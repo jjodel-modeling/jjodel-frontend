@@ -1,0 +1,12 @@
+.myinput-label{
+  order: 1;
+}
+.myinput-input{
+  order: 2;
+}
+
+.myinput-root[data-type="checkbox"], .myinput-root[data-type="radio"], .myinput-root[data-type="color"]{
+  .myinput-label{
+    order: 0;
+  }
+}

@@ -1,0 +1,30 @@
+
+smart-tabs[vertical]:not([allow-toggle]){
+    .smart-content-container[vertical]>.smart-header-section{
+        width: auto;
+        writing-mode: vertical-lr;
+        height: 100%;
+        display: flex;
+    }
+
+    .smart-content-container[vertical]{
+        display: flex;
+        flex-flow: column;
+        flex-wrap: wrap;
+    }
+    .smart-window.smart-tabs-window .smart-content-container[vertical]>.smart-content {
+        height: 100%;
+    }
+    .smart-content-container[vertical] > .smart-header-section > .smart-buttons-container{
+        width: 100%;
+        height: auto;
+        margin: auto;
+        margin-top: 0;
+    }
+    // .smart-content-container[vertical] > .smart-content >
+    .smart-container > .smart-header.smart-tabs-header-section > .smart-tabs-header-items > .smart-tabs-selection-bar{
+      display: none;
+    }
+
+}
+

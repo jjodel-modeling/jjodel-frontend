@@ -1,0 +1,177 @@
+.dock-panel{
+  --background1: #facccc;
+  --background2: #d88;
+  --background3: #fff;
+  --color1: #f00;
+  --color2: #c33;
+}
+.dock-panel.dock-style-custom {
+  border: 1px solid var(--mainBorder);
+  border-radius: 8px 8px 0 0;
+}
+
+.dock-panel.dock-style-custom .dock-tab {
+  margin-right: 0;
+  border: 1px solid var(--background2);
+  background: var(--background2);
+  color: #fff;
+  border-radius: 16px 16px 0 0;
+}
+
+.dock-panel.dock-style-custom .dock-tab.dock-tab-active {
+  background: var(--background3);
+  color: var(--color2);
+}
+
+.dock-panel.dock-style-custom .dock-bar {
+  background: var(--background1);
+  border-radius: 7px 7px 0 0;
+  border-bottom: 1px solid var(--background2);
+}
+
+.dock-panel.dock-style-custom .dock-tab-hit-area {
+  /* cover the border area */
+  left: -1px;
+  right: -1px;
+}
+
+.dock-panel.dock-style-custom .dock-panel-max-btn {
+  opacity: 1;
+  width: 30px;
+  height: calc(100% - 5px);
+  margin-top: 5px;
+  background-image: url("../../img/google/2x/baseline_fullscreen_black_24dp.png");
+  background-size: cover;
+  background-color: var(--background1);
+  background-blend-mode: overlay; // | soft-light
+}
+.dock-panel.dock-style-custom .dock-panel-max-btn:before {
+  border-color: #fff;
+  color: #fff;
+  content: '-';
+  display: none;
+}
+
+.dock-mbox .dock-panel.dock-style-custom .dock-panel-max-btn{
+  background-image: url("../../img/google/2x/baseline_fullscreen_exit_black_24dp.png");
+}
+
+/* different color for the focused panel */
+.dock-panel.dock-style-custom{ border: 1px solid var(--background1);}
+.dock-panel.dock-style-custom:focus-within {
+  // outline: 2px solid var(--background1);
+  border: 2px solid var(--background1);
+  // outline: none; box-shadow: 0px 0px 8px var(--color1);
+}
+
+/* tab buttons take all the space */
+.dock-panel.dock-style-custom .dock-nav-list {
+  flex-grow: 1;
+}
+.dock-panel.dock-style-custom .dock-tab {
+  flex: 1 0 auto;
+}
+
+/* global dock layout styles */
+.dock-layout > .dock-drop-indicator {
+  border: solid 1px var(--color1);
+  box-shadow: inset 0 0 10px var(--color1);
+  background: none;
+}
+
+
+//////////////// default stile already included in rc-doc sources
+/*
+.dock-panel.dock-style-place-holder {
+  border: none;
+
+  .dock-bar {
+    display: none;
+  }
+}
+
+// dock-style-headless
+.dock-layout > :not(.dock-fbox) {
+  .dock-panel.dock-style-headless {
+    border: none;
+
+    .dock-bar {
+      position: absolute;
+      z-index: 1;
+      opacity: 0;
+      height: 20px;
+      width: 100%;
+      transition: all 0.15s ease-in-out;
+    }
+
+    .dock-bar:hover, .dock-bar:focus-within, &.dock-panel-dropping .dock-bar {
+      opacity: 1;
+      height: 31px;
+    }
+
+    .dock-content {
+      height: 100%; // header size is 0
+    }
+  }
+}
+
+// dock-style-main
+.dock-panel.dock-style-main {
+  border: none;
+
+  .dock-bar {
+    background: none;
+    border-bottom: 1px solid #eee;
+  }
+
+  .dock-tab {
+    background: #fff;
+  }
+}
+
+//dock-style-card
+.dock-panel.dock-style-card {
+
+
+  .dock-tab.dock-tab-active {
+    border-bottom: 1px solid #fff;
+    background: #fff;
+  }
+
+  .dock-bar {
+    border-bottom: 1px solid #ddd;
+    overflow: visible;
+  }
+
+  .dock-nav-wrap {
+    padding-top: 5px;
+    transform: translate(0, 1px);
+  }
+
+  .dock-ink-bar {
+    // hide animated ink bar
+    background: #fff;
+    opacity: 0;
+  }
+
+  .dock-tab-hit-area {
+    // cover the border area
+    left: -2px;
+    right: -2px;
+  }
+
+  .dock-panel-max-btn {
+    margin-top: 4px;
+  }
+
+  .dock-tab-close-btn {
+    right: 0;
+    font-size: 10px;
+    top: 8px;
+  }
+
+  .dock-extra-content {
+    height: 35px;
+  }
+}
+*/
