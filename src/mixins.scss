@@ -1,0 +1,99 @@
+@mixin defineColorRGB_Untested($varname, $r, $g, $b, $a: 1){
+  // usage:  #some.selector { @include defineColorRGB(--color-primary-darker, 255, 128, 64, 0.75), @include defineColorRGB(...), ... }
+  // include è sempre necessario anche alla N-esima chiamata, credo serva ad incollare le variabili interne alla funzione
+  #{$varname}: unquote("rgba(#{$r}, #{$g}, #{$b}, #{$a});");
+  #{$varname}-r: #{$r};
+  #{$varname}-g: #{$g};
+  #{$varname}-b: #{$b};
+  #{$varname}-a: #{$a};
+  $r1: $r / 255.0;
+  $g1: $g / 255.0;
+  $b1: $b / 255.0;
+  $cmax: max($r1, $g1, $b1);
+  $cmin: min($r1, $g1, $b1);
+  $delta: $cmax - $cmin;
+  $saturation: 'toreplace';
+  $hue: 'toreplace';
+  @if ($delta == 0) { $hue: 0; }
+  @else if ($cmax == $r1) { $hue: 60° * ((($g1 - $b1) / $delta) % 6); }
+  @else if ($cmax == $g1) { $hue: 60° * ((($b1 - $r1) / $delta) + 2); }
+  @else if ($cmax == $g1) { $hue: 60° * ((($r1 - $g1) / $delta) + 4); }
+  @else { @error("wrong calculation on hue#{$r1, $g1, $b1, $cmax, $cmin, $delta}"); }
+  $lightness: ($cmax + $cmin) / 2;
+  @if ($delta == 0) { $saturation: 0; }
+  @else { $saturation: $delta / (1 - abs( 2 * $lightness - 1)); }
+
+  #{$varname}-h: #{$hue};
+  #{$varname}-s: #{$saturation};
+  #{$varname}-l: #{$lightness};
+}
+/*
+@if expression1 == expression2 {} @else if {} @else {}
+@error "message: #{$variable}"
+
+*/
+
+@mixin defineColorHSL($color, $hue, $saturation, $lightness, $a: 1){
+  // usage:  #some.selector { @include defineColorHSL(--color-primary-darker, 220, 90%, 36%), @include defineColorHSL(...), ... }
+  // include è sempre necessario anche alla N-esima chiamata, credo serva ad incollare le variabili interne alla funzione
+  #{$color}: unquote("hsla(#{$hue}, #{$saturation}, #{$lightness}, #{$a});");
+  #{$color}-h: #{$hue};
+  #{$color}-s: #{$saturation};
+  #{$color}-l: #{$lightness};
+  #{$color}-a: #{$a};
+}
+
+// return css color variable with different opacity value
+@function alpha($color, $opacity){
+  // usage:  background-color: alpha(var(--color-primary), 0.2); OR just background-color: alpha(--color-primary, 0.2);
+  $color: str-replace($color, 'var(');
+  $color: str-replace($color, ');');
+  $color-h: var(#{$color+'-h'});
+  $color-s: var(#{$color+'-s'});
+  $color-l: var(#{$color+'-l'});
+  @return hsla($color-h, $color-s, $color-l, $opacity);
+}
+
+// replace substring with another string. credits: https://css-tricks.com/snippets/sass/str-replace-function/
+@function str-replace($string, $search, $replace: '') {
+  $index: str-index($string, $search);
+  @if $index {
+    @return str-slice($string, 1, $index - 1) + $replace + str-replace(str-slice($string, $index + str-length($search)), $search, $replace);
+  }
+  @return $string;
+}
+
+// replace substring with another string
+// credits: https://css-tricks.com/snippets/sass/str-replace-function/
+@function str-replace($string, $search, $replace: '') {
+  $index: str-index($string, $search);
+  @if $index {
+    @return str-slice($string, 1, $index - 1) + $replace + str-replace(str-slice($string, $index + str-length($search)), $search, $replace);
+  }
+  @return $string;
+}
+
+@function lightness($color, $lightnessMultiplier){
+  // usage:  background-color: lightness(var(--color-primary), 1.2);
+  $color: str-replace($color, 'var(');
+  $color: str-replace($color, ')');
+  $color-h: var(#{$color+'-h'});
+  $color-s: var(#{$color+'-s'});
+  $color-l: var(#{$color+'-l'});
+  @return hsl($color-h, $color-s, calc(#{$color-l} * #{$lightnessMultiplier})); }
+
+@function saturation($color, $saturationMultiplier){
+  // usage:  background-color: saturation(var(--color-primary), 1.2);
+  $color: str-replace($color, 'var(');
+  $color: str-replace($color, ')');
+  $color-h: var(#{$color+'-h'});
+  $color-s: var(#{$color+'-s'});
+  $color-l: var(#{$color+'-l'});
+  @return hsl($color-h, calc(#{$color-s} * #{$saturationMultiplier}), $color-l); }
+
+
+@function hsl-to-rgb($hsl-color) {
+  // usage: background-color: hsl-to-rgb(hsl(118, 77%, 53%));
+  @return mix($hsl-color,$hsl-color); //  output se ha alpha: rgba(141, 144, 152, 0.75), altrimenti #hex
+}
+

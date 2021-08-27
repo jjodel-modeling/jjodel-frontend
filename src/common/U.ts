@@ -1,8 +1,8 @@
-import {GObject, Json} from "../joiner";
-
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
-import {bool, Dictionary, DocString, JsType, Temporary, TODO} from "../joiner/types";
+import {GObject, Json, bool, Dictionary, DocString, JsType, MyError, Temporary, TODO} from "../joiner";
 import FocusInEvent from 'jquery';
+import {ReactElement} from "react";
+import {windoww} from "../joiner/types";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
 export class Log{
@@ -19,26 +19,57 @@ export class Log{
         const key: string = U.getCaller(1);
         if (restArgs === null || restArgs === undefined) { restArgs = []; }
         let str = '[' + prefix + ']' + key + ': ';
-        for (let i = 0; i < restArgs.length; i++) { str += '' + restArgs[i] + '\t\r\n'; }
+        for (let i = 0; i < restArgs.length; i++) {
+            console.log({i, restArgs, curr:restArgs[i]});
+            str += '' +
+                (typeof restArgs[i] === 'symbol' ?
+                    '' + String(restArgs[i]) :
+                    restArgs[i])
+                + '\t\r\n'; }
         if (Log.loggerMapping[category]) for (const logger of Log.loggerMapping[category]) { logger.log(category, key, restArgs, str); }
         originalFunc(key, ...restArgs);
         return str; }
 
-    public static e(b: boolean, ...restArgs: any[]): any | never {
-        if (!b) return null;
-        const str = Log.log('Error', 'e', console.error, b, restArgs);
+    public static e(b: boolean, ...restArgs: any[]): string {
+        if (!b) return '';
+        const str = Log.log('Error', 'e', console.error, b, ...restArgs);
         Log.lastError = restArgs;
-        throw new Error(str); }
+        return str;
+        // throw new Error(str);
+    }
 
-    public static eDev(b: boolean, ...restArgs: any[]): null | never{
-        if (!b) return null;
-        const str = Log.log('Dev Error','eDev', console.error, b, restArgs);
+    public static eDev(b: boolean, ...restArgs: any[]): string {
+        if (!b) return '';
+        const str = Log.log('Dev Error','eDev', console.error, b, ...restArgs);
         Log.lastError = restArgs;
-        throw new Error(str); }
+        return str;
+        // throw new Error(str);
+    }
 
-    public static i(b: boolean, ...restArgs: any[]): string { return Log.log('Info', 'i', console.info, b, restArgs); }
-    public static l(b: boolean, ...restArgs: any[]): string { return Log.log('Log', 'l', console.log, b, restArgs); }
-    public static w(b: boolean, ...restArgs: any[]): string { return Log.log('Warn', 'w', console.info, b, restArgs); }
+    public static ex(b: boolean, ...restArgs: any[]): null | never | any {
+        if (!b) return null;
+        const str = Log.log('Error', 'e', console.error, b, ...restArgs);
+        Log.lastError = restArgs;
+        throw new MyError(str, ...restArgs); }
+
+    public static exDev(b: boolean, ...restArgs: any[]): null | never | any {
+        if (!b) return null;
+        const str = Log.log('Dev Error','eDev', console.error, b, ...restArgs);
+        Log.lastError = restArgs;
+        throw new MyError(str, ...restArgs); }
+
+    public static i(b: boolean, ...restArgs: any[]): string { return Log.log('Info', 'i', console.info, b, ...restArgs); }
+    public static l(b: boolean, ...restArgs: any[]): string { return Log.log('Log', 'l', console.log, b, ...restArgs); }
+    public static w(b: boolean, ...restArgs: any[]): string { return Log.log('Warn', 'w', console.info, b, ...restArgs); }
+
+
+    public static eDevv(...restAgs: any): string { return Log.eDev(true, ...restAgs); }
+    public static ee(...restAgs: any): string { return Log.e(true, ...restAgs); }
+    public static exDevv(...restAgs: any): never | any { return Log.exDev(true, ...restAgs); }
+    public static exx(...restAgs: any): never | any { return Log.ex(true, ...restAgs); }
+    public static ii(...restAgs: any): string { return Log.i(true, ...restAgs); }
+    public static ll(...restAgs: any): string { return Log.l(true, ...restAgs); }
+    public static ww(...restAgs: any): string { return Log.w(true, ...restAgs); }
 }
 
 interface LoggerInterface{
@@ -46,6 +77,7 @@ interface LoggerInterface{
 }
 
 export class U{
+    private static notNullFilter(e: any) { return !!e; };
     static pe(useLog_e: never, ...rest: any): void | never {}
 
     // warn: this check if the scope containing the function is strict, to check if a specific external scope-file is strict
@@ -121,9 +153,10 @@ export class U{
     // warn: cannot set different scope and context, "this" della funzione sovrascrive anche il "this" interno allo scope come chiave dell'oggetto
     // warn: if you modify
     public static evalInContextAndScope<T = any>(codeStr: string, scope?: GObject, context?: GObject): T {
+        console.log('evalInContextAndScope', {codeStr, scope, context});
         // scope per accedere a variabili direttamente "x + y"
         // context per accedervi tramite this, possono essere impostati come diversi.
-        if (!scope && !context) { return Log.e(true, 'evalInContextAndScope: must specify at least one of scope || context'); }
+        if (!scope && !context) { Log.ex(true, 'evalInContextAndScope: must specify at least one of scope || context', {codeStr, scope, context}); }
         if (!context) context = scope; // se creo un nuovo contesto pulisco anche lo scope dalle variabili locali di questa funzione.
         // scope.this = scope.this || context || scope; non funziona
         console.log('"with(this){ return eval( \'" + codeStr + "\' ); }"', "with(this){ return eval( '" + codeStr + "' ); }");
@@ -152,6 +185,7 @@ export class U{
         }
         if (scope && context) {
             (context as any)._eval = _eval;
+            console.log('pre eval jsx:', context, 'body:', {codeStr, Input: windoww.Input});
             _ret = new (Function as any)(prefixDeclarations + "return eval( this._eval.codeStr );" + postfixDeclarations).call(context);
             delete (context as any)._eval; } else
         if (!scope && context) { _ret = new (Function as any)( "return eval( this._eval._codeStr );").call(context); } else
@@ -179,7 +213,7 @@ export class U{
                 postfixDeclarations = " }";
             }
         }
-        if (!scope && !context) { return Log.e(true, 'execInContextAndScope: must specify at least one of scope || context'); }
+        if (!scope && !context) { Log.ex(true, 'execInContextAndScope: must specify at least one of scope || context', {func, scope, context}); }
         if (!context) context = scope; // se creo un nuovo contesto pulisco anche lo scope dalle variabili locali di questa funzione.
         if (scope && context) {
             context._eval = _eval;
@@ -400,7 +434,7 @@ export class U{
         if (!key) key = U.getCaller(1);
         if (condition || U.oneTimeMap[key]) return null;
         U.oneTimeMap[key] = true;
-        return printFunction(condition, s, restArgs); }*/
+        return printFunction(condition, s, ...restArgs); }*/
 
     // ritorna un array con tutti i figli, nipoti... discendenti di @parent
     public static iterateDescendents(parent: Element): HTMLCollectionOf<Element> { return parent.getElementsByTagName('*'); }
@@ -482,6 +516,38 @@ export class U{
 
     static RadToDegree(radians: number): number { return radians * (180 / Math.PI); }
     static DegreeToRad(degree: number): number { return degree * (Math.PI / 180); }
+
+    private static maxID: number = 0;
+    public static idPrefix: string = '';
+    static getID(): string { return U.idPrefix + U.maxID++; }
+
+
+
+    static ReactNodeAsElement(e: React.ReactNode): React.ReactElement | null { return (e as ReactElement).type ? e as ReactElement : null; }
+
+    static getType(param: any): string {
+        switch (typeof param) {
+            default: return typeof param;
+            case 'object':
+                return param?.constructor?.name || "{_rawobject_}";
+            case 'function': // and others
+                return "geType for function todo: distinguish betweeen arrow and classic";
+        }
+    }
+
+    static stringCompare(s1: string, s2: string): -1 | 0 | 1 { return (s1 < s2) ? -1 : (s1 > s2) ? 1 : 0; }
+
+    static endsWith(str: string, suffix: string): boolean {
+        return str.lastIndexOf(suffix) === str.length - suffix.length;
+    }
+
+    static arrayFilterNull<T>(arr: (T | null | undefined)[]): T[] {
+        return arr.filter(U.notNullFilter) as T[];
+    }
+
+    static arrayMergeInPlace<T>(arr1: T[], ...otherArrs: T[][]): T[] {
+        for (const arr of otherArrs) arr1.push.apply(arr1, arr);
+        return arr1; }
 }
 
 export class DDate{
@@ -1096,7 +1162,7 @@ export class SelectorOutput {
 //         if (prepend) { document.head.prepend(css); } else { document.head.append(css); }
 //     }
 //
-//     static petmp(b: boolean, s: any, ...restArgs: any[]): null { return UU.pe(b, s, restArgs); }
+//     static petmp(b: boolean, s: any, ...restArgs: any[]): null { return UU.pe(b, s, ...restArgs); }
 //
 //     static pedev(b: boolean, s: any, ...restArgs: any[]): null {
 //         // todo: questi sono gli errori che dovrebbero verificarsi solo in caso di errori nel codice, mai in seguito ad azioni utente invalide.

@@ -1,13 +1,11 @@
 .dock-panel{
-  --background1: #facccc;
-  --background2: #d88;
-  --background3: #fff;
-  --color1: #f00;
-  --color2: #c33;
-}
-.dock-panel.dock-style-custom {
-  border: 1px solid var(--mainBorder);
-  border-radius: 8px 8px 0 0;
+  --background1: #fafafa; //#facccc;
+  --background2: #ddd; // #d88;
+  --background3: #fff; // #fff;
+  --color1: #f0f0f0; // #f00;
+  --color2: #333; // #c33;
+  --color3: #108ee9; // #108ee9
+  --color4: #000;
 }
 
 .dock-panel.dock-style-custom .dock-tab {
@@ -15,27 +13,64 @@
   border: 1px solid var(--background2);
   background: var(--background2);
   color: #fff;
-  border-radius: 16px 16px 0 0;
-}
-
-.dock-panel.dock-style-custom .dock-tab.dock-tab-active {
+  border-radius: var(--radius) var(--radius) 0 0;
   background: var(--background3);
-  color: var(--color2);
+  color: var(--color4);
 }
 
-.dock-panel.dock-style-custom .dock-bar {
+.dock-panel.dock-style-transparent .dock-tab{
+  opacity: 0.5;
+}
+.dock-panel.dock-style-transparent .dock-tab.dock-tab-active{
+  opacity: 1;
+}
+.dock-panel.dock-style-large .dock-tab.dock-tab-active{
+  color: var(--color3);
+}
+
+.dock-layout > :not(.dock-fbox) .dock-panel.dock-style-ghostone .dock-bar{
+  position: absolute;
+  display: inline-block;
+  z-index: 1;
+  // opacity: 0;
+  border-radius: 0;
+  height: 30px;
+  width: 30px;
+  right: 0;
+  top: 0;
+  background-image: url('//img/outline_drag_indicator_black_24dp.png');
+  overflow: hidden;
+  padding-right: 30px; // i pulsanti azione li sposto oltre l'area che triggera visibilità
+  &:hover, &:focus-within{
+    background-image: none;
+    width: auto;
+    height: auto;// 31px;
+    border-radius: var(--radius);
+  }
+  transition: all 0.15s ease-in-out;
+}
+/*
+.dock-panel.dock-style-ghostone .dock-tab +
+.dock-panel.dock-style-ghostone .dock-tab.dock-tab-active,
+.dock-panel.dock-style-ghostone .dock-tab.dock-tab-active +
+.dock-panel.dock-style-ghostone .dock-tab{
+  display: block; // nascondo la scheda attiva se è l'unica schedae la mostro se ha adiacenti. l'unica scheda è sempre selected
+}
+*/
+
+.dock-panel.dock-style-card .dock-bar {
   background: var(--background1);
-  border-radius: 7px 7px 0 0;
+  border-radius: var(--radius) var(--radius) 0 0;
   border-bottom: 1px solid var(--background2);
 }
 
-.dock-panel.dock-style-custom .dock-tab-hit-area {
+.dock-panel.dock-style-card .dock-tab-hit-area {
   /* cover the border area */
   left: -1px;
   right: -1px;
 }
 
-.dock-panel.dock-style-custom .dock-panel-max-btn {
+.dock-panel.dock-style-card .dock-panel-max-btn {
   opacity: 1;
   width: 30px;
   height: calc(100% - 5px);
@@ -45,30 +80,33 @@
   background-color: var(--background1);
   background-blend-mode: overlay; // | soft-light
 }
-.dock-panel.dock-style-custom .dock-panel-max-btn:before {
+.dock-panel.dock-style-card .dock-panel-max-btn:before {
   border-color: #fff;
   color: #fff;
   content: '-';
   display: none;
 }
 
-.dock-mbox .dock-panel.dock-style-custom .dock-panel-max-btn{
+.dock-mbox .dock-panel.dock-style-card .dock-panel-max-btn{
   background-image: url("../../img/google/2x/baseline_fullscreen_exit_black_24dp.png");
 }
 
 /* different color for the focused panel */
-.dock-panel.dock-style-custom{ border: 1px solid var(--background1);}
-.dock-panel.dock-style-custom:focus-within {
+.dock-panel.dock-style-card{
+  border-radius: 8px 8px 0 0;
+  border: 1px solid var(--background1);
+}
+.dock-panel.dock-style-card:focus-within {
   // outline: 2px solid var(--background1);
-  border: 2px solid var(--background1);
+  border: 1px solid var(--background2);
   // outline: none; box-shadow: 0px 0px 8px var(--color1);
 }
 
 /* tab buttons take all the space */
-.dock-panel.dock-style-custom .dock-nav-list {
+.dock-panel.dock-style-large .dock-nav-list {
   flex-grow: 1;
 }
-.dock-panel.dock-style-custom .dock-tab {
+.dock-panel.dock-style-large .dock-tab {
   flex: 1 0 auto;
 }
 

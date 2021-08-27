@@ -1,9 +1,8 @@
 import React, {DetailedReactHTMLElement, Dispatch, PureComponent, ReactChild, ReactElement, ReactNode} from "react";
 import { connect } from "react-redux";
-import {Dictionary, GObject} from "../../joiner/types";
 import PanelComponent, {PanelOwnProps} from "./panelComponent";
-import {IStore} from "../../redux/store";
 import './panelContainerComponent.css';
+import {Dictionary, GObject, IStore} from "../../joiner";
 // private
 interface ThisState {
     // listAllStateVariables: boolean,

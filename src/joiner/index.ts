@@ -1,9 +1,51 @@
 import * as jsxtt from 'jsx-transform/lib/jsx.js';
 import $ from 'jquery';
+import {ReactNode} from "react";
 import {$s, GraphPoint, GraphSize, IPoint, ISize, Log, Point, Size, U} from "../common/U";
+import {ViewElement} from "../view/viewElement/view";
 export {$s, GraphPoint, GraphSize, IPoint, ISize, Log, Point, Size, U};
+export {Uarr, CSSParser} from "../common/U";
+// nb: export type è un export "finto" che esiste solo in compilazione per fare capire a typescript i tipi. permette export di alias con nomi diversi (l'export normale no)
+export type {Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv, NotFound, DocString, nbool, nnumber, nstring, Nullable, Pointer, TODO, UnixTimestamp, UObject} from "./types";
+export {RuntimeAccessibleClass, JsType, PointerTargetable, MyError} from "./classes";
+export {
+    DModelElement,
+    DModel,
+    DValue,
+    DNamedElement,
+    DOBject,
+    DEnumerator,
+    DEnumLiteral,
+    DAttribute,
+    DReference,
+    DStructuralFeature,
+    DClassifier,
+    DDataType,
+    DClass,
+    DParameter,
+    DOperation,
+    DPackage,
+    DTypedElement,
+    DAnnotation,
+    EJavaObject,
+    DFactory_useless_} from "../model/dataStructure";
+export {
+    LModelElement,
+    LAnnotation,
+    LAttribute,
+    LClass,
+    LClassifier,
+    LEnumerator,
+    LEnumLiteral, LModel,
+    LObject, LOperation,
+    LPackage, LParameter, LReference,
+    LStructuralFeature,
+    LValue} from "../model/logicWrapper/LModelElement";
+export {Action, CreateElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
+export {ViewElement} from "../view/viewElement/view";
+export {IStore, UserState, ModelStore, ViewPointState} from "../redux/store";
+export {fakeExport, store} from './ExecuteOnRead';
 
-export type {Empty, Json, GObject} from "./types";
 class JSXT_TYPE{
     fromString(str: string, options?:
         {   factory: string,
@@ -12,7 +54,7 @@ class JSXT_TYPE{
             passUnknownTagsToFactory?:boolean,
             unknownTagsAsString?:boolean,
             arrayChildren?:boolean
-        }):string{ return ''; }
+        }):ReactNode { return ''; }
     fromFile(path: string, options?:
         {   factory: string,
             spreadFn?:Function,
@@ -20,7 +62,7 @@ class JSXT_TYPE{
             passUnknownTagsToFactory?:boolean,
             unknownTagsAsString?:boolean,
             arrayChildren?:boolean
-        }):string { return ''; }
+        }):ReactNode { return ''; }
     browserifyTransform(...params: any): any {}
     visitor: unknown = null;
 }

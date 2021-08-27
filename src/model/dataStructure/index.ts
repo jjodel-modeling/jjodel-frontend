@@ -1,1 +1,21 @@
-export {DModelElement} from "./modelElement";
+export {
+    DModelElement,
+    DModel,
+    DValue,
+    DNamedElement,
+    DOBject,
+    DEnumerator,
+    DEnumLiteral,
+    DAttribute,
+    DReference,
+    DStructuralFeature,
+    DClassifier,
+    DDataType,
+    DClass,
+    DParameter,
+    DOperation,
+    DPackage,
+    DTypedElement,
+    DAnnotation,
+    EJavaObject,
+    DFactory_useless_} from "./modelElement";

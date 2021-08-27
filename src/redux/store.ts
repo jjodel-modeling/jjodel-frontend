@@ -1,21 +1,77 @@
-import {GObject, GraphPoint, Point} from "../joiner";
 import {createStore, PreloadedState, Reducer, Store, StoreEnhancer} from 'redux';
-import {reducer} from './reducer/reducer';
-import {DModel, DNamedElement, PointerTargetable} from "../model/dataStructure/modelElement";
-import {Pointer} from "../joiner/types";
-import {InferableComponentEnhancerWithProps, MapDispatchToPropsNonObject, MapStateToPropsParam} from "react-redux";
-import {Action} from "./action/action";
+import {
+    GObject, GraphPoint, Point,
+    DAttribute,
+    DClass,
+    DModel,
+    DModelElement,
+    DNamedElement,
+    DReference,
+    Pointer, PointerTargetable, RuntimeAccessibleClass,
+    SetRootFieldAction, TRANSACTION,
+} from "../joiner";
 
-export class IStore {
-    models: DModel[]; // Pointer<DModel, 0, 'N'>[] = [];
+
+
+export class IStore extends RuntimeAccessibleClass {
+    models: Pointer<DModel, 0, 'N'>[] = []; // Pointer<DModel, 0, 'N'>[] = [];
     user: UserState;
     collaborators: UserState[];
-
     idlookup: Record<string, GObject> = {};
     constructor(){
+        super();
         this.user = new UserState();
         this.models = [];
         this.collaborators = [];
+        this.fakeinit();
+    }
+
+    fakeinit(): void {
+        const outElemArray: DModelElement[] = [];
+        const m3: DModel = this.makeM3Test(false, outElemArray);
+        for (let elem of outElemArray) {
+            this.idlookup[elem.id] = elem;
+        }
+        this.models = [m3.id];
+    }
+
+    makeM3Test(fireAction: boolean = true, outElemArray: DModelElement[] = []): DModel {
+        const me: DModelElement = new DClass('ModelElement', true);
+        const annotation: DClass = new DClass('Annotation');
+        annotation.implements = [me.id];
+        const namedElement: DClass = new DClass('NamedElement');
+        const attribname: DAttribute = new DAttribute('name');
+        namedElement.implements = [me.id]; // , classifier.id, namedelement.id, modelelement.id]
+        namedElement.attributes = [attribname.id];
+
+        const pkg: DClass = new DClass('M3Package');
+        const attriburi: DAttribute = new DAttribute('uri');
+        pkg.implements = [namedElement.id];
+        pkg.attributes = [attriburi.id];
+        const classifierref: DReference = new DReference('classifiers');
+        pkg.references = [classifierref.id];
+
+        const model: DClass = new DClass('M3');
+        const pkgref: DReference = new DReference('package');
+        model.implements = [namedElement.id];
+        pkgref.type = pkg.id;
+        const classe: DClass = new DClass('Class', false, true);
+        classifierref.type = classe.id;
+        classe.implements = [namedElement.id]; // , classifier.id, namedelement.id, modelelement.id]
+        /// model itself outside of ecore
+        const m3: DModel = new DModel('M3');
+        m3.packages = [pkg.id];
+        // m3.modellingElements = [me.id, annotation.id, namedElement.id, attribname.id, pkg.id, attriburi.id, classifierref.id, pkgref.id, classe.id];
+        // dispatching actions
+
+        outElemArray.push.call(outElemArray, m3, me, annotation, namedElement, attribname, pkg, attriburi, classifierref, pkgref, classe);
+        if (fireAction)
+            TRANSACTION( () => {
+                let fake: IStore;
+                new SetRootFieldAction('models[]', m3);
+                for (let elem of outElemArray) { DModelElement.persist(elem); }
+            });
+        return m3;
     }
 }
 
@@ -60,8 +116,3 @@ type Cconnect = <TStateProps = {}, TDispatchProps = {}, TOwnProps = {}, State = 
 ): InferableComponentEnhancerWithProps<TStateProps & TDispatchProps, TOwnProps>;
 */
 // export const initialState: IStore = new IStore();
-export const initialState: IStore = new IStore();
-
-interface StateExt{}
-export const store:Store<IStore & StateExt, Action> & IStore = createStore(reducer);
-

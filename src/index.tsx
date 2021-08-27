@@ -4,8 +4,8 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import {Provider} from "react-redux";
-import {store} from "./redux/store";
 import {Log, U, GraphPoint, Size, myFileReader, ISize, Uarr, RawVertex, RawEdge, RawGraph, GraphSize, Point, IPoint, TagNames, ParseNumberOrBooleanOptions, CSSParser, $s} from "./common/U";
+import {store} from "./redux/createStore";
 
 ReactDOM.render(
   // <React.StrictMode> <App /> </React.StrictMode>,

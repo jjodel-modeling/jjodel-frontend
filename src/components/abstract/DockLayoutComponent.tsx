@@ -1,11 +1,13 @@
 import React, {Dispatch, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
-import {IStore} from "../../redux/store";
 import {DockContext, DockLayout, DropDirection, PanelData} from "rc-dock";
 // import {LayoutData} from "rc-dock/src/DockData";
 import "rc-dock/dist/rc-dock.css";
 import './docking.scss';
 import {LayoutBase} from "rc-dock/lib/DockData";
+import GraphElement from "../../graph/graphElement/graphElement";
+import {ViewElement, IStore} from "../../joiner";
+import GraphsContainerComponent from "../../graph/graph/graph";
 
 // private
 interface ThisState {
@@ -64,6 +66,8 @@ let defaultTab = {
     content: (
         <div>
             Tabs from different style group can't be docked in same panel
+            <h1>ModelPiece</h1>
+            <GraphsContainerComponent />
         </div>
     )
 };
@@ -88,8 +92,9 @@ let cardTab = {
     ),
     // this is a pre-defined style, defined here:
     // https://github.com/ticlo/rc-dock/blob/master/style/predefined-panels.less
-    group: 'card'
+    group: 'card ghostone'
 };
+// groups definiti da me o default: card | large | transparent | ghostone (utilizzabili in combinazione
 let customTab = {
     title: 'custom-style',
     content: (
@@ -100,7 +105,7 @@ let customTab = {
     // you can mix predefined style with you own style
     // separate 2 styles with space
     // the panel class will contain both dock-style-car and dock-style-custom
-    group: 'card custom'
+    group: 'card large'
 };
 let box: LayoutData = {
     dockbox: {

@@ -1,0 +1,406 @@
+
+{
+  "header": {
+    "reportVersion": 1,
+    "event": "Allocation failed - JavaScript heap out of memory",
+    "trigger": "FatalError",
+    "filename": "report.20210806.002517.2044.0.001.json",
+    "dumpEventTime": "2021-08-06T00:25:17Z",
+    "dumpEventTimeStamp": "1628202317930",
+    "processId": 2044,
+    "cwd": "D:\\Programming\\web\\jodel-react",
+    "commandLine": [
+      "D:\\Program Files\\nodejs\\node.exe",
+      "C:\\Program Files\\JetBrains\\WebStorm 2019.3.4\\plugins\\JavaScriptLanguage\\jsLanguageServicesImpl\\js-language-service.js",
+      "-id=1628036503492",
+      "-debug-name=typescript"
+    ],
+    "nodejsVersion": "v12.16.1",
+    "wordSize": 64,
+    "arch": "x64",
+    "platform": "win32",
+    "componentVersions": {
+      "node": "12.16.1",
+      "v8": "7.8.279.23-node.31",
+      "uv": "1.34.0",
+      "zlib": "1.2.11",
+      "brotli": "1.0.7",
+      "ares": "1.15.0",
+      "modules": "72",
+      "nghttp2": "1.40.0",
+      "napi": "5",
+      "llhttp": "2.0.4",
+      "http_parser": "2.9.3",
+      "openssl": "1.1.1d",
+      "cldr": "35.1",
+      "icu": "64.2",
+      "tz": "2019c",
+      "unicode": "12.1"
+    },
+    "release": {
+      "name": "node",
+      "lts": "Erbium",
+      "headersUrl": "https://nodejs.org/download/release/v12.16.1/node-v12.16.1-headers.tar.gz",
+      "sourceUrl": "https://nodejs.org/download/release/v12.16.1/node-v12.16.1.tar.gz",
+      "libUrl": "https://nodejs.org/download/release/v12.16.1/win-x64/node.lib"
+    },
+    "osName": "Windows_NT",
+    "osRelease": "10.0.19043",
+    "osVersion": "Windows 10 Home",
+    "osMachine": "x86_64",
+    "cpus": [
+      {
+        "model": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "speed": 2592,
+        "user": 21339625,
+        "nice": 0,
+        "sys": 14568578,
+        "idle": 80064250,
+        "irq": 3089468
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "speed": 2592,
+        "user": 16627375,
+        "nice": 0,
+        "sys": 9002062,
+        "idle": 90342328,
+        "irq": 1206671
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "speed": 2592,
+        "user": 49329140,
+        "nice": 0,
+        "sys": 14784000,
+        "idle": 51858625,
+        "irq": 716718
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "speed": 2592,
+        "user": 21181468,
+        "nice": 0,
+        "sys": 7924812,
+        "idle": 86865468,
+        "irq": 358296
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "speed": 2592,
+        "user": 30478328,
+        "nice": 0,
+        "sys": 13926859,
+        "idle": 71566562,
+        "irq": 495343
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "speed": 2592,
+        "user": 19976421,
+        "nice": 0,
+        "sys": 8325640,
+        "idle": 87669687,
+        "irq": 483000
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "speed": 2592,
+        "user": 30118968,
+        "nice": 0,
+        "sys": 11898062,
+        "idle": 73954703,
+        "irq": 482015
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "speed": 2592,
+        "user": 19218468,
+        "nice": 0,
+        "sys": 6338140,
+        "idle": 90415125,
+        "irq": 367828
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "speed": 2592,
+        "user": 35604671,
+        "nice": 0,
+        "sys": 13351562,
+        "idle": 67015500,
+        "irq": 804109
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "speed": 2592,
+        "user": 17860937,
+        "nice": 0,
+        "sys": 7369953,
+        "idle": 90740828,
+        "irq": 417890
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "speed": 2592,
+        "user": 27766937,
+        "nice": 0,
+        "sys": 11695296,
+        "idle": 76509484,
+        "irq": 541078
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+        "speed": 2592,
+        "user": 17891484,
+        "nice": 0,
+        "sys": 5989953,
+        "idle": 92090265,
+        "irq": 331156
+      }
+    ],
+    "host": "LAPTOP-MUDBGT5B"
+  },
+  "javascriptStack": {
+    "message": "No stack.",
+    "stack": [
+      "Unavailable."
+    ]
+  },
+  "nativeStack": [
+    {
+      "pc": "0x00007ff7693d19f9",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff7693d5e1c",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff7693d4dd8",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff7694d34cb",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff769ce9f4e",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff769cd2021",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff769b9e57c",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff769ba6521",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff769b9bb13",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff769b9a184",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff769bbb36d",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff769920c51",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff76a134ddd",
+      "symbol": ""
+    },
+    {
+      "pc": "0x00007ff76a135d0d",
+      "symbol": ""
+    },
+    {
+      "pc": "0x0000028c21c82b3b",
+      "symbol": ""
+    }
+  ],
+  "javascriptHeap": {
+    "totalMemory": 200880128,
+    "totalCommittedMemory": 200880128,
+    "usedMemory": 198691392,
+    "availableMemory": 1999339728,
+    "memoryLimit": 2197815296,
+    "heapSpaces": {
+      "read_only_space": {
+        "memorySize": 262144,
+        "committedMemory": 262144,
+        "capacity": 32808,
+        "used": 32808,
+        "available": 0
+      },
+      "new_space": {
+        "memorySize": 1048576,
+        "committedMemory": 1048576,
+        "capacity": 1047456,
+        "used": 1047456,
+        "available": 0
+      },
+      "old_space": {
+        "memorySize": 163987456,
+        "committedMemory": 163987456,
+        "capacity": 163712376,
+        "used": 163001832,
+        "available": 710544
+      },
+      "code_space": {
+        "memorySize": 3051520,
+        "committedMemory": 3051520,
+        "capacity": 2833056,
+        "used": 2580096,
+        "available": 252960
+      },
+      "map_space": {
+        "memorySize": 1052672,
+        "committedMemory": 1052672,
+        "capacity": 1051200,
+        "used": 657600,
+        "available": 393600
+      },
+      "large_object_space": {
+        "memorySize": 31051776,
+        "committedMemory": 31051776,
+        "capacity": 31007312,
+        "used": 31007312,
+        "available": 0
+      },
+      "code_large_object_space": {
+        "memorySize": 425984,
+        "committedMemory": 425984,
+        "capacity": 364288,
+        "used": 364288,
+        "available": 0
+      },
+      "new_large_object_space": {
+        "memorySize": 0,
+        "committedMemory": 0,
+        "capacity": 1047456,
+        "used": 0,
+        "available": 1047456
+      }
+    }
+  },
+  "resourceUsage": {
+    "userCpuSeconds": 255.171,
+    "kernelCpuSeconds": 282.265,
+    "cpuConsumptionPercent": 0.324075,
+    "maxRss": 1057161216,
+    "pageFaults": {
+      "IORequired": 1574678,
+      "IONotRequired": 0
+    },
+    "fsActivity": {
+      "reads": 10446,
+      "writes": 5998
+    }
+  },
+  "libuv": [
+  ],
+  "environmentVariables": {
+    "=::": "::\\",
+    "ALLUSERSPROFILE": "C:\\ProgramData",
+    "ANDROID_HOME": "C:\\Users\\damia\\AppData\\Local\\Android\\Sdk",
+    "APPDATA": "C:\\Users\\damia\\AppData\\Roaming",
+    "ChocolateyInstall": "C:\\ProgramData\\chocolatey",
+    "ChocolateyLastPathUpdate": "132293015742700676",
+    "CommonProgramFiles": "C:\\Program Files\\Common Files",
+    "CommonProgramFiles(x86)": "C:\\Program Files (x86)\\Common Files",
+    "CommonProgramW6432": "C:\\Program Files\\Common Files",
+    "COMPUTERNAME": "LAPTOP-MUDBGT5B",
+    "ComSpec": "C:\\WINDOWS\\system32\\cmd.exe",
+    "Conda3Path": "D:\\Programmi\\programming\\Miniconda3",
+    "DriverData": "C:\\Windows\\System32\\Drivers\\DriverData",
+    "FPS_BROWSER_APP_PROFILE_STRING": "Internet Explorer",
+    "FPS_BROWSER_USER_PROFILE_STRING": "Default",
+    "HOMEDRIVE": "C:",
+    "HOMEPATH": "\\Users\\damia",
+    "IDEA_INITIAL_DIRECTORY": "C:\\Program Files\\JetBrains\\WebStorm 2019.3.4\\bin",
+    "IntelliJ IDEA": "C:\\Program Files\\JetBrains\\IntelliJ IDEA 2019.3.4\\bin;",
+    "JetBrains Rider": "D:\\Programming\\JetBrains Rider 2020.3.3\\bin;",
+    "KMP_BLOCKTIME": "0",
+    "LOCALAPPDATA": "C:\\Users\\damia\\AppData\\Local",
+    "LOGONSERVER": "\\\\LAPTOP-MUDBGT5B",
+    "MOZ_PLUGIN_PATH": "D:\\Programmi\\office\\Foxit Reader\\plugins\\",
+    "NUMBER_OF_PROCESSORS": "12",
+    "OMP_WAIT_POLICY": "PASSIVE",
+    "OneDrive": "C:\\Users\\damia\\OneDrive",
+    "OneDriveConsumer": "C:\\Users\\damia\\OneDrive",
+    "OnlineServices": "Online Services",
+    "OS": "Windows_NT",
+    "Path": "C:\\windows\\system32;C:\\windows;C:\\windows\\System32\\Wbem;C:\\windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\windows\\System32\\OpenSSH\\;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR;c:\\path;C:\\Program Files\\Git\\cmd;C:\\ProgramData\\chocolatey\\bin;D:\\Program Files\\nodejs\\;D:\\Programmi\\Multimedia\\Audio\\Audacity\\help\\manual\\m\\skins\\streamlink 1.4.1\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;D:\\xampp\\php;C:\\ProgramData\\ComposerSetup\\bin;D:\\Programming\\lib_dll_jar\\adb android platform-tools\\;C:\\Program Files\\dotnet\\;C:\\Users\\damia\\AppData\\Local\\Microsoft\\WindowsApps;c:\\path\\;C:\\Program Files\\JetBrains\\WebStorm 2019.3.4\\bin;C:\\Program Files\\JetBrains\\PhpStorm 2019.3.4\\bin;C:\\Program Files\\JetBrains\\IntelliJ IDEA 2019.3.4\\bin;C:\\Users\\damia\\AppData\\Local\\GitHubDesktop\\bin;C:\\Users\\damia\\AppData\\Roaming\\npm;D:\\Programmi\\util\\ffmpeg\\bin;C:\\Users\\damia\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\damia\\AppData\\Roaming\\Composer\\vendor\\bin;D:\\Programmi\\programming\\Miniconda3\\Scripts;D:\\Programming\\Microsoft VS Code\\bin;D:\\Programming\\JetBrains Rider 2020.3.3\\bin;;C:\\Users\\damia\\.dotnet\\tools;D:\\Programming\\lib_dll_jar\\openjdk-16.0.1\\bin;",
+    "PATHEXT": ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC",
+    "PhpStorm": "C:\\Program Files\\JetBrains\\PhpStorm 2019.3.4\\bin;",
+    "pip3": "D:\\Programmi\\programming\\Miniconda3\\Scripts\\pip.exe",
+    "platformcode": "KV",
+    "PROCESSOR_ARCHITECTURE": "AMD64",
+    "PROCESSOR_IDENTIFIER": "Intel64 Family 6 Model 158 Stepping 10, GenuineIntel",
+    "PROCESSOR_LEVEL": "6",
+    "PROCESSOR_REVISION": "9e0a",
+    "ProgramData": "C:\\ProgramData",
+    "ProgramFiles": "C:\\Program Files",
+    "ProgramFiles(x86)": "C:\\Program Files (x86)",
+    "ProgramW6432": "C:\\Program Files",
+    "PSModulePath": "C:\\Program Files\\WindowsPowerShell\\Modules;C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\Modules",
+    "PUBLIC": "C:\\Users\\Public",
+    "RegionCode": "EMEA",
+    "SESSIONNAME": "Console",
+    "SystemDrive": "C:",
+    "SystemRoot": "C:\\WINDOWS",
+    "TEMP": "C:\\Users\\damia\\AppData\\Local\\Temp",
+    "TMP": "C:\\Users\\damia\\AppData\\Local\\Temp",
+    "USERDOMAIN": "LAPTOP-MUDBGT5B",
+    "USERDOMAIN_ROAMINGPROFILE": "LAPTOP-MUDBGT5B",
+    "USERNAME": "damia",
+    "USERPROFILE": "C:\\Users\\damia",
+    "VBOX_MSI_INSTALL_PATH": "D:\\Programmi\\emulator\\VirtualBox\\",
+    "WebStorm": "C:\\Program Files\\JetBrains\\WebStorm 2019.3.4\\bin;",
+    "windir": "C:\\WINDOWS"
+  },
+  "sharedObjects": [
+    "D:\\Program Files\\nodejs\\node.exe",
+    "C:\\WINDOWS\\SYSTEM32\\ntdll.dll",
+    "C:\\WINDOWS\\System32\\KERNEL32.DLL",
+    "C:\\WINDOWS\\System32\\KERNELBASE.dll",
+    "C:\\WINDOWS\\System32\\WS2_32.dll",
+    "C:\\WINDOWS\\System32\\RPCRT4.dll",
+    "C:\\WINDOWS\\SYSTEM32\\dbghelp.dll",
+    "C:\\WINDOWS\\System32\\PSAPI.DLL",
+    "C:\\WINDOWS\\System32\\ADVAPI32.dll",
+    "C:\\WINDOWS\\System32\\ucrtbase.dll",
+    "C:\\WINDOWS\\System32\\msvcrt.dll",
+    "C:\\WINDOWS\\System32\\sechost.dll",
+    "C:\\WINDOWS\\SYSTEM32\\IPHLPAPI.DLL",
+    "C:\\WINDOWS\\SYSTEM32\\USERENV.dll",
+    "C:\\WINDOWS\\System32\\USER32.dll",
+    "C:\\WINDOWS\\System32\\win32u.dll",
+    "C:\\WINDOWS\\System32\\GDI32.dll",
+    "C:\\WINDOWS\\System32\\gdi32full.dll",
+    "C:\\WINDOWS\\System32\\msvcp_win.dll",
+    "C:\\WINDOWS\\System32\\CRYPT32.dll",
+    "C:\\WINDOWS\\System32\\bcrypt.dll",
+    "C:\\WINDOWS\\SYSTEM32\\WINMM.dll",
+    "C:\\WINDOWS\\System32\\IMM32.DLL",
+    "C:\\WINDOWS\\SYSTEM32\\powrprof.dll",
+    "C:\\WINDOWS\\SYSTEM32\\UMPDC.dll",
+    "C:\\WINDOWS\\SYSTEM32\\CRYPTBASE.DLL",
+    "C:\\WINDOWS\\system32\\uxtheme.dll",
+    "C:\\WINDOWS\\System32\\combase.dll",
+    "C:\\WINDOWS\\system32\\mswsock.dll",
+    "C:\\WINDOWS\\SYSTEM32\\kernel.appcore.dll",
+    "C:\\WINDOWS\\System32\\bcryptprimitives.dll",
+    "C:\\WINDOWS\\System32\\NSI.dll"
+  ]
+}

@@ -1,11 +1,10 @@
 import React, {Dispatch, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
-import {IStore} from "../../redux/store";
 import './logger.scss';
 import {DDate, U} from "../../common/U";
-import {bool, Dictionary, GObject, UnixTimestamp} from "../../joiner/types";
 import MyInputComponent from "../abstract/MyInput";
 import ReactJson, {CollapsedFieldProps} from 'react-json-view' // npm i react-json-view
+import {bool, Dictionary, GObject, UnixTimestamp} from "../../joiner";
 
 // private
 interface ThisState { }
