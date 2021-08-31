@@ -1,76 +1,49 @@
-import React, {Dispatch, PureComponent, ReactNode} from "react";
-import { connect } from "react-redux";
-import {IStore} from "../../redux/store";
-import './graph.scss';
-import GraphElement from "../graphElement/graphElement";
-import {ViewElement} from "../../view/viewElement/view";
-import {LModel, LModelElement} from "../../model/logicWrapper/LModelElement";
-import {DModel, DModelElement} from "../../model/dataStructure";
+import React, {PureComponent} from "react";import {connect} from "react-redux";
 
-// private
-interface ThisState { }
+import {GObject, IStore,
+    GraphElementRaw,
+    GraphElement, windoww} from "../../joiner";
+import {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps} from  "../graphElement/sharedTypes/sharedTypes";
 
-class GraphsContainerComponent extends PureComponent<AllProps, ThisState>{
-    constructor(props: AllProps, context: any) {
-        super(props, context);
-    }
 
-    render(): ReactNode {
-        // const editinput = "<input onChange={(e) => this.data.name = e.target.value } value={this.data.name} />";
-        // const editinput = "";
-        const editinput = "<Input obj={this.data.id} field={'name'} getter={val => val.toUpperCase()} setter={(val) => val.toLowerCase()} />";
-        // "<Input obj={this.data} field={'name'} getter={val => val.toUpperCase()} setter={(val) => val.toLowerCase()} />";
-        return (<>
-            {
-                this.props.models.map( (m: LModel) => (<>
-                    <GraphElement
-                        data={m}
-                        view={new ViewElement('<p><h1>hello1 {this.data.name + (this.data.id)}</h1><i>{JSON.stringify(Object.keys(this))}</i>'+editinput + '</p>')} />
-                    <GraphElement
-                        data={m}
-                        view={new ViewElement('<p><h1>hello2 {this.data.name + (this.model.id)}</h1><i>{JSON.stringify(Object.keys(this))}</i>'+editinput + '</p>')} />
-                </>
-                    )
-                )
-            }
-        </>); }
+class GraphStatee extends GraphElementStatee {
+    /*graphid!: string
+    constructor(preRenderFunc: string | undefined, evalContext: GObject, templatefunc: () => React.ReactNode, id: string) {
+        super(preRenderFunc, evalContext, templatefunc);
+        this.graphid = id;
+    }*/
 }
 
+export class GraphRaw<AllProps extends AllPropss, GraphState extends GraphStatee> extends GraphElementRaw<AllProps, GraphState>{
+}
+// todo: devo permettere agli elementi di: multi-selezionare, resize, drag, rotate, drop (outside-inside container)
 // private
-interface OwnProps {
+class VertexOwnProps extends GraphElementOwnProps {
+    onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
     // propsRequestedFromHtmlAsAttributes: string;
 }
 // private
-interface StateProps {
-    models: LModel[];
+class VertexReduxStateProps extends GraphElementReduxStateProps{
     // propsFromReduxStateOrOtherKindOfStateManagement: boolean; // flux or custom things too, unrelated to this.state of react.
 }
 
 // private
-interface DispatchProps {
+class VertexDispatchProps extends GraphElementDispatchProps {
     // propsFromReduxActions: typeof funzioneTriggeraAzioneDaImportare;
 }
 
 
 // private
-type AllProps = OwnProps & StateProps & DispatchProps;
-
-////// mapper func
-
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as any;
-    console.log('mapStateToProps', {ret, state, ownProps, models: state.models})
-    ret.models = state.models.length ? state.models.map( (mid) => mid && LModelElement.wrap(state.idlookup[mid] as DModel)) as LModel[] : [];
-    /// to fill
-    return ret; }
-
-function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
-    const ret: DispatchProps = {} as any;
-    /// to fill
-    return ret; }
+type AllPropss = VertexOwnProps & VertexReduxStateProps & VertexDispatchProps;
 
 
-export default connect<StateProps, DispatchProps, OwnProps, IStore>(
-    mapStateToProps,
-    mapDispatchToProps
-)(GraphsContainerComponent);
+const GraphConnected = connect<VertexReduxStateProps, VertexDispatchProps, VertexOwnProps, IStore>(
+    GraphRaw.mapStateToProps,
+    GraphRaw.mapDispatchToProps
+)(GraphRaw);
+export const Graph = GraphConnected;
+
+
+
+if (!windoww.mycomponents) windoww.mycomponents = {};
+windoww.mycomponents.Graph = GraphRaw;

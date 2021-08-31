@@ -8,7 +8,7 @@ import {
     DNamedElement,
     DReference,
     Pointer, PointerTargetable, RuntimeAccessibleClass,
-    SetRootFieldAction, TRANSACTION,
+    SetRootFieldAction, TRANSACTION, Dictionary, User, DocString,
 } from "../joiner";
 
 
@@ -16,6 +16,7 @@ import {
 export class IStore extends RuntimeAccessibleClass {
     models: Pointer<DModel, 0, 'N'>[] = []; // Pointer<DModel, 0, 'N'>[] = [];
     user: UserState;
+    users: Dictionary<DocString<Pointer<User>>, UserState> = {};
     collaborators: UserState[];
     idlookup: Record<string, GObject> = {};
     constructor(){
@@ -85,8 +86,9 @@ class SynchStore{// shared on session
 class AsynchStore{ // user private
     pendingUserAction: UserPendingAction[];
 }*/
-export class UserState extends PointerTargetable{
+export class UserState extends PointerTargetable {
     pointerPosition?: GraphPoint;
+    selection: Dictionary<DocString<Pointer<User>>, DocString<Pointer<'Vertex', 0, 'N'>>[]> = {};
     constructor() { super(true); }
 }
 

@@ -1,5 +1,5 @@
 import {
-    Log, CreateElementAction, Dictionary, Pointer, PointerTargetable, DocString
+    Log, CreateElementAction, Dictionary, Pointer, PointerTargetable, DocString, ViewElement
 } from "../../joiner";
 
 import type {
@@ -16,6 +16,7 @@ import type {
 import {LDataType, LNamedElement, LTypedElement} from "../logicWrapper/LModelElement";
 import {IsActually} from "../../joiner/types";
 
+const editinput = "<Input field={'name'} />";
 export abstract class DModelElement extends PointerTargetable {
     static logic: IsActually<LModelElement>;
     // ******************** ecore officials inherited ******************** //
@@ -32,6 +33,8 @@ export abstract class DModelElement extends PointerTargetable {
     }
 
     static persist(me: DModelElement) { new CreateElementAction(me); }
+    // todo: move it away
+    currentView: ViewElement = new ViewElement('<p><h1>hello1 {this.data.name + (this.data.id)}</h1><i>{JSON.stringify(Object.keys(this))}</i>' + editinput + '</p>')
 }
 
 export class DAnnotation extends DModelElement {

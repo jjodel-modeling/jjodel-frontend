@@ -13,8 +13,6 @@ export type Function2 =  (...a: any) => any;
 export type Temporary = any;
 export type Nullable<T> = T | null
 export type UnixTimestamp = number;
-
-
 interface NoCaller { caller?: never; }
 interface NoBind { bind?: never; }
 interface NoApply { apply?: never; }
@@ -59,5 +57,6 @@ declare global  {
 
 export type Proxyfied<T extends object> = UObject & T;
 export const windoww: typeof window & GObject= window;
+export type InOutParam<T> = T;
 
 export type IsActually<T> = any; // for some reason typescript complains about circular type references? this is a workaround

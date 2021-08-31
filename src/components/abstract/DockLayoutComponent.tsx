@@ -5,9 +5,8 @@ import {DockContext, DockLayout, DropDirection, PanelData} from "rc-dock";
 import "rc-dock/dist/rc-dock.css";
 import './docking.scss';
 import {LayoutBase} from "rc-dock/lib/DockData";
-import GraphElement from "../../graph/graphElement/graphElement";
 import {ViewElement, IStore} from "../../joiner";
-import GraphsContainerComponent from "../../graph/graph/graph";
+import GraphsContainerComponent from "../../graph/graph/graphContainer";
 
 // private
 interface ThisState {

@@ -1,0 +1,68 @@
+.overlap-parent{
+  &.overlap-child-chooses-width{
+    width: fit-content;
+  }
+  &.overlap-child-chooses-height{
+    height: fit-content;
+  }
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.overlap-child-wrapper{
+  &>*{
+    /*position: absolute; */
+    /*margin-left: -100%;  quasi, ma non li allenea davvero, il bordo delle figure precedenti occupa spazio e causa offset delle seguenti
+    transform: translate(100px);*/
+    /*grid-row-start: 1;
+    grid-column-start: 1;
+    margin: auto;*/
+
+    margin: auto;
+  }
+  &.overlap-parent-chooses-width > *{
+    width: available; /* 100%; or auto + display:block; or fill-container-somethinglikethis; */
+  }
+  &.overlap-parent-chooses-height > *{
+    height: available;
+  }
+  /*unnecessary for overlap, necessary for centering*/
+  display: flex;
+  max-height: 100%;
+  max-width: 100%;
+  min-height: fit-content;
+  min-width: fit-content;
+  grid-row-start: 1;
+  grid-column-start: 1;
+}
+
+/* just for test */
+
+.overlap-child-wrapper > .rectangle {
+  border: 10px solid white;
+  /*margin-left: 25px;
+  margin-right: 25px;*/
+  height: 150px;
+  width: calc(100% - 60px);
+}
+
+.overlap-child-wrapper > .ellipse {
+  border: 10px solid white;
+  border-radius: 100%;
+  width: calc(100% - 20px);
+  height: 100px;
+}
+
+.overlap-child-wrapper > .point {
+  width: 10px;
+  height: 10px;
+  background: black;
+}
+.overlap-parent{
+  position: relative;
+  background-color: red;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+/*
+*/

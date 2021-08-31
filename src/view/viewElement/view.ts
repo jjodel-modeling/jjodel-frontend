@@ -1,4 +1,4 @@
-import {U} from "../../joiner";
+import {Dictionary, DocString, Pointer, Size, U, User} from "../../joiner";
 
 export class ViewElement{
     id!: string; // user_id + autoincrement number for that user.
@@ -6,6 +6,12 @@ export class ViewElement{
     preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
     jsxString!: string; // l'html template
     usageDeclarations?: string; // example: state
+    scalezoomx: boolean = false; // whether to resize the element normally using width-height or resize it using zoom-scale css
+    scalezoomy: boolean = false;
+    size: Size = new Size(0, 0, 200, 100);
+    // not persistent, some not shared. deve essere diverso da utente ad utente perchè dipende dal pan e zoom nel grafo dell'utente attuale.
+    // facendo pan su grafo html sposti gli elementi, per simulare uno spostamento del grafo e farlo sembrare illimitato.
+    transient: TransientProperties = new TransientProperties();
     constructor(jsxString: string, usageDeclarations: string = '', constants: string = '', preRenderFunc: string = '') {
         this.jsxString = jsxString;
         this.usageDeclarations = usageDeclarations;
@@ -13,6 +19,12 @@ export class ViewElement{
         this.preRenderFunc = preRenderFunc;
         this.id = U.getID();
     }
+}
+class TransientProperties{
+    isSelected: Dictionary<DocString<Pointer<User>>, boolean> = {};
+    private: {
+        size: Size
+    } = { size: new Size(0, 0, 200, 100) }
 }
 // shapeless component, receive jsx from redux
 // can access any of the redux state, but will usually access 1-2 var among many,

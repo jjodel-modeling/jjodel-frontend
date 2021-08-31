@@ -5,6 +5,7 @@ import type {DModelElement} from "../../model/dataStructure";
 import {LModel, LModelElement} from "../../model/logicWrapper/LModelElement";
 import type {GObject, Pointer} from "../../joiner";
 import {windoww} from "../../joiner/types";
+import {U} from "../../joiner";
 // import './bidirectionalinput.scss';
 
 // private
@@ -14,22 +15,26 @@ interface ThisState {
 
 class BidirectionalInput extends PureComponent<AllProps, ThisState> {
     render(): ReactNode {
-        const props: GObject = {...this.props};
-        delete props.data; // tenta di settare l'attributo data con un proxy e fallisce perchè non è stringa
-        console.log('BidirectionalInput rendering', {thiss: this, props:this.props, field: this.props.field, data: this.props.data, propss: props});
+        const data = this.props.data;
+        const otherprops: GObject = {...this.props};
+        delete otherprops.data; // tenta di settare l'attributo data con un proxy e fallisce perchè non è stringa
+        console.log('BidirectionalInput rendering', {thiss: this, props:{...this.props}, field: this.props.field, data: this.props.data, otherprops});
         return (<>
-            <input onChange={(e) => this.props.data[this.props.field] = this.props.setter ? this.props.setter(e.target.value) : e.target.value }
-                   value={this.props.getter ? this.props.getter(this.props.data[this.props.field]) : this.props.data[this.props.field]}
-                   {...props} />
+            <input onChange={(e) => data && (data[this.props.field] = (this.props.setter ? this.props.setter(e.target.value) : e.target.value)) }
+                   value={data ? (this.props.getter ? this.props.getter(data[this.props.field]) : data[this.props.field]) : 'undef'}
+                   {...otherprops} />
         </>); }
 }
 
 class BidirectionalTextArea extends PureComponent<AllProps, ThisState> {
     render(): ReactNode {
+        const data = this.props.data;
+        const otherprops: GObject = {...this.props};
+        delete otherprops.data; // tenta di settare l'attributo data con un proxy e fallisce perchè non è stringa
         return (<>
-            <textarea onChange={(e) => this.props.data[this.props.field] = this.props.setter ? this.props.setter(e.target.value) : e.target.value }
-                      {...this.props} >
-                {this.props.getter ? this.props.getter(this.props.data[this.props.field]) : this.props.data[this.props.field]}
+            <textarea onChange={(e) => data && (data[this.props.field] = (this.props.setter ? this.props.setter(e.target.value) : e.target.value)) }
+                      {...otherprops} >
+                {data && (this.props.getter ? this.props.getter(data[this.props.field]) : data[this.props.field])}
             </textarea>
         </>); }
 }
@@ -61,7 +66,8 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    console.log("ownProps.obj", ownProps.obj, {ownProps});
+    console.log("ownProps.obj", ({state, ownProps:{...ownProps}}));
+    if (!ownProps.obj) return ret;
     let objid: Pointer<DModelElement, 1, 1, LModelElement> = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
     ret.data = LModelElement.wrap(state.idlookup[objid] as DModelElement);
     return ret; }
@@ -87,5 +93,6 @@ export const Textarea = (props: OwnProps, childrens: (string | React.Component)[
 }
 
 
-windoww.Textarea = Textarea;
-windoww.Input = Input;
+if (!windoww.mycomponents) windoww.mycomponents = {};
+windoww.mycomponents.Textarea = BidirectionalTextArea;
+windoww.mycomponents.Input = BidirectionalInput;

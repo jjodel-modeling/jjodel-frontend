@@ -265,6 +265,14 @@ export class U{
     static asString<T>(propKey: unknown, elseReturn: T | null = null): string | null | T { return typeof propKey === 'string' ? propKey : elseReturn; }
     static isString(propKey: unknown): boolean { return typeof propKey === 'string'; }
 
+
+    static cloneObj<T extends object>(o: T): Json<T> {
+        /*o = {...o};
+        delete (o as any)._reactInternals; should be done recursively
+        delete (o as any)._owner;
+        console.log('o', {o});*/
+        return JSON.parse(JSON.stringify(o)); }
+
     static loadScript(path: string, useEval: boolean = false): void {
         const script = document.createElement('script');
         script.src = path;
@@ -272,10 +280,10 @@ export class U{
         Log.eDev(useEval, 'loadScript', 'useEval','useEval todo. potrebbe essere utile per avviare codice fuori dalle funzioni in futuro.');
         document.body.append(script); }
 
-    static ancestorFilter<T extends Element>(selector: string, domelem: T, stopNode?: Element, includeSelf: boolean = true): JQuery<T> {
+    static ancestorFilter<T extends Element>(selector: string, domelem: T, stopNode?: Node, includeSelf: boolean = true): JQuery<T> {
         return $(U.ancestorArray(domelem, stopNode, includeSelf)).filter(selector); }
 
-    static ancestorArray<T extends Element>(domelem: T, stopNode?: Element, includeSelf: boolean = true): Array<T> {
+    static ancestorArray<T extends Element>(domelem: T, stopNode?: Node, includeSelf: boolean = true): Array<T> {
         // [0]=element, [1]=father, [2]=grandfather... [n]=document
         if (domelem === null || domelem === undefined) { return []; }
         const arr = includeSelf ? [domelem] : [];
@@ -1336,13 +1344,6 @@ export class SelectorOutput {
 //         }
 //         return selString; }
 //
-//     static cloneObj<T extends object>(o: T): Json {
-//         // const r: HTMLElement = document.createElement(o.tagName);
-//         // r.innerHTML = o.innerHTML;
-//         // UU.pe( o as HTMLElement !== null, 'non utilizzabile su html');
-//         return JSON.parse(JSON.stringify(o));
-//         // todo: questa funzione non può clonare html. allow cloneObj of circular objects.
-//     }
 //
 //     static cloneObj2<T extends object>(o: T): T {
 //         UU.pe(true, 'todo: dovrebbe fare una deep copy copiando anche le funzioni (cosa che json.stringify non fa).');

@@ -1,13 +1,27 @@
 import * as jsxtt from 'jsx-transform/lib/jsx.js';
 import $ from 'jquery';
 import {ReactNode} from "react";
+
+// true imports for this file (should all be import type
+import type { DocString } from './types';
+
+// import independent generic modules
 import {$s, GraphPoint, GraphSize, IPoint, ISize, Log, Point, Size, U} from "../common/U";
-import {ViewElement} from "../view/viewElement/view";
 export {$s, GraphPoint, GraphSize, IPoint, ISize, Log, Point, Size, U};
 export {Uarr, CSSParser} from "../common/U";
+export {UX} from "../common/UX";
+
+// import types
 // nb: export type è un export "finto" che esiste solo in compilazione per fare capire a typescript i tipi. permette export di alias con nomi diversi (l'export normale no)
-export type {Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv, NotFound, DocString, nbool, nnumber, nstring, Nullable, Pointer, TODO, UnixTimestamp, UObject} from "./types";
-export {RuntimeAccessibleClass, JsType, PointerTargetable, MyError} from "./classes";
+
+export type {Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv, NotFound, DocString, nbool, nnumber, nstring, Nullable, Pointer, TODO, UnixTimestamp, UObject, IsActually, Function, Function2, InOutParam} from "./types";
+export type {GetPath} from './classes';
+export {RuntimeAccessibleClass, JsType, PointerTargetable, MyError, MyProxyHandler, getPath} from "./classes";
+export {windoww} from './types';
+
+
+
+// import domain-specific classes
 export {
     DModelElement,
     DModel,
@@ -41,10 +55,13 @@ export {
     LPackage, LParameter, LReference,
     LStructuralFeature,
     LValue} from "../model/logicWrapper/LModelElement";
+export {User} from "../model/user/User";
 export {Action, CreateElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
 export {ViewElement} from "../view/viewElement/view";
 export {IStore, UserState, ModelStore, ViewPointState} from "../redux/store";
 export {fakeExport, store} from './ExecuteOnRead';
+
+
 
 class JSXT_TYPE{
     fromString(str: string, options?:
@@ -54,7 +71,7 @@ class JSXT_TYPE{
             passUnknownTagsToFactory?:boolean,
             unknownTagsAsString?:boolean,
             arrayChildren?:boolean
-        }):ReactNode { return ''; }
+        }): DocString<ReactNode, 'compiled code as string, like React.CreateElement(...)'> { return ''; }
     fromFile(path: string, options?:
         {   factory: string,
             spreadFn?:Function,
@@ -62,7 +79,7 @@ class JSXT_TYPE{
             passUnknownTagsToFactory?:boolean,
             unknownTagsAsString?:boolean,
             arrayChildren?:boolean
-        }):ReactNode { return ''; }
+        }): DocString<ReactNode, 'compiled code as string, like React.CreateElement(...)'> { return ''; }
     browserifyTransform(...params: any): any {}
     visitor: unknown = null;
 }
@@ -119,7 +136,7 @@ export type FocusEventBase = JQuery.FocusEventBase;
 // todo: continua
 
 
-// window
+// window (NB: most of them should be replaced by RuntimeAccessibleClass)
 let w: any = window;
 w.$ = $;
 w.Log = Log;
@@ -131,3 +148,15 @@ w.Point = Point;
 w.IPoint = IPoint;
 w.GraphPoint = GraphPoint;
 w.$s = $s;
+
+
+
+
+
+/// import components that must save themselves to global "window" to be accessible for user
+export {QA} from "../graph/droppable/droppable";
+export {GraphElement, GraphElementRaw} from "../graph/graphElement/graphElement";
+export {GraphRaw, Graph} from "../graph/graph/graph";
+export {Field} from "../graph/field/Field";
+export {Vertex} from "../graph/vertex/Vertex";
+export {fakeexport} from "../graph/edge/Edge";

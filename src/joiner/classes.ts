@@ -1,4 +1,5 @@
-import {U, Uarr, GObject} from "../joiner";
+import {U, Uarr, GObject, Proxyfied} from "../joiner";
+import {windoww} from "./types";
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
 
 export class RuntimeAccessibleClass {
@@ -11,7 +12,7 @@ export class RuntimeAccessibleClass {
     }
 }
 // todo: problema: per creare un PointerTargetable ho bisogno dell'userid, e devo generarlo prima che venga generato l'initialState... dovrebbe venir servito con la pagina dal server. o passato come navigation props dalla pagina di login
-export abstract class PointerTargetable extends RuntimeAccessibleClass {
+export class PointerTargetable extends RuntimeAccessibleClass {
     private static maxID: number = 0;
     id: string;
     constructor(isUser: boolean = false) {
@@ -108,3 +109,32 @@ export class JsType{
     public static asDate<T>(data: Date | any, fallbackReturn: T): T | Date { return JsType.isDate(data) ? data : fallbackReturn; }
     public static isPrimitive(data: any) { return !JsType.isAnyOfTypes(data, JsType.object, JsType.function, JsType.array); }
 }
+
+export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibleClass implements ProxyHandler<T>{
+    s: string = 'set_';
+    g: string = 'get_';
+    get(target: T, p: string | number | symbol, proxyitself: Proxyfied<T>): boolean { throw new Error('must be overridden'); }
+    set(target: T, p: string | number | symbol, value: any, proxyitself: Proxyfied<T>): boolean { throw new Error('must be overridden'); }
+
+    ownKeys(target: T): ArrayLike<string | symbol>{ return Object.keys(target); }
+}
+
+export type GetPath<T = GObject> = T;
+class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
+    strbuilder: string = '';
+    get(targetObj: T, propKey: keyof T | string, proxyitself: Proxyfied<T>): any {
+        console.log(arguments, {targetObj, propKey, proxyitself});
+        if (propKey === "start") this.strbuilder = '';
+        this.strbuilder += (this.strbuilder ? '' : '.') + propKey;
+        return proxyitself;
+    }
+    set(target: T, p: string | number | symbol, value: any, receiver: any): boolean {
+        const ret: string = this.strbuilder;
+        this.strbuilder = '';
+        return ret as any;
+    }
+}
+export const getPath: GetPath = new Proxy( {}, new GetPathHandler());
+windoww.getpathtest = getPath;
+// todo: testalo con:
+// this.test[1].with.arrays+=1;

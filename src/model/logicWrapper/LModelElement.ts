@@ -20,20 +20,12 @@ import {
     DNamedElement, DOBject, DOperation,
     DPackage, DParameter, DReference, DStructuralFeature,
     DTypedElement, DValue,
-    SetFieldAction, store
+    SetFieldAction, store, Proxyfied
 } from "../../joiner";
 import {IsActually, windoww} from "../../joiner/types";
+import {MyProxyHandler} from "../../joiner/classes";
 
 type NotAConcatenation = null;
-
-abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibleClass implements ProxyHandler<T>{
-    s: string = 'set_';
-    g: string = 'get_';
-    get(target: T, p: string | symbol, receiver: any): boolean { throw new Error('must be overridden'); }
-    set(target: T, p: string | symbol, value: any, receiver: any): boolean { throw new Error('must be overridden'); }
-
-    ownKeys(target: T): ArrayLike<string | symbol>{ return Object.keys(target); }
-}
 
 // todo: questo è l'unico proxyhandler, NON farne altri per sottoclassi di ModellingElement
 export class LModelElementProxyHandler<ME extends DModelElement = DModelElement, LE extends LModelElement = LModelElement> extends MyProxyHandler<ME> {
@@ -49,7 +41,7 @@ export class LModelElementProxyHandler<ME extends DModelElement = DModelElement,
         this.lg = this.l;
     }
 
-    private concatenableHandler(targetObj: ME, propKey: keyof DModelElement | string | symbol, receiverThis: any): NotAConcatenation | any {
+    private concatenableHandler(targetObj: ME, propKey: keyof DModelElement | string | symbol, proxyitself: Proxyfied<ME>): NotAConcatenation | any {
         if (propKey in targetObj)  return null as NotAConcatenation;
         const propKeyStr: null | string = U.asString(propKey, null);
         let _index: number = propKeyStr ? propKeyStr.indexOf('_') : -1;
@@ -58,14 +50,18 @@ export class LModelElementProxyHandler<ME extends DModelElement = DModelElement,
         let isConcatenable = true;
         let ret: any = (propKey as string).split('_').map( (subKey: string) => {
             // se trovo multipli ___ li tratto come spazi aggiuntivi invece che come proprietà '' che ritornano undefined, così posso fare name___surname --> "damiano   di vincenzo"
-            let val: any = subKey === '' ? ' ' : this.get(targetObj, subKey, receiverThis);
+            let val: any = subKey === '' ? ' ' : this.get(targetObj, subKey, proxyitself);
             isConcatenable = isConcatenable && JsType.isPrimitive(val);
             return val;
         });
         return isConcatenable ? ret.join(' ') : ret; }
 
-    public get(targetObj: ME, propKey: keyof DModelElement | string | symbol, receiverThis: any): any {
+    public get(targetObj: ME, propKey: keyof DModelElement | string | symbol, proxyitself: Proxyfied<ME>): any {
         if (propKey === "__raw") return targetObj;
+        switch(propKey){
+            case '__raw': return targetObj;
+            case 'toJSON': return () => targetObj;
+        }
         if (propKey in this.l) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
             if (typeof propKey !== 'symbol' && this.s + propKey in this.lg) return this.lg[this.g + propKey](new LogicContext(this, targetObj));
@@ -82,13 +78,13 @@ export class LModelElementProxyHandler<ME extends DModelElement = DModelElement,
 
         }
         // if property do not exist
-        const concatenationTentative = this.concatenableHandler(targetObj, propKey, receiverThis);
+        const concatenationTentative = this.concatenableHandler(targetObj, propKey, proxyitself);
         if (concatenationTentative !== null) return concatenationTentative;
         Log.exx('property "', (propKey as any), '" do not exist in object of type "' + U.getType(this.l), {logic: this.l, data: targetObj});
         return undefined;
         // todo: credo che con espressioni sui tipi siano tipizzabili tutti i return di proprietà note eccetto quelle ottenute per concatenazione.
     }
-    public set(targetObj: DModelElement, propKey: string | symbol, value: any, receiver: any): boolean {
+    public set(targetObj: ME, propKey: string | symbol, value: any, proxyitself: Proxyfied<ME>): boolean {
         if (propKey in this.l) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
             if (typeof propKey !== 'symbol' && this.s + propKey in this.lg) return this.lg[this.s + propKey](value, new LogicContext(this, targetObj));
