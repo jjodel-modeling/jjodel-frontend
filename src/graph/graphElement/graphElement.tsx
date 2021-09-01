@@ -121,7 +121,7 @@ export class GraphElementRaw<AllProps extends AllPropss, GraphElementState exten
             case GraphElement.name:
             case windoww.mycomponents.Graph.name:
             case windoww.mycomponents.Field.name:
-            case windoww.mycomponents.Vertex.name:
+            case windoww.mycomponents.VertexRaw.name:
                 return React.cloneElement(re, {key: re.props.key || thiss.props.view.id + '_' + thiss.props.data.id, view: re.props.view || thiss.props.view, graphID: thiss.props.graphID});
         }}.bind(this);
 

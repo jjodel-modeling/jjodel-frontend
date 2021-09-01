@@ -134,6 +134,7 @@ class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
         return ret as any;
     }
 }
+
 export const getPath: GetPath = new Proxy( {}, new GetPathHandler());
 windoww.getpathtest = getPath;
 // todo: testalo con:

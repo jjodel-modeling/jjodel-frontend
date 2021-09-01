@@ -11,7 +11,7 @@ import {
     LClass,
     LClassifier,
     LEnumerator, LEnumLiteral, LModel,
-    LModelElement, LObject, LOperation, LPackage, LParameter, LReference, LStructuralFeature, LValue
+    LModelElement, LObject, LOperation, LPackage, LParameter, LReference, LStructuralFeature, LValue, windoww
 } from "../joiner";
 
 

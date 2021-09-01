@@ -12,7 +12,7 @@ import {
     DModelElement,
     PointerTargetable,
     GObject,
-    User, store, SetFieldAction, SetRootFieldAction, GraphElementRaw
+    User, store, SetFieldAction, SetRootFieldAction, GraphElementRaw, Log, getPath
 } from "../../joiner";
 import Overlap from "../../components/forEndUser/Overlap";
 import {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps} from  "../graphElement/sharedTypes/sharedTypes";
@@ -48,14 +48,18 @@ class VertexDragResizeRotateSelect<AllProps extends AllPropss, VertexState exten
     static mapStateToProps(state: IStore, ownProps: VertexOwnProps): VertexReduxStateProps {
         const superret: GraphElementReduxStateProps = GraphElementRaw.mapStateToProps(state, ownProps);
         const ret: VertexReduxStateProps = new VertexReduxStateProps();
+        console.log('Verx mapstate', {ret, superret, state, ownProps});
         ////// begin vertex-specific code (currently none)
-        return {...superret, ...ret};
-    }
+        U.objectMergeInPlace(superret, ret);
+        U.removeEmptyObjectKeys(superret);
+        return superret; }
 
     static mapDispatchToProps(dispatch: Dispatch<any>): GraphElementDispatchProps {
         const superret: GraphElementDispatchProps = GraphElementRaw.mapDispatchToProps(dispatch);
         const ret: GraphElementDispatchProps = new GraphElementDispatchProps();
-        return {...superret, ...ret};
+        U.objectMergeInPlace(superret, ret);
+        U.removeEmptyObjectKeys(superret);
+        return superret;
     }
 
     addToSelection(mpid: Pointer<DModelElement>) {
@@ -72,7 +76,10 @@ class VertexDragResizeRotateSelect<AllProps extends AllPropss, VertexState exten
         this.parentRef = React.createRef();
         const id = new PointerTargetable(false).id;
         VertexDragResizeRotateSelect.idMap[id] = this as any;
-        this.setState({vertexid: id});
+
+        // @ts-ignore in constructor is fine
+        (this.state as any) = {vertexid: id};
+
     }
 
 
@@ -86,18 +93,21 @@ class VertexDragResizeRotateSelect<AllProps extends AllPropss, VertexState exten
         this.clearCurrentUserSelection();
         this.select();
     }
+    private onmousedown0 = (e:React.MouseEvent<HTMLDivElement>): void => {
 
-    private onclick(e: React.MouseEvent<HTMLDivElement>): void {
-        this.onclick0(e);
-        this.props.onclick?.(e);
     }
+
+    private onclick = (e: React.MouseEvent<HTMLDivElement>): void => {
+        this.onclick0(e);
+        this.props.onclick?.(e); }
+
+    private onmousedown = (e: React.MouseEvent<HTMLDivElement>): void => {
+        this.onclick0(e);
+        this.props.onmousedown?.(e); }
 
     private getMpID(): Pointer<DModelElement> {
         return this.props.data.id;
     }
-    private isSelected(byUser?: Pointer<User> & string): boolean { return this.props.view.transient.isSelected[byUser || User.current];}
-    private deselect(): void {}
-
     componentDidMount(): void {
         super.componentDidMount();
         // send redux action to create vertex
@@ -110,6 +120,7 @@ class VertexDragResizeRotateSelect<AllProps extends AllPropss, VertexState exten
         const size: Size | null = this.parentRef.current && Size.of(this.parentRef.current);
         const sizestyle: CSSProperties = {};
         sizestyle.transform = '';
+        console.log('Verx render', {props: this.props, view: this.props.view});
         if (false && this.props.view.scalezoomy) sizestyle.transform += " scaleY(0.?)";
         else sizestyle.height = this.props.view.transient.private.size.h + "px";
         if (false && this.props.view.scalezoomx) sizestyle.transform += " scaleX(0.?)";
@@ -124,7 +135,7 @@ class VertexDragResizeRotateSelect<AllProps extends AllPropss, VertexState exten
         if (this.isSelected()) classes.push("selected");
         return (<>
             <Overlap>
-                <div id={this.state.vertexid} className={classes.join(' ')} ref={this.parentRef} onClick={this.onclick}
+                <div id={this.state.vertexid} className={classes.join(' ')} ref={this.parentRef} onClick={this.onclick} data-userSelecting={Object.keys(this.props.view.transient.isSelected).join(' ')}
                 style={{...this.props.style, ...sizestyle} }>
                     {
                         // this.props.children
@@ -140,15 +151,25 @@ class VertexDragResizeRotateSelect<AllProps extends AllPropss, VertexState exten
 
     }
 
+    private isSelected(byUser?: Pointer<User> & string): boolean { return this.props.view.transient.isSelected[byUser || User.current]; }
+    private deselect(forUser:Pointer<User, 0, 1> = null): void {
+        if (!forUser) forUser = User.current;
+        if (!this.isSelected(forUser)) return;
+        delete this.props.view.transient.isSelected[forUser];
+    }
+
     private select(forUser:Pointer<User, 0, 1> = null): void {
         if (!forUser) forUser = User.current;
-        new SetRootFieldAction('users.' + forUser + ".selection[]", this.state.vertexid);
+        if (this.isSelected(forUser)) return;
+        this.props.view.transient.isSelected[forUser] = true;
+        // new SetRootFieldAction( (getPath as IStore).idlookup[this.], this.state.vertexid);
     }
 }
 
 // private
 class VertexOwnProps extends GraphElementOwnProps {
     onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
     // propsRequestedFromHtmlAsAttributes: string;
 }
 // private
@@ -175,4 +196,5 @@ export const Vertex = DragResizeRotateConnected;
 
 
 if (!windoww.mycomponents) windoww.mycomponents = {};
-windoww.mycomponents.Vertex =  VertexDragResizeRotateSelect;
+windoww.mycomponents.VertexRaw = VertexDragResizeRotateSelect;
+windoww.mycomponents.Vertex = Vertex;

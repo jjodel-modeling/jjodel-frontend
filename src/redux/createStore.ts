@@ -8,3 +8,4 @@ export let store: Store<IStore & StateExt, Action> & IStore = createStore(reduce
 // setTimeout(() =>  { store = createStore(reducer); }, 0);
 let windoww: any = window as any;
 windoww.store = store;
+windoww.s = store.getState;

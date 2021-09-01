@@ -77,6 +77,7 @@ interface LoggerInterface{
 }
 
 export class U{
+
     private static notNullFilter(e: any) { return !!e; };
     static pe(useLog_e: never, ...rest: any): void | never {}
 
@@ -85,6 +86,27 @@ export class U{
     // @ts-ignore
     public static isStrict: boolean = ( function() { return !this; })();
 
+    // merge properties with first found first kept (first parameters have priority on override). only override null|undefined values, not (false|0|'') values
+    static objectMergeInPlace<A extends object, B extends object>(output: A, ...objarr: B[]): void {
+        const out: GObject = output;
+        for (let o of objarr) for (let key in o) {
+            // noinspection BadExpressionStatementJS,JSUnfilteredForInLoop
+            out[key] ?? (out[key] = o[key]);
+        }
+    }
+
+    static removeEmptyObjectKeys(obj: GObject): void{
+        for (let key of Object.keys(obj)) {
+            if (obj[key] === null || obj[key] === undefined) delete obj[key];
+        }
+    }
+
+        // usage example: objectMergeInPlace_conditional(baseobj, (out, key, current) => !out[key] && current[key];
+    static objectMergeInPlace_conditional<A extends object, B extends object>(output: A, condition: (out:A&B, key: string | number, current:B, objarr?: B[], indexOfCurrent?: number) => boolean, ...objarr: B[]): A & B {
+        const out: GObject = output;
+        let i: number = 0;
+        for (let o of objarr) for (let key in o) { if (condition(out as A&B, key, o, objarr, i++)) out[key] = o[key]; }
+        return out as  A & B; }
 
     static getFunctionSignatureFromComments(f: Function): {parameters: {name: string, defaultVal: string | undefined, typedesc: string | null}[], returns: string | undefined, f: Function, fname: string | undefined, isLambda: boolean, signature: string} {
         Log.e(!JsType.isFunction(f), 'getFunctionSignature() parameter must be a function');

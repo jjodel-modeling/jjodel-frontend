@@ -2,7 +2,7 @@ import React, {Dispatch, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
 import {IStore} from "../../redux/store";
 import './graph.scss';
-import {GraphElement} from "../../joiner";
+import {GraphElement, Vertex} from "../../joiner";
 import {ViewElement} from "../../view/viewElement/view";
 import {LModel, LModelElement} from "../../model/logicWrapper/LModelElement";
 import {DModel, DModelElement} from "../../model/dataStructure";
@@ -48,7 +48,7 @@ class GraphsContainerComponent extends PureComponent<AllProps, ThisState>{
                         <GraphElement
                             data={m.id}
                             view={m.currentView} />
-                        <GraphElement
+                        <Vertex
                             data={m.id}
                             view={m.currentView} />
 

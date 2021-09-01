@@ -8,23 +8,32 @@ export class ViewElement{
     usageDeclarations?: string; // example: state
     scalezoomx: boolean = false; // whether to resize the element normally using width-height or resize it using zoom-scale css
     scalezoomy: boolean = false;
-    size: Size = new Size(0, 0, 200, 100);
+    size: Size = defaultSize;
     // not persistent, some not shared. deve essere diverso da utente ad utente perchè dipende dal pan e zoom nel grafo dell'utente attuale.
     // facendo pan su grafo html sposti gli elementi, per simulare uno spostamento del grafo e farlo sembrare illimitato.
-    transient: TransientProperties = new TransientProperties();
+    transient: TransientProperties;
     constructor(jsxString: string, usageDeclarations: string = '', constants: string = '', preRenderFunc: string = '') {
         this.jsxString = jsxString;
         this.usageDeclarations = usageDeclarations;
         this.constants = constants;
         this.preRenderFunc = preRenderFunc;
         this.id = U.getID();
+        this.transient = new TransientProperties();
     }
 }
 class TransientProperties{
     isSelected: Dictionary<DocString<Pointer<User>>, boolean> = {};
-    private: {
-        size: Size
-    } = { size: new Size(0, 0, 200, 100) }
+    private: PrivateTransientProperties;
+    constructor() {
+        this.private = new PrivateTransientProperties();
+    }
+}
+const defaultSize = new Size(0, 0, 200, 200);
+class PrivateTransientProperties{
+    public size: Size
+    constructor(size?: Size) {
+        this.size = size || defaultSize;
+    }
 }
 // shapeless component, receive jsx from redux
 // can access any of the redux state, but will usually access 1-2 var among many,
