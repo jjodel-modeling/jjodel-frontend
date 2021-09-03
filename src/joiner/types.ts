@@ -1,9 +1,4 @@
-import {Log, Size, U, Uarr} from "../common/U";
-import {DModelElement} from "../model/dataStructure";
-import {ViewElement} from "../view/viewElement/view";
-import {Symbol} from "typescript";
-import {LModelElement} from "../model/logicWrapper";
-import {store} from "../redux/createStore";
+export type Class = { new(...args: any[]): any; };
 interface Caller { caller: any; }
 interface Bind { bind: any; }
 interface Apply { apply: any; }
@@ -31,7 +26,7 @@ export type RawObject = { [key: string]: NotFunction; };
 export type Json<T extends GObject = RawObject> = {[key in keyof T]: T[key] extends Function ? never : T[key]; };
 
 // export type Dictionary<K extends keyof any, T> = { [P in K]: T; };
-export type Dictionary<K extends keyof GObject, T> = { [P in K]: T; };
+export type Dictionary<K extends keyof GObject = any, V = any> = { [P in K]: V; };
 export type DocString<T, COMMENT = ''> = string;
 export type NotFound = null;
 export const NotFoundv = null as NotFound;

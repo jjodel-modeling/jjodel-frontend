@@ -1,10 +1,8 @@
 import React, {Dispatch, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
-import type {IStore} from "../../redux/store";
-import type {DModelElement} from "../../model/dataStructure";
-import {LModel, LModelElement} from "../../model/logicWrapper/LModelElement";
-import type {GObject, Pointer} from "../../joiner";
-import {windoww} from "../../joiner/types";
+import type {IStore, GObject, Pointer} from "../../joiner";
+import {windoww, DModelElement, LModelElement} from "../../joiner";
+
 import {U} from "../../joiner";
 // import './bidirectionalinput.scss';
 

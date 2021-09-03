@@ -8,7 +8,7 @@ import {
     DNamedElement,
     DReference,
     Pointer, PointerTargetable, RuntimeAccessibleClass,
-    SetRootFieldAction, TRANSACTION, Dictionary, User, DocString,
+    SetRootFieldAction, TRANSACTION, Dictionary, User, DocString, ViewElement, windoww,
 } from "../joiner";
 
 
@@ -18,7 +18,7 @@ export class IStore extends RuntimeAccessibleClass {
     user: UserState;
     users: Dictionary<DocString<Pointer<User>>, UserState> = {};
     collaborators: UserState[];
-    idlookup: Record<string, GObject> = {};
+    idlookup: Record<string, PointerTargetable> = {};
     constructor(){
         super();
         this.user = new UserState();
@@ -36,7 +36,7 @@ export class IStore extends RuntimeAccessibleClass {
         this.models = [m3.id];
     }
 
-    makeM3Test(fireAction: boolean = true, outElemArray: DModelElement[] = []): DModel {
+    makeM3Test(fireAction: boolean = true, outElemArray: (DModelElement | ViewElement)[] = []): DModel {
         const me: DModelElement = new DClass('ModelElement', true);
         const annotation: DClass = new DClass('Annotation');
         annotation.implements = [me.id];
@@ -65,12 +65,18 @@ export class IStore extends RuntimeAccessibleClass {
         // m3.modellingElements = [me.id, annotation.id, namedElement.id, attribname.id, pkg.id, attriburi.id, classifierref.id, pkgref.id, classe.id];
         // dispatching actions
 
-        outElemArray.push.call(outElemArray, m3, me, annotation, namedElement, attribname, pkg, attriburi, classifierref, pkgref, classe);
+
+        const editinput = "<Input field={'name'} />";
+        let view: ViewElement = new ViewElement('<p><h1>hello1 {this.data.name + (this.data.id)}</h1><i>{JSON.stringify(Object.keys(this))}</i>' + editinput + '</p>');
+
+        outElemArray.push.call(outElemArray, m3, me, annotation, namedElement, attribname, pkg, attriburi, classifierref, pkgref, classe, view);
+        m3._transient.currentView = view.id;
+
         if (fireAction)
             TRANSACTION( () => {
                 let fake: IStore;
                 new SetRootFieldAction('models[]', m3);
-                for (let elem of outElemArray) { DModelElement.persist(elem); }
+                // for (let elem of outElemArray) { DModelElement.persist(elem); }
             });
         return m3;
     }

@@ -1,11 +1,7 @@
 import React, {Dispatch, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
-import {IStore} from "../../redux/store";
 import './graph.scss';
-import {GraphElement, Vertex} from "../../joiner";
-import {ViewElement} from "../../view/viewElement/view";
-import {LModel, LModelElement} from "../../model/logicWrapper/LModelElement";
-import {DModel, DModelElement} from "../../model/dataStructure";
+import {IStore, GraphElement, Vertex, ViewElement, LModelElement, LModel, DModel} from "../../joiner";
 import {QA} from "../droppable/droppable";
 import Overlap from "../../components/forEndUser/Overlap";
 
@@ -44,13 +40,9 @@ class GraphsContainerComponent extends PureComponent<AllProps, ThisState>{
                                 <foreignObject className={"ellipse"} style={{width: '300px'}}/>
                                 <foreignObject className={"point"} />
                             </Overlap>
-                        </svg>*/}
-                        <GraphElement
-                            data={m.id}
-                            view={m.currentView} />
-                        <Vertex
-                            data={m.id}
-                            view={m.currentView} />
+                        </svg>* /}
+                        <GraphElement data={m} />*/}
+                        <Vertex data={m} />
 
                         {/*<QA />*/}
                     </>)

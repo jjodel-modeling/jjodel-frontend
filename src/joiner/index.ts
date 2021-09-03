@@ -14,11 +14,11 @@ export {UX} from "../common/UX";
 // import types
 // nb: export type è un export "finto" che esiste solo in compilazione per fare capire a typescript i tipi. permette export di alias con nomi diversi (l'export normale no)
 
-export type {Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv, NotFound, DocString, nbool, nnumber, nstring, Nullable, Pointer, TODO, UnixTimestamp, UObject, IsActually, Function, Function2, InOutParam} from "./types";
-export type {GetPath} from './classes';
-export {RuntimeAccessibleClass, JsType, PointerTargetable, MyError, MyProxyHandler, getPath} from "./classes";
+export type {Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv, NotFound, DocString, nbool, nnumber, nstring, Nullable, Pointer, TODO, UnixTimestamp, UObject, IsActually, Function, Function2, InOutParam} from "./types";
+export type {GetPath} from './proxy';
 export {windoww} from './types';
-
+export {RuntimeAccessibleClass, JsType, PointerTargetable, MyError} from "./classes";
+export {getPath, MyProxyHandler, LogicContext} from './proxy';
 
 
 // import domain-specific classes
@@ -27,7 +27,7 @@ export {
     DModel,
     DValue,
     DNamedElement,
-    DOBject,
+    DObject,
     DEnumerator,
     DEnumLiteral,
     DAttribute,
@@ -42,7 +42,11 @@ export {
     DTypedElement,
     DAnnotation,
     EJavaObject,
-    DFactory_useless_} from "../model/dataStructure";
+    DFactory_useless_,
+    DModelElementTransientProperties
+} from "../model/dataStructure/modelElement";
+
+
 export {
     LModelElement,
     LAnnotation,
@@ -53,14 +57,15 @@ export {
     LEnumLiteral, LModel,
     LObject, LOperation,
     LPackage, LParameter, LReference,
-    LStructuralFeature,
-    LValue} from "../model/logicWrapper/LModelElement";
+    LStructuralFeature, LDataType, LTypedElement, LNamedElement, TargetableProxyHandler, // DMap, LMap,
+    LValue, LModelElementTransientProperties} from "../model/logicWrapper/LModelElement";
+export {DViewTransientProperties, LViewTransientProperties, DViewPrivateTransientProperties, LViewElement, ViewElement, LViewPrivateTransientProperties} from "../view/viewElement/view";
 export {User} from "../model/user/User";
 export {Action, CreateElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
-export {ViewElement} from "../view/viewElement/view";
 export {IStore, UserState, ModelStore, ViewPointState} from "../redux/store";
+export {Selectors} from "../redux/selectors/selectors";
+export {reducer} from "../redux/reducer/reducer";
 export {fakeExport, store} from './ExecuteOnRead';
-
 
 
 class JSXT_TYPE{

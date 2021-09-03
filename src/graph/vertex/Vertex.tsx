@@ -12,11 +12,21 @@ import {
     DModelElement,
     PointerTargetable,
     GObject,
-    User, store, SetFieldAction, SetRootFieldAction, GraphElementRaw, Log, getPath
+    Selectors,
+    User,
+    store,
+    SetFieldAction,
+    SetRootFieldAction,
+    GraphElementRaw,
+    Log,
+    getPath,
+    windoww,
+    ViewElement,
+    BEGIN,
+    TRANSACTION,
 } from "../../joiner";
 import Overlap from "../../components/forEndUser/Overlap";
 import {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps} from  "../graphElement/sharedTypes/sharedTypes";
-import {windoww} from "../../joiner/types";
 
 // private
 class VertexStatee extends GraphElementStatee {
@@ -50,6 +60,7 @@ class VertexDragResizeRotateSelect<AllProps extends AllPropss, VertexState exten
         const ret: VertexReduxStateProps = new VertexReduxStateProps();
         console.log('Verx mapstate', {ret, superret, state, ownProps});
         ////// begin vertex-specific code (currently none)
+
         U.objectMergeInPlace(superret, ret);
         U.removeEmptyObjectKeys(superret);
         return superret; }
@@ -62,11 +73,16 @@ class VertexDragResizeRotateSelect<AllProps extends AllPropss, VertexState exten
         return superret;
     }
 
-    addToSelection(mpid: Pointer<DModelElement>) {
-        // to do redux on shared data (each user can have a different selection)
-    }
-    static clearSelection(): void {
-
+    static clearSelection(forUser:Pointer<User, 0, 1> = null): void {
+        console.log('CLEAR VERTEX SELECTION');
+        if (!forUser) forUser = User.current;
+        let views = Selectors.getAllViewElements();
+        TRANSACTION( () => {
+            for (let view of views) {
+                // @ts-ignore
+                new SetRootFieldAction(view.id + '.' + (getPath as ViewElement).__transient.isSelected[forUser].$, false);
+            }
+        });
     }
     private readonly parentRef: React.RefObject<HTMLDivElement>;
 
@@ -97,6 +113,9 @@ class VertexDragResizeRotateSelect<AllProps extends AllPropss, VertexState exten
 
     }
 
+    addToSelection(mpid: Pointer<DModelElement>) {
+        // to do redux on shared data (each user can have a different selection)
+    }
     private onclick = (e: React.MouseEvent<HTMLDivElement>): void => {
         this.onclick0(e);
         this.props.onclick?.(e); }
@@ -121,12 +140,13 @@ class VertexDragResizeRotateSelect<AllProps extends AllPropss, VertexState exten
         const sizestyle: CSSProperties = {};
         sizestyle.transform = '';
         console.log('Verx render', {props: this.props, view: this.props.view});
+        const viewTransient = this.props.view.__transient;
         if (false && this.props.view.scalezoomy) sizestyle.transform += " scaleY(0.?)";
-        else sizestyle.height = this.props.view.transient.private.size.h + "px";
+        else sizestyle.height = viewTransient.private.size.h + "px";
         if (false && this.props.view.scalezoomx) sizestyle.transform += " scaleX(0.?)";
-        else sizestyle.width = this.props.view.transient.private.size.w + "px";
-        sizestyle.top = this.props.view.transient.private.size.y + "px";
-        sizestyle.left = this.props.view.transient.private.size.x + "px";
+        else sizestyle.width = viewTransient.private.size.w + "px";
+        sizestyle.top = viewTransient.private.size.y + "px";
+        sizestyle.left = viewTransient.private.size.x + "px";
 
 
         let classes: string[] = this.props.class ? (Array.isArray(this.props.class) ? this.props.class : [this.props.class]) : [];
@@ -135,7 +155,7 @@ class VertexDragResizeRotateSelect<AllProps extends AllPropss, VertexState exten
         if (this.isSelected()) classes.push("selected");
         return (<>
             <Overlap>
-                <div id={this.state.vertexid} className={classes.join(' ')} ref={this.parentRef} onClick={this.onclick} data-userSelecting={Object.keys(this.props.view.transient.isSelected).join(' ')}
+                <div id={this.state.vertexid} className={classes.join(' ')} ref={this.parentRef} onClick={this.onclick} data-userSelecting={Object.keys(viewTransient.isSelected).join(' ')}
                 style={{...this.props.style, ...sizestyle} }>
                     {
                         // this.props.children
@@ -151,17 +171,17 @@ class VertexDragResizeRotateSelect<AllProps extends AllPropss, VertexState exten
 
     }
 
-    private isSelected(byUser?: Pointer<User> & string): boolean { return this.props.view.transient.isSelected[byUser || User.current]; }
+    private isSelected(byUser?: Pointer<User> & string): boolean { return this.props.view.__transient.isSelected[byUser || User.current]; }
     private deselect(forUser:Pointer<User, 0, 1> = null): void {
         if (!forUser) forUser = User.current;
         if (!this.isSelected(forUser)) return;
-        delete this.props.view.transient.isSelected[forUser];
+        delete this.props.view.__transient.isSelected[forUser];
     }
 
     private select(forUser:Pointer<User, 0, 1> = null): void {
         if (!forUser) forUser = User.current;
         if (this.isSelected(forUser)) return;
-        this.props.view.transient.isSelected[forUser] = true;
+        this.props.view.__transient.isSelected[forUser] = true;
         // new SetRootFieldAction( (getPath as IStore).idlookup[this.], this.state.vertexid);
     }
 }

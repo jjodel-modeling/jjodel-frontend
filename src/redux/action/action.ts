@@ -16,9 +16,10 @@ export function ABORT() {
 export function END() {
     hasBegun = false;
     // for (let action of pendingActions) { }
-    store.dispatch(new CompositeAction(pendingActions, true));
+    store.dispatch({...new CompositeAction(pendingActions, true)} as CompositeAction);
     pendingActions = [];
 }
+make class isinstorage e mettici il path studia annotazioni per annotare gli oggett in modo che vengano rwappati prima di farli ritornare se sono annotati
 // minor todo: type as (...args: infer P) => any) ?
 export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...params: Parameters<F>): boolean {
     BEGIN();
@@ -47,6 +48,7 @@ export abstract class Action {
         if (hasBegun) {
             pendingActions.push(this);
         } else {
+            console.log('firing action:', this);
             store.dispatch({...this});
         }
         return true;

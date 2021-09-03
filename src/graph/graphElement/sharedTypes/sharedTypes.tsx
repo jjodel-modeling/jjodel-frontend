@@ -1,5 +1,6 @@
-import {DModelElement, GObject, Json, LModel, LModelElement, Pointer, UserState, ViewElement} from "../../../joiner";
+import {DModelElement, GObject, Json, LModel, LModelElement, Pointer, UserState, ViewElement, LViewElement} from "../../../joiner";
 import React, {CSSProperties, ReactNode} from "react";
+import {} from "../../../view/viewElement/view";
 
 export class GraphElementStatee {/*
     constructor(preRenderFunc: string | undefined, evalContext: GObject, templatefunc: () => React.ReactNode) {
@@ -14,7 +15,7 @@ export class GraphElementStatee {/*
 
 export class GraphElementReduxStateProps {
     // userexample?: UserState; // todo: make and repace with proxy wrapper "User", or make a "cached" global variable synchronized with redux state for easier access
-    view!: ViewElement;
+    view!: LViewElement;
     graphID!: string;
     data!: LModelElement;
     // model?: LModel;
@@ -29,7 +30,7 @@ export class GraphElementDispatchProps {
 
 export class GraphElementOwnProps {
     data!: LModelElement | Pointer<DModelElement>;
-    view!: ViewElement;
+    view?: LViewElement | Pointer<ViewElement, 1, 1, LViewElement>;
 
     // generic props for every component that this component will need to extend joining user-specified values and component-specific built-in values
     style?: CSSProperties;

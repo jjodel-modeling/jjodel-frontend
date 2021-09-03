@@ -3,7 +3,7 @@ export {
     DModel,
     DValue,
     DNamedElement,
-    DOBject,
+    DObject,
     DEnumerator,
     DEnumLiteral,
     DAttribute,
@@ -19,3 +19,4 @@ export {
     DAnnotation,
     EJavaObject,
     DFactory_useless_} from "./modelElement";
+// useless file now

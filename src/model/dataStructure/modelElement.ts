@@ -1,10 +1,17 @@
 import {
-    Log, CreateElementAction, Dictionary, Pointer, PointerTargetable, DocString, ViewElement
+    Log,
+    CreateElementAction,
+    Dictionary,
+    Pointer,
+    PointerTargetable,
+    DocString,
+    ViewElement,
+    RuntimeAccessibleClass,
+    LViewElement,
 } from "../../joiner";
 
 import type {
     LAnnotation,
-    LModelElement,
     LAttribute,
     LClass,
     LClassifier,
@@ -12,13 +19,15 @@ import type {
     LEnumLiteral, LModel,
     LObject, LOperation,
     LPackage, LParameter, LReference,
-    LStructuralFeature, LValue} from '../../joiner';
-import {LDataType, LNamedElement, LTypedElement} from "../logicWrapper/LModelElement";
-import {IsActually} from "../../joiner/types";
+    LStructuralFeature, LValue,
+    LDataType, LModelElementTransientProperties,
+    LNamedElement, LTypedElement, TargetableProxyHandler, IsActually} from '../../joiner';
+import type {Class, LModelElement} from "../../joiner";
 
-const editinput = "<Input field={'name'} />";
+
 export abstract class DModelElement extends PointerTargetable {
-    static logic: IsActually<LModelElement>;
+    static logic: typeof LModelElement;
+
     // ******************** ecore officials inherited ******************** //
     // ******************** ecore officials personal ********************* //
     // eAnnotations: Pointer<DAnnotation, 0, 'N'>[] = [];
@@ -30,15 +39,20 @@ export abstract class DModelElement extends PointerTargetable {
     parent: Pointer<DModelElement, 0, 'N', LModelElement>[] = [];
     constructor() {
         super(false);
+        this._transient = new DModelElementTransientProperties();
     }
 
     static persist(me: DModelElement) { new CreateElementAction(me); }
-    // todo: move it away
-    currentView: ViewElement = new ViewElement('<p><h1>hello1 {this.data.name + (this.data.id)}</h1><i>{JSON.stringify(Object.keys(this))}</i>' + editinput + '</p>')
+    _transient: DModelElementTransientProperties | LModelElementTransientProperties;
+}
+
+export class DModelElementTransientProperties extends RuntimeAccessibleClass {
+    static logic: typeof LModelElementTransientProperties;
+    currentView!: Pointer<ViewElement, 1, 1, LViewElement>;
 }
 
 export class DAnnotation extends DModelElement {
-    static logic: IsActually<LModelElement>;
+    static logic: typeof LModelElement;
     parent: Pointer<DModelElement, 0, 'N', LModelElement>[] = [];
 
     // ******************** ecore officials inherited ******************** //
@@ -51,7 +65,7 @@ export class DAnnotation extends DModelElement {
 }
 
 export abstract class DNamedElement extends DModelElement {
-    static logic: IsActually<LNamedElement>;
+    static logic: typeof LModelElement;
     // ******************** ecore officials inherited ******************** //
     // ******************** ecore officials personal ********************* //
     name: string = '';
@@ -61,11 +75,11 @@ export abstract class DNamedElement extends DModelElement {
 }
 
 export abstract class DFactory_useless_ extends DModelElement {
-    static logic: IsActually<'not exist'>;
+    static logic: IsActually<'not exist yet'>;
     // ******************** ecore officials inherited ******************** //
     // ******************** ecore officials personal ********************* //
     ePackage: Pointer<DPackage, 1, 1, LPackage> = null;
-    abstract create(DClass: DClass): DOBject;
+    abstract create(DClass: DClass): DObject;
     abstract createFromString(eDataType: DDataType, literalValue: string): EJavaObject;
     abstract convertFromString(eDataType: DDataType, instanceValue: EJavaObject): string;
     // ********************** my additions inherited ********************* //
@@ -73,11 +87,11 @@ export abstract class DFactory_useless_ extends DModelElement {
 }
 
 export class EJavaObject{
-    static logic: IsActually<'not exist'>;
+    static logic: IsActually<'not exist yet'>;
 }// ??? EDataType instance?
 
 export abstract class DTypedElement extends DNamedElement {
-    static logic: IsActually<LTypedElement>;
+    static logic: typeof LNamedElement;
     // ******************** ecore officials inherited ******************** //
     // ******************** ecore officials personal ********************* //
     type: Pointer<DClassifier, 0, 1, LClassifier> = null;
@@ -93,14 +107,14 @@ export abstract class DTypedElement extends DNamedElement {
 
 const todoret: any = 'todo';
 export abstract class DClassifier extends DNamedElement {
-    static logic: IsActually<LClassifier>;
+    static logic: typeof LNamedElement;
     parent: Pointer<DPackage, 0, 'N', LPackage>[] = [];
     childrens: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature>[] = [];
     // ******************** ecore officials inherited ******************** //
     // ******************** ecore officials personal ********************* //
     instanceClassName!: string;
     // instanceClass: EJavaClass // ?
-    defaultValue: Pointer<DOBject, 1, 1, LObject> = null;
+    defaultValue: Pointer<DObject, 1, 1, LObject> = null;
     // isInstance(object: EJavaObject): boolean; ?
     // getClassifierID(): number;
     // ********************** my additions inherited ********************* //
@@ -108,7 +122,7 @@ export abstract class DClassifier extends DNamedElement {
 }
 
 export class DPackage extends DNamedElement {
-    static logic: IsActually<LPackage>;
+    static logic: typeof LNamedElement;
     parent: Pointer<DPackage | DModel, 0, 'N', LPackage | LModel>[] = [];
     childrens: Pointer<DPackage | DClass, 0, 'N', LPackage | LClass>[] = [];
 
@@ -128,25 +142,25 @@ export class DPackage extends DNamedElement {
 }
 
 export class DOperation extends DTypedElement {
-    static logic: IsActually<LOperation>;
+    static logic: typeof LTypedElement;
     parent: Pointer<DClass, 0, 'N', LClass>[] = [];
     exceptions: Pointer<DClassifier, 0, 'N', LClassifier>[] = [];
     parameters: Pointer<DParameter, 0, 'N', LParameter>[] = [];
 }
 export class DParameter extends DTypedElement {
-    static logic: IsActually<LParameter>;
+    static logic: typeof LTypedElement;
     parent: Pointer<DOperation, 0, 'N', LOperation>[] = [];
 }
 
 export class DClass extends DClassifier {
-    static logic: IsActually<LClass>;
+    static logic: typeof LClassifier;
     isSuperTypeOf(someClass: DClassifier): boolean { return todoret; }
     getEstructuralFeatureByID(featureID: number): DStructuralFeature { return todoret; }
     getEstructuralFeature(featureName: string): DStructuralFeature { return todoret; }
     abstract: boolean = false;
     interface: boolean = false;
     parent: Pointer<DPackage, 0, 'N', LPackage>[] = [];
-    instances: Pointer<DOBject, 0, 'N', LObject>[] = [];
+    instances: Pointer<DObject, 0, 'N', LObject>[] = [];
     operations: Pointer<DOperation, 0, 'N', LOperation>[] = [];
     features: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature>[] = [];
     references: Pointer<DReference, 0, 'N', LReference>[] = [];
@@ -177,14 +191,14 @@ export class DClass extends DClassifier {
 }
 
 export class DDataType extends DClassifier {
-    static logic: IsActually<LDataType>;
+    static logic: typeof LClassifier;
     parent: Pointer<DPackage, 0, 'N', LPackage>[] = [];
     serializable: boolean = true;
     usedBy: Pointer<DAttribute, 0, 'N', LAttribute>[] = [];
 }
 
 export class DStructuralFeature extends DTypedElement {
-    static logic: IsActually<LStructuralFeature>;
+    static logic: typeof LTypedElement;
     parent: Pointer<DClass, 0, 'N', LClass>[] = [];
     instances: Pointer<DValue, 0, 'N', LValue>[] = [];
 
@@ -201,7 +215,7 @@ export class DStructuralFeature extends DTypedElement {
 }
 
 export class DReference extends DStructuralFeature {
-    static logic: IsActually<LReference>;
+    static logic: typeof LStructuralFeature;
     parent: Pointer<DClass, 0, 'N', LClass>[] = [];
     instances: Pointer<DValue, 0, 'N', LValue>[] = [];
     containment: boolean = true;
@@ -211,38 +225,38 @@ export class DReference extends DStructuralFeature {
 }
 
 export class DAttribute extends DStructuralFeature {
-    static logic: IsActually<LAttribute>;
+    static logic: typeof LStructuralFeature;
     parent: Pointer<DClass, 0, 'N', LClass>[] = [];
     isID: boolean = false; // ? exist in ecore as "iD" ?
     instances: Pointer<DValue, 0, 'N', LValue>[] = [];
 }
 
 export class DEnumLiteral extends DNamedElement {
-    static logic: IsActually<LEnumLiteral>;
+    static logic: typeof LNamedElement;
     parent: Pointer<DEnumerator, 0, 'N', LEnumerator>[] = [];
     value: number = 0;
 }
 
 export class DEnumerator extends DDataType {
-    static logic: IsActually<LEnumerator>;
+    static logic: typeof LDataType;
     parent: Pointer<DPackage, 0, 'N'>[] = [];
     childrens: Pointer<DEnumLiteral, 0, 'N', LEnumLiteral>[] = [];
 }
 
-export class DOBject extends DNamedElement { // m1 class instance
-    static logic: IsActually<LObject>;
+export class DObject extends DNamedElement { // m1 class instance
+    static logic: typeof LNamedElement;
     parent: Pointer<DModel, 0, 'N'>[] = [];
     instanceof: Pointer<DClass, 0, 1>[] = [];
 }
 
 export class DValue extends DModelElement { // m1 value (attribute | reference)
-    static logic: IsActually<LValue>;
-    parent: Pointer<DOBject, 0, 'N', LObject>[] = [];
+    static logic: typeof LModelElement;
+    parent: Pointer<DObject, 0, 'N', LObject>[] = [];
     instanceof: Pointer<DStructuralFeature, 0, 1, LStructuralFeature>[] = [];
 }
 
 export class DModel extends DNamedElement {
-    static logic: IsActually<LModel>;
+    static logic: typeof LNamedElement;
     packages:  Pointer<DPackage, 0, 'N', LPackage>[] = [];
 
     // ******************** ecore officials inherited ******************** //

@@ -1,23 +1,32 @@
-import {U, Uarr, GObject, Proxyfied} from "../joiner";
-import {windoww} from "./types";
+import {U, Uarr, GObject, Proxyfied, Pointer, store, TargetableProxyHandler, ViewElement, Log, User} from "../joiner";
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
 
 export class RuntimeAccessibleClass {
+    static wrap<D extends RuntimeAccessibleClass, L extends D>(data: D | Pointer<ViewElement>, baseObjInLookup?: PointerTargetable, path: string = ''): L{
+        if (!data || (data as any).__isProxy) return data as any;
+        if (typeof data === 'string') {
+            data = store.getState().idlookup[data] as unknown as D;
+            if (!data) { return Log.exx('Cannot wrap:', {data, baseObjInLookup, path}); }
+        }
+        if (!data) return data;
+        console.log('ProxyWrapping:', {data, baseObjInLookup, path});
+        return new Proxy(data, new TargetableProxyHandler(data, baseObjInLookup, path));
+    }
+
     className: string;
     constructor() {
-        console.log('RuntimeAccessibleClass', this.constructor);
         this.className = this.constructor.name;
         (window as any)[this.constructor.name] = this.constructor;
-
     }
 }
 // todo: problema: per creare un PointerTargetable ho bisogno dell'userid, e devo generarlo prima che venga generato l'initialState... dovrebbe venir servito con la pagina dal server. o passato come navigation props dalla pagina di login
 export class PointerTargetable extends RuntimeAccessibleClass {
     private static maxID: number = 0;
+
     id: string;
     constructor(isUser: boolean = false) {
         super();
-        const userid = 'uniqueuseridtodo';
+        const userid = User.current;
         this.id = (isUser ? '' : userid + "_") + PointerTargetable.maxID++ + "_" + new Date().getTime();
         // todo store.dispatch(new IdLinkAction(this));
     }
@@ -109,33 +118,3 @@ export class JsType{
     public static asDate<T>(data: Date | any, fallbackReturn: T): T | Date { return JsType.isDate(data) ? data : fallbackReturn; }
     public static isPrimitive(data: any) { return !JsType.isAnyOfTypes(data, JsType.object, JsType.function, JsType.array); }
 }
-
-export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibleClass implements ProxyHandler<T>{
-    s: string = 'set_';
-    g: string = 'get_';
-    get(target: T, p: string | number | symbol, proxyitself: Proxyfied<T>): boolean { throw new Error('must be overridden'); }
-    set(target: T, p: string | number | symbol, value: any, proxyitself: Proxyfied<T>): boolean { throw new Error('must be overridden'); }
-
-    ownKeys(target: T): ArrayLike<string | symbol>{ return Object.keys(target); }
-}
-
-export type GetPath<T = GObject> = T;
-class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
-    strbuilder: string = '';
-    get(targetObj: T, propKey: keyof T | string, proxyitself: Proxyfied<T>): any {
-        console.log(arguments, {targetObj, propKey, proxyitself});
-        if (propKey === "start") this.strbuilder = '';
-        this.strbuilder += (this.strbuilder ? '' : '.') + propKey;
-        return proxyitself;
-    }
-    set(target: T, p: string | number | symbol, value: any, receiver: any): boolean {
-        const ret: string = this.strbuilder;
-        this.strbuilder = '';
-        return ret as any;
-    }
-}
-
-export const getPath: GetPath = new Proxy( {}, new GetPathHandler());
-windoww.getpathtest = getPath;
-// todo: testalo con:
-// this.test[1].with.arrays+=1;

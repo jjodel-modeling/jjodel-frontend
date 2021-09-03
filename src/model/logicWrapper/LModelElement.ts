@@ -13,35 +13,54 @@ import {
     Dictionary,
     RuntimeAccessibleClass,
     PointerTargetable,
-    DAnnotation, DAttribute,
+    DAnnotation,
+    DAttribute,
     DClass,
-    DClassifier, DDataType, DEnumerator, DEnumLiteral,
+    DClassifier,
+    DDataType,
+    DEnumerator,
+    DEnumLiteral,
     DModel,
-    DNamedElement, DOBject, DOperation,
-    DPackage, DParameter, DReference, DStructuralFeature,
-    DTypedElement, DValue,
-    SetFieldAction, store, Proxyfied
+    DNamedElement,
+    DObject,
+    DOperation,
+    DPackage,
+    DParameter,
+    DReference,
+    DStructuralFeature,
+    DTypedElement,
+    DValue,
+    SetFieldAction,
+    store,
+    Proxyfied,
+    MyProxyHandler,
+    IsActually,
+    windoww,
+    LViewElement,
+    DModelElementTransientProperties,
+    LogicContext, getPath, DViewTransientProperties, SetRootFieldAction
 } from "../../joiner";
-import {IsActually, windoww} from "../../joiner/types";
-import {MyProxyHandler} from "../../joiner/classes";
 
 type NotAConcatenation = null;
 
 // todo: questo è l'unico proxyhandler, NON farne altri per sottoclassi di ModellingElement
-export class LModelElementProxyHandler<ME extends DModelElement = DModelElement, LE extends LModelElement = LModelElement> extends MyProxyHandler<ME> {
+export class TargetableProxyHandler<ME extends RuntimeAccessibleClass = DModelElement, LE extends RuntimeAccessibleClass = LModelElement> extends MyProxyHandler<ME> {
 // permette di fare cose tipo: user.name_surname che ritorna la concatenazione di nome e cognome anche se il campo name_surname non esiste.
-    lg: LModelElement & GObject; // to disable type check easily and access 'set_' + varname dynamically
-    l: LModelElement;
-    d: DModelElement;
-    constructor(d: DModelElement, l?: LModelElement) {
+    lg: LE & GObject; // to disable type check easily and access 'set_' + varname dynamically
+    l: LE;
+    d: ME;
+    constructor(d: ME, public baseObjInLookup?: PointerTargetable, public additionalPath: string = '', l?: LE) {
         super();
         this.d = d;
-        if (!l) { l = windoww[d.className].logic.singleton; }
-        this.l = l as LModelElement;
+        if (!l) {
+            l = windoww[d.className]?.logic?.singleton;
+            Log.exDev(!l, 'Trying to wrap class without singleton or logic mapped', { object: d, clas: windoww[d.className], logic: windoww[d.className]?.logic, singleton: windoww[d.className]?.logic?.singleton })
+        }
+        this.l = l as LE;
         this.lg = this.l;
     }
 
-    private concatenableHandler(targetObj: ME, propKey: keyof DModelElement | string | symbol, proxyitself: Proxyfied<ME>): NotAConcatenation | any {
+    private concatenableHandler(targetObj: ME, propKey: number | string | symbol, proxyitself: Proxyfied<ME>): NotAConcatenation | any {
         if (propKey in targetObj)  return null as NotAConcatenation;
         const propKeyStr: null | string = U.asString(propKey, null);
         let _index: number = propKeyStr ? propKeyStr.indexOf('_') : -1;
@@ -56,31 +75,43 @@ export class LModelElementProxyHandler<ME extends DModelElement = DModelElement,
         });
         return isConcatenable ? ret.join(' ') : ret; }
 
-    public get(targetObj: ME, propKey: keyof DModelElement | string | symbol, proxyitself: Proxyfied<ME>): any {
+    public get(targetObj: ME, propKey: string | symbol, proxyitself: Proxyfied<ME>): any {
+        let ret;
+        let isError = false;
+        console.error('_proxy get PRE:', {targetObj, propKey, proxyitself});
+        try { ret = this.get0(targetObj, propKey, proxyitself); } catch(e) { ret = e; isError = true;}
+
+        if (isError) throw ret;
+        console.error('_proxy get POST:', {targetObj, propKey, ret});
+        return ret;
+    }
+
+    public get0(targetObj: ME, propKey: string | symbol, proxyitself: Proxyfied<ME>): any {
         if (propKey === "__raw") return targetObj;
         switch(propKey){
             case '__raw': return targetObj;
             case 'toJSON': return () => targetObj;
+            case '__isProxy': return true;
         }
         if (propKey in this.l) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
-            if (typeof propKey !== 'symbol' && this.s + propKey in this.lg) return this.lg[this.g + propKey](new LogicContext(this, targetObj));
+            if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) return this.lg[this.g + propKey](new LogicContext<this, ME>(this, targetObj,));
             // se esiste la proprietà ma non esiste il setter, che fare? do errore.
             // Log.eDevv("dev error: property exist but getter does not: ", propKey, this);
-            // @ts-ignore
-            return this.lg[propKey];
+            // console.error('proxy GET direct match', {targetObj, propKey, ret: this.d[propKey as keyof ME]});
+            // console.error('proxy GET direct match', {l:this.l});
+            return this.d[propKey as keyof ME];
         }
         if (typeof propKey === "symbol") {
             switch(String(propKey)){
                 default: Log.exDevv('unexpected symbol:', propKey); break;
                 case "Symbol(Symbol.toPrimitive)": return this.lg[propKey as any] || (targetObj as any)[propKey] || typeof targetObj;
             }
-
         }
         // if property do not exist
         const concatenationTentative = this.concatenableHandler(targetObj, propKey, proxyitself);
         if (concatenationTentative !== null) return concatenationTentative;
-        Log.exx('property "', (propKey as any), '" do not exist in object of type "' + U.getType(this.l), {logic: this.l, data: targetObj});
+        Log.exx('GET property "', (propKey as any), '" do not exist in object of type "' + U.getType(this.l), {logic: this.l, data: targetObj});
         return undefined;
         // todo: credo che con espressioni sui tipi siano tipizzabili tutti i return di proprietà note eccetto quelle ottenute per concatenazione.
     }
@@ -92,7 +123,7 @@ export class LModelElementProxyHandler<ME extends DModelElement = DModelElement,
             Log.eDevv("dev error: property exist but setter does not: ", propKey, this);
         }
         // if property do not exist
-        Log.exx('property "' + (propKey as any) + '" do not exist in object of type "' + U.getType(this.l));
+        Log.exx('SET property "' + (propKey as any) + '" do not exist in object of type "' + U.getType(this.l));
         return false; }
         /*      problema: ogni oggetto deve avere multipli puntatori, quando ne modifico uno devo modificarli tutti, come tengo traccia?
                 ipotesi 1: lo memorizzo in un solo posto (store.idlookup) e uso Pointer<type, lb, ub> che è una stringa che simula un puntatore
@@ -108,18 +139,37 @@ export class LModelElementProxyHandler<ME extends DModelElement = DModelElement,
     apply(target: DModelElement, thisArg: any, argArray: any[]): any {
         // will i ever use it? dovrei pasare una funzione invece di una classe, quindi in questo caso credo wrappi solo il costruttore
     }*/
+    static getMap(data: Dictionary, logicContext: LogicContext<TargetableProxyHandler<RuntimeAccessibleClass>, RuntimeAccessibleClass>, path: string): Proxyfied<Dictionary> {
+        if (!data || (data as any).__isProxy) return data as any;
+        console.error('GETMAP', {data, logicContext, path});
+        return new Proxy(data, new MapProxyHandler(data, logicContext.proxy.baseObjInLookup, path));
+    }
 }
 
-class LogicContext<P extends MyProxyHandler<D>, D extends DModelElement> extends RuntimeAccessibleClass{
-    constructor(public proxy: P, public data: D) { super(); }
-/*
-    saveToRedux(propkey: "keyof data" | string, val: "typeof data[path]" | any): void { // todo: ask non stackoverflow
-        // todo, put data in redux store, path is "obj1.obj2.obj3..." might replace it with a path funciton that return the foremost nested object container
-        if (!propkey) {
-            // todo: set whole object instead of a property
-        }
-    }*/
+export class MapProxyHandler extends MyProxyHandler<Dictionary> {
+    constructor(public d: Dictionary, public baseObjInLookup?: PointerTargetable, public additionalPath: string = '') { super(); }
+
+    get(target: Dictionary, key: string | number | symbol, proxyitself: Proxyfied<Dictionary>): any {
+        //if (!(key in target)) { // Log.exx('property not found in dictionary', {target, key, thiss:this, proxyitself}); return undefined; }
+        return target[key as string]; }
+
+    set(target: Dictionary, key: string | number | symbol, value: any, proxyitself: Proxyfied<Dictionary>): boolean {
+        if (typeof key === "symbol") { Log.exx('cannot set a symbol in dictionary', {target, key, value, proxyitself}); return false; }
+        new SetRootFieldAction(this.additionalPath + '.' + key, value).fire();
+        return true;
+    }
 }
+/*
+export class DMap extends RuntimeAccessibleClass { // useless now
+    static logic: typeof LViewElement;
+
+}
+export class LMap extends DMap{ // useless now
+    static structure: typeof DMap;
+    static singleton: LMap;
+}*/
+
+
 /*
 export class LNamedElementProxyHandler extends MyProxyHandler<DNamedElement> {
     // nb: If the set() method returns false, and the assignment happened in strict-mode code, a TypeError will be thrown. https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/Proxy/set
@@ -141,11 +191,23 @@ export class LNamedElementProxyHandler extends MyProxyHandler<DNamedElement> {
 
 
 type typeOfClassComeLofaccio = any; // typeof Class non funziona come return type
+
+export class LModelElementTransientProperties extends RuntimeAccessibleClass {
+    static structure: DModelElementTransientProperties;
+    static singleton: LModelElementTransientProperties;
+    currentView!: LViewElement;
+
+    get_currentView(context: LogicContext<MyProxyHandler<DModelElementTransientProperties>, DModelElementTransientProperties>): LViewElement {
+        console.error('getCurrentView', context.data);
+        return LViewElement.wrap(context.data.currentView);
+    }
+}
+
 export class LModelElement extends DModelElement {
     static singleton: IsActually<LModelElement>;
     // static proxyHandler: LModelElementProxyHandler = new LModelElementProxyHandler(LModelElement.singleton);
     // [key: string]: any; // uncomment to allow custom properties typed with any while keeping typed existing ones
-
+/*
     public static init(): void {
         DAnnotation.logic = LAnnotation;
         DModelElement.logic = LModelElement;
@@ -155,7 +217,7 @@ export class LModelElement extends DModelElement {
         DEnumerator.logic = LEnumerator;
         DEnumLiteral.logic = LEnumLiteral;
         DModel.logic = LModel;
-        DOBject.logic = LObject;
+        DObject.logic = LObject;
         DOperation.logic = LOperation;
         DPackage.logic = LPackage;
         DParameter.logic = LParameter;
@@ -178,15 +240,11 @@ export class LModelElement extends DModelElement {
         LValue.singleton = new LValue();
         LModel.singleton = new LModel();
         LObject.singleton = new LObject();
-    }
-    static getLclass<D extends DModelElement, L extends typeof LModelElement>(data: DModelElement): typeof LModelElement {
+    }*/
+    /*static getLclass<D extends DModelElement, L extends typeof LModelElement>(data: DModelElement): typeof LModelElement {
         const l: typeof LModelElement = LModelElement;
         return (data.constructor as typeof DModelElement).logic.singleton
-    }
-    public static wrap<T extends LModelElement>(data: DModelElement): T{
-        if (!data) return data;
-        return new Proxy(data, new LModelElementProxyHandler(data)) as T;
-    }
+    }*/
 
     static ResolvePointer<T extends GObject = DModelElement, LB=number, UB=number, RET extends GObject = LModelElement>(ptr: Pointer<T, LB, UB, RET>): RET | null {
         if (!ptr) return null;
@@ -201,33 +259,48 @@ export class LModelElement extends DModelElement {
     private resolvePointer<T extends GObject = DModelElement, LB=number, UB=number, RET extends GObject = LModelElement>(ptr: Pointer<T, LB, UB, RET>): RET | null { return LModelElement.ResolvePointer(ptr); }
     private resolvePointers<T extends GObject = DModelElement, LB=number, UB=number, RET extends GObject = LModelElement>(ptr: Pointer<T, LB, UB, RET>[]): (RET | null)[] { return LModelElement.ResolvePointers(ptr); }
 
+
+    constructor(){
+        super();
+        this._transient = new LModelElementTransientProperties();
+    }
+
+    _transient!: LModelElementTransientProperties;
+
+    get__transient(context: LogicContext<MyProxyHandler<DModelElement>, DModelElement>): LModelElementTransientProperties {
+        console.error('get me transient');
+
+        // @ts-ignore for $ at end of getpath
+        return RuntimeAccessibleClass.wrap(context.data._transient, context.data, (getPath as LModelElement)._transient.$);
+    }
+
     // todo: per ogni field creo getter e setter che vengono chiamati dal proxy
     get_id(context: LogicContext<MyProxyHandler<this>, this>): string { return context.data.id; }
     set_id(): boolean { return Log.exx('id is read-only', this); }
 
-    add_parent(val: Pointer<DAnnotation> | LModelElement, logicContext: LogicContext<LModelElementProxyHandler, DNamedElement>): boolean {
+    add_parent(val: Pointer<DAnnotation> | LModelElement, logicContext: LogicContext<TargetableProxyHandler, DNamedElement>): boolean {
         return new SetFieldAction(logicContext.data, 'parent[]', val).fire();
     }
-    remove_parent(logicContext: LogicContext<LModelElementProxyHandler, DNamedElement>): boolean {
+    remove_parent(logicContext: LogicContext<TargetableProxyHandler, DNamedElement>): boolean {
         return new SetFieldAction(logicContext.data, 'parent', []).fire();}
     get_parent(context: LogicContext<MyProxyHandler<LModelElement>, LModelElement>): LModelElement[] {
         return U.arrayFilterNull(this.resolvePointers<DModelElement>(context.data.parent));
     }
-    set_parent(val: Pointer<DAnnotation> | LModelElement[], logicContext: LogicContext<LModelElementProxyHandler, DNamedElement>): boolean {
+    set_parent(val: Pointer<DAnnotation> | LModelElement[], logicContext: LogicContext<TargetableProxyHandler, DNamedElement>): boolean {
         return new SetFieldAction(logicContext.data, 'parent', val).fire();
     }
 
     // todo: cerca se puoi fare override del += e -=, altrimenti posso chiamarlo con add_annotation = val e remove_annotation = val
-    add_annotation(val: Pointer<DAnnotation> | LAnnotation, logicContext: LogicContext<LModelElementProxyHandler, DNamedElement>): boolean {
+    add_annotation(val: Pointer<DAnnotation> | LAnnotation, logicContext: LogicContext<TargetableProxyHandler, DNamedElement>): boolean {
         return true;
     }
-    remove_annotation(val: Pointer<DAnnotation> | LAnnotation, logicContext: LogicContext<LModelElementProxyHandler, DNamedElement>): boolean {
+    remove_annotation(val: Pointer<DAnnotation> | LAnnotation, logicContext: LogicContext<TargetableProxyHandler, DNamedElement>): boolean {
         return true;
     }
     get_annotations(context: LogicContext<MyProxyHandler<this>, this>): (LAnnotation | null)[] {
         return this.resolvePointers(context.data.annotations);
     }
-    set_annotations(val: Pointer<DAnnotation>[] | LAnnotation[], logicContext: LogicContext<LModelElementProxyHandler, DNamedElement>): boolean {
+    set_annotations(val: Pointer<DAnnotation>[] | LAnnotation[], logicContext: LogicContext<TargetableProxyHandler, DNamedElement>): boolean {
         if (!Array.isArray(val)) val = [val];
         // for (const v of val) { if ()}
         // todo: un oggetto proxy DAnnotation che si comporta come LAnnotation come faccio a far ritornare instanceof = true? devo cambiare il getter del __proto__?
@@ -255,7 +328,8 @@ export class LAnnotation extends Mixin(DAnnotation, LModelElement) {
 }
 
 export class LNamedElement extends Mixin(DNamedElement, LModelElement) {
-    static singleton: IsActually<LNamedElement>;
+    static structure: typeof DNamedElement;
+    static singleton: LNamedElement;
     // private static proxyHandler: DNamedElementProxyHandler = new DNamedElementProxyHandler();
     // [key: string]: any; // uncomment to allow custom properties typed with any while keeping typed existing ones
     // todo: per ogni field creo getter e setter che vengono chiamati dal proxy
@@ -274,22 +348,26 @@ export class LNamedElement extends Mixin(DNamedElement, LModelElement) {
 }
 
 export class LTypedElement extends Mixin(DTypedElement, LNamedElement) {
-    static singleton: IsActually<LTypedElement>;
+    static structure: typeof DTypedElement;
+    static singleton: LTypedElement;
+
     get_ordered(context: LogicContext<MyProxyHandler<this>, this>): boolean {
         return context.data.ordered; }
-    set_ordered(val: boolean, logicContext: LogicContext<LModelElementProxyHandler, this>): boolean {
+    set_ordered(val: boolean, logicContext: LogicContext<TargetableProxyHandler, this>): boolean {
         new SetFieldAction(logicContext.data, 'ordered', !!(val as unknown));
         return true; }
     get_unique(context: LogicContext<MyProxyHandler<this>, this>): boolean {
         return context.data.unique; }
-    set_unique(val: boolean, logicContext: LogicContext<LModelElementProxyHandler, this>): boolean {
+    set_unique(val: boolean, logicContext: LogicContext<TargetableProxyHandler, this>): boolean {
         new SetFieldAction(logicContext.data, 'unique', !!(val as unknown));
         return true; }
 }
 
 
 export class LClassifier extends Mixin(DClassifier, LNamedElement) {
-    static singleton: IsActually<LClassifier>;
+    static structure: typeof DClassifier;
+    static singleton: LClassifier;
+
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
@@ -299,12 +377,12 @@ export class LClassifier extends Mixin(DClassifier, LNamedElement) {
 
     get_ordered(context: LogicContext<MyProxyHandler<LModelElement>, LModelElement>): boolean {
         return this.ordered; }
-    set_ordered(val: boolean, logicContext: LogicContext<LModelElementProxyHandler, DNamedElement>): boolean {
+    set_ordered(val: boolean, logicContext: LogicContext<TargetableProxyHandler, DNamedElement>): boolean {
         new SetFieldAction(logicContext.data, 'ordered', !!(val as unknown));
         return true; }
     get_unique(context: LogicContext<MyProxyHandler<LModelElement>, LModelElement>): boolean {
         return this.unique; }
-    set_unique(val: boolean, logicContext: LogicContext<LModelElementProxyHandler, DNamedElement>): boolean {
+    set_unique(val: boolean, logicContext: LogicContext<TargetableProxyHandler, DNamedElement>): boolean {
         new SetFieldAction(logicContext.data, 'unique', !!(val as unknown));
         return true; }
 }
@@ -312,42 +390,55 @@ export class LClassifier extends Mixin(DClassifier, LNamedElement) {
 
 
 export class LPackage extends Mixin(DPackage, LNamedElement) {
-    static singleton: IsActually<LPackage>;
+    static structure: typeof DPackage;
+    static singleton: LPackage;
 }
 
 export class LOperation extends Mixin(DOperation, LTypedElement) {
-    static singleton: IsActually<LOperation>;
+    static structure: typeof DOperation;
+    static singleton: LOperation;
 }
 export class LParameter extends Mixin(DParameter, LTypedElement) {
-    static singleton: IsActually<LParameter>;
+    static structure: typeof DParameter;
+    static singleton: LParameter;
 }
 export class LClass extends Mixin(DClass, LClassifier) {
-    static singleton: IsActually<LClass>;
+    static structure: typeof DClass;
+    static singleton: LClass;
 }
 export class LDataType extends Mixin(DDataType, LClassifier) {
-    static singleton: IsActually<LDataType>;
+    static structure: typeof DDataType;
+    static singleton: LDataType;
 }
 export class LStructuralFeature extends Mixin(DStructuralFeature, LTypedElement) {
-    static singleton: IsActually<LStructuralFeature>;
+    static structure: typeof DStructuralFeature;
+    static singleton: LStructuralFeature;
 }
 export class LReference extends Mixin(DReference, LStructuralFeature) {
-    static singleton: IsActually<LReference>;
+    static structure: typeof DReference;
+    static singleton: LReference;
 }
 export class LAttribute extends Mixin(DAttribute, LStructuralFeature) {
-    static singleton: IsActually<LAttribute>;
+    static structure: typeof DAttribute;
+    static singleton: LAttribute;
 }
 export class LEnumLiteral extends Mixin(DEnumLiteral, LNamedElement) {
-    static singleton: IsActually<LEnumLiteral>;
+    static structure: typeof DEnumLiteral;
+    static singleton: LEnumLiteral;
 }
 export class LEnumerator extends Mixin(DEnumerator, LDataType) {
-    static singleton: IsActually<LEnumerator>;
+    static structure: typeof DEnumerator
+    static singleton: LEnumerator;
 }
-export class LObject extends Mixin(DOBject, LNamedElement) {
-    static singleton: IsActually<LObject>;
+export class LObject extends Mixin(DObject, LNamedElement) {
+    static structure: typeof DObject;
+    static singleton: LObject;
 }
 export class LValue extends Mixin(DValue, LModelElement) {
-    static singleton: IsActually<LValue>;
+    static structure: typeof DValue;
+    static singleton: LValue;
 }
 export class LModel extends Mixin(DModel, LNamedElement) {
-    static singleton: IsActually<LModel>;
+    static structure: typeof DModel;
+    static singleton: LModel;
 }

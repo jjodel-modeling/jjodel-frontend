@@ -17,7 +17,7 @@ import {
     LModel,
     ViewElement,
     DocString, LModelElement, DModelElement, Log, Pointer, DModel,
-    windoww, InOutParam
+    windoww, InOutParam, LViewElement
 } from "../../joiner";
 import {Input, Textarea} from "../../components/forEndUser/bidirectionalInput";
 import {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps} from "./sharedTypes/sharedTypes";
@@ -38,16 +38,16 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
     // to delete, i will get it from redux props instead of asking them with a func
     //if (!jsxString) { this.setState({template: this.getDefaultTemplate()}); return; }
     // sintassi: '||' + anything + (opzionale: '|' + anything)*N_Volte + '||' + jsx oppure direttamente: jsx
-    const view: ViewElement = stateProps.data.currentView;
-    /*todo: sposta tutto lo stato non-redux in stato redux e memoizza
-    learn samuro & zeratul*/
+    const view: LViewElement = stateProps.data._transient.currentView;
     // eslint-disable-next-line no-mixed-operators
-    const evalContext = makeEvalContext({...ownProps, ...stateProps}, view);
+    let allProps: AllPropss = {...ownProps, ...stateProps} as AllPropss;
+    const evalContext = makeEvalContext(allProps, view);
     // const evalContextOld = U.evalInContext(this, constants);
     // this.setState({evalContext});
     //console.error({jsx:view.jsxString, view});
 
     // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
+    console.error('tojsx', {view, jsx:view.jsxString});
     let jsxCodeString: DocString<ReactNode> = JSXT.fromString(view.jsxString, {factory: 'React.createElement'});
     const jsxparsedfunc = U.evalInContextAndScope<() => ReactNode>('()=>' + jsxCodeString, evalContext); // U.evalInContext({...this, ...evalContext}, res); // todo: remove eval and add new Function() ?
 
@@ -60,10 +60,13 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 export class GraphElementRaw<AllProps extends AllPropss, GraphElementState extends GraphElementStatee> extends PureComponent<AllProps, GraphElementState>{
     ////// mapper func
     static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps): GraphElementReduxStateProps {
-        let ret: GraphElementReduxStateProps = ownProps.view.usageDeclarations ? {...U.evalInContextAndScope(ownProps.view.usageDeclarations)} : {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
-        const meid = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data?.id;
+        let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
+        const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : ownProps.data?.id) as string;
         Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ownProps, state});
-        ret.data = LModelElement.wrap(state.idlookup[meid as any] as DModelElement);
+        ret.data = LModelElement.wrap(state.idlookup[meid as any]);
+        ret.view = ret.data._transient.currentView;
+        // ret.view = LViewElement.wrap(state.idlookup[vid]);
+        if (ret.view.usageDeclarations) U.objectMergeInPlace(ret, U.evalInContextAndScope(ret.view.usageDeclarations));
         console.log('GE mapstatetoprops:', {state, ownProps, reduxProps: ret});
         // ret.model = state.models.length ? LModelElement.wrap(state.models[0]) as LModel : undefined;
         setTemplateString(ret, ownProps);
@@ -206,7 +209,7 @@ export class GraphElementRaw<AllProps extends AllPropss, GraphElementState exten
 }
 
 // private
-type AllPropss = GraphElementReduxStateProps & GraphElementDispatchProps & GraphElementOwnProps
+type AllPropss = GraphElementOwnProps & GraphElementDispatchProps & GraphElementReduxStateProps
 
 export const GraphElement = connect<GraphElementReduxStateProps, GraphElementDispatchProps, GraphElementOwnProps, IStore>(
     GraphElementRaw.mapStateToProps,
