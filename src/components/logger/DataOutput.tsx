@@ -1,15 +1,13 @@
 import React, {Dispatch, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
-import './logger.scss';
-import {DDate, U} from "../../common/U";
-import MyInputComponent from "../abstract/MyInput";
 import ReactJson, {CollapsedFieldProps} from 'react-json-view' // npm i react-json-view
-import {bool, Dictionary, GObject, UnixTimestamp} from "../../joiner";
+import './logger.scss'
+import {bool, Dictionary, GObject, UnixTimestamp, windoww} from "../../joiner";
 
 // private
 interface ThisState { }
 
-class DataOutputComponent extends PureComponent<AllProps, ThisState>{
+export class DataOutputComponent extends PureComponent<AllProps, ThisState>{
     render(): ReactNode {
         {/* themes:
                                         export interface ThemeObject {
@@ -95,5 +93,8 @@ interface OwnProps {
 // private
 type AllProps = OwnProps;
 
+if (!windoww.mycomponents) windoww.mycomponents = {};
+windoww.mycomponents.DataOutput = DataOutputComponent;
+windoww.mycomponents.DataOutputComponent = DataOutputComponent;
 ////// mapper func
-export default DataOutputComponent;
+

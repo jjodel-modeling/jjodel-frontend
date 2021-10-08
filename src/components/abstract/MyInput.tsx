@@ -2,7 +2,7 @@ import React, {PureComponent, ReactNode} from "react";
 import './myInput.scss';
 
 
-class MyInputComponent extends PureComponent<AllProps, ThisState>{
+export class MyInputComponent extends PureComponent<AllProps, ThisState>{
     render(): ReactNode {
         return (<>
             <label className={"myinput-root "} data-type={this.props.type || "text"}>
@@ -27,4 +27,4 @@ interface OwnProps {
 type AllProps = React.DetailedHTMLProps<React.InputHTMLAttributes<HTMLInputElement>, HTMLInputElement> & OwnProps;
 
 
-export default MyInputComponent;
+// export default MyInputComponent;

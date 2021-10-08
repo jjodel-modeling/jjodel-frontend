@@ -1,3 +1,26 @@
+* {
+  user-select: none;
+}
+input, textarea {
+  user-select: auto;
+}
+
+img {
+  user-drag: none;
+}
+
+
+
+
+
+
+
+
+
+
+/*
+original premade scss
+*/
 html{
   --radius: 7.5px;
 }

@@ -7,7 +7,7 @@ import './overlap.scss';
 interface ThisState {
 }
 
-class Overlap extends PureComponent<AllProps, ThisState>{
+export class Overlap extends PureComponent<AllProps, ThisState>{
     render(): ReactNode {
         console.log('overlap childs:', this.props.children);
         return (<>

@@ -1,12 +1,26 @@
-import React, {Dispatch, PureComponent, ReactNode} from "react";
+import React, {Dispatch, MouseEventHandler, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
-import {DockContext, DockLayout, DropDirection, PanelData} from "rc-dock";
+import {DockContext, DockLayout, DropDirection, PanelData, TabData} from "rc-dock";
 // import {LayoutData} from "rc-dock/src/DockData";
 import "rc-dock/dist/rc-dock.css";
 import './docking.scss';
 import {LayoutBase} from "rc-dock/lib/DockData";
-import {ViewElement, IStore} from "../../joiner";
-import GraphsContainerComponent from "../../graph/graph/graphContainer";
+import Swal, {SweetAlertResult} from 'sweetalert2'
+import withReactContent from 'sweetalert2-react-content'
+import {
+    CreateElementAction,
+    DGraph,
+    DModel,
+    IStore,
+    Pointer,
+    Selectors,
+    store, TRANSACTION, U, Graph, Log, DViewElement, windoww,//  StyleEditor
+} from "../../joiner";
+
+
+console.error('see reading');
+const StyleEditor = windoww.components.StyleEditor;
+const MySwal = withReactContent(Swal);
 
 // private
 interface ThisState {
@@ -16,16 +30,116 @@ type LayoutData = any;
 
 let count = 0;
 
-function newTab() {
+function newTab0() {
     return {
         id: `newtab${++count}`,
         title: 'New Tab',
+        group: 'graph card ghostone addable',
         content: (
             <div>
-                <p>This panel has an 'add' button defined in panelLock</p>
-            </div>)
+                <p>newTab</p>
+            </div>),
     };
 }
+
+
+function newTab(modelid0?: Pointer<DModel, 1, 1>, name?: string, gid?: Pointer<DGraph, 1, 1>, model?: DModel): TabData {
+    let ret: TabData = {} as any;
+    let modelid = modelid0;
+    if (!modelid) modelid = store.getState().models[0] as string;
+    if (!gid) gid = store.getState().graphs[0] as string;
+    //temporary issue todo: nello store c'è modello ma non c'è graph
+    console.log('newtab', {gid, model, modelid, modelid0, graphs:[...store.getState().graphs]});
+    return {
+        id: `newtab${++count}`,
+        title: <span>{name || 'Graph ' + count}</span>,
+        group: 'graph card ghostone addable',
+        closable: true,
+        cached: true,
+        minHeight: undefined,
+        minWidth: undefined,
+        content: (
+            <>{modelid ?
+            <div>
+                <h1>Model name: {name}, id: {modelid}</h1>
+                <Graph data={modelid} nodeid={gid} graphid={gid} />
+                <span>Edit Section</span>
+                <Graph data={modelid} nodeid={gid+'_'+2} graphid={gid+'_'+2} view = {Selectors.getByName(DViewElement, 'EditView')?.id as string} />
+                <span>Graph end</span>
+            </div> : <span>No models found</span>
+            }</>
+        )
+    };
+}
+async function addButtonClick(e: React.MouseEvent<HTMLElement>, context: DockContext, panelData: PanelData): Promise<void> {// Promise<SweetAlertResult>
+    /*const { value: url } = await Swal.fire({
+        input: 'url',
+        inputLabel: 'URL address',
+        inputPlaceholder: 'Enter the URL'
+    })*/
+/*
+    if (url) {
+        Swal.fire(`Entered URL: ${url}`)
+    }*/
+    const {value: modelName} = await MySwal.fire({
+        title: <span>Make a graph for which model?</span>,
+        input: 'text',
+        inputLabel: 'Model name',
+        inputAttributes: {autocapitalize: 'off', placeholder: "New model", list: 'model-datalist'},
+        showCancelButton: true,
+        confirmButtonText: 'Add',
+        showLoaderOnConfirm: true,
+        preConfirm: (mpid: string) => {
+            return mpid;
+            /*
+                return fetch(`//api.github.com/users/${login}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(response.statusText)
+                        }
+                        return response.json()
+                    })
+                    .catch(error => {
+                        Swal.showValidationMessage(
+                            `Request failed: ${error}`
+                        )
+                    })*/
+        },
+        allowOutsideClick: () => !MySwal.isLoading()
+    })/*.then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: `${result.value.login}'s avatar`,
+                imageUrl: result.value.avatar_url
+            })
+        }
+    })*/
+    if (!modelName) return;
+    let model: DModel = Selectors.getModel(modelName, false, false) as DModel;
+
+    let isGraphOpen = (gid: string): boolean => { return false; } // todo
+    let getGraphID = (): string => {
+        Log.exDev(!model?.id, 'failed to createGraphID, model.id is null', {model, modelid: model.id, modelName});
+        return U.increaseEndingNumber(DGraph.makeID(model.id), false, false, isGraphOpen); }
+    if (model as any) {
+        console.log('createTab1:', {model, modelName, graphid: getGraphID()});
+        context.dockMove(newTab(model.id, modelName, getGraphID(), model), panelData, 'middle');
+        return;
+    }
+    model = new DModel(modelName);
+    TRANSACTION(
+        () => {
+            // model._transient.currentView = LViewElement.findViewFor(model).id;
+            new CreateElementAction(model);
+            new CreateElementAction(DGraph.create(model.id));
+        }
+    );
+    const graphid = getGraphID();
+    console.log('createTab2:', {model, modelName, graphid});
+    Log.exDev(!graphid, 'failed to createGraphID', {model, modelName, graphid});
+    context.dockMove(newTab(model.id, modelName, graphid, model), panelData, 'middle');
+}
+
 // todo: permetti commenti con riferimenti, riferimenti che non siano diretti ma query-like e permetti di mettere reference query-like anche dentro le reference ver fuori dai commenti che verranno risolte a run-time, es: eisLinkedWithMe = (me, otherclass) => me.getVertexPos().center().subtract(otherClass.getVertexPos().center()).absolute().lessthan(sogliavicinanza) per assegnare reference agli elementi vicini.
 
 let groups = {
@@ -36,22 +150,24 @@ let groups = {
         floatable: true,
         maximizable: true,
     },
-    'card custom': {
+    // 'card custom': {
+    'graph card ghostone addable': {
         // the css class for this would be dock-panel-custom
         // this is a custom panel style defined in panel-style.html
         floatable: true,
         maximizable: true,
         panelExtra: (panelData: PanelData, context: DockContext) => (
-            <div>
-                <span className='my-panel-extra-btn'
+            <div className={"my-panel-extra-container"}>
+                <span className='my-panel-extra-btn dock-panel-max-btn'
                       onClick={() => context.dockMove(panelData, null, 'maximize')}>
-                  {panelData.parent?.mode === 'maximize' ? '▬' : '▣'}
+                  {/*panelData.parent?.mode === 'maximize' ? '▬' : '▣'*/}
                 </span>
-                <span className='my-panel-extra-btn' style={{display: 'none'}}
-                      onClick={() => context.dockMove(panelData, null, 'remove')}>
-                  X
+                <span className='my-panel-extra-btn dock-panel-add-btn'
+                      onClick={(e) => addButtonClick(e, context, panelData)}>
+                    {/*onClick={() => context.dockMove(panelData, null, 'remove')}> */}
+                  +
                 </span>
-                <button className='btn'
+                <button className='my-panel-extra-btn dock-panel-add-btn' style={{display: 'none'}}
                         onClick={() => context.dockMove(newTab(), panelData, 'middle')}>
                     add
                 </button>
@@ -65,8 +181,6 @@ let defaultTab = {
     content: (
         <div>
             Tabs from different style group can't be docked in same panel
-            <h1>ModelPiece</h1>
-            <GraphsContainerComponent />
         </div>
     )
 };
@@ -74,25 +188,23 @@ let headlessTab = {
     title: 'headless',
     content: (
         <div style={{background: '#f6f6f6', height: '100%', margin: 0, padding: 30}}>
-            <p>Hide border and header.</p>
-            Move mouse near top border to show header.
+            <h1>Style Editor</h1>
+            <StyleEditor/>
         </div>
     ),
+
     // this is a pre-defined style, defined here:
     // https://github.com/ticlo/rc-dock/blob/master/style/predefined-panels.less
     group: 'headless'
 };
-let cardTab = {
-    title: 'card-style',
-    content: (
-        <div>
-            card style
-        </div>
-    ),
+let cardTabOld = {
+    title: <span>card-style</span>,
+    content: <span>newtab</span>, //newTab(),
     // this is a pre-defined style, defined here:
     // https://github.com/ticlo/rc-dock/blob/master/style/predefined-panels.less
-    group: 'card ghostone'
+    group: 'graph card ghostone addable', // card hhostone
 };
+let cardTab = newTab();
 // groups definiti da me o default: card | large | transparent | ghostone (utilizzabili in combinazione
 let customTab = {
     title: 'custom-style',
@@ -159,19 +271,27 @@ let groups2 = {
         // https://github.com/ticlo/rc-dock/blob/master/style/predefined-panels.less
         floatable: true,
         maximizable: true,
-        closable: true,
     },
     'card custom': {
         // the css class for this would be dock-panel-custom
         // this is a custom panel style defined in panel-style.html
         floatable: true,
         maximizable: true,
-        closable: true,
+        panelExtra: (panelData: PanelData, context: DockContext) => (
+            <div className={"extra-btn-container"}>
+                <span className='my-panel-extra-btn'
+                      onClick={() => context.dockMove(panelData, null, 'maximize')}>
+                  {panelData.parent?.mode === 'maximize' ? 'a▬' : 'b▣'}
+                </span>
+                <span className='my-panel-extra-btn'
+                      onClick={() => context.dockMove(panelData, null, 'remove')}>
+                  X</span>
+            </div>
+        )
     },
     'close-all': {
         floatable: true,
         maximizable: true,
-        closable: true,
         panelExtra: (panelData: PanelData, context: DockContext) => (
             <div>
                 <span className='my-panel-extra-btn'
@@ -187,7 +307,6 @@ let groups2 = {
     addable: {
         floatable: true,
         maximizable: true,
-        closable: true,
         panelExtra: (panelData: PanelData, context: DockContext) => (
                 <button className='btn' onClick={() => context.dockMove(newTab(), panelData, 'middle')}>add</button>
         )
@@ -229,18 +348,21 @@ let defaultLayout: LayoutData = {
 let saved = {"dockbox":{"id":"+1","size":200,"mode":"horizontal","children":[{"id":"+2","size":432,"mode":"vertical","children":[{"id":"+3","size":200,"tabs":[{"id":"t7"},{"id":"t8"}],"activeId":"t7"},{"id":"+4","size":239,"tabs":[{"id":"t9"},{"id":"t10"},{"id":"t11"}],"activeId":"t9"}]},{"id":"+5","size":1464,"mode":"vertical","children":[{"id":"+6","size":296,"tabs":[{"id":"t4"},{"id":"t5"},{"id":"t6"}],"activeId":"t4"},{"id":"+7","size":60,"tabs":[{"id":"t1"},{"id":"t2"},{"id":"t3"}],"activeId":"t1"}]}]},"floatbox":{"id":"+8","size":1,"mode":"float","children":[]},"windowbox":{"id":"+9","size":1,"mode":"window","children":[]},"maxbox":{"id":"+10","size":1,"mode":"maximize","children":[]}};
 
 
-class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
+class DockLayoutComponentRaw extends PureComponent<AllProps, ThisState>{
     private static maxID: number = 0;
     private rcdock: DockLayout | null;
-    private id: string = "rcdock_" + DockLayoutComponent.maxID++;
+    private id: string = "rcdock_" + DockLayoutComponentRaw.maxID++;
 
     constructor(props: AllProps, context: any) {
         super(props, context);
         this.rcdock = null;
     }
     private save(): void {
+        let debug: boolean = true;
+        if (debug) return;
         if (this.rcdock) localStorage.setItem(this.id, JSON.stringify(this.rcdock.saveLayout()));
     }
+
     private load(newLayout?: LayoutBase): void {
         if (!this.rcdock) return;
         if (!newLayout) {
@@ -255,9 +377,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     onLayoutChange = (newLayout: LayoutBase, currentTabId?: string | undefined, direction?: DropDirection | undefined): void => {
         // control DockLayout from state
         this.save();
-        let debug: boolean = true;
-
-        console.log(currentTabId, newLayout, direction);
+        console.log('onlayoutchange', currentTabId, newLayout, direction);
         if (currentTabId === 'protect1' && direction === 'remove') {
             alert('removal of this tab is rejected');
         } else {
@@ -317,7 +437,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret; }
 
 
-export default connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const DockLayoutComponent = connect<StateProps, DispatchProps, OwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
-)(DockLayoutComponent);
+)(DockLayoutComponentRaw);

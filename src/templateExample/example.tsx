@@ -1,6 +1,6 @@
 import React, {Dispatch, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
-import {IStore} from "../redux/store";
+import {IStore} from "../joiner";
 import './example.scss';
 
 // private
@@ -21,7 +21,7 @@ class ExampleComponent extends PureComponent<AllProps, ThisState>{
 
 // private
 interface OwnProps {
-    // propsRequestedFromHtmlAsAttributes: string;
+    // propsRequestedFromJSX_AsAttributes: string;
 }
 // private
     interface StateProps {

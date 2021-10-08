@@ -1,24 +1,28 @@
 import * as jsxtt from 'jsx-transform/lib/jsx.js';
-import $ from 'jquery';
+import $$ from 'jquery';
 import {ReactNode} from "react";
 
 // true imports for this file (should all be import type
 import type { DocString } from './types';
 
-// import independent generic modules
-import {$s, GraphPoint, GraphSize, IPoint, ISize, Log, Point, Size, U} from "../common/U";
-export {$s, GraphPoint, GraphSize, IPoint, ISize, Log, Point, Size, U};
-export {Uarr, CSSParser} from "../common/U";
-export {UX} from "../common/UX";
+
+(window as any).$ = $$;
+export const $: JQueryStatic = $$;
 
 // import types
-// nb: export type è un export "finto" che esiste solo in compilazione per fare capire a typescript i tipi. permette export di alias con nomi diversi (l'export normale no)
+//import {$s, GraphPoint, GraphSize, IPoint, ISize, Log, Point, Size, U} from "../common/U";
+export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
 
-export type {Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv, NotFound, DocString, nbool, nnumber, nstring, Nullable, Pointer, TODO, UnixTimestamp, UObject, IsActually, Function, Function2, InOutParam} from "./types";
+// nb: export type è un export "finto" che esiste solo in compilazione per fare capire a typescript i tipi. permette export di alias con nomi diversi (l'export normale no)
 export type {GetPath} from './proxy';
 export {windoww} from './types';
-export {RuntimeAccessibleClass, JsType, PointerTargetable, MyError} from "./classes";
-export {getPath, MyProxyHandler, LogicContext} from './proxy';
+export type {Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv, NotFound, DocString, nbool, nnumber, nstring, Nullable, Pointer, TODO, UnixTimestamp, UObject, IsActually, Function, Function2, InOutParam} from "./types";
+export {RuntimeAccessibleClass, RuntimeAccessible, JsType, DPointerTargetable, LPointerTargetable, MyError} from "./classes";
+export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
+// import independent generic modules (only dependent from types and RuntimeAccessible
+export {Uarr, CSSParser, DDate, GraphSize, RawVertex, DPoint, GraphPoint, IPoint, ISize, Size, $s, ParseNumberOrBooleanOptions, TagNames, Point, RawGraph, RawEdge, myFileReader, Log, AutocompleteMatch,
+    Keystrokes, CSSRuleSorted, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, LPoint, SelectorOutput, U} from "../common/U";
+export {UX} from "../common/UX";
 
 
 // import domain-specific classes
@@ -43,9 +47,9 @@ export {
     DAnnotation,
     EJavaObject,
     DFactory_useless_,
-    DModelElementTransientProperties
 } from "../model/dataStructure/modelElement";
 
+console.error('joiner here 3');
 
 export {
     LModelElement,
@@ -57,15 +61,21 @@ export {
     LEnumLiteral, LModel,
     LObject, LOperation,
     LPackage, LParameter, LReference,
-    LStructuralFeature, LDataType, LTypedElement, LNamedElement, TargetableProxyHandler, // DMap, LMap,
-    LValue, LModelElementTransientProperties} from "../model/logicWrapper/LModelElement";
-export {DViewTransientProperties, LViewTransientProperties, DViewPrivateTransientProperties, LViewElement, ViewElement, LViewPrivateTransientProperties} from "../view/viewElement/view";
-export {User} from "../model/user/User";
-export {Action, CreateElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
-export {IStore, UserState, ModelStore, ViewPointState} from "../redux/store";
+    LStructuralFeature, LDataType, LTypedElement, LNamedElement, // DMap, LMap,
+    LValue,
+} from "../model/logicWrapper/LModelElement";
+export {DVertex, defaultVSize, LGraph, DGraph, LVoidVertex, DEdgePoint, LEdgePoint, DVoidVertex, DVoidEdge, LVoidEdge, DEdge, DExtEdge, LExtEdge, LRefEdge, DRefEdge, LEdge, LGraphElement, DGraphElement, LVertex} from "../model/dataStructure/GraphDataElements";
+
+export {GraphDragHandler} from "../graph/vertex/GraphDragHandler";
+
+export {DViewTransientProperties, LViewTransientProperties, DViewPrivateTransientProperties, LViewElement, DViewElement, LViewPrivateTransientProperties} from "../view/viewElement/view";
+export {DUser, LUser} from "../model/user/User";
+export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
+export {IStore, DUserState, ModelStore, ViewPointState} from "../redux/store";
 export {Selectors} from "../redux/selectors/selectors";
-export {reducer} from "../redux/reducer/reducer";
-export {fakeExport, store} from './ExecuteOnRead';
+export {reducer, jodelInit} from "../redux/reducer/reducer";
+export {store} from "../redux/createStore";
+
 
 
 class JSXT_TYPE{
@@ -142,7 +152,7 @@ export type FocusEventBase = JQuery.FocusEventBase;
 
 
 // window (NB: most of them should be replaced by RuntimeAccessibleClass)
-let w: any = window;
+let w: any = window;/*
 w.$ = $;
 w.Log = Log;
 w.U = U;
@@ -153,15 +163,29 @@ w.Point = Point;
 w.IPoint = IPoint;
 w.GraphPoint = GraphPoint;
 w.$s = $s;
+*/
+export {
+    // GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
+    GraphElementRaw,
+    VertexComponent,
+    GraphElement,
+    TextareaConnected, InputConnected,
+    Textarea,    Input,
+    InputRawComponent,
+    TextAreaRawComponent,
+    MyInputComponent,
+    Field,
+    GraphRaw,
+    fakeexport,
+    QA,
+    GraphsContainerComponentRaw,
+    DataOutputComponent,
+    Overlap, LoggerComponent,
+    GraphsContainer,
+    Vertex,    Graph,
+    StyleEditor,
+    DockLayoutComponent,
+} from './components'
 
-
-
-
-
-/// import components that must save themselves to global "window" to be accessible for user
-export {QA} from "../graph/droppable/droppable";
-export {GraphElement, GraphElementRaw} from "../graph/graphElement/graphElement";
-export {GraphRaw, Graph} from "../graph/graph/graph";
-export {Field} from "../graph/field/Field";
-export {Vertex} from "../graph/vertex/Vertex";
-export {fakeexport} from "../graph/edge/Edge";
+export {fakeExport} from './ExecuteOnRead';
+console.info('joiner loaded');

@@ -1,5 +1,12 @@
-import {DocString, Pointer} from "../../joiner";
+import {DocString, DPointerTargetable, LPointerTargetable, Pointer, RuntimeAccessible} from "../../joiner";
+import {Mixin} from "ts-mixer";
 
-export class User{
-    static current: DocString<Pointer<User, 1, 1>> = "currentUserPointerToDo";
+@RuntimeAccessible
+export class DUser extends DPointerTargetable{
+    static current: DocString<Pointer<DUser, 1, 1>> = "currentUserPointerToDo";
+}
+
+@RuntimeAccessible
+export class LUser extends Mixin(DUser, LPointerTargetable) {
+
 }

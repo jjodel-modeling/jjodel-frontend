@@ -1,15 +1,3 @@
-import {
-    Log,
-    CreateElementAction,
-    Dictionary,
-    Pointer,
-    PointerTargetable,
-    DocString,
-    ViewElement,
-    RuntimeAccessibleClass,
-    LViewElement,
-} from "../../joiner";
-
 import type {
     LAnnotation,
     LAttribute,
@@ -20,40 +8,55 @@ import type {
     LObject, LOperation,
     LPackage, LParameter, LReference,
     LStructuralFeature, LValue,
-    LDataType, LModelElementTransientProperties,
-    LNamedElement, LTypedElement, TargetableProxyHandler, IsActually} from '../../joiner';
-import type {Class, LModelElement} from "../../joiner";
+    LDataType,
+    LNamedElement, LTypedElement, TargetableProxyHandler, IsActually} from /*type*/ "../../joiner";
+
+import {
+    Log,
+    CreateElementAction,
+    Dictionary,
+    Pointer,
+    DPointerTargetable,
+    DocString,
+    DViewElement,
+    RuntimeAccessibleClass,
+    LViewElement, LPointerTargetable, RuntimeAccessible,
+    LModelElement,
+} from "../../joiner";
 
 
-export abstract class DModelElement extends PointerTargetable {
-    static logic: typeof LModelElement;
+@RuntimeAccessible
+export /*abstract*/ class DModelElement extends DPointerTargetable {
+    static logic: typeof LPointerTargetable;
 
     // ******************** ecore officials inherited ******************** //
     // ******************** ecore officials personal ********************* //
-    // eAnnotations: Pointer<DAnnotation, 0, 'N'>[] = [];
+    // eAnnotations: Pointer<DAnnotation, 0, 'N'> = [];
 
     getAnnotation(source: string): DAnnotation { return todoret; }
     // ********************** my additions inherited ********************* //
     // ********************** my additions personal ********************** //ù
-    annotations: Pointer<DAnnotation, 0, 'N', LAnnotation>[] = [];
-    parent: Pointer<DModelElement, 0, 'N', LModelElement>[] = [];
+    annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
+    parent: Pointer<DModelElement, 0, 'N', LModelElement> = []; // a modelElement can be shared between different models
     constructor() {
         super(false);
-        this._transient = new DModelElementTransientProperties();
+        //this._transient = new DModelElementTransientProperties();
     }
 
     static persist(me: DModelElement) { new CreateElementAction(me); }
-    _transient: DModelElementTransientProperties | LModelElementTransientProperties;
+    //_transient: DModelElementTransientProperties | LModelElementTransientProperties;
 }
-
+/*
+@RuntimeAccessible
 export class DModelElementTransientProperties extends RuntimeAccessibleClass {
     static logic: typeof LModelElementTransientProperties;
-    currentView!: Pointer<ViewElement, 1, 1, LViewElement>;
-}
+    // currentView!: Pointer<DViewElement, 1, 1, LViewElement>;
+}*/
 
+@RuntimeAccessible
 export class DAnnotation extends DModelElement {
     static logic: typeof LModelElement;
-    parent: Pointer<DModelElement, 0, 'N', LModelElement>[] = [];
+    // parent: Pointer<DModelElement, 0, 'N', LModelElement> = [];
 
     // ******************** ecore officials inherited ******************** //
     // ******************** ecore officials personal ********************* //
@@ -64,7 +67,8 @@ export class DAnnotation extends DModelElement {
     // ********************** my additions personal ********************** //
 }
 
-export abstract class DNamedElement extends DModelElement {
+@RuntimeAccessible
+export /*abstract*/ class DNamedElement extends DModelElement {
     static logic: typeof LModelElement;
     // ******************** ecore officials inherited ******************** //
     // ******************** ecore officials personal ********************* //
@@ -74,11 +78,12 @@ export abstract class DNamedElement extends DModelElement {
     constructor(name: string = ''){ super(); this.name = name; }
 }
 
+@RuntimeAccessible
 export abstract class DFactory_useless_ extends DModelElement {
     static logic: IsActually<'not exist yet'>;
     // ******************** ecore officials inherited ******************** //
     // ******************** ecore officials personal ********************* //
-    ePackage: Pointer<DPackage, 1, 1, LPackage> = null;
+    ePackage: Pointer<DPackage, 1, 1, LPackage> = '';
     abstract create(DClass: DClass): DObject;
     abstract createFromString(eDataType: DDataType, literalValue: string): EJavaObject;
     abstract convertFromString(eDataType: DDataType, instanceValue: EJavaObject): string;
@@ -86,11 +91,13 @@ export abstract class DFactory_useless_ extends DModelElement {
     // ********************** my additions personal ********************** //
 }
 
+@RuntimeAccessible
 export class EJavaObject{
     static logic: IsActually<'not exist yet'>;
 }// ??? EDataType instance?
 
-export abstract class DTypedElement extends DNamedElement {
+@RuntimeAccessible
+export /*abstract*/ class DTypedElement extends DNamedElement {
     static logic: typeof LNamedElement;
     // ******************** ecore officials inherited ******************** //
     // ******************** ecore officials personal ********************* //
@@ -106,28 +113,30 @@ export abstract class DTypedElement extends DNamedElement {
 }
 
 const todoret: any = 'todo';
-export abstract class DClassifier extends DNamedElement {
+
+@RuntimeAccessible
+export /*abstract*/ class DClassifier extends DNamedElement {
     static logic: typeof LNamedElement;
-    parent: Pointer<DPackage, 0, 'N', LPackage>[] = [];
-    childrens: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature>[] = [];
+    parent: Pointer<DPackage, 0, 'N', LPackage> = [];
+    // childrens: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature> = [];
     // ******************** ecore officials inherited ******************** //
     // ******************** ecore officials personal ********************* //
     instanceClassName!: string;
     // instanceClass: EJavaClass // ?
-    defaultValue: Pointer<DObject, 1, 1, LObject> = null;
+    defaultValue!: Pointer<DObject, 1, 1, LObject>;
     // isInstance(object: EJavaObject): boolean; ?
     // getClassifierID(): number;
     // ********************** my additions inherited ********************* //
     // ********************** my additions personal ********************** //
 }
 
+@RuntimeAccessible
 export class DPackage extends DNamedElement {
     static logic: typeof LNamedElement;
-    parent: Pointer<DPackage | DModel, 0, 'N', LPackage | LModel>[] = [];
-    childrens: Pointer<DPackage | DClass, 0, 'N', LPackage | LClass>[] = [];
+    parent: Pointer<DPackage | DModel, 0, 'N', LPackage | LModel> = [];
 
-    classifiers: Pointer<DClass, 0, 'N', LClass>[] = [];
-    subpackages: Pointer<DPackage, 0, 'N', LPackage>[] = []
+    classifiers: Pointer<DClass, 0, 'N', LClass> = [];
+    subpackages: Pointer<DPackage, 0, 'N', LPackage> = []
 
     // ******************** ecore officials inherited ******************** //
     // ******************** ecore officials personal ********************* //
@@ -141,17 +150,21 @@ export class DPackage extends DNamedElement {
     }
 }
 
+@RuntimeAccessible
 export class DOperation extends DTypedElement {
     static logic: typeof LTypedElement;
-    parent: Pointer<DClass, 0, 'N', LClass>[] = [];
-    exceptions: Pointer<DClassifier, 0, 'N', LClassifier>[] = [];
-    parameters: Pointer<DParameter, 0, 'N', LParameter>[] = [];
-}
-export class DParameter extends DTypedElement {
-    static logic: typeof LTypedElement;
-    parent: Pointer<DOperation, 0, 'N', LOperation>[] = [];
+    parent: Pointer<DClass, 0, 'N', LClass> = [];
+    exceptions: Pointer<DClassifier, 0, 'N', LClassifier> = [];
+    parameters: Pointer<DParameter, 0, 'N', LParameter> = [];
 }
 
+@RuntimeAccessible
+export class DParameter extends DTypedElement {
+    static logic: typeof LTypedElement;
+    parent: Pointer<DOperation, 0, 'N', LOperation> = [];
+}
+
+@RuntimeAccessible
 export class DClass extends DClassifier {
     static logic: typeof LClassifier;
     isSuperTypeOf(someClass: DClassifier): boolean { return todoret; }
@@ -159,19 +172,19 @@ export class DClass extends DClassifier {
     getEstructuralFeature(featureName: string): DStructuralFeature { return todoret; }
     abstract: boolean = false;
     interface: boolean = false;
-    parent: Pointer<DPackage, 0, 'N', LPackage>[] = [];
-    instances: Pointer<DObject, 0, 'N', LObject>[] = [];
-    operations: Pointer<DOperation, 0, 'N', LOperation>[] = [];
-    features: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature>[] = [];
-    references: Pointer<DReference, 0, 'N', LReference>[] = [];
-    attributes: Pointer<DAttribute, 0, 'N', LAttribute>[] = [];
-    referencedBy: Pointer<DReference, 0, 'N', LReference>[] = [];
-    extends: Pointer<DClass, 0, 'N', LClass>[] = [];
-    extendedBy: Pointer<DClass, 0, 'N', LClass>[] = [];
+    parent: Pointer<DPackage, 0, 'N', LPackage> = [];
+    instances: Pointer<DObject, 0, 'N', LObject> = [];
+    operations: Pointer<DOperation, 0, 'N', LOperation> = [];
+    features: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature> = [];
+    references: Pointer<DReference, 0, 'N', LReference> = [];
+    attributes: Pointer<DAttribute, 0, 'N', LAttribute> = [];
+    referencedBy: Pointer<DReference, 0, 'N', LReference> = [];
+    extends: Pointer<DClass, 0, 'N', LClass> = [];
+    extendedBy: Pointer<DClass, 0, 'N', LClass> = [];
 
     // mia aggiunta:
-    implements: Pointer<DClass, 0, 'N', LClass>[] = [];
-    implementedBy: Pointer<DClass, 0, 'N', LClass>[] = [];
+    implements: Pointer<DClass, 0, 'N', LClass> = [];
+    implementedBy: Pointer<DClass, 0, 'N', LClass> = [];
 
     constructor(name: string = '', isInterface: boolean = false, isAbstract: boolean = false) {
         super(name);
@@ -190,17 +203,19 @@ export class DClass extends DClassifier {
     }
 }
 
+@RuntimeAccessible
 export class DDataType extends DClassifier {
     static logic: typeof LClassifier;
-    parent: Pointer<DPackage, 0, 'N', LPackage>[] = [];
+    parent: Pointer<DPackage, 0, 'N', LPackage> = [];
     serializable: boolean = true;
-    usedBy: Pointer<DAttribute, 0, 'N', LAttribute>[] = [];
+    usedBy: Pointer<DAttribute, 0, 'N', LAttribute> = [];
 }
 
+@RuntimeAccessible
 export class DStructuralFeature extends DTypedElement {
     static logic: typeof LTypedElement;
-    parent: Pointer<DClass, 0, 'N', LClass>[] = [];
-    instances: Pointer<DValue, 0, 'N', LValue>[] = [];
+    parent: Pointer<DClass, 0, 'N', LClass> = [];
+    instances: Pointer<DValue, 0, 'N', LValue> = [];
 
     changeable: boolean = true;
     volatile: boolean = true;
@@ -214,62 +229,71 @@ export class DStructuralFeature extends DTypedElement {
     // getContainerClass(): EJavaClass
 }
 
+@RuntimeAccessible
 export class DReference extends DStructuralFeature {
     static logic: typeof LStructuralFeature;
-    parent: Pointer<DClass, 0, 'N', LClass>[] = [];
-    instances: Pointer<DValue, 0, 'N', LValue>[] = [];
+    parent: Pointer<DClass, 0, 'N', LClass> = [];
+    instances: Pointer<DValue, 0, 'N', LValue> = [];
     containment: boolean = true;
     container: boolean = false; // ?
     resolveProxies: boolean = true; // ?
     opposite: Pointer<DReference, 0, 1, LReference> = null;
 }
 
+@RuntimeAccessible
 export class DAttribute extends DStructuralFeature {
     static logic: typeof LStructuralFeature;
-    parent: Pointer<DClass, 0, 'N', LClass>[] = [];
+    parent: Pointer<DClass, 0, 'N', LClass> = [];
     isID: boolean = false; // ? exist in ecore as "iD" ?
-    instances: Pointer<DValue, 0, 'N', LValue>[] = [];
+    instances: Pointer<DValue, 0, 'N', LValue> = [];
 }
 
+@RuntimeAccessible
 export class DEnumLiteral extends DNamedElement {
     static logic: typeof LNamedElement;
-    parent: Pointer<DEnumerator, 0, 'N', LEnumerator>[] = [];
+    parent: Pointer<DEnumerator, 0, 'N', LEnumerator> = [];
     value: number = 0;
 }
 
+@RuntimeAccessible
 export class DEnumerator extends DDataType {
     static logic: typeof LDataType;
-    parent: Pointer<DPackage, 0, 'N'>[] = [];
-    childrens: Pointer<DEnumLiteral, 0, 'N', LEnumLiteral>[] = [];
+    parent: Pointer<DPackage, 0, 'N'> = [];
+    literals: Pointer<DEnumLiteral, 0, 'N', LEnumLiteral> = [];
 }
 
+@RuntimeAccessible
 export class DObject extends DNamedElement { // m1 class instance
     static logic: typeof LNamedElement;
-    parent: Pointer<DModel, 0, 'N'>[] = [];
-    instanceof: Pointer<DClass, 0, 1>[] = [];
+    parent: Pointer<DModel, 0, 'N'> = [];
+    instanceof: Pointer<DClass, 0, 'N'> = [];
 }
 
+@RuntimeAccessible
 export class DValue extends DModelElement { // m1 value (attribute | reference)
     static logic: typeof LModelElement;
-    parent: Pointer<DObject, 0, 'N', LObject>[] = [];
-    instanceof: Pointer<DStructuralFeature, 0, 1, LStructuralFeature>[] = [];
+    parent: Pointer<DObject, 0, 'N', LObject> = [];
+    instanceof: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature> = [];
 }
 
+@RuntimeAccessible
 export class DModel extends DNamedElement {
     static logic: typeof LNamedElement;
-    packages:  Pointer<DPackage, 0, 'N', LPackage>[] = [];
+    packages:  Pointer<DPackage, 0, 'N', LPackage> = [];
 
     // ******************** ecore officials inherited ******************** //
     // ******************** ecore officials personal ********************* //
 
     // ********************** my additions inherited ********************* //
     // ********************** my additions personal ********************** //
-    // modellingElements: Pointer<DModelElement, 0, 'N', LModelElement>[] = [];
+    // modellingElements: Pointer<DModelElement, 0, 'N', LModelElement> = [];
 }
 
 
 
 /*
+
+@RuntimeAccessible
 export class IClass extends IClassNoFunc{
     static singleton: IClass = null as any;
     static get(): IClass{ return IClass.singleton || (IClass.singleton = new IClass()); }
@@ -299,6 +323,7 @@ export class IClass extends IClassNoFunc{
     }
 
 }
+@RuntimeAccessible
 export class Package{
     data: PackageNoFunc[] = [];
 }*/

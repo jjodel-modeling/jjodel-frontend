@@ -1,13 +1,8 @@
 import React, {Dispatch, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
-import {IStore} from "../../redux/store";
 import './logger.scss';
-import {DDate, Log, U} from "../../common/U";
-import {bool, Dictionary, GObject, UnixTimestamp} from "../../joiner/types";
-import MyInputComponent from "../abstract/MyInput";
-import {UX} from "../../common/UX";
+import {IStore, DDate, Log, U, Dictionary, GObject, UnixTimestamp, MyInputComponent, DataOutputComponent} from "../../joiner";
 import ReactJson, {CollapsedFieldProps} from 'react-json-view'
-import DataOutputComponent from "./DataOutput"; // npm i react-json-view
 
 // private
 interface ThisState {
@@ -21,7 +16,7 @@ interface ThisState {
     maxDate: UnixTimestamp;
 }
 
-class LoggerComponent extends PureComponent<AllProps, ThisState>{
+export class LoggerComponent extends PureComponent<AllProps, ThisState>{
     public static loggers: LoggerComponent[] = [];
     private static max_id: number = 0;
     public static Log(category: string, key: string, data: any[]): void{
@@ -138,6 +133,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 ////// mapper func
 
+/*
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     /// to fill
@@ -148,8 +144,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     /// to fill
     return ret; }
 
-
-export default connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const LoggerComponentConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
-)(LoggerComponent);
+)(LoggerComponent);*/

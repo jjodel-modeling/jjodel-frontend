@@ -1,15 +1,24 @@
-import React, {Dispatch, PureComponent, ReactNode} from "react";
+import React, {Dispatch, PureComponent, ReactElement, ReactNode} from "react";
 import { connect } from "react-redux";
 import './graph.scss';
-import {IStore, GraphElement, Vertex, ViewElement, LModelElement, LModel, DModel} from "../../joiner";
-import {QA} from "../droppable/droppable";
-import Overlap from "../../components/forEndUser/Overlap";
+import {
+    IStore,
+    DViewElement,
+    LModelElement,
+    LModel,
+    DModel,
+    LGraph,
+    DGraph,
+    DPointerTargetable,
+
+    Graph, Vertex
+} from "../../joiner";
 
 
 // private
 interface ThisState { }
 
-class GraphsContainerComponent extends PureComponent<AllProps, ThisState>{
+export class GraphsContainerComponentRaw extends PureComponent<AllProps, ThisState>{
     constructor(props: AllProps, context: any) {
         super(props, context);
     }
@@ -25,7 +34,7 @@ class GraphsContainerComponent extends PureComponent<AllProps, ThisState>{
         // "<Input obj={this.data} field={'name'} getter={val => val.toUpperCase()} setter={(val) => val.toLowerCase()} />";
         return (<>
             {
-                this.props.models.map( (m: LModel) => (
+                this.props.graphs.map( (m: LGraph) => (
                     <>
                         {/*<svg style={{backgroundColor: 'red'}}>
                         <Overlap style={{width: '100px'}}>
@@ -42,9 +51,13 @@ class GraphsContainerComponent extends PureComponent<AllProps, ThisState>{
                             </Overlap>
                         </svg>* /}
                         <GraphElement data={m} />*/}
-                        <Vertex data={m} />
+                        {
+                            <Graph graphid={m.id} data={m.model} view={undefined}>
+                                <Vertex data={m.model}/>
+                            </Graph>
 
-                        {/*<QA />*/}
+                        }
+                        {this.props.children/*<QA />*/}
                     </>)
                 )
             }
@@ -58,6 +71,7 @@ interface OwnProps {
 // private
 interface StateProps {
     models: LModel[];
+    graphs: LGraph[];
     // propsFromReduxStateOrOtherKindOfStateManagement: boolean; // flux or custom things too, unrelated to this.state of react.
 }
 
@@ -75,7 +89,8 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     console.log('mapStateToProps', {ret, state, ownProps, models: state.models})
-    ret.models = state.models.length ? state.models.map( (mid) => mid && LModelElement.wrap(state.idlookup[mid] as DModel)) as LModel[] : [];
+    ret.models = state.models.length ? state.models.map( (mid) => mid && DPointerTargetable.wrap(state.idlookup[mid] as DModel)) as LModel[] : [];
+    ret.graphs = state.graphs.length ? state.graphs.map( (mid) => mid && LGraph.wrap(state.idlookup[mid] as DGraph)) as LGraph[] : [];
     /// to fill
     return ret; }
 
@@ -85,7 +100,11 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret; }
 
 
-export default connect<StateProps, DispatchProps, OwnProps, IStore>(
+const GraphsContainerConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
-)(GraphsContainerComponent);
+)(GraphsContainerComponentRaw);
+
+export const GraphsContainer = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    return <GraphsContainerConnected {...{...props, childrens}} />; }
+

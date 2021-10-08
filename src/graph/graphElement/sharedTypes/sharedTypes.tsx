@@ -1,6 +1,13 @@
-import {DModelElement, GObject, Json, LModel, LModelElement, Pointer, UserState, ViewElement, LViewElement} from "../../../joiner";
 import React, {CSSProperties, ReactNode} from "react";
-import {} from "../../../view/viewElement/view";
+import type {
+    DModelElement,
+    Json,
+    LModelElement,
+    Pointer,
+    DViewElement,
+    LViewElement,
+    DGraphElement, LGraphElement, DGraph, LGraph
+} from "../../../joiner";
 
 export class GraphElementStatee {/*
     constructor(preRenderFunc: string | undefined, evalContext: GObject, templatefunc: () => React.ReactNode) {
@@ -10,31 +17,42 @@ export class GraphElementStatee {/*
     }
     preRenderFunc?: string;
     evalContext: Json;
-    template: () => ReactNode;*/
+    template: () => ReactNode;* /
+    nodeid: Pointer<DGraphElement, 1, 1, LGraphElement>;
+    constructor(nodeid: Pointer<DGraphElement, 1, 1, LGraphElement>) {
+        this.nodeid = nodeid;
+    }*/
+    // displayPosition?: GraphSize; // used while dragging to prevent flood of redux events
 }
 
 export class GraphElementReduxStateProps {
     // userexample?: UserState; // todo: make and repace with proxy wrapper "User", or make a "cached" global variable synchronized with redux state for easier access
     view!: LViewElement;
-    graphID!: string;
+    views!: LViewElement[]; // all applicable views
+    // graphID!: string;
     data!: LModelElement;
     // model?: LModel;
     // [userMappedFromRedux: string]: any; // roba che l'utente ha dichiarato di voler prendere dallo stato e redux gli carica nelle props
     preRenderFunc?: string;
     evalContext!: Json;
     template!: () => ReactNode;
+    node!: LGraphElement;
+    graph!: LGraph;
 }
 
 export class GraphElementDispatchProps {
 }
 
 export class GraphElementOwnProps {
-    data!: LModelElement | Pointer<DModelElement>;
-    view?: LViewElement | Pointer<ViewElement, 1, 1, LViewElement>;
-
+    data?: LModelElement | Pointer<DModelElement>;
+    view?:Pointer<DViewElement, 1, 1, LViewElement>; // | LViewElement
     // generic props for every component that this component will need to extend joining user-specified values and component-specific built-in values
+    children?: any;
     style?: CSSProperties;
     'class'?: string | string[];
     'className'?: string | string[];
-    key?: string
+    key?: string;
+    nodeid?: Pointer<DGraphElement, 1, 1, LGraphElement>; // Injected
+    graphid?: Pointer<DGraph, 1, 1, LGraph>; // injected
+    parentViewId?: Pointer<DViewElement, 1, 1, LViewElement>// injected
 }

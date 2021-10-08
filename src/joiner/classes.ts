@@ -1,37 +1,123 @@
-import {U, Uarr, GObject, Proxyfied, Pointer, store, TargetableProxyHandler, ViewElement, Log, User} from "../joiner";
+import {
+    U,
+    Uarr,
+    GObject,
+    Proxyfied,
+    Pointer,
+    store,
+    TargetableProxyHandler,
+    DViewElement,
+    Log,
+    DUser,
+    Dictionary,
+    LogicContext,
+    MyProxyHandler,
+    LViewElement,
+    MapProxyHandler
+} from "../joiner";
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
 
+
+
 export class RuntimeAccessibleClass {
-    static wrap<D extends RuntimeAccessibleClass, L extends D>(data: D | Pointer<ViewElement>, baseObjInLookup?: PointerTargetable, path: string = ''): L{
+    // static allRuntimeClasses: string[] = [];
+    static classes: Dictionary<string, typeof RuntimeAccessibleClass> = {};
+    static getAllNames(): string[] { return Object.keys(RuntimeAccessibleClass.classes); }
+    static getAllClasses(): typeof RuntimeAccessibleClass[] { return Object.values(RuntimeAccessibleClass.classes); }
+    static getAllClassesDictionary(): Dictionary<string, typeof RuntimeAccessibleClass> { return RuntimeAccessibleClass.classes; }
+
+    static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable>(data: D | Pointer<DViewElement>, baseObjInLookup?: DPointerTargetable, path: string = ''): L{
         if (!data || (data as any).__isProxy) return data as any;
         if (typeof data === 'string') {
             data = store.getState().idlookup[data] as unknown as D;
             if (!data) { return Log.exx('Cannot wrap:', {data, baseObjInLookup, path}); }
         }
         if (!data) return data;
-        console.log('ProxyWrapping:', {data, baseObjInLookup, path});
+        // console.log('ProxyWrapping:', {data, baseObjInLookup, path});
         return new Proxy(data, new TargetableProxyHandler(data, baseObjInLookup, path));
+    }
+
+    static mapWrap2<D extends DPointerTargetable, L extends LPointerTargetable>(map: RuntimeAccessibleClass, container: D, baseObjInLookup?: DPointerTargetable, path: string = ''): L{
+        if (!map || (map as any).__isProxy) return map as any;
+        if (typeof container === 'string') {
+            container = store.getState().idlookup[container] as unknown as D;
+            if (!container) { return Log.exx('Cannot wrap map:', {map, container, baseObjInLookup, path}); }
+        }
+        // console.log('ProxyWrapping:', {data, baseObjInLookup, path});
+        return new Proxy(map, new MapProxyHandler(map, baseObjInLookup, path));
+    }
+
+
+    static mapWrap(data: Dictionary, baseObjInLookup: DPointerTargetable, path: string, subMapKeys: string[]): Proxyfied<Dictionary> {
+        if (!data || (data as any).__isProxy) return data as any;
+        // console.error('GETMAP', {data, logicContext, path});
+        return new Proxy(data, new MapProxyHandler(data, baseObjInLookup, path, subMapKeys));
     }
 
     className: string;
     constructor() {
         this.className = this.constructor.name;
-        (window as any)[this.constructor.name] = this.constructor;
+        // todo: remove the direct link in window and all references?
+        (window as any)[this.className] =
+        RuntimeAccessibleClass.classes[this.className] = this.constructor as any;
+        // RuntimeAccessibleClass.allRuntimeClasses.push(this.className);
+    }
+
+    public static get<T extends typeof RuntimeAccessibleClass = typeof RuntimeAccessibleClass>(dclassname: string) : T & {logic?: typeof LPointerTargetable} { return this.classes[dclassname] as any; }
+
+    public static extends(className: string, superClassName: string, returnIfEqual: boolean = true): boolean {
+        let superclass = RuntimeAccessibleClass.get(superClassName);
+        const thisclass = RuntimeAccessibleClass.get(className);
+        if (superclass === thisclass) return returnIfEqual;
+        if (!superclass || !thisclass) return false;
+        return (thisclass instanceof superclass); // todo: check if works with constructors
     }
 }
+
+
+
+// annotation
+export function RuntimeAccessible<T extends any>(constructor: T): T {
+    // console.log('DecoratorTest', {constructor, arguments});
+    // @ts-ignore
+    RuntimeAccessibleClass.classes[constructor.name] = constructor as any as typeof RuntimeAccessibleClass;
+    // @ts-ignore
+    constructor.prototype.className = constructor.name;
+    return constructor;
+}
+
+(window as any).RuntimeAccessibleClass = RuntimeAccessibleClass;
 // todo: problema: per creare un PointerTargetable ho bisogno dell'userid, e devo generarlo prima che venga generato l'initialState... dovrebbe venir servito con la pagina dal server. o passato come navigation props dalla pagina di login
-export class PointerTargetable extends RuntimeAccessibleClass {
+
+@RuntimeAccessible
+export class DPointerTargetable extends RuntimeAccessibleClass {
     private static maxID: number = 0;
+    public static logic: typeof LPointerTargetable;
+    _storePath?: string[];
 
     id: string;
-    constructor(isUser: boolean = false) {
+    constructor(isUser: any = false, id?: any, a?: any, b?:any, c?:any) {
         super();
-        const userid = User.current;
-        this.id = (isUser ? '' : userid + "_") + PointerTargetable.maxID++ + "_" + new Date().getTime();
+        const userid = DUser.current;
+        this.id = id || (isUser ? '' : userid + "_") + DPointerTargetable.maxID++ + "_" + new Date().getTime();
         // todo store.dispatch(new IdLinkAction(this));
+    }
+
+}
+
+@RuntimeAccessible
+export class LPointerTargetable extends DPointerTargetable {
+    public static structure: typeof DPointerTargetable;
+    public static singleton: LPointerTargetable;
+
+    public __raw!: this;
+
+    public get__extends(superClassName: string, context: LogicContext<this>): boolean {
+        return RuntimeAccessibleClass.extends(context.data.className, superClassName);
     }
 }
 
+@RuntimeAccessible
 export class MyError extends Error {
     constructor(message?: string, ...otherMsg: any[]) {
         // 'Error' breaks prototype chain here
@@ -47,6 +133,7 @@ export class MyError extends Error {
     }
 }
 
+// @RuntimeAccessible
 export class JsType{
     public static all: JsType[] = [];
     public static object: JsType = new JsType("object", JsType.isObject, false);

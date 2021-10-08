@@ -1,16 +1,9 @@
-import React, {Component, Dispatch, PureComponent, ReactNode} from "react";
+/* import React, {Component, Dispatch, PureComponent, ReactNode} from "react";
 // import { Portal } from 'react-portal';
 import * as ReactDOM from "react-dom";
 import PanelContainerComponent, {PanelData} from "./PanelContainerComponent";
-import {Dictionary} from "../../joiner/types";
+import {Dictionary} from "../../joiner";
 // enum dockMode {none, left, right, top, bottom}
-/*todo: voglio una griglia come photoshop dove posso mettere N strati di left-bar e un elemento può mettersi in seconda fila o condividere orizzontalmente la prima fila verticale (o verticalmente la prima fila orizzontale di topbar)
-e devce essere persistente e ricordato in user preference (non in viewpoint)*/
-
-
-////////////////////// start
-// import { connect } from "react-redux";
-// import {IStore} from "../../redux/store";
 
 
 // private
@@ -68,7 +61,7 @@ function mapStateToProps(state: IStore, ownProps: AllProps): StateProps {
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     const ret: DispatchProps = {} as any;
     /// to fill
-    return ret; }*/
+    return ret; }* /
 
 
 export default PanelComponent;
@@ -78,3 +71,4 @@ export default connect<StateProps, DispatchProps, AllProps, IStore>(
     mapDispatchToProps
 )(PanelComponent);
 */
+export const todelete = {};

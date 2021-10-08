@@ -21,3 +21,6 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+sandbox/sandbox.js
+sandbox/sandbox.tsx
+sandbox/sandbox.tsx

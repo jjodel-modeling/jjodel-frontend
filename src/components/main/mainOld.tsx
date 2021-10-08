@@ -1,4 +1,4 @@
-import React, {Dispatch, PureComponent, ReactNode} from "react";
+/*import React, {Dispatch, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
 import {IStore} from "../../redux/store";
 import PanelContainerComponent, {PanelData} from "../abstract/PanelContainerComponent";
@@ -59,3 +59,5 @@ export default connect<StateProps, DispatchProps, OwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
 )(MainComponent);
+*/
+export const todelete = {};

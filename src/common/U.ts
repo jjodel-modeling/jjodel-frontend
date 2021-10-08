@@ -1,10 +1,22 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
-import {GObject, Json, bool, Dictionary, DocString, JsType, MyError, Temporary, TODO} from "../joiner";
-import FocusInEvent from 'jquery';
 import {ReactElement} from "react";
-import {windoww} from "../joiner/types";
+import {isDeepStrictEqual} from "util";
+import {Mixin} from "ts-mixer";
+import {
+    GObject,
+    Json,
+    bool,
+    Dictionary,
+    DocString,
+    JsType,
+    MyError,
+    Temporary,
+    TODO,
+    RuntimeAccessible, RuntimeAccessibleClass, LPointerTargetable, DPointerTargetable, windoww
+} from "../joiner";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
+@RuntimeAccessible
 export class Log{
     // public static history: Dictionary<string, Dictionary<string, any[]>> = {}; // history['pe']['key'] = ...parameters
     public static lastError: any[];
@@ -56,6 +68,8 @@ export class Log{
         if (!b) return null;
         const str = Log.log('Dev Error','eDev', console.error, b, ...restArgs);
         Log.lastError = restArgs;
+        windoww.ee = restArgs;
+        windoww.e1 = restArgs[1];
         throw new MyError(str, ...restArgs); }
 
     public static i(b: boolean, ...restArgs: any[]): string { return Log.log('Info', 'i', console.info, b, ...restArgs); }
@@ -63,19 +77,22 @@ export class Log{
     public static w(b: boolean, ...restArgs: any[]): string { return Log.log('Warn', 'w', console.info, b, ...restArgs); }
 
 
-    public static eDevv(...restAgs: any): string { return Log.eDev(true, ...restAgs); }
+    public static eDevv<T extends any = any>(firstParam?: NotBool<T>, ...restAgs: any): string { return Log.eDev(true, ...[firstParam, ...restAgs]); }
     public static ee(...restAgs: any): string { return Log.e(true, ...restAgs); }
-    public static exDevv(...restAgs: any): never | any { return Log.exDev(true, ...restAgs); }
+    public static exDevv<T extends any = any>(firstParam?: NotBool<T>, ...restAgs: any): never | any { return Log.exDev(true, ...[firstParam, ...restAgs]); }
     public static exx(...restAgs: any): never | any { return Log.ex(true, ...restAgs); }
     public static ii(...restAgs: any): string { return Log.i(true, ...restAgs); }
     public static ll(...restAgs: any): string { return Log.l(true, ...restAgs); }
     public static ww(...restAgs: any): string { return Log.w(true, ...restAgs); }
 }
 
+type NotBool<T> = Exclude<T, boolean>;
+
 interface LoggerInterface{
     log: (category: string, key: string, data: any[], fullconcat?: string) => any;
 }
 
+@RuntimeAccessible
 export class U{
 
     private static notNullFilter(e: any) { return !!e; };
@@ -549,7 +566,8 @@ export class U{
 
     private static maxID: number = 0;
     public static idPrefix: string = '';
-    static getID(): string { return U.idPrefix + U.maxID++; }
+    // static getID(): string { return U.idPrefix + U.maxID++; }
+    static getID: Generator<number> = function* idgenerator(): Generator<number> { let i: number = 0; while(true) yield i++; }();
 
 
 
@@ -567,7 +585,13 @@ export class U{
 
     static stringCompare(s1: string, s2: string): -1 | 0 | 1 { return (s1 < s2) ? -1 : (s1 > s2) ? 1 : 0; }
 
-    static endsWith(str: string, suffix: string): boolean {
+    static endsWith(str: string, suffix: string | string[]): boolean {
+        if (Array.isArray(suffix)) {
+            for(let suf of suffix) {
+                if (U.endsWith(str, suf)) return true;
+            }
+            return false;
+        }
         return str.lastIndexOf(suffix) === str.length - suffix.length;
     }
 
@@ -578,6 +602,55 @@ export class U{
     static arrayMergeInPlace<T>(arr1: T[], ...otherArrs: T[][]): T[] {
         for (const arr of otherArrs) arr1.push.apply(arr1, arr);
         return arr1; }
+
+    static getEndingNumber(s: string, ignoreNonNumbers: boolean = false, allowDecimal: boolean = false): number {
+        let i = s.length;
+        let numberEnd = -1;
+        while (--i > 0) {
+            if (!isNaN(+s[i])) { if (numberEnd === -1) { numberEnd = i; } continue; }
+            if (s[i] === '.' && !allowDecimal) { break; }
+            if (s[i] === '.') { allowDecimal = false; continue; }
+            if (!ignoreNonNumbers) { break; }
+            if (numberEnd !== -1) { ignoreNonNumbers = false; }
+        }
+        s = numberEnd === -1 ? '1' : s.substring(i, numberEnd);
+        return +parseFloat(s); }
+
+    static increaseEndingNumber(s: string, allowLastNonNumberChars: boolean = false, allowDecimal: boolean = false, increaseWhile?: ((x: string) => boolean)): string {
+        /*let i = s.length;
+    let numberEnd = -1;
+    while (--i > 0) {
+      if (!isNaN(+s[i])) { if (numberEnd === -1) { numberEnd = i; } continue; }
+      if (s[i] === '.' && !allowDecimal) { break; }
+      if (s[i] === '.') { allowDecimal = false; continue; }
+      if (!ignoreNonNumbers) { break; }
+      if (numberEnd !== -1) { ignoreNonNumbers = false; }
+    }
+    if (numberEnd === -1) { return s + '_1'; }
+    // i++;
+    numberEnd++;*/
+        let regexpstr = '([0-9]+' + (allowDecimal ? '|[0-9]+\\.[0-9]+' : '') + ')' + (allowLastNonNumberChars ? '[^0-9]*' : '') + '$';
+        const matches: RegExpExecArray | null = new RegExp(regexpstr, 'g').exec(s); // Global (return multi-match) Single line (. matches \n).
+        // S flag removed for browser support (firefox), should work anyway.
+        let prefix: string;
+        let num: number;
+        if (!matches) {
+            prefix = s;
+            num = 2;
+        } else {
+            Log.ex(matches.length > 2, 'parsing error: /' + regexpstr + '/gs.match(' + s + ')');
+            let i = s.length - matches[0].length;
+            prefix = s.substring(0, i);
+            num = 1 + (+matches[1]);
+            // UU.pe(isNaN(num), 'wrong parsing:', s, s.substring(i, numberEnd), i, numberEnd);
+            // const prefix: string = s.substring(0, i);
+            // console.log('increaseendingNumber:  prefix: |' + prefix+'| num:'+num, '[i] = ['+i+']; s: |'+s+"|");
+
+        }
+        if (increaseWhile) while (increaseWhile(prefix + num)) { num++; }
+        return prefix + num; }
+
+    static deepEqual_use_isDeepStrictEqual_bynode(subElements: any, val: any): boolean { return false; }
 }
 
 export class DDate{
@@ -2510,53 +2583,6 @@ export class SelectorOutput {
 //         // return (typeof v !== 'function') && (typeof v !== 'object') && (!UU.isArray(v));
 //         return !UU.isObject(v) && !Array.isArray(v) && !UU.isFunction(v); }
 //
-//     static getEndingNumber(s: string, ignoreNonNumbers: boolean = false, allowDecimal: boolean = false): number {
-//         let i = s.length;
-//         let numberEnd = -1;
-//         while (--i > 0) {
-//             if (!isNaN(+s[i])) { if (numberEnd === -1) { numberEnd = i; } continue; }
-//             if (s[i] === '.' && !allowDecimal) { break; }
-//             if (s[i] === '.') { allowDecimal = false; continue; }
-//             if (!ignoreNonNumbers) { break; }
-//             if (numberEnd !== -1) { ignoreNonNumbers = false; }
-//         }
-//         s = numberEnd === -1 ? '1' : s.substring(i, numberEnd);
-//         return +parseFloat(s); }
-//
-//     static increaseEndingNumber(s: string, allowLastNonNumberChars: boolean = false, allowDecimal: boolean = false, increaseWhile: (x: string) => boolean = null): string {
-//         /*let i = s.length;
-//     let numberEnd = -1;
-//     while (--i > 0) {
-//       if (!isNaN(+s[i])) { if (numberEnd === -1) { numberEnd = i; } continue; }
-//       if (s[i] === '.' && !allowDecimal) { break; }
-//       if (s[i] === '.') { allowDecimal = false; continue; }
-//       if (!ignoreNonNumbers) { break; }
-//       if (numberEnd !== -1) { ignoreNonNumbers = false; }
-//     }
-//     if (numberEnd === -1) { return s + '_1'; }
-//     // i++;
-//     numberEnd++;*/
-//         let regexpstr = '([0-9]+' + (allowDecimal ? '|[0-9]+\\.[0-9]+' : '') + ')' + (allowLastNonNumberChars ? '[^0-9]*' : '') + '$';
-//         const matches: RegExpExecArray = new RegExp(regexpstr, 'g').exec(s); // Global (return multi-match) Single line (. matches \n).
-//         // S flag removed for browser support (firefox), should work anyway.
-//         let prefix: string;
-//         let num: number;
-//         if (!matches) {
-//             prefix = s;
-//             num = 2;
-//         } else {
-//             UU.pe(matches.length > 2, 'parsing error: /' + regexpstr + '/gs.match(' + s + ')');
-//             let i = s.length - matches[0].length;
-//             prefix = s.substring(0, i);
-//             num = 1 + (+matches[1]);
-//             // UU.pe(isNaN(num), 'wrong parsing:', s, s.substring(i, numberEnd), i, numberEnd);
-//             // const prefix: string = s.substring(0, i);
-//             // console.log('increaseendingNumber:  prefix: |' + prefix+'| num:'+num, '[i] = ['+i+']; s: |'+s+"|");
-//
-//         }
-//         while (increaseWhile !== null && increaseWhile(prefix + num)) { num++; }
-//         return prefix + num; }
-//
 //     static isValidName(name: string): boolean { return /^[a-zA-Z_$][0-9a-zA-Z_$]*$/.test(name); }
 //
 //     static getTSClassName(thing: any): string {
@@ -4060,7 +4086,7 @@ export class DetectZoom {
     static zoom(): number { U.pe(true, 'better not use this, looks like always === 1'); return detectzoooom.zoom(); }
 }*/
 
-export abstract class ISize {
+export abstract class ISize<PT extends IPoint = IPoint> {
     x: number;
     y: number;
     w: number;
@@ -4079,35 +4105,126 @@ export abstract class ISize {
         else if (isNaN(+h)) { this.h = 0; }
         else this.h = +h; }
 
-    abstract makePoint(x: number, y: number): IPoint;
-    abstract clone(otherJson: ISize): ISize;
-    abstract duplicate(): ISize;
-    tl(): IPoint { return this.makePoint(   this.x,             this.y         ); }
-    tr(): IPoint { return this.makePoint(this.x + this.w,    this.y         ); }
-    bl(): IPoint { return this.makePoint(   this.x,          this.y + this.h); }
-    br(): IPoint { return this.makePoint(this.x + this.w, this.y + this.h); }
-    equals(size: ISize): boolean { return this.x === size.x && this.y === size.y && this.w === size.w && this.h === size.h; }
+    set(x?: number, y?: number, w?: number, h?: number): void {
+        if (x !== undefined) (this.x = +x);
+        if (y !== undefined) (this.y = +y);
+        if (w !== undefined) (this.w = +w);
+        if (h !== undefined) (this.h = +h);
+    }
+
+    abstract makePoint(x: number, y: number): PT;
+    abstract new(): this;
+    clone(json: this): this { this.x = json.x; this.y = json.y; this.w = json.w; this.h = json.h; return this; }
+    duplicate(): this { return this.new().clone(this); }
+
+    add(pt2: this | PT): void {
+        this.x += pt2.x;
+        this.y += pt2.y;
+        if (!('w' in pt2)) return;
+        this.w += (pt2 as ISize).w;
+        this.h += (pt2 as ISize).h; }
+
+    subtract(pt2: this | PT): void {
+        this.x -= pt2.x;
+        this.y -= pt2.y;
+        if (!('w' in pt2)) return;
+        this.w -= (pt2 as ISize).w;
+        this.h -= (pt2 as ISize).h; }
+
+    multiply(pt2: this | PT): void {
+        this.x *= pt2.x;
+        this.y *= pt2.y;
+        if (!('w' in pt2)) return;
+        this.w *= (pt2 as ISize).w;
+        this.h *= (pt2 as ISize).h; }
+
+    divide(pt2: this | PT): void {
+        this.x /= pt2.x;
+        this.y /= pt2.y;
+        if (!('w' in pt2)) return;
+        this.w /= (pt2 as ISize).w;
+        this.h /= (pt2 as ISize).h; }
+
+    tl(): PT { return this.makePoint(   this.x,             this.y         ); }
+    tr(): PT { return this.makePoint(this.x + this.w,    this.y         ); }
+    bl(): PT { return this.makePoint(   this.x,          this.y + this.h); }
+    br(): PT { return this.makePoint(this.x + this.w, this.y + this.h); }
+    equals(size: this): boolean { return this.x === size.x && this.y === size.y && this.w === size.w && this.h === size.h; }
     /// field-wise Math.min()
-    min(minSize: ISize, clone: boolean): ISize {
-        const ret: ISize = clone ? this.duplicate() : this;
+    min(minSize: this, clone: boolean): this {
+        const ret: this = clone ? this.new() : this;
         if (!isNaN(minSize.x) && ret.x < minSize.x) { ret.x = minSize.x; }
         if (!isNaN(minSize.y) && ret.y < minSize.y) { ret.y = minSize.y; }
         if (!isNaN(minSize.w) && ret.w < minSize.w) { ret.w = minSize.w; }
         if (!isNaN(minSize.h) && ret.h < minSize.h) { ret.h = minSize.h; }
         return ret; }
-    max(maxSize: ISize, clone: boolean): ISize {
-        const ret: ISize = clone ? this.duplicate() : this;
+    max(maxSize: this, clone: boolean): this {
+        const ret: this = clone ? this.new() : this;
         if (!isNaN(maxSize.x) && ret.x > maxSize.x) { ret.x = maxSize.x; }
         if (!isNaN(maxSize.y) && ret.y > maxSize.y) { ret.y = maxSize.y; }
         if (!isNaN(maxSize.w) && ret.w > maxSize.w) { ret.w = maxSize.w; }
         if (!isNaN(maxSize.h) && ret.h > maxSize.h) { ret.h = maxSize.h; }
         return ret; }
 
-    abstract intersection(size: ISize): ISize | null;
-    contains(pt: IPoint): boolean {
+    intersection(size: this): this | null {
+        // anche "isinside"
+        let startx, starty, endx, endy;
+        startx = Math.max(this.x, size.x);
+        starty = Math.max(this.y, size.y);
+        endx = Math.min(this.x + this.w, size.x + size.w);
+        endy = Math.min(this.y + this.h, size.y + size.h);
+        const intersection: this = this.new();
+        // intersection.set(0, 0, 0, 0);
+        intersection.x = startx;
+        intersection.y = starty;
+        intersection.w = endx - startx;
+        intersection.h = endy - starty;
+        const doesintersect: boolean = intersection.w > 0 && intersection.h > 0;
+        return (doesintersect) ? intersection: null; }
+
+    contains(pt: PT): boolean {
         return  pt.x >= this.x && pt.x <= this.x + this.w && pt.y >= this.y && pt.y <= this.y + this.h; }
+
+    isOverlapping(size2: this): boolean { return !!this.intersection(size2); }
+    isOverlappingAnyOf(sizes: this[]): boolean {
+        if (!sizes) return false;
+        for (let size of sizes) { if (this.isOverlapping(size)) return true; }
+        return false;
+    }
+
+    multiplyPoint(other: PT, newInstance: boolean): this {
+        const ret: this = newInstance ? this.new() : this;
+        ret.x *= other.x;
+        ret.w *= other.x;
+        ret.y *= other.y;
+        ret.h *= other.y;
+        return ret; }
+
+    dividePoint(other: PT, newInstance: boolean): this {
+        const ret: this = newInstance ? this.new() : this;
+        ret.x /= other.x;
+        ret.w /= other.x;
+        ret.y /= other.y;
+        ret.h /= other.y;
+        return ret; }
+
+    boundary(size2: this): void {
+        /*let minx, maxx, miny, maxy;
+        if (size2.y < this.y) { miny = size2.y; /*maxy = this.y;* / } else { miny = this.y; /*maxy = size2.y;* / }
+        if (size2.x < this.x) { minx = size2.y; /*maxx = this.x;* / } else { minx = this.x; /*maxy = size2.x;* / }
+        if (size2.y + size2.h < this.y + this.h) maxy = this.y + this.h; else maxy = size2.y + size2.h;
+        if (size2.x + size2.w < this.x + this.w) maxx = this.x + this.w; else maxx = size2.x + size2.w;
+        */
+        this.h = (size2.y + size2.h > this.y + this.h ? size2.y + size2.h : this.y + this.h); // -miny
+        this.w = (size2.x + size2.w > this.x + this.w ? size2.x + size2.w : this.x + this.w); // -minx
+        if (this.y < size2.y) this.y = size2.y;
+        if (this.x < size2.x) this.x = size2.x;
+        this.h -= this.y;
+        this.w -= this.x;
+    }
 }
-export class Size extends ISize {
+
+export class Size extends ISize<Point> {
     private static sizeofvar: HTMLElement;
     private static $sizeofvar: JQuery<HTMLElement>;
 
@@ -4151,41 +4268,28 @@ export class Size extends ISize {
         return size;
     }
 
-    static fromPoints(firstPt: Point, secondPt: Point): Size {
+    static fromPoints(firstPt: IPoint, secondPt: IPoint): Size {
         const minX = Math.min(firstPt.x, secondPt.x);
         const maxX = Math.max(firstPt.x, secondPt.x);
         const minY = Math.min(firstPt.y, secondPt.y);
         const maxY = Math.max(firstPt.y, secondPt.y);
         return new Size(minX, minY, maxX - minX, maxY - minY); }
     dontMixWithGraphSize: any;
-    clone(json: Size): Size { return new Size(json.x, json.y, json.w, json.h); }
-    duplicate(): Size { return new Size().clone(this); }
+
     makePoint(x: number, y: number): Point { return new Point(x, y); }
+    new(): this { return new Size() as this; }
+    /*
+    duplicate(): this { return (this.new()).clone(this); }
     tl(): Point { return super.tl() as Point; }
     tr(): Point { return super.tr() as Point; }
     bl(): Point { return super.bl() as Point; }
     br(): Point { return super.br() as Point; }
-    equals(size: Size): boolean { return super.equals(size); }
+    equals(size: Size): boolean { return super.equals(size); }/ *
     min(minSize: Size, clone: boolean): Size { return super.min(minSize, clone) as Size; }
-    max(minSize: Size, clone: boolean): Size { return super.max(minSize, clone) as Size; }
-
-    intersection(size: Size): Size | null {
-        // anche "isinside"
-        let startx, starty, endx, endy;
-        startx = Math.max(this.x, size.x);
-        starty = Math.max(this.y, size.y);
-        endx = Math.min(this.x + this.w, size.x + size.w);
-        endy = Math.min(this.y + this.h, size.y + size.h);
-        const intersection: Size = new Size(0, 0, 0, 0);
-        intersection.x = startx;
-        intersection.y = starty;
-        intersection.w = endx - startx;
-        intersection.h = endy - starty;
-        const doesintersect: boolean = intersection.w > 0 && intersection.h > 0;
-        return (doesintersect) ? intersection: null; }
+    max(minSize: Size, clone: boolean): Size { return super.max(minSize, clone) as Size; }*/
 }
 
-export class GraphSize extends ISize {
+export class GraphSize extends ISize<GraphPoint> {
     static fromPoints(firstPt: GraphPoint, secondPt: GraphPoint): GraphSize {
         const minX = Math.min(firstPt.x, secondPt.x);
         const maxX = Math.max(firstPt.x, secondPt.x);
@@ -4286,9 +4390,14 @@ export class GraphSize extends ISize {
         return pt; }
 
     dontMixWithSize: any;
-    clone(json: GraphSize): GraphSize { return new GraphSize(json.x, json.y, json.w, json.h); }
-    duplicate(): GraphSize { return new GraphSize().clone(this); }
-    makePoint(x: number, y: number): Point { return new GraphPoint(x, y); }
+
+    new(): this { return new GraphSize() as this; }
+    makePoint(x: number, y: number): GraphPoint { return new GraphPoint(x, y) as GraphPoint; }
+
+    /*
+    new(): this { return new GraphSize() as this; }
+    duplicate(): this { return (this.new()).clone(this); }
+    makePoint(x: number, y: number): IPoint { return new Point(x, y); }
     tl(): GraphPoint { return super.tl() as GraphPoint; }
     tr(): GraphPoint { return super.tr() as GraphPoint; }
     bl(): GraphPoint { return super.bl() as GraphPoint; }
@@ -4297,45 +4406,11 @@ export class GraphSize extends ISize {
     min(minSize: GraphSize, clone: boolean): GraphSize { return super.min(minSize, clone) as GraphSize; }
     max(minSize: GraphSize, clone: boolean): GraphSize { return super.max(minSize, clone) as GraphSize; }
 
-    intersection(size: GraphSize): GraphSize | null {
-        // anche "isinside"
-        let startx, starty, endx, endy;
-        startx = Math.max(this.x, size.x);
-        starty = Math.max(this.y, size.y);
-        endx = Math.min(this.x + this.w, size.x + size.w);
-        endy = Math.min(this.y + this.h, size.y + size.h);
-        const intersection: GraphSize = new GraphSize(0, 0, 0, 0);
-        intersection.x = startx;
-        intersection.y = starty;
-        intersection.w = endx - startx;
-        intersection.h = endy - starty;
-        const doesintersect: boolean = intersection.w > 0 && intersection.h > 0;
-        return (doesintersect) ? intersection: null; }
 
-    contains(pt: IPoint): boolean { return super.contains(pt); }
 
-    isOverlapping(size2: GraphSize): boolean { return !!this.intersection(size2); }
-    isOverlappingAnyOf(sizes: GraphSize[]): boolean {
-        if (!sizes) return false;
-        for (let size of sizes) { if (this.isOverlapping(size)) return true; }
-        return false;
-    }
+    contains(pt: IPoint): boolean { return super.contains(pt); }*/
 
-    multiplyPoint(other: IPoint, newInstance: boolean): GraphSize {
-        const ret: GraphSize = newInstance ? new GraphSize() : this;
-        ret.x *= other.x;
-        ret.w *= other.x;
-        ret.y *= other.y;
-        ret.h *= other.y;
-        return ret; }
 
-    dividePoint(other: IPoint, newInstance: boolean): GraphSize {
-        const ret: GraphSize = newInstance ? new GraphSize() : this;
-        ret.x /= other.x;
-        ret.w /= other.x;
-        ret.y /= other.y;
-        ret.h /= other.y;
-        return ret; }
 }
 
 export abstract class IPoint {
@@ -4354,57 +4429,71 @@ export abstract class IPoint {
         else this.y = +y;}
 
     toString(): string { return '(' + this.x + ', ' + this.y + ')'; }
-    abstract clone(other: IPoint): void;
-    abstract duplicate(): IPoint;
+    clone(other: this): void { this.x = other.x; this.y = other.y; }
 
-    subtract(p2: IPoint, newInstance: boolean): IPoint {
+    abstract new(): this;
+    duplicate(): this { const ret = this.new(); ret.clone(this); return ret; }
+
+    subtract(p2: IPoint, newInstance: boolean): this {
         Log.e(!p2, 'subtract argument must be a valid point: ', p2);
-        let p1: IPoint;
+        let p1: this;
         if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
         p1.x -= p2.x;
         p1.y -= p2.y;
         return p1; }
 
-    add(p2: IPoint, newInstance: boolean): IPoint {
+    add(p2: IPoint, newInstance: boolean): this {
         Log.e(!p2, 'add argument must be a valid point: ', p2);
-        let p1: IPoint;
+        let p1: this;
         if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
         p1.x += p2.x;
         p1.y += p2.y;
         return p1; }
 
-    addAll(p: IPoint[], newInstance: boolean): IPoint {
+    addAll(p: IPoint[], newInstance: boolean): this {
         let i;
-        let p0: IPoint;
+        let p0: this;
         if (!newInstance) { p0 = this; } else { p0 = this.duplicate(); }
         for (i = 0; i < p.length; i++) { p0.add(p[i], true); }
         return p0; }
 
-    subtractAll(p: IPoint[], newInstance: boolean): IPoint {
+    subtractAll(p: this[], newInstance: boolean): this {
         let i;
-        let p0: IPoint;
+        let p0: this;
         if (!newInstance) { p0 = this; } else { p0 = this.duplicate(); }
         for (i = 0; i < p.length; i++) { p0.subtract(p[i], true); }
         return p0; }
 
-    multiply(scalar: number, newInstance: boolean): IPoint {
+    multiply(pt: this, newInstance: boolean = false): this {
+        let ret: this = (newInstance ? this.duplicate() : this);
+        ret.x *= pt.x;
+        ret.y *= pt.y;
+        return ret; }
+
+    divide(pt: this, newInstance: boolean = false): this {
+        let ret = (newInstance ? this.duplicate() : this);
+        ret.x /= pt.x;
+        ret.y /= pt.y;
+        return ret; }
+
+    multiplyScalar(scalar: number, newInstance: boolean): this {
         Log.e(isNaN(+scalar), 'IPoint.multiply()', 'scalar argument must be a valid number: ', scalar);
-        let p1: IPoint;
+        let p1: this;
         if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
         p1.x *= scalar;
         p1.y *= scalar;
         return p1; }
 
-    divide(scalar: number, newInstance: boolean): IPoint {
+    divideScalar(scalar: number, newInstance: boolean): this {
         Log.e(isNaN(+scalar), 'IPoint.divide()', 'scalar argument must be a valid number: ', scalar);
-        let p1: IPoint;
+        let p1: this;
         if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
         p1.x /= scalar;
         p1.y /= scalar;
         return p1; }
 
-    isInTheMiddleOf(firstPt: IPoint, secondPt: IPoint, tolleranza: number): boolean {
-        const rectangle: Size = Size.fromPoints(firstPt as Point, secondPt as Point);
+    isInTheMiddleOf(firstPt: this, secondPt: this, tolleranza: number): boolean {
+        const rectangle: Size = Size.fromPoints(firstPt, secondPt);
         const tolleranzaX = tolleranza; // actually should be cos * arctan(m);
         const tolleranzaY = tolleranza; // actually should be sin * arctan(m);
         if (this.x < rectangle.x - tolleranzaX || this.x > rectangle.x + rectangle.w + tolleranzaX) { return false; }
@@ -4456,6 +4545,7 @@ export abstract class IPoint {
         return toRadians ? ret : U.RadToDegree(ret); }
 
     absolute(): number { return Math.sqrt(this.x * this.x + this.y * this.y); }
+    set(x: number, y: number) { this.x = x; this.y = y; }
 }
 
 export class GraphPoint extends IPoint{
@@ -4468,9 +4558,10 @@ export class GraphPoint extends IPoint{
         throw new Error("todo: const g: IGraph = Status.status.getActiveModel().graph;");
         return g.toGraphCoord(p); }
 
-    duplicate(): GraphPoint { return new GraphPoint(this.x, this.y); }
-    clone(other: GraphPoint): void { this.x = other.x; this.y = other.y; }
-    subtract(p2: GraphPoint, newInstance: boolean): GraphPoint { return super.subtract(p2, newInstance) as GraphPoint; }
+    new(): this { return new GraphPoint() as this;}
+    /* duplicate(): this { return new GraphPoint(this.x, this.y) as this; }/*
+    clone(other: this): void { this.x = other.x; this.y = other.y; }
+    subtract(p2: this, newInstance: boolean): GraphPoint { return super.subtract(p2, newInstance) as GraphPoint; }
     add(p2: GraphPoint, newInstance: boolean): GraphPoint { return super.add(p2, newInstance) as GraphPoint; }
     multiply(scalar: number, newInstance: boolean): GraphPoint { return super.multiply(scalar, newInstance) as GraphPoint; }
     divide(scalar: number, newInstance: boolean): GraphPoint { return super.divide(scalar, newInstance) as GraphPoint; }
@@ -4480,30 +4571,51 @@ export class GraphPoint extends IPoint{
     moveOnNearestBorder(startVertexSize: GraphSize, clone: boolean, debug: boolean = true): GraphPoint {
         return super.moveOnNearestBorder(startVertexSize, clone, debug) as GraphPoint; }
     getM(pt2: GraphPoint): number { return super.getM(pt2); }
-    degreeWith(pt2: GraphPoint, toRadians: boolean): number { return super.degreeWith(pt2, toRadians); }
+    degreeWith(pt2: GraphPoint, toRadians: boolean): number { return super.degreeWith(pt2, toRadians); }*/
 
 }
 export class Point extends IPoint{
-    dontmixwithPoint: any;
+    dontmixwithGPoint: any;
     static fromEvent(e: JQuery.ClickEvent | JQuery.MouseMoveEvent | JQuery.MouseUpEvent | JQuery.MouseDownEvent | JQuery.MouseEnterEvent | JQuery.MouseLeaveEvent | JQuery.MouseEventBase)
         : Point {
         const p: Point = new Point(e.pageX, e.pageY);
         return p; }
 
-    duplicate(): Point { return new Point(this.x, this.y); }
-    clone(other: Point): void{ this.x = other.x; this.y = other.y; }
+    new(): this { return new Point() as this;}
+    /* duplicate(): this { return new Point(this.x, this.y) as this; }
+    /*
     subtract(p2: Point, newInstance: boolean): Point { return super.subtract(p2, newInstance) as Point; }
     add(p2: Point, newInstance: boolean): Point { return super.add(p2, newInstance) as Point; }
-    multiply(scalar: number, newInstance: boolean): Point { return super.multiply(scalar, newInstance) as Point; }
+    // multiplyScalar(scalar: number, newInstance: boolean): Point { sdhfgmj }
 
-    divide(scalar: number, newInstance: boolean): Point { return super.divide(scalar, newInstance) as Point; }
+    // divideScalar(scalar: number, newInstance: boolean): Point { gdhfg }
     isInTheMiddleOf(firstPt: Point, secondPt: Point, tolleranza: number): boolean { return super.isInTheMiddleOf(firstPt, secondPt, tolleranza); }
     distanceFromLine(p1: Point, p2: Point): number { return super.distanceFromLine(p1, p2); }
     equals(pt: Point, tolleranzaX: number = 0, tolleranzaY: number = 0): boolean { return super.equals(pt, tolleranzaX, tolleranzaY); }
     moveOnNearestBorder(startVertexSize: GraphSize, clone: boolean, debug: boolean = true): Point {
         return super.moveOnNearestBorder(startVertexSize, clone, debug) as Point; }
     getM(pt2: Point): number { return super.getM(pt2); }
-    degreeWith(pt2: Point, toRadians: boolean): number { return super.degreeWith(pt2, toRadians); }
+    degreeWith(pt2: Point, toRadians: boolean): number { return super.degreeWith(pt2, toRadians); }*/
+
+}
+
+@RuntimeAccessible
+export class DPoint extends DPointerTargetable {
+    static logic: typeof LPointerTargetable;
+    public x: number;
+    public y: number;
+    constructor(x?: number, y?: number) {
+        super();
+        this.x = +(x ?? 0); // if null | undefined -> 0, else just x
+        this.y = +(y ?? 0);
+    }
+}
+
+@RuntimeAccessible
+export class LPoint extends Mixin(DPoint, LPointerTargetable){
+    // todo: se vuoi evitare che si affolli troppo idlookup: crea un idlookup per ogni DClass e prependi this.className all'id
+    static structure: typeof DPoint;
+    static singleton: LPoint;
 }
 
 export class FileReadTypeEnum {

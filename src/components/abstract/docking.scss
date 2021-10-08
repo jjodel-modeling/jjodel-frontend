@@ -73,12 +73,12 @@
 .dock-panel.dock-style-card .dock-panel-max-btn {
   opacity: 1;
   width: 30px;
-  height: calc(100% - 5px);
-  margin-top: 5px;
+  height: 100%; // calc(100% - 5px);
+  // margin-top: 5px;
   background-image: url("../../img/google/2x/baseline_fullscreen_black_24dp.png");
   background-size: cover;
   background-color: var(--background1);
-  background-blend-mode: overlay; // | soft-light
+  // background-blend-mode: overlay; // | soft-light
 }
 .dock-panel.dock-style-card .dock-panel-max-btn:before {
   border-color: #fff;
@@ -117,6 +117,24 @@
   background: none;
 }
 
+///// additional buttons
+.dock-style-addable{
+  .dock-nav-operations/*.dock-nav-operations-hidden*/~.dock-extra-content{
+    display: none;
+  }
+  .dock-nav-operations.dock-nav-operations-hidden~.dock-extra-content{
+    display: flex;
+  }
+  .my-panel-extra-container {
+    display: flex;
+    margin: auto;
+    height: 100%;
+  }
+  .my-panel-extra-btn{
+    padding: 6px 4px 4px 2px;
+    margin: 4px 2px 2px 0;
+  }
+}
 
 //////////////// default stile already included in rc-doc sources
 /*

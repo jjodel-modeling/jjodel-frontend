@@ -1,46 +1,9 @@
-import {
-    DAnnotation,
-    DAttribute,
-    DClass,
-    DClassifier,
-    DEnumerator,
-    DEnumLiteral,
-    DModel,
-    DModelElement,
-    DObject,
-    DOperation,
-    DPackage,
-    DParameter,
-    DReference,
-    DStructuralFeature,
-    DValue,
-    LAnnotation,
-    LAttribute,
-    LClass,
-    LClassifier,
-    LEnumerator,
-    LEnumLiteral,
-    LModel,
-    LModelElement,
-    LObject,
-    LOperation,
-    LPackage,
-    LParameter,
-    LReference,
-    LStructuralFeature,
-    LValue,
-    windoww,
-    LModelElementTransientProperties,
-    DModelElementTransientProperties,
-    DViewTransientProperties,
-    LViewTransientProperties,
-    DViewPrivateTransientProperties,
-    LViewPrivateTransientProperties,
-    LViewElement,
-    ViewElement,
-} from "../joiner";
+import {IStore, jodelInit, windoww} from "../joiner";
+import * as Componentss from '../joiner/components';
+import React from "react";
 
 
+/*
 let pairs = [
     [DAnnotation, LAnnotation],
     [DModelElement, LModelElement],
@@ -60,17 +23,19 @@ let pairs = [
     [DModelElementTransientProperties, LModelElementTransientProperties],
     [DViewTransientProperties, LViewTransientProperties],
     [DViewPrivateTransientProperties, LViewPrivateTransientProperties],
-    [ViewElement, LViewElement],
+    [DViewElement, LViewElement],
+    [DVoidVertex, LVoidVertex]
     // [DMap, LMap],
 ];
+*/
 
-for (let pair of pairs as any[]) {
+/*for (let pair of pairs as any[]) {
     pair[0].logic = pair[1];
     pair[1].singleton = new pair[1]();
     pair[1].structure = pair[0];
     windoww[pair[0].name] = pair[0];
     windoww[pair[1].name] = pair[1];
-}
+}*/
 
 /*
 DAnnotation.logic = LAnnotation;
@@ -109,5 +74,24 @@ LObject.singleton = new LObject();
 LModelElementTransientProperties.singleton = new LModelElementTransientProperties();
 */
 export const fakeExport = {}; // just to import-execute this file
-export {store} from "../redux/createStore";
+// IStore.fakeinit();
 // Symbol.prototype.toString = function(): string { alert('symbol to string'); return String(this); }
+
+let Components = Componentss;
+/*
+Components.map(C=> {
+    if (typeof C === 'object') return
+})
+for (let Comp of Components) {
+
+}*/
+windoww.Components = Componentss;
+
+
+function afterStoreLoad() {
+    console.error('aaaafter store load');
+    jodelInit();
+    IStore.fakeinit();
+}
+
+afterStoreLoad();

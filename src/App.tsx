@@ -1,9 +1,10 @@
 import React, {Component, PureComponent} from 'react';
 import logo from './logo.svg';
 import './App.scss';
-import DockLayoutComponent from "./components/abstract/DockLayoutComponent";
+import {U, DockLayoutComponent} from "./joiner";
 interface AllProps{}
 interface MPState{}
+
 class App extends PureComponent<AllProps, MPState>{
     constructor(props: Readonly<AllProps> | AllProps) {
         super(props);

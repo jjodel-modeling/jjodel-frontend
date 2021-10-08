@@ -4,13 +4,11 @@ import ReactDOM from "react-dom";
 import { DockingLayout } from 'smart-webcomponents-react/dockinglayout';
 import { Slider } from 'smart-webcomponents-react/slider';
 import { MultilineTextBox } from 'smart-webcomponents-react/multilinetextbox';
-import {GObject} from "../../joiner";
+import {GObject, Size, LoggerComponent} from "../../joiner";
 import TopbarComponent from "../topbar/TopbarComponent";
 import ToolboxComponent from "../toolbox/ToolboxComponent";
 import TreeViewComponent from "../rightbar/TreeView/TreeViewComponent";
 import $ from 'jquery';
-import {Size} from "../../common/U";
-import LoggerComponent from "../logger/loggerComponent";
 import './main.scss';
 
 class DragContext{

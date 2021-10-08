@@ -1,8 +1,10 @@
 import React, {Component} from "react";
 import './attribute.css';
 import logo from "../../logo.svg";
+import {RuntimeAccessible} from "../../../joiner";
 
 
+@RuntimeAccessible
 export class Attribute extends Component<any, any> {
     render() {
         window[('' + 'attrib') as any] = this as any;

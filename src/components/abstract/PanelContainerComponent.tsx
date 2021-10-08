@@ -1,3 +1,4 @@
+/*
 import React, {DetailedReactHTMLElement, Dispatch, PureComponent, ReactChild, ReactElement, ReactNode} from "react";
 import { connect } from "react-redux";
 import PanelComponent, {PanelOwnProps} from "./panelComponent";
@@ -70,7 +71,7 @@ class PanelContainerComponent extends PureComponent<AllProps, ThisState>{
         let dockSide: Dictionary<string, Element> = {};
         // const onSummaryUpdate = () => {};
         const onSummaryUpdate = () => this.forceUpdate();
-        this.setState( {panelSummary, /*panelCreatedCountForReRender: this.state.panelCreatedCountForReRender + 1*/}, onSummaryUpdate); // force sub-components to re-update (by passing new prop when changing deep state
+        this.setState( {panelSummary, /*panelCreatedCountForReRender: this.state.panelCreatedCountForReRender + 1* /}, onSummaryUpdate); // force sub-components to re-update (by passing new prop when changing deep state
     }
     public onRemovePanel(children: PanelComponent): void{
         // todo
@@ -81,10 +82,10 @@ class PanelContainerComponent extends PureComponent<AllProps, ThisState>{
 
         // todo: credo sia sbagliato sicuramente nei tipi, forse a runtime
         const childrenPanels = this.props.children ? (this.props.children as any).map(
-            (child: any) => { return React.cloneElement(child as any, { parentComponent: this, fakeProps: "fakeProps", forceReRender: {/*always new object shallowly different from old one*/} })}) : [];
+            (child: any) => { return React.cloneElement(child as any, { parentComponent: this, fakeProps: "fakeProps", forceReRender: {/*always new object shallowly different from old one* /} })}) : [];
         return (<>
             <div className="panelContainer">
-                { /*todo: sta parte non funziona e poi dovrei assegnare l'elemento DOM al portale (Tramite document.getelementbyid? la ref di react punta ai componenti non ai nodi DOM*/
+                { /*todo: sta parte non funziona e poi dovrei assegnare l'elemento DOM al portale (Tramite document.getelementbyid? la ref di react punta ai componenti non ai nodi DOM* /
 
                 dockSides.map( side =>
                     <div className={"panelDockSide " + side}>{
@@ -94,7 +95,7 @@ class PanelContainerComponent extends PureComponent<AllProps, ThisState>{
                     </div>)
                 }
                 <div className="pendingPanelHome" style={{display:'none'}}>
-                    { /* this.props.children */ }
+                    { /* this.props.children * / }
                     {childrenPanels}
                 </div>
             </div>
@@ -132,5 +133,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 export default connect<StateProps, DispatchProps, OwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
-)(PanelContainerComponent);*/
+)(PanelContainerComponent);* /
 export default PanelContainerComponent;
+*/
+export const todelete = {};

@@ -1,8 +1,9 @@
 import ReactJson from 'react-json-view' // npm i react-json-view
-import {JsType} from "../joiner";
+import {JsType, RuntimeAccessible} from "../joiner";
 import React, {ReactNode} from "react";
 // U-functions that require jsx
 
+@RuntimeAccessible
 export class UX{
     static recursiveMap<T extends ReactNode | ReactNode[] | null | undefined>(children: T, fn: (rn: T)=>T): T {
         const innermap = (child: ReactNode): T => {

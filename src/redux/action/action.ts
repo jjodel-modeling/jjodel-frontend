@@ -1,5 +1,14 @@
-import {Log} from "../../common/U";
-import {DModelElement, store} from "../../joiner";
+import {
+    Log,
+    DModelElement,
+    IStore,
+    Pointer,
+    DPointerTargetable,
+    reducer,
+    store,
+    windoww,
+    RuntimeAccessible
+} from "../../joiner";
 
 let pendingActions: Action[] = [];
 let hasBegun = false;
@@ -13,33 +22,46 @@ export function ABORT() {
     hasBegun = false;
     pendingActions = [];
 }
-export function END() {
+export function END(): boolean | IStore {
     hasBegun = false;
     // for (let action of pendingActions) { }
-    store.dispatch({...new CompositeAction(pendingActions, true)} as CompositeAction);
+    const ca: CompositeAction = new CompositeAction(pendingActions, false);
     pendingActions = [];
+    return ca.fire();
 }
-make class isinstorage e mettici il path studia annotazioni per annotare gli oggett in modo che vengano rwappati prima di farli ritornare se sono annotati
+
+// make class isinstorage e mettici il path studia annotazioni per annotare gli oggett in modo che vengano rwappati prima di farli ritornare se sono annotati
 // minor todo: type as (...args: infer P) => any) ?
-export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...params: Parameters<F>): boolean {
+export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...params: Parameters<F>): boolean | IStore {
     BEGIN();
     // minor todo: potrei fare l'override di Error() per fare in modo che gli errori vengano presi anche se non uso TRANSACTION o try-catch ?
     try { func(...params); } catch(e) { Log.ee('Transaction failed:', e); ABORT(); return false; }
-    END();
-    return true;
+    return END();
 }
 
 export abstract class Action {
     static type = 'ACTION';
+    static SubType: {
+        vertexSubElements: 'vertexSubElements',
+        vertexSize: 'vertexSize'
+    };
     hasFired: number = 0;
     // targetID: string | undefined;
     // target: IClass = null as any;
     consoleTargetSelector: string = '';
     // field: string = ''; // es: ID_58
     // value: any; // es: lowerbound, name, namespace, values (for attrib-ref)...
-    type: string
-    constructor(public field: string, public value: any){
+    type: string;
+    public field: string;
+    public value: any;
+    private src?: string[];
+    subType?: string;
+    constructor(field: string, value: any, subType?: string){
+        this.field = field;
+        this.value = value;
         this.type = (this.constructor as any).type;
+        this.src = new Error().stack?.split('\n').splice( 2);
+        this.subType = subType;
     }
 
     fire(forceRelaunch: boolean = false): boolean {
@@ -48,36 +70,53 @@ export abstract class Action {
         if (hasBegun) {
             pendingActions.push(this);
         } else {
-            console.log('firing action:', this);
-            store.dispatch({...this});
+            let storee = store || windoww.store;
+            console.log('firing action:', this, 'store:', storee);
+            storee.dispatch({...this});
         }
         return true;
     }
 
 }
+@RuntimeAccessible
 export class SetRootFieldAction extends Action {
     static type = 'SET_ROOT_FIELD';
-    constructor(public field: string, public value: any) {
-        super(field, value);
-        this.fire();
+    constructor(field: string, value: any, fire: boolean = true, subType?: string) {
+        super(field, value, subType);
+        if (fire) this.fire();
     }
 }
+
+@RuntimeAccessible
 export class SetFieldAction extends Action {
     static type = 'SET_ME_FIELD';
-    constructor(me: DModelElement, field: string, value: any) {
-        super('idlookup.' + me.id + ( field ? '.' + field : ''), value);
+    constructor(me: DPointerTargetable | Pointer<DPointerTargetable>, field: string, val: any, subtype?: string) {
+        super('idlookup.' + ((me as DPointerTargetable).id || me) + ( field ? '.' + field : ''), val, subtype);
         this.fire();
     }
 }
+
+@RuntimeAccessible
 export class CreateElementAction extends Action {
     static type = 'CREATE_ELEMENT';
-    value!: DModelElement;
-    constructor(me: DModelElement) {
+    value!: DPointerTargetable;
+    constructor(me: DPointerTargetable) {
         super('idlookup.' + me.id, me);
+        this.value = me;
         this.fire();
+    }
+}
+
+@RuntimeAccessible
+export class DeleteElementAction extends SetFieldAction {
+    static type = 'DELETE_ELEMENT';
+    constructor(me: DPointerTargetable | Pointer<DPointerTargetable>, subType?: string) {
+        super((me as DPointerTargetable).id || me, '', subType);
     }
 }
 /*
+
+@RuntimeAccessible
 export class IDLinkAction extends Action{
     constructor() {
         super(IDLinkAction.name,
@@ -85,9 +124,10 @@ export class IDLinkAction extends Action{
     nope, uso un proxy
 }*/
 
+@RuntimeAccessible
 export class CompositeAction extends Action {
-    actions: Action[] = [];
     static type: string = 'COMPOSITE_ACTION';
+    actions: Action[] = [];
     constructor(actions: Action[], launch: boolean = false) {
         super('', '');
         this.actions = actions;
@@ -95,7 +135,9 @@ export class CompositeAction extends Action {
     }
 }
 
+@RuntimeAccessible
 export class ParsedAction extends Action {
     path!: string; // path to a property in the store "something.like.this"
     pathArray!: string[]; // path splitted "like.1.this"
+    executionCount!: number;
 }

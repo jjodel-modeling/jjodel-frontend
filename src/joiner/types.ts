@@ -1,3 +1,5 @@
+import {DPointerTargetable, LPointerTargetable} from "./classes";
+
 export type Class = { new(...args: any[]): any; };
 interface Caller { caller: any; }
 interface Bind { bind: any; }
@@ -35,9 +37,13 @@ export type nnumber = null | number;
 export type nbool = null | boolean;
 export type bool = boolean;
 export type TODO<T = any> = any;
+export type NonEmptyString = Exclude<string, ''>;
 
 // tipo puramente documentazionale, è solo una stringa o array di stringhe
-export type Pointer<T, lowerbound = number, upperbound = number | string, RET = GObject> = (string | null); // & {[Symbol.iterator]: () => IterableIterator<string>};
+export type Pointer<T extends DPointerTargetable = DPointerTargetable, lowerbound = number, upperbound = number | string, RET = LPointerTargetable> =
+    upperbound extends 'N' ? string[] : (
+    upperbound extends 0 ? never : (
+    lowerbound extends 0 ? (string | undefined | null) : string)); // & {[Symbol.iterator]: () => IterableIterator<string>};
 
 declare global  {
     interface ProxyConstructor {
