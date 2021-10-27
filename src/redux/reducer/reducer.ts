@@ -15,7 +15,7 @@ import {
     DocString,
     Dictionary,
     RuntimeAccessibleClass,
-    LPointerTargetable, store, windoww, getPath, Selectors
+    LPointerTargetable, store, windoww, getPath, Selectors, GraphDragHandler
 } from "../../joiner";
 import React from "react";
 
@@ -48,9 +48,15 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
         // perform final assignment
         if (i >= action.pathArray.length - 1) {
             let isArrayAppend = false;
+            let isArrayRemove = false;
+            console.log('isarrayappend?', {endswith: U.endsWith(key, ['+=', '[]', '-1']), key, action, i});
+            console.log('isarraydelete?', {endswith: U.endsWith(key, ['-='])});
             if (U.endsWith(key, ['+=', '[]', '-1'])) {
                 key = key.substr(0, key.length - 2);
                 isArrayAppend = true; }
+            if (U.endsWith(key, ['-='])) {
+                key = key.substr(0, key.length - 2);
+                isArrayRemove = true; }
             // perform final assignment
             if (isArrayAppend) {
                 if (!Array.isArray(current[key])) {
@@ -59,7 +65,15 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
                 }
                 gotChanged = true;
                 current[key].push(newVal);
-            } else {
+            }
+            if (isArrayRemove){
+                if (!Array.isArray(current[key])) { current[key] = []; }
+                gotChanged = true;
+                let index = U.isNumber(key) ? +key : -1;
+                if (index === -1) index = current[key].length;
+                current[key] = current[key].splice(index, 1);
+            }
+            else {
                 gotChanged = current[key] !== newVal;
                 if (newVal === undefined) delete current[key];
                 else current[key] = newVal;
@@ -215,6 +229,8 @@ export function jodelInit() {
         lclass.singleton = new lclass();
         lclass.structure = dclass;
     }
+
+    // GraphDragHandler.init();
 
 }
 

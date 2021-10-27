@@ -587,12 +587,12 @@ export class U{
 
     static endsWith(str: string, suffix: string | string[]): boolean {
         if (Array.isArray(suffix)) {
-            for(let suf of suffix) {
+            for (let suf of suffix) {
                 if (U.endsWith(str, suf)) return true;
             }
             return false;
         }
-        return str.lastIndexOf(suffix) === str.length - suffix.length;
+        return str.length >= suffix.length && str.lastIndexOf(suffix) === str.length - suffix.length;
     }
 
     static arrayFilterNull<T>(arr: (T | null | undefined)[]): T[] {
@@ -651,6 +651,10 @@ export class U{
         return prefix + num; }
 
     static deepEqual_use_isDeepStrictEqual_bynode(subElements: any, val: any): boolean { return false; }
+
+
+     // returns true only if parameter is already a number by type. UU.isNumber('3') will return false
+     static isNumber(o: any): boolean { return +o === o && !isNaN(o); }
 }
 
 export class DDate{
@@ -834,6 +838,7 @@ export class Uarr{
         if (!arr1 || ! arr2) return null as any;
         return arr1.filter( e => arr2.indexOf(e) >= 0);
     }
+
 }
 
 export class FocusHistoryEntry {
@@ -2510,8 +2515,6 @@ export class SelectorOutput {
 //         if (isNaN(o)) return null;
 //         return o; }
 //
-//     // returns true only if parameter is already a number by type. UU.isNumber('3') will return false
-//     static isNumber(o: any): boolean { return +o === o && !isNaN(o); }
 //     // returns true only if parameter is a number or a stringified number. UU.isNumber('3') will return true
 //     static isNumerizable(o: any): boolean { return o !== null && o !== undefined && o !== '' && !isNaN(+o); }
 //     static isNumberArray(o: any, minn: number = Number.NEGATIVE_INFINITY, max: number = Number.POSITIVE_INFINITY,
@@ -4105,6 +4108,8 @@ export abstract class ISize<PT extends IPoint = IPoint> {
         else if (isNaN(+h)) { this.h = 0; }
         else this.h = +h; }
 
+    toString(): string { return JSON.stringify({x: this.x, y: this.y, w: this.w, h: this.h}); }
+
     set(x?: number, y?: number, w?: number, h?: number): void {
         if (x !== undefined) (this.x = +x);
         if (y !== undefined) (this.y = +y);
@@ -4289,6 +4294,7 @@ export class Size extends ISize<Point> {
     max(minSize: Size, clone: boolean): Size { return super.max(minSize, clone) as Size; }*/
 }
 
+@RuntimeAccessible
 export class GraphSize extends ISize<GraphPoint> {
     static fromPoints(firstPt: GraphPoint, secondPt: GraphPoint): GraphSize {
         const minX = Math.min(firstPt.x, secondPt.x);
@@ -4393,7 +4399,11 @@ export class GraphSize extends ISize<GraphPoint> {
 
     new(): this { return new GraphSize() as this; }
     makePoint(x: number, y: number): GraphPoint { return new GraphPoint(x, y) as GraphPoint; }
-
+/*
+    tl(): GraphPoint { return super.tl(); }
+    tr(): GraphPoint { return super.tr(); }
+    bl(): GraphPoint { return super.bl(); }
+    br(): GraphPoint { return super.br(); }*/
     /*
     new(): this { return new GraphSize() as this; }
     duplicate(): this { return (this.new()).clone(this); }
@@ -4429,7 +4439,7 @@ export abstract class IPoint {
         else this.y = +y;}
 
     toString(): string { return '(' + this.x + ', ' + this.y + ')'; }
-    clone(other: this): void { this.x = other.x; this.y = other.y; }
+    clone(other: this): this { this.x = other.x; this.y = other.y; return this; }
 
     abstract new(): this;
     duplicate(): this { const ret = this.new(); ret.clone(this); return ret; }
@@ -4576,10 +4586,11 @@ export class GraphPoint extends IPoint{
 }
 export class Point extends IPoint{
     dontmixwithGPoint: any;
-    static fromEvent(e: JQuery.ClickEvent | JQuery.MouseMoveEvent | JQuery.MouseUpEvent | JQuery.MouseDownEvent | JQuery.MouseEnterEvent | JQuery.MouseLeaveEvent | JQuery.MouseEventBase)
+    /// https://stackoverflow.com/questions/6073505/what-is-the-difference-between-screenx-y-clientx-y-and-pagex-y
+    /*static fromEvent(e: JQuery.ClickEvent | JQuery.MouseMoveEvent | JQuery.MouseUpEvent | JQuery.MouseDownEvent | JQuery.MouseEnterEvent | JQuery.MouseLeaveEvent | JQuery.MouseEventBase)
         : Point {
         const p: Point = new Point(e.pageX, e.pageY);
-        return p; }
+        return p; }*/
 
     new(): this { return new Point() as this;}
     /* duplicate(): this { return new Point(this.x, this.y) as this; }
