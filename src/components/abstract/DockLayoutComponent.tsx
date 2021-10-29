@@ -18,8 +18,7 @@ import {
 } from "../../joiner";
 
 
-console.error('see reading');
-const StyleEditor = windoww.components.StyleEditor;
+const StyleEditor = windoww.tempcomponents.StyleEditor;
 const MySwal = withReactContent(Swal);
 
 // private
@@ -63,9 +62,9 @@ function newTab(modelid0?: Pointer<DModel, 1, 1>, name?: string, gid?: Pointer<D
             <div>
                 <h1>Model name: {name}, id: {modelid}</h1>
                 <Graph data={modelid} nodeid={gid} graphid={gid} />
-                <span>Edit Section</span>
+                {/*<span>Edit Section</span>
                 <Graph data={modelid} nodeid={gid+'_'+2} graphid={gid+'_'+2} view = {Selectors.getByName(DViewElement, 'EditView')?.id as string} />
-                <span>Graph end</span>
+                <span>Graph end</span>*/}.
             </div> : <span>No models found</span>
             }</>
         )

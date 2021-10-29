@@ -13,7 +13,7 @@ import {
     LogicContext,
     MyProxyHandler,
     LViewElement,
-    MapProxyHandler
+    MapProxyHandler, GraphSize, DocString
 } from "../joiner";
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
 
@@ -26,15 +26,20 @@ export class RuntimeAccessibleClass {
     static getAllClasses(): typeof RuntimeAccessibleClass[] { return Object.values(RuntimeAccessibleClass.classes); }
     static getAllClassesDictionary(): Dictionary<string, typeof RuntimeAccessibleClass> { return RuntimeAccessibleClass.classes; }
 
-    static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable>(data: D | Pointer<DViewElement>, baseObjInLookup?: DPointerTargetable, path: string = ''): L{
+    static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
+        RET extends CAN_THROW extends true ? L : L | undefined  = CAN_THROW extends true ? L : L | undefined>
+    (data: D | Pointer<DViewElement>, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW): CAN_THROW extends true ? L : L | undefined{
         if (!data || (data as any).__isProxy) return data as any;
         if (typeof data === 'string') {
             data = store.getState().idlookup[data] as unknown as D;
-            if (!data) { return Log.exx('Cannot wrap:', {data, baseObjInLookup, path}); }
+            if (!data) {
+                if (canThrow) return Log.exx('Cannot wrap:', {data, baseObjInLookup, path});
+                else return undefined as RET;
+            }
         }
         if (!data) return data;
         // console.log('ProxyWrapping:', {data, baseObjInLookup, path});
-        return new Proxy(data, new TargetableProxyHandler(data, baseObjInLookup, path));
+        return new Proxy(data, new TargetableProxyHandler(data, baseObjInLookup, path)) as L;
     }
 
     static mapWrap2<D extends DPointerTargetable, L extends LPointerTargetable>(map: RuntimeAccessibleClass, container: D, baseObjInLookup?: DPointerTargetable, path: string = ''): L{
@@ -54,12 +59,12 @@ export class RuntimeAccessibleClass {
         return new Proxy(data, new MapProxyHandler(data, baseObjInLookup, path, subMapKeys));
     }
 
-    className: string;
+    className!: string;
     constructor() {
         this.className = this.constructor.name;
-        // todo: remove the direct link in window and all references?
-        (window as any)[this.className] =
-        RuntimeAccessibleClass.classes[this.className] = this.constructor as any;
+        // nb: per i mixin questo settaggio viene sovrascritto. perchè il mixin crea le 2 classi ereditate separatamente con i loro costruttori e le incrocia. quindi devo settarlo dall'annotazione @ tramite prototype
+        (window as any)[this.constructor.name] =
+        RuntimeAccessibleClass.classes[this.constructor.name] = this.constructor as any;
         // RuntimeAccessibleClass.allRuntimeClasses.push(this.className);
     }
 
@@ -77,12 +82,13 @@ export class RuntimeAccessibleClass {
 
 
 // annotation
-export function RuntimeAccessible<T extends any>(constructor: T): T {
+export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
     // console.log('DecoratorTest', {constructor, arguments});
     // @ts-ignore
     RuntimeAccessibleClass.classes[constructor.name] = constructor as any as typeof RuntimeAccessibleClass;
     // @ts-ignore
     constructor.prototype.className = constructor.name;
+    (constructor as any).classNameDebug = constructor.name;
     return constructor;
 }
 
@@ -96,6 +102,9 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     _storePath?: string[];
 
     id: string;
+    pointedBy: DocString<'path in store'>[] = []; // NB: potrebbe contenere puntatori invalidi.
+    // se viene cancellato un intero oggetto A che contiene una lista di puntatori, gli oggetti che puntano ad A rimuovono A dai loro "poitnedBy",
+    // ma gli oggetti puntati da A tramite sotto-oggetti o attributi (subviews...) non vengono aggiornati in "pointedby"
     constructor(isUser: any = false, id?: any, a?: any, b?:any, c?:any) {
         super();
         const userid = DUser.current;
@@ -109,11 +118,32 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
 export class LPointerTargetable extends DPointerTargetable {
     public static structure: typeof DPointerTargetable;
     public static singleton: LPointerTargetable;
-
+    // @ts-ignore
+    public pointedBy: LPointerTargetable[];
     public __raw!: this;
 
     public get__extends(superClassName: string, context: LogicContext<this>): boolean {
         return RuntimeAccessibleClass.extends(context.data.className, superClassName);
+    }
+
+    public get_pointedBy(superClassName: string, context: LogicContext<DPointerTargetable>): LPointerTargetable[] {
+        let state: GObject = store.getState();
+        function getForemostObjectInPath(path: DocString<'storePath'>): undefined | LPointerTargetable {
+            let lastPointableObject: undefined | DPointerTargetable;
+            let pathArray = path.split('.');
+            for (let key of pathArray) {
+                let currentObj: GObject = state[key];
+                if (!currentObj) break;
+                if (currentObj && currentObj.id && state.idlookup[currentObj.id]) lastPointableObject = state.idlookup[currentObj.id];
+            }
+            return lastPointableObject && DPointerTargetable.wrap(lastPointableObject);
+        }
+        return (context.data.pointedBy || []).map(getForemostObjectInPath).filter( lobj => !!lobj) as LPointerTargetable[];
+    }
+
+    public set_pointedBy(val: never, context: LogicContext<DPointerTargetable>): boolean {
+        Log.exx('pointedBy field should never be directly edited.', {context, val});
+        return false;
     }
 }
 

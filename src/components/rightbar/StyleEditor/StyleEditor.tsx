@@ -10,7 +10,15 @@ import {
     DViewElement,
     DModelElement,
     LGraphElement,
-    LViewElement, LModelElement, DPointerTargetable, DNamedElement, LNamedElement, windoww,
+    LViewElement,
+    LModelElement,
+    DPointerTargetable,
+    DNamedElement,
+    LNamedElement,
+    windoww,
+    DModel,
+    LModel,
+    LPointerTargetable,
 } from "../../../joiner";
 
 // private
@@ -23,10 +31,16 @@ class StyleEditorComponent extends PureComponent<AllProps, ThisState>{
     }
 
     render(): ReactNode {
+        const proxy: LModelElement = {} as any;
+        proxy.annotations = [];
+
+        if (!this.props.selected) return <div>empty selection</div>;
+        const selection = this.props.selected;
+        selection.modelElement = DPointerTargetable.wrap<DModel, LModel>(new DModel());
         return (<>
             {
                 this.props.selected?.modelElement ?
-                    <Input obj={(this.props.selected?.modelElement as LNamedElement)} field={'name'} type={"checkbox"} /> :
+                    <Input obj={(this.props.selected?.view as LViewElement)} field={'jsxString'} /> :
                     <div>Empty selection.</div>
             }
         </>); }
@@ -58,8 +72,8 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.selectedid = state._lastSelected;
     ret.selected = ret.selectedid && {
-            node: DPointerTargetable.wrap(state.idlookup[ret.selectedid.node]),
-            view: DPointerTargetable.wrap(state.idlookup[ret.selectedid.view]),
+            node: DPointerTargetable.wrap(state.idlookup[ret.selectedid.node]) as LGraphElement,
+            view: DPointerTargetable.wrap(state.idlookup[ret.selectedid.view]) as LViewElement,
             modelElement: ret.selectedid.modelElement ? DPointerTargetable.wrap<DPointerTargetable, LModelElement>(state.idlookup[ret.selectedid.modelElement]) : undefined };
     return ret; }
 
@@ -78,6 +92,5 @@ export const StyleEditorConnected = connect<StateProps, DispatchProps, OwnProps,
 // nb: necessario per usarlo a runtime
 export const StyleEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     return <StyleEditorConnected {...{...props, childrens}} />; }
-if (!windoww.components) windoww.components = {};
-console.error('see writing');
-windoww.components.StyleEditor = StyleEditor;
+if (!windoww.tempcomponents) windoww.tempcomponents = {};
+windoww.tempcomponents.StyleEditor = StyleEditor;

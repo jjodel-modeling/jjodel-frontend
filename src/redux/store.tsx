@@ -129,9 +129,9 @@ function makeDefaultGraphView(): DViewElement {
     // let jsxstringtodo = todo itera i nodi o i children di un modello nel jsx;
     let thiss: {data: LModelElement} = null as any;
     // let jsxstring = <div><span>{JSON.stringify(thiss.data.__raw)}</span> <div className={"childrens"}>{thiss.data.childrens.map((p) => <VertexConnected data={p.id} />)}</div></div>;
-    let jsxstring = '<div><span style={{maxHeight: "50px", display: "block", overflowY: "scroll"}}>{JSON.stringify({...this.data.__raw, childrens: this.data.childrens})}</span>\n' +
+    let jsxstring = '<div><b>{this.data.__raw.className + ": " + this.data.id}</b><span style={{maxHeight: "50px", display: "block", overflowY: "scroll"}}>{JSON.stringify({...this.data.__raw, childrens: this.data.childrens})}</span>\n' +
         '<div className={"childrens"}>childrens: {this.data.childrens.map((p) => <Vertex data={p.id} />)}</div>\n' +
-        '<Field data={this.data.id} nodeid={this.nodeid + "2"} graphid={this.graphid} view = {Selectors.getByName(DViewElement, \'EditView\').id} />\n' +
+        '{/*<Field data={this.data.id} nodeid={this.nodeid + "2"} graphid={this.graphid} view = {Selectors.getByName(DViewElement, \'EditView\').id} />\n*/}' +
         '</div>';
     // let jsxstring = '<div><DataOutputComponent data={this.data.__raw} /> <div className={"childrens"}>{this.data.childrens.map((p) => <Vertex data={p.id} />)}</div></div>';
     let view: DViewElement = new DViewElement('GraphDefaultView', jsxstring, undefined, '', '', '', [DModelElement.name]);

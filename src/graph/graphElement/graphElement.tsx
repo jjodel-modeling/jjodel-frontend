@@ -1,15 +1,13 @@
 import React, {
-    Component, CSSProperties,
     Dispatch,
     PureComponent,
     ReactElement,
-    ReactNode, ReactNodeArray
+    ReactNode,
 } from "react";
-//import { map } from "react-itertools";
 import { createPortal } from "react-dom";
 import { connect } from "react-redux";
-import './graphElement.scss';
 import {deepStrictEqual} from "assert";
+import './graphElement.scss';
 
 import {
     JSXT,
@@ -31,7 +29,11 @@ import {
     Dictionary,
     Selectors,
     DGraph,
-    GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps, RuntimeAccessible
+    GraphElementStatee,
+    GraphElementDispatchProps,
+    GraphElementReduxStateProps,
+    GraphElementOwnProps,
+    RuntimeAccessible, LPointerTargetable, MyProxyHandler,
 } from "../../joiner";
 console.info('graphElement loading');
 
@@ -54,11 +56,10 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
     //console.error({jsx:view.jsxString, view});
 
     // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
-    console.error('tojsx', {view, jsx:view.jsxString});
     let jsxCodeString: DocString<ReactNode>;
     try { jsxCodeString = JSXT.fromString(view.jsxString, {factory: 'React.createElement'}); }
-    catch (e) {
-        Log.exDevv('Syntax Error in custom user-defined template:\n\n' +e.toString() + '\n\n' + view.jsxString, {evalContext});
+    catch (e: any) {
+        Log.eDevv('Syntax Error in custom user-defined template:\n\n' +e.toString() + '\n\n' + view.jsxString, {evalContext});
         jsxCodeString = '<div>Syntax error 1</div>';
     }
     let jsxparsedfunc: () => React.ReactNode;
@@ -66,8 +67,8 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
         jsxparsedfunc = U.evalInContextAndScope<() => ReactNode>('()=>{ return ' + jsxCodeString + '}', evalContext);
         // U.evalInContext({...this, ...evalContext}, res); // todo: remove eval and add new Function() ?
     }
-    catch (e) {
-        Log.exDevv('Syntax Error in custom user-defined template.\nReminder: empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString, {jsxCodeString, evalContext});
+    catch (e: any) {
+        Log.eDevv('Syntax Error in custom user-defined template.\nReminder: empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString, {jsxCodeString, evalContext});
         jsxparsedfunc = () => <div>Syntax Error 2</div>;
     }
 
@@ -80,25 +81,28 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 @RuntimeAccessible
 export class GraphElementRaw<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
     extends PureComponent<AllProps, GraphElementState>{
-    ////// mapper func
-    static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps): GraphElementReduxStateProps {
-        let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
+
+    static mapViewAndModelElement(state: IStore, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
         const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : ownProps.data?.id) as string;
         Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ownProps, state});
-        ret.data = LModelElement.wrap(state.idlookup[meid as any]);
-        // todo: graph non è ancora settato
+        ret.data = MyProxyHandler.wrap(state.idlookup[meid as any]);
         const viewScores = Selectors.getAppliedViews(ret.data, ret.node, ret.graph, ownProps.view, ownProps.parentViewId);
-        ret.views = viewScores.map(e => DPointerTargetable.wrap(e.element));
+        ret.views = viewScores.map(e => MyProxyHandler.wrap(e.element));
         ret.view = ret.views[0];
         (ret as any).viewScores = viewScores; // debug only
+        /*        if (ownProps.view) {
+                    ret.view = DPointerTargetable.wrap(state.idlookup[ownProps.view]);
+                } else {
+                    ret.view = ret.views[0];
+                }*/
+    }
 
-/*        if (ownProps.view) {
-            ret.view = DPointerTargetable.wrap(state.idlookup[ownProps.view]);
-        } else {
-            ret.view = ret.views[0];
-        }*/
-
-        GraphElementRaw.addLGraphElementStuff(state, ownProps, ret);
+    ////// mapper func
+    static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps, dGraphDataClass: typeof DGraphElement = DGraphElement): GraphElementReduxStateProps {
+        // console.log('dragx GE mapstate', {dGraphDataClass});
+        let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
+        GraphElementRaw.mapViewAndModelElement(state, ret, ownProps);
+        GraphElementRaw.addLGraphElementStuff(state, ownProps, ret, dGraphDataClass);
         // ret.view = LViewElement.wrap(state.idlookup[vid]);
         // view non deve essere più injected ma calcolata, però devo fare inject della view dell'elemento parent. learn ocl to make view target
         Log.exDev(!ret.view, 'failed to inject view:', {state, ownProps, reduxProps: ret});
@@ -115,7 +119,7 @@ export class GraphElementRaw<AllProps extends AllPropss = AllPropss, GraphElemen
     static addLGraphElementStuff(state: IStore,
                                  ownProps: GraphElementOwnProps,
                                  stateProps: GraphElementReduxStateProps,
-                                 dataClass: typeof DGraphElement = DGraphElement,
+                                 dGraphElementDataClass: typeof DGraphElement = DGraphElement,
                                  isDGraph?: DGraph): void {
         const idlookup = state.idlookup;
         let nodeid: string = isDGraph ? isDGraph.id : ownProps.nodeid as string;
@@ -128,13 +132,20 @@ export class GraphElementRaw<AllProps extends AllPropss = AllPropss, GraphElemen
             todo: quando il componente si aggiorna questo viene perso, come posso rendere permanente un settaggio di reduxstate in mapstatetoprops? o devo metterlo nello stato normale?
         }*/
 
-        stateProps.graph = idlookup[nodeid] as DGraphElement as any;
-        if (!stateProps.graph) { new CreateElementAction(new dataClass(false, graphid, graphid)); }
-        else { stateProps.graph = DPointerTargetable.wrap(stateProps.graph); }
+        stateProps.graph = idlookup[graphid] as DGraphElement as any;
+        let dGraphDataClass = DGraph;
+        if (!stateProps.graph) { new CreateElementAction(new dGraphDataClass(false, graphid, graphid, 'model_id_pointer_todo_hjkl')); }
+        else {
+            stateProps.graph = MyProxyHandler.wrap(stateProps.graph);
+            Log.exDev(stateProps.graph.__raw.className !== "DGraph", 'graph class is wrong', {graph: stateProps.graph, ownProps});
+        }
+
 
         let dnode: DGraphElement = idlookup[nodeid] as DGraphElement;
-        if (!dnode) { new CreateElementAction(new dataClass(false, nodeid, graphid)); }
-        else { stateProps.node = DPointerTargetable.wrap(dnode); }
+
+        // console.log('dragx GE mapstate addGEStuff', {dGraphElementDataClass, created: new dGraphElementDataClass(false, nodeid, graphid)});
+        if (!dnode) { new CreateElementAction(new dGraphElementDataClass(false, nodeid, graphid)); }
+        else { stateProps.node = MyProxyHandler.wrap(dnode); }
     }
 
     static mapDispatchToProps(dispatch: Dispatch<any>): GraphElementDispatchProps {
@@ -215,17 +226,18 @@ export class GraphElementRaw<AllProps extends AllPropss = AllPropss, GraphElemen
             default:
                 //console.log('relement default');
                 return re;
-            case windoww.mycomponents.Input.name:
-            case windoww.mycomponents.Textarea.name:
+            case windoww.Components.Input.name:
+            case windoww.Components.Textarea.name:
                 const objid =  re.props.obj?.id || re.props.obj || parentComponent.props.data.id;
                 const ret = React.cloneElement(re, {key: re.props.key || parentComponent.props.view.id + '_' + parentComponent.props.data.id + '_' + re.props.field, obj: objid, obj2: objid});
                 //console.log('relement Input set props',
                 //    {'re.props.obj.id': re.props.obj?.id, 're.props.obj': re.props.obj, 'thiss.props.data.id': thiss.props.data.id, thiss, re, objid, ret, 'ret.props': ret.props});
                 return ret;
-            case GraphElement.name:
-            case windoww.mycomponents.Graph.name:
-            case windoww.mycomponents.Field.name:
-            case windoww.mycomponents.VertexRaw.name:
+            case windoww.Components.GraphElement.name:
+            case windoww.Components.DefaultNode.name:
+            case windoww.Components.Graph.name:
+            case windoww.Components.Field.name:
+            case windoww.Components.VertexComponent.name:
                 const injectProps: GraphElementOwnProps = {} as any;
                 injectProps.parentViewId = parentComponent.props.view.id || parentComponent.props.view; // re.props.view ||  thiss.props.view
                 injectProps.graphid = parentComponent.props.graphid;
@@ -309,7 +321,8 @@ export class GraphElementRaw<AllProps extends AllPropss = AllPropss, GraphElemen
             setTimeout( () => new SetRootFieldAction('forceupdate', 4), 1);
             return <div>Loading</div>;}
         try {
-            ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], this.props.evalContext); } catch(e) {
+            ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], this.props.evalContext); }
+        catch(e: any) {
             Log.exDevv('Error in custom user-defined template:\n' + e.toString() + '\n\n' + this.props.view.jsxString,
                 {templateString: this.props.view.jsxString, evalContext: this.props.evalContext, error: e});
         }

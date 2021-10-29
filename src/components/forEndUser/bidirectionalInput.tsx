@@ -86,7 +86,7 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     console.log("ownProps.obj", ({state, ownProps:{...ownProps}}));
     if (!ownProps.obj) return ret;
     let objid: Pointer<DModelElement, 1, 1, LModelElement> = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
-    ret.data = DPointerTargetable.wrap(state.idlookup[objid]);
+    ret.data = DPointerTargetable.wrap(state.idlookup[objid]) as LPointerTargetable;
     return ret; }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
@@ -109,7 +109,7 @@ export const Input = (props: GObject & OwnProps, childrens: (string | React.Comp
     // delete (props as any).children;
     return <InputConnected {...props} field={props.field} obj={props.obj} />
 }
-
+/*
 if (!windoww.mycomponents) windoww.mycomponents = {};
 windoww.mycomponents.Textarea = BidirectionalTextArea;
-windoww.mycomponents.Input = BidirectionalInput;
+windoww.mycomponents.Input = BidirectionalInput;*/

@@ -16,7 +16,7 @@ import {
     store,
     LModel,
     DModel,
-    RuntimeAccessibleClass, RuntimeAccessible, Dictionary, DocString, DUser, GObject,
+    RuntimeAccessibleClass, RuntimeAccessible, Dictionary, DocString, DUser, GObject, MyProxyHandler,
 } from "../../joiner";
 
 @RuntimeAccessible
@@ -24,7 +24,7 @@ export class DGraphElement extends DPointerTargetable {
     static logic: typeof LPointerTargetable;
     graphID: Pointer<DGraph, 1, 1, LGraph>;
     graph!: LGraph;
-    size: GraphSize;
+    // size: GraphSize;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
 
 
@@ -35,35 +35,10 @@ export class DGraphElement extends DPointerTargetable {
         super(false, nodeID);
         this.graphID = graphID;
         this.subElements = [];
-        this.size = new GraphSize(0, 0, 0, 0);
+        // this.size = new GraphSize(0, 0, 0, 0);
     }
 
-    get_graph(context: LogicContext<this>): LGraph {
-        return TargetableProxyHandler.wrap(this.graphID); }
 
-    set_containedIn(context: LogicContext< this>, val: Pointer<DGraphElement, 0, 'N', LGraphElement>[]): boolean {
-        new SetFieldAction(context.data, 'containedIn', val);
-        return true;
-    }
-
-    set_subElements(context: LogicContext<this>, val: Pointer<DGraphElement, 0, 'N', LGraphElement>): boolean {
-        if (isDeepStrictEqual(context.data.subElements, val)) return true;
-        new SetFieldAction(context.data, 'subElements', val, Action.SubType.vertexSubElements);
-        const idlookup = store.getState().idlookup;
-        // new subelements
-        for (let newsubelementid of val) {
-            let subelement: DGraphElement = (newsubelementid && idlookup[newsubelementid]) as DGraphElement;
-            if (subelement.containedIn === context.data.id) continue;
-            DPointerTargetable.wrap<DGraphElement, LGraphElement>(subelement).containedIn = context.data.id; // trigger side-action
-        }
-        // old subelements
-        for (let oldsubelementid of context.data.subElements) {
-            let subelement: DGraphElement = (oldsubelementid && idlookup[oldsubelementid]) as DGraphElement;
-            if (subelement.containedIn !== context.data.id) continue;
-            DPointerTargetable.wrap<DGraphElement, LGraphElement>(subelement).containedIn = null; // todo: can this happen? è transitorio o causa vertici senza parent permanenti?
-        }
-        return true;
-    }
 }
 
 @RuntimeAccessible
@@ -98,11 +73,13 @@ export const defaultVSize: GraphSize = new GraphSize(0, 0, 300, 160); // useless
 export class DVoidVertex extends Mixin(DGraphElement, GraphSize) {
     // size: GraphSize;
     // selected: boolean = false;
-    size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
+    // size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
 
     constructor(isUser: boolean = false, nodeID: string | undefined, graphID: string) {
         super(false, nodeID, graphID);
+        this.className = this.constructor.name; // todo: il mixin setta il classname del primo costruttore (DGraphElement) tutti i classname delle Dclass mixin sono da settare a mano?
         this.clone(defaultVSize as this);
+        let uselessJustForNavigation: LVoidVertex;
         // this.size = defaultVSize.duplicate();
     }
 }
@@ -143,6 +120,33 @@ export class DRefEdge extends DEdge {
 export class LGraphElement extends Mixin(LPointerTargetable, DGraphElement) {
     static structure: typeof DGraphElement;
     static singleton: LGraphElement;
+
+    get_graph(context: LogicContext<this>): LGraph {
+        return TargetableProxyHandler.wrap(context.data.graphID); }
+
+    set_containedIn(val: Pointer<DGraphElement, 0, 'N', LGraphElement>[], context: LogicContext<this>): boolean {
+        new SetFieldAction(context.data, 'containedIn', val);
+        return true;
+    }
+
+    set_subElements(val: Pointer<DGraphElement, 0, 'N', LGraphElement>, context: LogicContext<this>): boolean {
+        if (isDeepStrictEqual(context.data.subElements, val)) return true;
+        new SetFieldAction(context.data, 'subElements', val, Action.SubType.vertexSubElements);
+        const idlookup = store.getState().idlookup;
+        // new subelements
+        for (let newsubelementid of val) {
+            let subelement: DGraphElement = (newsubelementid && idlookup[newsubelementid]) as DGraphElement;
+            if (subelement.containedIn === context.data.id) continue;
+            MyProxyHandler.wrap<DGraphElement, LGraphElement>(subelement).containedIn = context.data.id; // trigger side-action
+        }
+        // old subelements
+        for (let oldsubelementid of context.data.subElements) {
+            let subelement: DGraphElement = (oldsubelementid && idlookup[oldsubelementid]) as DGraphElement;
+            if (subelement.containedIn !== context.data.id) continue;
+            MyProxyHandler.wrap<DGraphElement, LGraphElement>(subelement).containedIn = null; // todo: can this happen? è transitorio o causa vertici senza parent permanenti?
+        }
+        return true;
+    }
 }
 
 @RuntimeAccessible
@@ -150,24 +154,41 @@ export class LGraph extends Mixin(LGraphElement, DGraph) {
     zoom!: GraphPoint;
     // @ts-ignore
     model?: LModel;
-    set_size(context: LogicContext< this>, val: GraphSize): boolean {
+    set_size(val: GraphSize, context: LogicContext<this>): boolean {
         new SetFieldAction(context.data, 'size', val);
         return true;
     }
+    /*
+    get_size(context: LogicContext<this>): GraphSize { return context.data.size; }
+    get_zoom(context: LogicContext<this>): GraphPoint {
+        const zoom: GraphPoint = context.data.zoom;
+        (zoom as any).debug = {rawgraph: context.data, zoomx: context.data.zoom.x, zoomy: context.data.zoom.y}
+        return context.data.zoom; }*/
 }
 
 @RuntimeAccessible
 export class LVoidVertex extends Mixin(LGraphElement, DVoidVertex) {
     static structure: typeof DVoidVertex;
     static singleton: LVoidVertex;
+    size!: GraphSize; // fittizio, la size è memorizzata nell'oggetto stesso (estende ISize)
 
     get_size(context: LogicContext<this>): GraphSize {
-        return new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h);
+        return context.proxyObject as any; // new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h);
     }
-    set_size(context: LogicContext<this>, val: GraphSize): boolean {
-        new SetFieldAction(context.data, 'size', val, Action.SubType.vertexSize);
+
+    // todo: devo settare che il primo parametro delle funzioni che iniziano con set_ non può essere un logicContext
+    set_size(val: GraphSize, context: LogicContext<this>): boolean {
+        // new SetFieldAction(context.data, 'size', val, Action.SubType.vertexSize);
+        if (!val) { val = defaultVSize; }
+        console.trace('setsize:', {context, val});
+        if (context.data.x !== val.x) new SetFieldAction(context.data, 'x', val.x);
+        if (context.data.y !== val.y) new SetFieldAction(context.data, 'y', val.y);
+        if (context.data.w !== val.w) new SetFieldAction(context.data, 'w', val.w);
+        if (context.data.h !== val.h) new SetFieldAction(context.data, 'h', val.h);
         // (context.proxy as unknown as LGraphElement).graph.size
-        const graph: LGraph = this.get_graph(context);
+        // update graph boundary too
+        console.log('setsize2, graph:', {context, val});
+        const graph: LGraph = this.get_graph(context); // (context.proxyObject as this).get_graph(context);
         const gsize = graph.size;
         val.boundary(gsize);
         if (val.equals(gsize)) return true;

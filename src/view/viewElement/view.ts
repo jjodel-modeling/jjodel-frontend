@@ -28,6 +28,7 @@ export class DViewElement extends DPointerTargetable {
     preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
     jsxString!: string; // l'html template
     usageDeclarations?: string; // example: state
+    forceNodeType?: DocString<'component name'>;
     scalezoomx: boolean = false; // whether to resize the element normally using width-height or resize it using zoom-scale css
     scalezoomy: boolean = false;
     // not persistent, some not shared. deve essere diverso da utente ad utente perchè dipende dal pan e zoom nel grafo dell'utente attuale.

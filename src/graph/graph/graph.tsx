@@ -5,7 +5,7 @@ import {
     IStore,
     windoww,
     GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
-    GraphElementRaw, RuntimeAccessibleClass
+    GraphElementRaw, RuntimeAccessibleClass, DVoidVertex, DGraph, DModelElement, Field, DModel, DPackage
 } from "../../joiner";
 // import {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps} from  "../graphElement/sharedTypes/sharedTypes";
 
@@ -24,6 +24,11 @@ export class GraphRaw<AllProps extends AllPropss, GraphState extends GraphStatee
     // extends GraphElementRaw<AllProps, GraphState>
     // @ts-ignore
     extends superclass<AllProps, GraphState>{
+
+    static mapStateToProps(state: IStore, ownProps: GraphOwnProps): GraphReduxStateProps {
+        // console.log('dragx vertex mapstate', {DVoidVertex});
+        return GraphElementRaw.mapStateToProps(state, ownProps, DGraph);
+    }
     /*static addLGraphElementStuff(state: IStore, ownProps: GraphOwnProps, stateProps: GraphReduxStateProps, dataClass: typeof DGraph = DGraph): void {
         let dgraph: DGraph = DGraph.create(ownProps.data as string);
         new CreateElementAction(dgraph);
@@ -66,7 +71,10 @@ const GraphConnected = connect<GraphReduxStateProps, GraphDispatchProps, GraphOw
 export const Graph = (props: GraphOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     return <GraphConnected {...{...props, childrens}} />; }
 
+DModel.defaultComponent = Graph;
+DPackage.defaultComponent = Graph;
 
+/*
 if (!windoww.mycomponents) windoww.mycomponents = {};
-windoww.mycomponents.Graph = GraphRaw;
+windoww.mycomponents.Graph = GraphRaw;*/
 console.info('GraphComponent loaded');

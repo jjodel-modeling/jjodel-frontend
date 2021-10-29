@@ -51,34 +51,67 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
             let isArrayRemove = false;
             console.log('isarrayappend?', {endswith: U.endsWith(key, ['+=', '[]', '-1']), key, action, i});
             console.log('isarraydelete?', {endswith: U.endsWith(key, ['-='])});
-            if (U.endsWith(key, ['+=', '[]', '-1'])) {
+            if (U.endsWith(key, ['+=', '[]'])) {
                 key = key.substr(0, key.length - 2);
                 isArrayAppend = true; }
             if (U.endsWith(key, ['-='])) {
                 key = key.substr(0, key.length - 2);
                 isArrayRemove = true; }
+
+            let oldValue: any;
+            let unpointedElement: DPointerTargetable | undefined;
             // perform final assignment
             if (isArrayAppend) {
+                gotChanged = true;
                 if (!Array.isArray(current[key])) {
                     // throw new MyError('indexing of type "+=", "[]", or "-1" is only valid on terminal arrays, found instead:', {foundInstead: current[key], action});
                     current[key] = [];
                 }
-                gotChanged = true;
                 current[key].push(newVal);
-            }
+                oldValue = undefined;
+                unpointedElement = state.idlookup[oldValue];
+            } else
             if (isArrayRemove){
                 if (!Array.isArray(current[key])) { current[key] = []; }
-                gotChanged = true;
-                let index = U.isNumber(key) ? +key : -1;
-                if (index === -1) index = current[key].length;
-                current[key] = current[key].splice(index, 1);
+                let index = U.isNumber(newVal) ? +newVal : -1;
+                if (index === -1) index = current[key].length - 1;
+                gotChanged = index >=0 && index < current[key].length;
+                if (gotChanged){
+                    current[key] = [...current[key]];
+                    /*
+                    const elementsThatChangedIndex: DPointerTargetable[] = current[key].slice(index);
+                    // todo: problema: se ho [dobj1, dobj2]... e li swappo, cambia un indice nel percorso "pointedby" e non me ne accorgo mai e un oggetto risulta "pointedby" da oggetti che non lo puntano o non esistono più a quell'indice
+                    for (let j = 0; j < elementsThatChangedIndex.length; j++) {
+                        let newindex = index + j - 1;
+                        let oldFullpathTrimmed = action.pathArray.join('.');
+                        se realizzi "pointedby" qui è to do: remove old paths and re-add them with updated index
+                    }*/
+                    oldValue = current[key].splice(index, 1);
+                    unpointedElement = state.idlookup[oldValue];
+                }
             }
-            else {
-                gotChanged = current[key] !== newVal;
+            else if (current[key] !== newVal) {
+                oldValue = current[key];
+                gotChanged = true;
+                unpointedElement = state.idlookup[oldValue];
+                // NB: se elimino un oggetto che contiene array di puntatori, o resetto l'array di puntatori kinda like store.arr= [ptr1, ptr2, ...]; store.arr = [];
+                // i puntati dall'array hanno i loro pointedBY non aggiornati, non voglio fare un deep check di tutto l'oggetto a cercare puntatori per efficienza.
                 if (newVal === undefined) delete current[key];
                 else current[key] = newVal;
+            } else {
+                gotChanged = false;
+                // value not changed
             }
 
+            let fullpathTrimmed = action.pathArray.join('.');
+            /*if (unpointedElement) {
+                if (isArrayAppend || isArrayAppend) fullpathTrimmed.substr(0, fullpathTrimmed.length - 2);
+                U.arrayRemoveAll(unpointedElement.pointedBy, fullpathTrimmed); // todo: se faccio una insert in mezzo ad un array devo aggiustare tutti i path di pointedby...
+            }
+            let newlyPointedElement = state.idlookup[newVal];
+            if (newlyPointedElement) {
+                U.ArrayAdd(newlyPointedElement.pointedBy, fullpathTrimmed);
+            }*/
             console.log('deepCopyButOnlyFollowingPath final', {current, i, imax:action.pathArray.length, key, isArrayAppend, gotChanged, alreadyPastDivergencePoint});
             break;
         }

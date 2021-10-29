@@ -17,12 +17,13 @@ import {
 type NotAConcatenation = null;
 
 @RuntimeAccessible
-export class LogicContext<D extends GObject = DModelElement, P extends MyProxyHandler<D> = MyProxyHandler<D>> extends RuntimeAccessibleClass{
-    public proxy: P;
+export class LogicContext<D extends GObject = DModelElement, P extends LPointerTargetable = LPointerTargetable, PF extends MyProxyHandler<D> = MyProxyHandler<D>> extends RuntimeAccessibleClass{
+    // public proxyfyFunction: PF;
+    public proxyObject: P;
     public data: D;
-    constructor(proxy: P, data: D) {
+    constructor(proxyObject: P, data: D) {
         super();
-        this.proxy = proxy;
+        this.proxyObject = proxyObject;
         this.data = data;
     }
     /*
@@ -35,13 +36,14 @@ export class LogicContext<D extends GObject = DModelElement, P extends MyProxyHa
 }
 
 @RuntimeAccessible
-export class MapLogicContext extends LogicContext<GObject, MapProxyHandler> {
+export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, MapProxyHandler> {
     data: GObject;
     path: string;
     subMaps: string[];
-    constructor(proxy: MapProxyHandler, data: GObject, path: string, subMaps: string[] = []) {
+    constructor(proxy: LPointerTargetable, data: GObject, path: string, subMaps: string[] = []) {
         super(proxy, data);
-        this.proxy = proxy;
+        // this.proxyfyFunction = proxyfyFunction;
+        this.proxyObject = proxy;
         this.data = data;
         this.path = path;
         this.subMaps = subMaps;
@@ -57,10 +59,13 @@ export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibl
     deleteProperty(target: T, p: string | symbol): boolean { throw new Error('proxy delete must be overridden'); }
 
     ownKeys(target: T): ArrayLike<string | symbol>{ return Object.keys(target); }
+    static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
+        RET extends CAN_THROW extends true ? L : L | undefined  = CAN_THROW extends true ? L : L>
+    (data: D | Pointer<DViewElement>, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW): RET{
 
-    static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable>
-        (data: D | Pointer<DViewElement>, baseObjInLookup?: DPointerTargetable, path: string = ''): L{
-        return DPointerTargetable.wrap(data, baseObjInLookup, path); }
+//    static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable, RET extends boolean = false>
+//        (data: D | Pointer<DViewElement>, baseObjInLookup?: DPointerTargetable, path: string = '', canthrow: RET = false as RET): RET {
+        return DPointerTargetable.wrap(data, baseObjInLookup, path) as RET; }
 
     static isProxy(data: GObject): boolean { return data?.__isProxy || false; }
 }
@@ -131,9 +136,10 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             case 'toJSON': return () => targetObj;
             case '__isProxy': return true;
         }
+        console.log('proxy keysearch', {l: this.l, proxyitself, d: this.d});
         if (propKey in this.l) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
-            if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) return this.lg[this.g + propKey](new LogicContext(this, targetObj,));
+            if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) return this.lg[this.g + propKey](new LogicContext(proxyitself as any, targetObj));
             // se esiste la proprietà ma non esiste il setter, che fare? do errore.
             // Log.eDevv("dev error: property exist but getter does not: ", propKey, this);
             // console.error('proxy GET direct match', {targetObj, propKey, ret: this.d[propKey as keyof ME]});
@@ -158,11 +164,11 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         let enableFallbackSetter = true;
         if (propKey in this.l) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
-            if (typeof propKey !== 'symbol' && this.s + propKey in this.lg) return this.lg[this.s + propKey](value, new LogicContext(this, targetObj));
+            if (typeof propKey !== 'symbol' && this.s + propKey in this.lg) return this.lg[this.s + propKey](value, new LogicContext(proxyitself as any, targetObj));
 
 
             if (enableFallbackSetter) {
-                new SetFieldAction(new LogicContext(this, targetObj).data as any, propKey as string, value);
+                new SetFieldAction(new LogicContext(proxyitself as any, targetObj).data as any, propKey as string, value);
                 return true;
             }
             // se esiste la proprietà ma non esiste il setter, che fare? do errore.

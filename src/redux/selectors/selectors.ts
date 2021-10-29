@@ -15,7 +15,7 @@ import {
     Log,
     LGraphElement,
     LViewElement,
-    DModelElement, RuntimeAccessibleClass, DGraphElement, LModel, DGraph
+    DModelElement, RuntimeAccessibleClass, DGraphElement, LModel, DGraph, MyProxyHandler
 } from "../../joiner";
 
 enum ViewEClassMatch { // this acts as a multiplier for explicit priority
@@ -36,7 +36,7 @@ export class Selectors{
         let ptrs: Pointer<DVoidVertex>[] = [];
 
         // @ts-ignore cose che vengono create nello store a runtime
-        U.ArrayMerge(ptrs, Object.values(state.voidVertex), Object.values(state.Vertex), Object.values(state.EdgePoint));
+        U.ArrayMerge(ptrs, Object.values(state.voidVertex || {}), Object.values(state.Vertex || {}), Object.values(state.EdgePoint || {}));
         if (wrap === undefined || wrap === true) return ptrs.map( p => DPointerTargetable.wrap(p)) as any[];
         if (resolvePointers === undefined || resolvePointers === true) return ptrs.map( r => state.idlookup[r]) as any[];
         return ptrs as any[];
@@ -48,8 +48,9 @@ export class Selectors{
         if (!state) state = store.getState();
         const className: string = Classe.name.substr(1).toLowerCase() + 's';
         const allIdByClassName: Pointer<D, 1, 1, L>[] = (state as GObject)[className as string];
-        let allDByClassName: D[] = null as any as D[];
-        let allLByClassName: L[] = null as any as L[];
+        Log.exDev(!allIdByClassName, 'cannot find store key:', {state, className});
+        let allDByClassName: D[] | null = null;
+        let allLByClassName: L[] | null = null;
         if (resolvePointers || wrap) {
             allDByClassName = allIdByClassName.map( (e) => (state as IStore).idlookup[e] ) as D[];
             if (wrap) {
@@ -136,7 +137,7 @@ export class Selectors{
                            selectedViewId: Pointer<DViewElement, 0, 1, LViewElement>, parentViewId: Pointer<DViewElement, 0, 1, LViewElement>): Scored<DViewElement>[] {
         const state : IStore = store.getState();
         const allViews: DViewElement[] = [...Selectors.getAllViewElements()];
-        const selectedView: DViewElement | null = selectedViewId ? state.idlookup[selectedViewId] as DViewElement : null;
+        const selectedView: DViewElement | null = null; // selectedViewId ? state.idlookup[selectedViewId] as DViewElement : null;
         const parentView: DViewElement | null = parentViewId ? state.idlookup[parentViewId] as DViewElement : null;
         const sameViewPointSubViews: Pointer<DViewElement, 1, 1>[] = parentView ? parentView.subViews : []; // a viewpoint is a simple view that is targeting a model
         if (selectedView) U.arrayRemoveAll(allViews, selectedView);
@@ -154,7 +155,7 @@ export class Selectors{
         const g: DGraph = state.idlookup[forGraph] as DGraph;
         if (asPointers) return g.subElements;
         const subelements: DGraphElement[] = g.subElements.map( geid => state.idlookup[geid]) as DGraphElement[];
-        if (wrap) return subelements.map<LGraphElement>( (ge) => DPointerTargetable.wrap(ge));
+        if (wrap) return subelements.map<LGraphElement>( (ge) => MyProxyHandler.wrap(ge));
         return subelements; }
 }
 

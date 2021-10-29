@@ -534,10 +534,10 @@ export class U{
         for (i = 0; i < arr2.length; i++) { U.ArrayAdd(arr1, arr2[i]); } }
 
     static ArrayAdd<T>(arr: Array<T>, elem: T, unique: boolean = true, throwIfContained: boolean = false): boolean {
-        Log.e(!arr || !Array.isArray(arr), 'ArrayAdd arr null or not array:', arr);
+        Log.ex(!arr || !Array.isArray(arr), 'ArrayAdd arr null or not array:', arr);
         if (!unique) { arr.push(elem); return true; }
         if (arr.indexOf(elem) === -1) { arr.push(elem); return true; }
-        Log.e(throwIfContained, 'ArrayAdd element already contained:', arr, elem);
+        Log.ex(throwIfContained, 'ArrayAdd element already contained:', arr, elem);
         return false; }
 
     static fieldCount(obj: object): number {

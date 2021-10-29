@@ -1,4 +1,4 @@
-import type {GObject} from "../../joiner";
+import type {GObject, VertexComponent} from "../../joiner";
 import {
     ClickEvent,
     DGraphElement,
@@ -10,7 +10,7 @@ import {
     SetRootFieldAction,
     store,
     TRANSACTION,
-    DUser, RuntimeAccessible, $, DPointerTargetable
+    DUser, RuntimeAccessible, $, DPointerTargetable, Log, MyProxyHandler
 } from "../../joiner";
 
 @RuntimeAccessible
@@ -19,12 +19,18 @@ export class GraphDragHandler extends RuntimeAccessibleClass {
     // static idMap: Dictionary<string, typeof GraphElementRaw>;
     public static isDragging: boolean = false;
     private currentSelection: Pointer<DGraphElement,1,'N'> = [];
-    private draggingSelection: DVoidVertex[] = [];
+    public draggingSelection: DVoidVertex[] = [];
     public vertexToComponent: Dictionary<Pointer<DGraphElement, 1, 1, LGraphElement>, GObject> = {}; // VertexComponent
     private totalDragOffset: Point; // NOT graphpoint, this is pixels
     private dragTolerance = 10; // if less than 10 pixel i won't start the drag
+
+
+    public static init() {
+        console.log('dragx init');
+        new GraphDragHandler();
+    }
     // public static mousedownStartDragOn?: Pointer<DVoidVertex, 1, 1, LVoidVertex>; // per iniziare il drag non basta mousemove & mousedown & selezione. il mousedown dev'essere partito da un vertice.
-    constructor() {
+    protected constructor() {
         super();
         GraphDragHandler.singleton = this;
         // GraphDragHandler.idMap = {};
@@ -59,6 +65,7 @@ export class GraphDragHandler extends RuntimeAccessibleClass {
 
     // todo: add on mousedown su GraphElementRaw per triggerare startDragging
     public startDragging(): void {
+        console.log('dragx start', {draggingSelection: this.draggingSelection, thiss:this});
         GraphDragHandler.isDragging = true;
         // this.totalDragOffset.set(0, 0);
         let state: IStore =  store.getState();
@@ -66,19 +73,24 @@ export class GraphDragHandler extends RuntimeAccessibleClass {
     }
 
     public stopDragging(): void {
+        console.log('dragx stop', {draggingSelection: this.draggingSelection, thiss:this});
         GraphDragHandler.isDragging = false;
         this.totalDragOffset.set(0, 0);
     }
+
     private onMouseMove = (e: JQuery.MouseMoveEvent<Document, undefined, Document, Document>, ...args: any[]): any => {
+        // console.log('dragx dragging check: ' + GraphDragHandler.isDragging);
         if (!GraphDragHandler.isDragging) return;
-        let dragged: DVoidVertex;
         const offset: Point = new Point(e.offsetX, e.offsetY);
-        this.totalDragOffset.add(offset, false);
+        console.log('dragx dragging : ' + offset, {draggingSelection: this.draggingSelection, totalOffset: this.totalDragOffset.toString(), e, offset});
+        let dragged: DVoidVertex;
+        this.totalDragOffset  = offset; // this.totalDragOffset.add(offset, false);
         if (this.totalDragOffset.absolute() < this.dragTolerance) return;
         for (dragged of this.draggingSelection) {
             let component = this.vertexToComponent[dragged.id];
-            // if (!component) continue;
-            component?.vertexGotMoved(offset);
+            // console.log('dragx dragging component', {component});
+            if (!component) continue; // got unmounted before deselecting
+            component?.setAbsolutePosition(offset);
         }
         return;
     }
@@ -90,7 +102,8 @@ export class GraphDragHandler extends RuntimeAccessibleClass {
         const nodes: DGraphElement[] = (Selectors.getSubNodeElements(forGraph, false, false) as DGraphElement[]).filter( (n: DGraphElement) => n.isSelected[user]);
         TRANSACTION( () => {
             for (let node of nodes) {
-                DPointerTargetable.wrap<DGraphElement, LGraphElement>(node).isSelected[user] = false;
+                let proxy = MyProxyHandler.wrap<DGraphElement, LGraphElement>(node);
+                if (proxy) proxy.isSelected[user] = false;
                 // new SetRootFieldAction('idlookup.' + view.id + '.' + (getPath as DViewElement).__transient.isSelected[forUser].$, false);
             }
         });

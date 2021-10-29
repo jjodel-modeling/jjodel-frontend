@@ -149,9 +149,9 @@ export class LModelElement extends Mixin(DModelElement, LPointerTargetable) {
 
     static ResolvePointer<T extends DPointerTargetable = DModelElement, LB=number, UB=number, RET extends LPointerTargetable = LModelElement>(ptr: Pointer<T, LB, UB, RET>): RET | null {
         if (!ptr) return null;
-        let obj: DPointerTargetable = store.getState().idlookup[ptr as string];
+        let obj: DPointerTargetable | LPointerTargetable | undefined = store.getState().idlookup[ptr as string];
         if (!obj) return null;
-        if (obj instanceof DModelElement) obj = LModelElement.wrap(obj);
+        if (obj instanceof DModelElement) obj = MyProxyHandler.wrap(obj);
         return obj as RET; }
 
     private static ResolvePointers<T extends DPointerTargetable = DPointerTargetable, LB=number, UB=string, RET extends LPointerTargetable = LPointerTargetable>(ptr: Pointer<T, LB, UB, RET>[]): (RET | null)[] {
@@ -183,7 +183,7 @@ export class LModelElement extends Mixin(DModelElement, LPointerTargetable) {
     set_id(): boolean { return Log.exx('id is read-only', this); }
 
     get_childrens_idlist(context: LogicContext<DModelElement>): Pointer<DAnnotation, 1, 'N'> {  return context.data.annotations; }
-    get_childrens(context: LogicContext<DModelElement>): LModelElement[] { return this.get_childrens_idlist(context).map(e => DPointerTargetable.wrap(e)); }
+    get_childrens(context: LogicContext<DModelElement>): LModelElement[] { return this.get_childrens_idlist(context).map(e => MyProxyHandler.wrap(e)); }
     set_childrens(): boolean { return Log.exx('childrens is a derived read-only collection', this); }
 
     add_parent(val: Pointer<DAnnotation> | LModelElement, logicContext: LogicContext<DNamedElement>): boolean {

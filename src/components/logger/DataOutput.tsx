@@ -92,9 +92,9 @@ interface OwnProps {
 }
 // private
 type AllProps = OwnProps;
-
+/*
 if (!windoww.mycomponents) windoww.mycomponents = {};
 windoww.mycomponents.DataOutput = DataOutputComponent;
-windoww.mycomponents.DataOutputComponent = DataOutputComponent;
+windoww.mycomponents.DataOutputComponent = DataOutputComponent;*/
 ////// mapper func
 

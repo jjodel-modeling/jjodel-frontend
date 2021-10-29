@@ -22,7 +22,7 @@ type NotFunction = GObject & NotAFunction | primitiveType
 
 export type Empty = any;
 export type UObject = { [key: string]: unknown; }
-export type GObject = { [key: string]: any; };
+export type GObject<DocSubType = ''> = { [key: string]: any; };
 export type RawObject = { [key: string]: NotFunction; };
 // Json<T> = oggetto con le chiavi di T senza le funzioni (post deserializzazione)
 export type Json<T extends GObject = RawObject> = {[key in keyof T]: T[key] extends Function ? never : T[key]; };

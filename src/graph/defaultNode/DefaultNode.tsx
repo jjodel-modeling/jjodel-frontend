@@ -1,0 +1,79 @@
+import React, {CSSProperties, Dispatch, PureComponent, ReactElement, ReactNode} from "react";
+import { connect } from "react-redux";
+import {
+    U,
+    IStore,
+    Log,
+    windoww,
+    LViewElement,
+    RuntimeAccessibleClass, LModelElement, Dictionary, GObject,
+} from "../../joiner";
+import {
+    GraphElementStatee,
+    GraphElementDispatchProps,
+    GraphElementReduxStateProps,
+    GraphElementOwnProps,
+    GraphElementRaw,
+} from "../../joiner";
+
+const superclass: typeof GraphElementRaw = RuntimeAccessibleClass.classes.GraphElementRaw as any as typeof GraphElementRaw;
+
+// private
+class DefaultNodeStatee extends GraphElementStatee { }
+
+// from ownstateprops function getVertexID(props: AllPropss): Pointer<DVoidVertex, 0, 1, LVoidVertex> { return props.vertex?.id; }
+
+export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeState = DefaultNodeStatee>
+    extends superclass<AllProps, NodeState>{
+
+
+    static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps): GraphElementReduxStateProps {
+        let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
+        GraphElementRaw.mapViewAndModelElement(state, ret, ownProps);
+        return ret; }
+
+    constructor(props: AllProps, context: any) { super(props, context); }
+
+    render(): ReactNode {
+        const view: LViewElement = this.props.view;
+        const modelElement: LModelElement = this.props.data;
+
+        console.log('dnode render', {props: this.props});
+        let componentMap: Dictionary<string, (props: GObject, childrens?: (string | React.Component)[]) => ReactElement> = windoww.components;
+        let dmodelMap: Dictionary<string, GObject<'Constructor'>> = RuntimeAccessibleClass.classes as any;
+
+        let serializableProps = {...this.props, data: this.props.data?.id, view: this.props.view?.id, views: this.props.views?.map( v => v.id )};
+        if (view.forceNodeType) switch (view.forceNodeType) {
+            default: Log.exDevv('unrecognized View.forceNodeType:' + view.forceNodeType, {view, modelElement}); return <div>dev error</div>
+            case windoww.Components.GraphElementRaw.name:
+            case windoww.Components.VertexComponent.name:
+            case windoww.Components.Field.name: return componentMap[view.forceNodeType](this.props, this.props.children);
+        }
+        if (modelElement) switch(modelElement.className) {
+            default:
+                const dmodel = dmodelMap[modelElement.className];
+                Log.exDev(!dmodel || !dmodel.defaultComponent, 'invalid model class:', {dmodel, modelElement, view, dmodelMap, componentMap});
+                return dmodel.defaultComponent(serializableProps, this.props.children);
+        }
+        // errore: questoon passa gli id correttamente al sottoelemento vertex o field
+        return (<>Error: Node is missing both view and model</>);
+    }
+
+}
+
+// private
+class DefaultNodeOwnProps extends GraphElementOwnProps {}
+class DefaultNodeReduxStateProps  extends GraphElementReduxStateProps {}
+class DefaultNodeDispatchProps extends GraphElementDispatchProps {}
+type AllPropss = DefaultNodeOwnProps & DefaultNodeReduxStateProps & DefaultNodeDispatchProps;
+
+
+const DefaultNodeConnected = connect<DefaultNodeReduxStateProps, DefaultNodeDispatchProps, DefaultNodeOwnProps, IStore>(
+    DefaultNodeComponent.mapStateToProps,
+    DefaultNodeComponent.mapDispatchToProps
+)(DefaultNodeComponent as any);
+// export const Vertex = VertexConnected;
+
+
+export const DefaultNode = (props: DefaultNodeOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    return <DefaultNodeConnected {...{...props, childrens}} />; }

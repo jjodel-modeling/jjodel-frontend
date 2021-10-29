@@ -9,7 +9,8 @@ import type {
     LPackage, LParameter, LReference,
     LStructuralFeature, LValue,
     LDataType,
-    LNamedElement, LTypedElement, TargetableProxyHandler, IsActually} from /*type*/ "../../joiner";
+    LNamedElement, LTypedElement, TargetableProxyHandler, IsActually, GObject
+} from /*type*/ "../../joiner";
 
 import {
     Log,
@@ -27,6 +28,7 @@ import {
 
 @RuntimeAccessible
 export /*abstract*/ class DModelElement extends DPointerTargetable {
+    static defaultComponent: (props: GObject, childrens?: (string | React.Component)[]) => React.ReactElement;
     static logic: typeof LPointerTargetable;
 
     // ******************** ecore officials inherited ******************** //

@@ -91,6 +91,7 @@ export class SetRootFieldAction extends Action {
 export class SetFieldAction extends Action {
     static type = 'SET_ME_FIELD';
     constructor(me: DPointerTargetable | Pointer<DPointerTargetable>, field: string, val: any, subtype?: string) {
+        Log.exDev(!me, 'BaseObject missing in SetFieldAction', {me, field, val, subtype});
         super('idlookup.' + ((me as DPointerTargetable).id || me) + ( field ? '.' + field : ''), val, subtype);
         this.fire();
     }

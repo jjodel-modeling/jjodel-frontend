@@ -5,7 +5,7 @@ import {
     GraphElementReduxStateProps,
     GraphElementOwnProps,
     IStore,
-    GraphElementRaw, RuntimeAccessibleClass, GraphElementStatee,
+    GraphElementRaw, RuntimeAccessibleClass, GraphElementStatee, DClassifier, DModelElement,
 } from "../../joiner";
 import {connect} from "react-redux";
 const superclass: typeof GraphElementRaw = RuntimeAccessibleClass.classes.GraphElementRaw as any as typeof GraphElementRaw;
@@ -47,6 +47,7 @@ const FieldConnected = connect<FieldReduxStateProps, FieldDispatchProps, FieldOw
 export const Field = (props: FieldOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     return <FieldConnected {...{...props, childrens}} />; }
 
-
+DModelElement.defaultComponent = Field;
+/*
 if (!windoww.mycomponents) windoww.mycomponents = {};
-windoww.mycomponents.Field = Field;
+windoww.mycomponents.Field = Field;*/
