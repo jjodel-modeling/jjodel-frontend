@@ -113,18 +113,28 @@ async function addButtonClick(e: React.MouseEvent<HTMLElement>, context: DockCon
             })
         }
     })*/
+    createOrOpenModelTab(modelName, context, panelData);
+}
+
+export function createOrOpenModelTab(modelName: string, context0?: DockContext, panelData0?: PanelData): void {
     if (!modelName) return;
+
+    let context: DockContext = context0 || windoww.lastDockContext;
+    let panelData: PanelData = panelData0 || windoww.lastDockPanelData;
+    console.log('createOrOpenModelTab0', {context0 , wcontext: windoww.lastDockContext, panelData, wpanel: windoww.lastDockPanelData});
     let model: DModel = Selectors.getModel(modelName, false, false) as DModel;
 
+    console.log('createOrOpenModelTab', {context, panelData});
     let isGraphOpen = (gid: string): boolean => { return false; } // todo
     let getGraphID = (): string => {
         Log.exDev(!model?.id, 'failed to createGraphID, model.id is null', {model, modelid: model.id, modelName});
         return U.increaseEndingNumber(DGraph.makeID(model.id), false, false, isGraphOpen); }
+
     if (model as any) {
         console.log('createTab1:', {model, modelName, graphid: getGraphID()});
         context.dockMove(newTab(model.id, modelName, getGraphID(), model), panelData, 'middle');
-        return;
-    }
+        return; }
+
     model = new DModel(modelName);
     TRANSACTION(
         () => {
@@ -155,8 +165,10 @@ let groups = {
         // this is a custom panel style defined in panel-style.html
         floatable: true,
         maximizable: true,
-        panelExtra: (panelData: PanelData, context: DockContext) => (
-            <div className={"my-panel-extra-container"}>
+        panelExtra: (panelData: PanelData, context: DockContext) => {
+            windoww.lastDockContext = context;
+            windoww.lastDockPanelData = panelData; // temp workaround to programmatically create a tab
+            return (<div className={"my-panel-extra-container"}>
                 <span className='my-panel-extra-btn dock-panel-max-btn'
                       onClick={() => context.dockMove(panelData, null, 'maximize')}>
                   {/*panelData.parent?.mode === 'maximize' ? '▬' : '▣'*/}
@@ -164,14 +176,14 @@ let groups = {
                 <span className='my-panel-extra-btn dock-panel-add-btn'
                       onClick={(e) => addButtonClick(e, context, panelData)}>
                     {/*onClick={() => context.dockMove(panelData, null, 'remove')}> */}
-                  +
+                    +
                 </span>
                 <button className='my-panel-extra-btn dock-panel-add-btn' style={{display: 'none'}}
                         onClick={() => context.dockMove(newTab(), panelData, 'middle')}>
                     add
                 </button>
-            </div>
-        )
+            </div>);
+        }
     }
 };
 

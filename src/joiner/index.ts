@@ -166,7 +166,7 @@ w.$s = $s;
 */
 export {
     // GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
-    GraphElementRaw,
+    GraphElementComponent,
     VertexComponent,
     GraphElement,
     TextareaConnected, InputConnected,
@@ -175,10 +175,10 @@ export {
     TextAreaRawComponent,
     MyInputComponent,
     Field,
-    GraphRaw,
+    GraphComponent,
     fakeexport,
     QA,
-    GraphsContainerComponentRaw,
+    GraphsContainerComponent,
     DataOutputComponent,
     Overlap, LoggerComponent,
     GraphsContainer,
@@ -187,5 +187,6 @@ export {
     DockLayoutComponent,
 } from './components'
 
+export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file
 export {fakeExport} from './ExecuteOnRead';
 console.info('joiner loaded');

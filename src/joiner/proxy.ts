@@ -137,7 +137,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             case '__isProxy': return true;
         }
         console.log('proxy keysearch', {l: this.l, proxyitself, d: this.d});
-        if (propKey in this.l) {
+        if (propKey in this.l || propKey in this.d) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
             if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) return this.lg[this.g + propKey](new LogicContext(proxyitself as any, targetObj));
             // se esiste la proprietà ma non esiste il setter, che fare? do errore.
@@ -183,12 +183,11 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             problemone 2: non so a quali proprietà dello store devo abbonarmi, devo leggere sempre tutto lo store?
             !!!!! soluzione 2?: dovrei dichiarare le variabili a cui mi abbono, salvarle nello stato e precaricarle tramite mapStateToProps*/
 
-    public deleteProperty(target: ME, p: string | symbol): boolean {
-        if (typeof p === "symbol") return false;
-        this.set(target, p, undefined, undefined);
-        delete target[p];
-        return true;
-    }
+    public deleteProperty(target: ME, key: string | symbol, proxyItself?: Proxyfied<any>): boolean {
+        if (typeof key === "symbol") return false;
+        this.set(target, key, undefined, proxyItself);
+        delete target[key];
+        return true; }
 
     ownKeys(target: ME): ArrayLike<string | symbol>{
         return U.arrayMergeInPlace(Object.keys(target), Object.keys(this.l).filter(k => k.indexOf('set_') !== 0 || k.indexOf('get_') !== 0));
@@ -218,6 +217,12 @@ export class MapProxyHandler extends MyProxyHandler<Dictionary> {
         new SetRootFieldAction(this.additionalPath + '.' + key, value).fire();
         return true;
     }
+
+    public deleteProperty(target: Dictionary, key: string | symbol, proxyItself?: Proxyfied<any>): boolean {
+        if (typeof key === "symbol") return false;
+        this.set(target, key, undefined, proxyItself);
+        delete target[key];
+        return true; }
 }
 
 

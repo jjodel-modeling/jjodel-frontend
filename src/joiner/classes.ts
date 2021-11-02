@@ -86,6 +86,7 @@ export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
     // console.log('DecoratorTest', {constructor, arguments});
     // @ts-ignore
     RuntimeAccessibleClass.classes[constructor.name] = constructor as any as typeof RuntimeAccessibleClass;
+    if (!window[constructor.name]) (window[constructor.name] as any) = constructor;
     // @ts-ignore
     constructor.prototype.className = constructor.name;
     (constructor as any).classNameDebug = constructor.name;

@@ -11,11 +11,11 @@ export {LoggerComponent} from "../components/logger/loggerComponent";
 
 export {Overlap} from "../components/forEndUser/Overlap";
 export {QA} from "../graph/droppable/droppable";
-export {GraphElement, GraphElementRaw} from "../graph/graphElement/graphElement";
-export {Graph, GraphRaw} from "../graph/graph/graph"; // require graphelement
+export {GraphElement, GraphElementComponent} from "../graph/graphElement/graphElement";
+export {Graph, GraphComponent} from "../graph/graph/graph"; // require graphelement
 export {DefaultNode, DefaultNodeComponent} from "../graph/defaultNode/DefaultNode"; // require graphelement
 export {Vertex, VertexComponent} from "../graph/vertex/Vertex"; // require overlap, graphelement
-export {GraphsContainer, GraphsContainerComponentRaw} from "../graph/graph/graphContainer"; // require vertex, graph
+export {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphContainer"; // require vertex, graph
 export {Field, FieldComponent} from "../graph/field/Field";
 export {fakeexport} from "../graph/edge/Edge";
 // export {StyleEditor} from "../components/rightbar/StyleEditor/StyleEditor";

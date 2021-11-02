@@ -5,7 +5,7 @@ import {
     IStore,
     windoww,
     GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
-    GraphElementRaw, RuntimeAccessibleClass, DVoidVertex, DGraph, DModelElement, Field, DModel, DPackage
+    GraphElementComponent, RuntimeAccessibleClass, DVoidVertex, DGraph, DModelElement, Field, DModel, DPackage
 } from "../../joiner";
 // import {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps} from  "../graphElement/sharedTypes/sharedTypes";
 
@@ -19,15 +19,15 @@ class GraphStatee extends GraphElementStatee {
     }*/
 }
 
-const superclass = RuntimeAccessibleClass.classes.GraphElementRaw as any as typeof GraphElementRaw;
-export class GraphRaw<AllProps extends AllPropss, GraphState extends GraphStatee>
+const superclass = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
+export class GraphComponent<AllProps extends AllPropss, GraphState extends GraphStatee>
     // extends GraphElementRaw<AllProps, GraphState>
     // @ts-ignore
     extends superclass<AllProps, GraphState>{
 
     static mapStateToProps(state: IStore, ownProps: GraphOwnProps): GraphReduxStateProps {
         // console.log('dragx vertex mapstate', {DVoidVertex});
-        return GraphElementRaw.mapStateToProps(state, ownProps, DGraph);
+        return GraphElementComponent.mapStateToProps(state, ownProps, DGraph);
     }
     /*static addLGraphElementStuff(state: IStore, ownProps: GraphOwnProps, stateProps: GraphReduxStateProps, dataClass: typeof DGraph = DGraph): void {
         let dgraph: DGraph = DGraph.create(ownProps.data as string);
@@ -63,9 +63,9 @@ type AllPropss = GraphOwnProps & GraphReduxStateProps & GraphDispatchProps;
 
 
 const GraphConnected = connect<GraphReduxStateProps, GraphDispatchProps, GraphOwnProps, IStore>(
-    GraphRaw.mapStateToProps,
-    GraphRaw.mapDispatchToProps
-)(GraphRaw as any);
+    GraphComponent.mapStateToProps,
+    GraphComponent.mapDispatchToProps
+)(GraphComponent as any);
 
 // nb: necessario per usarlo a runtime
 export const Graph = (props: GraphOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {

@@ -18,7 +18,7 @@ import {
 // private
 interface ThisState { }
 
-export class GraphsContainerComponentRaw extends PureComponent<AllProps, ThisState>{
+export class GraphsContainerComponent extends PureComponent<AllProps, ThisState>{
     constructor(props: AllProps, context: any) {
         super(props, context);
     }
@@ -103,7 +103,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 const GraphsContainerConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
-)(GraphsContainerComponentRaw);
+)(GraphsContainerComponent);
 
 export const GraphsContainer = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     return <GraphsContainerConnected {...{...props, childrens}} />; }
