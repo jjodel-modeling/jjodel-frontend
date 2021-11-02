@@ -56,7 +56,6 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
                 return dmodel.defaultComponent(serializableProps, this.props.children);
         }
         // errore: questoon passa gli id correttamente al sottoelemento vertex o field
-        let a = <div style={{aa:'23'}}></div>
         return (<>Error: Node is missing both view and model</>);
     }
 
