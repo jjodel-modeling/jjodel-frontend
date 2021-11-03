@@ -6,17 +6,17 @@ import {
     Log,
     windoww,
     LViewElement,
-    RuntimeAccessibleClass, LModelElement, Dictionary, GObject,
+    RuntimeAccessibleClass, LModelElement, Dictionary, GObject, DModelElement,
 } from "../../joiner";
 import {
     GraphElementStatee,
     GraphElementDispatchProps,
     GraphElementReduxStateProps,
     GraphElementOwnProps,
-    GraphElementRaw,
+    GraphElementComponent,
 } from "../../joiner";
 
-const superclass: typeof GraphElementRaw = RuntimeAccessibleClass.classes.GraphElementRaw as any as typeof GraphElementRaw;
+const superclass: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 
 // private
 class DefaultNodeStatee extends GraphElementStatee { }
@@ -29,7 +29,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
 
     static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps): GraphElementReduxStateProps {
         let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
-        GraphElementRaw.mapViewAndModelElement(state, ret, ownProps);
+        GraphElementComponent.mapViewAndModelElement(state, ret, ownProps);
         return ret; }
 
     constructor(props: AllProps, context: any) { super(props, context); }
@@ -38,20 +38,20 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
         const view: LViewElement = this.props.view;
         const modelElement: LModelElement = this.props.data;
 
-        console.log('dnode render', {props: this.props});
         let componentMap: Dictionary<string, (props: GObject, childrens?: (string | React.Component)[]) => ReactElement> = windoww.components;
-        let dmodelMap: Dictionary<string, GObject<'Constructor'>> = RuntimeAccessibleClass.classes as any;
+        let dmodelMap: Dictionary<string, typeof DModelElement> = RuntimeAccessibleClass.classes as any;
 
         let serializableProps = {...this.props, data: this.props.data?.id, view: this.props.view?.id, views: this.props.views?.map( v => v.id )};
+        // console.log('dnode render', {props: {...this.props}, serializableProps});
         if (view.forceNodeType) switch (view.forceNodeType) {
             default: Log.exDevv('unrecognized View.forceNodeType:' + view.forceNodeType, {view, modelElement}); return <div>dev error</div>
-            case windoww.Components.GraphElementRaw.name:
+            case windoww.Components.GraphElementComponent.name:
             case windoww.Components.VertexComponent.name:
-            case windoww.Components.Field.name: return componentMap[view.forceNodeType](this.props, this.props.children);
+            case windoww.Components.FieldComponent.name: return componentMap[view.forceNodeType](this.props, this.props.children);
         }
         if (modelElement) switch(modelElement.className) {
             default:
-                const dmodel = dmodelMap[modelElement.className];
+                const dmodel: typeof DModelElement = dmodelMap[modelElement.className];
                 Log.exDev(!dmodel || !dmodel.defaultComponent, 'invalid model class:', {dmodel, modelElement, view, dmodelMap, componentMap});
                 return dmodel.defaultComponent(serializableProps, this.props.children);
         }

@@ -72,9 +72,9 @@ export class Log{
         windoww.e1 = restArgs[1];
         throw new MyError(str, ...restArgs); }
 
-    public static i(b: boolean, ...restArgs: any[]): string { return Log.log('Info', 'i', console.info, b, ...restArgs); }
+    public static i(b: boolean, ...restArgs: any[]): string { return Log.log('Info', 'i', console.log, b, ...restArgs); }
     public static l(b: boolean, ...restArgs: any[]): string { return Log.log('Log', 'l', console.log, b, ...restArgs); }
-    public static w(b: boolean, ...restArgs: any[]): string { return Log.log('Warn', 'w', console.info, b, ...restArgs); }
+    public static w(b: boolean, ...restArgs: any[]): string { return Log.log('Warn', 'w', console.warn, b, ...restArgs); }
 
 
     public static eDevv<T extends any = any>(firstParam?: NotBool<T>, ...restAgs: any): string { return Log.eDev(true, ...[firstParam, ...restAgs]); }
@@ -192,13 +192,13 @@ export class U{
     // warn: cannot set different scope and context, "this" della funzione sovrascrive anche il "this" interno allo scope come chiave dell'oggetto
     // warn: if you modify
     public static evalInContextAndScope<T = any>(codeStr: string, scope?: GObject, context?: GObject): T {
-        console.log('evalInContextAndScope', {codeStr, scope, context});
+        // console.log('evalInContextAndScope', {codeStr, scope, context});
         // scope per accedere a variabili direttamente "x + y"
         // context per accedervi tramite this, possono essere impostati come diversi.
         if (!scope && !context) { Log.ex(true, 'evalInContextAndScope: must specify at least one of scope || context', {codeStr, scope, context}); }
         if (!context) context = scope; // se creo un nuovo contesto pulisco anche lo scope dalle variabili locali di questa funzione.
         // scope.this = scope.this || context || scope; non funziona
-        console.log('"with(this){ return eval( \'" + codeStr + "\' ); }"', "with(this){ return eval( '" + codeStr + "' ); }");
+        // console.log('"with(this){ return eval( \'" + codeStr + "\' ); }"', "with(this){ return eval( '" + codeStr + "' ); }");
         // eslint-disable-next-line no-restricted-syntax,no-with
         // if (allowScope && allowContext) { return function(){ with(this){ return eval( '" + codeStr + "' ); }}.call(scopeAndContext); }
         // if (allowScope && allowContext) { return new Function( "with(this){ return eval( '" + codeStr + "' ); }").call(scopeAndContext); }
@@ -224,13 +224,13 @@ export class U{
         }
         if (scope && context) {
             (context as any)._eval = _eval;
-            console.log('pre eval jsx:', context, 'body:', {codeStr, Input: windoww.Input});
+            //console.log('pre eval jsx:', context, 'body:', {codeStr, Input: windoww.Input});
             _ret = new (Function as any)(prefixDeclarations + "return eval( this._eval.codeStr );" + postfixDeclarations).call(context);
             delete (context as any)._eval; } else
         if (!scope && context) { _ret = new (Function as any)( "return eval( this._eval._codeStr );").call(context); } else
         if (scope && !context) {
             // NB: potrei creare lo scope con "let key = value;" per ogni chiave, ma dovrei fare json stringify e non è una serializzazione perfetta e può dare eccezioni(circolarità)
-            console.log({isStrict: U.isStrict, eval: "eval(" + prefixDeclarations + codeStr + postfixDeclarations + ")"});
+            // console.log({isStrict: U.isStrict, eval: "eval(" + prefixDeclarations + codeStr + postfixDeclarations + ")"});
             _ret = eval(prefixDeclarations + codeStr + postfixDeclarations); }
         return _ret; }
 
@@ -4129,12 +4129,12 @@ export abstract class ISize<PT extends IPoint = IPoint> {
         this.w += (pt2 as ISize).w;
         this.h += (pt2 as ISize).h; }
 
-    subtract(pt2: this | PT): void {
+    subtract(pt2: this | PT): this {
         this.x -= pt2.x;
         this.y -= pt2.y;
-        if (!('w' in pt2)) return;
+        if (!('w' in pt2)) return this;
         this.w -= (pt2 as ISize).w;
-        this.h -= (pt2 as ISize).h; }
+        this.h -= (pt2 as ISize).h; return this; }
 
     multiply(pt2: this | PT): void {
         this.x *= pt2.x;
@@ -4239,7 +4239,7 @@ export class Size extends ISize<Point> {
         Log.e(element as any === document, 'trying to measure document.');
         if (element as any === document) { element = document.body as any; }
         const $element = $(element);
-        Log.e(element.tagName === 'foreignObject', 'sizeof()', 'SvgForeignElementObject have a bug with size, measure a child instead.');
+        Log.e(!element || element.tagName === 'foreignObject', 'sizeof()', 'SvgForeignElementObject have a bug with size, measure a child instead.', element);
         let tmp;
         let size: Size;
         if (!Size.sizeofvar) {

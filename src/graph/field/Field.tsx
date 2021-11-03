@@ -5,10 +5,10 @@ import {
     GraphElementReduxStateProps,
     GraphElementOwnProps,
     IStore,
-    GraphElementRaw, RuntimeAccessibleClass, GraphElementStatee, DClassifier, DModelElement,
+    GraphElementComponent, RuntimeAccessibleClass, GraphElementStatee, DClassifier, DModelElement,
 } from "../../joiner";
 import {connect} from "react-redux";
-const superclass: typeof GraphElementRaw = RuntimeAccessibleClass.classes.GraphElementRaw as any as typeof GraphElementRaw;
+const superclass: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 
 class FieldState extends GraphElementStatee{
 

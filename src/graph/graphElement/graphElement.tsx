@@ -79,7 +79,7 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 }
 
 @RuntimeAccessible
-export class GraphElementRaw<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
+export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
     extends PureComponent<AllProps, GraphElementState>{
 
     static mapViewAndModelElement(state: IStore, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
@@ -101,8 +101,8 @@ export class GraphElementRaw<AllProps extends AllPropss = AllPropss, GraphElemen
     static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps, dGraphDataClass: typeof DGraphElement = DGraphElement): GraphElementReduxStateProps {
         // console.log('dragx GE mapstate', {dGraphDataClass});
         let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
-        GraphElementRaw.mapViewAndModelElement(state, ret, ownProps);
-        GraphElementRaw.addLGraphElementStuff(state, ownProps, ret, dGraphDataClass);
+        GraphElementComponent.mapViewAndModelElement(state, ret, ownProps);
+        GraphElementComponent.addLGraphElementStuff(state, ownProps, ret, dGraphDataClass);
         // ret.view = LViewElement.wrap(state.idlookup[vid]);
         // view non deve essere più injected ma calcolata, però devo fare inject della view dell'elemento parent. learn ocl to make view target
         Log.exDev(!ret.view, 'failed to inject view:', {state, ownProps, reduxProps: ret});
@@ -224,7 +224,7 @@ export class GraphElementRaw<AllProps extends AllPropss = AllPropss, GraphElemen
         // add "view" (view id) prop as default to sub-elements of any depth to inherit the view of the parent unless the user forced another view to apply
         switch ((re.type as any).WrappedComponent?.name || re.type) {
             default:
-                //console.log('relement default');
+                console.count('relement default: ' + ((re.type as any).WrappedComponent?.name || re.type));
                 return re;
             case windoww.Components.Input.name:
             case windoww.Components.Textarea.name:
@@ -234,9 +234,14 @@ export class GraphElementRaw<AllProps extends AllPropss = AllPropss, GraphElemen
                 //    {'re.props.obj.id': re.props.obj?.id, 're.props.obj': re.props.obj, 'thiss.props.data.id': thiss.props.data.id, thiss, re, objid, ret, 'ret.props': ret.props});
                 return ret;
             case windoww.Components.GraphElement.name:
+            case windoww.Components.GraphElementComponent.name:
             case windoww.Components.DefaultNode.name:
+            case windoww.Components.DefaultNodeComponent.name:
             case windoww.Components.Graph.name:
+            case windoww.Components.GraphComponent.name:
             case windoww.Components.Field.name:
+            case windoww.Components.FieldComponent.name:
+            case windoww.Components.Vertex.name:
             case windoww.Components.VertexComponent.name:
                 const injectProps: GraphElementOwnProps = {} as any;
                 injectProps.parentViewId = parentComponent.props.view.id || parentComponent.props.view; // re.props.view ||  thiss.props.view
@@ -373,9 +378,9 @@ export class GraphElementRaw<AllProps extends AllPropss = AllPropss, GraphElemen
 type AllPropss = GraphElementOwnProps & GraphElementDispatchProps & GraphElementReduxStateProps
 
 const GraphElementConnected = connect<GraphElementReduxStateProps, GraphElementDispatchProps, GraphElementOwnProps, IStore>(
-    GraphElementRaw.mapStateToProps,
-    GraphElementRaw.mapDispatchToProps
-)(GraphElementRaw as any);
+    GraphElementComponent.mapStateToProps,
+    GraphElementComponent.mapDispatchToProps
+)(GraphElementComponent as any);
 
 export const GraphElement = (props: GraphElementOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     return <GraphElementConnected {...{...props, childrens}} />; }

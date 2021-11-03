@@ -15,7 +15,7 @@ import {
     DocString,
     Dictionary,
     RuntimeAccessibleClass,
-    LPointerTargetable, store, windoww, getPath, Selectors, GraphDragHandler
+    LPointerTargetable, store, windoww, getPath, Selectors, GraphDragHandler, createOrOpenModelTab
 } from "../../joiner";
 import React from "react";
 
@@ -29,12 +29,12 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
     if (!action.path?.length) throw new MyError("path length must be at least 1", {action});
     let gotChanged: boolean = false; // dovrebbe cambiare sempre, se non cambia non lancio neanche l'azione e non faccio la shallow copy, ma non si sa mai, così posso evitare un render se succede l' "insuccedibile"
     let alreadyPastDivergencePoint = false; // true dal momento in cui il path dell'azione attuale e della azione precedente divergono, false fino al sotto-segmento in cui combaciano
-    console.log('deepCopyButOnlyFollowingPath', arguments);
+    // console.log('deepCopyButOnlyFollowingPath', arguments);
     for (let i = 0; i < action.pathArray.length; i++) {
-        let key = action.pathArray[i];
+        let key = action.pathArray[i].trim();
         let prevActionPathKey = prevAction?.pathArray[i];
         // middle execution: not on final loop
-        console.log('deepCopyButOnlyFollowingPath', {current, i, imax:action.pathArray.length, key, gotChanged, alreadyPastDivergencePoint});
+        // console.log('deepCopyButOnlyFollowingPath', {current, i, imax:action.pathArray.length, key, gotChanged, alreadyPastDivergencePoint});
         if (i !== action.pathArray.length - 1) {
             if (alreadyPastDivergencePoint || key !== prevActionPathKey) {
                 // se l'oggetto è stato già duplicato in una azione composita, non lo duplico 2 volte.
@@ -49,13 +49,13 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
         if (i >= action.pathArray.length - 1) {
             let isArrayAppend = false;
             let isArrayRemove = false;
-            console.log('isarrayappend?', {endswith: U.endsWith(key, ['+=', '[]', '-1']), key, action, i});
-            console.log('isarraydelete?', {endswith: U.endsWith(key, ['-='])});
+            // console.log('isarrayappend?', {endswith: U.endsWith(key, ['+=', '[]', '-1']), key, action, i});
+            // console.log('isarraydelete?', {endswith: U.endsWith(key, ['-='])});
             if (U.endsWith(key, ['+=', '[]'])) {
-                key = key.substr(0, key.length - 2);
+                key = key.substr(0, key.length - 2).trim();
                 isArrayAppend = true; }
             if (U.endsWith(key, ['-='])) {
-                key = key.substr(0, key.length - 2);
+                key = key.substr(0, key.length - 2).trim();
                 isArrayRemove = true; }
 
             let oldValue: any;
@@ -112,7 +112,7 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
             if (newlyPointedElement) {
                 U.ArrayAdd(newlyPointedElement.pointedBy, fullpathTrimmed);
             }*/
-            console.log('deepCopyButOnlyFollowingPath final', {current, i, imax:action.pathArray.length, key, isArrayAppend, gotChanged, alreadyPastDivergencePoint});
+            // console.log('deepCopyButOnlyFollowingPath final', {current, i, imax:action.pathArray.length, key, isArrayAppend, gotChanged, alreadyPastDivergencePoint});
             break;
         }
         Log.exDevv('should not reach here: reducer');
@@ -263,6 +263,7 @@ export function jodelInit() {
         lclass.structure = dclass;
     }
 
+    setTimeout( () =>createOrOpenModelTab('m3'), 1);
     // GraphDragHandler.init();
 
 }

@@ -22,7 +22,7 @@ import {
     GraphElementDispatchProps,
     GraphElementReduxStateProps,
     GraphElementOwnProps,
-    GraphElementRaw,
+    GraphElementComponent,
     Overlap,
     RuntimeAccessibleClass,
     SetRootFieldAction,
@@ -31,7 +31,7 @@ import {
     defaultVSize,
     MyProxyHandler, DClass, DClassifier,
 } from "../../joiner";
-const superclass: typeof GraphElementRaw = RuntimeAccessibleClass.classes.GraphElementRaw as any as typeof GraphElementRaw;
+const superclass: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 
 // private
 class VertexStatee extends GraphElementStatee {
@@ -56,7 +56,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
     ////// mapper func
     static mapStateToProps(state: IStore, ownProps: VertexOwnProps): VertexReduxStateProps {
         // console.log('dragx vertex mapstate', {DVoidVertex});
-        const superret: VertexReduxStateProps = GraphElementRaw.mapStateToProps(state, ownProps, DVoidVertex) as VertexReduxStateProps;
+        const superret: VertexReduxStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DVoidVertex) as VertexReduxStateProps;
         const ret: VertexReduxStateProps = new VertexReduxStateProps();
         // console.log('Verx mapstate', {ret, superret, state, ownProps});
         Log.exDev(!ownProps.nodeid, 'node id is undefined', {ownProps});
@@ -72,7 +72,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         return superret; }
 
     static mapDispatchToProps(dispatch: Dispatch<any>): GraphElementDispatchProps {
-        const superret: GraphElementDispatchProps = GraphElementRaw.mapDispatchToProps(dispatch);
+        const superret: GraphElementDispatchProps = GraphElementComponent.mapDispatchToProps(dispatch);
         const ret: GraphElementDispatchProps = new GraphElementDispatchProps();
         U.objectMergeInPlace(superret, ret);
         U.removeEmptyObjectKeys(superret);
@@ -100,14 +100,16 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
     private onmousedown0 = (e:React.MouseEvent<HTMLDivElement>): void => {
         console.log('vertex evt mousedown');
         (e.nativeEvent as any).clickedOnVertex = true;
-        GraphDragHandler.singleton.startDragging(); // .mousedownStartDragOn = this.props.nodeid;
         if (e.shiftKey || e.ctrlKey) {
+            console.log('mousedown select() check:', {isSelected:this.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
             if (this.isSelected()) { this.deselect(); return; }
             this.select();
             return;
         }
-        // this.clearCurrentUserSelection();
         this.select();
+        console.log('vertex evt mousedown start drag');
+        GraphDragHandler.singleton.startDragging(e, this.props.node.__raw); // .mousedownStartDragOn = this.props.nodeid;
+        // this.clearCurrentUserSelection();
     }
 
     private onclick = (e: React.MouseEvent<HTMLDivElement>): void => {
@@ -151,6 +153,11 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
             sizestyle.top = vsize.y + "px";
             sizestyle.left = vsize.x + "px";
         }
+
+        sizestyle.border = "2px solid gray";
+        sizestyle.borderColor = this.props.node?.isSelected[DUser.current] ? 'blue' : 'black';
+        console.log('isSelected ? ', this.props.node && this.props.node.isSelected, this.props.node?.__raw.isSelected);
+
         let classes: string[] = this.props.class ? (Array.isArray(this.props.class) ? this.props.class : [this.props.class]) : [];
         if (this.props.className) U.arrayMergeInPlace(classes, Array.isArray(this.props.className) ? this.props.className : [this.props.className])
         classes.push("vertex");
@@ -163,9 +170,9 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
                 ref={this.parentRef}
                 onClick={this.onclick}
                 onMouseDown={this.onmousedown}
-                data-userSelecting={Object.keys(this.props.node?.isSelected || {}).join(' ')}
+                data-userSelecting={JSON.stringify(this.props.node?.__raw.isSelected || {})}
                 style={{...this.props.style, ...sizestyle} }
-            >
+            ><div>{'selected: ' + (!!this.props.node?.__raw.isSelected[DUser.current])}</div>
                 <Overlap autosizex={false}>
                     <div className={"vertex-controls"} />
                     <div>V_Size: <span>{vsize?.toString()}</span></div>
@@ -188,6 +195,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         }
         // const vertexOffset = new GraphSize(e.offsetX, e.offsetY);
         // const zoom = new GraphSize(1, 1); // todo: take it from graph? or just do it with css zoom-scale?
+        console.log('fff', {thiss:this, getvpos:this.getVertexPosition(), node: this.props.node});
         const currentVPos = new GraphSize().clone(this.getVertexPosition());
         let graphSize: GraphSize = new GraphSize().clone(this.props.graph.size);
         let graphZoom: GraphPoint = new GraphPoint().clone(this.props.graph.zoom);
@@ -218,7 +226,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         return new Point(1, 1); }*/
 
     private getVertexPosition(): GraphSize {
-        if (this.isSelected() && GraphDragHandler.isDragging) return this.state.draggingTempPosition as GraphSize;
+        // if (this.isSelected() && GraphDragHandler.isDragging) return this.state.draggingTempPosition as GraphSize;
         return this.props.node.size;
     }
 
@@ -257,12 +265,14 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         return ret; }
 
     private isSelected(byUser?: Pointer<DUser> & string): boolean { return this.props.node?.isSelected[byUser || DUser.current] || false; }
+
     private deselect(forUser:Pointer<DUser, 0, 1> = null): void {
         if (!forUser) forUser = DUser.current;
         if (!this.isSelected(forUser)) return;
         delete this.props.node.isSelected[forUser]; // todo: come reagisce il proxyhandler sulla delete? invoca la set? devo registrare un'altra funzione in override di "Proxy" nativo?
         U.arrayRemoveAll<DVoidVertex>(GraphDragHandler.singleton.draggingSelection, this.props.node);
         new SetRootFieldAction('_lastSelected', {node: this.props.graphid, view: this.props.parentViewId, modelElement: this.props.graph.model?.id});
+        console.log('deselect()');
     }
 
     private select(forUser:Pointer<DUser, 0, 1> = null): void {
@@ -271,6 +281,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         this.props.node.isSelected[forUser] = true;
         new SetRootFieldAction('_lastSelected', {node: this.props.nodeid, view: this.props.view.id, modelElement: this.props.data?.id});
         GraphDragHandler.singleton.draggingSelection.push(this.props.node);
+        console.log('select()');
         // new SetRootFieldAction( (getPath as IStore).idlookup[this.], this.state.vertexid);
     }
 }

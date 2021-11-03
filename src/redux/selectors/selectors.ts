@@ -36,7 +36,7 @@ export class Selectors{
         let ptrs: Pointer<DVoidVertex>[] = [];
 
         // @ts-ignore cose che vengono create nello store a runtime
-        U.ArrayMerge(ptrs, Object.values(state.voidVertex || {}), Object.values(state.Vertex || {}), Object.values(state.EdgePoint || {}));
+        U.ArrayMerge(ptrs, Object.values(state.voidvertexs || {}), Object.values(state.vertexs || {}), Object.values(state.edgepoints || {}));
         if (wrap === undefined || wrap === true) return ptrs.map( p => DPointerTargetable.wrap(p)) as any[];
         if (resolvePointers === undefined || resolvePointers === true) return ptrs.map( r => state.idlookup[r]) as any[];
         return ptrs as any[];

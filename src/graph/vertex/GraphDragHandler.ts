@@ -10,9 +10,11 @@ import {
     SetRootFieldAction,
     store,
     TRANSACTION,
-    DUser, RuntimeAccessible, $, DPointerTargetable, Log, MyProxyHandler
+    DUser, RuntimeAccessible, $, DPointerTargetable, Log, MyProxyHandler, Size, U
 } from "../../joiner";
+import React from "react";
 
+const debug: boolean = false;
 @RuntimeAccessible
 export class GraphDragHandler extends RuntimeAccessibleClass {
     public static singleton: GraphDragHandler;
@@ -22,11 +24,11 @@ export class GraphDragHandler extends RuntimeAccessibleClass {
     public draggingSelection: DVoidVertex[] = [];
     public vertexToComponent: Dictionary<Pointer<DGraphElement, 1, 1, LGraphElement>, GObject> = {}; // VertexComponent
     private totalDragOffset: Point; // NOT graphpoint, this is pixels
+    private startDragClickedPoint!: Point; // NOT graphpoint, this is pixels
     private dragTolerance = 10; // if less than 10 pixel i won't start the drag
 
 
     public static init() {
-        console.log('dragx init');
         new GraphDragHandler();
     }
     // public static mousedownStartDragOn?: Pointer<DVoidVertex, 1, 1, LVoidVertex>; // per iniziare il drag non basta mousemove & mousedown & selezione. il mousedown dev'essere partito da un vertice.
@@ -64,31 +66,47 @@ export class GraphDragHandler extends RuntimeAccessibleClass {
 
 
     // todo: add on mousedown su GraphElementRaw per triggerare startDragging
-    public startDragging(): void {
-        console.log('dragx start', {draggingSelection: this.draggingSelection, thiss:this});
+    public startDragging(e:React.MouseEvent<HTMLDivElement>, manualAddLastSelected?: DVoidVertex): void {
+        Log.i(true, 'dragx start', {draggingSelection: this.draggingSelection, thiss:this});
+        console.log('vertex evt mousedown dragx start', {draggingSelection: this.draggingSelection, thiss:this});
         GraphDragHandler.isDragging = true;
+        this.startDragClickedPoint = new Point(e.screenX, e.screenY);
         // this.totalDragOffset.set(0, 0);
-        let state: IStore =  store.getState();
+        // let state: IStore =  store.getState();
         this.draggingSelection = Selectors.getVertex(false, true).filter( (v) => v.isSelected[DUser.current]);
+        if (manualAddLastSelected) U.ArrayAdd(this.draggingSelection, manualAddLastSelected);
     }
 
     public stopDragging(): void {
-        console.log('dragx stop', {draggingSelection: this.draggingSelection, thiss:this});
+        console.log('vertex evt mousedown dragx stop', {draggingSelection: this.draggingSelection, thiss:this});
+        Log.i(debug, 'dragx stop', {draggingSelection: this.draggingSelection, thiss:this});
         GraphDragHandler.isDragging = false;
         this.totalDragOffset.set(0, 0);
     }
 
     private onMouseMove = (e: JQuery.MouseMoveEvent<Document, undefined, Document, Document>, ...args: any[]): any => {
-        // console.log('dragx dragging check: ' + GraphDragHandler.isDragging);
+        // Log.i(debug, 'dragx dragging check: ' + GraphDragHandler.isDragging);
         if (!GraphDragHandler.isDragging) return;
-        const offset: Point = new Point(e.offsetX, e.offsetY);
-        console.log('dragx dragging : ' + offset, {draggingSelection: this.draggingSelection, totalOffset: this.totalDragOffset.toString(), e, offset});
+        function getOffset() {
+            // return new Point(e.offsetX, e.offsetY);
+            return new Point(e.screenX, e.screenY);
+
+            Log.i(debug, 'dragx dragging getoffset: ', {child:e.currentTarget, e});
+            let parent = e.currentTarget.parentElement;
+            let parentsize = Size.of(parent as any);
+            let childsize = e.currentTarget && Size.of(e.currentTarget as any);
+            Log.i(debug, 'dragx dragging getoffset: ', {parent, child:e.currentTarget, parentSize:{...parentsize}, childSize:{...childsize}});
+            return childsize.subtract(parentsize).tl(); }
+
+        const mouseposAbsolute: Point = new Point(e.screenX, e.screenY);
+        const offset: Point = mouseposAbsolute.subtract(this.startDragClickedPoint, false);
+        Log.i(true, 'dragx dragging : ' + offset, {draggingSelection: this.draggingSelection, totalOffset: this.totalDragOffset.toString(), e, offset});
         let dragged: DVoidVertex;
         this.totalDragOffset  = offset; // this.totalDragOffset.add(offset, false);
         if (this.totalDragOffset.absolute() < this.dragTolerance) return;
         for (dragged of this.draggingSelection) {
             let component = this.vertexToComponent[dragged.id];
-            // console.log('dragx dragging component', {component});
+            // Log.i(debug, 'dragx dragging component', {component});
             if (!component) continue; // got unmounted before deselecting
             component?.setAbsolutePosition(offset);
         }

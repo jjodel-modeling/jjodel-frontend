@@ -197,7 +197,7 @@ export class LVoidVertex extends Mixin(LGraphElement, DVoidVertex) {
     }
 
     get_isSelected(context: LogicContext<this>): GObject {
-        return DPointerTargetable.mapWrap(this, context.data, 'idlookup.' + context.data.id + '.isSelected', []);
+        return DPointerTargetable.mapWrap(context.data.isSelected, context.data, 'idlookup.' + context.data.id + '.isSelected', []);
     }
 }
 
