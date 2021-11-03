@@ -28,7 +28,7 @@ import {
     LViewElement,
     LPointerTargetable,
     getPath,
-    LModelElement, LModel, LPackage, LAnnotation,
+    LModelElement, LModel, LPackage, LAnnotation, DPackage,
 } from "../joiner";
 
 import {Mixin} from "ts-mixer";
@@ -88,12 +88,13 @@ export class IStore {
         namedElement.implements = [me.id]; // , classifier.id, namedelement.id, modelelement.id]
         namedElement.attributes = [attribname.id];
 
-        const pkg: DClass = new DClass('M3Package');
+        // todo: uncomment const pkg: DClass = new DClass('M3Package');
+        const pkg: DPackage = new DPackage('M3Package');
         const attriburi: DAttribute = new DAttribute('uri');
-        pkg.implements = [namedElement.id];
-        pkg.attributes = [attriburi.id];
+        // todo: uncomment pkg.implements = [namedElement.id];
+        // todo: uncomment pkg.attributes = [attriburi.id];
         const classifierref: DReference = new DReference('classifiers');
-        pkg.references = [classifierref.id];
+        // todo: uncomment pkg.references = [classifierref.id];
 
         const model: DClass = new DClass('M3');
         const pkgref: DReference = new DReference('package');
@@ -129,7 +130,10 @@ function makeDefaultGraphView(): DViewElement {
     // let jsxstringtodo = todo itera i nodi o i children di un modello nel jsx;
     let thiss: {data: LModelElement} = null as any;
     // let jsxstring = <div><span>{JSON.stringify(thiss.data.__raw)}</span> <div className={"childrens"}>{thiss.data.childrens.map((p) => <VertexConnected data={p.id} />)}</div></div>;
-    let jsxstring = '<div><b>{this.data.__raw.className + ": " + this.data.id}</b><span style={{maxHeight: "50px", display: "block", overflowY: "scroll"}}>{JSON.stringify({...this.data.__raw, childrens: this.data.childrens})}</span>\n' +
+    let jsxstring = '<div>' +
+        '<b style={{display: \'block\'}}>{this.data.__raw.className + ": " + this.data.id}</b>' +
+        '<b style={{display: \'block\'}}>{(this.node && this.node.className) + ": " + (this.node && this.node.id)}</b>' +
+        '<span style={{maxHeight: "50px", display: "none", overflowY: "scroll"}}>{JSON.stringify({...this.data.__raw, childrens: this.data.childrens})}</span>\n' +
         '<div className={"childrens"}>childrens: {this.data.childrens.map((p) => <DefaultNode data={p.id} />)}</div>\n' +
         '{/*<Field data={this.data.id} nodeid={this.nodeid + "2"} graphid={this.graphid} view = {Selectors.getByName(DViewElement, \'EditView\').id} />\n*/}' +
         '</div>';

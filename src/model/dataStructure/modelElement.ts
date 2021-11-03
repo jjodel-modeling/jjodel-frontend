@@ -28,7 +28,7 @@ import {
 
 @RuntimeAccessible
 export /*abstract*/ class DModelElement extends DPointerTargetable {
-    static defaultComponent: (props: GObject, childrens?: (string | React.Component)[]) => React.ReactElement;
+    static defaultComponent: (ownProps: GObject, childrens?: (string | React.Component)[]) => React.ReactElement;
     static logic: typeof LPointerTargetable;
 
     // ******************** ecore officials inherited ******************** //

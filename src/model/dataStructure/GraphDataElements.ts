@@ -98,6 +98,10 @@ export class DVoidEdge extends DGraphElement {
 export class DVertex extends DVoidVertex {
     static logic: typeof LVoidVertex; // typeof LVertex;
 }
+@RuntimeAccessible
+export class DGraphVertex extends Mixin(DGraph, DVertex) {
+    static logic: typeof LGraphVertex; // typeof LGraphVertex;
+}
 
 @RuntimeAccessible
 export class DEdge extends DVoidEdge{
@@ -211,6 +215,12 @@ export class LVoidEdge extends Mixin(LGraphElement, DVoidEdge) {
 export class LVertex extends Mixin(LVoidVertex, DVertex) {
     static structure: typeof DVertex;
     static singleton: LVertex;
+}
+
+@RuntimeAccessible
+export class LGraphVertex extends Mixin(LVertex, LGraph) {
+    static structure: typeof LGraphVertex;
+    static singleton: LGraphVertex;
 }
 
 @RuntimeAccessible

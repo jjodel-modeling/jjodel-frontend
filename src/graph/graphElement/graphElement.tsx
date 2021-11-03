@@ -68,7 +68,12 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
         // U.evalInContext({...this, ...evalContext}, res); // todo: remove eval and add new Function() ?
     }
     catch (e: any) {
-        Log.eDevv('Syntax Error in custom user-defined template.\nReminder: empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString, {jsxCodeString, evalContext});
+        const errormsg = 'Syntax Error in custom user-defined template.';
+        if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0)
+            Log.ee( '\nReminder: nullish operators ".?" and "??" are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString, {jsxCodeString, evalContext});
+        else if (view.jsxString.indexOf('?.') >= 0)
+            Log.ee(errormsg + '\nReminder: empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString, {jsxCodeString, evalContext});
+        else Log.ee(errormsg);
         jsxparsedfunc = () => <div>Syntax Error 2</div>;
     }
 
@@ -304,7 +309,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     componentWillUnmount(): void {
-        // todo: devo fare in modo che venga cancellato solo se sto modificando la vista in modo che questo vertice non esista più.
+        // todo: devo fare in modo che il nodo venga cancellato solo se sto modificando la vista in modo che questo vertice non esista più.
         //  e non venga cancellato se il componente viene smontato perchè ho solo cambiato vista
         //  LOW PRIORITY perchè funziona anche senza, pur sprecando memoria che potrebbe essere liberata.
         // if (view_is_still_active_but_got_modified_and_vertex_is_deleted) new DeleteElementAction(this.getId());

@@ -29,8 +29,9 @@ import {
     LGraph,
     DVoidVertex,
     defaultVSize,
-    MyProxyHandler, DClass, DClassifier,
+    MyProxyHandler, DClass, DClassifier, GObject, DPackage, DModel, DGraphElement, DVertex, DGraph,
 } from "../../joiner";
+import {DGraphVertex} from "../../model/dataStructure/GraphDataElements";
 const superclass: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 
 // private
@@ -56,7 +57,13 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
     ////// mapper func
     static mapStateToProps(state: IStore, ownProps: VertexOwnProps): VertexReduxStateProps {
         // console.log('dragx vertex mapstate', {DVoidVertex});
-        const superret: VertexReduxStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DVoidVertex) as VertexReduxStateProps;
+        let DGraphElementClass: typeof DGraphElement;
+        if (ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraphVertex;
+        else if (ownProps.isVertex && !ownProps.isGraph) DGraphElementClass = DVoidVertex; // DVertex
+        else if (!ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraph;
+        else if (!ownProps.isVertex && !ownProps.isGraph) DGraphElementClass = DGraphElement;
+        else  DGraphElementClass = DGraphElement;
+        const superret: VertexReduxStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass) as VertexReduxStateProps;
         const ret: VertexReduxStateProps = new VertexReduxStateProps();
         // console.log('Verx mapstate', {ret, superret, state, ownProps});
         Log.exDev(!ownProps.nodeid, 'node id is undefined', {ownProps});
@@ -94,10 +101,18 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
 
 
     getVertex(): LVoidVertex { return this.props.node; }
-    private onclick0(e: React.MouseEvent<HTMLDivElement>): void {
+    private onclick_graph = (e: React.MouseEvent<HTMLDivElement>): void => {
+        console.log('graph evt click');
+    }
+    private onclick_vertex = (e: React.MouseEvent<HTMLDivElement>): void => {
         console.log('vertex evt click');
     }
-    private onmousedown0 = (e:React.MouseEvent<HTMLDivElement>): void => {
+
+    private onmousedown_graph = (e:React.MouseEvent<HTMLDivElement>): void => {
+        console.log('graph evt mousedown');
+
+    }
+    private onmousedown_vertex = (e:React.MouseEvent<HTMLDivElement>): void => {
         console.log('vertex evt mousedown');
         (e.nativeEvent as any).clickedOnVertex = true;
         if (e.shiftKey || e.ctrlKey) {
@@ -113,11 +128,14 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
     }
 
     private onclick = (e: React.MouseEvent<HTMLDivElement>): void => {
-        this.onclick0(e);
-        this.props.onclick?.(e); }
+        if (this.props.isVertex) this.onclick_vertex(e);
+        if (this.props.isGraph) this.onclick_graph(e);
+        this.props.onclick?.(e);
+    }
 
     private onmousedown = (e: React.MouseEvent<HTMLDivElement>): void => {
-        this.onmousedown0(e);
+        if (this.props.isVertex) this.onmousedown_vertex(e);
+        if (this.props.isGraph) this.onmousedown_graph(e);
         this.props.onmousedown?.(e); }
 
     private getMpID(): Pointer<DModelElement> {
@@ -140,18 +158,26 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         const vsize: GraphSize | undefined = this.getCurrentVPosIncludingPanAndZoom();
         // const viewTransient = this.props.view.__transient;
 
-        const sizestyle: CSSProperties = {};
-        sizestyle.transform = '';
-        if (!vsize) {
-            // sizestyle.display = 'none';
-            sizestyle.backgroundColor = 'black';
-        } else {
-            if (false && this.props.view.scalezoomy) sizestyle.transform += " scaleY(0.?)";
-            else sizestyle.height = vsize.h + "px";
-            if (false && this.props.view.scalezoomx) sizestyle.transform += " scaleX(0.?)";
-            else sizestyle.width = vsize.w + "px";
-            sizestyle.top = vsize.y + "px";
-            sizestyle.left = vsize.x + "px";
+        const sizestyle: CSSProperties = { display: 'flex', flexWrap: "wrap"};
+        if (this.props.isVertex) {
+            sizestyle.transform = '';
+            if (!vsize) {
+                // sizestyle.display = 'none';
+                sizestyle.backgroundColor = 'black';
+            } else {
+                if (false && this.props.view.scalezoomy) sizestyle.transform += " scaleY(0.?)";
+                else sizestyle.height = vsize.h + "px";
+                if (false && this.props.view.scalezoomx) sizestyle.transform += " scaleX(0.?)";
+                else sizestyle.width = vsize.w + "px";
+                sizestyle.top = vsize.y + "px";
+                sizestyle.left = vsize.x + "px";
+            }
+        }
+        if (this.props.isGraph && !this.props.isVertex) {
+            sizestyle.width = '100%';
+            sizestyle.height = '100%';
+            sizestyle.flexGrow = 1;
+            sizestyle.overflow = 'hidden';
         }
 
         sizestyle.border = "2px solid gray";
@@ -173,11 +199,16 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
                 data-userSelecting={JSON.stringify(this.props.node?.__raw.isSelected || {})}
                 style={{...this.props.style, ...sizestyle} }
             ><div>{'selected: ' + (!!this.props.node?.__raw.isSelected[DUser.current])}</div>
-                <Overlap autosizex={false}>
-                    <div className={"vertex-controls"} />
-                    <div>V_Size: <span>{vsize?.toString()}</span></div>
-                    <div>{super.render()}</div>
-                </Overlap>
+                {
+                    this.props.isVertex
+                        ?
+                        <Overlap autosizex={false}>
+                            <div className={"vertex-controls"}/>
+                            <div style={{display: "none"}}>V_Size: <span>{vsize?.toString()}</span></div>
+                            <div>{super.render()}</div>
+                        </Overlap>
+                        :
+                        <div>{super.render()}</div>}
             </div>
         </>); }
     /*
@@ -270,7 +301,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         if (!forUser) forUser = DUser.current;
         if (!this.isSelected(forUser)) return;
         delete this.props.node.isSelected[forUser]; // todo: come reagisce il proxyhandler sulla delete? invoca la set? devo registrare un'altra funzione in override di "Proxy" nativo?
-        U.arrayRemoveAll<DVoidVertex>(GraphDragHandler.singleton.draggingSelection, this.props.node);
+        U.arrayRemoveAll<DGraphElement>(GraphDragHandler.singleton.draggingSelection, this.props.node);
         new SetRootFieldAction('_lastSelected', {node: this.props.graphid, view: this.props.parentViewId, modelElement: this.props.graph.model?.id});
         console.log('deselect()');
     }
@@ -290,6 +321,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
 class VertexOwnProps extends GraphElementOwnProps {
     onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
     onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    isGraph?: boolean = false;
+    isVertex?: boolean = true;
     // propsRequestedFromHtmlAsAttributes: string;
 }
 // private
@@ -316,8 +349,21 @@ const VertexConnected = connect<VertexReduxStateProps, VertexDispatchProps, Vert
 
 
 export const Vertex = (props: VertexOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <VertexConnected {...{...props, childrens}} />; }
+    return <VertexConnected {...{...props, childrens}} isGraph={false} isVertex={true}/>; }
+
+export const Graph = (props: VertexOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    return <VertexConnected {...{...props, childrens}} isGraph={true} isVertex={false}/>; }
+
+export const GraphVertex = (props: VertexOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    return <VertexConnected {...{...props, childrens}} isGraph={true} isVertex={true}/>; }
+
+export const Field = (props: VertexOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    return <VertexConnected {...{...props, childrens}} isGraph={false} isVertex={false}/>; }
 DClassifier.defaultComponent = Vertex;
+DPackage.defaultComponent = GraphVertex;
+DModel.defaultComponent = Graph;
+
+DModelElement.defaultComponent = Field; // fallback
 
 /*
 if (!windoww.mycomponents) windoww.mycomponents = {};

@@ -425,7 +425,6 @@ export class LModel extends Mixin(DModel, LNamedElement) {
     static structure: typeof DModel;
     static singleton: LModel;
 
-
     // @ts-ignore
     parent!: never;
     // @ts-ignore
@@ -435,4 +434,7 @@ export class LModel extends Mixin(DModel, LNamedElement) {
 
     get_childrens_idlist(context: LogicContext<DModel>): Pointer<DAnnotation | DModel, 1, 'N'> {
         return [...super.get_childrens_idlist(context), ...context.data.packages]; }
+
+    get_packages(context: LogicContext<DModel>): LPackage[] {
+        return context.data.packages.map(p => MyProxyHandler.wrap(p)); }
 }
