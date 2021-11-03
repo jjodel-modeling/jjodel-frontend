@@ -87,7 +87,7 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
                         se realizzi "pointedby" qui è to do: remove old paths and re-add them with updated index
                     }*/
                     oldValue = current[key].splice(index, 1);
-                    unpointedElement = state.idlookup[oldValue];
+                    //unpointedElement = state.idlookup[oldValue];
                 }
             }
             else if (current[key] !== newVal) {

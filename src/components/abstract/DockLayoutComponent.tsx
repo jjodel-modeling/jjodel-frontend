@@ -18,7 +18,12 @@ import {
 } from "../../joiner";
 
 
-const StyleEditor = windoww.tempcomponents.StyleEditor;
+
+//const StyleEditor = windoww.tempcomponents.StyleEditor;
+
+console.error('see reading');
+const StyleEditor = windoww.components.StyleEditor;
+const ViewsEditor = windoww.components.ViewsEditor;
 const MySwal = withReactContent(Swal);
 
 // private
@@ -187,8 +192,8 @@ let headlessTab = {
     title: 'headless',
     content: (
         <div style={{background: '#f6f6f6', height: '100%', margin: 0, padding: 30}}>
-            <h1>Style Editor</h1>
-            <StyleEditor/>
+            <h4 className={"mb-4"}>STYLE EDITOR</h4>
+            <StyleEditor />
         </div>
     ),
 
@@ -208,8 +213,8 @@ let cardTab = newTab();
 let customTab = {
     title: 'custom-style',
     content: (
-        <div>
-            Custom style
+        <div style={{background: '#f6f6f6', height: '100%', margin: 0, padding: 30}}>
+            <ViewsEditor />
         </div>
     ),
     // you can mix predefined style with you own style

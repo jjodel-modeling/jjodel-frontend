@@ -13,10 +13,20 @@ import {
     RuntimeAccessibleClass,
     MyProxyHandler,
     LogicContext,
-    DAnnotation, Selectors,
-    SetFieldAction, LModelElement, getPath, Proxyfied, GraphSize, defaultVSize, LPointerTargetable, RuntimeAccessible
+    DAnnotation,
+    Selectors,
+    SetFieldAction,
+    LModelElement,
+    getPath,
+    Proxyfied,
+    GraphSize,
+    defaultVSize,
+    LPointerTargetable,
+    RuntimeAccessible,
+    GObject
 } from "../../joiner";
 import {Mixin} from "ts-mixer";
+import {Runtime} from "inspector";
 
 
 @RuntimeAccessible
@@ -24,8 +34,10 @@ export class DViewElement extends DPointerTargetable {
     static logic: typeof LPointerTargetable;
     bindVertexSizeToView: boolean = true;
     name: string;
+
     constants?: string; // evalutate 1 sola volta all'applicazione della vista o alla creazione dell'elemento.
     preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
+
     jsxString!: string; // l'html template
     usageDeclarations?: string; // example: state
     forceNodeType?: DocString<'component name'>;
@@ -40,6 +52,13 @@ export class DViewElement extends DPointerTargetable {
     oclApplyCondition: string; // ocl selector
     explicitApplicationPriority: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
     defaultVSize: GraphSize;
+    adaptHeight: boolean;
+    adaptWidth: boolean;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+
 
     constructor(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '', preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1) {
         super();
@@ -54,6 +73,15 @@ export class DViewElement extends DPointerTargetable {
         this.oclApplyCondition = '';
         this.explicitApplicationPriority = priority;
         this.defaultVSize = defaultVSize || new GraphSize(0, 0, 350, 200);
+        this.adaptHeight = false;
+        this.adaptWidth = false;
+        this.x = 0;
+        this.y = 0;
+        this.width = 350;
+        this.height = 200;
+    }
+    addSubview(id: string): void{
+        this.subViews.push(id);
     }
 }
 
@@ -73,7 +101,16 @@ export class DViewTransientProperties extends RuntimeAccessibleClass{
 export class LViewElement extends Mixin(DViewElement, LPointerTargetable) {
     static structure: typeof DViewElement;
     static singleton: LViewElement;
+    subViews: any;
 
+    get_subViews(context: LogicContext<DViewElement>, key: string): LViewElement[]{
+        let subViewsPointers = context.data.subViews;
+        let subViews: LViewElement[] = [];
+        for(let pointer of subViewsPointers){
+           subViews.push(MyProxyHandler.wrap(pointer));
+        }
+        return subViews;
+    }
     set_generic_entry(context: LogicContext<this>, key: string, val: any): boolean {
         console.log('set_generic_entry', {context, key, val});
         new SetFieldAction(context.data, key, val);
