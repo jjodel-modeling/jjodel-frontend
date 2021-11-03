@@ -38,6 +38,8 @@ import {Mixin} from "ts-mixer";
 export class IStore {
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
     currentUser: DUserState;
+    stackViews: Pointer<DViewElement>[] = [];
+
     // users: Dictionary<DocString<Pointer<DUser>>, UserState> = {};
     // collaborators: UserState[];
     idlookup: Record<Pointer<DPointerTargetable, 1, 1>, DPointerTargetable> = {};
@@ -115,7 +117,13 @@ export class IStore {
         let view: DViewElement = new DViewElement('m3View', '<p><h1>hello1 {this.data.name + (this.data.id)}</h1><i>{JSON.stringify(Object.keys(this))}</i>' + editinput + '</p>');
         let editView: DViewElement = makeEditView();
         let graphView: DViewElement = makeDefaultGraphView();
-        outElemArray.push.call(outElemArray, m3, m3graph, me, annotation, namedElement, attribname, pkg, attriburi, classifierref, pkgref, classe, view, editView, graphView);
+
+        let test: DViewElement = new DViewElement('testView', '');
+        test.addSubview(view.id);
+        test.addSubview(editView.id);
+        test.addSubview(graphView.id);
+
+        outElemArray.push.call(outElemArray, m3, m3graph, me, annotation, namedElement, attribname, pkg, attriburi, classifierref, pkgref, classe, view, editView, graphView, test);
         // m3._transient.currentView = view.id;
         /*
         if (fireAction)
