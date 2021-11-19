@@ -29,9 +29,8 @@ import {
     LGraph,
     DVoidVertex,
     defaultVSize,
-    MyProxyHandler, DClass, DClassifier, GObject, DPackage, DModel, DGraphElement, DVertex, DGraph,
+    MyProxyHandler, DClass, DClassifier, GObject, DPackage, DModel, DGraphElement, DVertex, DGraph, DGraphVertex
 } from "../../joiner";
-import {DGraphVertex} from "../../model/dataStructure/GraphDataElements";
 const superclass: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 
 // private
@@ -61,8 +60,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         if (ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraphVertex;
         else if (ownProps.isVertex && !ownProps.isGraph) DGraphElementClass = DVoidVertex; // DVertex
         else if (!ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraph;
-        else if (!ownProps.isVertex && !ownProps.isGraph) DGraphElementClass = DGraphElement;
-        else  DGraphElementClass = DGraphElement;
+        else DGraphElementClass = DGraphElement;
         const superret: VertexReduxStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass) as VertexReduxStateProps;
         const ret: VertexReduxStateProps = new VertexReduxStateProps();
         // console.log('Verx mapstate', {ret, superret, state, ownProps});
@@ -198,13 +196,14 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
                 onMouseDown={this.onmousedown}
                 data-userSelecting={JSON.stringify(this.props.node?.__raw.isSelected || {})}
                 style={{...this.props.style, ...sizestyle} }
-            ><div>{'selected: ' + (!!this.props.node?.__raw.isSelected[DUser.current])}</div>
+                ><div>{'__selected: ' + (!!this.props.node?.__raw.isSelected[DUser.current]) + ', __isG:' + this.props.isGraph + ', __isV:' + this.props.isGraph + ', __DType:' + (this.props.node && this.props.node.className)}</div>
                 {
                     this.props.isVertex
                         ?
                         <Overlap autosizex={false}>
+                            {/*
                             <div className={"vertex-controls"}/>
-                            <div style={{display: "none"}}>V_Size: <span>{vsize?.toString()}</span></div>
+                            <div style={{display: "none"}}>V_Size: <span>{vsize?.toString()}</span></div>*/}
                             <div>{super.render()}</div>
                         </Overlap>
                         :
@@ -228,7 +227,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         // const zoom = new GraphSize(1, 1); // todo: take it from graph? or just do it with css zoom-scale?
         console.log('fff', {thiss:this, getvpos:this.getVertexPosition(), node: this.props.node});
         const currentVPos = new GraphSize().clone(this.getVertexPosition());
-        let graphSize: GraphSize = new GraphSize().clone(this.props.graph.size);
+        let graphSize: GraphSize = new GraphSize().clone(this.props.graph.graphSize);
         let graphZoom: GraphPoint = new GraphPoint().clone(this.props.graph.zoom);
         let newpos: GraphPoint = (pos as any as GraphPoint).multiply(this.props.graph.zoom);
         console.log("dragx setAbsolutePosition: newpos:" + newpos + ', pos:' + pos + ", zoom:" + this.props.graph.zoom, {Point});
@@ -290,9 +289,9 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         if (!this.props.graph) return undefined;
 
         const gMinPos: GraphPoint = new GraphPoint();
-        gMinPos.clone(this.props.graph.size as any);
+        gMinPos.clone(this.props.graph.graphSize);
         // ret.subtract(gMinPos); todo: re-enable when there are multiple vertices, with 1 vertex it is basically auto-focus
-        console.log('getCurrentVPosIncludingPanAndZoom graphsize', {graph: this.props.graph, gsize: this.props.graph?.size, gMinPos, ret});
+        console.log('getCurrentVPosIncludingPanAndZoom graphsize', {graph: this.props.graph, gsize: this.props.graph?.graphSize, gMinPos, ret});
         return ret; }
 
     private isSelected(byUser?: Pointer<DUser> & string): boolean { return this.props.node?.isSelected[byUser || DUser.current] || false; }

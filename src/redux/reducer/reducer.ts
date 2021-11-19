@@ -263,7 +263,8 @@ export function jodelInit() {
         lclass.structure = dclass;
     }
 
-    setTimeout( () =>createOrOpenModelTab('m3'), 1);
+    IStore.fakeinit();
+    setTimeout( () => createOrOpenModelTab('m3'), 1);
     // GraphDragHandler.init();
 
 }
@@ -272,5 +273,4 @@ export function jodelInit() {
 function afterStoreLoad() {
     console.error('aaaafter store load');
     jodelInit();
-    IStore.fakeinit();
 }

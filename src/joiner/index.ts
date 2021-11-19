@@ -64,7 +64,7 @@ export {
     LStructuralFeature, LDataType, LTypedElement, LNamedElement, // DMap, LMap,
     LValue,
 } from "../model/logicWrapper/LModelElement";
-export {DVertex, defaultVSize, LGraph, DGraph, LVoidVertex, DEdgePoint, LEdgePoint, DVoidVertex, DVoidEdge, LVoidEdge, DEdge, DExtEdge, LExtEdge, LRefEdge, DRefEdge, LEdge, LGraphElement, DGraphElement, LVertex} from "../model/dataStructure/GraphDataElements";
+export {DVertex, defaultVSize, LGraph, DGraph, LVoidVertex, DGraphVertex, DEdgePoint, LEdgePoint, DVoidVertex, DVoidEdge, LVoidEdge, DEdge, DExtEdge, LExtEdge, LRefEdge, DRefEdge, LEdge, LGraphElement, DGraphElement, LVertex} from "../model/dataStructure/GraphDataElements";
 
 export {GraphDragHandler} from "../graph/vertex/GraphDragHandler";
 

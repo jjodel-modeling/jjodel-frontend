@@ -4,8 +4,9 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import {Provider} from "react-redux";
-import {store} from "./joiner";
+import {jodelInit, store} from "./joiner";
 
+jodelInit();
 ReactDOM.render(
   // <React.StrictMode> <App /> </React.StrictMode>,
     // eslint-disable-next-line react/jsx-no-undef

@@ -43,9 +43,9 @@ export class DGraphElement extends DPointerTargetable {
 
 @RuntimeAccessible
 export class DGraph extends DGraphElement {
-    size!: GraphSize; // x,y are minimum x,y position of contained vertices, w,h are distance(min_pos, max_pos)
     zoom!: GraphPoint;
     model!: Pointer<DModel, 1, 1, LModel>;
+    graphSize: GraphSize;
 
     static create(model: Pointer<DModel>): DGraph {
         let ret = new DGraph(false, undefined, undefined, model);
@@ -56,8 +56,9 @@ export class DGraph extends DGraphElement {
     constructor(isUser: boolean = false, nodeID: string | undefined, graphID: string | undefined, model: Pointer<DModel>) {
         super(false, nodeID, undefined as any);
         this.graphID = this.id;
-        this.size = new GraphSize(0, 0, 0, 0);
         this.zoom = new GraphPoint(1, 1);
+        this.graphSize = new GraphSize(0, 0, 0, 0); // GraphSize.apply(this, [0, 0, 0 ,0]);
+        this._subMaps = {zoom: true, graphSize: true}
         this.model = model;
     }
 
@@ -77,10 +78,19 @@ export class DVoidVertex extends Mixin(DGraphElement, GraphSize) {
 
     constructor(isUser: boolean = false, nodeID: string | undefined, graphID: string) {
         super(false, nodeID, graphID);
-        this.className = this.constructor.name; // todo: il mixin setta il classname del primo costruttore (DGraphElement) tutti i classname delle Dclass mixin sono da settare a mano?
-        this.clone(defaultVSize as this);
+        console.log('dvoidvertex constructor,', {thiss: this, GraphSize, gsproto: GraphSize.prototype});
         let uselessJustForNavigation: LVoidVertex;
         // this.size = defaultVSize.duplicate();
+        // GraphSize.prototype.clone.call(this, defaultVSize);
+        this.x = defaultVSize.x;
+        this.y = defaultVSize.y;
+        this.w = defaultVSize.w;
+        this.h = defaultVSize.h;
+    }
+
+    protected init0(...constructorParameters: any) {
+        console.log('dvoidvertex constructor init', this);
+        // GraphSize.prototype.clone.call(this, defaultVSize); // this.clone(defaultVSize as this);
     }
 }
 
@@ -158,10 +168,6 @@ export class LGraph extends Mixin(LGraphElement, DGraph) {
     zoom!: GraphPoint;
     // @ts-ignore
     model?: LModel;
-    set_size(val: GraphSize, context: LogicContext<this>): boolean {
-        new SetFieldAction(context.data, 'size', val);
-        return true;
-    }
     /*
     get_size(context: LogicContext<this>): GraphSize { return context.data.size; }
     get_zoom(context: LogicContext<this>): GraphPoint {
@@ -174,7 +180,7 @@ export class LGraph extends Mixin(LGraphElement, DGraph) {
 export class LVoidVertex extends Mixin(LGraphElement, DVoidVertex) {
     static structure: typeof DVoidVertex;
     static singleton: LVoidVertex;
-    size!: GraphSize; // fittizio, la size è memorizzata nell'oggetto stesso (estende ISize)
+    size: GraphSize = undefined as any; // fittizio, la size è memorizzata nell'oggetto stesso (estende ISize)
 
     get_size(context: LogicContext<this>): GraphSize {
         return context.proxyObject as any; // new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h);
@@ -189,14 +195,14 @@ export class LVoidVertex extends Mixin(LGraphElement, DVoidVertex) {
         if (context.data.y !== val.y) new SetFieldAction(context.data, 'y', val.y);
         if (context.data.w !== val.w) new SetFieldAction(context.data, 'w', val.w);
         if (context.data.h !== val.h) new SetFieldAction(context.data, 'h', val.h);
-        // (context.proxy as unknown as LGraphElement).graph.size
+        // (context.proxy as unknown as LGraphElement).graph.graphSize
         // update graph boundary too
         console.log('setsize2, graph:', {context, val});
         const graph: LGraph = this.get_graph(context); // (context.proxyObject as this).get_graph(context);
-        const gsize = graph.size;
+        const gsize = graph.graphSize;
         val.boundary(gsize);
         if (val.equals(gsize)) return true;
-        graph.size = val;
+        graph.graphSize = val;
         return true;
     }
 

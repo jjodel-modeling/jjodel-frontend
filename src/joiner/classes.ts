@@ -12,14 +12,15 @@ import {
     Dictionary,
     LogicContext,
     MyProxyHandler,
-    LViewElement,
     MapProxyHandler, GraphSize, DocString
 } from "../joiner";
+import {Class, Longest} from "ts-mixer/dist/types/types";
+import {Mixin} from "ts-mixer";
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
 
 
 
-export class RuntimeAccessibleClass {
+export abstract class RuntimeAccessibleClass {
     // static allRuntimeClasses: string[] = [];
     static classes: Dictionary<string, typeof RuntimeAccessibleClass> = {};
     static getAllNames(): string[] { return Object.keys(RuntimeAccessibleClass.classes); }
@@ -41,7 +42,7 @@ export class RuntimeAccessibleClass {
         // console.log('ProxyWrapping:', {data, baseObjInLookup, path});
         return new Proxy(data, new TargetableProxyHandler(data, baseObjInLookup, path)) as L;
     }
-
+/*
     static mapWrap2<D extends DPointerTargetable, L extends LPointerTargetable>(map: RuntimeAccessibleClass, container: D, baseObjInLookup?: DPointerTargetable, path: string = ''): L{
         if (!map || (map as any).__isProxy) return map as any;
         if (typeof container === 'string') {
@@ -52,21 +53,27 @@ export class RuntimeAccessibleClass {
         return new Proxy(map, new MapProxyHandler(map, baseObjInLookup, path));
     }
 
+*/
 
-    static mapWrap(data: Dictionary, baseObjInLookup: DPointerTargetable, path: string, subMapKeys: string[]): Proxyfied<Dictionary> {
+    static mapWrap(data: Dictionary, baseObjInLookup: DPointerTargetable, path: string, subMapKeys: string[] = []): Proxyfied<Dictionary> {
         if (!data || (data as any).__isProxy) return data as any;
         // console.error('GETMAP', {data, logicContext, path});
-        return new Proxy(data, new MapProxyHandler(data, baseObjInLookup, path, subMapKeys));
+        return new Proxy(data, new MapProxyHandler(data, baseObjInLookup, path));
     }
 
     className!: string;
     constructor() {
-        this.className = this.constructor.name;
+        // this.className = this.constructor.name;
         // nb: per i mixin questo settaggio viene sovrascritto. perchè il mixin crea le 2 classi ereditate separatamente con i loro costruttori e le incrocia. quindi devo settarlo dall'annotazione @ tramite prototype
-        (window as any)[this.constructor.name] =
-        RuntimeAccessibleClass.classes[this.constructor.name] = this.constructor as any;
         // RuntimeAccessibleClass.allRuntimeClasses.push(this.className);
+        let finalObject = this;
+        if (finalObject.constructor.name === "DVoidVertex" || finalObject.constructor.name === "DGraphElement") {
+            let breakp = true; }
+
+        console.log('creation of___0 ', {thiss: this, finalObject});
+        // this.init0(...arguments);
     }
+
 
     public static get<T extends typeof RuntimeAccessibleClass = typeof RuntimeAccessibleClass>(dclassname: string) : T & {logic?: typeof LPointerTargetable} { return this.classes[dclassname] as any; }
 
@@ -77,6 +84,44 @@ export class RuntimeAccessibleClass {
         if (!superclass || !thisclass) return false;
         return (thisclass instanceof superclass); // todo: check if works with constructors
     }
+
+    getAllPrototypeSuperClasses(): GObject[] {
+        let currentlevel = this;
+        let ret: GObject[] = [];
+        while (true) {
+            if (!currentlevel) break;
+            ret.push(currentlevel);
+            // @ts-ignore
+            currentlevel = currentlevel.__proto__;
+        }
+        console.log('constructor chain:', ret);
+        return ret;
+    }
+    initBase(){
+        let superclasses = this.getAllPrototypeSuperClasses();
+        for (let sc of superclasses) {
+            if (!sc.hasOwnProperty('init0')) continue;
+            console.log('initbase calling ', {thiss: this, sc, init0: sc.init0, args:sc.constructorArguments});
+            sc.init0.apply(this, ...(sc.constructorArguments || []));
+        }
+    }
+    // protected abstract init(...constructorParameters: any): void;
+    // NB: per colpa della limitazione #3 di ts-mixer,
+    // DEVO chiamare init su ogni oggetto per settargli il corretto this.className, altrimenti prende quello dell'ultima superclasse
+    protected init0(...constructorParameters: any): void {
+        let a = this;
+        let finalObject = this;
+        console.log('creation of___ ', {thiss: this, finalObject});
+        if (finalObject.constructor.name === "DVoidVertex" || finalObject.constructor.name === "DGraphElement") {
+            let breakp = true; }
+
+        (window as any)[finalObject.constructor.name] =
+            RuntimeAccessibleClass.classes[finalObject.constructor.name] = finalObject.constructor as any;
+        // @ts-ignore
+        // delete this.className;
+        this.className = (finalObject as any).__proto__.className;
+    }
+
 }
 
 
@@ -87,10 +132,29 @@ export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
     // @ts-ignore
     RuntimeAccessibleClass.classes[constructor.name] = constructor as any as typeof RuntimeAccessibleClass;
     if (!window[constructor.name]) (window[constructor.name] as any) = constructor;
-    // @ts-ignore
     constructor.prototype.className = constructor.name;
     (constructor as any).classNameDebug = constructor.name;
-    return constructor;
+    // @ts-ignore
+    console.log('runtimeaccessible annotation:', {thiss:this, constructor});
+//    const classnameFixedConstructor = constructor; //  function (...args) { let obj = new constructor(...args); obj.init?.(); obj.init0?.(); return obj; }
+
+    // @ts-ignore
+    let outerthis = this;
+    // @ts-ignore
+    const classnameFixedConstructorDoNotRenameWithoutSearchStrings = function (...args) {
+        // @ts-ignore
+        console.log('runtimeaccessible annotation inner:', {thiss:this, outerthis, constructor});
+        // @ts-ignore
+        let obj = new constructor(...args);
+        obj.classNameFromAnnotation = constructor.name;
+        // obj.init?.();
+        // obj.init0?.();
+        obj.initBase?.();
+        // @ts-ignore
+        console.log('runtimeaccessible annotation inner end:', {thiss:this, outerthis, constructor});
+        return obj; }
+    classnameFixedConstructorDoNotRenameWithoutSearchStrings.prototype = constructor.prototype;
+    return classnameFixedConstructorDoNotRenameWithoutSearchStrings as any;
 }
 
 (window as any).RuntimeAccessibleClass = RuntimeAccessibleClass;
@@ -101,6 +165,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     private static maxID: number = 0;
     public static logic: typeof LPointerTargetable;
     _storePath?: string[];
+    _subMaps?: Dictionary<string, boolean>;
 
     id: string;
     pointedBy: DocString<'path in store'>[] = []; // NB: potrebbe contenere puntatori invalidi.
@@ -235,4 +300,32 @@ export class JsType{
     public static asUndefined<T>(data: undefined | any, fallbackReturn: T): T | undefined { return JsType.isUndefined(data) ? data : fallbackReturn; }
     public static asDate<T>(data: Date | any, fallbackReturn: T): T | Date { return JsType.isDate(data) ? data : fallbackReturn; }
     public static isPrimitive(data: any) { return !JsType.isAnyOfTypes(data, JsType.object, JsType.function, JsType.array); }
+}
+
+abstract class AbstractMixedClass {
+    // superclass!: Dictionary<DocString<'parent class name', Class>>;
+    abstract init_constructor(...constructorArguments: any): void;
+}
+
+function invalidSuperClassError(/*callee: Class,*/ scname: string, superclass: Class): (() => never) {
+    return () => { Log.exDevv('parent super class "' + scname + '" is not implementing init_constructor', {scname, superclass, }); throw new Error(); }
+}
+// @ts-ignore
+function MixinFakeConstructor() { this.isMixinFakeConstructor = true; }
+export function MixOnlyFuncs<A1 extends any[], I1, S1, A2 extends any[], I2, S2>(c1: Class<A1, I1, S1>, c2: Class<A2, I2, S2>):
+    Class<Longest<A1, A2>, I1 & I2 & {superclass: Dictionary<string, (/*thiss: I1 & I2,*/ ...superConstructorParams:ConstructorParameters<Class<A1, I1, S1>> | ConstructorParameters<Class<A2, I2, S2>>) => void>, initt: Class<A1, I1, S1>} & AbstractMixedClass, S1 & S2> {
+    // strategia: passo dei finti valori che copiano i prototipi delle classi sovrascrivendo i costruttori per evitare che chiami i costruttori delle superclassi
+    // ma che comunque erediti campi e funzioni
+    // @ts-ignore
+    let c1noconstructor: any = MixinFakeConstructor;
+    let c2noconstructor: any = MixinFakeConstructor;
+    c1noconstructor.prototype = c1.prototype;
+    c2noconstructor.prototype = c2.prototype;
+    let ret = Mixin(c1noconstructor, c2noconstructor);
+    let c1name = c1.name === 'classnameFixedConstructorDoNotRenameWithoutSearchStrings' ? c1.prototype.className : c1.name;
+    let c2name = c2.name === 'classnameFixedConstructorDoNotRenameWithoutSearchStrings' ? c2.prototype.className : c2.name;
+    ret.prototype['superclass'] = {};
+    ret.prototype['superclass'][c1name] = c1.prototype.init_constructor || invalidSuperClassError(c1name, c1);
+    ret.prototype['superclass'][c2name] = c2.prototype.init_constructor || invalidSuperClassError(c2name, c2);
+    return ret;
 }

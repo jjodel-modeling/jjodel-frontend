@@ -571,13 +571,13 @@ export class U{
 
 
 
-    static ReactNodeAsElement(e: React.ReactNode): React.ReactElement | null { return (e as ReactElement).type ? e as ReactElement : null; }
+    static ReactNodeAsElement(e: React.ReactNode): React.ReactElement | null { return e && (e as ReactElement).type ? e as ReactElement : null; }
 
     static getType(param: any): string {
         switch (typeof param) {
             default: return typeof param;
             case 'object':
-                return param?.constructor?.name || "{_rawobject_}";
+                return param?.constructor?.name || param?.className || "{_rawobject_}";
             case 'function': // and others
                 return "geType for function todo: distinguish betweeen arrow and classic";
         }
@@ -4439,7 +4439,7 @@ export abstract class IPoint {
         else this.y = +y;}
 
     toString(): string { return '(' + this.x + ', ' + this.y + ')'; }
-    clone(other: this): this { this.x = other.x; this.y = other.y; return this; }
+    clone(other: { x: number, y: number }): this { this.x = other.x; this.y = other.y; return this; }
 
     abstract new(): this;
     duplicate(): this { const ret = this.new(); ret.clone(this); return ret; }

@@ -28,7 +28,9 @@ enum ViewEClassMatch { // this acts as a multiplier for explicit priority
 @RuntimeAccessible
 export class Selectors{
     static getAllViewElements(): DViewElement[] {
-        return Object.values(store.getState().idlookup).filter(v => v.className === DViewElement.name) as DViewElement[]; }
+        // return Object.values(store.getState().idlookup).filter(v => v.className === DViewElement.name) as DViewElement[];
+        return Object.values((store.getState() as GObject).viewelements as DViewElement[]);
+    }
 
     static getVertex<W extends boolean = true, RP extends boolean = true>(wrap?: W /* = true */, resolvePointers?: RP /**/):
         W extends false ? (RP extends false ? Pointer<DVoidVertex, 1, 1, LVoidVertex>[] : DVoidVertex[]) : LVoidVertex[] {

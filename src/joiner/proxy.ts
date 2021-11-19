@@ -11,7 +11,7 @@ import {
     SetFieldAction,
     Dictionary,
     SetRootFieldAction,
-    LModelElement, Pointer, DViewElement
+    LModelElement, Pointer, DViewElement, GraphSize
 } from "../joiner";
 
 type NotAConcatenation = null;
@@ -20,7 +20,7 @@ type NotAConcatenation = null;
 export class LogicContext<D extends GObject = DModelElement, P extends LPointerTargetable = LPointerTargetable, PF extends MyProxyHandler<D> = MyProxyHandler<D>> extends RuntimeAccessibleClass{
     // public proxyfyFunction: PF;
     public proxyObject: P;
-    public data: D;
+    public data: D & GObject;
     constructor(proxyObject: P, data: D) {
         super();
         this.proxyObject = proxyObject;
@@ -54,7 +54,13 @@ export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, M
 export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibleClass implements ProxyHandler<T>{
     s: string = 'set_';
     g: string = 'get_';
-    get(target: T, p: string | number | symbol, proxyitself: Proxyfied<T>): boolean { throw new Error('proxy get must be overridden'); }
+    /*get(target: T, p: string | number | symbol, proxyitself: Proxyfied<T>): boolean {
+        switch (p) {
+            case '_isProxy': return true;
+            case 'init': return (this as any).init;
+            case 'init0': return (this as any).init0;
+            default: throw new Error('proxy get must be overridden, called for key: ' + (p as string));
+        }}*/
     set(target: T, p: string | number | symbol, value: any, proxyitself: Proxyfied<T>): boolean { throw new Error('proxy set must be overridden'); }
     deleteProperty(target: T, p: string | symbol): boolean { throw new Error('proxy delete must be overridden'); }
 
@@ -91,14 +97,16 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     lg: LE & GObject; // to disable type check easily and access 'set_' + varname dynamically
     l: LE;
     d: ME;
+    additionalPath: string;
 
-    constructor(d: ME, public baseObjInLookup?: DPointerTargetable, public additionalPath: string = '', l?: LE) {
+    constructor(d: ME, public baseObjInLookup?: DPointerTargetable, additionalPath: string = '', l?: LE) {
         super();
         this.d = d;
         if (!l) {
             l = RuntimeAccessibleClass.get(d.className)?.logic?.singleton as LE;
             Log.exDev(!l, 'Trying to wrap class without singleton or logic mapped', { object: d })
         }
+        this.additionalPath = additionalPath;
         this.l = l as LE;
         this.lg = this.l;
     }
@@ -140,6 +148,16 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         if (propKey in this.l || propKey in this.d) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
             if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) return this.lg[this.g + propKey](new LogicContext(proxyitself as any, targetObj));
+
+
+
+            if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) {
+                let getterMethod: Function = this.lg[this.g + propKey]; // || this.defaultGetter;
+                return getterMethod ? getterMethod(new LogicContext(proxyitself as any, targetObj)) : this.defaultGetter(targetObj, propKey, proxyitself);
+
+            }
+
+
             // se esiste la proprietà ma non esiste il setter, che fare? do errore.
             // Log.eDevv("dev error: property exist but getter does not: ", propKey, this);
             // console.error('proxy GET direct match', {targetObj, propKey, ret: this.d[propKey as keyof ME]});
@@ -155,9 +173,23 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         // if property do not exist
         const concatenationTentative = this.concatenableHandler(targetObj, propKey, proxyitself);
         if (concatenationTentative !== null) return concatenationTentative;
-        Log.exx('GET property "', (propKey as any), '" do not exist in object of type "' + U.getType(this.l), {logic: this.l, data: targetObj});
+        Log.exx('GET property "', (propKey as any), '" do not exist in object of type "' + U.getType(this.l) + " DType:" +  U.getType(this.l), {logic: this.l, data: targetObj});
         return undefined;
         // todo: credo che con espressioni sui tipi siano tipizzabili tutti i return di proprietà note eccetto quelle ottenute per concatenazione.
+    }
+
+    public defaultGetter(targetObj: ME, key: string, proxyitself: Proxyfied<ME>): any {
+        if (!targetObj) return targetObj;
+        if (!targetObj._subMaps || !targetObj._subMaps[key]) return (targetObj as Dictionary)[key];
+        // if is a nexted subobject
+        let context: MapLogicContext = new MapLogicContext(proxyitself as any, targetObj, key, []);
+        let retRaw: Dictionary = this.lg[this.s + key]
+        return MapProxyHandler.wrap((targetObj as Dictionary)[key], targetObj as any, this.additionalPath + '.' + key, true)
+    }
+
+    public defaultSetter(targetObj: DPointerTargetable, propKey: string, value: any, proxyitself?: Proxyfied<ME>): boolean {
+        new SetFieldAction(targetObj, propKey as string, value);
+        return true;
     }
 
     public set(targetObj: ME, propKey: string | symbol, value: any, proxyitself?: Proxyfied<ME>): boolean {
@@ -168,14 +200,15 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
 
             if (enableFallbackSetter) {
-                new SetFieldAction(new LogicContext(proxyitself as any, targetObj).data as any, propKey as string, value);
-                return true;
+                return this.defaultSetter(targetObj as any as DPointerTargetable, propKey as string, value, proxyitself);
+                // new SetFieldAction(new LogicContext(proxyitself as any, targetObj).data as any, propKey as string, value); return true;
             }
             // se esiste la proprietà ma non esiste il setter, che fare? do errore.
             Log.eDevv("dev error: property exist but setter does not: ", propKey, this);
         }
         // if property do not exist
-        Log.exx('SET property "' + (propKey as any) + '" do not exist in object of type "' + U.getType(this.l));
+        let breakpoint = 1;
+        Log.exx('SET property "' + (propKey as any) + '" do not exist in object of type "' + U.getType(this.l) + " DType:" +  U.getType(this.l), {'this': this, targetObj});
         return false; }
     /*      problema: ogni oggetto deve avere multipli puntatori, quando ne modifico uno devo modificarli tutti, come tengo traccia?
             ipotesi 1: lo memorizzo in un solo posto (store.idlookup) e uso Pointer<type, lb, ub> che è una stringa che simula un puntatore
@@ -200,17 +233,21 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 }
 
 @RuntimeAccessible
-export class MapProxyHandler extends MyProxyHandler<Dictionary> {
-    public subMapKeys: string[];
-    constructor(public d: Dictionary, public baseObjInLookup?: DPointerTargetable, public additionalPath: string = '', subMapKeys: string[] = []) { super(); this.subMapKeys = subMapKeys; }
-
+export class MapProxyHandler extends TargetableProxyHandler<Dictionary> {
+    // todo: sposta alcune funzioni da TargetableProxy a MyProxy e fai estendere direttamente MyProxy a questa classe
+    /*public subMapKeys: string[];
+    constructor(public d: Dictionary, public baseObjInLookup?: DPointerTargetable, public additionalPath: string = '', subMapKeys: string[] = []) {
+        super();
+        this.subMapKeys = subMapKeys;
+    }*/
+/*
     get(target: Dictionary, key: string | number | symbol, proxyitself: Proxyfied<Dictionary>): any {
         //if (!(key in target)) { // Log.exx('property not found in dictionary', {target, key, thiss:this, proxyitself}); return undefined; }
         if (key in this.subMapKeys){
             // todo: wrap sub-map
             Log.exDevv('todo: wrap sub-map', {thiss: this});
         }
-        return target[key as string]; }
+        return target[key as string]; }*/
 
     set(target: Dictionary, key: string | number | symbol, value: any, proxyitself: Proxyfied<Dictionary>): boolean {
         if (typeof key === "symbol") { Log.exx('cannot set a symbol in dictionary', {target, key, value, proxyitself}); return false; }

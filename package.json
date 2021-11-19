@@ -40,7 +40,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "manual_debug": "echo http://localhost:3000/ click this using CTRL+SFHIT"
   },
   "eslintConfig": {
     "extends": [

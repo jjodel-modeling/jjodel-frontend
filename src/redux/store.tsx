@@ -114,16 +114,19 @@ export class IStore {
 
 
         const editinput = "<Input field={'name'} />";
-        let view: DViewElement = new DViewElement('m3View', '<p><h1>hello1 {this.data.name + (this.data.id)}</h1><i>{JSON.stringify(Object.keys(this))}</i>' + editinput + '</p>');
-        let editView: DViewElement = makeEditView();
+        // let m3view: DViewElement = new DViewElement('m3View', '<p style={{display: "flex", flexFlow: "wrap"}}><h1>m3view {this.data.name + (this.data.id)}</h1><i>{JSON.stringify(Object.keys(this))}</i>' + editinput + '</p>');
+        // let editView: DViewElement = makeEditView();
         let graphView: DViewElement = makeDefaultGraphView();
-
+/*
         let test: DViewElement = new DViewElement('testView', '');
         test.addSubview(view.id);
-        test.addSubview(editView.id);
-        test.addSubview(graphView.id);
+        // test.addSubview(editView.id);
+        test.addSubview(graphView.id);*/
 
-        outElemArray.push.call(outElemArray, m3, m3graph, me, annotation, namedElement, attribname, pkg, attriburi, classifierref, pkgref, classe, view, editView, graphView, test);
+        outElemArray.push.call(outElemArray, m3, m3graph, me, annotation, namedElement, attribname, pkg, attriburi, classifierref, pkgref, classe, graphView);
+        // outElemArray.push(m3view);
+        // outElemArray.push(editView);
+        // outElemArray.push(test);
         // m3._transient.currentView = view.id;
         /*
         if (fireAction)
@@ -138,11 +141,12 @@ function makeDefaultGraphView(): DViewElement {
     // let jsxstringtodo = todo itera i nodi o i children di un modello nel jsx;
     let thiss: {data: LModelElement} = null as any;
     // let jsxstring = <div><span>{JSON.stringify(thiss.data.__raw)}</span> <div className={"childrens"}>{thiss.data.childrens.map((p) => <VertexConnected data={p.id} />)}</div></div>;
-    let jsxstring = '<div>' +
+    let jsxstring = '<div style={{display: "flex", flexFlow: "wrap"}}>' +
         '<b style={{display: \'block\'}}>{this.data.__raw.className + ": " + this.data.id}</b>' +
         '<b style={{display: \'block\'}}>{(this.node && this.node.className) + ": " + (this.node && this.node.id)}</b>' +
+        '<b style={{display: \'block\'}}>{"isGraph: " + (this.isGraph) + ", isVertex: " + (this.isVertex)}</b>' +
         '<span style={{maxHeight: "50px", display: "none", overflowY: "scroll"}}>{JSON.stringify({...this.data.__raw, childrens: this.data.childrens})}</span>\n' +
-        '<div className={"childrens"}>childrens: {this.data.childrens.map((p) => <DefaultNode data={p.id} />)}</div>\n' +
+        '<div className={"childrens"}>dn.childrens: {this.data.childrens.map((p) => <DefaultNode data={p.id} />)}</div>\n' +
         '{/*<Field data={this.data.id} nodeid={this.nodeid + "2"} graphid={this.graphid} view = {Selectors.getByName(DViewElement, \'EditView\').id} />\n*/}' +
         '</div>';
     // let jsxstring = '<div><DataOutputComponent data={this.data.__raw} /> <div className={"childrens"}>{this.data.childrens.map((p) => <Vertex data={p.id} />)}</div></div>';
@@ -152,7 +156,7 @@ function makeDefaultGraphView(): DViewElement {
 }
 function makeEditView(): DViewElement{
     // let jsx = <p><h1>edit view of {this.data.name}</h1><Input obj={this.view.id} field={((getPath as DViewElement).jsxString as any).$}/></p>;
-    let jsxstring = '<p><h1>edit view of {this.data.name}</h1><Textarea obj={this.views[1].id} field={((getPath).jsxString).$}/></p>;';
+    let jsxstring = '<p style={{display: "flex", flexFlow: "wrap"}}><h1>edit view of {this.data.name}</h1><Textarea obj={this.views[1].id} field={((getPath).jsxString).$}/></p>;';
     let view: DViewElement = new DViewElement('EditView', jsxstring);
     view.subViews = [view.id]; // childrens can use this view too, this is indented and likely definitive.
     return view;
