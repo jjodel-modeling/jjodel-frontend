@@ -28,10 +28,9 @@ import {
     LViewElement,
     LPointerTargetable,
     getPath,
-    LModelElement, LModel, LPackage, LAnnotation, DPackage,
+    LModelElement, LModel, LPackage, LAnnotation, DPackage, MixOnlyFuncs,
 } from "../joiner";
-
-import {Mixin} from "ts-mixer";
+console.warn('ts loading store');
 
 // @RuntimeAccessible
 // NB: le voci che iniziano con '_' sono personali e non condivise
@@ -108,7 +107,8 @@ export class IStore {
         /// model itself outside of ecore
         const m3: DModel = new DModel('M3');
         m3.packages = [pkg.id];
-        const m3graph: DGraph = DGraph.create(m3.id);
+        // const m3graph: DGraph = DGraph.create(m3.id);
+        const m3graph: DGraph = new DGraph(undefined, undefined, undefined, m3.id);
         // m3.modellingElements = [me.id, annotation.id, namedElement.id, attribname.id, pkg.id, attriburi.id, classifierref.id, pkgref.id, classe.id];
         // dispatching actions
 
@@ -177,11 +177,11 @@ export class DUserState extends DPointerTargetable {
 }
 
 @RuntimeAccessible
-export class LUserState extends Mixin(DUserState, LPointerTargetable) {
+export class LUserState extends MixOnlyFuncs(DUserState, LPointerTargetable) {
     pointerPosition?: GraphPoint;
     defaultView!: LViewElement;
     // nope, la selezione è vertex-wise, e il vertex è graph-dependent. la view è graph-indipendent. selection: Dictionary<Pointer<User, 1, 1>, Pointer<DGraphElement, 0, 'N'>[]> = {};
-    constructor() { super(true); }
+
 }
 
 @RuntimeAccessible
@@ -212,3 +212,4 @@ type Cconnect = <TStateProps = {}, TDispatchProps = {}, TOwnProps = {}, State = 
 ): InferableComponentEnhancerWithProps<TStateProps & TDispatchProps, TOwnProps>;
 */
 // export const initialState: IStore = new IStore();
+console.error('ts loaded store');

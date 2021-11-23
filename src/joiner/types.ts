@@ -2,6 +2,7 @@ import {DPointerTargetable, LPointerTargetable} from "./classes";
 
 // export type Class = { new(...args: any[]): any; };
 export declare type Class<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (abstract new (...args: any[]) => InstanceType) & StaticType;
+export declare type CClass<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (new (...args: any[]) => InstanceType) & StaticType;
 interface Caller { caller: any; }
 interface Bind { bind: any; }
 interface Apply { apply: any; }

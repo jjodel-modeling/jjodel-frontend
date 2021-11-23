@@ -1,32 +1,17 @@
 import {
-    Dictionary,
-    DModelElement,
-    DNamedElement,
     DocString,
     Pointer,
     DPointerTargetable,
-    Size,
-    U,
-    DUser,
-    TargetableProxyHandler,
-    store,
     RuntimeAccessibleClass,
     MyProxyHandler,
     LogicContext,
-    DAnnotation,
-    Selectors,
     SetFieldAction,
-    LModelElement,
-    getPath,
-    Proxyfied,
     GraphSize,
     defaultVSize,
     LPointerTargetable,
     RuntimeAccessible,
-    GObject
+    MixOnlyFuncs
 } from "../../joiner";
-import {Mixin} from "ts-mixer";
-import {Runtime} from "inspector";
 
 
 @RuntimeAccessible
@@ -80,9 +65,6 @@ export class DViewElement extends DPointerTargetable {
         this.width = 350;
         this.height = 200;
     }
-    addSubview(id: string): void{
-        this.subViews.push(id);
-    }
 }
 
 @RuntimeAccessible
@@ -90,15 +72,11 @@ export class DViewTransientProperties extends RuntimeAccessibleClass{
     static logic: typeof LPointerTargetable;
     // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
     // private: DViewPrivateTransientProperties;
-    constructor() {
-        super();
-        // this.private = new DViewPrivateTransientProperties();
-    }
 }
 
 
 @RuntimeAccessible
-export class LViewElement extends Mixin(DViewElement, LPointerTargetable) {
+export class LViewElement extends MixOnlyFuncs(DViewElement, LPointerTargetable) {
     static structure: typeof DViewElement;
     static singleton: LViewElement;
     subViews: any;
@@ -130,12 +108,12 @@ export class LViewElement extends Mixin(DViewElement, LPointerTargetable) {
 }
 
 @RuntimeAccessible
-export class LViewTransientProperties extends Mixin(DViewTransientProperties, LPointerTargetable) {
+export class LViewTransientProperties extends MixOnlyFuncs(DViewTransientProperties, LPointerTargetable) {
     static structure: typeof DPointerTargetable;
     static singleton: LViewTransientProperties;
 
     // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    private!: LViewPrivateTransientProperties;
+    // private!: LViewPrivateTransientProperties;
 /*
     get_private(context: LogicContext<DViewTransientProperties>): LViewPrivateTransientProperties {
         return LViewTransientProperties.wrap(context.data.private, context.proxy.baseObjInLookup, context.proxy.additionalPath + '.private'); }*/
@@ -145,10 +123,10 @@ export class LViewTransientProperties extends Mixin(DViewTransientProperties, LP
         console.log('GET_ISSELECTED handler func');
         return TargetableProxyHandler.getMap(logicContext.data.isSelected, logicContext, logicContext.proxy.additionalPath + '.' + (getPath as this).isSelected.$);
     }*/
-}
+}/*
 
 @RuntimeAccessible
-export class DViewPrivateTransientProperties extends RuntimeAccessibleClass{
+export class DViewPrivateTransientProperties extends DPointerTargetable{
     static logic: typeof LViewPrivateTransientProperties;
 
     public size: GraphSize
@@ -163,7 +141,7 @@ export class LViewPrivateTransientProperties extends DViewPrivateTransientProper
     static structure: typeof DViewPrivateTransientProperties;
     static singleton: LViewPrivateTransientProperties;
 
-}
+}*/
 // shapeless component, receive jsx from redux
 // can access any of the redux state, but will usually access 1-2 var among many,
 // how can i dynamically mapStateToProps to map only the required ones?

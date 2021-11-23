@@ -10,11 +10,12 @@ import {
     SetRootFieldAction,
     store,
     TRANSACTION,
-    DUser, RuntimeAccessible, $, DPointerTargetable, Log, MyProxyHandler, Size, U
+    DUser, RuntimeAccessible, $, DPointerTargetable, Log, MyProxyHandler, Size, U, LPointerTargetable
 } from "../../joiner";
 import React from "react";
 
 const debug: boolean = false;
+let gdasuperclass: Omit<typeof RuntimeAccessibleClass, 'singleton'> = RuntimeAccessibleClass;
 @RuntimeAccessible
 export class GraphDragHandler extends RuntimeAccessibleClass {
     public static singleton: GraphDragHandler;

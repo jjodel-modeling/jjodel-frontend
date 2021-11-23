@@ -138,6 +138,7 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
                 break;
         }
     }
+    console.error({U, Umip:U.arrayMergeInPlace, WU: windoww.U, WUmip: windoww.U.arrayMergeInPlace});
     actions = U.arrayMergeInPlace<ParsedAction>(actions, derivedActions);
     const possibleInconsistencies: Dictionary<DocString<'subtype'>, Pointer[]> = {};
     // normalizzo tutti i path

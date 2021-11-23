@@ -16,12 +16,13 @@ export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStatePro
 // nb: export type è un export "finto" che esiste solo in compilazione per fare capire a typescript i tipi. permette export di alias con nomi diversi (l'export normale no)
 export type {GetPath} from './proxy';
 export {windoww} from './types';
+
 export type {Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv, NotFound, DocString, nbool, nnumber, nstring, Nullable, Pointer, TODO, UnixTimestamp, UObject, IsActually, Function, Function2, InOutParam} from "./types";
-export {RuntimeAccessibleClass, RuntimeAccessible, JsType, DPointerTargetable, LPointerTargetable, MyError} from "./classes";
+export {RuntimeAccessibleClass, RuntimeAccessible, JsType, DPointerTargetable, LPointerTargetable, MyError, MixOnlyFuncs, LUser, DUser} from "./classes";
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
 // import independent generic modules (only dependent from types and RuntimeAccessible
-export {Uarr, CSSParser, DDate, GraphSize, RawVertex, DPoint, GraphPoint, IPoint, ISize, Size, $s, ParseNumberOrBooleanOptions, TagNames, Point, RawGraph, RawEdge, myFileReader, Log, AutocompleteMatch,
-    Keystrokes, CSSRuleSorted, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, LPoint, SelectorOutput, U} from "../common/U";
+export {Uarr, CSSParser, DDate, GraphSize, RawVertex, GraphPoint, IPoint, ISize, Size, $s, ParseNumberOrBooleanOptions, TagNames, Point, RawGraph, RawEdge, myFileReader, Log, AutocompleteMatch,
+    Keystrokes, CSSRuleSorted, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, SelectorOutput, U} from "../common/U";
 export {UX} from "../common/UX";
 
 
@@ -68,8 +69,7 @@ export {DVertex, defaultVSize, LGraph, DGraph, LVoidVertex, DGraphVertex, DEdgeP
 
 export {GraphDragHandler} from "../graph/vertex/GraphDragHandler";
 
-export {DViewTransientProperties, LViewTransientProperties, DViewPrivateTransientProperties, LViewElement, DViewElement, LViewPrivateTransientProperties} from "../view/viewElement/view";
-export {DUser, LUser} from "../model/user/User";
+export {DViewTransientProperties, LViewTransientProperties, LViewElement, DViewElement} from "../view/viewElement/view";
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
 export {IStore, DUserState, ModelStore, ViewPointState} from "../redux/store";
 export {Selectors} from "../redux/selectors/selectors";

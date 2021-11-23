@@ -1,7 +1,7 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
 import {ReactElement} from "react";
 import {isDeepStrictEqual} from "util";
-import {Mixin} from "ts-mixer";
+// import {Mixin} from "ts-mixer";
 import {
     GObject,
     Json,
@@ -12,9 +12,11 @@ import {
     MyError,
     Temporary,
     TODO,
-    RuntimeAccessible, RuntimeAccessibleClass, LPointerTargetable, DPointerTargetable, windoww
+    RuntimeAccessible, RuntimeAccessibleClass, LPointerTargetable, DPointerTargetable, windoww, MixOnlyFuncs
 } from "../joiner";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
+
+console.warn('loading ts U');
 
 @RuntimeAccessible
 export class Log{
@@ -4089,24 +4091,30 @@ export class DetectZoom {
     static zoom(): number { U.pe(true, 'better not use this, looks like always === 1'); return detectzoooom.zoom(); }
 }*/
 
-export abstract class ISize<PT extends IPoint = IPoint> {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
+@RuntimeAccessible
+export abstract class ISize<PT extends IPoint = IPoint> extends DPointerTargetable {
+    x!: number;
+    y!: number;
+    w!: number;
+    h!: number;
     constructor(x: number = 0, y: number = 0, w: number = 0, h: number = 0) {
-        if (x === null) this.x = null as Temporary;
-        else if (isNaN(+x)) { this.x = 0; }
-        else this.x = +x;
-        if (y === null) this.y = null as Temporary;
-        else if (isNaN(+y)) { this.y = 0; }
-        else this.y = +y;
-        if (w === null) this.w = null as Temporary;
-        else if (isNaN(+w)) { this.w = 0; }
-        else this.w = +w;
-        if (h === null) this.h = null as Temporary;
-        else if (isNaN(+h)) { this.h = 0; }
-        else this.h = +h; }
+        super();
+        ISize.init_constructor(this, x, y, w, h);
+    }
+
+    static init_constructor(thiss: GObject, x: any = 0, y: any = 0, w: any = 0, h: any = 0, ...a: any): void {
+        if (x === null) thiss.x = null as Temporary;
+        else if (isNaN(+x)) { thiss.x = 0; }
+        else thiss.x = +x;
+        if (y === null) thiss.y = null as Temporary;
+        else if (isNaN(+y)) { thiss.y = 0; }
+        else thiss.y = +y;
+        if (w === null) thiss.w = null as Temporary;
+        else if (isNaN(+w)) { thiss.w = 0; }
+        else thiss.w = +w;
+        if (h === null) thiss.h = null as Temporary;
+        else if (isNaN(+h)) { thiss.h = 0; }
+        else thiss.h = +h; }
 
     toString(): string { return JSON.stringify({x: this.x, y: this.y, w: this.w, h: this.h}); }
 
@@ -4229,6 +4237,7 @@ export abstract class ISize<PT extends IPoint = IPoint> {
     }
 }
 
+@RuntimeAccessible
 export class Size extends ISize<Point> {
     private static sizeofvar: HTMLElement;
     private static $sizeofvar: JQuery<HTMLElement>;
@@ -4305,8 +4314,8 @@ export class GraphSize extends ISize<GraphPoint> {
 
     static closestIntersection(vertexGSize: GraphSize, prevPt: GraphPoint, pt0: GraphPoint, gridAlign?: GraphPoint): GraphPoint | null {
         let pt: GraphPoint | null = pt0.duplicate();
-        const m = GraphPoint.getM(prevPt, pt);
-        const q = GraphPoint.getQ(prevPt, pt);
+        const m = GraphPoint.getM?.(prevPt, pt) as number;
+        const q = GraphPoint.getQ?.(prevPt, pt) as number;
         // U.pe( Math.abs((pt.y - m * pt.x) - (prevPt.y - m * prevPt.x)) > .001, 'wrong math in Q:', (pt.y - m * pt.x), ' vs ', (prevPt.y - m * prevPt.x));
         /*const isL = prevPt.x < pt.x;
     const isT = prevPt.y < pt.y;
@@ -4423,20 +4432,28 @@ export class GraphSize extends ISize<GraphPoint> {
 
 }
 
-export abstract class IPoint {
-    x: number;
-    y: number;
 
-    static getM(firstPt: IPoint, secondPt: IPoint): number { return (firstPt.y - secondPt.y) / (firstPt.x - secondPt.x); }
-    static getQ(firstPt: IPoint, secondPt: IPoint): number { return firstPt.y - IPoint.getM(firstPt, secondPt) * firstPt.x; }
+@RuntimeAccessible
+export abstract class IPoint extends DPointerTargetable {
+    x!: number;
+    y!: number;
 
-    constructor(x: number | string = 0, y: number | string = 0) {
-        if (x === null) this.x = null as Temporary;
-        else if (isNaN(+x)) { this.x = 0; }
-        else this.x = +x;
-        if (y === null) this.y = null as Temporary;
-        else if (isNaN(+y)) { this.y = 0; }
-        else this.y = +y;}
+    static getM? = function(firstPt: IPoint, secondPt: IPoint): number { return (firstPt.y - secondPt.y) / (firstPt.x - secondPt.x); }
+    // @ts-ignore static getM is not null but must be declared nullable to achieve subclass mixing
+    static getQ? = function(firstPt: IPoint, secondPt: IPoint): number { return firstPt.y - (IPoint.getM(firstPt, secondPt) * firstPt.x);  }
+
+    constructor(x: number = 0, y: number = 0) {
+        super();
+        IPoint.init_constructor(this, x, y);
+    }
+
+    static init_constructor(thiss: GObject, x: any = 0, y: any = 0, ...a: any): void {
+        if (x === null) thiss.x = null as Temporary;
+        else if (isNaN(+x)) { thiss.x = 0; }
+        else thiss.x = +x;
+        if (y === null) thiss.y = null as Temporary;
+        else if (isNaN(+y)) { thiss.y = 0; }
+        else thiss.y = +y; }
 
     toString(): string { return '(' + this.x + ', ' + this.y + ')'; }
     clone(other: { x: number, y: number }): this { this.x = other.x; this.y = other.y; return this; }
@@ -4547,7 +4564,7 @@ export abstract class IPoint {
         if (debug && graph && pt instanceof GraphPoint) { graph.markg(pt, false, 'purple'); }
         return pt; }
 
-    getM(pt2: IPoint): number { return IPoint.getM(this, pt2); }
+    getM(pt2: IPoint): number { return IPoint.getM?.(this, pt2) as unknown as number; }
 
     degreeWith(pt2: IPoint, toRadians: boolean): number {
         const directionVector: IPoint = this.subtract(pt2, true);
@@ -4558,6 +4575,7 @@ export abstract class IPoint {
     set(x: number, y: number) { this.x = x; this.y = y; }
 }
 
+@RuntimeAccessible
 export class GraphPoint extends IPoint{
     dontmixwithPoint: any;
     static fromEvent(e: JQuery.ClickEvent | JQuery.MouseMoveEvent | JQuery.MouseUpEvent | JQuery.MouseDownEvent | JQuery.MouseEnterEvent | JQuery.MouseLeaveEvent | JQuery.MouseEventBase)
@@ -4584,6 +4602,8 @@ export class GraphPoint extends IPoint{
     degreeWith(pt2: GraphPoint, toRadians: boolean): number { return super.degreeWith(pt2, toRadians); }*/
 
 }
+
+@RuntimeAccessible
 export class Point extends IPoint{
     dontmixwithGPoint: any;
     /// https://stackoverflow.com/questions/6073505/what-is-the-difference-between-screenx-y-clientx-y-and-pagex-y
@@ -4609,7 +4629,7 @@ export class Point extends IPoint{
     degreeWith(pt2: Point, toRadians: boolean): number { return super.degreeWith(pt2, toRadians); }*/
 
 }
-
+/*
 @RuntimeAccessible
 export class DPoint extends DPointerTargetable {
     static logic: typeof LPointerTargetable;
@@ -4623,11 +4643,19 @@ export class DPoint extends DPointerTargetable {
 }
 
 @RuntimeAccessible
-export class LPoint extends Mixin(DPoint, LPointerTargetable){
+export class LPoint extends MixOnlyFuncs(DPoint, LPointerTargetable){
     // todo: se vuoi evitare che si affolli troppo idlookup: crea un idlookup per ogni DClass e prependi this.className all'id
     static structure: typeof DPoint;
     static singleton: LPoint;
-}
+    constructor(x?: number, y?: number) {
+        super(x,y);
+        this.init_constructor(x, y);
+    }
+    init_constructor(x?: number, y?: number) {
+        this.superclass.LPointerTargetable(false, undefined);
+        this.superclass.DPoint(x, y);
+    }
+}*/
 
 export class FileReadTypeEnum {
     public static image: FileReadTypeEnum = "image/*" as any;
@@ -4637,3 +4665,5 @@ export class FileReadTypeEnum {
     public static AndManyOthersButThereAreTooMuch: string = "And many others... https://www.iana.org/assignments/media-types/media-types.xhtml";
     public static OrJustPutFileExtension: string = "OrJustPutFileExtension";
 }
+
+console.warn('loaded ts U');
