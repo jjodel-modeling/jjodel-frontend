@@ -107,7 +107,8 @@ export class LViewElement extends Mixin(DViewElement, LPointerTargetable) {
         let subViewsPointers = context.data.subViews;
         let subViews: LViewElement[] = [];
         for(let pointer of subViewsPointers){
-           subViews.push(MyProxyHandler.wrap(pointer));
+            let item: LViewElement = MyProxyHandler.wrap(pointer);
+            if(item !== undefined) subViews.push(item);
         }
         return subViews;
     }

@@ -19,7 +19,7 @@ import {
     Textarea,
     DModel,
     LModel,
-    HTMLEditor,
+    HTMLEditor, OCLEditor,
     GraphDragHandler,
     GObject,
     LGraph,
@@ -28,28 +28,24 @@ import {
     CreateElementAction,
     GraphSize,
     DeleteElementAction,
-    SetRootFieldAction, LPointerTargetable,
+    SetRootFieldAction, LPointerTargetable, MyProxyHandler,
 } from "../../../joiner";
 import withReactContent from "sweetalert2-react-content";
 import Swal from "sweetalert2";
 
 // private
-interface ThisState {
-}
+interface ThisState {}
 
 const MySwal = withReactContent(Swal);
 
 class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
+
     constructor(props: AllProps, context: any) {
         super(props, context);
     }
-
     render(): ReactNode{
         const views = this.props.views;
         const viewsStack = this.props.stackViews;
-
-        console.clear();
-        console.log(viewsStack);
 
         if(viewsStack.length > 0){
             const view = viewsStack[viewsStack.length - 1]
@@ -63,7 +59,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                             }}>
                         <i className="fas fa-long-arrow-alt-left"></i>
                     </button>
-                    <h4 className={"col"}>VIEWS EDITOR</h4>
+                    <h4 className={"col"}>GRAPHICAL SYNTAX LAYER</h4>
                     <button style={{maxWidth: "3em"}} className={"col btn btn-danger"}
                             onClick={async(e) => {
                                 const confirm = await MySwal.fire({
@@ -89,9 +85,11 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                         <div className={"col"}><Input obj={view} field={'height'} label={"Height"} type={"number"} /></div>
                     </div>
                     <div className={"row"}>
-                        <div className={"col"}><Input obj={view} field={'adaptWidth'} label={"Adapt width to content"} type={"checkbox"} /></div>
-                        <div className={"col"}><Input obj={view} field={'adaptHeight'} label={"Adapt height to content"} type={"checkbox"} /></div>
+                        <div className={"col"}><Input obj={view} field={'adaptWidth'} label={"Adapt width"} type={"checkbox"} /></div>
+                        <div className={"col"}><Input obj={view} field={'adaptHeight'} label={"Adapt height"} type={"checkbox"} /></div>
                     </div>
+
+                    <OCLEditor obj={view} field={'ocl'} label={"Editor OCL"}/>
                     <HTMLEditor obj={view} field={'jsxString'} label={"Editor HTML"} />
                 </div>
                 <div className={"row mt-5"}>
@@ -107,7 +105,9 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                             title: <span>Add subview</span>,
                             input: 'select',
                             inputOptions: inputOptions,
-                            inputAttributes: {required: 'true', autocapitalize: 'off', placeholder: "New view", list: 'model-datalist'},
+                            inputAttributes: {
+                                required: 'true', autocapitalize: 'off', placeholder: "New view", list: 'model-datalist'
+                            },
                             showCancelButton: true,
                             confirmButtonText: 'Add',
                             showLoaderOnConfirm: true,
@@ -137,7 +137,8 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                         }}>
                                     <i className="fas fa-info"></i>
                                 </button>
-                                <button style={{maxWidth: "3em"}} className={"ms-1 col btn btn-danger"} onClick={async(e) => {
+                                <button style={{maxWidth: "3em"}} className={"ms-1 col btn btn-danger"}
+                                        onClick={async(e) => {
                                     // DELETE SUBVIEW
                                     const confirm = await MySwal.fire({
                                         title: <span>Are you sure you want to remove this subview?</span>,
@@ -165,7 +166,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
         else{
             return (<>
                 <div className={"row"}>
-                    <h4 className={"col"}>VIEWS EDITOR</h4>
+                    <h4 className={"col"}>GRAPHICAL SYNTAX LAYER</h4>
                     <button style={{maxWidth: "3em"}} className={"col btn btn-success"}
                             onClick={async(e) => {
                                 const viewName = await MySwal.fire({
@@ -253,21 +254,25 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
 
     let lViews: LViewElement[] = [];
     for(let dView of Selectors.getAllViewElements()){
-        lViews.push(DViewElement.wrap(dView) as LViewElement)
+        let item: LViewElement = MyProxyHandler.wrap(dView)
+        if(item !== undefined) lViews.push(item)
     }
     ret.views = lViews;
 
     let lStackViews: LViewElement[] = [];
     for(let dStackView of state.stackViews){
-        lStackViews.push(DViewElement.wrap(dStackView) as LViewElement)
+        let item: LViewElement = MyProxyHandler.wrap(dStackView)
+        if(item !== undefined) lStackViews.push(item)
     }
     ret.stackViews = lStackViews;
 
     if(state.stackViews.length > 0){
         let dView = state.stackViews[state.stackViews.length - 1]
-        let lView = DViewElement.wrap(dView) as LViewElement
-        let objId: Pointer<DViewElement, 1, 1, LViewElement> = lView.id;
-        ret.data = DPointerTargetable.wrap(state.idlookup[objId]) as LPointerTargetable;
+        let lView: LViewElement = MyProxyHandler.wrap(dView)
+        if(lView !== undefined){
+            let objId: Pointer<DViewElement, 1, 1, LViewElement> = lView.id;
+            ret.data = MyProxyHandler.wrap(state.idlookup[objId]);
+        }
     }
 
     return ret; }

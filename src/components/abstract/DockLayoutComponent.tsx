@@ -225,7 +225,7 @@ let cardTab = newTab();
 let customTab = {
     title: 'custom-style',
     content: (
-        <div style={{background: '#f6f6f6', height: '100%', margin: 0, padding: 30}}>
+        <div style={{overflowY: "scroll", background: '#f6f6f6', height: '100%', margin: 0, padding: 30}}>
             <ViewsEditor />
         </div>
     ),

@@ -1,4 +1,4 @@
-import React, {CSSProperties, Dispatch, PureComponent, ReactElement, ReactNode} from "react";
+import React, {CSSProperties, Dispatch, LegacyRef, PureComponent, ReactElement, ReactNode} from "react";
 import { connect } from "react-redux";
 import type {IStore, GObject, Pointer} from /*type*/ "../../joiner";
 import {
@@ -81,7 +81,7 @@ class BidirectionalHTMLEditor extends PureComponent<AllProps, ThisState>{
         delete otherprops.obj; // obj è stato wrappato come proxy in "data"
         let code: string | null = null;
         return (<>
-            <div className={"mt-2"} style={{height: "7em"}} tabIndex={-1} onBlur={(e:any) => {
+            <div style={{marginTop: "5.5em", height: "7em"}} tabIndex={-1} onBlur={(e:any) => {
                 if(code != null) {
                     data && (data[this.props.field] = (this.props.setter ? this.props.setter(code) : code));
                 }}
@@ -92,6 +92,69 @@ class BidirectionalHTMLEditor extends PureComponent<AllProps, ThisState>{
                         onChange={(e:any) => code=e as string}/>
             </div>
 
+        </>);
+    }
+}
+
+
+class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
+
+    oclContainer? : LegacyRef<HTMLDivElement>
+
+    constructor(props: AllProps, context: any) {
+        super(props, context);
+        this.oclContainer = React.createRef();
+    }
+
+    componentDidMount() {
+        this.loadEditor()
+    }
+
+    componentDidUpdate(prevProps: Readonly<AllProps>, prevState: Readonly<ThisState>, snapshot?: any) {
+        this.loadEditor()
+    }
+
+    loadEditor() {
+        // @ts-ignore
+        window.xtext.createEditor({ baseUrl: window.baseUrl,
+            serviceUrl: "http://localhost:8085/xtext-service",
+            syntaxDefinition: `xtext-resources/generated/mode-ocl.js`,
+            enableCors: true, // @ts-ignore
+            parent: this.oclContainer.current
+        })
+    }
+
+    getOclQuery() {
+        // @ts-ignore
+        let query = this.oclContainer.current?.innerText
+        let code = ""
+        for(let row of query){
+            // se row è un numero o il carattere '' lo ignoro
+            if(isNaN(row) && row !== "")
+                code += row
+        }
+        console.log(code)
+    }
+
+    render(): ReactNode {
+        const data = this.props.data;
+        const otherprops: GObject = {...this.props};
+        if (!otherprops.style) otherprops.style = {};
+        if (!otherprops.style.width) otherprops.style.width = '100%';
+        delete otherprops.data; // tenta di settare l'attributo data con un proxy e fallisce perchè non è stringa
+        delete otherprops.obj; // obj è stato wrappato come proxy in "data"
+
+        return (<>
+            <div className={"mt-2"} style={{height: "7em"}}>
+                <div className={"row"}>
+                    <p className={"col my-auto mx-auto mb-2"}><b>{this.props.label}</b></p>
+                    <button onClick={() => this.getOclQuery()} style={{borderRadius: "100px", maxWidth: "2.5em"}}
+                            className={"col btn btn-success"}><i className="fa fa-arrow-right"></i>
+                    </button>
+                </div>
+                <div style={{marginTop: ".5em", height: "12em"}} data-editor-xtext-lang={"ocl"} ref={this.oclContainer}>
+                </div>
+            </div>
         </>);
     }
 }
@@ -149,9 +212,11 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 export const InputRawComponent = BidirectionalInput;
 export const TextAreaRawComponent = BidirectionalTextArea;
 export const HTMLEditorRawComponent = BidirectionalHTMLEditor;
+export const OCLEditorRawComponent = BidirectionalOCLEditor;
 export const TextareaConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalTextArea);
 export const InputConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalInput);
 export  const HTMLEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalHTMLEditor);
+export  const OCLEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalOCLEditor);
 
 export const Textarea = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     // props = {...props};
@@ -171,7 +236,12 @@ export const HTMLEditor = (props: GObject & OwnProps, childrens: (string | React
     return <HTMLEditorConnected {...props} field={props.field} obj={props.obj} />
 }
 
+export const OCLEditor = (props: GObject & OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    return <OCLEditorConnected {...props} field={props.field} obj={props.obj} />
+}
+
 if (!windoww.mycomponents) windoww.mycomponents = {};
 windoww.mycomponents.Textarea = BidirectionalTextArea;
 windoww.mycomponents.Input = BidirectionalInput;
 windoww.mycomponents.HTMLEditor = BidirectionalHTMLEditor;
+windoww.mycomponents.OCLEditor = BidirectionalOCLEditor;
