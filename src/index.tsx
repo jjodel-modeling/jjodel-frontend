@@ -15,7 +15,8 @@ function start(){
         document.getElementById('root')
     );
 }
-setTimeout(start, 1);
+
+setTimeout(start, 2);
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

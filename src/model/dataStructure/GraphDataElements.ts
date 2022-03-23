@@ -45,6 +45,7 @@ export class DGraphElement extends DPointerTargetable {
         windoww.DPointerTargetable.init_constructor(thiss, false, nodeID);
         thiss.graphID = graphID;
         thiss.subElements = [];
+        thiss.className = this.name;
     }
 
     constructor(isUser: boolean = false, nodeID: string | undefined, graphID: string, a?: any) {
@@ -58,6 +59,24 @@ export class DGraphElement extends DPointerTargetable {
 
 @RuntimeAccessible
 export class DGraph extends DGraphElement {
+    static getNodes(dmp: import("./modelElement").DModelElement[], out: {$matched: JQuery<HTMLElement>; $notMatched: JQuery<HTMLElement>; }): JQuery<HTMLElement> {
+
+        let $allnodes = $('[data-dataid]');
+        let matchedids: Pointer[] = (dmp || []).map(d => d.id);
+        let matchedidmap:Dictionary<string, boolean> = U.objectFromArrayValues(matchedids);
+        if (!out) out = {} as any;
+
+        let allnodesarr = [...$allnodes];
+        let filternode = (d: HTMLElement) => {
+            if (!d?.dataset?.dataid) return false;
+            let id: string = ''+d?.dataset?.dataid;
+            return matchedidmap[id]; };
+        out.$matched = $(allnodesarr.filter(filternode));
+        out.$notMatched = $(allnodesarr.filter((n) => !filternode(n)));
+        console.error("getnodes", {dmp, out, matchedidmap, matchedids, allnodesarr});
+        return out.$matched;
+        // throw new Error("Method not implemented.");
+    }
     static logic: typeof LGraphElement;
     zoom!: GraphPoint;
     model!: Pointer<DModel, 1, 1, LModel>;
@@ -82,6 +101,7 @@ export class DGraph extends DGraphElement {
         thiss.graphSize = new GraphSize(0, 0, 0, 0); // GraphSize.apply(this, [0, 0, 0 ,0]);
         thiss._subMaps = {zoom: true, graphSize: true}
         thiss.model = model;
+        thiss.className = this.name;
     }
 
     static makeID(modelid:Pointer<DModel, 1, 1>): Pointer<DGraph, 1, 1, LGraph> {
@@ -112,6 +132,7 @@ export class DVoidVertex extends MixOnlyFuncs(DGraphElement, GraphPoint) {
         DGraphElement.init_constructor(thiss, isUser, nodeID, graphID);
         GraphSize.init_constructor(thiss, defaultVSize.x, defaultVSize.y, defaultVSize.w, defaultVSize.h);
         console.log('dvoidvertex constructor,', {thiss: thiss, GraphSize, gsproto: GraphSize.prototype});
+        thiss.className = this.name;
         let uselessJustForNavigation: LVoidVertex;
         // this.size = defaultVSize.duplicate();
         // GraphSize.prototype.clone.call(this, defaultVSize);
@@ -151,6 +172,7 @@ export class DGraphVertex extends MixOnlyFuncs(DGraph, DVertex) {
         DGraph.init_constructor(thiss, isUser, nodeID, graphID, model);
 //isUser: boolean = false, nodeID: string | undefined, graphID: string, model?: Pointer<DModel>
         DVertex.init_constructor(thiss, isUser, nodeID, graphID as string, model);
+        thiss.className = this.name;
     }
 }
 
@@ -217,12 +239,12 @@ export class LGraph extends MixOnlyFuncs(LGraphElement, DGraph) {
     zoom!: GraphPoint;
     // @ts-ignore
     model?: LModel;
-    /*
-    get_size(context: LogicContext<this>): GraphSize { return context.data.size; }
+    get_size(context: LogicContext<this>): GraphSize { return context.data.graphSize; }
+    get_graphSize(context: LogicContext<this>): GraphSize { return context.data.graphSize; }
     get_zoom(context: LogicContext<this>): GraphPoint {
         const zoom: GraphPoint = context.data.zoom;
         (zoom as any).debug = {rawgraph: context.data, zoomx: context.data.zoom.x, zoomy: context.data.zoom.y}
-        return context.data.zoom; }*/
+        return context.data.zoom; }
 }
 
 @RuntimeAccessible

@@ -15,3 +15,9 @@ code {
 *{
   box-sizing: border-box;
 }
+
+.ocl_match{
+  background:blue;
+  outline: 2px solid red;
+  border: 2px solid purple;
+}

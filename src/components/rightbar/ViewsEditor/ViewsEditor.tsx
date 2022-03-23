@@ -1,5 +1,6 @@
 import React, {Dispatch, PureComponent, ReactElement, ReactNode} from "react";
 import { connect } from "react-redux";
+import type {Constructor, AbstractConstructor} from "../../../joiner";
 import {
     Selectors,
     U,
@@ -28,7 +29,7 @@ import {
     CreateElementAction,
     GraphSize,
     DeleteElementAction,
-    SetRootFieldAction, LPointerTargetable,
+    SetRootFieldAction, LPointerTargetable, DGraph, OCL, RuntimeAccessibleClass,
 } from "../../../joiner";
 import withReactContent from "sweetalert2-react-content";
 import Swal from "sweetalert2";
@@ -44,16 +45,35 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
         super(props, context);
     }
 
+    private ocltextchanged(oclText0: string| boolean): string{
+        let oclText = ''+oclText0;
+        let state: IStore = windoww.store.getState();
+        let dmp: DModelElement[] = Selectors.getAllMP(state);
+        let lmp: LModelElement[] = Selectors.wrap(dmp, state);
+        console.log('all MP:', dmp, lmp);
+        let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
+        let valids: DPointerTargetable[] = [];
+        try { valids = OCL.filter(true, "src", lmp, oclText, constructors) as DPointerTargetable[]; }
+        catch (e) { console.error('invalid ocl query:', {e, oclText, dmp, lmp});}
+        let out: { $matched: JQuery<HTMLElement>, $notMatched: JQuery<HTMLElement>} = {} as any;
+        console.log('filtered MP', {dmp, lmp, valids, validfilled:valids.filter(b=>!!b)});
+        let $htmlmatch: JQuery<HTMLElement> = DGraph.getNodes(valids.filter(b=>!!b) as DModelElement[], out);
+        console.log('filtered MP', {dmp, lmp, valids, $htmlmatch});
+        out.$notMatched.removeClass('ocl_match');
+
+        $htmlmatch.addClass('ocl_match');
+        return oclText;
+    }
+
     render(): ReactNode{
         const views = this.props.views;
         const viewsStack = this.props.stackViews;
-
-        console.clear();
-        console.log(viewsStack);
+        let ocltemp = {ocltmp:''};
 
         if(viewsStack.length > 0){
             const view = viewsStack[viewsStack.length - 1]
-            const data = this.props.data as LViewElement
+            const data = this.props.data as LViewElement;
+            var inputstyle  = {marginTop:'25px'};
             return (<>
                 <div className={"row mb-4"}>
                     <button style={{maxWidth: "3em"}} className={"col btn btn-danger"}
@@ -93,6 +113,9 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                         <div className={"col"}><Input obj={view} field={'adaptHeight'} label={"Adapt height to content"} type={"checkbox"} /></div>
                     </div>
                     <HTMLEditor obj={view} field={'jsxString'} label={"Editor HTML"} />
+                    <input
+                        defaultValue ={"context DClass inv: self.attrib_3.editCount>-1"} // context DClass inv: self.className.length >20
+                        onChange={(e) => this.ocltextchanged(e.target.value)} style={inputstyle} />
                 </div>
                 <div className={"row mt-5"}>
                     <h5 className={"my-auto col"}>SUB VIEWS</h5>
@@ -252,8 +275,9 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
 
     let lViews: LViewElement[] = [];
+    console.log('DVE', {DPointerTargetable, dpt:windoww.DPointerTargetable});
     for(let dView of Selectors.getAllViewElements()){
-        lViews.push(DViewElement.wrap(dView) as LViewElement)
+        lViews.push(DPointerTargetable.wrap(dView) as LViewElement)
     }
     ret.views = lViews;
 

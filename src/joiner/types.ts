@@ -9,6 +9,8 @@ interface Apply { apply: any; }
 interface Call { call: any; }
 export type Function =  Caller | Bind | Apply | Call;
 export type Function2 =  (...a: any) => any;
+export type Constructor<InstanceType = any> = (new (...a: any) => InstanceType) & {__proto__?: Constructor<InstanceType> & GObject};
+export type AbstractConstructor<InstanceType = any> = (GObject | (new (...a: any) => InstanceType)) & {__proto__?: Constructor<InstanceType> & GObject};
 export type Temporary = any;
 export type Nullable<T> = T | null
 export type UnixTimestamp = number;

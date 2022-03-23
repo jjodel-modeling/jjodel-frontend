@@ -7,7 +7,7 @@ import {
     reducer,
     store,
     windoww,
-    RuntimeAccessible
+    RuntimeAccessible, RuntimeAccessibleClass
 } from "../../joiner";
 
 let pendingActions: Action[] = [];
@@ -39,7 +39,8 @@ export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...param
     return END();
 }
 
-export abstract class Action {
+@RuntimeAccessible
+export abstract class Action extends RuntimeAccessibleClass{
     static type = 'ACTION';
     static SubType: {
         vertexSubElements: 'vertexSubElements',
@@ -57,11 +58,13 @@ export abstract class Action {
     private src?: string[];
     subType?: string;
     constructor(field: string, value: any, subType?: string){
+        super();
         this.field = field;
         this.value = value;
         this.type = (this.constructor as any).type;
         this.src = new Error().stack?.split('\n').splice( 2);
         this.subType = subType;
+        this.className = this.constructor.name;
     }
 
     fire(forceRelaunch: boolean = false): boolean {
@@ -84,6 +87,7 @@ export class SetRootFieldAction extends Action {
     constructor(field: string, value: any, fire: boolean = true, subType?: string) {
         super(field, value, subType);
         if (fire) this.fire();
+        this.className = this.constructor.name;
     }
 }
 
@@ -93,6 +97,7 @@ export class SetFieldAction extends Action {
     constructor(me: DPointerTargetable | Pointer<DPointerTargetable>, field: string, val: any, subtype?: string) {
         Log.exDev(!me, 'BaseObject missing in SetFieldAction', {me, field, val, subtype});
         super('idlookup.' + ((me as DPointerTargetable).id || me) + ( field ? '.' + field : ''), val, subtype);
+        this.className = this.constructor.name;
         this.fire();
     }
 }
@@ -105,6 +110,7 @@ export class CreateElementAction extends Action {
         super('idlookup.' + me.id, me);
         this.value = me;
         this.fire();
+        this.className = this.constructor.name;
     }
 }
 
@@ -113,6 +119,7 @@ export class DeleteElementAction extends SetFieldAction {
     static type = 'DELETE_ELEMENT';
     constructor(me: DPointerTargetable | Pointer<DPointerTargetable>, subType?: string) {
         super((me as DPointerTargetable).id || me, '', subType);
+        this.className = this.constructor.name;
     }
 }
 /*
@@ -133,6 +140,7 @@ export class CompositeAction extends Action {
         super('', '');
         this.actions = actions;
         if (launch) this.fire();
+        this.className = this.constructor.name;
     }
 }
 

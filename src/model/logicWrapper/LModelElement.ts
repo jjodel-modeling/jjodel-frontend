@@ -28,7 +28,15 @@ import {
     LViewElement,
     LogicContext,
     SetRootFieldAction,
-    LPointerTargetable, MapLogicContext, Log, U, RuntimeAccessible, getPath, DocString, MixOnlyFuncs
+    LPointerTargetable,
+    MapLogicContext,
+    Log,
+    U,
+    RuntimeAccessible,
+    getPath,
+    DocString,
+    MixOnlyFuncs,
+    CreateElementAction, DeleteElementAction
 } from "../../joiner";
 /*
 @RuntimeAccessible
@@ -169,7 +177,7 @@ export class LModelElement extends MixOnlyFuncs(DModelElement, LPointerTargetabl
     get_id(context: LogicContext<this>): string { return context.data.id; }
     set_id(): boolean { return Log.exx('id is read-only', this); }
 
-    get_childrens_idlist(context: LogicContext<DModelElement>): Pointer<DAnnotation, 1, 'N'> {  return context.data.annotations; }
+    get_childrens_idlist(context: LogicContext<DModelElement>): Pointer<DAnnotation, 1, 'N'> {  return [...context.data.annotations]; }
     get_childrens(context: LogicContext<DModelElement>): LModelElement[] { return this.get_childrens_idlist(context).map(e => MyProxyHandler.wrap(e)); }
     set_childrens(): boolean { return Log.exx('childrens is a derived read-only collection', this); }
 
@@ -205,6 +213,99 @@ export class LModelElement extends MixOnlyFuncs(DModelElement, LPointerTargetabl
         val = val.map( v => (v instanceof LAnnotation ? v.id : ( isValidPointer(v, DAnnotation) ? v : null ))) as Pointer<DAnnotation>[];
         new SetFieldAction(logicContext.data, 'annotations', val);
         return true;
+    }
+
+
+    remove(context: LogicContext): void {
+        new DeleteElementAction(context.data);
+    }
+    get_addClass(context: LogicContext<DModelElement>): () => void {
+        let dpackage: DPackage | null = (context.data?.className === "DPackage") ? context.data as DPackage : null;
+        let lpackage: LPackage | null = dpackage && MyProxyHandler.wrap(dpackage) as any;
+        const dmodel: DModel | null = (context.data?.className === "DModel") ? context.data as DModel : null;
+        let ret = () => {};
+
+        console.log('addchildren click', {dpackage, dmodel});
+        Log.ex(!dpackage && !dmodel, 'Childrens can only be inserted inside packages or models.', {dpackage, dmodel, context});
+        if (dpackage && lpackage) {
+            let name = 'class_' + 0;
+            let pkgchildrens: (LClassifier | LAnnotation | LPackage)[] = lpackage.childrens;
+            let childrennames: (string)[] = lpackage.childrens.map( c => (c as LClassifier).name);
+            name = U.increaseEndingNumber(name, false, false, (newname) => childrennames.indexOf(newname) >= 0)
+            const dclass = new DClass(name);
+            dclass.parent = [dpackage.id];
+            ret = () => LModelElement.addClass_(dpackage as DPackage, dclass);
+        }
+        if (dmodel) {
+            dpackage = new DPackage();
+            dpackage.parent = [dmodel.id];
+            ret = () => LModelElement.addPackage_(dmodel as DModel, dpackage as DPackage);
+        }
+
+        console.log('addchildren click', {dpackage, dmodel, ret});
+        ret();
+        return ret;
+    }
+
+    get_addChildren(context: LogicContext<DClass>): (type:string) => void {
+        return (type) => {
+            switch ((type || '').toLowerCase()){
+                default: Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), context}); break;
+                case "attribute": return this.get_addAttribute(context);
+                case "class": return this.get_addClass(context);
+                case "package": return this.get_addPackage(context);
+            }
+        }
+    }
+
+    get_addAttribute(context: LogicContext<DClass>): () => void {
+        let dclass: DClass | null = (context.data?.className === "DClass") ? context.data : null;
+        let lclass: LClass | null = dclass && MyProxyHandler.wrap(dclass) as any;
+        let ret = () => {};
+
+        console.log('add_Attribute click', {dclass, context});
+        Log.ex(!dclass || !lclass, 'Attributes can only be inserted inside classes.', {dclass, lclass, context});
+        if (dclass && lclass) {
+            let name = 'attrib_' + 0;
+            let childrens: (LAnnotation | LAttribute | LReference | LOperation)[] = lclass.childrens;
+            let childrennames: (string)[] = lclass.childrens.map( c => (c as LStructuralFeature).name);
+            name = U.increaseEndingNumber(name, false, false, (newname) => childrennames.indexOf(newname) >= 0)
+            const dattribute = new DAttribute(name);
+            dattribute.parent = [dclass.id];
+            ret = () => LModelElement.addAttribute_(dclass as DClass, dattribute);
+            console.log('add attribute click', {dclass, dattribute, ret});
+        }
+
+        ret();
+        return ret;
+    }
+
+    get_addPackage(context: LogicContext): (() => void) { return this.get_addClass(context); }
+    // activated by user in JSX
+    addClass(): void { Log.exDevv('addClass should never be called directly, but should trigger get_addClass(), this is only a signature for type checking.'); }
+    addPackage(): void { Log.exDevv('addPackage should never be called directly, but should trigger get_addClass(), this is only a signature for type checking.'); }
+    addAttribute(): void { Log.exDevv('addAttribute should never be called directly, but should trigger get_addAttribute(), this is only a signature for type checking.'); }
+    addChildren(type: string): void { Log.exDevv('addAttribute("'+type+'") should never be called directly, but should trigger get_addAttribute(), this is only a signature for type checking.'); }
+    private static addAttribute_(dclass: DClass, dattribute: DAttribute): void {
+        // const lpackage = DPointerTargetable.wrap(dpackage);
+        new CreateElementAction(dattribute);
+        new SetFieldAction(dclass, 'attributes+=', dattribute.id);
+        // new SetFieldAction(dclass, 'parent', [dpackage.id]);
+    }
+    private static addClass_(dpackage: DPackage, dclass: DClassifier): void {
+        // const lpackage = DPointerTargetable.wrap(dpackage);
+        new CreateElementAction(dclass);
+        new SetFieldAction(dpackage, 'classifiers+=', dclass.id);
+
+        // new SetFieldAction(dclass, 'parent', [dpackage.id]);
+
+    }
+    private static addPackage_(dmodel: DModel, dpackage: DPackage): void {
+        // const lmodel = DPointerTargetable.wrap(dmodel);
+        new CreateElementAction(dpackage);
+        new SetFieldAction(dmodel, 'packages+=', dpackage.id);
+        // new SetFieldAction(dpackage, 'parent', [dmodel.id]);
+        console.log('addPackage', {dpackage, dmodel, modelid:dmodel.id});
     }
 }
 
@@ -293,7 +394,7 @@ export class LPackage extends MixOnlyFuncs(DPackage, LNamedElement) {
     static structure: typeof DPackage;
     static singleton: LPackage;
     // @ts-ignore
-    childrens!: (LPackage | LAnnotation)[];
+    childrens!: (LClassifier | LPackage | LAnnotation)[];
     // @ts-ignore
     subpackages!: LPackage[];
     // @ts-ignore
@@ -347,7 +448,7 @@ export class LClass extends MixOnlyFuncs(DClass, LClassifier) {
 
 
     get_childrens_idlist(context: LogicContext<DClass>): Pointer<DAnnotation | DAttribute | DReference | DOperation, 1, 'N'> {
-        return [...super.get_childrens_idlist(context), ...context.data.attributes, ... context.data.references, ...context.data.operations]; }
+        return [...super.get_childrens_idlist(context), ...context.data.attributes, ...context.data.references, ...context.data.operations]; }
 }
 
 @RuntimeAccessible
@@ -413,6 +514,10 @@ export class LModel extends MixOnlyFuncs(DModel, LNamedElement) {
     static structure: typeof DModel;
     static singleton: LModel;
 
+    constructor() {
+        super();
+    }
+
     // @ts-ignore
     parent!: never;
     // @ts-ignore
@@ -427,6 +532,9 @@ export class LModel extends MixOnlyFuncs(DModel, LNamedElement) {
         return context.data.packages.map(p => MyProxyHandler.wrap(p)); }
 
 }
+
+// @ts-ignore
+// LModel.prototype.get_childrens = LModelElement.prototype.get_childrens;
 /*
 @RuntimeAccessible
 export class DTestParent1 extends RuntimeAccessibleClass{

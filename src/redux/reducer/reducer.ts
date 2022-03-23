@@ -249,6 +249,7 @@ export function reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: I
 }
 
 export function jodelInit() {
+    RuntimeAccessibleClass.fixStatics();
     let dClasses: string[] = RuntimeAccessibleClass.getAllNames().filter( rc => rc[0] === 'D');
 
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
@@ -265,7 +266,7 @@ export function jodelInit() {
     }
 
     IStore.fakeinit();
-    setTimeout( () => createOrOpenModelTab('m3'), 1);
+//    setTimeout( () => createOrOpenModelTab('m3'), 1);
     // GraphDragHandler.init();
 
 }

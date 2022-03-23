@@ -64,6 +64,7 @@ export class DViewElement extends DPointerTargetable {
         this.y = 0;
         this.width = 350;
         this.height = 200;
+        this.className = this.constructor.name;
     }
 }
 

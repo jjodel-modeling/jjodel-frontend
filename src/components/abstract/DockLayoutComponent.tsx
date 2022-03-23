@@ -134,6 +134,7 @@ export function createOrOpenModelTab(modelName: string, context0?: DockContext, 
     let isGraphOpen = (gid: string): boolean => { return false; } // todo
     let getGraphID = (): string => {
         Log.exDev(!model?.id, 'failed to createGraphID, model.id is null', {model, modelid: model.id, modelName});
+        console.log(!model?.id, 'dgraph.makeid', {DGraph, wdg: windoww.DGraph});
         return U.increaseEndingNumber(DGraph.makeID(model.id), false, false, isGraphOpen); }
 
     if (model as any) {

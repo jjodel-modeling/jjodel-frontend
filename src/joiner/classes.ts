@@ -1,26 +1,17 @@
-import {
-    U,
-    Uarr,
-    GObject,
-    Proxyfied,
-    Pointer,
-    store,
-    TargetableProxyHandler,
-    DViewElement,
-    Log,
-    Dictionary,
-    LogicContext,
-    MyProxyHandler,
-    MapProxyHandler, GraphSize, DocString
-} from "../joiner";
-import {Class, Longest} from "ts-mixer/dist/types/types";
 import {Mixin} from "ts-mixer";
-import {Runtime} from "inspector";
-import {CClass} from "./types";
+import type {Class, Longest} from "ts-mixer/dist/types/types";
+import type {Dictionary, GObject, Pointer, Proxyfied, DocString, CClass} from "./types";
+import type {DViewElement} from "../view/viewElement/view";
+import type {LogicContext} from "./proxy";
+var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
 
 
 console.warn('ts loading classes');
+
+
+// annotation @RuntimeAccessible
+// import {store} from "../redux/createStore";
 
 abstract class AbstractMixedClass {
     // superclass!: Dictionary<DocString<'parent class name', Class>>;
@@ -32,63 +23,79 @@ abstract class AbstractMixedClass {
 }
 
 export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
+    static fixStatics() {
+        // problem: se lo statico è un valore primitivo ne genera una copia.
+        for (let classs of Object.values(RuntimeAccessibleClass.annotatedClasses)) {
+            let gclass = classs as GObject;
+            console.log('fix statics', {gclass, s: gclass.s});
+            for (let statickey in gclass.s) { gclass[statickey] = gclass.s[statickey]; }
+        }
+    }
     // static allRuntimeClasses: string[] = [];
     static classes: Dictionary<string, typeof RuntimeAccessibleClass> = {};
-    static getAllNames(): string[] { return Object.keys(RuntimeAccessibleClass.classes); }
-    static getAllClasses(): typeof RuntimeAccessibleClass[] { return Object.values(RuntimeAccessibleClass.classes); }
-    static getAllClassesDictionary(): Dictionary<string, typeof RuntimeAccessibleClass> { return RuntimeAccessibleClass.classes; }
+    static annotatedClasses: Dictionary<string, typeof RuntimeAccessibleClass> = {};
+
+    static getAllNames(annotated = false): string[] {
+        return Object.keys(annotated ? RuntimeAccessibleClass.annotatedClasses : RuntimeAccessibleClass.classes); }
+    static getAllClasses(annotated = false): typeof RuntimeAccessibleClass[] {
+        return Object.values(annotated ? RuntimeAccessibleClass.annotatedClasses : RuntimeAccessibleClass.classes); }
+    static getAllClassesDictionary(annotated = false): Dictionary<string, typeof RuntimeAccessibleClass> {
+        return annotated ? RuntimeAccessibleClass.annotatedClasses : RuntimeAccessibleClass.classes; }
 
     static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
         RET extends CAN_THROW extends true ? L : L | undefined  = CAN_THROW extends true ? L : L | undefined>
     (data: D | Pointer<DViewElement>, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW): CAN_THROW extends true ? L : L | undefined{
         if (!data || (data as any).__isProxy) return data as any;
         if (typeof data === 'string') {
-            data = store.getState().idlookup[data] as unknown as D;
+            data = windoww.store.getState().idlookup[data] as unknown as D;
             if (!data) {
-                if (canThrow) return Log.exx('Cannot wrap:', {data, baseObjInLookup, path});
+                if (canThrow) return windoww.Log.exx('Cannot wrap:', {data, baseObjInLookup, path});
                 else return undefined as RET;
             }
         }
         if (!data) return data;
         // console.log('ProxyWrapping:', {data, baseObjInLookup, path});
-        return new Proxy(data, new TargetableProxyHandler(data, baseObjInLookup, path)) as L;
+        return new Proxy(data, new windoww.TargetableProxyHandler(data, baseObjInLookup, path)) as L;
     }
-/*
-    static mapWrap2<D extends DPointerTargetable, L extends LPointerTargetable>(map: RuntimeAccessibleClass, container: D, baseObjInLookup?: DPointerTargetable, path: string = ''): L{
-        if (!map || (map as any).__isProxy) return map as any;
-        if (typeof container === 'string') {
-            container = store.getState().idlookup[container] as unknown as D;
-            if (!container) { return Log.exx('Cannot wrap map:', {map, container, baseObjInLookup, path}); }
+    /*
+        static mapWrap2<D extends DPointerTargetable, L extends LPointerTargetable>(map: RuntimeAccessibleClass, container: D, baseObjInLookup?: DPointerTargetable, path: string = ''): L{
+            if (!map || (map as any).__isProxy) return map as any;
+            if (typeof container === 'string') {
+                container = store.getState().idlookup[container] as unknown as D;
+                if (!container) { return Log.exx('Cannot wrap map:', {map, container, baseObjInLookup, path}); }
+            }
+            // console.log('ProxyWrapping:', {data, baseObjInLookup, path});
+            return new Proxy(map, new MapProxyHandler(map, baseObjInLookup, path));
         }
-        // console.log('ProxyWrapping:', {data, baseObjInLookup, path});
-        return new Proxy(map, new MapProxyHandler(map, baseObjInLookup, path));
-    }
 
-*/
+    */
 
     static mapWrap(data: Dictionary, baseObjInLookup: DPointerTargetable, path: string, subMapKeys: string[] = []): Proxyfied<Dictionary> {
         if (!data || (data as any).__isProxy) return data as any;
         // console.error('GETMAP', {data, logicContext, path});
-        return new Proxy(data, new MapProxyHandler(data, baseObjInLookup, path));
+        return new Proxy(data, new windoww.MapProxyHandler(data, baseObjInLookup, path));
     }
 
     className!: string;
     constructor(...a:any) {
         super();
+        RuntimeAccessibleClass.init_constructor(this, ...a);
         // this.className = this.constructor.name;
         // nb: per i mixin questo settaggio viene sovrascritto. perchè il mixin crea le 2 classi ereditate separatamente con i loro costruttori e le incrocia. quindi devo settarlo dall'annotazione @ tramite prototype
         // RuntimeAccessibleClass.allRuntimeClasses.push(this.className);
     }
 
-    static init_constructor(...thiss: any): void {
+    static init_constructor(thiss: any, ...args: any): void {
 
         // this.className = this.constructor.name;
         // let finalObject = this;
         // if (finalObject.constructor.name === "DVoidVertex" || finalObject.constructor.name === "DGraphElement") { let breakp = true; }
         // this.init0(...arguments);
+        thiss.className = this.name;
     }
 
-    public static get<T extends typeof RuntimeAccessibleClass = typeof RuntimeAccessibleClass>(dclassname: string) : T & {logic?: typeof LPointerTargetable} { return this.classes[dclassname] as any; }
+    public static get<T extends typeof RuntimeAccessibleClass = typeof RuntimeAccessibleClass>(dclassname: string, annotated = false)
+        : T & {logic?: typeof LPointerTargetable} { return (annotated ? RuntimeAccessibleClass.annotatedClasses : this.classes)[dclassname] as any; }
 
     public static extends(className: string, superClassName: string, returnIfEqual: boolean = true): boolean {
         let superclass = RuntimeAccessibleClass.get(superClassName);
@@ -137,16 +144,15 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
 
 }
 
-
-
-// annotation
 export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
     // console.log('DecoratorTest', {constructor, arguments});
     // @ts-ignore
     RuntimeAccessibleClass.classes[constructor.name] = constructor as any as typeof RuntimeAccessibleClass;
     if (!window[constructor.name]) (window[constructor.name] as any) = constructor;
     constructor.prototype.className = constructor.name;
-    (constructor as any).classNameDebug = constructor.name;
+    //constructor.prototype.$$typeof = constructor.name;
+    //constructor.prototype.typeName = constructor.name;
+    (constructor as any).staticClassName = constructor.name;
     // @ts-ignore
     console.log('runtimeaccessible annotation:', {thiss:this, constructor});
 //    const classnameFixedConstructor = constructor; //  function (...args) { let obj = new constructor(...args); obj.init?.(); obj.init0?.(); return obj; }
@@ -161,12 +167,15 @@ export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
         let obj = new constructor(...args);
         obj.classNameFromAnnotation = constructor.name;
         obj.className = constructor.name;
+        //obj.prototype.$$typeof = constructor.name;
+        // obj.prototype.typeName = constructor.name;
         // obj.init?.();
         // obj.init0?.();
         obj.initBase?.();
         // @ts-ignore
         console.log('runtimeaccessible annotation inner end:', {thiss:this, outerthis, constructor, obj});
         return obj; }
+    RuntimeAccessibleClass.annotatedClasses[constructor.name] = classnameFixedConstructorDoNotRenameWithoutSearchStrings as any as typeof RuntimeAccessibleClass;
 
     for (let key in constructor) (classnameFixedConstructorDoNotRenameWithoutSearchStrings as GObject)[key] = constructor[key];
     // constructor.constructor = classnameFixedConstructorDoNotRenameWithoutSearchStrings; return constructor;
@@ -174,8 +183,15 @@ export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
     // @ts-ignore
     // for (let staticKey of constructor as GObject) { classnameFixedConstructorDoNotRenameWithoutSearchStrings[staticKey] = constructor[staticKey]; }
     classnameFixedConstructorDoNotRenameWithoutSearchStrings.prototype = constructor.prototype;
-    return classnameFixedConstructorDoNotRenameWithoutSearchStrings as any;
+    classnameFixedConstructorDoNotRenameWithoutSearchStrings.prototype.constructor = constructor.prototype.constructor;
+
+    // required for inheriting static methods
+    classnameFixedConstructorDoNotRenameWithoutSearchStrings.__proto__ = constructor.__proto__;
+    classnameFixedConstructorDoNotRenameWithoutSearchStrings.s = constructor;
+    // return classnameFixedConstructorDoNotRenameWithoutSearchStrings as any;
+    return constructor;
 }
+
 
 (window as any).RuntimeAccessibleClass = RuntimeAccessibleClass;
 // todo: problema: per creare un PointerTargetable ho bisogno dell'userid, e devo generarlo prima che venga generato l'initialState... dovrebbe venir servito con la pagina dal server. o passato come navigation props dalla pagina di login
@@ -193,12 +209,13 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     // ma gli oggetti puntati da A tramite sotto-oggetti o attributi (subviews...) non vengono aggiornati in "pointedby"
     constructor(isUser: any = false, id?: any, a?: any, b?:any, c?:any) {
         super();
-        DPointerTargetable.init_constructor(this, ...arguments)
+        DPointerTargetable.init_constructor(this, ...arguments);
     }
 
     static init_constructor(thiss: DPointerTargetable, isUser: any = false, id?: any, a?: any, b?:any, c?:any): void {
         const userid = DUser.current;
         thiss.id = id || (isUser ? '' : userid + "_") + DPointerTargetable.maxID++ + "_" + new Date().getTime();
+        thiss.className = this.name;
         // todo store.dispatch(new IdLinkAction(this));
     }
 
@@ -217,7 +234,7 @@ export class LPointerTargetable extends DPointerTargetable {
     }
 
     public get_pointedBy(superClassName: string, context: LogicContext<DPointerTargetable>): LPointerTargetable[] {
-        let state: GObject = store.getState();
+        let state: GObject = windoww.store.getState();
         function getForemostObjectInPath(path: DocString<'storePath'>): undefined | LPointerTargetable {
             let lastPointableObject: undefined | DPointerTargetable;
             let pathArray = path.split('.');
@@ -232,7 +249,7 @@ export class LPointerTargetable extends DPointerTargetable {
     }
 
     public set_pointedBy(val: never, context: LogicContext<DPointerTargetable>): boolean {
-        Log.exx('pointedBy field should never be directly edited.', {context, val});
+        windoww.Log.exx('pointedBy field should never be directly edited.', {context, val});
         return false;
     }
 }
@@ -260,6 +277,7 @@ export class MyError extends Error {
 
         if (Object.setPrototypeOf) { Object.setPrototypeOf(this, actualProto); }
         else { (this as any).__proto__ = actualProto; }
+        (this as any).className = this.constructor.name;
     }
 }
 
@@ -289,7 +307,7 @@ export class JsType{
     * example: isObject but not Date, not function...
     * */
     public static isOnlyType(data: any, type: JsType): boolean { return !JsType.getTypes(data, type).length; }
-    public static isAnyOfTypes(data: any, ...acceptables: JsType[]): boolean { return !!Uarr.arrayIntersection(JsType.getTypes(data), acceptables).length; }
+    public static isAnyOfTypes(data: any, ...acceptables: JsType[]): boolean { return !!windoww.Uarr.arrayIntersection(JsType.getTypes(data), acceptables).length; }
     public static getTypes(data: any, stopIfTypeIsNot?: JsType): JsType[]{
         const ret: JsType[] = [];
         for (const type of JsType.all) {
@@ -307,7 +325,7 @@ export class JsType{
     public static isFunction(data: Function | any): boolean { return typeof data === "function"; }
     public static isLambdaFunction(data: Function | any): boolean {
         if (!JsType.isFunction(data)) return false;
-        return U.getFunctionSignatureFromComments(data).isLambda; }
+        return windoww.U.getFunctionSignatureFromComments(data).isLambda; }
     public static isNonLambdaFunction(data: Function | any): boolean { return JsType.isFunction(data) && !JsType.isNonLambdaFunction(data); }
     public static isArray(data: Array<any> | any): boolean { return Array.isArray(data); }
     public static isSymbol(data: symbol | any): boolean { return typeof data === "symbol"; }
@@ -338,7 +356,7 @@ export class JsType{
 
 
 function invalidSuperClassError(/*callee: Class,*/ scname: string, superclass: Class): (() => never) {
-    return () => { Log.exDevv('parent super class "' + scname + '" is not implementing init_constructor', {scname, superclass, }); throw new Error(); }
+    return () => { windoww.Log.exDevv('parent super class "' + scname + '" is not implementing init_constructor', {scname, superclass, }); throw new Error(); }
 }
 // @ts-ignore
 function MixinFakeConstructor() { this.isMixinFakeConstructor = true; }
@@ -359,6 +377,13 @@ export function MixOnlyFuncs<A1 extends any[], I1, S1, A2 extends any[], I2, S2>
     let c2noconstructor: any = MixinFakeConstructor;
     c1noconstructor.prototype = c1.prototype;
     c2noconstructor.prototype = c2.prototype;
+
+    let disableconstructor = false;
+    if (!disableconstructor) {
+        c1noconstructor = c1;
+        c2noconstructor = c2; }
+
+
     let ret = Mixin(c1noconstructor, c2noconstructor);
     let c1name = c1.name === 'classnameFixedConstructorDoNotRenameWithoutSearchStrings' ? c1.prototype.className : c1.name;
     let c2name = c2.name === 'classnameFixedConstructorDoNotRenameWithoutSearchStrings' ? c2.prototype.className : c2.name;

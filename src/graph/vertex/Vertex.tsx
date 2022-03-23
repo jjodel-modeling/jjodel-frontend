@@ -107,21 +107,21 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
     }
 
     private onmousedown_graph = (e:React.MouseEvent<HTMLDivElement>): void => {
-        console.log('graph evt mousedown');
+        console.log('graph evt mousedown'); }
 
-    }
     private onmousedown_vertex = (e:React.MouseEvent<HTMLDivElement>): void => {
         console.log('vertex evt mousedown');
         (e.nativeEvent as any).clickedOnVertex = true;
+        windoww.mp = this.props.data;
+        windoww.selected = this;
         if (e.shiftKey || e.ctrlKey) {
             console.log('mousedown select() check:', {isSelected:this.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
             if (this.isSelected()) { this.deselect(); return; }
             this.select();
-            return;
-        }
+            return; }
         this.select();
         console.log('vertex evt mousedown start drag');
-        GraphDragHandler.singleton.startDragging(e, this.props.node.__raw); // .mousedownStartDragOn = this.props.nodeid;
+        GraphDragHandler.singleton.startDragging(e, undefined && this.props.node.__raw);
         // this.clearCurrentUserSelection();
     }
 
@@ -129,12 +129,23 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         if (this.props.isVertex) this.onclick_vertex(e);
         if (this.props.isGraph) this.onclick_graph(e);
         this.props.onclick?.(e);
+
+        // e.preventDefault();
+        e.stopPropagation();
+        e.nativeEvent.stopPropagation();
     }
 
     private onmousedown = (e: React.MouseEvent<HTMLDivElement>): void => {
         if (this.props.isVertex) this.onmousedown_vertex(e);
         if (this.props.isGraph) this.onmousedown_graph(e);
-        this.props.onmousedown?.(e); }
+        this.props.onmousedown?.(e);
+
+        // e.preventDefault();
+        e.stopPropagation();
+        e.nativeEvent.stopPropagation();
+
+        console.log('vertex mousedown stop evt', e);
+    }
 
     private getMpID(): Pointer<DModelElement> {
         return this.props.data.id;
@@ -178,8 +189,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
             sizestyle.overflow = 'hidden';
         }
 
-        sizestyle.border = "2px solid gray";
-        sizestyle.borderColor = this.props.node?.isSelected[DUser.current] ? 'blue' : 'black';
+        // sizestyle.border = "2px solid gray";
+        // sizestyle.borderColor = this.props.node?.isSelected[DUser.current] ? 'blue' : 'black';
         console.log('isSelected ? ', this.props.node && this.props.node.isSelected, this.props.node?.__raw.isSelected);
 
         let classes: string[] = this.props.class ? (Array.isArray(this.props.class) ? this.props.class : [this.props.class]) : [];
@@ -190,13 +201,26 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         return (<>
             <div
                 id={this.props.nodeid}
-                className={classes.join(' ')}
+                data-dataid={this.props.data?.id}
+                data-viewid={this.props.view?.id}
+                data-modelname={this.props.data?.className}
+                className={"StaticVertex " + classes.join(' ')}
                 ref={this.parentRef}
                 onClick={this.onclick}
                 onMouseDown={this.onmousedown}
-                data-userSelecting={JSON.stringify(this.props.node?.__raw.isSelected || {})}
+                data-userselecting={JSON.stringify(this.props.node?.__raw.isSelected || {})}
                 style={{...this.props.style, ...sizestyle} }
-                ><div>{'__selected: ' + (!!this.props.node?.__raw.isSelected[DUser.current]) + ', __isG:' + this.props.isGraph + ', __isV:' + this.props.isGraph + ', __DType:' + (this.props.node && this.props.node.className)}</div>
+                >
+                {
+                    false &&
+                    <div >size: {JSON.stringify(sizestyle)}</div>
+                }
+                {/*<div>{
+                    '__selected: ' + (
+                    !!((this.props.node?.__raw?.isSelected || {})[DUser.current])) +
+                ', __isG:' + this.props.isGraph + ', __isV:' +
+                this.props.isVertex + ', __DType:' +
+                (this.props.node && this.props.node.className)}</div>*/}
                 {
                     this.props.isVertex
                         ?
@@ -204,7 +228,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
                             {/*
                             <div className={"vertex-controls"}/>
                             <div style={{display: "none"}}>V_Size: <span>{vsize?.toString()}</span></div>*/}
-                            <div>{super.render()}</div>
+                            <div style={{height:'min-content'}}>{super.render()}</div>
                         </Overlap>
                         :
                         <div>{super.render()}</div>}
@@ -299,10 +323,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
     private deselect(forUser:Pointer<DUser, 0, 1> = null): void {
         if (!forUser) forUser = DUser.current;
         if (!this.isSelected(forUser)) return;
+        return;
+        /*
         delete this.props.node.isSelected[forUser]; // todo: come reagisce il proxyhandler sulla delete? invoca la set? devo registrare un'altra funzione in override di "Proxy" nativo?
         U.arrayRemoveAll<DGraphElement>(GraphDragHandler.singleton.draggingSelection, this.props.node);
         new SetRootFieldAction('_lastSelected', {node: this.props.graphid, view: this.props.parentViewId, modelElement: this.props.graph.model?.id});
-        console.log('deselect()');
+        console.log('deselect()');*/
     }
 
     private select(forUser:Pointer<DUser, 0, 1> = null): void {

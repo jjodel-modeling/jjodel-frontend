@@ -1,4 +1,8 @@
 import {createStore, PreloadedState, Reducer, Store, StoreEnhancer} from 'redux';
+import type {
+    LGraph,
+    LVertex,
+    LEdgePoint} from '../joiner';
 import {
     GObject,
     GraphPoint,
@@ -23,13 +27,16 @@ import {
     DGraphElement,
     LGraphElement,
     RuntimeAccessible,
-    DGraph,
-    LGraph,
     LViewElement,
     LPointerTargetable,
     getPath,
-    LModelElement, LModel, LPackage, LAnnotation, DPackage, MixOnlyFuncs,
+    LModelElement,
+    DPackage,
+    MixOnlyFuncs,
+    DGraph, DClassifier, DEnumerator, Input, DOperation,
 } from "../joiner";
+import React, {ChangeEvent} from "react";
+import {LGraphVertex} from "../model/dataStructure/GraphDataElements";
 console.warn('ts loading store');
 
 // @RuntimeAccessible
@@ -45,6 +52,10 @@ export class IStore {
 
     //// DClass section to fill
     graphs: Pointer<DGraph, 0, 'N', LGraph> = [];
+    voidvertexs: Pointer<DGraph, 0, 'N', LGraphVertex> = [];
+    vertexs: Pointer<DGraph, 0, 'N', LVertex> = [];
+    graphvertexs: Pointer<DGraph, 0, 'N', LGraphVertex> = [];
+    edgepoints: Pointer<DGraph, 0, 'N', LEdgePoint> = [];
 
 
 
@@ -113,17 +124,17 @@ export class IStore {
         // dispatching actions
 
 
-        const editinput = "<Input field={'name'} />";
+        const editinput = "<Input className={''} field={'name'} />";
         // let m3view: DViewElement = new DViewElement('m3View', '<p style={{display: "flex", flexFlow: "wrap"}}><h1>m3view {this.data.name + (this.data.id)}</h1><i>{JSON.stringify(Object.keys(this))}</i>' + editinput + '</p>');
         // let editView: DViewElement = makeEditView();
-        let graphView: DViewElement = makeDefaultGraphView();
+        let graphDefaultViews: DViewElement[] = makeDefaultGraphViews();
 /*
         let test: DViewElement = new DViewElement('testView', '');
         test.addSubview(view.id);
         // test.addSubview(editView.id);
         test.addSubview(graphView.id);*/
 
-        outElemArray.push.call(outElemArray, m3, m3graph, me, annotation, namedElement, attribname, pkg, attriburi, classifierref, pkgref, classe, graphView);
+        outElemArray.push.call(outElemArray, m3, m3graph, me, annotation, namedElement, attribname, pkg, attriburi, classifierref, pkgref, classe, ...graphDefaultViews);
         // outElemArray.push(m3view);
         // outElemArray.push(editView);
         // outElemArray.push(test);
@@ -137,25 +148,303 @@ export class IStore {
         return m3;
     }
 }
-function makeDefaultGraphView(): DViewElement {
+function makeDefaultGraphViews(): DViewElement[] {
     // let jsxstringtodo = todo itera i nodi o i children di un modello nel jsx;
     let thiss: {data: LModelElement} = null as any;
+    let modeljsxstring = `<div class={"model root"}>
+        <div className={"childrens"}>{this.data.childrens.map((p) => <Graph data={p.id} style={{minHeight: "100%", minWidth: "100%"}} />)}</div>
+    </div>`;
+    // let jsx2 = <><button onClick={ () => { console.log( "acfunc click:", {acfunc: this.data.addClass})}} Add </button><button onClick={this.data.addClass}> Add </button></>;
     // let jsxstring = <div><span>{JSON.stringify(thiss.data.__raw)}</span> <div className={"childrens"}>{thiss.data.childrens.map((p) => <VertexConnected data={p.id} />)}</div></div>;
-    let jsxstring = '<div style={{display: "flex", flexFlow: "wrap"}}>' +
-        '<b style={{display: \'block\'}}>{this.data.__raw.className + ": " + this.data.id}</b>' +
-        '<b style={{display: \'block\'}}>{(this.node && this.node.className) + ": " + (this.node && this.node.id)}</b>' +
-        '<b style={{display: \'block\'}}>{"isGraph: " + (this.isGraph) + ", isVertex: " + (this.isVertex)}</b>' +
-        '<span style={{maxHeight: "50px", display: "none", overflowY: "scroll"}}>{JSON.stringify({...this.data.__raw, childrens: this.data.childrens})}</span>\n' +
-        '<div className={"childrens"}>dn.childrens: {this.data.childrens.map((p) => <DefaultNode data={p.id} />)}</div>\n' +
-        '{/*<Field data={this.data.id} nodeid={this.nodeid + "2"} graphid={this.graphid} view = {Selectors.getByName(DViewElement, \'EditView\').id} />\n*/}' +
-        '</div>';
+    let pkgjsxstring = `<div className="pkgroot" style={{display: "flex", flexFlow: "wrap", width: '100%', height:'calc(100% - 102px)', position:'absolute'}}>
+        <b style={{display: "block", width:"100%"}}>{this.data.__raw.className + (true ? "" : this.data.id)}</b>
+        <b style={{display: "block"}}>{(window.thiss = this) && true}</b>
+        {/*<b style={{display: "block"}}>{(this.node && this.node.className) + ": " + (this.node && this.node.id)}</b>*/}
+        <b style={{display: "block", width: "100%"}}>Position: {(this.node && this.node.size.x) + ", " + (this.node && this.node.size.y)}</b><br/>
+        {/*<b style={{display: "block"}}>Size: {(this.node && this.node.size && this.node.size.w) + " x " + (this.node && this.node.size && this.node.size.h)}</b>*/}
+        {/*<b style={{display: "block"}}>Size: {"X "+(this.node && this.node && this.node.size && this.node.size.w)}</b><br />*/}
+        <b style={{display: "block"}}>{"isGraph: " + (this.isGraph) + ", isVertex: " + (this.isVertex)}</b>
+        <span style={{maxHeight: "50px", display: "none", overflowY: "scroll"}}>{JSON.stringify({...this.data.__raw, childrens: this.data.childrens})}</span>
+        <Input className={'raw'} obj={this.data} field={"name"} label={"Name: " + this.data.name} style={{width: "100%"}}/>
+        <div className={"childrens"}>dn.childrens({this.data.childrens.length}): {this.data.childrens.map((p) => <DefaultNode data={p.id} />)}</div>
+        <button onClick={ () => { console.log( "acfunc click:", {acfunc: this.data.addClass})}}> Add </button>
+        {/*<button onClick={this.data.addClass} Add </button>*/}
+    {/*<Field data={this.data.id} nodeid={this.nodeid + "2"} graphid={this.graphid} view = {Selectors.getByName(DViewElement, "EditView").id} />\n*/} +
+</div>`;
     // let jsxstring = '<div><DataOutputComponent data={this.data.__raw} /> <div className={"childrens"}>{this.data.childrens.map((p) => <Vertex data={p.id} />)}</div></div>';
-    let view: DViewElement = new DViewElement('GraphDefaultView', jsxstring, undefined, '', '', '', [DModelElement.name]);
-    view.subViews = [view.id]; // childrens can use this view too todo: this is temporary
-    return view;
+
+    let mview: DViewElement = new DViewElement('ModelDefaultView', modeljsxstring, undefined, '', '', '',
+        [DModel.name]);
+    let pkgview: DViewElement = new DViewElement('PackageDefaultView', pkgjsxstring, undefined, '', '', '',
+        [DPackage.name]);
+
+    let styletodo = `<style data-correcttag={"is <style> "} id='default-class-css'>{\`
+            .Vertex.Attribute{
+                position: relative !important
+            }
+            .addFieldButtonContainer{ width: 100%; text-align: center; display: flex; max-height: 20px; min-height: 20px; opacity: 0; padding: 0 5px;}
+            .Vertex .childcontainer{ display: flex; flex-direction: column; border-bottom: 0.5px solid #77777777; background: #00000013; }
+            .Vertex:hover .addFieldButtonContainer{
+                background: var(--color-1);
+                border-radius: 7px 0 7px 7px;
+                opacity: 1; }
+            .addFieldButton{
+                height: 100%;
+                background:rgba(127, 127, 127, 0.2);
+                border-bottom: none;
+                border-right: none;
+                padding: 0 0.5rem; }
+            .open-options.active{
+            border - bottom - right - radius: 0 !important;
+            opacity: 1;
+            visibility: visible; }
+            .Feature { margin: 2px 0; }
+            .open-options{
+            position: absolute;
+            right: 0;
+            border: 2px solid var(--color-2);
+            background: var(--color-1);
+            width: 25px;
+            height: 25px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0.5;}
+            /* for M1 */
+            /*
+            EChar = 'EChar',
+            EString = 'EString',
+            EDate = 'EDate',
+            EFloat = 'EFloat',
+            EDouble = 'EDouble',
+            EBoolean = 'EBoolean',
+            EByte = 'EByte',
+            EShort = 'EShort',
+            EInt = 'EInt',
+            ELong = 'ELong',*/
+            .Vertex [data-type='EDouble'] input:not([type='number']):not([type='range']),
+            .Vertex [data-type='EFloat'] input:not([type='number']):not([type='range']),
+            .Vertex [data-type='ELong'] input:not([type='number']):not([type='range']),
+            .Vertex [data-type='EInt'] input:not([type='number']):not([type='range']),
+            .Vertex [data-type='EShort'] input:not([type='number']):not([type='range']),
+            .Vertex [data-type='EByte'] input:not([type='number']):not([type='range']),
+            .Vertex [data-type='EDouble'] textarea,
+            .Vertex [data-type='EFloat'] textarea,
+            .Vertex [data-type='ELong'] textarea,
+            .Vertex [data-type='EInt'] textarea,
+            .Vertex [data-type='EShort'] textarea,
+            .Vertex [data-type='EByte'] textarea,
+            .Vertex [data-type='EDouble'] select:not([number]),
+            .Vertex [data-type='EFloat'] select:not([number]),
+            .Vertex [data-type='ELong'] select:not([number]),
+            .Vertex [data-type='EInt'] select:not([number]),
+            .Vertex [data-type='EShort'] select:not([number]),
+            .Vertex [data-type='EByte'] select:not([number]) { display: none; }
+    
+            .Vertex [data-type='EBoolean'] input:not([type='radio']):not([type='checkbox']),
+            .Vertex [data-type='EBoolean'] select:not([bool]),
+            .Vertex [data-type='EBoolean'] textarea:not([bool]){display: none;}
+            .Vertex [data-type='EDate']
+            input:not([type='date']):not([type='time']):not([type='datetime-local']):not([type='month']):not([type='week']),
+            .Vertex [data-type='EDate'] select:not([date]),
+            .Vertex [data-type='EDate'] textarea:not([date]){display: none;}
+    
+            .Vertex [data-type='EString'] input[type='number'],
+            .Vertex [data-type='EString'] input[type='range'],
+            .Vertex [data-type='EString'] input[type='radio'],
+            .Vertex [data-type='EString'] input[type='checkbox'],
+            .Vertex [data-type='EString'] input[type='date'],
+            .Vertex [data-type='EString'] input[type='time'],
+            .Vertex [data-type='EString'] input[type='datetime-local'],
+            .Vertex [data-type='EString'] input[type='month'],
+            .Vertex [data-type='EString'] input[type='week'],
+            .Vertex [data-type='EString'] select[enum],
+            .Vertex [data-type='EString'] select[date],
+            .Vertex [data-type='EString'] select[bool],
+            .Vertex [data-type='EString'] select[number],
+            .Vertex [data-type='EString'] textarea[enum],
+            .Vertex [data-type='EString'] textarea[date],
+            .Vertex [data-type='EString'] textarea[bool],
+            .Vertex [data-type='EString'] textarea[number],
+            .Vertex [data-type='EChar'] input[type='number'],
+            .Vertex [data-type='EChar'] input[type='range'],
+            .Vertex [data-type='EChar'] input[type='radio'],
+            .Vertex [data-type='EChar'] input[type='checkbox'],
+            .Vertex [data-type='EChar'] input[type='date'],
+            .Vertex [data-type='EChar'] input[type='time'],
+            .Vertex [data-type='EChar'] input[type='datetime-local'],
+            .Vertex [data-type='EChar'] input[type='month'],
+            .Vertex [data-type='EChar'] input[type='week'],
+            .Vertex [data-type='EChar'] select[enum],
+            .Vertex [data-type='EChar'] select[date],
+            .Vertex [data-type='EChar'] select[bool],
+            .Vertex [data-type='EChar'] select[number],
+            .Vertex [data-type='EChar'] textarea[enum],
+            .Vertex [data-type='EChar'] textarea[date],
+            .Vertex [data-type='EChar'] textarea[bool],
+            .Vertex [data-type='EChar'] textarea[number] {display: none;}
+    
+            .Vertex [enum-type='EEnum']/*in m1 style i set only 2 possible values, this or template error*/
+            select:not([enum]),
+            .Vertex [enum-type='EEnum'] input:not([enum]),
+            .Vertex [enum-type='EEnum'] textarea:not([enum]){display: none;}
+            \`}</style>`;
+
+    // styletodo = `<style>{"div {background-color: pink;}"}</style>`;
+    let classdefaultjsx =
+        `<div className='template Vertex Class' tabIndex={-1}
+                       style={{
+                           cursor: 'pointer',
+                           position: 'relative',
+                           borderRadius: '7px',
+                           background: 'var(--color-1)',
+                           color: 'var(--color-2)'
+                       }}>
+            <div className='Class'
+                 style={{
+                     background: 'var(--color-1)',
+                     boxShadow: '0 0 3pt 0.5pt var(--color-3)',
+                     height: 'auto',
+                    
+                     width: '100%',
+                     borderRadius: '7px',
+                     display: 'inline-flex',
+                     flexFlow: 'column'
+                 }}
+                 data-autosizey='1'>
+                <div className='VertexHeader'
+                     style={{
+                         textAlign: 'center',
+                         display: 'flex',
+                         padding: '8px 5px',
+                         width: '100%',
+                         fontSize: '1rem',
+                         borderBottom: '0.5px solid #77777777'}}>
+                    <input value='$##name$' placeholder='Object name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*'
+                    style={{display: 'none'}}
+                           data-style='background:transparent; border:none; text-align:right; order:1; flex-basis: 50%; min-width:10px;' />
+                    <Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Class name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*'
+                           style={{
+                               background: 'transparent',
+                               border: 'none',
+                               textAlign: 'right',
+                               order: 1,
+                               flexBasis: '50%',
+                               minWidth:'10px'}}/>
+                        <div style={{
+                            textAlign: 'left',
+                            order: 2,
+                            flexGrow: 1,
+                            color: 'var(--color-4)',
+                            margin: 'auto'}}>: Concept
+                        </div>
+                        <div hover-display='v1' className='hover-unfade open-options' tabIndex={-1}
+                             style={{
+                                 top: '-25px',
+                                 right: '7px',
+                                 borderTopRightRadius: '999px',
+                                 borderTopLeftRadius: '999px'
+                             }}>
+                            <span>...</span>
+                        </div>
+                </div>
+                <div className='specialjs hideempty childcontainer AttributeContainer hover-exclude' />
+                <div className='specialjs hideempty childcontainer ReferenceContainer hover-exclude' />
+                <div className='specialjs hideempty childcontainer OperationContainer hover-exclude' />
+                
+                <div className='specialjs hideempty childcontainer AttributeContainer hover-exclude' style ={ {height: (this.data.childrens.length && (15+this.data.childrens.length * 18)) + 'px' }}>
+                    {this.data.childrens.length > 0 ? ('attributes(' +this.data.childrens.length +')') : null}
+                    {this.data.childrens.map((p) => <DefaultNode data={p.id} clasName={"Attribute"}/>)}
+                </div>
+                
+                <div className='addFieldButtonContainer'>
+                    <span style={{display: 'flex', margin: 'auto'}}>Add&nbsp;</span>
+                    <select className='AddFieldSelect' style={{
+                        background: 'transparent',
+                        display: 'flex',
+                        margin: 'auto',
+                    }} onChange={(e) => this.selected = event.target.value }>
+                        <optgroup label='FeatureType'>
+                            <option value='Attribute' selected>Attribute</option>
+                            <option value='Reference'>Reference</option>
+                            <option value='Operation'>Operation</option>
+                        </optgroup>
+                    </select>
+                    <span style={{display: 'flex', margin: 'auto'}}>&nbsp;field&nbsp;</span>
+                    <button className='addFieldButton' onClick={() => this.data.addChildren(this.selected || 'Attribute')}>Go</button>
+                </div>
+            </div>` +
+        styletodo +
+        `</div> `;
+/*todo
+    let a =
+        <select className='AddFieldSelect' style={{
+            background: 'transparent',
+            display: 'flex',
+            margin: 'auto',
+        }} onChange={ (e:ChangeEvent) => { this.selected = e.target.value }} />;*/
+
+    let attribdefaultjsx = `<div style={{display: 'flex', height: '18px'}}><Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Attribute name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*'
+                           style={{
+                               background: 'transparent',
+                               border: 'none',
+                               textAlign: 'right',
+                               order: 1,
+                               flexBasis: '50%',
+                               minWidth:'10px'}}/>
+                        <div style={{
+                            textAlign: 'left',
+                            order: 2,
+                            flexGrow: 1,
+                            color: 'orange',
+                            paddingRight: '5px',
+                            margin: 'auto'}}>: attribute
+                        </div></div>`;
+    let refdefaultjsx = `<div style={{display: 'flex', height: '18px'}}><Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Attribute name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*'
+                           style={{
+                               background: 'transparent',
+                               border: 'none',
+                               textAlign: 'right',
+                               order: 1,
+                               flexBasis: '50%',
+                               minWidth:'10px'}}/>
+                        <div style={{
+                            textAlign: 'left',
+                            order: 2,
+                            flexGrow: 1,
+                            color: 'orange',
+                            margin: 'auto'}}>: reference
+                        </div></div>`;
+    let opdefaultjsx = `<div style={{display: 'flex', height: '18px'}}><Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Attribute name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*'
+                           style={{
+                               background: 'transparent',
+                               border: 'none',
+                               textAlign: 'right',
+                               order: 1,
+                               flexBasis: '50%',
+                               minWidth:'10px'}}/>
+                        <div style={{
+                            textAlign: 'left',
+                            order: 2,
+                            flexGrow: 1,
+                            color: 'orange',
+                            margin: 'auto'}}>: operation
+                        </div></div>`;
+    let cview: DViewElement = new DViewElement('ClassDefaultView', classdefaultjsx, undefined, '', '', '', [DClass.name]);
+    let enumdefaultjsx = `<div class="Enumerator" style={{width: '100px', height: '50px', background: 'pink'}}>Enumerator placeholder</div>`;
+    let eview: DViewElement = new DViewElement('EnumDefaultView', enumdefaultjsx, undefined, '', '', '', [DEnumerator.name]);
+    let aview: DViewElement = new DViewElement('AttribDefaultView', attribdefaultjsx, undefined, '', '', '', [DAttribute.name]);
+    let rview: DViewElement = new DViewElement('RefDefaultView', attribdefaultjsx, undefined, '', '', '', [DReference.name]);
+    let oview: DViewElement = new DViewElement('OperationDefaultView', attribdefaultjsx, undefined, '', '', '', [DOperation.name]);
+
+    pkgview.subViews = [cview.id]; // childrens can use this view too todo: this is temporary
+    let alldefaultViews = [mview, pkgview, cview, eview, aview, rview, oview];
+    mview.subViews = [mview.id, ...alldefaultViews.slice(1).map(e => e.id)]// childrens can use this view too todo: this is temporary, should just be the sliced map of everything else.
+    return alldefaultViews;
 }
+
 function makeEditView(): DViewElement{
-    // let jsx = <p><h1>edit view of {this.data.name}</h1><Input obj={this.view.id} field={((getPath as DViewElement).jsxString as any).$}/></p>;
+    // let jsx = <p><h1>edit view of {this.data.name}</h1><Input className={'raw'} obj={this.view.id} field={((getPath as DViewElement).jsxString as any).$}/></p>;
     let jsxstring = '<p style={{display: "flex", flexFlow: "wrap"}}><h1>edit view of {this.data.name}</h1><Textarea obj={this.views[1].id} field={((getPath).jsxString).$}/></p>;';
     let view: DViewElement = new DViewElement('EditView', jsxstring);
     view.subViews = [view.id]; // childrens can use this view too, this is indented and likely definitive.
@@ -173,7 +462,10 @@ class AsynchStore{ // user private
 export class DUserState extends DPointerTargetable {
     pointerPosition?: GraphPoint;
     // nope, la selezione è vertex-wise, e il vertex è graph-dependent. la view è graph-indipendent. selection: Dictionary<Pointer<User, 1, 1>, Pointer<DGraphElement, 0, 'N'>[]> = {};
-    constructor() { super(true); }
+    constructor() {
+        super(true);
+        this.className = this.constructor.name;
+    }
 }
 
 @RuntimeAccessible

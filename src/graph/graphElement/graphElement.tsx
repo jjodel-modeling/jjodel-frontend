@@ -59,7 +59,7 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
     let jsxCodeString: DocString<ReactNode>;
     try { jsxCodeString = JSXT.fromString(view.jsxString, {factory: 'React.createElement'}); }
     catch (e: any) {
-        Log.eDevv('Syntax Error in custom user-defined template:\n\n' +e.toString() + '\n\n' + view.jsxString, {evalContext});
+        Log.eDevv('Syntax Error in custom user-defined template. try to remove typescript typings:\n\n' +e.toString() + '\n\n' + view.jsxString, {evalContext});
         jsxCodeString = '<div>Syntax error 1</div>';
     }
     let jsxparsedfunc: () => React.ReactNode;
@@ -72,7 +72,7 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
         if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0)
             Log.ee( '\nReminder: nullish operators ".?" and "??" are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString, {jsxCodeString, evalContext});
         else if (view.jsxString.indexOf('?.') >= 0)
-            Log.ee(errormsg + '\nReminder: empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString, {jsxCodeString, evalContext});
+            Log.ee(errormsg + '\nReminder: ?. operator and empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString, {jsxCodeString, evalContext});
         else Log.ee(errormsg);
         jsxparsedfunc = () => <div>Syntax Error 2</div>;
     }
@@ -364,7 +364,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // const injectprops = {a:3, b:4} as DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
         // rnode = React.cloneElement(rnode as ReactElement, injectprops);
 
-        if (this.props.node?.containedIn) {
+        if (this.props.node?.__raw.containedIn) {
             let $containedIn = $('#' + this.props.node.containedIn);
             let $containerDropArea = $containedIn.find(".VertexContainer");
             const droparea = $containerDropArea[0] || $containedIn[0];
