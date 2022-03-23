@@ -1,15 +1,6 @@
-import { Mixin } from 'ts-mixer';
 import {
     DModelElement,
-    NotFound,
-    nstring,
-    NotFoundv,
     Pointer,
-    JsType,
-    GObject,
-    MyError,
-    bool,
-    Dictionary,
     RuntimeAccessibleClass,
     DPointerTargetable,
     DAnnotation,
@@ -31,23 +22,27 @@ import {
     DValue,
     SetFieldAction,
     store,
-    Proxyfied,
     MyProxyHandler,
     IsActually,
     windoww,
     LViewElement,
     LogicContext,
-    DViewTransientProperties,
     SetRootFieldAction,
     LPointerTargetable,
-    LGraph,
-    LGraphElement, MapLogicContext, Log, U, RuntimeAccessible, getPath} from "../../joiner";
-
+    MapLogicContext,
+    Log,
+    U,
+    RuntimeAccessible,
+    getPath,
+    DocString,
+    MixOnlyFuncs,
+    CreateElementAction, DeleteElementAction
+} from "../../joiner";
+/*
 @RuntimeAccessible
 export class DMap extends RuntimeAccessibleClass { // useless now
-    static logic: typeof LViewElement;
-
-}
+    static logic: typeof RuntimeAccessibleClass;
+}* /
 
 @RuntimeAccessible
 export class LMap extends DMap { // useless now
@@ -62,7 +57,7 @@ export class LMap extends DMap { // useless now
     }
 
 }
-
+*/
 
 /*
 @RuntimeAccessible
@@ -98,8 +93,19 @@ export class LModelElementTransientProperties extends RuntimeAccessibleClass {
     }* /
 }
 */
+
+function resolvePointersfn <T extends DPointerTargetable = DPointerTargetable, LB=number, UB=string, RET extends LPointerTargetable = LPointerTargetable>(ptr: Pointer<T, LB, UB, RET>[]): (RET | null)[] {
+    return (ptr && ptr.map( p => LModelElement.ResolvePointer<T, LB, UB, RET>(p)) as RET[]) || []; }
+
+function resolvePointerfn<T extends DPointerTargetable = DModelElement, LB=number, UB=number, RET extends LPointerTargetable = LModelElement>(ptr: Pointer<T, LB, UB, RET>): RET | null {
+    if (!ptr) return null;
+    let obj: DPointerTargetable | LPointerTargetable | undefined = store.getState().idlookup[ptr as string];
+    if (!obj) return null;
+    if (obj instanceof DModelElement) obj = MyProxyHandler.wrap(obj);
+    return obj as RET; }
+
 @RuntimeAccessible
-export class LModelElement extends Mixin(DModelElement, LPointerTargetable) {
+export class LModelElement extends MixOnlyFuncs(DModelElement, LPointerTargetable) {
     static singleton: IsActually<LModelElement>;
     // @ts-ignore
     parent!: LModelElement[];
@@ -147,28 +153,17 @@ export class LModelElement extends Mixin(DModelElement, LPointerTargetable) {
         return (data.constructor as typeof DModelElement).logic.singleton
     }*/
 
-    static ResolvePointer<T extends DPointerTargetable = DModelElement, LB=number, UB=number, RET extends LPointerTargetable = LModelElement>(ptr: Pointer<T, LB, UB, RET>): RET | null {
-        if (!ptr) return null;
-        let obj: DPointerTargetable | LPointerTargetable | undefined = store.getState().idlookup[ptr as string];
-        if (!obj) return null;
-        if (obj instanceof DModelElement) obj = MyProxyHandler.wrap(obj);
-        return obj as RET; }
+    static ResolvePointer = resolvePointerfn;
 
-    private static ResolvePointers<T extends DPointerTargetable = DPointerTargetable, LB=number, UB=string, RET extends LPointerTargetable = LPointerTargetable>(ptr: Pointer<T, LB, UB, RET>[]): (RET | null)[] {
-        return (ptr && ptr.map( p => LModelElement.ResolvePointer<T, LB, UB, RET>(p)) as RET[]) || []; }
+    private static ResolvePointers? = resolvePointersfn;
 
     private resolvePointer<T extends DPointerTargetable = DPointerTargetable, LB extends number = 0, UB extends number = 0, RET extends LPointerTargetable = LPointerTargetable>(ptr: Pointer<T, LB, UB, RET>): RET | null {
         return LModelElement.ResolvePointer(ptr); }
 
     private resolvePointers<T extends DPointerTargetable = DPointerTargetable, LB extends number = 0, RET extends LPointerTargetable = LPointerTargetable>(ptr: Pointer<T, LB, 'N', RET>)
         : (RET | null)[] {
-        return LModelElement.ResolvePointers(ptr); }
+        return resolvePointersfn(ptr); }
 
-
-    constructor(){
-        super();
-        // this._transient = new LModelElementTransientProperties();
-    }
 
 /*    _transient!: LModelElementTransientProperties;
 
@@ -182,7 +177,7 @@ export class LModelElement extends Mixin(DModelElement, LPointerTargetable) {
     get_id(context: LogicContext<this>): string { return context.data.id; }
     set_id(): boolean { return Log.exx('id is read-only', this); }
 
-    get_childrens_idlist(context: LogicContext<DModelElement>): Pointer<DAnnotation, 1, 'N'> {  return context.data.annotations; }
+    get_childrens_idlist(context: LogicContext<DModelElement>): Pointer<DAnnotation, 1, 'N'> {  return [...context.data.annotations]; }
     get_childrens(context: LogicContext<DModelElement>): LModelElement[] { return this.get_childrens_idlist(context).map(e => MyProxyHandler.wrap(e)); }
     set_childrens(): boolean { return Log.exx('childrens is a derived read-only collection', this); }
 
@@ -206,7 +201,7 @@ export class LModelElement extends Mixin(DModelElement, LPointerTargetable) {
         return true;
     }
     get_annotations(context: LogicContext<DModelElement>): (LAnnotation | null)[] {
-        return this.resolvePointers(context.data.annotations);
+        return this.resolvePointers<DAnnotation, 1, LAnnotation>(context.data.annotations);
     }
 
     set_annotations(val: Pointer<DAnnotation>[] | LAnnotation[], logicContext: LogicContext<DNamedElement>): boolean {
@@ -219,7 +214,101 @@ export class LModelElement extends Mixin(DModelElement, LPointerTargetable) {
         new SetFieldAction(logicContext.data, 'annotations', val);
         return true;
     }
+
+
+    remove(context: LogicContext): void {
+        new DeleteElementAction(context.data);
+    }
+    get_addClass(context: LogicContext<DModelElement>): () => void {
+        let dpackage: DPackage | null = (context.data?.className === "DPackage") ? context.data as DPackage : null;
+        let lpackage: LPackage | null = dpackage && MyProxyHandler.wrap(dpackage) as any;
+        const dmodel: DModel | null = (context.data?.className === "DModel") ? context.data as DModel : null;
+        let ret = () => {};
+
+        console.log('addchildren click', {dpackage, dmodel});
+        Log.ex(!dpackage && !dmodel, 'Childrens can only be inserted inside packages or models.', {dpackage, dmodel, context});
+        if (dpackage && lpackage) {
+            let name = 'class_' + 0;
+            let pkgchildrens: (LClassifier | LAnnotation | LPackage)[] = lpackage.childrens;
+            let childrennames: (string)[] = lpackage.childrens.map( c => (c as LClassifier).name);
+            name = U.increaseEndingNumber(name, false, false, (newname) => childrennames.indexOf(newname) >= 0)
+            const dclass = new DClass(name);
+            dclass.parent = [dpackage.id];
+            ret = () => LModelElement.addClass_(dpackage as DPackage, dclass);
+        }
+        if (dmodel) {
+            dpackage = new DPackage();
+            dpackage.parent = [dmodel.id];
+            ret = () => LModelElement.addPackage_(dmodel as DModel, dpackage as DPackage);
+        }
+
+        console.log('addchildren click', {dpackage, dmodel, ret});
+        ret();
+        return ret;
+    }
+
+    get_addChildren(context: LogicContext<DClass>): (type:string) => void {
+        return (type) => {
+            switch ((type || '').toLowerCase()){
+                default: Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), context}); break;
+                case "attribute": return this.get_addAttribute(context);
+                case "class": return this.get_addClass(context);
+                case "package": return this.get_addPackage(context);
+            }
+        }
+    }
+
+    get_addAttribute(context: LogicContext<DClass>): () => void {
+        let dclass: DClass | null = (context.data?.className === "DClass") ? context.data : null;
+        let lclass: LClass | null = dclass && MyProxyHandler.wrap(dclass) as any;
+        let ret = () => {};
+
+        console.log('add_Attribute click', {dclass, context});
+        Log.ex(!dclass || !lclass, 'Attributes can only be inserted inside classes.', {dclass, lclass, context});
+        if (dclass && lclass) {
+            let name = 'attrib_' + 0;
+            let childrens: (LAnnotation | LAttribute | LReference | LOperation)[] = lclass.childrens;
+            let childrennames: (string)[] = lclass.childrens.map( c => (c as LStructuralFeature).name);
+            name = U.increaseEndingNumber(name, false, false, (newname) => childrennames.indexOf(newname) >= 0)
+            const dattribute = new DAttribute(name);
+            dattribute.parent = [dclass.id];
+            ret = () => LModelElement.addAttribute_(dclass as DClass, dattribute);
+            console.log('add attribute click', {dclass, dattribute, ret});
+        }
+
+        ret();
+        return ret;
+    }
+
+    get_addPackage(context: LogicContext): (() => void) { return this.get_addClass(context); }
+    // activated by user in JSX
+    addClass(): void { Log.exDevv('addClass should never be called directly, but should trigger get_addClass(), this is only a signature for type checking.'); }
+    addPackage(): void { Log.exDevv('addPackage should never be called directly, but should trigger get_addClass(), this is only a signature for type checking.'); }
+    addAttribute(): void { Log.exDevv('addAttribute should never be called directly, but should trigger get_addAttribute(), this is only a signature for type checking.'); }
+    addChildren(type: string): void { Log.exDevv('addAttribute("'+type+'") should never be called directly, but should trigger get_addAttribute(), this is only a signature for type checking.'); }
+    private static addAttribute_(dclass: DClass, dattribute: DAttribute): void {
+        // const lpackage = DPointerTargetable.wrap(dpackage);
+        new CreateElementAction(dattribute);
+        new SetFieldAction(dclass, 'attributes+=', dattribute.id);
+        // new SetFieldAction(dclass, 'parent', [dpackage.id]);
+    }
+    private static addClass_(dpackage: DPackage, dclass: DClassifier): void {
+        // const lpackage = DPointerTargetable.wrap(dpackage);
+        new CreateElementAction(dclass);
+        new SetFieldAction(dpackage, 'classifiers+=', dclass.id);
+
+        // new SetFieldAction(dclass, 'parent', [dpackage.id]);
+
+    }
+    private static addPackage_(dmodel: DModel, dpackage: DPackage): void {
+        // const lmodel = DPointerTargetable.wrap(dmodel);
+        new CreateElementAction(dpackage);
+        new SetFieldAction(dmodel, 'packages+=', dpackage.id);
+        // new SetFieldAction(dpackage, 'parent', [dmodel.id]);
+        console.log('addPackage', {dpackage, dmodel, modelid:dmodel.id});
+    }
 }
+
 // type UserDefinedClassTODO = Function;
 function isValidPointer<T extends DPointerTargetable = DModelElement, LB extends number = 0, UB extends number = 1, RET extends LPointerTargetable = LModelElement>
 (p: Pointer<T, LB, UB, RET>, constraintType?: typeof DPointerTargetable): boolean {
@@ -229,7 +318,7 @@ function isValidPointer<T extends DPointerTargetable = DModelElement, LB extends
     return (pointerval instanceof constraintType); }
 
 @RuntimeAccessible
-export class LAnnotation extends Mixin(DAnnotation, LModelElement) {
+export class LAnnotation extends MixOnlyFuncs(DAnnotation, LModelElement) {
     static singleton: IsActually<LAnnotation>;
     get_source(context: LogicContext<this>): string {
         return context.data.source; }
@@ -239,7 +328,7 @@ export class LAnnotation extends Mixin(DAnnotation, LModelElement) {
 }
 
 @RuntimeAccessible
-export class LNamedElement extends Mixin(DNamedElement, LModelElement) {
+export class LNamedElement extends MixOnlyFuncs(DNamedElement, LModelElement) {
     static structure: typeof DNamedElement;
     static singleton: LNamedElement;
     // private static proxyHandler: DNamedElementProxyHandler = new DNamedElementProxyHandler();
@@ -260,7 +349,7 @@ export class LNamedElement extends Mixin(DNamedElement, LModelElement) {
 }
 
 @RuntimeAccessible
-export class LTypedElement extends Mixin(DTypedElement, LNamedElement) {
+export class LTypedElement extends MixOnlyFuncs(DTypedElement, LNamedElement) {
     static structure: typeof DTypedElement;
     static singleton: LTypedElement;
 
@@ -277,7 +366,7 @@ export class LTypedElement extends Mixin(DTypedElement, LNamedElement) {
 }
 
 @RuntimeAccessible
-export class LClassifier extends Mixin(DClassifier, LNamedElement) {
+export class LClassifier extends MixOnlyFuncs(DClassifier, LNamedElement) {
     static structure: typeof DClassifier;
     static singleton: LClassifier;
 
@@ -301,11 +390,11 @@ export class LClassifier extends Mixin(DClassifier, LNamedElement) {
 }
 
 @RuntimeAccessible
-export class LPackage extends Mixin(DPackage, LNamedElement) {
+export class LPackage extends MixOnlyFuncs(DPackage, LNamedElement) {
     static structure: typeof DPackage;
     static singleton: LPackage;
     // @ts-ignore
-    childrens!: (LPackage | LAnnotation)[];
+    childrens!: (LClassifier | LPackage | LAnnotation)[];
     // @ts-ignore
     subpackages!: LPackage[];
     // @ts-ignore
@@ -318,7 +407,7 @@ export class LPackage extends Mixin(DPackage, LNamedElement) {
 }
 
 @RuntimeAccessible
-export class LOperation extends Mixin(DOperation, LTypedElement) {
+export class LOperation extends MixOnlyFuncs(DOperation, LTypedElement) {
     static structure: typeof DOperation;
     static singleton: LOperation;
 
@@ -336,13 +425,13 @@ export class LOperation extends Mixin(DOperation, LTypedElement) {
 }
 
 @RuntimeAccessible
-export class LParameter extends Mixin(DParameter, LTypedElement) {
+export class LParameter extends MixOnlyFuncs(DParameter, LTypedElement) {
     static structure: typeof DParameter;
     static singleton: LParameter;
 }
 
 @RuntimeAccessible
-export class LClass extends Mixin(DClass, LClassifier) {
+export class LClass extends MixOnlyFuncs(DClass, LClassifier) {
     static structure: typeof DClass;
     static singleton: LClass;
 
@@ -359,41 +448,41 @@ export class LClass extends Mixin(DClass, LClassifier) {
 
 
     get_childrens_idlist(context: LogicContext<DClass>): Pointer<DAnnotation | DAttribute | DReference | DOperation, 1, 'N'> {
-        return [...super.get_childrens_idlist(context), ...context.data.attributes, ... context.data.references, ...context.data.operations]; }
+        return [...super.get_childrens_idlist(context), ...context.data.attributes, ...context.data.references, ...context.data.operations]; }
 }
 
 @RuntimeAccessible
-export class LDataType extends Mixin(DDataType, LClassifier) {
+export class LDataType extends MixOnlyFuncs(DDataType, LClassifier) {
     static structure: typeof DDataType;
     static singleton: LDataType;
 }
 
 @RuntimeAccessible
-export class LStructuralFeature extends Mixin(DStructuralFeature, LTypedElement) {
+export class LStructuralFeature extends MixOnlyFuncs(DStructuralFeature, LTypedElement) {
     static structure: typeof DStructuralFeature;
     static singleton: LStructuralFeature;
 }
 
 @RuntimeAccessible
-export class LReference extends Mixin(DReference, LStructuralFeature) {
+export class LReference extends MixOnlyFuncs(DReference, LStructuralFeature) {
     static structure: typeof DReference;
     static singleton: LReference;
 }
 
 @RuntimeAccessible
-export class LAttribute extends Mixin(DAttribute, LStructuralFeature) {
+export class LAttribute extends MixOnlyFuncs(DAttribute, LStructuralFeature) {
     static structure: typeof DAttribute;
     static singleton: LAttribute;
 }
 
 @RuntimeAccessible
-export class LEnumLiteral extends Mixin(DEnumLiteral, LNamedElement) {
+export class LEnumLiteral extends MixOnlyFuncs(DEnumLiteral, LNamedElement) {
     static structure: typeof DEnumLiteral;
     static singleton: LEnumLiteral;
 }
 
 @RuntimeAccessible
-export class LEnumerator extends Mixin(DEnumerator, LDataType) {
+export class LEnumerator extends MixOnlyFuncs(DEnumerator, LDataType) {
     static structure: typeof DEnumerator
     static singleton: LEnumerator;
 
@@ -409,22 +498,25 @@ export class LEnumerator extends Mixin(DEnumerator, LDataType) {
 }
 
 @RuntimeAccessible
-export class LObject extends Mixin(DObject, LNamedElement) {
+export class LObject extends MixOnlyFuncs(DObject, LNamedElement) {
     static structure: typeof DObject;
     static singleton: LObject;
 }
 
 @RuntimeAccessible
-export class LValue extends Mixin(DValue, LModelElement) {
+export class LValue extends MixOnlyFuncs(DValue, LModelElement) {
     static structure: typeof DValue;
     static singleton: LValue;
 }
 
 @RuntimeAccessible
-export class LModel extends Mixin(DModel, LNamedElement) {
+export class LModel extends MixOnlyFuncs(DModel, LNamedElement) {
     static structure: typeof DModel;
     static singleton: LModel;
 
+    constructor() {
+        super();
+    }
 
     // @ts-ignore
     parent!: never;
@@ -435,4 +527,124 @@ export class LModel extends Mixin(DModel, LNamedElement) {
 
     get_childrens_idlist(context: LogicContext<DModel>): Pointer<DAnnotation | DModel, 1, 'N'> {
         return [...super.get_childrens_idlist(context), ...context.data.packages]; }
+
+    get_packages(context: LogicContext<DModel>): LPackage[] {
+        return context.data.packages.map(p => MyProxyHandler.wrap(p)); }
+
 }
+
+// @ts-ignore
+// LModel.prototype.get_childrens = LModelElement.prototype.get_childrens;
+/*
+@RuntimeAccessible
+export class DTestParent1 extends RuntimeAccessibleClass{
+    a1: string;
+    constructor(a1: string, arg2auto='arg2autoo') {
+        super();
+        this.a1 = a1;
+        console.log('creation of DTestParent1', {className: this.className, a1, prototype: (this as any).prototype, __proto2__: (this as any).__proto__});
+        this.className = (this as any).__proto__.className;
+        this.init_constructor(...arguments);
+
+    }
+    init_constructor(b0val: string = 'b0val') {
+        console.trace('creation of DTestParent1 init', {b0val, thiss: this, className: this.className, prototype: (this as any).prototype, __proto2__: (this as any).__proto__});
+
+        // this.initBase();
+        console.log('creation of DTestParent2 init', {className: this.className, arguments, prototype: (this as any).prototype, __proto2__: (this as any).__proto__});
+        //@ts-ignore
+        this.classNamep1 = (this as any).__proto__.className;
+        // @ts-ignore
+        this.parent1Initialized = this;
+    }
+}
+/*
+@RuntimeAccessible
+export class DTestParent2 extends RuntimeAccessibleClass{
+    a2: string;
+    constructor(a2: string) {
+        super();
+        this.a2 = a2
+        console.log('creation of DTestParent2', {className: this.className, a2, prototype: (this as any).prototype, __proto2__: (this as any).__proto__});
+        this.className = (this as any).__proto__.className;
+        this.init_constructor(...arguments);
+    }
+    init_constructor(b0val: string = 'b0val') {
+        console.trace('creation of DTestParent2 init', {b0val, thiss: this, className: this.className, prototype: (this as any).prototype, __proto2__: (this as any).__proto__});
+        //@ts-ignore
+        this.classNamep2 = (this as any).__proto__.className;
+        // @ts-ignore
+        this.parent2Initialized = this;
+    }
+
+}
+
+/*
+function MyMixin<A1 extends any[], I1, S1, A2 extends any[], I2, S2>(c1: Class<A1, I1, S1>, c2: Class<A2, I2, S2>): Class<Longest<A1, A2>, I1 & I2, S1 & S2> {
+    // @ts-ignore
+    console.log('calling mymixin', {c1, c2, thiss:this});
+    // @ts-ignore
+    let outerthis = this;
+    let ret = function (...a:any) {
+        // @ts-ignore
+        console.log('calling mymixin inner constructor', {c1, c2, outerthis, thiss:this, arguments});
+        let ret: any = Mixin(c1, c2);
+        ret.init?.();
+        ret.init1?.();
+        // @ts-ignore
+        this.classNameic = {ret, thiss: this} ;// this.__proto__.constructor.name + "_" + ret.constructor.name;
+        return new ret(a); }
+    ret.prototype.mixinclassname = 'mcn';
+    // @ts-ignore
+    ret.mixinclassname = 'mcn00';
+
+    // @ts-ignore
+    ret.init?.();
+    // @ts-ignore
+    let rett = new ret(arguments) as any;
+
+    // @ts-ignore
+    rett.init?.();
+    // @ts-ignore
+    this?.init?.();
+
+    // return rett as any;
+    let initconstructor = function (...a: any){
+        // @ts-ignore
+        let ret2=new ret(a);
+        ret2.init?.();
+        return ret2;
+    };
+    // @ts-ignore
+    let r2: any = initconstructor;
+    r2.__proto__ = ret;
+    // @ts-ignore
+    // r2.prototype = this as any;
+    // r2.constructor = initconstructor;
+    return r2 as any;
+}
+function FakeMixin<A1 extends any[], I1, S1, A2 extends any[], I2, S2>(c1: Class<A1, I1, S1>, c2: Class<A2, I2, S2>): Class<Longest<A1, A2>, I1 & I2, S1 & S2> {
+    return c1 as any; // function(...args) {}; // la prima classe viene davvero estesa, le altre gli copio i valori
+}
+* /
+// @ts-ignore
+@RuntimeAccessible export class DTestChild extends MixOnlyFuncs(DTestParent1, DTestParent2){
+    bchild!: string
+    constructor(b0val: string = 'b0val') {
+        super(b0val);
+        this.init_constructor(...arguments);
+    }
+
+    init_constructor(b0val: string = 'b0val'): void {
+        console.log('children init0', this);
+        windoww.temp1 = this;
+        this.superclass.DTestParent1.call(this, '111');
+        this.superclass.DTestParent2.call(this, '222');
+        this.bchild = b0val;
+        // @ts-ignore
+        this.classNameFromChildren = this.__proto__.className;
+        console.log('creation of DTestChild', {className: this.className, prototype: (this as any).prototype, __proto2__: (this as any).__proto__});
+    }
+}
+windoww.dtt = DTestChild;
+*/

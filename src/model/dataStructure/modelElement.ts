@@ -28,7 +28,7 @@ import {
 
 @RuntimeAccessible
 export /*abstract*/ class DModelElement extends DPointerTargetable {
-    static defaultComponent: (props: GObject, childrens?: (string | React.Component)[]) => React.ReactElement;
+    static defaultComponent: (ownProps: GObject, childrens?: (string | React.Component)[]) => React.ReactElement;
     static logic: typeof LPointerTargetable;
 
     // ******************** ecore officials inherited ******************** //
@@ -42,18 +42,20 @@ export /*abstract*/ class DModelElement extends DPointerTargetable {
     parent: Pointer<DModelElement, 0, 'N', LModelElement> = []; // a modelElement can be shared between different models
     constructor() {
         super(false);
+        this.className = this.constructor.name;
         //this._transient = new DModelElementTransientProperties();
     }
 
     static persist(me: DModelElement) { new CreateElementAction(me); }
     //_transient: DModelElementTransientProperties | LModelElementTransientProperties;
 }
-/*
-@RuntimeAccessible
-export class DModelElementTransientProperties extends RuntimeAccessibleClass {
-    static logic: typeof LModelElementTransientProperties;
-    // currentView!: Pointer<DViewElement, 1, 1, LViewElement>;
-}*/
+
+    /*
+    @RuntimeAccessible
+    export class DModelElementTransientProperties extends RuntimeAccessibleClass {
+        static logic: typeof LModelElementTransientProperties;
+        // currentView!: Pointer<DViewElement, 1, 1, LViewElement>;
+    }*/
 
 @RuntimeAccessible
 export class DAnnotation extends DModelElement {
@@ -77,7 +79,11 @@ export /*abstract*/ class DNamedElement extends DModelElement {
     name: string = '';
     // ********************** my additions inherited ********************* //
     // ********************** my additions personal ********************** //
-    constructor(name: string = ''){ super(); this.name = name; }
+    constructor(name: string = ''){
+        super();
+        this.name = name;
+        this.className = this.constructor.name;
+    }
 }
 
 @RuntimeAccessible
@@ -149,6 +155,7 @@ export class DPackage extends DNamedElement {
     constructor(name: string = '', uri: string = '') {
         super(name);
         this.uri = uri;
+        this.className = this.constructor.name;
     }
 }
 
@@ -192,6 +199,7 @@ export class DClass extends DClassifier {
         super(name);
         this.abstract = isAbstract;
         this.interface = isInterface
+        this.className = this.constructor.name;
     }
 
     setImplement(interfaceIds: string[]): DClass {
@@ -337,3 +345,7 @@ export class Package{
 
 // ********************** my additions inherited ********************* //
 // ********************** my additions personal ********************** //
+(DModelElement as any).subclasses = [DModelElement, DModel, DNamedElement,
+    DReference, DAttribute, DOperation, DParameter,
+    DPackage, DClassifier, DClass, DEnumerator, DEnumLiteral,
+    DValue, DObject, DStructuralFeature, DDataType, DTypedElement, DFactory_useless_, DAnnotation, ];

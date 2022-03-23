@@ -1,96 +1,27 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
 import {ReactElement} from "react";
 import {isDeepStrictEqual} from "util";
-import {Mixin} from "ts-mixer";
-import {
+// import {Mixin} from "ts-mixer";
+import type {
+    Constructor,
     GObject,
+    Dictionary,
+    Temporary} from "../joiner";
+import {
     Json,
     bool,
-    Dictionary,
     DocString,
     JsType,
-    MyError,
-    Temporary,
-    TODO,
-    RuntimeAccessible, RuntimeAccessibleClass, LPointerTargetable, DPointerTargetable, windoww
+    RuntimeAccessibleClass,
+    LPointerTargetable,
+    MixOnlyFuncs,
+    RuntimeAccessible,
+    windoww,
+    MyError, DPointerTargetable, TODO
 } from "../joiner";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
-@RuntimeAccessible
-export class Log{
-    // public static history: Dictionary<string, Dictionary<string, any[]>> = {}; // history['pe']['key'] = ...parameters
-    public static lastError: any[];
-    private static loggerMapping: Dictionary<string, LoggerInterface[]> = {} // takes function name returns logger list
-    public static registerLogger(logger: LoggerInterface, triggerAt: (typeof U.pe) & {name: string}) {
-        if (!Log.loggerMapping[triggerAt.name]) Log.loggerMapping[triggerAt.name] = [];
-        Log.loggerMapping[triggerAt.name].push(logger);
-    }
-
-    private static log(prefix: string, category: string, originalFunc: typeof console.log, b: boolean, ...restArgs: any[]): string {
-        if (!b) { return ''; }
-        const key: string = U.getCaller(1);
-        if (restArgs === null || restArgs === undefined) { restArgs = []; }
-        let str = '[' + prefix + ']' + key + ': ';
-        for (let i = 0; i < restArgs.length; i++) {
-            console.log({i, restArgs, curr:restArgs[i]});
-            str += '' +
-                (typeof restArgs[i] === 'symbol' ?
-                    '' + String(restArgs[i]) :
-                    restArgs[i])
-                + '\t\r\n'; }
-        if (Log.loggerMapping[category]) for (const logger of Log.loggerMapping[category]) { logger.log(category, key, restArgs, str); }
-        originalFunc(key, ...restArgs);
-        return str; }
-
-    public static e(b: boolean, ...restArgs: any[]): string {
-        if (!b) return '';
-        const str = Log.log('Error', 'e', console.error, b, ...restArgs);
-        Log.lastError = restArgs;
-        return str;
-        // throw new Error(str);
-    }
-
-    public static eDev(b: boolean, ...restArgs: any[]): string {
-        if (!b) return '';
-        const str = Log.log('Dev Error','eDev', console.error, b, ...restArgs);
-        Log.lastError = restArgs;
-        return str;
-        // throw new Error(str);
-    }
-
-    public static ex(b: boolean, ...restArgs: any[]): null | never | any {
-        if (!b) return null;
-        const str = Log.log('Error', 'e', console.error, b, ...restArgs);
-        Log.lastError = restArgs;
-        throw new MyError(str, ...restArgs); }
-
-    public static exDev(b: boolean, ...restArgs: any[]): null | never | any {
-        if (!b) return null;
-        const str = Log.log('Dev Error','eDev', console.error, b, ...restArgs);
-        Log.lastError = restArgs;
-        windoww.ee = restArgs;
-        windoww.e1 = restArgs[1];
-        throw new MyError(str, ...restArgs); }
-
-    public static i(b: boolean, ...restArgs: any[]): string { return Log.log('Info', 'i', console.log, b, ...restArgs); }
-    public static l(b: boolean, ...restArgs: any[]): string { return Log.log('Log', 'l', console.log, b, ...restArgs); }
-    public static w(b: boolean, ...restArgs: any[]): string { return Log.log('Warn', 'w', console.warn, b, ...restArgs); }
-
-
-    public static eDevv<T extends any = any>(firstParam?: NotBool<T>, ...restAgs: any): string { return Log.eDev(true, ...[firstParam, ...restAgs]); }
-    public static ee(...restAgs: any): string { return Log.e(true, ...restAgs); }
-    public static exDevv<T extends any = any>(firstParam?: NotBool<T>, ...restAgs: any): never | any { return Log.exDev(true, ...[firstParam, ...restAgs]); }
-    public static exx(...restAgs: any): never | any { return Log.ex(true, ...restAgs); }
-    public static ii(...restAgs: any): string { return Log.i(true, ...restAgs); }
-    public static ll(...restAgs: any): string { return Log.l(true, ...restAgs); }
-    public static ww(...restAgs: any): string { return Log.w(true, ...restAgs); }
-}
-
-type NotBool<T> = Exclude<T, boolean>;
-
-interface LoggerInterface{
-    log: (category: string, key: string, data: any[], fullconcat?: string) => any;
-}
+console.warn('loading ts U log');
 
 @RuntimeAccessible
 export class U{
@@ -527,11 +458,17 @@ export class U{
         for (i = 0; i < maps.length; i++) { maps[i].forEach(function(value, key){ ret.set(key, value); }) }
         return ret; }
 
-    static ArrayMerge(arr1: any[], arr2: any[], unique: boolean = false): void {
-        if (!arr1 || !arr2) return;
-        if (!unique) Array.prototype.push.apply(arr1, arr2);
-        let i: number;
-        for (i = 0; i < arr2.length; i++) { U.ArrayAdd(arr1, arr2[i]); } }
+    // merge with unique elements
+    static ArrayMergeU(arr1: any[], ...arr2: any[]): void { U.ArrayMerge0(true, arr1, arr2); }
+    // merge without unique check
+    static ArrayMerge(arr1: any[], ...arr2: any[]): void { U.ArrayMerge0(false, arr1, arr2); }
+    // implementation
+    static ArrayMerge0(unique: boolean, arrtarget: any[], ...arrays: any[]): void {
+        if (!arrtarget || !arrays) return;
+
+        if (unique) { for (let arri of arrays) for (let e of arri) U.ArrayAdd(arrtarget, e); }
+        else { for (let arri of arrays) Array.prototype.push.apply(arrtarget, arri); }
+    }
 
     static ArrayAdd<T>(arr: Array<T>, elem: T, unique: boolean = true, throwIfContained: boolean = false): boolean {
         Log.ex(!arr || !Array.isArray(arr), 'ArrayAdd arr null or not array:', arr);
@@ -571,13 +508,13 @@ export class U{
 
 
 
-    static ReactNodeAsElement(e: React.ReactNode): React.ReactElement | null { return (e as ReactElement).type ? e as ReactElement : null; }
+    static ReactNodeAsElement(e: React.ReactNode): React.ReactElement | null { return e && (e as ReactElement).type ? e as ReactElement : null; }
 
     static getType(param: any): string {
         switch (typeof param) {
             default: return typeof param;
             case 'object':
-                return param?.constructor?.name || "{_rawobject_}";
+                return param?.constructor?.name || param?.className || "{_rawobject_}";
             case 'function': // and others
                 return "geType for function todo: distinguish betweeen arrow and classic";
         }
@@ -655,6 +592,32 @@ export class U{
 
      // returns true only if parameter is already a number by type. UU.isNumber('3') will return false
      static isNumber(o: any): boolean { return +o === o && !isNaN(o); }
+
+    public static getAllPrototypes(constructor: Constructor, chainoutoutrecursive: GObject[] = [], currentRecursion = 0, maxRecursion = 20, cache: boolean = true): GObject[] {
+        // console.log('getAllPrototypes:', {name: constructor.name, currentRecursion, constructor, chainoutoutrecursive});
+        if (cache && (constructor as any).__allprototypes) return (constructor as any).__allprototypes;
+        let prototype = (constructor.prototype?.name) && constructor.prototype;
+        let __proto__ = (constructor.__proto__?.name) && constructor.__proto__;
+        if (!prototype && !__proto__ || currentRecursion >= maxRecursion) return chainoutoutrecursive;
+        if (prototype) chainoutoutrecursive.push(prototype);
+        if (__proto__) chainoutoutrecursive.push(__proto__);
+        if (prototype) U.getAllPrototypes(prototype, chainoutoutrecursive, currentRecursion + 1, maxRecursion);
+        if (__proto__) U.getAllPrototypes(__proto__, chainoutoutrecursive, currentRecursion + 1, maxRecursion);
+        if (cache) (constructor as any).__allprototypes = chainoutoutrecursive;
+        return chainoutoutrecursive;
+    }
+
+    public static classIsExtending(subconstructor: Constructor, superconstructor: Constructor): boolean {
+        return U.getAllPrototypes(subconstructor).includes(superconstructor); }
+
+    static isObject(obj: GObject|any): boolean { return obj instanceof Object; }
+
+    static objectFromArrayValues(arr: (string | number)[]): Dictionary<string | number, boolean> {
+        let ret: Dictionary = {};
+        // todo: improve efficiency
+        for (let val of arr) { ret[val] = true; }
+        return ret;
+    }
 }
 
 export class DDate{
@@ -4030,83 +3993,322 @@ export class ParseNumberOrBooleanOptions{
         this.allowBooleans = allowBooleans; this.trueValue = trueValue; this.falseValue = falseValue;
     }
 }
-/*
-export class JsonUtil {
-    static getAnnotations(thiss: Json): Json[] {
-        const ret = thiss[ECorePackage.eAnnotations];
-        if (!ret || $.isEmptyObject(ret)) { return []; }
-        if (Array.isArray(ret)) { return ret; } else { return [ret]; } }
 
-    static getDetails(thiss: Json): Json[] {
-        const ret = thiss[ECoreAnnotation.details];
-        if (!ret || $.isEmptyObject(ret)) { return []; }
-        if (Array.isArray(ret)) { return ret; } else { return [ret]; } }
-
-    static getChildrens(thiss: Json, throwError: boolean = false, functions: boolean = false): Json[] {
-        if (!thiss && !throwError) { return []; }
-        const mod = thiss[ECoreRoot.ecoreEPackage];
-        const pkg = thiss[ECorePackage.eClassifiers];
-        const cla = thiss[functions ? ECoreClass.eOperations : ECoreClass.eStructuralFeatures];
-        const fun = thiss[ECoreOperation.eParameters];
-        const lit = thiss[ECoreEnum.eLiterals];
-
-        const ret: any = mod || pkg || cla || fun || lit;
-        /*if ( ret === undefined || ret === null ) {
-      if (thiss['@name'] !== undefined) { ret = thiss; } // if it's the root with only 1 child arrayless
-    }* /
-        // U.pe(true, debug, 'getchildrens(', thiss, ')');
-        U.pe( throwError && !ret, 'getChildrens() Failed: ', thiss, ret);
-        // console.log('ret = ', ret, ' === ', {}, ' ? ', ($.isEmptyObject(ret) ? [] : [ret]));
-        if (!ret || $.isEmptyObject(ret)) { return []; }
-        if (Array.isArray(ret)) { return ret; } else { return [ret]; }
+@RuntimeAccessible
+export class Log{
+    constructor() { }
+    // public static history: Dictionary<string, Dictionary<string, any[]>> = {}; // history['pe']['key'] = ...parameters
+    public static lastError: any[];
+    private static loggerMapping: Dictionary<string, LoggerInterface[]> = {} // takes function name returns logger list
+    public static registerLogger(logger: LoggerInterface, triggerAt: (typeof windoww.U.pe) & {name: string}) {
+        if (!Log.loggerMapping[triggerAt.name]) Log.loggerMapping[triggerAt.name] = [];
+        Log.loggerMapping[triggerAt.name].push(logger);
     }
 
-    static read(json: Json, field: string, valueIfNotFound: any = 'read<T>()CanThrowError'): string {
-        let ret: any = json ? json[field] : null;
-        if (ret !== null && ret !== undefined && field.indexOf(Status.status.XMLinlineMarker) !== -1) {
-            U.pe(U.isObject(ret, false, false, true), 'inline value |' + field + '| must be primitive.', ret);
-            ret = U.multiReplaceAll('' + ret, ['&amp;', '&#38;', '&quot;'], ['&', '\'', '"']);
-        }
-        if ((ret === null || ret === undefined)) {
-            U.pe(valueIfNotFound === 'read<T>()CanThrowError', 'Json.read<',  '> failed: field[' + field + '], json: ', json);
-            return valueIfNotFound; }
+    static disableConsole(){
+        // @ts-ignore
+        console['logg'] = console.log;
+        console.log = () => {}; }
+
+    static enableConsole() {
+        // @ts-ignore
+        if (console['logg']) console.log = console['logg']; }
+
+    private static log(prefix: string, category: string, originalFunc: typeof console.log, b: boolean, ...restArgs: any[]): string {
+        if (!b) { return ''; }
+        const key: string = windoww.U.getCaller(1);
+        if (restArgs === null || restArgs === undefined) { restArgs = []; }
+        let str = '[' + prefix + ']' + key + ': ';
+        for (let i = 0; i < restArgs.length; i++) {
+            console.log({i, restArgs, curr:restArgs[i]});
+            str += '' +
+                (typeof restArgs[i] === 'symbol' ?
+                    '' + String(restArgs[i]) :
+                    restArgs[i])
+                + '\t\r\n'; }
+        if (Log.loggerMapping[category]) for (const logger of Log.loggerMapping[category]) { logger.log(category, key, restArgs, str); }
+        originalFunc(key, ...restArgs);
+        return str; }
+
+    public static e(b: boolean, ...restArgs: any[]): string {
+        if (!b) return '';
+        const str = Log.log('Error', 'e', console.error, b, ...restArgs);
+        Log.lastError = restArgs;
+        return str;
+        // throw new Error(str);
+    }
+
+    public static eDev(b: boolean, ...restArgs: any[]): string {
+        if (!b) return '';
+        const str = Log.log('Dev Error','eDev', console.error, b, ...restArgs);
+        Log.lastError = restArgs;
+        return str;
+        // throw new Error(str);
+    }
+
+    public static ex(b: boolean, ...restArgs: any[]): null | never | any {
+        if (!b) return null;
+        const str = Log.log('Error', 'e', console.error, b, ...restArgs);
+        Log.lastError = restArgs;
+        windoww.ee = restArgs;
+        windoww.e1 = restArgs[1];
+        throw new MyError(str, ...restArgs); }
+
+    public static exDev(b: boolean, ...restArgs: any[]): null | never | any {
+        if (!b) return null;
+        const str = Log.log('Dev Error','eDev', console.error, b, ...restArgs);
+        Log.lastError = restArgs;
+        windoww.ee = restArgs;
+        windoww.e1 = restArgs[1];
+        throw new MyError(str, ...restArgs); }
+
+    public static i(b: boolean, ...restArgs: any[]): string { return Log.log('Info', 'i', console.log, b, ...restArgs); }
+    public static l(b: boolean, ...restArgs: any[]): string { return Log.log('Log', 'l', console.log, b, ...restArgs); }
+    public static w(b: boolean, ...restArgs: any[]): string { return Log.log('Warn', 'w', console.warn, b, ...restArgs); }
+
+
+    public static eDevv<T extends any = any>(firstParam?: NotBool<T>, ...restAgs: any): string { return Log.eDev(true, ...[firstParam, ...restAgs]); }
+    public static ee(...restAgs: any): string { return Log.e(true, ...restAgs); }
+    public static exDevv<T extends any = any>(firstParam?: NotBool<T>, ...restAgs: any): never | any { return Log.exDev(true, ...[firstParam, ...restAgs]); }
+    public static exx(...restAgs: any): never | any { return Log.ex(true, ...restAgs); }
+    public static ii(...restAgs: any): string { return Log.i(true, ...restAgs); }
+    public static ll(...restAgs: any): string { return Log.l(true, ...restAgs); }
+    public static ww(...restAgs: any): string { return Log.w(true, ...restAgs); }
+}
+
+type NotBool<T> = Exclude<T, boolean>;
+
+interface LoggerInterface{
+    log: (category: string, key: string, data: any[], fullconcat?: string) => any;
+}
+
+
+
+@RuntimeAccessible
+export abstract class IPoint extends DPointerTargetable {
+    x!: number;
+    y!: number;
+
+    static getM? = function(firstPt: IPoint, secondPt: IPoint): number { return (firstPt.y - secondPt.y) / (firstPt.x - secondPt.x); }
+    // @ts-ignore static getM is not null but must be declared nullable to achieve subclass mixing
+    static getQ? = function(firstPt: IPoint, secondPt: IPoint): number { return firstPt.y - (IPoint.getM(firstPt, secondPt) * firstPt.x);  }
+
+    constructor(x: number = 0, y: number = 0) {
+        super();
+        IPoint.init_constructor(this, x, y);
+    }
+
+    static init_constructor(thiss: GObject, x: any = 0, y: any = 0, ...a: any): void {
+        if (x === null) thiss.x = null as Temporary;
+        else if (isNaN(+x)) { thiss.x = 0; }
+        else thiss.x = +x;
+        if (y === null) thiss.y = null as Temporary;
+        else if (isNaN(+y)) { thiss.y = 0; }
+        else thiss.y = +y;
+        thiss.className = this.name;
+    }
+
+    toString(): string { return '(' + this.x + ', ' + this.y + ')'; }
+    clone(other: { x: number, y: number }): this { this.x = other.x; this.y = other.y; return this; }
+
+    abstract new(): this;
+    duplicate(): this { const ret = this.new(); ret.clone(this); return ret; }
+
+    subtract(p2: IPoint, newInstance: boolean): this {
+        Log.e(!p2, 'subtract argument must be a valid point: ', p2);
+        let p1: this;
+        if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
+        p1.x -= p2.x;
+        p1.y -= p2.y;
+        return p1; }
+
+    add(p2: IPoint, newInstance: boolean): this {
+        Log.e(!p2, 'add argument must be a valid point: ', p2);
+        let p1: this;
+        if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
+        p1.x += p2.x;
+        p1.y += p2.y;
+        return p1; }
+
+    addAll(p: IPoint[], newInstance: boolean): this {
+        let i;
+        let p0: this;
+        if (!newInstance) { p0 = this; } else { p0 = this.duplicate(); }
+        for (i = 0; i < p.length; i++) { p0.add(p[i], true); }
+        return p0; }
+
+    subtractAll(p: this[], newInstance: boolean): this {
+        let i;
+        let p0: this;
+        if (!newInstance) { p0 = this; } else { p0 = this.duplicate(); }
+        for (i = 0; i < p.length; i++) { p0.subtract(p[i], true); }
+        return p0; }
+
+    multiply(pt: this, newInstance: boolean = false): this {
+        let ret: this = (newInstance ? this.duplicate() : this);
+        ret.x *= pt.x;
+        ret.y *= pt.y;
         return ret; }
 
-    static write(json: Json, field: string, val: string | any[]): string | any[] {
-        if (val !== null && field.indexOf(Status.status.XMLinlineMarker) !== -1) {
-            U.pe(val !== '' + val, 'inline value |' + field + '| must be a string.', val);
-            val = U.multiReplaceAll(val as string, ['&', '\'', '"'], ['&amp;', '&#38;', '&quot;']);
-        }
-        else U.pe(val !== '' + val || !U.isObject(val, true), 'primitive values should be inserted only inline in the xml:', field, val);
-        json[field] = val;
-        return val; }
+    divide(pt: this, newInstance: boolean = false): this {
+        let ret = (newInstance ? this.duplicate() : this);
+        ret.x /= pt.x;
+        ret.y /= pt.y;
+        return ret; }
+
+    multiplyScalar(scalar: number, newInstance: boolean): this {
+        Log.e(isNaN(+scalar), 'IPoint.multiply()', 'scalar argument must be a valid number: ', scalar);
+        let p1: this;
+        if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
+        p1.x *= scalar;
+        p1.y *= scalar;
+        return p1; }
+
+    divideScalar(scalar: number, newInstance: boolean): this {
+        Log.e(isNaN(+scalar), 'IPoint.divide()', 'scalar argument must be a valid number: ', scalar);
+        let p1: this;
+        if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
+        p1.x /= scalar;
+        p1.y /= scalar;
+        return p1; }
+
+    isInTheMiddleOf(firstPt: this, secondPt: this, tolleranza: number): boolean {
+        const rectangle: Size = Size.fromPoints(firstPt, secondPt);
+        const tolleranzaX = tolleranza; // actually should be cos * arctan(m);
+        const tolleranzaY = tolleranza; // actually should be sin * arctan(m);
+        if (this.x < rectangle.x - tolleranzaX || this.x > rectangle.x + rectangle.w + tolleranzaX) { return false; }
+        if (this.y < rectangle.y - tolleranzaX || this.y > rectangle.y + rectangle.h + tolleranzaY) { return false; }
+        // const m = IPoint.getM(firstPt, secondPt);
+        // const q = IPoint.getQ(firstPt, secondPt);
+        const lineDistance = this.distanceFromLine(firstPt, secondPt);
+        // console.log('distance:', lineDistance, ', this:', this, ', p1:', firstPt, ', p2:', secondPt);
+        return lineDistance <= tolleranza; }
+
+    distanceFromLine(p1: IPoint, p2: IPoint): number {
+        const top: number =
+            + (p2.y - p1.y) * this.x
+            - (p2.x - p1.x) * this.y
+            + p2.x * p1.y
+            - p1.x * p2.y;
+        const bot =
+            (p2.y - p1.y) * (p2.y - p1.y) +
+            (p2.x - p1.x) * (p2.x - p1.x);
+        return Math.abs(top) / Math.sqrt(bot);  }
+
+    equals(pt: IPoint, tolleranzaX: number = 0, tolleranzaY: number = 0): boolean {
+        if (pt === null) { return false; }
+        return Math.abs(this.x - pt.x) <= tolleranzaX && Math.abs(this.y - pt.y) <= tolleranzaY; }
+
+    moveOnNearestBorder(startVertexSize: ISize, clone: boolean, graph: TODO/*IGraph*/, debug: boolean = true): IPoint {
+        const pt: IPoint = clone ? this.duplicate() : this;
+        const tl: IPoint = startVertexSize.tl();
+        const tr: IPoint = startVertexSize.tr();
+        const bl: IPoint = startVertexSize.bl();
+        const br: IPoint = startVertexSize.br();
+        const L: number = pt.distanceFromLine(tl, bl);
+        const R: number = pt.distanceFromLine(tr, br);
+        const T: number = pt.distanceFromLine(tl, tr);
+        const B: number = pt.distanceFromLine(bl, br);
+        const min: number = Math.min(L, R, T, B);
+        if (min === L) { pt.x = tl.x; }
+        if (min === R) { pt.x = tr.x; }
+        if (min === T) { pt.y = tr.y; }
+        if (min === B) { pt.y = br.y; }
+        if (debug && graph && pt instanceof GraphPoint) { graph.markg(pt, false, 'purple'); }
+        return pt; }
+
+    getM(pt2: IPoint): number { return IPoint.getM?.(this, pt2) as unknown as number; }
+
+    degreeWith(pt2: IPoint, toRadians: boolean): number {
+        const directionVector: IPoint = this.subtract(pt2, true);
+        const ret: number = Math.atan2(directionVector.y, directionVector.x);
+        return toRadians ? ret : windoww.U.RadToDegree(ret); }
+
+    absolute(): number { return Math.sqrt(this.x * this.x + this.y * this.y); }
+    set(x: number, y: number) { this.x = x; this.y = y; }
 }
-*/
 
-/*
-export class DetectZoom {
-    static device(): number { return detectzoooom.device(); }
-    static zoom(): number { U.pe(true, 'better not use this, looks like always === 1'); return detectzoooom.zoom(); }
-}*/
+@RuntimeAccessible
+export class GraphPoint extends IPoint{
+    dontmixwithPoint: any;
+    static fromEvent(e: JQuery.ClickEvent | JQuery.MouseMoveEvent | JQuery.MouseUpEvent | JQuery.MouseDownEvent | JQuery.MouseEnterEvent | JQuery.MouseLeaveEvent | JQuery.MouseEventBase)
+        : GraphPoint | null {
+        if (!e) { return null; }
+        const p: Point = new Point(e.pageX, e.pageY);
+        const g: any = null;
+        throw new Error("todo: const g: IGraph = Status.status.getActiveModel().graph;");
+        return g.toGraphCoord(p); }
 
-export abstract class ISize<PT extends IPoint = IPoint> {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
+    new(): this { return new GraphPoint() as this;}
+    /* duplicate(): this { return new GraphPoint(this.x, this.y) as this; }/*
+    clone(other: this): void { this.x = other.x; this.y = other.y; }
+    subtract(p2: this, newInstance: boolean): GraphPoint { return super.subtract(p2, newInstance) as GraphPoint; }
+    add(p2: GraphPoint, newInstance: boolean): GraphPoint { return super.add(p2, newInstance) as GraphPoint; }
+    multiply(scalar: number, newInstance: boolean): GraphPoint { return super.multiply(scalar, newInstance) as GraphPoint; }
+    divide(scalar: number, newInstance: boolean): GraphPoint { return super.divide(scalar, newInstance) as GraphPoint; }
+    isInTheMiddleOf(firstPt: GraphPoint, secondPt: GraphPoint, tolleranza: number): boolean { return super.isInTheMiddleOf(firstPt, secondPt, tolleranza); }
+    distanceFromLine(p1: GraphPoint, p2: GraphPoint): number { return super.distanceFromLine(p1, p2); }
+    equals(pt: GraphPoint, tolleranzaX: number = 0, tolleranzaY: number = 0): boolean { return super.equals(pt, tolleranzaX, tolleranzaY); }
+    moveOnNearestBorder(startVertexSize: GraphSize, clone: boolean, debug: boolean = true): GraphPoint {
+        return super.moveOnNearestBorder(startVertexSize, clone, debug) as GraphPoint; }
+    getM(pt2: GraphPoint): number { return super.getM(pt2); }
+    degreeWith(pt2: GraphPoint, toRadians: boolean): number { return super.degreeWith(pt2, toRadians); }*/
+
+}
+
+@RuntimeAccessible
+export class Point extends IPoint{
+    dontmixwithGPoint: any;
+    /// https://stackoverflow.com/questions/6073505/what-is-the-difference-between-screenx-y-clientx-y-and-pagex-y
+    /*static fromEvent(e: JQuery.ClickEvent | JQuery.MouseMoveEvent | JQuery.MouseUpEvent | JQuery.MouseDownEvent | JQuery.MouseEnterEvent | JQuery.MouseLeaveEvent | JQuery.MouseEventBase)
+        : Point {
+        const p: Point = new Point(e.pageX, e.pageY);
+        return p; }*/
+
+    new(): this { return new Point() as this;}
+    /* duplicate(): this { return new Point(this.x, this.y) as this; }
+    /*
+    subtract(p2: Point, newInstance: boolean): Point { return super.subtract(p2, newInstance) as Point; }
+    add(p2: Point, newInstance: boolean): Point { return super.add(p2, newInstance) as Point; }
+    // multiplyScalar(scalar: number, newInstance: boolean): Point { sdhfgmj }
+
+    // divideScalar(scalar: number, newInstance: boolean): Point { gdhfg }
+    isInTheMiddleOf(firstPt: Point, secondPt: Point, tolleranza: number): boolean { return super.isInTheMiddleOf(firstPt, secondPt, tolleranza); }
+    distanceFromLine(p1: Point, p2: Point): number { return super.distanceFromLine(p1, p2); }
+    equals(pt: Point, tolleranzaX: number = 0, tolleranzaY: number = 0): boolean { return super.equals(pt, tolleranzaX, tolleranzaY); }
+    moveOnNearestBorder(startVertexSize: GraphSize, clone: boolean, debug: boolean = true): Point {
+        return super.moveOnNearestBorder(startVertexSize, clone, debug) as Point; }
+    getM(pt2: Point): number { return super.getM(pt2); }
+    degreeWith(pt2: Point, toRadians: boolean): number { return super.degreeWith(pt2, toRadians); }*/
+
+}
+
+
+@RuntimeAccessible
+export abstract class ISize<PT extends IPoint = IPoint> extends DPointerTargetable {
+    x!: number;
+    y!: number;
+    w!: number;
+    h!: number;
     constructor(x: number = 0, y: number = 0, w: number = 0, h: number = 0) {
-        if (x === null) this.x = null as Temporary;
-        else if (isNaN(+x)) { this.x = 0; }
-        else this.x = +x;
-        if (y === null) this.y = null as Temporary;
-        else if (isNaN(+y)) { this.y = 0; }
-        else this.y = +y;
-        if (w === null) this.w = null as Temporary;
-        else if (isNaN(+w)) { this.w = 0; }
-        else this.w = +w;
-        if (h === null) this.h = null as Temporary;
-        else if (isNaN(+h)) { this.h = 0; }
-        else this.h = +h; }
+        super();
+        ISize.init_constructor(this, x, y, w, h);
+    }
+
+    static init_constructor(thiss: GObject, x: any = 0, y: any = 0, w: any = 0, h: any = 0, ...a: any): void {
+        if (x === null) thiss.x = null as Temporary;
+        else if (isNaN(+x)) { thiss.x = 0; }
+        else thiss.x = +x;
+        if (y === null) thiss.y = null as Temporary;
+        else if (isNaN(+y)) { thiss.y = 0; }
+        else thiss.y = +y;
+        if (w === null) thiss.w = null as Temporary;
+        else if (isNaN(+w)) { thiss.w = 0; }
+        else thiss.w = +w;
+        if (h === null) thiss.h = null as Temporary;
+        else if (isNaN(+h)) { thiss.h = 0; }
+        else thiss.h = +h;
+        thiss.className = this.name; }
 
     toString(): string { return JSON.stringify({x: this.x, y: this.y, w: this.w, h: this.h}); }
 
@@ -4229,6 +4431,7 @@ export abstract class ISize<PT extends IPoint = IPoint> {
     }
 }
 
+@RuntimeAccessible
 export class Size extends ISize<Point> {
     private static sizeofvar: HTMLElement;
     private static $sizeofvar: JQuery<HTMLElement>;
@@ -4249,8 +4452,8 @@ export class Size extends ISize<Point> {
         const isOrphan = element.parentNode === null;
         // var visible = element.style.display !== 'none';
         // var visible = $element.is(":visible"); crea bug quando un elemento è teoricamente visibile ma orfano
-        const ancestors = U.ancestorArray(element);
-        const displayStyles: string[] = ancestors.map( e => e?.style?.display);
+        const ancestors =  windoww.U.ancestorArray(element);
+        const displayStyles: string[] = ancestors.map( (e: HTMLElement) => e?.style?.display);
         if (isOrphan) { Size.sizeofvar.append(element); }
         // show all and saveToDB visibility to restore it later
         for (let i = 0; i < ancestors.length; i++) { // document has undefined style
@@ -4268,7 +4471,7 @@ export class Size extends ISize<Point> {
             if (displayStyles[i]) ancestors[i].style.display = displayStyles[i];
             else ancestors[i].style.removeProperty('display');
         }
-        if (isOrphan) { U.clear(Size.sizeofvar); }
+        if (isOrphan) {  windoww.U.clear(Size.sizeofvar); }
         // Status.status.getActiveModel().graph.markS(size, false);
         return size;
     }
@@ -4305,8 +4508,8 @@ export class GraphSize extends ISize<GraphPoint> {
 
     static closestIntersection(vertexGSize: GraphSize, prevPt: GraphPoint, pt0: GraphPoint, gridAlign?: GraphPoint): GraphPoint | null {
         let pt: GraphPoint | null = pt0.duplicate();
-        const m = GraphPoint.getM(prevPt, pt);
-        const q = GraphPoint.getQ(prevPt, pt);
+        const m = GraphPoint.getM?.(prevPt, pt) as number;
+        const q = GraphPoint.getQ?.(prevPt, pt) as number;
         // U.pe( Math.abs((pt.y - m * pt.x) - (prevPt.y - m * prevPt.x)) > .001, 'wrong math in Q:', (pt.y - m * pt.x), ' vs ', (prevPt.y - m * prevPt.x));
         /*const isL = prevPt.x < pt.x;
     const isT = prevPt.y < pt.y;
@@ -4399,11 +4602,11 @@ export class GraphSize extends ISize<GraphPoint> {
 
     new(): this { return new GraphSize() as this; }
     makePoint(x: number, y: number): GraphPoint { return new GraphPoint(x, y) as GraphPoint; }
-/*
-    tl(): GraphPoint { return super.tl(); }
-    tr(): GraphPoint { return super.tr(); }
-    bl(): GraphPoint { return super.bl(); }
-    br(): GraphPoint { return super.br(); }*/
+    /*
+        tl(): GraphPoint { return super.tl(); }
+        tr(): GraphPoint { return super.tr(); }
+        bl(): GraphPoint { return super.bl(); }
+        br(): GraphPoint { return super.br(); }*/
     /*
     new(): this { return new GraphSize() as this; }
     duplicate(): this { return (this.new()).clone(this); }
@@ -4423,193 +4626,68 @@ export class GraphSize extends ISize<GraphPoint> {
 
 }
 
-export abstract class IPoint {
-    x: number;
-    y: number;
 
-    static getM(firstPt: IPoint, secondPt: IPoint): number { return (firstPt.y - secondPt.y) / (firstPt.x - secondPt.x); }
-    static getQ(firstPt: IPoint, secondPt: IPoint): number { return firstPt.y - IPoint.getM(firstPt, secondPt) * firstPt.x; }
+/*
+export class JsonUtil {
+    static getAnnotations(thiss: Json): Json[] {
+        const ret = thiss[ECorePackage.eAnnotations];
+        if (!ret || $.isEmptyObject(ret)) { return []; }
+        if (Array.isArray(ret)) { return ret; } else { return [ret]; } }
 
-    constructor(x: number | string = 0, y: number | string = 0) {
-        if (x === null) this.x = null as Temporary;
-        else if (isNaN(+x)) { this.x = 0; }
-        else this.x = +x;
-        if (y === null) this.y = null as Temporary;
-        else if (isNaN(+y)) { this.y = 0; }
-        else this.y = +y;}
+    static getDetails(thiss: Json): Json[] {
+        const ret = thiss[ECoreAnnotation.details];
+        if (!ret || $.isEmptyObject(ret)) { return []; }
+        if (Array.isArray(ret)) { return ret; } else { return [ret]; } }
 
-    toString(): string { return '(' + this.x + ', ' + this.y + ')'; }
-    clone(other: this): this { this.x = other.x; this.y = other.y; return this; }
+    static getChildrens(thiss: Json, throwError: boolean = false, functions: boolean = false): Json[] {
+        if (!thiss && !throwError) { return []; }
+        const mod = thiss[ECoreRoot.ecoreEPackage];
+        const pkg = thiss[ECorePackage.eClassifiers];
+        const cla = thiss[functions ? ECoreClass.eOperations : ECoreClass.eStructuralFeatures];
+        const fun = thiss[ECoreOperation.eParameters];
+        const lit = thiss[ECoreEnum.eLiterals];
 
-    abstract new(): this;
-    duplicate(): this { const ret = this.new(); ret.clone(this); return ret; }
+        const ret: any = mod || pkg || cla || fun || lit;
+        /*if ( ret === undefined || ret === null ) {
+      if (thiss['@name'] !== undefined) { ret = thiss; } // if it's the root with only 1 child arrayless
+    }* /
+        // U.pe(true, debug, 'getchildrens(', thiss, ')');
+        U.pe( throwError && !ret, 'getChildrens() Failed: ', thiss, ret);
+        // console.log('ret = ', ret, ' === ', {}, ' ? ', ($.isEmptyObject(ret) ? [] : [ret]));
+        if (!ret || $.isEmptyObject(ret)) { return []; }
+        if (Array.isArray(ret)) { return ret; } else { return [ret]; }
+    }
 
-    subtract(p2: IPoint, newInstance: boolean): this {
-        Log.e(!p2, 'subtract argument must be a valid point: ', p2);
-        let p1: this;
-        if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
-        p1.x -= p2.x;
-        p1.y -= p2.y;
-        return p1; }
-
-    add(p2: IPoint, newInstance: boolean): this {
-        Log.e(!p2, 'add argument must be a valid point: ', p2);
-        let p1: this;
-        if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
-        p1.x += p2.x;
-        p1.y += p2.y;
-        return p1; }
-
-    addAll(p: IPoint[], newInstance: boolean): this {
-        let i;
-        let p0: this;
-        if (!newInstance) { p0 = this; } else { p0 = this.duplicate(); }
-        for (i = 0; i < p.length; i++) { p0.add(p[i], true); }
-        return p0; }
-
-    subtractAll(p: this[], newInstance: boolean): this {
-        let i;
-        let p0: this;
-        if (!newInstance) { p0 = this; } else { p0 = this.duplicate(); }
-        for (i = 0; i < p.length; i++) { p0.subtract(p[i], true); }
-        return p0; }
-
-    multiply(pt: this, newInstance: boolean = false): this {
-        let ret: this = (newInstance ? this.duplicate() : this);
-        ret.x *= pt.x;
-        ret.y *= pt.y;
+    static read(json: Json, field: string, valueIfNotFound: any = 'read<T>()CanThrowError'): string {
+        let ret: any = json ? json[field] : null;
+        if (ret !== null && ret !== undefined && field.indexOf(Status.status.XMLinlineMarker) !== -1) {
+            U.pe(U.isObject(ret, false, false, true), 'inline value |' + field + '| must be primitive.', ret);
+            ret = U.multiReplaceAll('' + ret, ['&amp;', '&#38;', '&quot;'], ['&', '\'', '"']);
+        }
+        if ((ret === null || ret === undefined)) {
+            U.pe(valueIfNotFound === 'read<T>()CanThrowError', 'Json.read<',  '> failed: field[' + field + '], json: ', json);
+            return valueIfNotFound; }
         return ret; }
 
-    divide(pt: this, newInstance: boolean = false): this {
-        let ret = (newInstance ? this.duplicate() : this);
-        ret.x /= pt.x;
-        ret.y /= pt.y;
-        return ret; }
-
-    multiplyScalar(scalar: number, newInstance: boolean): this {
-        Log.e(isNaN(+scalar), 'IPoint.multiply()', 'scalar argument must be a valid number: ', scalar);
-        let p1: this;
-        if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
-        p1.x *= scalar;
-        p1.y *= scalar;
-        return p1; }
-
-    divideScalar(scalar: number, newInstance: boolean): this {
-        Log.e(isNaN(+scalar), 'IPoint.divide()', 'scalar argument must be a valid number: ', scalar);
-        let p1: this;
-        if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
-        p1.x /= scalar;
-        p1.y /= scalar;
-        return p1; }
-
-    isInTheMiddleOf(firstPt: this, secondPt: this, tolleranza: number): boolean {
-        const rectangle: Size = Size.fromPoints(firstPt, secondPt);
-        const tolleranzaX = tolleranza; // actually should be cos * arctan(m);
-        const tolleranzaY = tolleranza; // actually should be sin * arctan(m);
-        if (this.x < rectangle.x - tolleranzaX || this.x > rectangle.x + rectangle.w + tolleranzaX) { return false; }
-        if (this.y < rectangle.y - tolleranzaX || this.y > rectangle.y + rectangle.h + tolleranzaY) { return false; }
-        // const m = IPoint.getM(firstPt, secondPt);
-        // const q = IPoint.getQ(firstPt, secondPt);
-        const lineDistance = this.distanceFromLine(firstPt, secondPt);
-        // console.log('distance:', lineDistance, ', this:', this, ', p1:', firstPt, ', p2:', secondPt);
-        return lineDistance <= tolleranza; }
-
-    distanceFromLine(p1: IPoint, p2: IPoint): number {
-        const top: number =
-            + (p2.y - p1.y) * this.x
-            - (p2.x - p1.x) * this.y
-            + p2.x * p1.y
-            - p1.x * p2.y;
-        const bot =
-            (p2.y - p1.y) * (p2.y - p1.y) +
-            (p2.x - p1.x) * (p2.x - p1.x);
-        return Math.abs(top) / Math.sqrt(bot);  }
-
-    equals(pt: IPoint, tolleranzaX: number = 0, tolleranzaY: number = 0): boolean {
-        if (pt === null) { return false; }
-        return Math.abs(this.x - pt.x) <= tolleranzaX && Math.abs(this.y - pt.y) <= tolleranzaY; }
-
-    moveOnNearestBorder(startVertexSize: ISize, clone: boolean, graph: TODO/*IGraph*/, debug: boolean = true): IPoint {
-        const pt: IPoint = clone ? this.duplicate() : this;
-        const tl: IPoint = startVertexSize.tl();
-        const tr: IPoint = startVertexSize.tr();
-        const bl: IPoint = startVertexSize.bl();
-        const br: IPoint = startVertexSize.br();
-        const L: number = pt.distanceFromLine(tl, bl);
-        const R: number = pt.distanceFromLine(tr, br);
-        const T: number = pt.distanceFromLine(tl, tr);
-        const B: number = pt.distanceFromLine(bl, br);
-        const min: number = Math.min(L, R, T, B);
-        if (min === L) { pt.x = tl.x; }
-        if (min === R) { pt.x = tr.x; }
-        if (min === T) { pt.y = tr.y; }
-        if (min === B) { pt.y = br.y; }
-        if (debug && graph && pt instanceof GraphPoint) { graph.markg(pt, false, 'purple'); }
-        return pt; }
-
-    getM(pt2: IPoint): number { return IPoint.getM(this, pt2); }
-
-    degreeWith(pt2: IPoint, toRadians: boolean): number {
-        const directionVector: IPoint = this.subtract(pt2, true);
-        const ret: number = Math.atan2(directionVector.y, directionVector.x);
-        return toRadians ? ret : U.RadToDegree(ret); }
-
-    absolute(): number { return Math.sqrt(this.x * this.x + this.y * this.y); }
-    set(x: number, y: number) { this.x = x; this.y = y; }
+    static write(json: Json, field: string, val: string | any[]): string | any[] {
+        if (val !== null && field.indexOf(Status.status.XMLinlineMarker) !== -1) {
+            U.pe(val !== '' + val, 'inline value |' + field + '| must be a string.', val);
+            val = U.multiReplaceAll(val as string, ['&', '\'', '"'], ['&amp;', '&#38;', '&quot;']);
+        }
+        else U.pe(val !== '' + val || !U.isObject(val, true), 'primitive values should be inserted only inline in the xml:', field, val);
+        json[field] = val;
+        return val; }
 }
+*/
 
-export class GraphPoint extends IPoint{
-    dontmixwithPoint: any;
-    static fromEvent(e: JQuery.ClickEvent | JQuery.MouseMoveEvent | JQuery.MouseUpEvent | JQuery.MouseDownEvent | JQuery.MouseEnterEvent | JQuery.MouseLeaveEvent | JQuery.MouseEventBase)
-        : GraphPoint | null {
-        if (!e) { return null; }
-        const p: Point = new Point(e.pageX, e.pageY);
-        const g: any = null;
-        throw new Error("todo: const g: IGraph = Status.status.getActiveModel().graph;");
-        return g.toGraphCoord(p); }
+/*
+export class DetectZoom {
+    static device(): number { return detectzoooom.device(); }
+    static zoom(): number { U.pe(true, 'better not use this, looks like always === 1'); return detectzoooom.zoom(); }
+}*/
 
-    new(): this { return new GraphPoint() as this;}
-    /* duplicate(): this { return new GraphPoint(this.x, this.y) as this; }/*
-    clone(other: this): void { this.x = other.x; this.y = other.y; }
-    subtract(p2: this, newInstance: boolean): GraphPoint { return super.subtract(p2, newInstance) as GraphPoint; }
-    add(p2: GraphPoint, newInstance: boolean): GraphPoint { return super.add(p2, newInstance) as GraphPoint; }
-    multiply(scalar: number, newInstance: boolean): GraphPoint { return super.multiply(scalar, newInstance) as GraphPoint; }
-    divide(scalar: number, newInstance: boolean): GraphPoint { return super.divide(scalar, newInstance) as GraphPoint; }
-    isInTheMiddleOf(firstPt: GraphPoint, secondPt: GraphPoint, tolleranza: number): boolean { return super.isInTheMiddleOf(firstPt, secondPt, tolleranza); }
-    distanceFromLine(p1: GraphPoint, p2: GraphPoint): number { return super.distanceFromLine(p1, p2); }
-    equals(pt: GraphPoint, tolleranzaX: number = 0, tolleranzaY: number = 0): boolean { return super.equals(pt, tolleranzaX, tolleranzaY); }
-    moveOnNearestBorder(startVertexSize: GraphSize, clone: boolean, debug: boolean = true): GraphPoint {
-        return super.moveOnNearestBorder(startVertexSize, clone, debug) as GraphPoint; }
-    getM(pt2: GraphPoint): number { return super.getM(pt2); }
-    degreeWith(pt2: GraphPoint, toRadians: boolean): number { return super.degreeWith(pt2, toRadians); }*/
 
-}
-export class Point extends IPoint{
-    dontmixwithGPoint: any;
-    /// https://stackoverflow.com/questions/6073505/what-is-the-difference-between-screenx-y-clientx-y-and-pagex-y
-    /*static fromEvent(e: JQuery.ClickEvent | JQuery.MouseMoveEvent | JQuery.MouseUpEvent | JQuery.MouseDownEvent | JQuery.MouseEnterEvent | JQuery.MouseLeaveEvent | JQuery.MouseEventBase)
-        : Point {
-        const p: Point = new Point(e.pageX, e.pageY);
-        return p; }*/
-
-    new(): this { return new Point() as this;}
-    /* duplicate(): this { return new Point(this.x, this.y) as this; }
-    /*
-    subtract(p2: Point, newInstance: boolean): Point { return super.subtract(p2, newInstance) as Point; }
-    add(p2: Point, newInstance: boolean): Point { return super.add(p2, newInstance) as Point; }
-    // multiplyScalar(scalar: number, newInstance: boolean): Point { sdhfgmj }
-
-    // divideScalar(scalar: number, newInstance: boolean): Point { gdhfg }
-    isInTheMiddleOf(firstPt: Point, secondPt: Point, tolleranza: number): boolean { return super.isInTheMiddleOf(firstPt, secondPt, tolleranza); }
-    distanceFromLine(p1: Point, p2: Point): number { return super.distanceFromLine(p1, p2); }
-    equals(pt: Point, tolleranzaX: number = 0, tolleranzaY: number = 0): boolean { return super.equals(pt, tolleranzaX, tolleranzaY); }
-    moveOnNearestBorder(startVertexSize: GraphSize, clone: boolean, debug: boolean = true): Point {
-        return super.moveOnNearestBorder(startVertexSize, clone, debug) as Point; }
-    getM(pt2: Point): number { return super.getM(pt2); }
-    degreeWith(pt2: Point, toRadians: boolean): number { return super.degreeWith(pt2, toRadians); }*/
-
-}
-
+/*
 @RuntimeAccessible
 export class DPoint extends DPointerTargetable {
     static logic: typeof LPointerTargetable;
@@ -4623,11 +4701,19 @@ export class DPoint extends DPointerTargetable {
 }
 
 @RuntimeAccessible
-export class LPoint extends Mixin(DPoint, LPointerTargetable){
+export class LPoint extends MixOnlyFuncs(DPoint, LPointerTargetable){
     // todo: se vuoi evitare che si affolli troppo idlookup: crea un idlookup per ogni DClass e prependi this.className all'id
     static structure: typeof DPoint;
     static singleton: LPoint;
-}
+    constructor(x?: number, y?: number) {
+        super(x,y);
+        this.init_constructor(x, y);
+    }
+    init_constructor(x?: number, y?: number) {
+        this.superclass.LPointerTargetable(false, undefined);
+        this.superclass.DPoint(x, y);
+    }
+}*/
 
 export class FileReadTypeEnum {
     public static image: FileReadTypeEnum = "image/*" as any;
@@ -4637,3 +4723,5 @@ export class FileReadTypeEnum {
     public static AndManyOthersButThereAreTooMuch: string = "And many others... https://www.iana.org/assignments/media-types/media-types.xhtml";
     public static OrJustPutFileExtension: string = "OrJustPutFileExtension";
 }
+
+console.warn('loaded ts U');

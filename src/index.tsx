@@ -4,14 +4,19 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import {Provider} from "react-redux";
-import {store} from "./joiner";
+import {jodelInit, store} from "./joiner";
 
-ReactDOM.render(
-  // <React.StrictMode> <App /> </React.StrictMode>,
-    // eslint-disable-next-line react/jsx-no-undef
-    <Provider store={store}><App/></Provider>,
-  document.getElementById('root')
-);
+function start(){
+    jodelInit();
+    ReactDOM.render(
+        // <React.StrictMode> <App /> </React.StrictMode>,
+        // eslint-disable-next-line react/jsx-no-undef
+        <Provider store={store}><App/></Provider>,
+        document.getElementById('root')
+    );
+}
+
+setTimeout(start, 2);
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

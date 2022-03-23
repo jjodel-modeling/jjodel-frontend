@@ -8,4 +8,4 @@ windoww.store = store;
 windoww.s = store.getState;
 
 
-console.log('store:', {store, wstore: windoww.store, state: U.cloneObj(store.getState())});
+// console.log('store:', {store, wstore: windoww.store, state: U.cloneObj(store.getState())});

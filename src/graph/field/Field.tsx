@@ -17,6 +17,7 @@ class FieldState extends GraphElementStatee{
 export class FieldComponent
     extends superclass<AllProps, FieldState>{
 
+    // Obsoleta? usa Vertex con isVertex = false e cambia nome al componente
 }
 
 // private
@@ -47,7 +48,7 @@ const FieldConnected = connect<FieldReduxStateProps, FieldDispatchProps, FieldOw
 export const Field = (props: FieldOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     return <FieldConnected {...{...props, childrens}} />; }
 
-DModelElement.defaultComponent = Field;
+// DModelElement.defaultComponent = Field;
 /*
 if (!windoww.mycomponents) windoww.mycomponents = {};
 windoww.mycomponents.Field = Field;*/

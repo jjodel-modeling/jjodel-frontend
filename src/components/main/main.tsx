@@ -75,6 +75,7 @@ class DragPanel extends DragContext{
         return this;
     }
 }
+
 class DragTab extends DragContext{
     childrens!: never[];
     constructor(parent: DragContext | DragPanel){

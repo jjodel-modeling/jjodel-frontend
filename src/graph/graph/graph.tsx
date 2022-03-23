@@ -29,14 +29,7 @@ export class GraphComponent<AllProps extends AllPropss, GraphState extends Graph
         // console.log('dragx vertex mapstate', {DVoidVertex});
         return GraphElementComponent.mapStateToProps(state, ownProps, DGraph);
     }
-    /*static addLGraphElementStuff(state: IStore, ownProps: GraphOwnProps, stateProps: GraphReduxStateProps, dataClass: typeof DGraph = DGraph): void {
-        let dgraph: DGraph = DGraph.create(ownProps.data as string);
-        new CreateElementAction(dgraph);
-        stateProps.nodeid = dgraph.id;
-        stateProps.graphid = dgraph.id;
-        super.addLGraphElementStuff(state, ownProps, stateProps, dataClass, dgraph);
-
-    }*/
+    // obsoleta? usa Vertex con isGraph = true e cambiagli nome
 
 }
 // todo: devo permettere agli elementi di: multi-selezionare, resize, drag, rotate, drop (outside-inside container)
@@ -71,8 +64,8 @@ const GraphConnected = connect<GraphReduxStateProps, GraphDispatchProps, GraphOw
 export const Graph = (props: GraphOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     return <GraphConnected {...{...props, childrens}} />; }
 
-DModel.defaultComponent = Graph;
-DPackage.defaultComponent = Graph;
+// DModel.defaultComponent = Graph;
+// DPackage.defaultComponent = Graph;
 
 /*
 if (!windoww.mycomponents) windoww.mycomponents = {};

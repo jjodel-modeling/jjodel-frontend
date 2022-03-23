@@ -138,6 +138,7 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
                 break;
         }
     }
+    console.error({U, Umip:U.arrayMergeInPlace, WU: windoww.U, WUmip: windoww.U.arrayMergeInPlace});
     actions = U.arrayMergeInPlace<ParsedAction>(actions, derivedActions);
     const possibleInconsistencies: Dictionary<DocString<'subtype'>, Pointer[]> = {};
     // normalizzo tutti i path
@@ -248,6 +249,7 @@ export function reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: I
 }
 
 export function jodelInit() {
+    RuntimeAccessibleClass.fixStatics();
     let dClasses: string[] = RuntimeAccessibleClass.getAllNames().filter( rc => rc[0] === 'D');
 
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
@@ -263,7 +265,8 @@ export function jodelInit() {
         lclass.structure = dclass;
     }
 
-    setTimeout( () =>createOrOpenModelTab('m3'), 1);
+    IStore.fakeinit();
+//    setTimeout( () => createOrOpenModelTab('m3'), 1);
     // GraphDragHandler.init();
 
 }
@@ -272,5 +275,4 @@ export function jodelInit() {
 function afterStoreLoad() {
     console.error('aaaafter store load');
     jodelInit();
-    IStore.fakeinit();
 }

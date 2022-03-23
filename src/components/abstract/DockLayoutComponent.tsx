@@ -16,6 +16,7 @@ import {
     Selectors,
     store, TRANSACTION, U, Graph, Log, DViewElement, windoww,//  StyleEditor
 } from "../../joiner";
+import {DefaultNode} from "../../joiner/components";
 
 
 
@@ -66,7 +67,7 @@ function newTab(modelid0?: Pointer<DModel, 1, 1>, name?: string, gid?: Pointer<D
             <>{modelid ?
             <div>
                 <h1>Model name: {name}, id: {modelid}</h1>
-                <Graph data={modelid} nodeid={gid} graphid={gid} />
+                <DefaultNode data={modelid} nodeid={gid} graphid={gid} />
                 {/*<span>Edit Section</span>
                 <Graph data={modelid} nodeid={gid+'_'+2} graphid={gid+'_'+2} view = {Selectors.getByName(DViewElement, 'EditView')?.id as string} />
                 <span>Graph end</span>*/}.
@@ -133,6 +134,7 @@ export function createOrOpenModelTab(modelName: string, context0?: DockContext, 
     let isGraphOpen = (gid: string): boolean => { return false; } // todo
     let getGraphID = (): string => {
         Log.exDev(!model?.id, 'failed to createGraphID, model.id is null', {model, modelid: model.id, modelName});
+        console.log(!model?.id, 'dgraph.makeid', {DGraph, wdg: windoww.DGraph});
         return U.increaseEndingNumber(DGraph.makeID(model.id), false, false, isGraphOpen); }
 
     if (model as any) {

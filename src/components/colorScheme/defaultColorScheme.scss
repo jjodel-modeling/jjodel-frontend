@@ -1,0 +1,1473 @@
+.dock-style-graph {
+  // old app.component.ts
+  // body
+  white-space: nowrap;
+  /* css variables */
+  --topbarH: 40px;
+  --sidebarW: 283px;
+  --mainBorderWidth: 5px;
+  --mainBorder: var(--mainBorderColor) solid var(--mainBorderWidth);
+  --scrollbarW: 0px;
+  --tabH: 30px;
+  --bluebordercolor: #0084ff;
+  /*
+    --mainFontColor: transparent;
+    --mainBackgroundColor: transparent;
+    --mainBorderColor: transparent;
+    --secondaryBorderColor: transparent;
+    --popupBackgroundColor: transparent;
+    --altBackgroundColor: var(--mainBorderColor);
+    --altFontColor: transparent;*/
+
+  /* todo: questi colori vengono sempre rimpiazzati dinamicamente, esistono solo in fallback se l'utente elimina tutti i color-scheme*/
+  --color-1: #f5f5f5;
+  --color-2: #3c3c44;
+  --color-3: #2e2f34;
+  --color-4: #1E90FF;
+  --color-bg-1: #ffffff;
+  --color-bg-2: #f0f0f0;
+  --color-bg-3: #2e2f34;
+  --color-bg-30: transparent;
+
+  /*
+  --LightsecondaryBorderColor: var(--color-1); /*#c5c5c5;* /
+  --LightmainFontColor: var(--color-2);
+  --LightaltFontColor: var(--color-3);
+  --LightmainBackgroundColor: var(--color-bg-1);
+  --LightmainBorderColor: var(--color-bg-2); /*#9ca7b8; on intelliJidea darker shade /*#e5e5e5;* /
+  --LightpopupBackgroundColor: var(--color-bg-3);
+  /* --LightaltBackgroundColor: var(--color-bg-30);* /
+
+  --DarksecondaryBorderColor: #3c3c44;/*#c5c5c5;* /--color-1
+  --DarkmainFontColor: #b2b2ba; --color-2
+  --DarkaltFontColor: #f0f0f0;/* var(--LightmainBorderColor); * /--color-3
+  --DarkmainBackgroundColor: #1a1a1c;/*whiteSmoke;* /--color-bg-1
+  --DarkmainBorderColor: #2e2f34;/*#e5e5e5;* /--color-bg-2
+  --DarkpopupBackgroundColor: #44444c;--color-bg-3
+  /*--DarkaltBackgroundColor: var(--mainBorderColor);*/
+
+  --mainFontColor: var(--color-2);
+  --mainBackgroundColor: var(--color-bg-1);
+  --mainBorderColor: var(--color-bg-2); /*#9ca7b8; on intelliJidea darker shade /*#e5e5e5;*/
+  --secondaryBorderColor: var(--color-1); /*#c5c5c5;*/
+  --popupBackgroundColor: var(--color-bg-3);
+  /*--altBackgroundColor: var(--color-bg-30);*/
+  --altFontColor: var(--color-3);
+
+// body
+  overflow: hidden;
+  min-width: 100vw;
+  min-height: 100vh;
+  padding: 0px;
+  margin: 0px;
+  box-sizing: border-box;
+  display: flex;
+  flex-flow: column;
+  flex-wrap: wrap;
+
+  color: var(--mainFontColor);
+  font-family: Helvetica, OpenSans, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  background-color: var(--mainBackgroundColor);
+
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  -o-user-select: none; /*?*/
+  user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
+  /* css variables */
+  --topbarH: 40px;
+  --sidebarW: 283px;
+  --mainBorderWidth: 5px;
+  --mainBorder: var(--mainBorderColor) solid var(--mainBorderWidth);
+  --scrollbarW: 0px;
+  --tabH: 30px;
+  --bluebordercolor: #0084ff;
+  /*
+    --mainFontColor: transparent;
+    --mainBackgroundColor: transparent;
+    --mainBorderColor: transparent;
+    --secondaryBorderColor: transparent;
+    --popupBackgroundColor: transparent;
+    --altBackgroundColor: var(--mainBorderColor);
+    --altFontColor: transparent;*/
+
+  /* todo: questi colori vengono sempre rimpiazzati dinamicamente, esistono solo in fallback se l'utente elimina tutti i color-scheme*/
+  --color-1: #f5f5f5;
+  --color-2: #3c3c44;
+  --color-3: #2e2f34;
+  --color-4: #1E90FF;
+  --color-bg-1: #ffffff;
+  --color-bg-2: #f0f0f0;
+  --color-bg-3: #2e2f34;
+  --color-bg-30: transparent;
+
+  /*
+  --LightsecondaryBorderColor: var(--color-1); /*#c5c5c5;* /
+  --LightmainFontColor: var(--color-2);
+  --LightaltFontColor: var(--color-3);
+  --LightmainBackgroundColor: var(--color-bg-1);
+  --LightmainBorderColor: var(--color-bg-2); /*#9ca7b8; on intelliJidea darker shade /*#e5e5e5;* /
+  --LightpopupBackgroundColor: var(--color-bg-3);
+  /* --LightaltBackgroundColor: var(--color-bg-30);* /
+
+  --DarksecondaryBorderColor: #3c3c44;/*#c5c5c5;* /--color-1
+  --DarkmainFontColor: #b2b2ba; --color-2
+  --DarkaltFontColor: #f0f0f0;/* var(--LightmainBorderColor); * /--color-3
+  --DarkmainBackgroundColor: #1a1a1c;/*whiteSmoke;* /--color-bg-1
+  --DarkmainBorderColor: #2e2f34;/*#e5e5e5;* /--color-bg-2
+  --DarkpopupBackgroundColor: #44444c;--color-bg-3
+  /*--DarkaltBackgroundColor: var(--mainBorderColor);*/
+
+  --mainFontColor: var(--color-2);
+  --mainBackgroundColor: var(--color-bg-1);
+  --mainBorderColor: var(--color-bg-2); /*#9ca7b8; on intelliJidea darker shade /*#e5e5e5;*/
+  --secondaryBorderColor: var(--color-1); /*#c5c5c5;*/
+  --popupBackgroundColor: var(--color-bg-3);
+  /*--altBackgroundColor: var(--color-bg-30);*/
+  --altFontColor: var(--color-3);
+
+// body end
+
+  .Vertex {
+    --color-1: #FFFFFF;
+    --color-2: #000000;
+    --color-3: #000000;
+    --color-4: #1E90FF;
+    --color-5: #FF0000;
+  }
+
+  .Feature {
+    --color-f-1: #ff8c00;
+    --color-f-2: #28a745;
+    --color-f-3: #d3d3d3;
+  }
+
+  * {
+    box-sizing: border-box;
+    scrollbar-base-color: transparent;
+    scrollbar-3dlight-color: transparent;
+    scrollbar-highlight-color: rgba(93, 95, 104, 0); /* unused? totally transparent*/
+    scrollbar-track-color: rgba(93, 95, 104, 0);
+    scrollbar-arrow-color: #000;
+    scrollbar-shadow-color: rgba(93, 95, 104, 0);
+    scrollbar-darkshadow-color: rgba(93, 95, 104, 0);
+    /* -moz-appearance: none !important; */
+  }
+
+  .graph * {
+    overflow: inherit;
+    text-overflow: ellipsis;
+  }
+
+  /*because color will be inherited, but background not (since input and selects cannot inherit and inherit behave like transparent.
+   this is fine on the input itself but the optgroup cannot have transparent and will be always white.
+   now, the problem is if you set a bacgkround-color: inherit / transparent select inside a black element with white text, the optgroup will be white with white text.
+   */
+  select {
+    text-overflow: clip;
+  }
+
+  optgroup {
+    color: black;
+    background-color: white;
+  }
+
+  [title] {
+    cursor: help;
+  }
+
+  /*::-webkit-scrollbar {
+  display: none;
+  }*/
+  *:disabled {
+    cursor: not-allowed !important;
+  }
+
+  input[type=checkbox] {
+    -moz-appearance: checkbox !important;
+  }
+
+  input[type=radio] {
+    -moz-appearance: radio !important;
+  }
+
+  input:disabled {
+    opacity: .75;
+    filter: alpha(opacity=75); /* IE<9 */
+  }
+
+  .styleEditorSelected {
+    outline: 3px dashed red !important;
+  }
+
+  /*olds*/
+
+  /****************** attributeEditor.css */
+  .attributeEditor, .styleEditor {
+    /*display:inline-box;*/
+    position: absolute;
+    width: -moz-fit-content;
+    padding: 8px;
+    background-color: var(--mainBackgroundColor);
+    border: var(--mainBorder);
+    max-width: 100vw;
+    max-height: 100vh;
+    overflow: auto;
+  }
+
+  .styleEditor {
+    left: var(--sidebarW);
+    top: calc(var(--topbarH) + var(--tabH));
+    /*voglio che sia diversa perchè di solito parte con altezza pari a topbar.h e voglio che sia scrollabile senza spostarla*/
+    max-height: calc(100vh - calc(var(--topbarH) + var(--tabH)));
+  }
+
+  button.attributeEditorConfirm, button.styleEditorConfirm {
+    margin-left: calc(50% - 50px);
+    /* width:100px;
+     height:30px;*/
+  }
+
+  table.attributeTable .attributeEditorFieldName, table.styleTable .styleEditorFieldName {
+    max-width: 150px;
+    max-height: 150px;
+    overflow: auto;
+  }
+
+  .styleTable {
+    margin-top: 10px;
+    text-align: center;
+  }
+
+  .styleTable td {
+    max-width: 300px;
+  }
+
+  .attributeEditorTitle, .styleEditorTitle {
+    text-align: center;
+  }
+
+  .edgeRow {
+    display: flex;
+  }
+
+  .edgeRow > * {
+    display: flex;
+    margin: 0px;
+    flex-flow: column;
+    text-align: center;
+    padding: 4px;
+    flex-basis: 0px;
+    flex-grow: 0;
+    white-space: nowrap;
+  }
+
+  .isCompoundEdge {
+    display: flex;
+    margin: auto;
+  }
+
+  .styleCompoundWrapper {
+    flex-grow: 1;
+  }
+
+  .compoundEdgeStart, .compoundEdgeEnd {
+    text-align: center;
+    width: 100%;
+  }
+
+  .SidebarStyleHtml, .GraphStyleHtml {
+    display: flex;
+    justify-content: center;
+  }
+
+  /*
+  table.attributeTable {
+      border:none;
+      border-collapse: collapse;
+  }
+
+  table.attributeTable td {
+      border-left: 1px solid #000;
+      border-right: 1px solid #000;
+  }
+
+  table.attributeTable td:first-child {
+      border-left: none;
+  }
+
+  table.attributeTable td:last-child {
+      border-right: none;
+  }*/
+
+  .attributeEditorTitle input[type="checkbox"], .styleEditorTitle input[type="radio"] {
+    margin: 4px;
+  }
+
+  .ReferenceSelector {
+    float: right;
+  }
+
+  .rowModelDetail, .vertexModelDetail {
+    float: right;
+    border-radius: 50%;
+    width: 33px;
+    height: 33px;
+    padding-top: 2px;
+  }
+
+  .vertexModelDetail {
+    margin-left: 10px;
+    float: none;
+  }
+
+
+  /*//////////////////////////////////////////////////  css.css nothing of this should work*/
+  /*
+  .sidebarShell, .editorShell, .property_sidebar{
+    display: inline-block;/*flex;* /
+    /* height: calc(100vh - (var(--topbarH) + var(--tabH)));* /
+    overflow: hidden;
+    flex-wrap: wrap;}
+  .sidebarShell{
+    flex-grow: 0;
+    flex-basis: calc(var(--sidebarW));
+    background-color: var(--mainBackgroundColor);
+  }
+  #property_sidebar{
+    flex-grow: 0;
+    flex-basis: calc(var(--sidebarW));
+    background-color: var(--mainBackgroundColor);
+  }
+  .editorShell{
+    flex-basis: 0px;
+    flex-grow: 1;
+    width: calc(100vw - var(--sidebarW));
+  }
+  */
+  #metamodel_tab, #model_tab {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    align-content: flex-start;
+    width: 100vw;
+  }
+
+
+  #metamodel_editor, #model_editor {
+    display: flex;
+    flex-basis: 0px;
+    flex-grow: 1;
+    /*width: calc(100vw - var(--sidebarW) - var(--scrollbarW));/*NB: TO DO: quando nascondi l'hiddeninput */
+    height: calc(100vh - calc(var(--topbarH) + var(--tabH)));
+    background-color: #44444c; /*lightgoldenrodyellow;*/
+  }
+
+  #input {
+    display: none;
+    width: 100vw;
+    height: 300px;
+    overflow-y: scroll;
+  }
+
+
+  table.noBorder {
+    border: none;
+  }
+
+  .Vertex {
+    --color-1: #FFFFFF;
+    --color-2: #000000;
+    --color-3: #000000;
+    --color-4: #1E90FF;
+    --color-5: #FF0000;
+  }
+
+  .Feature {
+    --color-f-1: #ff8c00;
+    --color-f-2: #28a745;
+    --color-f-3: #d3d3d3;
+  }
+
+  * {
+    box-sizing: border-box;
+    scrollbar-base-color: transparent;
+    scrollbar-3dlight-color: transparent;
+    scrollbar-highlight-color: rgba(93, 95, 104, 0); /* unused? totally transparent*/
+    scrollbar-track-color: rgba(93, 95, 104, 0);
+    scrollbar-arrow-color: #000;
+    scrollbar-shadow-color: rgba(93, 95, 104, 0);
+    scrollbar-darkshadow-color: rgba(93, 95, 104, 0);
+    /* -moz-appearance: none !important; */
+  }
+
+  .graph * {
+    overflow: inherit;
+    text-overflow: ellipsis;
+  }
+
+  /*because color will be inherited, but background not (since input and selects cannot inherit and inherit behave like transparent.
+   this is fine on the input itself but the optgroup cannot have transparent and will be always white.
+   now, the problem is if you set a bacgkround-color: inherit / transparent select inside a black element with white text, the optgroup will be white with white text.
+   */
+  select {
+    text-overflow: clip;
+  }
+
+  optgroup {
+    color: black;
+    background-color: white;
+  }
+
+  [title] {
+    cursor: help;
+  }
+
+  /*::-webkit-scrollbar {
+  display: none;
+  }*/
+  *:disabled {
+    cursor: not-allowed !important;
+  }
+
+  input[type=checkbox] {
+    -moz-appearance: checkbox !important;
+  }
+
+  input[type=radio] {
+    -moz-appearance: radio !important;
+  }
+
+  input:disabled {
+    opacity: .75;
+    filter: alpha(opacity=75); /* IE<9 */
+  }
+
+  .styleEditorSelected {
+    outline: 3px dashed red !important;
+  }
+
+  /*olds*/
+
+  /****************** attributeEditor.css */
+  .attributeEditor, .styleEditor {
+    /*display:inline-box;*/
+    position: absolute;
+    width: -moz-fit-content;
+    padding: 8px;
+    background-color: var(--mainBackgroundColor);
+    border: var(--mainBorder);
+    max-width: 100vw;
+    max-height: 100vh;
+    overflow: auto;
+  }
+
+  .styleEditor {
+    left: var(--sidebarW);
+    top: calc(var(--topbarH) + var(--tabH));
+    /*voglio che sia diversa perchè di solito parte con altezza pari a topbar.h e voglio che sia scrollabile senza spostarla*/
+    max-height: calc(100vh - calc(var(--topbarH) + var(--tabH)));
+  }
+
+  button.attributeEditorConfirm, button.styleEditorConfirm {
+    margin-left: calc(50% - 50px);
+    /* width:100px;
+     height:30px;*/
+  }
+
+  table.attributeTable .attributeEditorFieldName, table.styleTable .styleEditorFieldName {
+    max-width: 150px;
+    max-height: 150px;
+    overflow: auto;
+  }
+
+  .styleTable {
+    margin-top: 10px;
+    text-align: center;
+  }
+
+  .styleTable td {
+    max-width: 300px;
+  }
+
+  .attributeEditorTitle, .styleEditorTitle {
+    text-align: center;
+  }
+
+  .edgeRow {
+    display: flex;
+  }
+
+  .edgeRow > * {
+    display: flex;
+    margin: 0px;
+    flex-flow: column;
+    text-align: center;
+    padding: 4px;
+    flex-basis: 0px;
+    flex-grow: 0;
+    white-space: nowrap;
+  }
+
+  .isCompoundEdge {
+    display: flex;
+    margin: auto;
+  }
+
+  .styleCompoundWrapper {
+    flex-grow: 1;
+  }
+
+  .compoundEdgeStart, .compoundEdgeEnd {
+    text-align: center;
+    width: 100%;
+  }
+
+  .SidebarStyleHtml, .GraphStyleHtml {
+    display: flex;
+    justify-content: center;
+  }
+
+  /*
+  table.attributeTable {
+      border:none;
+      border-collapse: collapse;
+  }
+
+  table.attributeTable td {
+      border-left: 1px solid #000;
+      border-right: 1px solid #000;
+  }
+
+  table.attributeTable td:first-child {
+      border-left: none;
+  }
+
+  table.attributeTable td:last-child {
+      border-right: none;
+  }*/
+
+  .attributeEditorTitle input[type="checkbox"], .styleEditorTitle input[type="radio"] {
+    margin: 4px;
+  }
+
+  .ReferenceSelector {
+    float: right;
+  }
+
+  .rowModelDetail, .vertexModelDetail {
+    float: right;
+    border-radius: 50%;
+    width: 33px;
+    height: 33px;
+    padding-top: 2px;
+  }
+
+  .vertexModelDetail {
+    margin-left: 10px;
+    float: none;
+  }
+
+
+  /*//////////////////////////////////////////////////  css.css nothing of this should work*/
+  /*
+  .sidebarShell, .editorShell, .property_sidebar{
+    display: inline-block;/*flex;* /
+    /* height: calc(100vh - (var(--topbarH) + var(--tabH)));* /
+    overflow: hidden;
+    flex-wrap: wrap;}
+  .sidebarShell{
+    flex-grow: 0;
+    flex-basis: calc(var(--sidebarW));
+    background-color: var(--mainBackgroundColor);
+  }
+  #property_sidebar{
+    flex-grow: 0;
+    flex-basis: calc(var(--sidebarW));
+    background-color: var(--mainBackgroundColor);
+  }
+  .editorShell{
+    flex-basis: 0px;
+    flex-grow: 1;
+    width: calc(100vw - var(--sidebarW));
+  }
+  */
+  #metamodel_tab, #model_tab {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    align-content: flex-start;
+    width: 100vw;
+  }
+
+
+  #metamodel_editor, #model_editor {
+    display: flex;
+    flex-basis: 0px;
+    flex-grow: 1;
+    /*width: calc(100vw - var(--sidebarW) - var(--scrollbarW));/*NB: TO DO: quando nascondi l'hiddeninput */
+    height: calc(100vh - calc(var(--topbarH) + var(--tabH)));
+    background-color: #44444c; /*lightgoldenrodyellow;*/
+  }
+
+  #input {
+    display: none;
+    width: 100vw;
+    height: 300px;
+    overflow-y: scroll;
+  }
+
+
+  table.noBorder {
+    border: none;
+  }
+
+  // old style.css
+  /*@import '../src/themes/squaredTabs.css'; /* You can add global styles to this file, and also import other style files */
+  :root {
+    --transparent-1: #ffffff;
+  }
+
+  ::-webkit-scrollbar {
+    /*background-color: rgba(00, 132, 255, 255);*/
+    /* background-color: var(--mainBorderColor); */
+    width: 10px; /* Remove scrollbar space */
+    /* background: transparent;  /* Optional: just make scrollbar invisible */
+    opacity: 0.1;
+  }
+
+  /*others*/
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-4);
+    border: 2px solid darkblue;
+    border-radius: 5px;
+    /* no one works
+    background-clip: padding-box;
+    filter: invert(); /*brightness(100%);* /
+    opacity: 0.5;*/
+
+  }
+
+
+
+  input, textarea, [contenteditable] {
+    -webkit-touch-callout: default;
+    -webkit-user-select: text;
+    -khtml-user-select: default;
+    -khtml-user-select: text;
+    -o-user-select: default;
+    -o-user-select: text; /*not sure wich works on -khtml and -o*/
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    border-radius: 7.5px;
+  }
+
+  input, select {
+    border-radius: 4px;
+    color: inherit;
+  }
+
+  svg input, svg textarea, svg [contenteditable] {
+    /* potrebbe avere senso fare input con font diverso dal testo immutabile
+    font-family: Consolas, "Courier New", monospace; */
+  }
+
+  /* *::-moz-selection, *::-webkit-selection  to change selection color*/
+  input::selection,
+  textarea::selection,
+  *[contenteditable=""]::selection,
+  *[contenteditable="true"]::selection {
+    background: #0078d7; /* default color for firefox */
+    color: white;
+  }
+
+  input[type="checkbox"], input[type="radio"], input[type="color"] {
+    width: 24px;
+    height: 24px;
+    margin: 0;
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+
+  input[type="color"] {
+    padding: 0;
+    vertical-align: middle;
+    /*border: none;*/
+  }
+
+  input[type="color"]::-webkit-color-swatch-wrapper {
+    /*il "bordo"?*/
+    padding: 2px;
+  }
+
+  input[type="color"]::-webkit-color-swatch {
+    /*il centro*/
+    /*border-radius: 100%;*/
+    border: none;
+  }
+
+  select {
+    border-width: 1px;
+  }
+
+  input[type="number"] {
+    text-align: center;
+  }
+
+  input[type="number"][digit="1"] {
+    min-width: 30px;
+  }
+
+  input[type="number"][digit="2"] {
+    min-width: 38px;
+  }
+
+  input[type="number"][digit="3"] {
+    min-width: 40px;
+  }
+
+  input[type="number"],
+  input[type="number"][digit="4"] {
+    min-width: 50px;
+  }
+
+  input[type="number"][digit="5"] {
+    min-width: 60px;
+  }
+
+  td, th {
+    padding: 5px;
+    border: 1px solid #aaaaaa;
+  }
+
+  th {
+    font-weight: 800;
+  }
+
+  .propertyBarContainer td, .propertyBarContainer th {
+    padding: 0;
+    border: none;
+  }
+
+  img {
+    image-rendering: -webkit-optimize-contrast; /* chrome have an issues with asymmetrical resized images becoming blurry */
+  }
+
+  /* Optional: show position indicator in red */
+  /* resizable border */
+  /* example-specific */
+  /*
+  .testresizablecontent {
+    background-color: blue;
+  }
+  .resizableBorder.left { border-left: 5px solid green; }
+  .resizableBorder.right { border-right: 5px solid green; }
+  .resizableBorder.top { border-top: 5px solid red; }
+  .resizableBorder.bottom { border-bottom: 5px solid red; }*/
+  .resizableBorder.left {
+    border-left: 5px solid rgb(46, 47, 52);
+  }
+
+  .resizableBorder.right {
+    border-right: 5px solid rgb(46, 47, 52);
+  }
+
+  .resizableBorder.top {
+    border-top: 5px solid rgb(46, 47, 52);
+  }
+
+  .resizableBorder.bottom {
+    border-bottom: 5px solid rgb(46, 47, 52);
+  }
+
+  /*.template, .whatisthis {
+    display: none !important;
+  }*/
+
+  .dropdown-item {
+    cursor: pointer;
+  }
+
+  /* real css */
+  .resizableBorderContainer {
+    background-color: var(--mainBackgroundColor);
+    display: flex;
+    flex-flow: column;
+  }
+
+  .resizableStrip {
+    min-width: 100%;
+    height: fit-content;
+    display: flex;
+  }
+
+  .resizableStrip.center {
+    flex-grow: 1;
+  }
+
+  input:focus, [contenteditable]:focus, textarea:focus {
+    outline: none;
+    box-shadow: 0 0 3pt 0.5pt var(--color-3);
+  }
+
+  input[type="radio"]:focus {
+    /*impossibile fare bordi-outline-shadow arrotondate senza ricreare l'elemento da 0 con altro html, è gestito nativamente come le select*/
+    box-shadow: none;
+  }
+
+
+  .resizableBorder.side.top, .resizableBorder.side.bottom {
+    flex-basis: 0;
+    flex-grow: 1;
+    cursor: n-resize;
+  }
+
+  .resizableBorder.side.left, .resizableBorder.side.right {
+    width: fit-content;
+    height: auto;
+    cursor: w-resize;
+  }
+
+  .resizableBorder.top.left {
+    cursor: nw-resize;
+  }
+
+  .resizableBorder.top.right {
+    cursor: ne-resize;
+  }
+
+  .resizableBorder.bottom.left {
+    cursor: sw-resize;
+  }
+
+  .resizableBorder.bottom.right {
+    cursor: se-resize;
+  }
+
+  /* others */
+
+  app-graph-tab-html {
+    flex-grow: 1;
+    position: relative;
+    display: flex;
+  }
+
+  #MM_INPUT {
+    display: none;
+  }
+
+  input:invalid:not([step]), input[invalid]:not([invalid="false"]):not([invalid="0"]), input[invalidDataList]:not([invalidDataList="false"]):not([invalidDataList="0"]) {
+    /*NB: segna come invalido ogni cosa fuori dallo step*/
+    border: 2px solid #FF2020 !important;
+    outline: 2px solid #ff2020 !important;
+    outline-offset: 2px !important;
+  }
+
+  /* horizontal & vertical filler */
+  .verticalFiller, .horizontalFiller, .horizontalChild, .verticalChild {
+    min-width: 0;
+    flex-basis: 0;
+    flex-grow: 1;
+    overflow: auto;
+  }
+
+  .verticalFillingContainer, .verticalContainer {
+    height: 100%;
+    display: flex;
+    flex-flow: column;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    text-align: center;
+  }
+
+  button.duplicate:not(.btn), button.delete:not(.btn), button.remove:not(.btn), button.copy:not(.btn), button.paste:not(.btn), button.edit:not(.btn) {
+    border: none;
+    background-size: cover;
+    background-color: var(--mainBackgroundColor);
+  }
+
+  /*
+  #metamodel_editor .allVertexContainer button.delete, #model_editor .allVertexContainer button.delete {
+    padding: 0 5px;
+    border: 1px solid black;
+    font-size: small;
+    background-image: unset;
+    background-color: unset;
+    border-radius: 10%;
+  }
+
+  #metamodel_editor .allVertexContainer button.delete:hover, #model_editor .allVertexContainer button.delete:hover {
+    background-color: red;
+  }*/
+
+  .horizontalFillingContainer, .horizontalContainer {
+    display: flex;
+    flex-flow: row;
+  }
+
+  .editorShell {
+    position: relative;
+  }
+
+  .viewpointShell {
+    padding: 0;
+  }
+
+  .viewpointShell * {
+    color: #FFFFFF;
+    text-shadow: 2px 2px 3px #4074b5, 2px -2px 3px #4074b5, -2px 2px 3px #4074b5, -2px -2px 3px #4074b5, 2px 0px 3px #4074b5, 0px 2px 3px #4074b5, -2px 0px 3px #4074b5, 0px -2px 3px #4074b5;
+    text-shadow: 2px 2px 3px #000000, 2px -2px 3px #000000, -2px 2px 3px #000000, -2px -2px 3px #000000, 2px 0px 3px #000000, 0px 2px 3px #000000, -2px 0px 3px #000000, 0px -2px 3px #000000;
+    text-shadow: 1px 1px 0px #777777, 1px -1px 0px #777777, -1px 1px 0px #777777, -1px -1px 0px #777777, 1px 0px 0px #777777, 0px 1px 0px #777777, -1px 0px 0px #777777, 0px -1px 0px #777777
+  }
+
+  .viewpointShell h6 {
+    color: #FFFFFF;
+    /*text-shadow: 2px 2px 3px #4074b5, 2px -2px 3px #4074b5, -2px 2px 3px #4074b5, -2px -2px 3px #4074b5, 2px 0px 3px #4074b5, 0px 2px 3px #4074b5, -2px 0px 3px #4074b5, 0px -2px 3px #4074b5;*/
+    text-shadow: 1px 1px 1.3px #777777, 1px -1px 1.3px #777777, -1px 1px 1.3px #777777, -1px -1px 1.3px #777777, 1px 0px 1.3px #777777, 0px 1px 1.3px #777777, -1px 0px 1.3px #777777, 0px -1px 1.3px #777777;
+  }
+
+  .viewpointShell input {
+    margin-top: auto;
+    margin-bottom: auto;
+  }
+
+  .mainRow {
+    flex-grow: 1;
+  }
+
+  .mconsole, .mmconsole {
+    border-top: var(--mainBorder);
+    background-color: var(--mainBackgroundColor);
+    overflow-y: auto;
+    flex-grow: 0;
+    /*position: fixed;
+    bottom: 0;*/
+    height: 100%;
+    width: 100%;
+  }
+
+  .production .todo {
+    display: none !important;
+  }
+
+  .debug .todo {
+    background-color: darkred !important;
+  }
+
+  .todo {
+    cursor: not-allowed !important;
+    color: white !important;
+  }
+
+  .todo > *, .todo * {
+    cursor: not-allowed !important;
+  }
+
+  button {
+    border-color: inherit;
+    outline-color: inherit;
+  }
+
+  /*
+  .Vertex input, .Vertex select, .Vertex button{
+    color: inherit; /* previene la sovrascrittura del colore da parte di bootstrap, voglio che erediti dal color scheme* /
+    border-color: inherit;
+    outline-color: inherit;
+  }
+  */
+  .Vertex select {
+    text-align-last: end;
+  }
+
+  .alertcontainer {
+    position: fixed;
+    display: flex;
+    top: 0;
+    height: 200%;
+    width: 100%;
+    max-height: 100vh;
+    overflow: hidden;
+    left: 0;
+    z-index: 100000;
+    pointer-events: none;
+    flex-wrap: wrap;
+    flex-flow: column;
+  }
+
+  .alertcontainer > * {
+    pointer-events: all;
+  }
+
+  .alertshell {
+    margin: auto;
+    padding-left: 30px;
+    padding-right: 30px;
+  }
+
+  .alert {
+    margin-bottom: 5px;
+  }
+
+  .UtabContainer {
+    flex-grow: 1;
+    flex-basis: 0;
+    overflow: auto;
+    display: flex;
+    flex-flow: column;
+  }
+
+  .UtabContentContainer {
+    flex-grow: 1;
+    flex-basis: 0;
+    overflow: auto;
+  }
+
+  .UtabContent {
+    position: relative;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: auto;
+    padding: 17px;
+    padding-right: calc(17px - 10px); /*for scrollbar ?*/
+    flex-grow: 1;
+  }
+
+  .UtabContent.main {
+    padding: 0;
+  }
+
+  .UtabHeader {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    margin: 6px;
+    margin-left: 0;
+    /*
+    border: var(--mainBorder);
+    */
+    background-color: var(--mainBackgroundColor);
+    flex-flow: column;
+    display: flex;
+    flex-grow: 1;
+    flex-basis: 0;
+    text-align: center;
+  }
+
+  .UtabHeader:last-of-type {
+    margin-right: 0;
+  }
+
+  .UtabHeader:not([selected="true"]) {
+    font-weight: bold;
+    background-color: var(--mainBorderColor);
+  }
+
+  .UtabHeaderContainer {
+    background-color: var(--mainBorderColor);
+    padding: 0;
+    margin: 0;
+    display: flex;
+  }
+
+  /* for squared */
+  /* for squared end*/
+  /* glowing tab headers* /
+  .UtabHeader {
+    border: none !important;
+    margin: 2px !important;
+    margin-top: 4px !important;
+    margin-bottom: 4px !important;
+    box-shadow: 2px 2px 3px #506894, 2px -2px 3px #506894, -2px 2px 3px #506894, -2px -2px 3px #506894, 2px 0px 3px #506894, 0px 2px 3px #506894, -2px 0px 3px #506894, 0px -2px 3px #506894;
+    box-shadow: 2px 2px 3px #606373, 2px -2px 3px #606373, -2px 2px 3px #606373, -2px -2px 3px #606373, 2px 0px 3px #606373, 0px 2px 3px #606373, -2px 0px 3px #606373, 0px -2px 3px #606373;
+  }
+  .UtabHeader[selected="true"] {
+    box-shadow: 2px 2px 3px #606373, 2px -2px 3px #606373, -2px 2px 3px #606373, -2px -2px 3px #606373, 2px 0px 3px #606373, 0px 2px 3px #606373, -2px 0px 3px #606373, 0px -2px 3px #606373;
+    box-shadow: 2px 2px 3px #506894, 2px -2px 3px #506894, -2px 2px 3px #506894, -2px -2px 3px #506894, 2px 0px 3px #506894, 0px 2px 3px #506894, -2px 0px 3px #506894, 0px -2px 3px #506894;
+    box-shadow: none;
+  }
+  /* glowing tab headers end*/
+  .sidebarShell:first-child {
+    padding-top: 15px;
+    padding-left: 10px;
+  }
+
+  .sidebarShell {
+    padding: 0; /*required for U.resizingBorders*/
+  }
+
+
+  .colContainer, .columnContainer {
+    display: flex;
+    flex-flow: row;
+    flex-wrap: wrap;
+  }
+
+  .colChild, .columnChild {
+    display: inline-flex;
+    flex-flow: wrap;
+    flex-grow: 1;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  /****** changelog style *******/
+  .changelog {
+    width: 60vw;
+    list-style: none;
+    user-select: text;
+  }
+
+  .changelog li.version::before,
+  .changelog li.feature::before,
+  .changelog li.info::before,
+  .changelog li.bugfix::before,
+  .changelog li.bug::before {
+    content: "•";
+    margin-right: 5px;
+    font-size: 1.5rem;
+    vertical-align: sub;
+  }
+
+  .changelog li.version::before {
+    content: "◦";
+    margin-right: 20px;
+    margin-left: -25px;
+  }
+
+  .changelog li.bugfix::before {
+    color: green;
+  }
+
+  .changelog li.bug::before {
+    color: red;
+  }
+
+  .changelog li.info::before {
+    color: gray;
+  }
+
+  .changelog li.feature::before {
+    color: dodgerblue;
+  }
+
+  .filterContainer {
+    display: flex;
+    width: 100%;
+  }
+
+  .filterContainer button.featurefilter {
+    flex-grow: 1;
+    margin: 10px;
+    margin-top: 0;
+    text-align: center;
+  }
+
+  .changelog li {
+    padding-left: 1em;
+    vertical-align: middle;
+  }
+
+  .changelog.li.versionpoint {
+    text-indent: -.7em;
+  }
+
+  .changelog .description, .changelog .title {
+    /* white-space: pre; */
+    white-space: break-spaces;
+  }
+
+  .changelog .title {
+    font-weight: bolder;
+  }
+
+  .changelog ul.subpoint, .changelog ul.versionSubPoints {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .changelog {
+    padding: 5px;
+    word-break: break-word;
+  }
+
+
+  /* css editor START */
+  .csseditorroot .roww .g0 {
+    flex-grow: 0;
+  }
+
+  .csseditorroot .roww .g1 {
+    flex-grow: 1;
+  }
+
+  .csseditorroot .roww .g2 {
+    flex-grow: 2;
+  }
+
+  .csseditorroot .roww .g3 {
+    flex-grow: 3;
+  }
+
+  .csseditorroot .roww .g {
+    display: flex;
+    flex-wrap: wrap;
+    flex-basis: 0;
+  }
+
+  .csseditorroot .roww .g > * {
+    margin: auto;
+    text-align: center;
+  }
+
+  .csseditorroot .roww .c {
+    position: relative;
+    margin: 0 auto;
+    font-weight: 800;
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .csseditorroot .roww .c > div {
+    position: absolute;
+    width: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .csseditorroot .roww .c input[type="color"] {
+    height: 100%;
+    width: 48px;
+  }
+
+  .csseditorroot .roww .delcssprop {
+    margin-right: 5px;
+  }
+
+  .csseditorroot .roww .cssprop {
+    margin: auto 5px;
+  }
+
+  .csseditorroot .roww .cssval {
+    margin: auto 5px;
+    margin-right: 0;
+  }
+
+  .csseditorroot .roww .rc {
+    color: white;
+  }
+
+  .csseditorroot .roww .fc > div {
+    z-index: 1;
+  }
+
+  .csseditorroot .c input[type="color"]::-webkit-color-swatch {
+    opacity: 0;
+  }
+
+  .csseditorroot div.addclass {
+    display: flex;
+  }
+
+  .csseditorroot div.addclass > input {
+    flex-grow: 1;
+    flex-basis: 0;
+  }
+
+  /*
+  *::-webkit-color-swatch-wrapper{
+  }
+  *::-webkit-color-swatch{
+      filter: invert(1);
+  }*/
+  .csseditorroot .csscontainer {
+    margin-top: 5px;
+    margin-bottom: 30px;
+  }
+
+  .csseditorroot .css_editor {
+    margin-top: 5px;
+  }
+
+  .csseditorroot button.addclass {
+    margin-left: 5px;
+  }
+
+  .csseditorroot .roww {
+    display: flex;
+  }
+
+
+  .csseditorroot .cscheme {
+    min-height: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    flex-grow: 1;
+  }
+
+  .csseditorroot .colorblock {
+    min-width: 20px;
+    flex-grow: 1;
+    min-height: 20px;
+    display: flex;
+  }
+
+  .csseditorroot .cschemeroot {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .csseditorroot .cschemeroot > * {
+    flex-grow: 1;
+  }
+
+  .csseditorroot .colorblock.empty {
+    border: 1px solid black;
+    text-align: center;
+    border-left-width: 0px;
+  }
+
+  .csseditorroot .colorblock.empty:first-child {
+    border-left-width: 1px;
+  }
+
+  .csseditorroot .colorblock.empty::after {
+    content: '?';
+    margin: auto;
+  }
+
+  .csseditorroot .dropdown button {
+    width: 100%;
+  }
+
+  .resizableContent {
+    flex-grow: 1 !important;
+  }
+
+  /* css editor END */
+  .graph .allVertexContainer {
+    transform-style: preserve-3d;
+    overflow: visible;
+  }
+
+  .hover-unfade:hover, .hover-unfade:focus-within {
+    opacity: 1 !important;
+  }
+
+  /* direct child or with someone in the middle that is not excluded */
+  [hover-base="v1"] [hover-display="v1"],
+  [hover-base="f1"] [hover-display="f1"],
+  [hover-base="p1"] [hover-display="p1"],
+  [hover-base="l1"] [hover-display="l1"] {
+    visibility: hidden;
+  }
+
+  [hover-base="v1"]:hover [hover-display="v1"],
+  [hover-base="f1"]:hover [hover-display="f1"],
+  [hover-base="p1"]:hover [hover-display="p1"],
+  [hover-base="l1"]:hover [hover-display="l1"],
+  [hover-base="v1"]:focus-within [hover-display="v1"],
+  [hover-base="f1"]:focus-within [hover-display="f1"],
+  [hover-base="p1"]:focus-within [hover-display="p1"],
+  [hover-base="l1"]:focus-within [hover-display="l1"] {
+    /* todo: proposta di cambiamento css perchè questa soluzione fa schifo, e non esistono soluzioni migliori nel css attuale.
+    * 1) [hover-base=@someVariable@] [hover-display=@someVariable@], would be great. (@somevariable@) is never defined in css, it just check if the html attrib content. match with children attrib content.
+    * 2) reference inside html, parent is pointing to children through id or selector (or same attrib value) and i do something like: parentSelector->childSelector, that is equal to: match parent, follow the reference (->) from that position in dom, match childSelector. benefits: similar to ">" operator but a child is logically defined instead of dom-position defined
+  */
+    /* direct child or with someone in the middle that is not excluded */
+    visibility: visible;
+  }
+
+  .hideempty:empty {
+    display: none !important;
+  }
+
+  input, select, option, optgroup {
+    font-size: inherit;
+  }
+
+  .graph .no-ov, .graph select, .graph input,
+  .no-ov, select, input {
+    overflow: hidden;
+  }
+
+  .graph .ov,
+  .ov {
+    overflow: visible;
+  }
+
+  /*************************** icons **********************************/
+
+  /*
+  body.Dark button.delete:not(.btn),
+  body.Dark button.remove:not(.btn) { background-image: url(../img/black/delete.png); }
+  body.Dark button.duplicate:not(.btn),
+  body.Dark button.copy:not(.btn) { background-image: url(../img/black/duplicate.png); }
+  body.Dark button.edit:not(.btn) { background-image: url(../img/black/edit.png); }
+
+  body.Light button.delete:not(.btn),
+  body.Light button.remove:not(.btn) { background-image: url(../img/white/deletew.png); }
+  body.Light button.duplicate:not(.btn),
+  body.Light button.copy:not(.btn) { background-image: url(../img/white/duplicatew.png); }
+  body.Light button.edit:not(.btn) { background-image: url(../img/white/editw.png); }*/
+
+  /*
+  icon{
+    background-image: url(../img/icons/missing_image.png);
+    background-repeat: no-repeat;
+    background-size: contain;
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    margin-right: 5px;
+  }
+  icon[big]{
+    width: 100px;
+    height: 100px;
+  }
+  icon[empty]{
+    visibility: hidden;
+  }
+  icon[duplicate]{
+    background-image: url(../img/icons/google/2x/baseline_content_paste_black_24dp.png);
+  }
+  icon[extend]{
+    background-image: url(../img/icons/extend.png);
+    filter: brightness(0);
+  }
+  icon[trash]{
+    background-image: url(../img/icons/google/2x/outline_delete_black_24dp.png);
+  }
+  icon[add]{
+    background-image: url(../img/icons/google/2x/outline_add_black_24dp.png);
+  }
+  icon[magic]{
+    background-image: url(../img/icons/google/2x/outline_auto_awesome_black_24dp.png);
+  }
+  icon[edit]{
+    background-image: url(../img/icons/google/2x/outline_edit_black_24dp.png);
+  }
+  icon[up]{
+    background-image: url(../img/icons/google/2x/outline_arrow_upward_black_24dp.png);
+  }
+  icon[down]{
+    background-image: url(../img/icons/google/2x/outline_arrow_downward_black_24dp.png);
+  }
+  icon[left]{
+    background-image: url(../img/icons/google/2x/outline_arrow_back_black_24dp.png);
+  }
+  icon[right]{
+    background-image: url(../img/icons/google/2x/outline_arrow_forward_black_24dp.png);
+  }
+  */
+}

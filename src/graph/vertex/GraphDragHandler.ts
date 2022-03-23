@@ -10,11 +10,12 @@ import {
     SetRootFieldAction,
     store,
     TRANSACTION,
-    DUser, RuntimeAccessible, $, DPointerTargetable, Log, MyProxyHandler, Size, U
+    DUser, RuntimeAccessible, $, DPointerTargetable, Log, MyProxyHandler, Size, U, LPointerTargetable
 } from "../../joiner";
 import React from "react";
 
 const debug: boolean = false;
+let gdasuperclass: Omit<typeof RuntimeAccessibleClass, 'singleton'> = RuntimeAccessibleClass;
 @RuntimeAccessible
 export class GraphDragHandler extends RuntimeAccessibleClass {
     public static singleton: GraphDragHandler;
@@ -78,7 +79,7 @@ export class GraphDragHandler extends RuntimeAccessibleClass {
     }
 
     public stopDragging(): void {
-        console.log('vertex evt mousedown dragx stop', {draggingSelection: this.draggingSelection, thiss:this});
+        console.log('vertex evt mousedown dragx stop', {draggingSelection: [...this.draggingSelection], thiss:this});
         Log.i(debug, 'dragx stop', {draggingSelection: this.draggingSelection, thiss:this});
         GraphDragHandler.isDragging = false;
         this.totalDragOffset.set(0, 0);
@@ -108,7 +109,9 @@ export class GraphDragHandler extends RuntimeAccessibleClass {
             let component = this.vertexToComponent[dragged.id];
             // Log.i(debug, 'dragx dragging component', {component});
             if (!component) continue; // got unmounted before deselecting
-            component?.setAbsolutePosition(offset);
+
+            // component?.setAbsolutePosition(offset);
+            component?.setAbsolutePosition(mouseposAbsolute); // (offset);
         }
         return;
     }

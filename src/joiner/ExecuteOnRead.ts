@@ -91,7 +91,7 @@ windoww.Components = Componentss;
 function afterStoreLoad() {
     console.error('aaaafter store load');
     jodelInit();
-    IStore.fakeinit();
 }
 
-afterStoreLoad();
+// afterStoreLoad();
+// setTimeout( afterStoreLoad, 0);

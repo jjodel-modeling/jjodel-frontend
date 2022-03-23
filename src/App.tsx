@@ -1,10 +1,11 @@
 import React, {Component, PureComponent} from 'react';
 import logo from './logo.svg';
 import './App.scss';
-import {U, DockLayoutComponent} from "./joiner";
+import {U, DockLayoutComponent, ColorScheme} from "./joiner";
 
 interface AllProps{}
 interface MPState{}
+
 
 
 
@@ -30,6 +31,7 @@ class App extends PureComponent<AllProps, MPState>{
                     </a>
                 </header>
                 <DockLayoutComponent />
+                <ColorScheme />
                 { //<TabContainerComponent/>
                 }
             </div>

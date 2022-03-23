@@ -29,7 +29,7 @@ import {
     LGraph,
     DVoidVertex,
     defaultVSize,
-    MyProxyHandler, DClass, DClassifier,
+    MyProxyHandler, DClass, DClassifier, GObject, DPackage, DModel, DGraphElement, DVertex, DGraph, DGraphVertex
 } from "../../joiner";
 const superclass: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 
@@ -56,7 +56,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
     ////// mapper func
     static mapStateToProps(state: IStore, ownProps: VertexOwnProps): VertexReduxStateProps {
         // console.log('dragx vertex mapstate', {DVoidVertex});
-        const superret: VertexReduxStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DVoidVertex) as VertexReduxStateProps;
+        let DGraphElementClass: typeof DGraphElement;
+        if (ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraphVertex;
+        else if (ownProps.isVertex && !ownProps.isGraph) DGraphElementClass = DVoidVertex; // DVertex
+        else if (!ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraph;
+        else DGraphElementClass = DGraphElement;
+        const superret: VertexReduxStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass) as VertexReduxStateProps;
         const ret: VertexReduxStateProps = new VertexReduxStateProps();
         // console.log('Verx mapstate', {ret, superret, state, ownProps});
         Log.exDev(!ownProps.nodeid, 'node id is undefined', {ownProps});
@@ -94,31 +99,53 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
 
 
     getVertex(): LVoidVertex { return this.props.node; }
-    private onclick0(e: React.MouseEvent<HTMLDivElement>): void {
+    private onclick_graph = (e: React.MouseEvent<HTMLDivElement>): void => {
+        console.log('graph evt click');
+    }
+    private onclick_vertex = (e: React.MouseEvent<HTMLDivElement>): void => {
         console.log('vertex evt click');
     }
-    private onmousedown0 = (e:React.MouseEvent<HTMLDivElement>): void => {
+
+    private onmousedown_graph = (e:React.MouseEvent<HTMLDivElement>): void => {
+        console.log('graph evt mousedown'); }
+
+    private onmousedown_vertex = (e:React.MouseEvent<HTMLDivElement>): void => {
         console.log('vertex evt mousedown');
         (e.nativeEvent as any).clickedOnVertex = true;
+        windoww.mp = this.props.data;
+        windoww.selected = this;
         if (e.shiftKey || e.ctrlKey) {
             console.log('mousedown select() check:', {isSelected:this.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
             if (this.isSelected()) { this.deselect(); return; }
             this.select();
-            return;
-        }
+            return; }
         this.select();
         console.log('vertex evt mousedown start drag');
-        GraphDragHandler.singleton.startDragging(e, this.props.node.__raw); // .mousedownStartDragOn = this.props.nodeid;
+        GraphDragHandler.singleton.startDragging(e, undefined && this.props.node.__raw);
         // this.clearCurrentUserSelection();
     }
 
     private onclick = (e: React.MouseEvent<HTMLDivElement>): void => {
-        this.onclick0(e);
-        this.props.onclick?.(e); }
+        if (this.props.isVertex) this.onclick_vertex(e);
+        if (this.props.isGraph) this.onclick_graph(e);
+        this.props.onclick?.(e);
+
+        // e.preventDefault();
+        e.stopPropagation();
+        e.nativeEvent.stopPropagation();
+    }
 
     private onmousedown = (e: React.MouseEvent<HTMLDivElement>): void => {
-        this.onmousedown0(e);
-        this.props.onmousedown?.(e); }
+        if (this.props.isVertex) this.onmousedown_vertex(e);
+        if (this.props.isGraph) this.onmousedown_graph(e);
+        this.props.onmousedown?.(e);
+
+        // e.preventDefault();
+        e.stopPropagation();
+        e.nativeEvent.stopPropagation();
+
+        console.log('vertex mousedown stop evt', e);
+    }
 
     private getMpID(): Pointer<DModelElement> {
         return this.props.data.id;
@@ -140,22 +167,30 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         const vsize: GraphSize | undefined = this.getCurrentVPosIncludingPanAndZoom();
         // const viewTransient = this.props.view.__transient;
 
-        const sizestyle: CSSProperties = {};
-        sizestyle.transform = '';
-        if (!vsize) {
-            // sizestyle.display = 'none';
-            sizestyle.backgroundColor = 'black';
-        } else {
-            if (false && this.props.view.scalezoomy) sizestyle.transform += " scaleY(0.?)";
-            else sizestyle.height = vsize.h + "px";
-            if (false && this.props.view.scalezoomx) sizestyle.transform += " scaleX(0.?)";
-            else sizestyle.width = vsize.w + "px";
-            sizestyle.top = vsize.y + "px";
-            sizestyle.left = vsize.x + "px";
+        const sizestyle: CSSProperties = { display: 'flex', flexWrap: "wrap"};
+        if (this.props.isVertex) {
+            sizestyle.transform = '';
+            if (!vsize) {
+                // sizestyle.display = 'none';
+                sizestyle.backgroundColor = 'black';
+            } else {
+                if (false && this.props.view.scalezoomy) sizestyle.transform += " scaleY(0.?)";
+                else sizestyle.height = vsize.h + "px";
+                if (false && this.props.view.scalezoomx) sizestyle.transform += " scaleX(0.?)";
+                else sizestyle.width = vsize.w + "px";
+                sizestyle.top = vsize.y + "px";
+                sizestyle.left = vsize.x + "px";
+            }
+        }
+        if (this.props.isGraph && !this.props.isVertex) {
+            sizestyle.width = '100%';
+            sizestyle.height = '100%';
+            sizestyle.flexGrow = 1;
+            sizestyle.overflow = 'hidden';
         }
 
-        sizestyle.border = "2px solid gray";
-        sizestyle.borderColor = this.props.node?.isSelected[DUser.current] ? 'blue' : 'black';
+        // sizestyle.border = "2px solid gray";
+        // sizestyle.borderColor = this.props.node?.isSelected[DUser.current] ? 'blue' : 'black';
         console.log('isSelected ? ', this.props.node && this.props.node.isSelected, this.props.node?.__raw.isSelected);
 
         let classes: string[] = this.props.class ? (Array.isArray(this.props.class) ? this.props.class : [this.props.class]) : [];
@@ -166,18 +201,37 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         return (<>
             <div
                 id={this.props.nodeid}
-                className={classes.join(' ')}
+                data-dataid={this.props.data?.id}
+                data-viewid={this.props.view?.id}
+                data-modelname={this.props.data?.className}
+                className={"StaticVertex " + classes.join(' ')}
                 ref={this.parentRef}
                 onClick={this.onclick}
                 onMouseDown={this.onmousedown}
-                data-userSelecting={JSON.stringify(this.props.node?.__raw.isSelected || {})}
+                data-userselecting={JSON.stringify(this.props.node?.__raw.isSelected || {})}
                 style={{...this.props.style, ...sizestyle} }
-            ><div>{'selected: ' + (!!this.props.node?.__raw.isSelected[DUser.current])}</div>
-                <Overlap autosizex={false}>
-                    <div className={"vertex-controls"} />
-                    <div>V_Size: <span>{vsize?.toString()}</span></div>
-                    <div>{super.render()}</div>
-                </Overlap>
+                >
+                {
+                    false &&
+                    <div >size: {JSON.stringify(sizestyle)}</div>
+                }
+                {/*<div>{
+                    '__selected: ' + (
+                    !!((this.props.node?.__raw?.isSelected || {})[DUser.current])) +
+                ', __isG:' + this.props.isGraph + ', __isV:' +
+                this.props.isVertex + ', __DType:' +
+                (this.props.node && this.props.node.className)}</div>*/}
+                {
+                    this.props.isVertex
+                        ?
+                        <Overlap autosizex={false}>
+                            {/*
+                            <div className={"vertex-controls"}/>
+                            <div style={{display: "none"}}>V_Size: <span>{vsize?.toString()}</span></div>*/}
+                            <div style={{height:'min-content'}}>{super.render()}</div>
+                        </Overlap>
+                        :
+                        <div>{super.render()}</div>}
             </div>
         </>); }
     /*
@@ -197,7 +251,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         // const zoom = new GraphSize(1, 1); // todo: take it from graph? or just do it with css zoom-scale?
         console.log('fff', {thiss:this, getvpos:this.getVertexPosition(), node: this.props.node});
         const currentVPos = new GraphSize().clone(this.getVertexPosition());
-        let graphSize: GraphSize = new GraphSize().clone(this.props.graph.size);
+        let graphSize: GraphSize = new GraphSize().clone(this.props.graph.graphSize);
         let graphZoom: GraphPoint = new GraphPoint().clone(this.props.graph.zoom);
         let newpos: GraphPoint = (pos as any as GraphPoint).multiply(this.props.graph.zoom);
         console.log("dragx setAbsolutePosition: newpos:" + newpos + ', pos:' + pos + ", zoom:" + this.props.graph.zoom, {Point});
@@ -259,9 +313,9 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         if (!this.props.graph) return undefined;
 
         const gMinPos: GraphPoint = new GraphPoint();
-        gMinPos.clone(this.props.graph.size as any);
+        gMinPos.clone(this.props.graph.graphSize);
         // ret.subtract(gMinPos); todo: re-enable when there are multiple vertices, with 1 vertex it is basically auto-focus
-        console.log('getCurrentVPosIncludingPanAndZoom graphsize', {graph: this.props.graph, gsize: this.props.graph?.size, gMinPos, ret});
+        console.log('getCurrentVPosIncludingPanAndZoom graphsize', {graph: this.props.graph, gsize: this.props.graph?.graphSize, gMinPos, ret});
         return ret; }
 
     private isSelected(byUser?: Pointer<DUser> & string): boolean { return this.props.node?.isSelected[byUser || DUser.current] || false; }
@@ -269,10 +323,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
     private deselect(forUser:Pointer<DUser, 0, 1> = null): void {
         if (!forUser) forUser = DUser.current;
         if (!this.isSelected(forUser)) return;
+        return;
+        /*
         delete this.props.node.isSelected[forUser]; // todo: come reagisce il proxyhandler sulla delete? invoca la set? devo registrare un'altra funzione in override di "Proxy" nativo?
-        U.arrayRemoveAll<DVoidVertex>(GraphDragHandler.singleton.draggingSelection, this.props.node);
+        U.arrayRemoveAll<DGraphElement>(GraphDragHandler.singleton.draggingSelection, this.props.node);
         new SetRootFieldAction('_lastSelected', {node: this.props.graphid, view: this.props.parentViewId, modelElement: this.props.graph.model?.id});
-        console.log('deselect()');
+        console.log('deselect()');*/
     }
 
     private select(forUser:Pointer<DUser, 0, 1> = null): void {
@@ -290,6 +346,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
 class VertexOwnProps extends GraphElementOwnProps {
     onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
     onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    isGraph?: boolean = false;
+    isVertex?: boolean = true;
     // propsRequestedFromHtmlAsAttributes: string;
 }
 // private
@@ -316,8 +374,21 @@ const VertexConnected = connect<VertexReduxStateProps, VertexDispatchProps, Vert
 
 
 export const Vertex = (props: VertexOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <VertexConnected {...{...props, childrens}} />; }
+    return <VertexConnected {...{...props, childrens}} isGraph={false} isVertex={true}/>; }
+
+export const Graph = (props: VertexOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    return <VertexConnected {...{...props, childrens}} isGraph={true} isVertex={false}/>; }
+
+export const GraphVertex = (props: VertexOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    return <VertexConnected {...{...props, childrens}} isGraph={true} isVertex={true}/>; }
+
+export const Field = (props: VertexOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    return <VertexConnected {...{...props, childrens}} isGraph={false} isVertex={false}/>; }
 DClassifier.defaultComponent = Vertex;
+DPackage.defaultComponent = GraphVertex;
+DModel.defaultComponent = Graph;
+
+DModelElement.defaultComponent = Field; // fallback
 
 /*
 if (!windoww.mycomponents) windoww.mycomponents = {};

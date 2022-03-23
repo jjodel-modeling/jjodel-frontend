@@ -1,4 +1,4 @@
-import {Mixin} from "ts-mixer";
+// import {Mixin} from "ts-mixer";
 import {isDeepStrictEqual} from "util";
 
 import {
@@ -16,25 +16,41 @@ import {
     store,
     LModel,
     DModel,
-    RuntimeAccessibleClass, RuntimeAccessible, Dictionary, DocString, DUser, GObject, MyProxyHandler,
+    RuntimeAccessibleClass,
+    RuntimeAccessible,
+    Dictionary,
+    DocString,
+    DUser,
+    GObject,
+    MyProxyHandler,
+    MixOnlyFuncs,
+    windoww,
 } from "../../joiner";
 
+console.warn('ts loading graphDataElement');
 @RuntimeAccessible
 export class DGraphElement extends DPointerTargetable {
     static logic: typeof LPointerTargetable;
-    graphID: Pointer<DGraph, 1, 1, LGraph>;
+    graphID!: Pointer<DGraph, 1, 1, LGraph>;
     graph!: LGraph;
     // size: GraphSize;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
 
 
     containedIn: Pointer<DGraphElement, 0, 1, LGraphElement>;
-    subElements: Pointer<DGraphElement, 0, 'N', LGraphElement>;
+    subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
+
+    static init_constructor(thiss: DGraphElement, isUser: boolean = false, nodeID: string | undefined, graphID: string, a?: any): void {
+        // console.log({dpt:DPointerTargetable.init_constructor, wdpt:(window as any).DPointerTargetable.init_constructor});
+        windoww.DPointerTargetable.init_constructor(thiss, false, nodeID);
+        thiss.graphID = graphID;
+        thiss.subElements = [];
+        thiss.className = this.name;
+    }
 
     constructor(isUser: boolean = false, nodeID: string | undefined, graphID: string, a?: any) {
         super(false, nodeID);
-        this.graphID = graphID;
-        this.subElements = [];
+        DGraphElement.init_constructor(this, isUser, nodeID, graphID, a);
         // this.size = new GraphSize(0, 0, 0, 0);
     }
 
@@ -43,9 +59,28 @@ export class DGraphElement extends DPointerTargetable {
 
 @RuntimeAccessible
 export class DGraph extends DGraphElement {
-    size!: GraphSize; // x,y are minimum x,y position of contained vertices, w,h are distance(min_pos, max_pos)
+    static getNodes(dmp: import("./modelElement").DModelElement[], out: {$matched: JQuery<HTMLElement>; $notMatched: JQuery<HTMLElement>; }): JQuery<HTMLElement> {
+
+        let $allnodes = $('[data-dataid]');
+        let matchedids: Pointer[] = (dmp || []).map(d => d.id);
+        let matchedidmap:Dictionary<string, boolean> = U.objectFromArrayValues(matchedids);
+        if (!out) out = {} as any;
+
+        let allnodesarr = [...$allnodes];
+        let filternode = (d: HTMLElement) => {
+            if (!d?.dataset?.dataid) return false;
+            let id: string = ''+d?.dataset?.dataid;
+            return matchedidmap[id]; };
+        out.$matched = $(allnodesarr.filter(filternode));
+        out.$notMatched = $(allnodesarr.filter((n) => !filternode(n)));
+        console.error("getnodes", {dmp, out, matchedidmap, matchedids, allnodesarr});
+        return out.$matched;
+        // throw new Error("Method not implemented.");
+    }
+    static logic: typeof LGraphElement;
     zoom!: GraphPoint;
     model!: Pointer<DModel, 1, 1, LModel>;
+    graphSize!: GraphSize;
 
     static create(model: Pointer<DModel>): DGraph {
         let ret = new DGraph(false, undefined, undefined, model);
@@ -55,10 +90,18 @@ export class DGraph extends DGraphElement {
 
     constructor(isUser: boolean = false, nodeID: string | undefined, graphID: string | undefined, model: Pointer<DModel>) {
         super(false, nodeID, undefined as any);
-        this.graphID = this.id;
-        this.size = new GraphSize(0, 0, 0, 0);
-        this.zoom = new GraphPoint(1, 1);
-        this.model = model;
+        DGraph.init_constructor(this, isUser, nodeID, graphID, model);
+    }
+
+    static init_constructor(thiss: DGraph, isUser: boolean = false, nodeID: string | undefined, graphID: string | undefined, model: Pointer<DModel>): void {
+        windoww.DGraphElement.init_constructor(thiss, false, nodeID, undefined as any, model);
+        if (!thiss.id) thiss.id = DGraph.makeID(model);
+        thiss.graphID = thiss.id;
+        thiss.zoom = new GraphPoint(1, 1);
+        thiss.graphSize = new GraphSize(0, 0, 0, 0); // GraphSize.apply(this, [0, 0, 0 ,0]);
+        thiss._subMaps = {zoom: true, graphSize: true}
+        thiss.model = model;
+        thiss.className = this.name;
     }
 
     static makeID(modelid:Pointer<DModel, 1, 1>): Pointer<DGraph, 1, 1, LGraph> {
@@ -70,18 +113,35 @@ export class DGraph extends DGraphElement {
 export const defaultVSize: GraphSize = new GraphSize(0, 0, 300, 160); // useless?
 
 @RuntimeAccessible
-export class DVoidVertex extends Mixin(DGraphElement, GraphSize) {
+export class DVoidVertex extends MixOnlyFuncs(DGraphElement, GraphPoint) {
+// export class DVoidVertex extends MixOnlyFuncs(DGraphElement, GraphPoint) {
+    static logic: typeof LGraphElement;
+    dvvattrib!: string;
     // size: GraphSize;
     // selected: boolean = false;
     // size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
 
     constructor(isUser: boolean = false, nodeID: string | undefined, graphID: string) {
         super(false, nodeID, graphID);
-        this.className = this.constructor.name; // todo: il mixin setta il classname del primo costruttore (DGraphElement) tutti i classname delle Dclass mixin sono da settare a mano?
-        this.clone(defaultVSize as this);
+        DVoidVertex.init_constructor(this, isUser, nodeID, graphID);
+    }
+
+    static init_constructor(thiss: DVoidVertex, isUser: boolean = false, nodeID: string | undefined, graphID: string, model?: Pointer<DModel>): void {
+        // this.superclass1.DGraphElement(isUser, nodeID, graphID);
+        // this.superclass2.GraphSize(0, 0);
+        DGraphElement.init_constructor(thiss, isUser, nodeID, graphID);
+        GraphSize.init_constructor(thiss, defaultVSize.x, defaultVSize.y, defaultVSize.w, defaultVSize.h);
+        console.log('dvoidvertex constructor,', {thiss: thiss, GraphSize, gsproto: GraphSize.prototype});
+        thiss.className = this.name;
         let uselessJustForNavigation: LVoidVertex;
         // this.size = defaultVSize.duplicate();
+        // GraphSize.prototype.clone.call(this, defaultVSize);
+        /*this.x = defaultVSize.x;
+        this.y = defaultVSize.y;
+        this.w = defaultVSize.w;
+        this.h = defaultVSize.h;*/
     }
+
 }
 
 @RuntimeAccessible
@@ -97,6 +157,23 @@ export class DVoidEdge extends DGraphElement {
 @RuntimeAccessible
 export class DVertex extends DVoidVertex {
     static logic: typeof LVoidVertex; // typeof LVertex;
+}
+
+@RuntimeAccessible
+export class DGraphVertex extends MixOnlyFuncs(DGraph, DVertex) {
+    static logic: typeof LGraphVertex; // typeof LGraphVertex;
+    constructor(isUser: boolean = false, nodeID: string | undefined, graphID: string | undefined, model: Pointer<DModel>) {
+        super(isUser, nodeID, graphID, model);
+        DGraphVertex.init_constructor(this, isUser, nodeID, graphID, model);
+    }
+
+
+    static init_constructor(thiss: DGraphVertex, isUser: boolean = false, nodeID: string | undefined, graphID: string | undefined, model: Pointer<DModel>): void {
+        DGraph.init_constructor(thiss, isUser, nodeID, graphID, model);
+//isUser: boolean = false, nodeID: string | undefined, graphID: string, model?: Pointer<DModel>
+        DVertex.init_constructor(thiss, isUser, nodeID, graphID as string, model);
+        thiss.className = this.name;
+    }
 }
 
 @RuntimeAccessible
@@ -117,9 +194,17 @@ export class DRefEdge extends DEdge {
 // for edges without a modelling element
 
 @RuntimeAccessible
-export class LGraphElement extends Mixin(LPointerTargetable, DGraphElement) {
+export class LGraphElement extends MixOnlyFuncs(LPointerTargetable, DGraphElement) {
     static structure: typeof DGraphElement;
     static singleton: LGraphElement;
+    /* NOT REQUIRED ON LPointerTargetable subclasses
+    constructor(isUser: boolean = false, nodeID: string | undefined, graphID: string, a?: any) {
+        super();
+        LGraphElement.init_constructor()
+    }
+    static init_constructor(thiss: DGraphElement, isUser: boolean = false, nodeID: string | undefined, graphID: string, a?: any): void {
+        super.init_constructor(isUser, id, a, b, c);
+    }*/
 
     get_graph(context: LogicContext<this>): LGraph {
         return TargetableProxyHandler.wrap(context.data.graphID); }
@@ -150,27 +235,23 @@ export class LGraphElement extends Mixin(LPointerTargetable, DGraphElement) {
 }
 
 @RuntimeAccessible
-export class LGraph extends Mixin(LGraphElement, DGraph) {
+export class LGraph extends MixOnlyFuncs(LGraphElement, DGraph) {
     zoom!: GraphPoint;
     // @ts-ignore
     model?: LModel;
-    set_size(val: GraphSize, context: LogicContext<this>): boolean {
-        new SetFieldAction(context.data, 'size', val);
-        return true;
-    }
-    /*
-    get_size(context: LogicContext<this>): GraphSize { return context.data.size; }
+    get_size(context: LogicContext<this>): GraphSize { return context.data.graphSize; }
+    get_graphSize(context: LogicContext<this>): GraphSize { return context.data.graphSize; }
     get_zoom(context: LogicContext<this>): GraphPoint {
         const zoom: GraphPoint = context.data.zoom;
         (zoom as any).debug = {rawgraph: context.data, zoomx: context.data.zoom.x, zoomy: context.data.zoom.y}
-        return context.data.zoom; }*/
+        return context.data.zoom; }
 }
 
 @RuntimeAccessible
-export class LVoidVertex extends Mixin(LGraphElement, DVoidVertex) {
+export class LVoidVertex extends MixOnlyFuncs(LGraphElement, DVoidVertex) {
     static structure: typeof DVoidVertex;
     static singleton: LVoidVertex;
-    size!: GraphSize; // fittizio, la size è memorizzata nell'oggetto stesso (estende ISize)
+    size: GraphSize = undefined as any; // fittizio, la size è memorizzata nell'oggetto stesso (estende ISize)
 
     get_size(context: LogicContext<this>): GraphSize {
         return context.proxyObject as any; // new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h);
@@ -185,14 +266,14 @@ export class LVoidVertex extends Mixin(LGraphElement, DVoidVertex) {
         if (context.data.y !== val.y) new SetFieldAction(context.data, 'y', val.y);
         if (context.data.w !== val.w) new SetFieldAction(context.data, 'w', val.w);
         if (context.data.h !== val.h) new SetFieldAction(context.data, 'h', val.h);
-        // (context.proxy as unknown as LGraphElement).graph.size
+        // (context.proxy as unknown as LGraphElement).graph.graphSize
         // update graph boundary too
         console.log('setsize2, graph:', {context, val});
         const graph: LGraph = this.get_graph(context); // (context.proxyObject as this).get_graph(context);
-        const gsize = graph.size;
+        const gsize = graph.graphSize;
         val.boundary(gsize);
         if (val.equals(gsize)) return true;
-        graph.size = val;
+        graph.graphSize = val;
         return true;
     }
 
@@ -202,37 +283,44 @@ export class LVoidVertex extends Mixin(LGraphElement, DVoidVertex) {
 }
 
 @RuntimeAccessible
-export class LVoidEdge extends Mixin(LGraphElement, DVoidEdge) {
+export class LVoidEdge extends MixOnlyFuncs(LGraphElement, DVoidEdge) {
     static structure: typeof DVoidEdge;
     static singleton: LVoidEdge;
 }
 
 @RuntimeAccessible
-export class LVertex extends Mixin(LVoidVertex, DVertex) {
+export class LVertex extends MixOnlyFuncs(LVoidVertex, DVertex) {
     static structure: typeof DVertex;
     static singleton: LVertex;
 }
 
 @RuntimeAccessible
-export class LEdge extends Mixin(LVoidEdge, DEdge) {
+export class LGraphVertex extends MixOnlyFuncs(LVertex, LGraph) {
+    static structure: typeof LGraphVertex;
+    static singleton: LGraphVertex;
+}
+
+@RuntimeAccessible
+export class LEdge extends MixOnlyFuncs(LVoidEdge, DEdge) {
     static structure: typeof DEdge;
     static singleton: LEdge;
 }
 
 @RuntimeAccessible
-export class LExtEdge extends Mixin(LEdge, DExtEdge) {
+export class LExtEdge extends MixOnlyFuncs(LEdge, DExtEdge) {
     static structure: typeof DExtEdge;
     static singleton: LExtEdge;
 }
 
 @RuntimeAccessible
-export class LRefEdge extends Mixin(LEdge, DRefEdge) {
+export class LRefEdge extends MixOnlyFuncs(LEdge, DRefEdge) {
     static structure: typeof DRefEdge;
     static singleton: LRefEdge;
 }
 
 @RuntimeAccessible
-export class LEdgePoint extends Mixin(LVoidEdge, DEdgePoint) {
+export class LEdgePoint extends MixOnlyFuncs(LVoidEdge, DEdgePoint) {
     static structure: typeof DEdgePoint;
     static singleton: LEdgePoint;
 }
+console.warn('ts loading graphDataElement');
