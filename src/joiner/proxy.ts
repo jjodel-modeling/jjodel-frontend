@@ -137,14 +137,14 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         this.className = this.constructor.name;
     }
 
-    private concatenableHandler(targetObj: ME, propKey: number | string | symbol, proxyitself: Proxyfied<ME>): NotAConcatenation | any {
+    private concatenableHandler(targetObj: ME, propKey: number | string | symbol, proxyitself: Proxyfied<ME>): NotAConcatenation | any[] | string {
         if (propKey in targetObj)  return null as NotAConcatenation;
         const propKeyStr: null | string = U.asString(propKey, null);
         let _index: number = propKeyStr ? propKeyStr.indexOf('_') : -1;
         if (_index < 0) return null as NotAConcatenation;
 
         let isConcatenable = true;
-        let ret: any = (propKey as string).split('_').map( (subKey: string) => {
+        let ret: any[] = (propKey as string).split('_').map( (subKey: string) => {
             // se trovo multipli ___ li tratto come spazi aggiuntivi invece che come proprietà '' che ritornano undefined, così posso fare name___surname --> "damiano   di vincenzo"
             let val: any = subKey === '' ? ' ' : this.get(targetObj, subKey, proxyitself);
             isConcatenable = isConcatenable && JsType.isPrimitive(val);
