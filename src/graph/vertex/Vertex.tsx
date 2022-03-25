@@ -182,13 +182,6 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
                 sizestyle.left = vsize.x + "px";
             }
         }
-        if (this.props.isGraph && !this.props.isVertex) {
-            sizestyle.width = '100%';
-            sizestyle.height = '100%';
-            sizestyle.flexGrow = 1;
-            sizestyle.overflow = 'hidden';
-        }
-
         // sizestyle.border = "2px solid gray";
         // sizestyle.borderColor = this.props.node?.isSelected[DUser.current] ? 'blue' : 'black';
         console.log('isSelected ? ', this.props.node && this.props.node.isSelected, this.props.node?.__raw.isSelected);
@@ -197,6 +190,38 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         if (this.props.className) U.arrayMergeInPlace(classes, Array.isArray(this.props.className) ? this.props.className : [this.props.className])
         classes.push("vertex");
         if (this.isSelected()) classes.push("selected");
+
+
+        let autosizey = true;
+        let autosizex = false;
+
+        let overlapChildStyle: any = {};
+        if (autosizex) {
+            overlapChildStyle.display = 'inline-flex';
+            overlapChildStyle.width = 'min-content';
+            sizestyle.width = 'min-content';
+        }
+        else {
+            overlapChildStyle.width = '100%';
+            overlapChildStyle.display = 'block';
+        }
+        if (autosizey) {
+            overlapChildStyle.height = 'min-content';
+            sizestyle.height = 'auto';
+        }
+        else {
+            overlapChildStyle.height = '100%';
+        }
+
+        if (this.props.isGraph && !this.props.isVertex) {
+            sizestyle.width = '100%';
+            sizestyle.height = '100%';
+            sizestyle.flexGrow = 1;
+            sizestyle.overflow = 'hidden';
+        }
+        if (sizestyle.width === '0px' || sizestyle.height === '0px') {
+            sizestyle.overflow= 'hidden';
+        }
 
         return (<>
             <div
@@ -224,11 +249,11 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
                 {
                     this.props.isVertex
                         ?
-                        <Overlap autosizex={false}>
+                        <Overlap autosizex={false} autosizey={true}>
                             {/*
                             <div className={"vertex-controls"}/>
                             <div style={{display: "none"}}>V_Size: <span>{vsize?.toString()}</span></div>*/}
-                            <div style={{height:'min-content'}}>{super.render()}</div>
+                            <div className={"OverlapGrandChildren"} style={overlapChildStyle}>{super.render()}</div>
                         </Overlap>
                         :
                         <div>{super.render()}</div>}

@@ -163,13 +163,21 @@ function makeDefaultGraphViews(): DViewElement[] {
         <b style={{display: "block", width: "100%"}}>Position: {(this.node && this.node.size.x) + ", " + (this.node && this.node.size.y)}</b><br/>
         {/*<b style={{display: "block"}}>Size: {(this.node && this.node.size && this.node.size.w) + " x " + (this.node && this.node.size && this.node.size.h)}</b>*/}
         {/*<b style={{display: "block"}}>Size: {"X "+(this.node && this.node && this.node.size && this.node.size.w)}</b><br />*/}
-        <b style={{display: "block"}}>{"isGraph: " + (this.isGraph) + ", isVertex: " + (this.isVertex)}</b>
-        <span style={{maxHeight: "50px", display: "none", overflowY: "scroll"}}>{JSON.stringify({...this.data.__raw, childrens: this.data.childrens})}</span>
-        <Input className={'raw'} obj={this.data} field={"name"} label={"Name: " + this.data.name} style={{width: "100%"}}/>
-        <div className={"childrens"}>dn.childrens({this.data.childrens.length}): {this.data.childrens.map((p) => <DefaultNode data={p.id} />)}</div>
-        <button onClick={ () => { console.log( "acfunc click:", {acfunc: this.data.addClass})}}> Add </button>
+        <b style={{display: "none"}}>{"isGraph: " + (this.isGraph) + ", isVertex: " + (this.isVertex)}</b>
+        <div style={{display: 'flex'}}>
+            <span style={{margin: "auto 10px", maxHeight: "50px", display: "none", overflowY: "scroll"}}>{JSON.stringify({...this.data.__raw, childrens: this.data.childrens})}</span>
+            <label style={{margin: "auto 10px"}}>
+                <span style={{margin: "auto 5px"}}>Name: {this.data.name}</span>
+                <Input className={'raw'} obj={this.data} field={"name"} style={{margin: "auto 5px", width: "100%"}}/>
+            </label>
+            <button className="btn btn-primary" onClick={ () => { console.log( "acfunc click:", {acfunc: this.data.addClass})}}> Add </button>
+            <br/>
+            <span style={{margin: "auto 10px"}}>package childrens({this.data.childrens.length}):</span>
+        </div>
+        <div className={"childrens"}> {this.data.childrens.map((p) => <DefaultNode data={p.id} />)}</div>
+        
         {/*<button onClick={this.data.addClass} Add </button>*/}
-    {/*<Field data={this.data.id} nodeid={this.nodeid + "2"} graphid={this.graphid} view = {Selectors.getByName(DViewElement, "EditView").id} />\n*/} +
+    {/*<Field data={this.data.id} nodeid={this.nodeid + "2"} graphid={this.graphid} view = {Selectors.getByName(DViewElement, "EditView").id} />\n*/}
 </div>`;
     // let jsxstring = '<div><DataOutputComponent data={this.data.__raw} /> <div className={"childrens"}>{this.data.childrens.map((p) => <Vertex data={p.id} />)}</div></div>';
 
@@ -302,7 +310,93 @@ function makeDefaultGraphViews(): DViewElement[] {
                        }}>
             <div className='Class'
                  style={{
-                     background: 'var(--color-1)',
+                     background: 'inherit',
+                     boxShadow: '0 0 3pt 0.5pt var(--color-3)',
+                     height: 'auto',
+                     width: '100%',
+                     borderRadius: '7px',
+                     display: 'inline-flex',
+                     flexFlow: 'column'
+                 }}
+                 data-autosizey='1'>
+                <div className='VertexHeader'
+                     style={{
+                         textAlign: 'center',
+                         display: 'flex',
+                         padding: '8px 5px',
+                         width: '100%',
+                         fontSize: '1rem',
+                         borderBottom: '0.5px solid #77777777'}}>
+                    <input value='$##name$' placeholder='Object name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*'
+                    style={{display: 'none'}}
+                           data-style='background:transparent; border:none; text-align:right; order:1; flex-basis: 50%; min-width:10px;' />
+                    <Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Class name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*'
+                           style={{
+                               background: 'transparent',
+                               border: 'none',
+                               textAlign: 'right',
+                               order: 1,
+                               flexBasis: '50%',
+                               minWidth:'10px'}}/>
+                        <div style={{
+                            textAlign: 'left',
+                            order: 2,
+                            flexGrow: 1,
+                            color: 'var(--color-4)',
+                            margin: 'auto'}}>: Concept
+                        </div>
+                        <div hover-display='v1' className='hover-unfade open-options' tabIndex={-1}
+                             style={{
+                                 top: '-25px',
+                                 right: '7px',
+                                 borderTopRightRadius: '999px',
+                                 borderTopLeftRadius: '999px'
+                             }}>
+                            <span>...</span>
+                        </div>
+                </div>
+                <div className='specialjs hideempty childcontainer AttributeContainer hover-exclude' />
+                <div className='specialjs hideempty childcontainer ReferenceContainer hover-exclude' />
+                <div className='specialjs hideempty childcontainer OperationContainer hover-exclude' />
+                
+                <div className='specialjs hideempty childcontainer AttributeContainer hover-exclude' style ={ {height: (this.data.childrens.length && (15+this.data.childrens.length * 18)) + 'px' }}>
+                    {this.data.childrens.length > 0 ? ('attributes(' +this.data.childrens.length +')') : null}
+                    {this.data.childrens.map((p) => <DefaultNode data={p.id} clasName={"Attribute"}/>)}
+                </div>
+                
+                <div className='addFieldButtonContainer'>
+                    <span style={{display: 'flex', margin: 'auto'}}>Add&nbsp;</span>
+                    <select className='AddFieldSelect' style={{
+                        background: 'transparent',
+                        display: 'flex',
+                        margin: 'auto',
+                    }} onChange={(e) => this.selected = event.target.value }>
+                        <optgroup label='FeatureType'>
+                            <option value='Attribute' selected>Attribute</option>
+                            <option value='Reference'>Reference</option>
+                            <option value='Operation'>Operation</option>
+                        </optgroup>
+                    </select>
+                    <span style={{display: 'flex', margin: 'auto'}}>&nbsp;field&nbsp;</span>
+                    <button className='addFieldButton' onClick={() => this.data.addChildren(this.selected || 'Attribute')}>Go</button>
+                </div>
+            </div>` +
+        styletodo +
+        `</div> `;
+
+
+    let classdefaultjsx2 =
+        `<div className='template Vertex Class' tabIndex={-1}
+                       style={{
+                           cursor: 'pointer',
+                           position: 'relative',
+                           borderRadius: '7px',
+                           background: 'blue',
+                           color: 'var(--color-2)'
+                       }}>
+            <div className='Class'
+                 style={{
+                     background: 'inherit',
                      boxShadow: '0 0 3pt 0.5pt var(--color-3)',
                      height: 'auto',
                     
@@ -431,14 +525,15 @@ function makeDefaultGraphViews(): DViewElement[] {
                             margin: 'auto'}}>: operation
                         </div></div>`;
     let cview: DViewElement = new DViewElement('ClassDefaultView', classdefaultjsx, undefined, '', '', '', [DClass.name]);
+    let cview2: DViewElement = new DViewElement('Class View 2', classdefaultjsx2, undefined, '', '', '', [DClass.name]);
     let enumdefaultjsx = `<div class="Enumerator" style={{width: '100px', height: '50px', background: 'pink'}}>Enumerator placeholder</div>`;
     let eview: DViewElement = new DViewElement('EnumDefaultView', enumdefaultjsx, undefined, '', '', '', [DEnumerator.name]);
     let aview: DViewElement = new DViewElement('AttribDefaultView', attribdefaultjsx, undefined, '', '', '', [DAttribute.name]);
     let rview: DViewElement = new DViewElement('RefDefaultView', attribdefaultjsx, undefined, '', '', '', [DReference.name]);
     let oview: DViewElement = new DViewElement('OperationDefaultView', attribdefaultjsx, undefined, '', '', '', [DOperation.name]);
 
-    pkgview.subViews = [cview.id]; // childrens can use this view too todo: this is temporary
-    let alldefaultViews = [mview, pkgview, cview, eview, aview, rview, oview];
+    pkgview.subViews = [cview.id, cview2.id]; // childrens can use this view too todo: this is temporary
+    let alldefaultViews = [mview, pkgview, cview, cview2, eview, aview, rview, oview];
     mview.subViews = [mview.id, ...alldefaultViews.slice(1).map(e => e.id)]// childrens can use this view too todo: this is temporary, should just be the sliced map of everything else.
     return alldefaultViews;
 }

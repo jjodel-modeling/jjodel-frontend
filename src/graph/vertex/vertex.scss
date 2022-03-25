@@ -1,5 +1,7 @@
 .selected{
-  border: 2px solid blue;
+  // border: 5px solid blue;
+  // outline: 7px solid blue;
+  box-shadow: 0 0 6pt 3pt var(--color-4);
 }
 .vertex{
   display: inline-block;

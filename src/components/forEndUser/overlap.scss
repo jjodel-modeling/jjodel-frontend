@@ -17,6 +17,7 @@
 }
 
 .overlap-child-wrapper{
+  overflow: visible;
   &>*{
     /*position: absolute; */
     /*margin-left: -100%;  quasi, ma non li allenea davvero, il bordo delle figure precedenti occupa spazio e causa offset delle seguenti
@@ -28,12 +29,14 @@
     margin: auto;
   }
   &.overlap-parent-chooses-width{
-    overflow-x: hidden;
-    width: available; /* 100%; or auto + display:block; or fill-container-somethinglikethis; */
+    // overflow-x: hidden;
+    width: available;
+    width: -webkit-fill-available; /* 100%; or auto + display:block; or fill-container-somethinglikethis; */
   }
   &.overlap-parent-chooses-height{
-    overflow-y: hidden;
+    // overflow-y: hidden;
     height: available;
+    height: -webkit-fill-available;
   }
   /*unnecessary for overlap, necessary for centering*/
   display: flex;

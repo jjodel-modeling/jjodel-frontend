@@ -10,8 +10,26 @@ interface ThisState {
 export class Overlap extends PureComponent<AllProps, ThisState>{
     render(): ReactNode {
         console.log('overlap childs:', this.props.children);
-        if (!this.props.children || !Array.isArray(this.props.children)) return this.props.children;
-        const childrens = this.props.children; // ? (Array.isArray(this.props.children) ? this.props.children : [this.props.children]) : [];
+        // if (!this.props.children || !Array.isArray(this.props.children)) return this.props.children;
+        const childrens: any[] = (Array.isArray(this.props.children) ? this.props.children : [this.props.children]);
+
+/*
+        let overlapChildStyle = {};
+        if (this.props.autosizex) {
+            overlapChildStyle.width = '100%';
+            overlapChildStyle.display = 'flex';
+        }
+        else {
+            overlapChildStyle.display = 'inline-flex';
+            overlapChildStyle.width = 'auto';
+        }
+        if (this.props.autosizey) {
+            overlapChildStyle.height = '100%';
+        }
+        else {
+            overlapChildStyle.height = 'min-content';
+        }*/
+
         return (<>
             {/*trouble on svg: G elements cannot be styled and rect cannot be nested, i cannot force a container to take size of childrens unless set size with plain js*/}
             <div className={"overlap-parent" + (this.props.autosizex ? " overlap-child-chooses-width" : "") + (this.props.autosizex ? " overlap-child-chooses-height" : "")} style={{...this.props.style}}>
