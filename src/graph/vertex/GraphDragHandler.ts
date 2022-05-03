@@ -1,4 +1,4 @@
-import type {GObject, VertexComponent} from "../../joiner";
+import type {GObject, VertexComponent, } from "../../joiner";
 import {
     ClickEvent,
     DGraphElement,
@@ -9,7 +9,7 @@ import {
     Selectors,
     SetRootFieldAction,
     store,
-    TRANSACTION,
+    TRANSACTION,GraphPoint,
     DUser, RuntimeAccessible, $, DPointerTargetable, Log, MyProxyHandler, Size, U, LPointerTargetable
 } from "../../joiner";
 import React from "react";
@@ -27,6 +27,7 @@ export class GraphDragHandler extends RuntimeAccessibleClass {
     private totalDragOffset: Point; // NOT graphpoint, this is pixels
     private startDragClickedPoint!: Point; // NOT graphpoint, this is pixels
     private dragTolerance = 10; // if less than 10 pixel i won't start the drag
+    private draggingInitialPositions: GraphPoint[] = [];
 
 
     public static init() {
@@ -68,21 +69,30 @@ export class GraphDragHandler extends RuntimeAccessibleClass {
 
     // todo: add on mousedown su GraphElementRaw per triggerare startDragging
     public startDragging(e:React.MouseEvent<HTMLDivElement>, manualAddLastSelected?: DVoidVertex): void {
-        Log.i(true, 'dragx start', {draggingSelection: this.draggingSelection, thiss:this});
-        console.log('vertex evt mousedown dragx start', {draggingSelection: this.draggingSelection, thiss:this});
+        Log.i(true, 'vertex evt dragx start', {draggingSelection: this.draggingSelection, thiss:this});
         GraphDragHandler.isDragging = true;
         this.startDragClickedPoint = new Point(e.screenX, e.screenY);
         // this.totalDragOffset.set(0, 0);
         // let state: IStore =  store.getState();
         this.draggingSelection = Selectors.getVertex(false, true).filter( (v) => v.isSelected[DUser.current]);
+        this.draggingInitialPositions = this.draggingSelection.map<GraphPoint>( (v) => new GraphPoint(v.x, v.y));
         if (manualAddLastSelected) U.ArrayAdd(this.draggingSelection, manualAddLastSelected);
+        for (let dragged of this.draggingSelection) {
+            let component = (this.vertexToComponent[dragged.id] as VertexComponent);
+            if (component) component.suspendRender  = true;
+        }
     }
 
     public stopDragging(): void {
         console.log('vertex evt mousedown dragx stop', {draggingSelection: [...this.draggingSelection], thiss:this});
         Log.i(debug, 'dragx stop', {draggingSelection: this.draggingSelection, thiss:this});
         GraphDragHandler.isDragging = false;
+        this.draggingInitialPositions = [];
+        this.draggingSelection = []
         this.totalDragOffset.set(0, 0);
+        for (let dragged of this.draggingSelection) {
+            let component = (this.vertexToComponent[dragged.id] as VertexComponent);
+            if (component) component.suspendRender  = false; }
     }
 
     private onMouseMove = (e: JQuery.MouseMoveEvent<Document, undefined, Document, Document>, ...args: any[]): any => {
@@ -100,18 +110,31 @@ export class GraphDragHandler extends RuntimeAccessibleClass {
             return childsize.subtract(parentsize).tl(); }
 
         const mouseposAbsolute: Point = new Point(e.screenX, e.screenY);
-        const offset: Point = mouseposAbsolute.subtract(this.startDragClickedPoint, false);
-        Log.i(true, 'dragx dragging : ' + offset, {draggingSelection: this.draggingSelection, totalOffset: this.totalDragOffset.toString(), e, offset});
+        const offset: Point = mouseposAbsolute.subtract(this.startDragClickedPoint, true);
         let dragged: DVoidVertex;
         this.totalDragOffset  = offset; // this.totalDragOffset.add(offset, false);
         if (this.totalDragOffset.absolute() < this.dragTolerance) return;
-        for (dragged of this.draggingSelection) {
+        for (let i = 0; i < this.draggingSelection.length; i++) {
+
+            let dragged = this.draggingSelection[i];
+            let initialPos = this.draggingInitialPositions[i];
             let component = this.vertexToComponent[dragged.id];
+
+
+            Log.i(true, 'dragx dragging 055f ' + i + ': ' + offset, {
+                draggingSelection: this.draggingSelection,
+                newpos: offset.add(initialPos, true).toString(),
+                offset: offset.toString(),
+                initialPos: initialPos.toString(),
+                clickedPoint: this.startDragClickedPoint.toString(),
+                mouseposAbsolute: mouseposAbsolute.toString(),
+                totalOffset: this.totalDragOffset.toString(),
+                e});
             // Log.i(debug, 'dragx dragging component', {component});
             if (!component) continue; // got unmounted before deselecting
-
+            component?.setAbsolutePosition(offset.add(initialPos, true));
             // component?.setAbsolutePosition(offset);
-            component?.setAbsolutePosition(mouseposAbsolute); // (offset);
+            ///////////////////////////////////////////////////////////// component?.setAbsolutePosition(mouseposAbsolute); // (offset);
         }
         return;
     }

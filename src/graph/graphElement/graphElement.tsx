@@ -87,6 +87,17 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
     extends PureComponent<AllProps, GraphElementState>{
 
+
+
+
+    public static defaultShouldComponentUpdate<AllProps extends GObject, State extends GObject, Context extends any>
+    (instance: React.Component, nextProps: Readonly<AllProps>, nextState: Readonly<State>, nextContext: Context) {
+        return (
+            !U.shallowEqual(instance.props, nextProps) ||
+            !U.shallowEqual(instance.state, nextState)
+        );
+    }
+
     static mapViewAndModelElement(state: IStore, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
         const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : ownProps.data?.id) as string;
         Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ownProps, state});

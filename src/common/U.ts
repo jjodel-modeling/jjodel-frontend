@@ -590,6 +590,23 @@ export class U{
     static deepEqual_use_isDeepStrictEqual_bynode(subElements: any, val: any): boolean { return false; }
 
 
+    public static shallowEqual(objA: GObject, objB: GObject): boolean {
+        if (objA === objB) { return true; }
+
+        if (!objA || !objB || typeof objA !== 'object' || typeof objB !== 'object') { return false; }
+
+        var keysA = Object.keys(objA);
+        var keysB = Object.keys(objB);
+
+        // if (keysA.length !== keysB.length) { return false; }
+        // Test for A's keys different from B.
+        // var bHasOwnProperty = hasOwnProperty.bind(objB);
+        for (let keya in objA) if (objA[keya] !== objB[keya]) return false;
+
+        // for (var i = 0; i < keysA.length; i++) if (!bHasOwnProperty(keysA[i]) || objA[keysA[i]] !== objB[keysA[i]]) { return false; }
+        return true;
+    }
+
      // returns true only if parameter is already a number by type. UU.isNumber('3') will return false
      static isNumber(o: any): boolean { return +o === o && !isNaN(o); }
 

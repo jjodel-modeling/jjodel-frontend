@@ -31,7 +31,7 @@ import {
     defaultVSize,
     MyProxyHandler, DClass, DClassifier, GObject, DPackage, DModel, DGraphElement, DVertex, DGraph, DGraphVertex
 } from "../../joiner";
-const superclass: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
+const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 
 // private
 class VertexStatee extends GraphElementStatee {
@@ -52,8 +52,9 @@ class VertexStatee extends GraphElementStatee {
 // from ownstateprops function getVertexID(props: AllPropss): Pointer<DVoidVertex, 0, 1, LVoidVertex> { return props.vertex?.id; }
 
 export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState extends VertexStatee = VertexStatee>
-    extends superclass<AllProps, VertexState>{
+    extends superclassGraphElementComponent<AllProps, VertexState>{
     ////// mapper func
+    public suspendRender: boolean = false;
     static mapStateToProps(state: IStore, ownProps: VertexOwnProps): VertexReduxStateProps {
         // console.log('dragx vertex mapstate', {DVoidVertex});
         let DGraphElementClass: typeof DGraphElement;
@@ -264,6 +265,18 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         GraphDragHandler.clearSelection();
     }*/
 
+
+
+    /*
+    + problem: quando stoppi di trascinare e sblocca il rendering, non ci sono ulteriori aggiornamenti di stato, quindi se lo perde invece di buffararli.
+    + problem: prototype.shouldComponentUpdate returns false all the time?
+    */
+
+    shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<VertexState>, nextContext: any): boolean {
+        return !this.suspendRender && superclassGraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
+        // return !!(PureComponent.prototype.shouldComponentUpdate?.call(this, nextProps, nextState, nextContext));
+    }
+
     //NB: do not add logic functions like setName here, add them on data (proxy of raw model data). to edit model just do: oninput={(e)=>{this.model.name=e.target.value}, the proxy will trigger a redux action
     public setAbsolutePosition(pos: Point) {
         console.log('dragx setAbsolutePosition: ' + pos + ' zoom:' + this.props.graph.zoom, {zoom: this.props.graph.zoom, graph: this.props.graph});
@@ -274,7 +287,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         }
         // const vertexOffset = new GraphSize(e.offsetX, e.offsetY);
         // const zoom = new GraphSize(1, 1); // todo: take it from graph? or just do it with css zoom-scale?
-        console.log('fff', {thiss:this, getvpos:this.getVertexPosition(), node: this.props.node});
+        // console.log('fff', {thiss:this, getvpos:this.getVertexPosition(), node: this.props.node});
         const currentVPos = new GraphSize().clone(this.getVertexPosition());
         let graphSize: GraphSize = new GraphSize().clone(this.props.graph.graphSize);
         let graphZoom: GraphPoint = new GraphPoint().clone(this.props.graph.zoom);
