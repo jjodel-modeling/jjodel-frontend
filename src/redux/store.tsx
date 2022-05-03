@@ -157,19 +157,22 @@ function makeDefaultGraphViews(): DViewElement[] {
     // let jsx2 = <><button onClick={ () => { console.log( "acfunc click:", {acfunc: this.data.addClass})}} Add </button><button onClick={this.data.addClass}> Add </button></>;
     // let jsxstring = <div><span>{JSON.stringify(thiss.data.__raw)}</span> <div className={"childrens"}>{thiss.data.childrens.map((p) => <VertexConnected data={p.id} />)}</div></div>;
     let pkgjsxstring = `<div className="pkgroot" style={{display: "flex", flexFlow: "wrap", width: '100%', height:'calc(100% - 102px)', position:'absolute'}}>
-        <b style={{display: "block", width:"100%"}}>{this.data.__raw.className + (true ? "" : this.data.id)}</b>
-        <b style={{display: "block"}}>{(window.thiss = this) && true}</b>
+        <b style={{display: "none", width:"100%"}}>{this.data.__raw.className + (true ? "" : this.data.id)}</b>
+        <b style={{display: "none"}}>{(window.thiss = this) && true}</b>
         {/*<b style={{display: "block"}}>{(this.node && this.node.className) + ": " + (this.node && this.node.id)}</b>*/}
-        <b style={{display: "block", width: "100%"}}>Position: {(this.node && this.node.size.x) + ", " + (this.node && this.node.size.y)}</b><br/>
+        <b style={{display: "none", width: "100%"}}>Position: {(this.node && this.node.size.x) + ", " + (this.node && this.node.size.y)}</b><br/>
         {/*<b style={{display: "block"}}>Size: {(this.node && this.node.size && this.node.size.w) + " x " + (this.node && this.node.size && this.node.size.h)}</b>*/}
         {/*<b style={{display: "block"}}>Size: {"X "+(this.node && this.node && this.node.size && this.node.size.w)}</b><br />*/}
-        <b style={{display: "block"}}>{"isGraph: " + (this.isGraph) + ", isVertex: " + (this.isVertex)}</b>
+        <b style={{display: "none"}}>{"isGraph: " + (this.isGraph) + ", isVertex: " + (this.isVertex)}</b>
         <span style={{maxHeight: "50px", display: "none", overflowY: "scroll"}}>{JSON.stringify({...this.data.__raw, childrens: this.data.childrens})}</span>
-        <Input className={'raw'} obj={this.data} field={"name"} label={"Name: " + this.data.name} style={{width: "100%"}}/>
-        <div className={"childrens"}>dn.childrens({this.data.childrens.length}): {this.data.childrens.map((p) => <DefaultNode data={p.id} />)}</div>
-        <button onClick={ () => { console.log( "acfunc click:", {acfunc: this.data.addClass})}}> Add </button>
+        <Input className={'d-none raw'} obj={this.data} field={"name"} label={"Name: " + this.data.name} style={{width: "100%"}}/>
+        
+        <div className={"childrens"}>{this.data.childrens.map((p) => <DefaultNode data={p.id} />)}</div>
+        
+        <button className={"btn btn-success me-2"} style={{top: 0, right: 0, position: "absolute", borderRadius: "10px"}} 
+            onClick={ () => { console.log( "acfunc click:", {acfunc: this.data.addClass})}}> Add </button>
         {/*<button onClick={this.data.addClass} Add </button>*/}
-    {/*<Field data={this.data.id} nodeid={this.nodeid + "2"} graphid={this.graphid} view = {Selectors.getByName(DViewElement, "EditView").id} />\n*/} +
+    {/*<Field data={this.data.id} nodeid={this.nodeid + "2"} graphid={this.graphid} view = {Selectors.getByName(DViewElement, "EditView").id} />\n*/}
 </div>`;
     // let jsxstring = '<div><DataOutputComponent data={this.data.__raw} /> <div className={"childrens"}>{this.data.childrens.map((p) => <Vertex data={p.id} />)}</div></div>';
 

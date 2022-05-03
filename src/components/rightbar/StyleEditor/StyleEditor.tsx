@@ -3,8 +3,6 @@ import { connect } from "react-redux";
 import ViewsEditor from "../ViewsEditor/ViewsEditor";
 import './style_editor.scss';
 import {
-    Selectors,
-    U,
     IStore,
     Input,
     Pointer,
@@ -15,14 +13,7 @@ import {
     LViewElement,
     LModelElement,
     DPointerTargetable,
-    DNamedElement,
-    LNamedElement,
-    windoww,
-    Textarea,
-    DModel,
-    LModel,
-    HTMLEditor,
-    GraphDragHandler,
+    windoww
 } from "../../../joiner";
 
 // private
@@ -30,16 +21,17 @@ interface ThisState {
 }
 
 class StyleEditorComponent extends PureComponent<AllProps, ThisState>{
-    constructor(props: AllProps, context: any) {
-        super(props, context);
-    }
     render(): ReactNode{
         if(this.props.selected?.modelElement){
             return( <>
                 <Input obj={(this.props.selected?.view as LViewElement)} field={'name'} label={"Name View"} type={"text"} />
                 <div className={"row"}>
-                    <div className={"col"}><Input obj={(this.props.selected?.view as LViewElement)} field={'x'} label={"X position"} type={"number"} /></div>
-                    <div className={"col"}><Input obj={(this.props.selected?.view as LViewElement)} field={'y'} label={"Y position"} type={"number"} /></div>
+                    <div className={"col"}>
+                        <Input obj={(this.props.selected?.view as LViewElement)} field={'x'} label={"X position"} type={"number"} />
+                    </div>
+                    <div className={"col"}>
+                        <Input obj={(this.props.selected?.view as LViewElement)} field={'y'} label={"Y position"} type={"number"} />
+                    </div>
                 </div>
             </> );
         }

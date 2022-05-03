@@ -66,7 +66,7 @@ function newTab(modelid0?: Pointer<DModel, 1, 1>, name?: string, gid?: Pointer<D
         content: (
             <>{modelid ?
             <div>
-                <h1>Model name: {name}, id: {modelid}</h1>
+                <h1>Model name: {name}</h1>
                 <DefaultNode data={modelid} nodeid={gid} graphid={gid} />
                 {/*<span>Edit Section</span>
                 <Graph data={modelid} nodeid={gid+'_'+2} graphid={gid+'_'+2} view = {Selectors.getByName(DViewElement, 'EditView')?.id as string} />
@@ -245,6 +245,7 @@ let box: LayoutData = {
                 children: [
                     {
                         tabs: [
+                        /*
                             {...defaultTab, id: 't7'},
                             {
                                 ...defaultTab, id: 't8', title: (
@@ -257,6 +258,7 @@ let box: LayoutData = {
                                     </div>
                                 )
                             }
+                         */
                         ],
                     },
                     {
@@ -458,4 +460,4 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 export const DockLayoutComponent = connect<StateProps, DispatchProps, OwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
-)(DockLayoutComponentRaw);
+)(DockLayoutComponentRaw as any);

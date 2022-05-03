@@ -7,7 +7,7 @@ import {
     LModelElement,
     DPointerTargetable,
     LPointerTargetable,
-    MyProxyHandler
+    MyProxyHandler, Selectors, Constructor, RuntimeAccessibleClass, AbstractConstructor, OCL, DGraph
 } from "../../joiner";
 import Editor from "@monaco-editor/react";
 import {types} from "util";
@@ -103,6 +103,7 @@ class BidirectionalHTMLEditor extends PureComponent<AllProps, ThisState>{
 class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
 
     oclContainer? : LegacyRef<HTMLDivElement>
+    editor? : any
 
     constructor(props: AllProps, context: any) {
         super(props, context);
@@ -114,12 +115,12 @@ class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
     }
 
     componentDidUpdate(prevProps: Readonly<AllProps>, prevState: Readonly<ThisState>, snapshot?: any) {
-        this.loadEditor()
+        //this.loadEditor()
     }
 
     loadEditor() {
         // @ts-ignore
-        window.xtext.createEditor({ baseUrl: window.baseUrl,
+        this.editor = window.xtext.createEditor({ baseUrl: window.baseUrl,
             serviceUrl: "http://localhost:8085/xtext-service",
             syntaxDefinition: `xtext-resources/generated/mode-ocl.js`,
             enableCors: true, // @ts-ignore
@@ -128,15 +129,27 @@ class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
     }
 
     getOclQuery() {
-        // @ts-ignore
-        let query = this.oclContainer.current?.innerText
-        let code = ""
-        for(let row of query){
-            // se row è un numero o il carattere '' lo ignoro
-            if(isNaN(row) && row !== "")
-                code += row
-        }
-        console.log(code)
+        this.ocltextchanged(this.editor.getValue())
+    }
+
+    private ocltextchanged(oclText0: string| boolean): string{
+        let oclText = ''+oclText0;
+        let state: IStore = windoww.store.getState();
+        let dmp: DModelElement[] = Selectors.getAllMP(state);
+        let lmp: LModelElement[] = Selectors.wrap(dmp, state);
+        console.log('all MP:', dmp, lmp);
+        let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
+        let valids: DPointerTargetable[] = [];
+        try { valids = OCL.filter(true, "src", lmp, oclText, constructors) as DPointerTargetable[]; }
+        catch (e) { console.error('invalid ocl query:', {e, oclText, dmp, lmp});}
+        let out: { $matched: JQuery<HTMLElement>, $notMatched: JQuery<HTMLElement>} = {} as any;
+        console.log('filtered MP', {dmp, lmp, valids, validfilled:valids.filter(b=>!!b)});
+        let $htmlmatch: JQuery<HTMLElement> = DGraph.getNodes(valids.filter(b=>!!b) as DModelElement[], out);
+        console.log('filtered MP', {dmp, lmp, valids, $htmlmatch});
+        out.$notMatched.removeClass('ocl_match');
+
+        $htmlmatch.addClass('ocl_match');
+        return oclText;
     }
 
     render(): ReactNode {
@@ -221,7 +234,7 @@ export const OCLEditorRawComponent = BidirectionalOCLEditor;
 export const TextareaConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalTextArea);
 export const InputConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalInput);
 export  const HTMLEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalHTMLEditor);
-export  const OCLEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalOCLEditor);
+export  const OCLEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalOCLEditor as any);
 
 export const Textarea = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     // props = {...props};
