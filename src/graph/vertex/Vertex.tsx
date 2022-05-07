@@ -176,9 +176,16 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
                 sizestyle.backgroundColor = 'black';
             } else {
                 if (false && this.props.view.scalezoomy) sizestyle.transform += " scaleY(0.?)";
-                else sizestyle.height = vsize.h + "px";
+                //else sizestyle.height = vsize.h + "px"
+                else{
+                    sizestyle.height = "auto"
+                }
+
                 if (false && this.props.view.scalezoomx) sizestyle.transform += " scaleX(0.?)";
-                else sizestyle.width = vsize.w + "px";
+                //else sizestyle.width = vsize.w + "px"
+                else{
+                    sizestyle.height = "auto"
+                }
                 sizestyle.top = vsize.y + "px";
                 sizestyle.left = vsize.x + "px";
             }

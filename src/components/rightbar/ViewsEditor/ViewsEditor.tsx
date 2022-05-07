@@ -29,11 +29,10 @@ import {
     CreateElementAction,
     GraphSize,
     DeleteElementAction,
-    SetRootFieldAction, LPointerTargetable, DGraph, OCL, RuntimeAccessibleClass,
+    SetRootFieldAction, LPointerTargetable, MyProxyHandler,
 } from "../../../joiner";
 import withReactContent from "sweetalert2-react-content";
 import Swal from "sweetalert2";
-
 
 // private
 interface ThisState {
@@ -82,9 +81,9 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                 //POP: GO BACK
                                 new SetRootFieldAction ('stackViews-=', undefined)
                             }}>
-                        <i className="fas fa-long-arrow-alt-left"></i>
+                        <i className={"fas fa-long-arrow-alt-left"} />
                     </button>
-                    <h4 className={"col"}>VIEWS EDITOR</h4>
+                    <h4 className={"col"}>GRAPHICAL SYNTAX LAYER</h4>
                     <button style={{maxWidth: "3em"}} className={"col btn btn-danger"}
                             onClick={async(e) => {
                                 const confirm = await MySwal.fire({
@@ -99,7 +98,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                     new DeleteElementAction(view as DViewElement);
                                 }
                             }}>
-                        <i className="fas fa-trash-alt"></i>
+                        <i className="fas fa-trash-alt" />
                     </button>
 
                 </div>
@@ -113,6 +112,8 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                         <div className={"col"}><Input obj={view} field={'adaptWidth'} label={"Adapt width to content"} type={"checkbox"} /></div>
                         <div className={"col"}><Input obj={view} field={'adaptHeight'} label={"Adapt height to content"} type={"checkbox"} /></div>
                     </div>
+
+                    <OCLEditor obj={view} field={'ocl'} label={"Editor OCL"}/>
                     <HTMLEditor obj={view} field={'jsxString'} label={"Editor HTML"} />
                     <input
                         defaultValue ={"context DClass inv: self.attrib_3.editCount>-1"} // context DClass inv: self.className.length >20
@@ -145,7 +146,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                             data['subViews'] = pointers
                         }
                     }}>
-                        <i className="fas fa-plus"></i>
+                        <i className={"fas fa-plus"} />
                     </button>
                 </div>
 
@@ -159,7 +160,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                             //PUSH: CLICK SUBVIEW
                                             new SetRootFieldAction ('stackViews+=', subView.id)
                                         }}>
-                                    <i className="fas fa-info"></i>
+                                    <i className={"fas fa-info"} />
                                 </button>
                                 <button style={{maxWidth: "3em"}} className={"ms-1 col btn btn-danger"} onClick={async(e) => {
                                     // DELETE SUBVIEW
@@ -178,7 +179,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                         data['subViews'] = pointers
                                     }
                                 }}>
-                                    <i className="fas fa-times"></i>
+                                    <i className="fas fa-times" />
                                 </button>
                             </div>
                         </>
@@ -189,7 +190,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
         else{
             return (<>
                 <div className={"row"}>
-                    <h4 className={"col"}>VIEWS EDITOR</h4>
+                    <h4 className={"col"}>GRAPHICAL SYNTAX LAYER</h4>
                     <button style={{maxWidth: "3em"}} className={"col btn btn-success"}
                             onClick={async(e) => {
                                 const viewName = await MySwal.fire({
@@ -208,7 +209,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                     new SetRootFieldAction ('stackViews+=', newView.id)
                                 }
                             }}>
-                        <i className="fas fa-plus"></i>
+                        <i className={"fas fa-plus"} />
                     </button>
                 </div>
                 {
@@ -222,7 +223,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                                 //PUSH: CLICK VIEW
                                                 new SetRootFieldAction ('stackViews+=', view.id)
                                             }}>
-                                        <i className="fas fa-info"></i>
+                                        <i className={"fas fa-info"} />
                                     </button>
                                     <button style={{maxWidth: "3em"}} className={"col btn btn-danger"}
                                             onClick={async(e) => {
@@ -238,7 +239,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                                     new DeleteElementAction(view as DViewElement);
                                                 }
                                             }}>
-                                        <i className="fas fa-trash-alt"></i>
+                                        <i className={"fas fa-trash-alt"} />
                                     </button>
                                 </div>
                             }
@@ -278,21 +279,25 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     let lViews: LViewElement[] = [];
     console.log('DVE', {DPointerTargetable, dpt:windoww.DPointerTargetable});
     for(let dView of Selectors.getAllViewElements()){
-        lViews.push(DPointerTargetable.wrap(dView) as LViewElement)
+        let item: LViewElement = MyProxyHandler.wrap(dView)
+        if (item) lViews.push(item)
     }
     ret.views = lViews;
 
     let lStackViews: LViewElement[] = [];
     for(let dStackView of state.stackViews){
-        lStackViews.push(DViewElement.wrap(dStackView) as LViewElement)
+        let item: LViewElement = MyProxyHandler.wrap(dStackView)
+        if (item) lStackViews.push(item)
     }
     ret.stackViews = lStackViews;
 
     if(state.stackViews.length > 0){
         let dView = state.stackViews[state.stackViews.length - 1]
-        let lView = DViewElement.wrap(dView) as LViewElement
-        let objId: Pointer<DViewElement, 1, 1, LViewElement> = lView.id;
-        ret.data = DPointerTargetable.wrap(state.idlookup[objId]) as LPointerTargetable;
+        let lView: LViewElement = MyProxyHandler.wrap(dView)
+        if(lView !== undefined){
+            let objId: Pointer<DViewElement, 1, 1, LViewElement> = lView.id;
+            ret.data = MyProxyHandler.wrap(state.idlookup[objId]);
+        }
     }
 
     return ret; }

@@ -39,7 +39,6 @@
   },
   "scripts": {
     "nv": " nvm install 16.13.0",
-    "start2": "react-scripts --openssl-legacy-provider start",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

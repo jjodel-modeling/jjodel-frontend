@@ -97,12 +97,7 @@ class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
             return ret; }
         this.array.push(propKey);
         if (!this.__asArray) this.strbuilder += (this.strbuilder ? '.' : '') + propKey;
-        if (this.__nested) return proxyitself;
-        switch (propKey) {
-            case "typeName":
-            case '$$typeof': return undefined;
-            default: return {};
-        }
+        return this.__nested ? proxyitself : {};
     }
 
     set(target: T, p: string | number | symbol, value: any, proxyitself: Proxyfied<T>): boolean {

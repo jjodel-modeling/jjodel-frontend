@@ -227,7 +227,7 @@ let cardTab = newTab();
 let customTab = {
     title: 'custom-style',
     content: (
-        <div style={{background: '#f6f6f6', height: '100%', margin: 0, padding: 30}}>
+        <div style={{overflowY: "scroll", background: '#f6f6f6', height: '100%', margin: 0, padding: 30}}>
             <ViewsEditor />
         </div>
     ),
@@ -245,6 +245,7 @@ let box: LayoutData = {
                 children: [
                     {
                         tabs: [
+                        /*
                             {...defaultTab, id: 't7'},
                             {
                                 ...defaultTab, id: 't8', title: (
@@ -257,6 +258,7 @@ let box: LayoutData = {
                                     </div>
                                 )
                             }
+                         */
                         ],
                     },
                     {
@@ -458,4 +460,4 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 export const DockLayoutComponent = connect<StateProps, DispatchProps, OwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
-)(DockLayoutComponentRaw);
+)(DockLayoutComponentRaw as any);

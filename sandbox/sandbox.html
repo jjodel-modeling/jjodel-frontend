@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+
+
+
+
+
+
+<div class="muro top measurable"
+     style="position:absolute; border:solid gray; border-width:2px 2px 0 2px; max-height:10px; min-height:10px; background:darkgray;"
+     disabled_ruley="$##@WallTopY_GUIONLY.values$ = positionAbsY" disabled_onrefresh="#$##id$ .ClassRules" disabled_rulex="$##@WallTopX.values$ = positionAbsX"
+     _onrefresh_style="true≔-> _dstyle" _onresizeend_setw="true≔-> _varw" _onresizeend_style="true≔-> _dstyle" _ondragend_setw="true≔-> _varx"
+     _varx="≔this.model.getChildren('WallTopX').setValues(this.relativeVPos.x)"
+     _varw="≔this.model.getChildren('WallTopWidth').setValues( this.width ); this.unsafe.model.refreshGUI();"
+     _dstyle1="≔'top:' + this.model.getChildren('WallTopY_GUIONLY').getValues() + 'px; left:' + this.model.getChildren('WallTopX').getValues() + 'px; width:' + this.model.getChildren('WallTopWidth').getValues() + 'px;'" _jquiresghost="true" _jquiresautohide="true" _jquirescontainment="parent" _jquireshandles="se" _jquidraaxis="x, y" onrefresh_style="" onresizeend_setw="" onresizeend_style="" ondragend_setw="" varx="" varw="" dstyle1="" jquiresghost="" jquiresautohide="" jquirescontainment="" jquireshandles="" jquidraaxis=""></div>
+
+<div class="muro bot measurable"
+     style="position:absolute; border:solid gray; border-width:0 2px 2px 2px; max-height:10px; min-height:10px; background:darkgray;"
+     disabled_dstyle="'top:calc($##@WallTopY_GUIONLY.values.0$px + $##@WallHeight.values.0$px - 10px); left:$##@WallBotX.values.0$px; width:$##@WallBotWidth.values.0$px;'"
+     disabled_ruley="$##@WallHeight.values$ = height - $##@WallTopY_GUIONLY.values.0$ + 10"
+     disabled_rulex="$##@WallBotX.values$ = positionAbsX - $##@FoundationX_GUIONLY.values.0$"
+     disabled_rulew="$##@WallBotWidth.values$ = width"
+     disabled_chainfinal1="#$##id$ .ClassRules"
+     disabled_chain0="#$##id$ .terrenoBackground->_dstyle"
+     disabled_chain1="#$##id$ .wall.shadow->_dstyle"
+
+     _dstyle="'top:' + (this.model.getChildren('WallTopY_GUIONLY').getValues() - 10 + this.model.getChildren('WallHeight').getValues() + 'px; left:' + this.model.getChildren('WallBotX').getValues() + 'px; width:' + this.model.getChildren('WallBotWidth').getValues() + 'px;'"
+     _varposy="≔this.model.getChildren('WallHeight').setValues( this.height - this.model.getChildren('WallTopY_GUIONLY').getValues() + 10)"
+     _varposx="≔this.model.getChildren('WallBotX').setValues( this.relativeVPos.x - this.model.getChildren('FoundationX_GUIONLY').getValues())"
+     _varsizew="≔this.model.getChildren('WallBotWidth).setValues( this.width )"
+     _onrefresh_style="true≔-> _dstyle"
+     _ondragend_setpos="true≔-> _varpos"
+     _onresizeend_setpos="true≔-> _varsize"
+     d_axis="x"
+     r_handles="w, e"
+     r_autohide="true"
+     r_containment="parent"
+     r_ghost="true"
+     dstyle=""
+     _onrefresh1="true≔-> _dstyle"
+     onrefresh1=""
+     _jquidraaxis="x"
+     jquidraaxis=""></div>
+
+
+
+
+
+</body>
+</html>
