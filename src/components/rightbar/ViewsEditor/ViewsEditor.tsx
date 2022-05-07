@@ -29,7 +29,7 @@ import {
     CreateElementAction,
     GraphSize,
     DeleteElementAction,
-    SetRootFieldAction, LPointerTargetable, MyProxyHandler,
+    SetRootFieldAction, LPointerTargetable, MyProxyHandler, DGraph, RuntimeAccessibleClass, OCL, OCLEditor,
 } from "../../../joiner";
 import withReactContent from "sweetalert2-react-content";
 import Swal from "sweetalert2";
