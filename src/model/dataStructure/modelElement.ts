@@ -22,7 +22,7 @@ import {
     DViewElement,
     RuntimeAccessibleClass,
     LViewElement, LPointerTargetable, RuntimeAccessible,
-    LModelElement,
+    LModelElement, Selectors, store,
 } from "../../joiner";
 
 
@@ -109,7 +109,8 @@ export /*abstract*/ class DTypedElement extends DNamedElement {
     static logic: typeof LNamedElement;
     // ******************** ecore officials inherited ******************** //
     // ******************** ecore officials personal ********************* //
-    type: Pointer<DClassifier, 0, 1, LClassifier> = null;
+    //Giordano: change assignment from null to store...
+    type: Pointer<DClassifier, 0, 1, LClassifier> = store.getState().classifiers[0];
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
@@ -144,6 +145,7 @@ export class DPackage extends DNamedElement {
     parent: Pointer<DPackage | DModel, 0, 'N', LPackage | LModel> = [];
 
     classifiers: Pointer<DClass, 0, 'N', LClass> = [];
+    enumerations: Pointer<DEnumerator, 0, 'N', LEnumerator> = [];
     subpackages: Pointer<DPackage, 0, 'N', LPackage> = []
 
     // ******************** ecore officials inherited ******************** //
@@ -248,6 +250,7 @@ export class DReference extends DStructuralFeature {
     container: boolean = false; // ?
     resolveProxies: boolean = true; // ?
     opposite: Pointer<DReference, 0, 1, LReference> = null;
+
 }
 
 @RuntimeAccessible

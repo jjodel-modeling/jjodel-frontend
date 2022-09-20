@@ -229,7 +229,7 @@ export class LModelElement extends MixOnlyFuncs(DModelElement, LPointerTargetabl
         Log.ex(!dpackage && !dmodel, 'Childrens can only be inserted inside packages or models.', {dpackage, dmodel, context});
         if (dpackage && lpackage) {
             let name = 'class_' + 0;
-            let pkgchildrens: (LClassifier | LAnnotation | LPackage)[] = lpackage.childrens;
+            let pkgchildrens: (LClassifier | LAnnotation | LPackage | LEnumerator)[] = lpackage.childrens;
             let childrennames: (string)[] = lpackage.childrens.map( c => (c as LClassifier).name);
             name = U.increaseEndingNumber(name, false, false, (newname) => childrennames.indexOf(newname) >= 0)
             const dclass = new DClass(name);
@@ -247,13 +247,16 @@ export class LModelElement extends MixOnlyFuncs(DModelElement, LPointerTargetabl
         return ret;
     }
 
-    get_addChildren(context: LogicContext<DClass>): (type:string) => void {
+     get_addChildren(context: LogicContext<DClass>): (type:string) => void {
         return (type) => {
             switch ((type || '').toLowerCase()){
                 default: Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), context}); break;
                 case "attribute": return this.get_addAttribute(context);
                 case "class": return this.get_addClass(context);
                 case "package": return this.get_addPackage(context);
+                case "reference": return this.get_addReference(context);
+                case "enumeration": return this.get_addEnumeration(context);
+                case "literal": return this.get_addLiteral(context);
             }
         }
     }
@@ -266,7 +269,7 @@ export class LModelElement extends MixOnlyFuncs(DModelElement, LPointerTargetabl
         console.log('add_Attribute click', {dclass, context});
         Log.ex(!dclass || !lclass, 'Attributes can only be inserted inside classes.', {dclass, lclass, context});
         if (dclass && lclass) {
-            let name = 'attrib_' + 0;
+            let name = 'attribute_' + 0;
             let childrens: (LAnnotation | LAttribute | LReference | LOperation)[] = lclass.childrens;
             let childrennames: (string)[] = lclass.childrens.map( c => (c as LStructuralFeature).name);
             name = U.increaseEndingNumber(name, false, false, (newname) => childrennames.indexOf(newname) >= 0)
@@ -275,37 +278,92 @@ export class LModelElement extends MixOnlyFuncs(DModelElement, LPointerTargetabl
             ret = () => LModelElement.addAttribute_(dclass as DClass, dattribute);
             console.log('add attribute click', {dclass, dattribute, ret});
         }
+        ret();
+        return ret;
+    }
+    get_addPackage(context: LogicContext): (() => void) { return this.get_addClass(context); }
 
+    get_addReference(context: LogicContext<DClass>): (() => void) {
+        let ret = () => {};
+        const classPointer: string | null = (context.data?.className === "DClass") ? context.data.id : null;
+        if(classPointer) {
+            const lClass: LClass = MyProxyHandler.wrap(classPointer);
+            let name = 'reference_' + 0;
+            const childrenNames: (string)[] = lClass.childrens.map( c => (c as LNamedElement).name);
+            name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
+            const dReference = new DReference(name);
+            dReference.parent = [classPointer];
+            dReference.type = classPointer;
+            ret = () => LModelElement.addReference_(classPointer, dReference);
+        }
         ret();
         return ret;
     }
 
-    get_addPackage(context: LogicContext): (() => void) { return this.get_addClass(context); }
+    get_addEnumeration(context: LogicContext<DModelElement>): () => void {
+        let ret = () => {};
+        const packagePointer: string | null = (context.data?.className === "DPackage") ? context.data.id : null;
+        if(packagePointer) {
+            const lPackage: LPackage = MyProxyHandler.wrap(packagePointer);
+            let name = 'enum_' + 0;
+            const childrenNames: (string)[] = lPackage.childrens.map( c => (c as LNamedElement).name);
+            name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
+            const dEnumeration = new DEnumerator(name);
+            dEnumeration.parent = [packagePointer];
+            ret = () => LModelElement.addEnumeration_(packagePointer, dEnumeration);
+        }
+        ret();
+        return ret;
+    }
+
+    get_addLiteral(context: LogicContext<DModelElement>): () => void {
+        let ret = () => {};
+        const enumPointer: string | null = (context.data?.className === "DEnumerator") ? context.data.id : null;
+        if(enumPointer) {
+            const lEnum: LEnumerator = MyProxyHandler.wrap(enumPointer);
+            let name = 'literal_' + 0;
+            const childrenNames: (string)[] = lEnum.childrens.map(c => (c as LNamedElement).name);
+            name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
+            const dLiteral = new DEnumLiteral(name);
+            dLiteral.parent = [enumPointer];
+            ret = () => LModelElement.addLiteral_(enumPointer, dLiteral);
+        }
+        ret();
+        return ret;
+    }
+
     // activated by user in JSX
     addClass(): void { Log.exDevv('addClass should never be called directly, but should trigger get_addClass(), this is only a signature for type checking.'); }
     addPackage(): void { Log.exDevv('addPackage should never be called directly, but should trigger get_addClass(), this is only a signature for type checking.'); }
     addAttribute(): void { Log.exDevv('addAttribute should never be called directly, but should trigger get_addAttribute(), this is only a signature for type checking.'); }
+    addReference(): void { Log.exDevv('addReference should never be called directly, but should trigger get_addReference(), this is only a signature for type checking.'); }
+    addEnumeration(): void { Log.exDevv('addEnumeration should never be called directly, but should trigger get_Enumeration(), this is only a signature for type checking.'); }
+    addLiteral(): void { Log.exDevv('addLiteral should never be called directly, but should trigger get_Literal(), this is only a signature for type checking.'); }
     addChildren(type: string): void { Log.exDevv('addAttribute("'+type+'") should never be called directly, but should trigger get_addAttribute(), this is only a signature for type checking.'); }
+
+    private static addReference_(classPointer: string, dReference: DReference): void {
+        new CreateElementAction(dReference);
+        new SetFieldAction(classPointer, "references+=", dReference.id);
+    }
     private static addAttribute_(dclass: DClass, dattribute: DAttribute): void {
-        // const lpackage = DPointerTargetable.wrap(dpackage);
         new CreateElementAction(dattribute);
         new SetFieldAction(dclass, 'attributes+=', dattribute.id);
-        // new SetFieldAction(dclass, 'parent', [dpackage.id]);
     }
     private static addClass_(dpackage: DPackage, dclass: DClassifier): void {
-        // const lpackage = DPointerTargetable.wrap(dpackage);
         new CreateElementAction(dclass);
         new SetFieldAction(dpackage, 'classifiers+=', dclass.id);
-
-        // new SetFieldAction(dclass, 'parent', [dpackage.id]);
-
     }
     private static addPackage_(dmodel: DModel, dpackage: DPackage): void {
-        // const lmodel = DPointerTargetable.wrap(dmodel);
         new CreateElementAction(dpackage);
         new SetFieldAction(dmodel, 'packages+=', dpackage.id);
-        // new SetFieldAction(dpackage, 'parent', [dmodel.id]);
-        console.log('addPackage', {dpackage, dmodel, modelid:dmodel.id});
+    }
+    private static addEnumeration_(packagePointer: string, dEnumeration: DEnumerator): void {
+        new CreateElementAction(dEnumeration);
+        new SetFieldAction(packagePointer, 'enumerations+=', dEnumeration.id);
+    }
+    private static addLiteral_(enumPointer: string, dLiteral: DEnumLiteral) {
+        new CreateElementAction(dLiteral);
+        new SetFieldAction(enumPointer, "literals+=", dLiteral.id);
     }
 }
 
@@ -394,16 +452,18 @@ export class LPackage extends MixOnlyFuncs(DPackage, LNamedElement) {
     static structure: typeof DPackage;
     static singleton: LPackage;
     // @ts-ignore
-    childrens!: (LClassifier | LPackage | LAnnotation)[];
+    childrens!: (LClassifier | LPackage | LAnnotation | LEnumerator)[];
     // @ts-ignore
     subpackages!: LPackage[];
     // @ts-ignore
     classifiers!: LClassifier[];
     // @ts-ignore
+    enumerations!: LClassifier[];
+    // @ts-ignore
     parent!: LModel;
 
-    get_childrens_idlist(context: LogicContext<DPackage>): Pointer<DAnnotation | DPackage | DClassifier, 1, 'N'> {
-        return [...super.get_childrens_idlist(context), ...context.data.subpackages, ...context.data.classifiers]; }
+    get_childrens_idlist(context: LogicContext<DPackage>): Pointer<DAnnotation | DPackage | DClassifier |DEnumerator, 1, 'N'> {
+        return [...super.get_childrens_idlist(context), ...context.data.subpackages, ...context.data.classifiers, ...context.data.enumerations]; }
 }
 
 @RuntimeAccessible

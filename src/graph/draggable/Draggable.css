@@ -1,0 +1,12 @@
+.draggable-container {
+    height: 500px; width: 1000px;
+    background-color: lightgreen;
+    overflow: hidden;
+}
+.draggable {
+    width: 200px;
+    height: 200px;
+    background-color: blueviolet;
+    position: relative;
+    cursor: pointer;
+}

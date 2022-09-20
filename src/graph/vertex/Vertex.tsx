@@ -1,4 +1,4 @@
-import React, {CSSProperties, Dispatch, PureComponent, ReactElement, ReactNode} from "react";
+import React, {CSSProperties, Dispatch, MouseEventHandler, PureComponent, ReactElement, ReactNode} from "react";
 import { connect } from "react-redux";
 import './vertex.scss';
 // import {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps} from "../graphElement/sharedTypes/sharedTypes";
@@ -29,9 +29,22 @@ import {
     LGraph,
     DVoidVertex,
     defaultVSize,
-    MyProxyHandler, DClass, DClassifier, GObject, DPackage, DModel, DGraphElement, DVertex, DGraph, DGraphVertex
+    MyProxyHandler,
+    DClass,
+    DClassifier,
+    GObject,
+    DPackage,
+    DModel,
+    DGraphElement,
+    DVertex,
+    DGraph,
+    DGraphVertex,
+    SetFieldAction
 } from "../../joiner";
+import Draggable from 'react-draggable';
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
+
+
 
 // private
 class VertexStatee extends GraphElementStatee {
@@ -96,6 +109,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         let initialState: VertexStatee = { draggingTempPosition: undefined };
         // @ts-ignore
         this.state = initialState;
+
     }
 
 
@@ -161,6 +175,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         // send redux action to delete vertex
         delete GraphDragHandler.singleton.vertexToComponent[this.props.nodeid as string];
     }
+
 
     render(): ReactNode {
         // const htmlsize: Size | null = this.parentRef.current && Size.of(this.parentRef.current);
@@ -230,43 +245,67 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
         if (sizestyle.width === '0px' || sizestyle.height === '0px') {
             sizestyle.overflow= 'hidden';
         }
-
-        return (<>
-            <div
-                id={this.props.nodeid}
-                data-dataid={this.props.data?.id}
-                data-viewid={this.props.view?.id}
-                data-modelname={this.props.data?.className}
-                className={"StaticVertex " + classes.join(' ')}
-                ref={this.parentRef}
-                onClick={this.onclick}
-                onMouseDown={this.onmousedown}
-                data-userselecting={JSON.stringify(this.props.node?.__raw.isSelected || {})}
-                style={{...this.props.style, ...sizestyle} }
+        //onMouseDown={this._dragStart} onMouseMove={this._dragging} onMouseUp={this._dragEnd}
+        const className = this.props.data.className;
+        if(className === "DClass" || className === "DEnumerator")
+            return (<Draggable>
+                <div
+                    id={this.props.nodeid}
+                    data-dataid={this.props.data?.id}
+                    data-viewid={this.props.view?.id}
+                    data-modelname={this.props.data?.className}
+                    className={"StaticVertex " + classes.join(' ')}
+                    ref={this.parentRef}
+                    onClick={this.onclick}
+                    data-userselecting={JSON.stringify(this.props.node?.__raw.isSelected || {})}
+                    style={{...this.props.style, ...sizestyle}}
+                    onMouseDown={this.onmousedown}
                 >
-                {
-                    false &&
-                    <div >size: {JSON.stringify(sizestyle)}</div>
-                }
-                {/*<div>{
-                    '__selected: ' + (
-                    !!((this.props.node?.__raw?.isSelected || {})[DUser.current])) +
-                ', __isG:' + this.props.isGraph + ', __isV:' +
-                this.props.isVertex + ', __DType:' +
-                (this.props.node && this.props.node.className)}</div>*/}
-                {
-                    this.props.isVertex
-                        ?
-                        <Overlap autosizex={false} autosizey={true}>
-                            {/*
-                            <div className={"vertex-controls"}/>
-                            <div style={{display: "none"}}>V_Size: <span>{vsize?.toString()}</span></div>*/}
-                            <div className={"OverlapGrandChildren"} style={overlapChildStyle}>{super.render()}</div>
-                        </Overlap>
-                        :
-                        <div>{super.render()}</div>}
-            </div>
-        </>); }
+                    {
+                        this.props.isVertex ?
+                            <Overlap autosizex={false} autosizey={true}>
+
+                                    <div className={"OverlapGrandChildren"} style={overlapChildStyle}>
+                                        {super.render()}
+                                    </div>
+
+                            </Overlap>
+                            :
+                            <div>{super.render()}</div>
+                    }
+                </div>
+            </Draggable>);
+        else
+            return (<>
+                <div
+                    id={this.props.nodeid}
+                    data-dataid={this.props.data?.id}
+                    data-viewid={this.props.view?.id}
+                    data-modelname={this.props.data?.className}
+                    className={"StaticVertex " + classes.join(' ')}
+                    ref={this.parentRef}
+                    onClick={this.onclick}
+                    data-userselecting={JSON.stringify(this.props.node?.__raw.isSelected || {})}
+                    style={{...this.props.style, ...sizestyle}}
+                    onMouseDown={this.onmousedown}
+                >
+                    {
+                        this.props.isVertex ?
+                            <Overlap autosizex={false} autosizey={true}>
+
+                                <div className={"OverlapGrandChildren"} style={overlapChildStyle}>
+                                    {super.render()}
+                                </div>
+
+                            </Overlap>
+                            :
+                            <div>{super.render()}</div>
+                    }
+                </div>
+            </>);
+    }
+
+
     /*
     private clearCurrentUserSelection(): void {
         GraphDragHandler.clearSelection();
@@ -279,10 +318,13 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
     + problem: prototype.shouldComponentUpdate returns false all the time?
     */
 
+    //Giordano:: comment this
+    /*
     shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<VertexState>, nextContext: any): boolean {
         return !this.suspendRender && superclassGraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
         // return !!(PureComponent.prototype.shouldComponentUpdate?.call(this, nextProps, nextState, nextContext));
     }
+    */
 
     //NB: do not add logic functions like setName here, add them on data (proxy of raw model data). to edit model just do: oninput={(e)=>{this.model.name=e.target.value}, the proxy will trigger a redux action
     public setAbsolutePosition(pos: Point) {

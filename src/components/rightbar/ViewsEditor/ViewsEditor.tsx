@@ -278,6 +278,8 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
 
     let lViews: LViewElement[] = [];
     console.log('DVE', {DPointerTargetable, dpt:windoww.DPointerTargetable});
+
+    //Giordano: use state.views instaed Selectors ?
     for(let dView of Selectors.getAllViewElements()){
         let item: LViewElement = MyProxyHandler.wrap(dView)
         if (item) lViews.push(item)

@@ -5,10 +5,19 @@ input, textarea {
   user-select: auto;
 }
 
-img {
-  user-drag: none;
-}
+img { user-drag: none; }
 
+/* BOOTSTRAP OVERRIDE */
+button { border-radius: 10px !important; }
+.row > * {
+  padding-right: 0;
+  padding-left: 0;
+}
+.render-test {
+  width: 100px;
+  height: 100px;
+  background: green;
+}
 
 
 
@@ -62,3 +71,62 @@ html{
     transform: rotate(360deg);
   }
 }
+
+/* MODELLING */
+.model-root {
+  position: absolute;
+  height: 100%; width: 100%;
+  background-image: url("./graph.svg"); background-repeat: repeat
+}
+.pkg-root {}
+.attrib-root {}
+.vertex-root {
+  width: 14em;
+  background-color: white;
+  border: 1px solid #0000005c;
+  border-radius: 8px;
+  box-shadow: rgba(0, 0, 0, 0.24) 0 5px 10px;
+}
+.vertex-header {
+  text-align: center;
+  display: flex;
+  padding: 8px 0;
+  width: 100%;
+  font-size: 1rem;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  border-bottom: 0.5px solid #77777777;
+}
+.name-edit { background: transparent; border: none; }
+.name-edit>input:focus {
+  border-radius: 8px;
+  outline: 1px dashed black;
+}
+.childrens-container {
+  background-color: whitesmoke;
+  width: 100%;
+  font-size: .75rem;
+  border-bottom: 0.5px solid #77777777;
+}
+.attrib-type-select {
+  outline: none;
+  border: none;
+  background: transparent;
+  text-align: right;
+}
+.vertex-footer {
+  width: 100%;
+  height: 2.1em;
+  font-size: .8rem;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+.vertex-footer>form>div>p { font-size: .7rem; }
+.vertex-footer>form>div>select { font-size: .7rem; border-radius: 8px; outline: none; }
+.add-attribute {
+  border-radius: 0 0 6px 0 !important;
+  background: #e1e1e1;
+  padding: 0 15px;
+}
+.vertex-footer-hide { display: none; }
+.vertex-root:hover .vertex-footer-hide { display: flex; }

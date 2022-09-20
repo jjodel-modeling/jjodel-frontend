@@ -15,7 +15,15 @@ import {
     Log,
     LGraphElement,
     LViewElement,
-    DModelElement, RuntimeAccessibleClass, DGraphElement, LModel, DGraph, MyProxyHandler, Selectorss
+    DModelElement,
+    RuntimeAccessibleClass,
+    DGraphElement,
+    LModel,
+    DGraph,
+    MyProxyHandler,
+    Selectorss,
+    DClassifier,
+    DClass, DEnumerator
 } from "../../joiner";
 
 enum ViewEClassMatch { // this acts as a multiplier for explicit priority
@@ -33,6 +41,25 @@ export class Selectors{
         const ptrs: Pointer<DViewElement, 0, 'N'> = Object.values((state).viewelements);
         let views: DViewElement[] = ptrs.map<DViewElement>( (ptr) => state.idlookup[ptr] as DViewElement);
         return views;
+    }
+    //Giordano: implement this
+    static getAllClassifiers(): DClassifier[] {
+        let state: IStore & GObject = store.getState();
+        const ptrs: Pointer<DClassifier, 0, 'N'> = Object.values((state).classifiers);
+        const classifiers: DClassifier[] = ptrs.map<DClassifier>( (ptr) => state.idlookup[ptr] as DClassifier);
+        return classifiers;
+    }
+    static getAllEnumerations(): DEnumerator[] {
+        let state: IStore & GObject = store.getState();
+        const ptrs: Pointer<DEnumerator, 0, 'N'> = Object.values((state).enumerators);
+        const enumerations: DEnumerator[] = ptrs.map<DEnumerator>( (ptr) => state.idlookup[ptr] as DEnumerator);
+        return enumerations;
+    }
+    static getAllClasses(): DClass[] {
+        let state: IStore & GObject = store.getState();
+        const ptrs: Pointer<DClass, 0, 'N'> = Object.values((state).classs);
+        const classes: DClass[] = ptrs.map<DClass>( (ptr) => state.idlookup[ptr] as DClass);
+        return classes;
     }
 
     static getVertex<W extends boolean = true, RP extends boolean = true>(wrap?: W /* = true */, resolvePointers?: RP /**/):
