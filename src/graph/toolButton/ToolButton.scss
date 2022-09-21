@@ -1,0 +1,30 @@
+.tool-button {
+  width: 2em;
+  height: 1.6em;
+  background: whitesmoke;
+  position: absolute;
+  top: -1.5em;
+  left: calc(100% - 2.4em);
+  border-top-left-radius: 999px;
+  border-top-right-radius: 999px;
+  cursor: pointer;
+  display: none;
+}
+.tool-menu {
+  font-size: .8rem;
+  width: 10em;
+  height: auto;
+  background: white;
+  position: absolute;
+  left: calc(100% - 3em);
+  display: none;
+  text-align: center;
+  padding: .2em;
+  border: 1px solid black;
+  border-radius: 8px;
+  z-index: 999;
+}
+.tool-menu > div:hover { cursor: pointer; color: #007bff; font-weight: bold; }
+.DClass:hover .tool-button { display: block; }
+.DEnumerator:hover .tool-button { display: block; }
+.tool-container:hover .tool-menu { display: block }

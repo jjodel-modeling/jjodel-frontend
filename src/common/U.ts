@@ -17,7 +17,7 @@ import {
     MixOnlyFuncs,
     RuntimeAccessible,
     windoww,
-    MyError, DPointerTargetable, TODO
+    MyError, DPointerTargetable, TODO, LogicContext
 } from "../joiner";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
@@ -28,6 +28,21 @@ export class U{
 
     private static notNullFilter(e: any) { return !!e; };
     static pe(useLog_e: never, ...rest: any): void | never {}
+
+    //Giordano: implement this
+    public static orderChildrenByTimestamp(context: LogicContext) {
+        const children = context.data?.childrens;
+        if(children && children.length > 0) {
+            let orderedChildren = new Map();
+            for(let child of children) {
+                let timestamp = child.id.slice(-13);
+                orderedChildren.set(+timestamp, child);
+            }
+            orderedChildren = new Map([...orderedChildren.entries()].sort());
+            return [...orderedChildren.values()];
+        } else return [];
+
+    }
 
     // warn: this check if the scope containing the function is strict, to check if a specific external scope-file is strict
     // you have to write inline the code:        var isStrict = true; eval("var isStrict = false"); if (isStrict)...

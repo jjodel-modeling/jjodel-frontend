@@ -69,6 +69,7 @@ export class IStore {
     classifiers: Pointer<DClassifier, 0, 'N', LClassifier> = [];
     //classs: Pointer<DClass, 0, 'N', LCLass> = [];
     enumerators: Pointer<DEnumerator, 0, 'N', LEnumerator> = [];
+    packages: Pointer<DPackage, 0, 'N', LPackage> = [];
 
 
 
@@ -201,19 +202,20 @@ function makeDefaultGraphViews(): DViewElement[] {
         <div className={"pkg-root"}>
             <div style={{position: "absolute", zIndex: 1}} className={"p-1"}>
                 <button type={"button"} className={"btn btn-dark btn-sm"} onClick={() => {
-                    this.data.addChildren("class");
+                    this.data.addChild("class");
                 }}>
                     <i className={"bi bi-plus"}></i> class
                 </button>            
                 <button type={"button"} className={"ms-1 btn btn-dark btn-sm"} onClick={() => {
-                    this.data.addChildren("enumeration");
+                    this.data.addChild("enumeration");
                 }}>
                     <i className={"bi bi-plus"}></i> enum
-                </button>
+                </button>           
             </div>
             <div className={"childrens"}>
-                {this.data.childrens.map((classifier, i) => {
-                    return <DefaultNode key={i} data={classifier.id} />})
+                {U.orderChildrenByTimestamp(this).map((classifier, i) => {
+                        return <DefaultNode key={i} data={classifier.id} />
+                    })
                 }
             </div>
         </div>
@@ -335,7 +337,7 @@ function makeDefaultGraphViews(): DViewElement[] {
             .Vertex [enum-type='EEnum'] textarea:not([enum]){display: none;}
             \`}</style>`;
 
-    let classdefaultjsx = `<div>
+    let classdefaultjsx = `<div className={""}>
         <div className={"vertex-root"}>
             <div className={"vertex-header"}>
                 <div className={"row w-100 mx-auto"}>
@@ -356,7 +358,7 @@ function makeDefaultGraphViews(): DViewElement[] {
                 <form action={""} method={"GET"} className={"vertex-footer-hide"} onSubmit={(e) => {
                     e.preventDefault();
                     const featureType = e.target[0].value; // this can be "Attribute" or "Reference"
-                    this.data.addChildren(featureType);
+                    this.data.addChild(featureType);
                  }}>
                     <div className={"d-flex mx-2 my-auto"}>
                         <p className={"my-auto"}>Add</p>
@@ -399,7 +401,7 @@ function makeDefaultGraphViews(): DViewElement[] {
                 <form action={""} method={"GET"} className={"vertex-footer-hide"} onSubmit={(e) => {
                     e.preventDefault();
                     const featureType = e.target[0].value; // this can be only "Literal"
-                    this.data.addChildren(featureType);
+                    this.data.addChild(featureType);
                  }}>
                     <div className={"d-flex mx-2 my-auto"}>
                         <p className={"my-auto"}>Add</p>

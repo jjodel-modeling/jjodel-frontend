@@ -42,6 +42,7 @@ import {
     SetFieldAction
 } from "../../joiner";
 import Draggable from 'react-draggable';
+import ToolButton from "../toolButton/ToolButton";
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 
 
@@ -264,11 +265,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, VertexState
                     {
                         this.props.isVertex ?
                             <Overlap autosizex={false} autosizey={true}>
-
-                                    <div className={"OverlapGrandChildren"} style={overlapChildStyle}>
+                                    <div className={"OverlapGrandChildren " + this.props.data.className} style={overlapChildStyle}>
+                                        {this.props.data.className === "DClass" || this.props.data.className === "DEnumerator" ?
+                                            <ToolButton data={this.props.data} /> : <></>
+                                        }
                                         {super.render()}
                                     </div>
-
                             </Overlap>
                             :
                             <div>{super.render()}</div>

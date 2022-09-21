@@ -247,7 +247,7 @@ export class LModelElement extends MixOnlyFuncs(DModelElement, LPointerTargetabl
         return ret;
     }
 
-     get_addChildren(context: LogicContext<DClass>): (type:string) => void {
+     get_addChild(context: LogicContext<DClass>): (type:string) => void {
         return (type) => {
             switch ((type || '').toLowerCase()){
                 default: Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), context}); break;
@@ -339,7 +339,7 @@ export class LModelElement extends MixOnlyFuncs(DModelElement, LPointerTargetabl
     addReference(): void { Log.exDevv('addReference should never be called directly, but should trigger get_addReference(), this is only a signature for type checking.'); }
     addEnumeration(): void { Log.exDevv('addEnumeration should never be called directly, but should trigger get_Enumeration(), this is only a signature for type checking.'); }
     addLiteral(): void { Log.exDevv('addLiteral should never be called directly, but should trigger get_Literal(), this is only a signature for type checking.'); }
-    addChildren(type: string): void { Log.exDevv('addAttribute("'+type+'") should never be called directly, but should trigger get_addAttribute(), this is only a signature for type checking.'); }
+    addChild(type: string): void { Log.exDevv('addAttribute("'+type+'") should never be called directly, but should trigger get_addAttribute(), this is only a signature for type checking.'); }
 
     private static addReference_(classPointer: string, dReference: DReference): void {
         new CreateElementAction(dReference);
