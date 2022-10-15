@@ -84,7 +84,7 @@ class BidirectionalHTMLEditor extends PureComponent<AllProps, ThisState>{
         delete otherprops.obj; // obj è stato wrappato come proxy in "data"
         let code: string | null = null;
         return (<>
-            <div style={{marginTop: "5.5em", height: "7em"}} tabIndex={-1} onBlur={(e:any) => {
+            <div style={{marginTop: "5.5em", height: "10em"}} tabIndex={-1} onBlur={(e:any) => {
                 if(code != null) {
                     data && (data[this.props.field] = (this.props.setter ? this.props.setter(code) : code));
                 }}

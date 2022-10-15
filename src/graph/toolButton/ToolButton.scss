@@ -1,7 +1,6 @@
 .tool-button {
   width: 2em;
   height: 1.6em;
-  background: whitesmoke;
   position: absolute;
   top: -1.5em;
   left: calc(100% - 2.4em);
@@ -10,6 +9,7 @@
   cursor: pointer;
   display: none;
 }
+
 .tool-menu {
   font-size: .8rem;
   width: 10em;
@@ -17,7 +17,6 @@
   background: white;
   position: absolute;
   left: calc(100% - 3em);
-  display: none;
   text-align: center;
   padding: .2em;
   border: 1px solid black;
@@ -27,4 +26,36 @@
 .tool-menu > div:hover { cursor: pointer; color: #007bff; font-weight: bold; }
 .DClass:hover .tool-button { display: block; }
 .DEnumerator:hover .tool-button { display: block; }
-.tool-container:hover .tool-menu { display: block }
+//.tool-container:hover .tool-menu { display: block }
+
+.tool-button-no-vertex {
+  width: 1.6em;
+  height: 2em;
+  position: absolute;
+  left: calc(100% + .25em);
+  transform: rotate(90deg);
+  border-top-left-radius: 999px;
+  border-top-right-radius: 999px;
+  cursor: pointer;
+  //display: none;
+  display: block;
+}
+.tool-menu-no-vertex {
+  font-size: .8rem;
+  width: 10em;
+  height: auto;
+  background: white;
+  position: absolute;
+  left: 100%;
+  //top: 3em;
+  text-align: center;
+  padding: .2em;
+  border: 1px solid black;
+  border-radius: 8px;
+  z-index: 999;
+}
+.tool-menu-no-vertex > div:hover { cursor: pointer; color: #007bff; font-weight: bold; }
+.DAttribute:hover .tool-button-no-vertex { display: block; }
+.DReference:hover .tool-button-no-vertex { display: block; }
+.DEnumLiteral:hover .tool-button-no-vertex { display: block; }
+//.tool-container:hover .tool-menu-no-vertex { display: block }

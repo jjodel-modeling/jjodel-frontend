@@ -17,7 +17,24 @@ import {
     MixOnlyFuncs,
     RuntimeAccessible,
     windoww,
-    MyError, DPointerTargetable, TODO, LogicContext
+    MyError,
+    DPointerTargetable,
+    TODO,
+    LogicContext,
+    LModelElement,
+    SetRootFieldAction,
+    DLog,
+    CreateElementAction,
+    MyProxyHandler,
+    LReference,
+    LClass,
+    LPackage,
+    LEnumerator,
+    LAttribute,
+    DRefEdge,
+    Selectors,
+    DReference,
+    DModelElement
 } from "../joiner";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
@@ -29,11 +46,12 @@ export class U{
     private static notNullFilter(e: any) { return !!e; };
     static pe(useLog_e: never, ...rest: any): void | never {}
 
-    //Giordano: implement this
-    public static orderChildrenByTimestamp(context: LogicContext) {
+    //Giordano: start
+
+    public static orderChildrenByTimestamp(context: LogicContext): LModelElement[] {
         const children = context.data?.childrens;
         if(children && children.length > 0) {
-            let orderedChildren = new Map();
+            let orderedChildren = new Map<number, LModelElement>();
             for(let child of children) {
                 let timestamp = child.id.slice(-13);
                 orderedChildren.set(+timestamp, child);
@@ -41,8 +59,125 @@ export class U{
             orderedChildren = new Map([...orderedChildren.entries()].sort());
             return [...orderedChildren.values()];
         } else return [];
-
     }
+
+    public static getReferenceEdge(dReference: DReference) : DRefEdge | undefined {
+        const dRefEdges: DRefEdge[] = Selectors.getRefEdges();
+        for(let dRefEdge of dRefEdges) {
+            if(dRefEdge.start === dReference.id) { return dRefEdge; }
+        }
+        return undefined;
+    }
+
+    /*
+    public static removeFromList<T extends LPointerTargetable>(list: T[], itemToRemove: T): T[] {
+        const correctedList: T[] = [];
+        for(let item of list) {
+            const lItem: T | undefined = MyProxyHandler.wrap(item as DPointerTargetable);
+            if(lItem && lItem.id !== itemToRemove.id) { correctedList.push(lItem); }
+        }
+        return correctedList;
+    }
+    */
+    public static removeFromList(list: string[], itemToRemove: string): string[] {
+        const set = new Set(list);
+        set.delete(itemToRemove);
+        return [...set];
+    }
+
+    public static showToolButton(className : string) : boolean {
+        switch (className){
+            default: return false;
+            case "DPackage": return true;
+            case "DClass": return true;
+            case "DAttribute": return true;
+            case "DReference": return true;
+            case "DEnumerator": return true;
+            case "DEnumLiteral": return true;
+        }
+    }
+
+    public static deletePointerBy(lModel: LPointerTargetable, dPointer: string|DPointerTargetable): void {
+        const pointedBy = new Set(lModel.pointedBy);
+        const pointer: string = dPointer instanceof DPointerTargetable ? dPointer.id : dPointer;
+        pointedBy.delete(pointer);
+        lModel.pointedBy = [...pointedBy];
+    }
+    public static addPointerBy(lModel: LPointerTargetable, dPointer: string|DPointerTargetable): void {
+        const pointedBy = new Set(lModel.pointedBy);
+        const pointer: string = dPointer instanceof DPointerTargetable ? dPointer.id : dPointer;
+        pointedBy.add(pointer);
+        lModel.pointedBy = [...pointedBy];
+    }
+
+    public static getAllPackageClasses(data: LReference): LClass[] {
+        const dClass = data.father;
+        const lClass: LClass = MyProxyHandler.wrap(dClass);
+        const dPackage = lClass.father;
+        const lPackage: LPackage = MyProxyHandler.wrap(dPackage);
+        const classes: LClass[] = [];
+        for(let classifier of lPackage.classifiers) {
+            const lClassifier: LClass | LEnumerator = MyProxyHandler.wrap(classifier);
+            if(lClassifier.className === "DClass") classes.push(lClassifier as LClass);
+        }
+        return classes;
+    }
+    public static getAllPackageEnumerators(data: LAttribute): LEnumerator[] {
+        const dClass = data.father;
+        const lClass: LClass = MyProxyHandler.wrap(dClass);
+        const dPackage = lClass.father;
+        const lPackage: LPackage = MyProxyHandler.wrap(dPackage);
+        const enumerators: LEnumerator[] = [];
+        for(let classifier of lPackage.classifiers) {
+            const lClassifier: LClass | LEnumerator = MyProxyHandler.wrap(classifier);
+            if(lClassifier.className === "DEnumerator") enumerators.push(lClassifier as LEnumerator);
+        }
+        return enumerators;
+    }
+
+    public static writeLog(action: string, context: string, firstItem: string, secondItem?: string): void {
+        let log: string = "";
+        //context = context.toUpperCase();
+        switch(action.toLowerCase()) {
+            case "create": log = `<i>${context}:</i> created <b>${firstItem}</b>`; break;
+            case "add": log = `<i>${context}:</i> added <b>${firstItem}</b> to <b>${secondItem}</b>`; break;
+            case "delete": log = `<i>${context}:</i> deleted <b>${firstItem}</b> from <b>${secondItem}</b>`; break;
+        }
+        new CreateElementAction(new DLog(log));
+    }
+
+    // delete this block --> start
+    private static classnameConverter(classname: string): string | null {
+        switch (classname) {
+            default: return null;
+            case "DAttribute": return "attributes";
+            case "DReference": return "references";
+            case "DPackage": return "packages";
+        }
+    }
+    public static classnameToObjConverter(classname: string): string | null {
+        switch (classname) {
+            default: return U.classnameConverter(classname);
+            case "DClass": return "classifiers";
+            case "DEnumerator": return "classifiers";
+            case "DEnumLiteral": return "literals";
+        }
+    }
+    public static classnameToReduxConverter(classname: string): string | null {
+        switch (classname) {
+            default: return U.classnameConverter(classname);
+            case "DClass": return "classs";
+            case "DEnumerator": return "enumerators";
+            case "DEnumLiteral": return "enumliterals";
+        }
+    }
+    // delete this block --> start
+
+    public static classnameToRedux(classname: string): string | null {
+        return  (classname.substring(1)).toLowerCase() + "s";
+    }
+    //Giordano: end
+
 
     // warn: this check if the scope containing the function is strict, to check if a specific external scope-file is strict
     // you have to write inline the code:        var isStrict = true; eval("var isStrict = false"); if (isStrict)...
@@ -56,6 +191,11 @@ export class U{
             // noinspection BadExpressionStatementJS,JSUnfilteredForInLoop
             out[key] ?? (out[key] = o[key]);
         }
+    }
+
+    public static log(log: any) {
+        console.clear();
+        console.log("###", log);
     }
 
     static removeEmptyObjectKeys(obj: GObject): void{

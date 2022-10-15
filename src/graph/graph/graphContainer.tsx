@@ -51,12 +51,13 @@ export class GraphsContainerComponent extends PureComponent<AllProps, ThisState>
                             </Overlap>
                         </svg>* /}
                         <GraphElement data={m} />*/}
-                        {
+                        {/*
+                            Giordano comment this problem with model's children
                             <Graph graphid={m.id} data={m.model} view={undefined}>
                                 <Vertex data={m.model}/>
                             </Graph>
 
-                        }
+                        */}
                         {this.props.children/*<QA />*/}
                     </>)
                 )

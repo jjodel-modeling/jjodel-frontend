@@ -24,7 +24,7 @@ import {
     GObject,
     MyProxyHandler,
     MixOnlyFuncs,
-    windoww,
+    windoww, DModelElement, LModelElement,
 } from "../../joiner";
 
 console.warn('ts loading graphDataElement');
@@ -179,6 +179,8 @@ export class DGraphVertex extends MixOnlyFuncs(DGraph, DVertex) {
 @RuntimeAccessible
 export class DEdge extends DVoidEdge{
     static logic: typeof LVoidEdge; //typeof LEdge;
+    start: Pointer<DModelElement, 1, 1, LModelElement> = "";
+    end: Pointer<DModelElement, 1, 1, LModelElement> = "";
 }
 
 @RuntimeAccessible
@@ -190,6 +192,7 @@ export class DExtEdge extends DEdge {
 export class DRefEdge extends DEdge {
     static logic: typeof LEdge; // typeof LRefEdge;
 }
+
 
 // for edges without a modelling element
 

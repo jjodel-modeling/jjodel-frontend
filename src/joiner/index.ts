@@ -37,6 +37,9 @@ export {Uarr, CSSParser, DDate, RawVertex, $s, ParseNumberOrBooleanOptions,
 export const Log = windoww.Log;
 export {UX} from "../common/UX";
 export var U = windoww.U as typeof UType;
+export {MDE} from "../common/MDE";
+export {DLog} from "../model/classes/D";
+export {LLog} from "../model/classes/L";
 // console.error('iiiiiiiiiiiiiiii 4');
 
 // import domain-specific classes
@@ -198,7 +201,7 @@ export {
     MyInputComponent,
     Field,
     GraphComponent,
-    fakeexport,
+    Edges,
     QA,
     GraphsContainerComponent,
     DataOutputComponent,

@@ -3,63 +3,98 @@ import {connect} from "react-redux";
 import {
     DClass, DeleteElementAction,
     DModelElement, DPackage, DViewElement,
-    IStore, LClass, LClassifier,
+    IStore, LClass, LClassifier, LEnumLiteral,
     LModelElement,
-    LPackage,
+    LPackage, MDE,
     MyProxyHandler,
     Pointer, SetFieldAction,
-    SetRootFieldAction,
+    SetRootFieldAction, U, windoww,
 } from "../../joiner";
 import "./ToolButton.scss"
+import {useStateIfMounted} from "use-state-if-mounted";
 
 interface ThisState {}
+function ToolButtonComponent(props: AllProps, state: ThisState) {
 
-class ToolButtonComponent extends PureComponent<AllProps, ThisState> {
+    const data = props.data;
+    const isVertex = props.isVertex;
+    const [visible, setVisible] = useStateIfMounted(false);
 
-    lPackage = this.props.lPackage;
-    data = this.props.data;
+    const onClick = (e: React.MouseEvent<HTMLDivElement>): void => {
+        U.log(data);
+        windoww.temp = data;
+        //MDE.deleteModelElement(data);
+        data.delete();
 
-    constructor(props: AllProps, context: any) {
-        super(props, context);
     }
 
-    private deleteClass = (e: React.MouseEvent<HTMLDivElement>): void => {
-        let index = 0;
-        for(let classifier of this.lPackage.classifiers) {
-            // @ts-ignore
-            if(classifier === this.data.id) {
-                new SetFieldAction(this.lPackage.id, "classifiers-=", index);
+    const cssClass: string = isVertex ? "tool-button" : "tool-button-no-vertex";
+    return (<div className={"tool-container"} onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {setVisible(false)}}>
+        <div className={cssClass + " text-center text-white bg-primary"}
+             onClick={(e: React.MouseEvent<HTMLDivElement>) => {setVisible(true)}} >
+            {isVertex ? <i style={{fontSize: ".75rem"}} className="bi bi-tools"></i> :
+                <></>
             }
-            index++;
+        </div>
+        {data.className === "DClass" ?
+            <div className={"tool-menu"} style={{display: visible ? "block" : "none"}}>
+                <div onClick={onClick}>Class option</div>
+                <div onClick={onClick}>Class option</div>
+                <div onClick={onClick}>Class option</div>
+                <div onClick={onClick}>Class option</div>
+            </div> : <></>
         }
-        new DeleteElementAction(this.data.__raw);
-    }
+        {data.className === "DEnumerator" ?
+            <div className={"tool-menu"} style={{display: visible ? "block" : "none"}}>
+                <div onClick={onClick}>Enum option</div>
+                <div onClick={onClick}>Enum option</div>
+                <div onClick={onClick}>Enum option</div>
+                <div onClick={onClick}>Enum option</div>
+            </div> : <></>
+        }
+        {data.className === "DAttribute" ?
+            <div className={"tool-menu-no-vertex"} style={{display: visible ? "block" : "none"}}>
+                <div onClick={onClick}>Attrib option</div>
+                <div onClick={onClick}>Attrib option</div>
+                <div onClick={onClick}>Attrib option</div>
+                <div onClick={onClick}>Attrib option</div>
+            </div> : <></>
+        }
+        {data.className === "DReference" ?
+            <div className={"tool-menu-no-vertex"} style={{display: visible ? "block" : "none"}}>
+                <div onClick={onClick}>Reference option</div>
+                <div onClick={onClick}>Reference option</div>
+                <div onClick={onClick}>Reference option</div>
+                <div onClick={onClick}>Reference option</div>
+            </div> : <></>
+        }
+        {data.className === "DEnumLiteral" ?
+            <div className={"tool-menu-no-vertex"} style={{display: visible ? "block" : "none"}}>
+                <div onClick={onClick}>Literal option</div>
+                <div onClick={onClick}>Literal option</div>
+                <div onClick={onClick}>Literal option</div>
+                <div onClick={onClick}>Literal option</div>
+            </div> : <></>
+        }
+        {data.className === "DPackage" ?
+            <div className={"tool-menu-no-vertex"} style={{display: visible ? "block" : "none"}}>
+                <div onClick={onClick}>Package option</div>
+                <div onClick={onClick}>Package option</div>
+                <div onClick={onClick}>Package option</div>
+                <div onClick={onClick}>Package option</div>
+            </div> : <></>
+        }
+    </div>);
 
-    render(): ReactNode {
-        return (<div className={"tool-container"}>
-            <div className={"tool-button text-center text-white bg-primary"}>
-                <i style={{fontSize: ".75rem"}} className="bi bi-tools"></i>
-            </div>
-            <div className={"tool-menu"}>
-                <div onClick={this.deleteClass}>Delete</div>
-                <div>Option</div>
-                <div>Option</div>
-                <div>Option</div>
-                <div>Option</div>
-            </div>
-        </div>);
-    }
 }
 
-interface OwnProps {data: LModelElement}
-interface StateProps {lPackage: LPackage}
+interface OwnProps {data: LModelElement, isVertex: boolean | undefined}
+interface StateProps {}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {
-        lPackage: MyProxyHandler.wrap(state.packages[0])
-    };
+    const ret: StateProps = {};
     return ret;
 }
 

@@ -1,5 +1,6 @@
-import type {GObject, VertexComponent, } from "../../joiner";
+import type {VertexComponent, } from "./VertexOLD";
 import {
+    GObject,
     ClickEvent,
     DGraphElement,
     Dictionary, DVertex, DViewElement, DVoidEdge, DVoidVertex, getPath,

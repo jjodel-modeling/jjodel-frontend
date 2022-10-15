@@ -204,9 +204,14 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     _subMaps?: Dictionary<string, boolean>;
 
     id!: string;
-    pointedBy: DocString<'path in store'>[] = []; // NB: potrebbe contenere puntatori invalidi.
+    //Giordano: comment this
+    //pointedBy: DocString<'path in store'>[] = []; // NB: potrebbe contenere puntatori invalidi.
     // se viene cancellato un intero oggetto A che contiene una lista di puntatori, gli oggetti che puntano ad A rimuovono A dai loro "poitnedBy",
     // ma gli oggetti puntati da A tramite sotto-oggetti o attributi (subviews...) non vengono aggiornati in "pointedby"
+
+    pointedBy: Pointer<DPointerTargetable, 0, 'N'> = [];
+    father: Pointer<DPointerTargetable, 1, 1> = "";
+
     constructor(isUser: any = false, id?: any, a?: any, b?:any, c?:any) {
         super();
         DPointerTargetable.init_constructor(this, ...arguments);
@@ -226,13 +231,15 @@ export class LPointerTargetable extends DPointerTargetable {
     public static structure: typeof DPointerTargetable;
     public static singleton: LPointerTargetable;
     // @ts-ignore
-    public pointedBy: LPointerTargetable[];
+    //Giordano: comment this
+    // public pointedBy: LPointerTargetable[];
     public __raw!: this;
 
     public get__extends(superClassName: string, context: LogicContext<this>): boolean {
         return RuntimeAccessibleClass.extends(context.data.className, superClassName);
     }
 
+    /* Giordano: comment this
     public get_pointedBy(superClassName: string, context: LogicContext<DPointerTargetable>): LPointerTargetable[] {
         let state: GObject = windoww.store.getState();
         function getForemostObjectInPath(path: DocString<'storePath'>): undefined | LPointerTargetable {
@@ -247,11 +254,11 @@ export class LPointerTargetable extends DPointerTargetable {
         }
         return (context.data.pointedBy || []).map(getForemostObjectInPath).filter( lobj => !!lobj) as LPointerTargetable[];
     }
-
     public set_pointedBy(val: never, context: LogicContext<DPointerTargetable>): boolean {
         windoww.Log.exx('pointedBy field should never be directly edited.', {context, val});
         return false;
     }
+    */
 }
 
 @RuntimeAccessible

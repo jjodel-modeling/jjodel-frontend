@@ -1,21 +1,29 @@
-/*
+import React, {ReactNode} from "react";
+import Xarrow from "react-xarrows";
+import {ReactComponent as DefaultSvg} from "./assets/default.svg";
+import {LRefEdge} from "../../model/dataStructure/GraphDataElements";
+import {LReference} from "../../model/logicWrapper/LModelElement";
+import {svgCustomEdgeType, svgEdgeShapeType} from "react-xarrows/lib/types";
 
-example:
-<EdgeContainer graph={this.props.graphid}> <--genera un svg allineato con la griglia del grafo che lo contiene
-    this.props.model.edges.map( e =>
-        <Edge vertex_start={ e.start } vertex_end={ e.end } edgeid={ e.id } edge = {e} />
-    )
-</EdgeContainer>
-
-
-
-about "model.edges", every time you create a reference an edge is created inside redux state
-if the reference is deleted, the edge is deleted
-if the edge is deleted, the user will choose to delete the reference or only the edge
-the user can create edges unrelated to modelelements (detached)
-a detached edge, can be attached later on to a reference
-
-
-*/
-
-export const fakeexport = {};
+export default class Edge {
+    private static Arrow(start: string, end: string, head?: any, tail?: any): ReactNode {
+        const headShape: svgEdgeShapeType | svgCustomEdgeType = (head) ? head : {svgElem: <DefaultSvg />, offsetForward: 1};
+        const tailShape: svgEdgeShapeType | svgCustomEdgeType = (tail) ? tail : {svgElem: <DefaultSvg />, offsetForward: 1};
+        return(<Xarrow showXarrow={true} zIndex={0} start={start} end={end} color={"black"}
+                       showHead={head !== undefined} headShape={headShape} showTail={tail !== undefined} tailShape={tailShape}
+                       startAnchor={["left", "right"]} endAnchor={"auto"} strokeWidth={2} path={"grid"} gridBreak={"20%50"} />);
+    }
+    public static ReferenceEdge(lRefEdge: LRefEdge, lReference: LReference): ReactNode {
+        if(lReference.containment) { return Edge.ReferenceContainmentEdge(lRefEdge, lReference); }
+        else { return Edge.ReferenceNotContainmentEdge(lRefEdge, lReference); }
+    }
+    private static ReferenceContainmentEdge(lRefEdge: LRefEdge, lReference: LReference): ReactNode {
+        const head = {svgElem: <path d="M 0 0 L 1 0.5 L 0 1 L 0.25 0.5 z"/>, offsetForward: 1};
+        const tail = {svgElem: <rect style={{rotate: "45deg", fill: "white", strokeWidth: "0.1", stroke: "black"}} width=".6pt" height=".6pt" />, offsetForward: 1};
+        return Edge.Arrow(lRefEdge.start, lRefEdge.end, head, tail);
+    }
+    private static ReferenceNotContainmentEdge(lRefEdge: LRefEdge, lReference: LReference): ReactNode {
+        const head = {svgElem: <path d="M 0 0 L 1 0.5 L 0 1 L 0.25 0.5 z"/>, offsetForward: 1};
+        return Edge.Arrow(lRefEdge.start, lRefEdge.end, head, undefined);
+    }
+}

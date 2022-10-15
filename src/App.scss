@@ -72,15 +72,28 @@ html{
   }
 }
 
-/* MODELLING */
-.model-root {
-  position: absolute;
-  height: 100%; width: 100%;
-  background-image: url("./graph.svg"); background-repeat: repeat
+.dock-content .dock-tabpane {
+  //overflow: scroll !important;
 }
-.pkg-root {}
+
+/* MODELLING */
+
+.model-root {
+  position: relative;
+  height: 100%; width: 100%;
+  background-image: url("static/svg/graph.svg"); background-repeat: repeat
+}
+.pkg-root {
+  position: relative;
+  min-width: 30em; min-height: 20em;
+  background-color: white;
+  border: 1px solid #0000005c;
+  border-radius: 8px;
+  box-shadow: rgba(0, 0, 0, 0.24) 0 5px 10px;
+}
 .attrib-root {}
 .vertex-root {
+  overflow: hidden;
   width: 14em;
   background-color: white;
   border: 1px solid #0000005c;
@@ -104,7 +117,8 @@ html{
 }
 .childrens-container {
   background-color: whitesmoke;
-  width: 100%;
+  width: 100% !important;
+  height: 100%;
   font-size: .75rem;
   border-bottom: 0.5px solid #77777777;
 }
@@ -130,3 +144,10 @@ html{
 }
 .vertex-footer-hide { display: none; }
 .vertex-root:hover .vertex-footer-hide { display: flex; }
+
+
+//.childrens { height: fit-content; width: fit-content;}
+
+//.DPackage { width: min-content; height: min-content; }
+
+

@@ -7,7 +7,7 @@ import {
     IStore,
     LGraph,
     LModel,
-    MyProxyHandler,
+    MyProxyHandler, StyleEditor,
 } from "../../joiner";
 import {DefaultNode} from "../../graph/defaultNode/DefaultNode";
 
@@ -15,6 +15,11 @@ import {DockLayout, DockMode, TabData} from "rc-dock";
 import "rc-dock/dist/rc-dock.css";
 import Draggable2 from "../../graph/draggable/Draggable2";
 import ViewsEditor from "../rightbar/ViewsEditor/ViewsEditor";
+import StructureEditor from "../rightbar/structureEditor/StructureEditor";
+import Logger from "../rightbar/logger/Logger";
+import {Xwrapper} from "react-xarrows";
+import Edges from "../../graph/edge/Edges";
+import ToolBar from "../toolbar/ToolBar";
 
 
 interface ThisState {}
@@ -25,10 +30,20 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
     constructor(props: AllProps, context: any) {
         super(props, context);
     }
-    tab: TabData = { title: "Tab", group: "2", closable: true, content: <h5>Content</h5> };
     metamodel: TabData = { title: "Metamodel", group: "1", closable: false, content:
-            <DefaultNode data={this.model.id} nodeid={this.graph.id} graphid={this.graph.id} />
+            <Xwrapper>
+                <ToolBar model={this.model.id} />
+                <DefaultNode data={this.model.id} nodeid={this.graph.id} graphid={this.graph.id} />
+                <Edges graphID={this.graph.id} nodeID={this.graph.id} />
+            </Xwrapper>
     }
+    structureEditor: TabData = { title: "Structure", group: "2", closable: false, content:
+            <StructureEditor />
+    }
+    viewsEditor: TabData = { title: "Views", group: "2", closable: false, content:
+            <ViewsEditor />
+    }
+    logger: TabData = { title: "Logger", group: "2", closable: true, content: <Logger /> };
     box: any = {
         dockbox: {
             mode: "horizontal", children: [
@@ -36,7 +51,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
                     children: [{tabs: [{ ...this.metamodel, id: "1" }]}]
                 },
                 {
-                    children: [{tabs: [{ ...this.tab, id: "2" }, { ...this.tab, id: "3" }]}]
+                    children: [{tabs: [{ ...this.structureEditor, id: "2" }, { ...this.viewsEditor, id: "3" }]}]
                 }
             ]
         }
