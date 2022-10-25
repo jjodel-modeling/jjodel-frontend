@@ -29,7 +29,15 @@ import {
     CreateElementAction,
     GraphSize,
     DeleteElementAction,
-    SetRootFieldAction, LPointerTargetable, MyProxyHandler, DGraph, RuntimeAccessibleClass, OCL, OCLEditor,
+    SetRootFieldAction,
+    LPointerTargetable,
+    MyProxyHandler,
+    DGraph,
+    RuntimeAccessibleClass,
+    OCL,
+    OCLEditor,
+    DReference,
+    LReference, LClass,
 } from "../../../joiner";
 import withReactContent from "sweetalert2-react-content";
 import Swal from "sweetalert2";
@@ -95,7 +103,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                 if(confirm.value === true){
                                     //POP: DELETE VIEW
                                     new SetRootFieldAction ('stackViews-=', undefined)
-                                    new DeleteElementAction(view as DViewElement);
+                                    new DeleteElementAction(view.__raw);
                                 }
                             }}>
                         <i className="fas fa-trash-alt" />
@@ -142,8 +150,8 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                             for(let subView of view.subViews){
                                 pointers.push(subView.id)
                             }
-                            pointers.push(viewPointer.value)
-                            data['subViews'] = pointers
+                            pointers.push(viewPointer.value);
+                            (data as any)['subViews'] = pointers;
                         }
                     }}>
                         <i className={"fas fa-plus"} />
@@ -175,8 +183,8 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                         for(let subView of view.subViews){
                                             pointers.push(subView.id)
                                         }
-                                        pointers.splice(index, 1)
-                                        data['subViews'] = pointers
+                                        pointers.splice(index, 1);
+                                        (data as any)['subViews'] = pointers;
                                     }
                                 }}>
                                     <i className="fas fa-times" />
@@ -236,7 +244,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                                 if(confirm.value === true){
                                                     //POP: DELETE VIEW
                                                     new SetRootFieldAction ('stackViews-=', undefined)
-                                                    new DeleteElementAction(view as DViewElement);
+                                                    new DeleteElementAction(view.__raw);
                                                 }
                                             }}>
                                         <i className={"fas fa-trash-alt"} />

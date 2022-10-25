@@ -49,6 +49,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
             case windoww.Components.VertexComponent.name:
             case windoww.Components.FieldComponent.name: return componentMap[view.forceNodeType](this.props, this.props.children);
         }
+
         if (modelElement) switch(modelElement.className) {
             default:
                 const dmodel: typeof DModelElement = dmodelMap[modelElement.className];

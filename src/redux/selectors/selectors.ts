@@ -40,9 +40,14 @@ export class Selectors{
         const state: IStore = store.getState();
         let ptrs: Pointer<DVoidVertex>[] = [];
 
-        U.ArrayMerge0(false, ptrs, Object.values(state.voidvertexs || {}), Object.values(state.vertexs || {}), Object.values(state.graphvertexs || {}), Object.values(state.edgepoints || {}));
+        U.ArrayMerge0(false, ptrs,
+            // Object.values(state.graphs || {}),
+            Object.values(state.voidvertexs || {}),
+            Object.values(state.vertexs || {}),
+            Object.values(state.graphvertexs || {}),
+            Object.values(state.edgepoints || {}));
 
-        console.log('selector getvertex: ', {ptrs, vv:Object.values(state.voidvertexs || {}), v:Object.values(state.vertexs || {}), gv:Object.values(state.graphvertexs || {}), ep:Object.values(state.edgepoints || {})});
+        console.log('selector getvertex: ', {ptrs, g: Object.values(state.graphs || {}), vv:Object.values(state.voidvertexs || {}), v:Object.values(state.vertexs || {}), gv:Object.values(state.graphvertexs || {}), ep:Object.values(state.edgepoints || {})});
         if (wrap === undefined || wrap === true) return ptrs.map( p => DPointerTargetable.wrap(p)) as any[];
         if (resolvePointers === undefined || resolvePointers === true) return ptrs.map( r => state.idlookup[r]) as any[];
         return ptrs as any[];

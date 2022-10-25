@@ -33,7 +33,7 @@ import {
     LModelElement,
     DPackage,
     MixOnlyFuncs,
-    DGraph, DClassifier, DEnumerator, Input, DOperation,
+    DGraph, DClassifier, DEnumerator, Input, DOperation, DVoidEdge,
 } from "../joiner";
 import React, {ChangeEvent} from "react";
 import {LGraphVertex} from "../model/dataStructure/GraphDataElements";
@@ -41,14 +41,16 @@ console.warn('ts loading store');
 
 // @RuntimeAccessible
 // NB: le voci che iniziano con '_' sono personali e non condivise
+
+
 export class IStore {
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
-    currentUser: DUserState;
+    currentUser: DUser;
     stackViews: Pointer<DViewElement>[] = [];
 
     // users: Dictionary<DocString<Pointer<DUser>>, UserState> = {};
     // collaborators: UserState[];
-    idlookup: Record<Pointer<DPointerTargetable, 1, 1>, DPointerTargetable> = {};
+    idlookup: Record<string, DPointerTargetable> = {}; // Pointer<DPointerTargetable, 1, 1>
 
     //// DClass section to fill
     graphs: Pointer<DGraph, 0, 'N', LGraph> = [];
@@ -56,8 +58,6 @@ export class IStore {
     vertexs: Pointer<DGraph, 0, 'N', LVertex> = [];
     graphvertexs: Pointer<DGraph, 0, 'N', LGraphVertex> = [];
     edgepoints: Pointer<DGraph, 0, 'N', LEdgePoint> = [];
-
-
 
 
 
@@ -75,7 +75,7 @@ export class IStore {
     };
     constructor(){
 //        super();
-        this.currentUser = new DUserState();
+        this.currentUser = new DUser();
         this.models = [];
         // this.collaborators = [];
         // this.fakeinit();
@@ -92,7 +92,7 @@ export class IStore {
     }
 
     static makeM3Test(fireAction: boolean = true, outElemArray: DPointerTargetable[] = []): DModel {
-        const me: DModelElement = new DClass('ModelElement', true);
+        const me: DClass = new DClass('ModelElement', true);
         const annotation: DClass = new DClass('Annotation');
         annotation.implements = [me.id];
         const namedElement: DClass = new DClass('NamedElement');
@@ -111,7 +111,7 @@ export class IStore {
         const model: DClass = new DClass('M3');
         const pkgref: DReference = new DReference('package');
         model.implements = [namedElement.id];
-        pkgref.type = pkg.id;
+        // pkgref.type = me.id;
         const classe: DClass = new DClass('Class', false, true);
         classifierref.type = classe.id;
         classe.implements = [namedElement.id]; // , classifier.id, namedelement.id, modelelement.id]
@@ -151,8 +151,8 @@ export class IStore {
 function makeDefaultGraphViews(): DViewElement[] {
     // let jsxstringtodo = todo itera i nodi o i children di un modello nel jsx;
     let thiss: {data: LModelElement} = null as any;
-    let modeljsxstring = `<div class={"model root"}>
-        <div className={"childrens"}>{this.data.childrens.map((p) => <Graph data={p.id} style={{minHeight: "100%", minWidth: "100%"}} />)}</div>
+    let modeljsxstring = `<div className={"model root"}>
+        <div className={"childrens"}>{this.data.childrens.map((p) => <Graph key={p.id} data={p.id} style={{minHeight: "100%", minWidth: "100%"}} />)}</div>
     </div>`;
     // let jsx2 = <><button onClick={ () => { console.log( "acfunc click:", {acfunc: this.data.addClass})}} Add </button><button onClick={this.data.addClass}> Add </button></>;
     // let jsxstring = <div><span>{JSON.stringify(thiss.data.__raw)}</span> <div className={"childrens"}>{thiss.data.childrens.map((p) => <VertexConnected data={p.id} />)}</div></div>;
@@ -165,16 +165,16 @@ function makeDefaultGraphViews(): DViewElement[] {
         {/*<b style={{display: "block"}}>Size: {"X "+(this.node && this.node && this.node.size && this.node.size.w)}</b><br />*/}
         <b style={{display: "none"}}>{"isGraph: " + (this.isGraph) + ", isVertex: " + (this.isVertex)}</b>
         <span style={{maxHeight: "50px", display: "none", overflowY: "scroll"}}>{JSON.stringify({...this.data.__raw, childrens: this.data.childrens})}</span>
-        <Input className={'d-none raw'} obj={this.data} field={"name"} label={"Name: " + this.data.name} style={{width: "100%"}}/>
+        <Input className={'d-none raw'} obj={this.data} field={"name"} label={"Name: " + this.data.name} />
         
-        <div className={"childrens"}>{this.data.childrens.map((p) => <DefaultNode data={p.id} />)}</div>
+        <div className={"childrens"}>{this.data.childrens.map((p) => <Vertex key={p.id} data={p.id} />)}</div>
         
         <button className={"btn btn-success me-2"} style={{top: 0, right: 0, position: "absolute", borderRadius: "10px"}} 
             onClick={ () => { console.log( "acfunc click:", {acfunc: this.data.addClass})}}> Add </button>
         {/*<button onClick={this.data.addClass} Add </button>*/}
     {/*<Field data={this.data.id} nodeid={this.nodeid + "2"} graphid={this.graphid} view = {Selectors.getByName(DViewElement, "EditView").id} />\n*/}
 </div>`;
-    // let jsxstring = '<div><DataOutputComponent data={this.data.__raw} /> <div className={"childrens"}>{this.data.childrens.map((p) => <Vertex data={p.id} />)}</div></div>';
+    // let jsxstring = '<div><DataOutputComponent data={this.data.__raw} /> <div className={"childrens"}>{this.data.childrens.map((p) => <Vertex key={p.id} data={p.id} />)}</div></div>';
 
     let mview: DViewElement = new DViewElement('ModelDefaultView', modeljsxstring, undefined, '', '', '',
         [DModel.name]);
@@ -327,7 +327,7 @@ function makeDefaultGraphViews(): DViewElement[] {
                     style={{display: 'none'}}
                            data-style='background:transparent; border:none; text-align:right; order:1; flex-basis: 50%; min-width:10px;' />
                     <Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Class name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*'
-                           style={{
+                           inputstyle={{
                                background: 'transparent',
                                border: 'none',
                                textAlign: 'right',
@@ -355,18 +355,34 @@ function makeDefaultGraphViews(): DViewElement[] {
                 <div className='specialjs hideempty childcontainer ReferenceContainer hover-exclude' />
                 <div className='specialjs hideempty childcontainer OperationContainer hover-exclude' />
                 
-                <div className='specialjs hideempty childcontainer AttributeContainer hover-exclude' style ={ {height: (this.data.childrens.length && (15+this.data.childrens.length * 18)) + 'px' }}>
-                    {this.data.childrens.length > 0 ? ('attributes(' +this.data.childrens.length +')') : null}
-                    {this.data.childrens.map((p) => <DefaultNode data={p.id} clasName={"Attribute"}/>)}
-                </div>
                 
+                <div className='specialjs hideempty childcontainer AttributeContainer hover-exclude' style = { {height: (this.data.attributes.length && (15+this.data.attributes.length * 30)) + 'px' }}>
+                    {this.data.attributes.length > 0 ? ('attributes(' +this.data.attributes.length +')') : null}
+                    {this.data.attributes.map((p) => <DefaultNode key={p.id} data={p.id} className={"Attribute"} />) } </div>
+                    
+                <div className='specialjs hideempty childcontainer OperationContainer hover-exclude' style = { {height: (this.data.operations.length && (15+this.data.operations.length * 30)) + 'px' }}>
+                    {this.data.operations.length > 0 ? ('operations(' +this.data.operations.length +')') : null}
+                    {this.data.operations.map((p) => <DefaultNode key={p.id} data={p.id} className={"Operation"} />) } </div>
+                    
+                <div className='specialjs hideempty childcontainer ReferenceContainer hover-exclude' style = { {height: (this.data.references.length && (15+this.data.references.length * 30)) + 'px' }}>
+                    {this.data.references.length > 0 ? ('references(' +this.data.references.length +')') : null}
+                    {this.data.references.map((p) => <DefaultNode key={p.id} data={p.id} className={"Reference"} style={{height: '30px'}}/>) } </div>
+
+                <div className='specialjs hideempty childcontainer generic hover-exclude' style ={ {height: (this.data.childrens.length && (15+this.data.childrens.length * 30)) + 'px' }}>
+                    {false && this.data.childrens.length > 0 ? ('childrens(' +this.data.childrens.length +')') : null}
+                    {false && this.data.childrens.map((p) => <DefaultNode key={p.id} data={p.id} className={"ClassUnknownChildren"}/>)}
+                </div>
+
                 <div className='addFieldButtonContainer'>
                     <span style={{display: 'flex', margin: 'auto'}}>Add&nbsp;</span>
                     <select className='AddFieldSelect' style={{
                         background: 'transparent',
                         display: 'flex',
                         margin: 'auto',
-                    }} onChange={(e) => this.selected = event.target.value }>
+                    }} onChange={(e) => {
+                        console.log('child type change:', {thiss: this, selected: event.target.value, e});
+                        this.data._tmptypeselected = e.target.value;
+                    } }>
                         <optgroup label='FeatureType'>
                             <option value='Attribute' selected>Attribute</option>
                             <option value='Reference'>Reference</option>
@@ -374,7 +390,7 @@ function makeDefaultGraphViews(): DViewElement[] {
                         </optgroup>
                     </select>
                     <span style={{display: 'flex', margin: 'auto'}}>&nbsp;field&nbsp;</span>
-                    <button className='addFieldButton' onClick={() => this.data.addChildren(this.selected || 'Attribute')}>Go</button>
+                    <button className='addFieldButton' onClick={() => this.data.addChildren((this.data).__raw._tmptypeselected || "Attribute")}>Go</button>
                 </div>
             </div>` +
         styletodo +
@@ -387,8 +403,9 @@ function makeDefaultGraphViews(): DViewElement[] {
             margin: 'auto',
         }} onChange={ (e:ChangeEvent) => { this.selected = e.target.value }} />;*/
 
-    let attribdefaultjsx = `<div style={{display: 'flex', height: '18px'}}><Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Attribute name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*'
-                           style={{
+    let attribdefaultjsx = `<div style={{display: 'flex', width: '100%', height: '30px'}} className={"Attribute"}>
+                        <Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Attribute name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*' rootstyle={{height: 'min-content', margin: 'auto'}} labelstyle={{width: undefined}}
+                           inputstyle={{
                                background: 'transparent',
                                border: 'none',
                                textAlign: 'right',
@@ -403,29 +420,31 @@ function makeDefaultGraphViews(): DViewElement[] {
                             paddingRight: '5px',
                             margin: 'auto'}}>: attribute
                         </div></div>`;
-    let refdefaultjsx = `<div style={{display: 'flex', height: '18px'}}><Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Attribute name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*'
-                           style={{
+    let refdefaultjsx =
+    `<div className={"Reference"} style={{display: 'flex', width: '100%', height: '30px'}}>
+                        <Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Attribute name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*' rootstyle={{height: 'min-content', margin: 'auto'}} labelstyle={{width: undefined}}
+                           inputstyle={{
                                background: 'transparent',
                                border: 'none',
                                textAlign: 'right',
-                               order: 1,
                                flexBasis: '50%',
                                minWidth:'10px'}}/>
                         <div style={{
                             textAlign: 'left',
-                            order: 2,
                             flexGrow: 1,
                             color: 'orange',
                             margin: 'auto'}}>: reference
-                        </div></div>`;
-    let opdefaultjsx = `<div style={{display: 'flex', height: '18px'}}><Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Attribute name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*'
-                           style={{
+                        </div>
+                        <button className={"reflinkbtn btn"} style={{ background: 'var(--color-4)', color: 'var(--color1)', 'padding-top': 0, 'padding-bottom': 0, 'margin-left': '5px'}} onClick={(e)=>{ this.data.startlink(e) }}>→</button></div>`;
+    let opdefaultjsx = `<div className={"Operation"} style={{display: 'flex', width: '100%', height: '30px'}}>
+                    <Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Attribute name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*' rootstyle={{height: 'min-content', margin: 'auto'}} labelstyle={{width: undefined}}
+                           inputstyle={{
                                background: 'transparent',
                                border: 'none',
                                textAlign: 'right',
                                order: 1,
                                flexBasis: '50%',
-                               minWidth:'10px'}}/>
+                               minWidth:'10px'}} />
                         <div style={{
                             textAlign: 'left',
                             order: 2,
@@ -434,11 +453,11 @@ function makeDefaultGraphViews(): DViewElement[] {
                             margin: 'auto'}}>: operation
                         </div></div>`;
     let cview: DViewElement = new DViewElement('ClassDefaultView', classdefaultjsx, undefined, '', '', '', [DClass.name]);
-    let enumdefaultjsx = `<div class="Enumerator" style={{width: '100px', height: '50px', background: 'pink'}}>Enumerator placeholder</div>`;
+    let enumdefaultjsx = `<div className="Enumerator" style={{width: '100px', height: '50px', background: 'pink'}}>Enumerator placeholder</div>`;
     let eview: DViewElement = new DViewElement('EnumDefaultView', enumdefaultjsx, undefined, '', '', '', [DEnumerator.name]);
     let aview: DViewElement = new DViewElement('AttribDefaultView', attribdefaultjsx, undefined, '', '', '', [DAttribute.name]);
-    let rview: DViewElement = new DViewElement('RefDefaultView', attribdefaultjsx, undefined, '', '', '', [DReference.name]);
-    let oview: DViewElement = new DViewElement('OperationDefaultView', attribdefaultjsx, undefined, '', '', '', [DOperation.name]);
+    let rview: DViewElement = new DViewElement('RefDefaultView', refdefaultjsx, undefined, '', '', '', [DReference.name]);
+    let oview: DViewElement = new DViewElement('OperationDefaultView', opdefaultjsx, undefined, '', '', '', [DOperation.name]);
 
     pkgview.subViews = [cview.id]; // childrens can use this view too todo: this is temporary
     let alldefaultViews = [mview, pkgview, cview, eview, aview, rview, oview];
@@ -460,7 +479,7 @@ class SynchStore{// shared on session
 class AsynchStore{ // user private
     pendingUserAction: UserPendingAction[];
 }*/
-
+/*
 @RuntimeAccessible
 export class DUserState extends DPointerTargetable {
     pointerPosition?: GraphPoint;
@@ -478,6 +497,7 @@ export class LUserState extends MixOnlyFuncs(DUserState, LPointerTargetable) {
     // nope, la selezione è vertex-wise, e il vertex è graph-dependent. la view è graph-indipendent. selection: Dictionary<Pointer<User, 1, 1>, Pointer<DGraphElement, 0, 'N'>[]> = {};
 
 }
+DPointerTargetable.subclasses.push(DUserState);*/
 
 @RuntimeAccessible
 export class ViewPointState extends DPointerTargetable{

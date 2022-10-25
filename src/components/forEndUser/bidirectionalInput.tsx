@@ -23,8 +23,12 @@ class BidirectionalInput extends PureComponent<AllProps, ThisState> {
     render(): ReactNode {
         const data = this.props.data;
         const otherprops: GObject = {...this.props};
-        if (!otherprops.style) otherprops.style = {};
-        if (!otherprops.style.width) otherprops.style.width = '100%';
+        if (!otherprops.labelstyle) otherprops.labelstyle = {};
+        if (!otherprops.labelstyle.width) otherprops.labelstyle.width = '100%';
+        if (!otherprops.inputstyle) otherprops.inputstyle = {};
+        if (!otherprops.inputstyle.width) otherprops.inputstyle.width = '100%';
+        if (!otherprops.rootstyle) otherprops.rootstyle = {};
+        if (!otherprops.rootstyle.width) otherprops.rootstyle.width = '100%';
         delete otherprops.data; // tenta di settare l'attributo data con un proxy e fallisce perchè non è stringa
         delete otherprops.obj; // obj è stato wrappato come proxy in "data"
         delete otherprops.label;
@@ -36,17 +40,17 @@ class BidirectionalInput extends PureComponent<AllProps, ThisState> {
         // NB: se il setter, getter o qualsiasi props diversa da "data" e "obj" sono proxy, crasha. non puoi passare proxy come props.
         const className = this.props.className;
         return (<>
-            <label key={otherprops.key} className={"input-root " + (className || "row mt-2 p-1")}>
-                {this.props.label && <p className={"input-label " + (className || "col my-auto mx-auto")}>{this.props.label}</p>}
+            <label key={otherprops.key} className={"bidirectional input input-root " + (className || "row mt-2 p-1")} style={this.props.rootstyle} >
+                {this.props.label && <p className={"input-label " + (className || "col my-auto mx-auto")} style={this.props.labelstyle}>{this.props.label}</p>}
                 <input
                     onChange={(e) => {
                         console.log('BidirectionalInput change', {props:this.props, e});
                         let value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-                        return data && (data[this.props.field] = (this.props.setter ? this.props.setter(value) : value))
+                        return data && (data[this.props.field] = (this.props.setter ? this.props.setter(value, data) : value))
                     }}
                     value = { '' + (data ? (this.props.getter ? this.props.getter(data[this.props.field], data, this.props.field) : data[this.props.field]) : '_undefined_')}
                     checked = { this.props.type === "checkbox" ? data[this.props.field] as boolean : undefined}
-                    {...otherprops} className={(className || ' col pt-3 pb-3 form-check-input my-auto mx-auto')} style={this.props.style}/>
+                    {...otherprops} className={(className || ' col pt-3 pb-3 form-check-input my-auto mx-auto')} style={this.props.inputstyle}/>
             </label>
         </>); }
 
@@ -56,8 +60,8 @@ class BidirectionalTextArea extends PureComponent<AllProps, ThisState> {
     render(): ReactNode {
         const data = this.props.data;
         const otherprops: GObject = {...this.props};
-        if (!otherprops.style) otherprops.style = {};
-        if (!otherprops.style.width) otherprops.style.width = '100%';
+        if (!otherprops.inputstyle) otherprops.inputstyle = {};
+        if (!otherprops.inputstyle.width) otherprops.inputstyle.width = '100%';
         delete otherprops.data; // tenta di settare l'attributo data con un proxy e fallisce perchè non è stringa
         delete otherprops.obj; // obj è stato wrappato come proxy in "data"
         delete otherprops.label;
@@ -66,8 +70,8 @@ class BidirectionalTextArea extends PureComponent<AllProps, ThisState> {
         return (<>
             <div key={otherprops.key} className={"row mt-2 p-1"}>
                 <p className={"row my-auto mx-auto"}><b>{this.props.label}</b></p>
-                <textarea onChange={(e) => data && (data[this.props.field] = (this.props.setter ? this.props.setter(e.target.value) : e.target.value)) }
-                        {...otherprops} className={className + "row mx-3 mt-2 form-control"} style={this.props.style}
+                <textarea onChange={(e) => data && (data[this.props.field] = (this.props.setter ? this.props.setter(e.target.value, data) : e.target.value)) }
+                        {...otherprops} className={className + "row mx-3 mt-2 form-control"} style={this.props.inputstyle}
                         value={data ? (this.props.getter ? this.props.getter(data[this.props.field], data, this.props.field) : data[this.props.field]) : '_undefined_'}>
                 </textarea>
             </div>
@@ -78,21 +82,22 @@ class BidirectionalHTMLEditor extends PureComponent<AllProps, ThisState>{
     render(): ReactNode {
         const data = this.props.data;
         const otherprops: GObject = {...this.props};
-        if (!otherprops.style) otherprops.style = {};
-        if (!otherprops.style.width) otherprops.style.width = '100%';
+        if (!otherprops.inputstyle) otherprops.inputstyle = {};
+        if (!otherprops.inputstyle.width) otherprops.inputstyle.width = '100%';
         delete otherprops.data; // tenta di settare l'attributo data con un proxy e fallisce perchè non è stringa
         delete otherprops.obj; // obj è stato wrappato come proxy in "data"
         let code: string | null = null;
         return (<>
             <div style={{marginTop: "5.5em", height: "7em"}} tabIndex={-1} onBlur={(e:any) => {
                 if(code != null) {
-                    data && (data[this.props.field] = (this.props.setter ? this.props.setter(code) : code));
+                    data && (data[this.props.field] = (this.props.setter ? this.props.setter(code, data) : code));
                 }}
             }>
                 <p className={"row my-auto mx-auto"}><b>{this.props.label}</b></p>
                 <Editor className={"row mt-2"} {...otherprops} defaultLanguage="html"
                         value={data ? (this.props.getter ? this.props.getter(data[this.props.field], data, this.props.field) : data[this.props.field]) : '_undefined_'}
-                        onChange={(e:any) => code=e as string}/>
+                        onChange={(e:any) => code=e as string}
+                />
             </div>
 
         </>);
@@ -137,6 +142,9 @@ class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
         let state: IStore = windoww.store.getState();
         let dmp: DModelElement[] = Selectors.getAllMP(state);
         let lmp: LModelElement[] = Selectors.wrap(dmp, state);
+
+
+
         console.log('all MP:', dmp, lmp);
         let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
         let valids: DPointerTargetable[] = [];
@@ -177,25 +185,27 @@ class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
 
 // private
 interface OwnProps {
-        getter?: ((val: any, baseobj: GObject, key: string) => string);
-        setter?: ((val: string|boolean) => any);
-        obj: GObject | (Pointer<DPointerTargetable, 0, 'N', LPointerTargetable> & string);
-            //LPointerTargetable | (Pointer<DPointerTargetable, 0, 'N', LPointerTargetable> & string);
-        field: string;
-        label?: string;
-        type? : 'button'|'checkbox'|'color'|'date'|'datetime-local'|'email' |'file' |'hidden' |'image' |'month' |
-                'number' |'password' |'radio' |'range' |'reset' |'search' |'submit' |'tel' |'text' |'time' |'url' |'week';
-        className?: string;
-        id?: string;
-        key?: string;
-        placeholder?: string;
-        min?: number;
-        max?: number;
-        step?: number|'any';
-        disabled?: boolean;
-        readonly?: boolean;
-        style?: CSSProperties;
-        wrap?: boolean;
+    getter?: ((val: any, baseobj: GObject, key: string) => string);
+    setter?: ((val: string|boolean, data: LPointerTargetable) => any);
+    obj: GObject | (Pointer<DPointerTargetable, 0, 'N', LPointerTargetable> & string);
+        //LPointerTargetable | (Pointer<DPointerTargetable, 0, 'N', LPointerTargetable> & string);
+    field: string;
+    label?: string;
+    type? : 'button'|'checkbox'|'color'|'date'|'datetime-local'|'email' |'file' |'hidden' |'image' |'month' |
+            'number' |'password' |'radio' |'range' |'reset' |'search' |'submit' |'tel' |'text' |'time' |'url' |'week';
+    className?: string;
+    id?: string;
+    key?: string;
+    placeholder?: string;
+    min?: number;
+    max?: number;
+    step?: number|'any';
+    disabled?: boolean;
+    readonly?: boolean;
+    rootstyle?: CSSProperties;
+    labelstyle?: CSSProperties;
+    inputstyle?: CSSProperties;
+    wrap?: boolean;
     // propsRequestedFromHtmlAsAttributes: string;
 }
 // private

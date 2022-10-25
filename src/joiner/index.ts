@@ -23,8 +23,10 @@ export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStatePro
 export type {GetPath} from './proxy';
 export {windoww} from './types';
 
-export type {Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv, NotFound, DocString, nbool, nnumber, nstring, Nullable, Pointer, TODO, UnixTimestamp, UObject, IsActually, Function, Function2, InOutParam} from "./types";
-export {RuntimeAccessibleClass, RuntimeAccessible, JsType, DPointerTargetable, LPointerTargetable, MyError, MixOnlyFuncs, LUser, DUser} from "./classes";
+export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv, NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually, Function, Function2, InOutParam} from "./types";
+export type {Pointer, PtrString} from "./classes";
+export {JsType, RuntimeAccessibleClass, DPointerTargetable, LPointerTargetable, MyError, RuntimeAccessible, MixOnlyFuncs, LUser, DUser} from "./classes";
+// export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
 // console.error('iiiiiiiiiiiiiiii 3');
 // import independent generic modules (only dependent from types and RuntimeAccessible
@@ -42,29 +44,30 @@ export var U = windoww.U as typeof UType;
 // import domain-specific classes
 export {
     DModelElement,
-    DModel,
-    DValue,
-    DNamedElement,
-    DObject,
-    DEnumerator,
-    DEnumLiteral,
-    DAttribute,
-    DReference,
-    DStructuralFeature,
-    DClassifier,
-    DDataType,
-    DClass,
-    DParameter,
-    DOperation,
-    DPackage,
-    DTypedElement,
-    DAnnotation,
+    LModelElement,
+    DModel, LModel,
+    DValue, LValue,
+    DNamedElement, LNamedElement,
+    DObject, LObject,
+    DEnumerator, LEnumerator,
+    DEnumLiteral, LEnumLiteral,
+    DAttribute, LAttribute,
+    DReference, LReference,
+    DStructuralFeature, LStructuralFeature,
+    DClassifier, LClassifier,
+    DDataType, LDataType,
+    DClass, LClass,
+    DParameter, LParameter,
+    DOperation, LOperation,
+    DPackage, LPackage,
+    DTypedElement, LTypedElement,
+    DAnnotation, LAnnotation,
     EJavaObject,
-    DFactory_useless_,
-} from "../model/dataStructure/modelElement";
+    DFactory_useless_, LFactory_useless_, DMap, LMap
+} from "../model/logicWrapper/LModelElement";
 
 // console.error('joiner here 3');
-
+/*
 export {
     LModelElement,
     LAnnotation,
@@ -77,8 +80,9 @@ export {
     LPackage, LParameter, LReference,
     LStructuralFeature, LDataType, LTypedElement, LNamedElement, // DMap, LMap,
     LValue,
-} from "../model/logicWrapper/LModelElement";
-export {DVertex, defaultVSize, LGraph, DGraph, LVoidVertex, DGraphVertex, DEdgePoint, LEdgePoint, DVoidVertex, DVoidEdge, LVoidEdge, DEdge, DExtEdge, LExtEdge, LRefEdge, DRefEdge, LEdge, LGraphElement, DGraphElement, LVertex} from "../model/dataStructure/GraphDataElements";
+} from "../model/logicWrapper/LModelElement";*/
+export {DExtEdge, DRefEdge, DVoidEdge, LGraphVertex, LRefEdge, LEdgePoint, DVoidVertex, DGraphVertex, DEdgePoint, DVertex, DEdge, LVertex, LGraph, DGraph, LVoidVertex, LVoidEdge, LEdge, LGraphElement, LExtEdge, DGraphElement, defaultVSize} from "../model/dataStructure/GraphDataElements";
+
 
 export {GraphDragHandler} from "../graph/vertex/GraphDragHandler";
 
@@ -87,7 +91,7 @@ export {DViewTransientProperties, LViewTransientProperties, LViewElement, DViewE
 // console.error('iiiiiiiiiiiiiiii 12', windoww.DViewElement);
 
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
-export {IStore, DUserState, ModelStore, ViewPointState} from "../redux/store";
+export {IStore, ModelStore, ViewPointState} from "../redux/store";
 export {Selectors as Selectorss} from "../redux/selectors/selectors";
 export var Selectors = windoww.Selectors as typeof SelType;
 export {reducer, jodelInit} from "../redux/reducer/reducer";

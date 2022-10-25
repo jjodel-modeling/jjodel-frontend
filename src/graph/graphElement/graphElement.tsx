@@ -37,7 +37,7 @@ import {
 } from "../../joiner";
 console.info('graphElement loading');
 
-function makeEvalContext(props: AllPropss, view: DViewElement): GObject {
+function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
     let evalContext: GObject = view.constants ? eval('window.tmp = ' + view.constants) : {};
     evalContext = {...windoww.defaultContext, ...evalContext, model: props.data, ...props};
     windoww.evalContext = evalContext;
@@ -86,9 +86,15 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 @RuntimeAccessible
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
     extends PureComponent<AllProps, GraphElementState>{
-
-
-
+    static maxid: number = 0;
+    static all: Dictionary<number, GraphElementComponent> = {};
+    id: number;
+    public static refresh() {
+        for (let key in GraphElementComponent.all) {
+            GraphElementComponent.all[key].forceUpdate();
+        }
+        console.log(GraphElementComponent.all);
+    }
 
     public static defaultShouldComponentUpdate<AllProps extends GObject, State extends GObject, Context extends any>
     (instance: React.Component, nextProps: Readonly<AllProps>, nextState: Readonly<State>, nextContext: Context) {
@@ -102,7 +108,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : ownProps.data?.id) as string;
         Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ownProps, state});
         ret.data = MyProxyHandler.wrap(state.idlookup[meid as any]);
-        const viewScores = Selectors.getAppliedViews(ret.data, ret.node, ret.graph, ownProps.view, ownProps.parentViewId);
+        const viewScores = Selectors.getAppliedViews(ret.data, ret.node.__raw, ret.graph, ownProps.view, ownProps.parentViewId);
         ret.views = viewScores.map(e => MyProxyHandler.wrap(e.element));
         ret.view = ret.views[0];
         (ret as any).viewScores = viewScores; // debug only
@@ -138,7 +144,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                                  dGraphElementDataClass: typeof DGraphElement = DGraphElement,
                                  isDGraph?: DGraph): void {
         const idlookup = state.idlookup;
-        let nodeid: string = isDGraph ? isDGraph.id : ownProps.nodeid as string;
+        let nodeid: string = ownProps.nodeid as string;
         let graphid: string = isDGraph ? isDGraph.id : ownProps.graphid as string;
         // if (!nodeid || !graphid) { Log.ee('node id injection failed'); return; }
         Log.exDev(!nodeid || !graphid, 'node id injection failed'); /*
@@ -176,6 +182,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     constructor(props: AllProps, context: any) {
         super(props, context);
         this._isMounted = false;
+        this.id = GraphElementComponent.maxid++;
+        GraphElementComponent.all[this.id] = this;
 /*
         console.log('GE constructor props:', this.props);
         this.setTemplateString(this.props.view, true);
@@ -365,17 +373,17 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap(); // todo: per passarla come prop ma mantenerla modificabile
             rawRElement = React.cloneElement(rawRElement, {key: this.props.key || this.props.view.id + '_' + me.id, onDragTestInject, children: UX.recursiveMap(rawRElement/*.props.children*/,
                     (rn: ReactNode) => this.injectProp(rn, subElements))});
-            console.log('tempdebug', {deepStrictEqual, okeys:Object.keys});
+            /*console.log('tempdebug', {deepStrictEqual, okeys:Object.keys});
             let isEqual = true;
             try {deepStrictEqual(subElements, this.props.node.subElements)} catch(e) { isEqual = false; }
             if (isEqual) {
                 this.props.node.subElements = Object.keys(subElements);
-            }
+            }*/
         }
         // const injectprops = {a:3, b:4} as DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
         // rnode = React.cloneElement(rnode as ReactElement, injectprops);
 
-        if (this.props.node?.__raw.containedIn) {
+        if ((this.props.node?.__raw as DGraphElement).containedIn) {
             let $containedIn = $('#' + this.props.node.containedIn);
             let $containerDropArea = $containedIn.find(".VertexContainer");
             const droparea = $containerDropArea[0] || $containedIn[0];

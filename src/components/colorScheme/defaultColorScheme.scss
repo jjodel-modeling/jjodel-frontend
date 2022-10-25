@@ -1,4 +1,5 @@
 .dock-style-graph {
+  // div{width: 100%} crea problemi con autosize di vertici prima che vengano ridimensionati a mano, voglio che si estendano al contenuto a meno di resize.
   // old app.component.ts
   // body
   white-space: nowrap;

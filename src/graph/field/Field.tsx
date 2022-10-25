@@ -17,6 +17,10 @@ class FieldState extends GraphElementStatee{
 export class FieldComponent
     extends superclass<AllProps, FieldState>{
 
+    render(): React.ReactNode {
+        return super.render();
+    }
+
     // Obsoleta? usa Vertex con isVertex = false e cambia nome al componente
 }
 
@@ -24,6 +28,8 @@ export class FieldComponent
 class FieldOwnProps extends GraphElementOwnProps {
     onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
     onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    isField?: boolean = true;
+    // isVertex: boolean = false;
     // propsRequestedFromHtmlAsAttributes: string;
 }
 // private
@@ -46,7 +52,7 @@ const FieldConnected = connect<FieldReduxStateProps, FieldDispatchProps, FieldOw
 )(FieldComponent as any);
 
 export const Field = (props: FieldOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <FieldConnected {...{...props, childrens}} />; }
+    return <FieldConnected {...{...props, childrens}} isField={true} />; }
 
 // DModelElement.defaultComponent = Field;
 /*

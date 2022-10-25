@@ -3,7 +3,4 @@
   <component name="AhkProjectSettings">
     <option name="defaultAhkSdk" value="AutoHotkey vnull" />
   </component>
-  <component name="JavaScriptSettings">
-    <option name="languageLevel" value="JSX" />
-  </component>
 </project>

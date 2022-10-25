@@ -1,5 +1,3 @@
-import {DPointerTargetable, LPointerTargetable} from "./classes";
-
 // export type Class = { new(...args: any[]): any; };
 export declare type Class<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (abstract new (...args: any[]) => InstanceType) & StaticType;
 export declare type CClass<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (new (...args: any[]) => InstanceType) & StaticType;
@@ -44,12 +42,20 @@ export type bool = boolean;
 export type TODO<T = any> = any;
 export type NonEmptyString = Exclude<string, ''>;
 
+// export type Subtract<T, K> = {  [L in Exclude<keyof T, K>]: T[L] };
+// Or alternatively, and more concisely, as:
+
+// export type Subtract<T, K> = Pick<T, Exclude<keyof T, K>>;
+export type Subtract<T, K> = Omit<T, keyof K>;
+
+
+
 // tipo puramente documentazionale, è solo una stringa o array di stringhe
-export type Pointer<T extends DPointerTargetable = DPointerTargetable, lowerbound = number, upperbound = number | string, RET = LPointerTargetable> =
+/*export type Pointer<T extends DPointerTargetable = DPointerTargetable, lowerbound = number, upperbound = number | string, RET = LPointerTargetable> =
     upperbound extends 'N' ? string[] : (
     upperbound extends 0 ? never : (
     lowerbound extends 0 ? (string | undefined | null) : string)); // & {[Symbol.iterator]: () => IterableIterator<string>};
-
+*/
 declare global  {
     interface ProxyConstructor {
         new <TS extends object, TT extends object = TS>(target: TS, handler: ProxyHandler<TS>): TT;
@@ -66,3 +72,4 @@ export const windoww: typeof window & GObject= window;
 export type InOutParam<T> = T;
 
 export type IsActually<T> = any; // for some reason typescript complains about circular type references? this is a workaround
+

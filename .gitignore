@@ -23,4 +23,6 @@ yarn-debug.log*
 yarn-error.log*
 sandbox/sandbox.js
 sandbox/sandbox.tsx
-sandbox/sandbox.tsx
+.idea/*
+.idea/misc.xml
+.idea/jodel-react.iml

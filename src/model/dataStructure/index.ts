@@ -1,22 +1,3 @@
-export {
-    DModelElement,
-    DModel,
-    DValue,
-    DNamedElement,
-    DObject,
-    DEnumerator,
-    DEnumLiteral,
-    DAttribute,
-    DReference,
-    DStructuralFeature,
-    DClassifier,
-    DDataType,
-    DClass,
-    DParameter,
-    DOperation,
-    DPackage,
-    DTypedElement,
-    DAnnotation,
-    EJavaObject,
-    DFactory_useless_} from "./modelElement";
+export const fakevar = {};
 // useless file now
+export {DExtEdge, DRefEdge, DVoidEdge, LGraphVertex, LRefEdge, LEdgePoint, DVoidVertex, DGraphVertex, DEdgePoint, DVertex, DEdge, LVertex, LGraph, DGraph, LVoidVertex, LVoidEdge, LEdge, LGraphElement, LExtEdge, DGraphElement, defaultVSize} from "../dataStructure/GraphDataElements";

@@ -84,7 +84,7 @@ export abstract class Action extends RuntimeAccessibleClass{
 @RuntimeAccessible
 export class SetRootFieldAction extends Action {
     static type = 'SET_ROOT_FIELD';
-    constructor(field: string, value: any, fire: boolean = true, subType?: string) {
+    constructor(field: string, value: any = undefined, fire: boolean = true, subType?: string) {
         super(field, value, subType);
         if (fire) this.fire();
         this.className = this.constructor.name;
@@ -94,7 +94,11 @@ export class SetRootFieldAction extends Action {
 @RuntimeAccessible
 export class SetFieldAction extends Action {
     static type = 'SET_ME_FIELD';
-    constructor(me: DPointerTargetable | Pointer<DPointerTargetable>, field: string, val: any, subtype?: string) {
+    static new<D extends DPointerTargetable = DPointerTargetable>(me: D | Pointer<D>, field: keyof D, val: any, subtype?: string) {
+        return new SetFieldAction(me, field as string, val, subtype);
+    }
+
+    constructor(me: DPointerTargetable | Pointer, field: string, val: any, subtype?: string) {
         Log.exDev(!me, 'BaseObject missing in SetFieldAction', {me, field, val, subtype});
         super('idlookup.' + ((me as DPointerTargetable).id || me) + ( field ? '.' + field : ''), val, subtype);
         this.className = this.constructor.name;

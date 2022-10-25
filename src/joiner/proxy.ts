@@ -20,7 +20,7 @@ type NotAConcatenation = null;
 export class LogicContext<D extends GObject = DModelElement, P extends LPointerTargetable = LPointerTargetable, PF extends MyProxyHandler<D> = MyProxyHandler<D>> extends RuntimeAccessibleClass{
     // public proxyfyFunction: PF;
     public proxyObject: P;
-    public data: D & GObject;
+    public data: D;// & GObject;
     constructor(proxyObject: P, data: D) {
         super();
         this.proxyObject = proxyObject;
@@ -69,7 +69,7 @@ export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibl
     ownKeys(target: T): ArrayLike<string | symbol>{ return Object.keys(target); }
     static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
         RET extends CAN_THROW extends true ? L : L | undefined  = CAN_THROW extends true ? L : L>
-    (data: D | Pointer<DViewElement>, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW): RET{
+    (data: D | Pointer, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW): RET{
 
 //    static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable, RET extends boolean = false>
 //        (data: D | Pointer<DViewElement>, baseObjInLookup?: DPointerTargetable, path: string = '', canthrow: RET = false as RET): RET {
@@ -264,6 +264,11 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         }
         // if property do not exist
         let breakpoint = 1;
+
+        if (enableFallbackSetter && typeof (propKey === "string") && ((propKey as string)[0] === '_' || (propKey as string).indexOf('tmp') > 0)) {
+            return this.defaultSetter(targetObj as any as DPointerTargetable, propKey as string, value, proxyitself);
+            // new SetFieldAction(new LogicContext(proxyitself as any, targetObj).data as any, propKey as string, value); return true;
+        }
         Log.exx('SET property "set_' + (propKey as any) + '" do not exist in object of type "' + U.getType(this.l) + " DType:" +  U.getType(this.l), {'this': this, targetObj});
         return false; }
     /*      problema: ogni oggetto deve avere multipli puntatori, quando ne modifico uno devo modificarli tutti, come tengo traccia?

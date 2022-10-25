@@ -1,1 +1,22 @@
-export {LModelElement} from "./LModelElement";
+export {
+    DModelElement,
+    LModelElement,
+    DModel, LModel,
+    DValue, LValue,
+    DNamedElement, LNamedElement,
+    DObject, LObject,
+    DEnumerator, LEnumerator,
+    DEnumLiteral, LEnumLiteral,
+    DAttribute, LAttribute,
+    DReference, LReference,
+    DStructuralFeature, LStructuralFeature,
+    DClassifier, LClassifier,
+    DDataType, LDataType,
+    DClass, LClass,
+    DParameter, LParameter,
+    DOperation, LOperation,
+    DPackage, LPackage,
+    DTypedElement, LTypedElement,
+    DAnnotation, LAnnotation,
+    EJavaObject, DMap, LMap,
+    DFactory_useless_, LFactory_useless_} from "./LModelElement";

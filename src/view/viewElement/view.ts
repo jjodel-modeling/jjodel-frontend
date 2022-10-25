@@ -10,16 +10,26 @@ import {
     defaultVSize,
     LPointerTargetable,
     RuntimeAccessible,
-    MixOnlyFuncs
+    MixOnlyFuncs, GObject, Dictionary, DReference
 } from "../../joiner";
 
 
 @RuntimeAccessible
 export class DViewElement extends DPointerTargetable {
-    static logic: typeof LPointerTargetable;
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    // static singleton: LViewElement;
+    // static logic: typeof LViewElement;
+    // static structure: typeof DViewElement;
+
+    // inherited redefine
+    // public __raw!: DViewElement;
+    id!: Pointer<DViewElement, 1, 1, LViewElement>;
+
+
+    // own properties
     bindVertexSizeToView: boolean = true;
     name: string;
-
     constants?: string; // evalutate 1 sola volta all'applicazione della vista o alla creazione dell'elemento.
     preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
 
@@ -33,7 +43,7 @@ export class DViewElement extends DPointerTargetable {
     // __transient: DViewTransientProperties;
     storeTemporaryPositions: boolean = false; // if true updates vertex position every X millisecond while dragging, if false updates it once when the vertex is released.
     appliableToClasses: string[]; // class names: DModel, DPackage, DAttribute...
-    subViews: Pointer<DViewElement, 1, 1>[];
+    subViews: Pointer<DViewElement, 0, 'N', LViewElement>;
     oclApplyCondition: string; // ocl selector
     explicitApplicationPriority: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
     defaultVSize: GraphSize;
@@ -77,10 +87,45 @@ export class DViewTransientProperties extends RuntimeAccessibleClass{
 
 
 @RuntimeAccessible
-export class LViewElement extends MixOnlyFuncs(DViewElement, LPointerTargetable) {
-    static structure: typeof DViewElement;
-    static singleton: LViewElement;
-    subViews: any;
+export class LViewElement extends LPointerTargetable { // MixOnlyFuncs(DViewElement, LPointerTargetable)
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    // static singleton: LViewElement;
+    // static logic: typeof LViewElement;
+    // static structure: typeof DViewElement;
+
+    // inherited redefine
+    public __raw!: DViewElement;
+    id!: Pointer<DViewElement, 1, 1, LViewElement>;
+
+
+    // own properties
+    bindVertexSizeToView!: boolean;
+    name!: string;
+    constants?: string; // evalutate 1 sola volta all'applicazione della vista o alla creazione dell'elemento.
+    preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
+
+    jsxString!: string; // l'html template
+    usageDeclarations?: string; // example: state
+    forceNodeType?: DocString<'component name'>;
+    scalezoomx!: boolean; // whether to resize the element normally using width-height or resize it using zoom-scale css
+    scalezoomy!: boolean;
+    // not persistent, some not shared. deve essere diverso da utente ad utente perchè dipende dal pan e zoom nel grafo dell'utente attuale.
+    // facendo pan su grafo html sposti gli elementi, per simulare uno spostamento del grafo e farlo sembrare illimitato.
+    // __transient: DViewTransientProperties;
+    storeTemporaryPositions!: boolean; // if true updates vertex position every X millisecond while dragging, if false updates it once when the vertex is released.
+    appliableToClasses!: string[]; // class names: DModel, DPackage, DAttribute...
+    subViews!: LViewElement[];
+    oclApplyCondition!: string; // ocl selector
+    explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
+    defaultVSize!: GraphSize;
+    adaptHeight!: boolean;
+    adaptWidth!: boolean;
+    x!: number;
+    y!: number;
+    width!: number;
+    height!: number;
+    // subViews: any;
 
     get_subViews(context: LogicContext<DViewElement>, key: string): LViewElement[]{
         let subViewsPointers = context.data.subViews;
@@ -91,13 +136,13 @@ export class LViewElement extends MixOnlyFuncs(DViewElement, LPointerTargetable)
         }
         return subViews;
     }
-    set_generic_entry(context: LogicContext<this>, key: string, val: any): boolean {
+    set_generic_entry(context: LogicContext<DViewElement>, key: string, val: any): boolean {
         console.log('set_generic_entry', {context, key, val});
         new SetFieldAction(context.data, key, val);
         return true;
     }
 
-    set_defaultVSize(val: GraphSize, context: LogicContext<this>): boolean {
+    set_defaultVSize(val: GraphSize, context: LogicContext<DViewElement>): boolean {
         console.log('set_defaultVSize', {context, val});
         return this.set_generic_entry(context, 'defaultVSize', val);
     }
