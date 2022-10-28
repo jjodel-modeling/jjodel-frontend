@@ -10,7 +10,7 @@ import {
     defaultVSize,
     LPointerTargetable,
     RuntimeAccessible,
-    MixOnlyFuncs, GObject, Dictionary, DReference
+    MixOnlyFuncs, GObject, Dictionary, DReference, getWParams, LUser, DUser
 } from "../../joiner";
 
 
@@ -77,15 +77,6 @@ export class DViewElement extends DPointerTargetable {
         this.className = this.constructor.name;
     }
 }
-
-@RuntimeAccessible
-export class DViewTransientProperties extends RuntimeAccessibleClass{
-    static logic: typeof LPointerTargetable;
-    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    // private: DViewPrivateTransientProperties;
-}
-
-
 @RuntimeAccessible
 export class LViewElement extends LPointerTargetable { // MixOnlyFuncs(DViewElement, LPointerTargetable)
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -146,18 +137,31 @@ export class LViewElement extends LPointerTargetable { // MixOnlyFuncs(DViewElem
         console.log('set_defaultVSize', {context, val});
         return this.set_generic_entry(context, 'defaultVSize', val);
     }
-/*
-    get___transient(context: LogicContext<this>): LViewTransientProperties {
-        return DPointerTargetable.wrap<DViewTransientProperties, LViewTransientProperties>(context.data.__transient, context.data,
-            // @ts-ignore for $ at end of getpath
-            'idlookup.' + context.data.id + '.' + (getPath as LViewElement).__transient.$); }*/
+    /*
+        get___transient(context: LogicContext<this>): LViewTransientProperties {
+            return DPointerTargetable.wrap<DViewTransientProperties, LViewTransientProperties>(context.data.__transient, context.data,
+                // @ts-ignore for $ at end of getpath
+                'idlookup.' + context.data.id + '.' + (getPath as LViewElement).__transient.$); }*/
 
+}
+DPointerTargetable.subclasses.push(DViewElement);
+LPointerTargetable.subclasses.push(LViewElement);
+
+export type WViewElement = getWParams<LViewElement, DPointerTargetable>;
+
+@RuntimeAccessible
+export class DViewTransientProperties extends RuntimeAccessibleClass{
+    static logic: typeof LPointerTargetable;
+    _isDViewTransientProperties!: true;
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    // private: DViewPrivateTransientProperties;
 }
 
 @RuntimeAccessible
 export class LViewTransientProperties extends MixOnlyFuncs(DViewTransientProperties, LPointerTargetable) {
     static structure: typeof DPointerTargetable;
     static singleton: LViewTransientProperties;
+    _isLViewTransientProperties!: true;
 
     // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
     // private!: LViewPrivateTransientProperties;
@@ -170,7 +174,14 @@ export class LViewTransientProperties extends MixOnlyFuncs(DViewTransientPropert
         console.log('GET_ISSELECTED handler func');
         return TargetableProxyHandler.getMap(logicContext.data.isSelected, logicContext, logicContext.proxy.additionalPath + '.' + (getPath as this).isSelected.$);
     }*/
-}/*
+}
+
+DPointerTargetable.subclasses.push(DViewTransientProperties);
+LPointerTargetable.subclasses.push(LViewTransientProperties);
+
+export type WViewTransientProperties = getWParams<LViewTransientProperties, DViewTransientProperties>;
+
+/*
 
 @RuntimeAccessible
 export class DViewPrivateTransientProperties extends DPointerTargetable{

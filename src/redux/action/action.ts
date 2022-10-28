@@ -98,6 +98,7 @@ export class SetFieldAction extends Action {
         return new SetFieldAction(me, field as string, val, subtype);
     }
 
+    // field can end with "+=", "[]", or "-1" if it's array
     constructor(me: DPointerTargetable | Pointer, field: string, val: any, subtype?: string) {
         Log.exDev(!me, 'BaseObject missing in SetFieldAction', {me, field, val, subtype});
         super('idlookup.' + ((me as DPointerTargetable).id || me) + ( field ? '.' + field : ''), val, subtype);

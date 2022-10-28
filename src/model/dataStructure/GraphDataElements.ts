@@ -1,9 +1,12 @@
 // import {Mixin} from "ts-mixer";
 import {isDeepStrictEqual} from "util";
-import type { DMap, LMap, Dictionary,
+import type {
+    IsActually, getWParams,
+    DMap, LMap, Dictionary,
     GObject,
     Pointer,
     DocString} from "../../joiner";
+
 import {
     Action,
     bool,
@@ -81,8 +84,9 @@ export class LGraphElement extends LPointerTargetable {
     get_graph(context: LogicContext<DGraphElement>): LGraph {
         return TargetableProxyHandler.wrap(context.data.graph); }
 
-    set_containedIn(val: Pointer<DGraphElement, 0, 'N', LGraphElement>[], context: LogicContext<DGraphElement>): boolean {
+    set_containedIn(val: Pointer<DGraphElement, 0, 1, LGraphElement>[], context: LogicContext<DGraphElement>): boolean {
         new SetFieldAction(context.data, 'containedIn', val);
+        if (val) SetFieldAction.new(val as any, 'subElements+=', context.data.id, Action.SubType.vertexSubElements);
         return true;
     }
 
@@ -695,73 +699,27 @@ LEdge.subclasses.push(LRefEdge);
 // for edges without a modelling element
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/*
+
+let a = `DExtEdge, DRefEdge, DVoidEdge, LGraphVertex, LRefEdge, LEdgePoint, DVoidVertex, DGraphVertex, DEdgePoint, DVertex, DEdge, LVertex, LGraph, DGraph, LVoidVertex, LVoidEdge, LEdge, LGraphElement, LExtEdge, DGraphElement`; // // ... get from export in index.ts
+a = a.replaceAll(',,', ",")
+let aa = a.split(",").map(a => a.trim().substring(1));
+
+function onlyUnique(value, index, self) { return self.indexOf(value) === index; }
+
+aa = aa.filter(onlyUnique).filter( a=> !!a)
+let r = aa.filter(onlyUnique).filter( a=> !!a).map( a=> `export type W${a} = getWParams<L${a}, D${a}>;`).join('\n')
+document.body.innerText = r;
+*/
+export type WExtEdge = getWParams<LExtEdge, DExtEdge>;
+export type WRefEdge = getWParams<LRefEdge, DRefEdge>;
+export type WVoidEdge = getWParams<LVoidEdge, DVoidEdge>;
+export type WGraphVertex = getWParams<LGraphVertex, DGraphVertex>;
+export type WEdgePoint = getWParams<LEdgePoint, DEdgePoint>;
+export type WVoidVertex = getWParams<LVoidVertex, DVoidVertex>;
+export type WVertex = getWParams<LVertex, DVertex>;
+export type WEdge = getWParams<LEdge, DEdge>;
+export type WGraph = getWParams<LGraph, DGraph>;
+export type WGraphElement = getWParams<LGraphElement, DGraphElement>;
 
 console.warn('ts loading graphDataElement');

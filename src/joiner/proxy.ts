@@ -1,4 +1,43 @@
-import type {DocString, GObject, Proxyfied} from "../joiner";
+import type {
+    DocString,
+    GObject,
+    Proxyfied,
+    WPointerTargetable,
+    WAnnotation,
+    WNamedElement,
+    WFactory_useless_,
+    WClass,
+    WAttribute,
+    WClassifier,
+    WDataType,
+    WMap,
+    WModel,
+    WModelElement,
+    WEnumerator,
+    WObject,
+    WPackage,
+    WOperation,
+    WValue,
+    WParameter,
+    WReference,
+    WTypedElement,
+    WEnumLiteral,
+    WStructuralFeature,
+    WUser,
+    WEdge,
+    WEdgePoint,
+    WExtEdge,
+    WGraph,
+    WRefEdge,
+    WGraphElement,
+    WVoidEdge,
+    WGraphVertex,
+    WVertex,
+    WVoidVertex,
+    WViewTransientProperties, WViewElement, LtoW, LtoD, WtoD, WtoL, DtoW, DtoL,
+
+} from "../joiner";
+
 import {
     DModelElement,
     RuntimeAccessible,
@@ -11,21 +50,93 @@ import {
     SetFieldAction,
     Dictionary,
     SetRootFieldAction,
-    LModelElement, Pointer, DViewElement, GraphSize
+    LModelElement,
+    Pointer,
+    DViewElement,
+    GraphSize,
+    LEnumerator,
+    DEnumerator,
+    LAttribute,
+    DAttribute,
+    LReference,
+    DReference,
+    LRefEdge,
+    DRefEdge,
+    LExtEdge,
+    DExtEdge,
+    LDataType,
+    DDataType,
+    LClass,
+    DClass,
+    LStructuralFeature,
+    DStructuralFeature,
+    LParameter,
+    DParameter,
+    LOperation,
+    DOperation,
+    LEdge,
+    DEdge,
+    LEdgePoint,
+    DEdgePoint,
+    LGraphVertex,
+    DGraphVertex,
+    LModel,
+    DModel,
+    LValue,
+    DValue,
+    LObject,
+    DObject,
+    LEnumLiteral,
+    DEnumLiteral,
+    LPackage,
+    DPackage,
+    LClassifier,
+    DClassifier,
+    LTypedElement,
+    DTypedElement,
+    LVertex,
+    DVertex,
+    LVoidEdge,
+    DVoidEdge,
+    LVoidVertex,
+    DVoidVertex,
+    LGraph,
+    DGraph,
+    LNamedElement,
+    DNamedElement,
+    LAnnotation,
+    DAnnotation,
+    LGraphElement,
+    DGraphElement, LMap, DMap, LUser, DUser, LViewTransientProperties, LViewElement, DViewTransientProperties
 } from "../joiner";
 
 type NotAConcatenation = null;
+type ERROR = "_Type_Error_";
+
+// (DX extends DUser ? LUser : (DX extends DPointerTargetable ? LPointerTargetable : (ERROR))
+// (DX extends DUser ? LUser : (DX extends DPointerTargetable ? LPointerTargetable : (           WViewElement
+//
+// (IN extends WViewElement ? LViewElement : (IN extends WViewTransientProperties ? LWiewTransientProperties : (ERROR)))
+// ))
+// type WtoL<WX extends WPointerTargetable> ='';
 
 @RuntimeAccessible
-export class LogicContext<D extends GObject = DModelElement, P extends LPointerTargetable = LPointerTargetable, PF extends MyProxyHandler<D> = MyProxyHandler<D>> extends RuntimeAccessibleClass{
+export class LogicContext<
+    DX extends GObject = DModelElement,
+    LX = DtoL<DX>,
+    // PF extends MyProxyHandler<DX> = MyProxyHandler<DX>,
+    WX = DtoW<DX>
+    > extends RuntimeAccessibleClass{
     // public proxyfyFunction: PF;
-    public proxyObject: P;
-    public data: D;// & GObject;
-    constructor(proxyObject: P, data: D) {
+    public proxyObject: LX;
+    public data: DX;// & GObject;
+    public write: WX;
+    constructor(proxyObject: LX, data: DX) {
         super();
-        this.proxyObject = proxyObject;
-        this.data = data;
         this.className = this.constructor.name;
+        this.data = data;
+        this.proxyObject = proxyObject;
+        this.write = proxyObject as any;
     }
     /*
         saveToRedux(propkey: "keyof data" | string, val: "typeof data[path]" | any): void { // todo: ask non stackoverflow
@@ -37,7 +148,7 @@ export class LogicContext<D extends GObject = DModelElement, P extends LPointerT
 }
 
 @RuntimeAccessible
-export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, MapProxyHandler> {
+export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, WPointerTargetable> {
     data: GObject;
     path: string;
     subMaps: string[];

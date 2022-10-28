@@ -2,7 +2,15 @@ import {Mixin} from "ts-mixer";
 import type {
     DExtEdge, DRefEdge, DVoidEdge, LGraphVertex, LRefEdge,
     LEdgePoint, DVoidVertex, DGraphVertex, DEdgePoint, DVertex, DEdge,
-    LVertex, LGraph, DGraph, LVoidVertex, LVoidEdge, LEdge, LGraphElement, LExtEdge, DGraphElement} from "../model/dataStructure/GraphDataElements";
+    LVertex, LGraph, DGraph, LVoidVertex, LVoidEdge, LEdge, LGraphElement, LExtEdge, DGraphElement,
+    WEdge,
+    WEdgePoint,
+    WExtEdge, WGraph, WGraphElement,
+    WGraphVertex,
+    WRefEdge,
+    WVertex,
+    WVoidEdge, WVoidVertex
+} from "../model/dataStructure";
 import type {Class, Longest} from "ts-mixer/dist/types/types";
 import type {
     DModelElement,
@@ -25,13 +33,21 @@ import type {
     DTypedElement, LTypedElement,
     DAnnotation, LAnnotation, DMap, LMap,
     EJavaObject,
-    DFactory_useless_, LFactory_useless_} from "../model/logicWrapper";
+    DFactory_useless_, LFactory_useless_,
+
+    WAnnotation,
+    WAttribute,
+    WClass, WClassifier,
+    WDataType,
+    WEnumerator, WEnumLiteral, WMap, WModel, WModelElement, WNamedElement, WObject, WOperation, WPackage,
+    WParameter,
+    WReference,
+    WStructuralFeature, WTypedElement, WValue} from "../model/logicWrapper";
 // import type {Pointer} from "./typeconverter";
 import type {Dictionary, GObject, Proxyfied, DocString, CClass} from "./types";
-import type {DViewElement} from "../view/viewElement/view";
+import type {DViewElement, LViewElement, WViewElement, WViewTransientProperties, LViewTransientProperties, DViewTransientProperties} from "../view/viewElement/view";
 import type {LogicContext} from "./proxy";
 
-import {store} from "../redux/createStore";
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
 
@@ -233,6 +249,15 @@ export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
 (window as any).RuntimeAccessibleClass = RuntimeAccessibleClass;
 // todo: problema: per creare un PointerTargetable ho bisogno dell'userid, e devo generarlo prima che venga generato l'initialState... dovrebbe venir servito con la pagina dal server. o passato come navigation props dalla pagina di login
 
+
+
+export type DtoL<DX extends GObject, LX = DX extends DEnumerator ? LEnumerator : (DX extends DAttribute ? LAttribute : (DX extends DReference ? LReference : (DX extends DRefEdge ? LRefEdge : (DX extends DExtEdge ? LExtEdge : (DX extends DDataType ? LDataType : (DX extends DClass ? LClass : (DX extends DStructuralFeature ? LStructuralFeature : (DX extends DParameter ? LParameter : (DX extends DOperation ? LOperation : (DX extends DEdge ? LEdge : (DX extends DEdgePoint ? LEdgePoint : (DX extends DGraphVertex ? LGraphVertex : (DX extends DModel ? LModel : (DX extends DValue ? LValue : (DX extends DObject ? LObject : (DX extends DEnumLiteral ? LEnumLiteral : (DX extends DPackage ? LPackage : (DX extends DClassifier ? LClassifier : (DX extends DTypedElement ? LTypedElement : (DX extends DVertex ? LVertex : (DX extends DVoidEdge ? LVoidEdge : (DX extends DVoidVertex ? LVoidVertex : (DX extends DGraph ? LGraph : (DX extends DNamedElement ? LNamedElement : (DX extends DAnnotation ? LAnnotation : (DX extends DGraphElement ? LGraphElement : (DX extends DMap ? LMap : (DX extends DModelElement ? LModelElement : (DX extends DUser ? LUser : (DX extends DPointerTargetable ? LPointerTargetable : (ERROR)))))))))))))))))))))))))))))))> = LX;
+export type DtoW<DX extends GObject, WX = DX extends DEnumerator ? WEnumerator : (DX extends DAttribute ? WAttribute : (DX extends DReference ? WReference : (DX extends DRefEdge ? WRefEdge : (DX extends DExtEdge ? WExtEdge : (DX extends DDataType ? WDataType : (DX extends DClass ? WClass : (DX extends DStructuralFeature ? WStructuralFeature : (DX extends DParameter ? WParameter : (DX extends DOperation ? WOperation : (DX extends DEdge ? WEdge : (DX extends DEdgePoint ? WEdgePoint : (DX extends DGraphVertex ? WGraphVertex : (DX extends DModel ? WModel : (DX extends DValue ? WValue : (DX extends DObject ? WObject : (DX extends DEnumLiteral ? WEnumLiteral : (DX extends DPackage ? WPackage : (DX extends DClassifier ? WClassifier : (DX extends DTypedElement ? WTypedElement : (DX extends DVertex ? WVertex : (DX extends DVoidEdge ? WVoidEdge : (DX extends DVoidVertex ? WVoidVertex : (DX extends DGraph ? WGraph : (DX extends DNamedElement ? WNamedElement : (DX extends DAnnotation ? WAnnotation : (DX extends DGraphElement ? WGraphElement : (DX extends DMap ? WMap : (DX extends DModelElement ? WModelElement : (DX extends DUser ? WUser : (DX extends DPointerTargetable ? WPointerTargetable : (ERROR)))))))))))))))))))))))))))))))> = WX;
+export type LtoD<LX extends LPointerTargetable, DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LRefEdge ? DRefEdge : (LX extends LExtEdge ? DExtEdge : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LEdge ? DEdge : (LX extends LEdgePoint ? DEdgePoint : (LX extends LGraphVertex ? DGraphVertex : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LVertex ? DVertex : (LX extends LVoidEdge ? DVoidEdge : (LX extends LVoidVertex ? DVoidVertex : (LX extends LGraph ? DGraph : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : (LX extends LGraphElement ? DGraphElement : (LX extends LMap ? DMap : (LX extends LModelElement ? DModelElement : (LX extends LUser ? DUser : (LX extends LPointerTargetable ? DPointerTargetable : (ERROR)))))))))))))))))))))))))))))))> = DX;
+export type LtoW<LX extends LPointerTargetable, WX = LX extends LEnumerator ? WEnumerator : (LX extends LAttribute ? WAttribute : (LX extends LReference ? WReference : (LX extends LRefEdge ? WRefEdge : (LX extends LExtEdge ? WExtEdge : (LX extends LDataType ? WDataType : (LX extends LClass ? WClass : (LX extends LStructuralFeature ? WStructuralFeature : (LX extends LParameter ? WParameter : (LX extends LOperation ? WOperation : (LX extends LEdge ? WEdge : (LX extends LEdgePoint ? WEdgePoint : (LX extends LGraphVertex ? WGraphVertex : (LX extends LModel ? WModel : (LX extends LValue ? WValue : (LX extends LObject ? WObject : (LX extends LEnumLiteral ? WEnumLiteral : (LX extends LPackage ? WPackage : (LX extends LClassifier ? WClassifier : (LX extends LTypedElement ? WTypedElement : (LX extends LVertex ? WVertex : (LX extends LVoidEdge ? WVoidEdge : (LX extends LVoidVertex ? WVoidVertex : (LX extends LGraph ? WGraph : (LX extends LNamedElement ? WNamedElement : (LX extends LAnnotation ? WAnnotation : (LX extends LGraphElement ? WGraphElement : (LX extends LMap ? WMap : (LX extends LModelElement ? WModelElement : (LX extends LUser ? WUser : (LX extends LPointerTargetable ? WPointerTargetable : (ERROR)))))))))))))))))))))))))))))))> = WX;
+export type WtoD<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? DEnumerator : (IN extends WAttribute ? DAttribute : (IN extends WReference ? DReference : (IN extends WRefEdge ? DRefEdge : (IN extends WExtEdge ? DExtEdge : (IN extends WDataType ? DDataType : (IN extends WClass ? DClass : (IN extends WStructuralFeature ? DStructuralFeature : (IN extends WParameter ? DParameter : (IN extends WOperation ? DOperation : (IN extends WEdge ? DEdge : (IN extends WEdgePoint ? DEdgePoint : (IN extends WGraphVertex ? DGraphVertex : (IN extends WModel ? DModel : (IN extends WValue ? DValue : (IN extends WObject ? DObject : (IN extends WEnumLiteral ? DEnumLiteral : (IN extends WPackage ? DPackage : (IN extends WClassifier ? DClassifier : (IN extends WTypedElement ? DTypedElement : (IN extends WVertex ? DVertex : (IN extends WVoidEdge ? DVoidEdge : (IN extends WVoidVertex ? DVoidVertex : (IN extends WGraph ? DGraph : (IN extends WNamedElement ? DNamedElement : (IN extends WAnnotation ? DAnnotation : (IN extends WGraphElement ? DGraphElement : (IN extends WMap ? DMap : (IN extends WModelElement ? DModelElement : (IN extends WUser ? DUser : (IN extends WPointerTargetable ? DPointerTargetable : (IN extends WViewElement ? DViewElement : (IN extends WViewTransientProperties ? DViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
+export type WtoL<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? LEnumerator : (IN extends WAttribute ? LAttribute : (IN extends WReference ? LReference : (IN extends WRefEdge ? LRefEdge : (IN extends WExtEdge ? LExtEdge : (IN extends WDataType ? LDataType : (IN extends WClass ? LClass : (IN extends WStructuralFeature ? LStructuralFeature : (IN extends WParameter ? LParameter : (IN extends WOperation ? LOperation : (IN extends WEdge ? LEdge : (IN extends WEdgePoint ? LEdgePoint : (IN extends WGraphVertex ? LGraphVertex : (IN extends WModel ? LModel : (IN extends WValue ? LValue : (IN extends WObject ? LObject : (IN extends WEnumLiteral ? LEnumLiteral : (IN extends WPackage ? LPackage : (IN extends WClassifier ? LClassifier : (IN extends WTypedElement ? LTypedElement : (IN extends WVertex ? LVertex : (IN extends WVoidEdge ? LVoidEdge : (IN extends WVoidVertex ? LVoidVertex : (IN extends WGraph ? LGraph : (IN extends WNamedElement ? LNamedElement : (IN extends WAnnotation ? LAnnotation : (IN extends WGraphElement ? LGraphElement : (IN extends WMap ? LMap : (IN extends WModelElement ? LModelElement : (IN extends WUser ? LUser : (IN extends WPointerTargetable ? LPointerTargetable : (IN extends WViewElement ? LViewElement : (IN extends WViewTransientProperties ? LViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
+
 @RuntimeAccessible
 export class DPointerTargetable extends RuntimeAccessibleClass {
     static defaultComponent: (ownProps: GObject, childrens?: (string | React.Component)[]) => React.ReactElement;
@@ -311,12 +336,14 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         return null as any;
     }
     static from0(a: any, ...aa: any): any { return null; }
+    static writeable<LX extends LPointerTargetable, WX = LtoW<LX>>(l: LX): WX { return l as any; }
 }
-
-let d0: LClass = null as any;
+/*
+let d0: LClassifier = null as any;
 let ptrr: Pointer<DPackage, 1, 'N', LPackage> = null as any;
 let ptr1: Pointer<DPackage, 1, 1, LPackage> = null as any;
 let dd = DPointerTargetable.from(d0.id);
+*/
 
 
 
@@ -330,7 +357,7 @@ export class LPointerTargetable extends DPointerTargetable {
     public pointedBy: LPointerTargetable[];
     public __raw!: DPointerTargetable;
 
-    public get__extends(superClassName: string, context: LogicContext<this>): boolean {
+    public get__extends(superClassName: string, context: LogicContext<DPointerTargetable>): boolean {
         return RuntimeAccessibleClass.extends(context.data.className, superClassName);
     }
 
@@ -413,7 +440,15 @@ export class LPointerTargetable extends DPointerTargetable {
 
     static from0(a: any, ...aa: any): any { return null; }
 }
+@RuntimeAccessible
+export class WPointerTargetable extends DPointerTargetable{
+    id!: never;
+    _storePath!: never;
+    _subMaps!: never;
+    pointedBy!: never;
+}
 DPointerTargetable.subclasses.push(LPointerTargetable);
+DPointerTargetable.subclasses.push(WPointerTargetable);
 
 function fffff<DX, LX = DX extends DRefEdge ? LRefEdge : 'not'>( t: DX): LX { return null as any; }
 let a: DGraphElement = null as any;
@@ -456,6 +491,8 @@ export class LUser extends LPointerTargetable { // MixOnlyFuncs(DUser, LPointerT
 }
 DPointerTargetable.subclasses.push(DUser);
 LPointerTargetable.subclasses.push(LUser);
+
+export type WUser = getWParams<LUser, DUser>;
 
 @RuntimeAccessible
 export class MyError extends Error {
@@ -836,3 +873,16 @@ type RemoveKeysOfType<T, ExcludeType> = Exclude2<T, OnlyKeysOfType<T, ExcludeTyp
 
 let str: string = null as any;
 let ptr: Pointer = null as any;
+
+
+
+export type getWParams<L extends LPointerTargetable, D extends Object> = {
+    // [Property in keyof ValidObj<L>]: L[Property] extends never ? never : L[Property]
+    [Property in keyof L]: Property extends string ? (
+        //@ts-ignore
+        L[`set_${Property}`] extends (...a:any)=> any ?
+            Parameters<L[`set_${Property}`]>[0] // if set_X function is defined, get first param
+            //@ts-ignore
+            : D[Property] | `todo: should define set_${Property}` // default type if it's not assigned = type in the D version
+        ) : never
+}

@@ -50,6 +50,7 @@ export type Subtract<T, K> = Omit<T, keyof K>;
 
 
 
+
 // tipo puramente documentazionale, è solo una stringa o array di stringhe
 /*export type Pointer<T extends DPointerTargetable = DPointerTargetable, lowerbound = number, upperbound = number | string, RET = LPointerTargetable> =
     upperbound extends 'N' ? string[] : (

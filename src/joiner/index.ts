@@ -24,7 +24,8 @@ export type {GetPath} from './proxy';
 export {windoww} from './types';
 
 export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv, NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually, Function, Function2, InOutParam} from "./types";
-export type {Pointer, PtrString} from "./classes";
+export type {Pointer, PtrString, WPointerTargetable, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL} from "./classes";
+
 export {JsType, RuntimeAccessibleClass, DPointerTargetable, LPointerTargetable, MyError, RuntimeAccessible, MixOnlyFuncs, LUser, DUser} from "./classes";
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
@@ -42,6 +43,13 @@ export var U = windoww.U as typeof UType;
 // console.error('iiiiiiiiiiiiiiii 4');
 
 // import domain-specific classes
+
+export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
+    WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature
+} from "../model/logicWrapper/LModelElement";
+export type {WEdge, WEdgePoint, WExtEdge, WGraph, WRefEdge, WGraphElement, WVoidEdge, WGraphVertex, WVertex, WVoidVertex} from "../model/dataStructure/GraphDataElements";
+
+
 export {
     DModelElement,
     LModelElement,
@@ -87,6 +95,7 @@ export {DExtEdge, DRefEdge, DVoidEdge, LGraphVertex, LRefEdge, LEdgePoint, DVoid
 export {GraphDragHandler} from "../graph/vertex/GraphDragHandler";
 
 // console.error('iiiiiiiiiiiiiiii 11', windoww.DViewElement);
+export type {WViewElement, WViewTransientProperties} from "../view/viewElement/view";
 export {DViewTransientProperties, LViewTransientProperties, LViewElement, DViewElement} from "../view/viewElement/view";
 // console.error('iiiiiiiiiiiiiiii 12', windoww.DViewElement);
 

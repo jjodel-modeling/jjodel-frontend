@@ -1,5 +1,5 @@
 import type {
-    Dictionary, Pointer, IsActually, GObject
+    Dictionary, Pointer, IsActually, GObject, getWParams
 } from "../../joiner";
 
 import {
@@ -7,7 +7,7 @@ import {
     DPointerTargetable,
     LPointerTargetable,
     DEdge,
-    LEdge, RuntimeAccessibleClass, DRefEdge, LRefEdge, LGraphElement,
+    LEdge, RuntimeAccessibleClass, DRefEdge, LRefEdge, LGraphElement, GraphSize, LogicContext, DVoidVertex,
 } from "../../joiner";
 import {Mixin} from "ts-mixer";
 
@@ -42,7 +42,51 @@ export class LModelElement extends LPointerTargetable{ // extends Mixin(DModelEl
     parent!: LModelElement[];
     father!: LModelElement;
     annotations!: LAnnotation[];
+
+    // it is called by the proxy, but the user or dev should never call this directly, use set_parent instead, it will call this one.
+    private get_set_parent(val: any, context: LogicContext<DModelElement, LModelElement>) {
+        context.proxyObject.parent = val as any; // this will trigger _set_parent()
+
+        const thiss: LModelElement | DModelElement = context.proxyObject as any;
+        const write = LPointerTargetable.writeable(context.proxyObject);
+        if (!val) val = [];
+        if (!Array.isArray(val)) {
+            val = [val] as any[];
+        }
+        if (!val.length) { thiss.parent = []; return; }
+        if ((val[0] as LModelElement).id) { val = (val as LModelElement[] | DModelElement[]).map( (v) => v.id); }
+        // now it's surely a Pointer[]
+        write.parent = val as string[];
+    }
+
+    public set_parent(val: DModelElement[] | LModelElement[] | DModelElement | LModelElement | Pointer<DModelElement, 1, 1, LModelElement> | Pointer<DModelElement, 1, 'N', LModelElement> | null | undefined) {
+        throw new Error("set_parent should never be executed, the proxy should redirect to get_set_parent.");
+    }
 }
+/* todo:
+nel proxy aggiungi regola di default, se prendi qualcosa che inizia con "set_X" esplicitamente (dovrebbe farlo solo il dev)
+richiama _set_X(context, ...params)     <---- nuova funzione set di default, anche this.x = x richiama _set_x
+
+il dev specifica set_x come public di sola firma senza implementazione (throw exception) e senza context
+il dev specifica _set_x come implementazione private
+
+per la get esiste solo _get_x, non "get_x"
+
+ todo2: aggiungi readonly a tutti i campi L per non sbagliarsi e fare in modo che il dev usi sempre i "set_" che sono correttamente tipizzati
+*
+* */
+
+/*todo:
+* for every feature X: typed L, in CLASS_L0 with a side effects when they are edited (like need to update other data for consistency)
+*
+* dev will use this
+* public set_X(val: D | L | Pointer<D> ) { throw new Error("set_X should never be executed, the proxy should redirect to get_set_X."); }
+* public get_set_X( val: D | L | Pointer<D>, otherparams, LogicContext<D>) { throw new Error("set_X should never be executed, the proxy should redirect to get_set_X."); }
+*
+*
+* */
+// @RuntimeAccessible export class _WModelElement extends LModelElement { }
+// export type WModelElement = DModelElement | LModelElement | _WModelElement;
 DPointerTargetable.subclasses.push(DModelElement);
 DPointerTargetable.subclasses.push(LModelElement);
 
@@ -85,7 +129,15 @@ export class LAnnotation extends LModelElement { // Mixin(DAnnotation0, LModelEl
     // personal
     source!: string;
     details: Dictionary<string, string> = {};
+
+    set_source(test_typings_on_WAnnotation: boolean): void {}
 }
+
+@RuntimeAccessible class _WAnnotation extends LModelElement{ //extends _WModelElement {
+    source!: Parameters<LAnnotation["set_source"]>[0];
+}
+
+// export type WAnnotation = DAnnotation | LAnnotation | _WAnnotation;
 DModelElement.subclasses.push(DAnnotation);
 LModelElement.subclasses.push(LAnnotation);
 // todo no: Proxyclass con i get/set che viene istanziata once come singleton senza structure static. copia L con tutto ma non può esistere. quindi unica soluzione de-tipizza singleton e structure
@@ -126,7 +178,7 @@ export class DNamedElement extends DPointerTargetable { // Mixin(DNamedElement0,
 }
 
 @RuntimeAccessible
-export class LNamedElement extends LPointerTargetable { // Mixin(DNamedElement0, DAnnotation)
+export class LNamedElement extends LModelElement { // Mixin(DNamedElement0, DAnnotation)
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DNamedElement;
@@ -142,6 +194,8 @@ export class LNamedElement extends LPointerTargetable { // Mixin(DNamedElement0,
     // personal
     name!: string;
 }
+// @RuntimeAccessible export class _WNamedElement extends _WModelElement { }
+// export type WNamedElement = DNamedElement | LNamedElement | _WNamedElement;
 DModelElement.subclasses.push(DNamedElement);
 LModelElement.subclasses.push(LNamedElement);
 
@@ -183,7 +237,7 @@ export class DTypedElement extends DPointerTargetable { // Mixin(DTypedElement0,
 }
 
 @RuntimeAccessible
-export class LTypedElement extends LModelElement { // extends Mixin(DTypedElement0, LNamedElement)
+export class LTypedElement extends LNamedElement { // extends Mixin(DTypedElement0, LNamedElement)
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DTypedElement;
@@ -206,6 +260,8 @@ export class LTypedElement extends LModelElement { // extends Mixin(DTypedElemen
     many!: boolean;
     required!: boolean;
 }
+// @RuntimeAccessible export class _WTypedElement extends _WNamedElement { }
+// export type WTypedElement = DTypedElement | LTypedElement | _WTypedElement;
 DNamedElement.subclasses.push(DTypedElement);
 LNamedElement.subclasses.push(LTypedElement);
 
@@ -257,6 +313,8 @@ export class LClassifier extends LNamedElement { // extends DNamedElement
     // isInstance(object: EJavaObject): boolean; ?
     // getClassifierID(): number;
 }
+// @RuntimeAccessible export class _WClassifier extends _WNamedElement { }
+// export type WClassifier = DClassifier | LClassifier | _WClassifier;
 DNamedElement.subclasses.push(DClassifier);
 LNamedElement.subclasses.push(LClassifier);
 
@@ -289,6 +347,7 @@ export class DPackage extends DPointerTargetable { // extends DNamedElement
         this.className = this.constructor.name;
     }
 }
+
 @RuntimeAccessible
 export class LPackage extends LNamedElement { // extends DNamedElement
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -299,7 +358,7 @@ export class LPackage extends LNamedElement { // extends DNamedElement
     // static logic: typeof LPackage; todo: fixa questo con una funzione statica fuori dalle classi con tipo condizionale incasinato che gli dai costruttore e ti ridà istanza  getSingleton(LPackage)
     // static structure: typeof DPackage;
     // inherit redefine
-    parent!: LPackage[];
+    parent!: LPackage[];  // ype 'LPackage' is missing the following properties from type 'LModelElement': get_set_parent, set_parent
     father!: LPackage;
     annotations!: LAnnotation[];
     name!: string;
@@ -313,6 +372,8 @@ export class LPackage extends LNamedElement { // extends DNamedElement
         this.className = this.constructor.name;
     }
 }
+// @RuntimeAccessible export class _WPackage extends _WNamedElement { }
+// export type WPackage = DPackage | LPackage | _WPackage;
 DNamedElement.subclasses.push(DPackage);
 LNamedElement.subclasses.push(LPackage);
 
@@ -1119,3 +1180,58 @@ export class LMap extends LPointerTargetable {
 DPointerTargetable.subclasses.push(DMap as any);
 LPointerTargetable.subclasses.push(LMap);
 
+
+
+
+/*
+function makeKeyf<NS extends string, N extends string>(n1: NS, n2: N) {
+    return n1 + '' + n2 as `${NS}${N}`
+}
+type makeKey<NS extends string, N extends string> =`${NS}${N}`;
+type filter_set_keys<T> = { [K in keyof T]: K extends `set_${string}` ? T[K] : never };
+*/
+
+
+
+
+
+
+
+
+
+/*
+
+let a = ``  // ... get from export in index.ts
+a = a.replaceAll(',,', ",")
+let aa = a.split(",").map(a => a.trim().substring(1));
+
+function onlyUnique(value, index, self) { return self.indexOf(value) === index; }
+
+aa = aa.filter(onlyUnique).filter( a=> !!a)
+let r = aa.filter(onlyUnique).filter( a=> !!a).map( a=> `export type W${a} = getWParams<L${a}, D${a}>;`).join('\n')
+document.body.innerText = r;
+*/
+
+
+
+export type WModelElement = getWParams<LModelElement, DModelElement>;
+export type WModel = getWParams<LModel, DModel>;
+export type WValue = getWParams<LValue, DValue>;
+export type WNamedElement = getWParams<LNamedElement, DNamedElement>;
+export type WObject = getWParams<LObject, DObject>;
+export type WEnumerator = getWParams<LEnumerator, DEnumerator>;
+export type WEnumLiteral = getWParams<LEnumLiteral, DEnumLiteral>;
+export type WAttribute = getWParams<LAttribute, DAttribute>;
+export type WReference = getWParams<LReference, DReference>;
+export type WStructuralFeature = getWParams<LStructuralFeature, DStructuralFeature>;
+export type WClassifier = getWParams<LClassifier, DClassifier>;
+export type WDataType = getWParams<LDataType, DDataType>;
+export type WClass = getWParams<LClass, DClass>;
+export type WParameter = getWParams<LParameter, DParameter>;
+export type WOperation = getWParams<LOperation, DOperation>;
+export type WPackage = getWParams<LPackage, DPackage>;
+export type WTypedElement = getWParams<LTypedElement, DTypedElement>;
+export type WAnnotation = getWParams<LAnnotation, DAnnotation>;
+// export type WJavaObject = getWParams<LJavaObject, DJavaObject>;
+export type WMap = getWParams<LMap, DMap>;
+export type WFactory_useless_ = getWParams<LFactory_useless_, DFactory_useless_>;
