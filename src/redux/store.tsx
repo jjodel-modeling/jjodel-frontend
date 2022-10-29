@@ -31,12 +31,15 @@ import {
     LPointerTargetable,
     getPath,
     LModelElement,
+    LPackage,
     DPackage,
     MixOnlyFuncs,
     DGraph, DClassifier, DEnumerator, Input, DOperation, DVoidEdge,
 } from "../joiner";
-import React, {ChangeEvent} from "react";
+import React, {ChangeEvent, CSSProperties} from "react";
 import {LGraphVertex} from "../model/dataStructure/GraphDataElements";
+import {MyProxyHandler} from "../joiner";
+import DV from "../common/DV";
 console.warn('ts loading store');
 
 // @RuntimeAccessible
@@ -44,26 +47,35 @@ console.warn('ts loading store');
 
 
 export class IStore {
+    logs: Pointer<DLog, 0, 'N', LLog> = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
     currentUser: DUser;
+    //change viewsEditor to hook function and use the state instaed redux (?)
     stackViews: Pointer<DViewElement>[] = [];
 
     // users: Dictionary<DocString<Pointer<DUser>>, UserState> = {};
     // collaborators: UserState[];
-    idlookup: Record<string, DPointerTargetable> = {}; // Pointer<DPointerTargetable, 1, 1>
+    idlookup: Record<Pointer<DPointerTargetable, 1, 1>, DPointerTargetable> = {};
 
     //// DClass section to fill
     graphs: Pointer<DGraph, 0, 'N', LGraph> = [];
     voidvertexs: Pointer<DGraph, 0, 'N', LGraphVertex> = [];
     vertexs: Pointer<DGraph, 0, 'N', LVertex> = [];
     graphvertexs: Pointer<DGraph, 0, 'N', LGraphVertex> = [];
+
     edgepoints: Pointer<DGraph, 0, 'N', LEdgePoint> = [];
+    //my addon
+    extEdges: Pointer<DExtEdge, 0, "N", LExtEdge> = [];
+    refEdges: Pointer<DRefEdge, 0, "N", LRefEdge> = [];
 
-
-
-
-
-
+    classifiers: Pointer<DClassifier, 0, 'N', LClassifier> = [];
+    enumerators: Pointer<DEnumerator, 0, 'N', LEnumerator> = [];
+    packages: Pointer<DPackage, 0, 'N', LPackage> = [];
+    primitiveTypes: Pointer<DClass, 0, "N", LClass> = [];
+    attributes: Pointer<DAttribute, 0, "N", LAttribute> = [];
+    enumliterals: Pointer<DEnumLiteral, 0, "N", LEnumLiteral> = [];
+    references: Pointer<DReference, 0, "N", LReference> = [];
+    classs: Pointer<DClass, 0, "N", LClass> = [];
 
     /// DClass section end
 
@@ -73,7 +85,8 @@ export class IStore {
         view: Pointer<DViewElement, 1, 1>,
         modelElement: Pointer<DModelElement, 0, 1> // if a node is clicked: a node and a view are present, a modelElement might be. a node can exist without a modelElement counterpart.
     };
-    constructor(){
+
+    constructor() {
 //        super();
         this.currentUser = new DUser();
         this.models = [];
@@ -82,17 +95,24 @@ export class IStore {
     }
 
     static fakeinit(store?: IStore): void {
-        const outElemArray: DModelElement[] = [];
-        const m3: DModel = this.makeM3Test(false, outElemArray);
-        TRANSACTION( () => {
-            for (let elem of outElemArray) {
-                new CreateElementAction(elem);
-            }
-        });
+        const graphDefaultViews: DViewElement[] = makeDefaultGraphViews();
+        for (let graphDefaultView of graphDefaultViews) {
+            new CreateElementAction(graphDefaultView);
+        }
+        const dModel = new DModel("Test Model");
+        new CreateElementAction(dModel);
+        new CreateElementAction(DGraph.create(dModel.id));
+
+        const primitiveTypes = ["EString", "EInt", "EBoolean"];
+        for (let primitiveType of primitiveTypes) {
+            const dPrimitiveType = new DClass(primitiveType);
+            new CreateElementAction(dPrimitiveType);
+            new SetRootFieldAction("primitiveTypes+=", dPrimitiveType.id);
+        }
     }
 
     static makeM3Test(fireAction: boolean = true, outElemArray: DPointerTargetable[] = []): DModel {
-        const me: DClass = new DClass('ModelElement', true);
+        const me: DModelElement = new DClass('ModelElement', true);
         const annotation: DClass = new DClass('Annotation');
         annotation.implements = [me.id];
         const namedElement: DClass = new DClass('NamedElement');
@@ -111,7 +131,7 @@ export class IStore {
         const model: DClass = new DClass('M3');
         const pkgref: DReference = new DReference('package');
         model.implements = [namedElement.id];
-        // pkgref.type = me.id;
+        //pkgref.type = pkg.id;
         const classe: DClass = new DClass('Class', false, true);
         classifierref.type = classe.id;
         classe.implements = [namedElement.id]; // , classifier.id, namedelement.id, modelelement.id]
@@ -149,318 +169,23 @@ export class IStore {
     }
 }
 function makeDefaultGraphViews(): DViewElement[] {
-    // let jsxstringtodo = todo itera i nodi o i children di un modello nel jsx;
-    let thiss: {data: LModelElement} = null as any;
-    let modeljsxstring = `<div className={"model root"}>
-        <div className={"childrens"}>{this.data.childrens.map((p) => <Graph key={p.id} data={p.id} style={{minHeight: "100%", minWidth: "100%"}} />)}</div>
-    </div>`;
-    // let jsx2 = <><button onClick={ () => { console.log( "acfunc click:", {acfunc: this.data.addClass})}} Add </button><button onClick={this.data.addClass}> Add </button></>;
-    // let jsxstring = <div><span>{JSON.stringify(thiss.data.__raw)}</span> <div className={"childrens"}>{thiss.data.childrens.map((p) => <VertexConnected data={p.id} />)}</div></div>;
-    let pkgjsxstring = `<div className="pkgroot" style={{display: "flex", flexFlow: "wrap", width: '100%', height:'calc(100% - 102px)', position:'absolute'}}>
-        <b style={{display: "none", width:"100%"}}>{this.data.__raw.className + (true ? "" : this.data.id)}</b>
-        <b style={{display: "none"}}>{(window.thiss = this) && true}</b>
-        {/*<b style={{display: "block"}}>{(this.node && this.node.className) + ": " + (this.node && this.node.id)}</b>*/}
-        <b style={{display: "none", width: "100%"}}>Position: {(this.node && this.node.size.x) + ", " + (this.node && this.node.size.y)}</b><br/>
-        {/*<b style={{display: "block"}}>Size: {(this.node && this.node.size && this.node.size.w) + " x " + (this.node && this.node.size && this.node.size.h)}</b>*/}
-        {/*<b style={{display: "block"}}>Size: {"X "+(this.node && this.node && this.node.size && this.node.size.w)}</b><br />*/}
-        <b style={{display: "none"}}>{"isGraph: " + (this.isGraph) + ", isVertex: " + (this.isVertex)}</b>
-        <span style={{maxHeight: "50px", display: "none", overflowY: "scroll"}}>{JSON.stringify({...this.data.__raw, childrens: this.data.childrens})}</span>
-        <Input className={'d-none raw'} obj={this.data} field={"name"} label={"Name: " + this.data.name} />
-        
-        <div className={"childrens"}>{this.data.childrens.map((p) => <Vertex key={p.id} data={p.id} />)}</div>
-        
-        <button className={"btn btn-success me-2"} style={{top: 0, right: 0, position: "absolute", borderRadius: "10px"}} 
-            onClick={ () => { console.log( "acfunc click:", {acfunc: this.data.addClass})}}> Add </button>
-        {/*<button onClick={this.data.addClass} Add </button>*/}
-    {/*<Field data={this.data.id} nodeid={this.nodeid + "2"} graphid={this.graphid} view = {Selectors.getByName(DViewElement, "EditView").id} />\n*/}
-</div>`;
-    // let jsxstring = '<div><DataOutputComponent data={this.data.__raw} /> <div className={"childrens"}>{this.data.childrens.map((p) => <Vertex key={p.id} data={p.id} />)}</div></div>';
 
-    let mview: DViewElement = new DViewElement('ModelDefaultView', modeljsxstring, undefined, '', '', '',
-        [DModel.name]);
-    let pkgview: DViewElement = new DViewElement('PackageDefaultView', pkgjsxstring, undefined, '', '', '',
-        [DPackage.name]);
-
-    let styletodo = `<style data-correcttag={"is <style> "} id='default-class-css'>{\`
-            .Vertex.Attribute{
-                position: relative !important
-            }
-            .addFieldButtonContainer{ width: 100%; text-align: center; display: flex; max-height: 20px; min-height: 20px; opacity: 0; padding: 0 5px;}
-            .Vertex .childcontainer{ display: flex; flex-direction: column; border-bottom: 0.5px solid #77777777; background: #00000013; }
-            .Vertex:hover .addFieldButtonContainer{
-                background: var(--color-1);
-                border-radius: 7px 0 7px 7px;
-                opacity: 1; }
-            .addFieldButton{
-                height: 100%;
-                background:rgba(127, 127, 127, 0.2);
-                border-bottom: none;
-                border-right: none;
-                padding: 0 0.5rem; }
-            .open-options.active{
-            border - bottom - right - radius: 0 !important;
-            opacity: 1;
-            visibility: visible; }
-            .Feature { margin: 2px 0; }
-            .open-options{
-            position: absolute;
-            right: 0;
-            border: 2px solid var(--color-2);
-            background: var(--color-1);
-            width: 25px;
-            height: 25px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0.5;}
-            /* for M1 */
-            /*
-            EChar = 'EChar',
-            EString = 'EString',
-            EDate = 'EDate',
-            EFloat = 'EFloat',
-            EDouble = 'EDouble',
-            EBoolean = 'EBoolean',
-            EByte = 'EByte',
-            EShort = 'EShort',
-            EInt = 'EInt',
-            ELong = 'ELong',*/
-            .Vertex [data-type='EDouble'] input:not([type='number']):not([type='range']),
-            .Vertex [data-type='EFloat'] input:not([type='number']):not([type='range']),
-            .Vertex [data-type='ELong'] input:not([type='number']):not([type='range']),
-            .Vertex [data-type='EInt'] input:not([type='number']):not([type='range']),
-            .Vertex [data-type='EShort'] input:not([type='number']):not([type='range']),
-            .Vertex [data-type='EByte'] input:not([type='number']):not([type='range']),
-            .Vertex [data-type='EDouble'] textarea,
-            .Vertex [data-type='EFloat'] textarea,
-            .Vertex [data-type='ELong'] textarea,
-            .Vertex [data-type='EInt'] textarea,
-            .Vertex [data-type='EShort'] textarea,
-            .Vertex [data-type='EByte'] textarea,
-            .Vertex [data-type='EDouble'] select:not([number]),
-            .Vertex [data-type='EFloat'] select:not([number]),
-            .Vertex [data-type='ELong'] select:not([number]),
-            .Vertex [data-type='EInt'] select:not([number]),
-            .Vertex [data-type='EShort'] select:not([number]),
-            .Vertex [data-type='EByte'] select:not([number]) { display: none; }
-    
-            .Vertex [data-type='EBoolean'] input:not([type='radio']):not([type='checkbox']),
-            .Vertex [data-type='EBoolean'] select:not([bool]),
-            .Vertex [data-type='EBoolean'] textarea:not([bool]){display: none;}
-            .Vertex [data-type='EDate']
-            input:not([type='date']):not([type='time']):not([type='datetime-local']):not([type='month']):not([type='week']),
-            .Vertex [data-type='EDate'] select:not([date]),
-            .Vertex [data-type='EDate'] textarea:not([date]){display: none;}
-    
-            .Vertex [data-type='EString'] input[type='number'],
-            .Vertex [data-type='EString'] input[type='range'],
-            .Vertex [data-type='EString'] input[type='radio'],
-            .Vertex [data-type='EString'] input[type='checkbox'],
-            .Vertex [data-type='EString'] input[type='date'],
-            .Vertex [data-type='EString'] input[type='time'],
-            .Vertex [data-type='EString'] input[type='datetime-local'],
-            .Vertex [data-type='EString'] input[type='month'],
-            .Vertex [data-type='EString'] input[type='week'],
-            .Vertex [data-type='EString'] select[enum],
-            .Vertex [data-type='EString'] select[date],
-            .Vertex [data-type='EString'] select[bool],
-            .Vertex [data-type='EString'] select[number],
-            .Vertex [data-type='EString'] textarea[enum],
-            .Vertex [data-type='EString'] textarea[date],
-            .Vertex [data-type='EString'] textarea[bool],
-            .Vertex [data-type='EString'] textarea[number],
-            .Vertex [data-type='EChar'] input[type='number'],
-            .Vertex [data-type='EChar'] input[type='range'],
-            .Vertex [data-type='EChar'] input[type='radio'],
-            .Vertex [data-type='EChar'] input[type='checkbox'],
-            .Vertex [data-type='EChar'] input[type='date'],
-            .Vertex [data-type='EChar'] input[type='time'],
-            .Vertex [data-type='EChar'] input[type='datetime-local'],
-            .Vertex [data-type='EChar'] input[type='month'],
-            .Vertex [data-type='EChar'] input[type='week'],
-            .Vertex [data-type='EChar'] select[enum],
-            .Vertex [data-type='EChar'] select[date],
-            .Vertex [data-type='EChar'] select[bool],
-            .Vertex [data-type='EChar'] select[number],
-            .Vertex [data-type='EChar'] textarea[enum],
-            .Vertex [data-type='EChar'] textarea[date],
-            .Vertex [data-type='EChar'] textarea[bool],
-            .Vertex [data-type='EChar'] textarea[number] {display: none;}
-    
-            .Vertex [enum-type='EEnum']/*in m1 style i set only 2 possible values, this or template error*/
-            select:not([enum]),
-            .Vertex [enum-type='EEnum'] input:not([enum]),
-            .Vertex [enum-type='EEnum'] textarea:not([enum]){display: none;}
-            \`}</style>`;
-
-    // styletodo = `<style>{"div {background-color: pink;}"}</style>`;
-    let classdefaultjsx =
-        `<div className='template Vertex Class' tabIndex={-1}
-                       style={{
-                           cursor: 'pointer',
-                           position: 'relative',
-                           borderRadius: '7px',
-                           background: 'var(--color-1)',
-                           color: 'var(--color-2)'
-                       }}>
-            <div className='Class'
-                 style={{
-                     background: 'var(--color-1)',
-                     boxShadow: '0 0 3pt 0.5pt var(--color-3)',
-                     height: 'auto',
-                    
-                     width: '100%',
-                     borderRadius: '7px',
-                     display: 'inline-flex',
-                     flexFlow: 'column'
-                 }}
-                 data-autosizey='1'>
-                <div className='VertexHeader'
-                     style={{
-                         textAlign: 'center',
-                         display: 'flex',
-                         padding: '8px 5px',
-                         width: '100%',
-                         fontSize: '1rem',
-                         borderBottom: '0.5px solid #77777777'}}>
-                    <input value='$##name$' placeholder='Object name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*'
-                    style={{display: 'none'}}
-                           data-style='background:transparent; border:none; text-align:right; order:1; flex-basis: 50%; min-width:10px;' />
-                    <Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Class name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*'
-                           inputstyle={{
-                               background: 'transparent',
-                               border: 'none',
-                               textAlign: 'right',
-                               order: 1,
-                               flexBasis: '50%',
-                               minWidth:'10px'}}/>
-                        <div style={{
-                            textAlign: 'left',
-                            order: 2,
-                            flexGrow: 1,
-                            color: 'var(--color-4)',
-                            margin: 'auto'}}>: Concept
-                        </div>
-                        <div hover-display='v1' className='hover-unfade open-options' tabIndex={-1}
-                             style={{
-                                 top: '-25px',
-                                 right: '7px',
-                                 borderTopRightRadius: '999px',
-                                 borderTopLeftRadius: '999px'
-                             }}>
-                            <span>...</span>
-                        </div>
-                </div>
-                <div className='specialjs hideempty childcontainer AttributeContainer hover-exclude' />
-                <div className='specialjs hideempty childcontainer ReferenceContainer hover-exclude' />
-                <div className='specialjs hideempty childcontainer OperationContainer hover-exclude' />
-                
-                
-                <div className='specialjs hideempty childcontainer AttributeContainer hover-exclude' style = { {height: (this.data.attributes.length && (15+this.data.attributes.length * 30)) + 'px' }}>
-                    {this.data.attributes.length > 0 ? ('attributes(' +this.data.attributes.length +')') : null}
-                    {this.data.attributes.map((p) => <DefaultNode key={p.id} data={p.id} className={"Attribute"} />) } </div>
-                    
-                <div className='specialjs hideempty childcontainer OperationContainer hover-exclude' style = { {height: (this.data.operations.length && (15+this.data.operations.length * 30)) + 'px' }}>
-                    {this.data.operations.length > 0 ? ('operations(' +this.data.operations.length +')') : null}
-                    {this.data.operations.map((p) => <DefaultNode key={p.id} data={p.id} className={"Operation"} />) } </div>
-                    
-                <div className='specialjs hideempty childcontainer ReferenceContainer hover-exclude' style = { {height: (this.data.references.length && (15+this.data.references.length * 30)) + 'px' }}>
-                    {this.data.references.length > 0 ? ('references(' +this.data.references.length +')') : null}
-                    {this.data.references.map((p) => <DefaultNode key={p.id} data={p.id} className={"Reference"} style={{height: '30px'}}/>) } </div>
-
-                <div className='specialjs hideempty childcontainer generic hover-exclude' style ={ {height: (this.data.childrens.length && (15+this.data.childrens.length * 30)) + 'px' }}>
-                    {false && this.data.childrens.length > 0 ? ('childrens(' +this.data.childrens.length +')') : null}
-                    {false && this.data.childrens.map((p) => <DefaultNode key={p.id} data={p.id} className={"ClassUnknownChildren"}/>)}
-                </div>
-
-                <div className='addFieldButtonContainer'>
-                    <span style={{display: 'flex', margin: 'auto'}}>Add&nbsp;</span>
-                    <select className='AddFieldSelect' style={{
-                        background: 'transparent',
-                        display: 'flex',
-                        margin: 'auto',
-                    }} onChange={(e) => {
-                        console.log('child type change:', {thiss: this, selected: event.target.value, e});
-                        this.data._tmptypeselected = e.target.value;
-                    } }>
-                        <optgroup label='FeatureType'>
-                            <option value='Attribute' selected>Attribute</option>
-                            <option value='Reference'>Reference</option>
-                            <option value='Operation'>Operation</option>
-                        </optgroup>
-                    </select>
-                    <span style={{display: 'flex', margin: 'auto'}}>&nbsp;field&nbsp;</span>
-                    <button className='addFieldButton' onClick={() => this.data.addChildren((this.data).__raw._tmptypeselected || "Attribute")}>Go</button>
-                </div>
-            </div>` +
-        styletodo +
-        `</div> `;
-/*todo
-    let a =
-        <select className='AddFieldSelect' style={{
-            background: 'transparent',
-            display: 'flex',
-            margin: 'auto',
-        }} onChange={ (e:ChangeEvent) => { this.selected = e.target.value }} />;*/
-
-    let attribdefaultjsx = `<div style={{display: 'flex', width: '100%', height: '30px'}} className={"Attribute"}>
-                        <Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Attribute name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*' rootstyle={{height: 'min-content', margin: 'auto'}} labelstyle={{width: undefined}}
-                           inputstyle={{
-                               background: 'transparent',
-                               border: 'none',
-                               textAlign: 'right',
-                               order: 1,
-                               flexBasis: '50%',
-                               minWidth:'10px'}}/>
-                        <div style={{
-                            textAlign: 'left',
-                            order: 2,
-                            flexGrow: 1,
-                            color: 'orange',
-                            paddingRight: '5px',
-                            margin: 'auto'}}>: attribute
-                        </div></div>`;
-    let refdefaultjsx =
-    `<div className={"Reference"} style={{display: 'flex', width: '100%', height: '30px'}}>
-                        <Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Attribute name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*' rootstyle={{height: 'min-content', margin: 'auto'}} labelstyle={{width: undefined}}
-                           inputstyle={{
-                               background: 'transparent',
-                               border: 'none',
-                               textAlign: 'right',
-                               flexBasis: '50%',
-                               minWidth:'10px'}}/>
-                        <div style={{
-                            textAlign: 'left',
-                            flexGrow: 1,
-                            color: 'orange',
-                            margin: 'auto'}}>: reference
-                        </div>
-                        <button className={"reflinkbtn btn"} style={{ background: 'var(--color-4)', color: 'var(--color1)', 'padding-top': 0, 'padding-bottom': 0, 'margin-left': '5px'}} onClick={(e)=>{ this.data.startlink(e) }}>→</button></div>`;
-    let opdefaultjsx = `<div className={"Operation"} style={{display: 'flex', width: '100%', height: '30px'}}>
-                    <Input className={'raw'} field={'name'} obj={this.data.id} placeholder='Attribute name' pattern='[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*' rootstyle={{height: 'min-content', margin: 'auto'}} labelstyle={{width: undefined}}
-                           inputstyle={{
-                               background: 'transparent',
-                               border: 'none',
-                               textAlign: 'right',
-                               order: 1,
-                               flexBasis: '50%',
-                               minWidth:'10px'}} />
-                        <div style={{
-                            textAlign: 'left',
-                            order: 2,
-                            flexGrow: 1,
-                            color: 'orange',
-                            margin: 'auto'}}>: operation
-                        </div></div>`;
-    let cview: DViewElement = new DViewElement('ClassDefaultView', classdefaultjsx, undefined, '', '', '', [DClass.name]);
-    let enumdefaultjsx = `<div className="Enumerator" style={{width: '100px', height: '50px', background: 'pink'}}>Enumerator placeholder</div>`;
-    let eview: DViewElement = new DViewElement('EnumDefaultView', enumdefaultjsx, undefined, '', '', '', [DEnumerator.name]);
-    let aview: DViewElement = new DViewElement('AttribDefaultView', attribdefaultjsx, undefined, '', '', '', [DAttribute.name]);
-    let rview: DViewElement = new DViewElement('RefDefaultView', refdefaultjsx, undefined, '', '', '', [DReference.name]);
-    let oview: DViewElement = new DViewElement('OperationDefaultView', opdefaultjsx, undefined, '', '', '', [DOperation.name]);
+    let mview: DViewElement = new DViewElement('ModelDefaultView', DV.modelView(), undefined, '', '', '', [DModel.name]);
+    let pkgview: DViewElement = new DViewElement('PackageDefaultView', DV.packageView(), undefined, '', '', '', [DPackage.name]);
+    let cview: DViewElement = new DViewElement('ClassDefaultView', DV.classView(), undefined, '', '', '', [DClass.name]);
+    let eview: DViewElement = new DViewElement('EnumDefaultView', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.name]);
+    let aview: DViewElement = new DViewElement('AttribDefaultView', DV.attributeView(), undefined, '', '', '', [DAttribute.name]);
+    let rview: DViewElement = new DViewElement('RefDefaultView', DV.referenceView(), undefined, '', '', '', [DReference.name]);
+    let oview: DViewElement = new DViewElement('OperationDefaultView', DV.attributeView(), undefined, '', '', '', [DOperation.name]);
+    let literalDefaultView: DViewElement = new DViewElement('LiteralDefaultView', DV.literalView(), undefined, '', '', '', [DEnumLiteral.name]);
 
     pkgview.subViews = [cview.id]; // childrens can use this view too todo: this is temporary
-    let alldefaultViews = [mview, pkgview, cview, eview, aview, rview, oview];
+
+    let defaultJsx = `<div className={"render-test"}></div>`;
+    let defaultView: DViewElement = new DViewElement("DefaultView", defaultJsx, undefined, "",
+        "", "", []);
+
+    let alldefaultViews = [mview, pkgview, cview, eview, aview, rview, oview, literalDefaultView, defaultView];
     mview.subViews = [mview.id, ...alldefaultViews.slice(1).map(e => e.id)]// childrens can use this view too todo: this is temporary, should just be the sliced map of everything else.
     return alldefaultViews;
 }

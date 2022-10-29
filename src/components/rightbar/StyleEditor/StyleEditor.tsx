@@ -78,7 +78,8 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
             node: DPointerTargetable.wrap(state.idlookup[ret.selectedid.node]) as LGraphElement,
             view: DPointerTargetable.wrap(state.idlookup[ret.selectedid.view]) as LViewElement,
             modelElement: ret.selectedid.modelElement ? DPointerTargetable.wrap<DPointerTargetable, LModelElement>(state.idlookup[ret.selectedid.modelElement]) : undefined };
-    return ret; }
+    return ret;
+}
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     const ret: DispatchProps = {} as any;

@@ -1,11 +1,14 @@
 .selected{
   // border: 5px solid blue;
   // outline: 7px solid blue;
-  box-shadow: 0 0 6pt 3pt var(--color-4);
+  // box-shadow: 0 0 6pt 3pt var(--color-4);
+  border: 1px dashed red !important;
+  //border-radius: 8px;
 }
 .ocl_match {
   box-shadow: 0 0 6pt 3pt red;
 }
+/*
 .vertex{
   display: inline-block;
   position: absolute;
@@ -16,4 +19,47 @@
   position: relative;
   display: flex;
   border: none !important;
+}
+*/
+.test-arrow1 {
+  background-color: red;
+  width: 200px;
+  height: 200px;
+  position: absolute;
+}
+.test-arrow2 {
+  border: 3px solid green;
+  position: relative;
+}
+.test-arrow3 {
+  background-color: black;
+  width: 20px;
+  height: 20px;
+  position: absolute;
+}
+.test-arrow4 {
+  background-color: blue;
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  top: 100px;
+  left: 10px;
+}
+
+.test {
+  border: 2px solid red;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+}
+
+.childrens {
+  height: 100%;
+  width: 100%;
+}
+
+.pkg-root > .childrens {
+  height: 88%;
+  width: 100%;
+  position: absolute;
 }

@@ -15,7 +15,25 @@ import {
     Log,
     LGraphElement,
     LViewElement,
-    DModelElement, RuntimeAccessibleClass, DGraphElement, LModel, DGraph, MyProxyHandler, Selectorss
+    DModelElement,
+    RuntimeAccessibleClass,
+    DGraphElement,
+    LModel,
+    DGraph,
+    MyProxyHandler,
+    Selectorss,
+    DClassifier,
+    DClass,
+    DEnumerator,
+    LAttribute,
+    LClass,
+    LPackage,
+    LEnumerator,
+    LClassifier,
+    LReference,
+    DRefEdge,
+    LRefEdge,
+    DAttribute, DEnumLiteral, LEnumLiteral
 } from "../../joiner";
 
 enum ViewEClassMatch { // this acts as a multiplier for explicit priority
@@ -34,6 +52,66 @@ export class Selectors{
         let views: DViewElement[] = ptrs.map<DViewElement>( (ptr) => state.idlookup[ptr] as DViewElement);
         return views;
     }
+    //Giordano: start
+
+    static getAllPrimitiveTypes(): DClassifier[] {
+        let state: IStore & GObject = store.getState();
+        const ptrs: Pointer<DClassifier, 0, 'N'> = Object.values((state).primitiveTypes);
+        const classifiers: DClassifier[] = ptrs.map<DClassifier>( (ptr) => state.idlookup[ptr] as DClassifier);
+        return classifiers;
+    }
+    static getFirstPrimitiveTypes(): DClassifier {
+        return Selectors.getAllPrimitiveTypes()[0];
+    }
+    static getRefEdges(): DRefEdge[] {
+        const state: IStore & GObject = store.getState();
+        const pointers: Pointer<DRefEdge, 0, 'N', LRefEdge> = Object.values((state).refEdges);
+        const dRefEdges: DRefEdge[] = pointers.map<DRefEdge>( (ptr) => state.idlookup[ptr] as DRefEdge);
+        return dRefEdges;
+    }
+    static getField(field: string): string[] {
+        let state: IStore & GObject = store.getState();
+        const pointers: Pointer<DModelElement, 0, 'N'> = Object.values((state)[field]);
+        return pointers;
+    }
+
+    static getAllAttributes(): string[] {
+        const state: IStore = store.getState();
+        return Object.values((state).attributes);
+    }
+    static getAllEnumLiterals(): string[] {
+        const state: IStore = store.getState();
+        return Object.values((state).enumliterals);
+    }
+    static getAllReferences(): string[] {
+        const state: IStore = store.getState();
+        return Object.values((state).references);
+    }
+    static getAllReferenceEdges(): string[] {
+        const state: IStore = store.getState();
+        return Object.values((state).refEdges);
+    }
+    static getAllClasses(): string[] {
+        const state: IStore = store.getState();
+        return Object.values((state).classs);
+    }
+    static getAllEnumerators(): string[] {
+        const state: IStore = store.getState();
+        return Object.values((state).enumerators);
+    }
+    static getAllPackages(): string[] {
+        const state: IStore = store.getState();
+        return Object.values((state).packages);
+    }
+
+
+    static getDElement<T extends DModelElement>(pointer: string): T {
+        const state: IStore & GObject = store.getState();
+        const dElement: T = state.idlookup[pointer] as T;
+        return dElement;
+    }
+
+    //Giordano: end
 
     static getVertex<W extends boolean = true, RP extends boolean = true>(wrap?: W /* = true */, resolvePointers?: RP /**/):
         W extends false ? (RP extends false ? Pointer<DVoidVertex, 1, 1, LVoidVertex>[] : DVoidVertex[]) : LVoidVertex[] {

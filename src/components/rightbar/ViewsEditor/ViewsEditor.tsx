@@ -82,7 +82,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
             const view = viewsStack[viewsStack.length - 1]
             const data = this.props.data as LViewElement;
             var inputstyle  = {marginTop:'25px'};
-            return (<>
+            return (<div className={"bg-light mx-3"}>
                 <div className={"row mb-4"}>
                     <button style={{maxWidth: "3em"}} className={"col btn btn-danger"}
                             onClick={(e) => {
@@ -193,10 +193,10 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                         </>
                     ))
                 }
-            </>);
+            </div>);
         }
         else{
-            return (<>
+            return (<div className={"bg-light  mx-3"}>
                 <div className={"row"}>
                     <h4 className={"col"}>GRAPHICAL SYNTAX LAYER</h4>
                     <button style={{maxWidth: "3em"}} className={"col btn btn-success"}
@@ -254,7 +254,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                         </>)
                     )
                 }
-            </>);
+            </div>);
         }
     }
 }
@@ -286,6 +286,8 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
 
     let lViews: LViewElement[] = [];
     console.log('DVE', {DPointerTargetable, dpt:windoww.DPointerTargetable});
+
+    //Giordano: use state.views instaed Selectors ?
     for(let dView of Selectors.getAllViewElements()){
         let item: LViewElement = MyProxyHandler.wrap(dView)
         if (item) lViews.push(item)

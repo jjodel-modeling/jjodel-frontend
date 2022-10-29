@@ -610,6 +610,10 @@ export class DEdge extends DGraphElement { // DVoidEdge
     state: DMap = {} as any;
     __isDEdge!: true;
     __isDVoidEdge!: true;
+
+
+    start: Pointer<DModelElement, 1, 1, LModelElement> = "";
+    end: Pointer<DModelElement, 1, 1, LModelElement> = "";
 }
 
 @RuntimeAccessible

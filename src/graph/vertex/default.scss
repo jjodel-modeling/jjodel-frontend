@@ -1,0 +1,106 @@
+$pkg-size: 20em;
+$class-size: 10em;
+$enum-size: 10em;
+
+$radius: .2em;
+
+$background: white;
+$pkg-color: green;
+$class-color: red;
+$enum-color: orange;
+$border-color: #0000005c;
+
+/* ------MODEL------ */
+.default-model {
+  height: 100%; width: 100%;
+  background-image: url("../../static/svg/graph.svg"); background-repeat: repeat;
+}
+.DModel { height: 100%; width: 100%; }
+
+/* -----PACKAGE----- */
+.default-pkg {
+  background-color: $background;
+  border: 1px solid $border-color;
+  border-left: .2em solid $pkg-color;
+  box-shadow: rgba(0, 0, 0, 0.25) 0 5px 10px;
+  border-radius: $radius;
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+.DPackage {
+  min-width: $pkg-size;
+  min-height: calc($pkg-size * 3 / 4);
+}
+
+/* ------CLASS------ */
+.default-class {
+  background-color: $background;
+  border: 1px solid $border-color;
+  border-left: .2em solid $class-color;
+  border-radius: $radius;
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+.class-header {
+  width: 100%;
+  border-bottom: 1px solid $border-color;
+}
+.class-header-label {
+  width: 100%;
+  text-align: center;
+  padding: calc($class-size / 25);
+}
+.class-header-label > b {
+  color: $class-color;
+}
+.DClass {
+  min-width: $class-size;
+  min-height: calc($class-size * 3 / 4);
+}
+
+/* ------ENUMS------ */
+.default-enum {
+  background-color: $background;
+  border: 1px solid $border-color;
+  border-left: .2em solid $enum-color;
+  border-radius: $radius;
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+.enum-header {
+  width: 100%;
+  border-bottom: 1px solid $border-color;
+}
+.enum-header-label {
+  width: 100%;
+  text-align: center;
+  padding: calc($enum-size / 25);
+}
+.enum-header-label > b {
+  color: $enum-color;
+}
+.DEnumerator {
+  min-width: $enum-size;
+  min-height: calc($enum-size * 3 / 4);
+}
+
+
+
+
+
+
+
+
+
+
+.children {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+}

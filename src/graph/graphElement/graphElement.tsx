@@ -50,6 +50,7 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
     const view: LViewElement = stateProps.view; //data._transient.currentView;
     // eslint-disable-next-line no-mixed-operators
     let allProps: AllPropss = {...ownProps, ...stateProps} as AllPropss;
+    (allProps as GObject).props = allProps;
     const evalContext = makeEvalContext(allProps, view);
     // const evalContextOld = U.evalInContext(this, constants);
     // this.setState({evalContext});
@@ -358,7 +359,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return ret;
     }
 
-    render(): ReactNode {
+    public render(): ReactNode {
         if (this.props.preRenderFunc) U.evalInContextAndScope(this.props.preRenderFunc, this.props.evalContext);
         const rnode: ReactNode = this.getTemplate();
         let rawRElement: ReactElement | null = U.ReactNodeAsElement(rnode);

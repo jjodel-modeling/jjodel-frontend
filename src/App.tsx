@@ -1,42 +1,19 @@
-import React, {Component, PureComponent} from 'react';
-import logo from './logo.svg';
+import React, {PureComponent} from 'react';
 import './App.scss';
-import {U, DockLayoutComponent, ColorScheme} from "./joiner";
+import Dock from "./components/abstract/DockComponent";
+import Draggable2 from "./graph/draggable/Draggable2";
+
 
 interface AllProps{}
 interface MPState{}
 
-
-
-
-class App extends PureComponent<AllProps, MPState>{
+export default class App extends PureComponent<AllProps, MPState>{
     constructor(props: Readonly<AllProps> | AllProps) {
         super(props);
     }
     render() {
-        return (
-            <div className="App">
-                <header className="App-header" style={{display: "none"}}>
-                    <img src={logo} className="App-logo" alt="logo" />
-                    <p>
-                        Edit <code>src/App.tsx</code> and save to reload.
-                    </p>
-                    <a
-                        className="App-link"
-                        href="https://reactjs.org"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        Learn React
-                    </a>
-                </header>
-                <DockLayoutComponent />
-                <ColorScheme />
-                { //<TabContainerComponent/>
-                }
-            </div>
-        );
+        return (<>
+            <Dock />
+        </>);
     }
 }
-
-export default App;

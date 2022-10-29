@@ -1,5 +1,5 @@
-import type {
-    Dictionary, Pointer, IsActually, GObject, getWParams
+import {
+    Dictionary, Pointer, IsActually, GObject, getWParams, Log, SetFieldAction, U
 } from "../../joiner";
 
 import {
@@ -10,13 +10,24 @@ import {
     LEdge, RuntimeAccessibleClass, DRefEdge, LRefEdge, LGraphElement, GraphSize, LogicContext, DVoidVertex,
 } from "../../joiner";
 import {Mixin} from "ts-mixer";
+/*
+function resolvePointersFunction<T extends DPointerTargetable = DPointerTargetable, LB=number, UB=string, RET extends LPointerTargetable = LPointerTargetable>(ptr: Pointer<T, LB, UB, RET>[]): (RET | null)[] {
+    return (ptr && ptr.map( p => LModelElement.ResolvePointer<T, LB, UB, RET>(p)) as RET[]) || []; }
+
+function resolvePointerFunction<T extends DPointerTargetable = DModelElement, LB=number, UB=number, RET extends LPointerTargetable = LModelElement>(ptr: Pointer<T, LB, UB, RET>): RET | null {
+    if (!ptr) return null;
+    let obj: DPointerTargetable | LPointerTargetable | undefined = store.getState().idlookup[ptr as string];
+    if (!obj) return null;
+    if (obj instanceof DModelElement) obj = MyProxyHandler.wrap(obj);
+    return obj as RET; }
+*/
 
 
 @RuntimeAccessible
 export class DModelElement extends DPointerTargetable{
-    static logic: typeof LModelElement;
-    static structure: typeof DModelElement;
-    static singleton: LModelElement;
+    // static logic: typeof LModelElement;
+    // static structure: typeof DModelElement;
+    // static singleton: LModelElement;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
@@ -30,39 +41,335 @@ export class DModelElement extends DPointerTargetable{
     }
 }
 
-export class LModelElement extends LPointerTargetable{ // extends Mixin(DModelElement0, LPointerTargetable)
+function LarrayToPointers<D extends DPointerTargetable, L extends LPointerTargetable, P extends Pointer> (val: (P | D | L)[] |  (P | D | L)): P[] {
+    if (!val) val = [];
+    if (!Array.isArray(val)) { val = [val]; }
+    if (!val.length) { return []; }
+    if ((val[0] as any).id) { val = (val as any as (LModelElement | DModelElement)[]).map( (v) => v.id) as any[]; }
+    return val as any[]; }
+
+function toPointer<D extends DPointerTargetable, L extends LPointerTargetable, P extends Pointer> (val: (P | D | L)): P | null { return !val ? null : (val as any).id; }
+// todo: add field "childrens" to all L classes
+
+@RuntimeAccessible
+export class LModelElement<Context extends LogicContext<DModelElement> = any> extends LPointerTargetable { // extends Mixin(DModelElement0, LPointerTargetable)
     // static logic: typeof LModelElement;
     // static structure: typeof DModelElement;
     // static singleton: LModelElement;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    /*static ResolvePointer = resolvePointerFunction;
+    private static ResolvePointers? = resolvePointersFunction;
+    private resolvePointer<T extends DPointerTargetable = DPointerTargetable, LB extends number = 0, UB extends number = 0, RET extends LPointerTargetable = LPointerTargetable>(ptr: Pointer<T, LB, UB, RET>): RET | null {
+        return LModelElement.ResolvePointer(ptr); }
+    private resolvePointers<T extends DPointerTargetable = DPointerTargetable, LB extends number = 0, RET extends LPointerTargetable = LPointerTargetable>(ptr: Pointer<T, LB, 'N', RET>)
+        : (RET | null)[] { return resolvePointersFunction(ptr); }
+    */
     public __raw!: DModelElement;
     id!: Pointer<DModelElement, 1, 1, LModelElement>;
 
     parent!: LModelElement[];
     father!: LModelElement;
     annotations!: LAnnotation[];
+    childrens!: (LPackage | LClassifier | LTypedElement | LAnnotation)[];
 
-    // it is called by the proxy, but the user or dev should never call this directly, use set_parent instead, it will call this one.
-    private get_set_parent(val: any, context: LogicContext<DModelElement, LModelElement>) {
-        context.proxyObject.parent = val as any; // this will trigger _set_parent()
 
-        const thiss: LModelElement | DModelElement = context.proxyObject as any;
-        const write = LPointerTargetable.writeable(context.proxyObject);
-        if (!val) val = [];
-        if (!Array.isArray(val)) {
-            val = [val] as any[];
+    // not necessary: there is a default getter get_id(context: LogicContext<this>): string { return context.data.id; }
+    set_id(): boolean { return Log.exx('id is read-only', this); }
+
+    get_childrens_idlist(context: LogicContext<DModelElement>): Pointer<DModelElement, 0, 'N', LModelElement> { // LPackage | LClassifier | LTypedElement | LAnnotation
+        return [...context.data.annotations];
+    }
+    get_childrens(context: Context): LModelElement[] {
+        // return this.get_childrens_idlist(context).map(e => LPointerTargetable.from(e));
+        return LPointerTargetable.from(this.get_childrens_idlist(context));
+    }
+    set_childrens(a: never): boolean { return Log.exx('childrens is a derived read-only collection', this); }
+
+
+    add_parent(val: Pointer<DAnnotation> | LModelElement, logicContext: Context): boolean {
+        return SetFieldAction.new(logicContext.data, 'parent[]', val); // todo: need to update childrens of the old and new parents
+    }
+
+    remove_parent(logicContext: LogicContext<DNamedElement>): boolean {
+        return new SetFieldAction(logicContext.data, 'parent', []).fire();
+    }
+    get_parent(context: LogicContext<DModelElement>): LModelElement[] {
+        return U.arrayFilterNull(this.resolvePointers(context.data.parent)) as LModelElement[];
+    }
+
+    set_parent(val: (LModelElement | DModelElement | Pointer<DModelElement>)[], context: LogicContext<DModelElement, LModelElement>): boolean {
+        val = toPointers(val) as Pointer<DModelElement>[];
+        return new SetFieldAction(context.data, 'parent', val).fire();
+    }
+
+
+    add_annotation(val: Pointer<DAnnotation> | LAnnotation, logicContext: LogicContext<DNamedElement>): boolean {
+        return true;
+    }
+    remove_annotation(val: Pointer<DAnnotation> | LAnnotation, logicContext: LogicContext<DNamedElement>): boolean {
+        return true;
+    }
+    get_annotations(context: LogicContext<DModelElement>): (LAnnotation | null)[] {
+        return this.resolvePointers<DAnnotation, 1, LAnnotation>(context.data.annotations);
+    }
+
+    set_annotations(val: Pointer<DAnnotation>[] | LAnnotation[] | DAnnotation[], logicContext: LogicContext<DNamedElement>): boolean {
+        if (!Array.isArray(val)) val = [val];
+        val = val.map( v => (v instanceof LAnnotation ? v.id : ( isValidPointer(v, DAnnotation) ? v : null ))) as Pointer<DAnnotation>[];
+        new SetFieldAction(logicContext.data, 'annotations', val);
+        return true;
+    }
+
+    remove(context: LogicContext): void {
+        new DeleteElementAction(context.data);
+    }
+
+    get_addChild(context: LogicContext<any>): (type:string) => void {
+        return (type) => {
+            switch ((type || '').toLowerCase()){
+                default: Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), context}); break;
+                case "attribute": return this.get_addAttribute(context);
+                case "class": return this.get_addClass(context);
+                case "package": return this.get_addPackage(context);
+                case "reference": return this.get_addReference(context);
+                case "enumerator": return this.get_addEnumerator(context);
+                case "literal": return this.get_addEnumLiteral(context);
+            }
         }
-        if (!val.length) { thiss.parent = []; return; }
-        if ((val[0] as LModelElement).id) { val = (val as LModelElement[] | DModelElement[]).map( (v) => v.id); }
-        // now it's surely a Pointer[]
-        write.parent = val as string[];
     }
 
-    public set_parent(val: DModelElement[] | LModelElement[] | DModelElement | LModelElement | Pointer<DModelElement, 1, 1, LModelElement> | Pointer<DModelElement, 1, 'N', LModelElement> | null | undefined) {
-        throw new Error("set_parent should never be executed, the proxy should redirect to get_set_parent.");
+    get_addPackage(context: LogicContext<any>): (() => void) {
+        let ret = () => {};
+        switch (context.data?.className) {
+            default: break;
+            case "DModel": ret = () => LModelElement.addPackage(context.data); break;
+            case "DPackage": ret = () => LModelElement.addSubPackage(context.data); break;
+        }
+        ret();
+        return ret;
     }
+
+    private static addPackage(dModel: DModel): void {
+        const lModel: LModel = MyProxyHandler.wrap(dModel);
+        let name = 'package_' + 0;
+        let childrenNames: (string)[] = lModel.childrens.map( p => (p as LPackage).name);
+        name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0)
+        const dPackage = new DPackage(name);
+        dPackage.parent = [dModel.id];
+        dPackage.father = dModel.id;
+        LModelElement.addPackage_(dModel, dPackage);
+    }
+
+    private static addSubPackage(dPackage: DPackage): void {
+        const lPackage: LPackage = MyProxyHandler.wrap(dPackage);
+        let name = 'subpackage_' + 0;
+        let childrenNames: (string)[] = lPackage.childrens.map( p => (p as LPackage).name);
+        name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0)
+        const dSubPackage = new DPackage(name);
+        dSubPackage.parent = [dPackage.id];
+        dSubPackage.father = dPackage.id;
+        LModelElement.addSubPackage_(dPackage, dSubPackage);
+    }
+
+    get_addClass(context: LogicContext<DPackage>): () => void {
+        const dPackage: DPackage | null = (context.data?.className === "DPackage") ? context.data as DPackage : null;
+        let ret = () => {};
+        if (dPackage) {
+            const lPackage: LPackage = MyProxyHandler.wrap(dPackage);
+            let name = 'class_' + 0;
+            let childrenNames: (string)[] = lPackage.childrens.map( c => (c as LClassifier).name);
+            name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0)
+            const dClass = new DClass(name);
+            dClass.parent = [dPackage.id];
+            dClass.father = dPackage.id;
+            ret = () => LModelElement.addClass_(dPackage, dClass);
+        }
+        ret();
+        return ret;
+    }
+
+    get_addAttribute(context: LogicContext<DClass>): () => void {
+        let ret = () => {};
+        const  dClass: DClass | null = (context.data?.className === "DClass") ? context.data : null;
+        if (dClass) {
+            const lClass: LClass = MyProxyHandler.wrap(dClass);
+            let name = 'attribute_' + 0;
+            let childrenNames: (string)[] = lClass.childrens.map( c => (c as LStructuralFeature).name);
+            name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0);
+            const dAttribute = new DAttribute(name);
+            dAttribute.parent = [dClass.id];
+            dAttribute.father = dClass.id;
+            const lString: LPointerTargetable = MyProxyHandler.wrap(Selectors.getFirstPrimitiveTypes());
+            dAttribute.type = lString.id;
+            U.addPointerBy(lString, dAttribute);
+            ret = () => LModelElement.addAttribute_(dClass, dAttribute);
+        }
+        ret();
+        return ret;
+    }
+
+    get_addReference(context: LogicContext<DClass>): (() => void) {
+        let ret = () => {};
+        const dClass: DClass | null = (context.data?.className === "DClass") ? context.data : null;
+        if(dClass) {
+            const lClass: LClass = MyProxyHandler.wrap(dClass);
+            let name = 'reference_' + 0;
+            const childrenNames: (string)[] = lClass.childrens.map( c => (c as LNamedElement).name);
+            name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
+            const dReference = new DReference(name);
+            dReference.parent = [dClass.id];
+            dReference.father = dClass.id;
+            dReference.type = dClass.id;
+
+            //todo: fix constructor with properly graphid and nodeid(?)
+            const dRefEdge: DRefEdge = new DRefEdge(false, undefined, "");
+            dRefEdge.start = dReference.id;
+            dRefEdge.end = dClass.id;
+
+            U.addPointerBy(lClass, dReference);
+            ret = () => LModelElement.addReference_(dClass, dReference, dRefEdge);
+        }
+        ret();
+        return ret;
+    }
+
+    get_addEnumerator(context: LogicContext<DPackage>): () => void {
+        let ret = () => {};
+        const dPackage: DPackage | null = (context.data?.className === "DPackage") ? context.data : null;
+        if(dPackage) {
+            const lPackage: LPackage = MyProxyHandler.wrap(dPackage);
+            let name = 'enum_' + 0;
+            const childrenNames: (string)[] = lPackage.childrens.map( c => (c as LNamedElement).name);
+            name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
+            const dEnumerator = new DEnumerator(name);
+            dEnumerator.parent = [dPackage.id];
+            dEnumerator.father = dPackage.id;
+            ret = () => LModelElement.addEnumerator_(dPackage, dEnumerator);
+        }
+        ret();
+        return ret;
+    }
+
+    get_addEnumLiteral(context: LogicContext<DEnumerator>): () => void {
+        let ret = () => {};
+        const dEnum: DEnumerator | null = (context.data?.className === "DEnumerator") ? context.data : null;
+        if(dEnum) {
+            const lEnum: LEnumerator = MyProxyHandler.wrap(dEnum);
+            let name = 'literal_' + 0;
+            const childrenNames: (string)[] = lEnum.childrens.map(c => (c as LNamedElement).name);
+            name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
+            const dLiteral = new DEnumLiteral(name);
+            dLiteral.parent = [dEnum.id];
+            dLiteral.father = dEnum.id;
+            ret = () => LModelElement.addEnumLiteral_(dEnum, dLiteral);
+        }
+        ret();
+        return ret;
+    }
+
+    // activated by user in JSX
+    addClass(): void { Log.exDevv('addClass should never be called directly, but should trigger get_addClass(), this is only a signature for type checking.'); }
+    addPackage(): void { Log.exDevv('addPackage should never be called directly, but should trigger get_addClass(), this is only a signature for type checking.'); }
+    addAttribute(): void { Log.exDevv('addAttribute should never be called directly, but should trigger get_addAttribute(), this is only a signature for type checking.'); }
+    addReference(): void { Log.exDevv('addReference should never be called directly, but should trigger get_addReference(), this is only a signature for type checking.'); }
+    addEnumerator(): void { Log.exDevv('addEnumerator should never be called directly, but should trigger get_Enumerator(), this is only a signature for type checking.'); }
+    addEnumLiteral(): void { Log.exDevv('addLiteral should never be called directly, but should trigger get_Literal(), this is only a signature for type checking.'); }
+    addChild(type: string): void { Log.exDevv('addAttribute("'+type+'") should never be called directly, but should trigger get_addAttribute(), this is only a signature for type checking.'); }
+
+    private static addReference_(dClass: DClass, dReference: DReference, dRefEdge: DRefEdge): void {
+        new CreateElementAction(dReference);
+        new SetFieldAction(dClass, "references+=", dReference.id);
+        new CreateElementAction(dRefEdge);
+        new SetRootFieldAction("refEdges+=", dRefEdge.id);
+    }
+    private static addAttribute_(dClass: DClass, dAttribute: DAttribute): void {
+        new CreateElementAction(dAttribute);
+        new SetFieldAction(dClass, 'attributes+=', dAttribute.id);
+    }
+    private static addClass_(dPackage: DPackage, dClass: DClass): void {
+        new CreateElementAction(dClass);
+        new SetFieldAction(dPackage, 'classifiers+=', dClass.id);
+    }
+    private static addPackage_(dModel: DModel, dPackage: DPackage): void {
+        new CreateElementAction(dPackage);
+        new SetFieldAction(dModel, 'packages+=', dPackage.id);
+    }
+    private static addSubPackage_(dPackage: DPackage, dSubPackage: DPackage): void {
+        new CreateElementAction(dSubPackage);
+        new SetFieldAction(dPackage, 'subpackages+=', dSubPackage.id);
+    }
+    private static addEnumerator_(dPackage: DPackage, dEnumerator: DEnumerator): void {
+        new CreateElementAction(dEnumerator);
+        new SetFieldAction(dPackage, 'classifiers+=', dEnumerator.id);
+    }
+    private static addEnumLiteral_(dEnum: DEnumerator, dLiteral: DEnumLiteral): void {
+        new CreateElementAction(dLiteral);
+        new SetFieldAction(dEnum, "literals+=", dLiteral.id);
+    }
+
+    changeAttributeType(newType: string): void {}
+    changeReferenceType(newType: string): void {}
+    changeType(newType: string): void {}
+
+    get_changeType(context: LogicContext<any>): (newType: string) => void {
+        const classname = context.data.className;
+        return (newType) => {
+            switch (classname){
+                default: alert(`You can't call changeType on ${classname}`); break;
+                case "DAttribute": return this.get_changeAttributeType(context, newType);
+                case "DReference": return this.get_changeReferenceType(context, newType);
+            }
+        }
+    }
+    get_changeAttributeType(context: LogicContext<DAttribute>, newType: string): () => void {
+        let ret = () => {};
+        const dAttribute: DAttribute = context.data;
+        const dOldClassifier: DClassifier = Selectors.getDElement<DClassifier>(dAttribute.type as string);
+        const dNewClassifier: DClassifier = Selectors.getDElement<DClassifier>(newType);
+        //const index: number = dOldClassifier.pointedBy.indexOf(dAttribute.id);
+        ret = () => {
+            new SetFieldAction(dAttribute, "type", newType);
+            new SetFieldAction(dOldClassifier, "pointedBy", U.removeFromList(dOldClassifier.pointedBy, dAttribute.id));
+            //new SetFieldAction(dOldClassifier, `pointedBy.${index}-=`, undefined);
+            new SetFieldAction(dNewClassifier, "pointedBy+=", dAttribute.id);
+        };
+        ret();
+        return ret;
+    }
+    //move to LRef? yes
+    get_changeReferenceType(context: LogicContext<DReference>, newType: string): () => void {
+        let ret = () => {};
+        const dReference: DReference = context.data;
+        const dOldClass: DClass = Selectors.getDElement<DClass>(dReference.type as string);
+        const dNewClass: DClass = Selectors.getDElement<DClass>(newType);
+        const dRefEdge: DRefEdge | undefined = U.getReferenceEdge(dReference);
+        ret = () => {
+            new SetFieldAction(dReference, "type", newType);
+            new SetFieldAction(dOldClass, "pointedBy", U.removeFromList(dOldClass.pointedBy, dReference.id));
+            //new SetFieldAction(dOldClass, "pointedBy-=", dOldClass.pointedBy.indexOf(dReference.id))
+            new SetFieldAction(dNewClass, "pointedBy+=", dReference.id);
+            if(dRefEdge) {
+                new SetFieldAction(dRefEdge, "end", newType);
+            }
+        };
+        ret();
+        return ret;
+    }
+
+
+    //delete
+    delete(): void {}
 }
+
+//dam: questa cosa non va bene. instanceof non te lo prende sempre corretto, quando serializzi e deserializzi perde il prototype.
+function isValidPointer<T extends DPointerTargetable = DModelElement, LB extends number = 0, UB extends number = 1, RET extends LPointerTargetable = LModelElement>
+(p: Pointer<T, LB, UB, RET>, constraintType?: typeof DPointerTargetable): boolean {
+    const pointerval: RET | null = LModelElement.ResolvePointer(p);
+    if (!pointerval) return false;
+    if (!constraintType) return true;
+    return (pointerval instanceof constraintType); }
+
 /* todo:
 nel proxy aggiungi regola di default, se prendi qualcosa che inizia con "set_X" esplicitamente (dovrebbe farlo solo il dev)
 richiama _set_X(context, ...params)     <---- nuova funzione set di default, anche this.x = x richiama _set_x
@@ -130,7 +437,11 @@ export class LAnnotation extends LModelElement { // Mixin(DAnnotation0, LModelEl
     source!: string;
     details: Dictionary<string, string> = {};
 
-    set_source(test_typings_on_WAnnotation: boolean): void {}
+    get_source(context: LogicContext<this>): string {
+        return context.data.source; }
+    set_source(val: string, logicContext: LogicContext<DAnnotation>): boolean {
+        SetFieldAction.new(logicContext.data, 'source', !!(val as unknown));
+        return true; }
 }
 
 @RuntimeAccessible class _WAnnotation extends LModelElement{ //extends _WModelElement {
@@ -193,6 +504,19 @@ export class LNamedElement extends LModelElement { // Mixin(DNamedElement0, DAnn
     annotations!: LAnnotation[];
     // personal
     name!: string;
+
+    get_name(context: LogicContext<this>): string { return context.data.name; }
+    set_name(val: string,  logicContext: LogicContext<this>): boolean {
+        if (val.match(/\s/)) val = this.autofix_name(val, logicContext);
+        // todo: validate if operation can be completed or need autocorrection, then either return false (invalid parameter cannot complete) or send newVal at redux
+        const fixedVal: string = val;
+        new SetFieldAction(logicContext.data, 'name', fixedVal);
+        return true;
+    }
+    autofix_name(val: string, logicContext: LogicContext<this>): string {
+        // NB: NON fare autofix di univocità nome tra i childrens o qualsiasi cosa dipendente dal contesto, questo potrebbe essere valido in alcuni modelli e invalido in altri e modificare un oggetto condiviso.
+        return val.replaceAll(/\s/g, '_');
+    }
 }
 // @RuntimeAccessible export class _WNamedElement extends _WModelElement { }
 // export type WNamedElement = DNamedElement | LNamedElement | _WNamedElement;
@@ -259,6 +583,19 @@ export class LTypedElement extends LNamedElement { // extends Mixin(DTypedElemen
     upperBound!: number;
     many!: boolean;
     required!: boolean;
+
+
+
+    get_ordered(context: LogicContext<this>): boolean {
+        return context.data.ordered; }
+    set_ordered(val: boolean, logicContext: LogicContext<this>): boolean {
+        new SetFieldAction(logicContext.data, 'ordered', !!(val as unknown));
+        return true; }
+    get_unique(context: LogicContext<this>): boolean {
+        return context.data.unique; }
+    set_unique(val: boolean, logicContext: LogicContext<this>): boolean {
+        new SetFieldAction(logicContext.data, 'unique', !!(val as unknown));
+        return true; }
 }
 // @RuntimeAccessible export class _WTypedElement extends _WNamedElement { }
 // export type WTypedElement = DTypedElement | LTypedElement | _WTypedElement;
@@ -312,6 +649,17 @@ export class LClassifier extends LNamedElement { // extends DNamedElement
     defaultValue!: LObject;
     // isInstance(object: EJavaObject): boolean; ?
     // getClassifierID(): number;
+
+    get_ordered(context: LogicContext<LModelElement>): boolean {
+        return this.ordered; }
+    set_ordered(val: boolean, logicContext: LogicContext<DNamedElement>): boolean {
+        new SetFieldAction(logicContext.data, 'ordered', !!(val as unknown));
+        return true; }
+    get_unique(context: LogicContext<LModelElement>): boolean {
+        return this.unique; }
+    set_unique(val: boolean, logicContext: LogicContext<DNamedElement>): boolean {
+        new SetFieldAction(logicContext.data, 'unique', !!(val as unknown));
+        return true; }
 }
 // @RuntimeAccessible export class _WClassifier extends _WNamedElement { }
 // export type WClassifier = DClassifier | LClassifier | _WClassifier;
@@ -370,6 +718,36 @@ export class LPackage extends LNamedElement { // extends DNamedElement
         super(name);
         this.uri = uri;
         this.className = this.constructor.name;
+    }
+
+    get_childrens_idlist(context: LogicContext<DPackage>): Pointer<DAnnotation | DPackage | DClassifier |DEnumerator, 1, 'N'> {
+        return [...super.get_childrens_idlist(context), ...context.data.subpackages, ...context.data.classifiers]; }
+
+    get_delete(context: LogicContext<DPackage>): () => void {
+        let ret = () => {};
+        const dPackage: DPackage = context.data;
+        const dFather: (DModel | DPackage) & GObject = Selectors.getDElement<DModel>(dPackage.father);
+        const children = new Set([...dPackage.classifiers, ...dPackage.subpackages]);
+        for(let dChild of children) {
+            const lChild: LClass | LEnumerator | LPackage = MyProxyHandler.wrap(dChild);
+            lChild.delete();
+        }
+        if(dFather.className === "DModel") {
+            ret = () => {
+                new SetFieldAction(dFather, "packages", U.removeFromList(dFather.packages, dPackage.id));
+                //new SetRootFieldAction("packages", U.removeFromList(Selectors.getAllPackages(), dPackage.id));
+                new DeleteElementAction(dPackage);
+            }
+        }
+        if(dFather.className === "DPackage") {
+            ret = () => {
+                new SetFieldAction(dFather, "subpackages", U.removeFromList(dFather.subpackages, dPackage.id));
+                //new SetRootFieldAction("packages", U.removeFromList(Selectors.getAllPackages(), dPackage.id));
+                new DeleteElementAction(dPackage);
+            }
+        }
+        ret();
+        return ret;
     }
 }
 // @RuntimeAccessible export class _WPackage extends _WNamedElement { }
@@ -430,6 +808,12 @@ export class LOperation extends LTypedElement { // extends DTypedElement
     // personal
     exceptions!: LClassifier[];
     parameters!: LParameter[];
+
+
+    get_childrens_idlist(context: LogicContext<DOperation>): Pointer<DAnnotation | DClassifier | DParameter, 1, 'N'> {
+        return [...super.get_childrens_idlist(context), ...context.data.exceptions, ...context.data.parameters]; }
+
+
 }
 DTypedElement.subclasses.push(DOperation);
 LTypedElement.subclasses.push(LOperation);
@@ -586,16 +970,37 @@ export class LClass extends LClassifier{ // extends DClassifier
         this.interface = isInterface
         this.className = this.constructor.name;
     }
-/*
-    setImplement(interfaceIds: string[]): DClass {
-        // todo: tutta sta roba andrebbe fatta da redux e dovrei aggiornare ImplementedBy, . e neanche andrebbe fatto qui ma dentro la parte logica proxy
-        this.implements = [...this.implements, ...interfaceIds];
-        return this;
+
+
+    get_childrens_idlist(context: LogicContext<DClass>): Pointer<DAnnotation | DAttribute | DReference | DOperation, 1, 'N'> {
+        return [...super.get_childrens_idlist(context), ...context.data.attributes, ...context.data.references, ...context.data.operations]; }
+
+    get_delete(context: LogicContext<DClass>): () => void {
+        const dClass: DClass = context.data;
+        const dPackage: DPackage = Selectors.getDElement<DPackage>(dClass.father);
+        const children = new Set([...dClass.attributes, ...dClass.references, ...dClass.pointedBy]);
+        for(let dChild of children) {
+            const lChild: LAttribute | LReference = MyProxyHandler.wrap(dChild);
+            lChild.delete();
+        }
+        const ret = () => {
+            new SetFieldAction(dPackage, "classifiers", U.removeFromList(dPackage.classifiers, dClass.id));
+            //new SetRootFieldAction("classs", U.removeFromList(Selectors.getAllClasses(), dClass.id));
+            new DeleteElementAction(dClass);
+        }
+        ret();
+        return ret;
     }
-    setExtend(classIds: string[]): DClass {
-        this.extends = [...this.extends, ...classIds];
-        return this;
-    }*/
+    /*
+        setImplement(interfaceIds: string[]): DClass {
+            // todo: tutta sta roba andrebbe fatta da redux e dovrei aggiornare ImplementedBy, . e neanche andrebbe fatto qui ma dentro la parte logica proxy
+            this.implements = [...this.implements, ...interfaceIds];
+            return this;
+        }
+        setExtend(classIds: string[]): DClass {
+            this.extends = [...this.extends, ...classIds];
+            return this;
+        }*/
 }
 DClassifier.subclasses.push(DClass);
 LClassifier.subclasses.push(LClass);
@@ -808,6 +1213,25 @@ export class LReference extends LStructuralFeature {
     opposite?: LReference;
     target!: LClass[];
     edges!: LEdge[];
+
+
+    get_delete(context: LogicContext<DReference>): () => void {
+        const dReference: DReference = context.data;
+        const dClass: DClass = Selectors.getDElement<DClass>(dReference.father);
+        const dType: DClass = Selectors.getDElement<DClass>(dReference.type as string);
+        const dEdge: DRefEdge | undefined = U.getReferenceEdge(dReference);
+        const ret = () => {
+            new SetFieldAction(dClass, "references", U.removeFromList(dClass.references, dReference.id));
+            new SetFieldAction(dType, "pointedBy", U.removeFromList(dType.pointedBy, dReference.id));
+            //new SetRootFieldAction("references", U.removeFromList(Selectors.getAllReferences(), dReference.id));
+            if(dEdge) {
+                new SetRootFieldAction("refEdges", U.removeFromList(Selectors.getAllReferenceEdges(), dEdge.id));
+            }
+            new DeleteElementAction(dReference);
+        }
+        ret();
+        return ret;
+    }
 }
 DStructuralFeature.subclasses.push(DReference);
 LStructuralFeature.subclasses.push(LReference);
@@ -879,11 +1303,26 @@ export class LAttribute extends LStructuralFeature { // DStructuralFeature
 
     // personal
     isID: boolean = false; // ? exist in ecore as "iD" ?
+
+    get_delete(context: LogicContext<DAttribute>): () => void {
+        const dAttribute: DAttribute = context.data;
+        const dClass: DClass = Selectors.getDElement<DClass>(dAttribute.father);
+        const dClassifier: DClassifier = Selectors.getDElement<DClass>(dAttribute.type as string);
+        const ret = () => {
+            new SetFieldAction(dClass, "attributes", U.removeFromList(dClass.attributes, dAttribute.id));
+            new SetFieldAction(dClassifier, "pointedBy", U.removeFromList(dClassifier.pointedBy, dAttribute.id));
+            //new SetRootFieldAction("attributes", U.removeFromList(Selectors.getAllAttributes(), dAttribute.id));
+            new DeleteElementAction(dAttribute);
+        }
+        ret();
+        return ret;
+    }
 }
 DStructuralFeature.subclasses.push(DAttribute);
 LStructuralFeature.subclasses.push(LAttribute);
 
-
+todo: tutti devno avere: get_delete, get_set dei PERSONAL attributes.
++ getchildrenidlist or something se aggiungi una classe di children nei personal attributes
 
 @RuntimeAccessible
 export class DEnumLiteral extends DPointerTargetable { // DNamedElement
@@ -919,6 +1358,18 @@ export class LEnumLiteral extends LNamedElement { // DNamedElement
     name!: string;
     // personal
     value!: number;
+
+    get_delete(context: LogicContext<DEnumLiteral>): () => void {
+        const dEnumLiteral: DEnumLiteral = context.data;
+        const dEnumerator: DEnumerator = Selectors.getDElement<DEnumerator>(dEnumLiteral.father);
+        const ret = () => {
+            new SetFieldAction(dEnumerator, "literals", U.removeFromList(dEnumerator.literals, dEnumLiteral.id));
+            //new SetRootFieldAction("enumliterals", U.removeFromList(Selectors.getAllEnumLiterals(), dEnumLiteral.id));
+            new DeleteElementAction(dEnumLiteral);
+        }
+        ret();
+        return ret;
+    }
 }
 DNamedElement.subclasses.push(DEnumLiteral);
 LNamedElement.subclasses.push(LEnumLiteral);
@@ -972,6 +1423,40 @@ export class LEnumerator extends LDataType { // DDataType
     usedBy!: LAttribute[];
     // personal
     literals!: LEnumLiteral[];
+
+
+
+    get_childrens_idlist(context: LogicContext<DEnumerator>): Pointer<DAnnotation | DEnumLiteral, 1, 'N'> {
+        return [...super.get_childrens_idlist(context), ...context.data.literals]; }
+
+    get_delete(context: LogicContext<DEnumerator>): () => void {
+        const dEnumerator: DEnumerator = context.data;
+        const dPackage: DPackage = Selectors.getDElement<DPackage>(dEnumerator.father);
+        const children = new Set([...dEnumerator.literals, ...dEnumerator.pointedBy]);
+
+        for(let dChild of children) {
+            const lChild: LEnumLiteral | LAttribute = MyProxyHandler.wrap(dChild);
+            lChild.delete();
+        }
+
+        /*
+        const pointedBy = new Set([...dEnumerator.pointedBy]);
+        for(let dPointer of pointedBy) {
+            const lPointer: LAttribute = MyProxyHandler.wrap(dPointer);
+            lPointer.changeAttributeType(Selectors.getFirstPrimitiveTypes().id);
+        }
+        */
+
+
+        const ret = () => {
+            new SetFieldAction(dPackage, "classifiers", U.removeFromList(dPackage.classifiers, dEnumerator.id));
+            //new SetRootFieldAction("enumerators", U.removeFromList(Selectors.getAllEnumerators(), dEnumerator.id));
+            new DeleteElementAction(dEnumerator);
+        }
+        ret();
+
+        return ret;
+    }
 }
 DDataType.subclasses.push(DEnumerator);
 LDataType.subclasses.push(LEnumerator);
@@ -1092,6 +1577,18 @@ export class LModel extends LNamedElement {
     // personal
     packages!: LPackage[];
     // modellingElements!: LModelElement[];
+
+
+    get_childrens_idlist(context: LogicContext<DModel>): Pointer<DAnnotation | DModel, 1, 'N'> {
+        return [...super.get_childrens_idlist(context), ...context.data.packages]; }
+
+    get_packages(context: LogicContext<DModel>): LPackage[] {
+        return context.data.packages.map(p => MyProxyHandler.wrap(p)); }
+
+    get_delete(context: LogicContext<DModelElement>): () => void {
+        const ret = () => { alert("todo delete LModel"); }
+        return ret;
+    }
 }
 DNamedElement.subclasses.push(DModel);
 LNamedElement.subclasses.push(LModel);

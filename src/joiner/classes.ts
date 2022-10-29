@@ -268,9 +268,13 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     _storePath?: string[];
     _subMaps?: Dictionary<string, boolean>;
     id!: Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
-    pointedBy: DocString<'path in store'>[] = []; // NB: potrebbe contenere puntatori invalidi.
+    // pointedBy: DocString<'path in store'>[] = []; // NB: potrebbe contenere puntatori invalidi.
     // se viene cancellato un intero oggetto A che contiene una lista di puntatori, gli oggetti che puntano ad A rimuovono A dai loro "poitnedBy",
     // ma gli oggetti puntati da A tramite sotto-oggetti o attributi (subviews...) non vengono aggiornati in "pointedby"
+
+    pointedBy: Pointer<DPointerTargetable, 0, 'N'> = [];
+    father: Pointer<DPointerTargetable, 1, 1> = "";
+
     constructor(isUser: any = false, id?: any, a?: any, b?:any, c?:any) {
         super();
         DPointerTargetable.init_constructor(this, ...arguments);
@@ -283,69 +287,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         // todo store.dispatch(new IdLinkAction(this));
     }
 
-    static fromL<LX extends LPointerTargetable,
-        DX = LX extends LEnumerator ? LEnumerator : (LX extends LAttribute ? LAttribute : (LX extends LReference ? LReference : (LX extends LRefEdge ? LRefEdge : (LX extends LExtEdge ? LExtEdge : (LX extends LDataType ? LDataType : (LX extends LClass ? LClass : (LX extends LStructuralFeature ? LStructuralFeature : (LX extends LParameter ? LParameter : (LX extends LOperation ? LOperation : (LX extends LEdge ? LEdge : (LX extends LEdgePoint ? LEdgePoint : (LX extends LGraphVertex ? LGraphVertex : (LX extends LModel ? LModel : (LX extends LValue ? LValue : (LX extends LObject ? LObject : (LX extends LEnumLiteral ? LEnumLiteral : (LX extends LPackage ? LPackage : (LX extends LClassifier ? LClassifier : (LX extends LTypedElement ? LTypedElement : (LX extends LVertex ? LVertex : (LX extends LVoidEdge ? LVoidEdge : (LX extends LVoidVertex ? LVoidVertex : (LX extends LGraph ? LGraph : (LX extends LNamedElement ? LNamedElement : (LX extends LAnnotation ? LAnnotation : (LX extends LGraphElement ? LGraphElement : (LX extends LMap ? LMap : (LX extends LModelElement ? LModelElement : (LX extends LUser ? LUser : (LX extends LPointerTargetable ? LPointerTargetable : (ERROR)))))))))))))))))))))))))))))))
-        >(data: LX): DX {
-        return data.__raw as any;
-    }
-
-
-    static fromPointer<// LOW extends number, UPP extends number | 'N',
-        T extends Pointer | Pointer[], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
-        DDD extends (T extends Pointer<infer D> ? D : 'undefined D'),
-        LOW extends (T extends Pointer<any, infer LO> ? LO : 'undefined_upp'),
-        UPP extends (T extends Pointer<any, number, infer UP> ? UP : 'undefined_low'),
-
-        DDDARR extends (T extends Pointer<infer D>[] ? D : 'undefined_DARR'),
-        LOWARR extends (T extends Pointer<any, infer LO>[] ? LO : 'undefined_uppARR'),
-        UPPARR extends (T extends Pointer<any, number, infer UP>[] ? 'UP_is_N' : 'undefined_lowARR'),
-
-        RET = UPPARR extends 'UP_is_N' ?
-            (DDDARR[]) : // 0...N
-            (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
-                (LOW extends 1 ? DDD : undefined)  //1...1
-                ),
-        INFERRED = {ret: RET, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR},>(ptr: T)
-        : RET {
-        return null as any;
-    }
-    static from<// LOW extends number, UPP extends number | 'N',
-        PTR extends Pointer | Pointer[], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
-        DDD extends (PTR extends Pointer<infer D> ? D : 'undefined D'),
-        LOW extends (PTR extends Pointer<any, infer LO> ? LO : 'undefined_upp'),
-        UPP extends (PTR extends Pointer<any, number, infer UP> ? UP : 'undefined_low'),
-
-        DDDARR extends (PTR extends Pointer<infer D>[] ? D : 'undefined_DARR'),
-        LOWARR extends (PTR extends Pointer<any, infer LO>[] ? LO : 'undefined_uppARR'),
-        UPPARR extends (PTR extends Pointer<any, number, infer UP>[] ? 'UP_is_N' : 'undefined_lowARR'),
-
-        LX extends LPointerTargetable,
-
-        RETPTR = UPPARR extends 'UP_is_N' ?
-            (DDDARR[]) : // 0...N
-            (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
-                (LOW extends 1 ? DDD : undefined)  //1...1
-                ),
-
-
-        // DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : ('ERROR'))))))))))))))))),
-        DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LRefEdge ? DRefEdge : (LX extends LExtEdge ? DExtEdge : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LEdge ? DEdge : (LX extends LEdgePoint ? DEdgePoint : (LX extends LGraphVertex ? DGraphVertex : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LVertex ? DVertex : (LX extends LVoidEdge ? DVoidEdge : (LX extends LVoidVertex ? DVoidVertex : (LX extends LGraph ? DGraph : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : (LX extends LGraphElement ? DGraphElement : (LX extends LMap ? DMap : (LX extends LModelElement ? DModelElement : (LX extends LUser ? DUser : (LX extends LPointerTargetable ? DPointerTargetable : (ERROR))))))))))))))))))))))))))))))),
-        RET = DX extends 'ERROR' ? RETPTR : (RETPTR extends DX ? RETPTR : DX),
-        INFERRED = {ret: RET, RETPTR:RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR | LX)
-        : RET {
-        return null as any;
-    }
-    static from0(a: any, ...aa: any): any { return null; }
-    static writeable<LX extends LPointerTargetable, WX = LtoW<LX>>(l: LX): WX { return l as any; }
 }
-/*
-let d0: LClassifier = null as any;
-let ptrr: Pointer<DPackage, 1, 'N', LPackage> = null as any;
-let ptr1: Pointer<DPackage, 1, 1, LPackage> = null as any;
-let dd = DPointerTargetable.from(d0.id);
-*/
-
-
 
 @RuntimeAccessible
 export class LPointerTargetable extends DPointerTargetable {
@@ -380,65 +322,6 @@ export class LPointerTargetable extends DPointerTargetable {
         windoww.Log.exx('pointedBy field should never be directly edited.', {context, val});
         return false;
     }
-
-
-
-
-    static fromD<DX extends DPointerTargetable,
-        LX = DX extends DEnumerator ? LEnumerator : (DX extends DAttribute ? LAttribute : (DX extends DReference ? LReference : (DX extends DRefEdge ? LRefEdge : (DX extends DExtEdge ? LExtEdge : (DX extends DDataType ? LDataType : (DX extends DClass ? LClass : (DX extends DStructuralFeature ? LStructuralFeature : (DX extends DParameter ? LParameter : (DX extends DOperation ? LOperation : (DX extends DEdge ? LEdge : (DX extends DEdgePoint ? LEdgePoint : (DX extends DGraphVertex ? LGraphVertex : (DX extends DModel ? LModel : (DX extends DValue ? LValue : (DX extends DObject ? LObject : (DX extends DEnumLiteral ? LEnumLiteral : (DX extends DPackage ? LPackage : (DX extends DClassifier ? LClassifier : (DX extends DTypedElement ? LTypedElement : (DX extends DVertex ? LVertex : (DX extends DVoidEdge ? LVoidEdge : (DX extends DVoidVertex ? LVoidVertex : (DX extends DGraph ? LGraph : (DX extends DNamedElement ? LNamedElement : (DX extends DAnnotation ? LAnnotation : (DX extends DGraphElement ? LGraphElement : (DX extends DMap ? LMap : (DX extends DModelElement ? LModelElement : (DX extends DUser ? LUser : (DX extends DPointerTargetable ? LPointerTargetable : (ERROR))))))))))))))))))))))))))))))),
-        >(data: DX): DX {
-        return null as any;
-    }
-
-
-    static fromPointer<
-        T extends Pointer | Pointer[], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
-        DDD extends (T extends Pointer<any, any, any, infer D> ? D : 'undefined L'),
-        LOW extends (T extends Pointer<any, infer LO> ? LO : 'undefined_upp'),
-        UPP extends (T extends Pointer<any, number, infer UP> ? UP : 'undefined_low'),
-
-        DDDARR extends (T extends Pointer<any, any, any, infer D>[] ? D : 'undefined_DARR'),
-        LOWARR extends (T extends Pointer<any, infer LO>[] ? LO : 'undefined_uppARR'),
-        UPPARR extends (T extends Pointer<any, number, infer UP>[] ? 'UP_is_N' : 'undefined_lowARR'),
-
-        RET = UPPARR extends 'UP_is_N' ?
-            (DDDARR[]) : // 0...N
-            (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
-                (LOW extends 1 ? DDD : undefined)  //1...1
-                ),
-        INFERRED = {ret: RET, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR},>(ptr: T)
-        : RET {
-        return null as any;
-    }
-    static from<// LOW extends number, UPP extends number | 'N',
-        PTR extends Pointer | Pointer[], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
-        // DDD extends (PTR extends Pointer<infer D> ? D : 'undefined_D'),
-        LOW extends (PTR extends Pointer<any, infer LO> ? LO : 'undefined_upp'),
-        UPP extends (PTR extends Pointer<any, number, infer UP> ? UP : 'undefined_low'),
-        DDD extends (PTR extends Pointer<any, number, any, infer LL> ? LL : 'undefined_L'),
-
-        LOWARR extends (PTR extends Pointer<any, infer LO>[] ? LO : 'undefined_uppARR'),
-        UPPARR extends (PTR extends Pointer<any, number, infer UP>[] ? 'UP_is_N' : 'undefined_lowARR'),
-        DDDARR extends (PTR extends Pointer<any, any, any, infer LL>[] ? LL : 'undefined_LARR'),
-
-        DX extends DPointerTargetable,
-
-        RETPTR = UPPARR extends 'UP_is_N' ?
-            (DDDARR[]) : // 0...N
-            (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
-                (LOW extends 1 ? DDD : undefined)  //1...1
-                ),
-
-
-        // DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : ('ERROR'))))))))))))))))),
-        LX = DX extends DEnumerator ? LEnumerator : (DX extends DAttribute ? LAttribute : (DX extends DReference ? LReference : (DX extends DRefEdge ? LRefEdge : (DX extends DExtEdge ? LExtEdge : (DX extends DDataType ? LDataType : (DX extends DClass ? LClass : (DX extends DStructuralFeature ? LStructuralFeature : (DX extends DParameter ? LParameter : (DX extends DOperation ? LOperation : (DX extends DEdge ? LEdge : (DX extends DEdgePoint ? LEdgePoint : (DX extends DGraphVertex ? LGraphVertex : (DX extends DModel ? LModel : (DX extends DValue ? LValue : (DX extends DObject ? LObject : (DX extends DEnumLiteral ? LEnumLiteral : (DX extends DPackage ? LPackage : (DX extends DClassifier ? LClassifier : (DX extends DTypedElement ? LTypedElement : (DX extends DVertex ? LVertex : (DX extends DVoidEdge ? LVoidEdge : (DX extends DVoidVertex ? LVoidVertex : (DX extends DGraph ? LGraph : (DX extends DNamedElement ? LNamedElement : (DX extends DAnnotation ? LAnnotation : (DX extends DGraphElement ? LGraphElement : (DX extends DMap ? LMap : (DX extends DModelElement ? LModelElement : (DX extends DUser ? LUser : (DX extends DPointerTargetable ? LPointerTargetable : (ERROR))))))))))))))))))))))))))))))),
-        RET = LX extends 'ERROR' ? RETPTR : (RETPTR extends LX ? RETPTR : LX),
-        INFERRED = {ret: RET, RETPTR: RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR | DX)
-        : RET {
-        return null as any;
-    }
-
-    static from0(a: any, ...aa: any): any { return null; }
 }
 @RuntimeAccessible
 export class WPointerTargetable extends DPointerTargetable{

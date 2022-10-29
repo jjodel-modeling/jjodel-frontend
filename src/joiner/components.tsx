@@ -20,7 +20,7 @@ export {DefaultNode, DefaultNodeComponent} from "../graph/defaultNode/DefaultNod
 export {Vertex, VertexComponent} from "../graph/vertex/Vertex"; // require overlap, graphelement
 export {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphContainer"; // require vertex, graph
 export {Field, FieldComponent} from "../graph/field/Field";
-export {fakeexport} from "../graph/edge/Edge";
+export {Edges} from "../graph/edge/Edges";
 // export {StyleEditor} from "../components/rightbar/StyleEditor/StyleEditor";
 // export const StyleEditor = SE; // se non lo importo non lo trova quando faccio l'import di DockLayoutComponent che lo utilizza. se non fingo di usarlo in una variabile, l'ottimizzatore del codice rimuove l'import.
 // export let DockLayoutComponent = DockLayoutComponentt;
