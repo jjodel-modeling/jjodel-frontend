@@ -20,44 +20,57 @@ import Logger from "../rightbar/logger/Logger";
 import {Xwrapper} from "react-xarrows";
 import Edges from "../../graph/edge/Edges";
 import ToolBar from "../toolbar/ToolBar";
+import Test from "../../graph/edge/test";
 
-
+let windoww = window as any;
 interface ThisState {}
 class DockComponent extends PureComponent<AllProps, ThisState> {
-    model= this.props.model;
-    graph = this.props.graph;
+    model!: LModel;
+    graph!: LGraph;
+    metamodel!: TabData;
+    structureEditor!: TabData;
+    viewsEditor!: TabData;
+    logger!: TabData;
+    box: any;
+    initialized: boolean = false;
 
     constructor(props: AllProps, context: any) {
         super(props, context);
+        windoww.dockComponent = this;
     }
-    metamodel: TabData = { title: "Metamodel", group: "1", closable: false, content:
-            <Xwrapper>
-                <ToolBar model={this.model.id} />
-                <DefaultNode data={this.model.id} nodeid={this.graph.id} graphid={this.graph.id} />
-                <Edges graphID={this.graph.id} nodeID={this.graph.id} />
-            </Xwrapper>
-    }
-    structureEditor: TabData = { title: "Structure", group: "2", closable: false, content:
-            <StructureEditor />
-    }
-    viewsEditor: TabData = { title: "Views", group: "2", closable: false, content:
-            <ViewsEditor />
-    }
-    logger: TabData = { title: "Logger", group: "2", closable: true, content: <Logger /> };
-    box: any = {
-        dockbox: {
-            mode: "horizontal", children: [
-                {
-                    children: [{tabs: [{ ...this.metamodel, id: "1" }]}]
-                },
-                {
-                    children: [{tabs: [{ ...this.structureEditor, id: "2" }, { ...this.viewsEditor, id: "3" }]}]
-                }
-            ]
+    init() {
+        this.initialized = true;
+        this.model = this.props.model;
+        this.graph = this.props.graph;
+        this.metamodel = { title: "Metamodel", group: "1", closable: false, content:
+                <div>
+                    {/*<Xwrapper>*/}
+                    <ToolBar model={this.model.id} />
+                    <DefaultNode data={this.model.id} nodeid={this.graph.id} graphid={this.graph.id} />
+                    <Edges graphID={this.graph.id as any} nodeID={this.graph.id + ''} />
+                    {/*</Xwrapper>*/}
+                </div>
+        };
+        this.structureEditor = { title: "Structure", group: "2", closable: false, content: <StructureEditor /> };
+        this.viewsEditor = { title: "Views", group: "2", closable: false, content: <ViewsEditor /> };
+        this.logger = { title: "Logger", group: "2", closable: true, content: <Logger /> };
+        this.box = {
+            dockbox: {
+                mode: "horizontal", children: [
+                    {
+                        children: [{tabs: [{ ...this.metamodel, id: "1" }]}]
+                    },
+                    {
+                        children: [{tabs: [{ ...this.structureEditor, id: "2" }, { ...this.viewsEditor, id: "3" }]}]
+                    }
+                ]
+            }
         }
-    };
+    }
 
     render(): ReactNode {
+        if (!this.initialized && this.props.model) this.init();
+        if (!this.box) this.box = {dockbox: {mode: "horizontal", children: [{children: [{tabs: [{id: "1", title: "loading", group: "2", closable: false, content: <div> loading model... </div> }]}]}]}};
         return (<>
             <DockLayout defaultLayout={this.box} style={{position: "absolute", left: 5, top: 5, right: 5, bottom: 5}} />
         </>);

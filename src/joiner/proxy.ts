@@ -198,6 +198,8 @@ class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
     public __asArray: boolean = false;
     public __nested: boolean = true;
 
+    public constructor() { super(); }
+
     get(targetObj: T, propKey: keyof T | string, proxyitself: Proxyfied<T>): any {
         // console.log('GetPathHandler', {targetObj, propKey, proxyitself});
         if (propKey === "start") { this.strbuilder = ''; this.array = []; }
@@ -275,7 +277,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     }
 
     public get0(targetObj: ME, propKey: string | symbol, proxyitself: Proxyfied<ME>): any {
-        console.log('proxy keysearch', {propKey, targetObj, l: this.l, proxyitself, d: this.d});
+        // console.log('proxy keysearch', {propKey, targetObj, l: this.l, proxyitself, d: this.d});
         if (propKey === "__raw") return targetObj;
 
         if (typeof propKey === "symbol") {
@@ -353,7 +355,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     }
 
     public defaultSetter(targetObj: DPointerTargetable, propKey: string, value: any, proxyitself?: Proxyfied<ME>): boolean {
-        new SetFieldAction(targetObj, propKey as string, value);
+        SetFieldAction.new(targetObj, propKey as any, value);
         return true;
     }
 

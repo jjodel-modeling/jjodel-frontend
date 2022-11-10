@@ -129,28 +129,29 @@ export function createOrOpenModelTab(modelName: string, context0?: DockContext, 
     let panelData: PanelData = panelData0 || windoww.lastDockPanelData;
     console.log('createOrOpenModelTab0', {context0 , wcontext: windoww.lastDockContext, panelData, wpanel: windoww.lastDockPanelData});
     let model: DModel = Selectors.getModel(modelName, false, false) as DModel;
-
+    let graph: DGraph;
+    graph = DGraph.new(model.id);
+    const graphid = graph.id; // getGraphID();
     console.log('createOrOpenModelTab', {context, panelData});
-    let isGraphOpen = (gid: string): boolean => { return false; } // todo
+    /*let isGraphOpen = (gid: string): boolean => { return false; } // todo
     let getGraphID = (): string => {
         Log.exDev(!model?.id, 'failed to createGraphID, model.id is null', {model, modelid: model.id, modelName});
         console.log(!model?.id, 'dgraph.makeid', {DGraph, wdg: windoww.DGraph});
-        return U.increaseEndingNumber(DGraph.makeID(model.id), false, false, isGraphOpen); }
+        return U.increaseEndingNumber(DGraph.makeID(model.id), false, false, isGraphOpen); }*/
 
     if (model as any) {
-        console.log('createTab1:', {model, modelName, graphid: getGraphID()});
-        context.dockMove(newTab(model.id, modelName, getGraphID(), model), panelData, 'middle');
+        console.log('createTab1:', {model, modelName, graphid});
+        context.dockMove(newTab(model.id, modelName, graphid, model), panelData, 'middle');
         return; }
 
-    model = new DModel(modelName);
+    model = DModel.new(modelName);
     TRANSACTION(
         () => {
             // model._transient.currentView = LViewElement.findViewFor(model).id;
             new CreateElementAction(model);
-            new CreateElementAction(DGraph.create(model.id));
+            new CreateElementAction(graph);
         }
     );
-    const graphid = getGraphID();
     console.log('createTab2:', {model, modelName, graphid});
     Log.exDev(!graphid, 'failed to createGraphID', {model, modelName, graphid});
     context.dockMove(newTab(model.id, modelName, graphid, model), panelData, 'middle');

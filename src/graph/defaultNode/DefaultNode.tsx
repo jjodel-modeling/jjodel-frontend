@@ -29,7 +29,9 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
 
     static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps): GraphElementReduxStateProps {
         let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
-        GraphElementComponent.mapViewAndModelElement(state, ret, ownProps);
+        GraphElementComponent.mapLModelStuff(state, ownProps, ret); // not necessary either?
+        // GraphElementComponent.mapLGraphElementStuff(state, ownProps, ret, dGraphDataClass); not necessary, it's demanded to sub-components
+        GraphElementComponent.mapViewStuff(state, ret, ownProps);
         return ret; }
 
     constructor(props: AllProps, context: any) { super(props, context); }

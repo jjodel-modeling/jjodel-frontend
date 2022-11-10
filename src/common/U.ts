@@ -6,7 +6,8 @@ import type {
     Constructor,
     GObject,
     Dictionary,
-    Temporary} from "../joiner";
+    Temporary, Pack, Pack1, Pointer, AbstractConstructor
+} from "../joiner";
 import {
     Json,
     bool,
@@ -34,7 +35,7 @@ import {
     DRefEdge,
     Selectors,
     DReference,
-    DModelElement
+    DModelElement, WPointerTargetable
 } from "../joiner";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
@@ -49,7 +50,7 @@ export class U{
     //Giordano: start
 
     public static orderChildrenByTimestamp(context: LogicContext): LModelElement[] {
-        const children = context.data?.childrens;
+        const children = context.proxyObject.childrens;
         if(children && children.length > 0) {
             let orderedChildren = new Map<number, LModelElement>();
             for(let child of children) {
@@ -98,41 +99,17 @@ export class U{
     }
 
     public static deletePointerBy(lModel: LPointerTargetable, dPointer: string|DPointerTargetable): void {
-        const pointedBy = new Set(lModel.pointedBy);
-        const pointer: string = dPointer instanceof DPointerTargetable ? dPointer.id : dPointer;
+        const pointedBy = new Set(lModel.pointedBy as any as string[]);
+        const pointer: string = typeof dPointer === "string" ? dPointer : dPointer.id;
         pointedBy.delete(pointer);
-        lModel.pointedBy = [...pointedBy];
+        // todo: WPointerTargetable.from(lModel)
+        (lModel as any).pointedBy = [...pointedBy];
     }
-    public static addPointerBy(lModel: LPointerTargetable, dPointer: string|DPointerTargetable): void {
+    public static addPointerBy(lModel: LPointerTargetable, newelem: DPointerTargetable | Pointer<DPointerTargetable>): void {
         const pointedBy = new Set(lModel.pointedBy);
-        const pointer: string = dPointer instanceof DPointerTargetable ? dPointer.id : dPointer;
-        pointedBy.add(pointer);
+        let newelem_: LPointerTargetable = LModelElement.from(newelem);
+        pointedBy.add(newelem_);
         lModel.pointedBy = [...pointedBy];
-    }
-
-    public static getAllPackageClasses(data: LReference): LClass[] {
-        const dClass = data.father;
-        const lClass: LClass = MyProxyHandler.wrap(dClass);
-        const dPackage = lClass.father;
-        const lPackage: LPackage = MyProxyHandler.wrap(dPackage);
-        const classes: LClass[] = [];
-        for(let classifier of lPackage.classifiers) {
-            const lClassifier: LClass | LEnumerator = MyProxyHandler.wrap(classifier);
-            if(lClassifier.className === "DClass") classes.push(lClassifier as LClass);
-        }
-        return classes;
-    }
-    public static getAllPackageEnumerators(data: LAttribute): LEnumerator[] {
-        const dClass = data.father;
-        const lClass: LClass = MyProxyHandler.wrap(dClass);
-        const dPackage = lClass.father;
-        const lPackage: LPackage = MyProxyHandler.wrap(dPackage);
-        const enumerators: LEnumerator[] = [];
-        for(let classifier of lPackage.classifiers) {
-            const lClassifier: LClass | LEnumerator = MyProxyHandler.wrap(classifier);
-            if(lClassifier.className === "DEnumerator") enumerators.push(lClassifier as LEnumerator);
-        }
-        return enumerators;
     }
 
     public static writeLog(action: string, context: string, firstItem: string, secondItem?: string): void {
@@ -779,8 +756,10 @@ export class U{
         return chainoutoutrecursive;
     }
 
-    public static classIsExtending(subconstructor: Constructor, superconstructor: Constructor): boolean {
-        return U.getAllPrototypes(subconstructor).includes(superconstructor); }
+    public static classIsExtending(subconstructor: Constructor | AbstractConstructor, superconstructor: Constructor | AbstractConstructor): boolean {
+        return (superconstructor as typeof DPointerTargetable)?._extends?.includes(subconstructor as any) || false;
+        // return U.getAllPrototypes(subconstructor).includes(superconstructor);
+    }
 
     static isObject(obj: GObject|any): boolean { return obj instanceof Object; }
 
@@ -4192,7 +4171,7 @@ export class Log{
         if (restArgs === null || restArgs === undefined) { restArgs = []; }
         let str = '[' + prefix + ']' + key + ': ';
         for (let i = 0; i < restArgs.length; i++) {
-            console.log({i, restArgs, curr:restArgs[i]});
+            console.log(prefix, {i, restArgs, curr:restArgs[i]});
             str += '' +
                 (typeof restArgs[i] === 'symbol' ?
                     '' + String(restArgs[i]) :
@@ -4266,11 +4245,13 @@ export abstract class IPoint extends DPointerTargetable {
     static getQ? = function(firstPt: IPoint, secondPt: IPoint): number { return firstPt.y - (IPoint.getM(firstPt, secondPt) * firstPt.x);  }
 
     constructor(x: number = 0, y: number = 0) {
-        super();
+        super('dwc');
         IPoint.init_constructor(this, x, y);
     }
 
     static init_constructor(thiss: GObject, x: any = 0, y: any = 0, ...a: any): void {
+        thiss.id = "POINT_" + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
+        thiss.className = thiss.constructor.name;
         if (x === null) thiss.x = null as Temporary;
         else if (isNaN(+x)) { thiss.x = 0; }
         else thiss.x = +x;
@@ -4463,11 +4444,16 @@ export abstract class ISize<PT extends IPoint = IPoint> extends DPointerTargetab
     w!: number;
     h!: number;
     constructor(x: number = 0, y: number = 0, w: number = 0, h: number = 0) {
-        super();
+        super('dwc');
+        // do not override any fields from the DPointerTargetable, otherwise the ! in the override will reinizialize the attribute
+        // erasing the value set in super or in the functions called by the constructor as side effect (static_init called from constructor will be overridden too)
+        // if need to override types, build the "new" static function like in DModelElement
         ISize.init_constructor(this, x, y, w, h);
     }
 
     static init_constructor(thiss: GObject, x: any = 0, y: any = 0, w: any = 0, h: any = 0, ...a: any): void {
+        thiss.id = "SIZE_" + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
+        thiss.className = thiss.constructor.name;
         if (x === null) thiss.x = null as Temporary;
         else if (isNaN(+x)) { thiss.x = 0; }
         else thiss.x = +x;

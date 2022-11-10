@@ -33,8 +33,7 @@ import type {
     DTypedElement, LTypedElement,
     DAnnotation, LAnnotation, DMap, LMap,
     EJavaObject,
-    DFactory_useless_, LFactory_useless_,
-
+    DFactory_useless_,
     WAnnotation,
     WAttribute,
     WClass, WClassifier,
@@ -44,9 +43,11 @@ import type {
     WReference,
     WStructuralFeature, WTypedElement, WValue} from "../model/logicWrapper";
 // import type {Pointer} from "./typeconverter";
-import type {Dictionary, GObject, Proxyfied, DocString, CClass} from "./types";
+import type {Dictionary, GObject, Proxyfied, DocString, CClass, unArr, orArr} from "./types";
 import type {DViewElement, LViewElement, WViewElement, WViewTransientProperties, LViewTransientProperties, DViewTransientProperties} from "../view/viewElement/view";
 import type {LogicContext} from "./proxy";
+import {DeleteElementAction, GraphPoint, GraphSize, Log} from "./index";
+import {defaultVSize} from "../model/dataStructure";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -62,8 +63,8 @@ abstract class AbstractMixedClass {
     // superclass!: Dictionary<DocString<'parent class name', Class>>;
     static logic: typeof LPointerTargetable;
     static structure: typeof DPointerTargetable;
-    static singleton: RuntimeAccessibleClass;
-    static [key: string]: any;
+    static singleton: LPointerTargetable;
+    // static [key: string]: any;
     static init_constructor(...constructorArguments: any): void{}
 }
 
@@ -130,9 +131,9 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     }
 
     className!: string;
-    constructor(...a:any) {
+    protected constructor(...a:any) {
         super();
-        RuntimeAccessibleClass.init_constructor(this, ...a);
+        // RuntimeAccessibleClass.init_constructor(this, ...a);
         // this.className = this.constructor.name;
         // nb: per i mixin questo settaggio viene sovrascritto. perchè il mixin crea le 2 classi ereditate separatamente con i loro costruttori e le incrocia. quindi devo settarlo dall'annotazione @ tramite prototype
         // RuntimeAccessibleClass.allRuntimeClasses.push(this.className);
@@ -144,7 +145,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         // let finalObject = this;
         // if (finalObject.constructor.name === "DVoidVertex" || finalObject.constructor.name === "DGraphElement") { let breakp = true; }
         // this.init0(...arguments);
-        thiss.className = this.name;
+        // thiss.className = this.name;
     }
 
     public static get<T extends typeof RuntimeAccessibleClass = typeof RuntimeAccessibleClass>(dclassname: string, annotated = false)
@@ -196,7 +197,8 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     }*/
 
 }
-
+export function Leaf<T extends any>( constructor: T & GObject): T { return constructor; }
+export function Node<T extends any>( constructor: T & GObject): T { return constructor; }
 export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
     // console.log('DecoratorTest', {constructor, arguments});
     // @ts-ignore
@@ -258,6 +260,147 @@ export type LtoW<LX extends LPointerTargetable, WX = LX extends LEnumerator ? WE
 export type WtoD<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? DEnumerator : (IN extends WAttribute ? DAttribute : (IN extends WReference ? DReference : (IN extends WRefEdge ? DRefEdge : (IN extends WExtEdge ? DExtEdge : (IN extends WDataType ? DDataType : (IN extends WClass ? DClass : (IN extends WStructuralFeature ? DStructuralFeature : (IN extends WParameter ? DParameter : (IN extends WOperation ? DOperation : (IN extends WEdge ? DEdge : (IN extends WEdgePoint ? DEdgePoint : (IN extends WGraphVertex ? DGraphVertex : (IN extends WModel ? DModel : (IN extends WValue ? DValue : (IN extends WObject ? DObject : (IN extends WEnumLiteral ? DEnumLiteral : (IN extends WPackage ? DPackage : (IN extends WClassifier ? DClassifier : (IN extends WTypedElement ? DTypedElement : (IN extends WVertex ? DVertex : (IN extends WVoidEdge ? DVoidEdge : (IN extends WVoidVertex ? DVoidVertex : (IN extends WGraph ? DGraph : (IN extends WNamedElement ? DNamedElement : (IN extends WAnnotation ? DAnnotation : (IN extends WGraphElement ? DGraphElement : (IN extends WMap ? DMap : (IN extends WModelElement ? DModelElement : (IN extends WUser ? DUser : (IN extends WPointerTargetable ? DPointerTargetable : (IN extends WViewElement ? DViewElement : (IN extends WViewTransientProperties ? DViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
 export type WtoL<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? LEnumerator : (IN extends WAttribute ? LAttribute : (IN extends WReference ? LReference : (IN extends WRefEdge ? LRefEdge : (IN extends WExtEdge ? LExtEdge : (IN extends WDataType ? LDataType : (IN extends WClass ? LClass : (IN extends WStructuralFeature ? LStructuralFeature : (IN extends WParameter ? LParameter : (IN extends WOperation ? LOperation : (IN extends WEdge ? LEdge : (IN extends WEdgePoint ? LEdgePoint : (IN extends WGraphVertex ? LGraphVertex : (IN extends WModel ? LModel : (IN extends WValue ? LValue : (IN extends WObject ? LObject : (IN extends WEnumLiteral ? LEnumLiteral : (IN extends WPackage ? LPackage : (IN extends WClassifier ? LClassifier : (IN extends WTypedElement ? LTypedElement : (IN extends WVertex ? LVertex : (IN extends WVoidEdge ? LVoidEdge : (IN extends WVoidVertex ? LVoidVertex : (IN extends WGraph ? LGraph : (IN extends WNamedElement ? LNamedElement : (IN extends WAnnotation ? LAnnotation : (IN extends WGraphElement ? LGraphElement : (IN extends WMap ? LMap : (IN extends WModelElement ? LModelElement : (IN extends WUser ? LUser : (IN extends WPointerTargetable ? LPointerTargetable : (IN extends WViewElement ? LViewElement : (IN extends WViewTransientProperties ? LViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
 
+export class Constructors<T extends DPointerTargetable>{
+    private thiss: T;
+    constructor(t:T) { this.thiss = t; }
+    // start(thiss: any): this { this.thiss = thiss; return this; }
+    end(): T {return this.thiss; }
+
+    DModelElement(): this { return this; }
+    DClassifier(): this { return this; }
+    DParameter(): this { return this; }
+    DStructuralFeature(): this { return this; }
+    DReference(): this { return this; }
+    DAttribute(): this { return this; }
+    DDataType(): this { return this; }
+    DObject(): this { return this; }
+    DValue(): this { return this; }
+    DEdgePoint(): this { return this; }
+    DVoidEdge(): this { return this; }
+    DVertex(): this { return this; }
+    DEdge(): this { return this; }
+    DExtEdge(): this { return this; }
+    DRefEdge(): this { return this; }
+
+    DGraphElement(model: DGraphElement["model"], parentNodeID?: DGraphElement["father"], graphID?: DGraphElement["graph"], nodeID?: DGraphElement["id"]): this {
+        const thiss: DGraphElement = this.thiss as any;
+        if (parentNodeID) thiss.father = parentNodeID;
+        if (graphID) thiss.graph = graphID;
+        thiss.model = model;
+        thiss.subElements = [];
+        if (nodeID) thiss.id = nodeID;
+        return this; }
+
+    DViewElement(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
+                 preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1): this {
+        const thiss: DViewElement = this.thiss as any;
+        thiss.name = name;
+        thiss.appliableToClasses = appliableToClasses;
+        thiss.jsxString = jsxString;
+        thiss.usageDeclarations = usageDeclarations;
+        thiss.constants = constants;
+        thiss.preRenderFunc = preRenderFunc;
+        // thiss.__transient = new DViewTransientProperties();
+        thiss.subViews = [];
+        thiss.oclApplyCondition = '';
+        thiss.explicitApplicationPriority = priority;
+        thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 350, 200);
+        thiss.adaptHeight = false;
+        thiss.adaptWidth = false;
+        thiss.x = 0;
+        thiss.y = 0;
+        thiss.width = 350;
+        thiss.height = 200;
+        return this; }
+
+    static DGraph_maxID: number = 0;
+    private static DGraph_makeID(modelid: DGraph["model"]): Pointer<DGraph, 1, 1, LGraph> {
+        if (!modelid) {
+            throw new Error("graph without model, currently not supported.");
+            return '_GraphWithoutModel_';
+        }
+        return modelid + '^graph' + Constructors.DGraph_maxID++;
+    }
+    DGraph(model: DGraph["model"]): this {
+        const thiss: DGraph = this.thiss as any;
+        thiss.id = Constructors.DGraph_makeID(model);
+        thiss.graph = thiss.id;
+        thiss.zoom = new GraphPoint(1, 1);
+        thiss.graphSize = new GraphSize(0, 0, 0, 0);  // GraphSize.apply(this, [0, 0, 0 ,0]);
+        thiss._subMaps = {zoom: true, graphSize: true}
+        return this; }
+
+    DVoidVertex(defaultVSize: GraphSize): this {
+        const thiss: DVoidVertex = this.thiss as any;
+        thiss.x = defaultVSize.x;
+        thiss.y = defaultVSize.y;
+        thiss.w = defaultVSize.w;
+        thiss.h = defaultVSize.h;
+        return this; }
+
+    DAnnotation(source?: DAnnotation["source"], details?: DAnnotation["details"]): this {
+        const thiss: DAnnotation = this.thiss as any;
+        thiss.source = source || '';
+        thiss.details = details || {};
+        return this; }
+
+    DPointerTargetable(isUser: boolean = false, id?: string): this {
+        const thiss: DPointerTargetable = this.thiss as any;
+        thiss.id = id || (isUser ? "USER" : DUser.current) + "_" + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
+        thiss.className = thiss.constructor.name;
+        // this.className = thiss.className;
+        return this; }
+
+    DUser(isUser: boolean = false, id?: string): this {
+        const thiss: DPointerTargetable = this.thiss as any;
+        thiss.id = 'USER_' + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
+        return this; }
+
+    DNamedElement(name?: DNamedElement["name"]): this {
+        const thiss: DNamedElement = this.thiss as any;
+        thiss.name = (name !== undefined) ? name || '' : thiss.constructor.name.substring(1) + " 1";
+        return this; }
+
+    DTypedElement(type?: DTypedElement["type"]): this {
+        const thiss: DTypedElement = this.thiss as any;
+        thiss.type = type as Pointer<DClassifier, 1, 1, LClassifier>;
+        return this; }
+
+    DPackage(uri?: DPackage["uri"]): this {
+        const thiss: DPackage = this.thiss as any;
+        thiss.uri = uri || '';
+        return this; }
+
+    DModel(packages: DModel["packages"] = []): this {
+        const thiss: DModel = this.thiss as any;
+        thiss.packages = packages;
+        return this; }
+
+    DOperation(exceptions: DOperation["exceptions"] = [], parameters: DOperation["parameters"] = []): this {
+        const thiss: DOperation = this.thiss as any;
+        thiss.parameters = parameters;
+        thiss.exceptions = exceptions;
+        return this; }
+
+    DClass(isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false): this {
+        const thiss: DClass = this.thiss as any;
+        thiss.interface = isInterface;
+        thiss.abstract = isAbstract;
+        return this; }
+
+    DEnumLiteral(value: DEnumLiteral["value"] = 0): this {
+        const thiss: DEnumLiteral = this.thiss as any;
+        thiss.value = value;
+        return this; }
+
+    DEnumerator( literals: DEnumerator["literals"] = []): this {
+        const thiss: DEnumerator = this.thiss as any;
+        thiss.literals = literals;
+        return this; }
+
+}
+// export const Constructors = new _Constructors();
+
 @RuntimeAccessible
 export class DPointerTargetable extends RuntimeAccessibleClass {
     static defaultComponent: (ownProps: GObject, childrens?: (string | React.Component)[]) => React.ReactElement;
@@ -273,24 +416,223 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     // ma gli oggetti puntati da A tramite sotto-oggetti o attributi (subviews...) non vengono aggiornati in "pointedby"
 
     pointedBy: Pointer<DPointerTargetable, 0, 'N'> = [];
-    father: Pointer<DPointerTargetable, 1, 1> = "";
 
-    constructor(isUser: any = false, id?: any, a?: any, b?:any, c?:any) {
+
+    public static new(...a:any): DPointerTargetable { return new Constructors(new DPointerTargetable('dwc')).DPointerTargetable().end(); }
+    constructor(fakearg_detectwrongcalls:'dwc') {
         super();
-        DPointerTargetable.init_constructor(this, ...arguments);
+        if (!fakearg_detectwrongcalls) throw new Error( "cannot build D-objects using new keyword, use the static D-Class.new method instead");
     }
 
+/*
     static init_constructor(thiss: DPointerTargetable, isUser: any = false, id?: any, a?: any, b?:any, c?:any): void {
         const userid = DUser.current;
-        thiss.id = id || (isUser ? '' : userid + "_") + DPointerTargetable.maxID++ + "_" + new Date().getTime();
-        thiss.className = this.name;
+        id = id || (isUser ? '' : userid + "_") + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
+        thiss.id = id;
+        thiss.className = thiss.constructor.name;
+        const clogparam = {thiss, id, isUser, a, b, c,
+            thisid: thiss.id,
+            newid: id || (isUser ? '' : userid + "_") + (DPointerTargetable.maxID++) + "_" + new Date().getTime(),
+            newid2: (isUser ? '' : userid + "_") + (DPointerTargetable.maxID++) + "_" + new Date().getTime()};
+        windoww.clogparam = clogparam;
+        console.log("in static constr", clogparam);
         // todo store.dispatch(new IdLinkAction(this));
+    }*/
+
+    static fromL<LX extends LPointerTargetable,
+        DX = LX extends LEnumerator ? LEnumerator : (LX extends LAttribute ? LAttribute : (LX extends LReference ? LReference : (LX extends LRefEdge ? LRefEdge : (LX extends LExtEdge ? LExtEdge : (LX extends LDataType ? LDataType : (LX extends LClass ? LClass : (LX extends LStructuralFeature ? LStructuralFeature : (LX extends LParameter ? LParameter : (LX extends LOperation ? LOperation : (LX extends LEdge ? LEdge : (LX extends LEdgePoint ? LEdgePoint : (LX extends LGraphVertex ? LGraphVertex : (LX extends LModel ? LModel : (LX extends LValue ? LValue : (LX extends LObject ? LObject : (LX extends LEnumLiteral ? LEnumLiteral : (LX extends LPackage ? LPackage : (LX extends LClassifier ? LClassifier : (LX extends LTypedElement ? LTypedElement : (LX extends LVertex ? LVertex : (LX extends LVoidEdge ? LVoidEdge : (LX extends LVoidVertex ? LVoidVertex : (LX extends LGraph ? LGraph : (LX extends LNamedElement ? LNamedElement : (LX extends LAnnotation ? LAnnotation : (LX extends LGraphElement ? LGraphElement : (LX extends LMap ? LMap : (LX extends LModelElement ? LModelElement : (LX extends LUser ? LUser : (LX extends LPointerTargetable ? LPointerTargetable : (ERROR)))))))))))))))))))))))))))))))
+        >(data: LX): DX {
+        return data.__raw as any;
+    }
+
+
+    static fromPointer<// LOW extends number, UPP extends number | 'N',
+        T extends Pointer | Pointer[], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
+        DDD extends (T extends Pointer<infer D> ? D : 'undefined D'),
+        LOW extends (T extends Pointer<any, infer LO> ? LO : 'undefined_upp'),
+        UPP extends (T extends Pointer<any, number, infer UP> ? UP : 'undefined_low'),
+
+        DDDARR extends (T extends Pointer<infer D>[] ? D : 'undefined_DARR'),
+        LOWARR extends (T extends Pointer<any, infer LO>[] ? LO : 'undefined_uppARR'),
+        UPPARR extends (T extends Pointer<any, number, infer UP>[] ? 'UP_is_N' : 'undefined_lowARR'),
+
+        RET = UPPARR extends 'UP_is_N' ?
+            (DDDARR[]) : // 0...N
+            (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
+                (LOW extends 1 ? DDD : undefined)  //1...1
+                ),
+        INFERRED = {ret: RET, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR},>(ptr: T)
+        : RET {
+        return null as any;
+    }
+    static from<// LOW extends number, UPP extends number | 'N',
+        PTR extends Pointer | Pointer[], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
+        DDD extends (PTR extends Pointer<infer D> ? D : 'undefined D'),
+        LOW extends (PTR extends Pointer<any, infer LO> ? LO : 'undefined_upp'),
+        UPP extends (PTR extends Pointer<any, number, infer UP> ? UP : 'undefined_low'),
+
+        DDDARR extends (PTR extends Pointer<infer D>[] ? D : 'undefined_DARR'),
+        LOWARR extends (PTR extends Pointer<any, infer LO>[] ? LO : 'undefined_uppARR'),
+        UPPARR extends (PTR extends Pointer<any, number, infer UP>[] ? 'UP_is_N' : 'undefined_lowARR'),
+
+        LX extends LPointerTargetable,
+
+        RETPTR = UPPARR extends 'UP_is_N' ?
+            (DDDARR[]) : // 0...N
+            (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
+                (LOW extends 1 ? DDD : undefined)  //1...1
+                ),
+
+
+        // DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : ('ERROR'))))))))))))))))),
+        DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LRefEdge ? DRefEdge : (LX extends LExtEdge ? DExtEdge : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LEdge ? DEdge : (LX extends LEdgePoint ? DEdgePoint : (LX extends LGraphVertex ? DGraphVertex : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LVertex ? DVertex : (LX extends LVoidEdge ? DVoidEdge : (LX extends LVoidVertex ? DVoidVertex : (LX extends LGraph ? DGraph : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : (LX extends LGraphElement ? DGraphElement : (LX extends LMap ? DMap : (LX extends LModelElement ? DModelElement : (LX extends LUser ? DUser : (LX extends LPointerTargetable ? DPointerTargetable : (ERROR))))))))))))))))))))))))))))))),
+        RET = DX extends 'ERROR' ? RETPTR : (RETPTR extends DX ? RETPTR : DX),
+        INFERRED = {ret: RET, RETPTR:RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR | LX)
+        : RET {
+        return null as any;
+    }
+    static from0(a: any, ...aa: any): any { return null; }
+    static writeable<LX extends LPointerTargetable, WX = LtoW<LX>>(l: LX): WX { return l as any; }
+}
+/*
+let d0: LClassifier = null as any;
+let ptrr: Pointer<DPackage, 1, 'N', LPackage> = null as any;
+let ptr1: Pointer<DPackage, 1, 1, LPackage> = null as any;
+let dd = DPointerTargetable.from(d0.id);
+*/
+
+
+/*
+type Pack1<D extends DPointerTargetable, L extends LPointerTargetable = DtoL<D>, P extends Pointer<D, 0, 1, L> = Pointer<D, 0, 1, L>, R = {D:D, L:L, P:P} > = P|D|L
+type PackArr<D extends DPointerTargetable, L extends LPointerTargetable = DtoL<D>, P extends Pointer<D, 0, 1, L> = Pointer<D, 0, 1, L> , ARR = Pack1<D>> = (ARR)[];
+type Pack<D extends DPointerTargetable, L extends LPointerTargetable = DtoL<D>, P extends Pointer<D, 0, 1, L> = Pointer<D, 0, 1, L> , ARR = Pack1<D>> = ARR | (ARR)[];*/
+
+
+
+@RuntimeAccessible
+export class Pointers{
+    static filterValid<P extends (Pointer | Pointer[]) = any, RET = P extends Pointer[] ? P : P | null>
+    (p: P): P | null {
+        const pointerval: DPointerTargetable | DPointerTargetable[] = DPointerTargetable.from(p);
+        if (Array.isArray(pointerval)) return pointerval.filter( p => !!p).map( p => p.id) as P;
+        if (!pointerval) return null;
+        return pointerval.id as P; }
+
+    fromArr<D extends DPointerTargetable, L extends LPointerTargetable, P extends Pointer> (val: (P | D | L | null | undefined)[] |  (P | D | L | null | undefined)): P[] {
+        if (!val) val = [];
+        if (!Array.isArray(val)) { val = [val]; }
+        if (!val.length) { return []; }
+        if ((val[0] as any).id) { val = (val as any as (LModelElement | DModelElement)[]).filter(v => !!v).map( (v) => v.id) as any[]; }
+        return val.filter( v => !!v) as any[]; }
+
+    fromm<D extends DPointerTargetable, L extends LPointerTargetable, P extends Pointer> (val: (P | D | L)): P | null { return !val ? null : (val as any).id; }
+
+    from0<// LOW extends number, UPP extends number | 'N',
+        PTR extends Pointer | Pointer[], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
+        // DDD extends (PTR extends Pointer<infer D> ? D : 'undefined_D'),
+        LOW extends (PTR extends Pointer<any, infer LO> ? LO : 'undefined_upp'),
+        UPP extends (PTR extends Pointer<any, number, infer UP> ? UP : 'undefined_low'),
+        DDD extends (PTR extends Pointer<any, number, any, infer LL> ? LL : 'undefined_L'),
+
+        LOWARR extends (PTR extends Pointer<any, infer LO>[] ? LO : 'undefined_uppARR'),
+        UPPARR extends (PTR extends Pointer<any, number, infer UP>[] ? 'UP_is_N' : 'undefined_lowARR'),
+        DDDARR extends (PTR extends Pointer<any, any, any, infer LL>[] ? LL : 'undefined_LARR'),
+
+        DX extends DPointerTargetable,
+        LX extends LPointerTargetable,
+        WX extends WPointerTargetable,
+        RETPTR = UPPARR extends 'UP_is_N' ?
+            (DDDARR[]) : // 0...N
+            (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
+                (LOW extends 1 ? DDD : undefined)  //1...1
+                ),
+
+
+        // DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : ('ERROR'))))))))))))))))),
+        LXX = DtoL<DX>,
+        DXX = LtoD<LX>,
+        LXFinal = LXX extends 'ERROR' ? LX : LXX,
+        DXFinal = DXX extends 'ERROR' ? DX : DXX,
+        RET = {d: DXFinal, l:LXFinal}, // Pointer<DX, 0 | 1, 1 | 'N', LX>
+        INFERRED = {ret: RET, RETPTR: RETPTR, LXX: LXX, DXX: DXX, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(data: LX | DX | WX)
+        : INFERRED {
+        return null as any;
+    }
+
+
+    static from00<
+        // LOW extends number, UPP extends number | 'N',
+        // DDD extends (PTR extends Pointer<infer D> ? D : 'undefined_D'),
+        DWL extends {id: any},
+        // PCK extends (T extends Pack<infer PPP> ? PPP : never),
+        //ISARR extends (T extends any[] ? true : false),
+        // PCK1 extends (T extends any[] ? null : T extends Pack1<infer PPP> ? PPP : never), //         PCK1 extends (T extends any[] ? true : false),
+        // PCKA extends (T extends PackArr<infer PPP> ? PPP : 'undefined_arrpack'),
+        // PTR extends DWL["id"], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
+        // T extends DWL | DWL[] | null | undefined,
+        /*DX extends (PTR extends Pointer<infer D0> ? D0 : 'undefined_D'),
+        LOW extends (PTR extends Pointer<any, infer LO> ? LO : 'undefined_upp'),
+        UPP extends (PTR extends Pointer<any, number, infer UP> ? UP : 'undefined_low'),
+        LX extends (PTR extends Pointer<any, number, any, infer LL> ? LL : 'undefined_L'),
+
+        LOWARR extends (PTR extends Pointer<any, infer LO>[] ? LO : 'undefined_uppARR'),
+        UPPARR extends (PTR extends Pointer<any, number, infer UP>[] ? 'UP_is_N' : 'undefined_lowARR'),
+        DDDARR extends (PTR extends Pointer<any, any, any, infer LL>[] ? LL : 'undefined_LARR'),
+        RET = DX extends DPointerTargetable ? ( LOW extends number ? ( UPP extends number ? ( LX extends LPointerTargetable ? Pointer<DX, LOW, UPP, LX> : '_notret_L_') : '_notret_UPP_') : '_notret_LOW_') : '_notret_D_'
+        */
+        PTRPARAM = Pointer | Pointer[],
+        T = Exclude<DWL | DWL[] | PTRPARAM, unknown[]>,
+        // @ts-ignore
+        PTR = T extends null ? null : T extends undefined ? null : (T extends PTRPARAM ? T : (T extends any[] ? T[number]['id'][] : T['id'])),
+        // RET extends Pointer<DPointerTargetable, any, any, LPointerTargetable> = T extends DWL ? DWL["id"] : (T extends DWL[] ? DWL["id"] : null),
+        // INF = { PCK:PCK, ISARR: ISARR,  PTR: PTR, DWL: DWL, RET: RET}, // {DD:DD, LL: LL}//
+        >(data: T | T[] ): PTR { // RET | RET[] {
+            if (Array.isArray(data)) return data.filter(d => !!d).map(d => (typeof d === "string" ? d : (d as any as DWL).id)) as any;
+            else return (data ? (data as any).id : null);
+    } // stavolta fai infer so D|l.id
+
+
+    public static from<DX extends DPointerTargetable>(data:DX): DX["id"]; // | {D:any};
+    public static from<DX extends DPointerTargetable>(data:DX[]): DX["id"][]; // | {DD:any};
+    public static from<LX extends LPointerTargetable>(data:LX): LX["id"]; // | {L:any};
+    public static from<LX extends LPointerTargetable>(data:LX[]): LX["id"][]; // | {LL:any};
+    public static from<WX extends WPointerTargetable>(data:WX): WX["id"]; // | {W:any};
+    public static from<WX extends WPointerTargetable>(data:WX[]): WX["id"][]; // | {WW:any};
+    public static from<PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:PTR): PTR; // | {P:any};
+    public static from<PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:PTR[]): PTR[]; // | {PP:any};
+    public static from<T extends LPointerTargetable>(data:Pack1<T>): Pointer<LtoD<T>, 1, 1, T>; //{TEST1:any};
+    public static from<T extends LPointerTargetable>(data:Pack1<T>[]): Pointer<LtoD<T>, 1, 1, T>[]; //{TEST111:any};
+    public static from<T extends LPointerTargetable>(data:Pack<T>): Pointer<LtoD<T>, 1, 1, T>[]; //{TEST0:any};
+    public static from<T extends LPointerTargetable>(data:PackArr<T>): Pointer<LtoD<T>, 1, 1, T>[]; //{TESTARR:any};
+    public static from<T extends LPointerTargetable>(data:Pack1<T[]>): Pointer<LtoD<T>, 1, 1, T>; //{TEST1:any};
+    public static from<T extends LPointerTargetable>(data:Pack1<T[]>[]): Pointer<LtoD<T>, 1, 1, T>[]; //{TEST111:any};
+    public static from<T extends LPointerTargetable>(data:Pack<T[]>): Pointer<LtoD<T>, 1, 1, T>[]; //{TEST0:any};
+    public static from<T extends LPointerTargetable>(data:PackArr<T[]>): Pointer<LtoD<T>, 1, 1, T>[]; //{TESTARR:any};
+    public static from(data:null | undefined): null; // | {Dn:any};
+    public static from(data:(null | undefined)[]): []; // | {Dnn:any};
+    public static from(data:(null | undefined) | (null | undefined)[]): []; // | {Dn0:any};
+
+// function from<PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:unknown | unknown[]): PTR | PTR[] | GObject {
+    public static from<T extends LClass, PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:unknown | unknown[]): null | PTR | PTR[]{
+        if (!data) return null;
+        if (Array.isArray(data)) return data.filter(d => !!d).map(d => (typeof d === "string" ? d : (d as any).id)) as any;
+        return typeof data === "string" ? data : (data as any).id;
     }
 
 }
 
+export type Pack1<LL extends orArr<LPointerTargetable>, L extends LPointerTargetable = unArr<LL>, D extends LtoD<L> = LtoD<L>> = D | L | LtoW<L> | Pointer<D, 1, 1, L>;
+export type PackArr<LL extends orArr<LPointerTargetable>, L extends LPointerTargetable = unArr<LL>> = Pack1<L>[];
+export type Pack<LL extends orArr<LPointerTargetable>, L extends LPointerTargetable = unArr<LL>> = Pack1<L> | PackArr<L>;
+/*
+let n: any = null;
+let aa: DClass = n;
+let ptrr = Pointers.from(aa.parent);
+aa.parent = ptrr;*/
+
+
 @RuntimeAccessible
-export class LPointerTargetable extends DPointerTargetable {
+export class LPointerTargetable<Context extends LogicContext<DPointerTargetable> = any, D extends DPointerTargetable = DPointerTargetable> extends DPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public static structure: typeof DPointerTargetable;
@@ -298,6 +640,31 @@ export class LPointerTargetable extends DPointerTargetable {
     // @ts-ignore
     public pointedBy: LPointerTargetable[];
     public __raw!: DPointerTargetable;
+
+    pointedBy!: PointedBy[];
+
+    protected wrongAccessMessage(str: string): any {
+        let msg = "Method "+str+" should not be called directly, attempting to do so should trigger get_"+str+"(). This is only a signature for type checking.";
+        Log.ex(msg, this);
+        throw new Error(msg); }
+
+    public toString(): string { throw this.wrongAccessMessage("toString"); }
+    protected get_toString(context: Context): () => string {
+        let gobj: GObject = context.data
+        return () => ( gobj.data.name ? gobj.data.name : gobj.data.className.substring(0));
+    }
+
+
+    protected get_id(context: Context): this["id"] { return context.data.id; }
+    protected set_id(): boolean { return Log.exx('"ID" field is read-only', this); }
+
+    protected _get_default< DD extends DPointerTargetable, T extends string & keyof (DD) & keyof (L), L extends LModelElement = LModelElement>(data: DD, key: T): L[T]{
+        // @ts-ignore
+        return LPointerTargetable.from(data[key]); }
+
+    public delete(): void { throw this.wrongAccessMessage("delete"); }
+    public _delete(context: Context): void { new DeleteElementAction(context.data); }
+    protected get_delete(context: Context): () => void { return () => this._delete(context); }
 
     public get__extends(superClassName: string, context: LogicContext<DPointerTargetable>): boolean {
         return RuntimeAccessibleClass.extends(context.data.className, superClassName);
@@ -322,6 +689,97 @@ export class LPointerTargetable extends DPointerTargetable {
         windoww.Log.exx('pointedBy field should never be directly edited.', {context, val});
         return false;
     }
+
+
+
+
+    static fromD<DX extends DPointerTargetable,
+        LX = DX extends DEnumerator ? LEnumerator : (DX extends DAttribute ? LAttribute : (DX extends DReference ? LReference : (DX extends DRefEdge ? LRefEdge : (DX extends DExtEdge ? LExtEdge : (DX extends DDataType ? LDataType : (DX extends DClass ? LClass : (DX extends DStructuralFeature ? LStructuralFeature : (DX extends DParameter ? LParameter : (DX extends DOperation ? LOperation : (DX extends DEdge ? LEdge : (DX extends DEdgePoint ? LEdgePoint : (DX extends DGraphVertex ? LGraphVertex : (DX extends DModel ? LModel : (DX extends DValue ? LValue : (DX extends DObject ? LObject : (DX extends DEnumLiteral ? LEnumLiteral : (DX extends DPackage ? LPackage : (DX extends DClassifier ? LClassifier : (DX extends DTypedElement ? LTypedElement : (DX extends DVertex ? LVertex : (DX extends DVoidEdge ? LVoidEdge : (DX extends DVoidVertex ? LVoidVertex : (DX extends DGraph ? LGraph : (DX extends DNamedElement ? LNamedElement : (DX extends DAnnotation ? LAnnotation : (DX extends DGraphElement ? LGraphElement : (DX extends DMap ? LMap : (DX extends DModelElement ? LModelElement : (DX extends DUser ? LUser : (DX extends DPointerTargetable ? LPointerTargetable : (ERROR))))))))))))))))))))))))))))))),
+        >(data: DX): DX {
+        // return null as any;
+        if (Array.isArray(ptr)) return LPointerTargetable.wrapAll(ptr) as any;
+        return LPointerTargetable.wrap(ptr) as any;
+    }
+
+
+    static fromPointer<
+        T extends Pointer | Pointer[], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
+        DDD extends (T extends Pointer<any, any, any, infer D> ? D : 'undefined L'),
+        LOW extends (T extends Pointer<any, infer LO> ? LO : 'undefined_upp'),
+        UPP extends (T extends Pointer<any, number, infer UP> ? UP : 'undefined_low'),
+
+        DDDARR extends (T extends Pointer<any, any, any, infer D>[] ? D : 'undefined_DARR'),
+        LOWARR extends (T extends Pointer<any, infer LO>[] ? LO : 'undefined_uppARR'),
+        UPPARR extends (T extends Pointer<any, number, infer UP>[] ? 'UP_is_N' : 'undefined_lowARR'),
+
+        RET = UPPARR extends 'UP_is_N' ?
+            (DDDARR[]) : // 0...N
+            (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
+                (LOW extends 1 ? DDD : undefined)  //1...1
+                ),
+        INFERRED = {ret: RET, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR},>(ptr: T)
+        : RET {
+        // return null as any;
+        if (Array.isArray(ptr)) return LPointerTargetable.wrapAll(ptr) as any;
+        return LPointerTargetable.wrap(ptr) as any;
+    }
+    static fromArr<
+        PTR extends Pointer | Pointer[], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
+        // DDD extends (PTR extends Pointer<infer D> ? D : 'undefined_D'),
+        LOW extends (PTR extends Pointer<any, infer LO> ? LO : 'undefined_upp'),
+        UPP extends (PTR extends Pointer<any, number, infer UP> ? UP : 'undefined_low'),
+        DDD extends (PTR extends Pointer<any, number, any, infer LL> ? LL : 'undefined_L'),
+
+        LOWARR extends (PTR extends Pointer<any, infer LO>[] ? LO : 'undefined_uppARR'),
+        UPPARR extends (PTR extends Pointer<any, number, infer UP>[] ? 'UP_is_N' : 'undefined_lowARR'),
+        DDDARR extends (PTR extends Pointer<any, any, any, infer LL>[] ? LL : 'undefined_LARR'),
+
+        DX extends DPointerTargetable,
+
+        RETPTR = UPPARR extends 'UP_is_N' ?
+        (DDDARR[]) : // 0...N
+        (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
+            (LOW extends 1 ? DDD : undefined)  //1...1
+        ),
+
+        // DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : ('ERROR'))))))))))))))))),
+        LX = DX extends DEnumerator ? LEnumerator : (DX extends DAttribute ? LAttribute : (DX extends DReference ? LReference : (DX extends DRefEdge ? LRefEdge : (DX extends DExtEdge ? LExtEdge : (DX extends DDataType ? LDataType : (DX extends DClass ? LClass : (DX extends DStructuralFeature ? LStructuralFeature : (DX extends DParameter ? LParameter : (DX extends DOperation ? LOperation : (DX extends DEdge ? LEdge : (DX extends DEdgePoint ? LEdgePoint : (DX extends DGraphVertex ? LGraphVertex : (DX extends DModel ? LModel : (DX extends DValue ? LValue : (DX extends DObject ? LObject : (DX extends DEnumLiteral ? LEnumLiteral : (DX extends DPackage ? LPackage : (DX extends DClassifier ? LClassifier : (DX extends DTypedElement ? LTypedElement : (DX extends DVertex ? LVertex : (DX extends DVoidEdge ? LVoidEdge : (DX extends DVoidVertex ? LVoidVertex : (DX extends DGraph ? LGraph : (DX extends DNamedElement ? LNamedElement : (DX extends DAnnotation ? LAnnotation : (DX extends DGraphElement ? LGraphElement : (DX extends DMap ? LMap : (DX extends DModelElement ? LModelElement : (DX extends DUser ? LUser : (DX extends DPointerTargetable ? LPointerTargetable : (ERROR))))))))))))))))))))))))))))))),
+        RET = LX extends 'ERROR' ? RETPTR : (RETPTR extends LX ? RETPTR : LX),
+        INFERRED = {ret: RET, RETPTR: RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR[] | DX[])
+    : RET[] {
+    return LPointerTargetable.from(ptr as any); }
+
+    static from<// LOW extends number, UPP extends number | 'N',
+        PTR extends Pointer | Pointer[], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
+        // DDD extends (PTR extends Pointer<infer D> ? D : 'undefined_D'),
+        LOW extends (PTR extends Pointer<any, infer LO> ? LO : 'undefined_upp'),
+        UPP extends (PTR extends Pointer<any, number, infer UP> ? UP : 'undefined_low'),
+        DDD extends (PTR extends Pointer<any, number, any, infer LL> ? LL : 'undefined_L'),
+
+        LOWARR extends (PTR extends Pointer<any, infer LO>[] ? LO : 'undefined_uppARR'),
+        UPPARR extends (PTR extends Pointer<any, number, infer UP>[] ? 'UP_is_N' : 'undefined_lowARR'),
+        DDDARR extends (PTR extends Pointer<any, any, any, infer LL>[] ? LL : 'undefined_LARR'),
+
+        DX extends DPointerTargetable,
+
+        RETPTR = UPPARR extends 'UP_is_N' ?
+            (DDDARR[]) : // 0...N
+            (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
+                (LOW extends 1 ? DDD : undefined)  //1...1
+                ),
+
+
+        // DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : ('ERROR'))))))))))))))))),
+        LX = DX extends DEnumerator ? LEnumerator : (DX extends DAttribute ? LAttribute : (DX extends DReference ? LReference : (DX extends DRefEdge ? LRefEdge : (DX extends DExtEdge ? LExtEdge : (DX extends DDataType ? LDataType : (DX extends DClass ? LClass : (DX extends DStructuralFeature ? LStructuralFeature : (DX extends DParameter ? LParameter : (DX extends DOperation ? LOperation : (DX extends DEdge ? LEdge : (DX extends DEdgePoint ? LEdgePoint : (DX extends DGraphVertex ? LGraphVertex : (DX extends DModel ? LModel : (DX extends DValue ? LValue : (DX extends DObject ? LObject : (DX extends DEnumLiteral ? LEnumLiteral : (DX extends DPackage ? LPackage : (DX extends DClassifier ? LClassifier : (DX extends DTypedElement ? LTypedElement : (DX extends DVertex ? LVertex : (DX extends DVoidEdge ? LVoidEdge : (DX extends DVoidVertex ? LVoidVertex : (DX extends DGraph ? LGraph : (DX extends DNamedElement ? LNamedElement : (DX extends DAnnotation ? LAnnotation : (DX extends DGraphElement ? LGraphElement : (DX extends DMap ? LMap : (DX extends DModelElement ? LModelElement : (DX extends DUser ? LUser : (DX extends DPointerTargetable ? LPointerTargetable : (ERROR))))))))))))))))))))))))))))))),
+        RET = LX extends 'ERROR' ? RETPTR : (RETPTR extends LX ? RETPTR : LX),
+        INFERRED = {ret: RET, RETPTR: RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR | DX)
+        : RET {
+        // return null as any;
+        if (Array.isArray(ptr)) return LPointerTargetable.wrapAll(ptr) as any;
+        return LPointerTargetable.wrap(ptr) as any;
+    }
+
+    // static from0(a: any, ...aa: any): any { return null; }
 }
 @RuntimeAccessible
 export class WPointerTargetable extends DPointerTargetable{
@@ -329,6 +787,7 @@ export class WPointerTargetable extends DPointerTargetable{
     _storePath!: never;
     _subMaps!: never;
     pointedBy!: never;
+    // todo: WfromD, WfromL, WfromPointer, Wfrom
 }
 DPointerTargetable.subclasses.push(LPointerTargetable);
 DPointerTargetable.subclasses.push(WPointerTargetable);
@@ -348,7 +807,7 @@ let bb2 = fffff(a);
 
 
 
-
+@Leaf
 @RuntimeAccessible
 export class DUser extends DPointerTargetable{
     static current: DocString<Pointer<DUser, 1, 1>> = "currentUserPointerToDo";
@@ -358,9 +817,9 @@ export class DUser extends DPointerTargetable{
     // public static singleton: LPointerTargetable;
     id!: Pointer<DUser, 1, 1, LUser>;
     __isUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
-    constructor() {
-        super(true);
-    }
+    public static new(): DUser { return new Constructors(new DUser('dwc')).DPointerTargetable().DUser().end(); }
+
+
 }
 @RuntimeAccessible
 export class LUser extends LPointerTargetable { // MixOnlyFuncs(DUser, LPointerTargetable)
@@ -533,10 +992,11 @@ console.warn('ts loaded classes');
 export type NotAString<T extends any = 'uselessval', T2 extends any = any, T3 extends any = any, T4 extends any = any> = string & Omit<string, 'bold'> & {bolda?: T};
 // export type NotAString<T> = string;
 // type Pointer<T> = NotAString<T>;
-export type Pointer<T extends DPointerTargetable = DPointerTargetable, lowerbound extends number = 1, upperbound extends number | string = 1, RET = LPointerTargetable> =
-    upperbound extends 'N' ? NotAString<T>[] : (
+export type Pointer<T extends DPointerTargetable = DPointerTargetable, lowerbound extends number = 1, upperbound extends number | string = 1,
+    RET = LPointerTargetable> =
+    upperbound extends 'N' ? NotAString<T, lowerbound, upperbound, RET>[] : (
         upperbound extends 0 ? never : (
-            lowerbound extends 0 ? (NotAString<T> | undefined | null) : NotAString<T, upperbound, lowerbound, RET>));
+            lowerbound extends 0 ? (NotAString<T, lowerbound, upperbound, RET> | null) : NotAString<T, upperbound, lowerbound, RET>));
 
 
 export type PtrString = any; // to convert Pointers to strings more explicitly then using as any
@@ -670,54 +1130,14 @@ windoww.buildWrapSignature = buildWrapSignature;
 
 
 
-// they must be ordered from subclass to superclass
-function wrapptr<DX extends D, LX = DX extends D2 ? L2: (DX extends D3 ? L3: (DX extends D ? L : ERROR))>(ptr: Pointer<DX>): LX {
-    return null as any;
-}
-
-// can i make generic types generics?
-function ptrtest<PDX extends Pointer<DX>, DX extends DPointerTargetable>(ptr:PDX):DX {
-    return '' as any;
-}
-
-function ptrmanual<DX extends D>(ptr: Pointer<DX>): DX { return '' as any; }
-
-
-type LFixed = D & LFix;
-let lf = (null as any as D) as LFixed;
-//// NB: l'And di tipi con un fix non va bene perchè poi il tipo dell'attributo ridefinito è entrambi -> non effettua controllo corretteza del tipo.
-
-let pp1 = wrapptr('ptr' as any as Pointer<D3>);
-let pp2 = ptrtest('ptr' as any as Pointer<D2>);
-let pp3 = ptrmanual<D2>('ptr' as any as Pointer<D2>);
-let c = pp1 || pp2 || pp3;
-
-
-
-type Dclean = Exclude<D, {parent: string}>;
-// let dclean: Dclean = null as any;
-
-
 type subtract<P, C> = { [F in keyof P]: keyof C extends undefined ? undefined : P[F] };
 type subtractDL = subtract<D, L>;
-let as: subtractDL = null as any;
-
-
-
-
 type Exclude3<T, U> = T & {[T in keyof U]: never};
-
 type Override<A, B> = Omit<A, keyof B> & B; //////////////////////////////////////////// best solution so far
-type OL = Override<D, L>;
 
 type Exclude2<Type, field> = {
     [Property in keyof Type as Exclude<Property, keyof field>]: Type[Property]      /////////////////////////equally best solution
 };
-
-type noD = Exclude2<D, {parent: any, dattrib: number}> & L
-let anod: noD;
-
-let aov: OL = null as any;
 
 
 type OnlyKeysOfTypeTmp<T, IncludeType> = ({[P in keyof T]: T[P] extends IncludeType ? P : never })[keyof T];
@@ -767,5 +1187,5 @@ export type getWParams<L extends LPointerTargetable, D extends Object> = {
             Parameters<L[`set_${Property}`]>[0] // if set_X function is defined, get first param
             //@ts-ignore
             : D[Property] | `todo: should define set_${Property}` // default type if it's not assigned = type in the D version
-        ) : never
+        ): never
 }

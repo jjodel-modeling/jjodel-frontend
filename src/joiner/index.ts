@@ -23,10 +23,15 @@ export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStatePro
 export type {GetPath} from './proxy';
 export {windoww} from './types';
 
-export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv, NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually, Function, Function2, InOutParam} from "./types";
-export type {Pointer, PtrString, WPointerTargetable, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL} from "./classes";
+export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv,
+    NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually,
+    Function, Function2, InOutParam,
+    unArr, orArr
 
-export {JsType, RuntimeAccessibleClass, DPointerTargetable, LPointerTargetable, MyError, RuntimeAccessible, MixOnlyFuncs, LUser, DUser} from "./classes";
+} from "./types";
+export type {Pointer, PtrString, WPointerTargetable, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, } from "./classes";
+
+export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable, LPointerTargetable, MyError, RuntimeAccessible, Leaf, Node, MixOnlyFuncs, LUser, DUser, Pointers} from "./classes";
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
 // console.error('iiiiiiiiiiiiiiii 3');
@@ -48,7 +53,7 @@ export {LLog} from "../model/classes/L";
 // import domain-specific classes
 
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
-    WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature
+    WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
 } from "../model/logicWrapper/LModelElement";
 export type {WEdge, WEdgePoint, WExtEdge, WGraph, WRefEdge, WGraphElement, WVoidEdge, WGraphVertex, WVertex, WVoidVertex} from "../model/dataStructure/GraphDataElements";
 
@@ -95,7 +100,7 @@ export {
 export {DExtEdge, DRefEdge, DVoidEdge, LGraphVertex, LRefEdge, LEdgePoint, DVoidVertex, DGraphVertex, DEdgePoint, DVertex, DEdge, LVertex, LGraph, DGraph, LVoidVertex, LVoidEdge, LEdge, LGraphElement, LExtEdge, DGraphElement, defaultVSize} from "../model/dataStructure/GraphDataElements";
 
 
-export {GraphDragHandler} from "../graph/vertex/GraphDragHandler";
+// export {GraphDragHandler} from "../graph/vertex/GraphDragHandler";
 
 // console.error('iiiiiiiiiiiiiiii 11', windoww.DViewElement);
 export type {WViewElement, WViewTransientProperties} from "../view/viewElement/view";
@@ -205,16 +210,16 @@ export {
     GraphElementComponent,
     VertexComponent,
     GraphElement,
-    TextareaConnected, InputConnected, HTMLEditorConnected, OCLEditorConnected,
-    Textarea, Input, HTMLEditor, OCLEditor,
+    TextareaConnected, SelectConnected, InputConnected, HTMLEditorConnected, OCLEditorConnected,
+    Textarea, Select, Input, HTMLEditor, OCLEditor,
     InputRawComponent,
+    SelectRawComponent,
     TextAreaRawComponent,
     HTMLEditorRawComponent,
     OCLEditorRawComponent,
     MyInputComponent,
     Field,
     GraphComponent,
-    Edges,
     QA,
     GraphsContainerComponent,
     DataOutputComponent,
@@ -222,13 +227,14 @@ export {
     GraphsContainer,
     Vertex,    Graph,
     StyleEditor,
-    DockLayoutComponent, ColorScheme
+    DockLayoutComponent,
+    ColorScheme,
+    Edges,
 } from './components'
 
 export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file
 export {fakeExport} from './ExecuteOnRead';
 console.info('joiner loaded');
-
 class Joiner{
     // just to help the file search
 }

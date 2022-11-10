@@ -56,7 +56,7 @@ export class MDE {
                     newList.push(child);
                 }
             }
-            new SetFieldAction(father.id, field, newList);
+            SetFieldAction.new(father.id, field as any, newList);
         }
     }
     private static deleteModelElement_(lModel: LModelElement) {

@@ -1,13 +1,14 @@
-$pkg-size: 20em;
-$class-size: 10em;
-$enum-size: 10em;
-
+$pkg-size: 30em;
+$class-size: 13em;
+$enum-size: 13em;
+$feature-text-size: .8rem;
 $radius: .2em;
 
 $background: white;
 $pkg-color: green;
 $class-color: red;
 $enum-color: orange;
+$feature-color: whitesmoke;
 $border-color: #0000005c;
 
 /* ------MODEL------ */
@@ -15,7 +16,7 @@ $border-color: #0000005c;
   height: 100%; width: 100%;
   background-image: url("../../static/svg/graph.svg"); background-repeat: repeat;
 }
-.DModel { height: 100%; width: 100%; }
+.DModel { height: 100%; width: 100%; position: absolute; }
 
 /* -----PACKAGE----- */
 .default-pkg {
@@ -31,7 +32,7 @@ $border-color: #0000005c;
 }
 .DPackage {
   min-width: $pkg-size;
-  min-height: calc($pkg-size * 3 / 4);
+  min-height: calc($pkg-size * 2 / 4);
 }
 
 /* ------CLASS------ */
@@ -51,15 +52,15 @@ $border-color: #0000005c;
 }
 .class-header-label {
   width: 100%;
-  text-align: center;
-  padding: calc($class-size / 25);
+  padding: calc($class-size / 40);
+  display: flex;
 }
 .class-header-label > b {
   color: $class-color;
 }
 .DClass {
   min-width: $class-size;
-  min-height: calc($class-size * 3 / 4);
+  min-height: calc($class-size * 2 / 4);
 }
 
 /* ------ENUMS------ */
@@ -79,15 +80,107 @@ $border-color: #0000005c;
 }
 .enum-header-label {
   width: 100%;
-  text-align: center;
-  padding: calc($enum-size / 25);
+  display: flex;
+  padding: calc($enum-size / 40);
 }
 .enum-header-label > b {
   color: $enum-color;
 }
 .DEnumerator {
   min-width: $enum-size;
-  min-height: calc($enum-size * 3 / 4);
+  min-height: calc($enum-size * 2 / 4);
+}
+/* ------ATTRIB------ */
+.default-attrib {
+  display: flex;
+  width: 100%;
+  background: $feature-color;
+}
+.default-attrib-name {
+  text-align: left;
+  width: 50%;
+  font-size: $feature-text-size;
+}
+.default-attrib-type {
+  position: absolute;
+  text-align: right;
+  right: 0;
+  font-size: $feature-text-size;
+}
+.children-attributes {
+  border-bottom: 1px solid $border-color;
+}
+
+/* ------REF------ */
+.default-ref {
+  display: flex;
+  width: 100%;
+  background: $feature-color;
+}
+.default-ref-name {
+  text-align: left;
+  width: 50%;
+  font-size: $feature-text-size;
+}
+.default-ref-type {
+  position: absolute;
+  text-align: right;
+  right: 0;
+  font-size: $feature-text-size;
+}
+.children-references {
+  border-bottom: 1px solid $border-color;
+}
+
+/* ---LITERAL--- */
+.default-literal {
+  display: flex;
+  width: 100%;
+  background: $feature-color;
+}
+.default-literal-name {
+  text-align: left;
+  width: 50%;
+  font-size: $feature-text-size;
+}
+.default-literal-type {
+  position: absolute;
+  text-align: right;
+  right: 0;
+  font-size: $feature-text-size;
+}
+.children-literals {
+  border-bottom: 1px solid $border-color;
+}
+
+/*----OPERATION---*/
+.default-operation {
+  display: flex;
+  width: 100%;
+  background: $feature-color;
+}
+.default-operation-sign {
+  text-align: left;
+  display: flex;
+  width: calc(100% - 6em);
+  font-size: $feature-text-size;
+}
+.default-operation-type {
+  position: absolute;
+  text-align: right;
+  right: 0;
+  width: 6em;
+  font-size: $feature-text-size;
+}
+.default-operation-parameters {
+  display: flex;
+  max-width: 75%;
+  overflow: hidden;
+  font-size: $feature-text-size;
+}
+
+.children-operations {
+  border-bottom: 1px solid $border-color;
 }
 
 
@@ -97,10 +190,33 @@ $border-color: #0000005c;
 
 
 
-
-
+/*---UTILITY---*/
 .children {
   position: absolute;
   height: 100%;
   width: 100%;
+}
+.transparent-input {
+  background: transparent;
+  border: none;
+  width: 100%;
+}
+.transparent-input:focus {
+  border-radius: 8px;
+  outline: 1px dashed black;
+}
+.transparent-select {
+  background: transparent;
+  border: none;
+  width: 100%;
+  height: 100%;
+}
+.transparent-select:focus {
+  outline: none;
+}
+
+
+
+.ui-icon {
+  display: none !important;
 }

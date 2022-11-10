@@ -1,0 +1,95 @@
+$radius: .2em;
+$border: black;
+$focus_border: black;
+$checkbox_size: 1.25em;
+
+
+.structure-input-wrapper {
+  margin-top: 5px;
+}
+.structure-input-wrapper > label {
+  height: min-content;
+  font-size: .9rem;
+}
+.structure-input-wrapper > label > input {
+  margin: auto;
+  height: min-content;
+  border-radius: $radius;
+  border: 1px solid $border;
+  flex: 0 0 auto;
+  width: 66.66666667%;
+}
+.structure-input-wrapper > label > input[type="checkbox"] {
+  margin: auto;
+  height: $checkbox_size;
+  border-radius: $radius;
+  flex: 0 0 auto;
+  width: 66.66666667%;
+}
+.structure-input-wrapper > label > input:focus {
+  border: none;
+  outline: 1px solid $focus_border;
+}
+.structure-input-wrapper > label > input[type="checkbox"]:focus {
+  outline: none;
+}
+.structure-input-wrapper > label > p {
+  margin: auto;
+  height: min-content;
+  font-weight: lighter;
+  flex: 0 0 auto;
+  width: 33.33333333%;
+}
+
+
+
+
+
+
+.structure-children-input-wrapper {
+  margin-top: 5px;
+}
+.structure-children-input-wrapper > label {
+  height: min-content;
+  font-size: .9rem;
+  width: 50%;
+}
+.structure-children-input-wrapper > label > input {
+  margin: auto;
+  height: min-content;
+  border-radius: $radius;
+  border: 1px solid $border;
+  flex: 0 0 auto;
+  width: 66%;
+}
+.structure-children-input-wrapper > label > select {
+  height: min-content;
+  border-radius: $radius;
+  border: 1px solid $border;
+  flex: 0 0 auto;
+  width: 70%;
+  margin: auto auto auto calc(1%);
+}
+.structure-children-input-wrapper > label > p {
+  margin: auto;
+  height: min-content;
+  font-weight: lighter;
+  flex: 0 0 auto;
+  width: 33%;
+}
+.structure-children-input-wrapper > .child-delete, .structure-editor-delete-button {
+  background: #dc3545;
+  height: min-content;
+  font-weight: lighter;
+  flex: 0 0 auto;
+  position: absolute;
+  right: .75em;
+  width: min-content;
+  border-radius: $radius;
+  cursor: pointer;
+}
+.structure-children-input-wrapper > .child-delete > i, .structure-editor-delete-button > i {
+  color: white;
+  text-align: center;
+  padding: 5px;
+}

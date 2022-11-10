@@ -21,7 +21,6 @@ function ToolButtonComponent(props: AllProps, state: ThisState) {
     const [visible, setVisible] = useStateIfMounted(false);
 
     const onClick = (e: React.MouseEvent<HTMLDivElement>): void => {
-        U.log(data);
         windoww.temp = data;
         //MDE.deleteModelElement(data);
         data.delete();

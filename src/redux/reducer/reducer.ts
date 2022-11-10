@@ -15,7 +15,7 @@ import {
     DocString,
     Dictionary,
     RuntimeAccessibleClass,
-    LPointerTargetable, store, windoww, getPath, Selectors, GraphDragHandler, createOrOpenModelTab
+    LPointerTargetable, store, windoww, getPath, Selectors, createOrOpenModelTab
 } from "../../joiner";
 import React from "react";
 
@@ -120,12 +120,72 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
     return gotChanged ? newRoot : state;
 }
 
+class PointedBy{
+    source: DPointerTargetable; // elemento da cui parte il puntatore
+    field: keyof DPointerTargetable;
+    // il bersaglio non c'è qui, perchè è l'oggetto che contiene questo dentro l'array pointedBy
 
+    private constructor(source: DPointerTargetable, field: any) {
+        this.source = source;
+        this.field = field;
+
+    }
+    static new<D extends DPointerTargetable> (source: D, field: keyof D) { return new PointedBy(source, field); }
+}
+
+example of usage:
+let lclass: LClass = null as any;
+let lref: LReference = null as any;
+lref.target = [lclass.id];
+lclass.pointedBy = sarà new PointedBy(lref, "target"); ma è semrpe settato automaticamente, non devi settarlo tu.
+
+class PendingPointedByPaths{
+    static all: PendingPointedByPaths[] = []; todo4: usa effettivamente questo array
+    // static pendingMoreThanTwice: ParsedAction[] = [];
+    static maxSolveAttempts: number = 20;
+    public solveAttempts: number = 1;
+    private stackTrace: string[]
+    constructor(
+        public from: DocString<"Path in store">,
+        public field: DocString<"keyof object found in from path">,
+        public to: Pointer){
+        this.stackTrace = U.getStackTrace();
+    }
+
+    public attemptResolve(state: IStore): ParsedAction | null {
+        if (this.canBeResolved(state)) return this.resolve();
+        return null;
+    }
+    todo5: fai in modo che quando viene sovrascritto un puntatore, ti salvi il vecchio per poter cancellare il pointedby dal vecchio oggetto non più puntato
+
+    private resolve(): ParsedAction{
+        todo: ma i campi sono già corretti credo, perchè presi da una parsedAction che tentava di settare un pointer.
+            todo2: setta isPointer to setFieldAct && setRootFieldAct.
+            todo3: assicurati che nel parse della action non si perda il boolean isPointer
+        U.arrayRemoveAll(PendingPointedByPaths.all, this);
+        return ParsedAction.new(this.to, 'pointedBy', new PointedBy(this.from, this.field), undefined, "+=");
+    }
+
+    public saveForLater(): void { PendingPointedByPaths.all.push(this); }
+    private canBeResolved(state: IStore): boolean {
+        this.solveAttempts++;
+        if (this.solveAttempts >= PendingPointedByPaths.maxSolveAttempts) Log.ex("pending PointedBy action is not revolved for too long, some pointer was wrongly set up.", this.stackTrace, this, state);
+        return !!state.idlookup[this.to]; }
+
+    static getSolveableActions(oldState: IStore): ParsedAction[] {
+        let allClone = [...this.all]; // necessary because the array will remove some elements during iteration as they are solved.
+        return allClone.map( p => p.attemptResolve(oldState)).filter(p => (!!p)) as ParsedAction[];
+    }
+}
+
+// const pendingPointedByPaths: {from: DocString<"Path in store">, field: DocString<"keyof object found in from path">, to: Pointer}[] = [];
 function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction): IStore {
     // per via di thunk se arrivo qui lo stato cambia sicuro in mono-client non synchro (non ri-assegno valori equivalenti)
     // todo: ma se arrivano in ordine sbagliato da altri client? posso permetterlo?
     let actions: (ParsedAction)[] = actionBatch.actions as ParsedAction[];
     if (!actions) actions = [actionBatch] as any[]; // if it's simple action
+    if (PendingPointedByPaths.all.length) actions.push(...PendingPointedByPaths.getSolveableActions(oldState)); //.all.map( p=> p.resolve() ) );
+
 
     // estraggo le azioni derivate
     let derivedActions: ParsedAction[] = [];
@@ -134,7 +194,15 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
             default: break;
             case CreateElementAction.type:
                 const elem: DPointerTargetable = action.value;
+                elem.className = elem.className || elem.constructor.name;
                 derivedActions.push(new SetRootFieldAction(elem.className.substr(1).toLowerCase() + 's[]', elem.id, false) as ParsedAction);
+                if (action.isPointer) {
+                    const ptr: Pointer = action.value;
+                    const target: DPointerTargetable | null = oldState.idlookup[ptr];
+                    let pendingPointedBy = new PendingPointedByPaths(action.path, action.field, target);
+                    if (!target) new PendingPointedByPaths(action.path, action.field, target).saveForLater(); // {from: action.path, field: action.field, to: target});
+                    else derivedActions.push(pendingPointedBy.resolve());
+                }
                 break;
         }
     }
@@ -247,15 +315,45 @@ export function reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: I
     }
     return CompositeActionReducer(oldState, ca);
 }
+function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, alll: Dictionary<string, typeof LPointerTargetable>) {
+    for (let dname in alld) {
+        switch (dname) {
+            case "DeleteElementAction": continue;
+            default: break;
+        }
+        let tagless = dname.substring(1);
+        let d = alld[dname];
+        let l = alll['L'+tagless];
+        d.logic = l;
+        if (!l) console.log('lllllllll', l, d);
+        // @ts-ignore
+        d.singleton = new l('dwc');
+        d.structure = d;
+
+        l.logic = d.logic;
+        l.singleton = d.singleton;
+        l.structure = d.structure;
+
+        if (!d.subclasses) d.subclasses = [];
+        // @ts-ignore
+        for (let sc of d.subclasses) { if (!sc["_extends"]) sc["_extends"] = [];  sc["_extends"].push(d); }
+    }
+}
 
 export function jodelInit() {
     RuntimeAccessibleClass.fixStatics();
+
     let dClasses: string[] = RuntimeAccessibleClass.getAllNames().filter( rc => rc[0] === 'D');
+    let lClasses: string[] = RuntimeAccessibleClass.getAllNames().filter( rc => rc[0] === 'L');
+    let dClassesmap: Dictionary<string, typeof DPointerTargetable> = dClasses.reduce((acc: any,curr)=> (acc[curr] = RuntimeAccessibleClass.get(curr), acc),{});
+    let lClassesmap: Dictionary<string, typeof LPointerTargetable> = lClasses.reduce((acc: any,curr)=> (acc[curr] = RuntimeAccessibleClass.get(curr), acc),{});
+    buildLSingletons(dClassesmap, lClassesmap);
+
 
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
 
     console.log('EXecute on read RuntimeClasses:', {dClasses, allClasses: {...RuntimeAccessibleClass.classes}});
-    for (let dclassname of dClasses) {
+    /*for (let dclassname of dClasses) {
         const dclass = RuntimeAccessibleClass.get(dclassname) as typeof DPointerTargetable;
         const lclass = RuntimeAccessibleClass.get('L' + dclassname.substr(1)) as typeof LPointerTargetable;
         dclass.logic = lclass;
@@ -263,7 +361,7 @@ export function jodelInit() {
         if (!lclass) continue;
         lclass.singleton = new lclass();
         lclass.structure = dclass;
-    }
+    }*/
 
     IStore.fakeinit();
 //    setTimeout( () => createOrOpenModelTab('m3'), 1);

@@ -6,7 +6,7 @@ import Draggable, {DraggableData, DraggableEvent} from "react-draggable";
 import RootVertex from "./RootVertex";
 import {useXarrow} from "react-xarrows";
 import {Size} from "../../common/U";
-import {U} from "../../joiner";
+import {DAttribute, DClass, LPointerTargetable, Pointer, U} from "../../joiner";
 
 interface ThisState {}
 function RootDraggableVertexComponent(props: AllProps, state: ThisState) {
@@ -23,8 +23,8 @@ function RootDraggableVertexComponent(props: AllProps, state: ThisState) {
     const dragStop = (e: DraggableEvent, data: DraggableData) => {
         e.stopPropagation();
         updateArrow();
-        rootProps.data.x = data.x;
-        rootProps.data.y = data.y;
+        // rootProps.node.x = data.x;
+        // rootProps.node.y = data.y;
         /*
         const graphElement = $('.DModel:visible')[0];
         const htmlElement = e.target as HTMLDivElement;

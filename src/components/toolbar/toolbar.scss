@@ -1,8 +1,40 @@
+$pkg-color: green;
+$class-color: red;
+$enum-color: orange;
+$feature-color: purple;
+$other-feature-color: brown;
+
+
 .toolbar {
   position: absolute;
-  height: 100%;
-  width: 5em;
-  background-color: #f6f9fc;
-  border: 1px solid black;
+  min-height: 100%;
+  width: 6.5em;
+  min-width: 6.5em;
+  background: whitesmoke;
   z-index: 999;
+  box-shadow: 6px 0 4px -4px #999, -6px 0 4px -4px #999;
+}
+.toolbar > .toolbar-item {
+  cursor: pointer;
+  margin-top: 5px;
+}
+.toolbar {
+  .package {
+    border-left: 2px solid $pkg-color;
+  }
+  .class {
+    border-left: 2px solid $class-color;
+  }
+  .enumerator {
+    border-left: 2px solid $enum-color;
+  }
+  .attribute, .reference, .operation {
+    border-left: 2px solid $feature-color;
+  }
+  .parameter, .exception, .literal {
+    border-left: 2px solid $other-feature-color;
+  }
+  .annotation {
+    border-left: 2px solid black;
+  }
 }

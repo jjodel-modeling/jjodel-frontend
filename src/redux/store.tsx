@@ -2,42 +2,47 @@ import {createStore, PreloadedState, Reducer, Store, StoreEnhancer} from 'redux'
 import type {
     LGraph,
     LVertex,
-    LEdgePoint} from '../joiner';
-import {
+    LEdgePoint,
     GObject,
     GraphPoint,
     Point,
-    DAttribute,
-    DClass,
-    DModel,
     DModelElement,
     DNamedElement,
-    DReference,
     Pointer,
-    DPointerTargetable,
     RuntimeAccessibleClass,
-    SetRootFieldAction,
     TRANSACTION,
     Dictionary,
-    DUser,
     DocString,
-    DViewElement,
     windoww,
-    CreateElementAction,
     DGraphElement,
     LGraphElement,
-    RuntimeAccessible,
     LViewElement,
     LPointerTargetable,
-    getPath,
     LModelElement,
     LPackage,
+    DClassifier,  DVoidEdge, LLog, DLog, DExtEdge, LRefEdge, DRefEdge, LAttribute,
+    LClass, LClassifier,
+    LEnumerator, LEnumLiteral, LGraphVertex,
+    LExtEdge, LReference, LOperation, LParameter, DParameter} from '../joiner';
+import {
+    DGraph,
+    DPointerTargetable,
+    DClass,
+    DModel,
+    DEnumerator,
+    DOperation,
     DPackage,
-    MixOnlyFuncs,
-    DGraph, DClassifier, DEnumerator, Input, DOperation, DVoidEdge,
+    DViewElement,
+    DReference,
+    DAttribute,
+    DEnumLiteral,
+    getPath,
+    SetRootFieldAction,
+    RuntimeAccessible,
+    CreateElementAction,
+    DUser,
 } from "../joiner";
 import React, {ChangeEvent, CSSProperties} from "react";
-import {LGraphVertex} from "../model/dataStructure/GraphDataElements";
 import {MyProxyHandler} from "../joiner";
 import DV from "../common/DV";
 console.warn('ts loading store');
@@ -76,7 +81,8 @@ export class IStore {
     enumliterals: Pointer<DEnumLiteral, 0, "N", LEnumLiteral> = [];
     references: Pointer<DReference, 0, "N", LReference> = [];
     classs: Pointer<DClass, 0, "N", LClass> = [];
-
+    operations: Pointer<DOperation, 0, "N", LOperation> = [];
+    parameters: Pointer<DParameter, 0, "N", LParameter> = [];
     /// DClass section end
 
     // private, non-shared fields
@@ -88,7 +94,7 @@ export class IStore {
 
     constructor() {
 //        super();
-        this.currentUser = new DUser();
+        this.currentUser = DUser.new();
         this.models = [];
         // this.collaborators = [];
         // this.fakeinit();
@@ -99,47 +105,47 @@ export class IStore {
         for (let graphDefaultView of graphDefaultViews) {
             new CreateElementAction(graphDefaultView);
         }
-        const dModel = new DModel("Test Model");
+        const dModel = DModel.new("Test Model");
         new CreateElementAction(dModel);
-        new CreateElementAction(DGraph.create(dModel.id));
+        new CreateElementAction(DGraph.new(dModel.id));
 
         const primitiveTypes = ["EString", "EInt", "EBoolean"];
         for (let primitiveType of primitiveTypes) {
-            const dPrimitiveType = new DClass(primitiveType);
+            const dPrimitiveType = DClass.new(primitiveType);
             new CreateElementAction(dPrimitiveType);
             new SetRootFieldAction("primitiveTypes+=", dPrimitiveType.id);
         }
     }
 
     static makeM3Test(fireAction: boolean = true, outElemArray: DPointerTargetable[] = []): DModel {
-        const me: DModelElement = new DClass('ModelElement', true);
-        const annotation: DClass = new DClass('Annotation');
+        const me: DClass = DClass.new('ModelElement', true);
+        const annotation: DClass = DClass.new('Annotation');
         annotation.implements = [me.id];
-        const namedElement: DClass = new DClass('NamedElement');
-        const attribname: DAttribute = new DAttribute('name');
+        const namedElement: DClass = DClass.new('NamedElement');
+        const attribname: DAttribute = DAttribute.new('name');
         namedElement.implements = [me.id]; // , classifier.id, namedelement.id, modelelement.id]
         namedElement.attributes = [attribname.id];
 
         // todo: uncomment const pkg: DClass = new DClass('M3Package');
-        const pkg: DPackage = new DPackage('M3Package');
-        const attriburi: DAttribute = new DAttribute('uri');
+        const pkg: DPackage = DPackage.new('M3Package');
+        const attriburi: DAttribute = DAttribute.new('uri');
         // todo: uncomment pkg.implements = [namedElement.id];
         // todo: uncomment pkg.attributes = [attriburi.id];
-        const classifierref: DReference = new DReference('classifiers');
+        const classifierref: DReference = DReference.new('classifiers');
         // todo: uncomment pkg.references = [classifierref.id];
 
-        const model: DClass = new DClass('M3');
-        const pkgref: DReference = new DReference('package');
+        const model: DClass = DClass.new('M3');
+        const pkgref: DReference = DReference.new('package');
         model.implements = [namedElement.id];
         //pkgref.type = pkg.id;
-        const classe: DClass = new DClass('Class', false, true);
+        const classe: DClass = DClass.new('Class', false, true);
         classifierref.type = classe.id;
         classe.implements = [namedElement.id]; // , classifier.id, namedelement.id, modelelement.id]
         /// model itself outside of ecore
-        const m3: DModel = new DModel('M3');
+        const m3: DModel = DModel.new('M3');
         m3.packages = [pkg.id];
         // const m3graph: DGraph = DGraph.create(m3.id);
-        const m3graph: DGraph = new DGraph(undefined, undefined, undefined, m3.id);
+        const m3graph: DGraph = DGraph.new(m3.id, '', '', '');
         // m3.modellingElements = [me.id, annotation.id, namedElement.id, attribname.id, pkg.id, attriburi.id, classifierref.id, pkgref.id, classe.id];
         // dispatching actions
 
@@ -170,19 +176,19 @@ export class IStore {
 }
 function makeDefaultGraphViews(): DViewElement[] {
 
-    let mview: DViewElement = new DViewElement('ModelDefaultView', DV.modelView(), undefined, '', '', '', [DModel.name]);
-    let pkgview: DViewElement = new DViewElement('PackageDefaultView', DV.packageView(), undefined, '', '', '', [DPackage.name]);
-    let cview: DViewElement = new DViewElement('ClassDefaultView', DV.classView(), undefined, '', '', '', [DClass.name]);
-    let eview: DViewElement = new DViewElement('EnumDefaultView', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.name]);
-    let aview: DViewElement = new DViewElement('AttribDefaultView', DV.attributeView(), undefined, '', '', '', [DAttribute.name]);
-    let rview: DViewElement = new DViewElement('RefDefaultView', DV.referenceView(), undefined, '', '', '', [DReference.name]);
-    let oview: DViewElement = new DViewElement('OperationDefaultView', DV.attributeView(), undefined, '', '', '', [DOperation.name]);
-    let literalDefaultView: DViewElement = new DViewElement('LiteralDefaultView', DV.literalView(), undefined, '', '', '', [DEnumLiteral.name]);
+    let mview: DViewElement = DViewElement.new('ModelDefaultView', DV.modelView(), undefined, '', '', '', [DModel.name]);
+    let pkgview: DViewElement = DViewElement.new('PackageDefaultView', DV.packageView(), undefined, '', '', '', [DPackage.name]);
+    let cview: DViewElement = DViewElement.new('ClassDefaultView', DV.classView(), undefined, '', '', '', [DClass.name]);
+    let eview: DViewElement = DViewElement.new('EnumDefaultView', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.name]);
+    let aview: DViewElement = DViewElement.new('AttribDefaultView', DV.attributeView(), undefined, '', '', '', [DAttribute.name]);
+    let rview: DViewElement = DViewElement.new('RefDefaultView', DV.referenceView(), undefined, '', '', '', [DReference.name]);
+    let oview: DViewElement = DViewElement.new('OperationDefaultView', DV.operationView(), undefined, '', '', '', [DOperation.name]);
+    let literalDefaultView: DViewElement = DViewElement.new('LiteralDefaultView', DV.literalView(), undefined, '', '', '', [DEnumLiteral.name]);
 
     pkgview.subViews = [cview.id]; // childrens can use this view too todo: this is temporary
 
     let defaultJsx = `<div className={"render-test"}></div>`;
-    let defaultView: DViewElement = new DViewElement("DefaultView", defaultJsx, undefined, "",
+    let defaultView: DViewElement = DViewElement.new("DefaultView", defaultJsx, undefined, "",
         "", "", []);
 
     let alldefaultViews = [mview, pkgview, cview, eview, aview, rview, oview, literalDefaultView, defaultView];
@@ -193,7 +199,7 @@ function makeDefaultGraphViews(): DViewElement[] {
 function makeEditView(): DViewElement{
     // let jsx = <p><h1>edit view of {this.data.name}</h1><Input className={'raw'} obj={this.view.id} field={((getPath as DViewElement).jsxString as any).$}/></p>;
     let jsxstring = '<p style={{display: "flex", flexFlow: "wrap"}}><h1>edit view of {this.data.name}</h1><Textarea obj={this.views[1].id} field={((getPath).jsxString).$}/></p>;';
-    let view: DViewElement = new DViewElement('EditView', jsxstring);
+    let view: DViewElement = DViewElement.new('EditView', jsxstring);
     view.subViews = [view.id]; // childrens can use this view too, this is indented and likely definitive.
     return view;
 }

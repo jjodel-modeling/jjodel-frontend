@@ -33,7 +33,7 @@ import {
     GraphElementDispatchProps,
     GraphElementReduxStateProps,
     GraphElementOwnProps,
-    RuntimeAccessible, LPointerTargetable, MyProxyHandler,
+    RuntimeAccessible, LPointerTargetable, MyProxyHandler, LModel, LGraphElement, DModelElement, Pointer,
 } from "../../joiner";
 console.info('graphElement loading');
 
@@ -105,11 +105,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         );
     }
 
-    static mapViewAndModelElement(state: IStore, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
-        const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : ownProps.data?.id) as string;
-        Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ownProps, state});
-        ret.data = MyProxyHandler.wrap(state.idlookup[meid as any]);
-        const viewScores = Selectors.getAppliedViews(ret.data, ret.node.__raw, ret.graph, ownProps.view, ownProps.parentViewId);
+    static mapViewStuff(state: IStore, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
+        let dnode: DGraphElement | undefined = ownProps?.nodeid && state.idlookup[ownProps.nodeid] as any;
+        // console.error("ret data:::",  ret.data);
+        const viewScores = Selectors.getAppliedViews(ret.data, dnode, ret.graph, ownProps.view || null, ownProps.parentViewId || null);
         ret.views = viewScores.map(e => MyProxyHandler.wrap(e.element));
         ret.view = ret.views[0];
         (ret as any).viewScores = viewScores; // debug only
@@ -120,12 +119,59 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 }*/
     }
 
+    static mapLModelStuff(state: IStore,
+                          ownProps: GraphElementOwnProps,
+                          ret: GraphElementReduxStateProps): void {
+        const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : (ownProps.data as any as DModelElement)?.id) as string;
+        Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ret, ownProps, state});
+        ret.data = MyProxyHandler.wrap(state.idlookup[meid as any]);
+
+    }
+    static mapLGraphElementStuff(state: IStore,
+                                 ownProps: GraphElementOwnProps,
+                                 ret: GraphElementReduxStateProps,
+                                 dGraphElementDataClass: typeof DGraphElement = DGraphElement,
+                                 isDGraph?: DGraph): void {
+        const idlookup = state.idlookup;
+        let nodeid: string = ownProps.nodeid as string;
+        let graphid: string = isDGraph ? isDGraph.id : ownProps.graphid as string;
+        let parentnodeid: string = ownProps.parentnodeid as string;
+        let dataid: Pointer<DModelElement, 0, 1, LModelElement> = ownProps.data || null;
+        // if (!nodeid || !graphid) { Log.ee('node id injection failed'); return; }
+        Log.exDev(!nodeid || !graphid, 'node id injection failed'); /*
+        if (!nodeid) {
+            nodeid = 'nodeof_' + stateProps.data.id + (stateProps.view.bindVertexSizeToView ? '^' + stateProps.view.id : '') + '^1';
+            stateProps.nodeid = U.increaseEndingNumber(nodeid, false, false, id => !idlookup[id]);
+            todo: quando il componente si aggiorna questo viene perso, come posso rendere permanente un settaggio di reduxstate in mapstatetoprops? o devo metterlo nello stato normale?
+        }*/
+
+        ret.graph = idlookup[graphid] as DGraphElement as any; // se non c'è un grafo lo creo
+        if (!ret.graph) {
+            let dGraphDataClass = DGraph;
+            Log.exDev(!dataid, 'attempted to make a Graph element without model', {dataid, ownProps, ret, thiss:this});
+            if (dataid) new CreateElementAction(dGraphDataClass.new(dataid, parentnodeid, graphid, graphid)); }
+        else {
+            ret.graph = MyProxyHandler.wrap(ret.graph);
+            Log.exDev(ret.graph.__raw.className !== "DGraph", 'graph class is wrong', {graph: ret.graph, ownProps});
+        }
+
+
+        let dnode: DGraphElement = idlookup[nodeid] as DGraphElement;
+
+        // console.log('dragx GE mapstate addGEStuff', {dGraphElementDataClass, created: new dGraphElementDataClass(false, nodeid, graphid)});
+        console.log("map ge2", {dataid, ownProps, ret});
+        if (!dnode) { new CreateElementAction(dGraphElementDataClass.new(dataid, parentnodeid, graphid, nodeid)); }
+        else { ret.node = MyProxyHandler.wrap(dnode); }
+    }
+
     ////// mapper func
     static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps, dGraphDataClass: typeof DGraphElement = DGraphElement): GraphElementReduxStateProps {
         // console.log('dragx GE mapstate', {dGraphDataClass});
         let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
-        GraphElementComponent.mapViewAndModelElement(state, ret, ownProps);
-        GraphElementComponent.addLGraphElementStuff(state, ownProps, ret, dGraphDataClass);
+        GraphElementComponent.mapLModelStuff(state, ownProps, ret);
+        console.log("map ge", {ownProps, ret, state});
+        GraphElementComponent.mapLGraphElementStuff(state, ownProps, ret, dGraphDataClass);
+        GraphElementComponent.mapViewStuff(state, ret, ownProps);
         // ret.view = LViewElement.wrap(state.idlookup[vid]);
         // view non deve essere più injected ma calcolata, però devo fare inject della view dell'elemento parent. learn ocl to make view target
         Log.exDev(!ret.view, 'failed to inject view:', {state, ownProps, reduxProps: ret});
@@ -137,38 +183,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // @ts-ignore
         ret.forceupdate = state.forceupdate;
         return ret;
-    }
-
-    static addLGraphElementStuff(state: IStore,
-                                 ownProps: GraphElementOwnProps,
-                                 stateProps: GraphElementReduxStateProps,
-                                 dGraphElementDataClass: typeof DGraphElement = DGraphElement,
-                                 isDGraph?: DGraph): void {
-        const idlookup = state.idlookup;
-        let nodeid: string = ownProps.nodeid as string;
-        let graphid: string = isDGraph ? isDGraph.id : ownProps.graphid as string;
-        // if (!nodeid || !graphid) { Log.ee('node id injection failed'); return; }
-        Log.exDev(!nodeid || !graphid, 'node id injection failed'); /*
-        if (!nodeid) {
-            nodeid = 'nodeof_' + stateProps.data.id + (stateProps.view.bindVertexSizeToView ? '^' + stateProps.view.id : '') + '^1';
-            stateProps.nodeid = U.increaseEndingNumber(nodeid, false, false, id => !idlookup[id]);
-            todo: quando il componente si aggiorna questo viene perso, come posso rendere permanente un settaggio di reduxstate in mapstatetoprops? o devo metterlo nello stato normale?
-        }*/
-
-        stateProps.graph = idlookup[graphid] as DGraphElement as any;
-        let dGraphDataClass = DGraph;
-        if (!stateProps.graph) { new CreateElementAction(new dGraphDataClass(false, graphid, graphid, 'model_id_pointer_todo_hjkl')); }
-        else {
-            stateProps.graph = MyProxyHandler.wrap(stateProps.graph);
-            Log.exDev(stateProps.graph.__raw.className !== "DGraph", 'graph class is wrong', {graph: stateProps.graph, ownProps});
-        }
-
-
-        let dnode: DGraphElement = idlookup[nodeid] as DGraphElement;
-
-        // console.log('dragx GE mapstate addGEStuff', {dGraphElementDataClass, created: new dGraphElementDataClass(false, nodeid, graphid)});
-        if (!dnode) { new CreateElementAction(new dGraphElementDataClass(false, nodeid, graphid)); }
-        else { stateProps.node = MyProxyHandler.wrap(dnode); }
     }
 
     static mapDispatchToProps(dispatch: Dispatch<any>): GraphElementDispatchProps {
@@ -270,6 +284,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             case windoww.Components.VertexComponent.name:
                 const injectProps: GraphElementOwnProps = {} as any;
                 injectProps.parentViewId = parentComponent.props.view.id || parentComponent.props.view; // re.props.view ||  thiss.props.view
+                injectProps.parentnodeid = parentComponent.props.node.id;
                 injectProps.graphid = parentComponent.props.graphid;
                 // const vidmap = GraphElementRaw.graphVertexID_counter;
                 // if (!vidmap[injectProps.graphid]) vidmap[injectProps.graphid] = {};
@@ -384,6 +399,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // const injectprops = {a:3, b:4} as DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
         // rnode = React.cloneElement(rnode as ReactElement, injectprops);
 
+        console.log("nodeee", {thiss:this, props:this.props, node: this.props.node});
         if ((this.props.node?.__raw as DGraphElement).containedIn) {
             let $containedIn = $('#' + this.props.node.containedIn);
             let $containerDropArea = $containedIn.find(".VertexContainer");

@@ -7,7 +7,7 @@ import {
     IStore, LGraphElement,
     LModelElement, LViewElement, MDE,
     MyProxyHandler,
-    Pointer, U,
+    Pointer, U, UX,
 } from "../../../joiner";
 import "../rightbar.scss";
 import Structure from "./Structure";
@@ -25,14 +25,16 @@ class StructureEditorComponent extends PureComponent<AllProps, ThisState> {
     render(): ReactNode{
         const lModelElement: LModelElement | undefined = this.props.selected?.modelElement;
         return <div className={"px-4"}>
-            <h5 className={"text-center mt-2"}>Structure Editor</h5>
+            <div className={"row mt-2"}>
+                <h5 className={"col-lg"}>Structure Editor</h5>
+                {lModelElement ? <div className={"structure-editor-delete-button"} onClick={async() =>{await UX.deleteWithAlarm(lModelElement)}}>
+                    <i className={"bi bi-trash3-fill"}></i>
+                </div> : <></>}
+            </div>
             <div className={"mt-3"}>
                 {Structure.Editor(lModelElement)}
             </div>
-            {JSON.stringify(lModelElement)}
-            {lModelElement ? <>
-                <button className={"btn btn-danger"} onClick={() => {lModelElement?.delete()}}>DELETE</button>
-            </> : <></>}
+            {/*text-overflow: ellipsis*/}
         </div>;
     }
 }

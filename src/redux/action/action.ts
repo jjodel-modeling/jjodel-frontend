@@ -7,7 +7,7 @@ import {
     reducer,
     store,
     windoww,
-    RuntimeAccessible, RuntimeAccessibleClass
+    RuntimeAccessible, RuntimeAccessibleClass, DClass, unArr, Pack1, LPointerTargetable
 } from "../../joiner";
 
 let pendingActions: Action[] = [];
@@ -84,47 +84,71 @@ export abstract class Action extends RuntimeAccessibleClass{
 @RuntimeAccessible
 export class SetRootFieldAction extends Action {
     static type = 'SET_ROOT_FIELD';
+    public static new(field: string, value: any = undefined, fire: boolean = true, subType?: string): boolean { return new SetRootFieldAction(field, value, fire, subType).fire(); }
     constructor(field: string, value: any = undefined, fire: boolean = true, subType?: string) {
         super(field, value, subType);
-        if (fire) this.fire();
         this.className = this.constructor.name;
+        if (fire) this.fire();
     }
 }
 
+// todo: ma non so come, fare in modo che [], +=, -=, siano disponibili solo se la chiave è il nome di un attributo di tipo array
+type arrayFieldNameTypes<D> = keyof D | `${string & keyof D}[]` | `${string & keyof D}+=` | `${string & keyof D}-=` | `${string & keyof D}.${number}` | `${string & keyof D}[${number}]`;
+type AccessModifier = '[]' | '+=' | '-=' | `.${number}` | `[${number}]` | undefined;
 @RuntimeAccessible
 export class SetFieldAction extends Action {
     static type = 'SET_ME_FIELD';
-    static new<D extends DPointerTargetable = DPointerTargetable>(me: D | Pointer<D>, field: keyof D, val: any, subtype?: string) {
-        return new SetFieldAction(me, field as string, val, subtype);
+    // @ts-ignore
+    static new<
+        D extends DPointerTargetable = DPointerTargetable,
+        T extends keyof D = keyof D,
+        AM extends AccessModifier = AccessModifier,
+        // T extends arrayFieldNameTypes<D> = any
+        >(me: D | Pointer<D>, field: T, val: (AM extends undefined ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : '_error_'))), subtype: string | undefined = undefined, accessModifier: AM | undefined = undefined): boolean {
+        return new SetFieldAction(me, field as string + accessModifier, val, subtype).fire();
     }
 
     // field can end with "+=", "[]", or "-1" if it's array
-    constructor(me: DPointerTargetable | Pointer, field: string, val: any, subtype?: string) {
+    protected constructor(me: DPointerTargetable | Pointer, field: string, val: any, subtype?: string) {
         Log.exDev(!me, 'BaseObject missing in SetFieldAction', {me, field, val, subtype});
         super('idlookup.' + ((me as DPointerTargetable).id || me) + ( field ? '.' + field : ''), val, subtype);
         this.className = this.constructor.name;
-        this.fire();
+        // this.fire();
     }
 }
+
+/*
+todo: showcase this
+let dclass: DClass = null as any;
+SetFieldAction.new(dclass, 'namek', '') // non è un attributo di "DCLass"
+SetFieldAction.new(dclass, 'parent', '') // val (stringa) non è assegnabile a parent (array di puntatori)
+SetFieldAction.new(dclass, 'name.5k', '') // non è un indice array valido
+SetFieldAction.new(dclass, 'name[4k]', '') // non è un indice array valido
+SetFieldAction.new(dclass, 'name[4]', '') // ok, anche se non dovrebbe accettare la dicitura array per name che è un primitivo (check non implementato, troppo difficile)
+SetFieldAction.new(dclass, 'name.5', '') // ok, equivale a dicitura array
+*/
 
 @RuntimeAccessible
 export class CreateElementAction extends Action {
     static type = 'CREATE_ELEMENT';
     value!: DPointerTargetable;
-    constructor(me: DPointerTargetable) {
+    public static new(me: DPointerTargetable): boolean { return new CreateElementAction(me).fire(); }
+    public constructor(me: DPointerTargetable, fire: boolean = true) {
         super('idlookup.' + me.id, me);
-        this.value = me;
-        this.fire();
         this.className = this.constructor.name;
+        this.value = me;
+        if (fire) this.fire();
     }
 }
 
 @RuntimeAccessible
 export class DeleteElementAction extends SetFieldAction {
     static type = 'DELETE_ELEMENT';
+    public static new(me: Pack1<LPointerTargetable>): boolean { return new DeleteElementAction(me as any).fire(); }
     constructor(me: DPointerTargetable | Pointer<DPointerTargetable>, subType?: string) {
         super((me as DPointerTargetable).id || me, '', subType);
         this.className = this.constructor.name;
+        this.fire();
     }
 }
 /*
@@ -141,6 +165,8 @@ export class IDLinkAction extends Action{
 export class CompositeAction extends Action {
     static type: string = 'COMPOSITE_ACTION';
     actions: Action[] = [];
+
+    public static new(actions: Action[], launch: boolean = true): CompositeAction { return new CompositeAction(actions, launch); }
     constructor(actions: Action[], launch: boolean = false) {
         super('', '');
         this.actions = actions;

@@ -44,7 +44,7 @@ export class GraphElementDispatchProps {
 }
 
 export class GraphElementOwnProps {
-    data?: LModelElement | Pointer<DModelElement>;
+    data?: Pointer<DModelElement, 0, 1, LModelElement>;
     view?:Pointer<DViewElement, 1, 1, LViewElement>; // | LViewElement
     // generic props for every component that this component will need to extend joining user-specified values and component-specific built-in values
     children?: any;
@@ -52,6 +52,7 @@ export class GraphElementOwnProps {
     'class'?: string | string[];
     'className'?: string | string[];
     key?: string;
+    parentnodeid?: Pointer<DGraphElement, 1, 1, LGraphElement>; // Injected
     nodeid?: Pointer<DGraphElement, 1, 1, LGraphElement>; // Injected
     graphid?: Pointer<DGraph, 1, 1, LGraph>; // injected
     parentViewId?: Pointer<DViewElement, 1, 1, LViewElement>// injected

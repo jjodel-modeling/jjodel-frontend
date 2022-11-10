@@ -38,10 +38,10 @@ class BidirectionalInput extends PureComponent<AllProps, ThisState> {
 
         // console.log('BidirectionalInput rendering', {thiss: this, props:{...this.props}, field: this.props.field, data: this.props.data, otherprops});
         // NB: se il setter, getter o qualsiasi props diversa da "data" e "obj" sono proxy, crasha. non puoi passare proxy come props.
-        const className = this.props.className;
+        const className = this.props.className || "";
         return (<>
-            <label key={otherprops.key} className={"bidirectional input input-root " + (className || "row mt-2 p-1")} style={this.props.rootstyle} >
-                {this.props.label && <p className={"input-label " + (className || "col my-auto mx-auto")} style={this.props.labelstyle}>{this.props.label}</p>}
+            <label key={otherprops.key} className={"input-root " + (className || "d-flex")} style={this.props.rootstyle}>
+                {this.props.label && <p className={"input-label " + (className)} style={this.props.labelstyle}>{this.props.label}</p>}
                 <input
                     onChange={(e) => {
                         console.log('BidirectionalInput change', {props:this.props, e});
@@ -50,10 +50,100 @@ class BidirectionalInput extends PureComponent<AllProps, ThisState> {
                     }}
                     value = { '' + (data ? (this.props.getter ? this.props.getter(data[this.props.field], data, this.props.field) : data[this.props.field]) : '_undefined_')}
                     checked = { this.props.type === "checkbox" ? data[this.props.field] as boolean : undefined}
-                    {...otherprops} className={(className || ' col pt-3 pb-3 form-check-input my-auto mx-auto')} style={this.props.inputstyle}/>
+                    {...otherprops} className={(className)} style={this.props.inputstyle}/>
             </label>
         </>); }
 
+}
+
+class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
+    render(): ReactNode {
+        const data = this.props.data;
+        const otherprops: GObject = {...this.props};
+        if (!otherprops.style) otherprops.style = {};
+        if (!otherprops.style.width) otherprops.style.width = '100%';
+        delete otherprops.data; // tenta di settare l'attributo data con un proxy e fallisce perchè non è stringa
+        delete otherprops.obj; // obj è stato wrappato come proxy in "data"
+        delete otherprops.label;
+        delete otherprops.key;
+        delete otherprops.setter;
+        delete otherprops.getter; const primitives = Selectors.getAllPrimitiveTypes();
+        // todo: replace with this.props.data.package.classes? but maybe attrib types can be from other packages in same model & from m3 primitive type def. so model.classes & model.meta.classes ?
+        const classes = Selectors.getAllPackageClasses(this.props.data.id);
+        const enumerators = Selectors.getAllPackageEnumerators(this.props.data.id);
+        sostituire tipo così ed implementarlo (this.props.data as LModelElement).model.enums
+
+        //todo: define hasVoid, hasClasses, ... with data.classname (default=true)
+        let hasVoid = true; let hasPrimitive = true; let hasClasses = true; let hasEnumerators = true;
+        if(data.className === "DAttribute") {
+            hasVoid = false;
+            hasClasses = false;
+        }
+        if(data.className === "DReference") {
+            hasVoid = false;
+            hasPrimitive = false;
+            hasEnumerators = false;
+        }
+        if(data.className === "DParameter") {
+            hasVoid = false;
+        }
+        hasVoid = (this.props.hasVoid !== undefined) ? this.props.hasVoid : hasVoid;
+        hasPrimitive = (this.props.hasPrimitive !== undefined) ? this.props.hasPrimitive : hasPrimitive;
+        hasClasses = (this.props.hasClasses !== undefined) ? this.props.hasClasses : hasClasses;
+        hasEnumerators = (this.props.hasEnumerators !== undefined) ? this.props.hasEnumerators : hasEnumerators;
+
+        const className = this.props.className;
+        const options = this.props.options ? this.props.options : [];
+        return (<>
+            <label key={otherprops.key} className={"input-root " + (className || "d-flex")}>
+                {this.props.label && <p className={"input-label " + (className || "")}>{this.props.label}</p>}
+                <select defaultValue={data.type} onChange={(e) => {
+                    data[this.props.field] = (this.props.setter ? this.props.setter(e.target.value) : e.target.value)
+                }} {...otherprops} className={(className || '')} style={this.props.style} >
+                    {hasVoid ? <optgroup label={"Default"}>
+                        <option value={undefined}>void</option>
+                    </optgroup> : <></>}
+                    {hasPrimitive && primitives.length > 0 ? <optgroup label={"Primitives"}>
+                        {primitives.map((dPrimitive) => {
+                            return <option value={dPrimitive.id}>{dPrimitive.name}</option>
+                        })}
+                    </optgroup> : <></>}
+                    {hasClasses && classes.length > 0 ? <optgroup label={"Classes"}>
+                        {classes.map((lClass) => {
+                            return <option value={lClass.id}>{lClass.name}</option>
+                        })}
+                    </optgroup> : <></>}
+                    {hasEnumerators && enumerators.length > 0 ? <optgroup label={"Enumerators"}>
+                        {enumerators.map((lEnum) => {
+                            return <option value={lEnum.id}>{lEnum.name}</option>
+                        })}
+                    </optgroup> : <></>}
+                    {options.map((optionGroup) => {
+                        if(optionGroup.options.length > 0) {
+                            return (<optgroup label={optionGroup.label}>
+                                {optionGroup.options.map((model) => {
+                                    let dModel: GObject | undefined;
+                                    if ((model as GObject).id) {
+                                        dModel = model as DModelElement;
+                                    } else {
+                                        if(model === "void") {
+                                            dModel = {id: null, name: "void"}
+                                        } else {
+                                            dModel = Selectors.getDElement<DModelElement>(model as string);
+                                        }
+                                    }
+                                    return dModel ? <option value={dModel.id}>{dModel.name}</option> : <></>;
+                                })}
+                            </optgroup>);
+                        }
+                    })}
+                </select>
+            </label>
+        </>); }
+}
+interface OptionGroup {
+    label: string,
+    options: (GObject | string)[]
 }
 
 class BidirectionalTextArea extends PureComponent<AllProps, ThisState> {
@@ -185,9 +275,9 @@ class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
 
 // private
 interface OwnProps {
-    getter?: ((val: any, baseobj: GObject, key: string) => string);
-    setter?: ((val: string|boolean, data: LPointerTargetable) => any);
-    obj: GObject | (Pointer<DPointerTargetable, 0, 'N', LPointerTargetable> & string);
+    getter?: ((val: any, baseobj: GObject, key: string) => string); // why there is value here?
+    setter?: ((val: string|boolean, data?: LPointerTargetable) => any);
+    obj: DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
         //LPointerTargetable | (Pointer<DPointerTargetable, 0, 'N', LPointerTargetable> & string);
     field: string;
     label?: string;
@@ -208,6 +298,22 @@ interface OwnProps {
     wrap?: boolean;
     // propsRequestedFromHtmlAsAttributes: string;
 }
+interface OwnSelectProps extends OwnProps{
+    type?: never;
+    placeholder?: never;
+    min?: never;
+    max?: never;
+    step?: never;
+    disabled?: boolean;
+    readonly?: boolean;
+    style?: CSSProperties;
+    wrap?: boolean;
+    options?: OptionGroup[];
+    hasVoid?: boolean;
+    hasPrimitive?: boolean;
+    hasClasses?: boolean;
+    hasEnumerators?: boolean;
+}
 // private
 interface StateProps {
         data: LPointerTargetable & GObject;
@@ -222,6 +328,7 @@ interface DispatchProps {
 
 // private
 type AllProps = OwnProps & StateProps & DispatchProps;
+type AllSelectProps = OwnSelectProps & StateProps & DispatchProps;
 
 ////// mapper func
 
@@ -238,13 +345,25 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret; }
 
 export const InputRawComponent = BidirectionalInput;
+export const SelectRawComponent = BidirectionalSelect;
 export const TextAreaRawComponent = BidirectionalTextArea;
 export const HTMLEditorRawComponent = BidirectionalHTMLEditor;
 export const OCLEditorRawComponent = BidirectionalOCLEditor;
-export const TextareaConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalTextArea);
 export const InputConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalInput);
-export  const HTMLEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalHTMLEditor);
-export  const OCLEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalOCLEditor as any);
+export const SelectConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalSelect);
+export const TextareaConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalTextArea);
+export const HTMLEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalHTMLEditor);
+export const OCLEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalOCLEditor as any);
+
+export const Input = (props: GObject & OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    // props = {...props};
+    // delete (props as any).children;
+    return <InputConnected {...props} field={props.field} obj={props.obj} />
+}
+
+export const Select = (props: OwnSelectProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    return <SelectConnected {...props} field={props.field} obj={props.obj} /> // todo: might let directly accept childrens instead of OptionGroups
+}
 
 export const Textarea = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     // props = {...props};
@@ -252,11 +371,6 @@ export const Textarea = (props: OwnProps, childrens: (string | React.Component)[
     return <TextareaConnected {...props} field={props.field} obj={props.obj} />
 }
 
-export const Input = (props: GObject & OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    // props = {...props};
-    // delete (props as any).children;
-    return <InputConnected {...props} field={props.field} obj={props.obj} />
-}
 
 export const HTMLEditor = (props: GObject & OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     // props = {...props};
@@ -269,7 +383,8 @@ export const OCLEditor = (props: GObject & OwnProps, childrens: (string | React.
 }
 
 if (!windoww.mycomponents) windoww.mycomponents = {};
-windoww.mycomponents.Textarea = BidirectionalTextArea;
 windoww.mycomponents.Input = BidirectionalInput;
-windoww.mycomponents.HTMLEditor = BidirectionalHTMLEditor;
+windoww.mycomponents.Select = BidirectionalSelect;
+windoww.mycomponents.Textarea = BidirectionalTextArea;
 windoww.mycomponents.OCLEditor = BidirectionalOCLEditor;
+windoww.mycomponents.HTMLEditor = BidirectionalHTMLEditor;

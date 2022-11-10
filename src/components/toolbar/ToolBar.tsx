@@ -23,10 +23,12 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
 
     const lModelElement: LModelElement = props.selected?.modelElement ? props.selected?.modelElement : MyProxyHandler.wrap(props.model);
     const myDictValidator: Map<string, ReactNode[]> = new Map();
-    myDictValidator.set("DModel", ToolBarItem.getItems(lModelElement, ["package"]));
-    myDictValidator.set("DPackage", ToolBarItem.getItems(lModelElement, ["package", "class", "enumerator"]));
-    myDictValidator.set("DClass", ToolBarItem.getItems(lModelElement, ["attribute", "reference"]));
-    myDictValidator.set("DEnumerator", ToolBarItem.getItems(lModelElement, ["literal"]));
+    const addChildrens = (...items: string[]) => [...ToolBarItem.getItems(lModelElement, items)];
+    myDictValidator.set("DModel", addChildrens("package"));
+    myDictValidator.set("DPackage", addChildrens("package", "class", "enumerator"));
+    myDictValidator.set("DClass", addChildrens("attribute", "reference", "operation"));
+    myDictValidator.set("DEnumerator", addChildrens("literal"));
+    myDictValidator.set("DOperation", addChildrens("parameter", "exception"));
 
 
     useEffect(() => {
@@ -37,6 +39,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         {myDictValidator.get(lModelElement?.className as string)?.map((item) => {
             return item;
         })}
+        <div className={"toolbar-item annotation"} onClick={() => lModelElement.addChild("annotation")}>+annotation</div>
     </div>);
 
 }

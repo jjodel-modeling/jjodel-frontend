@@ -10,8 +10,9 @@ import {
     defaultVSize,
     LPointerTargetable,
     RuntimeAccessible,
-    MixOnlyFuncs, GObject, Dictionary, DReference, getWParams, LUser, DUser
+    MixOnlyFuncs, GObject, Dictionary, DReference, getWParams, LUser, DUser, Constructors, DGraph, DGraphElement
 } from "../../joiner";
+import DV from "../../common/DV";
 
 
 @RuntimeAccessible
@@ -29,7 +30,7 @@ export class DViewElement extends DPointerTargetable {
 
     // own properties
     bindVertexSizeToView: boolean = true;
-    name: string;
+    name!: string;
     constants?: string; // evalutate 1 sola volta all'applicazione della vista o alla creazione dell'elemento.
     preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
 
@@ -42,41 +43,25 @@ export class DViewElement extends DPointerTargetable {
     // facendo pan su grafo html sposti gli elementi, per simulare uno spostamento del grafo e farlo sembrare illimitato.
     // __transient: DViewTransientProperties;
     storeTemporaryPositions: boolean = false; // if true updates vertex position every X millisecond while dragging, if false updates it once when the vertex is released.
-    appliableToClasses: string[]; // class names: DModel, DPackage, DAttribute...
-    subViews: Pointer<DViewElement, 0, 'N', LViewElement>;
-    oclApplyCondition: string; // ocl selector
-    explicitApplicationPriority: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
-    defaultVSize: GraphSize;
-    adaptHeight: boolean;
-    adaptWidth: boolean;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
+    appliableToClasses!: string[]; // class names: DModel, DPackage, DAttribute...
+    subViews!: Pointer<DViewElement, 0, 'N', LViewElement>;
+    oclApplyCondition!: string; // ocl selector
+    explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
+    defaultVSize!: GraphSize;
+    adaptHeight!: boolean;
+    adaptWidth!: boolean;
+    x!: number;
+    y!: number;
+    width!: number;
+    height!: number;
 
-
-    constructor(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '', preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1) {
-        super();
-        this.name = name;
-        this.appliableToClasses = appliableToClasses;
-        this.jsxString = jsxString;
-        this.usageDeclarations = usageDeclarations;
-        this.constants = constants;
-        this.preRenderFunc = preRenderFunc;
-        // this.__transient = new DViewTransientProperties();
-        this.subViews = [];
-        this.oclApplyCondition = '';
-        this.explicitApplicationPriority = priority;
-        this.defaultVSize = defaultVSize || new GraphSize(0, 0, 350, 200);
-        this.adaptHeight = false;
-        this.adaptWidth = false;
-        this.x = 0;
-        this.y = 0;
-        this.width = 350;
-        this.height = 200;
-        this.className = this.constructor.name;
+    public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
+                      preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1): DViewElement {
+        return new Constructors(new DViewElement('dwc')).DPointerTargetable().DViewElement(name, jsxString, defaultVSize, usageDeclarations, constants,
+            preRenderFunc, appliableToClasses, oclApplyCondition, priority).end();
     }
 }
+
 @RuntimeAccessible
 export class LViewElement extends LPointerTargetable { // MixOnlyFuncs(DViewElement, LPointerTargetable)
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -129,7 +114,7 @@ export class LViewElement extends LPointerTargetable { // MixOnlyFuncs(DViewElem
     }
     set_generic_entry(context: LogicContext<DViewElement>, key: string, val: any): boolean {
         console.log('set_generic_entry', {context, key, val});
-        new SetFieldAction(context.data, key, val);
+        SetFieldAction.new(context.data, key as any, val);
         return true;
     }
 
@@ -158,7 +143,7 @@ export class DViewTransientProperties extends RuntimeAccessibleClass{
 }
 
 @RuntimeAccessible
-export class LViewTransientProperties extends MixOnlyFuncs(DViewTransientProperties, LPointerTargetable) {
+export class LViewTransientProperties extends LPointerTargetable{
     static structure: typeof DPointerTargetable;
     static singleton: LViewTransientProperties;
     _isLViewTransientProperties!: true;

@@ -21,7 +21,6 @@ import {
     DModel,
     LModel,
     HTMLEditor,
-    GraphDragHandler,
     GObject,
     LGraph,
     Graph,
@@ -211,7 +210,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                     showLoaderOnConfirm: true,
                                 })
                                 if(viewName.value !== undefined) {
-                                    const newView = new DViewElement(viewName.value, '');
+                                    const newView = DViewElement.new(viewName.value, '');
                                     new CreateElementAction(newView);
                                     //PUSH: ADD VIEW
                                     new SetRootFieldAction ('stackViews+=', newView.id)

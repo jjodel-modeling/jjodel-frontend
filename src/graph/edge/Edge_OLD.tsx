@@ -1,13 +1,13 @@
 import React, {ReactNode} from "react";
 import Xarrow from "react-xarrows";
 import {ReactComponent as DefaultSvg} from "./assets/default.svg";
+import {LRefEdge} from "../../model/dataStructure";
+import {LReference} from "../../model/logicWrapper";
 import {svgCustomEdgeType, svgEdgeShapeType} from "react-xarrows/lib/types";
-import {Pointer, LRefEdge, DModelElement, LModelElement, LReference} from "../../joiner";
-
+import {DocString} from "../../joiner";
+// unused
 export default class Edge {
-    private static Arrow(start: Pointer<DModelElement> | DModelElement | LModelElement, end:  Pointer<DModelElement> | DModelElement | LModelElement, head?: any, tail?: any): ReactNode {
-        if (typeof start !== "string") start = start?.id || '';
-        if (typeof end !== "string") end = end?.id || '';
+    private static Arrow(start: DocString<"id nell'html">, end:  DocString<"id nell'html">, head?: any, tail?: any): ReactNode {
         const headShape: svgEdgeShapeType | svgCustomEdgeType = (head) ? head : {svgElem: <DefaultSvg />, offsetForward: 1};
         const tailShape: svgEdgeShapeType | svgCustomEdgeType = (tail) ? tail : {svgElem: <DefaultSvg />, offsetForward: 1};
         return(<Xarrow showXarrow={true} zIndex={0} start={start} end={end} color={"black"}
@@ -21,10 +21,13 @@ export default class Edge {
     private static ReferenceContainmentEdge(lRefEdge: LRefEdge, lReference: LReference): ReactNode {
         const head = {svgElem: <path d="M 0 0 L 1 0.5 L 0 1 L 0.25 0.5 z"/>, offsetForward: 1};
         const tail = {svgElem: <rect style={{rotate: "45deg", fill: "white", strokeWidth: "0.1", stroke: "black"}} width=".6pt" height=".6pt" />, offsetForward: 1};
+        // i don't get this. is it a pointer, LModele, LGraphe? but XArrow should get react components as args?
+        // @ts-ignore
         return Edge.Arrow(lRefEdge.start, lRefEdge.end, head, tail);
     }
     private static ReferenceNotContainmentEdge(lRefEdge: LRefEdge, lReference: LReference): ReactNode {
         const head = {svgElem: <path d="M 0 0 L 1 0.5 L 0 1 L 0.25 0.5 z"/>, offsetForward: 1};
+        // @ts-ignore
         return Edge.Arrow(lRefEdge.start, lRefEdge.end, head, undefined);
     }
 }

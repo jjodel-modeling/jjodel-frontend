@@ -34,12 +34,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         super(props, context);
     }
     render(): ReactNode {
-        return(<>
-            {(this.props.isVertex) ?
-                <RootDraggableVertex props={this.props} render={super.render()} /> :
-                <RootVertex props={this.props} render={super.render()} />
-            }
-        </>);
+        return(<RootVertex props={this.props} render={super.render()} />);
     }
 }
 

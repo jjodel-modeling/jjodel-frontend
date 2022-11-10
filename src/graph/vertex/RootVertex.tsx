@@ -37,7 +37,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     }
 
     useEffect(() => {
-        const element: JQuery & GObject = $("#" + rootProps.data?.id);
+        const element: GObject = $('[id="' + rootProps.nodeid + '"]'); // todo: install jqueryui types and remove GObject cast
         if(element && rootProps.isVertex) {
             element.draggable({
                 cursor: "grabbing",
@@ -63,7 +63,8 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
 
     //id = rootProps.node?.id
     return(
-        <div id={rootProps.data?.id}
+        <div id={rootProps.nodeid}
+             data-nodeid={rootProps.nodeid}
              data-dataid={rootProps.data?.id}
              data-viewid={rootProps.view?.id}
              data-modelname={rootProps.data?.className}
@@ -73,26 +74,10 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              onClick={onClick}
              key={rootProps.key}
         >
-            {U.showToolButton(classname) && false ?
-                <ToolButton isVertex={rootProps.isVertex} data={rootProps.data} /> : <></>
-            }
             {props.render}
         </div>
     );
 
-
-    /*
-    return(<>
-        <Draggable onDrag={updateArrow} onStop={updateArrow}>
-            <div id={"id_1"} className={"test-arrow1"}></div>
-        </Draggable>
-        <Draggable >
-            <div id={"id_2"} className={"test-arrow2"}></div>
-        </Draggable>
-        <div id={"id_3"} className={"test-arrow3"}></div>
-        <div id={"id_4"} className={"test-arrow4"}></div>
-    </>);
-    */
 }
 interface OwnProps {props: VertexProps, render: ReactNode}
 interface StateProps {}

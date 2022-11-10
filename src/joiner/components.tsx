@@ -2,7 +2,10 @@
 // import DockLayoutComponentt from "../components/abstract/DockLayoutComponent";
 
 export {MyInputComponent} from "../components/abstract/MyInput";
-export {TextAreaRawComponent, InputRawComponent, HTMLEditorRawComponent, OCLEditorRawComponent, TextareaConnected, InputConnected, HTMLEditorConnected, OCLEditorConnected, Input, Textarea, HTMLEditor, OCLEditor} from "../components/forEndUser/bidirectionalInput";
+export {
+    InputRawComponent, SelectRawComponent, TextAreaRawComponent, HTMLEditorRawComponent, OCLEditorRawComponent,
+    InputConnected, SelectConnected, TextareaConnected, HTMLEditorConnected, OCLEditorConnected,
+    Input, Select, Textarea, HTMLEditor, OCLEditor} from "../components/forEndUser/bidirectionalInput";
 export {DataOutputComponent} from "../components/logger/DataOutput";
 export {LoggerComponent} from "../components/logger/loggerComponent";
 
