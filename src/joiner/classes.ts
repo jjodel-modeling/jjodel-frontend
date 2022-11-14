@@ -630,6 +630,15 @@ let aa: DClass = n;
 let ptrr = Pointers.from(aa.parent);
 aa.parent = ptrr;*/
 
+class PointedBy{
+    source: DPointerTargetable; // elemento da cui parte il puntatore
+    field: keyof DPointerTargetable; // il bersaglio non c'è qui, perchè è l'oggetto che contiene questo dentro l'array pointedBy
+    private constructor(source: DPointerTargetable, field: any) {
+        this.source = source;
+        this.field = field;
+    }
+    static new<D extends DPointerTargetable> (source: D, field: keyof D) { return new PointedBy(source, field); }
+}
 
 @RuntimeAccessible
 export class LPointerTargetable<Context extends LogicContext<DPointerTargetable> = any, D extends DPointerTargetable = DPointerTargetable> extends DPointerTargetable {
@@ -638,10 +647,11 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     public static structure: typeof DPointerTargetable;
     public static singleton: LPointerTargetable;
     // @ts-ignore
-    public pointedBy: LPointerTargetable[];
+    //public pointedBy: LPointerTargetable[];  <-- Giordano comment this
     public __raw!: DPointerTargetable;
 
-    pointedBy!: PointedBy[];
+    // @ts-ignore
+    pointedBy: PointedBy[] = []; // <-- Giordano add this
 
     protected wrongAccessMessage(str: string): any {
         let msg = "Method "+str+" should not be called directly, attempting to do so should trigger get_"+str+"(). This is only a signature for type checking.";
