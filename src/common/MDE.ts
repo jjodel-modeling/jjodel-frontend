@@ -29,8 +29,8 @@ export class MDE {
         }
         for (let dPointer of lModelElement.pointedBy) {
             try {
-                const lPointer: LModelElement = MyProxyHandler.wrap(dPointer);
-                lPointer.delete();
+                /*const lPointer: LModelElement = MyProxyHandler.wrap(dPointer);
+                lPointer.delete();*/
             } catch (e) {
                 console.log(e);
             }

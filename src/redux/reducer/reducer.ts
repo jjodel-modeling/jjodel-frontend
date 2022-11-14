@@ -15,7 +15,7 @@ import {
     DocString,
     Dictionary,
     RuntimeAccessibleClass,
-    LPointerTargetable, store, windoww, getPath, Selectors, createOrOpenModelTab
+    LPointerTargetable, store, windoww, getPath, Selectors, createOrOpenModelTab, PointedBy
 } from "../../joiner";
 import React from "react";
 
@@ -23,7 +23,7 @@ import React from "react";
 
 
 
-function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevAction: ParsedAction, newVal: any) {
+function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevAction: ParsedAction, newVal: any): IStore {
     let newRoot: IStore = {...state} as IStore;
     let current: any = newRoot;
     if (!action.path?.length) throw new MyError("path length must be at least 1", {action});
@@ -120,50 +120,41 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
     return gotChanged ? newRoot : state;
 }
 
-class PointedBy{
-    source: DPointerTargetable; // elemento da cui parte il puntatore
-    field: keyof DPointerTargetable;
-    // il bersaglio non c'è qui, perchè è l'oggetto che contiene questo dentro l'array pointedBy
 
-    private constructor(source: DPointerTargetable, field: any) {
-        this.source = source;
-        this.field = field;
-
-    }
-    static new<D extends DPointerTargetable> (source: D, field: keyof D) { return new PointedBy(source, field); }
-}
-
-example of usage:
-let lclass: LClass = null as any;
-let lref: LReference = null as any;
-lref.target = [lclass.id];
-lclass.pointedBy = sarà new PointedBy(lref, "target"); ma è semrpe settato automaticamente, non devi settarlo tu.
 
 class PendingPointedByPaths{
-    static all: PendingPointedByPaths[] = []; todo4: usa effettivamente questo array
+    static all: PendingPointedByPaths[] = [];
     // static pendingMoreThanTwice: ParsedAction[] = [];
     static maxSolveAttempts: number = 20;
     public solveAttempts: number = 1;
     private stackTrace: string[]
     constructor(
-        public from: DocString<"Path in store">,
+        public from: DocString<"Path in store">, //todo: from should be fullpath including field.
+        // todo 6: how about actions that do not include index but just += -= [] ?
         public field: DocString<"keyof object found in from path">,
         public to: Pointer){
         this.stackTrace = U.getStackTrace();
+    }
+    static attemptimplementationdelete(pb: PointedBy) {
+        let state: IStore = store.getState();
+        let objectChain = U.followPath(state, pb.from)
+        todo7: if array +=, -= transform it in whole array set inside the function. (required whole d/l-object if += or -= is set. so the action can retrieve the array and push an element.)
+        // if
     }
 
     public attemptResolve(state: IStore): ParsedAction | null {
         if (this.canBeResolved(state)) return this.resolve();
         return null;
+        todo5: fai in modo che quando viene sovrascritto un puntatore, ti salvi il vecchio per poter cancellare il pointedby dal vecchio oggetto non più puntato
+
     }
-    todo5: fai in modo che quando viene sovrascritto un puntatore, ti salvi il vecchio per poter cancellare il pointedby dal vecchio oggetto non più puntato
 
     private resolve(): ParsedAction{
-        todo: ma i campi sono già corretti credo, perchè presi da una parsedAction che tentava di settare un pointer.
+        // i campi sono già corretti credo, perchè presi da una parsedAction che tentava di settare un pointer.
             todo2: setta isPointer to setFieldAct && setRootFieldAct.
-            todo3: assicurati che nel parse della action non si perda il boolean isPointer
+        // todo3: assicurati che nel parse della action non si perda il boolean isPointer
         U.arrayRemoveAll(PendingPointedByPaths.all, this);
-        return ParsedAction.new(this.to, 'pointedBy', new PointedBy(this.from, this.field), undefined, "+=");
+        return ParsedAction.new(this.to, 'pointedBy', PointedBy.new(this.from, this.field), undefined, "+=");
     }
 
     public saveForLater(): void { PendingPointedByPaths.all.push(this); }

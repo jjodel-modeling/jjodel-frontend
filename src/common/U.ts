@@ -70,6 +70,29 @@ export class U{
         return undefined;
     }
 
+    public static followPath(base: GObject, path: string): {chain: GObject[], lastObject: GObject, keys:string[], lastkey: string, lastval: any, failedRemainingPath: string[]} {
+        let patharr = path.split('.');
+        let base0 = base;
+        let ret: {chain: GObject[], lastObject: GObject, keys: string[], lastkey: string, lastval: any, failedRemainingPath: string[]}  = {} as any;
+        ret.keys = patharr;
+        ret.chain = [base];
+        let lastObject = base;
+
+        for (let i = 0; i < patharr.length; i++) {
+            let path = ret.lastkey = patharr[i];
+            lastObject = base;
+            base = base[path];
+            ret.chain.push(base);
+            if (typeof base !== "object" || i + 1 === patharr.length) {
+                ret.failedRemainingPath = patharr.slice(i);
+                ret.lastval = base;
+                ret.lastObject = lastObject;
+                return ret;
+            }
+        }
+        throw new Error("followPath should never reach here");
+        return ret;
+    }
     /*
     public static removeFromList<T extends LPointerTargetable>(list: T[], itemToRemove: T): T[] {
         const correctedList: T[] = [];

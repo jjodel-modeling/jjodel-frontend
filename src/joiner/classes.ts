@@ -414,8 +414,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     // pointedBy: DocString<'path in store'>[] = []; // NB: potrebbe contenere puntatori invalidi.
     // se viene cancellato un intero oggetto A che contiene una lista di puntatori, gli oggetti che puntano ad A rimuovono A dai loro "poitnedBy",
     // ma gli oggetti puntati da A tramite sotto-oggetti o attributi (subviews...) non vengono aggiornati in "pointedby"
-
-    pointedBy: Pointer<DPointerTargetable, 0, 'N'> = [];
+    pointedBy: PointedBy[] = [];
 
 
     public static new(...a:any): DPointerTargetable { return new Constructors(new DPointerTargetable('dwc')).DPointerTargetable().end(); }
@@ -630,6 +629,19 @@ let aa: DClass = n;
 let ptrr = Pointers.from(aa.parent);
 aa.parent = ptrr;*/
 
+export class PointedBy{
+    source: DPointerTargetable; // elemento da cui parte il puntatore
+    field: keyof DPointerTargetable;
+    // il bersaglio non c'è qui, perchè è l'oggetto che contiene questo dentro l'array pointedBy
+
+    private constructor(source: DPointerTargetable, field: any) {
+        this.source = source;
+        this.field = field;
+
+    }
+    static new<D extends DPointerTargetable> (source: D, field: keyof D) { return new PointedBy(source, field); }
+}
+
 
 @RuntimeAccessible
 export class LPointerTargetable<Context extends LogicContext<DPointerTargetable> = any, D extends DPointerTargetable = DPointerTargetable> extends DPointerTargetable {
@@ -637,11 +649,8 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public static structure: typeof DPointerTargetable;
     public static singleton: LPointerTargetable;
-    // @ts-ignore
-    public pointedBy: LPointerTargetable[];
     public __raw!: DPointerTargetable;
-
-    pointedBy!: PointedBy[];
+    public pointedBy!: PointedBy[];
 
     protected wrongAccessMessage(str: string): any {
         let msg = "Method "+str+" should not be called directly, attempting to do so should trigger get_"+str+"(). This is only a signature for type checking.";
@@ -670,6 +679,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return RuntimeAccessibleClass.extends(context.data.className, superClassName);
     }
 
+    /*
     public get_pointedBy(superClassName: string, context: LogicContext<DPointerTargetable>): LPointerTargetable[] {
         let state: GObject = windoww.store.getState();
         function getForemostObjectInPath(path: DocString<'storePath'>): undefined | LPointerTargetable {
@@ -683,7 +693,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
             return lastPointableObject && DPointerTargetable.wrap(lastPointableObject);
         }
         return (context.data.pointedBy || []).map(getForemostObjectInPath).filter( lobj => !!lobj) as LPointerTargetable[];
-    }
+    }*/
 
     public set_pointedBy(val: never, context: LogicContext<DPointerTargetable>): boolean {
         windoww.Log.exx('pointedBy field should never be directly edited.', {context, val});

@@ -7,7 +7,15 @@ import {
     LModelElement,
     DPointerTargetable,
     LPointerTargetable,
-    MyProxyHandler, Selectors, Constructor, RuntimeAccessibleClass, AbstractConstructor, OCL, DGraph
+    MyProxyHandler,
+    Selectors,
+    Constructor,
+    RuntimeAccessibleClass,
+    AbstractConstructor,
+    OCL,
+    DGraph,
+    LClass,
+    LEnumerator
 } from "../../joiner";
 import Editor from "@monaco-editor/react";
 import {types} from "util";
@@ -69,12 +77,14 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
         delete otherprops.setter;
         delete otherprops.getter; const primitives = Selectors.getAllPrimitiveTypes();
         // todo: replace with this.props.data.package.classes? but maybe attrib types can be from other packages in same model & from m3 primitive type def. so model.classes & model.meta.classes ?
-        const classes = Selectors.getAllPackageClasses(this.props.data.id);
-        const enumerators = Selectors.getAllPackageEnumerators(this.props.data.id);
-        sostituire tipo così ed implementarlo (this.props.data as LModelElement).model.enums
+        const classes = this.props.data.model.classes;
+        const enumerators = this.props.data.model.enums;
 
         //todo: define hasVoid, hasClasses, ... with data.classname (default=true)
         let hasVoid = true; let hasPrimitive = true; let hasClasses = true; let hasEnumerators = true;
+        // damiano: questo andrebbe invertito. di default setti tutto a let hasClasses = false, e se è un package lo setti a true.
+        // perchè altrimenti per d-class non previste (GraphElement, annotations...) risulta a true a meno che non le elenchi tutte.
+        // e meglio fare uno switch invece di if-chain
         if(data.className === "DAttribute") {
             hasVoid = false;
             hasClasses = false;
@@ -109,12 +119,12 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
                         })}
                     </optgroup> : <></>}
                     {hasClasses && classes.length > 0 ? <optgroup label={"Classes"}>
-                        {classes.map((lClass) => {
+                        {classes.map((lClass: LClass) => {
                             return <option value={lClass.id}>{lClass.name}</option>
                         })}
                     </optgroup> : <></>}
                     {hasEnumerators && enumerators.length > 0 ? <optgroup label={"Enumerators"}>
-                        {enumerators.map((lEnum) => {
+                        {enumerators.map((lEnum: LEnumerator) => {
                             return <option value={lEnum.id}>{lEnum.name}</option>
                         })}
                     </optgroup> : <></>}
@@ -336,7 +346,7 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     console.log("ownProps.obj", ({state, ownProps:{...ownProps}}));
     if (!ownProps.obj) return ret;
-    let objid: Pointer<DModelElement, 1, 1, LModelElement> = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
+    let objid: Pointer = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
     ret.data = ownProps.wrap === false ? ownProps.obj as any : DPointerTargetable.wrap(state.idlookup[objid]) as LPointerTargetable || ownProps.obj;
     return ret; }
 

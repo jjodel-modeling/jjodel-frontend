@@ -88,22 +88,20 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     */
     public __raw!: DModelElement;
     id!: Pointer<DModelElement, 1, 1, LModelElement>;
-    // utilities to go up in the tree (singular names)
-    model!: LModel; // utility, follow father chain until get a Model parent or null
-    package!: LPackage | null; // utility, follow father chain until get a Package parent or null
-    class!: LClass | null; // utility, follow father chain until get a Class parent or null
-    enum!: LEnumerator | null; // utility, follow father chain until get a Enumerator parent or null
-    operation!: LOperation | null; // utility, follow father chain until get a Operation parent or null
-
-    // utilities to go down in the tres (plural names)
-    enums!: LEnumerator[] | null;
-
-    // other things
     parent!: LModelElement[];
     father!: LModelElement; // annotations can be childrens of everything. except them fathers are: Model, Package, Classifier(class+enum), Operation
     annotations!: LAnnotation[];
     childrens!: (LPackage | LClassifier | LTypedElement | LAnnotation)[];
     nodes!: LGraphElement[];
+
+
+    // utilities to go up in the tree (singular names)
+    model!: LModel; // utility, follow father chain until get a Model parent or null
+    package!: LPackage | null;
+    class!: LClass | null;
+    enum!: LEnumerator | null;
+    operation!: LOperation | null;
+
 
     // @ts-ignore
     private get_until_parent<D extends Constructor, L extends DtoL<InstanceType<D>>>(l: LModelElement, d: DModelElement, father: D): L | null {
@@ -184,9 +182,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return true;
     }
 
-    protected get_addChild(context: Context): (type:string) => void {
-        return (type) => {
-            let ret = () => {};
+    protected get_addChild(context: Context): (type:string, exception?: Pack1<LClassifier>) => void { // just for add new, not for add pre-existing.
+        return (type, exception?: Pack1<LClassifier>) => {
+            let ret: (exception?: Pack1<LClassifier>) => void = () => {};
             switch ((type || '').toLowerCase()){
                 default: Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), context}); break;
                 case "attribute": ret = this.get_addAttribute(context as any); break;
@@ -197,7 +195,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 case "literal": ret = this.get_addEnumLiteral(context as any); break;
                 case "operation": ret = this.get_addOperation(context as any); break;
                 case "parameter": ret = this.get_addParameter(context as any); break;
-                case "exception": ret = this.get_addException(context as any); break;
+                case "exception": ret = ((exception: Pack1<LClassifier>) => { let rett = this.get_addException(context as any); rett(exception); }) as any; break;
             }
             return ret;
         }
@@ -265,7 +263,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         dAttribute.father = dClass.id;
         const lString: LClassifier = LPointerTargetable.from(Selectors.getFirstPrimitiveTypes());
         dAttribute.type = lString.id;
-        SetFieldAction.new(dAttribute.type, "pointedBy", dAttribute.id, '+=');
+        // SetFieldAction.new(dAttribute.type, "pointedBy", dAttribute.id, '+=');
         // U.addPointerBy(lString, dAttribute);
         ret = () => LClass.addAttribute_(dClass, dAttribute);
         ret();
@@ -365,26 +363,25 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return ret;
     }
 
-    protected get_addException(context: LogicContext<DOperation>, exception: DClassifier): () => void { todo: adesso lo prende da parametroe e non lo crea da zero, aggiusta
-        let ret = () => {};
-        const dOperation: DOperation | null = (context.data?.className === "DOperation") ? context.data : null;
-        if(dOperation) {
+    protected get_addException(context: Context): (exception: Pack1<LClassifier>) => void {
+        let ret = (exception: Pack1<LClassifier>) => {};
+        const dOperation: DOperation | null = (context.data?.className === "DOperation") ? context.data as DOperation : null;
+        if (dOperation) {
             const lOperation: LOperation = LPointerTargetable.from(dOperation);
             let name = 'except_' + 0;
             const childrenNames: (string)[] = lOperation.childrens.map(c => (c as LNamedElement).name);
             name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
             const dException = DClass.new(name); // non credo che l'eccezione vada salvata qui, add_exception dovrebbe prendere una classe già esistente da usare come eccezione
             dException.father = dOperation.id as any;
-            ret = () => LModelElement.addException_(dOperation, dException);
+            ret = (exception: Pack1<LClassifier>) => this._addException(dOperation, dException, context);
         }
-        ret();
         return ret;
     }
 
-    public addException(exception?: DClassifier): () => void { throw this.wrongAccessMessage("AddException"); }
-        todo: di default l'eccezione è la classe da cui viene chiamata (father of operation)
-        // chiedere al prof: cosa può lanciato come eccezione: se tutte le classi o se solo quelle che estendono Exception
+    protected _addException(operation: DOperation, exception: Pack1<LClassifier>, context: Context): void {
+        SetFieldAction.new(operation, "exceptions", Pointers.from(exception), undefined, '+=');
     }
+
 
     // activated by user in JSX
     // todo: this.wrongAccessMessage("addClass");
@@ -396,7 +393,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     public addEnumLiteral(): void { Log.exDevv('addLiteral should never be called directly, but should trigger get_addLiteral(), this is only a signature for type checking.'); }
     public addOperation(): void { Log.exDevv('addOperation should never be called directly, but should trigger get_addOperation(), this is only a signature for type checking.'); }
     public addParameter(): void { Log.exDevv('addParameter should never be called directly, but should trigger get_addParameter(), this is only a signature for type checking.'); }
-    public addException(): void { Log.exDevv('addException should never be called directly, but should trigger get_addException(), this is only a signature for type checking.'); }
+    // chiedere al prof: cosa può lanciato come eccezione: se tutte le classi o se solo quelle che estendono Exception
+    public addException(exception?: DClassifier): () => void { throw this.wrongAccessMessage("AddException"); }
     public addChild(type: string): void { Log.exDevv('addAttribute("'+type+'") should never be called directly, but should trigger get_addAttribute(), this is only a signature for type checking.'); }
 
     private static addOperation_ (dClass: DClass, dParameter: DParameter, dOperation: DOperation): void {
@@ -459,7 +457,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         }
     }
 
-    get_changeAttributeType(context: LogicContext<DAttribute>, newType: string): () => void {
+    get_changeAttributeType(context: LogicContext<DAttribute>, newType: Pointer<DClassifier, 1, 1, LClassifier>): () => void {
         let ret = () => {};
         const dAttribute: DAttribute = context.data;
         const dOldClassifier: DClassifier = Selectors.getDElement<DClassifier>(dAttribute.type as string);
@@ -467,9 +465,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         //const index: number = dOldClassifier.pointedBy.indexOf(dAttribute.id);
         ret = () => {
             SetFieldAction.new(dAttribute, "type", newType);
-            SetFieldAction.new(dOldClassifier, "pointedBy", U.removeFromList(dOldClassifier.pointedBy, dAttribute.id));
+            // SetFieldAction.new(dOldClassifier, "pointedBy", U.removeFromList(dOldClassifier.pointedBy, dAttribute.id));
             //SetFieldAction.new(dOldClassifier, `pointedBy.${index}-=`, undefined);
-            SetFieldAction.new(dNewClassifier, "pointedBy", dAttribute.id, undefined, '+=');
+            // SetFieldAction.new(dNewClassifier, "pointedBy", dAttribute.id, undefined, '+=');
         };
         ret();
         return ret;
@@ -483,9 +481,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         const dRefEdge: DRefEdge | undefined = U.getReferenceEdge(dReference);
         ret = () => {
             SetFieldAction.new(dReference, "type", newType);
-            SetFieldAction.new(dOldClass, "pointedBy", U.removeFromList(dOldClass.pointedBy, dReference.id));
+            // SetFieldAction.new(dOldClass, "pointedBy", U.removeFromList(dOldClass.pointedBy, dReference.id));
             //SetFieldAction.new(dOldClass, "pointedBy-=", dOldClass.pointedBy.indexOf(dReference.id))
-            SetFieldAction.new(dNewClass, "pointedBy", dReference.id, undefined, '+=');
+            // SetFieldAction.new(dNewClass, "pointedBy", dReference.id, undefined, '+=');
             if(dRefEdge) {
                 SetFieldAction.new(dRefEdge, "end", newType);
             }
@@ -890,14 +888,24 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     // static logic: typeof LPackage; todo: fixa questo con una funzione statica fuori dalle classi con tipo condizionale incasinato che gli dai costruttore e ti ridà istanza  getSingleton(LPackage)
     // static structure: typeof DPackage;
     // inherit redefine
-    parent!: LPackage[];  // ype 'LPackage' is missing the following properties from type 'LModelElement': get_set_parent, set_parent
-    father!: LPackage;
+    parent!: (LPackage| LModel)[];  // ype 'LPackage' is missing the following properties from type 'LModelElement': get_set_parent, set_parent
+    father!: LPackage | LModel;
     annotations!: LAnnotation[];
     name!: string;
     // personal
     classifiers!: LClassifier[];
     subpackages!: LPackage[];
     uri!: string;
+
+    // utilities to go down in the tree (plural names)
+    enums!: LEnumerator[] | null;
+    classes!: LClass[] | null;
+    operations!: LOperation[] | null;
+    parameters!: LParameter[] | null;
+    exceptions!: LClassifier[] | null;
+    attributes!: LAttribute[] | null;
+    references!: LReference[] | null;
+    literals!: LEnumLiteral[] | null;
 
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DPackage | DClassifier, 1, 'N'> {
         return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DPackage | DClassifier, 1, 'N'>, ...context.data.subpackages, ...context.data.classifiers]; }
@@ -1075,9 +1083,6 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
     required!: boolean;
     // personal
 
-    get_paramers() {
-        todo:
-    }
 
     protected get_delete(context: LogicContext<DParameter>): () => void {
         let ret = () => {};
@@ -1088,7 +1093,7 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
             ret = () => {
                 SetFieldAction.new(dOperation, "parameters", U.removeFromList(dOperation.parameters, dParameter.id));
                 if (dClassifier) {
-                    SetFieldAction.new(dClassifier, "pointedBy", U.removeFromList(dClassifier.pointedBy, dParameter.id));
+                    // SetFieldAction.new(dClassifier, "pointedBy", U.removeFromList(dClassifier.pointedBy, dParameter.id));
                 }
                 new SetRootFieldAction("parameters", U.removeFromList(Selectors.getAllParameters(), dParameter.id));
                 new DeleteElementAction(dParameter);
@@ -1109,9 +1114,9 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
         const ret = () => {
             SetFieldAction.new(dParameter, "type", newType);
             if (dOldClassifier) {
-                SetFieldAction.new(dOldClassifier, "pointedBy", U.removeFromList(dOldClassifier.pointedBy, dParameter.id));
+                // SetFieldAction.new(dOldClassifier, "pointedBy", U.removeFromList(dOldClassifier.pointedBy, dParameter.id));
             }
-            SetFieldAction.new(dNewClassifier, "pointedBy", dParameter.id, undefined, '+=');
+            // SetFieldAction.new(dNewClassifier, "pointedBy", dParameter.id, undefined, '+=');
         };
         ret();
         return ret;
@@ -1211,6 +1216,9 @@ export class LClass<Context extends LogicContext<DClass> = any, C extends Contex
     implements: Pointer<DClass, 0, 'N', LClass> = [];
     implementedBy: Pointer<DClass, 0, 'N', LClass> = [];
 
+    // utilities to go down in the tree (plural names)
+    exceptions!: LClassifier[] | null;
+    parameters!: LParameter[] | null;
 
     get_childrens_idlist(context: Context): Pointer<DAnnotation | DStructuralFeature | DOperation, 1, 'N'> {
         return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DStructuralFeature, 1, 'N'>, ...context.data.attributes, ...context.data.references, ...context.data.operations]; }
@@ -1218,7 +1226,8 @@ export class LClass<Context extends LogicContext<DClass> = any, C extends Contex
     protected get_delete(context: Context): () => void {
         const dClass: DClass = context.data;
         const dPackage: DPackage = Selectors.getDElement<DPackage>(dClass.father);
-        const children = new Set([...dClass.attributes, ...dClass.references, ...dClass.pointedBy]);
+        const children = new Set([...dClass.attributes, ...dClass.references]);
+        const pointedby = new Set(dClass.pointedBy);
         for(let dChild of children) {
             const lChild: LAttribute | LReference = LPointerTargetable.from(dChild);
             lChild._delete(context);
@@ -1506,7 +1515,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         const dEdge: DRefEdge | undefined = U.getReferenceEdge(dReference);
         const ret = () => {
             SetFieldAction.new(dClass, "references", U.removeFromList(dClass.references, dReference.id));
-            SetFieldAction.new(dType, "pointedBy", U.removeFromList(dType.pointedBy, dReference.id));
+            // SetFieldAction.new(dType, "pointedBy", U.removeFromList(dType.pointedBy, dReference.id));
             SetRootFieldAction.new("references", U.removeFromList(Selectors.getAllReferences(), dReference.id));
             // todo: this kind of deletion might fail if there are multiple ones of this kind fired at once. you remove elements 2° and 5°,
             //  assigning [elem1, undefined, elem3, elem4, elem5, ...], then assigning [elem1, elem2, elem3, elem4, undefined,...], the first deletion will be erased by the second.
@@ -1530,8 +1539,8 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         const dRefEdge: DRefEdge | undefined = U.getReferenceEdge(dReference);
         const ret = () => {
             SetFieldAction.new(dReference, "type", newType);
-            SetFieldAction.new(dOldClass, "pointedBy", U.removeFromList(dOldClass.pointedBy, dReference.id));
-            SetFieldAction.new(dNewClass, "pointedBy", dReference.id, undefined, '+=');
+            // SetFieldAction.new(dOldClass, "pointedBy", U.removeFromList(dOldClass.pointedBy, dReference.id));
+            // SetFieldAction.new(dNewClass, "pointedBy", dReference.id, undefined, '+=');
             if (dRefEdge) {
                 SetFieldAction.new(dRefEdge, "end", newType);
             }
@@ -1622,7 +1631,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         const dClassifier: DClassifier = Selectors.getDElement<DClass>(dAttribute.type as string);
         const ret = () => {
             SetFieldAction.new(dClass, "attributes", U.removeFromList(dClass.attributes, dAttribute.id));
-            SetFieldAction.new(dClassifier, "pointedBy", U.removeFromList(dClassifier.pointedBy, dAttribute.id));
+            // SetFieldAction.new(dClassifier, "pointedBy", U.removeFromList(dClassifier.pointedBy, dAttribute.id));
             SetRootFieldAction.new("attributes", U.removeFromList(Selectors.getAllAttributes(), dAttribute.id));
             new DeleteElementAction(dAttribute);
         }
@@ -1636,8 +1645,8 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         const dNewClassifier: DClassifier = Selectors.getDElement<DClassifier>(newType);
         const ret = () => {
             SetFieldAction.new(dAttribute, "type", newType);
-            SetFieldAction.new(dOldClassifier, "pointedBy", U.removeFromList(dOldClassifier.pointedBy, dAttribute.id));
-            SetFieldAction.new(dNewClassifier, "pointedBy", dAttribute.id, undefined, '+=');
+            // SetFieldAction.new(dOldClassifier, "pointedBy", U.removeFromList(dOldClassifier.pointedBy, dAttribute.id));
+            // SetFieldAction.new(dNewClassifier, "pointedBy", dAttribute.id, undefined, '+=');
         };
         ret();
         return ret;
@@ -1764,7 +1773,8 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         const dEnumerator: DEnumerator = context.data;
         const dPackage: DPackage = Selectors.getDElement<DPackage>(dEnumerator.father);
         const dFather: DPackage | DOperation = dPackage;
-        const children = new Set([...dEnumerator.literals, ...dEnumerator.pointedBy]);
+        const children = new Set([...dEnumerator.literals]);
+        const pointedBy = new Set([...dEnumerator.pointedBy]);
 
         for(let dChild of children) {
             const lChild: LEnumLiteral | LAttribute = LPointerTargetable.from(dChild);
@@ -1783,6 +1793,26 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         }
         ret();
 
+        return ret;
+    }
+
+
+    protected get_delete2(context: Context): () => void {
+        let ret = () => {};
+        const data = context.proxyObject;
+        const father = LPointerTargetable.from(data.father);
+        const reduxName = U.classnameToReduxConverter(data.className); // DClass -> classs
+        const objName = U.classnameToObjConverter(data.className); // DClass -> classes
+        if (reduxName && objName) {
+            ret = () => {
+                // tolgo al padre il figlio            SetFieldAction.new(father.id, reduxName, U.removeFromList(father[objName], data.id));
+                // tolgo i figli al nodo
+                for (let child of data.childrens) { child.delete(); }
+                //tolgo il  nodo
+                SetRootFieldAction.new(reduxName, U.removeFromList(Selectors["getAll" + objName.charAt(0).toUpperCase() + objName.slice(1)] as any[], data.id));
+                DeleteElementAction.new(data.id);
+            }
+        }
         return ret;
     }
 }
@@ -1922,6 +1952,17 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     packages!: LPackage[];
     // modellingElements!: LModelElement[];
 
+    // utilities to go down in the tree (plural names)
+    enums!: LEnumerator[] | null;
+    classes!: LClass[] | null;
+    operations!: LOperation[] | null;
+    parameters!: LParameter[] | null;
+    exceptions!: LClassifier[] | null;
+    attributes!: LAttribute[] | null;
+    references!: LReference[] | null;
+    literals!: LEnumLiteral[] | null;
+    allSubAnnotations!: LAnnotation[] | null;
+    allSubPackages!: LPackage[] | null;
 
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DPackage, 1, 'N'> {
         return [...(super.get_childrens_idlist(context) as Pointer<DAnnotation | DPackage, 1, 'N'>), ...context.data.packages]; }

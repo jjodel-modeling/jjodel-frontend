@@ -5,6 +5,7 @@ import {ReactNode} from "react";
 import type { DocString } from './types';
 import type {U as UType} from "../common/U";
 import type {Selectors as SelType} from "../redux/selectors/selectors";
+import type {GObject as GObjectt} from "./types";
 import type {Log as LogType} from "../common/U";
 export type {Constructor, AbstractConstructor} from "../joiner/types";
 var windoww = (window as any);
@@ -31,7 +32,7 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
 } from "./types";
 export type {Pointer, PtrString, WPointerTargetable, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, } from "./classes";
 
-export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable, LPointerTargetable, MyError, RuntimeAccessible, Leaf, Node, MixOnlyFuncs, LUser, DUser, Pointers} from "./classes";
+export {Constructors, JsType, PointedBy, RuntimeAccessibleClass, DPointerTargetable, LPointerTargetable, MyError, RuntimeAccessible, Leaf, Node, MixOnlyFuncs, LUser, DUser, Pointers} from "./classes";
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
 // console.error('iiiiiiiiiiiiiiii 3');
@@ -110,7 +111,7 @@ export {DViewTransientProperties, LViewTransientProperties, LViewElement, DViewE
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
 export {IStore, ModelStore, ViewPointState} from "../redux/store";
 export {Selectors as Selectorss} from "../redux/selectors/selectors";
-export var Selectors = windoww.Selectors as typeof SelType;
+export var Selectors = windoww.Selectors as (GObjectt & typeof SelType);
 export {reducer, jodelInit} from "../redux/reducer/reducer";
 export {store} from "../redux/createStore";
 
