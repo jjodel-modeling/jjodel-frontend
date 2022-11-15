@@ -293,7 +293,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 // todo: come butto dei sotto-vertici dentro un vertice contenitore? o dentro un sotto-grafo? senza modificare il jsx ma solo draggando?
                 const dataid = typeof re.props.data === "string" ? re.props.data : re.props.data?.id;
                 // forse posso salvarlo con i portali: l'utente specifica i parent-children originali e poi i portali scambiano le cose e fanno sotto-vertici
-                const idbasename: string = injectProps.graphid + '^' + re.props.data.id;
+                const idbasename: string = injectProps.graphid + '^' + dataid;
                 Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
                 injectProps.nodeid = U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
                 gvidmap[injectProps.nodeid] = true;
