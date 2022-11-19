@@ -7,7 +7,15 @@ import {
     LModelElement,
     DPointerTargetable,
     LPointerTargetable,
-    MyProxyHandler, Selectors, Constructor, RuntimeAccessibleClass, AbstractConstructor, OCL, DGraph
+    MyProxyHandler,
+    Selectors,
+    Constructor,
+    RuntimeAccessibleClass,
+    AbstractConstructor,
+    OCL,
+    DGraph,
+    DAttribute,
+    DReference, DParameter
 } from "../../joiner";
 import Editor from "@monaco-editor/react";
 import {types} from "util";
@@ -69,24 +77,18 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
         delete otherprops.setter;
         delete otherprops.getter; const primitives = Selectors.getAllPrimitiveTypes();
         // todo: replace with this.props.data.package.classes? but maybe attrib types can be from other packages in same model & from m3 primitive type def. so model.classes & model.meta.classes ?
-        const classes = Selectors.getAllPackageClasses(this.props.data.id);
-        const enumerators = Selectors.getAllPackageEnumerators(this.props.data.id);
-        sostituire tipo così ed implementarlo (this.props.data as LModelElement).model.enums
+        //const classes = Selectors.getAllPackageClasses(this.props.data.id);
+        //const enumerators = Selectors.getAllPackageEnumerators(this.props.data.id);
+        //sostituire tipo così ed implementarlo (this.props.data as LModelElement).model.enums
+
+        const classes = (this.props.data as LModelElement).model.classes;
+        const enumerators = (this.props.data as LModelElement).model.enumerators;
 
         //todo: define hasVoid, hasClasses, ... with data.classname (default=true)
         let hasVoid = true; let hasPrimitive = true; let hasClasses = true; let hasEnumerators = true;
-        if(data.className === "DAttribute") {
-            hasVoid = false;
-            hasClasses = false;
-        }
-        if(data.className === "DReference") {
-            hasVoid = false;
-            hasPrimitive = false;
-            hasEnumerators = false;
-        }
-        if(data.className === "DParameter") {
-            hasVoid = false;
-        }
+        if(data.className === DAttribute.name) { hasVoid = false; hasClasses = false; }
+        if(data.className === DReference.name) { hasVoid = false; hasPrimitive = false; hasEnumerators = false; }
+        if(data.className === DParameter.name) { hasVoid = false; }
         hasVoid = (this.props.hasVoid !== undefined) ? this.props.hasVoid : hasVoid;
         hasPrimitive = (this.props.hasPrimitive !== undefined) ? this.props.hasPrimitive : hasPrimitive;
         hasClasses = (this.props.hasClasses !== undefined) ? this.props.hasClasses : hasClasses;

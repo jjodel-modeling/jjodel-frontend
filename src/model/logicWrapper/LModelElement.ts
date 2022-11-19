@@ -2255,6 +2255,8 @@ export class DModel extends DNamedElement { // DNamedElement
     name!: string;
     // personal
     packages: Pointer<DPackage, 0, 'N', LPackage> = [];
+    classes: Pointer<DClass, 0, 'N', LClass> = [];
+    enumerators: Pointer<DEnumerator, 0, 'N', LEnumerator> = [];
     // modellingElements: Pointer<DModelElement, 0, 'N', LModelElement> = [];
 
     public static new(name?: DNamedElement["name"], packages: DModel["packages"] = []): DModel {
@@ -2280,6 +2282,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     name!: string;
     // personal
     packages!: LPackage[];
+    classes!: LClass[];
+    enumerators!: LEnumerator[];
     // modellingElements!: LModelElement[];
 
     protected get_packages(context: Context): this["packages"] {
@@ -2287,10 +2291,23 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             return LPointerTargetable.from(pointer)
         });
     }
+    // abbiamo bisogno di questo setter ?
     protected set_packages(val: PackArr<this["packages"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         SetFieldAction.new(context.data, 'packages', list);
         return true;
+    }
+
+    protected get_classes(context: Context): this["classes"] {
+        let classifiers: LClassifier[][] | LClassifier[] = context.proxyObject.packages.map((pkg) => { return pkg.classifiers; });
+        classifiers = classifiers.reduce(function(prev, next) { return prev.concat(next); });
+        return classifiers.filter((feature) => { return feature.className === DClass.name }).map((feature) => { return feature as LClass; })
+    }
+
+    protected get_enumerators(context: Context): this["enumerators"] {
+        let classifiers: LClassifier[][] | LClassifier[] = context.proxyObject.packages.map((pkg) => { return pkg.classifiers; });
+        classifiers = classifiers.reduce(function(prev, next) { return prev.concat(next); });
+        return classifiers.filter((feature) => { return feature.className === DEnumerator.name }).map((feature) => { return feature as LEnumerator; })
     }
 
 

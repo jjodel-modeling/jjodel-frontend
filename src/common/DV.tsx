@@ -27,7 +27,8 @@ export default class DV {
     public static classView(): string {
         return (`<div className={"w-100 h-100"}>
 
-            {this.data.dummysubelements.filter((subElement) => 
+            {this.data.dummysubelements.filter((subElement) => 0
+                errore non devi prendere model ma modelElement
                 subElement.model.className === "DReference").map((lNodeReference) => {
                     return <Edges source={lNodeReference} />
                 }
