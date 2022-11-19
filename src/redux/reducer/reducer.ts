@@ -69,7 +69,7 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
                 }
                 current[key].push(newVal);
                 oldValue = undefined;
-                unpointedElement = state.idlookup[oldValue];
+                unpointedElement = undefined;
             } else
             if (isArrayRemove){
                 if (!Array.isArray(current[key])) { current[key] = []; }
@@ -78,15 +78,15 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
                 gotChanged = index >=0 && index < current[key].length;
                 if (gotChanged){
                     current[key] = [...current[key]];
+                    unpointedElement = current[key].splice(index, 1); // in-place edit
                     /*
                     const elementsThatChangedIndex: DPointerTargetable[] = current[key].slice(index);
-                    // todo: problema: se ho [dobj1, dobj2]... e li swappo, cambia un indice nel percorso "pointedby" e non me ne accorgo mai e un oggetto risulta "pointedby" da oggetti che non lo puntano o non esistono più a quell'indice
+                    todo: problema: se ho [dobj1, dobj2]... e li swappo, cambia un indice nel percorso "pointedby" e non me ne accorgo mai e un oggetto risulta "pointedby" da oggetti che non lo puntano o non esistono più a quell'indice
                     for (let j = 0; j < elementsThatChangedIndex.length; j++) {
                         let newindex = index + j - 1;
                         let oldFullpathTrimmed = action.pathArray.join('.');
                         se realizzi "pointedby" qui è to do: remove old paths and re-add them with updated index
                     }*/
-                    oldValue = current[key].splice(index, 1);
                     //unpointedElement = state.idlookup[oldValue];
                 }
             }
@@ -127,8 +127,17 @@ class PendingPointedByPaths{
     // static pendingMoreThanTwice: ParsedAction[] = [];
     static maxSolveAttempts: number = 20;
     public solveAttempts: number = 1;
-    private stackTrace: string[]
-    constructor(
+    private stackTrace: string[];
+
+    // tmp fields, not sure what i need
+    public action: Action;
+    static new(action: ParsedAction, oldState: IStore){
+        const ptr: Pointer | Pointer[] = action.value;
+        const target: DPointerTargetable | null = oldState.idlookup[ptr as string];
+        let pendingPointedBy = new PendingPointedByPaths(action.path, action.field, target);
+    }
+
+    private constructor(
         public from: DocString<"Path in store">, //todo: from should be fullpath including field.
         // todo 6: how about actions that do not include index but just += -= [] ?
         public field: DocString<"keyof object found in from path">,
@@ -137,7 +146,7 @@ class PendingPointedByPaths{
     }
     static attemptimplementationdelete(pb: PointedBy) {
         let state: IStore = store.getState();
-        let objectChain = U.followPath(state, pb.from)
+        let objectChain = U.followPath(state, pb.from);
         todo7: if array +=, -= transform it in whole array set inside the function. (required whole d/l-object if += or -= is set. so the action can retrieve the array and push an element.)
         // if
     }
@@ -188,11 +197,17 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
                 elem.className = elem.className || elem.constructor.name;
                 derivedActions.push(new SetRootFieldAction(elem.className.substr(1).toLowerCase() + 's[]', elem.id, false) as ParsedAction);
                 if (action.isPointer) {
-                    const ptr: Pointer = action.value;
-                    const target: DPointerTargetable | null = oldState.idlookup[ptr];
-                    let pendingPointedBy = new PendingPointedByPaths(action.path, action.field, target);
-                    if (!target) new PendingPointedByPaths(action.path, action.field, target).saveForLater(); // {from: action.path, field: action.field, to: target});
-                    else derivedActions.push(pendingPointedBy.resolve());
+                    const ptr: Pointer | Pointer[] = action.value;
+                    if (Array.isArray(ptr)) {
+
+                    }
+                    else {
+                        const ptr: Pointer | Pointer[] = action.value;
+                        const target: DPointerTargetable | null = oldState.idlookup[ptr];
+                        let pendingPointedBy = new PendingPointedByPaths(action.path, action.field, target);
+                        if (!target) new PendingPointedByPaths(action.path, action.field, target).saveForLater(); // {from: action.path, field: action.field, to: target});
+                        else derivedActions.push(pendingPointedBy.resolve());
+                    }
                 }
                 break;
         }

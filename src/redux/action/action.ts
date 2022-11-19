@@ -98,15 +98,38 @@ type AccessModifier = '[]' | '+=' | '-=' | `.${number}` | `[${number}]` | undefi
 @RuntimeAccessible
 export class SetFieldAction extends Action {
     static type = 'SET_ME_FIELD';
-    // @ts-ignore
+
     static new<
-        D extends DPointerTargetable = DPointerTargetable,
-        T extends keyof D = keyof D,
+        D extends DPointerTargetable,
+        T extends (keyof D),
+        VAL extends (AM extends undefined ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : '_error_'))),
+        AM extends AccessModifier = AccessModifier,
+        ISPOINTER = "todo: ISPOINTER type = boolean but required only if val is UnArr< string > = string | string[], maybe do with override"
+        // T extends arrayFieldNameTypes<D> = any
+        >(me: D | Pointer<D>, field: T, val: VAL, subtype?: string | undefined, accessModifier?: AM | undefined, isPointer?: ISPOINTER): boolean;
+    static new<
+        D extends DPointerTargetable,
+        T extends (keyof D),
         AM extends AccessModifier = AccessModifier,
         // T extends arrayFieldNameTypes<D> = any
-        >(me: D | Pointer<D>, field: T, val: (AM extends undefined ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : '_error_'))), subtype: string | undefined = undefined, accessModifier: AM | undefined = undefined): boolean {
+        >(me: D | Pointer<D>, field: T, val: string | string[], subtype: string | undefined, accessModifier: AM | undefined, isPointer: boolean): boolean;
+    static new<
+        D extends DPointerTargetable,
+        T extends (keyof D),
+        AM extends AccessModifier = AccessModifier,
+        // T extends arrayFieldNameTypes<D> = any
+        >(me: D | Pointer<D>, field: T, val: string | null | undefined | (string | null | undefined)[], subtype: string | undefined, accessModifier: AM | undefined, isPointer: boolean): boolean;
+    static new<
+        D extends DPointerTargetable,
+        T extends (keyof D),
+        VAL extends (AM extends undefined ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : '_error_'))),
+        AM extends AccessModifier = AccessModifier,
+        ISPOINTER = "todo: ISPOINTER type = boolean but required only if val is UnArr< string > = string | string[], maybe do with override"
+        // T extends arrayFieldNameTypes<D> = any
+        >(me: D | Pointer<D>, field: T, val: VAL, subtype: string | undefined = undefined, accessModifier: AM | undefined = undefined, isPointer?: ISPOINTER): boolean {
         return new SetFieldAction(me, field as string + accessModifier, val, subtype).fire();
     }
+
 
     // field can end with "+=", "[]", or "-1" if it's array
     protected constructor(me: DPointerTargetable | Pointer, field: string, val: any, subtype?: string) {

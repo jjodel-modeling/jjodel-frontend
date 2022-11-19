@@ -1,4 +1,40 @@
+import {DPointerTargetable, LPackage, Pointer, unArr} from "./joiner";
+
 export const fakeexport = {};
+
+type arrayFieldNameTypes<D> = keyof D | `${string & keyof D}[]` | `${string & keyof D}+=` | `${string & keyof D}-=` | `${string & keyof D}.${number}` | `${string & keyof D}[${number}]`;
+type AccessModifier = '[]' | '+=' | '-=' | `.${number}` | `[${number}]` | undefined;
+class Action{
+    isPointer!: boolean;
+    static new<
+        D extends DPointerTargetable,
+        T extends (keyof D),
+        VAL extends (AM extends undefined ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : '_error_'))),
+        AM extends AccessModifier = AccessModifier,
+        ISPOINTER = "todo: ISPOINTER type = boolean but required only if val is UnArr< string > = string | string[], maybe do with override"
+        // T extends arrayFieldNameTypes<D> = any
+        >(me: D | Pointer<D>, field: T, val: VAL, subtype?: string | undefined, accessModifier?: AM | undefined, isPointer?: ISPOINTER): boolean;
+    static new<
+        D extends DPointerTargetable,
+        T extends (keyof D),
+        AM extends AccessModifier = AccessModifier,
+        // T extends arrayFieldNameTypes<D> = any
+        >(me: D | Pointer<D>, field: T, val: string | string[], subtype: string | undefined, accessModifier: AM | undefined, isPointer: boolean): boolean;
+}
+
+
+function pushactionpointdby() {}
+
+function reducer(a: Action) {
+    if (a.isPointer) { pushactionpointdby()}
+}
+
+
+
+let lPackage: LPackage = null as any;
+lPackage.subpackages
+Action.new(lPackage, "subpackages", ["id1", "id2"], undefined, undefined, true);
+
 
 /***
 

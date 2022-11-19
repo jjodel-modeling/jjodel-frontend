@@ -154,8 +154,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
 
     protected get_parent(context: Context): this["parent"] {
-        // this._get_default(context.data, "parent");
-        return LPointerTargetable.from(context.data.parent);
+        return LPointerTargetable.from(context.data.id);
     }
 
     protected set_parent(val: Pack<LAnnotation>, context: Context): boolean { // val: Pack<DModelElement>
