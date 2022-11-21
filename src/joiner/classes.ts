@@ -46,7 +46,8 @@ import type {
 import type {Dictionary, GObject, Proxyfied, DocString, CClass, unArr, orArr} from "./types";
 import type {DViewElement, LViewElement, WViewElement, WViewTransientProperties, LViewTransientProperties, DViewTransientProperties} from "../view/viewElement/view";
 import type {LogicContext} from "./proxy";
-import {DeleteElementAction, GraphPoint, GraphSize, Log} from "./index";
+import type {IStore, } from "./index";
+import {Action, DeleteElementAction, GraphPoint, ParsedAction, GraphSize, Log, SetRootFieldAction, store, U} from "./index";
 import {defaultVSize} from "../model/dataStructure";
 
 var windoww = window as any;
@@ -629,17 +630,112 @@ let aa: DClass = n;
 let ptrr = Pointers.from(aa.parent);
 aa.parent = ptrr;*/
 
+
+export class PendingPointedByPaths{
+    static all: PendingPointedByPaths[] = [];
+    // static pendingMoreThanTwice: ParsedAction[] = [];
+    static maxSolveAttempts: number = 20;
+    public solveAttempts: number = 1;
+    private stackTrace: string[];
+
+    // tmp fields, not sure what i need
+    public action!: Action; // todo: remove
+    static new(action: ParsedAction, oldState: IStore): PendingPointedByPaths {
+        const ptr: Pointer = action.value;
+        const target: DPointerTargetable | null = oldState.idlookup[ptr as string];
+        let pendingPointedBy = new PendingPointedByPaths(action.path, ptr);
+        pendingPointedBy.action = action;
+        return pendingPointedBy;
+    }
+
+    private constructor(
+        public from: DocString<"full Path in store including field key">,
+        // todo 6: how about actions that do not include index but just += -= [] ?
+        public to: Pointer){
+        this.stackTrace = U.getStackTrace();
+    }
+    static attemptimplementationdelete(pb: PointedBy) {
+        let state: IStore = store.getState();
+        let objectChain = U.followPath(state, pb.from);
+    }
+
+    public attemptResolve(state: IStore): ParsedAction | null {
+        if (this.canBeResolved(state)) return this.resolve();
+        return null;
+    }
+
+    private resolve(): ParsedAction{
+        U.arrayRemoveAll(PendingPointedByPaths.all, this);
+        return new ParsedAction(this.to, 'pointedBy', PointedBy.new(this.from + this.field), undefined, "+=");
+    }
+
+    public saveForLater(): void { PendingPointedByPaths.all.push(this); }
+    private canBeResolved(state: IStore): boolean {
+        this.solveAttempts++;
+        if (this.solveAttempts >= PendingPointedByPaths.maxSolveAttempts) Log.ex("pending PointedBy action is not revolved for too long, some pointer was wrongly set up.", this.stackTrace, this, state);
+        return !!state.idlookup[this.to]; }
+
+    static getSolveableActions(oldState: IStore): ParsedAction[] {
+        let allClone = [...this.all]; // necessary because the array will remove some elements during iteration as they are solved.
+        return allClone.map( p => p.attemptResolve(oldState)).filter(p => (!!p)) as ParsedAction[];
+    }
+}
+
 export class PointedBy{
-    source: DPointerTargetable; // elemento da cui parte il puntatore
-    field: keyof DPointerTargetable;
+    source: string; // elemento da cui parte il puntatore
+    // field: keyof DPointerTargetable;
     // il bersaglio non c'è qui, perchè è l'oggetto che contiene questo dentro l'array pointedBy
 
-    private constructor(source: DPointerTargetable, field: any) {
+    /*private constructor(source: DPointerTargetable, field: any) {
         this.source = source;
         this.field = field;
+    }*/
 
+    static getPath(p: PointedBy) : string { return p.source.substring(0, p.source.lastIndexOf(".")); }
+    static getLastKey(p: PointedBy) : string { return p.source.substring(p.source.lastIndexOf(".")); }
+    static getPathArr(p: PointedBy) : string[] { return p.source.split('.'); }
+    private constructor(source: string) {
+        this.source = source;
     }
-    static new<D extends DPointerTargetable> (source: D, field: keyof D) { return new PointedBy(source, field); }
+    static new<D extends DPointerTargetable> (action: ParsedAction, modifier: "-=" | "+=" | undefined = undefined): PointedBy {
+        let source: DocString<"full path in store including key"> = action.path;
+        if (modifier) source = source.substring(0, source.length - (modifier?.length || 0));
+        return new PointedBy(source);
+    }
+    // static new0<D extends DPointerTargetable> (source: D, field: keyof D): PointedBy { return new PointedBy(source, field); }
+
+
+
+    static remove(oldValue: Pointer | undefined, action: ParsedAction, state: IStore, casee: "+=" | "-=" | undefined = undefined): IStore {
+        if (!oldValue) return state;
+        let oldtarget: DPointerTargetable = state.idlookup[oldValue];// todo: if += -=
+        if (!oldtarget) return state;
+        let index = -1;
+        let actionpath: string = action.path.substring(0, action.path.length -(casee?.length || 0))
+        for (let i = 0; i < oldtarget.pointedBy.length; i++) { if (oldtarget.pointedBy[i].source === actionpath) {index = i; break; } }
+        if (index >= 0) {
+            oldtarget.pointedBy = [...oldtarget.pointedBy.splice(index, 1)];
+            state.idlookup[oldValue] = {...oldtarget} as any;
+            state.idlookup = {...state.idlookup};
+            state = {...state};
+        }
+        return state;
+    }
+
+    static add(newtargetptr: Pointer | undefined, action: ParsedAction, state: IStore, casee: "+=" | "-=" | undefined = undefined): IStore {
+        if (!newtargetptr) return state;
+        // todo: if can't be done because newtarget doesn't exist, build an action from this and set it pending.
+        let newtarget: DPointerTargetable = state.idlookup[newtargetptr];
+        if (!newtarget) {
+            PendingPointedByPaths.new(action, oldState).saveForLater(); // {from: action.path, field: action.field, to: target});
+            return state;
+        }
+        newtarget.pointedBy = [...newtarget.pointedBy, PointedBy.new(action, casee)];
+        state.idlookup[newtargetptr] = {...newtarget} as any;
+        state.idlookup = {...state.idlookup};
+        state = {...state};
+        return state;
+    }
 }
 
 

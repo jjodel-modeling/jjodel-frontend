@@ -16,6 +16,8 @@ var windoww = (window as any);
 (window as any).$ = $$;
 export const $: JQueryStatic = $$;
 
+
+
 // import types
 //import {$s, GraphPoint, GraphSize, IPoint, ISize, Log, Point, Size, U} from "../common/U";
 export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
@@ -32,7 +34,7 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
 } from "./types";
 export type {Pointer, PtrString, WPointerTargetable, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, } from "./classes";
 
-export {Constructors, JsType, PointedBy, RuntimeAccessibleClass, DPointerTargetable, LPointerTargetable, MyError, RuntimeAccessible, Leaf, Node, MixOnlyFuncs, LUser, DUser, Pointers} from "./classes";
+export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable, LPointerTargetable, MyError, RuntimeAccessible, Leaf, Node, MixOnlyFuncs, LUser, DUser, Pointers, PointedBy, PendingPointedByPaths} from "./classes";
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
 // console.error('iiiiiiiiiiiiiiii 3');

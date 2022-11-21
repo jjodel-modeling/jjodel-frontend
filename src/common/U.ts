@@ -792,6 +792,13 @@ export class U{
         for (let val of arr) { ret[val] = true; }
         return ret;
     }
+
+    static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[]} {
+        let ret: {added: T[], removed: T[]} = {} as any;
+        ret.removed = Uarr.arraySubtract(starting, final, false); // start & !end
+        ret.added = Uarr.arraySubtract(final, starting, false); // end & !start
+        return ret;
+    }
 }
 
 export class DDate{
@@ -975,6 +982,12 @@ export class Uarr{
         if (!arr1 || ! arr2) return null as any;
         return arr1.filter( e => arr2.indexOf(e) >= 0);
     }
+
+     static arraySubtract(arr1: any[], arr2: any[], inPlace: boolean): any[]{
+         let i: number;
+         const ret: any[] = inPlace ? arr1 : [...arr1];
+         for (i = 0; i < arr2.length; i++) { U.arrayRemoveAll(ret, arr2[i]); }
+         return ret; }
 
 }
 
@@ -3128,11 +3141,6 @@ export class SelectorOutput {
 //         for (i = 0; i < s.length && trimchars.indexOf(s[i]) !== -1; i++) { ; }
 //         return s.substr(i); }
 //
-//     static arraySubtract(arr1: any[], arr2: any[], inPlace: boolean): any[]{
-//         let i: number;
-//         const ret: any[] = inPlace ? arr1 : [...arr1];
-//         for (i = 0; i < arr2.length; i++) { UU.arrayRemoveAll(ret, arr2[i]); }
-//         return ret; }
 //
 //     static getAttributesByRegex(elem: Element, regexp: RegExp): Attr[]{
 //         const ret: Attr[] = [];
