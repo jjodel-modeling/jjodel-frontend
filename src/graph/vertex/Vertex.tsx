@@ -99,9 +99,3 @@ export const Field = (props: OwnProps, childrens: (string | React.Component)[] =
     return <VertexConnected {...{...props, childrens}} isGraph={false} isVertex={false} />;
 }
 
-DPackage.defaultComponent = GraphVertex;
-DClassifier.defaultComponent = Vertex;
-//DEnumerator.defaultComponent = Vertex;
-DModel.defaultComponent = Graph;
-DModelElement.defaultComponent = Field;
-

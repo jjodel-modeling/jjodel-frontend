@@ -159,8 +159,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let dnode: DGraphElement = idlookup[nodeid] as DGraphElement;
 
         // console.log('dragx GE mapstate addGEStuff', {dGraphElementDataClass, created: new dGraphElementDataClass(false, nodeid, graphid)});
-        console.log("map ge2", {dataid, ownProps, ret});
-        if (!dnode) { new CreateElementAction(dGraphElementDataClass.new(dataid, parentnodeid, graphid, nodeid)); }
+        if (!dnode) {
+            let dge = dGraphElementDataClass.new(dataid, parentnodeid, graphid, nodeid);
+            let act = new CreateElementAction(dge);
+            console.log("map ge2", {nodeid: nodeid+'', act:{...act}, dge: {...dge}, dgeid: dge.id});
+        }
         else { ret.node = MyProxyHandler.wrap(dnode); }
     }
 
@@ -291,9 +294,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 // const gvidmap = vidmap[injectProps.graphid];
                 const validVertexIdCondition = (id: string): boolean => gvidmap[id];
                 // todo: come butto dei sotto-vertici dentro un vertice contenitore? o dentro un sotto-grafo? senza modificare il jsx ma solo draggando?
-                const dataid = typeof re.props.data === "string" ? re.props.data : re.props.data?.id;
                 // forse posso salvarlo con i portali: l'utente specifica i parent-children originali e poi i portali scambiano le cose e fanno sotto-vertici
-                const idbasename: string = injectProps.graphid + '^' + re.props.data.id;
+                const dataid = typeof re.props.data === "string" ? re.props.data : re.props.data?.id;
+                const idbasename: string = injectProps.graphid + '^' + dataid;
+                console.log("setting nodeid", {injectProps, props:re.props, re});
                 Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
                 injectProps.nodeid = U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
                 gvidmap[injectProps.nodeid] = true;
@@ -363,7 +367,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // console.log('getTemplate:', {props: this.props, template: this.props.template, ctx: this.props.evalContext});
         let ret;
         if (false && this.props.evalContext.Vertex) {
-            setTimeout( () => new SetRootFieldAction('forceupdate', 4), 1);
+            setTimeout( () => SetRootFieldAction.new('forceupdate_', 41), 1);
             return <div>Loading</div>;}
         try {
             ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], this.props.evalContext); }
@@ -400,7 +404,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // rnode = React.cloneElement(rnode as ReactElement, injectprops);
 
         console.log("nodeee", {thiss:this, props:this.props, node: this.props.node});
-        if ((this.props.node?.__raw as DGraphElement).containedIn) {
+        if (false && (this.props.node?.__raw as DGraphElement).containedIn) {
             let $containedIn = $('#' + this.props.node.containedIn);
             let $containerDropArea = $containedIn.find(".VertexContainer");
             const droparea = $containerDropArea[0] || $containedIn[0];

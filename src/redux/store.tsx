@@ -113,7 +113,7 @@ export class IStore {
         for (let primitiveType of primitiveTypes) {
             const dPrimitiveType = DClass.new(primitiveType);
             new CreateElementAction(dPrimitiveType);
-            new SetRootFieldAction("primitiveTypes+=", dPrimitiveType.id);
+            SetRootFieldAction.new("primitiveTypes", dPrimitiveType.id, '+=', true);
         }
     }
 

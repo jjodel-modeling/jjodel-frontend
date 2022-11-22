@@ -75,7 +75,8 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
         delete otherprops.label;
         delete otherprops.key;
         delete otherprops.setter;
-        delete otherprops.getter; const primitives = Selectors.getAllPrimitiveTypes();
+        delete otherprops.getter;
+        const primitives = Selectors.getAllPrimitiveTypes(); // damiano: questo va spostato in mapstate to props
         // todo: replace with this.props.data.package.classes? but maybe attrib types can be from other packages in same model & from m3 primitive type def. so model.classes & model.meta.classes ?
         const classes = this.props.data.model.classes;
         const enumerators = this.props.data.model.enums;
@@ -100,10 +101,11 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
         hasVoid = (this.props.hasVoid !== undefined) ? this.props.hasVoid : hasVoid;
         hasPrimitive = (this.props.hasPrimitive !== undefined) ? this.props.hasPrimitive : hasPrimitive;
         hasClasses = (this.props.hasClasses !== undefined) ? this.props.hasClasses : hasClasses;
-        hasEnumerators = (this.props.hasEnumerators !== undefined) ? this.props.hasEnumerators : hasEnumerators;
+        hasEnumerators = (this.props.hasEnumerators !== undefined) ? this.props.hasEnumerators : hasEnumerators; //damiano: queste pure in mapstate, e se non hasPrimitive si può evitare chiamare il selettore per i primitivi
 
         const className = this.props.className;
         const options = this.props.options ? this.props.options : [];
+        console.log('primitivedebug', {primitives:hasPrimitive&&primitives, classes:hasClasses && classes, enumerators: hasEnumerators && enumerators, data: this.props.data});
         return (<>
             <label key={otherprops.key} className={"input-root " + (className || "d-flex")}>
                 {this.props.label && <p className={"input-label " + (className || "")}>{this.props.label}</p>}

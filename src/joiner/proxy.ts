@@ -429,7 +429,7 @@ export class MapProxyHandler extends TargetableProxyHandler<Dictionary, LPointer
 
     set(target: Dictionary, key: string | number | symbol, value: any, proxyitself: Proxyfied<Dictionary>): boolean {
         if (typeof key === "symbol") { Log.exx('cannot set a symbol in dictionary', {target, key, value, proxyitself}); return false; }
-        new SetRootFieldAction(this.additionalPath + '.' + key, value).fire();
+        SetRootFieldAction.new(this.additionalPath + '.' + key, value, '',false)
         return true;
     }
 

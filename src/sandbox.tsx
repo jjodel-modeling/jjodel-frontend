@@ -1,4 +1,4 @@
-import {DPointerTargetable, LPackage, Pointer, unArr} from "./joiner";
+import {DClassifier, DPointerTargetable, LClassifier, LPackage, LPointerTargetable, Pointer, unArr} from "./joiner";
 
 export const fakeexport = {};
 
@@ -6,7 +6,7 @@ type arrayFieldNameTypes<D> = keyof D | `${string & keyof D}[]` | `${string & ke
 type AccessModifier = '[]' | '+=' | '-=' | `.${number}` | `[${number}]` | undefined;
 class Action{
     isPointer!: boolean;
-    static new<
+/*    static new<
         D extends DPointerTargetable,
         T extends (keyof D),
         VAL extends (AM extends undefined ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : '_error_'))),
@@ -19,10 +19,10 @@ class Action{
         T extends (keyof D),
         AM extends AccessModifier = AccessModifier,
         // T extends arrayFieldNameTypes<D> = any
-        >(me: D | Pointer<D>, field: T, val: string | string[], subtype: string | undefined, accessModifier: AM | undefined, isPointer: boolean): boolean;
+        >(me: D | Pointer<D>, field: T, val: string | string[], subtype: string | undefined, accessModifier: AM | undefined, isPointer: boolean): boolean;*/
 }
 
-
+/*
 function pushactionpointdby() {}
 
 function reducer(a: Action) {
@@ -30,10 +30,19 @@ function reducer(a: Action) {
 }
 
 
+let ptr: Pointer<DClassifier, 0, 1, LClassifier> = null as any;
+let ptrarr: Pointer<DClassifier>[] = null as any;
+let ptrarr2: Pointer<DClassifier, 1, 'N'> = null as any;
+let d: DClassifier = null as any;
+let darr: DClassifier[] = null as any;
 
-let lPackage: LPackage = null as any;
-lPackage.subpackages
-Action.new(lPackage, "subpackages", ["id1", "id2"], undefined, undefined, true);
+let Lptr = LPointerTargetable.from(ptr);
+let Lptrarr = LPointerTargetable.from(ptrarr);
+let Lptrarr2 = LPointerTargetable.from(ptrarr2);
+let Ld = LPointerTargetable.from(d);
+let Ldarr = LPointerTargetable.from(darr);
+*/
+
 
 
 /***

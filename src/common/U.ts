@@ -121,6 +121,7 @@ export class U{
         }
     }
 
+    /*
     public static deletePointerBy(lModel: LPointerTargetable, dPointer: string|DPointerTargetable): void {
         const pointedBy = new Set(lModel.pointedBy as any as string[]);
         const pointer: string = typeof dPointer === "string" ? dPointer : dPointer.id;
@@ -133,7 +134,7 @@ export class U{
         let newelem_: LPointerTargetable = LModelElement.from(newelem);
         pointedBy.add(newelem_);
         lModel.pointedBy = [...pointedBy];
-    }
+    }*/
 
     public static writeLog(action: string, context: string, firstItem: string, secondItem?: string): void {
         let log: string = "";
@@ -692,7 +693,7 @@ export class U{
     }
 
     static arrayMergeInPlace<T>(arr1: T[], ...otherArrs: T[][]): T[] {
-        for (const arr of otherArrs) arr1.push.apply(arr1, arr);
+        for (const arr of otherArrs) arr1.push.apply(arr1, arr || []);
         return arr1; }
 
     static getEndingNumber(s: string, ignoreNonNumbers: boolean = false, allowDecimal: boolean = false): number {

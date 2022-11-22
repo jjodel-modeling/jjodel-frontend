@@ -72,7 +72,7 @@ export class MDE {
                     newList.push(modelElementPointer);
                 }
             }
-            new SetRootFieldAction(field, newList);
+            SetRootFieldAction.new(field, newList, '', true);
             new DeleteElementAction(lModel.id);
         }
     }

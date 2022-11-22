@@ -1,4 +1,13 @@
+import {RuntimeAccessible} from "../joiner";
+
+@RuntimeAccessible
 export default class DV {
+
+    public static nodeidprintable(nodeid: string ) {
+        let arr = nodeid.replace("^", "_").split("_");
+        return arr[1] + "_" + arr[3] + "_" + arr[4];
+    }
+
     public static modelView(): string {
         return `<div className={"w-100 h-100"}>
             <div className={"default-model"}>
@@ -26,7 +35,6 @@ export default class DV {
     }
     public static classView(): string {
         return (`<div className={"w-100 h-100"}>
-
             {this.data.dummysubelements.filter((subElement) => 
                 subElement.model.className === "DReference").map((lNodeReference) => {
                     return <Edges source={lNodeReference} />
@@ -41,7 +49,7 @@ export default class DV {
                 </div>
                  <button onClick={() => {
                     alert(this.nodeid); 
-                    console.log("debug: ", this.data, this.data?.dummydata)
+                    console.log("debug: ", this.data, this.data && this.data.dummydata)
                 }}>
                     getNodeId
                 </button>

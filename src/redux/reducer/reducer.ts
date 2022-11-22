@@ -146,21 +146,12 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
 function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction): IStore {
     // per via di thunk se arrivo qui lo stato cambia sicuro in mono-client non synchro (non ri-assegno valori equivalenti)
     // todo: ma se arrivano in ordine sbagliato da altri client? posso permetterlo?
-    let actions: (ParsedAction)[] = actionBatch.actions as ParsedAction[];
-    if (!actions) actions = [actionBatch] as any[]; // if it's simple action
+    let actions: ParsedAction[];
+    if (actionBatch.actions) actions = Action.parse(actionBatch.actions);
+    else actions = [Action.parse(actionBatch)]; // else-case is if it's a single action and not an actual compositeaction
     if (PendingPointedByPaths.all.length) actions.push(...PendingPointedByPaths.getSolveableActions(oldState)); //.all.map( p=> p.resolve() ) );
 
-    const possibleInconsistencies: Dictionary<DocString<'subtype'>, Pointer[]> = {};
-    // normalizzo tutti i path
-    for (let i = 0; i < actions.length; i++) {
-        const action: ParsedAction = actions[i];
-        action.path = action.field; // normalize the path
-        action.pathArray = action.path.split('.');
-        action.executionCount = 0;
-        if (!action.subType) continue;
-        if (!possibleInconsistencies[action.subType]) possibleInconsistencies[action.subType] = [ action.value ];
-        else possibleInconsistencies[action.subType].push(action.value);
-    }
+    Action.possibleInconsistencies = {};
 
     // estraggo le azioni derivate
     let derivedActions: ParsedAction[] = [];
@@ -170,7 +161,8 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
             case CreateElementAction.type:
                 const elem: DPointerTargetable = action.value;
                 elem.className = elem.className || elem.constructor.name;
-                derivedActions.push(new SetRootFieldAction(elem.className.substr(1).toLowerCase() + 's[]', elem.id, false) as ParsedAction);
+                derivedActions.push(
+                    Action.parse(SetRootFieldAction.create(elem.className.substring(1).toLowerCase() + 's', elem.id,'[]', true)));
                 if (false && action.isPointer) {
                     if (Array.isArray(action.value)) {
                         const ptr: Pointer[] = action.value;
@@ -181,6 +173,7 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
                         const target: DPointerTargetable | null = oldState.idlookup[ptr];
                         let pendingPointedBy = PendingPointedByPaths.new(action, oldState);
                         if (!target) PendingPointedByPaths.new(action, oldState).saveForLater(); // {from: action.path, field: action.field, to: target});
+                        // @ts-ignore
                         else derivedActions.push(pendingPointedBy.resolve());
                         // a -> x
                         // a -> y     unset x.pointedby(a)
@@ -228,10 +221,11 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
     }
 
     // effetti collaterali, aggiornamento di ridondanze
-    newState = updateRedundancies(newState, oldState, possibleInconsistencies);
+    newState = updateRedundancies_OBSOLETE(newState, oldState, Action.possibleInconsistencies);
     return newState;
 }
-function updateRedundancies(state: IStore, oldState:IStore, possibleInconsistencies: Dictionary<DocString<'subtype'>, (Pointer | DPointerTargetable)[]>): IStore {
+
+function updateRedundancies_OBSOLETE(state: IStore, oldState:IStore, possibleInconsistencies: Dictionary<DocString<'subtype'>, (Pointer | DPointerTargetable)[]>): IStore {
     for (let subType in possibleInconsistencies)
     switch (subType) {
         default: break;
@@ -291,6 +285,7 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
     for (let dname in alld) {
         switch (dname) {
             case "DeleteElementAction": continue;
+            case "DV": continue;
             default: break;
         }
         let tagless = dname.substring(1);

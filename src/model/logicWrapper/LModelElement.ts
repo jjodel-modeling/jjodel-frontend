@@ -20,7 +20,7 @@ import {
     CreateElementAction,
     Selectors,
     SetRootFieldAction,
-    Leaf, Node, DUser, Constructors
+    Leaf, Node, DUser, Constructors, store, IStore
 } from "../../joiner";
 
 import {
@@ -133,6 +133,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     protected get_Operation(context: Context): LOperation | null { return this.get_until_parent(context.proxyObject, context.data, DOperation); }
     protected get_Enum(context: Context): LEnumerator | null { return this.get_until_parent(context.proxyObject, context.data, DEnumerator); }
 
+    protected get_father(context: Context): LModelElement { return LPointerTargetable.from(context.data.father); }
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DPackage | DClassifier | DEnumerator | DEnumLiteral | DParameter | DStructuralFeature | DOperation, 1, 'N'>  { // LPackage | LClassifier | LTypedElement | LAnnotation | LEnumLiteral | LParameter | LStructuralFeature | LOperation
         return [...context.data.annotations];
     }
@@ -146,11 +147,11 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     add_parent(val: Pack<this["parent"]>, logicContext: Context): boolean { // todo: when will be used?
         const ptr = Pointers.from(val);
-        return SetFieldAction.new(logicContext.data, 'parent', ptr, undefined, '+='); // todo: need to update childrens of the old and new parents
+        return SetFieldAction.new(logicContext.data, 'parent', ptr, '+=', true); // todo: need to update childrens of the old and new parents
     }
 
     protected remove_parent(logicContext: Context): boolean { // todo: perchè senza bersaglio? perchè sempre elimina tutti?
-        return SetFieldAction.new(logicContext.data, 'parent', []);
+        return SetFieldAction.new(logicContext.data, 'parent', [], '', true);
     }
 
     protected get_parent(context: Context): this["parent"] {
@@ -159,17 +160,17 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     protected set_parent(val: Pack<LAnnotation>, context: Context): boolean { // val: Pack<DModelElement>
         const ptrs = Pointers.from(val);
-        return SetFieldAction.new(context.data, 'parent', ptrs);
+        return SetFieldAction.new(context.data, 'parent', ptrs, '', true);
     }
 
     add_annotation(val: Pack<this["annotations"]>, context: Context): boolean {
         const ptrs = Pointers.from(val);
-        return SetFieldAction.new(context.data, 'annotations', ptrs, undefined, '+=');
+        return SetFieldAction.new(context.data, 'annotations', ptrs, '+=', true);
     }
     remove_annotation(val: Pack<this["annotations"]>,  context: Context): boolean { // todo: when this will be ever used? this should be triggered by LObject but only get_ / set_ and delete of whole elements should be triggerable.
         const ptrs = Pointers.from(val);
         let indexes = ptrs.map( ptr=> context.data.annotations.indexOf(ptr)).filter(p => p>=0);
-        return SetFieldAction.new(context.data, 'annotations', indexes, undefined, '-=');
+        return SetFieldAction.new(context.data, 'annotations', indexes, '-=', true);
     }
     protected get_annotations(context: Context): this["annotations"] { return LPointerTargetable.fromPointer( context.data.annotations ); }
 
@@ -177,7 +178,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         //  if (!Array.isArray(val)) val = [val];
         //         val = val.map( v => (v instanceof LAnnotation ? v.id : ( Pointers.filterValid(v) ? v : null ))) as Pointer<DAnnotation>[];
         const ptrs = Pointers.from(val);
-        SetFieldAction.new(context.data, 'annotations', ptrs);
+        SetFieldAction.new(context.data, 'annotations', ptrs, '', true);
         return true;
     }
 
@@ -287,7 +288,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         dRefEdge.start = dReference.id;
         dRefEdge.end = dClass.id;
 
-        U.addPointerBy(lClass, dReference);
         ret = () => LModelElement.addReference_(dClass, dReference, dRefEdge);
         ret();
         return ret;
@@ -355,7 +355,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             dParameter.father = dOperation.id;
             const lString: LClass = LPointerTargetable.from(Selectors.getFirstPrimitiveTypes());
             dParameter.type = lString.id;
-            U.addPointerBy(lString, dParameter);
             ret = () => LModelElement.addParameter_(dOperation, dParameter);
         }
         ret();
@@ -378,7 +377,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
 
     protected _addException(operation: DOperation, exception: Pack1<LClassifier>, context: Context): void {
-        SetFieldAction.new(operation, "exceptions", Pointers.from(exception), undefined, '+=');
+        SetFieldAction.new(operation, "exceptions", Pointers.from(exception), '+=', true);
     }
 
 
@@ -399,46 +398,46 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     private static addOperation_ (dClass: DClass, dParameter: DParameter, dOperation: DOperation): void {
         new CreateElementAction(dParameter);
         new CreateElementAction(dOperation);
-        SetFieldAction.new(dOperation, "parameters", dParameter.id, '+=');
-        SetFieldAction.new(dClass, "operations", dOperation.id, '+=');
+        SetFieldAction.new(dOperation, "parameters", dParameter.id, '+=', true);
+        SetFieldAction.new(dClass, "operations", dOperation.id, '+=', true);
     }
     private static addParameter_(dOperation: DOperation, dParameter: DParameter): void {
         new CreateElementAction(dParameter);
-        SetFieldAction.new(dOperation, "parameters", dParameter.id, undefined, '+=');
+        SetFieldAction.new(dOperation, "parameters", dParameter.id, '+=', true);
     }
     private static addException_(dOperation: DOperation, dException: DClassifier): void {
         new CreateElementAction(dException);
-        SetFieldAction.new(dOperation, "exceptions", dException.id, undefined, '+=');
+        SetFieldAction.new(dOperation, "exceptions", dException.id, '+=', true);
     }
     private static addReference_(dClass: DClass, dReference: DReference, dRefEdge: DRefEdge): void {
         new CreateElementAction(dReference);
-        SetFieldAction.new(dClass, "references", dReference.id, undefined, '+=');
+        SetFieldAction.new(dClass, "references", dReference.id, '+=', true);
         new CreateElementAction(dRefEdge);
-        new SetRootFieldAction("refEdges", dRefEdge.id, undefined, '+='); // todo: la creazione di una ref non dovrebbe automaticamente implicare la creazione di un arco, ma per test per ora ok
+        // new SetRootFieldAction("refEdges", dRefEdge.id, '+=', true); // todo: la creazione di una ref non dovrebbe automaticamente implicare la creazione di un arco, ma per test per ora ok
     }
     private static addAttribute_(dClass: DClass, dAttribute: DAttribute): void {
         new CreateElementAction(dAttribute);
-        SetFieldAction.new(dClass, 'attributes', dAttribute.id, undefined, '+=');
+        SetFieldAction.new(dClass, 'attributes', dAttribute.id, '+=', true);
     }
     private static addClass_(dPackage: DPackage, dClass: DClass): void {
         new CreateElementAction(dClass);
-        SetFieldAction.new(dPackage, 'classifiers', dClass.id, undefined, '+=');
+        SetFieldAction.new(dPackage, 'classifiers', dClass.id, '+=', true);
     }
     private static addPackage_(dModel: DModel, dPackage: DPackage): void {
         new CreateElementAction(dPackage);
-        SetFieldAction.new(dModel, 'packages', dPackage.id, undefined, '+=');
+        SetFieldAction.new(dModel, 'packages', dPackage.id, '+=', true);
     }
     private static addSubPackage_(dPackage: DPackage, dSubPackage: DPackage): void {
         new CreateElementAction(dSubPackage);
-        SetFieldAction.new(dPackage, 'subpackages', dSubPackage.id, undefined, '+=');
+        SetFieldAction.new(dPackage, 'subpackages', dSubPackage.id, '+=', true);
     }
     private static addEnumerator_(dPackage: DPackage, dEnumerator: DEnumerator): void {
         new CreateElementAction(dEnumerator);
-        SetFieldAction.new(dPackage, 'classifiers', dEnumerator.id, undefined, '+=');
+        SetFieldAction.new(dPackage, 'classifiers', dEnumerator.id, '+=', true);
     }
     private static addEnumLiteral_(dEnum: DEnumerator, dLiteral: DEnumLiteral): void {
         new CreateElementAction(dLiteral);
-        SetFieldAction.new(dEnum, "literals", dLiteral.id, undefined, '+=');
+        SetFieldAction.new(dEnum, "literals", dLiteral.id, '+=', true);
     }
 
     changeAttributeType(newType: string): void {}
@@ -463,7 +462,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         const dNewClassifier: DClassifier = Selectors.getDElement<DClassifier>(newType);
         //const index: number = dOldClassifier.pointedBy.indexOf(dAttribute.id);
         ret = () => {
-            SetFieldAction.new(dAttribute, "type", newType);
+            SetFieldAction.new(dAttribute, "type", newType, '', true);
             // SetFieldAction.new(dOldClassifier, "pointedBy", U.removeFromList(dOldClassifier.pointedBy, dAttribute.id));
             //SetFieldAction.new(dOldClassifier, `pointedBy.${index}-=`, undefined);
             // SetFieldAction.new(dNewClassifier, "pointedBy", dAttribute.id, undefined, '+=');
@@ -479,12 +478,12 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         const dNewClass: DClass = Selectors.getDElement<DClass>(newType);
         const dRefEdge: DRefEdge | undefined = U.getReferenceEdge(dReference);
         ret = () => {
-            SetFieldAction.new(dReference, "type", newType);
+            SetFieldAction.new(dReference, "type", newType, '', true);
             // SetFieldAction.new(dOldClass, "pointedBy", U.removeFromList(dOldClass.pointedBy, dReference.id));
             //SetFieldAction.new(dOldClass, "pointedBy-=", dOldClass.pointedBy.indexOf(dReference.id))
             // SetFieldAction.new(dNewClass, "pointedBy", dReference.id, undefined, '+=');
             if(dRefEdge) {
-                SetFieldAction.new(dRefEdge, "end", newType);
+                SetFieldAction.new(dRefEdge, "end", newType, '', true);
             }
         };
         ret();
@@ -577,7 +576,7 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any> extend
     get_source(context: Context): string {
         return context.data.source; }
     set_source(val: string, logicContext: Context): boolean {
-        SetFieldAction.new(logicContext.data, 'source', val);
+        SetFieldAction.new(logicContext.data, 'source', val, '', false);
         return true; }
 }
 
@@ -680,7 +679,7 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
         if (val.match(/\s/)) val = this._autofix_name(val, logicContext);
         // todo: validate if operation can be completed or need autocorrection, then either return false (invalid parameter cannot complete) or send newVal at redux
         const fixedVal: string = val;
-        SetFieldAction.new(logicContext.data, 'name', fixedVal);
+        SetFieldAction.new(logicContext.data, 'name', fixedVal, '', false);
         return true;
     }
     protected _autofix_name(val: string, context: Context): string {
@@ -869,12 +868,14 @@ export class DPackage extends DPointerTargetable { // extends DNamedElement
     classifiers: Pointer<DClassifier, 0, 'N', LClassifier> = [];
     subpackages: Pointer<DPackage, 0, 'N', LPackage> = [];
     uri!: string;
+    prefix!: string;
 
     public static new(name?: DNamedElement["name"], uri?: DPackage["uri"]): DPackage {
         return new Constructors(new DPackage('dwc')).DPointerTargetable().DModelElement()
             .DNamedElement(name).DPackage(uri).end();
     }
 }
+
 
 @Leaf
 @RuntimeAccessible
@@ -895,16 +896,61 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     classifiers!: LClassifier[];
     subpackages!: LPackage[];
     uri!: string;
+    prefix: string = '';
+    // derived
+    classes!: LClass[];
+    enums!: LEnumerator[];
+    enumerators!: LEnumerator[];
 
     // utilities to go down in the tree (plural names)
-    enums!: LEnumerator[] | null;
-    classes!: LClass[] | null;
-    operations!: LOperation[] | null;
-    parameters!: LParameter[] | null;
-    exceptions!: LClassifier[] | null;
-    attributes!: LAttribute[] | null;
-    references!: LReference[] | null;
-    literals!: LEnumLiteral[] | null;
+    allSubPackages!: LPackage[];
+    allSubEnums!: LEnumerator[];
+    allSubClasses!: LClass[];
+    operations!: LOperation[];
+    parameters!: LParameter[];
+    exceptions!: LClassifier[];
+    attributes!: LAttribute[];
+    references!: LReference[];
+    literals!: LEnumLiteral[];
+
+
+    private get_classes(context: Context): LClass[] {
+            let classifiers = DPointerTargetable.fromPointer(context.data.classifiers as Pointer<DClassifier, 1, 1, LClassifier>[]);
+            let enumerators = classifiers.filter(dc => dc?.className === DClass.name ) as DClass[];
+            return LPointerTargetable.from(enumerators.map(e=> e.id)); }
+    private get_enums(context: Context): LEnumerator[] { return this.get_enumerators(context); }
+    private get_enumerators(context: Context): LEnumerator[] {
+        let classifiers = DPointerTargetable.fromPointer(context.data.classifiers as Pointer<DClassifier, 1, 1, LClassifier>[]);
+        let enumerators = classifiers.filter(dc => dc?.className === DEnumerator.name ) as DEnumerator[];
+        return LPointerTargetable.from(enumerators.map(e=> e.id)); }
+
+    private get_allSubClasses(context: Context): LClass[] {
+        const s: IStore = store.getState();
+        return this.get_allSubPackages(context, s).flatMap(p => p.classes || []); }
+    private get_allSubEnums(context: Context): LEnumerator[] { return this.get_allSubEnumerators(context); }
+    private get_allSubEnumerators(context: Context): LEnumerator[] {
+        const s: IStore = store.getState();
+        return this.get_allSubPackages(context, s).flatMap(p => (p.enums || []));
+    }
+
+    private get_allSubPackages(context: Context, state?: IStore): LPackage[] {
+        // return context.data.packages.map(p => LPointerTargetable.from(p));
+        state = state || store.getState();
+        let tocheck: Pointer<DPackage>[] = context.data.subpackages || [];
+        let checked: Dictionary<Pointer, true> = {};
+        checked[context.data.id] = true;
+        while (tocheck.length) {
+            let newtocheck: Pointer<DPackage>[] = [];
+            for (let ptr of tocheck) {
+                if (checked[ptr]) throw new Error("loop in packages containing themselves");
+                checked[ptr] = true;
+                let dpackage: DPackage = DPointerTargetable.from(ptr, state);
+                U.arrayMergeInPlace(newtocheck, dpackage?.subpackages);
+            }
+            tocheck = newtocheck;
+        }
+        return LPointerTargetable.from(Object.keys(checked), state);
+    }
 
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DPackage | DClassifier, 1, 'N'> {
         return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DPackage | DClassifier, 1, 'N'>, ...context.data.subpackages, ...context.data.classifiers]; }
@@ -920,7 +966,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         }
         if (dFather.className === "DModel") {
             ret = () => {
-                SetFieldAction.new(dFather, "packages", U.removeFromList(dFather.packages, dPackage.id));
+                SetFieldAction.new(dFather, "packages", U.removeFromList(dFather.packages, dPackage.id), '', true);
                 //new SetRootFieldAction("packages", U.removeFromList(Selectors.getAllPackages(), dPackage.id));
                 new DeleteElementAction(dPackage);
             }
@@ -928,7 +974,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         if (dFather.className === "DPackage") {
             ret = () => {
                 if (dFather.subpackages) SetFieldAction.new(dFather, "subpackages", U.removeFromList(dFather.subpackages, dPackage.id));
-                if (dFather.packages) SetRootFieldAction.new("packages", U.removeFromList(Selectors.getAllPackages(), dPackage.id));
+                // if (dFather.packages) SetRootFieldAction.new("packages", U.removeFromList(Selectors.getAllPackages(), dPackage.id, '', true));
                 new DeleteElementAction(dPackage);
             }
         }
@@ -1015,8 +1061,8 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
             lChild.delete(); // be carefull! here we're deleting the return type too
         }
         const ret = () => {
-            SetFieldAction.new(dClass, "operations", U.removeFromList(dClass.operations, dOperation.id));
-            SetRootFieldAction.new("operations", U.removeFromList(Selectors.getAllOperations(), dOperation.id));
+            SetFieldAction.new(dClass, "operations", U.removeFromList(dClass.operations, dOperation.id), '', true);
+            // SetRootFieldAction.new("operations", U.removeFromList(Selectors.getAllOperations(), dOperation.id), '', true);
             new DeleteElementAction(dOperation);
         }
         ret();
@@ -1090,11 +1136,11 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
         if (dOperation.parameters.indexOf(dParameter.id) !== 0) {
             const dClassifier: DClassifier | undefined = Selectors.getDElement<DClass>(dParameter.type as string); //first parameter is return type so his type is undefined
             ret = () => {
-                SetFieldAction.new(dOperation, "parameters", U.removeFromList(dOperation.parameters, dParameter.id));
+                SetFieldAction.new(dOperation,"parameters", U.removeFromList(dOperation.parameters, dParameter.id), '', true);
                 if (dClassifier) {
                     // SetFieldAction.new(dClassifier, "pointedBy", U.removeFromList(dClassifier.pointedBy, dParameter.id));
                 }
-                new SetRootFieldAction("parameters", U.removeFromList(Selectors.getAllParameters(), dParameter.id));
+                // SetRootFieldAction.new("parameters", U.removeFromList(Selectors.getAllParameters(), dParameter.id), '', true);
                 new DeleteElementAction(dParameter);
             }
         } else {
@@ -1111,7 +1157,7 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
         const dOldClassifier: DClassifier | undefined = (dParameter.type) ? Selectors.getDElement<DClassifier>(dParameter.type as string) : undefined;
         const dNewClassifier: DClassifier = Selectors.getDElement<DClassifier>(newType);
         const ret = () => {
-            SetFieldAction.new(dParameter, "type", newType);
+            SetFieldAction.new(dParameter, "type", newType, '', true);
             if (dOldClassifier) {
                 // SetFieldAction.new(dOldClassifier, "pointedBy", U.removeFromList(dOldClassifier.pointedBy, dParameter.id));
             }
@@ -1245,28 +1291,25 @@ export class LClass<Context extends LogicContext<DClass> = any, C extends Contex
 */
 
         const ret = () => {
-            SetFieldAction.new(dPackage, "classifiers", U.removeFromList(dPackage.classifiers, dClass.id)); // to delete
+            SetFieldAction.new(dPackage, "classifiers", U.removeFromList(dPackage.classifiers, dClass.id), '', true);
             //new SetRootFieldAction("classs", U.removeFromList(Selectors.getAllClasses(), dClass.id));
             new DeleteElementAction(dClass);
         }
         ret();
         return ret; }
 
-    get_dummysubelements(context: Context): LGraphElement[] {
-        const data = context.data;
-        const referenceNodes: LGraphElement[] = [];
-        // damiano version:
-        return data.references.flatMap( (ref: Pointer<DReference, 1, 1, LReference>) => LPointerTargetable.from(ref).nodes);
-
-        for(let ref of data.references){
-            const lRef: LReference & GObject = LPointerTargetable.from(ref);
-            for (let node of lRef.nodes) {
-                referenceNodes.push(node);
-            }
-        }
-        return referenceNodes;
+    get_dummysubelements(context: LogicContext<LClass>, includingthis: boolean = false): LGraphElement[] {
+        const lclass: LClass = context.proxyObject as any;
+        let $class = $('[data-dataid="' + context.data.id + '"]');
+        let $subnodes = $class.find('[data-nodeid]');
+        function mapfunc(this: HTMLElement) { return this.dataset.nodeid; }
+        let nodehtmlarr: HTMLElement[] = $subnodes.toArray();
+        if (includingthis) nodehtmlarr.push($class[0]);
+        let nodeidarr: string[] = nodehtmlarr.map( (html: HTMLElement) => html.dataset.nodeid ) as string[];
+        let state = store.getState();
+        let dnodes = nodeidarr.map( id => state.idlookup[id]).filter( (d) => !!d);
+        return dnodes.map( d => LPointerTargetable.wrap(d)) as any;
     }
-
     /*
         setImplement(interfaceIds: string[]): DClass {
             // todo: tutta sta roba andrebbe fatta da redux e dovrei aggiornare ImplementedBy, . e neanche andrebbe fatto qui ma dentro la parte logica proxy
@@ -1513,9 +1556,9 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         const dType: DClass = Selectors.getDElement<DClass>(dReference.type as string);
         const dEdge: DRefEdge | undefined = U.getReferenceEdge(dReference);
         const ret = () => {
-            SetFieldAction.new(dClass, "references", U.removeFromList(dClass.references, dReference.id));
+            SetFieldAction.new(dClass, "references", U.removeFromList(dClass.references, dReference.id), '', true);
             // SetFieldAction.new(dType, "pointedBy", U.removeFromList(dType.pointedBy, dReference.id));
-            SetRootFieldAction.new("references", U.removeFromList(Selectors.getAllReferences(), dReference.id));
+            // SetRootFieldAction.new("references", U.removeFromList(Selectors.getAllReferences(), dReference.id));
             // todo: this kind of deletion might fail if there are multiple ones of this kind fired at once. you remove elements 2° and 5°,
             //  assigning [elem1, undefined, elem3, elem4, elem5, ...], then assigning [elem1, elem2, elem3, elem4, undefined,...], the first deletion will be erased by the second.
             //  similar problem would happen deleting with indexes (even worse, removing twice the same index can remove 2 different elements.
@@ -1523,7 +1566,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
             //  if it's not DPointerTargetable the only solution might be never actually erasing but keeping fixed permanent indexes (they never shift position on delete) + deletion by index or by setting undef.
             //  (if a delete like in the example would turn undefined index to something with content, it will keep undefined, doing AND-wise for every element to check who should remain alive)
             if(dEdge) {
-                new SetRootFieldAction("refEdges", U.removeFromList(Selectors.getAllReferenceEdges(), dEdge.id));
+                // new SetRootFieldAction("refEdges", U.removeFromList(Selectors.getAllReferenceEdges(), dEdge.id, '', true));
             }
             new DeleteElementAction(dReference);
         }
@@ -1537,11 +1580,11 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         const dNewClass: DClass = Selectors.getDElement<DClass>(newType);
         const dRefEdge: DRefEdge | undefined = U.getReferenceEdge(dReference);
         const ret = () => {
-            SetFieldAction.new(dReference, "type", newType);
+            SetFieldAction.new(dReference, "type", newType, '', true);
             // SetFieldAction.new(dOldClass, "pointedBy", U.removeFromList(dOldClass.pointedBy, dReference.id));
             // SetFieldAction.new(dNewClass, "pointedBy", dReference.id, undefined, '+=');
             if (dRefEdge) {
-                SetFieldAction.new(dRefEdge, "end", newType);
+                SetFieldAction.new(dRefEdge, "end", newType, '', true);
             }
         };
         ret();
@@ -1629,9 +1672,9 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         const dClass: DClass = Selectors.getDElement<DClass>(dAttribute.father);
         const dClassifier: DClassifier = Selectors.getDElement<DClass>(dAttribute.type as string);
         const ret = () => {
-            SetFieldAction.new(dClass, "attributes", U.removeFromList(dClass.attributes, dAttribute.id));
+            SetFieldAction.new(dClass, "attributes", U.removeFromList(dClass.attributes, dAttribute.id), '', true);
             // SetFieldAction.new(dClassifier, "pointedBy", U.removeFromList(dClassifier.pointedBy, dAttribute.id));
-            SetRootFieldAction.new("attributes", U.removeFromList(Selectors.getAllAttributes(), dAttribute.id));
+            // SetRootFieldAction.new("attributes", U.removeFromList(Selectors.getAllAttributes(), dAttribute.id));
             new DeleteElementAction(dAttribute);
         }
         ret();
@@ -1643,7 +1686,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         const dOldClassifier: DClassifier = Selectors.getDElement<DClassifier>(dAttribute.type as string);
         const dNewClassifier: DClassifier = Selectors.getDElement<DClassifier>(newType);
         const ret = () => {
-            SetFieldAction.new(dAttribute, "type", newType);
+            SetFieldAction.new(dAttribute, "type", newType, '', true);
             // SetFieldAction.new(dOldClassifier, "pointedBy", U.removeFromList(dOldClassifier.pointedBy, dAttribute.id));
             // SetFieldAction.new(dNewClassifier, "pointedBy", dAttribute.id, undefined, '+=');
         };
@@ -1699,8 +1742,8 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
         const dEnumLiteral: DEnumLiteral = context.data;
         const dEnumerator: DEnumerator = Selectors.getDElement<DEnumerator>(dEnumLiteral.father);
         const ret = () => {
-            SetFieldAction.new(dEnumerator, "literals", U.removeFromList(dEnumerator.literals, dEnumLiteral.id));
-            SetRootFieldAction.new("enumliterals", U.removeFromList(Selectors.getAllEnumLiterals(), dEnumLiteral.id));
+            SetFieldAction.new(dEnumerator, "literals", U.removeFromList(dEnumerator.literals, dEnumLiteral.id), '', true);
+            // SetRootFieldAction.new("enumliterals", U.removeFromList(Selectors.getAllEnumLiterals(), dEnumLiteral.id));
             new DeleteElementAction(dEnumLiteral);
         }
         ret();
@@ -1784,10 +1827,10 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         const ret = () => {
             if(dFather.className === "DPackage") {
                 const dPackage = dFather;
-                SetFieldAction.new(dPackage, "classifiers", U.removeFromList((dPackage as GObject).classifiers, dEnumerator.id));
+                SetFieldAction.new(dPackage, "classifiers", U.removeFromList((dPackage as GObject).classifiers, dEnumerator.id), '', true);
             }
-            SetFieldAction.new(dPackage, "classifiers", U.removeFromList(dPackage.classifiers, dEnumerator.id));
-            SetRootFieldAction.new("enumerators", U.removeFromList(Selectors.getAllEnumerators(), dEnumerator.id));
+            SetFieldAction.new(dPackage, "classifiers", U.removeFromList(dPackage.classifiers, dEnumerator.id), '', true);
+            SetRootFieldAction.new("enumerators", U.removeFromList(Selectors.getAllEnumerators(), dEnumerator.id), '', true);
             new DeleteElementAction(dEnumerator);
         }
         ret();
@@ -1795,7 +1838,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         return ret;
     }
 
-
+/*
     protected get_delete2(context: Context): () => void {
         let ret = () => {};
         const data = context.proxyObject;
@@ -1813,7 +1856,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
             }
         }
         return ret;
-    }
+    }*/
 }
 DDataType.subclasses.push(DEnumerator);
 LDataType.subclasses.push(LEnumerator);
@@ -1966,8 +2009,34 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DPackage, 1, 'N'> {
         return [...(super.get_childrens_idlist(context) as Pointer<DAnnotation | DPackage, 1, 'N'>), ...context.data.packages]; }
 
-    get_packages(context: Context): LPackage[] {
-        return context.data.packages.map(p => LPointerTargetable.from(p)); }
+    private get_classes(context: Context): LClass[] {
+        const s: IStore = store.getState();
+        return this.get_allSubPackages(context, s).flatMap(p => p.classes || []); }
+    private get_enums(context: Context): LEnumerator[] { return this.get_enumerators(context); }
+    private get_enumerators(context: Context): LEnumerator[] {
+        const s: IStore = store.getState();
+        return this.get_allSubPackages(context, s).flatMap(p => (p.enums || []));
+    }
+
+    private get_allSubPackages(context: Context, state?: IStore): LPackage[] {
+        // return context.data.packages.map(p => LPointerTargetable.from(p));
+        state = state || store.getState();
+        let tocheck: Pointer<DPackage>[] = context.data.packages || [];
+        let checked: Dictionary<Pointer, true> = {};
+        while (tocheck.length) {
+            let newtocheck: Pointer<DPackage>[] = [];
+            for (let ptr of tocheck) {
+                if (checked[ptr]) throw new Error("loop in packages containing themselves");
+                checked[ptr] = true;
+                let dpackage: DPackage = DPointerTargetable.from(ptr, state);
+                U.arrayMergeInPlace(newtocheck, dpackage?.subpackages);
+            }
+            tocheck = newtocheck;
+        }
+        return LPointerTargetable.from(Object.keys(checked), state);
+    }
+
+    private get_packages(context: Context): LPackage[] { return context.data.packages.map(p => LPointerTargetable.from(p)); }
 
     protected get_delete(context: Context): () => void {
         const ret = () => { alert("todo delete LModel"); }
