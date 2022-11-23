@@ -6,7 +6,7 @@ import {
     GObject,
     Pointer,
     DocString,
-    Leaf, Node, Constructors, DNamedElement, DTypedElement, ISize
+    Leaf, Node, Constructors, DNamedElement, DTypedElement, ISize, IStore, DPackage, LNamedElement
 } from "../../joiner";
 
 import {
@@ -58,9 +58,10 @@ export class DGraphElement extends DPointerTargetable {
     public static new(model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"]): DGraphElement {
         return new Constructors(new DGraphElement('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID).end();
     }
+
 }
 @RuntimeAccessible
-export class LGraphElement extends LPointerTargetable {
+export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C extends Context = Context> extends LPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LGraphElement;
@@ -74,6 +75,7 @@ export class LGraphElement extends LPointerTargetable {
     containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
+    allSubNodes!: LGraphElement[];
 
     get_graph(context: LogicContext<DGraphElement>): LGraph {
         return TargetableProxyHandler.wrap(context.data.graph); }
@@ -101,6 +103,26 @@ export class LGraphElement extends LPointerTargetable {
             LPointerTargetable.from(subelement).containedIn = null as any; // todo: can this happen? è transitorio o causa vertici senza parent permanenti?
         }
         return true;
+    }
+
+
+    private get_allSubNodes(context: Context, state?: IStore): LPackage[] {
+        // return context.data.packages.map(p => LPointerTargetable.from(p));
+        state = state || store.getState();
+        let tocheck: Pointer<DPackage>[] = context.data.subElements || [];
+        let checked: Dictionary<Pointer, true> = {};
+        checked[context.data.id] = true;
+        while (tocheck.length) {
+            let newtocheck: Pointer<DPackage>[] = [];
+            for (let ptr of tocheck) {
+                if (checked[ptr]) throw new Error("loop in packages containing themselves");
+                checked[ptr] = true;
+                let dpackage: DGraphElement = DPointerTargetable.from(ptr, state);
+                U.arrayMergeInPlace(newtocheck, dpackage?.subElements);
+            }
+            tocheck = newtocheck;
+        }
+        return LPointerTargetable.from(Object.keys(checked), state);
     }
 
 
