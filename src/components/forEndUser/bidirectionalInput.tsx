@@ -14,8 +14,8 @@ import {
     AbstractConstructor,
     OCL,
     DGraph,
-    LClass,
-    LEnumerator
+    DAttribute,
+    DReference, DParameter
 } from "../../joiner";
 import Editor from "@monaco-editor/react";
 import {types} from "util";
@@ -83,21 +83,12 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
 
         //todo: define hasVoid, hasClasses, ... with data.classname (default=true)
         let hasVoid = true; let hasPrimitive = true; let hasClasses = true; let hasEnumerators = true;
+        if(data.className === DAttribute.name) { hasVoid = false; hasClasses = false; }
+        if(data.className === DReference.name) { hasVoid = false; hasPrimitive = false; hasEnumerators = false; }
+        if(data.className === DParameter.name) { hasVoid = false; }
         // damiano: questo andrebbe invertito. di default setti tutto a let hasClasses = false, e se è un package lo setti a true.
         // perchè altrimenti per d-class non previste (GraphElement, annotations...) risulta a true a meno che non le elenchi tutte.
         // e meglio fare uno switch invece di if-chain
-        if(data.className === "DAttribute") {
-            hasVoid = false;
-            hasClasses = false;
-        }
-        if(data.className === "DReference") {
-            hasVoid = false;
-            hasPrimitive = false;
-            hasEnumerators = false;
-        }
-        if(data.className === "DParameter") {
-            hasVoid = false;
-        }
         hasVoid = (this.props.hasVoid !== undefined) ? this.props.hasVoid : hasVoid;
         hasPrimitive = (this.props.hasPrimitive !== undefined) ? this.props.hasPrimitive : hasPrimitive;
         hasClasses = (this.props.hasClasses !== undefined) ? this.props.hasClasses : hasClasses;
@@ -105,7 +96,6 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
 
         const className = this.props.className;
         const options = this.props.options ? this.props.options : [];
-        console.log('primitivedebug', {primitives:hasPrimitive&&primitives, classes:hasClasses && classes, enumerators: hasEnumerators && enumerators, data: this.props.data});
         return (<>
             <label key={otherprops.key} className={"input-root " + (className || "d-flex")}>
                 {this.props.label && <p className={"input-label " + (className || "")}>{this.props.label}</p>}
