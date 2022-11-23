@@ -15,7 +15,7 @@ import {
     DocString,
     Dictionary,
     RuntimeAccessibleClass,
-    LPointerTargetable, store, windoww, getPath, Selectors, createOrOpenModelTab
+    LPointerTargetable, store, windoww, getPath, Selectors, createOrOpenModelTab, PointedBy, PendingPointedByPaths
 } from "../../joiner";
 import React from "react";
 
@@ -23,7 +23,8 @@ import React from "react";
 
 
 
-function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevAction: ParsedAction, newVal: any) {
+
+function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevAction: ParsedAction, newVal: any): IStore {
     let newRoot: IStore = {...state} as IStore;
     let current: any = newRoot;
     if (!action.path?.length) throw new MyError("path length must be at least 1", {action});
@@ -63,34 +64,38 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
             // perform final assignment
             if (isArrayAppend) {
                 gotChanged = true;
-                if (!Array.isArray(current[key])) {
-                    // throw new MyError('indexing of type "+=", "[]", or "-1" is only valid on terminal arrays, found instead:', {foundInstead: current[key], action});
-                    current[key] = [];
-                }
+                if (!Array.isArray(current[key])) { current[key] = []; }
+                oldValue = [...current[key]];
+                current[key] = [...current[key]];
                 current[key].push(newVal);
-                oldValue = undefined;
-                unpointedElement = state.idlookup[oldValue];
+                unpointedElement = undefined;
+                if (action.isPointer) { state = PointedBy.add(newVal as Pointer, action, state, "+="); }
             } else
             if (isArrayRemove){
                 if (!Array.isArray(current[key])) { current[key] = []; }
+                oldValue = [...current[key]];
                 let index = U.isNumber(newVal) ? +newVal : -1;
                 if (index === -1) index = current[key].length - 1;
                 gotChanged = index >=0 && index < current[key].length;
                 if (gotChanged){
                     current[key] = [...current[key]];
+                    let removedval = current[key].splice(index, 1); // in-place edit
+                    if (action.isPointer) { state = PointedBy.remove(removedval as Pointer, action, state, '-='); }
+
+                    /// a.pointsto = [x, y, z]; a.pointsto = [x, z]       --->    remove a from y.pointedby
                     /*
                     const elementsThatChangedIndex: DPointerTargetable[] = current[key].slice(index);
-                    // todo: problema: se ho [dobj1, dobj2]... e li swappo, cambia un indice nel percorso "pointedby" e non me ne accorgo mai e un oggetto risulta "pointedby" da oggetti che non lo puntano o non esistono più a quell'indice
+                    todo: problema: se ho [dobj1, dobj2]... e li swappo, cambia un indice nel percorso "pointedby" e non me ne accorgo mai e un oggetto risulta "pointedby" da oggetti che non lo puntano o non esistono più a quell'indice
                     for (let j = 0; j < elementsThatChangedIndex.length; j++) {
                         let newindex = index + j - 1;
                         let oldFullpathTrimmed = action.pathArray.join('.');
                         se realizzi "pointedby" qui è to do: remove old paths and re-add them with updated index
                     }*/
-                    oldValue = current[key].splice(index, 1);
                     //unpointedElement = state.idlookup[oldValue];
                 }
             }
             else if (current[key] !== newVal) {
+                // todo: caso in cui setto manualmente classes.1 = pointer; // the latest element is array and not DPointerTargetable, so might need to buffer upper level in the tree? or instead of "current" keep an array of sub-objects encountered navigating the path in state.
                 oldValue = current[key];
                 gotChanged = true;
                 unpointedElement = state.idlookup[oldValue];
@@ -98,6 +103,22 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
                 // i puntati dall'array hanno i loro pointedBY non aggiornati, non voglio fare un deep check di tutto l'oggetto a cercare puntatori per efficienza.
                 if (newVal === undefined) delete current[key];
                 else current[key] = newVal;
+
+                if (action.isPointer) {
+                    if (Array.isArray(action.value)) {
+                        let oldpointerdestinations: Pointer[] = oldValue;
+                        let difference: {added: Pointer[], removed: Pointer[]} = U.arrayDifference(oldpointerdestinations, current[key]);
+                        for (let rem of difference.removed) { state = PointedBy.remove(rem as Pointer, action, state); }
+                        for (let add of difference.added) { state = PointedBy.add(add as Pointer, action, state); }
+                        // a.pointsto = [a, b, c];  a.pointsto = [a, b, x];    ------>     c.pointedby.remove(a) & x.pointedby.add(a)
+                        // idlookup.somelongid.pointsto = [...b];
+                    }
+                    else {
+                        // a.pointsto = b;  a.pointsto = c;    ------>     b.pointedby.remove(a)
+                        state = PointedBy.remove(oldValue as Pointer, action, state);
+                        state = PointedBy.add(current[key] as Pointer, action, state);
+                    }
+                }
             } else {
                 gotChanged = false;
                 // value not changed
@@ -120,72 +141,17 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
     return gotChanged ? newRoot : state;
 }
 
-class PointedBy{
-    source: DPointerTargetable; // elemento da cui parte il puntatore
-    field: keyof DPointerTargetable;
-    // il bersaglio non c'è qui, perchè è l'oggetto che contiene questo dentro l'array pointedBy
-
-    private constructor(source: DPointerTargetable, field: any) {
-        this.source = source;
-        this.field = field;
-
-    }
-    static new<D extends DPointerTargetable> (source: D, field: keyof D) { return new PointedBy(source, field); }
-}
-
-example of usage:
-let lclass: LClass = null as any;
-let lref: LReference = null as any;
-lref.target = [lclass.id];
-lclass.pointedBy = sarà new PointedBy(lref, "target"); ma è semrpe settato automaticamente, non devi settarlo tu.
-
-class PendingPointedByPaths{
-    static all: PendingPointedByPaths[] = []; todo4: usa effettivamente questo array
-    // static pendingMoreThanTwice: ParsedAction[] = [];
-    static maxSolveAttempts: number = 20;
-    public solveAttempts: number = 1;
-    private stackTrace: string[]
-    constructor(
-        public from: DocString<"Path in store">,
-        public field: DocString<"keyof object found in from path">,
-        public to: Pointer){
-        this.stackTrace = U.getStackTrace();
-    }
-
-    public attemptResolve(state: IStore): ParsedAction | null {
-        if (this.canBeResolved(state)) return this.resolve();
-        return null;
-    }
-    todo5: fai in modo che quando viene sovrascritto un puntatore, ti salvi il vecchio per poter cancellare il pointedby dal vecchio oggetto non più puntato
-
-    private resolve(): ParsedAction{
-        todo: ma i campi sono già corretti credo, perchè presi da una parsedAction che tentava di settare un pointer.
-            todo2: setta isPointer to setFieldAct && setRootFieldAct.
-            todo3: assicurati che nel parse della action non si perda il boolean isPointer
-        U.arrayRemoveAll(PendingPointedByPaths.all, this);
-        return ParsedAction.new(this.to, 'pointedBy', new PointedBy(this.from, this.field), undefined, "+=");
-    }
-
-    public saveForLater(): void { PendingPointedByPaths.all.push(this); }
-    private canBeResolved(state: IStore): boolean {
-        this.solveAttempts++;
-        if (this.solveAttempts >= PendingPointedByPaths.maxSolveAttempts) Log.ex("pending PointedBy action is not revolved for too long, some pointer was wrongly set up.", this.stackTrace, this, state);
-        return !!state.idlookup[this.to]; }
-
-    static getSolveableActions(oldState: IStore): ParsedAction[] {
-        let allClone = [...this.all]; // necessary because the array will remove some elements during iteration as they are solved.
-        return allClone.map( p => p.attemptResolve(oldState)).filter(p => (!!p)) as ParsedAction[];
-    }
-}
 
 // const pendingPointedByPaths: {from: DocString<"Path in store">, field: DocString<"keyof object found in from path">, to: Pointer}[] = [];
 function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction): IStore {
     // per via di thunk se arrivo qui lo stato cambia sicuro in mono-client non synchro (non ri-assegno valori equivalenti)
     // todo: ma se arrivano in ordine sbagliato da altri client? posso permetterlo?
-    let actions: (ParsedAction)[] = actionBatch.actions as ParsedAction[];
-    if (!actions) actions = [actionBatch] as any[]; // if it's simple action
+    let actions: ParsedAction[];
+    if (actionBatch.actions) actions = Action.parse(actionBatch.actions);
+    else actions = [Action.parse(actionBatch)]; // else-case is if it's a single action and not an actual compositeaction
     if (PendingPointedByPaths.all.length) actions.push(...PendingPointedByPaths.getSolveableActions(oldState)); //.all.map( p=> p.resolve() ) );
 
+    Action.possibleInconsistencies = {};
 
     // estraggo le azioni derivate
     let derivedActions: ParsedAction[] = [];
@@ -195,34 +161,33 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
             case CreateElementAction.type:
                 const elem: DPointerTargetable = action.value;
                 elem.className = elem.className || elem.constructor.name;
-                derivedActions.push(new SetRootFieldAction(elem.className.substr(1).toLowerCase() + 's[]', elem.id, false) as ParsedAction);
-                if (action.isPointer) {
-                    const ptr: Pointer = action.value;
-                    const target: DPointerTargetable | null = oldState.idlookup[ptr];
-                    let pendingPointedBy = new PendingPointedByPaths(action.path, action.field, target);
-                    if (!target) new PendingPointedByPaths(action.path, action.field, target).saveForLater(); // {from: action.path, field: action.field, to: target});
-                    else derivedActions.push(pendingPointedBy.resolve());
+                derivedActions.push(
+                    Action.parse(SetRootFieldAction.create(elem.className.substring(1).toLowerCase() + 's', elem.id,'[]', true)));
+                if (false && action.isPointer) {
+                    if (Array.isArray(action.value)) {
+                        const ptr: Pointer[] = action.value;
+                        // todo but replaced by side actions in execution of the main action instead of triggering derived actions
+                    }
+                    else {
+                        const ptr: Pointer = action.value;
+                        const target: DPointerTargetable | null = oldState.idlookup[ptr];
+                        let pendingPointedBy = PendingPointedByPaths.new(action, oldState);
+                        if (!target) PendingPointedByPaths.new(action, oldState).saveForLater(); // {from: action.path, field: action.field, to: target});
+                        // @ts-ignore
+                        else derivedActions.push(pendingPointedBy.resolve());
+                        // a -> x
+                        // a -> y     unset x.pointedby(a)
+                    }
                 }
                 break;
         }
     }
-    console.error({U, Umip:U.arrayMergeInPlace, WU: windoww.U, WUmip: windoww.U.arrayMergeInPlace});
+    // console.error({U, Umip:U.arrayMergeInPlace, WU: windoww.U, WUmip: windoww.U.arrayMergeInPlace});
     actions = U.arrayMergeInPlace<ParsedAction>(actions, derivedActions);
-    const possibleInconsistencies: Dictionary<DocString<'subtype'>, Pointer[]> = {};
-    // normalizzo tutti i path
-    for (let i = 0; i < actions.length; i++) {
-        const action: ParsedAction = actions[i];
-        action.path = action.field; // normalize the path
-        console.log({action});
-        action.pathArray = action.path.split('.');
-        action.executionCount = 0;
-        if (!action.subType) continue;
 
-        if (!possibleInconsistencies[action.subType]) possibleInconsistencies[action.subType] = [ action.value ];
-        else possibleInconsistencies[action.subType].push(action.value);
-    }
     // ordino i path con segmenti comuni
     actions = actions.sort( (a1, a2) => U.stringCompare(a1.path, a2.path));
+
     // destrutturo solo i nodi intermedi e solo la prima volta che li incontro (richiede le azioni ordinate in base al path)
     let newState = oldState;
     for (let i = 0; i < actions.length; i++) {
@@ -256,10 +221,11 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
     }
 
     // effetti collaterali, aggiornamento di ridondanze
-    newState = updateRedundancies(newState, oldState, possibleInconsistencies);
+    newState = updateRedundancies_OBSOLETE(newState, oldState, Action.possibleInconsistencies);
     return newState;
 }
-function updateRedundancies(state: IStore, oldState:IStore, possibleInconsistencies: Dictionary<DocString<'subtype'>, (Pointer | DPointerTargetable)[]>): IStore {
+
+function updateRedundancies_OBSOLETE(state: IStore, oldState:IStore, possibleInconsistencies: Dictionary<DocString<'subtype'>, (Pointer | DPointerTargetable)[]>): IStore {
     for (let subType in possibleInconsistencies)
     switch (subType) {
         default: break;
@@ -319,6 +285,7 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
     for (let dname in alld) {
         switch (dname) {
             case "DeleteElementAction": continue;
+            case "DV": continue;
             default: break;
         }
         let tagless = dname.substring(1);

@@ -29,8 +29,8 @@ export class MDE {
         }
         for (let dPointer of lModelElement.pointedBy) {
             try {
-                const lPointer: LModelElement = MyProxyHandler.wrap(dPointer);
-                lPointer.delete();
+                /*const lPointer: LModelElement = MyProxyHandler.wrap(dPointer);
+                lPointer.delete();*/
             } catch (e) {
                 console.log(e);
             }
@@ -72,7 +72,7 @@ export class MDE {
                     newList.push(modelElementPointer);
                 }
             }
-            new SetRootFieldAction(field, newList);
+            SetRootFieldAction.new(field, newList, '', true);
             new DeleteElementAction(lModel.id);
         }
     }

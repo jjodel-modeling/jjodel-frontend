@@ -78,15 +78,15 @@ export class LGraphElement extends LPointerTargetable {
     get_graph(context: LogicContext<DGraphElement>): LGraph {
         return TargetableProxyHandler.wrap(context.data.graph); }
 
-    set_containedIn(val: Pointer<DGraphElement, 0, 1, LGraphElement>[], context: LogicContext<DGraphElement>): boolean {
+    set_containedIn(val: DGraphElement["containedIn"], context: LogicContext<DGraphElement>): boolean {
         SetFieldAction.new(context.data, 'containedIn', val);
-        if (val) SetFieldAction.new(val as any, 'subElements+=', context.data.id, Action.SubType.vertexSubElements);
+        if (val) SetFieldAction.new(val as any, 'subElements+=', context.data.id);
         return true;
     }
 
     set_subElements(val: Pointer<DGraphElement, 0, 'N', LGraphElement>, context: LogicContext<DGraphElement>): boolean {
         if (isDeepStrictEqual(context.data.subElements, val)) return true;
-        SetFieldAction.new(context.data, 'subElements', val, Action.SubType.vertexSubElements);
+        SetFieldAction.new(context.data, 'subElements', val, '', true);
         const idlookup = store.getState().idlookup;
         // new subelements
         for (let newsubelementid of val) {
@@ -143,7 +143,7 @@ export class DGraph extends DGraphElement {
 
     public static new(model: DGraph["model"], parentNodeID?: DGraphElement["father"], graphID?: DGraphElement["graph"], nodeID?: DGraphElement["id"] ): DGraph {
         return new Constructors(new DGraph('dwc')).DPointerTargetable()
-            .DGraphElement(model, parentNodeID, graphID, nodeID).DGraph(model).end();
+            .DGraphElement(model, parentNodeID, graphID, nodeID).DGraph(model, nodeID).end();
     }
 
 
@@ -507,7 +507,7 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
 
     public static new(model: DGraph["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size: GraphSize = defaultVSize): DGraphVertex {
         return new Constructors(new DGraphVertex('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
-            .DVoidVertex(size).DVertex().DGraph(model).end();
+            .DVoidVertex(size).DVertex().DGraph(model, nodeID).end();
     }
 
 

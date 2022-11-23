@@ -17,7 +17,7 @@ export default class JSX {
         const select = (forUser:Pointer<DUser, 0, 1> = null) => {
             if (!forUser) forUser = DUser.current;
             props.node.isSelected[forUser] = true;
-            new SetRootFieldAction('_lastSelected', {
+            SetRootFieldAction.new('_lastSelected', {
                 node: props.nodeid,
                 view: props.view.id,
                 modelElement: props.data?.id

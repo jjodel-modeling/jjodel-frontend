@@ -1,4 +1,49 @@
+import {DClassifier, DPointerTargetable, LClassifier, LPackage, LPointerTargetable, Pointer, unArr} from "./joiner";
+
 export const fakeexport = {};
+
+type arrayFieldNameTypes<D> = keyof D | `${string & keyof D}[]` | `${string & keyof D}+=` | `${string & keyof D}-=` | `${string & keyof D}.${number}` | `${string & keyof D}[${number}]`;
+type AccessModifier = '[]' | '+=' | '-=' | `.${number}` | `[${number}]` | undefined;
+class Action{
+    isPointer!: boolean;
+/*    static new<
+        D extends DPointerTargetable,
+        T extends (keyof D),
+        VAL extends (AM extends undefined ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : '_error_'))),
+        AM extends AccessModifier = AccessModifier,
+        ISPOINTER = "todo: ISPOINTER type = boolean but required only if val is UnArr< string > = string | string[], maybe do with override"
+        // T extends arrayFieldNameTypes<D> = any
+        >(me: D | Pointer<D>, field: T, val: VAL, subtype?: string | undefined, accessModifier?: AM | undefined, isPointer?: ISPOINTER): boolean;
+    static new<
+        D extends DPointerTargetable,
+        T extends (keyof D),
+        AM extends AccessModifier = AccessModifier,
+        // T extends arrayFieldNameTypes<D> = any
+        >(me: D | Pointer<D>, field: T, val: string | string[], subtype: string | undefined, accessModifier: AM | undefined, isPointer: boolean): boolean;*/
+}
+
+/*
+function pushactionpointdby() {}
+
+function reducer(a: Action) {
+    if (a.isPointer) { pushactionpointdby()}
+}
+
+
+let ptr: Pointer<DClassifier, 0, 1, LClassifier> = null as any;
+let ptrarr: Pointer<DClassifier>[] = null as any;
+let ptrarr2: Pointer<DClassifier, 1, 'N'> = null as any;
+let d: DClassifier = null as any;
+let darr: DClassifier[] = null as any;
+
+let Lptr = LPointerTargetable.from(ptr);
+let Lptrarr = LPointerTargetable.from(ptrarr);
+let Lptrarr2 = LPointerTargetable.from(ptrarr2);
+let Ld = LPointerTargetable.from(d);
+let Ldarr = LPointerTargetable.from(darr);
+*/
+
+
 
 /***
 

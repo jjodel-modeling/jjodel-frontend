@@ -1,4 +1,13 @@
+import {RuntimeAccessible} from "../joiner";
+
+@RuntimeAccessible
 export default class DV {
+
+    public static nodeidprintable(nodeid: string ) {
+        let arr = nodeid.replace("^", "_").split("_");
+        return arr[1] + "_" + arr[3] + "_" + arr[4];
+    }
+
     public static modelView(): string {
         return `<div className={"w-100 h-100"}>
             <div className={"default-model"}>
@@ -14,7 +23,7 @@ export default class DV {
         return (`<div className={"w-100 h-100"}>
             <div className={"default-pkg"}>
                 {/*<button onClick={() => {this.node.__raw.minimized = !this.node.__raw.minimized} } >test</button>*/}
-                <button onClick={() => {alert(this.nodeid)}}>getNodeId</button>
+                {/* <button onClick={() => {alert(this.nodeid)}}>getNodeId</button> */}
                 <div className={"children"}>
                     {this.data.childrens.map((classifier, i) => {
                             return <DefaultNode key={i} data={classifier.id} />
@@ -28,7 +37,7 @@ export default class DV {
         return (`<div className={"w-100 h-100"}>
 
             {this.data.dummysubelements.filter((subElement) => 0
-                errore non devi prendere model ma modelElement
+                //errore non devi prendere model ma modelElement
                 subElement.model.className === "DReference").map((lNodeReference) => {
                     return <Edges source={lNodeReference} />
                 }
@@ -40,12 +49,7 @@ export default class DV {
                             pattern={"[a-zA-Z_\u0024][0-9a-zA-Z\\d_\u0024]*"} />
                     </div>
                 </div>
-                 <button onClick={() => {
-                    alert(this.nodeid); 
-                    console.log("debug: ", this.data, this.data?.dummydata)
-                }}>
-                    getNodeId
-                </button>
+                 {/*<button onClick={() => {alert(this.nodeid);console.log("debug: ", this.data, this.data && this.data.dummydata)}}>getNodeId</button>*/}
                 <div className={"children"}>
                     {(this.data.attributes.length > 0) && <div className={"children-attributes"}>
                         {this.data.attributes.map((attribute, i) => {

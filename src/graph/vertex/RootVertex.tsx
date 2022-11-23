@@ -19,7 +19,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     const select = (forUser:Pointer<DUser, 0, 1> = null) => {
         if (!forUser) forUser = DUser.current;
         rootProps.node.isSelected[forUser] = true;
-        new SetRootFieldAction('_lastSelected', {
+        SetRootFieldAction.new('_lastSelected', {
             node: rootProps.nodeid,
             view: rootProps.view.id,
             modelElement: rootProps.data?.id
@@ -45,9 +45,8 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                 drag: function(event: GObject, obj: GObject){
                     const y: number = obj.position.top;
                     const x: number = obj.position.left;
-
-                    rootProps.node.x = x;
-                    rootProps.node.y = y;
+                    // rootProps.node.x = x;
+                    // rootProps.node.y = y;
 
                 }
             });

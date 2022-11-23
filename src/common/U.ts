@@ -70,6 +70,29 @@ export class U{
         return undefined;
     }
 
+    public static followPath(base: GObject, path: string): {chain: GObject[], lastObject: GObject, keys:string[], lastkey: string, lastval: any, failedRemainingPath: string[]} {
+        let patharr = path.split('.');
+        let base0 = base;
+        let ret: {chain: GObject[], lastObject: GObject, keys: string[], lastkey: string, lastval: any, failedRemainingPath: string[]}  = {} as any;
+        ret.keys = patharr;
+        ret.chain = [base];
+        let lastObject = base;
+
+        for (let i = 0; i < patharr.length; i++) {
+            let path = ret.lastkey = patharr[i];
+            lastObject = base;
+            base = base[path];
+            ret.chain.push(base);
+            if (typeof base !== "object" || i + 1 === patharr.length) {
+                ret.failedRemainingPath = patharr.slice(i);
+                ret.lastval = base;
+                ret.lastObject = lastObject;
+                return ret;
+            }
+        }
+        throw new Error("followPath should never reach here");
+        return ret;
+    }
     /*
     public static removeFromList<T extends LPointerTargetable>(list: T[], itemToRemove: T): T[] {
         const correctedList: T[] = [];
@@ -98,6 +121,7 @@ export class U{
         }
     }
 
+    /*
     public static deletePointerBy(lModel: LPointerTargetable, dPointer: string|DPointerTargetable): void {
         const pointedBy = new Set(lModel.pointedBy as any as string[]);
         const pointer: string = typeof dPointer === "string" ? dPointer : dPointer.id;
@@ -110,7 +134,7 @@ export class U{
         let newelem_: LPointerTargetable = LModelElement.from(newelem);
         pointedBy.add(newelem_);
         lModel.pointedBy = [...pointedBy];
-    }
+    }*/
 
     public static writeLog(action: string, context: string, firstItem: string, secondItem?: string): void {
         let log: string = "";
@@ -669,7 +693,7 @@ export class U{
     }
 
     static arrayMergeInPlace<T>(arr1: T[], ...otherArrs: T[][]): T[] {
-        for (const arr of otherArrs) arr1.push.apply(arr1, arr);
+        for (const arr of otherArrs) arr1.push.apply(arr1, arr || []);
         return arr1; }
 
     static getEndingNumber(s: string, ignoreNonNumbers: boolean = false, allowDecimal: boolean = false): number {
@@ -767,6 +791,13 @@ export class U{
         let ret: Dictionary = {};
         // todo: improve efficiency
         for (let val of arr) { ret[val] = true; }
+        return ret;
+    }
+
+    static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[]} {
+        let ret: {added: T[], removed: T[]} = {} as any;
+        ret.removed = Uarr.arraySubtract(starting, final, false); // start & !end
+        ret.added = Uarr.arraySubtract(final, starting, false); // end & !start
         return ret;
     }
 }
@@ -952,6 +983,12 @@ export class Uarr{
         if (!arr1 || ! arr2) return null as any;
         return arr1.filter( e => arr2.indexOf(e) >= 0);
     }
+
+     static arraySubtract(arr1: any[], arr2: any[], inPlace: boolean): any[]{
+         let i: number;
+         const ret: any[] = inPlace ? arr1 : [...arr1];
+         for (i = 0; i < arr2.length; i++) { U.arrayRemoveAll(ret, arr2[i]); }
+         return ret; }
 
 }
 
@@ -3105,11 +3142,6 @@ export class SelectorOutput {
 //         for (i = 0; i < s.length && trimchars.indexOf(s[i]) !== -1; i++) { ; }
 //         return s.substr(i); }
 //
-//     static arraySubtract(arr1: any[], arr2: any[], inPlace: boolean): any[]{
-//         let i: number;
-//         const ret: any[] = inPlace ? arr1 : [...arr1];
-//         for (i = 0; i < arr2.length; i++) { UU.arrayRemoveAll(ret, arr2[i]); }
-//         return ret; }
 //
 //     static getAttributesByRegex(elem: Element, regexp: RegExp): Attr[]{
 //         const ret: Attr[] = [];

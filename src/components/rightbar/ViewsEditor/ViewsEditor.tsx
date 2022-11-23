@@ -86,7 +86,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                     <button style={{maxWidth: "3em"}} className={"col btn btn-danger"}
                             onClick={(e) => {
                                 //POP: GO BACK
-                                new SetRootFieldAction ('stackViews-=', undefined)
+                                SetRootFieldAction.new('stackViews', undefined, '-=', true);
                             }}>
                         <i className={"fas fa-long-arrow-alt-left"} />
                     </button>
@@ -101,7 +101,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                 })
                                 if(confirm.value === true){
                                     //POP: DELETE VIEW
-                                    new SetRootFieldAction ('stackViews-=', undefined)
+                                    SetRootFieldAction.new('stackViews', undefined, '-=', true);
                                     new DeleteElementAction(view.__raw);
                                 }
                             }}>
@@ -165,7 +165,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                 <button style={{maxWidth: '3em'}} className={"me-1 col btn btn-primary"}
                                         onClick={async(e) => {
                                             //PUSH: CLICK SUBVIEW
-                                            new SetRootFieldAction ('stackViews+=', subView.id)
+                                            SetRootFieldAction.new('stackViews', subView.id, '+=', true);
                                         }}>
                                     <i className={"fas fa-info"} />
                                 </button>
@@ -213,7 +213,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                     const newView = DViewElement.new(viewName.value, '');
                                     new CreateElementAction(newView);
                                     //PUSH: ADD VIEW
-                                    new SetRootFieldAction ('stackViews+=', newView.id)
+                                    SetRootFieldAction.new('stackViews', newView.id, '+=', true);
                                 }
                             }}>
                         <i className={"fas fa-plus"} />
@@ -228,7 +228,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                     <button style={{maxWidth: '3em'}} className={"me-1 col btn btn-primary"}
                                             onClick={(e) => {
                                                 //PUSH: CLICK VIEW
-                                                new SetRootFieldAction ('stackViews+=', view.id)
+                                                SetRootFieldAction.new('stackViews', view.id, '+=', true);
                                             }}>
                                         <i className={"fas fa-info"} />
                                     </button>
@@ -242,7 +242,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                                 })
                                                 if(confirm.value === true){
                                                     //POP: DELETE VIEW
-                                                    new SetRootFieldAction ('stackViews-=', undefined)
+                                                    SetRootFieldAction.new('stackViews', undefined, '-=', true);
                                                     new DeleteElementAction(view.__raw);
                                                 }
                                             }}>
