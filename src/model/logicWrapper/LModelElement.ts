@@ -870,9 +870,9 @@ export class DPackage extends DPointerTargetable { // extends DNamedElement
     uri!: string;
     prefix!: string;
 
-    public static new(name?: DNamedElement["name"], uri?: DPackage["uri"]): DPackage {
+    public static new(name?: DNamedElement["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]): DPackage {
         return new Constructors(new DPackage('dwc')).DPointerTargetable().DModelElement()
-            .DNamedElement(name).DPackage(uri).end();
+            .DNamedElement(name).DPackage(uri, prefix).end();
     }
 }
 

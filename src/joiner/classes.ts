@@ -368,9 +368,10 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.type = type as Pointer<DClassifier, 1, 1, LClassifier>;
         return this; }
 
-    DPackage(uri?: DPackage["uri"]): this {
+    DPackage(uri?: DPackage["uri"], prefix?: DPackage["prefix"]): this {
         const thiss: DPackage = this.thiss as any;
-        thiss.uri = uri || '';
+        thiss.uri = uri || 'org.jodel-react.username';
+        thiss.prefix = prefix || '';
         return this; }
 
     DModel(packages: DModel["packages"] = []): this {

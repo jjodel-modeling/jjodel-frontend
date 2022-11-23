@@ -182,7 +182,7 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
                 break;
         }
     }
-    console.error({U, Umip:U.arrayMergeInPlace, WU: windoww.U, WUmip: windoww.U.arrayMergeInPlace});
+    // console.error({U, Umip:U.arrayMergeInPlace, WU: windoww.U, WUmip: windoww.U.arrayMergeInPlace});
     actions = U.arrayMergeInPlace<ParsedAction>(actions, derivedActions);
 
     // ordino i path con segmenti comuni
