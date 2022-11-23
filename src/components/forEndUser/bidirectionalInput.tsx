@@ -1,22 +1,24 @@
 import React, {CSSProperties, Dispatch, LegacyRef, PureComponent, ReactElement, ReactNode} from "react";
 import { connect } from "react-redux";
 import type {IStore, GObject, Pointer} from /*type*/ "../../joiner";
-import {
-    windoww,
+import type {
     DModelElement,
     LModelElement,
-    DPointerTargetable,
-    LPointerTargetable,
-    MyProxyHandler,
-    Selectors,
-    Constructor,
-    RuntimeAccessibleClass,
     AbstractConstructor,
+    DAttribute,
+    DPointerTargetable,
+    DReference, DParameter, LClass, LEnumerator
+} from "../../joiner";
+import {
+    windoww,
+    Selectors,
+    RuntimeAccessibleClass,
+    Constructor,
     OCL,
     DGraph,
-    DAttribute,
-    DReference, DParameter
+    LPointerTargetable,
 } from "../../joiner";
+
 import Editor from "@monaco-editor/react";
 import {types} from "util";
 
@@ -83,9 +85,9 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
 
         //todo: define hasVoid, hasClasses, ... with data.classname (default=true)
         let hasVoid = true; let hasPrimitive = true; let hasClasses = true; let hasEnumerators = true;
-        if(data.className === DAttribute.name) { hasVoid = false; hasClasses = false; }
-        if(data.className === DReference.name) { hasVoid = false; hasPrimitive = false; hasEnumerators = false; }
-        if(data.className === DParameter.name) { hasVoid = false; }
+        if(data.className === "DAttribute") { hasVoid = false; hasClasses = false; }
+        if(data.className === "DReference") { hasVoid = false; hasPrimitive = false; hasEnumerators = false; }
+        if(data.className === "DParameter") { hasVoid = false; }
         // damiano: questo andrebbe invertito. di default setti tutto a let hasClasses = false, e se è un package lo setti a true.
         // perchè altrimenti per d-class non previste (GraphElement, annotations...) risulta a true a meno che non le elenchi tutte.
         // e meglio fare uno switch invece di if-chain
@@ -339,7 +341,7 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     console.log("ownProps.obj", ({state, ownProps:{...ownProps}}));
     if (!ownProps.obj) return ret;
     let objid: Pointer = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
-    ret.data = ownProps.wrap === false ? ownProps.obj as any : DPointerTargetable.wrap(state.idlookup[objid]) as LPointerTargetable || ownProps.obj;
+    ret.data = ownProps.wrap === false ? ownProps.obj as any : LPointerTargetable.wrap(state.idlookup[objid]) || ownProps.obj;
     return ret; }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
