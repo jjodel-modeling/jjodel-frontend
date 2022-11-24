@@ -33,15 +33,17 @@ export default class DV {
             </div>
         </div>`);
     }
+
+    /*
+        {this.data.dummysubelements.filter((subElement) => 0
+            subElement.model.className === "DReference").map((lNodeReference) => {
+            return <Edges source={lNodeReference} />
+        }
+        )}
+    */
+
     public static classView(): string {
         return (`<div className={"w-100 h-100"}>
-
-            {this.data.dummysubelements.filter((subElement) => 0
-                //errore non devi prendere model ma modelElement
-                subElement.model.className === "DReference").map((lNodeReference) => {
-                    return <Edges source={lNodeReference} />
-                }
-            )}
             <div className={"default-class"}>
                 <div className={"class-header"}>
                     <div className={"class-header-label"}> <b>Concept:</b>
@@ -49,7 +51,6 @@ export default class DV {
                             pattern={"[a-zA-Z_\u0024][0-9a-zA-Z\\d_\u0024]*"} />
                     </div>
                 </div>
-                 {/*<button onClick={() => {alert(this.nodeid);console.log("debug: ", this.data, this.data && this.data.dummydata)}}>getNodeId</button>*/}
                 <div className={"children"}>
                     {(this.data.attributes.length > 0) && <div className={"children-attributes"}>
                         {this.data.attributes.map((attribute, i) => {

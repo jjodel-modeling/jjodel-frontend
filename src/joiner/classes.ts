@@ -630,16 +630,11 @@ export class Pointers{
 
 }
 
-export type Pack1old<LL extends orArr<LPointerTargetable>, L extends LPointerTargetable = unArr<LL>, D extends LtoD<L> = LtoD<L>> = D | L | LtoW<L> | Pointer<D, 1, 1, L>;
-export type PackArrold<LL extends orArr<LPointerTargetable>, L extends LPointerTargetable = unArr<LL>> = Pack1<L>[];
-export type Packold<LL extends orArr<LPointerTargetable>, L extends LPointerTargetable = unArr<LL>> = Pack1<L> | PackArr<L>;
-
 export type Pack1<LL extends orArr<LPointerTargetable | undefined>, L extends LPointerTargetable | undefined = unArr<LL>,
     D extends (L extends LPointerTargetable ? LtoD<L> : undefined) = (L extends LPointerTargetable ? LtoD<L> : undefined)> =
     L extends LPointerTargetable ? ( D extends DPointerTargetable ? D | L | LtoW<L> | Pointer<D, 1, 1, L> : undefined) : undefined;
 export type PackArr<LL extends orArr<LPointerTargetable | undefined>, L extends LPointerTargetable | undefined = unArr<LL>> = Pack1<L>[];
 export type Pack<LL extends orArr<LPointerTargetable | undefined>, L extends LPointerTargetable | undefined = unArr<LL>> = Pack1<L> | PackArr<L>;
-
 /*
 let n: any = null;
 let aa: DClass = n;

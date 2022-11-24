@@ -30,19 +30,7 @@ import {
     DEdge,
     LEdge, RuntimeAccessibleClass, DRefEdge, LRefEdge, LGraphElement, GraphSize, LogicContext, DVoidVertex,
 } from "../../joiner";
-import {Mixin} from "ts-mixer";
-import {NotAString} from "../../joiner/classes";
-/*
-function resolvePointersFunction<T extends DPointerTargetable = DPointerTargetable, LB=number, UB=string, RET extends LPointerTargetable = LPointerTargetable>(ptr: Pointer<T, LB, UB, RET>[]): (RET | null)[] {
-    return (ptr && ptr.map( p => LModelElement.ResolvePointer<T, LB, UB, RET>(p)) as RET[]) || []; }
 
-function resolvePointerFunction<T extends DPointerTargetable = DModelElement, LB=number, UB=number, RET extends LPointerTargetable = LModelElement>(ptr: Pointer<T, LB, UB, RET>): RET | null {
-    if (!ptr) return null;
-    let obj: DPointerTargetable | LPointerTargetable | undefined = store.getState().idlookup[ptr as string];
-    if (!obj) return null;
-    if (obj instanceof DModelElement) obj = LPointerTargetable.from(obj);
-    return obj as RET; }
-*/
 
 @Node
 @RuntimeAccessible
@@ -121,7 +109,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         const father = proxyObject.father.__raw;
         for(let pointedBy of proxyObject.pointedBy) {
             const source: LModelElement = LPointerTargetable.from(pointedBy.source);
-            source.targetRemoved(pointedBy.field);
+            //todo: fix pointedBy field
+            //source.targetRemoved(pointedBy.field);
         }
         ret = () => {
             // al padre tolgo il nodo (perche property è keyof DModelElement e non keyof IStore ??)
@@ -760,7 +749,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
     required!: boolean;
 
     protected get_type(context: Context): this["type"] { return LPointerTargetable.from(context.data.type); }
-    protected set_type(val: Pack<this["type"]>, context: Context): boolean {
+    protected set_type(val: Pack1<this["type"]>, context: Context): boolean {
         SetFieldAction.new(context.data, 'type', Pointers.from(val), "", true);
         return true;
     }
@@ -1243,10 +1232,6 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
         }
         ret();
         return ret;
-    }
-    protected set_type(newType: string, context: LogicContext<DParameter>): boolean {
-        const dParameter: DParameter = context.data;
-        return SetFieldAction.new(dParameter, "type", newType, '', true);
     }
 }
 DTypedElement.subclasses.push(DParameter);
@@ -1819,7 +1804,8 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
 
     protected get_opposite(context: Context): this["opposite"] { return LPointerTargetable.from(context.data.opposite); }
     protected set_opposite(val: Pack<this["opposite"]>, context: Context): boolean {
-        SetFieldAction.new(context.data, 'opposite', Pointers.from(val), "", true);
+        //todo: remove as any
+        SetFieldAction.new(context.data, 'opposite', Pointers.from(val as any), "", true);
         return true;
     }
 
@@ -1868,18 +1854,6 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         }
         ret();
         return ret;
-    }
-
-    set_type(newType: string, context: LogicContext<DReference>): boolean {
-        const dReference: DReference = context.data;
-        const dOldClass: DClass = Selectors.getDElement<DClass>(dReference.type as string);
-        const dNewClass: DClass = Selectors.getDElement<DClass>(newType);
-        //const dRefEdge: DRefEdge | undefined = U.getReferenceEdge(dReference);
-        return SetFieldAction.new(dReference, "type", newType, '', true);
-        //if (dRefEdge) {
-           // SetFieldAction.new(dRefEdge, "end", newType, '', true);
-        //}
-
     }
 }
 DStructuralFeature.subclasses.push(DReference);
@@ -1978,10 +1952,6 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         return ret;
     }
 
-    set_type(newType: string, context: LogicContext<DAttribute>): boolean {
-        const dAttribute: DAttribute = context.data;
-        return SetFieldAction.new(dAttribute, "type", newType, '', true);
-    }
 }
 DStructuralFeature.subclasses.push(DAttribute);
 LStructuralFeature.subclasses.push(LAttribute);
@@ -2270,7 +2240,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     }
     protected set_instanceof(val: PackArr<this["instanceof"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
-        SetFieldAction.new(context.data, 'instanceof', list);
+        SetFieldAction.new(context.data, 'instanceof', list, "", true);
         return true;
     }
 }
@@ -2337,50 +2307,51 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DPackage, 1, 'N'> {
         return [...(super.get_childrens_idlist(context) as Pointer<DAnnotation | DPackage, 1, 'N'>), ...context.data.packages]; }
 
-    get_packages(context: Context): LPackage[] {
-        return context.data.packages.map(p => LPointerTargetable.from(p)); }
-
     protected get_delete(context: Context): () => void {
         const ret = () => { alert("todo delete LModel"); }
         return ret;
     }
 
-    /* Giordano
+
      protected get_packages(context: Context): this["packages"] {
         return context.data.packages.map((pointer) => {
             return LPointerTargetable.from(pointer)
         });
     }
-    // abbiamo bisogno di questo setter ?
+
     protected set_packages(val: PackArr<this["packages"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
-        SetFieldAction.new(context.data, 'packages', list);
+        SetFieldAction.new(context.data, 'packages', list, "", true);
         return true;
     }
-
+    /*
     protected get_classes(context: Context): this["classes"] {
         let classifiers: LClassifier[][] | LClassifier[] = context.proxyObject.packages.map((pkg) => { return pkg.classifiers; });
         classifiers = classifiers.reduce(function(prev, next) { return prev.concat(next); });
         return classifiers.filter((feature) => { return feature.className === DClass.name }).map((feature) => { return feature as LClass; })
     }
 
-    protected get_enumerators(context: Context): this["enumerators"] {
+    protected get_enumerators(context: Context): this["enums"] {
         let classifiers: LClassifier[][] | LClassifier[] = context.proxyObject.packages.map((pkg) => { return pkg.classifiers; });
         classifiers = classifiers.reduce(function(prev, next) { return prev.concat(next); });
         return classifiers.filter((feature) => { return feature.className === DEnumerator.name }).map((feature) => { return feature as LEnumerator; })
     }
     */
-    /*
-     private get_classes(context: Context): LClass[] {
+     protected get_classes(context: Context): this["classes"] {
         const s: IStore = store.getState();
-        return this.get_allSubPackages(context, s).flatMap(p => p.classes || []); }
-    private get_enums(context: Context): LEnumerator[] { return this.get_enumerators(context); }
-    private get_enumerators(context: Context): LEnumerator[] {
+        return this.get_allSubPackages(context, s).flatMap(p => p.classes || []);
+     }
+
+    protected get_enums(context: Context): this["enums"] {
+         return this.get_enumerators(context);
+    }
+
+    protected get_enumerators(context: Context): this["enums"] {
         const s: IStore = store.getState();
         return this.get_allSubPackages(context, s).flatMap(p => (p.enums || []));
     }
 
-    private get_allSubPackages(context: Context, state?: IStore): LPackage[] {
+    protected get_allSubPackages(context: Context, state?: IStore): LPackage[] {
         // return context.data.packages.map(p => LPointerTargetable.from(p));
         state = state || store.getState();
         let tocheck: Pointer<DPackage>[] = context.data.packages || [];
@@ -2397,12 +2368,6 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         }
         return LPointerTargetable.from(Object.keys(checked), state);
     }
-
-    private get_packages(context: Context): LPackage[] { return context.data.packages.map(p => LPointerTargetable.from(p)); }
-
-    */
-
-    protected get_Package(context: Context): LPackage { throw new Error("Element of type Model are not contained in packages "); }
 }
 DNamedElement.subclasses.push(DModel);
 LNamedElement.subclasses.push(LModel);
