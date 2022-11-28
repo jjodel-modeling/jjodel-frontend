@@ -669,18 +669,31 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
     // static structure: typeof DNamedElement;
 
     // inherit redefine
-    parent!: LModelElement[];
-    father!: LModelElement;
+    parent!: LModelElement[]; // todo:     parent!: LNamedElement[];
+    father!: LModelElement;   // todo:     father!: LNamedElement;
     annotations!: LAnnotation[];
     // personal
     name!: string;
     fullname!:string;
+    containers!: LNamedElement[]; // list of fathers until the model is reached. only LFactory and LAnnotation are not named. all namedElements have named fathers
 
-    protected set_fullname(): boolean { return this.cannotSet('fullname'); }
+    protected set_containers(): boolean { return this.cannotSet('containers'); }
+    public get_containers(context: Context): LNamedElement["containers"]{
+        let thiss: LNamedElement = context.proxyObject;
+        const ret: LNamedElement[] = [thiss];
+        while (true) {
+            thiss = thiss.father as LNamedElement;
+            if (!thiss) break;
+            ret.push(thiss);
+        }
+        return ret;
+    }
+
+
     protected get_fullname(context: Context): this["fullname"] {
         const containers = this.get_containers(context);
-        for( let cont of containers) {}
-        return context.data.id; }
+        let fullname: string = containers.map(c => c.name).join('.');
+        return fullname; }
 
 
     protected get_name(context: Context): this["name"] { return context.data.name; }
