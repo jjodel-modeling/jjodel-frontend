@@ -168,7 +168,7 @@ type StrictExclude<T, U> = T extends U ? U extends T ? never : T : T;
 @RuntimeAccessible
 export class SetFieldAction extends SetRootFieldAction {
     static type = 'SET_ME_FIELD';
-
+/*
     static new<
         D extends DPointerTargetable,
         T extends (keyof D),
@@ -177,7 +177,7 @@ export class SetFieldAction extends SetRootFieldAction {
           field: T,
           val: string | string[],
           accessModifier: AM | undefined,
-          isPointer: boolean): boolean;
+          isPointer: boolean): boolean;*/
     static new<
         D extends DPointerTargetable,
         T extends (keyof D),
@@ -262,7 +262,8 @@ export class CreateElementAction extends Action {
 @RuntimeAccessible
 export class DeleteElementAction extends SetFieldAction {
     static type = 'DELETE_ELEMENT';
-    public static new(me: Pack1<LPointerTargetable>): boolean { return new DeleteElementAction(me as any).fire(); }
+    public static new(me: Pack1<LPointerTargetable>): boolean {
+        return new DeleteElementAction(me as any).fire(); }
     constructor(me: DPointerTargetable | Pointer) {
         super((me as DPointerTargetable).id || me, '', undefined);
         this.className = this.constructor.name;

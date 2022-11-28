@@ -95,6 +95,19 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
 
     property!: keyof DModelElement;
+    containers!: LModelElement[]; // list of fathers until the model is reached.
+
+    protected set_containers(): boolean { return this.cannotSet('containers'); }
+    public get_containers(context: Context): LModelElement["containers"]{
+        let thiss: LModelElement = context.proxyObject;
+        const ret: LModelElement[] = [thiss];
+        while (true) {
+            thiss = thiss.father;
+            if (!thiss) break;
+            ret.push(thiss);
+        }
+        return ret;
+    }
 
     get_subNodes(context: LogicContext<LClass>, includingthis: boolean = false): LGraphElement[] {
         const lclass: LClass = context.proxyObject as any;
@@ -219,8 +232,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return SetFieldAction.new(context.data, 'annotations', ptrs, '+=', true);
     }
     remove_annotation(val: Pack<this["annotations"]>,  context: Context): boolean { // todo: when this will be ever used? this should be triggered by LObject but only get_ / set_ and delete of whole elements should be triggerable.
-        const ptrs = Pointers.from(val);
-        let indexes = ptrs.map( ptr=> context.data.annotations.indexOf(ptr)).filter(p => p>=0);
+        //todo: remove as any
+        const ptrs: Pointer<DAnnotation, 1, 'N', LAnnotation> = Pointers.from(val) as any;
+        let indexes = ptrs.map( ptr => context.data.annotations.indexOf(ptr)).filter(p => p>=0);
         return SetFieldAction.new(context.data, 'annotations', indexes, '-=', true);
     }
     protected get_annotations(context: Context): this["annotations"] { return LPointerTargetable.fromPointer( context.data.annotations ); }
@@ -444,17 +458,19 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     // activated by user in JSX
     // todo: this.wrongAccessMessage("addClass");
-    public addClass(): void { Log.exDevv('addClass should never be called directly, but should trigger get_addClass(), this is only a signature for type checking.'); }
-    public addPackage(): void { Log.exDevv('addPackage should never be called directly, but should trigger get_addClass(), this is only a signature for type checking.'); }
-    public addAttribute(): void { Log.exDevv('addAttribute should never be called directly, but should trigger get_addAttribute(), this is only a signature for type checking.'); }
-    public addReference(): void { Log.exDevv('addReference should never be called directly, but should trigger get_addReference(), this is only a signature for type checking.'); }
-    public addEnumerator(): void { Log.exDevv('addEnumerator should never be called directly, but should trigger get_addEnumerator(), this is only a signature for type checking.'); }
-    public addEnumLiteral(): void { Log.exDevv('addLiteral should never be called directly, but should trigger get_addLiteral(), this is only a signature for type checking.'); }
-    public addOperation(): void { Log.exDevv('addOperation should never be called directly, but should trigger get_addOperation(), this is only a signature for type checking.'); }
-    public addParameter(): void { Log.exDevv('addParameter should never be called directly, but should trigger get_addParameter(), this is only a signature for type checking.'); }
+    protected cannotCall(name: string, ...params: string[]): void {
+        Log.exDevv(name + ' should never be called directly, but should trigger get_' + name + '(' + params.join(', ') +'), this is only a signature for type checking.'); }
+    public addClass(): void { this.cannotCall('addClass'); }
+    public addPackage(): void { this.cannotCall('addPackage'); }
+    public addAttribute(): void { this.cannotCall('addAttribute'); }
+    public addReference(): void { this.cannotCall('addReference'); }
+    public addEnumerator(): void { this.cannotCall('addEnumerator'); }
+    public addEnumLiteral(): void { this.cannotCall('addLiteral'); }
+    public addOperation(): void { this.cannotCall('addOperation'); }
+    public addParameter(): void { this.cannotCall('addParameter'); }
     // chiedere al prof: cosa può lanciato come eccezione: se tutte le classi o se solo quelle che estendono Exception
     public addException(exception?: DClassifier): () => void { throw this.wrongAccessMessage("AddException"); }
-    public addChild(type: string): void { Log.exDevv('addAttribute("'+type+'") should never be called directly, but should trigger get_addAttribute(), this is only a signature for type checking.'); }
+    public addChild(type: string): void { this.cannotCall('addAttribute', type); }
 
     private static addOperation_ (dClass: DClass, dParameter: DParameter, dOperation: DOperation): void {
         new CreateElementAction(dParameter);
@@ -682,11 +698,32 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
     // static structure: typeof DNamedElement;
 
     // inherit redefine
-    parent!: LModelElement[];
-    father!: LModelElement;
+    parent!: LModelElement[]; // todo:     parent!: LNamedElement[];
+    father!: LModelElement;   // todo:     father!: LNamedElement;
     annotations!: LAnnotation[];
     // personal
     name!: string;
+    fullname!:string;
+    containers!: LNamedElement[]; // list of fathers until the model is reached. only LFactory and LAnnotation are not named. all namedElements have named fathers
+
+    protected set_containers(): boolean { return this.cannotSet('containers'); }
+    public get_containers(context: Context): LNamedElement["containers"]{
+        let thiss: LNamedElement = context.proxyObject;
+        const ret: LNamedElement[] = [thiss];
+        while (true) {
+            thiss = thiss.father as LNamedElement;
+            if (!thiss) break;
+            ret.push(thiss);
+        }
+        return ret;
+    }
+
+
+    protected get_fullname(context: Context): this["fullname"] {
+        const containers = this.get_containers(context);
+        let fullname: string = containers.map(c => c.name).join('.');
+        return fullname; }
+
 
     protected get_name(context: Context): this["name"] { return context.data.name; }
     protected set_name(val: this["name"],  context: Context): boolean {
@@ -1177,6 +1214,18 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
     protected get_type(context: Context): this["type"] {
         return context.proxyObject.parameters[0].type;
     }
+
+    _mark(b: boolean, superchildren: LOperation, override: string) {
+
+    }
+
+    _canOverride(superchildren: LOperation) {
+        return undefined;
+    }
+
+    _canPolymorph(superchildren: LOperation) {
+        return undefined;
+    }
 }
 DTypedElement.subclasses.push(DOperation);
 LTypedElement.subclasses.push(LOperation);
@@ -1504,7 +1553,117 @@ export class LClass<Context extends LogicContext<DClass> = any, C extends Contex
             new DeleteElementAction(dClass);
         }
         ret();
-        return ret; }
+        return ret;
+    }
+
+    public superclasses!: LClass[];
+    public allSubClasses!: LClass[];
+
+    public canExtend(superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
+        this.cannotCall("canExtend"); return false;
+    }
+
+    private get_canExtend(context: Context): (superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]}) => boolean {
+        return (superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []} ) => this._canExtend(context, superclass, output);
+    }
+
+    public isExtending(superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
+        this.cannotCall("isExtending"); return false;
+    }
+
+    private get_superclasses(context: Context, plusThis: boolean = false): LClass[] {
+        let i: number;
+        const thiss: LClass = context.proxyObject;
+        const visited: Dictionary<Pointer, LClass> = {};
+        let queue: LClass[] = thiss.extends;
+        if (plusThis) queue = [thiss, ...queue];
+        const ret: LClass[] = [];
+        for (i = 0; i < queue.length; i++) {
+            let elem: LClass = queue[i];
+            if (visited[elem.id]) continue;
+            visited[elem.id] = elem;
+            ret.push(elem);
+            queue.push(...elem.extends);
+        }
+        return ret;
+    }
+
+    private get_allSubClasses(context: Context, plusThis: boolean = false): LClass[] {
+        const thiss: LClass = context.proxyObject;
+        const set: Set<LClass> = plusThis ? new Set<LClass>([thiss]) : new Set();
+        for (let i = 0; i < thiss.extendedBy.length; i++) {
+            // todo: would this access get_extendedBy 2*N times?? verify and optimize
+            U.SetMerge(true, set, thiss.extendedBy[i].allSubClasses); }
+        return [...set]; }
+
+
+    private _canExtend(context: Context, superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
+        if (!superclass) { output.reason = 'Invalid extend target: ' + superclass; return false; }
+        const thiss: LClass = context.proxyObject;
+        if (superclass === thiss) { output.reason = 'Classes cannot extend themselves.'; return false; }
+        // todo: se diversi proxy dello stesso oggetto sono considerati diversi questo fallisce, in tal caso fai thiss.extends.map( l => l.id).indexof(superclass.id)
+        if (thiss.extends.indexOf(superclass) >= 0) { output.reason = 'Target class is already directly extended.'; return false; }
+        output.allTargetSuperClasses = superclass.superclasses;
+        if (thiss.superclasses.indexOf(superclass) >= 0) { output.reason = 'Target class is already indirectly extended.'; return false; }
+        if (output.allTargetSuperClasses.indexOf(thiss) >= 0) { output.reason = 'Cannot set this extend, it would cause a inheritance loop.'; return false; }
+        // ora verifico se causa delle violazioni di override (attibuti omonimi string e boolean non possono overridarsi)
+        let i: number;
+        let j: number;
+        let childrens: LOperation[] =  thiss.operations; //[...thiss.getBasicOperations()];
+        let superchildrens: LOperation[] = superclass.operations; //[...superclass.getBasicOperations()];
+        for (i = 0; i < childrens.length; i++) {
+            let op: LOperation = childrens[i];
+            for (j = 0; j < superchildrens.length; j++){
+                let superchildren: LOperation = superchildrens[j];
+                if (op.name !== superchildren.name) continue;
+                if (op._canOverride(superchildren) || op._canPolymorph(superchildren)) continue;
+                output.reason = 'Marked homonymous operations cannot override nor polymorph each others.';
+                setTimeout( () => {
+                    op._mark(true, superchildren, 'override'); //  mark op && superchildren
+                    setTimeout( () => { op._mark(false, superchildren, 'override'); }, 3000); // unmark
+                }, 1);
+                return false;
+            }
+        }
+        return true; }
+
+    private _isExtending(context: Context, superclass: LClass, orEqual: boolean = true): boolean {
+        if (!superclass) return false;
+        return this.get_superclasses(context, orEqual).includes(superclass); }
+
+    private add_Extends(context: Context, superclass: LClass, force: boolean = false): boolean {
+        let out: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []};
+        const thiss: LClass = context.proxyObject;
+        if (!force && !this._canExtend(context, superclass, out)) {  return false; }
+        SetFieldAction.new(thiss.__raw, 'extends', [superclass.id], '+=', true);
+        SetFieldAction.new(superclass.__raw, 'extendedBy', [thiss.id], '+=', true);
+        // const extendChildrens: LClass[] =  [thiss, ...thiss.superclasses];
+        // console.log('calculateViolationsExtend childrens:'  + extendChildrens, this);
+        // for (let extChild of extendChildrens) { extChild._checkViolations(false); } // after instances have their meta-class changed, they might need to change shape or values.
+        return true; }
+
+    unsetExtends(context: Context, superclass: LClass): void {
+        if (!superclass) return;
+        console.log('UnsetExtend:', context);
+        // todo: when Object is loaded in m3, set him there for easy access.
+        //  if (superclass.id === LClass.genericObjectid) { Log.w(true, 'Cannot un-extend "Object"'); return; }
+        const thiss: LClass = context.proxyObject;
+        let index: number = thiss.extends.indexOf(superclass);
+        if (index < 0) return;
+
+        let newextends = thiss.extends.map(l => l.id);
+        let newextendedBy = superclass.extendedBy.map(l => l.id);
+        U.arrayRemoveAll(newextends, superclass.id)
+        U.arrayRemoveAll(newextendedBy, thiss.id)
+        SetFieldAction.new(thiss, 'extends', (newextends), '', true); // -=
+        SetFieldAction.new(superclass, 'extendedBy', (newextendedBy), '', true); // -=
+        // todo: update instances for (i = 0; i < thiss.instances.length; i++) { thiss.instances[i].unsetExtends(superclass); }
+        // todo: remove extend edge? here?
+
+        // todo: check violations
+        // const extendedby: LClass[] = [thiss, ...thiss.allSubClasses];
+        // for (i = 0; i < extendedby.length; i++) { extendedby[i].checkViolations(true); }
+    }
 }
 DClassifier.subclasses.push(DClass);
 LClassifier.subclasses.push(LClass);
@@ -1808,9 +1967,8 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     }
 
     protected get_opposite(context: Context): this["opposite"] { return LPointerTargetable.from(context.data.opposite); }
-    protected set_opposite(val: Pack<this["opposite"]>, context: Context): boolean {
-        //todo: remove as any
-        SetFieldAction.new(context.data, 'opposite', Pointers.from(val as any), "", true);
+    protected set_opposite(val: Pack<LReference | undefined>, context: Context): boolean {
+        SetFieldAction.new(context.data, 'opposite', Pointers.from(val) as any as LAnnotation["id"], "", true);
         return true;
     }
 

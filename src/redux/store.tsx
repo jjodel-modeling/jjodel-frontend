@@ -100,11 +100,13 @@ export class IStore {
         view: Pointer<DViewElement, 1, 1>,
         modelElement: Pointer<DModelElement, 0, 1> // if a node is clicked: a node and a view are present, a modelElement might be. a node can exist without a modelElement counterpart.
     };
+    users: Pointer<DUser, 1, 'N', LUser>;
 
 
     constructor() {
 //        super();
-        this.currentUser = DUser.new();
+        this.currentUser = DUser.new(); // todo: this must become a pointer to idlookup and fire a CreateNewElementAction
+        this.users = [this.currentUser.id];
         this.models = [];
         // this.collaborators = [];
         // this.fakeinit();

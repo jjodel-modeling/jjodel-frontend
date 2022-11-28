@@ -22,9 +22,12 @@ interface ThisState {}
 function RootVertexComponent(props: AllProps, state: ThisState) {
     const rootProps = props.props;
     const isEdgePending = !!rootProps.isEdgePending.source;
+    const user = rootProps.isEdgePending.user;
+    const source = rootProps.isEdgePending.source;
+    const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
     const canBeExtend = isEdgePending &&
                         rootProps.data.className === "DClass" &&
-                        rootProps.isEdgePending.source.id !== rootProps.data.id;
+                        source.canExtend(rootProps.data as any as LClass, extendError);
 
     const [classes, setClasses] = useState<string[]>([]);
 

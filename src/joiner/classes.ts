@@ -47,7 +47,18 @@ import type {Dictionary, GObject, Proxyfied, DocString, CClass, unArr, orArr} fr
 import type {DViewElement, LViewElement, WViewElement, WViewTransientProperties, LViewTransientProperties, DViewTransientProperties} from "../view/viewElement/view";
 import type {LogicContext} from "./proxy";
 import type {IStore, } from "./index";
-import {Action, DeleteElementAction, GraphPoint, ParsedAction, GraphSize, Log, SetRootFieldAction, store, U} from "./index";
+import {
+    Action,
+    DeleteElementAction,
+    GraphPoint,
+    ParsedAction,
+    GraphSize,
+    Log,
+    SetRootFieldAction,
+    store,
+    U,
+    IPoint
+} from "./index";
 import {defaultVSize} from "../model/dataStructure";
 
 var windoww = window as any;
@@ -601,6 +612,7 @@ export class Pointers{
     } // stavolta fai infer so D|l.id
 
 
+    static aaa: undefined extends undefined | LPointerTargetable ? true : false;
     public static from<DX extends DPointerTargetable>(data:DX): DX["id"]; // | {D:any};
     public static from<DX extends DPointerTargetable>(data:DX[]): DX["id"][]; // | {DD:any};
     public static from<LX extends LPointerTargetable>(data:LX): LX["id"]; // | {L:any};
@@ -612,11 +624,35 @@ export class Pointers{
     public static from<T extends LPointerTargetable>(data:Pack1<T>): Pointer<LtoD<T>, 1, 1, T>; //{TEST1:any};
     public static from<T extends LPointerTargetable>(data:Pack1<T>[]): Pointer<LtoD<T>, 1, 1, T>[]; //{TEST111:any};
     public static from<T extends LPointerTargetable>(data:Pack<T>): Pointer<LtoD<T>, 1, 1, T>[]; //{TEST0:any};
+    public static from<P extends Pack<T> | undefined, T extends LPointerTargetable>(data: P): Pointer<LtoD<T>, 1, 1, T>[]; //{TEST0:any};
     public static from<T extends LPointerTargetable>(data:PackArr<T>): Pointer<LtoD<T>, 1, 1, T>[]; //{TESTARR:any};
     public static from<T extends LPointerTargetable>(data:Pack1<T[]>): Pointer<LtoD<T>, 1, 1, T>; //{TEST1:any};
     public static from<T extends LPointerTargetable>(data:Pack1<T[]>[]): Pointer<LtoD<T>, 1, 1, T>[]; //{TEST111:any};
     public static from<T extends LPointerTargetable>(data:Pack<T[]>): Pointer<LtoD<T>, 1, 1, T>[]; //{TEST0:any};
     public static from<T extends LPointerTargetable>(data:PackArr<T[]>): Pointer<LtoD<T>, 1, 1, T>[]; //{TESTARR:any};
+
+/*
+    public static from(data:undefined): undefined; // | {D:any};
+    public static from<DX extends DPointerTargetable | undefined | null>(data:DX): DX extends DPointerTargetable ? DX["id"] : DX; // | {D:any};
+    public static from<DX extends DPointerTargetable | undefined | null>(data:DX[]): DX extends DPointerTargetable ? DX["id"][] : DX; // | {DD:any};
+    public static from<LX extends LPointerTargetable | undefined | null>(data:LX): LX extends LPointerTargetable ? LX["id"] : LX; // | {L:any};
+    public static from<LX extends LPointerTargetable | undefined | null>(data:LX[]): LX extends LPointerTargetable ? LX["id"][] : LX; // | {LL:any};
+    public static from<WX extends WPointerTargetable | undefined | null>(data:WX): WX extends WPointerTargetable ? WX["id"] : WX; // | {W:any};
+    public static from<WX extends WPointerTargetable | undefined | null>(data:WX[]): WX extends WPointerTargetable ? WX["id"][] : WX; // | {WW:any};
+    public static from<PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable> | undefined | null>(data:PTR): PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable> ? PTR : PTR; // | {P:any};
+    public static from<PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable> | undefined | null>(data:PTR[]): PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable> ? PTR[] : PTR; // | {PP:any};
+    public static from<T extends LPointerTargetable | undefined | null>(data:Pack1<T>): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T> : T; //{TEST1:any};
+    public static from<T extends LPointerTargetable | undefined | null>(data:Pack1<T>[]): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T>[] : T; //{TEST111:any};
+    public static from<T extends LPointerTargetable | undefined | null>(data:Pack<T>): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T>[] : T; //{TEST0:any};
+    public static from<T extends LPointerTargetable | undefined | null>(data:PackArr<T>): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T>[] : T; //{TESTARR:any};
+    // public static from<T extends LPointerTargetable | undefined | null>(data:Pack1<T[]>): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T> : T; //{TEST1:any};
+    // public static from<T extends LPointerTargetable | undefined | null>(data:Pack1<T[]>[]): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T>[] : T; //{TEST111:any};
+    // DDD extends (T extends Pointer<infer D> ? D : 'undefined D'),*/
+    public static from<TT extends Pack<LPointerTargetable[]> | undefined | null,
+        // @ts-ignore
+        T extends (TT extends Pack<infer PTYPE> ? PTYPE : undefined)>(data:T): T extends null | undefined ? T : Pointer<LtoD<T>, 1, 1, T>[]; //{TEST0:any};
+    // @ts-ignore
+    public static from<T extends LPointerTargetable | undefined | null>(data: PackArr<T[]>): T extends null | undefined ? T : Pointer<LtoD<T>, 1, 1, T>[]; //{TESTARR:any};
     public static from(data:null | undefined): null; // | {Dn:any};
     public static from(data:(null | undefined)[]): []; // | {Dnn:any};
     public static from(data:(null | undefined) | (null | undefined)[]): []; // | {Dn0:any};
@@ -629,12 +665,25 @@ export class Pointers{
     }
 
 }
-
-export type Pack1<LL extends orArr<LPointerTargetable | undefined>, L extends LPointerTargetable | undefined = unArr<LL>,
+/*
+export type Pack1<L extends LPointerTargetable | undefined | null,
+    // L extends LPointerTargetable | undefined | null = LL extends LPointerTargetable[] ? LPointerTargetable : null | undefined,
+    D extends (L extends LPointerTargetable ? LtoD<L> : undefined | null) = (L extends LPointerTargetable ? LtoD<L> : undefined | null)> =
+    L extends LPointerTargetable ? ( D extends DPointerTargetable ? D | L /*| LtoW<L>* / | Pointer<D, 1, 1, L> : L) : undefined;
+export type PackArr<LL extends orArr<LPointerTargetable> | undefined | null,
+    L extends LPointerTargetable | undefined | null = LL extends undefined | null ? undefined : unArr<LL>> = Pack1<L>[];
+export type Pack<
+    LL extends orArr<LPointerTargetable> | undefined | null,
+    L extends unArr<LL> = unArr<LL>,
+    // L extends (LL extends orArr<LPointerTargetable> ? LPointerTargetable : undefined | null) = (LL extends orArr<LPointerTargetable> ? unArr<LL> : undefined)
+    >
+    = LL extends undefined ? undefined : Pack1<L> | PackArr<L>;
+*/
+export type Pack1<LL extends orArr<LPointerTargetable> | undefined, L extends LPointerTargetable | undefined = unArr<LL>,
     D extends (L extends LPointerTargetable ? LtoD<L> : undefined) = (L extends LPointerTargetable ? LtoD<L> : undefined)> =
-    L extends LPointerTargetable ? ( D extends DPointerTargetable ? D | L | LtoW<L> | Pointer<D, 1, 1, L> : undefined) : undefined;
-export type PackArr<LL extends orArr<LPointerTargetable | undefined>, L extends LPointerTargetable | undefined = unArr<LL>> = Pack1<L>[];
-export type Pack<LL extends orArr<LPointerTargetable | undefined>, L extends LPointerTargetable | undefined = unArr<LL>> = Pack1<L> | PackArr<L>;
+    L extends LPointerTargetable ? ( D extends DPointerTargetable ? D | L | Pointer<D, 1, 1, L> : undefined) : undefined;
+export type PackArr<LL extends orArr<LPointerTargetable> | undefined, L extends LPointerTargetable | undefined = unArr<LL>> = Pack1<L>[];
+export type Pack<LL extends orArr<LPointerTargetable> | undefined, L extends LPointerTargetable | undefined = unArr<LL>> = L extends undefined ? undefined : Pack1<L> | PackArr<L>;
 /*
 let n: any = null;
 let aa: DClass = n;
@@ -773,8 +822,9 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     }
 
 
+    protected cannotSet(field: string): boolean { return Log.exx('"' + field + '" field is read-only', this); }
     protected get_id(context: Context): this["id"] { return context.data.id; }
-    protected set_id(): boolean { return Log.exx('"ID" field is read-only', this); }
+    protected set_id(): boolean { return this.cannotSet('id'); }
 
     protected _get_default< DD extends DPointerTargetable, T extends string & keyof (DD) & keyof (L), L extends LModelElement = LModelElement>(data: DD, key: T): L[T]{
         // @ts-ignore
@@ -983,6 +1033,8 @@ export class DUser extends DPointerTargetable{
     static current: DocString<Pointer<DUser, 1, 1>> = "currentUserPointerToDo";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    cursorPositionX: number = 0;
+    cursorPositionY: number = 0;
     // public static structure: typeof DPointerTargetable;
     // public static singleton: LPointerTargetable;
     id!: Pointer<DUser, 1, 1, LUser>;
@@ -1000,6 +1052,7 @@ export class LUser extends LPointerTargetable { // MixOnlyFuncs(DUser, LPointerT
     public __raw!: DUser;
     id!: Pointer<DUser, 1, 1, LUser>;
     __isUser!: true;
+    cursorPosition!: IPoint; //todo
 }
 DPointerTargetable.subclasses.push(DUser);
 LPointerTargetable.subclasses.push(LUser);
@@ -1163,7 +1216,7 @@ export type NotAString<T extends any = 'uselessval', T2 extends any = any, T3 ex
 // export type NotAString<T> = string;
 // type Pointer<T> = NotAString<T>;
 export type Pointer<T extends DPointerTargetable = DPointerTargetable, lowerbound extends number = 1, upperbound extends number|'N' = 1,
-    RET = LPointerTargetable> =
+    RET extends LPointerTargetable = DtoL<T>> =
     upperbound extends 'N' ? NotAString<T, lowerbound, upperbound, RET>[] : (
         upperbound extends 0 ? never : (
             lowerbound extends 0 ? (NotAString<T, lowerbound, upperbound, RET> | null) : NotAString<T, upperbound, lowerbound, RET>));
@@ -1349,13 +1402,17 @@ let ptr: Pointer = null as any;
 
 
 
-export type getWParams<L extends LPointerTargetable, D extends Object> = {
+export type getWParams<L extends LPointerTargetable, D extends Object> = L & {
     // [Property in keyof ValidObj<L>]: L[Property] extends never ? never : L[Property]
-    [Property in keyof L]: Property extends string ? (
+    [Property in keyof L]:/*
+    Property extends "opposite" ? LReference | DReference | Pointer<DReference> :
+    Property extends "parent" ? LModelElement | DModelElement | Pointer<DModelElement> :
+    Property extends "annotations" ? LAnnotation | DAnnotation | Pointer<DAnnotation> :*/
+    (Property extends string ? (
         //@ts-ignore
         L[`set_${Property}`] extends (...a:any)=> any ?
             Parameters<L[`set_${Property}`]>[0] // if set_X function is defined, get first param
             //@ts-ignore
             : D[Property] | `todo: should define set_${Property}` // default type if it's not assigned = type in the D version
-        ): never
+        ): never)
 }
