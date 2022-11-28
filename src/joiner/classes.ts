@@ -768,8 +768,8 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
 
     public toString(): string { throw this.wrongAccessMessage("toString"); }
     protected get_toString(context: Context): () => string {
-        let gobj: GObject = context.data
-        return () => ( gobj.data.name ? gobj.data.name : gobj.data.className.substring(0));
+        const data = context.data as DNamedElement;
+        return () => ( data.name ? data.name : data.className.substring(0));
     }
 
 

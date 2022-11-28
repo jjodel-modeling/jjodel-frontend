@@ -89,10 +89,26 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     enum!: LEnumerator | null;
     operation!: LOperation | null;
 
+    subNodes!: LGraphElement[] | null;
+
 
 
 
     property!: keyof DModelElement;
+
+    get_subNodes(context: LogicContext<LClass>, includingthis: boolean = false): LGraphElement[] {
+        const lclass: LClass = context.proxyObject as any;
+        let $class = $('[data-dataid="' + context.data.id + '"]');
+        let $subnodes = $class.find('[data-nodeid]');
+        function mapfunc(this: HTMLElement) { return this.dataset.nodeid; }
+        let nodehtmlarr: HTMLElement[] = $subnodes.toArray();
+        if (includingthis) nodehtmlarr.push($class[0]);
+        let nodeidarr: string[] = nodehtmlarr.map( (html: HTMLElement) => html.dataset.nodeid ) as string[];
+        let state = store.getState();
+        let dnodes = nodeidarr.map( id => state.idlookup[id]).filter( (d) => !!d);
+        return dnodes.map( d => LPointerTargetable.wrap(d)) as any;
+    }
+
 
     // name -> redux (es. DClass -> classs)
     protected get_property(context: Context): this["property"]{
@@ -230,7 +246,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 case "literal": ret = this.get_addEnumLiteral(context as any); break;
                 case "operation": ret = this.get_addOperation(context as any); break;
                 case "parameter": ret = this.get_addParameter(context as any); break;
-                case "exception": ret = ((exception: Pack1<LClassifier>) => { let rett = this.get_addException(context as any); rett(exception); }) as any; break;
+                //case "exception": ret = ((exception: Pack1<LClassifier>) => { let rett = this.get_addException(context as any); rett(exception); }) as any; break;
+                case "exception": ret = this.get_addException(context as any); break;
             }
             return ret;
         }
@@ -370,7 +387,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
             const dOperation = DOperation.new(name);
             dOperation.father = dClass.id;
-            const dParameter = DParameter.new();
+            const dParameter = DParameter.new("return", Selectors.getReturnTypes()[0].id);
             dParameter.father = dOperation.id;
             ret = () => LModelElement.addOperation_(dClass, dParameter, dOperation);
         }
@@ -396,23 +413,33 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return ret;
     }
 
-    protected get_addException(context: Context): (exception: Pack1<LClassifier>) => void {
-        let ret = (exception: Pack1<LClassifier>) => {};
+    // (exception: Pack1<LClassifier>) => void #prima era cosi
+    protected get_addException(context: Context): () => void {
+        let ret = () => {};
         const dOperation: DOperation | null = (context.data?.className === "DOperation") ? context.data as DOperation : null;
         if (dOperation) {
             const lOperation: LOperation = LPointerTargetable.from(dOperation);
-            let name = 'except_' + 0;
-            const childrenNames: (string)[] = lOperation.childrens.map(c => (c as LNamedElement).name);
-            name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
-            const dException = DClass.new(name); // non credo che l'eccezione vada salvata qui, add_exception dovrebbe prendere una classe già esistente da usare come eccezione
-            dException.father = dOperation.id as any;
-            ret = (exception: Pack1<LClassifier>) => this._addException(dOperation, dException, context);
+            const dClass = DPointerTargetable.from(dOperation.father);
+            //let name = 'except_' + 0;
+            //const childrenNames: (string)[] = lOperation.childrens.map(c => (c as LNamedElement).name);
+            //name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
+            //const dException = DClass.new(name); // non credo che l'eccezione vada salvata qui, add_exception dovrebbe prendere una classe già esistente da usare come eccezione
+            //dException.father = dOperation.id as any;
+            //ret = (exception: Pack1<LClassifier>) => this._addException(dOperation, dException, context);
+            ret = () => this._addException(dOperation, dClass);
         }
+        ret();
         return ret;
     }
 
+    /*
     protected _addException(operation: DOperation, exception: Pack1<LClassifier>, context: Context): void {
         SetFieldAction.new(operation, "exceptions", Pointers.from(exception), '+=', true);
+    }
+    */
+
+    protected _addException(dOperation: DOperation, dClass: DClass): void {
+        SetFieldAction.new(dOperation, "exceptions", dClass.id, '+=', true);
     }
 
     // activated by user in JSX
@@ -1147,6 +1174,9 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
         ret();
         return ret;
     }
+    protected get_type(context: Context): this["type"] {
+        return context.proxyObject.parameters[0].type;
+    }
 }
 DTypedElement.subclasses.push(DOperation);
 LTypedElement.subclasses.push(LOperation);
@@ -1475,29 +1505,6 @@ export class LClass<Context extends LogicContext<DClass> = any, C extends Contex
         }
         ret();
         return ret; }
-
-    get_dummysubelements(context: LogicContext<LClass>, includingthis: boolean = false): LGraphElement[] {
-        const lclass: LClass = context.proxyObject as any;
-        let $class = $('[data-dataid="' + context.data.id + '"]');
-        let $subnodes = $class.find('[data-nodeid]');
-        function mapfunc(this: HTMLElement) { return this.dataset.nodeid; }
-        let nodehtmlarr: HTMLElement[] = $subnodes.toArray();
-        if (includingthis) nodehtmlarr.push($class[0]);
-        let nodeidarr: string[] = nodehtmlarr.map( (html: HTMLElement) => html.dataset.nodeid ) as string[];
-        let state = store.getState();
-        let dnodes = nodeidarr.map( id => state.idlookup[id]).filter( (d) => !!d);
-        return dnodes.map( d => LPointerTargetable.wrap(d)) as any;
-    }
-    /*
-        setImplement(interfaceIds: string[]): DClass {
-            // todo: tutta sta roba andrebbe fatta da redux e dovrei aggiornare ImplementedBy, . e neanche andrebbe fatto qui ma dentro la parte logica proxy
-            this.implements = [...this.implements, ...interfaceIds];
-            return this;
-        }
-        setExtend(classIds: string[]): DClass {
-            this.extends = [...this.extends, ...classIds];
-            return this;
-        }*/
 }
 DClassifier.subclasses.push(DClass);
 LClassifier.subclasses.push(LClass);

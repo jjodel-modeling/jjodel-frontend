@@ -34,7 +34,7 @@ class StructureEditorComponent extends PureComponent<AllProps, ThisState> {
             <div className={"mt-3"}>
                 {Structure.Editor(lModelElement)}
             </div>
-            {/*text-overflow: ellipsis*/}
+            {JSON.stringify(lModelElement)}
         </div>;
     }
 }

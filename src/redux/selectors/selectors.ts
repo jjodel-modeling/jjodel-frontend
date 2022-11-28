@@ -97,6 +97,10 @@ export class Selectors{
         const state: IStore = store.getState();
         return Object.values((state).classs);
     }
+    static getReturnTypes(): LClass[] {
+        const state: IStore = store.getState();
+        return LPointerTargetable.from(Object.values((state).returnTypes));
+    }
 
     static getAllClassesWithoutPrimitive(): string[] {
         // this solution does not look good. what if a primitive type is inserted at runtime in between?

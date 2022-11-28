@@ -6,7 +6,6 @@ import type {
     LModelElement,
     AbstractConstructor,
     DAttribute,
-    DPointerTargetable,
     DReference, DParameter, LClass, LEnumerator
 } from "../../joiner";
 import {
@@ -14,9 +13,10 @@ import {
     Selectors,
     RuntimeAccessibleClass,
     Constructor,
+    DPointerTargetable,
     OCL,
     DGraph,
-    LPointerTargetable,
+    LPointerTargetable, U,
 } from "../../joiner";
 
 import Editor from "@monaco-editor/react";
@@ -101,7 +101,7 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
         return (<>
             <label key={otherprops.key} className={"input-root " + (className || "d-flex")}>
                 {this.props.label && <p className={"input-label " + (className || "")}>{this.props.label}</p>}
-                <select defaultValue={data.type} onChange={(e) => {
+                <select defaultValue={data.type.id} onChange={(e) => {
                     data[this.props.field] = (this.props.setter ? this.props.setter(e.target.value) : e.target.value)
                 }} {...otherprops} className={(className || '')} style={this.props.style} >
                     {hasVoid ? <optgroup label={"Default"}>
@@ -133,7 +133,7 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
                                         if(model === "void") {
                                             dModel = {id: null, name: "void"}
                                         } else {
-                                            dModel = Selectors.getDElement<DModelElement>(model as string);
+                                            dModel = DPointerTargetable.from(model as string);
                                         }
                                     }
                                     return dModel ? <option value={dModel.id}>{dModel.name}</option> : <></>;

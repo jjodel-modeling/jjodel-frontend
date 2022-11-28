@@ -1,0 +1,30 @@
+$green: darkgreen;
+$red: darkred;
+$size: 20px;
+
+
+.edge-pending-check {
+  width: $size;
+  height: $size;
+  right: 0;
+  position: absolute;
+  margin: 2px;
+  border-radius: 999px;
+}
+
+.is-pending {
+  background: $green;
+}
+
+.is-not-pending {
+  background: $red;
+}
+
+.target {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: red;
+  border-radius: 999px;
+  z-index: -1;
+}

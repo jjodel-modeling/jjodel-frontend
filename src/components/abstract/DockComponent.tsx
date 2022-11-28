@@ -4,9 +4,9 @@ import {
     CreateElementAction,
     DClass,
     DNamedElement,
-    IStore,
+    IStore, LClass,
     LGraph,
-    LModel,
+    LModel, LPointerTargetable, LUser,
     MyProxyHandler, StyleEditor,
 } from "../../joiner";
 import {DefaultNode} from "../../graph/defaultNode/DefaultNode";
@@ -17,10 +17,8 @@ import Draggable2 from "../../graph/draggable/Draggable2";
 import ViewsEditor from "../rightbar/ViewsEditor/ViewsEditor";
 import StructureEditor from "../rightbar/structureEditor/StructureEditor";
 import Logger from "../rightbar/logger/Logger";
-import {Xwrapper} from "react-xarrows";
-import Edges from "../../graph/edge/Edges";
 import ToolBar from "../toolbar/ToolBar";
-import Test from "../../graph/edge/test";
+import PendingEdge from "../../graph/edge/PendingEdge";
 
 let windoww = window as any;
 interface ThisState {}
@@ -44,11 +42,10 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
         this.graph = this.props.graph;
         this.metamodel = { title: "Metamodel", group: "1", closable: false, content:
                 <div>
-                    {/*<Xwrapper>*/}
+                    <PendingEdge  source={undefined} user={undefined} edge={undefined} />
                     <ToolBar model={this.model.id} />
                     <DefaultNode data={this.model.id} nodeid={this.graph.id} graphid={this.graph.id} />
-                    <Edges graphID={this.graph.id as any} nodeID={this.graph.id + ''} />
-                    {/*</Xwrapper>*/}
+                    {/*<Edges graphID={this.graph.id as any} nodeID={this.graph.id + ''} />*/}
                 </div>
         };
         this.structureEditor = { title: "Structure", group: "2", closable: false, content: <StructureEditor /> };
@@ -84,9 +81,9 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const modelPointer = state.models[0];
-    const model: LModel = MyProxyHandler.wrap(modelPointer);
+    const model: LModel = LPointerTargetable.from(modelPointer);
     const graphPointer = state.graphs[0];
-    const graph: LGraph = MyProxyHandler.wrap(graphPointer);
+    const graph: LGraph = LPointerTargetable.from(graphPointer);
     const ret: StateProps = {graph, model};
     return ret;
 }

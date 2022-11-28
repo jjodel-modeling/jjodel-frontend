@@ -44,6 +44,9 @@ export default class DV {
 
     public static classView(): string {
         return (`<div className={"w-100 h-100"}>
+        {this.data.subNodes.filter((node) => node.model.className === "DReference").map((refNode) => {
+            return <Edges source={refNode} />})}
+           
             <div className={"default-class"}>
                 <div className={"class-header"}>
                     <div className={"class-header-label"}> <b>Concept:</b>
@@ -60,6 +63,11 @@ export default class DV {
                     {(this.data.references.length > 0) && <div className={"children-references"}>                    
                         {this.data.references.map((reference, i) => {
                             return <DefaultNode key={i} data={reference} />
+                        })}
+                    </div>}                    
+                    {(this.data.operations.length > 0) && <div className={"children-operations"}>                    
+                        {this.data.operations.map((operation, i) => {
+                            return <DefaultNode key={i} data={operation} />
                         })}
                     </div>}
                 </div>

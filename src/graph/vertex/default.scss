@@ -220,3 +220,12 @@ $border-color: #0000005c;
 .ui-icon {
   display: none !important;
 }
+
+.class-can-be-extended {
+  border: 3px solid #28A745FF !important;
+  border-radius: 5px;
+}
+.class-cannot-be-extended {
+  border: 3px solid #DC3545FF !important;
+  border-radius: 5px;
+}

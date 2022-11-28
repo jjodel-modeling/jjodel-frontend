@@ -1,20 +1,32 @@
 import {IStore} from "../../redux/store";
-import React, {CSSProperties, Dispatch, ReactElement, ReactNode, useEffect} from "react";
+import React, {CSSProperties, Dispatch, ReactElement, ReactNode, useEffect, useState} from "react";
 import {connect} from "react-redux";
-import {DUser, GObject, Pointer, SetRootFieldAction, U} from "../../joiner";
+import {
+    DClass,
+    DGraph,
+    DModelElement,
+    DUser,
+    GObject, LClass, LPointerTargetable,
+    Pointer,
+    SetFieldAction,
+    SetRootFieldAction,
+    U
+} from "../../joiner";
 import {AllPropss as VertexProps} from "./Vertex";
-import ToolButton from "../toolButton/ToolButton";
 import $ from "jquery";
 import "jqueryui";
 import "jqueryui/jquery-ui.css";
+import LeaderLine from "leader-line-new";
 
 interface ThisState {}
 function RootVertexComponent(props: AllProps, state: ThisState) {
     const rootProps = props.props;
-    const classname = rootProps.data.className;
-    const classes: string[] = [];
-    classes.push(classname);
-    if(rootProps.data.id === rootProps.lastSelected) classes.push("selected");
+    const isEdgePending = !!rootProps.isEdgePending.source;
+    const canBeExtend = isEdgePending &&
+                        rootProps.data.className === "DClass" &&
+                        rootProps.isEdgePending.source.id !== rootProps.data.id;
+
+    const [classes, setClasses] = useState<string[]>([]);
 
     const select = (forUser:Pointer<DUser, 0, 1> = null) => {
         if (!forUser) forUser = DUser.current;
@@ -26,14 +38,58 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
         });
     }
     const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        select();
+        if(isEdgePending) {
+            const user = rootProps.isEdgePending.user;
+            const source = rootProps.isEdgePending.source;
+            if(canBeExtend) {
+                const lClass: LClass = LPointerTargetable.from(rootProps.data.id);
+                SetFieldAction.new(lClass.id, "extendedBy", source.id, "", true);
+                SetFieldAction.new(source.id, "extends", lClass.id, "", true);
+            }
+            SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
+        } else {
+            select();
+        }
         e.stopPropagation();
         e.nativeEvent.stopPropagation();
     }
 
+    const onEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+        if(isEdgePending && rootProps.data.className === "DClass") {
+            const user = rootProps.isEdgePending.user;
+            const source = rootProps.isEdgePending.source;
+            if(canBeExtend) setClasses([...classes, "class-can-be-extended"]);
+            else setClasses([...classes, "class-cannot-be-extended"]);
+        }
+    }
+    const onLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+        if(rootProps.data.className === "DClass") {
+            setClasses(classes.filter((classname) => {
+                return classname !== "class-can-be-extended" && classname !=="class-cannot-be-extended"
+            }));
+        }
+    }
+
     const sizeStyle: CSSProperties = {};
-    if(rootProps.isVertex) {
-        sizeStyle.position = "absolute";
+    if(rootProps.isVertex) { sizeStyle.position = "absolute"; }
+
+    const edgeRefresh = () => {
+        const nodeid = rootProps.nodeid;
+        if(nodeid) {
+            const sources : LeaderLine[] = (window as any).leaderline.bySource[nodeid] || [];
+            const targets : LeaderLine[] = (window as any).leaderline.byTarget[nodeid] || [];
+            for(let ll of sources) { ll.position(); }
+            for(let ll of targets) { ll.position(); }
+            const subNodes = rootProps.data.subNodes;
+            if(subNodes) {
+                for(let node of subNodes) {
+                    const sources : LeaderLine[] = (window as any).leaderline.bySource[node.id] || [];
+                    const targets : LeaderLine[] = (window as any).leaderline.byTarget[node.id] || [];
+                    for(let ll of sources) { ll.position(); }
+                    for(let ll of targets) { ll.position(); }
+                }
+            }
+        }
     }
 
     useEffect(() => {
@@ -45,6 +101,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                 drag: function(event: GObject, obj: GObject){
                     const y: number = obj.position.top;
                     const x: number = obj.position.left;
+                    edgeRefresh();
                     // rootProps.node.x = x;
                     // rootProps.node.y = y;
 
@@ -60,7 +117,6 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     }, [])
 
 
-    //id = rootProps.node?.id
     return(
         <div id={rootProps.nodeid}
              data-nodeid={rootProps.nodeid}
@@ -69,8 +125,10 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              data-modelname={rootProps.data?.className}
              data-userselecting={JSON.stringify(rootProps.node?.__raw.isSelected || {})}
              style={{...sizeStyle}}
-             className={classes.join(' ')}
+             className={[...classes, ...props.classes].join(' ')}
              onClick={onClick}
+             onMouseEnter={onEnter}
+             onMouseLeave={onLeave}
              key={rootProps.key}
         >
             {props.render}
@@ -79,12 +137,16 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
 
 }
 interface OwnProps {props: VertexProps, render: ReactNode}
-interface StateProps {}
+interface StateProps {classes: Set<string>}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {};
+    const classes = new Set<string>();
+    const props = ownProps.props;
+    classes.add(props.data.className);
+    if(props.lastSelected && props.data.id === props.lastSelected.id) classes.add("selected");
+    const ret: StateProps = {classes};
     return ret;
 }
 

@@ -40,11 +40,12 @@ import {
     SetRootFieldAction,
     RuntimeAccessible,
     CreateElementAction,
-    DUser,
+    DUser, LUser,
 } from "../joiner";
 import React, {ChangeEvent, CSSProperties} from "react";
 import {MyProxyHandler} from "../joiner";
 import DV from "../common/DV";
+import LeaderLine from "leader-line-new";
 console.warn('ts loading store');
 
 // @RuntimeAccessible
@@ -83,7 +84,15 @@ export class IStore {
     classs: Pointer<DClass, 0, "N", LClass> = [];
     operations: Pointer<DOperation, 0, "N", LOperation> = [];
     parameters: Pointer<DParameter, 0, "N", LParameter> = [];
+    returnTypes: Pointer<DClass, 1, "N", LClass> = [];
     /// DClass section end
+
+    isEdgePending: {
+        user: Pointer<DUser, 1, 1, LUser>,
+        source: Pointer<DClass, 1, 1, LClass>
+    } = {user: "", source: ""};
+
+    pendingEdge : LeaderLine | undefined;
 
     // private, non-shared fields
     _lastSelected?: {
@@ -91,6 +100,7 @@ export class IStore {
         view: Pointer<DViewElement, 1, 1>,
         modelElement: Pointer<DModelElement, 0, 1> // if a node is clicked: a node and a view are present, a modelElement might be. a node can exist without a modelElement counterpart.
     };
+
 
     constructor() {
 //        super();
@@ -114,6 +124,13 @@ export class IStore {
             const dPrimitiveType = DClass.new(primitiveType);
             new CreateElementAction(dPrimitiveType);
             SetRootFieldAction.new("primitiveTypes", dPrimitiveType.id, '+=', true);
+        }
+
+        const returnTypes = ["void", "undefined", "null"];
+        for (let returnType of returnTypes) {
+            const dReturnType = DClass.new(returnType);
+            new CreateElementAction(dReturnType);
+            SetRootFieldAction.new("returnTypes", dReturnType.id, '+=', true);
         }
     }
 

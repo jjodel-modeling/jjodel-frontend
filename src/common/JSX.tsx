@@ -9,6 +9,7 @@ import {useXarrow} from "react-xarrows";
 export default class JSX {
 
     public static nodeRender(props: VertexProps, render: ReactNode): ReactNode {
+        /*
         const classname = props.data.className;
         const classes: string[] = [];
         classes.push(classname);

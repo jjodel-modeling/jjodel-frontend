@@ -1,6 +1,6 @@
 import React, {ReactNode} from "react";
 import type {DClassifier, DParameter, GObject, LClass, LModelElement, LParameter} from "../../../joiner";
-import {Input, LPointerTargetable, Select, U, UX} from "../../../joiner";
+import {Input, LClassifier, LPointerTargetable, Select, SetRootFieldAction, U, UX} from "../../../joiner";
 
 export default class Structure {
     private static BaseEditor(lModelElement: LModelElement) : ReactNode {
@@ -33,6 +33,17 @@ export default class Structure {
             </div>
             <div className={"structure-input-wrapper row"}>
                 <Input obj={lClass} field={"interface"} label={"IsInterface"} type={"checkbox"} />
+            </div>
+            <div className={"structure-input-wrapper row"}>
+                <p className={"generic-text"}>Set Extend</p>
+                <div className={"generic-button"} onClick={() => {
+                    SetRootFieldAction.new('isEdgePending', {
+                        user: '',
+                        source: lClass.id
+                    });
+                }}>
+                    <i className={"bi bi-caret-up-fill"}></i>
+                </div>
             </div>
         </div>);
     }
@@ -139,7 +150,7 @@ export default class Structure {
                 }
             })}
             {lOperation.exceptions.map((exception: DClassifier) => {
-                const lException: LClass = LPointerTargetable.from(exception);
+                const lException: LClassifier = LPointerTargetable.from(exception);
                 return <div className={"structure-children-input-wrapper row"}>
                     <Input obj={exception} field={"name"} label={"Exception"} type={"text"} />
                     <div className={"child-delete"} onClick={async() => {await UX.deleteWithAlarm(lException)}}>

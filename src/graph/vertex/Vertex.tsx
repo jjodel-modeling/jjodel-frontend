@@ -14,7 +14,7 @@ import {
     GraphElementOwnProps,
     GraphElementReduxStateProps,
     GraphElementStatee,
-    IStore,
+    IStore, LClass, LModelElement, LPointerTargetable, LUser,
     LVoidVertex,
     RuntimeAccessibleClass,
     U,
@@ -45,9 +45,10 @@ class OwnProps extends GraphElementOwnProps {
     isVertex?: boolean = true;
 }
 
-class StateProps extends GraphElementReduxStateProps{
+class StateProps extends GraphElementReduxStateProps {
     node!: LVoidVertex;
-    lastSelected: string | null | undefined;
+    lastSelected!: LModelElement | null;
+    isEdgePending!: { user: LUser, source: LClass };
 }
 
 class DispatchProps extends GraphElementDispatchProps {
@@ -62,7 +63,12 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     else if (!ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraph;
     else DGraphElementClass = DGraphElement;
     const superret: StateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass) as StateProps;
-    superret.lastSelected = state._lastSelected?.modelElement;
+    //superret.lastSelected = state._lastSelected?.modelElement;
+    superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
+    superret.isEdgePending = {
+        user: LPointerTargetable.from(state.isEdgePending.user),
+        source: LPointerTargetable.from(state.isEdgePending.source)
+    };
     const ret: StateProps = new StateProps();
     U.objectMergeInPlace(superret, ret);
     U.removeEmptyObjectKeys(superret);

@@ -93,3 +93,27 @@ $checkbox_size: 1.25em;
   text-align: center;
   padding: 5px;
 }
+
+.generic-button {
+  background: #4d4dee;
+  height: min-content;
+  font-weight: lighter;
+  flex: 0 0 auto;
+  margin-left: 10px;
+  width: min-content;
+  border-radius: $radius;
+  cursor: pointer;
+}
+
+.generic-button > i {
+  color: white;
+  text-align: center;
+  padding: 5px;
+}
+.generic-text {
+  height: min-content;
+  font-size: .9rem;
+  font-weight: lighter;
+  flex: 0 0 auto;
+  width: max-content;
+}

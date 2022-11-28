@@ -103,6 +103,11 @@ export class LGraphElement extends LPointerTargetable {
         return true;
     }
 
+    get_model(context: LogicContext<DGraphElement>): this["model"] {
+        const modelElementId = $('[id="' + context.data.id + '"]')[0].dataset.dataid;
+        const lModelElement: LModelElement = LPointerTargetable.from(modelElementId as string);
+        return lModelElement;
+    }
 
 }
 DPointerTargetable.subclasses.push(DGraphElement);
