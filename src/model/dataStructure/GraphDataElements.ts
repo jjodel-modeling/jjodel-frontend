@@ -6,7 +6,7 @@ import {
     GObject,
     Pointer,
     DocString,
-    Leaf, Node, Constructors, DNamedElement, DTypedElement, ISize, IStore, DPackage, LNamedElement
+    Leaf, Node, Constructors, DNamedElement, DTypedElement, ISize, IStore, DPackage, LNamedElement, LPackage
 } from "../../joiner";
 
 import {
@@ -106,19 +106,19 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
     }
 
 
-    private get_allSubNodes(context: Context, state?: IStore): LPackage[] {
+    private get_allSubNodes(context: Context, state?: IStore): DGraphElement[] {
         // return context.data.packages.map(p => LPointerTargetable.from(p));
         state = state || store.getState();
-        let tocheck: Pointer<DPackage>[] = context.data.subElements || [];
+        let tocheck: Pointer<DGraphElement>[] = context.data.subElements || [];
         let checked: Dictionary<Pointer, true> = {};
         checked[context.data.id] = true;
         while (tocheck.length) {
-            let newtocheck: Pointer<DPackage>[] = [];
+            let newtocheck: Pointer<DGraphElement>[] = [];
             for (let ptr of tocheck) {
-                if (checked[ptr]) throw new Error("loop in packages containing themselves");
+                if (checked[ptr]) throw new Error("loop in GraphElements containing themselves");
                 checked[ptr] = true;
-                let dpackage: DGraphElement = DPointerTargetable.from(ptr, state);
-                U.arrayMergeInPlace(newtocheck, dpackage?.subElements);
+                let subnode: DGraphElement = DPointerTargetable.from(ptr, state);
+                U.arrayMergeInPlace(newtocheck, subnode?.subElements);
             }
             tocheck = newtocheck;
         }
