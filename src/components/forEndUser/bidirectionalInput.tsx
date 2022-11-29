@@ -1,6 +1,6 @@
 import React, {CSSProperties, Dispatch, LegacyRef, PureComponent, ReactElement, ReactNode} from "react";
 import { connect } from "react-redux";
-import type {IStore, GObject, Pointer} from /*type*/ "../../joiner";
+import type {IStore, GObject, Pointer, Dictionary} from /*type*/ "../../joiner";
 import type {
     DModelElement,
     LModelElement,
@@ -16,7 +16,7 @@ import {
     DPointerTargetable,
     OCL,
     DGraph,
-    LPointerTargetable, U,
+    LPointerTargetable, U, LReference,
 } from "../../joiner";
 
 import Editor from "@monaco-editor/react";
@@ -80,8 +80,8 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
         delete otherprops.getter;
         const primitives = Selectors.getAllPrimitiveTypes(); // damiano: questo va spostato in mapstate to props
         // todo: replace with this.props.data.package.classes? but maybe attrib types can be from other packages in same model & from m3 primitive type def. so model.classes & model.meta.classes ?
-        const classes = this.props.data.model.classes;
-        const enumerators = this.props.data.model.enums;
+        const classes: LClass[] = this.props.data.model.classes;
+
 
         //todo: define hasVoid, hasClasses, ... with data.classname (default=true)
         let hasVoid = true; let hasPrimitive = true; let hasClasses = true; let hasEnumerators = true;
@@ -95,6 +95,19 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
         hasPrimitive = (this.props.hasPrimitive !== undefined) ? this.props.hasPrimitive : hasPrimitive;
         hasClasses = (this.props.hasClasses !== undefined) ? this.props.hasClasses : hasClasses;
         hasEnumerators = (this.props.hasEnumerators !== undefined) ? this.props.hasEnumerators : hasEnumerators; //damiano: queste pure in mapstate, e se non hasPrimitive si può evitare chiamare il selettore per i primitivi
+
+        /*const classnames: {ptr: Pointer, name: string}[] = !hasClasses ? [] : classes.map((c: LClass) => {
+            return {ptr: c.id, name: data.package && (c.package?.id === data.package?.id) ? c.name : c.fullname}; });*/
+        const classpackagesobj: {[pkgname: string]: {value: string, label: string}[]} = {}
+        for (let c of classes) {
+            let pkgname: string | undefined = c.package?.fullname;
+            if (!pkgname) continue; // not displaying "disconnected" classes, can they even exist?
+            if (!classpackagesobj[pkgname]) classpackagesobj[pkgname] = [];
+            classpackagesobj[pkgname].push({value: c.id, label: c.name} );
+        }
+        const classpackagesarr: {optgrp: string, options:{value: Pointer, label: string}[]}[]  = Object.entries(classpackagesobj).map( a=> {return {optgrp: a[0], options: a[1]}});
+        windoww.testt = {classes, data, classpackagesobj, classpackagesarr};
+        const enumerators = this.props.data.model.enums;
 
         const className = this.props.className;
         const options = this.props.options ? this.props.options : [];
@@ -112,11 +125,12 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
                             return <option value={dPrimitive.id}>{dPrimitive.name}</option>
                         })}
                     </optgroup> : <></>}
-                    {hasClasses && classes.length > 0 ? <optgroup label={"Classes"}>
-                        {classes.map((lClass: LClass) => {
-                            return <option value={lClass.id}>{lClass.name}</option>
+                    {classpackagesarr.map( (pkggrp) =>
+                        <optgroup label={pkggrp.optgrp}>
+                        {pkggrp.options.map((opt) => {
+                            return <option value={opt.value}>{opt.label}</option>
                         })}
-                    </optgroup> : <></>}
+                    </optgroup>)}
                     {hasEnumerators && enumerators.length > 0 ? <optgroup label={"Enumerators"}>
                         {enumerators.map((lEnum: LEnumerator) => {
                             return <option value={lEnum.id}>{lEnum.name}</option>

@@ -157,6 +157,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     // @ts-ignore
     private get_until_parent<D extends Constructor, L extends DtoL<InstanceType<D>>>(l: LModelElement, d: DModelElement, father: D): L | null {
         while (true) {
+            console.log('get_until_parent', {d, father}, {dname: d.className, fname: father.name});
             if (d.className === father.name) return l as L;
             l = l.father;
             let oldd = d;
@@ -192,10 +193,10 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     */
 
     protected get_model(context: Context): LModel { return this.get_until_parent(context.proxyObject, context.data, DModel) as LModel; }
-    protected get_Package(context: Context): LPackage { return this.get_until_parent(context.proxyObject, context.data, DPackage) as LPackage; }
-    protected get_Class(context: Context): LClass | null { return this.get_until_parent(context.proxyObject, context.data, DClass); } // todo: might be better for pergormance to erase this universal method and add implementations to every single L-class counting the correct amount of "father" navigations for each ( attrib to package? use attrib.father.father)
-    protected get_Operation(context: Context): LOperation | null { return this.get_until_parent(context.proxyObject, context.data, DOperation); }
-    protected get_Enum(context: Context): LEnumerator | null { return this.get_until_parent(context.proxyObject, context.data, DEnumerator); }
+    protected get_package(context: Context): LPackage { return this.get_until_parent(context.proxyObject, context.data, DPackage) as LPackage; }
+    protected get_class(context: Context): LClass | null { return this.get_until_parent(context.proxyObject, context.data, DClass); } // todo: might be better for pergormance to erase this universal method and add implementations to every single L-class counting the correct amount of "father" navigations for each ( attrib to package? use attrib.father.father)
+    protected get_operation(context: Context): LOperation | null { return this.get_until_parent(context.proxyObject, context.data, DOperation); }
+    protected get_enum(context: Context): LEnumerator | null { return this.get_until_parent(context.proxyObject, context.data, DEnumerator); }
 
     protected get_father(context: Context): LModelElement { return LPointerTargetable.from(context.data.father); }
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DPackage | DClassifier | DEnumerator | DEnumLiteral | DParameter | DStructuralFeature | DOperation, 1, 'N'>  { // LPackage | LClassifier | LTypedElement | LAnnotation | LEnumLiteral | LParameter | LStructuralFeature | LOperation
@@ -721,7 +722,7 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
 
     protected get_fullname(context: Context): this["fullname"] {
         const containers = this.get_containers(context);
-        let fullname: string = containers.map(c => c.name).join('.');
+        let fullname: string = containers.reverse().slice(1, containers.length).map(c => c.name).join('.');
         return fullname; }
 
 
@@ -1564,7 +1565,8 @@ export class LClass<Context extends LogicContext<DClass> = any, C extends Contex
     }
 
     private get_canExtend(context: Context): (superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]}) => boolean {
-        return (superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []} ) => this._canExtend(context, superclass, output);
+        return (superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} =
+            {reason: '', allTargetSuperClasses: []}) => this._canExtend(context, superclass, output);
     }
 
     public isExtending(superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
@@ -1600,12 +1602,13 @@ export class LClass<Context extends LogicContext<DClass> = any, C extends Contex
     private _canExtend(context: Context, superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
         if (!superclass) { output.reason = 'Invalid extend target: ' + superclass; return false; }
         const thiss: LClass = context.proxyObject;
-        if (superclass === thiss) { output.reason = 'Classes cannot extend themselves.'; return false; }
+        if (superclass.id === thiss.id) { output.reason = 'Classes cannot extend themselves.'; return false; }
         // todo: se diversi proxy dello stesso oggetto sono considerati diversi questo fallisce, in tal caso fai thiss.extends.map( l => l.id).indexof(superclass.id)
-        if (thiss.extends.indexOf(superclass) >= 0) { output.reason = 'Target class is already directly extended.'; return false; }
+        if (thiss.extends.map(sc=>sc.id).indexOf(superclass.id) >= 0) { output.reason = 'Target class is already directly extended.'; return false; }
         output.allTargetSuperClasses = superclass.superclasses;
-        if (thiss.superclasses.indexOf(superclass) >= 0) { output.reason = 'Target class is already indirectly extended.'; return false; }
-        if (output.allTargetSuperClasses.indexOf(thiss) >= 0) { output.reason = 'Cannot set this extend, it would cause a inheritance loop.'; return false; }
+        if (thiss.superclasses.map(sc=> sc.id).indexOf(superclass.id) >= 0) { output.reason = 'Target class is already indirectly extended.'; return false; }
+        if (output.allTargetSuperClasses.map(sc=>sc.id).indexOf(thiss.id) >= 0) { output.reason = 'Cannot set this extend, it would cause a inheritance loop.'; return false; }
+        if (thiss.interface && !superclass.interface) { output.reason = 'An interface cannot extend a class.'; return false; }
         // ora verifico se causa delle violazioni di override (attibuti omonimi string e boolean non possono overridarsi)
         let i: number;
         let j: number;
@@ -1667,8 +1670,6 @@ export class LClass<Context extends LogicContext<DClass> = any, C extends Contex
 }
 DClassifier.subclasses.push(DClass);
 LClassifier.subclasses.push(LClass);
-
-
 
 
 @RuntimeAccessible

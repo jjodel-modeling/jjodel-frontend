@@ -21,13 +21,14 @@ import LeaderLine from "leader-line-new";
 interface ThisState {}
 function RootVertexComponent(props: AllProps, state: ThisState) {
     const rootProps = props.props;
-    const isEdgePending = !!rootProps.isEdgePending.source;
+    const isEdgePending = !!(rootProps.isEdgePending?.source);
     const user = rootProps.isEdgePending.user;
     const source = rootProps.isEdgePending.source;
     const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
     const canBeExtend = isEdgePending &&
                         rootProps.data.className === "DClass" &&
                         source.canExtend(rootProps.data as any as LClass, extendError);
+    console.log("canextend", {src: rootProps.isEdgePending, target:rootProps.data, extendError});
 
     const [classes, setClasses] = useState<string[]>([]);
 
@@ -41,13 +42,14 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
         });
     }
     const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if(isEdgePending) {
+        if (isEdgePending) {
             const user = rootProps.isEdgePending.user;
             const source = rootProps.isEdgePending.source;
-            if(canBeExtend) {
+            if (canBeExtend) {
                 const lClass: LClass = LPointerTargetable.from(rootProps.data.id);
-                SetFieldAction.new(lClass.id, "extendedBy", source.id, "", true);
-                SetFieldAction.new(source.id, "extends", lClass.id, "", true);
+                SetFieldAction.new(lClass.id, "extendedBy", source.id, "", true); // todo: this should throw a error for wrong type.
+                SetFieldAction.new(lClass.id, "extendedBy", source.id, "+=", true);
+                SetFieldAction.new(source.id, "extends", lClass.id, "+=", true);
             }
             SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
         } else {
