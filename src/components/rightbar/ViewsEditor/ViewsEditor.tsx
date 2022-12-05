@@ -211,7 +211,7 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                 })
                                 if(viewName.value !== undefined) {
                                     const newView = DViewElement.new(viewName.value, '');
-                                    new CreateElementAction(newView);
+                                    CreateElementAction.new(newView);
                                     //PUSH: ADD VIEW
                                     SetRootFieldAction.new('stackViews', newView.id, '+=', true);
                                 }

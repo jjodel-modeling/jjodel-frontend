@@ -1,8 +1,9 @@
 {
   "name": "jodel-react",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "commentnodeversion": "16.13.0?",
+  "homepage": "https://damianonaraku.github.io/jodel-react",
   "dependencies": {
     "@monaco-editor/react": "^4.3.1",
     "@popperjs/core": "^2.11.6",
@@ -56,7 +57,10 @@
     "build-ssl": "react-scripts --openssl-legacy-provider build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "manual_debug": "echo http://localhost:3000/ click this using CTRL+SFHIT"
+    "manual_debug": "echo http://localhost:3000/ click this using CTRL+SFHIT",
+
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": [
@@ -78,6 +82,7 @@
   },
   "devDependencies": {
     "@types/jquery": "^3.5.5",
-    "@types/react-beautiful-dnd": "^13.1.1"
+    "@types/react-beautiful-dnd": "^13.1.1",
+    "gh-pages": "^4.0.0"
   }
 }

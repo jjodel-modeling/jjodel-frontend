@@ -148,8 +148,8 @@ export function createOrOpenModelTab(modelName: string, context0?: DockContext, 
     TRANSACTION(
         () => {
             // model._transient.currentView = LViewElement.findViewFor(model).id;
-            new CreateElementAction(model);
-            new CreateElementAction(graph);
+            CreateElementAction.new(model);
+            CreateElementAction.new(graph);
         }
     );
     console.log('createTab2:', {model, modelName, graphid});

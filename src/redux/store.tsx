@@ -120,23 +120,23 @@ export class IStore {
     static fakeinit(store?: IStore): void {
         const graphDefaultViews: DViewElement[] = makeDefaultGraphViews();
         for (let graphDefaultView of graphDefaultViews) {
-            new CreateElementAction(graphDefaultView);
+            CreateElementAction.new(graphDefaultView);
         }
         const dModel = DModel.new("Test Model");
-        new CreateElementAction(dModel);
-        new CreateElementAction(DGraph.new(dModel.id));
+        CreateElementAction.new(dModel);
+        CreateElementAction.new(DGraph.new(dModel.id));
 
         const primitiveTypes = ["EString", "EInt", "EBoolean"];
         for (let primitiveType of primitiveTypes) {
             const dPrimitiveType = DClass.new(primitiveType);
-            new CreateElementAction(dPrimitiveType);
+            CreateElementAction.new(dPrimitiveType);
             SetRootFieldAction.new("primitiveTypes", dPrimitiveType.id, '+=', true);
         }
 
         const returnTypes = ["void", "undefined", "null"];
         for (let returnType of returnTypes) {
             const dReturnType = DClass.new(returnType);
-            new CreateElementAction(dReturnType);
+            CreateElementAction.new(dReturnType);
             SetRootFieldAction.new("returnTypes", dReturnType.id, '+=', true);
         }
     }

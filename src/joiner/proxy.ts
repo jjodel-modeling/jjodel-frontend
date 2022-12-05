@@ -190,13 +190,29 @@ export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibl
 }
 
 export type GetPath<T = GObject> = T;
+/*
+* handling proxy += and proxy -=
+*
+* will become var = var + add; which will call Symbol.getPrimitive
+console.log(+obj2);     // 10        — hint is "number"         NaN with +array with multiple vals, +array[0] with array of size 1, NaN with functions & objects
+console.log(`${obj2}`); // "hello"   — hint is "string"         array => array.join(','), object => "[object Object]", function => function.toString() whole func definition with body code
+console.log(obj2 + ""); // "true"    — hint is "default"        array, object, function => same as with hint "string"
+*
+* */
+
+// NB: lclass.extends += somepointer will become: lclass.extends = lclass.extends + somepointer;
+// array + string will cause getPrimitive("default") to array, then .join(',') on it, and finally and toString() to be called on all array members.
+// so pointers cannot include "," char and toString() must return a pointer to keep lclass.extends += somepointer as a valid expression;
+// -= will call getPrimitive("number") which will result in array -> NaN, so NaN = NaN - pointer and cannot be done.
 
 @RuntimeAccessible
 class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
     strbuilder: string = '';
     array: (string | number | symbol)[] = [];
-    public __asArray: boolean = false;
-    public __nested: boolean = true;
+    calls: (GObject<'parameters of get calls'>)[] = [];
+    public static __asCalls: boolean = false;
+    public static __asArray: boolean = false;
+    public static __nested: boolean = true;
 
     public constructor() { super(); }
 
@@ -204,20 +220,29 @@ class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
         // console.log('GetPathHandler', {targetObj, propKey, proxyitself});
         if (propKey === "start") { this.strbuilder = ''; this.array = []; }
         if (propKey === '$') {
-            const ret = this.__asArray ? this.array : this.strbuilder;
+            const ret = GetPathHandler.__asCalls ? this.calls : (GetPathHandler.__asArray ? this.array : this.strbuilder);
             this.array = [];
             this.strbuilder = '';
             return ret; }
         this.array.push(propKey);
-        if (!this.__asArray) this.strbuilder += (this.strbuilder ? '.' : '') + propKey;
-        return this.__nested ? proxyitself : {};
+        this.calls.push(arguments);
+        if (propKey === Symbol.toPrimitive) {
+            console.log("toprimitive");
+            return (...a: any)=> {console.log("toprimitive called with parameters", a); }
+        }
+        if (!GetPathHandler.__asArray && !GetPathHandler.__asCalls) {
+            if (typeof propKey === "symbol") { this.strbuilder += propKey.toString(); }
+            else this.strbuilder += (this.strbuilder ? '.' : '') + propKey;
+        }
+        return GetPathHandler.__nested ? proxyitself : {};
     }
 
     set(target: T, p: string | number | symbol, value: any, proxyitself: Proxyfied<T>): boolean {
         switch(p){
             case '__asArray':
+            case '__asCalls':
             case '__nested':
-                this[p] = value;
+                (GetPathHandler as any)[p] = value;
                 return true;
             default:
                 throw new Error('getPath proxy cannot be written');
@@ -268,11 +293,11 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     public get(targetObj: ME, propKey: string | symbol, proxyitself: Proxyfied<ME>): any {
         let ret;
         let isError = false;
-        // console.error('_proxy get PRE:', {targetObj, propKey, proxyitself});
+        // console.error('_proxy get PRE:', {targetObj, propKey, proxyitself, arguments});
         try { ret = this.get0(targetObj, propKey, proxyitself); } catch(e) { ret = e; isError = true;}
 
         // if (isError) throw ret;
-        // console.error('_proxy get POST:', {targetObj, propKey, ret});
+        // console.error('_proxy get POST:', {targetObj, propKey, ret, isError});
         return ret;
     }
 
@@ -361,6 +386,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
     public set(targetObj: ME, propKey: string | symbol, value: any, proxyitself?: Proxyfied<ME>): boolean {
         let enableFallbackSetter = true;
+
+        // console.error('_proxy set PRE:', {targetObj, propKey, value, proxyitself, arguments});
         // if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.s + (propKey as string)] || (this.l as GObject)[(propKey as string)]) {
         if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.s + (propKey as string)]) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?

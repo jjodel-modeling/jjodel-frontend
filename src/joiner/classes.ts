@@ -57,7 +57,7 @@ import {
     SetRootFieldAction,
     store,
     U,
-    IPoint
+    IPoint, SetFieldAction,
 } from "./index";
 import {defaultVSize} from "../model/dataStructure";
 
@@ -267,6 +267,7 @@ export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
 
 export type DtoL<DX extends GObject, LX = DX extends DEnumerator ? LEnumerator : (DX extends DAttribute ? LAttribute : (DX extends DReference ? LReference : (DX extends DRefEdge ? LRefEdge : (DX extends DExtEdge ? LExtEdge : (DX extends DDataType ? LDataType : (DX extends DClass ? LClass : (DX extends DStructuralFeature ? LStructuralFeature : (DX extends DParameter ? LParameter : (DX extends DOperation ? LOperation : (DX extends DEdge ? LEdge : (DX extends DEdgePoint ? LEdgePoint : (DX extends DGraphVertex ? LGraphVertex : (DX extends DModel ? LModel : (DX extends DValue ? LValue : (DX extends DObject ? LObject : (DX extends DEnumLiteral ? LEnumLiteral : (DX extends DPackage ? LPackage : (DX extends DClassifier ? LClassifier : (DX extends DTypedElement ? LTypedElement : (DX extends DVertex ? LVertex : (DX extends DVoidEdge ? LVoidEdge : (DX extends DVoidVertex ? LVoidVertex : (DX extends DGraph ? LGraph : (DX extends DNamedElement ? LNamedElement : (DX extends DAnnotation ? LAnnotation : (DX extends DGraphElement ? LGraphElement : (DX extends DMap ? LMap : (DX extends DModelElement ? LModelElement : (DX extends DUser ? LUser : (DX extends DPointerTargetable ? LPointerTargetable : (ERROR)))))))))))))))))))))))))))))))> = LX;
 export type DtoW<DX extends GObject, WX = DX extends DEnumerator ? WEnumerator : (DX extends DAttribute ? WAttribute : (DX extends DReference ? WReference : (DX extends DRefEdge ? WRefEdge : (DX extends DExtEdge ? WExtEdge : (DX extends DDataType ? WDataType : (DX extends DClass ? WClass : (DX extends DStructuralFeature ? WStructuralFeature : (DX extends DParameter ? WParameter : (DX extends DOperation ? WOperation : (DX extends DEdge ? WEdge : (DX extends DEdgePoint ? WEdgePoint : (DX extends DGraphVertex ? WGraphVertex : (DX extends DModel ? WModel : (DX extends DValue ? WValue : (DX extends DObject ? WObject : (DX extends DEnumLiteral ? WEnumLiteral : (DX extends DPackage ? WPackage : (DX extends DClassifier ? WClassifier : (DX extends DTypedElement ? WTypedElement : (DX extends DVertex ? WVertex : (DX extends DVoidEdge ? WVoidEdge : (DX extends DVoidVertex ? WVoidVertex : (DX extends DGraph ? WGraph : (DX extends DNamedElement ? WNamedElement : (DX extends DAnnotation ? WAnnotation : (DX extends DGraphElement ? WGraphElement : (DX extends DMap ? WMap : (DX extends DModelElement ? WModelElement : (DX extends DUser ? WUser : (DX extends DPointerTargetable ? WPointerTargetable : (ERROR)))))))))))))))))))))))))))))))> = WX;
+// export type DtoW<DX extends GObject, WX = Omit<DtoW0<DX>, 'id'>> = WX;
 export type LtoD<LX extends LPointerTargetable, DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LRefEdge ? DRefEdge : (LX extends LExtEdge ? DExtEdge : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LEdge ? DEdge : (LX extends LEdgePoint ? DEdgePoint : (LX extends LGraphVertex ? DGraphVertex : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LVertex ? DVertex : (LX extends LVoidEdge ? DVoidEdge : (LX extends LVoidVertex ? DVoidVertex : (LX extends LGraph ? DGraph : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : (LX extends LGraphElement ? DGraphElement : (LX extends LMap ? DMap : (LX extends LModelElement ? DModelElement : (LX extends LUser ? DUser : (LX extends LPointerTargetable ? DPointerTargetable : (ERROR)))))))))))))))))))))))))))))))> = DX;
 export type LtoW<LX extends LPointerTargetable, WX = LX extends LEnumerator ? WEnumerator : (LX extends LAttribute ? WAttribute : (LX extends LReference ? WReference : (LX extends LRefEdge ? WRefEdge : (LX extends LExtEdge ? WExtEdge : (LX extends LDataType ? WDataType : (LX extends LClass ? WClass : (LX extends LStructuralFeature ? WStructuralFeature : (LX extends LParameter ? WParameter : (LX extends LOperation ? WOperation : (LX extends LEdge ? WEdge : (LX extends LEdgePoint ? WEdgePoint : (LX extends LGraphVertex ? WGraphVertex : (LX extends LModel ? WModel : (LX extends LValue ? WValue : (LX extends LObject ? WObject : (LX extends LEnumLiteral ? WEnumLiteral : (LX extends LPackage ? WPackage : (LX extends LClassifier ? WClassifier : (LX extends LTypedElement ? WTypedElement : (LX extends LVertex ? WVertex : (LX extends LVoidEdge ? WVoidEdge : (LX extends LVoidVertex ? WVoidVertex : (LX extends LGraph ? WGraph : (LX extends LNamedElement ? WNamedElement : (LX extends LAnnotation ? WAnnotation : (LX extends LGraphElement ? WGraphElement : (LX extends LMap ? WMap : (LX extends LModelElement ? WModelElement : (LX extends LUser ? WUser : (LX extends LPointerTargetable ? WPointerTargetable : (ERROR)))))))))))))))))))))))))))))))> = WX;
 export type WtoD<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? DEnumerator : (IN extends WAttribute ? DAttribute : (IN extends WReference ? DReference : (IN extends WRefEdge ? DRefEdge : (IN extends WExtEdge ? DExtEdge : (IN extends WDataType ? DDataType : (IN extends WClass ? DClass : (IN extends WStructuralFeature ? DStructuralFeature : (IN extends WParameter ? DParameter : (IN extends WOperation ? DOperation : (IN extends WEdge ? DEdge : (IN extends WEdgePoint ? DEdgePoint : (IN extends WGraphVertex ? DGraphVertex : (IN extends WModel ? DModel : (IN extends WValue ? DValue : (IN extends WObject ? DObject : (IN extends WEnumLiteral ? DEnumLiteral : (IN extends WPackage ? DPackage : (IN extends WClassifier ? DClassifier : (IN extends WTypedElement ? DTypedElement : (IN extends WVertex ? DVertex : (IN extends WVoidEdge ? DVoidEdge : (IN extends WVoidVertex ? DVoidVertex : (IN extends WGraph ? DGraph : (IN extends WNamedElement ? DNamedElement : (IN extends WAnnotation ? DAnnotation : (IN extends WGraphElement ? DGraphElement : (IN extends WMap ? DMap : (IN extends WModelElement ? DModelElement : (IN extends WUser ? DUser : (IN extends WPointerTargetable ? DPointerTargetable : (IN extends WViewElement ? DViewElement : (IN extends WViewTransientProperties ? DViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
@@ -277,7 +278,7 @@ export class Constructors<T extends DPointerTargetable>{
     private thiss: T;
     constructor(t:T) { this.thiss = t; }
     // start(thiss: any): this { this.thiss = thiss; return this; }
-    end(): T {return this.thiss; }
+    end(): T { return this.thiss; }
 
     DModelElement(): this { return this; }
     DClassifier(): this { return this; }
@@ -377,6 +378,7 @@ export class Constructors<T extends DPointerTargetable>{
     DTypedElement(type?: DTypedElement["type"]): this {
         const thiss: DTypedElement = this.thiss as any;
         thiss.type = type as Pointer<DClassifier, 1, 1, LClassifier>;
+        // SetFieldAction.new(dAttribute.type, "pointedBy", dAttribute.id, '+='); // ok only because type is set in D-object instead of L-object
         return this; }
 
     DPackage(uri?: DPackage["uri"], prefix?: DPackage["prefix"]): this {
@@ -690,7 +692,7 @@ let aa: DClass = n;
 let ptrr = Pointers.from(aa.parent);
 aa.parent = ptrr;*/
 
-
+@RuntimeAccessible
 export class PendingPointedByPaths{
     static all: PendingPointedByPaths[] = [];
     // static pendingMoreThanTwice: ParsedAction[] = [];
@@ -726,7 +728,7 @@ export class PendingPointedByPaths{
 
     private resolve(): ParsedAction{
         U.arrayRemoveAll(PendingPointedByPaths.all, this);
-        return Action.parse(SetRootFieldAction.create("idlookup." + this.to + '.pointedBy', PointedBy.new(this.action), '+=', false));
+        return Action.parse(SetRootFieldAction.create("idlookup." + this.to + '.pointedBy', PointedBy.new(this.action.path), '+=', false));
     }
 
     public saveForLater(): void { PendingPointedByPaths.all.push(this); }
@@ -741,6 +743,7 @@ export class PendingPointedByPaths{
     }
 }
 
+@RuntimeAccessible
 export class PointedBy{
     source: string; // elemento da cui parte il puntatore
     // field: keyof DPointerTargetable;
@@ -757,8 +760,11 @@ export class PointedBy{
     private constructor(source: string) {
         this.source = source;
     }
-    static new<D extends DPointerTargetable> (action: ParsedAction, modifier: "-=" | "+=" | undefined = undefined): PointedBy {
-        let source: DocString<"full path in store including key"> = action.path;
+    static fromID<D extends DPointerTargetable>(ptr: Pointer<D>, field: keyof D) {
+        return PointedBy.new("idlookup." + ptr + "." + field);
+    }
+    static new(source: DocString<"full path in store including key. like \'idlookup.id.extends\'">, modifier: "-=" | "+=" | undefined = undefined, action?: ParsedAction): PointedBy {
+        // let source: DocString<"full path in store including key"> = action.path;
         if (source.includes("true")) { console.error(this, action); throw new Error("mixed a bool"); }
         if (modifier) source = source.substring(0, source.length - (modifier?.length || 0));
         return new PointedBy(source);
@@ -767,7 +773,7 @@ export class PointedBy{
 
 
 
-    static remove(oldValue: Pointer | undefined, action: ParsedAction, state: IStore, casee: "+=" | "-=" | undefined = undefined): IStore {
+    public static remove(oldValue: Pointer | undefined, action: ParsedAction, state: IStore, casee: "+=" | "-=" | undefined = undefined): IStore {
         if (!oldValue) return state;
         let oldtarget: DPointerTargetable = state.idlookup[oldValue];// todo: if += -=
         if (!oldtarget) return state;
@@ -775,15 +781,16 @@ export class PointedBy{
         let actionpath: string = action.path.substring(0, action.path.length -(casee?.length || 0))
         for (let i = 0; i < oldtarget.pointedBy.length; i++) { if (oldtarget.pointedBy[i].source === actionpath) {index = i; break; } }
         if (index >= 0) {
-            oldtarget.pointedBy = [...oldtarget.pointedBy.splice(index, 1)];
-            state.idlookup[oldValue] = {...oldtarget} as any;
-            state.idlookup = {...state.idlookup};
             state = {...state};
+            state.idlookup = {...state.idlookup};
+            state.idlookup[oldValue] =  {...oldtarget, pointedBy: [...oldtarget.pointedBy]} as any;
+            state.idlookup[oldValue].pointedBy.splice(index, 1) // in-place edit
         }
+        // console.warn('pointedby remove:', {from: oldtarget.pointedBy, to: state.idlookup[oldValue].pointedBy, obj: state.idlookup[oldValue], index, oldValue, actionpath});
         return state;
     }
 
-    static add(newtargetptr: Pointer | undefined, action: ParsedAction, state: IStore, casee: "+=" | "-=" | undefined = undefined): IStore {
+    public static add(newtargetptr: Pointer | undefined, action: ParsedAction, state: IStore, casee: "+=" | "-=" | undefined = undefined): IStore {
         if (!newtargetptr) return state;
         // todo: if can't be done because newtarget doesn't exist, build an action from this and set it pending.
         let newtarget: DPointerTargetable = state.idlookup[newtargetptr];
@@ -791,10 +798,11 @@ export class PointedBy{
             PendingPointedByPaths.new(action, state).saveForLater(); // {from: action.path, field: action.field, to: target});
             return state;
         }
-        newtarget.pointedBy = [...newtarget.pointedBy, PointedBy.new(action, casee)];
-        state.idlookup[newtargetptr] = {...newtarget} as any;
-        state.idlookup = {...state.idlookup};
+        let oldtarget = {...newtarget, pointedBy: [...newtarget.pointedBy]}
         state = {...state};
+        state.idlookup = {...state.idlookup};
+        state.idlookup[newtargetptr] = {...newtarget, pointedBy:  [...newtarget.pointedBy, PointedBy.new(action.path, casee)]} as any;
+        // console.warn('pointedby add:', {from: oldtarget.pointedBy, to: state.idlookup[newtargetptr].pointedBy, obj: state.idlookup[newtargetptr]});
         return state;
     }
 }
@@ -819,6 +827,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     protected get_toString(context: Context): () => string {
         const data = context.data as DNamedElement;
         return () => ( data.name ? data.name : data.className.substring(0));
+        // return () => data.id;
     }
 
 
@@ -866,8 +875,8 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         LX = DX extends DEnumerator ? LEnumerator : (DX extends DAttribute ? LAttribute : (DX extends DReference ? LReference : (DX extends DRefEdge ? LRefEdge : (DX extends DExtEdge ? LExtEdge : (DX extends DDataType ? LDataType : (DX extends DClass ? LClass : (DX extends DStructuralFeature ? LStructuralFeature : (DX extends DParameter ? LParameter : (DX extends DOperation ? LOperation : (DX extends DEdge ? LEdge : (DX extends DEdgePoint ? LEdgePoint : (DX extends DGraphVertex ? LGraphVertex : (DX extends DModel ? LModel : (DX extends DValue ? LValue : (DX extends DObject ? LObject : (DX extends DEnumLiteral ? LEnumLiteral : (DX extends DPackage ? LPackage : (DX extends DClassifier ? LClassifier : (DX extends DTypedElement ? LTypedElement : (DX extends DVertex ? LVertex : (DX extends DVoidEdge ? LVoidEdge : (DX extends DVoidVertex ? LVoidVertex : (DX extends DGraph ? LGraph : (DX extends DNamedElement ? LNamedElement : (DX extends DAnnotation ? LAnnotation : (DX extends DGraphElement ? LGraphElement : (DX extends DMap ? LMap : (DX extends DModelElement ? LModelElement : (DX extends DUser ? LUser : (DX extends DPointerTargetable ? LPointerTargetable : (ERROR))))))))))))))))))))))))))))))),
         >(data: DX): DX {
         // return null as any;
-        if (Array.isArray(ptr)) return LPointerTargetable.wrapAll(ptr) as any;
-        return LPointerTargetable.wrap(ptr) as any;
+        if (Array.isArray(data)) return LPointerTargetable.wrapAll(data) as any;
+        return LPointerTargetable.wrap(data) as any;
     }
 
 
@@ -1008,6 +1017,8 @@ export class WPointerTargetable extends DPointerTargetable{
     _subMaps!: never;
     pointedBy!: never;
     // todo: WfromD, WfromL, WfromPointer, Wfrom
+
+    static fromD<DX extends DPointerTargetable, WX extends DtoW<DX>>(data: DX): WX { return LPointerTargetable.fromD(data) as any; }
 }
 DPointerTargetable.subclasses.push(LPointerTargetable);
 DPointerTargetable.subclasses.push(WPointerTargetable);
@@ -1397,22 +1408,21 @@ type RemoveKeysOfType<T, ExcludeType> = Exclude2<T, OnlyKeysOfType<T, ExcludeTyp
 
  */
 
-let str: string = null as any;
-let ptr: Pointer = null as any;
 
 
-
-export type getWParams<L extends LPointerTargetable, D extends Object> = L & {
+export type getWParams<L extends LPointerTargetable, D extends Object> ={
     // [Property in keyof ValidObj<L>]: L[Property] extends never ? never : L[Property]
     [Property in keyof L]:/*
     Property extends "opposite" ? LReference | DReference | Pointer<DReference> :
     Property extends "parent" ? LModelElement | DModelElement | Pointer<DModelElement> :
     Property extends "annotations" ? LAnnotation | DAnnotation | Pointer<DAnnotation> :*/
     (Property extends string ? (
-        //@ts-ignore
-        L[`set_${Property}`] extends (...a:any)=> any ?
+        Property extends "id" ? 'id is read-only' :
+            //@ts-ignore
+        (L[`set_${Property}`] extends (a:any, b: any, ...b:any)=> any ? // at least 2 params: 1 for val and 1 for Context
+            // damiano todo: if first parameter is Context this should return never. because Context should not be an acceptable set value & it will cause a definition loop because contains a W key
             Parameters<L[`set_${Property}`]>[0] // if set_X function is defined, get first param
             //@ts-ignore
-            : D[Property] | `todo: should define set_${Property}` // default type if it's not assigned = type in the D version
-        ): never)
-}
+            : never ///D[Property] | `todo: should define set_${Property}` // default type if it's not assigned = type in the D version
+        )): never)
+} // & L

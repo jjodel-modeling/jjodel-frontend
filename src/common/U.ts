@@ -144,7 +144,7 @@ export class U{
             case "add": log = `<i>${context}:</i> added <b>${firstItem}</b> to <b>${secondItem}</b>`; break;
             case "delete": log = `<i>${context}:</i> deleted <b>${firstItem}</b> from <b>${secondItem}</b>`; break;
         }
-        new CreateElementAction(new DLog(log));
+        CreateElementAction.new(new DLog(log));
     }
 
     // delete this block --> start
@@ -794,8 +794,12 @@ export class U{
         return ret;
     }
 
-    static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[]} {
-        let ret: {added: T[], removed: T[]} = {} as any;
+    static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[], starting: T[], final: T[]} {
+        let ret: {added: T[], removed: T[], starting: T[], final: T[]} = {} as any;
+        ret.starting = starting;
+        ret.final = final;
+        if (!starting) starting = [];
+        if (!final) final = [];
         ret.removed = Uarr.arraySubtract(starting, final, false); // start & !end
         ret.added = Uarr.arraySubtract(final, starting, false); // end & !start
         return ret;
