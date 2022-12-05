@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react";
 import LeaderLine from "leader-line-new";
-import {Dictionary, LGraphElement, LModelElement, LReference, Pointer, SetRootFieldAction, U} from "../../joiner";
+import {Dictionary, LGraphElement, LModelElement, LReference, Pointer, U} from "../../joiner";
 import Xarrow from "react-xarrows";
 
 interface OwnProps { source: LGraphElement; target: LGraphElement; }
@@ -11,7 +11,6 @@ const byTarget: Dictionary<string, LeaderLine[]> = {};
 
 function addleaderline(props: OwnProps, options: LeaderLine.Options): LeaderLine{
     const line = new LeaderLine(options);
-    SetRootFieldAction.new("edges", {id: Math.floor(Math.random() * 1000), options: options, source: props.source.id, target: props.target.id}, "+=", false);
     let startid: string = line.start === "string" ? line.start as any : (line.start as any as HTMLElement)?.id;
     let endid: string = line.end === "string" ? line.end as any : (line.end as any as HTMLElement)?.id;
     if (startid) {
@@ -26,7 +25,6 @@ function addleaderline(props: OwnProps, options: LeaderLine.Options): LeaderLine
 }
 
 function removeleaderline(line: LeaderLine){
-    SetRootFieldAction.new("edges", {}, "", false);
     let startid: string = line.start === "string" ? line.start as any : (line.start as any as HTMLElement)?.id;
     let endid: string = line.end === "string" ? line.end as any : (line.end as any as HTMLElement)?.id;
     if (startid) {

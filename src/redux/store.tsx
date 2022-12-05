@@ -52,6 +52,8 @@ console.warn('ts loading store');
 // NB: le voci che iniziano con '_' sono personali e non condivise
 
 
+export interface EdgeOptions{ id: number, options: LeaderLine.Options, source: string, target: string, counter: number }
+
 export class IStore {
     logs: Pointer<DLog, 0, 'N', LLog> = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
@@ -87,12 +89,12 @@ export class IStore {
     returnTypes: Pointer<DClass, 1, "N", LClass> = [];
     /// DClass section end
 
-    isEdgePending: {
-        user: Pointer<DUser, 1, 1, LUser>,
-        source: Pointer<DClass, 1, 1, LClass>
-    } = {user: "", source: ""};
+    isEdgePending: {user: Pointer<DUser, 1, 1, LUser>, source: Pointer<DClass, 1, 1, LClass>} = {user: "", source: ""};
 
-    pendingEdge : LeaderLine | undefined;
+    contextMenu: {display: boolean, x: number, y: number} = { display: false, x: 0, y: 0 };
+
+    dragging: number = 0;
+    edges: EdgeOptions[] = [];
 
     // private, non-shared fields
     _lastSelected?: {
@@ -101,6 +103,9 @@ export class IStore {
         modelElement: Pointer<DModelElement, 0, 1> // if a node is clicked: a node and a view are present, a modelElement might be. a node can exist without a modelElement counterpart.
     };
     users: Pointer<DUser, 1, 'N', LUser>;
+
+    //testing
+    leaderLine: any = undefined;
 
 
     constructor() {
