@@ -79,10 +79,10 @@ export abstract class Action extends RuntimeAccessibleClass{
 
     fire(forceRelaunch: boolean = false): boolean {
         if (this.hasFired && !forceRelaunch) return false;
-        this.hasFired++;
         if (hasBegun) {
             pendingActions.push(this);
         } else {
+            this.hasFired++;
             let storee = store || windoww.store;
             console.log('firing action:', this, 'store:', storee);
             storee.dispatch({...this});
@@ -250,8 +250,13 @@ SetFieldAction.new(dclass, 'name.5', '') // ok, equivale a dicitura array
 export class CreateElementAction extends Action {
     static type = 'CREATE_ELEMENT';
     value!: DPointerTargetable;
-    public static new(me: DPointerTargetable): boolean { return new CreateElementAction(me).fire(); }
-    public constructor(me: DPointerTargetable, fire: boolean = true) {
+    public static new<F extends boolean = true>(me: DPointerTargetable, notfire?: F): (F extends true ? boolean : CreateElementAction) {
+        if ((me as LPointerTargetable).__raw) me = (me as LPointerTargetable).__raw;
+        let act = new CreateElementAction(me);
+        if (!notfire) return act.fire() as any;
+        return act as any;
+    }
+    private constructor(me: DPointerTargetable, fire: boolean = true) {
         super('idlookup.' + me.id, me);
         this.className = this.constructor.name;
         this.value = me;

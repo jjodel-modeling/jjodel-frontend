@@ -149,7 +149,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!ret.graph) {
             let dGraphDataClass = DGraph;
             Log.exDev(!dataid, 'attempted to make a Graph element without model', {dataid, ownProps, ret, thiss:this});
-            if (dataid) new CreateElementAction(dGraphDataClass.new(dataid, parentnodeid, graphid, graphid)); }
+            if (dataid) CreateElementAction.new(dGraphDataClass.new(dataid, parentnodeid, graphid, graphid)); }
         else {
             ret.graph = MyProxyHandler.wrap(ret.graph);
             Log.exDev(ret.graph.__raw.className !== "DGraph", 'graph class is wrong', {graph: ret.graph, ownProps});
@@ -161,7 +161,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // console.log('dragx GE mapstate addGEStuff', {dGraphElementDataClass, created: new dGraphElementDataClass(false, nodeid, graphid)});
         if (!dnode) {
             let dge = dGraphElementDataClass.new(dataid, parentnodeid, graphid, nodeid);
-            let act = new CreateElementAction(dge);
+            let act = CreateElementAction.new(dge, false);
             console.log("map ge2", {nodeid: nodeid+'', act:{...act}, dge: {...dge}, dgeid: dge.id});
         }
         else { ret.node = MyProxyHandler.wrap(dnode); }

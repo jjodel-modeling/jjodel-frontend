@@ -24,8 +24,8 @@ import React from "react";
 
 
 
-function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevAction: ParsedAction, newVal: any): IStore {
-    let newRoot: IStore = {...state} as IStore;
+function deepCopyButOnlyFollowingPath(oldStateDoNotModify: IStore, action: ParsedAction, prevAction: ParsedAction, newVal: any): IStore {
+    let newRoot: IStore = {...oldStateDoNotModify} as IStore;
     let current: any = newRoot;
     if (!action.path?.length) throw new MyError("path length must be at least 1", {action});
     let gotChanged: boolean = false; // dovrebbe cambiare sempre, se non cambia non lancio neanche l'azione e non faccio la shallow copy, ma non si sa mai, così posso evitare un render se succede l' "insuccedibile"
@@ -69,7 +69,7 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
                 current[key] = [...current[key]];
                 current[key].push(newVal);
                 unpointedElement = undefined;
-                if (action.isPointer) { state = PointedBy.add(newVal as Pointer, action, state, "+="); }
+                if (action.isPointer) { newRoot = PointedBy.add(newVal as Pointer, action, newRoot, "+="); }
             } else
             if (isArrayRemove){
                 if (!Array.isArray(current[key])) { current[key] = []; }
@@ -80,7 +80,7 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
                 if (gotChanged){
                     current[key] = [...current[key]];
                     let removedval = current[key].splice(index, 1); // in-place edit
-                    if (action.isPointer) { state = PointedBy.remove(removedval as Pointer, action, state, '-='); }
+                    if (action.isPointer) { newRoot = PointedBy.remove(removedval as Pointer, action, newRoot, '-='); }
 
                     /// a.pointsto = [x, y, z]; a.pointsto = [x, z]       --->    remove a from y.pointedby
                     /*
@@ -91,14 +91,14 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
                         let oldFullpathTrimmed = action.pathArray.join('.');
                         se realizzi "pointedby" qui è to do: remove old paths and re-add them with updated index
                     }*/
-                    //unpointedElement = state.idlookup[oldValue];
+                    //unpointedElement = newRoot.idlookup[oldValue];
                 }
             }
             else if (current[key] !== newVal) {
                 // todo: caso in cui setto manualmente classes.1 = pointer; // the latest element is array and not DPointerTargetable, so might need to buffer upper level in the tree? or instead of "current" keep an array of sub-objects encountered navigating the path in state.
                 oldValue = current[key];
                 gotChanged = true;
-                unpointedElement = state.idlookup[oldValue];
+                unpointedElement = newRoot.idlookup[oldValue];
                 // NB: se elimino un oggetto che contiene array di puntatori, o resetto l'array di puntatori kinda like store.arr= [ptr1, ptr2, ...]; store.arr = [];
                 // i puntati dall'array hanno i loro pointedBY non aggiornati, non voglio fare un deep check di tutto l'oggetto a cercare puntatori per efficienza.
                 if (newVal === undefined) delete current[key];
@@ -107,16 +107,16 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
                 if (action.isPointer) {
                     if (Array.isArray(action.value)) {
                         let oldpointerdestinations: Pointer[] = oldValue;
-                        let difference: {added: Pointer[], removed: Pointer[]} = U.arrayDifference(oldpointerdestinations, current[key]);
-                        for (let rem of difference.removed) { state = PointedBy.remove(rem as Pointer, action, state); }
-                        for (let add of difference.added) { state = PointedBy.add(add as Pointer, action, state); }
+                        let difference = U.arrayDifference(oldpointerdestinations, current[key]); // : {added: Pointer[], removed: Pointer[], starting: Pointer[], final: Pointer[]}
+                        for (let rem of difference.removed) { newRoot = PointedBy.remove(rem as Pointer, action, newRoot); }
+                        for (let add of difference.added) { newRoot = PointedBy.add(add as Pointer, action, newRoot); }
                         // a.pointsto = [a, b, c];  a.pointsto = [a, b, x];    ------>     c.pointedby.remove(a) & x.pointedby.add(a)
                         // idlookup.somelongid.pointsto = [...b];
                     }
                     else {
                         // a.pointsto = b;  a.pointsto = c;    ------>     b.pointedby.remove(a)
-                        state = PointedBy.remove(oldValue as Pointer, action, state);
-                        state = PointedBy.add(current[key] as Pointer, action, state);
+                        newRoot = PointedBy.remove(oldValue as Pointer, action, newRoot);
+                        newRoot = PointedBy.add(current[key] as Pointer, action, newRoot);
                     }
                 }
             } else {
@@ -129,7 +129,7 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
                 if (isArrayAppend || isArrayAppend) fullpathTrimmed.substr(0, fullpathTrimmed.length - 2);
                 U.arrayRemoveAll(unpointedElement.pointedBy, fullpathTrimmed); // todo: se faccio una insert in mezzo ad un array devo aggiustare tutti i path di pointedby...
             }
-            let newlyPointedElement = state.idlookup[newVal];
+            let newlyPointedElement = newRoot.idlookup[newVal];
             if (newlyPointedElement) {
                 U.ArrayAdd(newlyPointedElement.pointedBy, fullpathTrimmed);
             }*/
@@ -138,7 +138,7 @@ function deepCopyButOnlyFollowingPath(state: IStore, action: ParsedAction, prevA
         }
         Log.exDevv('should not reach here: reducer');
     }
-    return gotChanged ? newRoot : state;
+    return gotChanged ? newRoot : oldStateDoNotModify;
 }
 
 
@@ -163,7 +163,7 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
                 elem.className = elem.className || elem.constructor.name;
                 derivedActions.push(
                     Action.parse(SetRootFieldAction.create(elem.className.substring(1).toLowerCase() + 's', elem.id,'[]', true)));
-                if (false && action.isPointer) {
+                /*if (false && action.isPointer) {
                     if (Array.isArray(action.value)) {
                         const ptr: Pointer[] = action.value;
                         // todo but replaced by side actions in execution of the main action instead of triggering derived actions
@@ -178,7 +178,7 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
                         // a -> x
                         // a -> y     unset x.pointedby(a)
                     }
-                }
+                }*/
                 break;
         }
     }

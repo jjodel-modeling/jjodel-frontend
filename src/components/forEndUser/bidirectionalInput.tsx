@@ -99,6 +99,7 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
         /*const classnames: {ptr: Pointer, name: string}[] = !hasClasses ? [] : classes.map((c: LClass) => {
             return {ptr: c.id, name: data.package && (c.package?.id === data.package?.id) ? c.name : c.fullname}; });*/
         const classpackagesobj: {[pkgname: string]: {value: string, label: string}[]} = {}
+        console.log({classes, data: this.props.data});
         for (let c of classes) {
             let pkgname: string | undefined = c.package?.fullname;
             if (!pkgname) continue; // not displaying "disconnected" classes, can they even exist?

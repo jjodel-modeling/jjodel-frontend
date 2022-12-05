@@ -2,6 +2,53 @@ import {DClassifier, DPointerTargetable, LClassifier, LPackage, LPointerTargetab
 
 export const fakeexport = {};
 
+
+
+/*
+
+
+
+todo: a.extends=[b.id, a.id, b.id, c.id, b.id]; a.extends=[a.id];                       pointedby test passed
+todo: a.extends += a.id                                                                 --- invalid it will become a.extends.join(',') + a.id
+todo: a.extends -= a.id                                                                 --- invalid it will become NaN - a.id
+todo: a.type=                                                                           ---
+
+
+
+var da = DClass.new("a"); var db = DClass.new("b");var dc = DClass.new("c"); new CreateElementAction(da);new CreateElementAction(db); new CreateElementAction(dc);
+var a = ()=>s().idlookup[da.id]; var b = ()=>s().idlookup[db.id]; var c = ()=>s().idlookup[dc.id];
+window.newtargetptr = da.id;
+
+function cp(o){return JSON.parse(JSON.stringify(o));}
+function w(o){return LPointerTargetable.from(o);}
+setTimeout( ()=>w(a()).extends=[db.id, da.id, db.id, dc.id, db.id], 100);
+// setTimeout(console.clear, 200);
+
+setTimeout(()=> window.longextend={a:cp(a()), b: cp(b()), c:cp(c())}, 300);
+setTimeout(()=> w(a()).extends=[da.id], 400);
+setTimeout(()=> window.smallextend={a:cp(a()), b: cp(b()), c:cp(c())}, 500);
+setTimeout(()=>{console.log('longextend', longextend); console.log('smallextend', smallextend)}, 500);
+*
+* */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 type arrayFieldNameTypes<D> = keyof D | `${string & keyof D}[]` | `${string & keyof D}+=` | `${string & keyof D}-=` | `${string & keyof D}.${number}` | `${string & keyof D}[${number}]`;
 type AccessModifier = '[]' | '+=' | '-=' | `.${number}` | `[${number}]` | undefined;
 class Action{
