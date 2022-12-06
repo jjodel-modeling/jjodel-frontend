@@ -313,15 +313,17 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         let name = 'class_' + 0;
 
         ret = function(){
+            BEGIN();
             let childrenNames: (string)[] = lPackage.childrens.map( c => (c as LClassifier).name);
             name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0);
             const dClass = DClass.new(name);
+            CreateElementAction.new(dClass);
             let wPackage = WPointerTargetable.fromD(dPackage);
             wPackage.classifiers = [...dPackage.classifiers, dClass];
             // lClass.parent = [dPackage.id]; // implied by dPackage.classifiers =
             // lClass.father = dPackage.id; // implied by dPackage.classifiers =
             // all pointedBy handled by Actions derived from L-object usage
-            LModelElement.addClass_(dPackage, dClass);
+            END();
         }
         ret();
         return ret;
@@ -340,7 +342,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         const ret = function () {
             BEGIN();
             const dAttribute = DAttribute.new(name, lString.id);
-            SetFieldAction.new(dClass, 'attributes', dAttribute.id, '+=', true);
             dAttribute.parent = [dClass.id];
             dAttribute.father = dClass.id;
             dClass.pointedBy.push(PointedBy.fromID(dAttribute.id, "father"));

@@ -60,7 +60,9 @@
     "manual_debug": "echo http://localhost:3000/ click this using CTRL+SFHIT",
 
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "predeploy-ssl": "npm run build-ssl",
+    "deploy": "gh-pages -d build",
+    "deploy-ssl": "gh-pages -d build-ssl"
   },
   "eslintConfig": {
     "extends": [
