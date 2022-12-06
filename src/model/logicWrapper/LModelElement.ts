@@ -30,6 +30,7 @@ import {
     DEdge,
     LEdge, RuntimeAccessibleClass, DRefEdge, LRefEdge, LGraphElement, GraphSize, LogicContext, DVoidVertex,
 } from "../../joiner";
+import LeaderLine from "leader-line-new";
 
 
 @Node
@@ -2782,3 +2783,4 @@ let alll: GObject = {
     LFactory_useless_, LMap};
 
 // let all: any = [...alld, ...alll, EJavaObject,];
+

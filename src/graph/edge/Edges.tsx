@@ -5,7 +5,7 @@ import {
     LModelElement,
     LGraphElement,
     LReference,
-    MyProxyHandler,
+    MyProxyHandler, LClass, U,
 } from "../../joiner";
 import EdgeTest from "./Test";
 
@@ -13,13 +13,28 @@ import EdgeTest from "./Test";
 interface ThisState {}
 
 function EdgesComponent(props: AllProps, state: ThisState) {
-    const lReference: LReference = props.source.model as any;
-    const lTarget: LModelElement = MyProxyHandler.wrap(lReference?.type);
-    return <>
-        {(props.targets) ? props.targets.map((targetNode) => {
-            return <EdgeTest source={props.source} target={targetNode} />
-        }) : <Edges source={props.source} targets={lTarget.nodes} />}
-    </>;
+    const me = props.source.model;
+    if(me?.className === "DReference") {
+        const lReference: LReference = me as any;
+        const lTarget: LModelElement = MyProxyHandler.wrap(lReference?.type);
+        return <>
+            {(props.targets) ? props.targets.map((targetNode) => {
+                return <EdgeTest source={props.source} target={targetNode} />
+            }) : <Edges source={props.source} targets={lTarget.nodes} />}
+        </>;
+    }
+    if(me?.className === "DClass") {
+        const lClass: LClass = me as any;
+        if(lClass.extends.length > 0) {
+            const lTarget: LModelElement = MyProxyHandler.wrap(lClass?.extends[0]);
+            return <>
+                {(props.targets) ? props.targets.map((targetNode) => {
+                    return <EdgeTest source={props.source} target={targetNode} />
+                }) : <Edges source={props.source} targets={lTarget.nodes} />}
+            </>;
+        }
+    }
+    return <></>;
 }
 interface OwnProps { source: LGraphElement; targets?: LGraphElement[] }
 interface StateProps {}

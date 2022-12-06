@@ -34,7 +34,7 @@ export default class Structure {
             <div className={"structure-input-wrapper row"}>
                 <Input obj={lClass} field={"interface"} label={"IsInterface"} type={"checkbox"} />
             </div>
-            <div className={"structure-input-wrapper row"}>
+            <div className={"d-none structure-input-wrapper row"}>
                 <p className={"generic-text"}>Set Extend</p>
                 <div className={"generic-button"} onClick={() => {
                     SetRootFieldAction.new('isEdgePending', {

@@ -3,11 +3,11 @@ import {connect} from "react-redux";
 import {
     CreateElementAction,
     DClass,
-    DNamedElement,
+    DNamedElement, GObject,
     IStore, LClass,
     LGraph,
     LModel, LPointerTargetable, LUser,
-    MyProxyHandler, StyleEditor,
+    MyProxyHandler, SetRootFieldAction, StyleEditor, U,
 } from "../../joiner";
 import {DefaultNode} from "../../graph/defaultNode/DefaultNode";
 
@@ -19,6 +19,11 @@ import StructureEditor from "../rightbar/structureEditor/StructureEditor";
 import Logger from "../rightbar/logger/Logger";
 import ToolBar from "../toolbar/ToolBar";
 import PendingEdge from "../../graph/edge/PendingEdge";
+import ContextMenu from "../toolbar/ContextMenu";
+import Xarrow, {Xwrapper} from "react-xarrows";
+import LeaderLine from "leader-line-new";
+import EdgesManager from "../../graph/edge/EdgesManager";
+
 
 let windoww = window as any;
 interface ThisState {}
@@ -28,6 +33,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
     metamodel!: TabData;
     structureEditor!: TabData;
     viewsEditor!: TabData;
+    styleEditor!: TabData;
     logger!: TabData;
     box: any;
     initialized: boolean = false;
@@ -42,14 +48,17 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
         this.graph = this.props.graph;
         this.metamodel = { title: "Metamodel", group: "1", closable: false, content:
                 <div>
-                    <PendingEdge  source={undefined} user={undefined} edge={undefined} />
+                    <ContextMenu />
+                    <EdgesManager />
+                    {/*Perche mi chiede source e user come OwnProps se li ho definiti come StateProps ? */}
+                    <PendingEdge  source={undefined} user={undefined} />
                     <ToolBar model={this.model.id} />
                     <DefaultNode data={this.model.id} nodeid={this.graph.id} graphid={this.graph.id} />
-                    {/*<Edges graphID={this.graph.id as any} nodeID={this.graph.id + ''} />*/}
                 </div>
         };
         this.structureEditor = { title: "Structure", group: "2", closable: false, content: <StructureEditor /> };
         this.viewsEditor = { title: "Views", group: "2", closable: false, content: <ViewsEditor /> };
+        this.styleEditor = { title: "Node", group: "2", closable: false, content: <StyleEditor /> };
         this.logger = { title: "Logger", group: "2", closable: true, content: <Logger /> };
         this.box = {
             dockbox: {
@@ -58,7 +67,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
                         children: [{tabs: [{ ...this.metamodel, id: "1" }]}]
                     },
                     {
-                        children: [{tabs: [{ ...this.structureEditor, id: "2" }, { ...this.viewsEditor, id: "3" }]}]
+                        children: [{tabs: [{ ...this.structureEditor, id: "2" }, { ...this.viewsEditor, id: "3" }, { ...this.styleEditor, id: "4" }]}]
                     }
                 ]
             }

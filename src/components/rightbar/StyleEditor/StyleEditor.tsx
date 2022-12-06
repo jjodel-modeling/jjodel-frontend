@@ -36,8 +36,8 @@ class StyleEditorComponent extends PureComponent<AllProps, ThisState>{
             return( <>
                 <Input obj={(this.props.selected?.view as LViewElement)} field={'name'} label={"Name View"} type={"text"} />
                 <div className={"row"}>
-                    <div className={"col"}><Input obj={(this.props.selected?.view as LViewElement)} field={'x'} label={"X position"} type={"number"} /></div>
-                    <div className={"col"}><Input obj={(this.props.selected?.view as LViewElement)} field={'y'} label={"Y position"} type={"number"} /></div>
+                    <div className={"col"}><Input obj={(this.props.selected?.node as LGraphElement)} field={'x'} label={"X position"} type={"number"} /></div>
+                    <div className={"col"}><Input obj={(this.props.selected?.node as LGraphElement)} field={'y'} label={"Y position"} type={"number"} /></div>
                 </div>
             </> );
         }

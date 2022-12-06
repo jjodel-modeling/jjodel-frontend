@@ -45,7 +45,10 @@ export default class DV {
     public static classView(): string {
         return (`<div className={"w-100 h-100"}>
         {this.data.subNodes.filter((node) => node.model.className === "DReference").map((refNode) => {
-            return <Edges source={refNode} />})}
+            return <Edges source={refNode} />})}       
+            
+        {this.data.nodes.map((node) => {return <Edges source={node} />})}
+
            
             <div className={"default-class"}>
                 <div className={"class-header"}>

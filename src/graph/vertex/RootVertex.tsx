@@ -1,4 +1,4 @@
-import {IStore} from "../../redux/store";
+import {EdgeOptions, IStore} from "../../redux/store";
 import React, {CSSProperties, Dispatch, ReactElement, ReactNode, useEffect, useState} from "react";
 import {connect} from "react-redux";
 import {
@@ -17,6 +17,7 @@ import $ from "jquery";
 import "jqueryui";
 import "jqueryui/jquery-ui.css";
 import LeaderLine from "leader-line-new";
+import {useXarrow, Xwrapper} from "react-xarrows";
 
 interface ThisState {}
 function RootVertexComponent(props: AllProps, state: ThisState) {
@@ -55,10 +56,20 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
         } else {
             select();
         }
+        SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
         e.stopPropagation();
-        e.nativeEvent.stopPropagation();
+        //e.nativeEvent.stopPropagation();
     }
-
+    const onContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+        select();
+        SetRootFieldAction.new("contextMenu", {
+            display: true,
+            x: e.clientX,
+            y: e.clientY
+        });
+        e.preventDefault();
+        e.stopPropagation();
+    }
     const onEnter = (e: React.MouseEvent<HTMLDivElement>) => {
         if(isEdgePending && rootProps.data.className === "DClass") {
             const user = rootProps.isEdgePending.user;
@@ -103,13 +114,17 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
             element.draggable({
                 cursor: "grabbing",
                 containment: "parent",
-                drag: function(event: GObject, obj: GObject){
+                drag: function(event: GObject, obj: GObject) {
+                    edgeRefresh();
+                    SetRootFieldAction.new("dragging", Math.floor(Math.random() * 10000));
+                },
+                stop: function (event: GObject, obj: GObject) {
                     const y: number = obj.position.top;
                     const x: number = obj.position.left;
-                    edgeRefresh();
-                    // rootProps.node.x = x;
-                    // rootProps.node.y = y;
-
+                    if(rootProps.node) {
+                        SetFieldAction.new(rootProps.node, "x", x, "", false);
+                        SetFieldAction.new(rootProps.node, "y", y, "", false);
+                    }
                 }
             });
             element.resizable({
@@ -132,6 +147,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              style={{...sizeStyle}}
              className={[...classes, ...props.classes].join(' ')}
              onClick={onClick}
+             onContextMenu={onContextMenu}
              onMouseEnter={onEnter}
              onMouseLeave={onLeave}
              key={rootProps.key}
@@ -142,17 +158,19 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
 
 }
 interface OwnProps {props: VertexProps, render: ReactNode}
-interface StateProps {classes: Set<string>}
+interface StateProps {classes: Set<string>, edges: EdgeOptions[]}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const classes = new Set<string>();
+    const edges = state.edges;
     const props = ownProps.props;
     classes.add(props.data.className);
     if(props.lastSelected && props.data.id === props.lastSelected.id) classes.add("selected");
-    const ret: StateProps = {classes};
+    const ret: StateProps = {classes, edges};
     return ret;
+
 }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {

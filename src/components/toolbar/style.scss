@@ -1,0 +1,23 @@
+.context-menu {
+  position: absolute;
+  background: white;
+  width: 100px;
+  right: 0;
+  z-index: 999;
+  border-radius: .1em;
+  border: 1px solid black;
+}
+
+.context-menu > .title {
+  font-size: .8rem;
+  font-weight: bold;
+}
+.context-menu > .item {
+  text-align: center;
+  cursor: pointer;
+  font-size: .8rem;
+}
+
+.context-menu > .item:hover {
+  background-color: whitesmoke;
+}
