@@ -288,9 +288,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         let childrenNames: (string)[] = lModel.packages.map( p => p.name);
         name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0)
         const dPackage = DPackage.new(name);
-        dPackage.parent = [dModel.id]; // not persistent yet, so this is allowed
-        dPackage.father = dModel.id;
-        LModelElement.addPackage_(dModel, dPackage);
+        CreateElementAction.new(dPackage);
+        let wModel = WPointerTargetable.fromD(dModel);
+        wModel.packages = [...dModel.packages, dPackage];
     }
 
     private static addSubPackage(dPackage: DPackage): void {
@@ -299,11 +299,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         let childrenNames: (string)[] = lPackage.childrens.map( p => (p as LPackage).name);
         name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0)
         const dSubPackage = DPackage.new(name);
-        dSubPackage.parent = [dPackage.id];
-        dSubPackage.father = dPackage.id;
-        SetFieldAction.new(dPackage, "pointedBy", PointedBy.fromID(dSubPackage.id, "father"), '+=');
-        SetFieldAction.new(dPackage, "pointedBy", PointedBy.fromID(dSubPackage.id, "parent"), '+=');
-        LModelElement.addSubPackage_(dPackage, dSubPackage);
+        CreateElementAction.new(dSubPackage);
+        let wPackage = WPointerTargetable.fromD(dPackage);
+        wPackage.subpackages = [...dPackage.subpackages, dSubPackage];
     }
 
     protected get_addClass(context: LogicContext<DPackage>): () => void {
@@ -312,17 +310,16 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         if (!dPackage) return ret;
         const lPackage: LPackage = LPointerTargetable.from(dPackage);
         let name = 'class_' + 0;
+        let childrenNames: (string)[] = lPackage.childrens.map( c => (c as LClassifier).name);
+        name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0);
 
         ret = function(){
-            let childrenNames: (string)[] = lPackage.childrens.map( c => (c as LClassifier).name);
-            name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0);
+            BEGIN()
             const dClass = DClass.new(name);
+            CreateElementAction.new(dClass);
             let wPackage = WPointerTargetable.fromD(dPackage);
             wPackage.classifiers = [...dPackage.classifiers, dClass];
-            // lClass.parent = [dPackage.id]; // implied by dPackage.classifiers =
-            // lClass.father = dPackage.id; // implied by dPackage.classifiers =
-            // all pointedBy handled by Actions derived from L-object usage
-            LModelElement.addClass_(dPackage, dClass);
+            END()
         }
         ret();
         return ret;
@@ -337,31 +334,17 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0);
         const lString: LClassifier = LPointerTargetable.from(Selectors.getFirstPrimitiveTypes());
 
-
         const ret = function () {
-            BEGIN();
             const dAttribute = DAttribute.new(name, lString.id);
-            SetFieldAction.new(dClass, 'attributes', dAttribute.id, '+=', true);
-            dAttribute.parent = [dClass.id];
-            dAttribute.father = dClass.id;
-            dClass.pointedBy.push(PointedBy.fromID(dAttribute.id, "father"));
-            dClass.pointedBy.push(PointedBy.fromID(dAttribute.id, "parent"));
-
-            dClass.attributes.push(dAttribute.id);
-            dAttribute.pointedBy.push(PointedBy.fromID(dClass.id, "attributes"));
-
-            dAttribute.type = lString.id;
-            lString.pointedBy.push(PointedBy.fromID(dAttribute.id, 'type'));
-
             CreateElementAction.new(dAttribute);
-            CreateElementAction.new(dClass); // already exist, but replaces.
-            CreateElementAction.new(lString);
-            END()
+            const wClass = WPointerTargetable.fromD(dClass);
+            wClass.attributes = [...dClass.attributes, dAttribute];
+            const wAttribute = WPointerTargetable.fromD(dAttribute);
+            wAttribute.type = lString.id;
         }
         ret();
         return ret;
     }
-
 
     protected get_addReference(context: LogicContext<DClass>): (() => void) {
         let ret = () => {};
@@ -371,17 +354,15 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         let name = 'reference_' + 0;
         const childrenNames: (string)[] = lClass.features.map( c => (c).name);
         name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
-        const dReference = DReference.new(name);
-        dReference.parent = [dClass.id];
-        dReference.father = dClass.id;
-        dReference.type = dClass.id;
 
-
-        const dRefEdge: DRefEdge = DRefEdge.new(dReference.id, '', '', "", );
-        dRefEdge.start = dReference.id;
-        dRefEdge.end = dClass.id;
-
-        ret = () => LModelElement.addReference_(dClass, dReference, dRefEdge);
+        ret = () =>  {
+            const dReference = DReference.new(name);
+            CreateElementAction.new(dReference);
+            const wReference = WPointerTargetable.fromD(dReference);
+            wReference.type = dClass.id;
+            const wClass = WPointerTargetable.fromD(dClass);
+            wClass.references = [...dClass.references, dReference];
+        }
         ret();
         return ret;
     }
@@ -394,10 +375,12 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         let name = 'enum_' + 0;
         const childrenNames: (string)[] = lPackage.childrens.map( c => (c as LNamedElement).name);
         name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
-        const dEnumerator = DEnumerator.new(name);
-        dEnumerator.parent = [dPackage.id];
-        dEnumerator.father = dPackage.id;
-        ret = () => LModelElement.addEnumerator_(dPackage, dEnumerator);
+        ret = () => {
+            const dEnumerator = DEnumerator.new(name);
+            CreateElementAction.new(dEnumerator);
+            const wPackage = WPointerTargetable.fromD(dPackage);
+            wPackage.classifiers = [...dPackage.classifiers, dEnumerator];
+        }
         ret();
         return ret;
     }
@@ -410,10 +393,12 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         let name = 'literal_' + 0;
         const childrenNames: (string)[] = lEnum.childrens.map(c => (c as LNamedElement).name);
         name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
-        const dLiteral = DEnumLiteral.new(name);
-        dLiteral.parent = [dEnum.id];
-        dLiteral.father = dEnum.id;
-        ret = () => LModelElement.addEnumLiteral_(dEnum, dLiteral);
+        ret = () => {
+            const dLiteral = DEnumLiteral.new(name);
+            CreateElementAction.new(dLiteral);
+            const wEnum = WPointerTargetable.fromD(dEnum);
+            wEnum.literals = [...dEnum.literals, dLiteral];
+        }
         ret();
         return ret;
     }
@@ -426,11 +411,18 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             let name = 'fx_' + 0;
             const childrenNames: (string)[] = lClass.childrens.map(c => (c as LNamedElement).name);
             name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
-            const dOperation = DOperation.new(name);
-            dOperation.father = dClass.id;
-            const dParameter = DParameter.new("return", Selectors.getReturnTypes()[0].id);
-            dParameter.father = dOperation.id;
-            ret = () => LModelElement.addOperation_(dClass, dParameter, dOperation);
+
+            ret = () => {
+                const dOperation = DOperation.new(name);
+                CreateElementAction.new(dOperation);
+                const wClass = WPointerTargetable.fromD(dClass);
+                wClass.operations = [...dClass.operations, dOperation];
+
+                const dParameter = DParameter.new("return", Selectors.getReturnTypes()[0].id);
+                CreateElementAction.new(dParameter);
+                const wOperation = WPointerTargetable.fromD(dOperation);
+                wOperation.parameters = [...dOperation.parameters, dParameter];
+            }
         }
         ret();
         return ret;
@@ -444,11 +436,16 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             let name = 'param_' + 0;
             const childrenNames: (string)[] = lOperation.childrens.map(c => (c as LNamedElement).name);
             name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
-            const dParameter = DParameter.new(name);
-            dParameter.father = dOperation.id;
             const lString: LClass = LPointerTargetable.from(Selectors.getFirstPrimitiveTypes());
-            dParameter.type = lString.id;
-            ret = () => LModelElement.addParameter_(dOperation, dParameter);
+
+            ret = () => {
+                const dParameter = DParameter.new(name);
+                CreateElementAction.new(dParameter);
+                const wParameter = WPointerTargetable.fromD(dParameter);
+                wParameter.type = lString.id;
+                const wOperation = WPointerTargetable.fromD(dOperation);
+                wOperation.parameters = [...dOperation.parameters, dParameter];
+            }
         }
         ret();
         return ret;
@@ -459,15 +456,10 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         let ret = () => {};
         const dOperation: DOperation | null = (context.data?.className === "DOperation") ? context.data as DOperation : null;
         if (dOperation) {
-            const lOperation: LOperation = LPointerTargetable.from(dOperation);
             const dClass = DPointerTargetable.from(dOperation.father);
-            //let name = 'except_' + 0;
-            //const childrenNames: (string)[] = lOperation.childrens.map(c => (c as LNamedElement).name);
-            //name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
-            //const dException = DClass.new(name); // non credo che l'eccezione vada salvata qui, add_exception dovrebbe prendere una classe già esistente da usare come eccezione
-            //dException.father = dOperation.id as any;
-            //ret = (exception: Pack1<LClassifier>) => this._addException(dOperation, dException, context);
-            ret = () => this._addException(dOperation, dClass);
+            ret = () => {
+                SetFieldAction.new(dOperation, "exceptions", dClass.id, '+=', true);
+            }
         }
         ret();
         return ret;
@@ -1087,11 +1079,8 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
      * */
     protected set_classifiers(val: PackArr<this["classifiers"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
-        let oldclassifiers = context.data.classifiers;
-        // const darr = DPointerTargetable.from(list, store.getState());
-        // damiano todo: alternative: o setti redundant field map impostato come pointedby. o qui e in ogni set_subelementcollection imposti update parent
-        const diff = U.arrayDifference(oldclassifiers, list);
-        const state = store.getState();
+        const oldList = context.data.classifiers;
+        const diff = U.arrayDifference(oldList, list);
         BEGIN();
         SetFieldAction.new(context.data, 'classifiers', list, "", true);
         for (let id of diff.added) {
@@ -1100,9 +1089,9 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         }
         for (let id of diff.removed as Pointer<DModelElement>[]) {
             SetFieldAction.new(id, 'father', undefined, '', true);
-            let parentarr = DPointerTargetable.from(id).parent;
-            U.arrayRemoveAll(parentarr, context.data.id);
-            SetFieldAction.new(id, 'parent', parentarr, '', true);
+            const parent = DPointerTargetable.from(id).parent;
+            U.arrayRemoveAll(parent, context.data.id);
+            SetFieldAction.new(id, 'parent', parent, '', true);
         }
         END();
         return true;
@@ -1115,7 +1104,21 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     }
     protected set_subpackages(val: PackArr<this["subpackages"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const oldList = context.data.subpackages;
+        const diff = U.arrayDifference(oldList, list);
+        BEGIN();
         SetFieldAction.new(context.data, 'subpackages', list, "", true);
+        for (let id of diff.added) {
+            SetFieldAction.new(id, 'father', context.data.id, '', true);
+            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+        }
+        for (let id of diff.removed as Pointer<DModelElement>[]) {
+            SetFieldAction.new(id, 'father', undefined, '', true);
+            const parent = DPointerTargetable.from(id).parent;
+            U.arrayRemoveAll(parent, context.data.id);
+            SetFieldAction.new(id, 'parent', parent, '', true);
+        }
+        END();
         return true;
     }
 
@@ -1238,7 +1241,21 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
     }
     protected set_parameters(val: PackArr<this["parameters"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const oldList = context.data.parameters;
+        const diff = U.arrayDifference(oldList, list);
+        BEGIN();
         SetFieldAction.new(context.data, 'parameters', list, "", true);
+        for (let id of diff.added) {
+            SetFieldAction.new(id, 'father', context.data.id, '', true);
+            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+        }
+        for (let id of diff.removed as Pointer<DModelElement>[]) {
+            SetFieldAction.new(id, 'father', undefined, '', true);
+            const parent = DPointerTargetable.from(id).parent;
+            U.arrayRemoveAll(parent, context.data.id);
+            SetFieldAction.new(id, 'parent', parent, '', true);
+        }
+        END();
         return true;
     }
 
@@ -1488,7 +1505,21 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
     protected set_operations(val: PackArr<this["operations"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const oldList = context.data.operations;
+        const diff = U.arrayDifference(oldList, list);
+        BEGIN();
         SetFieldAction.new(context.data, 'operations', list, "", true);
+        for (let id of diff.added) {
+            SetFieldAction.new(id, 'father', context.data.id, '', true);
+            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+        }
+        for (let id of diff.removed as Pointer<DModelElement>[]) {
+            SetFieldAction.new(id, 'father', undefined, '', true);
+            const parent = DPointerTargetable.from(id).parent;
+            U.arrayRemoveAll(parent, context.data.id);
+            SetFieldAction.new(id, 'parent', parent, '', true);
+        }
+        END();
         return true;
     }
 
@@ -1499,7 +1530,21 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
     protected set_features(val: PackArr<this["features"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const oldList = context.data.features;
+        const diff = U.arrayDifference(oldList, list);
+        BEGIN();
         SetFieldAction.new(context.data, 'features', list, "", true);
+        for (let id of diff.added) {
+            SetFieldAction.new(id, 'father', context.data.id, '', true);
+            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+        }
+        for (let id of diff.removed as Pointer<DModelElement>[]) {
+            SetFieldAction.new(id, 'father', undefined, '', true);
+            const parent = DPointerTargetable.from(id).parent;
+            U.arrayRemoveAll(parent, context.data.id);
+            SetFieldAction.new(id, 'parent', parent, '', true);
+        }
+        END();
         return true;
     }
 
@@ -1510,7 +1555,21 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
     protected set_references(val: PackArr<this["references"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const oldList = context.data.references;
+        const diff = U.arrayDifference(oldList, list);
+        BEGIN();
         SetFieldAction.new(context.data, 'references', list, "", true);
+        for (let id of diff.added) {
+            SetFieldAction.new(id, 'father', context.data.id, '', true);
+            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+        }
+        for (let id of diff.removed as Pointer<DModelElement>[]) {
+            SetFieldAction.new(id, 'father', undefined, '', true);
+            const parent = DPointerTargetable.from(id).parent;
+            U.arrayRemoveAll(parent, context.data.id);
+            SetFieldAction.new(id, 'parent', parent, '', true);
+        }
+        END();
         return true;
     }
 
@@ -1521,7 +1580,21 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
     protected set_attributes(val: PackArr<this["attributes"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const oldList = context.data.attributes;
+        const diff = U.arrayDifference(oldList, list);
+        BEGIN();
         SetFieldAction.new(context.data, 'attributes', list, "", true);
+        for (let id of diff.added) {
+            SetFieldAction.new(id, 'father', context.data.id, '', true);
+            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+        }
+        for (let id of diff.removed as Pointer<DModelElement>[]) {
+            SetFieldAction.new(id, 'father', undefined, '', true);
+            const parent = DPointerTargetable.from(id).parent;
+            U.arrayRemoveAll(parent, context.data.id);
+            SetFieldAction.new(id, 'parent', parent, '', true);
+        }
+        END();
         return true;
     }
 
@@ -2310,7 +2383,21 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
     }
     protected set_literals(val: PackArr<this["literals"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const oldList = context.data.literals;
+        const diff = U.arrayDifference(oldList, list);
+        BEGIN();
         SetFieldAction.new(context.data, 'literals', list, "", true);
+        for (let id of diff.added) {
+            SetFieldAction.new(id, 'father', context.data.id, '', true);
+            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+        }
+        for (let id of diff.removed as Pointer<DModelElement>[]) {
+            SetFieldAction.new(id, 'father', undefined, '', true);
+            const parent = DPointerTargetable.from(id).parent;
+            U.arrayRemoveAll(parent, context.data.id);
+            SetFieldAction.new(id, 'parent', parent, '', true);
+        }
+        END();
         return true;
     }
 
@@ -2548,7 +2635,21 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 
     protected set_packages(val: PackArr<this["packages"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const oldList = context.data.packages;
+        const diff = U.arrayDifference(oldList, list);
+        BEGIN();
         SetFieldAction.new(context.data, 'packages', list, "", true);
+        for (let id of diff.added) {
+            SetFieldAction.new(id, 'father', context.data.id, '', true);
+            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+        }
+        for (let id of diff.removed as Pointer<DModelElement>[]) {
+            SetFieldAction.new(id, 'father', undefined, '', true);
+            const parent = DPointerTargetable.from(id).parent;
+            U.arrayRemoveAll(parent, context.data.id);
+            SetFieldAction.new(id, 'parent', parent, '', true);
+        }
+        END();
         return true;
     }
     /*
