@@ -228,3 +228,11 @@ $border-color: #0000005c;
   border: 3px solid #DC3545FF !important;
   border-radius: 5px;
 }
+
+.saturated {
+  z-index: 999;
+  position: absolute;
+  height: 100%;
+  width: .2em;
+  background-color: rgba(0, 0, 0, 0.5);
+}

@@ -314,12 +314,10 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0);
 
         ret = function(){
-            BEGIN()
             const dClass = DClass.new(name);
             CreateElementAction.new(dClass);
             let wPackage = WPointerTargetable.fromD(dPackage);
             wPackage.classifiers = [...dPackage.classifiers, dClass];
-            END()
         }
         ret();
         return ret;

@@ -32,6 +32,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     console.log("canextend", {src: rootProps.isEdgePending, target:rootProps.data, extendError});
 
     const [classes, setClasses] = useState<string[]>([]);
+    const [isDragged, setIsDragged] = useState(false);
 
     const select = (forUser:Pointer<DUser, 0, 1> = null) => {
         if (!forUser) forUser = DUser.current;
@@ -115,8 +116,9 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                 cursor: "grabbing",
                 containment: "parent",
                 drag: function(event: GObject, obj: GObject) {
+                    setIsDragged(true);
                     edgeRefresh();
-                    SetRootFieldAction.new("dragging", Math.floor(Math.random() * 10000));
+                    SetRootFieldAction.new("dragging", {random: Math.floor(Math.random() * 10000), id: rootProps.data.id});
                 },
                 stop: function (event: GObject, obj: GObject) {
                     const y: number = obj.position.top;
@@ -125,6 +127,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                         SetFieldAction.new(rootProps.node, "x", x, "", false);
                         SetFieldAction.new(rootProps.node, "y", y, "", false);
                     }
+                    setIsDragged(false);
                 }
             });
             element.resizable({
@@ -136,7 +139,6 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
         }
     }, [])
 
-
     return(
         <div id={rootProps.nodeid}
              data-nodeid={rootProps.nodeid}
@@ -144,7 +146,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              data-viewid={rootProps.view?.id}
              data-modelname={rootProps.data?.className}
              data-userselecting={JSON.stringify(rootProps.node?.__raw.isSelected || {})}
-             style={{...sizeStyle}}
+             style={{...sizeStyle, zIndex: (isDragged) ? 999 : 0}}
              className={[...classes, ...props.classes].join(' ')}
              onClick={onClick}
              onContextMenu={onContextMenu}
@@ -152,13 +154,14 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              onMouseLeave={onLeave}
              key={rootProps.key}
         >
+            <div style={{display: props.selected ? 'none' : 'block', zIndex: props.index}} className={"saturated"}></div>
             {props.render}
         </div>
     );
 
 }
 interface OwnProps {props: VertexProps, render: ReactNode}
-interface StateProps {classes: Set<string>, edges: EdgeOptions[]}
+interface StateProps {classes: Set<string>, edges: EdgeOptions[], selected: boolean, index: number}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -167,8 +170,17 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const edges = state.edges;
     const props = ownProps.props;
     classes.add(props.data.className);
-    if(props.lastSelected && props.data.id === props.lastSelected.id) classes.add("selected");
-    const ret: StateProps = {classes, edges};
+    const selected: boolean = (props.lastSelected && props.data.id === props.lastSelected.id) as boolean;
+    //if(selected) classes.add("selected");
+    let index = 0;
+    switch (ownProps.props.data.className) {
+        default: index = -1; break;
+        case 'DModel': break;
+        case 'DPackage': index = 1; break;
+        case 'DClass': index = 2; break;
+        case 'DEnumerator': index = 2; break;
+    }
+    const ret: StateProps = {classes, edges, selected, index};
     return ret;
 
 }

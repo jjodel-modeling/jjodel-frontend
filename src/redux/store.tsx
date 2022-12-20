@@ -93,7 +93,7 @@ export class IStore {
 
     contextMenu: {display: boolean, x: number, y: number} = { display: false, x: 0, y: 0 };
 
-    dragging: number = 0;
+    dragging: {random: number, id: string} = { random: 0, id: '' };
     edges: EdgeOptions[] = [];
 
     // private, non-shared fields
