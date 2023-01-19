@@ -1,0 +1,4 @@
+/node_modules
+/sandbox
+Dockerfile
+docker-compose.dev.yml

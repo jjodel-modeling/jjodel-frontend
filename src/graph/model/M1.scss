@@ -1,0 +1,42 @@
+.concepts-container {
+  position: absolute;
+  min-height: 100%;
+  width: 6.5em;
+  min-width: 6.5em;
+  background: whitesmoke;
+  z-index: 999;
+  box-shadow: 6px 0 4px -4px #999, -6px 0 4px -4px #999;
+}
+
+.concepts-container > .item {
+  border-left: 2px solid red;
+  font-size: .95rem;
+  cursor: pointer;
+  margin-top: 5px;
+}
+
+.m1-graph {
+  margin-left: 6.5em;
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+.m1-graph > .object {
+  border-radius: .2em;
+  display: block;
+  height: min-content;
+  width: max-content;
+  border: 1px solid black;
+  z-index: 999;
+}
+.m1-graph > .object > .title {
+  font-size: .8rem;
+  color: white;
+  width: 100%;
+  border-bottom: 1px solid black;
+  background-color: #28a745;
+}
+.m1-graph > .object > .features {
+  background-color: whitesmoke;
+  z-index: 999;
+}

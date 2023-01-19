@@ -159,6 +159,20 @@ export default class DV {
             </div>
         </div>`;
     }
+
+    public static testView() {
+        return `<div className={"object mx-1 border"}>
+            <div className={"title"}>{this.data.name}</div>
+            <div className={"features"}>
+                {this.data.features.map((feature) => {
+                    return <div className={"feature"}>
+                        {feature.instanceof[0].name}: {feature.value}
+                    </div>
+                })}
+            </div>
+        </div>`
+    }
+
 }
 
 

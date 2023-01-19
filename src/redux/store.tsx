@@ -40,7 +40,7 @@ import {
     SetRootFieldAction,
     RuntimeAccessible,
     CreateElementAction,
-    DUser, LUser,
+    DUser, LUser, DValue, LValue, LObject, DObject,
 } from "../joiner";
 import React, {ChangeEvent, CSSProperties} from "react";
 import {MyProxyHandler} from "../joiner";
@@ -95,6 +95,9 @@ export class IStore {
 
     dragging: {random: number, id: string} = { random: 0, id: '' };
     edges: EdgeOptions[] = [];
+
+    objects: Pointer<DObject, 0, 'N', LObject> = [];
+    values: Pointer<DValue, 0, 'N', LValue> = [];
 
     // private, non-shared fields
     _lastSelected?: {
@@ -207,7 +210,8 @@ function makeDefaultGraphViews(): DViewElement[] {
     let aview: DViewElement = DViewElement.new('AttribDefaultView', DV.attributeView(), undefined, '', '', '', [DAttribute.name]);
     let rview: DViewElement = DViewElement.new('RefDefaultView', DV.referenceView(), undefined, '', '', '', [DReference.name]);
     let oview: DViewElement = DViewElement.new('OperationDefaultView', DV.operationView(), undefined, '', '', '', [DOperation.name]);
-    let literalDefaultView: DViewElement = DViewElement.new('LiteralDefaultView', DV.literalView(), undefined, '', '', '', [DEnumLiteral.name]);
+    let literalView: DViewElement = DViewElement.new('LiteralDefaultView', DV.literalView(), undefined, '', '', '', [DEnumLiteral.name]);
+    let objectView: DViewElement = DViewElement.new('ObjectView', DV.testView(), undefined, '', '', '', [DObject.name]);
 
     pkgview.subViews = [cview.id]; // childrens can use this view too todo: this is temporary
 
@@ -215,7 +219,7 @@ function makeDefaultGraphViews(): DViewElement[] {
     let defaultView: DViewElement = DViewElement.new("DefaultView", defaultJsx, undefined, "",
         "", "", []);
 
-    let alldefaultViews = [mview, pkgview, cview, eview, aview, rview, oview, literalDefaultView, defaultView];
+    let alldefaultViews = [mview, pkgview, cview, eview, aview, rview, oview, literalView, objectView, defaultView];
     mview.subViews = [mview.id, ...alldefaultViews.slice(1).map(e => e.id)]// childrens can use this view too todo: this is temporary, should just be the sliced map of everything else.
     return alldefaultViews;
 }

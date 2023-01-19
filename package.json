@@ -58,6 +58,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "manual_debug": "echo http://localhost:3000/ click this using CTRL+SFHIT",
+    "dev": "docker-compose -f docker-compose.dev.yml up",
 
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build"

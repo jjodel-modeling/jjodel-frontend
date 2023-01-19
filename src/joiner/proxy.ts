@@ -232,7 +232,11 @@ class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
         }
         if (!GetPathHandler.__asArray && !GetPathHandler.__asCalls) {
             if (typeof propKey === "symbol") { this.strbuilder += propKey.toString(); }
-            else this.strbuilder += (this.strbuilder ? '.' : '') + propKey;
+            else {
+                // Giordano: add ignore for webpack
+                //@ts-ignore
+                this.strbuilder += (this.strbuilder ? '.' : '') + propKey;
+            }
         }
         return GetPathHandler.__nested ? proxyitself : {};
     }

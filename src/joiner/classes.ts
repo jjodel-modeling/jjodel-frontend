@@ -761,6 +761,8 @@ export class PointedBy{
         this.source = source;
     }
     static fromID<D extends DPointerTargetable>(ptr: Pointer<D>, field: keyof D) {
+        // Giordano: add ignore for webpack
+        //@ts-ignore
         return PointedBy.new("idlookup." + ptr + "." + field);
     }
     static new(source: DocString<"full path in store including key. like \'idlookup.id.extends\'">, modifier: "-=" | "+=" | undefined = undefined, action?: ParsedAction): PointedBy {
@@ -1421,6 +1423,8 @@ export type getWParams<L extends LPointerTargetable, D extends Object> ={
             //@ts-ignore
         (L[`set_${Property}`] extends (a:any, b: any, ...b:any)=> any ? // at least 2 params: 1 for val and 1 for Context
             // damiano todo: if first parameter is Context this should return never. because Context should not be an acceptable set value & it will cause a definition loop because contains a W key
+            // Giordano: add ignore for webpack
+            //@ts-ignore
             Parameters<L[`set_${Property}`]>[0] // if set_X function is defined, get first param
             //@ts-ignore
             : never ///D[Property] | `todo: should define set_${Property}` // default type if it's not assigned = type in the D version

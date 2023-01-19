@@ -1801,6 +1801,39 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         // const extendedby: LClass[] = [thiss, ...thiss.allSubClasses];
         // for (i = 0; i < extendedby.length; i++) { extendedby[i].checkViolations(true); }
     }
+
+    public instance!: boolean;
+
+    get_instance(context: Context): boolean {
+
+        const dClass: DClass = context.data;
+        const lClass: LClass = LClass.from(dClass);
+        const dObject = DObject.new(dClass.name + ' instance');
+        dObject.isRoot = false;
+        dObject.instanceof = [dClass.id];
+        BEGIN()
+        CreateElementAction.new(dObject);
+
+        for(let feature of [...lClass.attributes, ...lClass.references]) {
+            const dValue = DValue.new(feature.name);
+            dValue.instanceof = [feature.id];
+            if(feature.className === 'DAttribute') {
+                switch (feature.type.name) {
+                    default: dValue.value = 'NULL'; break;
+                    case 'EString': dValue.value = ''; break;
+                    case 'EInt': dValue.value = '0'; break;
+                    case 'EBoolean': dValue.value = 'false'; break;
+                }
+            } else {
+                dValue.value = 'NULL';
+            }
+            CreateElementAction.new(dValue);
+            SetFieldAction.new(dObject, 'features', dValue.id, '+=', false);
+        }
+        END()
+
+        return true;
+    }
 }
 DClassifier.subclasses.push(DClass);
 LClassifier.subclasses.push(LClass);
@@ -2461,12 +2494,15 @@ export class DObject extends DPointerTargetable { // extends DNamedElement, m1 c
 
     // inherit redefine
     id!: Pointer<DObject, 1, 1, LObject>;
-    parent: Pointer<DModel, 0, 'N', LModel> = []; // todo: problema m1 model can contain objects without package, it's only a web of objects with a object root actually.
+    parent: Pointer<DModel, 0, 'N', LModel> = [];
     father!: Pointer<DModel, 1, 1, LModel>;
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
+
     // personal
-    instanceof: Pointer<DClass, 0, 'N'> = [];
+    instanceof!: Pointer<DClass, 1, 'N', LClass>;
+    isRoot!: boolean;
+    features: Pointer<DValue, 0, 'N', LValue> = [];
 
 
     public static new(name?: DNamedElement["name"]): DObject {
@@ -2485,12 +2521,15 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     // static structure: typeof DObject;
 
     // inherit redefine
-    parent!: LModel[]; // todo: problema m1 model can contain objects without package, it's only a web of objects with a object root actually.
+    parent!: LModel[];
     father!: LModel;
     annotations!: LAnnotation[];
     name!: string;
+
     // personal
     instanceof!: LClass[];
+    isRoot!: boolean;
+    features!: LValue[];
 
     protected get_instanceof(context: Context): this["instanceof"] {
         return context.data.instanceof.map((pointer) => {
@@ -2501,6 +2540,12 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         SetFieldAction.new(context.data, 'instanceof', list, "", true);
         return true;
+    }
+
+    protected get_features(context: Context): this['features'] {
+        return context.data.features.map((feature) => {
+            return LPointerTargetable.from(feature)
+        });
     }
 }
 DNamedElement.subclasses.push(DObject);
@@ -2520,8 +2565,10 @@ export class DValue extends DPointerTargetable { // extends DModelElement, m1 va
     parent: Pointer<DObject, 0, 'N', LObject> = [];
     father!: Pointer<DObject, 1, 1, LObject>;
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
+
     // personal
-    instanceof: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature> = [];
+    value!: string | Pointer<DObject, 1, 1, LObject>;
+    instanceof!: Pointer<DStructuralFeature, 1, 'N', LStructuralFeature>;
 
     public static new(name?: DNamedElement["name"]): DValue {
         return new Constructors(new DValue('dwc')).DPointerTargetable().DModelElement()
@@ -2543,7 +2590,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     father!: LObject;
     annotations!: LAnnotation[];
     // personal
-    instanceof!: LStructuralFeature [];
+    value!: string | LObject;
+    instanceof!: LStructuralFeature[];
 
     protected get_instanceof(context: Context): this["instanceof"] {
         return context.data.instanceof.map((pointer) => {
@@ -2555,6 +2603,28 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         SetFieldAction.new(context.data, 'instanceof', list, "", true);
         return true;
     }
+
+
+    protected get_value(context: Context): this['value'] {
+        const data: DValue = context.data;
+        const instanceOf: LStructuralFeature = context.proxyObject.instanceof[0];
+        if(instanceOf.className === 'DAttribute') {
+            return data.value;
+        }
+        if(data.value !== 'NULL') {
+            const obj: LObject = LObject.from(data.value); // data.value pointer a DObject
+            return obj.name;  // change to obj, in the toString insert obj.name
+        }
+        return 'NULL';
+    }
+
+    protected get_toString(context: Context): () => string {
+        const ret = () => {
+            return 'toString';
+        }
+        return ret;
+    }
+
 }
 DNamedElement.subclasses.push(DValue);
 LNamedElement.subclasses.push(LValue);

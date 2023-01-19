@@ -32,9 +32,10 @@ class DefaultNodeStatee extends GraphElementStatee { }
 
 // from ownstateprops function getVertexID(props: AllPropss): Pointer<DVoidVertex, 0, 1, LVoidVertex> { return props.vertex?.id; }
 
-export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeState = DefaultNodeStatee>
-    extends superclass<AllProps, NodeState>{
 
+// Giordano: add ignore for webpack
+//@ts-ignore
+export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeState = DefaultNodeStatee> extends superclass<AllProps, NodeState>{
 
     static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps): GraphElementReduxStateProps {
         let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
@@ -68,6 +69,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
             case "DPackage": componentfunction = GraphVertex; break;
             case "DClassifier":
             case "DEnumerator":
+            case "DObject":
             case "DClass": componentfunction = Vertex; break;
             case "DAnnotation":
             case "DAttribute":

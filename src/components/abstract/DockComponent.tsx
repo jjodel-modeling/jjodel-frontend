@@ -23,6 +23,7 @@ import ContextMenu from "../toolbar/ContextMenu";
 import Xarrow, {Xwrapper} from "react-xarrows";
 import LeaderLine from "leader-line-new";
 import EdgesManager from "../../graph/edge/EdgesManager";
+import M1 from "../../graph/model/M1";
 
 
 let windoww = window as any;
@@ -31,6 +32,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
     model!: LModel;
     graph!: LGraph;
     metamodel!: TabData;
+    m1!: TabData;
     structureEditor!: TabData;
     viewsEditor!: TabData;
     styleEditor!: TabData;
@@ -56,6 +58,11 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
                     <DefaultNode data={this.model.id} nodeid={this.graph.id} graphid={this.graph.id} />
                 </div>
         };
+        this.m1 = { title: "M1", group: "1", closable: false, content:
+                <div className={"h-100 w-100"}>
+                    <M1 nodeid={this.graph.id} graphid={this.graph.id} />
+                </div>
+        };
         this.structureEditor = { title: "Structure", group: "2", closable: false, content: <StructureEditor /> };
         this.viewsEditor = { title: "Views", group: "2", closable: false, content: <ViewsEditor /> };
         this.styleEditor = { title: "Node", group: "2", closable: false, content: <StyleEditor /> };
@@ -64,7 +71,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
             dockbox: {
                 mode: "horizontal", children: [
                     {
-                        children: [{tabs: [{ ...this.metamodel, id: "1" }]}]
+                        children: [{tabs: [{...this.metamodel, id: '1'}, {...this.m1, id: '2'}]}]
                     },
                     {
                         children: [{tabs: [{ ...this.structureEditor, id: "2" }, { ...this.viewsEditor, id: "3" }, { ...this.styleEditor, id: "4" }]}]

@@ -12,6 +12,8 @@ export class UX{
         const innermap = (child: ReactNode): T => {
             if (!React.isValidElement(child)) { return child as T; }
             if (child.props.children) {
+                // Giordano: add ignore for webpack
+                //@ts-ignore
                 child = React.cloneElement(child, { children: UX.recursiveMap(child.props.children, fn) });
             }
             return fn(child as T);
