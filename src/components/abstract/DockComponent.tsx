@@ -1,29 +1,18 @@
 import React, {Dispatch, PureComponent, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import {
-    CreateElementAction,
-    DClass,
-    DNamedElement, GObject,
-    IStore, LClass,
-    LGraph,
-    LModel, LPointerTargetable, LUser,
-    MyProxyHandler, SetRootFieldAction, StyleEditor, U,
-} from "../../joiner";
+import {IStore, LGraph, LModel, LPointerTargetable, StyleEditor,} from "../../joiner";
 import {DefaultNode} from "../../graph/defaultNode/DefaultNode";
 
-import {DockLayout, DockMode, TabData} from "rc-dock";
+import {DockLayout, TabData} from "rc-dock";
 import "rc-dock/dist/rc-dock.css";
-import Draggable2 from "../../graph/draggable/Draggable2";
 import ViewsEditor from "../rightbar/ViewsEditor/ViewsEditor";
 import StructureEditor from "../rightbar/structureEditor/StructureEditor";
-import Logger from "../rightbar/logger/Logger";
 import ToolBar from "../toolbar/ToolBar";
 import PendingEdge from "../../graph/edge/PendingEdge";
 import ContextMenu from "../toolbar/ContextMenu";
-import Xarrow, {Xwrapper} from "react-xarrows";
-import LeaderLine from "leader-line-new";
 import EdgesManager from "../../graph/edge/EdgesManager";
 import M1 from "../../graph/model/M1";
+import {Xwrapper} from "react-xarrows";
 
 
 let windoww = window as any;
@@ -51,7 +40,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
         this.metamodel = { title: "Metamodel", group: "1", closable: false, content:
                 <div>
                     <ContextMenu />
-                    <EdgesManager />
+                    {/*<EdgesManager />*/}
                     {/*Perche mi chiede source e user come OwnProps se li ho definiti come StateProps ? */}
                     <PendingEdge  source={undefined} user={undefined} />
                     <ToolBar model={this.model.id} />
@@ -60,13 +49,12 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
         };
         this.m1 = { title: "M1", group: "1", closable: false, content:
                 <div className={"h-100 w-100"}>
-                    <M1 nodeid={this.graph.id} graphid={this.graph.id} />
+                    <M1 modelid={this.model.id} />
                 </div>
         };
         this.structureEditor = { title: "Structure", group: "2", closable: false, content: <StructureEditor /> };
         this.viewsEditor = { title: "Views", group: "2", closable: false, content: <ViewsEditor /> };
         this.styleEditor = { title: "Node", group: "2", closable: false, content: <StyleEditor /> };
-        this.logger = { title: "Logger", group: "2", closable: true, content: <Logger /> };
         this.box = {
             dockbox: {
                 mode: "horizontal", children: [

@@ -1,7 +1,6 @@
 import React, {PureComponent} from 'react';
 import './App.scss';
 import Dock from "./components/abstract/DockComponent";
-import Draggable2 from "./graph/draggable/Draggable2";
 
 
 interface AllProps{}

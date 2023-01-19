@@ -20,23 +20,19 @@
   width: 100%;
   height: 100%;
   display: flex;
+  background-image: url("../../static/svg/graph.svg"); background-repeat: repeat;
 }
-.m1-graph > .object {
-  border-radius: .2em;
-  display: block;
-  height: min-content;
-  width: max-content;
-  border: 1px solid black;
-  z-index: 999;
+
+.EObject-container {
+  position: absolute;
+  height: 200px;
+  width: 200px;
+  border: 2px solid red;
+  z-index: 1;
 }
-.m1-graph > .object > .title {
-  font-size: .8rem;
-  color: white;
+.EValue-container {
+  position: relative;
   width: 100%;
-  border-bottom: 1px solid black;
-  background-color: #28a745;
-}
-.m1-graph > .object > .features {
-  background-color: whitesmoke;
-  z-index: 999;
+  background-color: green;
+  z-index: 2;
 }

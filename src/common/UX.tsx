@@ -32,7 +32,7 @@ export class UX{
             showLoaderOnConfirm: true
         });
         if (confirm.value === true) {
-            lItem.delete()
+            lItem.delete();
         }
     }
 }

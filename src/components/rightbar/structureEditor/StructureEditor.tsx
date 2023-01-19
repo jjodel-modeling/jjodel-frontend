@@ -2,16 +2,18 @@ import React, {Dispatch, PureComponent, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {
     DGraphElement,
-    DModelElement, DPointerTargetable,
-    DViewElement, Input,
-    IStore, LGraphElement,
-    LModelElement, LViewElement, MDE,
-    MyProxyHandler,
-    Pointer, U, UX,
+    DModelElement,
+    DPointerTargetable,
+    DViewElement,
+    IStore,
+    LGraphElement,
+    LModelElement,
+    LViewElement,
+    Pointer,
+    UX,
 } from "../../../joiner";
 import "../rightbar.scss";
 import Structure from "./Structure";
-
 
 
 interface ThisState {}

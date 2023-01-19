@@ -1,8 +1,7 @@
-import React, {Dispatch, PureComponent, ReactNode} from "react";
-import { connect } from "react-redux";
-import ReactJson, {CollapsedFieldProps} from 'react-json-view' // npm i react-json-view
+import React, {PureComponent, ReactNode} from "react";
+import ReactJson from 'react-json-view' // npm i react-json-view
 import './logger.scss'
-import {bool, Dictionary, GObject, UnixTimestamp, windoww} from "../../joiner";
+import {GObject} from "../../joiner";
 
 // private
 interface ThisState { }

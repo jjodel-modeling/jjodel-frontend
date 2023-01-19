@@ -1,26 +1,18 @@
 import React, {Dispatch, PureComponent, ReactElement, ReactNode} from "react";
-import { connect } from "react-redux";
+import {connect} from "react-redux";
 import ViewsEditor from "../ViewsEditor/ViewsEditor";
-import './style_editor.scss';
 import {
-    Selectors,
-    U,
-    IStore,
-    Input,
-    Pointer,
     DGraphElement,
-    DViewElement,
     DModelElement,
-    LGraphElement,
-    LViewElement,
-    LModelElement,
     DPointerTargetable,
-    DNamedElement,
-    LNamedElement,
+    DViewElement,
+    Input,
+    IStore,
+    LGraphElement,
+    LModelElement,
+    LViewElement,
+    Pointer,
     windoww,
-    Textarea,
-    DModel,
-    LModel,
 } from "../../../joiner";
 
 // private

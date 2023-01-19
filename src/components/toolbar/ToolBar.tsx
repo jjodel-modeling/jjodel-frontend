@@ -1,16 +1,20 @@
-import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from "react";
+import React, {Dispatch, ReactElement, ReactNode, useEffect} from "react";
 import {IStore} from "../../redux/store";
+
 import {connect} from "react-redux";
 import "./toolbar.scss";
 import {
-    DGraphElement, DModel,
-    DModelElement, DPointerTargetable,
+    DGraphElement,
+    DModel,
+    DModelElement,
+    DPointerTargetable,
     DViewElement,
     GObject,
     LGraphElement,
     LModel,
     LModelElement,
-    LViewElement, MyProxyHandler,
+    LViewElement,
+    MyProxyHandler,
     Pointer
 } from "../../joiner";
 import $ from "jquery";

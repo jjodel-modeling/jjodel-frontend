@@ -1,5 +1,4 @@
-import {LPointerTargetable, MixOnlyFuncs, RuntimeAccessible} from "../../joiner";
-import {DLog} from "./D";
+import {LPointerTargetable, RuntimeAccessible} from "../../joiner";
 
 @RuntimeAccessible
 export class LLog extends LPointerTargetable {

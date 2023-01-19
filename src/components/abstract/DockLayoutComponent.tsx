@@ -1,23 +1,25 @@
-import React, {Dispatch, MouseEventHandler, PureComponent, ReactNode} from "react";
-import { connect } from "react-redux";
+import React, {Dispatch, PureComponent, ReactNode} from "react";
+import {connect} from "react-redux";
 import {DockContext, DockLayout, DropDirection, PanelData, TabData} from "rc-dock";
 // import {LayoutData} from "rc-dock/src/DockData";
 import "rc-dock/dist/rc-dock.css";
 import './docking.scss';
 import {LayoutBase} from "rc-dock/lib/DockData";
-import Swal, {SweetAlertResult} from 'sweetalert2'
+import Swal from 'sweetalert2'
 import withReactContent from 'sweetalert2-react-content'
 import {
     CreateElementAction,
     DGraph,
     DModel,
     IStore,
+    Log,
     Pointer,
     Selectors,
-    store, TRANSACTION, U, Graph, Log, DViewElement, windoww,//  StyleEditor
+    store,
+    TRANSACTION,
+    windoww,
 } from "../../joiner";
 import {DefaultNode} from "../../joiner/components";
-
 
 
 //const StyleEditor = windoww.tempcomponents.StyleEditor;

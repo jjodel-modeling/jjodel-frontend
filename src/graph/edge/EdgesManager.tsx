@@ -1,15 +1,8 @@
 import {EdgeOptions, IStore} from "../../redux/store";
 import React, {Dispatch, ReactElement, useEffect, useState} from "react";
 import {connect} from "react-redux";
-import {
-    LModelElement,
-    LGraphElement,
-    LReference,
-    MyProxyHandler, LClass, U, GObject,
-} from "../../joiner";
-import EdgeTest from "./Test";
+import {LModelElement,} from "../../joiner";
 import LeaderLine from "leader-line-new";
-import edges_OLD from "./edges_OLD";
 
 
 interface ThisState {}
@@ -85,4 +78,3 @@ export const EdgesManager = (props: OwnProps, childrens: (string | React.Compone
     return <EdgesManagerConnected {...{...props, childrens}} />;
 }
 export default EdgesManager;
-

@@ -1,34 +1,32 @@
 // import {Mixin} from "ts-mixer";
 import {isDeepStrictEqual} from "util";
 import {
-    IsActually, getWParams,
-    DMap, LMap, Dictionary,
-    GObject,
-    Pointer,
+    Constructors,
+    Dictionary,
+    DMap,
+    DModelElement,
     DocString,
-    Leaf, Node, Constructors, DNamedElement, DTypedElement, ISize, IStore, DPackage, LNamedElement, LPackage
-} from "../../joiner";
-
-import {
-    Action,
-    bool,
+    DPointerTargetable,
+    DUser,
+    getWParams,
+    GObject,
     GraphPoint,
     GraphSize,
+    IStore,
+    Leaf,
+    LMap,
+    LModelElement,
     LogicContext,
-    DPointerTargetable,
-    SetFieldAction,
-    TargetableProxyHandler,
     LPointerTargetable,
-    U,
-    store,
-    LModel,
-    DModel,
-    RuntimeAccessibleClass,
-    RuntimeAccessible,
-    DUser,
-    MyProxyHandler,
     MixOnlyFuncs,
-    windoww, DModelElement, LModelElement,
+    Node,
+    Pointer,
+    RuntimeAccessible,
+    RuntimeAccessibleClass,
+    SetFieldAction,
+    store,
+    TargetableProxyHandler,
+    U
 } from "../../joiner";
 
 

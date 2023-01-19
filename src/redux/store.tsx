@@ -1,58 +1,68 @@
-import {createStore, PreloadedState, Reducer, Store, StoreEnhancer} from 'redux';
 import type {
-    LGraph,
-    LVertex,
-    LEdgePoint,
-    GObject,
-    GraphPoint,
-    Point,
-    DModelElement,
-    DNamedElement,
-    Pointer,
-    RuntimeAccessibleClass,
-    TRANSACTION,
-    Dictionary,
-    DocString,
-    windoww,
+    DClassifier,
+    DExtEdge,
     DGraphElement,
-    LGraphElement,
-    LViewElement,
-    LPointerTargetable,
-    LModelElement,
+    DLog,
+    DModelElement,
+    DParameter,
+    DRefEdge,
+    LAttribute,
+    LClass,
+    LClassifier,
+    LEdgePoint,
+    LEnumerator,
+    LEnumLiteral,
+    LExtEdge,
+    LGraph,
+    LGraphVertex,
+    LLog,
+    LOperation,
     LPackage,
-    DClassifier,  DVoidEdge, LLog, DLog, DExtEdge, LRefEdge, DRefEdge, LAttribute,
-    LClass, LClassifier,
-    LEnumerator, LEnumLiteral, LGraphVertex,
-    LExtEdge, LReference, LOperation, LParameter, DParameter} from '../joiner';
+    LParameter,
+    LRefEdge,
+    LReference,
+    LVertex,
+    Pointer
+} from '../joiner';
 import {
-    DGraph,
-    DPointerTargetable,
+    CreateElementAction,
+    DAttribute,
     DClass,
-    DModel,
     DEnumerator,
+    DEnumLiteral,
+    DGraph,
+    DModel,
+    DObject,
     DOperation,
     DPackage,
-    DViewElement,
+    DPointerTargetable,
     DReference,
-    DAttribute,
-    DEnumLiteral,
+    DUser,
+    DValue,
+    DViewElement,
     getPath,
-    SetRootFieldAction,
+    LObject,
+    LUser,
+    LValue,
     RuntimeAccessible,
-    CreateElementAction,
-    DUser, LUser, DValue, LValue, LObject, DObject,
+    SetRootFieldAction,
 } from "../joiner";
-import React, {ChangeEvent, CSSProperties} from "react";
-import {MyProxyHandler} from "../joiner";
+import React from "react";
 import DV from "../common/DV";
 import LeaderLine from "leader-line-new";
+
 console.warn('ts loading store');
 
 // @RuntimeAccessible
 // NB: le voci che iniziano con '_' sono personali e non condivise
 
 
-export interface EdgeOptions{ id: number, options: LeaderLine.Options, source: string, target: string, counter: number }
+export interface EdgeOptions{
+    id: number,
+    options: LeaderLine.Options,
+    source: string,
+    target: string
+}
 
 export class IStore {
     logs: Pointer<DLog, 0, 'N', LLog> = [];
@@ -93,8 +103,9 @@ export class IStore {
 
     contextMenu: {display: boolean, x: number, y: number} = { display: false, x: 0, y: 0 };
 
-    dragging: {random: number, id: string} = { random: 0, id: '' };
+    dragging: {random: number, id: string} = { random: 0, id: "" };
     edges: EdgeOptions[] = [];
+    edgesCounter: number = 0;
 
     objects: Pointer<DObject, 0, 'N', LObject> = [];
     values: Pointer<DValue, 0, 'N', LValue> = [];

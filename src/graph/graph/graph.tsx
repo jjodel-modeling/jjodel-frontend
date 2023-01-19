@@ -1,11 +1,15 @@
-import React, {PureComponent, ReactElement} from "react";
+import React, {ReactElement} from "react";
 import {connect} from "react-redux";
 
 import {
+    DGraph,
+    GraphElementComponent,
+    GraphElementDispatchProps,
+    GraphElementOwnProps,
+    GraphElementReduxStateProps,
+    GraphElementStatee,
     IStore,
-    windoww,
-    GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
-    GraphElementComponent, RuntimeAccessibleClass, DVoidVertex, DGraph, DModelElement, Field, DModel, DPackage
+    RuntimeAccessibleClass
 } from "../../joiner";
 // import {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps} from  "../graphElement/sharedTypes/sharedTypes";
 

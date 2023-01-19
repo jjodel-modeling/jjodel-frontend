@@ -1,26 +1,30 @@
 import React, {CSSProperties, Dispatch, LegacyRef, PureComponent, ReactElement, ReactNode} from "react";
-import { connect } from "react-redux";
-import type {IStore, GObject, Pointer, Dictionary} from /*type*/ "../../joiner";
+import {connect} from "react-redux";
 import type {
-    DModelElement,
-    LModelElement,
     AbstractConstructor,
     DAttribute,
-    DReference, DParameter, LClass, LEnumerator
+    DModelElement,
+    DParameter,
+    DReference,
+    GObject,
+    IStore,
+    LClass,
+    LEnumerator,
+    LModelElement,
+    Pointer
 } from "../../joiner";
 import {
-    windoww,
-    Selectors,
-    RuntimeAccessibleClass,
     Constructor,
-    DPointerTargetable,
-    OCL,
     DGraph,
-    LPointerTargetable, U, LReference,
+    DPointerTargetable,
+    LPointerTargetable,
+    OCL,
+    RuntimeAccessibleClass,
+    Selectors,
+    windoww,
 } from "../../joiner";
 
 import Editor from "@monaco-editor/react";
-import {types} from "util";
 
 // import './bidirectionalinput.scss';
 

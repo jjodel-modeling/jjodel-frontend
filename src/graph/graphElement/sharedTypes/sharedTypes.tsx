@@ -1,12 +1,15 @@
 import React, {CSSProperties, ReactNode} from "react";
 import type {
+    DGraph,
+    DGraphElement,
     DModelElement,
-    Json,
-    LModelElement,
-    Pointer,
     DViewElement,
+    Json,
+    LGraph,
+    LGraphElement,
+    LModelElement,
     LViewElement,
-    DGraphElement, LGraphElement, DGraph, LGraph
+    Pointer
 } from "../../../joiner";
 
 export class GraphElementStatee {/*

@@ -1,4 +1,4 @@
-import React, {CSSProperties, Dispatch, PureComponent, ReactChild, ReactNode} from "react";
+import React, {CSSProperties, PureComponent, ReactChild, ReactNode} from "react";
 // import { connect } from "react-redux";
 // import {IStore} from "../../redux/store";
 import './overlap.scss';

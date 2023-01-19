@@ -1,10 +1,8 @@
 import 'smart-webcomponents-react/source/styles/smart.default.css';
-import React, {RefObject} from "react";
+import React from "react";
 import ReactDOM from "react-dom";
-import { DockingLayout } from 'smart-webcomponents-react/dockinglayout';
-import { Slider } from 'smart-webcomponents-react/slider';
-import { MultilineTextBox } from 'smart-webcomponents-react/multilinetextbox';
-import {GObject, Size, LoggerComponent} from "../../joiner";
+import {DockingLayout} from 'smart-webcomponents-react/dockinglayout';
+import {GObject, LoggerComponent, Size} from "../../joiner";
 import TopbarComponent from "../topbar/TopbarComponent";
 import ToolboxComponent from "../toolbox/ToolboxComponent";
 import TreeViewComponent from "../rightbar/TreeView/TreeViewComponent";

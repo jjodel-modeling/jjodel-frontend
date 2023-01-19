@@ -1,20 +1,20 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {
-    DClassifier,
     DGraph,
     DGraphElement,
     DGraphVertex,
-    DModel,
-    DModelElement,
-    DPackage,
     DVoidVertex,
     GraphElementComponent,
     GraphElementDispatchProps,
     GraphElementOwnProps,
     GraphElementReduxStateProps,
     GraphElementStatee,
-    IStore, LClass, LModelElement, LPointerTargetable, LUser,
+    IStore,
+    LClass,
+    LModelElement,
+    LPointerTargetable,
+    LUser,
     LVoidVertex,
     RuntimeAccessibleClass,
     U,
@@ -22,7 +22,6 @@ import {
 import "./vertex.scss";
 import "./default.scss";
 import RootVertex from "./RootVertex";
-import RootDraggableVertex from "./RootDraggableVertex";
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee {}
@@ -34,7 +33,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         super(props, context);
     }
     render(): ReactNode {
-        return(<RootVertex props={this.props} render={super.render()} />);
+        return(<RootVertex key={this.props.key} props={this.props} render={super.render()} />);
     }
 }
 

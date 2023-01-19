@@ -1,6 +1,5 @@
 import type {Pointer} from "./classes";
-
-import {DPointerTargetable, LPointerTargetable, NotAString} from "./classes";
+import {DPointerTargetable, LPointerTargetable} from "./classes";
 import {DClass, DPackage, LClass} from "../model/logicWrapper";
 
 type GenericType<A1, A2, A3> = { something: 'that does not use A1, A2, A3' };

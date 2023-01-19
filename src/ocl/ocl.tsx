@@ -1,4 +1,4 @@
-import { OclEngine } from "@stekoe/ocl.js"
+import {OclEngine} from "@stekoe/ocl.js"
 import {Constructor, GObject, RuntimeAccessible} from "../joiner";
 import {OclResult} from "@stekoe/ocl.js/dist/components/OclResult";
 

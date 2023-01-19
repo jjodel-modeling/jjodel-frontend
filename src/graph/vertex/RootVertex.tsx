@@ -1,23 +1,23 @@
 import {EdgeOptions, IStore} from "../../redux/store";
-import React, {CSSProperties, Dispatch, ReactElement, ReactNode, useEffect, useState} from "react";
+import React, {CSSProperties, Dispatch, ReactElement, ReactNode, useEffect} from "react";
+import {useStateIfMounted} from "use-state-if-mounted";
 import {connect} from "react-redux";
 import {
     DClass,
-    DGraph,
-    DModelElement,
     DUser,
-    GObject, LClass, LPointerTargetable,
+    GObject,
+    LClass,
+    LPointerTargetable,
     Pointer,
     SetFieldAction,
-    SetRootFieldAction,
-    U
+    SetRootFieldAction
 } from "../../joiner";
 import {AllPropss as VertexProps} from "./Vertex";
 import $ from "jquery";
 import "jqueryui";
 import "jqueryui/jquery-ui.css";
 import LeaderLine from "leader-line-new";
-import {useXarrow, Xwrapper} from "react-xarrows";
+import {useXarrow} from "react-xarrows";
 
 interface ThisState {}
 function RootVertexComponent(props: AllProps, state: ThisState) {
@@ -31,8 +31,8 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                         source.canExtend(rootProps.data as any as LClass, extendError);
     console.log("canextend", {src: rootProps.isEdgePending, target:rootProps.data, extendError});
 
-    const [classes, setClasses] = useState<string[]>([]);
-    const [isDragged, setIsDragged] = useState(false);
+    const [classes, setClasses] = useStateIfMounted<string[]>([]);
+    const [isDragged, setIsDragged] = useStateIfMounted(false);
 
     const select = (forUser:Pointer<DUser, 0, 1> = null) => {
         if (!forUser) forUser = DUser.current;
@@ -90,25 +90,6 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     const sizeStyle: CSSProperties = {};
     if(rootProps.isVertex) { sizeStyle.position = "absolute"; }
 
-    const edgeRefresh = () => {
-        const nodeid = rootProps.nodeid;
-        if(nodeid) {
-            const sources : LeaderLine[] = (window as any).leaderline.bySource[nodeid] || [];
-            const targets : LeaderLine[] = (window as any).leaderline.byTarget[nodeid] || [];
-            for(let ll of sources) { ll.position(); }
-            for(let ll of targets) { ll.position(); }
-            const subNodes = rootProps.data.subNodes;
-            if(subNodes) {
-                for(let node of subNodes) {
-                    const sources : LeaderLine[] = (window as any).leaderline.bySource[node.id] || [];
-                    const targets : LeaderLine[] = (window as any).leaderline.byTarget[node.id] || [];
-                    for(let ll of sources) { ll.position(); }
-                    for(let ll of targets) { ll.position(); }
-                }
-            }
-        }
-    }
-
     useEffect(() => {
         const element: GObject = $('[id="' + rootProps.nodeid + '"]'); // todo: install jqueryui types and remove GObject cast
         if(element && rootProps.isVertex) {
@@ -116,9 +97,10 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                 cursor: "grabbing",
                 containment: "parent",
                 drag: function(event: GObject, obj: GObject) {
+                    if(!isDragged) {
+                        SetRootFieldAction.new("dragging", {id: rootProps.data.id})
+                    }
                     setIsDragged(true);
-                    edgeRefresh();
-                    SetRootFieldAction.new("dragging", {random: Math.floor(Math.random() * 10000), id: rootProps.data.id});
                 },
                 stop: function (event: GObject, obj: GObject) {
                     const y: number = obj.position.top;
@@ -126,6 +108,9 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                     if(rootProps.node) {
                         SetFieldAction.new(rootProps.node, "x", x, "", false);
                         SetFieldAction.new(rootProps.node, "y", y, "", false);
+                    }
+                    if(!isDragged) {
+                        SetRootFieldAction.new("dragging", {id: ""})
                     }
                     setIsDragged(false);
                 }

@@ -1,6 +1,5 @@
-import {IStore, jodelInit, windoww} from "../joiner";
+import {jodelInit, windoww} from "../joiner";
 import * as Componentss from '../joiner/components';
-import React from "react";
 
 
 /*

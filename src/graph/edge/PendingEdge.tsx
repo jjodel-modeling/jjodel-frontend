@@ -1,5 +1,6 @@
 import {IStore} from "../../redux/store";
-import React, {Dispatch, ReactElement, useEffect, useState} from "react";
+import React, {Dispatch, ReactElement, useEffect} from "react";
+import {useStateIfMounted} from "use-state-if-mounted";
 import {connect} from "react-redux";
 import {LClass, LPointerTargetable, LUser} from "../../joiner";
 import "./edge.scss";
@@ -7,8 +8,8 @@ import LeaderLine from "leader-line-new";
 
 function PendingEdgeComponent(props: AllProps) {
 
-    const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-    const [edge, setEdge] = useState<undefined | LeaderLine>();
+    const [mousePosition, setMousePosition] = useStateIfMounted({ x: 0, y: 0 });
+    const [edge, setEdge] = useStateIfMounted<undefined | LeaderLine>(undefined);
 
     useEffect(() => {
         if(props.source) {

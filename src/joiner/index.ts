@@ -2,11 +2,10 @@ import * as jsxtt from 'jsx-transform/lib/jsx.js';
 import $$ from 'jquery';
 import {ReactNode} from "react";
 // true imports for this file (should all be import type
-import type { DocString } from './types';
+import type {DocString, GObject as GObjectt} from './types';
 import type {U as UType} from "../common/U";
 import type {Selectors as SelType} from "../redux/selectors/selectors";
-import type {GObject as GObjectt} from "./types";
-import type {Log as LogType} from "../common/U";
+
 export type {Constructor, AbstractConstructor} from "../joiner/types";
 var windoww = (window as any);
 
@@ -48,7 +47,6 @@ export {Uarr, CSSParser, DDate, RawVertex, $s, ParseNumberOrBooleanOptions,
 export const Log = windoww.Log;
 export {UX} from "../common/UX";
 export var U = windoww.U as typeof UType;
-export {MDE} from "../common/MDE";
 export {DLog} from "../model/classes/D";
 export {LLog} from "../model/classes/L";
 // console.error('iiiiiiiiiiiiiiii 4');
@@ -221,9 +219,7 @@ export {
     HTMLEditorRawComponent,
     OCLEditorRawComponent,
     MyInputComponent,
-    Field,
     GraphComponent,
-    QA,
     GraphsContainerComponent,
     DataOutputComponent,
     Overlap, LoggerComponent,
@@ -231,8 +227,7 @@ export {
     Vertex,    Graph,
     StyleEditor,
     DockLayoutComponent,
-    ColorScheme,
-    Edges,
+    ColorScheme, Edges
 } from './components'
 
 export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file

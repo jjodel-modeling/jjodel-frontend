@@ -1,27 +1,25 @@
-import React, {CSSProperties, Dispatch, PureComponent, ReactElement, ReactNode} from "react";
-import { connect } from "react-redux";
+import React, {ReactElement, ReactNode} from "react";
+import {connect} from "react-redux";
 import {
-    U,
+    DClassifier,
+    DEnumerator,
+    Dictionary,
+    DModel,
+    DModelElement,
+    DPackage,
+    GObject,
+    GraphElementComponent,
+    GraphElementDispatchProps,
+    GraphElementOwnProps,
+    GraphElementReduxStateProps,
+    GraphElementStatee,
     IStore,
+    LModelElement,
     Log,
-    windoww,
     LViewElement,
     RuntimeAccessibleClass,
-    LModelElement,
-    Dictionary,
-    GObject,
-    DModelElement,
-    DEnumerator,
-    DClassifier,
-    DPackage,
-    DModel, Vertex,
-} from "../../joiner";
-import {
-    GraphElementStatee,
-    GraphElementDispatchProps,
-    GraphElementReduxStateProps,
-    GraphElementOwnProps,
-    GraphElementComponent,
+    Vertex,
+    windoww,
 } from "../../joiner";
 import {Field, Graph, GraphVertex} from "../vertex/Vertex";
 

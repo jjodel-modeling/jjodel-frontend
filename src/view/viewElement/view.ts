@@ -1,18 +1,17 @@
 import {
+    Constructors,
     DocString,
-    Pointer,
     DPointerTargetable,
-    RuntimeAccessibleClass,
-    MyProxyHandler,
-    LogicContext,
-    SetFieldAction,
+    getWParams,
     GraphSize,
-    defaultVSize,
+    LogicContext,
     LPointerTargetable,
+    MyProxyHandler,
+    Pointer,
     RuntimeAccessible,
-    MixOnlyFuncs, GObject, Dictionary, DReference, getWParams, LUser, DUser, Constructors, DGraph, DGraphElement
+    RuntimeAccessibleClass,
+    SetFieldAction
 } from "../../joiner";
-import DV from "../../common/DV";
 
 
 @RuntimeAccessible

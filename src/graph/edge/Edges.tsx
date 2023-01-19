@@ -1,26 +1,24 @@
 import {IStore} from "../../redux/store";
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {
-    LModelElement,
-    LGraphElement,
-    LReference,
-    MyProxyHandler, LClass, U,
-} from "../../joiner";
-import EdgeTest from "./Test";
+import {LClass, LGraphElement, LModelElement, LReference, MyProxyHandler,} from "../../joiner";
+import Edge from "./Edge";
 
 
 interface ThisState {}
 
 function EdgesComponent(props: AllProps, state: ThisState) {
     const me = props.source.model;
+    if(props.targets && props.targets.length <= 0) {
+        return <></>;
+    }
     if(me?.className === "DReference") {
         const lReference: LReference = me as any;
         const lTarget: LModelElement = MyProxyHandler.wrap(lReference?.type);
         return <>
             {(props.targets) ? props.targets.map((targetNode) => {
-                return <EdgeTest source={props.source} target={targetNode} />
-            }) : <Edges source={props.source} targets={lTarget.nodes} />}
+                return <Edge source={props.source} target={targetNode} />
+            }) : <Edges source={props.source} targets={(lTarget) ? lTarget.nodes : []} />}
         </>;
     }
     if(me?.className === "DClass") {
@@ -29,8 +27,8 @@ function EdgesComponent(props: AllProps, state: ThisState) {
             const lTarget: LModelElement = MyProxyHandler.wrap(lClass?.extends[0]);
             return <>
                 {(props.targets) ? props.targets.map((targetNode) => {
-                    return <EdgeTest source={props.source} target={targetNode} />
-                }) : <Edges source={props.source} targets={lTarget.nodes} />}
+                    return <Edge source={props.source} target={targetNode} />
+                }) : <Edges source={props.source} targets={(lTarget) ? lTarget.nodes : []} />}
             </>;
         }
     }
@@ -62,4 +60,3 @@ export const Edges = (props: OwnProps, childrens: (string | React.Component)[] =
     return <EdgesConnected {...{...props, childrens}} />;
 }
 export default Edges;
-

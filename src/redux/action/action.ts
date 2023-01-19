@@ -1,24 +1,19 @@
 import {
-    Log,
-    DModelElement,
-    IStore,
-    Pointer,
+    Dictionary,
+    DocString,
     DPointerTargetable,
-    reducer,
-    store,
-    windoww,
+    IStore,
+    Log,
+    LPointerTargetable,
+    orArr,
+    Pack1,
+    Pointer,
     RuntimeAccessible,
     RuntimeAccessibleClass,
-    DClass,
+    store,
     unArr,
-    Pack1,
-    LPointerTargetable,
-    LClass,
-    orArr,
-    Dictionary,
-    DocString
+    windoww
 } from "../../joiner";
-import Swal from "sweetalert2";
 
 let pendingActions: Action[] = [];
 let hasBegun = false;

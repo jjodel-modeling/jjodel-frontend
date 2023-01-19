@@ -1,12 +1,10 @@
 import {IStore} from "../../redux/store";
-import React, {Dispatch, ReactElement, useCallback, useEffect, useState} from "react";
+import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import "./style.scss";
 import {SetRootFieldAction} from "../../redux/action/action";
-import {LModelElement, LNamedElement} from "../../model/logicWrapper";
-import {LPointerTargetable, LUser} from "../../joiner";
-import JSX from "../../common/JSX";
-
+import {LModelElement} from "../../model/logicWrapper";
+import {LUser} from "../../joiner";
 
 interface ThisState {}
 function ContextMenuComponent(props: AllProps, state: ThisState) {
@@ -19,7 +17,7 @@ function ContextMenuComponent(props: AllProps, state: ThisState) {
     const close = () => { SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); }
 
     if(display && selected) {
-        const jsxList: JSX[] = [];
+        const jsxList = [];
         jsxList.push(<div className={"col title text-center"}>{selected.className}</div>);
         jsxList.push(<hr className={"mt-0 mb-0"} />);
         switch (selected.className) {

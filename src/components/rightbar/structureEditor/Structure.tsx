@@ -1,6 +1,6 @@
 import React, {ReactNode} from "react";
-import type {DClassifier, DParameter, GObject, LClass, LModelElement, LParameter} from "../../../joiner";
-import {Input, LClassifier, LPointerTargetable, Select, SetRootFieldAction, U, UX} from "../../../joiner";
+import type {DClassifier, GObject, LModelElement, LParameter} from "../../../joiner";
+import {Input, LClassifier, LPointerTargetable, Select, SetRootFieldAction, UX} from "../../../joiner";
 
 export default class Structure {
     private static BaseEditor(lModelElement: LModelElement) : ReactNode {

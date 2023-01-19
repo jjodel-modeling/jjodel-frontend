@@ -1,40 +1,36 @@
-import React, {
-    Dispatch,
-    PureComponent,
-    ReactElement,
-    ReactNode,
-} from "react";
-import { createPortal } from "react-dom";
-import { connect } from "react-redux";
-import {deepStrictEqual} from "assert";
+import React, {Dispatch, PureComponent, ReactElement, ReactNode,} from "react";
+import {createPortal} from "react-dom";
+import {connect} from "react-redux";
 import './graphElement.scss';
 
 import {
-    JSXT,
-    U,
-    UX,
-    GObject,
-    IStore,
-    DViewElement,
+    CreateElementAction,
+    DGraph,
+    DGraphElement,
+    Dictionary,
+    DModelElement,
     DocString,
+    GObject,
+    GraphElementDispatchProps,
+    GraphElementOwnProps,
+    GraphElementReduxStateProps,
+    GraphElementStatee,
+    InOutParam,
+    IStore,
+    JSXT,
     LModelElement,
     Log,
-    windoww,
-    InOutParam,
     LViewElement,
-    SetRootFieldAction,
-    CreateElementAction,
-    DGraphElement,
-    DPointerTargetable,
-    Dictionary,
+    MyProxyHandler,
+    Pointer,
+    RuntimeAccessible,
     Selectors,
-    DGraph,
-    GraphElementStatee,
-    GraphElementDispatchProps,
-    GraphElementReduxStateProps,
-    GraphElementOwnProps,
-    RuntimeAccessible, LPointerTargetable, MyProxyHandler, LModel, LGraphElement, DModelElement, Pointer,
+    SetRootFieldAction,
+    U,
+    UX,
+    windoww,
 } from "../../joiner";
+
 console.info('graphElement loading');
 
 function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
@@ -281,8 +277,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             case windoww.Components.DefaultNodeComponent.name:
             case windoww.Components.Graph.name:
             case windoww.Components.GraphComponent.name:
-            case windoww.Components.Field.name:
-            case windoww.Components.FieldComponent.name:
+            //case windoww.Components.Field.name:
+            //case windoww.Components.FieldComponent.name:
             case windoww.Components.Vertex.name:
             case windoww.Components.VertexComponent.name:
                 const injectProps: GraphElementOwnProps = {} as any;

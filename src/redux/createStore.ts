@@ -1,5 +1,5 @@
 import {createStore, Store} from "redux";
-import {windoww, IStore, reducer, Action, U} from "../joiner";
+import {Action, IStore, reducer, windoww} from "../joiner";
 
 interface StateExt{}
 export let store: Store<IStore & StateExt, Action> = createStore(reducer);

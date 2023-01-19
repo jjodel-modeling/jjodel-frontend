@@ -2,26 +2,27 @@ import {
     Action,
     CompositeAction,
     CreateElementAction,
+    DeleteElementAction,
+    Dictionary,
+    DocString,
+    DPointerTargetable,
+    getPath,
+    IStore,
+    Log,
+    LPointerTargetable,
+    MyError,
     ParsedAction,
+    PendingPointedByPaths,
+    PointedBy,
+    Pointer,
+    RuntimeAccessibleClass,
+    Selectors,
     SetFieldAction,
     SetRootFieldAction,
-    Log,
     U,
-    MyError,
-    IStore,
-    DPointerTargetable,
-    DeleteElementAction,
-    Pointer,
-    DocString,
-    Dictionary,
-    RuntimeAccessibleClass,
-    LPointerTargetable, store, windoww, getPath, Selectors, createOrOpenModelTab, PointedBy, PendingPointedByPaths
+    windoww
 } from "../../joiner";
 import React from "react";
-
-
-
-
 
 
 function deepCopyButOnlyFollowingPath(oldStateDoNotModify: IStore, action: ParsedAction, prevAction: ParsedAction, newVal: any): IStore {

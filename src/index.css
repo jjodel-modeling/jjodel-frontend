@@ -16,12 +16,6 @@ code {
   box-sizing: border-box;
 }
 
-.ocl_match_old{
-  background:blue;
-  outline: 2px solid red;
-  border: 2px solid purple;
-}
-
 .ocl_match{
   background: #4d4dee;
 }

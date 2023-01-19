@@ -1,42 +1,40 @@
 import type {
-    DVoidVertex,
-    IStore,
-    LVoidVertex,
-    Pointer,
-    GObject,
-    LModelElement,
-    LGraphElement,
-    LViewElement,
-    DGraphElement,
-    LModel,
-    DGraph,
-    Selectorss,
-    DClassifier,
+    DAttribute,
     DClass,
+    DClassifier,
     DEnumerator,
-    LAttribute,
-    LClass,
-    LPackage,
-    LEnumerator,
-    LClassifier,
-    LReference,
+    DGraph,
+    DGraphElement,
     DRefEdge,
+    DVoidVertex,
+    GObject,
+    IStore,
+    LClass,
+    LEnumerator,
+    LGraphElement,
+    LModel,
+    LModelElement,
+    LOperation,
+    LPackage,
     LRefEdge,
-    DAttribute, DEnumLiteral, LEnumLiteral, LOperation
+    LViewElement,
+    LVoidVertex,
+    Pointer
 } from "../../joiner";
 import {
-    DViewElement,
+    DModel,
+    DModelElement,
     DPointerTargetable,
+    DViewElement,
+    Log,
+    LPointerTargetable,
+    MyProxyHandler,
+    RuntimeAccessible,
+    RuntimeAccessibleClass,
     store,
     U,
-    DModel,
-    RuntimeAccessible,
-    LPointerTargetable,
-    Log,
-    DModelElement,
-    RuntimeAccessibleClass,
-    MyProxyHandler,
 } from "../../joiner";
+import {EdgeOptions} from "../store";
 
 enum ViewEClassMatch { // this acts as a multiplier for explicit priority
     MISMATCH = 0,
@@ -55,6 +53,17 @@ export class Selectors{
         return views;
     }
     //Giordano: start
+
+    static removeEdge(id: number): EdgeOptions[] {
+        const state: IStore & GObject = store.getState();
+        const edges: EdgeOptions[] = [];
+        for(let edge of state.edges) {
+            if(edge.id !== id) {
+                edges.push(edge);
+            }
+        }
+        return edges;
+    }
 
     static getAllPrimitiveTypes(): DClassifier[] {
         let state: IStore & GObject = store.getState();
@@ -323,16 +332,16 @@ export class Selectors{
         const data = MyProxyHandler.wrap(id) as GObject;
         let lPackage : LPackage | undefined;
         const classes: LClass[] = [];
-        if (data.className == "DReference") {
+        if (data.className === "DReference") {
             const lClass: LClass = MyProxyHandler.wrap(data.father);
             lPackage = MyProxyHandler.wrap(lClass.father);
         }
-        if (data.className == "DParameter") {
+        if (data.className === "DParameter") {
             const lOperation: LOperation = MyProxyHandler.wrap(data.father);
             const lClass: LClass = MyProxyHandler.wrap(lOperation.father);
             lPackage = MyProxyHandler.wrap(lClass.father);
         }
-        if (data.className == "DOperation") {
+        if (data.className === "DOperation") {
             const lClass: LClass = MyProxyHandler.wrap(data.father);
             lPackage = MyProxyHandler.wrap(lClass.father);
         }

@@ -1,36 +1,38 @@
 import {
-    Dictionary,
-    Pointer,
-    IsActually,
-    GObject,
-    getWParams,
-    Log,
-    SetFieldAction,
-    U,
-    DtoL,
+    BEGIN,
+    Constructors,
+    CreateElementAction,
+    DEdge,
     DeleteElementAction,
-    DGraphElement,
-    Pointers,
-    LtoD,
-    LtoW,
-    WPointerTargetable,
+    Dictionary,
+    DPointerTargetable,
+    DRefEdge,
+    DtoL,
+    END,
+    getWParams,
+    GObject,
+    IStore,
+    Leaf,
+    LEdge,
+    LGraphElement,
+    Log,
+    LogicContext,
+    LPointerTargetable,
+    Node,
     Pack,
     Pack1,
     PackArr,
-    CreateElementAction,
-    Selectors,
-    SetRootFieldAction,
-    Leaf, Node, DUser, Constructors, store, IStore, PointedBy, BEGIN, END, unArr
-} from "../../joiner";
-
-import {
+    Pointer,
+    Pointers,
     RuntimeAccessible,
-    DPointerTargetable,
-    LPointerTargetable,
-    DEdge,
-    LEdge, RuntimeAccessibleClass, DRefEdge, LRefEdge, LGraphElement, GraphSize, LogicContext, DVoidVertex,
+    RuntimeAccessibleClass,
+    Selectors,
+    SetFieldAction,
+    SetRootFieldAction,
+    store,
+    U,
+    WPointerTargetable
 } from "../../joiner";
-import LeaderLine from "leader-line-new";
 
 
 @Node
@@ -1802,38 +1804,39 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         // for (i = 0; i < extendedby.length; i++) { extendedby[i].checkViolations(true); }
     }
 
-    public instance!: boolean;
-
-    get_instance(context: Context): boolean {
-
-        const dClass: DClass = context.data;
-        const lClass: LClass = LClass.from(dClass);
-        const dObject = DObject.new(dClass.name + ' instance');
-        dObject.isRoot = false;
-        dObject.instanceof = [dClass.id];
-        BEGIN()
-        CreateElementAction.new(dObject);
-
-        for(let feature of [...lClass.attributes, ...lClass.references]) {
-            const dValue = DValue.new(feature.name);
-            dValue.instanceof = [feature.id];
-            if(feature.className === 'DAttribute') {
-                switch (feature.type.name) {
-                    default: dValue.value = 'NULL'; break;
-                    case 'EString': dValue.value = ''; break;
-                    case 'EInt': dValue.value = '0'; break;
-                    case 'EBoolean': dValue.value = 'false'; break;
-                }
-            } else {
-                dValue.value = 'NULL';
-            }
-            CreateElementAction.new(dValue);
-            SetFieldAction.new(dObject, 'features', dValue.id, '+=', false);
-        }
-        END()
-
+    public instance(): boolean {
         return true;
     }
+
+    private get_instance(context: Context): () => boolean {
+        return () => {
+            const dClass: DClass = context.data;
+            const lClass: LClass = LClass.from(dClass);
+            const dObject = DObject.new(dClass.name + ' instance');
+            dObject.isRoot = false;
+            dObject.instanceof = [dClass.id];
+            CreateElementAction.new(dObject);
+
+            for(let feature of [...lClass.attributes, ...lClass.references]) {
+                const dValue = DValue.new(feature.name);
+                dValue.instanceof = [feature.id];
+                if(feature.className === 'DAttribute') {
+                    switch (feature.type.name) {
+                        default: dValue.value = 'NULL'; break;
+                        case 'EString': dValue.value = ''; break;
+                        case 'EInt': dValue.value = '0'; break;
+                        case 'EBoolean': dValue.value = 'false'; break;
+                    }
+                } else {
+                    dValue.value = 'NULL';
+                }
+                CreateElementAction.new(dValue);
+                SetFieldAction.new(dObject, 'features', dValue.id, '+=', false);
+            }
+            return true;
+        };
+    }
+
 }
 DClassifier.subclasses.push(DClass);
 LClassifier.subclasses.push(LClass);

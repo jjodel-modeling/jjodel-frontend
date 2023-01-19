@@ -1,5 +1,5 @@
 import React, {Dispatch, PureComponent, ReactNode} from "react";
-import { connect } from "react-redux";
+import {connect} from "react-redux";
 import type {DGraph, Dictionary, DocString, IStore, Pointer} from "../../joiner";
 import './defaultColorScheme.scss';
 

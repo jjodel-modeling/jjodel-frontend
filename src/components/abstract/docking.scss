@@ -75,7 +75,7 @@
   width: 30px;
   height: 100%; // calc(100% - 5px);
   // margin-top: 5px;
-  background-image: url("../../img/google/2x/baseline_fullscreen_black_24dp.png");
+  //background-image: url("../../img/google/2x/baseline_fullscreen_black_24dp.png");
   background-size: cover;
   background-color: var(--background1);
   // background-blend-mode: overlay; // | soft-light
@@ -88,7 +88,7 @@
 }
 
 .dock-mbox .dock-panel.dock-style-card .dock-panel-max-btn{
-  background-image: url("../../img/google/2x/baseline_fullscreen_exit_black_24dp.png");
+  //background-image: url("../../img/google/2x/baseline_fullscreen_exit_black_24dp.png");
 }
 
 /* different color for the focused panel */
