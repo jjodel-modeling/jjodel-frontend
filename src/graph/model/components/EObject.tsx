@@ -3,7 +3,7 @@ import React, {Dispatch, ReactElement, useEffect} from "react";
 import {connect} from "react-redux";
 import EValue from "./EValue";
 import {LObject} from "../../../model/logicWrapper";
-import {GObject, SetRootFieldAction} from "../../../joiner";
+import {GObject, Input, SetRootFieldAction} from "../../../joiner";
 import $ from "jquery";
 
 function EObjectComponent(props: AllProps) {
@@ -32,11 +32,20 @@ function EObjectComponent(props: AllProps) {
 
     });
 
-    return <div className={"EObject-container"} id={object.id} onClick={click}>
-        <h5>{object.name}</h5>
-        {object.features.map((value, index) => {
-            return <EValue key={index} value={value} />
-        })}
+    return <div className={object.className + " default-EObject"} id={object.id} onClick={click}>
+        <div className={"EObject-header"}>
+            <div className={"EObject-header-label"}> <b>{object.instanceof[0].name}:</b>
+                <Input className={"mx-1 transparent-input"} field={"name"} obj={object}
+                       pattern={"[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*"} />
+            </div>
+        </div>
+        <div className={"children"}>
+            {(object.features.length > 0) && <div className={"children-EValue"}>
+                {object.features.map((value, index) => {
+                    return <EValue key={index} value={value} />
+                })}
+            </div>}
+        </div>
     </div>
 }
 interface OwnProps { object: LObject }

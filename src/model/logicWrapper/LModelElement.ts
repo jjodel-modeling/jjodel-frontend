@@ -128,14 +128,64 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     // name -> redux (es. DClass -> classs)
     protected get_property(context: Context): this["property"]{
-        return (this.className.substring(1) + "s").toLowerCase() as any;
+        let property = context.data.className.toLowerCase();
+        property = property.substring(1);
+        property = property + "s";
+        if(property === "enumliterals") {
+            property = "literals";
+        }
+        if(property === "enumerators" || property === "classs") {
+            property = "classifiers";
+        }
+        return property as keyof DModelElement;
     }
     protected targetRemoved(field: keyof DPointerTargetable): void {
         this.delete();
     }
 
+
     protected get_delete(context: Context): () => void {
-        let ret = () => {};
+        const obj = context.proxyObject;
+
+        let property = obj.property;
+        const father = obj.father.id;
+        const pointerPairs = new Set<string[]>();
+
+        for(let pointedBy of obj.pointedBy) {
+            const str = pointedBy.source;
+            const pointer = str.substring(str.indexOf(".") + 1, str.lastIndexOf("."));
+            const label = str.substring(str.lastIndexOf(".") + 1);
+            if(pointer) { pointerPairs.add([pointer, label]); }
+        }
+
+        for(let pair of pointerPairs) {
+            const pointer = pair[0]; const label = pair[1];
+            const deleted = Selectors.getDeleted();
+            const lPointer: LPointerTargetable = LPointerTargetable.fromPointer(pointer);
+            const ignoredLabels = ["extendedBy"];
+            if(lPointer && lPointer.id !== father && !ignoredLabels.includes(label) && !deleted.includes(pointer)) {
+                SetRootFieldAction.new("deleted", pointer, "+=", false);
+                lPointer.delete();
+            }
+        }
+
+        const dFather = DPointerTargetable.fromPointer(father);
+        if(dFather.className === "DPackage" && (property as string) === "packages") {
+            property = 'subpackages' as keyof DModelElement;
+        }
+        const fatherProperties = dFather[property] as string[];
+        const list = fatherProperties.filter((prop) => { return prop !== obj.id });
+        const ret = () => {
+            BEGIN();
+            SetFieldAction.new(dFather, property, list, "", false);
+            DeleteElementAction.new(obj.id);
+            END();
+        }
+        return ret;
+    }
+
+    /*
+    protected get_delete_old(context: Context): () => void {
         const proxyObject = context.proxyObject;
         const property = proxyObject.property;
         const father = proxyObject.father.__raw;
@@ -144,7 +194,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             //todo: fix pointedBy field
             //source.targetRemoved(pointedBy.field);
         }
-        ret = () => {
+        const ret = () => {
+            alert("delete from MODEL");
             // al padre tolgo il nodo (perche property è keyof DModelElement e non keyof IStore ??)
             SetFieldAction.new(father, property, U.removeFromList(father[property] as string[], proxyObject.id));
 
@@ -156,6 +207,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
         return ret;
     }
+     */
+
 
     // @ts-ignore
     private get_until_parent<D extends Constructor, L extends DtoL<InstanceType<D>>>(l: LModelElement, d: DModelElement, father: D): L | null {
@@ -312,7 +365,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         if (!dPackage) return ret;
         const lPackage: LPackage = LPointerTargetable.from(dPackage);
         let name = 'class_' + 0;
-        let childrenNames: (string)[] = lPackage.childrens.map( c => (c as LClassifier).name);
+        let childrenNames: (string)[] = lPackage.childrens.map( c => (c as LClass).name);
         name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0);
 
         ret = function(){
@@ -330,17 +383,34 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         if (!dClass) return () => {};
         const lClass: LClass = LPointerTargetable.from(dClass);
         let name = 'attribute_' + 0;
-        let childrenNames: (string)[] = lClass.features.map( c => (c).name);
+        let childrenNames: (string)[] = lClass.childrens.map( c => (c as LAttribute).name);
         name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0);
         const lString: LClassifier = LPointerTargetable.from(Selectors.getFirstPrimitiveTypes());
 
         const ret = function () {
             const dAttribute = DAttribute.new(name, lString.id);
             CreateElementAction.new(dAttribute);
+            const lAttribute = LAttribute.fromPointer(dAttribute.id);
             const wClass = WPointerTargetable.fromD(dClass);
             wClass.attributes = [...dClass.attributes, dAttribute];
             const wAttribute = WPointerTargetable.fromD(dAttribute);
             wAttribute.type = lString.id;
+
+            const objects = Selectors.getObjects().filter((obj) => {return obj.instanceof[0].id === dClass.id});
+            if(objects.length > 0){
+                for(let obj of objects) {
+                    const dValue = DValue.new(dAttribute.name);
+                    dValue.instanceof = [dAttribute.id];
+                    switch (lAttribute.type.name) {
+                        default: dValue.value = 'NULL'; break;
+                        case 'EString': dValue.value = ''; break;
+                        case 'EInt': dValue.value = '0'; break;
+                        case 'EBoolean': dValue.value = 'false'; break;
+                    }
+                    CreateElementAction.new(dValue);
+                    SetFieldAction.new(obj.__raw, 'features', dValue.id, '+=', false);
+                }
+            }
         }
         ret();
         return ret;
@@ -832,6 +902,23 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
 
     protected get_type(context: Context): this["type"] { return LPointerTargetable.from(context.data.type); }
     protected set_type(val: Pack1<this["type"]>, context: Context): boolean {
+        switch(context.data.className) {
+            default: break;
+            case "DReference":
+                const oldType = context.data.type;
+                if(oldType) {
+                    const oldClass: WClass = WPointerTargetable.fromPointer(oldType);
+                    oldClass.referencedBy = oldClass.referencedBy.filter((ref) => {return ref !== context.data.id});
+                }
+                const newType = val;
+                if(newType) {
+                    const newClass: WClass = WPointerTargetable.fromPointer(newType as string);
+                    newClass.referencedBy = [...newClass.referencedBy, context.data.id as string];
+                }
+                break;
+            case "DAttribute":
+                break;
+        }
         SetFieldAction.new(context.data, 'type', Pointers.from(val), "", true);
         return true;
     }
@@ -870,13 +957,14 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         return true;
     }
 
-
+    /*
     protected get_delete(context: Context): () => void {
         // todo: aggiusta questo e fai 90% in una funzione in LModelElement che aggiusta i pointedBy
         //  e fa le eliminazioni a cascata, e ridefinisci solo se devi fare azioni particolari incasi rari o cambiare il comportamento default (set to something else instead of delete?)
         const ret = () => { alert("todo classifier's delete"); } // potrebbe essere generalizzato invece di fare class.delete(), aggiustando modelElement.delete() che iteri i sottoelementi per eliminarli tutti.
         return ret;
     }
+      */
 }
 
 let wtyped: WTypedElement = null as any;
@@ -1081,7 +1169,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.classifiers;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
+        //BEGIN();
         SetFieldAction.new(context.data, 'classifiers', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -1093,7 +1181,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        END();
+        //END();
         return true;
     }
 
@@ -1106,7 +1194,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.subpackages;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
+        //BEGIN();
         SetFieldAction.new(context.data, 'subpackages', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -1118,7 +1206,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        END();
+        //END();
         return true;
     }
 
@@ -1128,6 +1216,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         return true;
     }
 
+    /*
     protected get_delete(context: Context): () => void {
         let ret = () => {};
         const dPackage: DPackage = context.data;
@@ -1154,6 +1243,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         ret();
         return ret;
     }
+    */
 }
 // @RuntimeAccessible export class _WPackage extends _WNamedElement { }
 // export type WPackage = DPackage | LPackage | _WPackage;
@@ -1243,7 +1333,7 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.parameters;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
+        //BEGIN();
         SetFieldAction.new(context.data, 'parameters', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -1255,10 +1345,10 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        END();
+        //END();
         return true;
     }
-
+    /*
     protected get_delete(context: Context): () => void {
         const dOperation: DOperation = context.data;
         const dClass: DClass = Selectors.getDElement<DClass>(dOperation.father);
@@ -1275,6 +1365,7 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
         ret();
         return ret;
     }
+    */
     protected get_type(context: Context): this["type"] {
         return context.proxyObject.parameters[0].type;
     }
@@ -1350,7 +1441,7 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
     required!: boolean;
     // personal
 
-
+    /*
     protected get_delete(context: LogicContext<DParameter>): () => void {
         let ret = () => {};
         const dParameter: DParameter = context.data;
@@ -1374,6 +1465,7 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
         ret();
         return ret;
     }
+    */
 }
 DTypedElement.subclasses.push(DParameter);
 LTypedElement.subclasses.push(LParameter);
@@ -1507,7 +1599,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.operations;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
+        //BEGIN();
         SetFieldAction.new(context.data, 'operations', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -1519,7 +1611,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        END();
+        //END();
         return true;
     }
 
@@ -1532,7 +1624,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.features;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
+        //BEGIN();
         SetFieldAction.new(context.data, 'features', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -1544,7 +1636,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        END();
+        //END();
         return true;
     }
 
@@ -1557,7 +1649,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.references;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
+        //BEGIN();
         SetFieldAction.new(context.data, 'references', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -1569,7 +1661,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        END();
+        //END();
         return true;
     }
 
@@ -1582,7 +1674,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.attributes;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
+        //BEGIN();
         SetFieldAction.new(context.data, 'attributes', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -1594,7 +1686,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        END();
+        //END();
         return true;
     }
 
@@ -1661,7 +1753,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
 
 
-
+    /*
     protected get_delete(context: Context): () => void {
         const dClass: DClass = context.data;
         const dPackage: DPackage = Selectors.getDElement<DPackage>(dClass.father);
@@ -1671,19 +1763,6 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             const lChild: LAttribute | LReference = LPointerTargetable.from(dChild);
             lChild._delete(context);
         }
-        /*
-        const ret = () => {  todo: rather than doing this, i think we should generalize using pointed_by. this would not work anyway for multiple operations sharing the same exception. nor for references.
-            if(dFather.className === "DPackage") {
-                const dPackage = dFather;
-                new SetFieldAction(dPackage, "classifiers", U.removeFromList((dPackage as GObject).classifiers, dClass.id));
-            }
-            if(dFather.className === "DOperation") {
-                const dOperation = dFather;
-                new SetFieldAction(dOperation, "exceptions", U.removeFromList((dOperation as GObject).exceptions, dClass.id));
-            }
-            new SetRootFieldAction("classs", U.removeFromList(Selectors.getAllClasses(), dClass.id));
-*/
-
         const ret = () => {
             SetFieldAction.new(dPackage, "classifiers", U.removeFromList(dPackage.classifiers, dClass.id), '', true);
             //new SetRootFieldAction("classs", U.removeFromList(Selectors.getAllClasses(), dClass.id));
@@ -1692,6 +1771,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         ret();
         return ret;
     }
+    */
+
 
     public superclasses!: LClass[];
     public allSubClasses!: LClass[];
@@ -2165,7 +2246,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         return true;
     }
 
-
+    /*
     protected get_delete(context: Context): () => void {
         const dReference: DReference = context.data;
         const dClass: DClass = Selectors.getDElement<DClass>(dReference.father);
@@ -2189,6 +2270,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         ret();
         return ret;
     }
+    */
 }
 DStructuralFeature.subclasses.push(DReference);
 LStructuralFeature.subclasses.push(LReference);
@@ -2272,6 +2354,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         return true;
     }
 
+    /*
     protected get_delete(context: Context): () => void {
         const dAttribute: DAttribute = context.data;
         const dClass: DClass = Selectors.getDElement<DClass>(dAttribute.father);
@@ -2285,6 +2368,8 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         ret();
         return ret;
     }
+
+     */
 
 }
 DStructuralFeature.subclasses.push(DAttribute);
@@ -2337,6 +2422,7 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
         return true;
     }
 
+    /*
     protected get_delete(context: Context): () => void {
         const dEnumLiteral: DEnumLiteral = context.data;
         const dEnumerator: DEnumerator = Selectors.getDElement<DEnumerator>(dEnumLiteral.father);
@@ -2348,6 +2434,8 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
         ret();
         return ret;
     }
+
+     */
 }
 DNamedElement.subclasses.push(DEnumLiteral);
 LNamedElement.subclasses.push(LEnumLiteral);
@@ -2419,7 +2507,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.literals;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
+        //BEGIN();
         SetFieldAction.new(context.data, 'literals', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -2431,10 +2519,10 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        END();
+        //END();
         return true;
     }
-
+/*
     protected get_delete(context: Context): () => void {
         const dEnumerator: DEnumerator = context.data;
         const dPackage: DPackage = Selectors.getDElement<DPackage>(dEnumerator.father);
@@ -2462,25 +2550,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         return ret;
     }
 
-/*
-    protected get_delete2(context: Context): () => void {
-        let ret = () => {};
-        const data = context.proxyObject;
-        const father = LPointerTargetable.from(data.father);
-        const reduxName = U.classnameToReduxConverter(data.className); // DClass -> classs
-        const objName = U.classnameToObjConverter(data.className); // DClass -> classes
-        if (reduxName && objName) {
-            ret = () => {
-                // tolgo al padre il figlio            SetFieldAction.new(father.id, reduxName, U.removeFromList(father[objName], data.id));
-                // tolgo i figli al nodo
-                for (let child of data.childrens) { child.delete(); }
-                //tolgo il  nodo
-                SetRootFieldAction.new(reduxName, U.removeFromList(Selectors["getAll" + objName.charAt(0).toUpperCase() + objName.slice(1)] as any[], data.id));
-                DeleteElementAction.new(data.id);
-            }
-        }
-        return ret;
-    }*/
+ */
 }
 DDataType.subclasses.push(DEnumerator);
 LDataType.subclasses.push(LEnumerator);
@@ -2708,7 +2778,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.packages;
         const diff = U.arrayDifference(oldList, list);
-        BEGIN();
+        //BEGIN();
         SetFieldAction.new(context.data, 'packages', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -2720,7 +2790,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        END();
+        //END();
         return true;
     }
     /*

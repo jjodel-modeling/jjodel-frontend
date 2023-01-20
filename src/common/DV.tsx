@@ -12,7 +12,7 @@ export default class DV {
         return `<div className={"w-100 h-100"}>
             <div className={"default-model"}>
                 <div className={"children"}>
-                    {this.data.childrens.map((pkg, i) => { 
+                    {this.data.childrens.map((pkg, i) => {
                         return <DefaultNode key={i} data={pkg.id} />})
                     }
                 </div>
@@ -44,7 +44,7 @@ export default class DV {
 
     public static classView(): string {
         return (`<div className={"w-100 h-100"}>
-        {this.data.subNodes.filter((node) => node.model.className === "DReference").map((refNode) => {
+        {this.data.subNodes.filter((node) => node.model && node.model.className === "DReference").map((refNode) => {
             return <Edges source={refNode} />})}       
             
         {this.data.nodes.map((node) => {return <Edges source={node} />})}

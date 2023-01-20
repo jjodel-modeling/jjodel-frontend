@@ -898,7 +898,12 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
 
     public delete(): void { throw this.wrongAccessMessage("delete"); }
     public _delete(context: Context): void { new DeleteElementAction(context.data); }
-    protected get_delete(context: Context): () => void { return () => this._delete(context); }
+    protected get_delete(context: Context): () => void {
+        return () => {
+            alert("Delete in LPOINTER")
+            this._delete(context);
+        }
+    }
 
     public get__extends(superClassName: string, context: LogicContext<DPointerTargetable>): boolean {
         return RuntimeAccessibleClass.extends(context.data.className, superClassName);

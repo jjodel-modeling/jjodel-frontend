@@ -12,15 +12,11 @@ function M1Component(props: AllProps) {
     const classes = model.classes;
     const objects = props.objects;
 
-    const test = (concept: LClass) => {
-        concept.instance();
-    }
-
     return <div className={"h-100 w-100"}>
         {/* LEFT BAR */}
         <div className={"concepts-container shadow"}>
-            {classes && classes.map((concept: LClass) => {
-                return <div className={"item"} onClick={() => test(concept)}>
+            {classes && classes.filter((concept) => {return !concept.abstract}).map((concept: LClass) => {
+                return <div className={"item"} onClick={() => concept.instance()}>
                     +{concept.name}
                 </div>
             })}
@@ -45,7 +41,7 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const objects: LObject[] = [];
     const ids = state.objects;
     for(let id of ids) {
-        const object: LObject = LObject.from(id);
+        const object: LObject = LObject.fromPointer(id);
         if(model.classes) {
             // here I'm checking if the object is an instance of a class that is in the fixed metamodel
             const check = model.classes.filter((concept) => {return concept.id === object.instanceof[0].id});

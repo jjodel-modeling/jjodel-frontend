@@ -1,15 +1,4 @@
-$pkg-size: 30em;
-$class-size: 13em;
-$enum-size: 13em;
-$feature-text-size: .8rem;
-$radius: .2em;
-
-$background: white;
-$pkg-color: green;
-$class-color: red;
-$enum-color: orange;
-$feature-color: whitesmoke;
-$border-color: #0000005c;
+@import "./palette";
 
 /* ------MODEL------ */
 .default-model {
@@ -180,6 +169,12 @@ $border-color: #0000005c;
 
 .children-operations {
   border-bottom: 1px solid $border-color;
+}
+
+/*---OBJECT---*/
+.DObject {
+  min-width: 13em;
+  min-height: 6em;
 }
 
 

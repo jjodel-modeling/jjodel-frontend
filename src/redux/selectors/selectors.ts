@@ -19,13 +19,13 @@ import type {
     LRefEdge,
     LViewElement,
     LVoidVertex,
-    Pointer
+    Pointer,
 } from "../../joiner";
 import {
     DModel,
-    DModelElement,
+    DModelElement, DObject,
     DPointerTargetable,
-    DViewElement,
+    DViewElement, LObject,
     Log,
     LPointerTargetable,
     MyProxyHandler,
@@ -53,6 +53,27 @@ export class Selectors{
         return views;
     }
     //Giordano: start
+
+    public static getObjects(): LObject[] {
+        let state: IStore & GObject = store.getState();
+        const ptrs: Pointer<DObject, 0, 'N'> = Object.values((state).objects);
+        const dObjects: DObject[] = ptrs.map<DObject>( (ptr) => state.idlookup[ptr] as DObject);
+        const lObjects: LObject[] = [];
+        for(let dObject of dObjects) {
+            lObjects.push(LObject.fromPointer(dObject.id));
+        }
+        return lObjects;
+    }
+
+    public static getDeleted(): string [] {
+        const state: IStore & GObject = store.getState();
+        return state.deleted;
+    }
+
+    public static getState(): any {
+        const state: IStore & GObject = store.getState();
+        return state;
+    }
 
     static removeEdge(id: number): EdgeOptions[] {
         const state: IStore & GObject = store.getState();
@@ -327,6 +348,8 @@ export class Selectors{
 
 
     //// giordano part
+
+
 
     public static getAllPackageClasses(id: string): LClass[] {
         const data = MyProxyHandler.wrap(id) as GObject;

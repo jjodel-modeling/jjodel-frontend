@@ -1,3 +1,5 @@
+@import "../vertex/palette";
+
 .concepts-container {
   position: absolute;
   min-height: 100%;
@@ -23,16 +25,56 @@
   background-image: url("../../static/svg/graph.svg"); background-repeat: repeat;
 }
 
-.EObject-container {
+/*OBJECT*/
+
+.default-EObject {
+  background-color: $background;
+  border: 1px solid $border-color;
+  border-left: .2em solid $class-color;
+  border-radius: $radius;
   position: absolute;
-  height: 200px;
-  width: 200px;
-  border: 2px solid red;
-  z-index: 1;
+  overflow: hidden;
 }
-.EValue-container {
-  position: relative;
+.EObject-header {
   width: 100%;
-  background-color: green;
-  z-index: 2;
+  border-bottom: 1px solid $border-color;
 }
+.EObject-header-label {
+  width: 100%;
+  padding: calc($class-size / 40);
+  display: flex;
+}
+.EObject-header-label > b {
+  color: $class-color;
+}
+
+
+
+/*---UTILITY---*/
+.children {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+}
+
+/* ------ATTRIB------ */
+.default-EValue {
+  display: flex;
+  width: 100%;
+  background: $feature-color;
+}
+.default-EValue-name {
+  text-align: left;
+  width: 50%;
+  font-size: $feature-text-size;
+}
+.default-EValue-value {
+  position: absolute;
+  text-align: right;
+  right: 0;
+  font-size: $feature-text-size;
+}
+.children-EValue {
+  border-bottom: 1px solid $border-color;
+}
+

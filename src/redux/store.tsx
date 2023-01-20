@@ -107,6 +107,8 @@ export class IStore {
     edges: EdgeOptions[] = [];
     edgesCounter: number = 0;
 
+    deleted : string[] = [];
+
     objects: Pointer<DObject, 0, 'N', LObject> = [];
     values: Pointer<DValue, 0, 'N', LValue> = [];
 

@@ -47,7 +47,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
                     <DefaultNode data={this.model.id} nodeid={this.graph.id} graphid={this.graph.id} />
                 </div>
         };
-        this.m1 = { title: "M1", group: "1", closable: false, content:
+        this.m1 = { title: "Model", group: "1", closable: false, content:
                 <div className={"h-100 w-100"}>
                     <M1 modelid={this.model.id} />
                 </div>
