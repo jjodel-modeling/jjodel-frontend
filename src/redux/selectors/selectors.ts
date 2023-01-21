@@ -24,10 +24,10 @@ import type {
 import {
     DModel,
     DModelElement, DObject,
-    DPointerTargetable,
+    DPointerTargetable, DValue,
     DViewElement, LObject,
     Log,
-    LPointerTargetable,
+    LPointerTargetable, LValue,
     MyProxyHandler,
     RuntimeAccessible,
     RuntimeAccessibleClass,
@@ -63,6 +63,16 @@ export class Selectors{
             lObjects.push(LObject.fromPointer(dObject.id));
         }
         return lObjects;
+    }
+    public static getValues(): LValue[] {
+        let state: IStore & GObject = store.getState();
+        const ptrs: Pointer<DValue, 0, 'N'> = Object.values((state).values);
+        const dValues: DValue[] = ptrs.map<DValue>( (ptr) => state.idlookup[ptr] as DValue);
+        const lValues: LValue[] = [];
+        for(let dValue of dValues) {
+            lValues.push(LValue.fromPointer(dValue.id));
+        }
+        return lValues;
     }
 
     public static getDeleted(): string [] {

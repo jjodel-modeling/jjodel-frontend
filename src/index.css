@@ -19,3 +19,7 @@ code {
 .ocl_match{
   background: #4d4dee;
 }
+
+.w-65 {
+  width: 65%!important;
+}

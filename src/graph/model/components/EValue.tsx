@@ -1,9 +1,9 @@
 import {IStore} from "../../../redux/store";
 import React, {Dispatch, ReactElement, useEffect, useState} from "react";
 import {connect} from "react-redux";
-import {LStructuralFeature, LValue} from "../../../model/logicWrapper";
-import {SetRootFieldAction} from "../../../redux/action/action";
-import {Input} from "../../../joiner";
+import {LEnumerator, LObject, LStructuralFeature, LValue} from "../../../model/logicWrapper";
+import {SetFieldAction, SetRootFieldAction} from "../../../redux/action/action";
+import {Input, Selectors} from "../../../joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
 
 
@@ -11,7 +11,7 @@ function EValueComponent(props: AllProps) {
 
     const value = props.value;
     const feature: LStructuralFeature = LStructuralFeature.from(value.instanceof[0]);
-    const [type, setType] = useStateIfMounted('text');
+    const [type, setType] = useStateIfMounted<'text'|'checkbox'|'number'>('text');
     const [css, setCss] = useStateIfMounted('');
 
     useEffect(() => {
@@ -21,13 +21,18 @@ function EValueComponent(props: AllProps) {
             case 'EBoolean': setType('checkbox'); break;
         }
         if(type !== "checkbox") {
-            setCss('w-75')
+            setCss('w-65')
         } else {
             setCss('my-auto');
         }
     })
 
-
+    const objectRef = () => {
+        const type = typeof value.value;
+        const wrong = ['boolean', 'number', 'string']
+        if(!wrong.includes(type)) { return (value.value as LObject).id; }
+        return 'NULL';
+    }
 
     const click = (e: React.MouseEvent<HTMLDivElement>) => {
         SetRootFieldAction.new('_lastSelected', {
@@ -38,12 +43,41 @@ function EValueComponent(props: AllProps) {
 
     return <div className={value.className + " default-EValue"} id={value.id} onClick={click}>
         <div className={"default-EValue-name ms-1"}>
-            {feature.name}
+            {feature.name}:&nbsp;<b>{feature.type.name}</b>
         </div>
-        <div className={"default-EValue-value"}>
-            <Input className={css + " transparent-input text-end"} field={"value"} obj={value} type={type as any}
-                   pattern={"[a-zA-Z_\u0024][0-9a-zA-Zd_\u0024]*"} />
-        </div>
+        {feature.className === "DAttribute" &&  feature.type.className === "DClass" &&
+            <div className={"default-EValue-value"}>
+                <Input className={css + " transparent-input text-end"} field={"value"} obj={value} type={type}
+                       pattern={"[a-zA-Z_\u0024][0-9a-zA-Zd_\u0024]*"}/>
+            </div>
+        }
+        {feature.className === "DAttribute" &&  feature.type.className === "DEnumerator" &&
+            <div className={"default-EValue-value"}>
+                <select onChange={(event) => {
+                    const val = event.target.value;
+                    SetFieldAction.new(value.__raw, 'value', val, '', false);
+                }}>
+                    <option value={0}>-----</option>
+                    {(feature.type as LEnumerator).literals.map((literal, index) => {
+                        return <option key={index} value={index + 1}>{literal.name}</option>
+                    })}
+                </select>
+            </div>
+        }
+        {feature.className === "DReference" &&
+            <div className={"default-EValue-value"}>
+                <select onChange={(event) => {
+                    const val = event.target.value;
+                    SetFieldAction.new(value.__raw, 'value', val, '', false);
+                }}>
+
+                    <option value={'NULL'}>NULL</option>
+                    {Selectors.getObjects().filter((obj) => {return obj.instanceof[0].id === value.instanceof[0].type.id}).map((obj) => {
+                        return <option value={obj.id}>{obj.name}</option>
+                    })}
+                </select>
+            </div>
+        }
     </div>
 }
 interface OwnProps { value: LValue }

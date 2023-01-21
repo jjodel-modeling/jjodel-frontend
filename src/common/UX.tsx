@@ -35,4 +35,12 @@ export class UX{
             lItem.delete();
         }
     }
+    public static async info(text: string) {
+        const MySwal = withReactContent(Swal);
+        const confirm = await MySwal.fire({
+            title: text,
+            showCancelButton: false,
+            confirmButtonText: "Got It"
+        });
+    }
 }

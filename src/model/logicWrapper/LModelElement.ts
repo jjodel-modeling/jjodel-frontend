@@ -30,7 +30,7 @@ import {
     SetFieldAction,
     SetRootFieldAction,
     store,
-    U,
+    U, UX,
     WPointerTargetable
 } from "../../joiner";
 
@@ -396,16 +396,17 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             const wAttribute = WPointerTargetable.fromD(dAttribute);
             wAttribute.type = lString.id;
 
+            // update DObject
             const objects = Selectors.getObjects().filter((obj) => {return obj.instanceof[0].id === dClass.id});
             if(objects.length > 0){
                 for(let obj of objects) {
                     const dValue = DValue.new(dAttribute.name);
                     dValue.instanceof = [dAttribute.id];
                     switch (lAttribute.type.name) {
-                        default: dValue.value = 'NULL'; break;
-                        case 'EString': dValue.value = ''; break;
-                        case 'EInt': dValue.value = '0'; break;
-                        case 'EBoolean': dValue.value = 'false'; break;
+                        case 'EString': dValue.value = 'empty'; break;
+                        case 'EInt': dValue.value = 0; break;
+                        case 'EBoolean': dValue.value = false; break;
+                        default: dValue.value = 0; break;
                     }
                     CreateElementAction.new(dValue);
                     SetFieldAction.new(obj.__raw, 'features', dValue.id, '+=', false);
@@ -432,6 +433,18 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             wReference.type = dClass.id;
             const wClass = WPointerTargetable.fromD(dClass);
             wClass.references = [...dClass.references, dReference];
+
+            // update DObject
+            const objects = Selectors.getObjects().filter((obj) => {return obj.instanceof[0].id === dClass.id});
+            if(objects.length > 0){
+                for(let obj of objects) {
+                    const dValue = DValue.new(dReference.name);
+                    dValue.instanceof = [dReference.id];
+                    dValue.value = 'NULL';
+                    CreateElementAction.new(dValue);
+                    SetFieldAction.new(obj.__raw, 'features', dValue.id, '+=', false);
+                }
+            }
         }
         ret();
         return ret;
@@ -521,7 +534,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return ret;
     }
 
-    // (exception: Pack1<LClassifier>) => void #prima era cosi
     protected get_addException(context: Context): () => void {
         let ret = () => {};
         const dOperation: DOperation | null = (context.data?.className === "DOperation") ? context.data as DOperation : null;
@@ -533,16 +545,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         }
         ret();
         return ret;
-    }
-
-    /*
-    protected _addException(operation: DOperation, exception: Pack1<LClassifier>, context: Context): void {
-        SetFieldAction.new(operation, "exceptions", Pointers.from(exception), '+=', true);
-    }
-    */
-
-    protected _addException(dOperation: DOperation, dClass: DClass): void {
-        SetFieldAction.new(dOperation, "exceptions", dClass.id, '+=', true);
     }
 
     // activated by user in JSX
@@ -560,51 +562,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     // chiedere al prof: cosa può lanciato come eccezione: se tutte le classi o se solo quelle che estendono Exception
     public addException(exception?: DClassifier): () => void { throw this.wrongAccessMessage("AddException"); }
     public addChild(type: string): void { this.cannotCall('addAttribute', type); }
-
-    private static addOperation_ (dClass: DClass, dParameter: DParameter, dOperation: DOperation): void {
-        CreateElementAction.new(dParameter);
-        CreateElementAction.new(dOperation);
-        SetFieldAction.new(dOperation, "parameters", dParameter.id, '+=', true);
-        SetFieldAction.new(dClass, "operations", dOperation.id, '+=', true);
-    }
-    private static addParameter_(dOperation: DOperation, dParameter: DParameter): void {
-        CreateElementAction.new(dParameter);
-        SetFieldAction.new(dOperation, "parameters", dParameter.id, '+=', true);
-    }
-    private static addException_(dOperation: DOperation, dException: DClassifier): void {
-        CreateElementAction.new(dException);
-        SetFieldAction.new(dOperation, "exceptions", dException.id, '+=', true);
-    }
-    private static addReference_(dClass: DClass, dReference: DReference, dRefEdge: DRefEdge): void {
-        CreateElementAction.new(dReference);
-        SetFieldAction.new(dClass, "references", dReference.id, '+=', true);
-        CreateElementAction.new(dRefEdge);
-        // new SetRootFieldAction("refEdges", dRefEdge.id, '+=', true); // todo: la creazione di una ref non dovrebbe automaticamente implicare la creazione di un arco, ma per test per ora ok
-    }
-    private static addAttribute_(dClass: DClass, dAttribute: DAttribute): void {
-        CreateElementAction.new(dAttribute);
-        SetFieldAction.new(dClass, 'attributes', dAttribute.id, '+=', true);
-    }
-    private static addClass_(dPackage: DPackage, dClass: DClass): void {
-        CreateElementAction.new(dClass);
-        SetFieldAction.new(dPackage, 'classifiers', dClass.id, '+=', true);
-    }
-    private static addPackage_(dModel: DModel, dPackage: DPackage): void {
-        CreateElementAction.new(dPackage);
-        SetFieldAction.new(dModel, 'packages', dPackage.id, '+=', true);
-    }
-    private static addSubPackage_(dPackage: DPackage, dSubPackage: DPackage): void {
-        CreateElementAction.new(dSubPackage);
-        SetFieldAction.new(dPackage, 'subpackages', dSubPackage.id, '+=', true);
-    }
-    private static addEnumerator_(dPackage: DPackage, dEnumerator: DEnumerator): void {
-        CreateElementAction.new(dEnumerator);
-        SetFieldAction.new(dPackage, 'classifiers', dEnumerator.id, '+=', true);
-    }
-    private static addEnumLiteral_(dEnum: DEnumerator, dLiteral: DEnumLiteral): void {
-        CreateElementAction.new(dLiteral);
-        SetFieldAction.new(dEnum, "literals", dLiteral.id, '+=', true);
-    }
 }
 
 /*function isValidPointer<T extends DPointerTargetable = DModelElement, LB extends number = 0, UB extends number = 1, RET extends LPointerTargetable = LModelElement>
@@ -902,22 +859,24 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
 
     protected get_type(context: Context): this["type"] { return LPointerTargetable.from(context.data.type); }
     protected set_type(val: Pack1<this["type"]>, context: Context): boolean {
-        switch(context.data.className) {
-            default: break;
-            case "DReference":
-                const oldType = context.data.type;
-                if(oldType) {
-                    const oldClass: WClass = WPointerTargetable.fromPointer(oldType);
-                    oldClass.referencedBy = oldClass.referencedBy.filter((ref) => {return ref !== context.data.id});
-                }
-                const newType = val;
-                if(newType) {
-                    const newClass: WClass = WPointerTargetable.fromPointer(newType as string);
-                    newClass.referencedBy = [...newClass.referencedBy, context.data.id as string];
-                }
-                break;
-            case "DAttribute":
-                break;
+        // update DObject values with the new default one
+        const values = Selectors.getValues().filter((value) => {return value.instanceof[0].id === context.data.id});
+        let defaultVal: number|boolean|string = '';
+        const type = LModelElement.fromPointer(Pointers.from(val));
+        if(context.data.className === 'DAttribute') {
+            switch(type.name) {
+                case 'EString': defaultVal = 'empty'; break;
+                case 'EInt': defaultVal = 0; break;
+                case 'EBoolean': defaultVal = false; break;
+                default: defaultVal = 0;
+            }
+        }
+        if(context.data.className === 'DReference') {
+            defaultVal = 'NULL';
+        }
+
+        for(let value of values) {
+            SetFieldAction.new(value.__raw, 'value', defaultVal, "", false);
         }
         SetFieldAction.new(context.data, 'type', Pointers.from(val), "", true);
         return true;
@@ -1570,7 +1529,12 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
     protected get_abstract(context: Context): this["abstract"] { return context.data.abstract; }
     protected set_abstract(val: this["abstract"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'abstract', val);
+        const objects = Selectors.getObjects().filter((obj) => { return obj.instanceof[0].id === context.data.id});
+        if(val && objects.length > 0) {
+            UX.info("You cannot change the abstraction level since you have instances of this class");
+        } else {
+            SetFieldAction.new(context.data, 'abstract', val);
+        }
         return true;
     }
     protected get_interface(context: Context): this["interface"] { return context.data.interface; }
@@ -1897,16 +1861,23 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             dObject.isRoot = false;
             dObject.instanceof = [dClass.id];
             CreateElementAction.new(dObject);
-
-            for(let feature of [...lClass.attributes, ...lClass.references]) {
+            let attributes : LAttribute[] = [];
+            let references : LReference[] = [];
+            for(let father of lClass.extends) {
+                attributes.push(...father.attributes);
+                references.push(...father.references);
+            }
+            attributes.push(...lClass.attributes);
+            references.push(...lClass.references);
+            for(let feature of [...attributes, ...references]) {
                 const dValue = DValue.new(feature.name);
                 dValue.instanceof = [feature.id];
                 if(feature.className === 'DAttribute') {
                     switch (feature.type.name) {
-                        default: dValue.value = 'NULL'; break;
-                        case 'EString': dValue.value = ''; break;
-                        case 'EInt': dValue.value = '0'; break;
-                        case 'EBoolean': dValue.value = 'false'; break;
+                        case 'EString': dValue.value = 'empty'; break;
+                        case 'EInt': dValue.value = 0; break;
+                        case 'EBoolean': dValue.value = false; break;
+                        default: dValue.value = 0; break;
                     }
                 } else {
                     dValue.value = 'NULL';
@@ -2640,7 +2611,7 @@ export class DValue extends DPointerTargetable { // extends DModelElement, m1 va
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
 
     // personal
-    value!: string | Pointer<DObject, 1, 1, LObject>;
+    value!: string|number|boolean|Pointer<DObject, 1, 1, LObject>;
     instanceof!: Pointer<DStructuralFeature, 1, 'N', LStructuralFeature>;
 
     public static new(name?: DNamedElement["name"]): DValue {
@@ -2663,7 +2634,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     father!: LObject;
     annotations!: LAnnotation[];
     // personal
-    value!: string | LObject;
+    value!: boolean|number|string|LObject;
     instanceof!: LStructuralFeature[];
 
     protected get_instanceof(context: Context): this["instanceof"] {
@@ -2684,7 +2655,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         if(instanceOf.className === 'DAttribute') {
             return data.value;
         }
-        if(data.value !== 'NULL') {
+        if(data.value !== 'NULL' && typeof data.value === 'string') {
             const obj: LObject = LObject.from(data.value); // data.value pointer a DObject
             return obj.name;  // change to obj, in the toString insert obj.name
         }
