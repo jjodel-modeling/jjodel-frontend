@@ -28,7 +28,8 @@ function ContextMenuComponent(props: AllProps, state: ThisState) {
                 }} className={"col item"}>Extend</div>);
                 break;
         }
-        jsxList.push(<div onClick={() => {close(); selected.delete();}} className={"col item"}>Delete</div>);
+        if(selected.className !== 'DValue')
+            jsxList.push(<div onClick={() => {close(); selected.delete();}} className={"col item"}>Delete</div>);
         return <>
             <div className={"context-menu"} style={{top: position.y - 40, left: position.x - 10}}>
                 {jsxList.map((jsx) => { return jsx; })}

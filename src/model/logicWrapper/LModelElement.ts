@@ -131,11 +131,10 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         let property = context.data.className.toLowerCase();
         property = property.substring(1);
         property = property + "s";
-        if(property === "enumliterals") {
-            property = "literals";
-        }
-        if(property === "enumerators" || property === "classs") {
-            property = "classifiers";
+        switch(property) {
+            case 'enumliterals': property = "literals"; break;
+            case 'enumerators': case 'classs': property = 'classifiers'; break;
+            case 'values': property = 'features'; break;
         }
         return property as keyof DModelElement;
     }
@@ -143,8 +142,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         this.delete();
     }
 
-
-    protected get_delete(context: Context): () => void {
+    public superDelete(): void {}
+    protected get_superDelete(context: Context): () => void {
         const obj = context.proxyObject;
 
         let property = obj.property;
@@ -181,6 +180,12 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             DeleteElementAction.new(obj.id);
             END();
         }
+        return ret;
+    }
+
+
+    protected get_delete(context: Context): () => void {
+        const ret = () => { context.proxyObject.superDelete() }
         return ret;
     }
 
@@ -401,7 +406,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             if(objects.length > 0){
                 for(let obj of objects) {
                     const dValue = DValue.new(dAttribute.name);
-                    dValue.instanceof = [dAttribute.id];
                     switch (lAttribute.type.name) {
                         case 'EString': dValue.value = 'empty'; break;
                         case 'EInt': dValue.value = 0; break;
@@ -409,7 +413,10 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                         default: dValue.value = 0; break;
                     }
                     CreateElementAction.new(dValue);
-                    SetFieldAction.new(obj.__raw, 'features', dValue.id, '+=', false);
+                    SetFieldAction.new(dValue, 'instanceof', [dAttribute.id], '', true);
+                    SetFieldAction.new(dValue, 'parent', [obj.id], '', true);
+                    SetFieldAction.new(dValue, 'father', obj.id, '', true);
+                    SetFieldAction.new(obj.__raw, 'features', dValue.id, '+=', true);
                 }
             }
         }
@@ -439,10 +446,12 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             if(objects.length > 0){
                 for(let obj of objects) {
                     const dValue = DValue.new(dReference.name);
-                    dValue.instanceof = [dReference.id];
                     dValue.value = 'NULL';
                     CreateElementAction.new(dValue);
-                    SetFieldAction.new(obj.__raw, 'features', dValue.id, '+=', false);
+                    SetFieldAction.new(dValue, 'instanceof', [dReference.id], '', true);
+                    SetFieldAction.new(dValue, 'parent', [obj.id], '', true);
+                    SetFieldAction.new(dValue, 'father', obj.id, '', true);
+                    SetFieldAction.new(obj.__raw, 'features', dValue.id, '+=', true);
                 }
             }
         }
@@ -1716,27 +1725,20 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return true;
     }
 
-
-    /*
     protected get_delete(context: Context): () => void {
-        const dClass: DClass = context.data;
-        const dPackage: DPackage = Selectors.getDElement<DPackage>(dClass.father);
-        const children = new Set([...dClass.attributes, ...dClass.references]);
-        const pointedby = new Set(dClass.pointedBy);
-        for(let dChild of children) {
-            const lChild: LAttribute | LReference = LPointerTargetable.from(dChild);
-            lChild._delete(context);
-        }
         const ret = () => {
-            SetFieldAction.new(dPackage, "classifiers", U.removeFromList(dPackage.classifiers, dClass.id), '', true);
-            //new SetRootFieldAction("classs", U.removeFromList(Selectors.getAllClasses(), dClass.id));
-            new DeleteElementAction(dClass);
+            const objects = Selectors.getObjects().filter((object) => {
+                return object.instanceof[0].id === context.data.id
+            });
+            if(objects.length > 0) {
+                UX.info("Cannot delete the class since there are instances");
+            } else {
+                context.proxyObject.superDelete();
+            }
         }
         ret();
         return ret;
     }
-    */
-
 
     public superclasses!: LClass[];
     public allSubClasses!: LClass[];
@@ -1857,9 +1859,11 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return () => {
             const dClass: DClass = context.data;
             const lClass: LClass = LClass.from(dClass);
-            const dObject = DObject.new(dClass.name + ' instance');
+            const dObject = DObject.new('instance');
             dObject.isRoot = false;
             dObject.instanceof = [dClass.id];
+            // dObject.parent = [MODEL.id];
+            // dObject.father = MODEL.id;
             CreateElementAction.new(dObject);
             let attributes : LAttribute[] = [];
             let references : LReference[] = [];
@@ -1871,7 +1875,6 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             references.push(...lClass.references);
             for(let feature of [...attributes, ...references]) {
                 const dValue = DValue.new(feature.name);
-                dValue.instanceof = [feature.id];
                 if(feature.className === 'DAttribute') {
                     switch (feature.type.name) {
                         case 'EString': dValue.value = 'empty'; break;
@@ -1883,7 +1886,10 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
                     dValue.value = 'NULL';
                 }
                 CreateElementAction.new(dValue);
-                SetFieldAction.new(dObject, 'features', dValue.id, '+=', false);
+                SetFieldAction.new(dValue, 'instanceof', [feature.id], '', true);
+                SetFieldAction.new(dValue, 'parent', [dObject.id], '', true);
+                SetFieldAction.new(dValue, 'father', dObject.id, '', true);
+                SetFieldAction.new(dObject, 'features', dValue.id, '+=', true);
             }
             return true;
         };
@@ -2082,7 +2088,6 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
         SetFieldAction.new(context.data, 'defaultValueLiteral', val, "", false);
         return true;
     }
-
 }
 DTypedElement.subclasses.push(DStructuralFeature);
 LTypedElement.subclasses.push(LStructuralFeature);
@@ -2591,6 +2596,28 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
             return LPointerTargetable.from(feature)
         });
     }
+
+    protected get_delete(context: Context): () => void {
+        const ret = () => {
+            const values = Selectors.getValues().filter((value) => {
+                return value.instanceof[0].className === 'DReference' &&
+                    value.value !== 'NULL' && (value.value as LObject).id === context.data.id
+            });
+            for(let value of values) {
+                SetFieldAction.new(value.id, 'value', 'NULL', '', false);
+            }
+
+            const list = Selectors.getObjects().filter((object) => {
+               return object.id !== context.data.id
+            });
+            const pointers: Pointer<DObject, 0, 'N', LObject> = [];
+            for(let item of list) { pointers.push(item.id); }
+            SetRootFieldAction.new('objects', pointers, '', false);
+            for(let value of context.proxyObject.features) { value.delete(); }
+            DeleteElementAction.new(context.data);
+        }
+        return ret;
+    }
 }
 DNamedElement.subclasses.push(DObject);
 LNamedElement.subclasses.push(LObject);
@@ -2657,18 +2684,29 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
         if(data.value !== 'NULL' && typeof data.value === 'string') {
             const obj: LObject = LObject.from(data.value); // data.value pointer a DObject
-            return obj.name;  // change to obj, in the toString insert obj.name
+            return obj;  // in the toString insert obj.name
         }
         return 'NULL';
     }
 
     protected get_toString(context: Context): () => string {
+        // testing stuff
         const ret = () => {
             return 'toString';
         }
         return ret;
     }
 
+    protected get_delete(context: Context): () => void {
+        const ret = () => {
+            const list = Selectors.getValues().filter((item) => {
+                return item && item.id !== context.data.id
+            });
+            SetRootFieldAction.new('values', list, '', false);
+            context.proxyObject.superDelete();
+        }
+        return ret;
+    }
 }
 DNamedElement.subclasses.push(DValue);
 LNamedElement.subclasses.push(LValue);

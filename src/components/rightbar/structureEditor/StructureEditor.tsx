@@ -7,7 +7,7 @@ import {
     DViewElement,
     IStore,
     LGraphElement,
-    LModelElement,
+    LModelElement, LPointerTargetable,
     LViewElement,
     Pointer,
     UX,
@@ -29,7 +29,9 @@ class StructureEditorComponent extends PureComponent<AllProps, ThisState> {
         return <div className={"px-4"}>
             <div className={"row mt-2"}>
                 <h5 className={"col-lg"}>Structure Editor</h5>
-                {lModelElement ? <div className={"structure-editor-delete-button"} onClick={async() =>{await UX.deleteWithAlarm(lModelElement)}}>
+                {(lModelElement && lModelElement.className !== 'DValue') ?
+                    <div className={"structure-editor-delete-button"}
+                         onClick={async() =>{await UX.deleteWithAlarm(lModelElement)}}>
                     <i className={"bi bi-trash3-fill"}></i>
                 </div> : <></>}
             </div>

@@ -172,6 +172,8 @@ export default class Structure {
                 case "DEnumerator": return Structure.EnumEditor(lModelElement);
                 case "DEnumLiteral": return Structure.EnumLiteralEditor(lModelElement);
                 case "DOperation": return Structure.OperationEditor(lModelElement);
+                case "DObject" : return Structure.BaseEditor(lModelElement);
+                case "DValue" : return Structure.BaseEditor(lModelElement);
             }
         }
         return <div className={"row"}><div className={"col-lg"}>No model selected.</div></div>;

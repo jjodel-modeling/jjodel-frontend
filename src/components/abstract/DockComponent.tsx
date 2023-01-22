@@ -10,9 +10,7 @@ import StructureEditor from "../rightbar/structureEditor/StructureEditor";
 import ToolBar from "../toolbar/ToolBar";
 import PendingEdge from "../../graph/edge/PendingEdge";
 import ContextMenu from "../toolbar/ContextMenu";
-import EdgesManager from "../../graph/edge/EdgesManager";
 import M1 from "../../graph/model/M1";
-import {Xwrapper} from "react-xarrows";
 
 
 let windoww = window as any;
@@ -38,7 +36,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
         this.model = this.props.model;
         this.graph = this.props.graph;
         this.metamodel = { title: "Metamodel", group: "1", closable: false, content:
-                <div>
+                <div className={"h-100 w-100"}>
                     <ContextMenu />
                     {/*<EdgesManager />*/}
                     {/*Perche mi chiede source e user come OwnProps se li ho definiti come StateProps ? */}
@@ -49,6 +47,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
         };
         this.m1 = { title: "Model", group: "1", closable: false, content:
                 <div className={"h-100 w-100"}>
+                    <ContextMenu />
                     <M1 modelid={this.model.id} />
                 </div>
         };

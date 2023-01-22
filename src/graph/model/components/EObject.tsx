@@ -10,10 +10,26 @@ function EObjectComponent(props: AllProps) {
 
     const object = props.object;
 
-    const click = (e: React.MouseEvent<HTMLDivElement>) => {
+    const select = () => {
         SetRootFieldAction.new('_lastSelected', {
             modelElement: object.id
         });
+    }
+
+    const onContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+        select();
+        SetRootFieldAction.new("contextMenu", {
+            display: true,
+            x: e.clientX,
+            y: e.clientY
+        });
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    const click = (e: React.MouseEvent<HTMLDivElement>) => {
+        select();
+        SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
         e.stopPropagation();
     }
 
@@ -32,7 +48,12 @@ function EObjectComponent(props: AllProps) {
 
     });
 
-    return <div className={object.className + " default-EObject"} id={object.id} onClick={click}>
+    return <div
+        className={object.className + " default-EObject"}
+        id={object.id}
+        onClick={click}
+        onContextMenu={onContextMenu}>
+        <div style={{display: props.selected ? 'none' : 'block'}} className={"saturated fix-saturated"}></div>
         <div className={"EObject-header"}>
             <div className={"EObject-header-label"}> <b>{object.instanceof[0].name}:</b>
                 <Input className={"mx-1 transparent-input"} field={"name"} obj={object}
@@ -49,13 +70,15 @@ function EObjectComponent(props: AllProps) {
     </div>
 }
 interface OwnProps { object: LObject }
-interface StateProps {}
+interface StateProps { selected: boolean }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {};
+    const lastSelected = state._lastSelected?.modelElement;
+    const selected = ownProps.object.id === lastSelected;
+    const ret: StateProps = {selected};
     return ret;
 }
 

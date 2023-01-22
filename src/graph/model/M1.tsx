@@ -4,7 +4,7 @@ import {connect} from "react-redux";
 import {DModel, LModel, LClass, LObject} from "../../model/logicWrapper";
 import './M1.scss';
 import EObject from "./components/EObject";
-import {Pointer} from "../../joiner";
+import {Pointer, SetRootFieldAction} from "../../joiner";
 
 function M1Component(props: AllProps) {
 
@@ -12,9 +12,17 @@ function M1Component(props: AllProps) {
     const classes = model.classes;
     const objects = props.objects;
 
-    return <div className={"h-100 w-100"}>
+    const onContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    const onClick = () => {
+        SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
+    }
+
+    return <div className={"h-100 w-100"} onContextMenu={onContextMenu} onClick={onClick}>
         {/* LEFT BAR */}
-        <div className={"concepts-container shadow"}>
+        <div className={"concepts-container"}>
             {classes && classes.filter((concept) => {return !concept.abstract}).map((concept: LClass) => {
                 return <div className={"item"} onClick={() => concept.instance()}>
                     +{concept.name}

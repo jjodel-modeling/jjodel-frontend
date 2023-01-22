@@ -1,8 +1,6 @@
-$pkg-color: green;
-$class-color: red;
-$enum-color: orange;
-$feature-color: purple;
+@import "../../graph/vertex/palette";
 $other-feature-color: brown;
+$feature-color: indigo;
 
 
 .toolbar {

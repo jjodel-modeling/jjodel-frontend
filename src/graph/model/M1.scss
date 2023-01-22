@@ -33,7 +33,6 @@
   border-left: .2em solid $class-color;
   border-radius: $radius;
   position: absolute;
-  overflow: hidden;
 }
 .EObject-header {
   width: 100%;
@@ -77,4 +76,6 @@
 .children-EValue {
   border-bottom: 1px solid $border-color;
 }
+
+.fix-saturated { left: -3px; }
 

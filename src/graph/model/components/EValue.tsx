@@ -27,21 +27,30 @@ function EValueComponent(props: AllProps) {
         }
     })
 
-    const objectRef = () => {
-        const type = typeof value.value;
-        const wrong = ['boolean', 'number', 'string']
-        if(!wrong.includes(type)) { return (value.value as LObject).id; }
-        return 'NULL';
-    }
-
-    const click = (e: React.MouseEvent<HTMLDivElement>) => {
+    const select = () => {
         SetRootFieldAction.new('_lastSelected', {
             modelElement: value.id
         });
+    }
+
+    const onContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+        select();
+        SetRootFieldAction.new("contextMenu", {
+            display: true,
+            x: e.clientX,
+            y: e.clientY
+        });
+        e.preventDefault();
         e.stopPropagation();
     }
 
-    return <div className={value.className + " default-EValue"} id={value.id} onClick={click}>
+    const click = (e: React.MouseEvent<HTMLDivElement>) => {
+        select();
+        SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
+        e.stopPropagation();
+    }
+
+    return <div className={value.className + " default-EValue"} id={value.id} onClick={click} onContextMenu={onContextMenu}>
         <div className={"default-EValue-name ms-1"}>
             {feature.name}:&nbsp;<b>{feature.type.name}</b>
         </div>
@@ -70,7 +79,6 @@ function EValueComponent(props: AllProps) {
                     const val = event.target.value;
                     SetFieldAction.new(value.__raw, 'value', val, '', false);
                 }}>
-
                     <option value={'NULL'}>NULL</option>
                     {Selectors.getObjects().filter((obj) => {return obj.instanceof[0].id === value.instanceof[0].type.id}).map((obj) => {
                         return <option value={obj.id}>{obj.name}</option>
