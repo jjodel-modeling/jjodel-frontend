@@ -233,17 +233,20 @@ class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
     }
 
     componentDidUpdate(prevProps: Readonly<AllProps>, prevState: Readonly<ThisState>, snapshot?: any) {
-        //this.loadEditor()
+        this.loadEditor()
     }
 
     loadEditor() {
-        // @ts-ignore
-        this.editor = window.xtext.createEditor({ baseUrl: window.baseUrl,
-            serviceUrl: "http://localhost:8085/xtext-service",
-            syntaxDefinition: `xtext-resources/generated/mode-ocl.js`,
-            enableCors: true, // @ts-ignore
-            parent: this.oclContainer.current
-        })
+        const xtext = (window as GObject).xtext;
+        const url = (window as GObject).baseUrl;
+        if(xtext && url) {
+            this.editor = xtext.createEditor({ baseUrl: url,
+                serviceUrl: "http://localhost:8085/xtext-service",
+                syntaxDefinition: `xtext-resources/generated/mode-ocl.js`,
+                enableCors: true, // @ts-ignore
+                parent: this.oclContainer.current
+            })
+        }
     }
 
     getOclQuery() {
@@ -255,8 +258,6 @@ class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
         let state: IStore = windoww.store.getState();
         let dmp: DModelElement[] = Selectors.getAllMP(state);
         let lmp: LModelElement[] = Selectors.wrap(dmp, state);
-
-
 
         console.log('all MP:', dmp, lmp);
         let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
@@ -285,8 +286,8 @@ class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
             <div className={"mt-2"} style={{height: "7em"}}>
                 <div className={"row"}>
                     <p className={"col my-auto mx-auto mb-2"}><b>{this.props.label}</b></p>
-                    <button onClick={() => this.getOclQuery()} style={{borderRadius: "100px", maxWidth: "2.5em"}}
-                            className={"col btn btn-success"}><i className="fa fa-arrow-right"></i>
+                    <button onClick={() => this.getOclQuery()} className={"col btn btn-success"} style={{maxWidth: '3em'}}>
+                        <i className="bi bi-arrow-right"></i>
                     </button>
                 </div>
                 <div style={{marginTop: ".5em", height: "12em"}} data-editor-xtext-lang={"ocl"} ref={this.oclContainer}>

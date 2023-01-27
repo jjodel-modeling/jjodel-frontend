@@ -47,15 +47,6 @@
   color: $class-color;
 }
 
-
-
-/*---UTILITY---*/
-.children {
-  position: absolute;
-  height: 100%;
-  width: 100%;
-}
-
 /* ------ATTRIB------ */
 .default-EValue {
   display: flex;
@@ -63,12 +54,14 @@
   background: $feature-color;
 }
 .default-EValue-name {
+  margin-top: auto;
+  margin-bottom: auto;
   text-align: left;
   width: 50%;
   font-size: $feature-text-size;
 }
 .default-EValue-value {
-  position: absolute;
+  margin-right: 5px;
   text-align: right;
   right: 0;
   font-size: $feature-text-size;

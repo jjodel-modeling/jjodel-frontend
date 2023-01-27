@@ -1184,34 +1184,26 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         return true;
     }
 
-    /*
     protected get_delete(context: Context): () => void {
-        let ret = () => {};
-        const dPackage: DPackage = context.data;
-        const dFather: (DModel | DPackage) & GObject = Selectors.getDElement<DModel>(dPackage.father);
-        const children = new Set([...dPackage.classifiers, ...dPackage.subpackages]);
-        for (let dChild of children) {
-            const lChild: LClass | LEnumerator | LPackage = LPointerTargetable.from(dChild);
-            lChild._delete(context);
-        }
-        if (dFather.className === "DModel") {
-            ret = () => {
-                SetFieldAction.new(dFather, "packages", U.removeFromList(dFather.packages, dPackage.id), '', true);
-                //new SetRootFieldAction("packages", U.removeFromList(Selectors.getAllPackages(), dPackage.id));
-                new DeleteElementAction(dPackage);
+
+        let ret = () => {
+            const classes = context.proxyObject.classes;
+            let check = false
+            for(let lClass of classes) {
+                const objects = Selectors.getObjects().filter((obj) => { return obj.instanceof[0].id === lClass.id  });
+                check = objects.length > 0;
+                if(check) break;
             }
-        }
-        if (dFather.className === "DPackage") {
-            ret = () => {
-                if (dFather.subpackages) SetFieldAction.new(dFather, "subpackages", U.removeFromList(dFather.subpackages, dPackage.id));
-                // if (dFather.packages) SetRootFieldAction.new("packages", U.removeFromList(Selectors.getAllPackages(), dPackage.id, '', true));
-                new DeleteElementAction(dPackage);
+            if(check) {
+                UX.info('You cannot delete the package since there are instances');
+            } else {
+                context.proxyObject.superDelete();
             }
-        }
+        };
         ret();
         return ret;
     }
-    */
+
 }
 // @RuntimeAccessible export class _WPackage extends _WNamedElement { }
 // export type WPackage = DPackage | LPackage | _WPackage;
@@ -2124,7 +2116,7 @@ export class DReference extends DPointerTargetable { // DStructuralFeature
     instances: Pointer<DValue, 0, 'N', LValue> = [];
 
     // personal
-    containment: boolean = true;
+    containment: boolean = false;
     container: boolean = false; // ?
     resolveProxies: boolean = true; // ?
     opposite: Pointer<DReference, 0, 1, LReference> = null;
@@ -2772,7 +2764,9 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return [...(super.get_childrens_idlist(context) as Pointer<DAnnotation | DPackage, 1, 'N'>), ...context.data.packages]; }
 
     protected get_delete(context: Context): () => void {
-        const ret = () => { alert("todo delete LModel"); }
+        const ret = () => {
+            UX.info('You cannot delete the metamodel');
+        }
         return ret;
     }
 

@@ -20,6 +20,10 @@ code {
   background: #4d4dee;
 }
 
-.w-65 {
-  width: 65%!important;
+.w-85 {
+  width: 85%!important;
 }
+label { height: min-content;font-size: 0.9rem; }
+.dock-content .dock-tabpane { background-color: whitesmoke; }
+.p-absolute { position: absolute; }
+

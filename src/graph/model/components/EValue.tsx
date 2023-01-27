@@ -21,7 +21,7 @@ function EValueComponent(props: AllProps) {
             case 'EBoolean': setType('checkbox'); break;
         }
         if(type !== "checkbox") {
-            setCss('w-65')
+            setCss('w-85')
         } else {
             setCss('my-auto');
         }

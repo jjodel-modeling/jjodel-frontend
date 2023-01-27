@@ -27,14 +27,6 @@ class StructureEditorComponent extends PureComponent<AllProps, ThisState> {
     render(): ReactNode{
         const lModelElement: LModelElement | undefined = this.props.selected?.modelElement;
         return <div className={"px-4"}>
-            <div className={"row mt-2"}>
-                <h5 className={"col-lg"}>Structure Editor</h5>
-                {(lModelElement && lModelElement.className !== 'DValue') ?
-                    <div className={"structure-editor-delete-button"}
-                         onClick={async() =>{await UX.deleteWithAlarm(lModelElement)}}>
-                    <i className={"bi bi-trash3-fill"}></i>
-                </div> : <></>}
-            </div>
             <div className={"mt-3"}>
                 {Structure.Editor(lModelElement)}
             </div>

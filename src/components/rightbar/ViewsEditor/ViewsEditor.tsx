@@ -1,24 +1,18 @@
 import React, {Dispatch, PureComponent, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import type {AbstractConstructor, Constructor} from "../../../joiner";
 import {
     CreateElementAction,
     DeleteElementAction,
-    DGraph,
-    DModelElement,
     DPointerTargetable,
     DViewElement,
     HTMLEditor,
     Input,
     IStore,
-    LModelElement,
     LPointerTargetable,
     LViewElement,
     MyProxyHandler,
-    OCL,
     OCLEditor,
     Pointer,
-    RuntimeAccessibleClass,
     Selectors,
     SetRootFieldAction,
     windoww,
@@ -37,46 +31,24 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
         super(props, context);
     }
 
-    private ocltextchanged(oclText0: string| boolean): string{
-        let oclText = ''+oclText0;
-        let state: IStore = windoww.store.getState();
-        let dmp: DModelElement[] = Selectors.getAllMP(state);
-        let lmp: LModelElement[] = Selectors.wrap(dmp, state);
-        console.log('all MP:', dmp, lmp);
-        let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
-        let valids: DPointerTargetable[] = [];
-        try { valids = OCL.filter(true, "src", lmp, oclText, constructors) as DPointerTargetable[]; }
-        catch (e) { console.error('invalid ocl query:', {e, oclText, dmp, lmp});}
-        let out: { $matched: JQuery<HTMLElement>, $notMatched: JQuery<HTMLElement>} = {} as any;
-        console.log('filtered MP', {dmp, lmp, valids, validfilled:valids.filter(b=>!!b)});
-        let $htmlmatch: JQuery<HTMLElement> = DGraph.getNodes(valids.filter(b=>!!b) as DModelElement[], out);
-        console.log('filtered MP', {dmp, lmp, valids, $htmlmatch});
-        out.$notMatched.removeClass('ocl_match');
-
-        $htmlmatch.addClass('ocl_match');
-        return oclText;
-    }
-
     render(): ReactNode{
         const views = this.props.views;
         const viewsStack = this.props.stackViews;
-        let ocltemp = {ocltmp:''};
 
         if(viewsStack.length > 0){
             const view = viewsStack[viewsStack.length - 1]
             const data = this.props.data as LViewElement;
-            var inputstyle  = {marginTop:'25px'};
-            return (<div className={"bg-light mx-3"}>
-                <div className={"row mb-4"}>
-                    <button style={{maxWidth: "3em"}} className={"col btn btn-danger"}
+            return (<div className={"bg-light h-100"} style={{overflowY: 'auto', overflowX: 'hidden'}}>
+                <div className={"row my-3 px-3"}>
+                    <button className={"col btn btn-danger"} style={{maxWidth: '3em'}}
                             onClick={(e) => {
                                 //POP: GO BACK
                                 SetRootFieldAction.new('stackViews', undefined, '-=', true);
                             }}>
-                        <i className={"fas fa-long-arrow-alt-left"} />
+                        <i className={"bi bi-arrow-left"}></i>
                     </button>
-                    <h4 className={"col"}>GRAPHICAL SYNTAX LAYER</h4>
-                    <button style={{maxWidth: "3em"}} className={"col btn btn-danger"}
+                    <h4 className={"col text-center"}>GRAPHICAL SYNTAX LAYER</h4>
+                    <button className={"col btn btn-danger "} style={{maxWidth: '3em'}}
                             onClick={async(e) => {
                                 const confirm = await MySwal.fire({
                                     title: <span>Are you sure you want to delete this view?</span>,
@@ -90,28 +62,30 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                     new DeleteElementAction(view.__raw);
                                 }
                             }}>
-                        <i className="fas fa-trash-alt" />
+                        <i className={"bi bi-trash3-fill"}></i>
                     </button>
-
                 </div>
-                <div>
-                    <Input obj={view} field={"name"} label={"Name"}/>
-                    <div className={"row"}>
-                        <div className={"col"}><Input obj={view} field={'width'} label={"Width"} type={"number"} /></div>
-                        <div className={"col"}><Input obj={view} field={'height'} label={"Height"} type={"number"} /></div>
+                <div className={"px-3"}>
+                    <div className={"structure-input-wrapper row"}>
+                        <Input obj={view} field={"name"} label={"Name:"} type={"text"}/>
                     </div>
-                    <div className={"row"}>
-                        <div className={"col"}><Input obj={view} field={'adaptWidth'} label={"Adapt width to content"} type={"checkbox"} /></div>
-                        <div className={"col"}><Input obj={view} field={'adaptHeight'} label={"Adapt height to content"} type={"checkbox"} /></div>
+                    <div className={"structure-input-wrapper row"}>
+                        <Input obj={view} field={"width"} label={"Width:"} type={"number"}/>
                     </div>
-
-                    <OCLEditor obj={view} field={'ocl'} label={"Editor OCL"}/>
+                    <div className={"structure-input-wrapper row"}>
+                        <Input obj={view} field={"height"} label={"Height:"} type={"number"}/>
+                    </div>
+                    <div className={"structure-input-wrapper row"}>
+                        <Input obj={view} field={"adaptWidth"} label={"Adapt Width:"} type={"checkbox"}/>
+                    </div>
+                    <div className={"structure-input-wrapper row"}>
+                        <Input obj={view} field={"adaptHeight"} label={"Adapt Height:"} type={"checkbox"}/>
+                    </div>
+                    {/*<OCLEditor obj={view} field={'ocl'} label={"Editor OCL"}/>*/}
                     <HTMLEditor obj={view} field={'jsxString'} label={"Editor HTML"} />
-                    <input
-                        defaultValue ={"context DClass inv: self.attrib_3.editCount>-1"} // context DClass inv: self.className.length >20
-                        onChange={(e) => this.ocltextchanged(e.target.value)} style={inputstyle} />
                 </div>
-                <div className={"row mt-5"}>
+                {/* SUBVIEWS TEMPORARY DISABLED */}
+                <div className={"row mt-5 d-none"}>
                     <h5 className={"my-auto col"}>SUB VIEWS</h5>
                     <button style={{maxWidth: "3em"}} className={"btn btn-success col"} onClick={async(e) => {
                         // INSERT SUBVIEW
@@ -141,48 +115,43 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                         <i className={"fas fa-plus"} />
                     </button>
                 </div>
-
-                {
-                    view.subViews.map( (subView: LViewElement, index: number) => (
-                        <>
-                            <div className={"mt-2 p-1 border border-dark row"}>
-                                <div className={"col my-auto"}>{subView.name}</div>
-                                <button style={{maxWidth: '3em'}} className={"me-1 col btn btn-primary"}
-                                        onClick={async(e) => {
-                                            //PUSH: CLICK SUBVIEW
-                                            SetRootFieldAction.new('stackViews', subView.id, '+=', true);
-                                        }}>
-                                    <i className={"fas fa-info"} />
-                                </button>
-                                <button style={{maxWidth: "3em"}} className={"ms-1 col btn btn-danger"} onClick={async(e) => {
-                                    // DELETE SUBVIEW
-                                    const confirm = await MySwal.fire({
-                                        title: <span>Are you sure you want to remove this subview?</span>,
-                                        showCancelButton: true,
-                                        confirmButtonText: 'Confirm',
-                                        showLoaderOnConfirm: true,
-                                    })
-                                    if(confirm.value === true) {
-                                        let pointers: string[] = []
-                                        for(let subView of view.subViews){
-                                            pointers.push(subView.id)
-                                        }
-                                        pointers.splice(index, 1);
-                                        (data as any)['subViews'] = pointers;
+                {view.subViews.map( (subView: LViewElement, index: number) => (
+                        <div className={"mt-2 p-1 border border-dark row d-none"}>
+                            <div className={"col my-auto"}>{subView.name}</div>
+                            <button style={{maxWidth: '3em'}} className={"me-1 col btn btn-primary"}
+                                    onClick={async(e) => {
+                                        //PUSH: CLICK SUBVIEW
+                                        SetRootFieldAction.new('stackViews', subView.id, '+=', true);
+                                    }}>
+                                <i className={"fas fa-info"} />
+                            </button>
+                            <button style={{maxWidth: "3em"}} className={"ms-1 col btn btn-danger"} onClick={async(e) => {
+                                // DELETE SUBVIEW
+                                const confirm = await MySwal.fire({
+                                    title: <span>Are you sure you want to remove this subview?</span>,
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Confirm',
+                                    showLoaderOnConfirm: true,
+                                })
+                                if(confirm.value === true) {
+                                    let pointers: string[] = []
+                                    for(let subView of view.subViews){
+                                        pointers.push(subView.id)
                                     }
-                                }}>
-                                    <i className="fas fa-times" />
-                                </button>
-                            </div>
-                        </>
-                    ))
-                }
+                                    pointers.splice(index, 1);
+                                    (data as any)['subViews'] = pointers;
+                                }
+                            }}>
+                                <i className="fas fa-times" />
+                            </button>
+                        </div>
+                    ))}
             </div>);
         }
         else{
-            return (<div className={"bg-light  mx-3"}>
-                <div className={"row"}>
-                    <h4 className={"col"}>GRAPHICAL SYNTAX LAYER</h4>
+            return (<div className={"bg-light h-100"}>
+                <div className={"row my-3 mx-3"}>
+                    <h4 className={"col text-center"}>GRAPHICAL SYNTAX LAYER</h4>
                     <button style={{maxWidth: "3em"}} className={"col btn btn-success"}
                             onClick={async(e) => {
                                 const viewName = await MySwal.fire({
@@ -201,43 +170,37 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                     SetRootFieldAction.new('stackViews', newView.id, '+=', true);
                                 }
                             }}>
-                        <i className={"fas fa-plus"} />
+                        <i className={"bi bi-plus-lg"}></i>
                     </button>
                 </div>
-                {
-                    views.map( (view: LViewElement) => (
-                        <>
-                            {
-                                <div className={"row mt-2 p-1 border border-dark"}>
-                                    <div className={"col my-auto"}>{view.name}</div>
-                                    <button style={{maxWidth: '3em'}} className={"me-1 col btn btn-primary"}
-                                            onClick={(e) => {
-                                                //PUSH: CLICK VIEW
-                                                SetRootFieldAction.new('stackViews', view.id, '+=', true);
-                                            }}>
-                                        <i className={"fas fa-info"} />
-                                    </button>
-                                    <button style={{maxWidth: "3em"}} className={"col btn btn-danger"}
-                                            onClick={async(e) => {
-                                                const confirm = await MySwal.fire({
-                                                    title: <span>Are you sure you want to delete this view?</span>,
-                                                    showCancelButton: true,
-                                                    confirmButtonText: 'Confirm',
-                                                    showLoaderOnConfirm: true,
-                                                })
-                                                if(confirm.value === true){
-                                                    //POP: DELETE VIEW
-                                                    SetRootFieldAction.new('stackViews', undefined, '-=', true);
-                                                    new DeleteElementAction(view.__raw);
-                                                }
-                                            }}>
-                                        <i className={"fas fa-trash-alt"} />
-                                    </button>
-                                </div>
-                            }
-                        </>)
-                    )
-                }
+                    {views.map((view: LViewElement) => {
+                        return <div className={"row mt-2 mx-3 border border-dark rounded"}>
+                            <label className={"ms-1 col my-auto"}>{view.name}</label>
+                            <button style={{maxWidth: '3em'}} className={"m-1 p-0 col btn btn-primary"}
+                                    onClick={(e) => {
+                                        //PUSH: CLICK VIEW
+                                        SetRootFieldAction.new('stackViews', view.id, '+=', true);
+                                    }}>
+                                <i className={"bi bi-info-lg"}></i>
+                            </button>
+                            <button style={{maxWidth: "3em"}} className={"m-1 p-0 col btn btn-danger"}
+                                    onClick={async(e) => {
+                                        const confirm = await MySwal.fire({
+                                            title: <span>Are you sure you want to delete this view?</span>,
+                                            showCancelButton: true,
+                                            confirmButtonText: 'Confirm',
+                                            showLoaderOnConfirm: true,
+                                        })
+                                        if(confirm.value === true){
+                                            //POP: DELETE VIEW
+                                            SetRootFieldAction.new('stackViews', undefined, '-=', true);
+                                            new DeleteElementAction(view.__raw);
+                                        }
+                                    }}>
+                                <i className={"bi bi-trash3-fill"}></i>
+                            </button>
+                        </div>
+                    })}
             </div>);
         }
     }

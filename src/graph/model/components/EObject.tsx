@@ -38,6 +38,7 @@ function EObjectComponent(props: AllProps) {
             element.draggable({
                 cursor: "grabbing",
                 containment: "parent",
+                start: function(event: GObject, obj: GObject) { select() },
                 drag: function(event: GObject, obj: GObject) {},
                 stop: function (event: GObject, obj: GObject) {}
             });
@@ -53,7 +54,7 @@ function EObjectComponent(props: AllProps) {
         id={object.id}
         onClick={click}
         onContextMenu={onContextMenu}>
-        <div style={{display: props.selected ? 'none' : 'block'}} className={"saturated fix-saturated"}></div>
+        <div style={{display: props.selected ? 'none' : 'block', zIndex: 0}} className={"saturated fix-saturated"}></div>
         <div className={"EObject-header"}>
             <div className={"EObject-header-label"}> <b>{object.instanceof[0].name}:</b>
                 <Input className={"mx-1 transparent-input"} field={"name"} obj={object}

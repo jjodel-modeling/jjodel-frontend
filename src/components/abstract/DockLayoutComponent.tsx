@@ -15,7 +15,7 @@ import {
     Log,
     Pointer,
     Selectors,
-    store,
+    store, StyleEditor,
     TRANSACTION,
     windoww,
 } from "../../joiner";
@@ -25,8 +25,9 @@ import {DefaultNode} from "../../joiner/components";
 //const StyleEditor = windoww.tempcomponents.StyleEditor;
 
 console.error('see reading');
-const StyleEditor = windoww.components.StyleEditor;
-const ViewsEditor = windoww.components.ViewsEditor;
+//Giordano: why this stuff is in joiner ? these components cannot be access by the user
+//const StyleEditor = windoww.components.StyleEditor;
+//const ViewsEditor = windoww.components.ViewsEditor;
 const MySwal = withReactContent(Swal);
 
 // private
@@ -231,7 +232,7 @@ let customTab = {
     title: 'custom-style',
     content: (
         <div style={{overflowY: "scroll", background: '#f6f6f6', height: '100%', margin: 0, padding: 30}}>
-            <ViewsEditor />
+            {/*<ViewsEditor />*/}
         </div>
     ),
     // you can mix predefined style with you own style

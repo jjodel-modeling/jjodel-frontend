@@ -36,7 +36,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
 
     const select = (forUser:Pointer<DUser, 0, 1> = null) => {
         if (!forUser) forUser = DUser.current;
-        rootProps.node.isSelected[forUser] = true;
+        // rootProps.node.isSelected[forUser] = true;
         SetRootFieldAction.new('_lastSelected', {
             node: rootProps.nodeid,
             view: rootProps.view.id,
@@ -96,6 +96,9 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
             element.draggable({
                 cursor: "grabbing",
                 containment: "parent",
+                start: function(event: GObject, obj: GObject) {
+                    select();
+                },
                 drag: function(event: GObject, obj: GObject) {
                     if(!isDragged) {
                         SetRootFieldAction.new("dragging", {id: rootProps.data.id})

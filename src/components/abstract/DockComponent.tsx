@@ -11,6 +11,7 @@ import ToolBar from "../toolbar/ToolBar";
 import PendingEdge from "../../graph/edge/PendingEdge";
 import ContextMenu from "../toolbar/ContextMenu";
 import M1 from "../../graph/model/M1";
+import EdgeEditor from "../rightbar/edgeEditor/EdgeEditor";
 
 
 let windoww = window as any;
@@ -23,6 +24,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
     structureEditor!: TabData;
     viewsEditor!: TabData;
     styleEditor!: TabData;
+    edgeEditor!: TabData;
     logger!: TabData;
     box: any;
     initialized: boolean = false;
@@ -54,6 +56,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
         this.structureEditor = { title: "Structure", group: "2", closable: false, content: <StructureEditor /> };
         this.viewsEditor = { title: "Views", group: "2", closable: false, content: <ViewsEditor /> };
         this.styleEditor = { title: "Node", group: "2", closable: false, content: <StyleEditor /> };
+        this.edgeEditor = { title: "Edge Editor", group: "2", closable: false, content: <EdgeEditor /> };
         this.box = {
             dockbox: {
                 mode: "horizontal", children: [
@@ -61,7 +64,12 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
                         children: [{tabs: [{...this.metamodel, id: '1'}, {...this.m1, id: '2'}]}]
                     },
                     {
-                        children: [{tabs: [{ ...this.structureEditor, id: "2" }, { ...this.viewsEditor, id: "3" }, { ...this.styleEditor, id: "4" }]}]
+                        children: [{tabs: [
+                            { ...this.structureEditor, id: "2" },
+                            { ...this.viewsEditor, id: "3" },
+                            { ...this.styleEditor, id: "4" },
+                            { ...this.edgeEditor, id: "5" }
+                        ]}]
                     }
                 ]
             }

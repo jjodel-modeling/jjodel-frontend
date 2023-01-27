@@ -1,80 +1,62 @@
-import React, {Dispatch, PureComponent, ReactElement, ReactNode} from "react";
+import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import ViewsEditor from "../ViewsEditor/ViewsEditor";
-import {
-    DGraphElement,
-    DModelElement,
-    DPointerTargetable,
-    DViewElement,
-    Input,
-    IStore,
-    LGraphElement,
-    LModelElement,
-    LViewElement,
-    Pointer,
-    windoww,
-} from "../../../joiner";
+import {IStore} from "../../../redux/store";
+import {LGraphElement} from "../../../model/dataStructure";
+import {LViewElement} from "../../../view/viewElement/view";
+import {LModelElement} from "../../../model/logicWrapper";
+import {Input} from "../../forEndUser/bidirectionalInput";
+import "../rightbar.scss";
 
-// private
-interface ThisState {
-}
+function StyleEditorComponent(props: AllProps) {
 
-class StyleEditorComponent extends PureComponent<AllProps, ThisState>{
-    constructor(props: AllProps, context: any) {
-        super(props, context);
-    }
-    render(): ReactNode{
-        if(this.props.selected?.modelElement){
-            return( <>
-                <Input obj={(this.props.selected?.view as LViewElement)} field={'name'} label={"Name View"} type={"text"} />
-                <div className={"row"}>
-                    <div className={"col"}><Input obj={(this.props.selected?.node as LGraphElement)} field={'x'} label={"X position"} type={"number"} /></div>
-                    <div className={"col"}><Input obj={(this.props.selected?.node as LGraphElement)} field={'y'} label={"Y position"} type={"number"} /></div>
-                </div>
-            </> );
-        }
-        else{
-            return <div>Empty selection.</div>
-        }
+    const selected = props.selected;
+    if(selected) {
+        return(<div className={"px-4 mt-3"}>
+            <div className={"structure-input-wrapper row"}>
+                <Input obj={selected.node} field={"x"} label={"X Position:"} type={"number"}/>
+            </div>
+            <div className={"structure-input-wrapper row"}>
+                <Input obj={selected.node} field={"y"} label={"Y Position:"} type={"number"} />
+            </div>
+        </div>);
+    } else {
+        return(<></>);
     }
 }
-
-// private
-interface OwnProps {
-    // propsRequestedFromJSX_AsAttributes: string;
-}
-// private
+interface OwnProps {}
 interface StateProps {
-    // propsFromReduxStateOrOtherKindOfStateManagement: boolean; // flux or custom things too, unrelated to this.state of react.
-    selectedid?: { node: Pointer<DGraphElement, 1, 1>; view: Pointer<DViewElement, 1, 1>; modelElement: Pointer<DModelElement, 0, 1> };
-    selected?: { node: LGraphElement; view: LViewElement; modelElement?: LModelElement };
+    selected?: {
+        node: LGraphElement;
+        view: LViewElement;
+        modelElement?: LModelElement
+    };
 }
-
-// private
-interface DispatchProps {
-    // propsFromReduxActions: typeof funzioneTriggeraAzioneDaImportare;
-}
-
-
-// private
+interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
-////// mapper func
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as any;
-    ret.selectedid = state._lastSelected;
-    ret.selected = ret.selectedid && {
-            node: DPointerTargetable.wrap(state.idlookup[ret.selectedid.node]) as LGraphElement,
-            view: DPointerTargetable.wrap(state.idlookup[ret.selectedid.view]) as LViewElement,
-            modelElement: ret.selectedid.modelElement ? DPointerTargetable.wrap<DPointerTargetable, LModelElement>(state.idlookup[ret.selectedid.modelElement]) : undefined };
+    let ret: StateProps = {};
+    const selected = state._lastSelected;
+    if(selected) {
+        const modelElement = state._lastSelected?.modelElement;
+        const node = state._lastSelected?.node;
+        const view = state._lastSelected?.view;
+        if(node && view) {
+            ret.selected = {
+                node: LGraphElement.fromPointer(node),
+                view: LViewElement.fromPointer(node),
+                modelElement: (modelElement) ? LModelElement.fromPointer(modelElement) : undefined
+            }
+        }
+    }
     return ret;
 }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
-    const ret: DispatchProps = {} as any;
-    /// to fill
-    return ret; }
+    const ret: DispatchProps = {};
+    return ret;
+}
 
 
 export const StyleEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
@@ -82,11 +64,8 @@ export const StyleEditorConnected = connect<StateProps, DispatchProps, OwnProps,
     mapDispatchToProps
 )(StyleEditorComponent);
 
-// nb: necessario per usarlo a runtime
 export const StyleEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <StyleEditorConnected {...{...props, childrens}} />; }
+    return <StyleEditorConnected {...{...props, childrens}} />;
+}
+export default StyleEditor;
 
-if (!windoww.components) windoww.components = {};
-console.error('see writing');
-windoww.components.StyleEditor = StyleEditor;
-windoww.components.ViewsEditor = ViewsEditor;
