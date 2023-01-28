@@ -5,7 +5,7 @@ import {Input, LClassifier, LPointerTargetable, Select, SetRootFieldAction, UX} 
 export default class Structure {
     private static BaseEditor(lModelElement: LModelElement) : ReactNode {
         return(<div className={"structure-input-wrapper row"}>
-            <Input obj={lModelElement} field={"name"} label={"Name"} type={"text"} />
+            <Input obj={lModelElement} field={"name"} label={"Name"} type={"text"} tooltip={"Tooltip"} />
         </div>);
     }
     public static ModelEditor(lModel: LModelElement): ReactNode {
@@ -18,10 +18,10 @@ export default class Structure {
             <div>
                 {Structure.BaseEditor(lPackage)}
                 <div className={"structure-input-wrapper row"}>
-                    <Input obj={lPackage} field={"uri"} label={"NsURI:"} type={"text"} />
+                    <Input obj={lPackage} field={"uri"} label={"NsURI"} type={"text"} tooltip={"Tooltip"} />
                 </div>
                 <div className={"structure-input-wrapper row"}>
-                    <Input obj={lPackage} field={"prefix"} label={"NsPrefix:"} type={"text"} />
+                    <Input obj={lPackage} field={"prefix"} label={"NsPrefix"} type={"text"} tooltip={"Tooltip"} />
                 </div>
             </div>);
     }
@@ -29,10 +29,10 @@ export default class Structure {
         return(<div>
             {Structure.BaseEditor(lClass)}
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lClass} field={"abstract"} label={"IsAbstract"} type={"checkbox"} />
+                <Input obj={lClass} field={"abstract"} label={"IsAbstract"} type={"checkbox"} tooltip={"Tooltip"} />
             </div>
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lClass} field={"interface"} label={"IsInterface"} type={"checkbox"} />
+                <Input obj={lClass} field={"interface"} label={"IsInterface"} type={"checkbox"} tooltip={"Tooltip"} />
             </div>
             <div className={"d-none structure-input-wrapper row"}>
                 <p className={"generic-text"}>Set Extend</p>
@@ -50,7 +50,7 @@ export default class Structure {
     private static DataTypeEditor(lDataType: LModelElement): ReactNode {
         return(<>
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lDataType} field={"serializable"} label={"IsSerializable"} type={"checkbox"} />
+                <Input obj={lDataType} field={"serializable"} label={"IsSerializable"} type={"checkbox"} tooltip={"Tooltip"} />
             </div>
         </>);
     }
@@ -63,38 +63,38 @@ export default class Structure {
     private static TypedElementEditor(lTypedElement: LModelElement): ReactNode {
         return(<>
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lTypedElement} field={"lowerBound"} label={"Lower Bound"} type={"number"} />
+                <Input obj={lTypedElement} field={"lowerBound"} label={"Lower Bound"} type={"number"} tooltip={"Tooltip"} />
             </div>
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lTypedElement} field={"upperBound"} label={"Upper Bound"} type={"number"} />
+                <Input obj={lTypedElement} field={"upperBound"} label={"Upper Bound"} type={"number"} tooltip={"Tooltip"} />
             </div>
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lTypedElement} field={"ordered"} label={"IsOrdered"} type={"checkbox"} />
+                <Input obj={lTypedElement} field={"ordered"} label={"IsOrdered"} type={"checkbox"} tooltip={"Tooltip"} />
             </div>
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lTypedElement} field={"unique"} label={"IsUnique"} type={"checkbox"} />
+                <Input obj={lTypedElement} field={"unique"} label={"IsUnique"} type={"checkbox"} tooltip={"Tooltip"} />
             </div>
         </>);
     }
     private static StructuralFeatureEditor(lStructuralFeature: LModelElement): ReactNode {
         return(<>
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lStructuralFeature} field={"defaultValueLiteral"} label={"Default Value Literal"} type={"text"} />
+                <Input obj={lStructuralFeature} field={"defaultValueLiteral"} label={"Default Value Literal"} type={"text"} tooltip={"Tooltip"} />
             </div>
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lStructuralFeature} field={"changeable"} label={"IsChangeable"} type={"checkbox"} />
+                <Input obj={lStructuralFeature} field={"changeable"} label={"IsChangeable"} type={"checkbox"} tooltip={"Tooltip"} />
             </div>
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lStructuralFeature} field={"volatile"} label={"IsVolatile"} type={"checkbox"} />
+                <Input obj={lStructuralFeature} field={"volatile"} label={"IsVolatile"} type={"checkbox"} tooltip={"Tooltip"} />
             </div>
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lStructuralFeature} field={"transient"} label={"IsTransient"} type={"checkbox"} />
+                <Input obj={lStructuralFeature} field={"transient"} label={"IsTransient"} type={"checkbox"} tooltip={"Tooltip"} />
             </div>
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lStructuralFeature} field={"unsettable"} label={"IsUnsettable"} type={"checkbox"} />
+                <Input obj={lStructuralFeature} field={"unsettable"} label={"IsUnsettable"} type={"checkbox"} tooltip={"Tooltip"} />
             </div>
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lStructuralFeature} field={"derived"} label={"IsDerived"} type={"checkbox"} />
+                <Input obj={lStructuralFeature} field={"derived"} label={"IsDerived"} type={"checkbox"} tooltip={"Tooltip"} />
             </div>
         </>);
     }
@@ -104,7 +104,7 @@ export default class Structure {
             {Structure.TypedElementEditor(lAttribute)}
             {Structure.StructuralFeatureEditor(lAttribute)}
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lAttribute} field={"isID"} label={"IsID"} type={"checkbox"} />
+                <Input obj={lAttribute} field={"isID"} label={"IsID"} type={"checkbox"} tooltip={"Tooltip"} />
             </div>
         </div>);
     }
@@ -114,20 +114,20 @@ export default class Structure {
             {Structure.TypedElementEditor(lReference)}
             {Structure.StructuralFeatureEditor(lReference)}
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lReference} field={"containment"} label={"IsContainment"} type={"checkbox"} />
+                <Input obj={lReference} field={"containment"} label={"IsContainment"} type={"checkbox"} tooltip={"Tooltip"} />
             </div>
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lReference} field={"container"} label={"IsContainer"} type={"checkbox"} />
+                <Input obj={lReference} field={"container"} label={"IsContainer"} type={"checkbox"} tooltip={"Tooltip"} />
             </div>
             <div className={"structure-input-wrapper row"}>
-                <Input obj={lReference} field={"resolveProxies"} label={"IsResolveProxies"} type={"checkbox"} />
+                <Input obj={lReference} field={"resolveProxies"} label={"IsResolveProxies"} type={"checkbox"} tooltip={"Tooltip"} />
             </div>
         </div>);
     }
     public static EnumLiteralEditor(lEnumLiteral: LModelElement): ReactNode {
         return(<div>
             {Structure.BaseEditor(lEnumLiteral)}<div className={"structure-input-wrapper row"}>
-            <Input obj={lEnumLiteral} field={"value"} label={"Value"} type={"number"} />
+            <Input obj={lEnumLiteral} field={"value"} label={"Value"} type={"number"} tooltip={"Tooltip"} />
         </div>
         </div>);
     }
@@ -140,7 +140,7 @@ export default class Structure {
                 if (index > 0) {
                     return <div>
                         <div className={"structure-children-input-wrapper row"}>
-                            <Input obj={parameter.id} field={"name"} label={"Parameter"} type={"text"} />
+                            <Input obj={parameter.id} field={"name"} label={"Parameter"} type={"text"} tooltip={"Tooltip"} />
                             <Select obj={parameter.id} field={"type"} />
                             <div className={"child-delete"} onClick={() => { UX.deleteWithAlarm(lParameter)}}>
                                 <i className={"bi bi-trash3-fill"}></i>
@@ -152,7 +152,7 @@ export default class Structure {
             {lOperation.exceptions.map((exception: DClassifier) => {
                 const lException: LClassifier = LPointerTargetable.from(exception);
                 return <div className={"structure-children-input-wrapper row"}>
-                    <Input obj={exception} field={"name"} label={"Exception"} type={"text"} />
+                    <Input obj={exception} field={"name"} label={"Exception"} type={"text"} tooltip={"Tooltip"} />
                     <div className={"child-delete"} onClick={async() => {await UX.deleteWithAlarm(lException)}}>
                         <i className={"bi bi-trash3-fill"}></i>
                     </div>

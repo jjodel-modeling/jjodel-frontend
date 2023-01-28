@@ -9,6 +9,7 @@ import $ from "jquery";
 function EObjectComponent(props: AllProps) {
 
     const object = props.object;
+    const name = object.features.filter((feature) => { return feature.instanceof[0].name === 'name' })[0]?.value;
 
     const select = () => {
         SetRootFieldAction.new('_lastSelected', {
@@ -56,9 +57,8 @@ function EObjectComponent(props: AllProps) {
         onContextMenu={onContextMenu}>
         <div style={{display: props.selected ? 'none' : 'block', zIndex: 0}} className={"saturated fix-saturated"}></div>
         <div className={"EObject-header"}>
-            <div className={"EObject-header-label"}> <b>{object.instanceof[0].name}:</b>
-                <Input className={"mx-1 transparent-input"} field={"name"} obj={object}
-                       pattern={"[a-zA-Z_\u0024][0-9a-zA-Z\d_\u0024]*"} />
+            <div className={"EObject-header-label"}> <b>{object.instanceof[0].name}{(name) ? ':' : ''}</b>
+                <label className={"ms-1 my-auto"}>{(name) ? String(name) : ''}</label>
             </div>
         </div>
         <div className={"children"}>

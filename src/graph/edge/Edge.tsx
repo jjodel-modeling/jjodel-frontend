@@ -24,7 +24,7 @@ function EdgeComponent(props: AllProps, state: ThisState) {
     const firstOptions: xarrowPropsType = {
         start: props.source.id, end: anchorMiddleId,
         path: "grid", color: color, strokeWidth: size,
-        startAnchor: ['top'], showHead: false
+        showHead: false
     };
     const lastOptions: xarrowPropsType = {
         start: anchorMiddleId, end: props.target.id,
@@ -48,8 +48,8 @@ function EdgeComponent(props: AllProps, state: ThisState) {
         source = source as LClass;
         lastOptions.showHead = true;
         lastOptions.headSize = 15;
-        lastOptions.headColor = color;
-        lastOptions.headShape = {svgElem:<svg><path d="M 0 0 L 1 0.5 L 0 1 L 0 0 z"/></svg>};
+        lastOptions.headColor = 'white';
+        lastOptions.headShape = {svgElem:<svg><path strokeWidth={0.1} stroke={color} d="M 0 0 L 1 0.5 L 0 1 L 0 0 z"/></svg>};
         // firstOptions.headShape = {svgElem: <path d="M 0 0 L 1 0.5 L 0 1 L 0.25 0.5 z"/>, offsetForward: 0.5};
     }
 
@@ -66,7 +66,6 @@ function EdgeComponent(props: AllProps, state: ThisState) {
         if(element) {
             element.draggable({
                 cursor: "grabbing",
-                axis: "x",
                 containment: "parent",
                 drag: function (event: GObject, obj: GObject) {
                     SetRootFieldAction.new("dragging", {id: 0})
@@ -104,9 +103,11 @@ function EdgeComponent(props: AllProps, state: ThisState) {
         event.stopPropagation();
     }
 
-    return(<div className={"w-100 h-100 p-absolute"} onClick={click} onContextMenu={contextMenu}>
-        <div style={{visibility: (show) ? 'visible' : 'hidden'}} id={anchorId} className={"anchor"}></div>
-        <div style={{borderColor: color}} id={anchorMiddleId} className={"middle-anchor"}></div>
+    return(<div onClick={click} onContextMenu={contextMenu}>
+        <div className={"w-100 h-100 p-absolute"} style={{maxHeight: '100%'}}>
+            <div style={{visibility: (show) ? 'visible' : 'hidden'}} id={anchorId} className={"anchor"}></div>
+            <div style={{borderColor: color}} id={anchorMiddleId} className={"middle-anchor"}></div>
+        </div>
         <Xarrow {...firstOptions} />
         <Xarrow {...lastOptions} />
     </div>);

@@ -25,7 +25,10 @@ import {
 } from "../../joiner";
 
 import Editor from "@monaco-editor/react";
+import {Tooltip} from "react-tooltip";
+import "./input.scss";
 
+const crypto = require("crypto");
 // import './bidirectionalinput.scss';
 
 // private
@@ -35,7 +38,9 @@ interface ThisState {
 
 class BidirectionalInput extends PureComponent<AllProps, ThisState> {
     render(): ReactNode {
+        const id = crypto.randomBytes(20).toString('hex');
         const data = this.props.data;
+        const tooltip = this.props.tooltip;
         const otherprops: GObject = {...this.props};
         if (!otherprops.labelstyle) otherprops.labelstyle = {};
         if (!otherprops.labelstyle.width) otherprops.labelstyle.width = '100%';
@@ -56,9 +61,8 @@ class BidirectionalInput extends PureComponent<AllProps, ThisState> {
         return (<>
             <label key={otherprops.key} className={"input-root " + (className || "d-flex")} style={this.props.rootstyle}>
                 {this.props.label && <p className={"input-label " + (className)} style={this.props.labelstyle}>{this.props.label}</p>}
-                <input
+                <input id={id}
                     onChange={(e) => {
-                        console.log('BidirectionalInput change', {props:this.props, e});
                         let value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
                         return data && (data[this.props.field] = (this.props.setter ? this.props.setter(value, data) : value))
                     }}
@@ -66,6 +70,11 @@ class BidirectionalInput extends PureComponent<AllProps, ThisState> {
                     checked = { this.props.type === "checkbox" ? data[this.props.field] as boolean : undefined}
                     {...otherprops} className={(className)} style={this.props.inputstyle}/>
             </label>
+            {(tooltip) &&
+                <Tooltip className={"custom-tooltip"} anchorId={id} noArrow={true} place={'left'} >
+                    <i className="bi bi-info-circle">{tooltip}</i>
+                </Tooltip>
+            }
         </>); }
 
 }
@@ -320,6 +329,7 @@ interface OwnProps {
     labelstyle?: CSSProperties;
     inputstyle?: CSSProperties;
     wrap?: boolean;
+    tooltip?: string;
     // propsRequestedFromHtmlAsAttributes: string;
 }
 interface OwnSelectProps extends OwnProps{

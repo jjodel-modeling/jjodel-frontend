@@ -74,8 +74,8 @@ function EValueComponent(props: AllProps) {
             </div>
         }
         {feature.className === "DReference" &&
-            <div className={"default-EValue-value"}>
-                <select onChange={(event) => {
+            <div className={"ms-auto default-EValue-value"}>
+                <select className={"transparent-input"} onChange={(event) => {
                     const val = event.target.value;
                     SetFieldAction.new(value.__raw, 'value', val, '', false);
                 }}>

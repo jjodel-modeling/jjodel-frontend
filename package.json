@@ -35,6 +35,7 @@
     "react-portal": "^4.2.1",
     "react-redux": "^7.2.4",
     "react-scripts": "4.0.3",
+    "react-tooltip": "^5.7.1",
     "react-xarrows": "^2.0.2",
     "sass": "^1.49.9",
     "smart-webcomponents-react": "^9.3.53",

@@ -779,13 +779,32 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
         return fullname; }
 
 
-    protected get_name(context: Context): this["name"] { return context.data.name; }
+    protected get_name(context: Context): this["name"] {
+        return context.data.name;
+    }
     protected set_name(val: this["name"],  context: Context): boolean {
+        let name = val;
+        const father = context.proxyObject.father;
+        if(father) {
+            const check = father.childrens.filter((child) => {
+                return child.className !== 'DAnnotation' &&
+                    (DNamedElement.fromPointer(child.id) as DNamedElement).name === name
+            });
+            if(check.length > 0){
+                UX.info('Cannot rename since the name is already used');
+                return true
+            }
+        }
+        SetFieldAction.new(context.data, 'name', name, '', false);
+        return true;
+
+        /*
         if (val.match(/\s/)) val = this._autofix_name(val, context);
         // todo: validate if operation can be completed or need autocorrection, then either return false (invalid parameter cannot complete) or send newVal at redux
         const fixedVal: string = val;
         SetFieldAction.new(context.data, 'name', fixedVal, '', false);
         return true;
+        */
     }
     protected _autofix_name(val: string, context: Context): string {
         // NB: NON fare autofix di univocità nome tra i childrens o qualsiasi cosa dipendente dal contesto, questo potrebbe essere valido in alcuni modelli e invalido in altri e modificare un oggetto condiviso.
