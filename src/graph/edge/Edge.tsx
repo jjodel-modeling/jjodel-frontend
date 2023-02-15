@@ -66,7 +66,8 @@ function EdgeComponent(props: AllProps, state: ThisState) {
         if(element) {
             element.draggable({
                 cursor: "grabbing",
-                containment: "parent",
+                //containment: "parent",
+                containment: "window",
                 drag: function (event: GObject, obj: GObject) {
                     SetRootFieldAction.new("dragging", {id: 0})
                 }

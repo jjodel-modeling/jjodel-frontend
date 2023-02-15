@@ -41,6 +41,17 @@ $checkbox_size: 1.25em;
   width: 33.33333333%;
 }
 
+.my-input {
+  margin: auto;
+  height: min-content;
+  border-radius: 0.2em;
+  border: 1px solid black;
+}
+.my-input:focus {
+  border: none;
+  outline: 1px solid $focus_border;
+}
+
 
 
 

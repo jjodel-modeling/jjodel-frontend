@@ -1,10 +1,19 @@
 import {IStore} from "../../../redux/store";
 import React, {Dispatch, ReactElement, useEffect, useState} from "react";
 import {connect} from "react-redux";
-import {LEnumerator, LObject, LStructuralFeature, LValue} from "../../../model/logicWrapper";
+import {
+    DEnumerator,
+    LClass,
+    LClassifier,
+    LEnumerator,
+    LObject,
+    LStructuralFeature,
+    LValue
+} from "../../../model/logicWrapper";
 import {SetFieldAction, SetRootFieldAction} from "../../../redux/action/action";
 import {Input, Selectors} from "../../../joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
+import {isNullOrUndefined} from "util";
 
 
 function EValueComponent(props: AllProps) {
@@ -50,42 +59,34 @@ function EValueComponent(props: AllProps) {
         e.stopPropagation();
     }
 
+    const typeValue: LClassifier|LClass|LEnumerator = value.instanceof[0].type;
+
     return <div className={value.className + " default-EValue"} id={value.id} onClick={click} onContextMenu={onContextMenu}>
         <div className={"default-EValue-name ms-1"}>
             {feature.name}:&nbsp;<b>{feature.type.name}</b>
         </div>
-        {feature.className === "DAttribute" &&  feature.type.className === "DClass" &&
-            <div className={"default-EValue-value"}>
-                <Input className={css + " transparent-input text-end"} field={"value"} obj={value} type={type}
-                       pattern={"[a-zA-Z_\u0024][0-9a-zA-Zd_\u0024]*"}/>
-            </div>
-        }
-        {feature.className === "DAttribute" &&  feature.type.className === "DEnumerator" &&
-            <div className={"default-EValue-value"}>
-                <select onChange={(event) => {
-                    const val = event.target.value;
-                    SetFieldAction.new(value.__raw, 'value', val, '', false);
-                }}>
-                    <option value={0}>-----</option>
-                    {(feature.type as LEnumerator).literals.map((literal, index) => {
-                        return <option key={index} value={index + 1}>{literal.name}</option>
-                    })}
-                </select>
-            </div>
-        }
-        {feature.className === "DReference" &&
-            <div className={"ms-auto default-EValue-value"}>
-                <select className={"transparent-input"} onChange={(event) => {
-                    const val = event.target.value;
-                    SetFieldAction.new(value.__raw, 'value', val, '', false);
-                }}>
-                    <option value={'NULL'}>NULL</option>
-                    {Selectors.getObjects().filter((obj) => {return obj.instanceof[0].id === value.instanceof[0].type.id}).map((obj) => {
-                        return <option value={obj.id}>{obj.name}</option>
-                    })}
-                </select>
-            </div>
-        }
+
+        <div className={"ms-auto d-block"}>
+            {(value.value.length > 1) && <select style={{fontSize: '.9rem'}} className={"my-auto transparent-input"} defaultValue={0}>
+                {value.value.map((raw, index) => {
+                    if(typeValue.className === 'DEnumerator') {
+                        return <option>{String((typeValue as LEnumerator).literals[parseInt(raw as any) - 1])}</option>
+                    } else {
+                        return <option>{String(raw)}</option>
+                    }
+                })}
+            </select>}
+            {(value.value.length === 1 && typeValue.className === 'DEnumerator') && <label>
+                {String((typeValue as LEnumerator).literals[value.value[0] as number - 1])}
+            </label>}
+            {(value.value.length === 1 && value.instanceof[0].className === 'DReference') && <label>
+                {(value.value[0] as LObject).name || 'NULL'}
+            </label>}
+            {(value.value.length === 1 && typeValue.className !== 'DEnumerator' && value.instanceof[0].className !== 'DReference') && <label className={"me-1"}>
+                {String(value.value[0])}
+            </label>}
+            {(value.value.length === 0) && <label></label>}
+        </div>
     </div>
 }
 interface OwnProps { value: LValue }

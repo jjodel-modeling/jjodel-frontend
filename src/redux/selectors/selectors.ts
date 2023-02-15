@@ -70,7 +70,9 @@ export class Selectors{
         const dValues: DValue[] = ptrs.map<DValue>( (ptr) => state.idlookup[ptr] as DValue);
         const lValues: LValue[] = [];
         for(let dValue of dValues) {
-            lValues.push(LValue.fromPointer(dValue.id));
+            if(dValue?.id) {
+                lValues.push(LValue.fromPointer(dValue.id));
+            }
         }
         return lValues;
     }

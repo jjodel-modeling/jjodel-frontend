@@ -1,7 +1,7 @@
 import {IStore} from "../../redux/store";
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {DModel, LModel, LClass, LObject} from "../../model/logicWrapper";
+import {DModel, LClass, LModel, LObject} from "../../model/logicWrapper";
 import './M1.scss';
 import EObject from "./components/EObject";
 import {Pointer, SetRootFieldAction} from "../../joiner";
@@ -31,8 +31,8 @@ function M1Component(props: AllProps) {
         </div>
         {/* GRAPH*/}
         <div className={"m1-graph"}>
-            {objects.map((object, index) => {
-                return <EObject key={index} object={object} />
+            {objects.map((obj, index) => {
+                return <EObject key={index} object={obj} />
             })}
         </div>
 

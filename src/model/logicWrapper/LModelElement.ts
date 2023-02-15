@@ -407,10 +407,10 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 for(let obj of objects) {
                     const dValue = DValue.new(dAttribute.name);
                     switch (lAttribute.type.name) {
-                        case 'EString': dValue.value = 'empty'; break;
-                        case 'EInt': dValue.value = 0; break;
-                        case 'EBoolean': dValue.value = false; break;
-                        default: dValue.value = 0; break;
+                        case 'EString': dValue.value = ['empty']; break;
+                        case 'EInt': dValue.value = [0]; break;
+                        case 'EBoolean': dValue.value = [false]; break;
+                        default: dValue.value = [0]; break;
                     }
                     CreateElementAction.new(dValue);
                     SetFieldAction.new(dValue, 'instanceof', [dAttribute.id], '', true);
@@ -446,7 +446,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             if(objects.length > 0){
                 for(let obj of objects) {
                     const dValue = DValue.new(dReference.name);
-                    dValue.value = 'NULL';
+                    dValue.value = [];
                     CreateElementAction.new(dValue);
                     SetFieldAction.new(dValue, 'instanceof', [dReference.id], '', true);
                     SetFieldAction.new(dValue, 'parent', [obj.id], '', true);
@@ -889,18 +889,18 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
     protected set_type(val: Pack1<this["type"]>, context: Context): boolean {
         // update DObject values with the new default one
         const values = Selectors.getValues().filter((value) => {return value.instanceof[0].id === context.data.id});
-        let defaultVal: number|boolean|string = '';
+        let defaultVal: number[]|boolean[]|string[] = [];
         const type = LModelElement.fromPointer(Pointers.from(val));
         if(context.data.className === 'DAttribute') {
             switch(type.name) {
-                case 'EString': defaultVal = 'empty'; break;
-                case 'EInt': defaultVal = 0; break;
-                case 'EBoolean': defaultVal = false; break;
-                default: defaultVal = 0;
+                case 'EString': defaultVal = ['empty']; break;
+                case 'EInt': defaultVal = [0]; break;
+                case 'EBoolean': defaultVal = [false]; break;
+                default: defaultVal = [0];
             }
         }
         if(context.data.className === 'DReference') {
-            defaultVal = 'NULL';
+            defaultVal = ['NULL'];
         }
 
         for(let value of values) {
@@ -1888,13 +1888,13 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
                 const dValue = DValue.new(feature.name);
                 if(feature.className === 'DAttribute') {
                     switch (feature.type.name) {
-                        case 'EString': dValue.value = 'empty'; break;
-                        case 'EInt': dValue.value = 0; break;
-                        case 'EBoolean': dValue.value = false; break;
-                        default: dValue.value = 0; break;
+                        case 'EString': dValue.value = ['empty']; break;
+                        case 'EInt': dValue.value = [0]; break;
+                        case 'EBoolean': dValue.value = [false]; break;
+                        default: dValue.value = [0]; break;
                     }
                 } else {
-                    dValue.value = 'NULL';
+                    dValue.value = ['NULL'];
                 }
                 CreateElementAction.new(dValue);
                 SetFieldAction.new(dValue, 'instanceof', [feature.id], '', true);
@@ -2610,12 +2610,18 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
     protected get_delete(context: Context): () => void {
         const ret = () => {
-            const values = Selectors.getValues().filter((value) => {
-                return value.instanceof[0].className === 'DReference' &&
-                    value.value !== 'NULL' && (value.value as LObject).id === context.data.id
+            const allValues = Selectors.getValues().filter((value) => {
+                return value.instanceof[0].className === 'DReference'
             });
+            const values: Pointer<DValue, 0, 'N', LValue> = [];
+            for(let value of allValues) {
+                for(let raw of value.value) {
+                    const id = (raw as LObject).id;
+                    if(id && id === context.data.id) { values.push(id as any); }
+                }
+            }
             for(let value of values) {
-                SetFieldAction.new(value.id, 'value', 'NULL', '', false);
+                SetFieldAction.new(value, 'value', 'NULL', '', false);
             }
 
             const list = Selectors.getObjects().filter((object) => {
@@ -2649,7 +2655,7 @@ export class DValue extends DPointerTargetable { // extends DModelElement, m1 va
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
 
     // personal
-    value!: string|number|boolean|Pointer<DObject, 1, 1, LObject>;
+    value!: string[]|number[]|boolean[]|Pointer<DObject, 1, 'N', LObject>;
     instanceof!: Pointer<DStructuralFeature, 1, 'N', LStructuralFeature>;
 
     public static new(name?: DNamedElement["name"]): DValue {
@@ -2672,7 +2678,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     father!: LObject;
     annotations!: LAnnotation[];
     // personal
-    value!: boolean|number|string|LObject;
+    value!: boolean[]|number[]|string[]|LObject[];
     instanceof!: LStructuralFeature[];
 
     protected get_instanceof(context: Context): this["instanceof"] {
@@ -2693,25 +2699,23 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         if(instanceOf.className === 'DAttribute') {
             return data.value;
         }
-        if(data.value !== 'NULL' && typeof data.value === 'string') {
-            const obj: LObject = LObject.from(data.value); // data.value pointer a DObject
-            return obj;  // in the toString insert obj.name
+        if(data.value.length > 0) {
+            const objs: any = [];
+            for(let value of data.value) {
+                const obj: LObject = LObject.from(String(value));
+                if(obj) objs.push(obj);
+                else objs.push('NULL');
+            }
+            return objs;
         }
-        return 'NULL';
+        return [];
     }
 
-    protected get_toString(context: Context): () => string {
-        // testing stuff
-        const ret = () => {
-            return 'toString';
-        }
-        return ret;
-    }
 
     protected get_delete(context: Context): () => void {
         const ret = () => {
             const list = Selectors.getValues().filter((item) => {
-                return item && item.id !== context.data.id
+                return item?.id && item.id !== context.data.id
             });
             SetRootFieldAction.new('values', list, '', false);
             context.proxyObject.superDelete();
