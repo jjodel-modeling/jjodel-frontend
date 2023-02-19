@@ -61,6 +61,7 @@ function EValueComponent(props: AllProps) {
 
     const typeValue: LClassifier|LClass|LEnumerator = value.instanceof[0].type;
 
+    /*
     return <div className={value.className + " default-EValue"} id={value.id} onClick={click} onContextMenu={onContextMenu}>
         <div className={"default-EValue-name ms-1"}>
             {feature.name}:&nbsp;<b>{feature.type.name}</b>
@@ -88,6 +89,8 @@ function EValueComponent(props: AllProps) {
             {(value.value.length === 0) && <label></label>}
         </div>
     </div>
+    */
+    return <></>;
 }
 interface OwnProps { value: LValue }
 interface StateProps {}

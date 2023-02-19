@@ -207,27 +207,18 @@ w.GraphPoint = GraphPoint;
 w.$s = $s;
 */
 export {
-    // GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
     GraphElementComponent,
     VertexComponent,
     GraphElement,
-    TextareaConnected, SelectConnected, InputConnected, HTMLEditorConnected, OCLEditorConnected,
-    Textarea, Select, Input, HTMLEditor, OCLEditor,
-    InputRawComponent,
-    SelectRawComponent,
-    TextAreaRawComponent,
-    HTMLEditorRawComponent,
-    OCLEditorRawComponent,
-    MyInputComponent,
+    Textarea, Select, Input, Image,
     GraphComponent,
     GraphsContainerComponent,
-    DataOutputComponent,
-    Overlap, LoggerComponent,
+    Overlap,
     GraphsContainer,
     Vertex,    Graph,
-    StyleEditor,
     DockLayoutComponent,
-    ColorScheme, Edges
+    ColorScheme, Edges,
+    DataOutputComponent, LoggerComponent, MyInputComponent
 } from './components'
 
 export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file

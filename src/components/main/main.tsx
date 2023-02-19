@@ -5,7 +5,6 @@ import {DockingLayout} from 'smart-webcomponents-react/dockinglayout';
 import {GObject, LoggerComponent, Size} from "../../joiner";
 import TopbarComponent from "../topbar/TopbarComponent";
 import ToolboxComponent from "../toolbox/ToolboxComponent";
-import TreeViewComponent from "../rightbar/TreeView/TreeViewComponent";
 import $ from 'jquery';
 import './main.scss';
 
@@ -209,7 +208,6 @@ class TabContainerComponent extends React.Component {
         const logger = document.querySelector(".docking-tab-content.bottombar > .logger");
         if (topbar) ReactDOM.render(<TopbarComponent />, topbar);
         if (toolbox) ReactDOM.render(<ToolboxComponent />, toolbox);
-        if (treeview) ReactDOM.render(<TreeViewComponent />, treeview);
         if (graphm1) ReactDOM.render(<div> graph-m1-content</div>, graphm1);
         if (graphm2) ReactDOM.render(<div> graph-m2-content</div>, graphm2);
         if (graphm2) ReactDOM.render(<div> graph-m3-content</div>, graphm3);

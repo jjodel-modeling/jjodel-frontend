@@ -7,7 +7,7 @@ import {
     DUser,
     GObject,
     LClass,
-    LPointerTargetable,
+    LPointerTargetable, LViewElement,
     Pointer,
     SetFieldAction,
     SetRootFieldAction
@@ -29,8 +29,6 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     const canBeExtend = isEdgePending &&
                         rootProps.data.className === "DClass" &&
                         source.canExtend(rootProps.data as any as LClass, extendError);
-    console.log("canextend", {src: rootProps.isEdgePending, target:rootProps.data, extendError});
-
     const [classes, setClasses] = useStateIfMounted<string[]>([]);
     const [isDragged, setIsDragged] = useStateIfMounted(false);
 
@@ -54,12 +52,9 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                 SetFieldAction.new(source.id, "extends", lClass.id, "+=", true);
             }
             SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
-        } else {
-            select();
-        }
+        } else { select(); }
         SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
         e.stopPropagation();
-        //e.nativeEvent.stopPropagation();
     }
     const onContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
         select();
@@ -87,45 +82,46 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
         }
     }
 
-    const sizeStyle: CSSProperties = {};
-    if(rootProps.isVertex) { sizeStyle.position = "absolute"; }
-
+    const view: LViewElement|undefined = rootProps.view;
     useEffect(() => {
-        const element: GObject = $('[id="' + rootProps.nodeid + '"]'); // todo: install jqueryui types and remove GObject cast
-        if(element && rootProps.isVertex) {
-            element.draggable({
-                cursor: "grabbing",
-                containment: "parent",
-                start: function(event: GObject, obj: GObject) {
-                    select();
-                },
-                drag: function(event: GObject, obj: GObject) {
-                    if(!isDragged) {
-                        SetRootFieldAction.new("dragging", {id: rootProps.data.id})
+        const element: GObject = $('[id="' + rootProps.nodeid + '"]');
+        if(element && rootProps.data.className !== 'DModel') {
+            if(view) {
+                element.draggable({
+                    cursor: "grabbing",
+                    containment: "parent",
+                    disabled: !(view.draggable),
+                    start: function(event: GObject, obj: GObject) {
+                        select();
+                    },
+                    drag: function(event: GObject, obj: GObject) {
+                        if(!isDragged) {
+                            SetRootFieldAction.new("dragging", {id: rootProps.data.id})
+                        }
+                        setIsDragged(true);
+                    },
+                    stop: function (event: GObject, obj: GObject) {
+                        const y: number = obj.position.top;
+                        const x: number = obj.position.left;
+                        const dNode = rootProps.node?.__raw;
+                        if(dNode) {
+                            SetFieldAction.new(dNode, 'x', x, '', false);
+                            SetFieldAction.new(dNode, 'y', y, '', false);
+                        }
+                        if(!isDragged) {
+                            SetRootFieldAction.new("dragging", {id: ""})
+                        }
+                        setIsDragged(false);
                     }
-                    setIsDragged(true);
-                },
-                stop: function (event: GObject, obj: GObject) {
-                    const y: number = obj.position.top;
-                    const x: number = obj.position.left;
-                    if(rootProps.node) {
-                        SetFieldAction.new(rootProps.node, "x", x, "", false);
-                        SetFieldAction.new(rootProps.node, "y", y, "", false);
-                    }
-                    if(!isDragged) {
-                        SetRootFieldAction.new("dragging", {id: ""})
-                    }
-                    setIsDragged(false);
-                }
-            });
-            element.resizable({
-                containment: "parent",
-                resize: function(event: GObject, obj: GObject) {
-
-                }
-            });
+                });
+                element.resizable({
+                    containment: "parent",
+                    disabled: !(view.resizable),
+                    resize: function(event: GObject, obj: GObject) {}
+                });
+            }
         }
-    }, [])
+    }, [view.draggable, view.resizable])
 
     return(
         <div id={rootProps.nodeid}
@@ -134,7 +130,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              data-viewid={rootProps.view?.id}
              data-modelname={rootProps.data?.className}
              data-userselecting={JSON.stringify(rootProps.node?.__raw.isSelected || {})}
-             style={{...sizeStyle, zIndex: (isDragged) ? 999 : 0}}
+             style={{zIndex: (isDragged) ? 999 : 0}}
              className={[...classes, ...props.classes].join(' ')}
              onClick={onClick}
              onContextMenu={onContextMenu}
@@ -142,14 +138,13 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              onMouseLeave={onLeave}
              key={rootProps.key}
         >
-            <div style={{display: props.selected ? 'none' : 'block', zIndex: props.index}} className={"saturated"}></div>
             {props.render}
         </div>
     );
 
 }
 interface OwnProps {props: VertexProps, render: ReactNode}
-interface StateProps {classes: Set<string>, edges: EdgeOptions[], selected: boolean, index: number}
+interface StateProps {classes: Set<string>, edges: EdgeOptions[], selected: boolean}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -159,16 +154,7 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const props = ownProps.props;
     classes.add(props.data.className);
     const selected: boolean = (props.lastSelected && props.data.id === props.lastSelected.id) as boolean;
-    //if(selected) classes.add("selected");
-    let index = 0;
-    switch (ownProps.props.data.className) {
-        default: index = -1; break;
-        case 'DModel': break;
-        case 'DPackage': index = 1; break;
-        case 'DClass': index = 2; break;
-        case 'DEnumerator': index = 2; break;
-    }
-    const ret: StateProps = {classes, edges, selected, index};
+    const ret: StateProps = {classes, edges, selected};
     return ret;
 
 }

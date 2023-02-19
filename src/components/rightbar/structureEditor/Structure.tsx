@@ -76,6 +76,9 @@ export default class Structure {
     private static TypedElementEditor(lTypedElement: LModelElement): ReactNode {
         return(<>
             <div className={"structure-input-wrapper row"}>
+                <Select obj={lTypedElement} field={"type"} label={"Type"} />
+            </div>
+            <div className={"structure-input-wrapper row"}>
                 <Input obj={lTypedElement} field={"lowerBound"} label={"Lower Bound"} type={"number"} tooltip={"lowerBound"} />
             </div>
             <div className={"structure-input-wrapper row"}>
@@ -181,48 +184,18 @@ export default class Structure {
         if (upperBound < 0) upperBound = 999;
 
         const addValue = (event: React.MouseEvent<HTMLButtonElement>) => {
-            let defaultValue: string|number|boolean = 'NULL';
-            switch(value.instanceof[0].type.name) {
-                case 'EString': defaultValue = 'empty'; break;
-                case 'EInt': defaultValue = 0; break;
-                case 'EBoolean': defaultValue = false; break;
-            }
-            let newValue = [];
-            if(value.instanceof[0].className === 'DReference') {
-                for(let pointers of value.value) { newValue.push((pointers as LObject).id); }
-                newValue.push(defaultValue as string);
-            } else {
-                newValue = [...value.value, defaultValue]
-            }
-
-            SetFieldAction.new(value.__raw, 'value', newValue as any, '', false);
-
+            SetFieldAction.new(value.__raw, 'value', 'null', '+=', false);
         }
         const deleteValue = (index: number) => {
-            let newValue = [];
-            if(value.instanceof[0].className === 'DReference') {
-                for(let pointers of value.value) { newValue.push((pointers as LObject).id); }
-            } else {
-                newValue = [...value.value]
-            }
-            newValue.splice(index, 1);
-            SetFieldAction.new(value.__raw, 'value', newValue as any, '', false);
+            SetFieldAction.new(value.__raw, 'value', index, '-=', false);
         }
 
-        const change = (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
-            if(value.instanceof[0].name === 'name') {
-                value.father.name = event.target.value;
-            }
-            const newValue = [...value.value];
-            let target: boolean|number|string;
-            switch(value.instanceof[0].type.name) {
-                case 'EString': target = String(event.target.value); break;
-                case 'EInt': target = parseInt(event.target.value); break;
-                case 'EBoolean': target = event.target.value === 'true'; break;
-                default: target = String(event.target.value);
-            }
-            newValue[index] = target;
-            SetFieldAction.new(value.__raw, 'value', newValue as any, '', false);
+        const change = (event: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>, index: number, isPointer: boolean) => {
+            const target = event.target.value;
+            if(value.instanceof[0].name === 'name') value.father.name = target;
+            const newValues = [...value.__raw.value];
+            newValues[index] = target;
+            SetFieldAction.new(value.__raw, 'value', newValues, '', target !== 'null' && isPointer);
         }
 
         return(<div>
@@ -236,28 +209,19 @@ export default class Structure {
             {value.value.map((val, index) => {
                 return <div key={index} className={"d-block mt-1"}>
                     {feature.className === "DAttribute" &&  feature.type.className === "DClass" &&
-                        <input className={"my-input"} defaultValue={String(val)} type={'text'} onChange={(evt) => change(evt, index)} />
+                        <input className={"my-input"} defaultValue={String(val)} type={'text'} onChange={(evt) => change(evt, index, false)} />
                     }
                     {feature.className === "DAttribute" &&  feature.type.className === "DEnumerator" &&
-                        <select className={"my-input"}  defaultValue={val as string} onChange={(event) => {
-                            const newValue = [...value.value];
-                            newValue[index] = event.target.value;
-                            SetFieldAction.new(value.__raw, 'value', newValue as any, '', false);
-                        }}>
-                            <option value={0}>-----</option>
+                        <select className={"my-input"}  defaultValue={val as string} onChange={(evt) => {change(evt, index, true)}}>
+                            <option value={'null'}>NULL</option>
                             {(feature.type as LEnumerator).literals.map((literal, i) => {
-                                return <option key={i} value={index + 1}>{literal.name}</option>
+                                return <option key={i} value={literal.id}>{literal.name}</option>
                             })}
                         </select>
                     }
                     {feature.className === "DReference" &&
-                        <select className={"my-input"}  defaultValue={(val as LObject).id} onChange={(event) => {
-                            const newValue = [];
-                            for(let pointers of value.value) { newValue.push((pointers as LObject).id); }
-                            newValue[index] = event.target.value;
-                            SetFieldAction.new(value.__raw, 'value', newValue as any, '', false);
-                        }}>
-                            <option value={'NULL'}>NULL</option>
+                        <select className={"my-input"}  defaultValue={(val as LObject).id} onChange={(evt) => {change(evt, index, true)}}>
+                            <option value={'null'}>NULL</option>
                             {Selectors.getObjects().filter((obj) => {return obj.instanceof[0].id === value.instanceof[0].type.id}).map((obj, i) => {
                                 return <option key={i} value={obj.id}>{obj.name}</option>
                             })}

@@ -1,9 +1,9 @@
 import type {
     DAttribute,
     DClass,
+    DGraph,
     DClassifier,
     DEnumerator,
-    DGraph,
     DGraphElement,
     DRefEdge,
     DVoidVertex,
@@ -22,17 +22,19 @@ import type {
     Pointer,
 } from "../../joiner";
 import {
+    AbstractConstructor,
+    Constructor,
     DModel,
-    DModelElement, DObject,
+    DModelElement, DNamedElement, DObject,
     DPointerTargetable, DValue,
-    DViewElement, LObject,
+    DViewElement, LNamedElement, LObject,
     Log,
     LPointerTargetable, LValue,
-    MyProxyHandler,
+    MyProxyHandler, OCL,
     RuntimeAccessible,
     RuntimeAccessibleClass,
     store,
-    U,
+    U, windoww,
 } from "../../joiner";
 import {EdgeOptions} from "../store";
 
@@ -260,15 +262,14 @@ export class Selectors{
 
     static getViews(condition?: (m: DModel) => boolean): DViewElement[] { return Selectors.getAll(DViewElement); }
 
-    /*static getCurrentView(data: LModelElement): DViewElement {
-        Log.exDevv('todo');
-        return undefined as any;
-    }*/
-    // 2 = explicit exact match (===), 1 = matches a subclass, 0 = implicit match (any *), -1 = not matches
     private static matchesOclCondition(v: DViewElement, data: DModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
-      if (!v.oclApplyCondition) return ViewEClassMatch.IMPLICIT_MATCH;
-      Log.exDevv('todo view ocl matching');
-      return ViewEClassMatch.EXACT_MATCH;
+        if (!v.oclApplyCondition) return ViewEClassMatch.IMPLICIT_MATCH;
+        const query = v.oclApplyCondition;
+        if(data.className === 'DObject') {
+            const lObject: LObject = LObject.fromPointer(data.id);
+            if(lObject.instanceof[0].name === query) return ViewEClassMatch.EXACT_MATCH;
+        }
+        return ViewEClassMatch.MISMATCH;
     }
 
     private static matchesMetaClassTarget(v: DViewElement, data: DModelElement): ViewEClassMatch {

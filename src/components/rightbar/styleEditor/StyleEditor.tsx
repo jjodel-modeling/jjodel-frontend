@@ -18,6 +18,7 @@ function StyleEditorComponent(props: AllProps) {
             <div className={"structure-input-wrapper row"}>
                 <Input obj={selected.node} field={"y"} label={"Y Position:"} type={"number"} />
             </div>
+            {JSON.stringify(selected.view)}
         </div>);
     } else {
         return(<></>);

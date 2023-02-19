@@ -4,21 +4,21 @@ import {
     CreateElementAction,
     DeleteElementAction,
     DPointerTargetable,
-    DViewElement,
-    HTMLEditor,
+    DViewElement, GObject,
     Input,
     IStore,
     LPointerTargetable,
     LViewElement,
     MyProxyHandler,
-    OCLEditor,
     Pointer,
-    Selectors,
+    Selectors, SetFieldAction,
     SetRootFieldAction,
     windoww,
 } from "../../../joiner";
 import withReactContent from "sweetalert2-react-content";
 import Swal from "sweetalert2";
+import JsxEditor from "../jsxEditor/JsxEditor";
+import OclEditor from "../oclEditor/OclEditor";
 
 // private
 interface ThisState {
@@ -81,17 +81,25 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                     <div className={"structure-input-wrapper row"}>
                         <Input obj={view} field={"adaptHeight"} label={"Adapt Height:"} type={"checkbox"}/>
                     </div>
-                    {/*<OCLEditor obj={view} field={'ocl'} label={"Editor OCL"}/>*/}
-                    <HTMLEditor obj={view} field={'jsxString'} label={"Editor HTML"} />
+                    <div className={"structure-input-wrapper row"}>
+                        <Input obj={view} field={"adaptHeight"} label={"Adapt Height:"} type={"checkbox"}/>
+                    </div>
+                    <div className={"structure-input-wrapper row"}>
+                        <Input obj={view} field={"draggable"} label={"Draggable:"} type={"checkbox"}/>
+                    </div>
+                    <div className={"structure-input-wrapper row"}>
+                        <Input obj={view} field={"resizable"} label={"Resizable:"} type={"checkbox"}/>
+                    </div>
+                    <OclEditor viewid={view.id} />
+                    <JsxEditor viewid={view.id} />
                 </div>
                 {/* SUBVIEWS TEMPORARY DISABLED */}
                 <div className={"row mt-5 d-none"}>
                     <h5 className={"my-auto col"}>SUB VIEWS</h5>
                     <button style={{maxWidth: "3em"}} className={"btn btn-success col"} onClick={async(e) => {
                         // INSERT SUBVIEW
-                        let inputOptions = {};
+                        let inputOptions: GObject = {};
                         for(let subView of Selectors.getAllViewElements()){
-                            // @ts-ignore
                             inputOptions[subView.id] = subView.name;
                         }
                         const viewPointer = await MySwal.fire({
@@ -103,13 +111,9 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                             confirmButtonText: 'Add',
                             showLoaderOnConfirm: true,
                         })
-                        if(viewPointer.value !== undefined) {
-                            let pointers: string[] = []
-                            for(let subView of view.subViews){
-                                pointers.push(subView.id)
-                            }
-                            pointers.push(viewPointer.value);
-                            (data as any)['subViews'] = pointers;
+                        if(viewPointer.value) {
+                            const pointer = viewPointer.value;
+                            SetFieldAction.new(data.__raw, 'subViews', pointer, '+=', true);
                         }
                     }}>
                         <i className={"fas fa-plus"} />
@@ -133,13 +137,8 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                     confirmButtonText: 'Confirm',
                                     showLoaderOnConfirm: true,
                                 })
-                                if(confirm.value === true) {
-                                    let pointers: string[] = []
-                                    for(let subView of view.subViews){
-                                        pointers.push(subView.id)
-                                    }
-                                    pointers.splice(index, 1);
-                                    (data as any)['subViews'] = pointers;
+                                if(confirm.value) {
+                                    SetFieldAction.new(data.__raw, 'subViews', index, '-=', true);
                                 }
                             }}>
                                 <i className="fas fa-times" />
@@ -164,7 +163,9 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                                     showLoaderOnConfirm: true,
                                 })
                                 if(viewName.value !== undefined) {
-                                    const newView = DViewElement.new(viewName.value, '');
+                                    const beautify = require('js-beautify').html;
+                                    const jsx = beautify(`<div className={'w-100 h-100'}><div className={'h-100 border border-dark'}></div></div>`);
+                                    const newView = DViewElement.new(viewName.value, jsx, undefined, '', '', '', []);
                                     CreateElementAction.new(newView);
                                     //PUSH: ADD VIEW
                                     SetRootFieldAction.new('stackViews', newView.id, '+=', true);

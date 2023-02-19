@@ -1,0 +1,11 @@
+@import "./defaultVariables";
+
+/* class */
+.round { border-radius: $radius; }
+.bg-smoke { background-color: whitesmoke; }
+.class-can-be-extended { border: 2px solid #28A745FF !important; border-radius: $radius; }
+.class-cannot-be-extended { border: 2px solid #DC3545FF !important; border-radius: $radius; }
+.ui-icon, .ui-widget-content .ui-icon { background-image: none !important; }
+
+/* tag */
+hr { margin: 0 0 !important; }

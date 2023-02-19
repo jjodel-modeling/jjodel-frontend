@@ -1,7 +1,6 @@
 import React, {Dispatch, PureComponent, ReactNode} from "react";
 import {connect} from "react-redux";
 import {DockContext, DockLayout, DropDirection, PanelData, TabData} from "rc-dock";
-// import {LayoutData} from "rc-dock/src/DockData";
 import "rc-dock/dist/rc-dock.css";
 import './docking.scss';
 import {LayoutBase} from "rc-dock/lib/DockData";
@@ -15,11 +14,12 @@ import {
     Log,
     Pointer,
     Selectors,
-    store, StyleEditor,
+    store,
     TRANSACTION,
     windoww,
 } from "../../joiner";
 import {DefaultNode} from "../../joiner/components";
+import StyleEditor from "../rightbar/styleEditor/StyleEditor";
 
 
 //const StyleEditor = windoww.tempcomponents.StyleEditor;

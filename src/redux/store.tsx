@@ -40,7 +40,7 @@ import {
     DUser,
     DValue,
     DViewElement,
-    getPath,
+    getPath, LModel,
     LObject,
     LUser,
     LValue,
@@ -122,12 +122,10 @@ export class IStore {
     _edgeSettings = { showAnchor: false, size: 1, color: '#000000' }
 
     constructor() {
-//        super();
-        this.currentUser = DUser.new(); // todo: this must become a pointer to idlookup and fire a CreateNewElementAction
+        // todo: this must become a pointer to idlookup and fire a CreateNewElementAction
+        this.currentUser = DUser.new();
         this.users = [this.currentUser.id];
         this.models = [];
-        // this.collaborators = [];
-        // this.fakeinit();
     }
 
     static fakeinit(store?: IStore): void {
@@ -135,23 +133,26 @@ export class IStore {
         for (let graphDefaultView of graphDefaultViews) {
             CreateElementAction.new(graphDefaultView);
         }
-        const dModel = DModel.new("Test Model");
-        CreateElementAction.new(dModel);
-        CreateElementAction.new(DGraph.new(dModel.id));
+        const dMetaModel = DModel.new("Metamodel");
+        CreateElementAction.new(dMetaModel);
+        CreateElementAction.new(DGraph.new(dMetaModel.id));
 
-        const primitiveTypes = ["EString", "EInt", "EBoolean"];
+        const primitiveTypes = ['EString', 'EInt', 'EBoolean'];
         for (let primitiveType of primitiveTypes) {
             const dPrimitiveType = DClass.new(primitiveType);
             CreateElementAction.new(dPrimitiveType);
             SetRootFieldAction.new("primitiveTypes", dPrimitiveType.id, '+=', true);
         }
-
         const returnTypes = ["void", "undefined", "null"];
         for (let returnType of returnTypes) {
             const dReturnType = DClass.new(returnType);
             CreateElementAction.new(dReturnType);
             SetRootFieldAction.new("returnTypes", dReturnType.id, '+=', true);
         }
+        const dModel: DModel = DModel.new('Model');
+        dModel.isMetamodel = false;
+        CreateElementAction.new(dModel);
+        CreateElementAction.new(DGraph.new(dModel.id));
     }
 
     static makeM3Test(fireAction: boolean = true, outElemArray: DPointerTargetable[] = []): DModel {
@@ -214,22 +215,26 @@ export class IStore {
 function makeDefaultGraphViews(): DViewElement[] {
 
     let mview: DViewElement = DViewElement.new('ModelDefaultView', DV.modelView(), undefined, '', '', '', [DModel.name]);
+    mview.draggable = false; mview.resizable = false;
     let pkgview: DViewElement = DViewElement.new('PackageDefaultView', DV.packageView(), undefined, '', '', '', [DPackage.name]);
     let cview: DViewElement = DViewElement.new('ClassDefaultView', DV.classView(), undefined, '', '', '', [DClass.name]);
     let eview: DViewElement = DViewElement.new('EnumDefaultView', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.name]);
     let aview: DViewElement = DViewElement.new('AttribDefaultView', DV.attributeView(), undefined, '', '', '', [DAttribute.name]);
+    aview.draggable = false; aview.resizable = false;
     let rview: DViewElement = DViewElement.new('RefDefaultView', DV.referenceView(), undefined, '', '', '', [DReference.name]);
+    rview.draggable = false; rview.resizable = false;
     let oview: DViewElement = DViewElement.new('OperationDefaultView', DV.operationView(), undefined, '', '', '', [DOperation.name]);
+    oview.draggable = false; oview.resizable = false;
     let literalView: DViewElement = DViewElement.new('LiteralDefaultView', DV.literalView(), undefined, '', '', '', [DEnumLiteral.name]);
-    let objectView: DViewElement = DViewElement.new('ObjectView', DV.testView(), undefined, '', '', '', [DObject.name]);
+    literalView.draggable = false; literalView.resizable = false;
+    let objectView: DViewElement = DViewElement.new('ObjectDefaultView', DV.objectView(), undefined, '', '', '', [DObject.name]);
+    let valueView: DViewElement = DViewElement.new('ValueDefaultView', DV.valueView(), undefined, '', '', '', [DValue.name]);
+    valueView.draggable = false; valueView.resizable = false;
+
 
     pkgview.subViews = [cview.id]; // childrens can use this view too todo: this is temporary
 
-    let defaultJsx = `<div className={"render-test"}></div>`;
-    let defaultView: DViewElement = DViewElement.new("DefaultView", defaultJsx, undefined, "",
-        "", "", []);
-
-    let alldefaultViews = [mview, pkgview, cview, eview, aview, rview, oview, literalView, objectView, defaultView];
+    let alldefaultViews = [mview, pkgview, cview, eview, aview, rview, oview, literalView, objectView, valueView];
     mview.subViews = [mview.id, ...alldefaultViews.slice(1).map(e => e.id)]// childrens can use this view too todo: this is temporary, should just be the sliced map of everything else.
     return alldefaultViews;
 }

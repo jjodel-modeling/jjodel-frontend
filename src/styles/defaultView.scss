@@ -1,0 +1,20 @@
+@import "./defaultVariables";
+
+.model-background { background-image: url("../static/svg/graph.svg"); background-repeat: repeat; }
+
+.DPackage { height: 15em; width: 30em; overflow: hidden; }
+.border-package { border: 0.1em solid $border-color; border-left: 0.25em solid $package-color }
+.name-package { font-weight: bold; color: $package-color; }
+
+.DClass { height: 7.5em; width: 15em; overflow: hidden }
+.border-class { border: 0.1em solid $border-color; border-left: 0.25em solid $class-color }
+.name-class { font-weight: bold; color: $class-color; }
+
+.DEnumerator { height: 7.5em; width: 15em; overflow: hidden }
+.border-enum { border: 0.1em solid $border-color; border-left: 0.25em solid $enum-color }
+.name-enum { font-weight: bold; color: $enum-color; }
+
+.DObject { height: 7.5em; width: 15em; overflow: hidden }
+.border-obj { border: 0.1em solid $border-color; border-left: 0.25em solid indigo }
+.name-obj { font-weight: bold; color: indigo; }
+

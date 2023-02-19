@@ -21,6 +21,7 @@
     "html-react-parser": "^3.0.4",
     "jquery": "^3.6.0",
     "jqueryui": "^1.11.1",
+    "js-beautify": "^1.14.7",
     "jsx-parser": "^1.0.8",
     "jsx-recast": "^0.1.1",
     "jsx-runtime": "^1.2.0",

@@ -71,7 +71,17 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
         else if (view.jsxString.indexOf('?.') >= 0)
             Log.ee(errormsg + '\nReminder: ?. operator and empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString, {jsxCodeString, evalContext});
         else Log.ee(errormsg);
-        jsxparsedfunc = () => <div>Syntax Error 2</div>;
+        jsxparsedfunc = () => <div className={'w-100 h-100'}>
+            <div className={"h-100 round bg-white border border-danger"}>
+                <div className={'text-center text-danger'}>
+                    <b>SYNTAX ERROR</b>
+                    <hr />
+                    <label className={'text-center mx-1'}>
+                        The JSX you provide is NOT valid!
+                    </label>
+                </div>
+            </div>
+        </div>;
     }
 
     stateProps.preRenderFunc = view.preRenderFunc;
@@ -283,7 +293,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             case windoww.Components.VertexComponent.name:
                 const injectProps: GraphElementOwnProps = {} as any;
                 injectProps.parentViewId = parentComponent.props.view.id || parentComponent.props.view; // re.props.view ||  thiss.props.view
-                injectProps.parentnodeid = parentComponent.props.node.id;
+                // Giordano add ? because only node go through error
+                injectProps.parentnodeid = parentComponent.props.node?.id;
                 injectProps.graphid = parentComponent.props.graphid;
                 // const vidmap = GraphElementRaw.graphVertexID_counter;
                 // if (!vidmap[injectProps.graphid]) vidmap[injectProps.graphid] = {};

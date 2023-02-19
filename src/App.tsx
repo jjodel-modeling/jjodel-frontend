@@ -1,5 +1,7 @@
 import React, {PureComponent} from 'react';
-import './App.scss';
+// import './App.scss';
+import './styles/defaultView.scss';
+import './styles/style.scss';
 import Dock from "./components/abstract/DockComponent";
 
 

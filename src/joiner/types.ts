@@ -22,6 +22,7 @@ export type orArr<T> = T | T[];
 export type unArr<T extends any[] | any> = T extends any[] ? T[0] : T;
 
 type primitiveType = string | number | boolean | symbol | null | undefined;
+export type PrimitiveType = string | number | boolean | null;
 type NotAFunction = NoCaller | NoBind | NoApply | NoCall;
 type NotFunction = GObject & NotAFunction | primitiveType
 

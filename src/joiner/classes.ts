@@ -358,7 +358,8 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.model = model;
         thiss.subElements = [];
         if (nodeID) thiss.id = nodeID;
-        return this; }
+        return this;
+    }
 
     DViewElement(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                  preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1): this {
@@ -376,11 +377,10 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 350, 200);
         thiss.adaptHeight = false;
         thiss.adaptWidth = false;
-        thiss.x = 0;
-        thiss.y = 0;
         thiss.width = 350;
         thiss.height = 200;
-        return this; }
+        return this;
+    }
 
     static DGraph_maxID: number = 0;
     private static DGraph_makeID(modelid: DGraph["model"]): Pointer<DGraph, 1, 1, LGraph> {

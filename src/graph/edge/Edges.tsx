@@ -10,7 +10,7 @@ interface ThisState {}
 function EdgesComponent(props: AllProps, state: ThisState) {
     const me = props.source.model;
     if(props.targets && props.targets.length <= 0) {
-        return <></>;
+        return <>oooooo</>;
     }
     if(me?.className === "DReference") {
         const lReference: LReference = me as any;
@@ -32,7 +32,7 @@ function EdgesComponent(props: AllProps, state: ThisState) {
             </>;
         }
     }
-    return <></>;
+    return <>ooooo</>;
 }
 interface OwnProps { source: LGraphElement; targets?: LGraphElement[] }
 interface StateProps {}

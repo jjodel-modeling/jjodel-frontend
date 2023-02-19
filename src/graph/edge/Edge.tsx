@@ -66,7 +66,6 @@ function EdgeComponent(props: AllProps, state: ThisState) {
         if(element) {
             element.draggable({
                 cursor: "grabbing",
-                //containment: "parent",
                 containment: "window",
                 drag: function (event: GObject, obj: GObject) {
                     SetRootFieldAction.new("dragging", {id: 0})
@@ -105,7 +104,7 @@ function EdgeComponent(props: AllProps, state: ThisState) {
     }
 
     return(<div onClick={click} onContextMenu={contextMenu}>
-        <div className={"w-100 h-100 p-absolute"} style={{maxHeight: '100%'}}>
+        <div className={"w-100 h-100"}>
             <div style={{visibility: (show) ? 'visible' : 'hidden'}} id={anchorId} className={"anchor"}></div>
             <div style={{borderColor: color}} id={anchorMiddleId} className={"middle-anchor"}></div>
         </div>
