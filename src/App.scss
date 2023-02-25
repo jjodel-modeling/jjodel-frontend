@@ -5,19 +5,7 @@ input, textarea {
   user-select: auto;
 }
 
-img { user-drag: none; }
 
-/* BOOTSTRAP OVERRIDE */
-button { border-radius: 10px !important; }
-.row > * {
-  padding-right: 0;
-  padding-left: 0;
-}
-.render-test {
-  width: 100px;
-  height: 100px;
-  background: green;
-}
 
 
 

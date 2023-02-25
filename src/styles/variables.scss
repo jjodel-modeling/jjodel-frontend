@@ -1,0 +1,20 @@
+$radius: .2em;
+$border-color: #0000005c;
+$background: white;
+$true: #28A745FF;
+$false: #DC3545FF;
+
+
+$model-color: purple;
+$package-color: green;
+$class-color: red;
+$enum-color: orange;
+$feature-color: blue;
+$attribute-color: $feature-color;
+$reference-color: $feature-color;
+$operation-color: $feature-color;
+$parameter-color: pink;
+$object-color: indigo;
+$value-color: $feature-color;
+$annotation-color: black;
+

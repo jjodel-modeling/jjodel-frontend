@@ -5,7 +5,6 @@ import {LGraphElement} from "../../../model/dataStructure";
 import {LViewElement} from "../../../view/viewElement/view";
 import {LModelElement} from "../../../model/logicWrapper";
 import {Input} from "../../forEndUser/bidirectionalInput";
-import "../rightbar.scss";
 
 function StyleEditorComponent(props: AllProps) {
 

@@ -12,7 +12,6 @@ import type {
     LClass,
     LEnumerator,
     LGraphElement,
-    LModel,
     LModelElement,
     LOperation,
     LPackage,
@@ -24,7 +23,7 @@ import type {
 import {
     AbstractConstructor,
     Constructor,
-    DModel,
+    DModel, LModel,
     DModelElement, DNamedElement, DObject,
     DPointerTargetable, DValue,
     DViewElement, LNamedElement, LObject,
@@ -34,7 +33,7 @@ import {
     RuntimeAccessible,
     RuntimeAccessibleClass,
     store,
-    U, windoww,
+    U, windoww, Pointers,
 } from "../../joiner";
 import {EdgeOptions} from "../store";
 
@@ -55,6 +54,15 @@ export class Selectors{
         return views;
     }
     //Giordano: start
+
+    public static getViewpoints() : number[] {
+        const state: IStore & GObject = store.getState();
+        return state.viewpoints;
+    }
+    public static getViewpoint() : number  {
+        const state: IStore & GObject = store.getState();
+        return state.viewpoint;
+    }
 
     public static getObjects(): LObject[] {
         let state: IStore & GObject = store.getState();
@@ -262,6 +270,7 @@ export class Selectors{
 
     static getViews(condition?: (m: DModel) => boolean): DViewElement[] { return Selectors.getAll(DViewElement); }
 
+    /*
     private static matchesOclCondition(v: DViewElement, data: DModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
         if (!v.oclApplyCondition) return ViewEClassMatch.IMPLICIT_MATCH;
         const query = v.oclApplyCondition;
@@ -271,6 +280,31 @@ export class Selectors{
         }
         return ViewEClassMatch.MISMATCH;
     }
+     */
+
+    private static queryJS(model: LModel, query: string): LPointerTargetable[] {
+        try {
+            return eval(query);
+        } catch (e) { return []; }
+    }
+
+    private static matchesOclCondition(v: DViewElement, data: DModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
+        if (!v.query) return ViewEClassMatch.IMPLICIT_MATCH;
+        const viewpoint = Selectors.getViewpoint();
+        if (v.viewpoint != viewpoint) return ViewEClassMatch.IMPLICIT_MATCH;
+        const query = v.query;
+        try {
+            const model = Selectors.getModel('model');
+            if(model) {
+                const lModel: LModel = LModel.fromPointer(model.id);
+                const result = Selectors.queryJS(lModel, query);
+                const pointers = Pointers.from(result);
+                if(pointers.includes(data.id)) return ViewEClassMatch.EXACT_MATCH;
+            }
+        } catch (e) { console.log('wrong query') }
+        return ViewEClassMatch.MISMATCH;
+    }
+
 
     private static matchesMetaClassTarget(v: DViewElement, data: DModelElement): ViewEClassMatch {
         if (!v.appliableToClasses || !v.appliableToClasses.length) return ViewEClassMatch.IMPLICIT_MATCH;

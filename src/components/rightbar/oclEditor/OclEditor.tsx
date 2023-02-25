@@ -9,13 +9,13 @@ function OclEditorComponent(props: AllProps) {
     const view = props.view;
 
     const change = (value: string|undefined) => {
-        if(value !== undefined) view.oclApplyCondition = value;
+        if(value !== undefined) view.query = value;
     }
 
     return <div style={{height: '100px'}}>
         <h5>OCL Editor</h5>
         <Editor className={'h-auto'} onChange={change}
-                defaultLanguage={'html'} value={view.oclApplyCondition} />
+                defaultLanguage={'js'} value={view.query} />
     </div>;
 }
 interface OwnProps { viewid: Pointer<DViewElement, 1, 1, LViewElement>; }

@@ -33,6 +33,7 @@ import {
     U, UX,
     WPointerTargetable
 } from "../../joiner";
+import {PrimitiveType} from "../../joiner/types";
 
 
 @Node
@@ -418,7 +419,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     const dObject: DObject = DObject.fromPointer(instance);
                     CreateElementAction.new(dValue);
                     BEGIN()
-                    SetFieldAction.new(dValue, 'value', 'null', '+=', false);
+                    SetFieldAction.new(dValue, 'value', U.initializeValue(lType.id), '+=', false);
                     SetFieldAction.new(dValue, 'father', dObject.id, '', true);
                     SetFieldAction.new(dValue, 'instanceof', dAttribute.id, '+=', true);
                     SetFieldAction.new(dAttribute, 'instances', dValue.id, '+=', true);
@@ -459,7 +460,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     const dObject: DObject = DObject.fromPointer(instance);
                     CreateElementAction.new(dValue);
                     BEGIN()
-                    SetFieldAction.new(dValue, 'value', 'null', '+=', false);
+                    SetFieldAction.new(dValue, 'value', U.initializeValue(dReference.type), '+=', false);
                     SetFieldAction.new(dValue, 'father', dObject.id, '', true);
                     SetFieldAction.new(dValue, 'instanceof', dReference.id, '+=', true);
                     SetFieldAction.new(dReference, 'instances', dValue.id, '+=', true);
@@ -911,7 +912,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         }
         for(let instance of instances) {
             const wInstance = WPointerTargetable.fromL(instance);
-            wInstance.value = ['null'];
+            wInstance.value = [U.initializeValue(val)];
         }
         SetFieldAction.new(context.data, 'type', Pointers.from(val), "", true);
         return true;
@@ -1856,7 +1857,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         // for (i = 0; i < extendedby.length; i++) { extendedby[i].checkViolations(true); }
     }
 
-    public instance(): DObject {return DObject.new('error');}
+    public instance(): DObject { this.cannotCall('instance'); return DObject.new(''); }
     private get_instance(context: Context): () => DObject {
         return () => {
             const dClass: DClass = context.data;
@@ -1871,7 +1872,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             let father: LClass|undefined = lClass;
             while(father) {
                 for(let dFeature of [...father.attributes, ...father.references]) {
-                    const dValue = DValue.new(dFeature.name); dValue.value = ['null'];
+                    const dValue = DValue.new(dFeature.name); dValue.value = [U.initializeValue(dFeature.type)];
                     CreateElementAction.new(dValue);
                     BEGIN()
                     SetFieldAction.new(dValue, 'father', dObject.id, '', true);
@@ -2571,6 +2572,20 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     isRoot!: boolean;
     features!: LValue[];
 
+    public feature(name: string): PrimitiveType { this.cannotCall('feature'); return null; }
+    private get_feature(context: Context): (name: string) => PrimitiveType|LObject {
+        return (name: string) => {
+            const lObject = context.proxyObject;
+            const features = lObject.features.filter((value) => {
+                return value.instanceof[0].name === name
+            });
+            if(features.length > 0) {
+                const feature = features[0];
+                return feature.value[0];
+            } return '';
+        }
+    }
+
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DValue, 1, 'N'> {
         return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DValue, 1, 'N'>,
                 ...context.data.features];
@@ -2667,38 +2682,32 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     }
 
 
-    protected get_value(context: Context): this['value']{
-        const data: DValue = context.data;
-        return data.value;
-    }
-
-    public get_toString(context: Context): () => string {
-        return () => {
-            let ret = '';
-            const data: DValue = context.data;
-            const instanceOf: LStructuralFeature = context.proxyObject.instanceof[0];
-            if (instanceOf.className === 'DAttribute') {
-                if (data.value.length === 1) ret = JSON.stringify(data.value[0]);
-                else ret = JSON.stringify(data.value);
+    protected get_value(context: Context): string|string[]{
+        const data: LValue = context.proxyObject;
+        const values = context.data.value;
+        const instanceOf: LStructuralFeature = data.instanceof[0];
+        if(instanceOf.className === 'DAttribute' && instanceOf.type.className === 'DEnumerator') {
+            const names: string[] = [];
+            for(let value of values) {
+                if(value !== 'null') {
+                    const dLiteral: DEnumLiteral = DEnumLiteral.fromPointer(value);
+                    names.push(dLiteral.name)
+                } else { names.push('null'); }
             }
-            if (instanceOf.className === 'DReference') {
-                const names: string[] = [];
-                for (let pointer of data.value) {
-                    if (pointer !== 'null') {
-                        const object: LObject = LObject.fromPointer(pointer);
-                        names.push(object.name);
-                    } else names.push('null');
-                }
-                if (data.value.length === 1) ret = JSON.stringify(names[0]);
-                else ret = JSON.stringify(names);
-            }
-            if(instanceOf.type.name === 'EString') ret = ret.replaceAll('\"', '\'')
-            else ret = ret.replaceAll('\"', '')
-            return ret;
+            return names;
         }
+        if(instanceOf.className === 'DReference') {
+            const names: string[] = [];
+            for(let value of values) {
+                if(value !== 'null') {
+                    const lObject: LObject = LObject.fromPointer(value);
+                    names.push(lObject.feature('name') as string);
+                } else { names.push('null'); }
+            }
+            return names;
+        }
+        return values;
     }
-
-
 
     protected get_delete(context: Context): () => void {
         const ret = () => {
@@ -2799,6 +2808,11 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return true;
     }
 
+    protected get_objects(context: Context): this['objects'] {
+        return context.data.objects.map((pointer) => {
+            return LPointerTargetable.from(pointer)
+        });
+    }
 
      protected get_packages(context: Context): this["packages"] {
         return context.data.packages.map((pointer) => {

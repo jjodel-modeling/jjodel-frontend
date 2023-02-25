@@ -35,7 +35,7 @@ import {
     DRefEdge,
     Selectors,
     DReference,
-    DModelElement, WPointerTargetable
+    DModelElement, WPointerTargetable, LEnumLiteral, DAttribute, DClassifier, LClassifier, LNamedElement
 } from "../joiner";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
@@ -48,6 +48,18 @@ export class U{
     static pe(useLog_e: never, ...rest: any): void | never {}
 
     //Giordano: start
+
+    public static initializeValue(classifier: undefined|DClassifier|LClassifier|Pointer<DClassifier, 1, 1, LClassifier>): string {
+        if(!classifier) return 'null';
+        const pointer: Pointer = typeof classifier === 'string' ? classifier : classifier.id;
+        const me: LNamedElement = LNamedElement.fromPointer(pointer);
+        switch(me.name) {
+            case 'EString': return 'empty';
+            case 'EInt': return '0';
+            case 'EBoolean': return 'false';
+        }
+        return 'null';
+    }
 
     public static orderChildrenByTimestamp(context: LogicContext): LModelElement[] {
         const children = context.proxyObject.childrens;
@@ -112,11 +124,11 @@ export class U{
     public static showToolButton(className : string) : boolean {
         switch (className){
             default: return false;
-            case "DPackage": return true;
-            case "DClass": return true;
-            case "DAttribute": return true;
-            case "DReference": return true;
-            case "DEnumerator": return true;
+            case "DPackage":
+            case "DClass":
+            case "DAttribute":
+            case "DReference":
+            case "DEnumerator":
             case "DEnumLiteral": return true;
         }
     }

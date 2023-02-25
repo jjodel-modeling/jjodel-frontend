@@ -1,0 +1,92 @@
+import React, {Dispatch, ReactElement, ReactNode} from "react";
+import {connect} from "react-redux";
+import {IStore} from "../../redux/store";
+import {LPointerTargetable, GObject, Pointer, LClass, LEnumerator} from "../../joiner";
+import type {LClassifier, DPointerTargetable} from "../../joiner";
+import {Tooltip} from "react-tooltip";
+
+
+function SelectComponent(props: AllProps) {
+
+    const data = props.data;
+    const field = props.field;
+    const value = (data[field] !== undefined) ? data[field] : 'undefined';
+    const label: string|undefined = props.label;
+    const jsxLabel: ReactNode|undefined = props.jsxLabel;
+    const tooltip = props.tooltip;
+    let css = 'my-auto select ';
+    css += (jsxLabel) ? 'ms-1' : 'ms-auto';
+    css += (props.hidden) ? ' hidden-input' : '';
+
+    let hasVoid = false; let hasPrimitive = false; let hasClasses = false; let hasEnumerators = false;
+    switch (data.className) {
+        case 'DAttribute': hasPrimitive = true; hasEnumerators = true; break;
+        case 'DReference': hasClasses = true;
+    }
+    const primitives = props.primitives;
+    const classes: LClass[] = data.model.classes;
+    const enumerators: LEnumerator[] = data.model.enumerators;
+
+    return(<div className={'d-flex p-1'}>
+        {(label && !jsxLabel) && <label className={'my-auto'}>
+            {label}
+        </label>}
+        {(jsxLabel && !label) && <label className={'my-auto'}>
+            {jsxLabel}
+        </label>}
+        <select className={css} value={value}>
+            {(hasPrimitive && primitives.length > 0) && <optgroup label={'Primitives'}>
+                {primitives.map((primitive, i) => {
+                    return <option key={i} value={primitive.id}>{primitive.name}</option>
+                })}
+            </optgroup>}
+            {(hasEnumerators && enumerators.length > 0) && <optgroup label={'Enumerators'}>
+                {enumerators.map((enumerator, i) => {
+                    return <option key={i} value={enumerator.id}>{enumerator.name}</option>
+                })}
+            </optgroup>}
+            {(hasClasses && classes.length > 0) && <optgroup label={'Classes'}>
+                {classes.map((classifier, i) => {
+                    return <option key={i} value={classifier.id}>{classifier.name}</option>
+                })}
+            </optgroup>}
+        </select>
+        {(tooltip) && <Tooltip>{tooltip}</Tooltip>}
+    </div>);
+}
+interface OwnProps {
+    obj: DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
+    field: string;
+    label?: string;
+    jsxLabel?: ReactNode;
+    tooltip?: string;
+    hidden?: boolean;
+}
+interface StateProps { data: LPointerTargetable & GObject; primitives: LClassifier[] }
+interface DispatchProps { }
+type AllProps = OwnProps & StateProps & DispatchProps;
+
+
+function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+    const ret: StateProps = {} as any;
+    const pointer: Pointer = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
+    ret.data = LPointerTargetable.fromPointer(pointer);
+    ret.primitives = LPointerTargetable.fromPointer(state.primitiveTypes);
+    return ret;
+}
+
+function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
+    const ret: DispatchProps = {};
+    return ret;
+}
+
+
+export const SelectConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+    mapStateToProps,
+    mapDispatchToProps
+)(SelectComponent);
+
+export const Select = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    return <SelectConnected {...{...props, childrens}} />;
+}
+export default Select;

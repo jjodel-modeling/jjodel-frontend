@@ -21,8 +21,7 @@ import JsxEditor from "../jsxEditor/JsxEditor";
 import OclEditor from "../oclEditor/OclEditor";
 
 // private
-interface ThisState {
-}
+interface ThisState {}
 
 const MySwal = withReactContent(Swal);
 
@@ -89,6 +88,9 @@ class ViewsEditorComponent extends PureComponent<AllProps, ThisState>{
                     </div>
                     <div className={"structure-input-wrapper row"}>
                         <Input obj={view} field={"resizable"} label={"Resizable:"} type={"checkbox"}/>
+                    </div>
+                    <div className={"structure-input-wrapper row"}>
+                        <Input obj={view} field={"viewpoint"} label={"Viewpoint:"} type={"number"}/>
                     </div>
                     <OclEditor viewid={view.id} />
                     <JsxEditor viewid={view.id} />

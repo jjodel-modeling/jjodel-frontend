@@ -53,6 +53,8 @@ export class DViewElement extends DPointerTargetable {
     height!: number;
     draggable: boolean = true;
     resizable: boolean = true;
+    query: string = '';
+    viewpoint: number = 0;
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1): DViewElement {
@@ -100,7 +102,8 @@ export class LViewElement extends LPointerTargetable { // MixOnlyFuncs(DViewElem
     height!: number;
     draggable!: boolean;
     resizable!: boolean;
-
+    query!: string;
+    viewpoint!: number;
 
     get_subViews(context: LogicContext<DViewElement>, key: string): LViewElement[]{
         let subViewsPointers = context.data.subViews;

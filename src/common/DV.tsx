@@ -27,9 +27,11 @@ class DefaultView {
 
     public static packageView(): string {
         return `<div className={'h-100 round border-package bg-white'}>
-            <label className={'ms-1'}>
-                <b className={'name-package me-1'}>EPackage:</b>{this.data.name}
+            <label className={'w-100'}>
+                <Input jsxLabel={<b className={'name-package'}>EPackage:</b>} 
+                       obj={this.data.id} field={'name'} hidden={true} />
             </label>
+            <hr />
             {this.data.childrens.map((child, index) => {
                 return <DefaultNode key={index} data={child.id}></DefaultNode>
             })}
@@ -38,8 +40,9 @@ class DefaultView {
 
     public static classView(): string {
         return `<div className={'h-100 round border-class bg-white'}>
-            <label className={'ms-1'}>
-                <b className={'name-class me-1'}>EClass:</b>{this.data.name}
+            <label className={'w-100'}>
+                <Input jsxLabel={<b className={'name-class'}>EClass:</b>} 
+                       obj={this.data.id} field={'name'} hidden={true} />
             </label>
             <hr />
             {this.data.childrens.map((child, index) => {
@@ -83,9 +86,9 @@ class DefaultView {
         </div>`;
     }
     public static objectView() {
-        return `<div className={'h-100 round border-obj bg-white'}>
+        return `<div className={'h-100 round border-object bg-white'}>
             <label className={'ms-1'}>
-                <b className={'name-obj me-1'}>EObject:</b>{this.data.name}
+                <b className={'name-object me-1'}>EObject:</b>{this.data.feature('name')}
             </label>
             <hr />
             {this.data.features.map((child, index) => {
@@ -96,8 +99,15 @@ class DefaultView {
     }
     public static valueView() {
         return `<div className={'h-100 d-flex bg-smoke'}>
-            <label className={'ms-1'}>{this.data.name}</label>
-            <label className={'ms-auto me-1'}>{this.data.value}</label>
+            <label className={'ms-1'}>{this.data.instanceof[0].name}</label>
+            <label className={'ms-auto me-1'}>
+                {this.data.value.map((value, i) => {
+                    return <label>
+                        {(i + 1) === this.data.value.length && <div className={'ms-1'}>{value}</div> }
+                        {(i + 1) !== this.data.value.length && <div className={'ms-1'}>{value},</div> }
+                    </label>
+                })}
+            </label>
         </div>`;
     }
 

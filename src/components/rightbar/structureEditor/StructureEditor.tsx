@@ -11,7 +11,6 @@ import {
     LViewElement,
     Pointer,
 } from "../../../joiner";
-import "../rightbar.scss";
 import Structure from "./Structure";
 
 

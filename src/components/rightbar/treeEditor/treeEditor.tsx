@@ -8,20 +8,33 @@ import {
     LModelElement,
     LPointerTargetable,
     LViewElement,
-    Pointer, Select
+    Pointer, Select, SetRootFieldAction
 } from "../../../joiner";
 import Editor from "@monaco-editor/react";
 import {useStateIfMounted} from "use-state-if-mounted";
 import Structure from "../structureEditor/Structure";
 
-interface Props {data: LModelElement, index: number}
+interface Props {data: LModelElement}
 function Child(props: Props) {
     const data = props.data;
-    const index = props.index;
-    return <div style={{marginLeft: (index === 1) ? '0' : '1rem'}}>
-        {Structure.Editor(data)}
+    const classname = data.className.slice(1).toLowerCase();
+    const css = 'name-' + classname;
+
+    const click = (evt: React.MouseEvent<HTMLButtonElement>) => {
+        const selected = { node: undefined, view: undefined, modelElement: data.id };
+        SetRootFieldAction.new('_lastSelected', selected);
+    }
+
+    return <div className={'mt-1 ms-3'}>
+        <div className={'d-flex'}>
+            <button className={'btn-white'} onClick={click}>
+                <i className={'bi bi-eye'}></i>
+            </button>
+            <label className={css + ' ms-1 text-capitalize my-auto'}>{classname}:</label>
+            <label className={'ms-1 my-auto'}>{((data as GObject).name) ? (data as GObject).name : 'unnamed'}</label>
+        </div>
         {data.childrens.map((child, i) => {
-            return <Child key={i} index={index + (i + 1)} data={child} />
+            return <Child key={i} data={child} />
         })}
     </div>
 }
@@ -29,9 +42,18 @@ function Child(props: Props) {
 function TreeEditorComponent(props: AllProps) {
     const data = props.data;
     if(data) {
-        return <div>
+        const classname = data.className.slice(1).toLowerCase();
+        const css = 'name-' + classname;
+        return <div className={'p-2'}>
+            <div className={'d-flex'}>
+                <button className={'btn-white'}>
+                    <i className={'bi bi-eye-slash'}></i>
+                </button>
+                <label className={css + ' ms-1 text-capitalize my-auto'}>{classname}:</label>
+                <label className={'ms-1 my-auto'}>{((data as GObject).name) ? (data as GObject).name : 'unnamed'}</label>
+            </div>
             {data.childrens.map((child, i) => {
-                return <Child key={i} index={1} data={child} />
+                return <Child key={i} data={child} />
             })}
         </div>
     } else return <></>

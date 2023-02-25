@@ -13,6 +13,7 @@ import EdgeEditor from "../rightbar/edgeEditor/EdgeEditor";
 import StyleEditor from "../rightbar/styleEditor/StyleEditor";
 import ViewsEditor from "../rightbar/viewsEditor/ViewsEditor";
 import TreeEditor from "../rightbar/treeEditor/treeEditor";
+import ViewpointEditor from "../rightbar/viewpointEditor/ViewpointEditor";
 
 
 let windoww = window as any;
@@ -30,6 +31,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
     viewsEditor!: TabData;
     styleEditor!: TabData;
     edgeEditor!: TabData;
+    viewpointEditor!: TabData;
     logger!: TabData;
     box: any;
     initialized: boolean = false;
@@ -64,6 +66,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
         this.viewsEditor = { title: "Views", group: "2", closable: false, content: <ViewsEditor /> };
         this.styleEditor = { title: "Node", group: "2", closable: false, content: <StyleEditor /> };
         this.edgeEditor = { title: "Edge Editor", group: "2", closable: false, content: <EdgeEditor /> };
+        this.viewpointEditor = { title: "Viewpoints", group: "2", closable: false, content: <ViewpointEditor /> };
         this.box = {
             dockbox: {
                 mode: "horizontal", children: [
@@ -78,8 +81,9 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
                             { ...this.structureEditor, id: '1' },
                             { ...this.treeEditor, id: '2' },
                             { ...this.viewsEditor, id: '3' },
-                            { ...this.styleEditor, id: '4' },
-                            { ...this.edgeEditor, id: '5' }
+                            { ...this.viewpointEditor, id: '4' },
+                            //{ ...this.styleEditor, id: '5' },
+                            //{ ...this.edgeEditor, id: '6' },
                         ]}]
                     }
                 ]

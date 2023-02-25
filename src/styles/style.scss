@@ -1,11 +1,26 @@
-@import "./defaultVariables";
+@import "./variables";
 
-/* class */
+/* classes */
 .round { border-radius: $radius; }
+.circle { border-radius: 999px; }
 .bg-smoke { background-color: whitesmoke; }
-.class-can-be-extended { border: 2px solid #28A745FF !important; border-radius: $radius; }
-.class-cannot-be-extended { border: 2px solid #DC3545FF !important; border-radius: $radius; }
+.class-can-be-extended { border: 2px solid $true !important; border-radius: $radius; }
+.class-cannot-be-extended { border: 2px solid $false !important; border-radius: $radius; }
 .ui-icon, .ui-widget-content .ui-icon { background-image: none !important; }
+.dock-content .dock-tabpane { background-color: whitesmoke; }
+.btn-white { background-color: whitesmoke; color: #2e2f34; }
+.input { width: 50%; outline: none; font-size: 0.9rem; appearance: none; height: min-content; border-radius: $radius; border: 1px solid black; }
+.hidden-input { border: 1px dashed transparent; background-color: transparent }
+.hidden-input:focus { border: 1px dashed black; }
+.input[type='checkbox'] { width: min-content; cursor: pointer; padding: 0.6em; background-color: $false; }
+.input[type='checkbox']:checked { background-color: $true; }
+.select { width: 50%; outline: none; font-size: 0.9rem; height: min-content; border-radius: $radius; border: 1px solid black; }
 
-/* tag */
+/* tags */
 hr { margin: 0 0 !important; }
+label { height: min-content; font-size: 0.9rem; font-weight: lighter; }
+button {
+  padding: 0 0.1em; line-height: normal;
+  border: 1px solid $border-color; border-radius: $radius;
+  background-color: blueviolet; color: white;
+}

@@ -1,7 +1,4 @@
-@import "../../graph/vertex/palette";
-$other-feature-color: brown;
-$feature-color: indigo;
-
+@import "src/styles/variables";
 
 .toolbar {
   position: absolute;
@@ -18,7 +15,7 @@ $feature-color: indigo;
 }
 .toolbar {
   .package {
-    border-left: 2px solid $pkg-color;
+    border-left: 2px solid $package-color;
   }
   .class {
     border-left: 2px solid $class-color;
@@ -30,9 +27,12 @@ $feature-color: indigo;
     border-left: 2px solid $feature-color;
   }
   .parameter, .exception, .literal {
-    border-left: 2px solid $other-feature-color;
+    border-left: 2px solid $feature-color;
   }
   .annotation {
-    border-left: 2px solid black;
+    border-left: 2px solid $annotation-color;
+  }
+  .object {
+    border-left: 2px solid $object-color;
   }
 }

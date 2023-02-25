@@ -1,4 +1,6 @@
-export {Input, Select, Textarea} from "../components/forEndUser/bidirectionalInput";
+export {Textarea} from "../components/forEndUser/bidirectionalInput";
+export {Input} from "../components/forEndUser/Input";
+export {Select} from "../components/forEndUser/Select";
 export {Image} from "../components/forEndUser/Image";
 export {DataOutputComponent} from "../components/logger/DataOutput";
 export {LoggerComponent} from "../components/logger/loggerComponent";

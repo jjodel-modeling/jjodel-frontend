@@ -121,6 +121,9 @@ export class IStore {
     users: Pointer<DUser, 1, 'N', LUser>;
     _edgeSettings = { showAnchor: false, size: 1, color: '#000000' }
 
+    viewpoint: number = 0;
+    viewpoints: number[] = [0];
+
     constructor() {
         // todo: this must become a pointer to idlookup and fire a CreateNewElementAction
         this.currentUser = DUser.new();

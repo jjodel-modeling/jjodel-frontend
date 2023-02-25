@@ -19,8 +19,6 @@ import {
     RuntimeAccessibleClass,
     U,
 } from "../../joiner";
-import "./vertex.scss";
-import "./default.scss";
 import RootVertex from "./RootVertex";
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
