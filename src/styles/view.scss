@@ -1,19 +1,27 @@
 @import "./variables";
 
-.model-background { background-image: url("../static/svg/graph.svg"); background-repeat: repeat; }
+
+.root { height: inherit; width: inherit; }
+
+.default-model { position: absolute;  background-image: url("../static/svg/graph.svg"); background-repeat: repeat; height: 100%; width: 100% }
 .name-model { font-weight: bold; color: $model-color; }
+.default-model > .children { height: 100%; width: 100%; }
 
-.DPackage { height: 15em; width: 30em; overflow: hidden; }
-.border-package { border: 0.1em solid $border-color; border-left: 0.25em solid $package-color }
+.default-package { min-height: 100px; min-width: 100px; height: 100%; width: 100%;
+  border: 0.1em solid $border-color; border-left: 0.25em solid $package-color }
 .name-package { font-weight: bold; color: $package-color; }
+.default-package > .children { height: 100%; width: 100%; }
 
-.DClass { height: 7.5em; width: 15em; overflow: hidden }
-.border-class { border: 0.1em solid $border-color; border-left: 0.25em solid $class-color }
+.default-class { min-height: 100px; min-width: 100px; height: 100%; width: 100%;
+  border: 0.1em solid $border-color; border-left: 0.25em solid $class-color }
 .name-class { font-weight: bold; color: $class-color; }
+.default-class > .children { height: fit-content; width: 100%; background-color: whitesmoke }
 
-.DEnumerator { height: 7.5em; width: 15em; overflow: hidden }
-.border-enum { border: 0.1em solid $border-color; border-left: 0.25em solid $enum-color }
+.default-enum { min-height: 100px; min-width: 100px; height: 100%; width: 100%;
+  border: 0.1em solid $border-color; border-left: 0.25em solid $enum-color }
 .name-enum { font-weight: bold; color: $enum-color; }
+.default-enum > .children { height: fit-content; width: 100%; background-color: whitesmoke }
+
 
 .name-feature { font-weight: bold; color: $feature-color; }
 .name-attribute { font-weight: bold; color: $attribute-color; }
@@ -21,8 +29,10 @@
 .name-operation { font-weight: bold; color: $operation-color; }
 .name-parameter { font-weight: bold; color: $parameter-color; }
 
-.DObject { height: 7.5em; width: 15em; overflow: hidden }
-.border-object { border: 0.1em solid $border-color; border-left: 0.25em solid $object-color }
+.default-object { min-height: 100px; min-width: 200px; height: 100%; width: 100%;
+  border: 0.1em solid $border-color; border-left: 0.25em solid $object-color }
 .name-object { font-weight: bold; color: $object-color; }
+.default-object > .children { height: fit-content; width: 100%; background-color: whitesmoke }
+
 
 .name-value { font-weight: bold; color: $value-color; }

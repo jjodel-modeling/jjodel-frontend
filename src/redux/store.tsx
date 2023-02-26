@@ -43,7 +43,7 @@ import {
     getPath, LModel,
     LObject,
     LUser,
-    LValue,
+    LValue, LViewElement,
     RuntimeAccessible,
     SetRootFieldAction,
 } from "../joiner";
@@ -68,8 +68,9 @@ export class IStore {
     logs: Pointer<DLog, 0, 'N', LLog> = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
     currentUser: DUser;
-    //change viewsEditor to hook function and use the state instaed redux (?)
-    stackViews: Pointer<DViewElement>[] = [];
+
+    viewelements: Pointer<DViewElement, 0, 'N', LViewElement> = [];
+    stackViews: Pointer<DViewElement, 0, 'N', LViewElement> = [];
 
     // users: Dictionary<DocString<Pointer<DUser>>, UserState> = {};
     // collaborators: UserState[];
@@ -96,7 +97,7 @@ export class IStore {
     classs: Pointer<DClass, 0, "N", LClass> = [];
     operations: Pointer<DOperation, 0, "N", LOperation> = [];
     parameters: Pointer<DParameter, 0, "N", LParameter> = [];
-    returnTypes: Pointer<DClass, 1, "N", LClass> = [];
+    returnTypes: Pointer<DClass, 0, "N", LClass> = [];
     /// DClass section end
 
     isEdgePending: {user: Pointer<DUser, 1, 1, LUser>, source: Pointer<DClass, 1, 1, LClass>} = {user: "", source: ""};
@@ -146,7 +147,7 @@ export class IStore {
             CreateElementAction.new(dPrimitiveType);
             SetRootFieldAction.new("primitiveTypes", dPrimitiveType.id, '+=', true);
         }
-        const returnTypes = ["void", "undefined", "null"];
+        const returnTypes = ['void'];
         for (let returnType of returnTypes) {
             const dReturnType = DClass.new(returnType);
             CreateElementAction.new(dReturnType);
@@ -219,20 +220,33 @@ function makeDefaultGraphViews(): DViewElement[] {
 
     let mview: DViewElement = DViewElement.new('ModelDefaultView', DV.modelView(), undefined, '', '', '', [DModel.name]);
     mview.draggable = false; mview.resizable = false;
+
     let pkgview: DViewElement = DViewElement.new('PackageDefaultView', DV.packageView(), undefined, '', '', '', [DPackage.name]);
+    pkgview.adaptHeight = true; pkgview.adaptWidth = true;
+
     let cview: DViewElement = DViewElement.new('ClassDefaultView', DV.classView(), undefined, '', '', '', [DClass.name]);
+    cview.adaptHeight = true; cview.adaptWidth = true;
+
     let eview: DViewElement = DViewElement.new('EnumDefaultView', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.name]);
+    eview.adaptHeight = true; eview.adaptWidth = true;
+
     let aview: DViewElement = DViewElement.new('AttribDefaultView', DV.attributeView(), undefined, '', '', '', [DAttribute.name]);
-    aview.draggable = false; aview.resizable = false;
+    aview.draggable = false; aview.resizable = false; aview.adaptHeight = true;
+
     let rview: DViewElement = DViewElement.new('RefDefaultView', DV.referenceView(), undefined, '', '', '', [DReference.name]);
-    rview.draggable = false; rview.resizable = false;
+    rview.draggable = false; rview.resizable = false; rview.adaptHeight = true;
+
     let oview: DViewElement = DViewElement.new('OperationDefaultView', DV.operationView(), undefined, '', '', '', [DOperation.name]);
-    oview.draggable = false; oview.resizable = false;
+    oview.draggable = false; oview.resizable = false; oview.adaptHeight = true;
+
     let literalView: DViewElement = DViewElement.new('LiteralDefaultView', DV.literalView(), undefined, '', '', '', [DEnumLiteral.name]);
-    literalView.draggable = false; literalView.resizable = false;
+    literalView.draggable = false; literalView.resizable = false; literalView.adaptHeight = true;
+
     let objectView: DViewElement = DViewElement.new('ObjectDefaultView', DV.objectView(), undefined, '', '', '', [DObject.name]);
+    objectView.adaptHeight = true; objectView.adaptWidth = true;
+
     let valueView: DViewElement = DViewElement.new('ValueDefaultView', DV.valueView(), undefined, '', '', '', [DValue.name]);
-    valueView.draggable = false; valueView.resizable = false;
+    valueView.draggable = false; valueView.resizable = false; valueView.adaptHeight = true;
 
 
     pkgview.subViews = [cview.id]; // childrens can use this view too todo: this is temporary

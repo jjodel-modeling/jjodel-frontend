@@ -5,7 +5,7 @@ import {connect} from "react-redux";
 import {U} from "../../../joiner";
 
 
-function ViewpointEditorComponent(props: AllProps) {
+function ViewpointsEditorComponent(props: AllProps) {
 
     const viewpoints = props.viewpoints;
     const selected = props.selected;
@@ -20,24 +20,30 @@ function ViewpointEditorComponent(props: AllProps) {
         SetRootFieldAction.new('viewpoint', value, '', false);
     }
 
-    return <div>
+    return(<div>
         <div className={'d-flex p-2'}>
             <b className={'ms-1 border border-dark my-auto'}>VIEWPOINTS</b>
-            <button className={'ms-auto p-1'} onClick={add}>add</button>
+            <button className={'btn btn-primary ms-auto'} onClick={add}>
+                <i className={'p-1 bi bi-plus'}></i>
+            </button>
         </div>
         {viewpoints.map((viewpoint, i) => {
             return <div key={i} className={'d-flex p-1 mt-1 border border-dark'}>
-                <label className={'border border-dark my-auto'}>
-                    {(selected !== viewpoint) && <>Viewpoint {viewpoint}</>}
-                    {(selected === viewpoint) && <b>Viewpoint {viewpoint}</b>}
+                <label style={{ backgroundColor: (selected === viewpoint) ? 'green' : 'transparent'}}
+                       className={'border border-dark my-auto'}>
+                    Viewpoint {viewpoint}
                 </label>
-                <button className={'ms-auto p-1'} disabled={selected === viewpoint}
-                        onClick={(evt) => {select(evt, viewpoint)}}>select</button>
-                <button className={'ms-1 p-1'} disabled={i === 0 || selected === viewpoint}
-                        onClick={(evt) => {remove(evt, i)}}>delete</button>
+                <button className={'btn btn-success ms-auto'} disabled={selected === viewpoint}
+                        onClick={(evt) => {select(evt, viewpoint)}}>
+                    <i className={'p-1 bi bi-check2'}></i>
+                </button>
+                <button className={'btn btn-danger ms-1'} disabled={i === 0 || selected === viewpoint}
+                        onClick={(evt) => {remove(evt, i)}}>
+                    <i className={'p-1 bi bi-trash3-fill'}></i>
+                </button>
             </div>
         })}
-    </div>
+    </div>);
 }
 interface OwnProps { }
 interface StateProps { viewpoints: number[], selected: number }
@@ -58,12 +64,12 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const ViewpointEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const ViewpointsEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
-)(ViewpointEditorComponent);
+)(ViewpointsEditorComponent);
 
-export const ViewpointEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <ViewpointEditorConnected {...{...props, childrens}} />;
+export const ViewpointsEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    return <ViewpointsEditorConnected {...{...props, childrens}} />;
 }
-export default ViewpointEditor;
+export default ViewpointsEditor;

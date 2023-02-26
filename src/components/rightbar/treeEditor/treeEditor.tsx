@@ -24,16 +24,16 @@ function Child(props: Props) {
         const selected = { node: undefined, view: undefined, modelElement: data.id };
         SetRootFieldAction.new('_lastSelected', selected);
     }
-
+    // I got problems with operation's exception
     return <div className={'mt-1 ms-3'}>
         <div className={'d-flex'}>
-            <button className={'btn-white'} onClick={click}>
+            <button className={'btn'} onClick={click}>
                 <i className={'bi bi-eye'}></i>
             </button>
             <label className={css + ' ms-1 text-capitalize my-auto'}>{classname}:</label>
             <label className={'ms-1 my-auto'}>{((data as GObject).name) ? (data as GObject).name : 'unnamed'}</label>
         </div>
-        {data.childrens.map((child, i) => {
+        {data.className !== 'DOperation' && data.childrens.map((child, i) => {
             return <Child key={i} data={child} />
         })}
     </div>
@@ -44,15 +44,16 @@ function TreeEditorComponent(props: AllProps) {
     if(data) {
         const classname = data.className.slice(1).toLowerCase();
         const css = 'name-' + classname;
+        // I got problems with operation's exception
         return <div className={'p-2'}>
             <div className={'d-flex'}>
-                <button className={'btn-white'}>
+                <button className={'btn'}>
                     <i className={'bi bi-eye-slash'}></i>
                 </button>
                 <label className={css + ' ms-1 text-capitalize my-auto'}>{classname}:</label>
                 <label className={'ms-1 my-auto'}>{((data as GObject).name) ? (data as GObject).name : 'unnamed'}</label>
             </div>
-            {data.childrens.map((child, i) => {
+            {data.className !== 'DOperation' && data.childrens.map((child, i) => {
                 return <Child key={i} data={child} />
             })}
         </div>

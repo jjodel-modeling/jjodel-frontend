@@ -9,18 +9,19 @@
 .ui-icon, .ui-widget-content .ui-icon { background-image: none !important; }
 .dock-content .dock-tabpane { background-color: whitesmoke; }
 .btn-white { background-color: whitesmoke; color: #2e2f34; }
-.input { width: 50%; outline: none; font-size: 0.9rem; appearance: none; height: min-content; border-radius: $radius; border: 1px solid black; }
+.input { width: 50%; outline: none; font-size: 0.9rem; appearance: none; height: min-content;
+  border-radius: $radius; border: 1px solid $border-color; }
+.input:focus { border: 1px dashed $border-color; }
 .hidden-input { border: 1px dashed transparent; background-color: transparent }
-.hidden-input:focus { border: 1px dashed black; }
+.hidden-input:focus { border: 1px dashed $border-color; }
 .input[type='checkbox'] { width: min-content; cursor: pointer; padding: 0.6em; background-color: $false; }
 .input[type='checkbox']:checked { background-color: $true; }
-.select { width: 50%; outline: none; font-size: 0.9rem; height: min-content; border-radius: $radius; border: 1px solid black; }
+.select { width: 50%; outline: none; font-size: 0.9rem; height: min-content; border-radius: $radius;
+  border: 1px solid $border-color; }
+.select:focus { border: 1px dashed $border-color; }
+.btn { padding: 0 0.1em; line-height: normal; border-radius: $radius; }
+
 
 /* tags */
 hr { margin: 0 0 !important; }
 label { height: min-content; font-size: 0.9rem; font-weight: lighter; }
-button {
-  padding: 0 0.1em; line-height: normal;
-  border: 1px solid $border-color; border-radius: $radius;
-  background-color: blueviolet; color: white;
-}

@@ -12,9 +12,9 @@ function OclEditorComponent(props: AllProps) {
         if(value !== undefined) view.query = value;
     }
 
-    return <div style={{height: '100px'}}>
-        <h5>OCL Editor</h5>
-        <Editor className={'h-auto'} onChange={change}
+    return <div style={{height: '5em'}}>
+        <label className={'ms-1'}>OCL Editor</label>
+        <Editor className={'h-auto mx-1'} onChange={change}
                 defaultLanguage={'js'} value={view.query} />
     </div>;
 }

@@ -13,7 +13,7 @@ import EdgeEditor from "../rightbar/edgeEditor/EdgeEditor";
 import StyleEditor from "../rightbar/styleEditor/StyleEditor";
 import ViewsEditor from "../rightbar/viewsEditor/ViewsEditor";
 import TreeEditor from "../rightbar/treeEditor/treeEditor";
-import ViewpointEditor from "../rightbar/viewpointEditor/ViewpointEditor";
+import ViewpointEditor from "../rightbar/viewpointsEditor/ViewpointsEditor";
 
 
 let windoww = window as any;

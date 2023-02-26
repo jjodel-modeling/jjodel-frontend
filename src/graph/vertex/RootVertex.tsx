@@ -1,5 +1,5 @@
 import {EdgeOptions, IStore} from "../../redux/store";
-import React, {CSSProperties, Dispatch, ReactElement, ReactNode, useEffect} from "react";
+import React, {Dispatch, ReactElement, ReactNode, useEffect} from "react";
 import {useStateIfMounted} from "use-state-if-mounted";
 import {connect} from "react-redux";
 import {
@@ -7,7 +7,8 @@ import {
     DUser,
     GObject,
     LClass,
-    LPointerTargetable, LViewElement,
+    LPointerTargetable,
+    LViewElement,
     Pointer,
     SetFieldAction,
     SetRootFieldAction
@@ -16,12 +17,11 @@ import {AllPropss as VertexProps} from "./Vertex";
 import $ from "jquery";
 import "jqueryui";
 import "jqueryui/jquery-ui.css";
-import LeaderLine from "leader-line-new";
-import {useXarrow} from "react-xarrows";
 
 interface ThisState {}
 function RootVertexComponent(props: AllProps, state: ThisState) {
     const rootProps = props.props;
+    const data = rootProps.data;
     const isEdgePending = !!(rootProps.isEdgePending?.source);
     const user = rootProps.isEdgePending.user;
     const source = rootProps.isEdgePending.source;
@@ -29,7 +29,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     const canBeExtend = isEdgePending &&
                         rootProps.data.className === "DClass" &&
                         source.canExtend(rootProps.data as any as LClass, extendError);
-    const [classes, setClasses] = useStateIfMounted<string[]>([]);
+    const [classes, setClasses] = useStateIfMounted<string[]>([data.className]);
     const [isDragged, setIsDragged] = useStateIfMounted(false);
 
     const select = (forUser:Pointer<DUser, 0, 1> = null) => {
@@ -123,6 +123,8 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
         }
     }, [view.draggable, view.resizable])
 
+    const height = (view.adaptHeight) ? 'fit-content' : '100%';
+    const width = (view.adaptWidth) ? 'fit-content' : '100%';
     return(
         <div id={rootProps.nodeid}
              data-nodeid={rootProps.nodeid}
@@ -130,8 +132,8 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              data-viewid={rootProps.view?.id}
              data-modelname={rootProps.data?.className}
              data-userselecting={JSON.stringify(rootProps.node?.__raw.isSelected || {})}
-             style={{zIndex: (isDragged) ? 999 : 0}}
-             className={[...classes, ...props.classes].join(' ')}
+             style={{height: height, width: width, overflow: 'hidden'}}
+             className={classes.join(' ')}
              onClick={onClick}
              onContextMenu={onContextMenu}
              onMouseEnter={onEnter}
@@ -144,17 +146,15 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
 
 }
 interface OwnProps {props: VertexProps, render: ReactNode}
-interface StateProps {classes: Set<string>, edges: EdgeOptions[], selected: boolean}
+interface StateProps {selected: boolean}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
-    const classes = new Set<string>();
     const edges = state.edges;
     const props = ownProps.props;
-    classes.add(props.data.className);
-    const selected: boolean = (props.lastSelected && props.data.id === props.lastSelected.id) as boolean;
-    const ret: StateProps = {classes, edges, selected};
+    const selected = props.data.id === props.lastSelected?.id;
+    const ret: StateProps = {selected};
     return ret;
 
 }

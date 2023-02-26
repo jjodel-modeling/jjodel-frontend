@@ -19,7 +19,7 @@ function InputComponent(props: AllProps) {
 
     const change = (evt: React.ChangeEvent<HTMLInputElement>) => {
         const target: any = (['checkbox', 'radio'].includes(evt.target.type)) ? evt.target.checked : evt.target.value;
-        SetFieldAction.new(data.__raw, field as keyof DPointerTargetable, target, '', false);
+        data[field] = target;
     }
 
     return(<div className={'d-flex p-1'}>
@@ -36,7 +36,7 @@ function InputComponent(props: AllProps) {
     </div>);
 }
 interface OwnProps {
-    obj: DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
+    obj: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
     label?: string;
     jsxLabel?: ReactNode;

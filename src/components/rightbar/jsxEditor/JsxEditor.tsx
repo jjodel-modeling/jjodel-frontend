@@ -17,9 +17,9 @@ function JsxEditorComponent(props: AllProps) {
         if(jsx) view.jsxString = jsx;
     }
 
-    return <div className={'mt-5'} style={{height: '200px'}} tabIndex={-1} onBlur={blur}>
-        <h5>JSX Editor</h5>
-        <Editor className={'h-auto'} onChange={change}
+    return <div style={{marginTop: '2.5em', height: '10em'}} tabIndex={-1} onBlur={blur}>
+        <label className={'ms-1'}>JSX Editor</label>
+        <Editor className={'h-auto mx-1'} onChange={change}
                 defaultLanguage={'html'} defaultValue={view.jsxString} />
     </div>;
 }

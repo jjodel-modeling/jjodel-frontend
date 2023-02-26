@@ -4,7 +4,7 @@ import {
     DValue,
     Input,
     LClassifier,
-    LEnumerator,
+    LEnumerator, LOperation,
     LPointerTargetable,
     LStructuralFeature,
     LValue,
@@ -89,29 +89,26 @@ export default class Structure {
         </>);
     }
 
-    public static OperationEditor(lOperation: LModelElement & GObject): ReactNode {
+    public static OperationEditor(me: LModelElement): ReactNode {
+        const operation: LOperation = LOperation.fromPointer(me.id);
         return(<>
-            {Structure.BaseEditor(lOperation)}
-            {lOperation.parameters.map((parameter: LParameter, index: number) => {
-                const lParameter: LParameter = parameter;
+            {Structure.BaseEditor(operation)}
+            <Select obj={operation.parameters[0].id} field={'type'} label={'Return'} />
+            {operation.parameters.map((parameter, index) => {
                 if (index > 0) {
-                    return <>
-                        <Input obj={parameter.id} field={"name"} label={"Parameter"} type={"text"} tooltip={"parameter"} />
-                        <Select obj={parameter.id} field={"type"} />
-                        <div className={"child-delete"} onClick={() => { UX.deleteWithAlarm(lParameter)}}>
-                            <i className={"bi bi-trash3-fill"}></i>
+                    return <div key={index}>
+                        <label className={'ms-1'}>Parameter</label>
+                        <div className={'ms-3'}>
+                            <Input obj={parameter.id} field={"name"} label={'• Name'} type={"text"} tooltip={"parameter"} />
+                            <Select obj={parameter.id} field={"type"} label={'• Type'} />
                         </div>
-                    </>
+                    </div>
                 }
             })}
-            {lOperation.exceptions.map((exception: DClassifier) => {
-                const lException: LClassifier = LPointerTargetable.from(exception);
-                return <>
-                    <Input obj={exception} field={"name"} label={"Exception"} type={"text"} tooltip={"exception"} />
-                    <div className={"child-delete"} onClick={async() => {await UX.deleteWithAlarm(lException)}}>
-                        <i className={"bi bi-trash3-fill"}></i>
-                    </div>
-                </>
+            {operation.exceptions.map((exception, index) => {
+                return <div key={index}>
+                    <Input obj={exception.id} field={"name"} label={"Exception"} type={"text"} tooltip={"exception"} />
+                </div>
             })}
         </>);
     }
