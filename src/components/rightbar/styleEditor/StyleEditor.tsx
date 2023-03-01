@@ -4,19 +4,17 @@ import {IStore} from "../../../redux/store";
 import {LGraphElement} from "../../../model/dataStructure";
 import {LViewElement} from "../../../view/viewElement/view";
 import {LModelElement} from "../../../model/logicWrapper";
-import {Input} from "../../forEndUser/bidirectionalInput";
+import Input from "../../forEndUser/Input";
 
 function StyleEditorComponent(props: AllProps) {
 
     const selected = props.selected;
     if(selected) {
-        return(<div className={"px-4 mt-3"}>
-            <div className={"structure-input-wrapper row"}>
-                <Input obj={selected.node} field={"x"} label={"X Position:"} type={"number"}/>
-            </div>
-            <div className={"structure-input-wrapper row"}>
-                <Input obj={selected.node} field={"y"} label={"Y Position:"} type={"number"} />
-            </div>
+        return(<div>
+            <Input obj={selected.node} field={"id"} label={"ID"} type={"text"} readonly={true}/>
+            <Input obj={selected.node} field={"x"} label={"X Position"} type={"number"}/>
+            <Input obj={selected.node} field={"y"} label={"Y Position"} type={"number"} />
+            <Input obj={selected.node} field={"zIndex"} label={"Z Index"} type={"number"} />
             {JSON.stringify(selected.view)}
         </div>);
     } else {

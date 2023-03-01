@@ -219,39 +219,38 @@ export class IStore {
 function makeDefaultGraphViews(): DViewElement[] {
 
     let mview: DViewElement = DViewElement.new('ModelDefaultView', DV.modelView(), undefined, '', '', '', [DModel.name]);
-    mview.draggable = false; mview.resizable = false;
+    mview.draggable = false; mview.resizable = false; mview.adaptWidth = true; mview.adaptHeight = true;
 
     let pkgview: DViewElement = DViewElement.new('PackageDefaultView', DV.packageView(), undefined, '', '', '', [DPackage.name]);
-    pkgview.adaptHeight = true; pkgview.adaptWidth = true;
 
     let cview: DViewElement = DViewElement.new('ClassDefaultView', DV.classView(), undefined, '', '', '', [DClass.name]);
-    cview.adaptHeight = true; cview.adaptWidth = true;
 
     let eview: DViewElement = DViewElement.new('EnumDefaultView', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.name]);
-    eview.adaptHeight = true; eview.adaptWidth = true;
 
     let aview: DViewElement = DViewElement.new('AttribDefaultView', DV.attributeView(), undefined, '', '', '', [DAttribute.name]);
-    aview.draggable = false; aview.resizable = false; aview.adaptHeight = true;
+    aview.draggable = false; aview.resizable = false; aview.adaptWidth = true; aview.display = 'contents';
 
     let rview: DViewElement = DViewElement.new('RefDefaultView', DV.referenceView(), undefined, '', '', '', [DReference.name]);
-    rview.draggable = false; rview.resizable = false; rview.adaptHeight = true;
+    rview.draggable = false; rview.resizable = false; rview.adaptWidth = true; rview.display = 'contents';
 
     let oview: DViewElement = DViewElement.new('OperationDefaultView', DV.operationView(), undefined, '', '', '', [DOperation.name]);
-    oview.draggable = false; oview.resizable = false; oview.adaptHeight = true;
+    oview.draggable = false; oview.resizable = false; oview.adaptWidth = true; oview.display = 'contents';
 
     let literalView: DViewElement = DViewElement.new('LiteralDefaultView', DV.literalView(), undefined, '', '', '', [DEnumLiteral.name]);
-    literalView.draggable = false; literalView.resizable = false; literalView.adaptHeight = true;
+    literalView.draggable = false; literalView.resizable = false; literalView.adaptWidth = true; literalView.display = 'contents';
 
     let objectView: DViewElement = DViewElement.new('ObjectDefaultView', DV.objectView(), undefined, '', '', '', [DObject.name]);
-    objectView.adaptHeight = true; objectView.adaptWidth = true;
 
     let valueView: DViewElement = DViewElement.new('ValueDefaultView', DV.valueView(), undefined, '', '', '', [DValue.name]);
-    valueView.draggable = false; valueView.resizable = false; valueView.adaptHeight = true;
+    valueView.draggable = false; valueView.resizable = false; valueView.adaptWidth = true; valueView.display = 'contents';
 
+    const defaultPackage: DViewElement = DViewElement.new('Default Package', DV.defaultPackage());
+    defaultPackage.draggable = false; defaultPackage.resizable = false; defaultPackage.adaptWidth = true; defaultPackage.adaptHeight = true;
+    defaultPackage.query = `metamodel.packages.filter((pkg) => {return pkg.name === 'default'})`;
 
     pkgview.subViews = [cview.id]; // childrens can use this view too todo: this is temporary
 
-    let alldefaultViews = [mview, pkgview, cview, eview, aview, rview, oview, literalView, objectView, valueView];
+    let alldefaultViews = [mview, pkgview, cview, eview, aview, rview, oview, literalView, objectView, valueView, defaultPackage];
     mview.subViews = [mview.id, ...alldefaultViews.slice(1).map(e => e.id)]// childrens can use this view too todo: this is temporary, should just be the sliced map of everything else.
     return alldefaultViews;
 }

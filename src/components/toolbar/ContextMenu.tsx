@@ -1,44 +1,70 @@
 import {IStore} from "../../redux/store";
-import React, {Dispatch, ReactElement} from "react";
+import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import "./style.scss";
-import {SetRootFieldAction} from "../../redux/action/action";
-import {LModelElement} from "../../model/logicWrapper";
-import {LUser} from "../../joiner";
+import {CreateElementAction, SetRootFieldAction} from "../../redux/action/action";
+import {LNamedElement} from "../../model/logicWrapper";
+import {DViewElement, GObject, LGraphElement, LUser} from "../../joiner";
 
-interface ThisState {}
-function ContextMenuComponent(props: AllProps, state: ThisState) {
+function ContextMenuComponent(props: AllProps) {
 
     const user = props.user;
     const display = props.display;
     const position = props.position;
-    const selected = props.selected;
+    const me = props.me;
+    const node = props.node;
+    const jsxList: ReactNode[] = [];
 
     const close = () => { SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); }
+    const addView = () => {
+        if(me) {
+            const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
+            const dView: DViewElement = DViewElement.new(me.name + 'View', jsx);
+            switch(me.className) {
+                case 'DClass':
+                    dView.query = `model.objects.filter((object) => {return object.instanceof.name === '${me.name}'})`;
+                    break;
+                case 'DAttribute':
+                case 'DReference':
+                    dView.query = `model.objects.map((obj) => {return obj.childrens.filter((child) => {return child.name === '${me.name}'})})`;
+                    break;
+            }
+            CreateElementAction.new(dView);
+            SetRootFieldAction.new('stackViews', dView.id, '+=', true);
+        }
+    }
 
-    if(display && selected) {
-        const jsxList = [];
-        jsxList.push(<div className={"col title text-center"}>{selected.className}</div>);
-        jsxList.push(<hr className={"mt-0 mb-0"} />);
-        switch (selected.className) {
-            case "DClass":
+    if(display && me && node) {
+        jsxList.push(<div className={"col title text-center"}>{me.className}</div>);
+        jsxList.push(<hr />);
+        jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={"col item"}>Up</div>);
+        jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={"col item"}>Down</div>);
+        jsxList.push(<div onClick={() => {close(); addView();}} className={"col item"}>Add View</div>);
+        jsxList.push(<div onClick={() => {close(); me.delete();}} className={"col item"}>Delete</div>);
+        switch (me.className) {
+            case 'DValue': jsxList.pop(); break;
+            case 'DClass':
                 jsxList.push(<div onClick={() => {
                     close();
-                    SetRootFieldAction.new('isEdgePending', {user: user.id, source: selected.id});
+                    SetRootFieldAction.new('isEdgePending', {user: user.id, source: me.id});
                 }} className={"col item"}>Extend</div>);
                 break;
         }
-        if(selected.className !== 'DValue')
-            jsxList.push(<div onClick={() => {close(); selected.delete();}} className={"col item"}>Delete</div>);
-        return <>
-            <div className={"context-menu"} style={{top: position.y - 40, left: position.x - 10}}>
-                {jsxList.map((jsx) => { return jsx; })}
-            </div>
-        </>;
-    } else { return <></>; }
+    }
+    return(<>
+        <div className={"context-menu round"} style={{top: position.y - 40, left: position.x - 10}}>
+            {jsxList.map((jsx) => { return jsx; })}
+        </div>
+    </>);
 }
 interface OwnProps {}
-interface StateProps { user: LUser, display: boolean, position: {x: number, y: number}, selected: LModelElement | undefined }
+interface StateProps {
+    user: LUser,
+    display: boolean,
+    position: {x: number, y: number},
+    me?: LNamedElement,
+    node?: LGraphElement,
+}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -47,9 +73,11 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const user = LUser.from(state.currentUser);
     const display = state.contextMenu.display;
     const position = {x: state.contextMenu.x, y: state.contextMenu.y}
-    const selectedPointer = state._lastSelected?.modelElement;
-    const selected: LModelElement | undefined = selectedPointer ? LModelElement.from(selectedPointer) : undefined;
-    const ret: StateProps = { user, display, selected, position };
+    const mePointer = state._lastSelected?.modelElement;
+    const me: LNamedElement | undefined = mePointer ? LNamedElement.fromPointer(mePointer) : undefined;
+    const nodePointer = state._lastSelected?.node;
+    const node: LGraphElement | undefined = nodePointer ? LGraphElement.fromPointer(nodePointer) : undefined;
+    const ret: StateProps = { user, display, position, me, node };
     return ret;
 }
 

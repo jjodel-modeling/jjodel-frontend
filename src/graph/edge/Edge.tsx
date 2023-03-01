@@ -4,7 +4,7 @@ import {connect} from "react-redux";
 import {LGraphElement} from "../../model/dataStructure";
 import Xarrow, {xarrowPropsType} from "react-xarrows";
 import {SetRootFieldAction} from "../../redux/action/action";
-import {GObject, LClass, LReference} from "../../joiner";
+import {GObject, LClass, LReference, Selectors} from "../../joiner";
 import {useEffectOnce} from "usehooks-ts";
 import { useStateIfMounted } from "use-state-if-mounted";
 import $ from "jquery";
@@ -12,23 +12,25 @@ import $ from "jquery";
 const crypto = require("crypto");
 interface ThisState {}
 function EdgeComponent(props: AllProps, state: ThisState) {
-    let source: LClass|LReference|undefined = props.source.model as any;
-    let target: LClass|LReference|undefined = props.target.model as any;
+    const sourceNode = props.source;
+    let source: LClass|LReference|undefined = sourceNode.model as any;
+    const targetNode = props.target;
+    let target: LClass|LReference|undefined = targetNode.model as any;
 
-    const [anchorId, setAnchorId] = useStateIfMounted('');
-    const [anchorMiddleId, setAnchorMiddleId] = useStateIfMounted('');
+    const [startAnchor, setStartAnchor] = useStateIfMounted('');
+    const [middleAnchor, setMiddleAnchor] = useStateIfMounted('');
     const show = props.showAnchor;
     const size = props.size;
     const color = props.color;
 
     const firstOptions: xarrowPropsType = {
-        start: props.source.id, end: anchorMiddleId,
+        start: startAnchor, end: middleAnchor,
         path: "grid", color: color, strokeWidth: size,
-        showHead: false
+        showHead: false, zIndex: 1
     };
     const lastOptions: xarrowPropsType = {
-        start: anchorMiddleId, end: props.target.id,
-        path: "grid", color: color, strokeWidth: size,
+        start: middleAnchor, end: targetNode.id,
+        path: "grid", color: color, strokeWidth: size, zIndex: 1
     };
 
     if(source?.className == "DReference") {
@@ -40,8 +42,6 @@ function EdgeComponent(props: AllProps, state: ThisState) {
             firstOptions.tailShape = {svgElem: <rect style={{
                     rotate: "45deg", fill: "white", strokeWidth: "0.1", stroke: color,
                 }} width=".5pt" height=".5pt" />, offsetForward: 1};
-
-            //firstOptions.tailShape = {svgElem: <path d="M150 0 L75 200 L225 200 Z" />}
         }
     }
     if(source?.className == "DClass") {
@@ -50,29 +50,31 @@ function EdgeComponent(props: AllProps, state: ThisState) {
         lastOptions.headSize = 15;
         lastOptions.headColor = 'white';
         lastOptions.headShape = {svgElem:<svg><path strokeWidth={0.1} stroke={color} d="M 0 0 L 1 0.5 L 0 1 L 0 0 z"/></svg>};
-        // firstOptions.headShape = {svgElem: <path d="M 0 0 L 1 0.5 L 0 1 L 0.25 0.5 z"/>, offsetForward: 0.5};
     }
 
-
-
     useEffectOnce(() => {
-        setAnchorId(crypto.randomBytes(20).toString('hex'));
-        setAnchorMiddleId(crypto.randomBytes(20).toString('hex'));
+        const startId = crypto.randomBytes(20).toString('hex');
+        const start: GObject = $('[id="' + sourceNode.id + '"]');
+        const startHtml = '<div id="' + startId + '" class="anchor"></div>';
+        start.append(startHtml); setStartAnchor(startId);
+
+        setMiddleAnchor(crypto.randomBytes(20).toString('hex'));
     })
 
-
-    useEffect(() =>{
-        const element: GObject = $('[id="' + anchorId + '"]');
-        if(element) {
-            element.draggable({
+    useEffect(() => {
+        const start: GObject = $('[id="' + startAnchor + '"]');
+        if(start) {
+            if(props.showAnchor) start.removeClass('invisible');
+            else start.addClass('invisible');
+            start.draggable({
                 cursor: "grabbing",
-                containment: "window",
+                containment: "parent",
                 drag: function (event: GObject, obj: GObject) {
                     SetRootFieldAction.new("dragging", {id: 0})
                 }
             });
         }
-        const middleware: GObject = $('[id="' + anchorMiddleId + '"]');
+        const middleware: GObject = $('[id="' + middleAnchor + '"]');
         if(middleware) {
             middleware.draggable({
                 cursor: "grabbing",
@@ -84,12 +86,10 @@ function EdgeComponent(props: AllProps, state: ThisState) {
         }
     })
 
-
-    firstOptions.start = anchorId;
     const click = (event: React.MouseEvent<HTMLDivElement>) => {
         if(source) {
             SetRootFieldAction.new('_lastSelected', {
-                node: props.source.id,
+                node: sourceNode.id,
                 view: undefined,
                 modelElement: source.id
             });
@@ -104,10 +104,7 @@ function EdgeComponent(props: AllProps, state: ThisState) {
     }
 
     return(<div onClick={click} onContextMenu={contextMenu}>
-        <div className={"w-100 h-100"}>
-            <div style={{visibility: (show) ? 'visible' : 'hidden'}} id={anchorId} className={"anchor"}></div>
-            <div style={{borderColor: color}} id={anchorMiddleId} className={"middle-anchor"}></div>
-        </div>
+        <div style={{borderColor: color}} id={middleAnchor} className={"middle-anchor"}></div>
         <Xarrow {...firstOptions} />
         <Xarrow {...lastOptions} />
     </div>);

@@ -6,7 +6,6 @@ import {
     DeleteElementAction,
     Dictionary,
     DPointerTargetable,
-    DRefEdge,
     DtoL,
     END,
     getWParams,
@@ -30,7 +29,8 @@ import {
     SetFieldAction,
     SetRootFieldAction,
     store,
-    U, UX,
+    U,
+    UX,
     WPointerTargetable
 } from "../../joiner";
 import {PrimitiveType} from "../../joiner/types";
@@ -421,7 +421,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     BEGIN()
                     SetFieldAction.new(dValue, 'value', U.initializeValue(lType.id), '+=', false);
                     SetFieldAction.new(dValue, 'father', dObject.id, '', true);
-                    SetFieldAction.new(dValue, 'instanceof', dAttribute.id, '+=', true);
+                    SetFieldAction.new(dValue, 'instanceof', dAttribute.id, '', true);
                     SetFieldAction.new(dAttribute, 'instances', dValue.id, '+=', true);
                     SetFieldAction.new(dObject, 'features', dValue.id, '+=', true);
                     END()
@@ -462,7 +462,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     BEGIN()
                     SetFieldAction.new(dValue, 'value', U.initializeValue(dReference.type), '+=', false);
                     SetFieldAction.new(dValue, 'father', dObject.id, '', true);
-                    SetFieldAction.new(dValue, 'instanceof', dReference.id, '+=', true);
+                    SetFieldAction.new(dValue, 'instanceof', dReference.id, '', true);
                     SetFieldAction.new(dReference, 'instances', dValue.id, '+=', true);
                     SetFieldAction.new(dObject, 'features', dValue.id, '+=', true);
                     END()
@@ -1866,7 +1866,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             dObject.isRoot = false;
             CreateElementAction.new(dObject);
             BEGIN()
-            SetFieldAction.new(dObject, 'instanceof', dClass.id, '+=', true);
+            SetFieldAction.new(dObject, 'instanceof', dClass.id, '', true);
             SetFieldAction.new(dClass, 'instances', dObject.id, '+=', true);
             END()
             let father: LClass|undefined = lClass;
@@ -1876,7 +1876,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
                     CreateElementAction.new(dValue);
                     BEGIN()
                     SetFieldAction.new(dValue, 'father', dObject.id, '', true);
-                    SetFieldAction.new(dValue, 'instanceof', dFeature.id, '+=', true);
+                    SetFieldAction.new(dValue, 'instanceof', dFeature.id, '', true);
                     SetFieldAction.new(dFeature, 'instances', dValue.id, '+=', true);
                     SetFieldAction.new(dObject, 'features', dValue.id, '+=', true);
                     END()
@@ -2541,7 +2541,7 @@ export class DObject extends DPointerTargetable { // extends DNamedElement, m1 c
     name!: string;
 
     // personal
-    instanceof!: Pointer<DClass, 1, 'N', LClass>;
+    instanceof!: Pointer<DClass, 1, 1, LClass>;
     isRoot!: boolean;
     features: Pointer<DValue, 0, 'N', LValue> = [];
 
@@ -2568,7 +2568,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     name!: string;
 
     // personal
-    instanceof!: LClass[];
+    instanceof!: LClass;
     isRoot!: boolean;
     features!: LValue[];
 
@@ -2577,7 +2577,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         return (name: string) => {
             const lObject = context.proxyObject;
             const features = lObject.features.filter((value) => {
-                return value.instanceof[0].name === name
+                return value.instanceof.name === name
             });
             if(features.length > 0) {
                 const feature = features[0];
@@ -2592,13 +2592,11 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     }
 
     protected get_instanceof(context: Context): this["instanceof"] {
-        return context.data.instanceof.map((pointer) => {
-            return LPointerTargetable.from(pointer)
-        });
+        const pointer = context.data.instanceof;
+        return LPointerTargetable.from(pointer)
     }
-    protected set_instanceof(val: PackArr<this["instanceof"]>, context: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
-        SetFieldAction.new(context.data, 'instanceof', list, "", true);
+    protected set_instanceof(val: this["instanceof"], context: Context): boolean {
+        SetFieldAction.new(context.data, 'instanceof', val.id, "", true);
         return true;
     }
 
@@ -2612,7 +2610,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     protected get_delete(context: Context): () => void {
         const ret = () => {
             const lObject = context.proxyObject;
-            const lClass = lObject.instanceof[0];
+            const lClass = lObject.instanceof;
             const classes = lClass.__raw.instances;
             const objects = [...(Selectors.getObjects().map((obj) => {return obj.id}))]
             BEGIN()
@@ -2645,7 +2643,7 @@ export class DValue extends DPointerTargetable { // extends DModelElement, m1 va
 
     // personal
     value: string[]|Pointer<DObject, 1, 'N', LObject> = [];
-    instanceof: Pointer<DStructuralFeature, 1, 'N', LStructuralFeature> = [];
+    instanceof: Pointer<DStructuralFeature, 1, 1, LStructuralFeature> = '';
 
     public static new(name?: DNamedElement["name"]): DValue {
         return new Constructors(new DValue('dwc')).DPointerTargetable().DModelElement()
@@ -2668,12 +2666,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     annotations!: LAnnotation[];
     // personal
     value!: string[]|LObject[];
-    instanceof!: LStructuralFeature[];
+    instanceof!: LStructuralFeature;
 
     protected get_instanceof(context: Context): this["instanceof"] {
-        return context.data.instanceof.map((pointer) => {
-            return LPointerTargetable.from(pointer)
-        });
+       const pointer = context.data.instanceof;
+        return LPointerTargetable.from(pointer)
     }
     protected set_instanceof(val: PackArr<this["instanceof"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
@@ -2685,7 +2682,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected get_value(context: Context): string|string[]{
         const data: LValue = context.proxyObject;
         const values = context.data.value;
-        const instanceOf: LStructuralFeature = data.instanceof[0];
+        const instanceOf: LStructuralFeature = data.instanceof;
         if(instanceOf.className === 'DAttribute' && instanceOf.type.className === 'DEnumerator') {
             const names: string[] = [];
             for(let value of values) {
@@ -2712,7 +2709,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected get_delete(context: Context): () => void {
         const ret = () => {
             const lValue = context.proxyObject;
-            const lFeature = lValue.instanceof[0];
+            const lFeature = lValue.instanceof;
             const features = lFeature.__raw.instances;
             const values = [...(Selectors.getValues().map((val) => {return val.id}))];
             BEGIN()

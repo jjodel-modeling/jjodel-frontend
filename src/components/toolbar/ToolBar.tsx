@@ -1,26 +1,22 @@
-import React, {Dispatch, ReactElement, ReactNode, useEffect} from "react";
+import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {IStore} from "../../redux/store";
 
 import {connect} from "react-redux";
 import "./toolbar.scss";
 import {
-    CreateElementAction,
     DGraphElement,
     DModel,
-    DModelElement, DObject,
+    DModelElement,
     DPointerTargetable,
     DViewElement,
-    GObject, LClass,
     LGraphElement,
     LModel,
     LModelElement,
     LViewElement,
     MyProxyHandler,
-    Pointer, SetFieldAction
+    Pointer,
+    SetFieldAction
 } from "../../joiner";
-import $ from "jquery";
-import "jqueryui";
-import "jqueryui/jquery-ui.css";
 import {ToolBarItem} from "./ToolBarItem";
 
 interface ThisState {}
@@ -38,11 +34,6 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     myDictValidator.set("DEnumerator", addChildrens("literal"));
     myDictValidator.set("DOperation", addChildrens("parameter", "exception"));
 
-
-    useEffect(() => {
-        const element: JQuery & GObject = $(".toolbar");
-        element.resizable({});
-    })
 
     if(isMetamodel) {
         return(<div className={"toolbar"}>

@@ -2,7 +2,7 @@ import {IStore} from "../../redux/store";
 import React, {Dispatch, ReactElement, useEffect} from "react";
 import {useStateIfMounted} from "use-state-if-mounted";
 import {connect} from "react-redux";
-import {LClass, LPointerTargetable, LUser} from "../../joiner";
+import {GObject, LClass, LPointerTargetable, LUser} from "../../joiner";
 import "./edge.scss";
 import LeaderLine from "leader-line-new";
 
@@ -37,15 +37,15 @@ function PendingEdgeComponent(props: AllProps) {
     </>;
 }
 
-interface OwnProps {}
-interface StateProps { user: LUser | undefined, source: LClass | undefined }
+interface OwnProps { }
+interface StateProps { user?: LUser, source?: LClass }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
-    const user = LPointerTargetable.from(state.isEdgePending.user);
-    const source = LPointerTargetable.from(state.isEdgePending.source);
-    const ret: StateProps = {user, source};
+    const ret: StateProps = { } as any;
+    ret.user = LPointerTargetable.from(state.isEdgePending.user);
+    ret.source = LPointerTargetable.from(state.isEdgePending.source);
     return ret;
 }
 

@@ -2,7 +2,53 @@
 
 
 .root { height: inherit; width: inherit; }
+.model-view { position: absolute; height: $fill; width: $fill;
+  background-image: url("../static/svg/graph.svg"); background-repeat: repeat; }
 
+
+.package-view { height: $fill; width: $fill;
+  border: 0.1em solid $border-color; border-left: 0.25em solid $package-color}
+.package-name { font-weight: bold; color: $package-color; }
+.package-children { height: $fill; width: $fill; }
+
+
+.class-view { height: $fill; width: $fill;
+  border: 0.1em solid $border-color; border-left: 0.25em solid $class-color}
+.class-name { font-weight: bold; color: $class-color; }
+.class-children { background-color: whitesmoke; height: fit-content; width: $fill; }
+
+
+.enum-view { height: $fill; width: $fill;
+  border: 0.1em solid $border-color; border-left: 0.25em solid $enum-color}
+.enum-name { font-weight: bold; color: $enum-color; }
+.enum-children { background-color: whitesmoke; height: fit-content; width: $fill; }
+
+.object-view { height: $fill; width: $fill;
+  border: 0.1em solid $border-color; border-left: 0.25em solid $object-color}
+.object-name { font-weight: bold; color: $object-color; }
+.object-children { background-color: whitesmoke; height: fit-content; width: $fill; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 .default-model { position: absolute;  background-image: url("../static/svg/graph.svg"); background-repeat: repeat; height: 100%; width: 100% }
 .name-model { font-weight: bold; color: $model-color; }
 .default-model > .children { height: 100%; width: 100%; }
@@ -36,3 +82,4 @@
 
 
 .name-value { font-weight: bold; color: $value-color; }
+*/

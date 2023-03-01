@@ -54,6 +54,9 @@ export class DGraphElement extends DPointerTargetable {
     father!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     x: number = 0;
     y: number = 0;
+    zIndex:number = 0;
+    width: number = 300;
+    height: number = 400;
 
     public static new(model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"]): DGraphElement {
         return new Constructors(new DGraphElement('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID).end();
@@ -78,6 +81,9 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
     allSubNodes!: LGraphElement[];
     x!: number;
     y!: number;
+    zIndex!: number;
+    width!: number;
+    height!: number;
 
     get_graph(context: LogicContext<DGraphElement>): LGraph {
         return TargetableProxyHandler.wrap(context.data.graph); }

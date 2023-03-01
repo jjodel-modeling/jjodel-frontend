@@ -14,7 +14,7 @@ function InputComponent(props: AllProps) {
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
     const tooltip = props.tooltip;
     let css = 'my-auto input ';
-    css += (jsxLabel) ? 'ms-1' : 'ms-auto';
+    css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
     css += (props.hidden) ? ' hidden-input' : '';
 
     const change = (evt: React.ChangeEvent<HTMLInputElement>) => {
@@ -22,14 +22,14 @@ function InputComponent(props: AllProps) {
         data[field] = target;
     }
 
-    return(<div className={'d-flex p-1'}>
+    return(<div style={{display: (jsxLabel || label) ? 'flex' : 'block'}} className={'p-1'}>
         {(label && !jsxLabel) && <label className={'my-auto'}>
             {label}
         </label>}
         {(jsxLabel && !label) && <label className={'my-auto'}>
             {jsxLabel}
         </label>}
-        <input spellCheck={false} className={css}
+        <input spellCheck={false} readOnly={props.readonly} className={css}
                type={type} onChange={change} value={value}
                checked={(['checkbox', 'radio'].includes(type)) ? value : false} />
         {(tooltip) && <Tooltip>{tooltip}</Tooltip>}

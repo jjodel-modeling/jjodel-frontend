@@ -24,7 +24,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    ret.views = LViewElement.fromPointer(state.viewelements.slice(10));
+    ret.views = LViewElement.fromPointer(state.viewelements.slice(0)); //10
     ret.stackViews = LViewElement.fromPointer(state.stackViews);
     return ret;
 }

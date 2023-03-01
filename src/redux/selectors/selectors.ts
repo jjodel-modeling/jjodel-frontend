@@ -292,12 +292,15 @@ export class Selectors{
         if (!v.query) return ViewEClassMatch.IMPLICIT_MATCH;
         const viewpoint = Selectors.getViewpoint();
         if (v.viewpoint != viewpoint) return ViewEClassMatch.IMPLICIT_MATCH;
-        const query = v.query;
+        let query = v.query;
         try {
-            const model = Selectors.getModel('model');
+            const name = query.substring(0, query.indexOf('.'));
+            query = query.slice(query.indexOf('.'), query.length);
+            query = 'model' + query;
+            const model = Selectors.getModel(name);
             if(model) {
                 const lModel: LModel = LModel.fromPointer(model.id);
-                const result = Selectors.queryJS(lModel, query);
+                const result = Selectors.queryJS(lModel, query).flat();
                 const pointers = Pointers.from(result);
                 if(pointers.includes(data.id)) return ViewEClassMatch.EXACT_MATCH;
             }

@@ -17,7 +17,10 @@ import {
 
 export default class Structure {
     private static BaseEditor(lModelElement: LModelElement) : ReactNode {
-        return(<Input obj={lModelElement} field={"name"} label={"Name"} type={"text"} tooltip={"name"} />);
+        return(<>
+            <Input obj={lModelElement} field={"id"} label={"ID"} type={"text"} readonly={true} />
+            <Input obj={lModelElement} field={"name"} label={"Name"} type={"text"} tooltip={"name"} />
+        </>);
     }
     public static ModelEditor(lModel: LModelElement): ReactNode {
         return(<>{Structure.BaseEditor(lModel)}</>);
@@ -116,9 +119,9 @@ export default class Structure {
         const dValue: DValue = DValue.fromPointer(me.id);
         const lValue: LValue = LValue.fromPointer(me.id);
 
-        const feature: LStructuralFeature = LStructuralFeature.fromPointer(lValue.instanceof[0].id);
-        const lowerBound = lValue.instanceof[0].lowerBound;
-        let upperBound = lValue.instanceof[0].upperBound;
+        const feature: LStructuralFeature = LStructuralFeature.fromPointer(lValue.instanceof.id);
+        const lowerBound = lValue.instanceof.lowerBound;
+        let upperBound = lValue.instanceof.upperBound;
         if (upperBound < 0) upperBound = 999;
 
         const addValue = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -160,7 +163,7 @@ export default class Structure {
                         <select className={"my-input"}  value={val} onChange={(evt) => {change(evt, index, true)}}>
                             <option value={'null'}>NULL</option>
                             {Selectors.getObjects().filter((obj) => {
-                                return obj.instanceof[0].id === feature.type.id
+                                return obj.instanceof.id === feature.type.id
                             }).map((obj, i) => {
                                 return <option key={i} value={obj.id}>{obj.feature('name')}</option>
                             })}

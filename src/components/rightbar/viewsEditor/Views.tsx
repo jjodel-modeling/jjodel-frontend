@@ -10,7 +10,6 @@ function ViewsData(props: Props) {
     const add = (evt: React.MouseEvent<HTMLButtonElement>) => {
         const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
         const dView: DViewElement = DViewElement.new('View', jsx);
-        dView.adaptHeight = true; dView.adaptWidth = true;
         CreateElementAction.new(dView);
         SetRootFieldAction.new('stackViews', dView.id, '+=', true);
     }

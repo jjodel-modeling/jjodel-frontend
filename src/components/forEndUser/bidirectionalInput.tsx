@@ -26,7 +26,7 @@ import {
 
 import Editor from "@monaco-editor/react";
 import {Tooltip} from "react-tooltip";
-import "./input.scss";
+import "./style.scss";
 
 const crypto = require("crypto");
 // import './bidirectionalinput.scss';

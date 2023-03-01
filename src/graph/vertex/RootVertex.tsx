@@ -6,7 +6,7 @@ import {
     DClass,
     DUser,
     GObject,
-    LClass,
+    LClass, LGraphElement,
     LPointerTargetable,
     LViewElement,
     Pointer,
@@ -95,6 +95,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                         select();
                     },
                     drag: function(event: GObject, obj: GObject) {
+                        SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 });
                         if(!isDragged) {
                             SetRootFieldAction.new("dragging", {id: rootProps.data.id})
                         }
@@ -117,14 +118,22 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                 element.resizable({
                     containment: "parent",
                     disabled: !(view.resizable),
-                    resize: function(event: GObject, obj: GObject) {}
+                    resize: function(event: GObject, obj: GObject) {
+                        SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 });
+                    }
                 });
             }
         }
     }, [view.draggable, view.resizable])
 
-    const height = (view.adaptHeight) ? 'fit-content' : '100%';
-    const width = (view.adaptWidth) ? 'fit-content' : '100%';
+    const style: GObject = {};
+    style.overflow = 'hidden'; style.position = 'absolute';
+    style.border = '1px solid orange'; style.display = rootProps.view?.display;
+    style.zIndex = rootProps.node?.zIndex;
+    if(view.adaptWidth) style.width = '-webkit-fill-available';
+    //else style.height = (rootProps.view.height) && rootProps.view.height + 'px';
+    if(view.adaptHeight) style.height = '-webkit-fill-available';
+    //else style.width = (rootProps.view.width) && rootProps.view.width + 'px';
     return(
         <div id={rootProps.nodeid}
              data-nodeid={rootProps.nodeid}
@@ -132,7 +141,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              data-viewid={rootProps.view?.id}
              data-modelname={rootProps.data?.className}
              data-userselecting={JSON.stringify(rootProps.node?.__raw.isSelected || {})}
-             style={{height: height, width: width, overflow: 'hidden'}}
+             style={{...style}}
              className={classes.join(' ')}
              onClick={onClick}
              onContextMenu={onContextMenu}
@@ -151,7 +160,6 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
-    const edges = state.edges;
     const props = ownProps.props;
     const selected = props.data.id === props.lastSelected?.id;
     const ret: StateProps = {selected};

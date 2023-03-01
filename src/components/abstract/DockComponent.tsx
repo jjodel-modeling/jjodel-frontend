@@ -1,6 +1,6 @@
 import React, {Dispatch, PureComponent, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import {IStore, LGraph, LModel, LPointerTargetable,} from "../../joiner";
+import {Edge, IStore, LGraph, LModel, LPointerTargetable,} from "../../joiner";
 import {DefaultNode} from "../../graph/defaultNode/DefaultNode";
 
 import {DockLayout, TabData} from "rc-dock";
@@ -14,6 +14,9 @@ import StyleEditor from "../rightbar/styleEditor/StyleEditor";
 import ViewsEditor from "../rightbar/viewsEditor/ViewsEditor";
 import TreeEditor from "../rightbar/treeEditor/treeEditor";
 import ViewpointEditor from "../rightbar/viewpointsEditor/ViewpointsEditor";
+import EdgesManager from "../../graph/edge/EdgesManager";
+import MetamodelTab from "./tabs/MetamodelTab";
+import ModelTab from "./tabs/ModelTab";
 
 
 let windoww = window as any;
@@ -47,19 +50,10 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
         this.graphs = this.props.graphs;
 
         this.metamodelTab = { title: "Metamodel", group: "1", closable: false, content:
-                <div className={"h-100 w-100"}>
-                    <ContextMenu />
-                    <PendingEdge  source={undefined} user={undefined} />
-                    <ToolBar model={this.metamodel.id} isMetamodel={true} />
-                    <DefaultNode data={this.metamodel.id} nodeid={this.graphs[0].id} graphid={this.graphs[0].id} />
-                </div>
+            <MetamodelTab modelid={this.metamodel.id} graphid={this.graphs[0].id} />
         };
         this.modelTab = { title: "Model", group: "1", closable: false, content:
-                <div className={"h-100 w-100"}>
-                    <ContextMenu />
-                    <ToolBar model={this.models[0].id} isMetamodel={false} metamodelId={this.props.metamodel.id} />
-                    <DefaultNode data={this.models[0].id} nodeid={this.graphs[1].id} graphid={this.graphs[1].id} />
-                </div>
+            <ModelTab modelid={this.models[0].id} graphid={this.graphs[1].id} metamodelid={this.metamodel.id} />
         };
         this.structureEditor = { title: "Structure", group: "2", closable: false, content: <StructureEditor /> };
         this.treeEditor = { title: "Tree Editor", group: "2", closable: false, content: <TreeEditor /> };
@@ -82,8 +76,8 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
                             { ...this.treeEditor, id: '2' },
                             { ...this.viewsEditor, id: '3' },
                             { ...this.viewpointEditor, id: '4' },
-                            //{ ...this.styleEditor, id: '5' },
-                            //{ ...this.edgeEditor, id: '6' },
+                            { ...this.styleEditor, id: '5' },
+                            { ...this.edgeEditor, id: '6' },
                         ]}]
                     }
                 ]
