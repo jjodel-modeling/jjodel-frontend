@@ -51,11 +51,11 @@ class DefaultView {
         </div>`;
     }
     public static enum(): string {
-        return `<div className={'round bg-white enum-view'}>
-            <Input jsxLabel={<b className={'enum-name'}>EEnum:</b>} 
+        return `<div className={'round bg-white enumerator-view'}>
+            <Input jsxLabel={<b className={'enumerator-name'}>EEnum:</b>} 
                    obj={this.data.id} field={'name'} hidden={true} />
             <hr />
-            <div className={'enum-children'}>
+            <div className={'enumerator-children'}>
                 {this.data.childrens.map((child, index) => {
                     return <DefaultNode key={index} data={child.id}></DefaultNode>
                 })}
@@ -74,7 +74,7 @@ class DefaultView {
     public static object(): string {
         return `<div className={'round bg-white object-view'}>
             <label className={'ms-1'}>
-                <b className={'name-object me-1'}>{this.data.instanceof.name}:</b>{this.data.feature('name')}
+                <b className={'object-name me-1'}>{this.data.instanceof.name}:</b>{this.data.feature('name')}
             </label>
             <hr />
             <div className={'object-children'}>
@@ -87,7 +87,7 @@ class DefaultView {
     public static value() {
         return `<div className={'d-flex'}>
             <label className={'d-block ms-1'}>{this.data.name}</label>
-            <label className={'d-block ms-auto'}>{this.data.value}</label>
+            <label className={'d-block ms-auto'}>{this.data.stringValue}</label>
         </div>`
     }
     public static defaultPackage() {

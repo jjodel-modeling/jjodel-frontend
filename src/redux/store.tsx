@@ -100,11 +100,11 @@ export class IStore {
     returnTypes: Pointer<DClass, 0, "N", LClass> = [];
     /// DClass section end
 
-    isEdgePending: {user: Pointer<DUser, 1, 1, LUser>, source: Pointer<DClass, 1, 1, LClass>} = {user: "", source: ""};
+    isEdgePending: {user: Pointer<DUser, 1, 1, LUser>, source: Pointer<DClass, 1, 1, LClass>} = {user: '', source: ''};
 
     contextMenu: {display: boolean, x: number, y: number} = { display: false, x: 0, y: 0 };
 
-    dragging: {random: number, id: string} = { random: 0, id: "" };
+    //dragging: {random: number, id: string} = { random: 0, id: "" };
     edges: EdgeOptions[] = [];
     edgesCounter: number = 0;
 
@@ -141,7 +141,7 @@ export class IStore {
         CreateElementAction.new(dMetaModel);
         CreateElementAction.new(DGraph.new(dMetaModel.id));
 
-        const primitiveTypes = ['EString', 'EInt', 'EBoolean'];
+        const primitiveTypes = ['EString', 'EChar', 'EInt', 'EFloat', 'EDouble', 'EByte', 'EShort', 'ELong', 'EBoolean', 'EDate'];
         for (let primitiveType of primitiveTypes) {
             const dPrimitiveType = DClass.new(primitiveType);
             CreateElementAction.new(dPrimitiveType);
@@ -222,27 +222,33 @@ function makeDefaultGraphViews(): DViewElement[] {
     mview.draggable = false; mview.resizable = false; mview.adaptWidth = true; mview.adaptHeight = true;
 
     let pkgview: DViewElement = DViewElement.new('PackageDefaultView', DV.packageView(), undefined, '', '', '', [DPackage.name]);
+    pkgview.width = 500; pkgview.height = 500;
 
     let cview: DViewElement = DViewElement.new('ClassDefaultView', DV.classView(), undefined, '', '', '', [DClass.name]);
 
     let eview: DViewElement = DViewElement.new('EnumDefaultView', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.name]);
 
     let aview: DViewElement = DViewElement.new('AttribDefaultView', DV.attributeView(), undefined, '', '', '', [DAttribute.name]);
-    aview.draggable = false; aview.resizable = false; aview.adaptWidth = true; aview.display = 'contents';
+    aview.draggable = false; aview.resizable = false; aview.adaptWidth = true; aview.display = 'contents'; aview.height = 0;
+    aview.adaptHeight = true;
 
     let rview: DViewElement = DViewElement.new('RefDefaultView', DV.referenceView(), undefined, '', '', '', [DReference.name]);
-    rview.draggable = false; rview.resizable = false; rview.adaptWidth = true; rview.display = 'contents';
+    rview.draggable = false; rview.resizable = false; rview.adaptWidth = true; rview.display = 'contents'; rview.height = 0;
+    rview.adaptHeight = true;
 
     let oview: DViewElement = DViewElement.new('OperationDefaultView', DV.operationView(), undefined, '', '', '', [DOperation.name]);
-    oview.draggable = false; oview.resizable = false; oview.adaptWidth = true; oview.display = 'contents';
+    oview.draggable = false; oview.resizable = false; oview.adaptWidth = true; oview.display = 'contents'; oview.height = 0;
+    oview.adaptHeight = true;
 
     let literalView: DViewElement = DViewElement.new('LiteralDefaultView', DV.literalView(), undefined, '', '', '', [DEnumLiteral.name]);
-    literalView.draggable = false; literalView.resizable = false; literalView.adaptWidth = true; literalView.display = 'contents';
+    literalView.draggable = false; literalView.resizable = false; literalView.adaptWidth = true; literalView.display = 'contents'; literalView.height = 0;
+    literalView.adaptHeight = true;
 
     let objectView: DViewElement = DViewElement.new('ObjectDefaultView', DV.objectView(), undefined, '', '', '', [DObject.name]);
 
     let valueView: DViewElement = DViewElement.new('ValueDefaultView', DV.valueView(), undefined, '', '', '', [DValue.name]);
-    valueView.draggable = false; valueView.resizable = false; valueView.adaptWidth = true; valueView.display = 'contents';
+    valueView.draggable = false; valueView.resizable = false; valueView.adaptWidth = true; valueView.display = 'contents'; valueView.height = 0;
+    valueView.adaptHeight = true;
 
     const defaultPackage: DViewElement = DViewElement.new('Default Package', DV.defaultPackage());
     defaultPackage.draggable = false; defaultPackage.resizable = false; defaultPackage.adaptWidth = true; defaultPackage.adaptHeight = true;

@@ -377,8 +377,8 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 350, 200);
         thiss.adaptHeight = false;
         thiss.adaptWidth = false;
-        thiss.width = 350;
-        thiss.height = 200;
+        thiss.width = 200;
+        thiss.height = 100;
         return this;
     }
 

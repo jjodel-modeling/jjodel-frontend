@@ -55,8 +55,15 @@ export class U{
         const me: LNamedElement = LNamedElement.fromPointer(pointer);
         switch(me.name) {
             case 'EString': return 'empty';
+            case 'EChar':  return 'a';
             case 'EInt': return '0';
+            case 'ELong': return '0';
+            case 'EShort': return '0';
+            case 'Byte': return '0';
+            case 'EFloat': return '0';
+            case 'EDouble': return '0';
             case 'EBoolean': return 'false';
+            case 'EDate': return new Date().toJSON().slice(0,10);
         }
         return 'null';
     }

@@ -2,7 +2,7 @@ import {IStore} from "../../redux/store";
 import React, {Dispatch, ReactElement, useEffect} from "react";
 import {connect} from "react-redux";
 import {LGraphElement} from "../../model/dataStructure";
-import Xarrow, {xarrowPropsType} from "react-xarrows";
+import Xarrow, {xarrowPropsType, Xwrapper} from "react-xarrows";
 import {SetRootFieldAction} from "../../redux/action/action";
 import {GObject, LClass, LReference, Selectors} from "../../joiner";
 import {useEffectOnce} from "usehooks-ts";
@@ -17,24 +17,25 @@ function EdgeComponent(props: AllProps, state: ThisState) {
     const targetNode = props.target;
     let target: LClass|LReference|undefined = targetNode.model as any;
 
-    const [startAnchor, setStartAnchor] = useStateIfMounted('');
-    const [middleAnchor, setMiddleAnchor] = useStateIfMounted('');
     const show = props.showAnchor;
     const size = props.size;
     const color = props.color;
 
+    const [middleAnchor, setMiddleAnchor] = useStateIfMounted('');
+
     const firstOptions: xarrowPropsType = {
-        start: startAnchor, end: middleAnchor,
+        start: sourceNode.id, end: middleAnchor,
         path: "grid", color: color, strokeWidth: size,
-        showHead: false, zIndex: 1
+        showHead: false, zIndex: 0
     };
     const lastOptions: xarrowPropsType = {
         start: middleAnchor, end: targetNode.id,
-        path: "grid", color: color, strokeWidth: size, zIndex: 1
+        path: "grid", color: color, strokeWidth: size, zIndex: 0
     };
 
     if(source?.className == "DReference") {
         source = source as LReference;
+        firstOptions.start = source.father.nodes[0].id;
         lastOptions.showHead = false;
         if(source.containment) {
             firstOptions.showTail = true;
@@ -53,34 +54,17 @@ function EdgeComponent(props: AllProps, state: ThisState) {
     }
 
     useEffectOnce(() => {
-        const startId = crypto.randomBytes(20).toString('hex');
-        const start: GObject = $('[id="' + sourceNode.id + '"]');
-        const startHtml = '<div id="' + startId + '" class="anchor"></div>';
-        start.append(startHtml); setStartAnchor(startId);
-
         setMiddleAnchor(crypto.randomBytes(20).toString('hex'));
     })
 
     useEffect(() => {
-        const start: GObject = $('[id="' + startAnchor + '"]');
-        if(start) {
-            if(props.showAnchor) start.removeClass('invisible');
-            else start.addClass('invisible');
-            start.draggable({
-                cursor: "grabbing",
-                containment: "parent",
-                drag: function (event: GObject, obj: GObject) {
-                    SetRootFieldAction.new("dragging", {id: 0})
-                }
-            });
-        }
         const middleware: GObject = $('[id="' + middleAnchor + '"]');
         if(middleware) {
             middleware.draggable({
                 cursor: "grabbing",
                 containment: "window",
                 drag: function (event: GObject, obj: GObject) {
-                    SetRootFieldAction.new("dragging", {id: 0})
+                    SetRootFieldAction.new("dragging", {})
                 }
             });
         }

@@ -30,7 +30,6 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                         rootProps.data.className === "DClass" &&
                         source.canExtend(rootProps.data as any as LClass, extendError);
     const [classes, setClasses] = useStateIfMounted<string[]>([data.className]);
-    const [isDragged, setIsDragged] = useStateIfMounted(false);
 
     const select = (forUser:Pointer<DUser, 0, 1> = null) => {
         if (!forUser) forUser = DUser.current;
@@ -88,18 +87,15 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
         if(element && rootProps.data.className !== 'DModel') {
             if(view) {
                 element.draggable({
-                    cursor: "grabbing",
-                    containment: "parent",
+                    cursor: 'grabbing',
+                    containment: 'parent',
                     disabled: !(view.draggable),
                     start: function(event: GObject, obj: GObject) {
                         select();
+                        SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 });
                     },
                     drag: function(event: GObject, obj: GObject) {
-                        SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 });
-                        if(!isDragged) {
-                            SetRootFieldAction.new("dragging", {id: rootProps.data.id})
-                        }
-                        setIsDragged(true);
+                        SetRootFieldAction.new("dragging", {})
                     },
                     stop: function (event: GObject, obj: GObject) {
                         const y: number = obj.position.top;
@@ -109,31 +105,31 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                             SetFieldAction.new(dNode, 'x', x, '', false);
                             SetFieldAction.new(dNode, 'y', y, '', false);
                         }
-                        if(!isDragged) {
-                            SetRootFieldAction.new("dragging", {id: ""})
-                        }
-                        setIsDragged(false);
                     }
                 });
                 element.resizable({
-                    containment: "parent",
+                    containment: 'parent',
                     disabled: !(view.resizable),
-                    resize: function(event: GObject, obj: GObject) {
+                    start: function(event: GObject, obj: GObject) {
+                        select();
                         SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 });
+                    },
+                    resize: function(event: GObject, obj: GObject) {
+                        SetRootFieldAction.new("dragging", {})
                     }
                 });
             }
         }
-    }, [view.draggable, view.resizable])
+    }, )
 
-    const style: GObject = {};
-    style.overflow = 'hidden'; style.position = 'absolute';
-    style.border = '1px solid orange'; style.display = rootProps.view?.display;
-    style.zIndex = rootProps.node?.zIndex;
-    if(view.adaptWidth) style.width = '-webkit-fill-available';
-    //else style.height = (rootProps.view.height) && rootProps.view.height + 'px';
-    if(view.adaptHeight) style.height = '-webkit-fill-available';
-    //else style.width = (rootProps.view.width) && rootProps.view.width + 'px';
+    const viewStyle: GObject = {};
+    viewStyle.overflow = 'hidden'; viewStyle.position = 'absolute';
+    viewStyle.display = rootProps.view?.display;
+    viewStyle.zIndex = rootProps.node?.zIndex;
+    if(view.adaptWidth) viewStyle.width = '-webkit-fill-available';
+    else viewStyle.height = (rootProps.view.height) && rootProps.view.height + 'px';
+    if(view.adaptHeight) viewStyle.height = '-webkit-fill-available';
+    else viewStyle.width = (rootProps.view.width) && rootProps.view.width + 'px';
     return(
         <div id={rootProps.nodeid}
              data-nodeid={rootProps.nodeid}
@@ -141,7 +137,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              data-viewid={rootProps.view?.id}
              data-modelname={rootProps.data?.className}
              data-userselecting={JSON.stringify(rootProps.node?.__raw.isSelected || {})}
-             style={{...style}}
+             style={{...viewStyle}}
              className={classes.join(' ')}
              onClick={onClick}
              onContextMenu={onContextMenu}

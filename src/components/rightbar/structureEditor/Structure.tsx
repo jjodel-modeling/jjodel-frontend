@@ -14,6 +14,7 @@ import {
     U,
     UX
 } from "../../../joiner";
+import Value from "./editors/Value";
 
 export default class Structure {
     private static BaseEditor(lModelElement: LModelElement) : ReactNode {
@@ -116,63 +117,11 @@ export default class Structure {
         </>);
     }
     public static ValueEditor(me: LModelElement & GObject): ReactNode {
-        const dValue: DValue = DValue.fromPointer(me.id);
         const lValue: LValue = LValue.fromPointer(me.id);
-
-        const feature: LStructuralFeature = LStructuralFeature.fromPointer(lValue.instanceof.id);
-        const lowerBound = lValue.instanceof.lowerBound;
-        let upperBound = lValue.instanceof.upperBound;
-        if (upperBound < 0) upperBound = 999;
-
-        const addValue = (event: React.MouseEvent<HTMLButtonElement>) => {
-            SetFieldAction.new(dValue, 'value', U.initializeValue(feature.type), '+=', false);
-        }
-        const deleteValue = (index: number) => {
-            SetFieldAction.new(dValue, 'value', index, '-=', false);
-        }
-
-        const change = (event: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>, index: number, isPointer: boolean) => {
-            const target = event.target.value;
-            const newValues = [...dValue.value];
-            newValues[index] = target;
-            SetFieldAction.new(dValue, 'value', newValues, '', target !== 'null' && isPointer);
-        }
 
         return(<div>
             {Structure.BaseEditor(lValue)}
-            <hr />
-            <div className={"d-flex"}>
-                <label>Values</label>
-                <button className={"btn btn-success py-0 px-2 ms-2"} disabled={dValue.value.length >= upperBound}
-                        onClick={addValue}><i className={"bi bi-plus"}></i></button>
-            </div>
-            {dValue.value.map((val, index) => {
-                return <div key={index} className={"d-block mt-1"}>
-                    {feature.className === "DAttribute" &&  feature.type.className === "DClass" &&
-                        <input className={"my-input"} defaultValue={String(val)} type={'text'} onChange={(evt) => change(evt, index, false)} />
-                    }
-                    {feature.className === "DAttribute" &&  feature.type.className === "DEnumerator" &&
-                        <select className={"my-input"}  value={val} onChange={(evt) => {change(evt, index, true)}}>
-                            <option value={'null'}>NULL</option>
-                            {(feature.type as LEnumerator).literals.map((literal, i) => {
-                                return <option key={i} value={literal.id}>{literal.name}</option>
-                            })}
-                        </select>
-                    }
-                    {feature.className === "DReference" &&
-                        <select className={"my-input"}  value={val} onChange={(evt) => {change(evt, index, true)}}>
-                            <option value={'null'}>NULL</option>
-                            {Selectors.getObjects().filter((obj) => {
-                                return obj.instanceof.id === feature.type.id
-                            }).map((obj, i) => {
-                                return <option key={i} value={obj.id}>{obj.feature('name')}</option>
-                            })}
-                        </select>                    }
-                    <button className={"btn btn-danger py-0 px-2 ms-2"} onClick={() => deleteValue(index)}>
-                        <i className={"bi bi-trash3-fill"}></i>
-                    </button>
-                </div>
-            })}
+            <Value value={lValue} />
         </div>);
     }
     public static Editor(lModelElement: LModelElement|undefined) : ReactNode {

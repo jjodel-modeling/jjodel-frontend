@@ -18,7 +18,7 @@ interface Props {data: LModelElement}
 function Child(props: Props) {
     const data = props.data;
     const classname = data.className.slice(1).toLowerCase();
-    const css = 'name-' + classname;
+    const css = classname + '-name';
 
     const click = (evt: React.MouseEvent<HTMLButtonElement>) => {
         const selected = { node: undefined, view: undefined, modelElement: data.id };
@@ -43,7 +43,7 @@ function TreeEditorComponent(props: AllProps) {
     const data = props.data;
     if(data) {
         const classname = data.className.slice(1).toLowerCase();
-        const css = 'name-' + classname;
+        const css = classname + '-name';
         // I got problems with operation's exception
         return <div className={'p-2'}>
             <div className={'d-flex'}>

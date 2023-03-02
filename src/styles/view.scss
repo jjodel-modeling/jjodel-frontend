@@ -4,7 +4,7 @@
 .root { height: inherit; width: inherit; }
 .model-view { position: absolute; height: $fill; width: $fill;
   background-image: url("../static/svg/graph.svg"); background-repeat: repeat; }
-
+.model-name { font-weight: bold; color: $model-color; }
 
 .package-view { height: $fill; width: $fill;
   border: 0.1em solid $border-color; border-left: 0.25em solid $package-color}
@@ -18,10 +18,16 @@
 .class-children { background-color: whitesmoke; height: fit-content; width: $fill; }
 
 
-.enum-view { height: $fill; width: $fill;
+.enumerator-view { height: $fill; width: $fill;
   border: 0.1em solid $border-color; border-left: 0.25em solid $enum-color}
-.enum-name { font-weight: bold; color: $enum-color; }
-.enum-children { background-color: whitesmoke; height: fit-content; width: $fill; }
+.enumerator-name { font-weight: bold; color: $enum-color; }
+.enumerator-children { background-color: whitesmoke; height: fit-content; width: $fill; }
+
+.feature-name { font-weight: bold; color: $feature-color; }
+.attribute-name { font-weight: bold; color: $attribute-color; }
+.reference-name { font-weight: bold; color: $reference-color; }
+.operation-name { font-weight: bold; color: $operation-color; }
+.parameter-name { font-weight: bold; color: $parameter-color; }
 
 .object-view { height: $fill; width: $fill;
   border: 0.1em solid $border-color; border-left: 0.25em solid $object-color}

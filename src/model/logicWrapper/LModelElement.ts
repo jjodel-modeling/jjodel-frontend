@@ -2572,16 +2572,21 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     isRoot!: boolean;
     features!: LValue[];
 
+
     public feature(name: string): PrimitiveType { this.cannotCall('feature'); return null; }
-    private get_feature(context: Context): (name: string) => PrimitiveType|LObject {
+    private get_feature(context: Context): (name: string) => (PrimitiveType|LObject)|(PrimitiveType|LObject)[] {
         return (name: string) => {
             const lObject = context.proxyObject;
             const features = lObject.features.filter((value) => {
                 return value.instanceof.name === name
             });
             if(features.length > 0) {
-                const feature = features[0];
-                return feature.value[0];
+                const matchedFeature = features[0];
+                switch(matchedFeature.value.length) {
+                    case 0: return '';
+                    case 1: return matchedFeature.value[0];
+                    default: return matchedFeature.value;
+                }
             } return '';
         }
     }
@@ -2678,7 +2683,45 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         return true;
     }
 
+    protected get_value(context: Context): (string|LObject)|(string|LObject)[] {
+        const value: (string|LObject)[]= [];
+        const data = context.data;
+        const instaceof = context.proxyObject.instanceof;
+        if(instaceof.className === 'DReference') {
+            const pointers = data.value;
+            for(let pointer of pointers) {
+                if(pointer !== 'null') {
+                    const object: LObject = LObject.fromPointer(pointer);
+                    value.push(object);
+                }
+            }
+        } else { value.push(...context.data.value); }
+        switch(value.length) {
+            case 0: return '';
+            case 1: return value[0];
+            default: return value;
+        }
+    }
 
+    public stringValue(): void { super.cannotCall('formatted'); }
+    protected get_stringValue(context: Context): string {
+        const values: (string|LObject)|(string|LObject)[] = context.proxyObject.value;
+        const stringValues: string[] = [];
+        if(Array.isArray(values)) {
+            for(let value of values) {
+                if(typeof value !== 'string') { stringValues.push(value.feature('name') as string); }
+                else { stringValues.push(value); }
+            }
+            return JSON.stringify(stringValues);
+        } else {
+            const singleton: LObject|string = values as (LObject|string);
+            if(typeof singleton !== 'string') { return JSON.stringify(singleton.feature('name') as string); }
+            else { return JSON.stringify(values); }
+        }
+
+    }
+
+    /*
     protected get_value(context: Context): string|string[]{
         const data: LValue = context.proxyObject;
         const values = context.data.value;
@@ -2705,6 +2748,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
         return values;
     }
+    */
 
     protected get_delete(context: Context): () => void {
         const ret = () => {

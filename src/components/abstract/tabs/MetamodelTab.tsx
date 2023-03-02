@@ -7,6 +7,8 @@ import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import PendingEdge from "../../../graph/edge/PendingEdge";
 import ContextMenu from "../../toolbar/ContextMenu";
+import EdgesManager from "../../../graph/edge/EdgesManager";
+import {Xwrapper} from "react-xarrows";
 
 
 function MetamodelTabComponent(props: AllProps) {
@@ -20,6 +22,7 @@ function MetamodelTabComponent(props: AllProps) {
             <ToolBar model={model.id} isMetamodel={model.isMetamodel} />
             <div style={{marginLeft: '6.55em'}}>
                 <DefaultNode data={model.id} nodeid={graph.id} graphid={graph.id} />
+                <EdgesManager modelid={model.id} />
             </div>
         </div>
     </div>);
