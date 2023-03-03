@@ -1,19 +1,15 @@
-import React, {PureComponent} from 'react';
+import React from 'react';
 import './styles/view.scss';
 import './styles/style.scss';
 import Dock from "./components/abstract/DockComponent";
+import TopBar from "./components/topbar/Topbar";
 
-
-interface AllProps{}
-interface MPState{}
-
-export default class App extends PureComponent<AllProps, MPState>{
-    constructor(props: Readonly<AllProps> | AllProps) {
-        super(props);
-    }
-    render() {
-        return (<>
-            <Dock />
-        </>);
-    }
+interface Props {}
+function App(props: Props) {
+    return(<div className={'d-flex flex-column h-100'} >
+        <TopBar />
+        <Dock />
+    </div>);
 }
+
+export default App;

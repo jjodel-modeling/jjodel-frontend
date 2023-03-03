@@ -22,16 +22,14 @@ function ViewsData(props: Props) {
 
     return(<div>
         <div className={'d-flex p-2'}>
-            <b className={'ms-1 border border-dark my-auto'}>VIEWS</b>
+            <b className={'ms-1 my-auto'}>VIEWS</b>
             <button className={'btn btn-primary ms-auto'} onClick={add}>
                 <i className={'p-1 bi bi-plus'}></i>
             </button>
         </div>
         {views.map((view, i) => {
-            return <div key={i} className={'d-flex p-1 mt-1 border border-dark'}>
-                <label className={'border border-dark my-auto'}>
-                    {view.name}
-                </label>
+            return <div key={i} className={'d-flex p-1 mt-1 border round'}>
+                <label className={'my-auto'}>{view.name}</label>
                 <button className={'btn btn-success ms-auto'} onClick={(evt) => {select(evt, view)}}>
                     <i className={'p-1 bi bi-info-lg'}></i>
                 </button>

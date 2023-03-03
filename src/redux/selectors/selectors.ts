@@ -36,6 +36,7 @@ import {
     U, windoww, Pointers,
 } from "../../joiner";
 import {EdgeOptions} from "../store";
+import {DViewPoint, LViewPoint} from "../../view/viewPoint/viewpoint";
 
 enum ViewEClassMatch { // this acts as a multiplier for explicit priority
     MISMATCH = 0,
@@ -55,13 +56,13 @@ export class Selectors{
     }
     //Giordano: start
 
-    public static getViewpoints() : number[] {
+    public static getViewpoints() : LViewPoint[] {
         const state: IStore & GObject = store.getState();
-        return state.viewpoints;
+        return LViewPoint.fromPointer(state.viewpoints);
     }
-    public static getViewpoint() : number  {
+    public static getViewpoint() : LViewPoint  {
         const state: IStore & GObject = store.getState();
-        return state.viewpoint;
+        return LViewPoint.fromPointer(state.viewpoint);
     }
 
     public static getObjects(): LObject[] {
@@ -291,7 +292,9 @@ export class Selectors{
     private static matchesOclCondition(v: DViewElement, data: DModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
         if (!v.query) return ViewEClassMatch.IMPLICIT_MATCH;
         const viewpoint = Selectors.getViewpoint();
-        if (v.viewpoint != viewpoint) return ViewEClassMatch.IMPLICIT_MATCH;
+        if(v.viewpoint !== viewpoint.id) {
+            return ViewEClassMatch.IMPLICIT_MATCH;
+        }
         let query = v.query;
         try {
             const name = query.substring(0, query.indexOf('.'));

@@ -1,22 +1,17 @@
 import React, {Dispatch, PureComponent, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import {Edge, IStore, LGraph, LModel, LPointerTargetable,} from "../../joiner";
-import {DefaultNode} from "../../graph/defaultNode/DefaultNode";
+import {IStore, LGraph, LModel, LPointerTargetable,} from "../../joiner";
 
 import {DockLayout, TabData} from "rc-dock";
-import "rc-dock/dist/rc-dock.css";
 import StructureEditor from "../rightbar/structureEditor/StructureEditor";
-import ToolBar from "../toolbar/ToolBar";
-import PendingEdge from "../../graph/edge/PendingEdge";
-import ContextMenu from "../toolbar/ContextMenu";
 import EdgeEditor from "../rightbar/edgeEditor/EdgeEditor";
 import StyleEditor from "../rightbar/styleEditor/StyleEditor";
 import ViewsEditor from "../rightbar/viewsEditor/ViewsEditor";
 import TreeEditor from "../rightbar/treeEditor/treeEditor";
 import ViewpointEditor from "../rightbar/viewpointsEditor/ViewpointsEditor";
-import EdgesManager from "../../graph/edge/EdgesManager";
 import MetamodelTab from "./tabs/MetamodelTab";
 import ModelTab from "./tabs/ModelTab";
+import './style.scss';
 
 
 let windoww = window as any;
@@ -87,11 +82,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
 
     render(): ReactNode {
         if(!this.initialized) this.init();
-        // if (!this.initialized && this.props.model) this.init();
-        // if (!this.box) this.box = {dockbox: {mode: "horizontal", children: [{children: [{tabs: [{id: "1", title: "loading", group: "2", closable: false, content: <div> loading model... </div> }]}]}]}};
-        return (<>
-            <DockLayout defaultLayout={this.box} style={{position: "absolute", left: 5, top: 5, right: 5, bottom: 5}} />
-        </>);
+        return (<DockLayout defaultLayout={this.box} />);
     }
 }
 

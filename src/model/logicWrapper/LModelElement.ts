@@ -172,6 +172,10 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     const dValue: DValue = DValue.fromPointer(lPointer.id);
                     SetFieldAction.new(dValue, 'value', dValue.value.indexOf(obj.id as string), '-=', true);
                 }
+                if(label === 'extendedBy') {
+                    const dClass: DClass = DClass.fromPointer(lPointer.id);
+                    SetFieldAction.new(dClass, label, dClass.extendedBy.indexOf(obj.id as string), '-=', true);
+                }
             }
         }
 
@@ -183,7 +187,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         const list = fatherProperties.filter((prop) => { return prop !== obj.id });
         const ret = () => {
             BEGIN();
-            SetFieldAction.new(dFather, property, list, "", false);
+            SetFieldAction.new(dFather, property, list, '', false);
             DeleteElementAction.new(obj.id);
             END();
         }

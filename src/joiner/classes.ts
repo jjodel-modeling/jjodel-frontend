@@ -115,6 +115,7 @@ import {
     store,
     U,
 } from "./index";
+import {DViewPoint} from "../view/viewPoint/viewpoint";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -379,6 +380,12 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.adaptWidth = false;
         thiss.width = 200;
         thiss.height = 100;
+        return this;
+    }
+
+    DViewPoint(name: string): this {
+        const thiss: DViewPoint = this.thiss as any;
+        thiss.name = name;
         return this;
     }
 

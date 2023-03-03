@@ -50,6 +50,7 @@ import {
 import React from "react";
 import DV from "../common/DV";
 import LeaderLine from "leader-line-new";
+import {DViewPoint, LViewPoint} from "../view/viewPoint/viewpoint";
 
 console.warn('ts loading store');
 
@@ -122,8 +123,8 @@ export class IStore {
     users: Pointer<DUser, 1, 'N', LUser>;
     _edgeSettings = { showAnchor: false, size: 1, color: '#000000' }
 
-    viewpoint: number = 0;
-    viewpoints: number[] = [0];
+    viewpoint: Pointer<DViewPoint, 1, 1, LViewPoint> = '';
+    viewpoints: Pointer<DViewPoint, 0, 'N', LViewPoint> = [];
 
     constructor() {
         // todo: this must become a pointer to idlookup and fire a CreateNewElementAction
@@ -134,9 +135,12 @@ export class IStore {
 
     static fakeinit(store?: IStore): void {
         const graphDefaultViews: DViewElement[] = makeDefaultGraphViews();
-        for (let graphDefaultView of graphDefaultViews) {
-            CreateElementAction.new(graphDefaultView);
-        }
+        for (let graphDefaultView of graphDefaultViews) {CreateElementAction.new(graphDefaultView);}
+
+        const viewpoint = DViewPoint.new('Default');
+        CreateElementAction.new(viewpoint);
+        SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
+
         const dMetaModel = DModel.new("Metamodel");
         CreateElementAction.new(dMetaModel);
         CreateElementAction.new(DGraph.new(dMetaModel.id));

@@ -12,6 +12,7 @@ import {
     RuntimeAccessibleClass,
     SetFieldAction
 } from "../../joiner";
+import {DViewPoint, LViewPoint} from "../viewPoint/viewpoint";
 
 
 @RuntimeAccessible
@@ -54,7 +55,7 @@ export class DViewElement extends DPointerTargetable {
     draggable: boolean = true;
     resizable: boolean = true;
     query: string = '';
-    viewpoint: number = 0;
+    viewpoint: Pointer<DViewPoint, 0, 1, LViewElement> = '';
     display: 'block'|'contents' = 'block';
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
@@ -104,8 +105,14 @@ export class LViewElement extends LPointerTargetable { // MixOnlyFuncs(DViewElem
     draggable!: boolean;
     resizable!: boolean;
     query!: string;
-    viewpoint!: number;
-    display!: 'block'|'contents'
+    viewpoint!: LViewPoint;
+    display!: 'block'|'contents';
+
+    get_viewpoint(context: LogicContext<DViewElement>): LViewPoint|undefined {
+        const viewpoint = context.data.viewpoint;
+        if(viewpoint) { return LViewPoint.fromPointer(viewpoint); }
+        else { return undefined; }
+    }
 
     get_subViews(context: LogicContext<DViewElement>, key: string): LViewElement[]{
         let subViewsPointers = context.data.subViews;
