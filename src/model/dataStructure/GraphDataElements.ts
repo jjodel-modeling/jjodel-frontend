@@ -54,7 +54,7 @@ export class DGraphElement extends DPointerTargetable {
     father!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     x: number = 0;
     y: number = 0;
-    zIndex:number = 0;
+    zIndex:number = 100;
     width: number = 300;
     height: number = 400;
 

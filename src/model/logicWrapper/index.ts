@@ -1,10 +1,9 @@
 export {
-    DModelElement,
-    LModelElement,
+    DModelElement, LModelElement,
     DModel, LModel,
+    DObject, LObject,
     DValue, LValue,
     DNamedElement, LNamedElement,
-    DObject, LObject,
     DEnumerator, LEnumerator,
     DEnumLiteral, LEnumLiteral,
     DAttribute, LAttribute,

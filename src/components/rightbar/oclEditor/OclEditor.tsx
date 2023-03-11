@@ -14,7 +14,7 @@ function OclEditorComponent(props: AllProps) {
 
     return <div style={{height: '5em'}}>
         <label className={'ms-1'}>OCL Editor</label>
-        <Editor className={'h-auto mx-1'} onChange={change}
+        <Editor className={'mx-1'} onChange={change}
                 defaultLanguage={'js'} value={view.query} />
     </div>;
 }

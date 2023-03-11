@@ -24,7 +24,6 @@ import StyleEditor from "../rightbar/styleEditor/StyleEditor";
 
 //const StyleEditor = windoww.tempcomponents.StyleEditor;
 
-console.error('see reading');
 //Giordano: why this stuff is in joiner ? these components cannot be access by the user
 //const StyleEditor = windoww.components.StyleEditor;
 //const ViewsEditor = windoww.components.ViewsEditor;

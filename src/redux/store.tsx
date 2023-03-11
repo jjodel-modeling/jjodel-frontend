@@ -327,4 +327,4 @@ type Cconnect = <TStateProps = {}, TDispatchProps = {}, TOwnProps = {}, State = 
 ): InferableComponentEnhancerWithProps<TStateProps & TDispatchProps, TOwnProps>;
 */
 // export const initialState: IStore = new IStore();
-console.error('ts loaded store');
+console.info('ts loaded store');

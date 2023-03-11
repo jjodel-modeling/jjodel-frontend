@@ -6,8 +6,8 @@ import TopBar from "./components/topbar/Topbar";
 
 interface Props {}
 function App(props: Props) {
-    return(<div className={'d-flex flex-column h-100'} >
-        <TopBar />
+    return(<div className={'d-flex flex-column h-100 p-1'} >
+        {/*<TopBar />*/}
         <Dock />
     </div>);
 }

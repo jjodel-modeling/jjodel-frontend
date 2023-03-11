@@ -57,6 +57,10 @@ export class DViewElement extends DPointerTargetable {
     query: string = '';
     viewpoint: Pointer<DViewPoint, 0, 1, LViewElement> = '';
     display: 'block'|'contents' = 'block';
+    onDragStart: string = '';
+    onDragEnd: string = '';
+    onResizeStart: string = '';
+    onResizeEnd: string = '';
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1): DViewElement {
@@ -107,6 +111,10 @@ export class LViewElement extends LPointerTargetable { // MixOnlyFuncs(DViewElem
     query!: string;
     viewpoint!: LViewPoint;
     display!: 'block'|'contents';
+    onDragStart!: string;
+    onDragEnd!: string;
+    onResizeStart!: string;
+    onResizeEnd!: string;
 
     get_viewpoint(context: LogicContext<DViewElement>): LViewPoint|undefined {
         const viewpoint = context.data.viewpoint;

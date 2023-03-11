@@ -18,6 +18,5 @@ function start() {
         document.getElementById('root')
     );
 }
-
 setTimeout(start, 10);
 

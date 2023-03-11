@@ -210,7 +210,7 @@ export {
     GraphElementComponent,
     VertexComponent,
     GraphElement,
-    Textarea, Select, Input, Image, Edge,
+    TextArea, Select, Input, Image, Edge,
     GraphComponent,
     GraphsContainerComponent,
     Overlap,

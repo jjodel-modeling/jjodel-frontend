@@ -14,6 +14,7 @@
 .input:focus { border: 1px dashed $border-color; }
 .hidden-input { border: 1px dashed transparent; background-color: transparent }
 .hidden-input:focus { border: 1px dashed $border-color; }
+.input[type='color'] { width: min-content; padding: 0.6em; cursor: pointer; }
 .input[type='checkbox'] { width: min-content; cursor: pointer; padding: 0.6em; background-color: $false; }
 .input[type='checkbox']:checked { background-color: $true; }
 .select { width: 50%; outline: none; font-size: 0.9rem; height: min-content; border-radius: $radius;

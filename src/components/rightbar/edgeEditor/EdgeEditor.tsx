@@ -33,17 +33,13 @@ function EdgeEditorComponent(props: AllProps, state: ThisState) {
     }
 
     return(<div className={"mt-3"}>
-        <div className={"d-flex mx-3"}>
-            <label>Show Anchor</label>
-            <input  checked={showAnchor} className={"ms-auto"} type={'checkbox'} onClick={changeShowAnchor} />
-        </div>
         <div className={"d-flex mx-3 mt-1"}>
             <label>Size</label>
-            <input value={size} className={"ms-auto"} type={'number'} onChange={changeSize} step={0.1} min={0} />
+            <input value={size} className={"input ms-auto"} type={'number'} onChange={changeSize} step={0.1} min={0} />
         </div>
         <div className={"d-flex mx-3 mt-1"}>
             <label>Color</label>
-            <input className={"ms-auto"} type={'color'} onChange={changeColor} />
+            <input className={"input ms-auto"} type={'color'} onChange={changeColor} />
         </div>
 
     </div>);

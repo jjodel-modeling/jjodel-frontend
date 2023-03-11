@@ -53,7 +53,7 @@ function ContextMenuComponent(props: AllProps) {
     }
     return(<>
         <div className={"context-menu round"} style={{top: position.y - 40, left: position.x - 10}}>
-            {jsxList.map((jsx) => { return jsx; })}
+            {jsxList.map((jsx, index) => { return <div key={index}>{jsx}</div>; })}
         </div>
     </>);
 }

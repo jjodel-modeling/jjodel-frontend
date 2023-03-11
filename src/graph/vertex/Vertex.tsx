@@ -20,6 +20,7 @@ import {
     U,
 } from "../../joiner";
 import RootVertex from "./RootVertex";
+import {LViewPoint} from "../../view/viewPoint/viewpoint";
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee {}
@@ -27,11 +28,27 @@ class ThisStatee extends GraphElementStatee {}
 export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
     extends superclassGraphElementComponent<AllProps, ThisState> {
 
+    /*
+    shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
+        const oldProps = this.props;
+        const newData = newProps.data; const oldData = oldProps.data;
+        const newNode = newProps.node; const oldNode = oldProps.node;
+        const newViewpoint = newProps.viewpoint; const oldViewpoint = oldProps.viewpoint;
+        const newEdgePending = newProps.isEdgePending; const oldEdgePending = oldProps.isEdgePending;
+
+        if(newData.__raw !== oldData.__raw) return true;
+        if(newNode?.__raw !== oldNode?.__raw) return true;
+        if(newViewpoint.__raw !== oldViewpoint.__raw) return true;
+        if(newEdgePending !== oldEdgePending) return true;
+        return false;
+    }
+     */
+
     constructor(props: AllProps, context: any) {
         super(props, context);
     }
     render(): ReactNode {
-        return(<RootVertex key={this.props.key} props={this.props} render={super.render()} />);
+        return(<RootVertex props={this.props} render={super.render()} />);
     }
 }
 
@@ -46,6 +63,7 @@ class StateProps extends GraphElementReduxStateProps {
     node!: LVoidVertex;
     lastSelected!: LModelElement | null;
     isEdgePending!: { user: LUser, source: LClass };
+    viewpoint!: LViewPoint
 }
 
 class DispatchProps extends GraphElementDispatchProps {
@@ -66,6 +84,7 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
         user: LPointerTargetable.from(state.isEdgePending.user),
         source: LPointerTargetable.from(state.isEdgePending.source)
     };
+    superret.viewpoint = LViewPoint.fromPointer(state.viewpoint);
     const ret: StateProps = new StateProps();
     U.objectMergeInPlace(superret, ret);
     U.removeEmptyObjectKeys(superret);

@@ -26,11 +26,11 @@ function EdgeComponent(props: AllProps, state: ThisState) {
     const firstOptions: xarrowPropsType = {
         start: sourceNode.id, end: middleAnchor,
         path: "grid", color: color, strokeWidth: size,
-        showHead: false, zIndex: 0
+        showHead: false, zIndex: 100
     };
     const lastOptions: xarrowPropsType = {
         start: middleAnchor, end: targetNode.id,
-        path: "grid", color: color, strokeWidth: size, zIndex: 0
+        path: "grid", color: color, strokeWidth: size, zIndex: 100
     };
 
     if(source?.className == "DReference") {

@@ -31,8 +31,11 @@ function Value(props: Props) {
     }
     const change = (event: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>, index: number, isPointer: boolean) => {
         const target = event.target.value;
+
         const newValues = [...dValue.value];
-        newValues[index] = target;
+        if(field === 'checkbox') { newValues[index] = (newValues[index] === 'false') ? 'true': 'false'; }
+        else { newValues[index] = target; }
+
         SetFieldAction.new(dValue, 'value', newValues, '', target !== 'null' && isPointer);
     }
 
@@ -48,7 +51,7 @@ function Value(props: Props) {
                 return(<div className={'mt-1 d-flex ms-4'} key={index}>
                     <div className={'border border-dark'}></div>
                     <input onChange={(evt) => {change(evt, index, false)}} className={'input ms-1'}
-                           value={pointer} type={field} step={stepSize} maxLength={maxLength} />
+                           value={pointer} checked={pointer === 'true'} type={field} step={stepSize} maxLength={maxLength} />
                     <button className={'btn btn-danger ms-2'} onClick={(evt) => {remove(index)}}>
                         <i className={'p-1 bi bi-trash3-fill'}></i>
                     </button>

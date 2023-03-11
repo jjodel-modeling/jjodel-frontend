@@ -29,11 +29,11 @@ function ViewsData(props: Props) {
         </div>
         {views.map((view, i) => {
             return <div key={i} className={'d-flex p-1 mt-1 border round'}>
-                <label className={'my-auto'}>{view.name}</label>
+                <label className={'my-auto'}>{view?.name}</label>
                 <button className={'btn btn-success ms-auto'} onClick={(evt) => {select(evt, view)}}>
                     <i className={'p-1 bi bi-info-lg'}></i>
                 </button>
-                <button className={'btn btn-danger ms-1'} onClick={(evt) => {remove(evt, i, view)}}>
+                <button className={'btn btn-danger ms-1'} disabled={true} onClick={(evt) => {remove(evt, i, view)}}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
                 </button>
             </div>

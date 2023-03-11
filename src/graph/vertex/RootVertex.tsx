@@ -3,8 +3,9 @@ import React, {Dispatch, ReactElement, ReactNode, useEffect} from "react";
 import {useStateIfMounted} from "use-state-if-mounted";
 import {connect} from "react-redux";
 import {
+    BEGIN,
     DClass,
-    DUser,
+    DUser, END,
     GObject,
     LClass, LGraphElement,
     LPointerTargetable,
@@ -20,7 +21,7 @@ import "jqueryui/jquery-ui.css";
 
 interface ThisState {}
 function RootVertexComponent(props: AllProps, state: ThisState) {
-    const rootProps = props.props;
+    const rootProps = props.props; const node = rootProps.node;
     const data = rootProps.data;
     const isEdgePending = !!(rootProps.isEdgePending?.source);
     const user = rootProps.isEdgePending.user;
@@ -66,6 +67,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
         e.stopPropagation();
     }
     const onEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+        console.log(isEdgePending)
         if(isEdgePending && rootProps.data.className === "DClass") {
             const user = rootProps.isEdgePending.user;
             const source = rootProps.isEdgePending.source;
@@ -93,17 +95,22 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                     start: function(event: GObject, obj: GObject) {
                         select();
                         SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 });
+                        if(view.onDragStart) {
+                            try{ eval(view.onDragStart); }
+                            catch (e) { console.log(e) }
+                        }
                     },
                     drag: function(event: GObject, obj: GObject) {
-                        SetRootFieldAction.new("dragging", {})
+                        //SetRootFieldAction.new("dragging", {})
                     },
                     stop: function (event: GObject, obj: GObject) {
-                        const y: number = obj.position.top;
-                        const x: number = obj.position.left;
-                        const dNode = rootProps.node?.__raw;
-                        if(dNode) {
-                            SetFieldAction.new(dNode, 'x', x, '', false);
-                            SetFieldAction.new(dNode, 'y', y, '', false);
+                        if(node) {
+                            node.y = obj.position.top;
+                            node.x = obj.position.left;
+                        }
+                        if(view.onDragEnd) {
+                            try{ eval(view.onDragEnd); }
+                            catch (e) { console.log(e) }
                         }
                     }
                 });
@@ -113,9 +120,19 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                     start: function(event: GObject, obj: GObject) {
                         select();
                         SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 });
+                        if(view.onResizeStart) {
+                            try{ eval(view.onResizeStart); }
+                            catch (e) { console.log(e) }
+                        }
                     },
                     resize: function(event: GObject, obj: GObject) {
-                        SetRootFieldAction.new("dragging", {})
+                        // SetRootFieldAction.new("dragging", {})
+                    },
+                    stop: function(event: GObject, obj: GObject) {
+                        if(view.onResizeEnd) {
+                            try{ eval(view.onResizeEnd); }
+                            catch (e) { console.log(e) }
+                        }
                     }
                 });
             }
@@ -143,7 +160,6 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              onContextMenu={onContextMenu}
              onMouseEnter={onEnter}
              onMouseLeave={onLeave}
-             key={rootProps.key}
         >
             {props.render}
         </div>

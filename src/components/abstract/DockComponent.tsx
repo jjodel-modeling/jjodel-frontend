@@ -12,6 +12,7 @@ import ViewpointEditor from "../rightbar/viewpointsEditor/ViewpointsEditor";
 import MetamodelTab from "./tabs/MetamodelTab";
 import ModelTab from "./tabs/ModelTab";
 import './style.scss';
+import Console from "../rightbar/console/Console";
 
 
 let windoww = window as any;
@@ -30,7 +31,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
     styleEditor!: TabData;
     edgeEditor!: TabData;
     viewpointEditor!: TabData;
-    logger!: TabData;
+    console!: TabData;
     box: any;
     initialized: boolean = false;
 
@@ -51,11 +52,12 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
             <ModelTab modelid={this.models[0].id} graphid={this.graphs[1].id} metamodelid={this.metamodel.id} />
         };
         this.structureEditor = { title: "Structure", group: "2", closable: false, content: <StructureEditor /> };
-        this.treeEditor = { title: "Tree Editor", group: "2", closable: false, content: <TreeEditor /> };
+        this.treeEditor = { title: "Tree View", group: "2", closable: false, content: <TreeEditor /> };
         this.viewsEditor = { title: "Views", group: "2", closable: false, content: <ViewsEditor /> };
         this.styleEditor = { title: "Node", group: "2", closable: false, content: <StyleEditor /> };
-        this.edgeEditor = { title: "Edge Editor", group: "2", closable: false, content: <EdgeEditor /> };
+        this.edgeEditor = { title: "Edges", group: "2", closable: false, content: <EdgeEditor /> };
         this.viewpointEditor = { title: "Viewpoints", group: "2", closable: false, content: <ViewpointEditor /> };
+        this.console = { title: "Console", group: "2", closable: false, content: <Console /> };
         this.box = {
             dockbox: {
                 mode: "horizontal", children: [
@@ -71,8 +73,9 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
                             { ...this.treeEditor, id: '2' },
                             { ...this.viewsEditor, id: '3' },
                             { ...this.viewpointEditor, id: '4' },
-                            { ...this.styleEditor, id: '5' },
-                            //{ ...this.edgeEditor, id: '6' },
+                            //{ ...this.styleEditor, id: '5' },
+                            { ...this.edgeEditor, id: '6' },
+                            { ...this.console, id: '7' },
                         ]}]
                     }
                 ]

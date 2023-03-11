@@ -291,10 +291,12 @@ export class Selectors{
 
     private static matchesOclCondition(v: DViewElement, data: DModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
         if (!v.query) return ViewEClassMatch.IMPLICIT_MATCH;
+
         const viewpoint = Selectors.getViewpoint();
         if(v.viewpoint !== viewpoint.id) {
             return ViewEClassMatch.IMPLICIT_MATCH;
         }
+
         let query = v.query;
         try {
             const name = query.substring(0, query.indexOf('.'));
@@ -305,7 +307,7 @@ export class Selectors{
                 const lModel: LModel = LModel.fromPointer(model.id);
                 const result = Selectors.queryJS(lModel, query).flat();
                 const pointers = Pointers.from(result);
-                if(pointers.includes(data.id)) return ViewEClassMatch.EXACT_MATCH;
+                if(pointers.includes(data.id)) return ViewEClassMatch.EXACT_MATCH + v.explicitApplicationPriority;
             }
         } catch (e) { console.log('wrong query') }
         return ViewEClassMatch.MISMATCH;

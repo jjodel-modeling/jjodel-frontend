@@ -125,14 +125,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 }*/
     }
 
-    static mapLModelStuff(state: IStore,
-                          ownProps: GraphElementOwnProps,
-                          ret: GraphElementReduxStateProps): void {
+    static mapLModelStuff(state: IStore, ownProps: GraphElementOwnProps, ret: GraphElementReduxStateProps): void {
         const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : (ownProps.data as any as DModelElement)?.id) as string;
         Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ret, ownProps, state});
         ret.data = MyProxyHandler.wrap(state.idlookup[meid as any]);
-
     }
+
     static mapLGraphElementStuff(state: IStore,
                                  ownProps: GraphElementOwnProps,
                                  ret: GraphElementReduxStateProps,
@@ -274,6 +272,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             default:
                 console.count('relement default: ' + ((re.type as any).WrappedComponent?.name || re.type));
                 return re;
+            //Giordano: commented this stuff
+            /*
             case windoww.Components.Input.name:
             case windoww.Components.Textarea.name:
                 const objid =  re.props.obj?.id || re.props.obj || parentComponent.props.data.id;
@@ -281,6 +281,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 //console.log('relement Input set props',
                 //    {'re.props.obj.id': re.props.obj?.id, 're.props.obj': re.props.obj, 'thiss.props.data.id': thiss.props.data.id, thiss, re, objid, ret, 'ret.props': ret.props});
                 return ret;
+             */
             case windoww.Components.GraphElement.name:
             case windoww.Components.GraphElementComponent.name:
             case windoww.Components.DefaultNode.name:

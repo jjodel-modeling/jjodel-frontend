@@ -1,25 +1,12 @@
 import React, {ReactNode} from "react";
-import type {DClassifier, GObject, LModelElement, LParameter} from "../../../joiner";
-import {
-    DValue,
-    Input,
-    LClassifier,
-    LEnumerator, LOperation,
-    LPointerTargetable,
-    LStructuralFeature,
-    LValue,
-    Select,
-    Selectors,
-    SetFieldAction,
-    U,
-    UX
-} from "../../../joiner";
+import type {GObject, LModelElement} from "../../../joiner";
+import {DValue, Input, LOperation, LValue, Select} from "../../../joiner";
 import Value from "./editors/Value";
 
 export default class Structure {
     private static BaseEditor(lModelElement: LModelElement) : ReactNode {
         return(<>
-            <Input obj={lModelElement} field={"id"} label={"ID"} type={"text"} readonly={true} />
+            {/*<Input obj={lModelElement} field={"id"} label={"ID"} type={"text"} readonly={true} />*/}
             <Input obj={lModelElement} field={"name"} label={"Name"} type={"text"} tooltip={"name"} />
         </>);
     }
@@ -120,7 +107,6 @@ export default class Structure {
         const lValue: LValue = LValue.fromPointer(me.id);
 
         return(<div>
-            {Structure.BaseEditor(lValue)}
             <Value value={lValue} />
         </div>);
     }
@@ -136,11 +122,11 @@ export default class Structure {
                 case "DEnumerator": return Structure.EnumEditor(lModelElement);
                 case "DEnumLiteral": return Structure.EnumLiteralEditor(lModelElement);
                 case "DOperation": return Structure.OperationEditor(lModelElement);
-                case "DObject" : return Structure.BaseEditor(lModelElement);
+                case "DObject" : return <div></div>;
                 case "DValue" : return Structure.ValueEditor(lModelElement);
             }
         }
-        return <div className={"row"}><div className={"col-lg"}>No model selected.</div></div>;
+        return <div></div>;
     }
 }
 

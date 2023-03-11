@@ -9,7 +9,6 @@ import {
     DtoL,
     END,
     getWParams,
-    GObject,
     IStore,
     Leaf,
     LEdge,
@@ -137,6 +136,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             case 'enumerators': case 'classs': property = 'classifiers'; break;
             case 'values': property = 'features'; break;
         }
+        if(context.proxyObject.father.className === "DPackage" && property=== "packages") {
+            property = 'subpackages';
+        }
         return property as keyof DModelElement;
     }
     protected targetRemoved(field: keyof DPointerTargetable): void {
@@ -180,9 +182,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         }
 
         const dFather = DPointerTargetable.fromPointer(father);
-        if(dFather.className === "DPackage" && (property as string) === "packages") {
-            property = 'subpackages' as keyof DModelElement;
-        }
         const fatherProperties = dFather[property] as string[];
         const list = fatherProperties.filter((prop) => { return prop !== obj.id });
         const ret = () => {
@@ -199,31 +198,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         const ret = () => { context.proxyObject.superDelete() }
         return ret;
     }
-
-    /*
-    protected get_delete_old(context: Context): () => void {
-        const proxyObject = context.proxyObject;
-        const property = proxyObject.property;
-        const father = proxyObject.father.__raw;
-        for(let pointedBy of proxyObject.pointedBy) {
-            const source: LModelElement = LPointerTargetable.from(pointedBy.source);
-            //todo: fix pointedBy field
-            //source.targetRemoved(pointedBy.field);
-        }
-        const ret = () => {
-            alert("delete from MODEL");
-            // al padre tolgo il nodo (perche property è keyof DModelElement e non keyof IStore ??)
-            SetFieldAction.new(father, property, U.removeFromList(father[property] as string[], proxyObject.id));
-
-            for (let child of proxyObject.childrens) { child.delete(); }
-
-            // SetRootFieldAction.new(property, U.removeFromList(Selectors["getAll" + property.charAt(0).toUpperCase() + objName.slice(1)], data.id));
-            DeleteElementAction.new(proxyObject.id);
-        }
-
-        return ret;
-    }
-     */
 
 
     // @ts-ignore
@@ -399,7 +373,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         if (!dClass) return () => {};
         const lClass: LClass = LPointerTargetable.from(dClass);
         let name = 'attribute_' + 0;
-        let childrenNames: (string)[] = lClass.childrens.map( c => (c as LAttribute).name);
+        let childrenNames: (string)[] = lClass.attributes.map(c => c.name);
         name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0);
         const lType: LClassifier = LClassifier.fromPointer(Selectors.getFirstPrimitiveTypes().id);
 
@@ -441,7 +415,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         if (!dClass) return () => {};
         const lClass: LClass = LPointerTargetable.from(dClass);
         let name = 'reference_' + 0;
-        const childrenNames: (string)[] = lClass.features.map( c => (c).name);
+        const childrenNames: (string)[] = lClass.references.map(c => c.name);
         name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
 
 
@@ -957,7 +931,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
     }
 }
 
-let wtyped: WTypedElement = null as any;
+//let wtyped: WTypedElement = null as any;
 
 // @RuntimeAccessible export class _WTypedElement extends _WNamedElement { }
 // export type WTypedElement = DTypedElement | LTypedElement | _WTypedElement;
@@ -1867,7 +1841,6 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             const dClass: DClass = context.data;
             const lClass: LClass = LClass.from(dClass);
             const dObject = DObject.new('instance');
-            dObject.isRoot = false;
             CreateElementAction.new(dObject);
             BEGIN()
             SetFieldAction.new(dObject, 'instanceof', dClass.id, '', true);
@@ -2528,253 +2501,6 @@ DDataType.subclasses.push(DEnumerator);
 LDataType.subclasses.push(LEnumerator);
 
 
-
-@RuntimeAccessible
-export class DObject extends DPointerTargetable { // extends DNamedElement, m1 class instance
-    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
-    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    // static singleton: LObject;
-    // static logic: typeof LObject;
-    // static structure: typeof DObject;
-
-    // inherit redefine
-    id!: Pointer<DObject, 1, 1, LObject>;
-    parent: Pointer<DModel, 0, 'N', LModel> = [];
-    father!: Pointer<DModel, 1, 1, LModel>;
-    annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
-    name!: string;
-
-    // personal
-    instanceof!: Pointer<DClass, 1, 1, LClass>;
-    isRoot!: boolean;
-    features: Pointer<DValue, 0, 'N', LValue> = [];
-
-
-    public static new(name?: DNamedElement["name"]): DObject {
-        return new Constructors(new DObject('dwc')).DPointerTargetable().DModelElement()
-            .DNamedElement(name).DObject().end();
-    }
-}
-@RuntimeAccessible
-export class LObject<Context extends LogicContext<DObject> = any, C extends Context = Context>  extends LNamedElement { // extends DNamedElement, m1 class instance
-    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
-    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    public __raw!: DObject;
-    id!: Pointer<DObject, 1, 1, LObject>;
-    // static singleton: LObject;
-    // static logic: typeof LObject;
-    // static structure: typeof DObject;
-
-    // inherit redefine
-    parent!: LModel[];
-    father!: LModel;
-    annotations!: LAnnotation[];
-    name!: string;
-
-    // personal
-    instanceof!: LClass;
-    isRoot!: boolean;
-    features!: LValue[];
-
-
-    public feature(name: string): PrimitiveType { this.cannotCall('feature'); return null; }
-    private get_feature(context: Context): (name: string) => (PrimitiveType|LObject)|(PrimitiveType|LObject)[] {
-        return (name: string) => {
-            const lObject = context.proxyObject;
-            const features = lObject.features.filter((value) => {
-                return value.instanceof.name === name
-            });
-            if(features.length > 0) {
-                const matchedFeature = features[0];
-                switch(matchedFeature.value.length) {
-                    case 0: return '';
-                    case 1: return matchedFeature.value[0];
-                    default: return matchedFeature.value;
-                }
-            } return '';
-        }
-    }
-
-    protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DValue, 1, 'N'> {
-        return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DValue, 1, 'N'>,
-                ...context.data.features];
-    }
-
-    protected get_instanceof(context: Context): this["instanceof"] {
-        const pointer = context.data.instanceof;
-        return LPointerTargetable.from(pointer)
-    }
-    protected set_instanceof(val: this["instanceof"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'instanceof', val.id, "", true);
-        return true;
-    }
-
-    protected get_features(context: Context): this['features'] {
-        return context.data.features.map((feature) => {
-            return LPointerTargetable.from(feature)
-        });
-    }
-
-
-    protected get_delete(context: Context): () => void {
-        const ret = () => {
-            const lObject = context.proxyObject;
-            const lClass = lObject.instanceof;
-            const classes = lClass.__raw.instances;
-            const objects = [...(Selectors.getObjects().map((obj) => {return obj.id}))]
-            BEGIN()
-            SetFieldAction.new(lClass.__raw, 'instances', classes.indexOf(lObject.id), '-=', true);
-            SetRootFieldAction.new('objects', objects.indexOf(lObject.id), '-=', false);
-            END()
-            lObject.superDelete();
-        }
-        return ret;
-    }
-
-}
-DNamedElement.subclasses.push(DObject);
-LNamedElement.subclasses.push(LObject);
-
-
-@RuntimeAccessible
-export class DValue extends DPointerTargetable { // extends DModelElement, m1 value (attribute | reference)
-    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
-    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    // static singleton: LValue;
-    // static logic: typeof LValue;
-    // static structure: typeof DValue;
-
-    // inherit redefine
-    id!: Pointer<DValue, 1, 1, LValue>;
-    parent: Pointer<DObject, 0, 'N', LObject> = [];
-    father!: Pointer<DObject, 1, 1, LObject>;
-    annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
-
-    // personal
-    value: string[]|Pointer<DObject, 1, 'N', LObject> = [];
-    instanceof: Pointer<DStructuralFeature, 1, 1, LStructuralFeature> = '';
-
-    public static new(name?: DNamedElement["name"]): DValue {
-        return new Constructors(new DValue('dwc')).DPointerTargetable().DModelElement()
-            .DNamedElement(name).DValue().end();
-    }
-}
-@RuntimeAccessible
-export class LValue<Context extends LogicContext<DValue> = any, C extends Context = Context>  extends LModelElement { // extends DModelElement, m1 value (attribute | reference)
-    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
-    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    public __raw!: DValue;
-    id!: Pointer<DValue, 1, 1, LValue>;
-    // static singleton: LValue;
-    // static logic: typeof LValue;
-    // static structure: typeof DValue;
-
-    // inherit redefine
-    parent!: LObject[]; // todo: problema m1 model can contain objects without package, it's only a web of objects with a object root actually.
-    father!: LObject;
-    annotations!: LAnnotation[];
-    // personal
-    value!: string[]|LObject[];
-    instanceof!: LStructuralFeature;
-
-    protected get_instanceof(context: Context): this["instanceof"] {
-       const pointer = context.data.instanceof;
-        return LPointerTargetable.from(pointer)
-    }
-    protected set_instanceof(val: PackArr<this["instanceof"]>, context: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
-        SetFieldAction.new(context.data, 'instanceof', list, "", true);
-        return true;
-    }
-
-    protected get_value(context: Context): (string|LObject)|(string|LObject)[] {
-        const value: (string|LObject)[]= [];
-        const data = context.data;
-        const instaceof = context.proxyObject.instanceof;
-        if(instaceof.className === 'DReference') {
-            const pointers = data.value;
-            for(let pointer of pointers) {
-                if(pointer !== 'null') {
-                    const object: LObject = LObject.fromPointer(pointer);
-                    value.push(object);
-                }
-            }
-        } else { value.push(...context.data.value); }
-        switch(value.length) {
-            case 0: return '';
-            case 1: return value[0];
-            default: return value;
-        }
-    }
-
-    public stringValue(): void { super.cannotCall('formatted'); }
-    protected get_stringValue(context: Context): string {
-        const values: (string|LObject)|(string|LObject)[] = context.proxyObject.value;
-        const stringValues: string[] = [];
-        if(Array.isArray(values)) {
-            for(let value of values) {
-                if(typeof value !== 'string') { stringValues.push(value.feature('name') as string); }
-                else { stringValues.push(value); }
-            }
-            return JSON.stringify(stringValues);
-        } else {
-            const singleton: LObject|string = values as (LObject|string);
-            if(typeof singleton !== 'string') { return JSON.stringify(singleton.feature('name') as string); }
-            else { return JSON.stringify(values); }
-        }
-
-    }
-
-    /*
-    protected get_value(context: Context): string|string[]{
-        const data: LValue = context.proxyObject;
-        const values = context.data.value;
-        const instanceOf: LStructuralFeature = data.instanceof;
-        if(instanceOf.className === 'DAttribute' && instanceOf.type.className === 'DEnumerator') {
-            const names: string[] = [];
-            for(let value of values) {
-                if(value !== 'null') {
-                    const dLiteral: DEnumLiteral = DEnumLiteral.fromPointer(value);
-                    names.push(dLiteral.name)
-                } else { names.push('null'); }
-            }
-            return names;
-        }
-        if(instanceOf.className === 'DReference') {
-            const names: string[] = [];
-            for(let value of values) {
-                if(value !== 'null') {
-                    const lObject: LObject = LObject.fromPointer(value);
-                    names.push(lObject.feature('name') as string);
-                } else { names.push('null'); }
-            }
-            return names;
-        }
-        return values;
-    }
-    */
-
-    protected get_delete(context: Context): () => void {
-        const ret = () => {
-            const lValue = context.proxyObject;
-            const lFeature = lValue.instanceof;
-            const features = lFeature.__raw.instances;
-            const values = [...(Selectors.getValues().map((val) => {return val.id}))];
-            BEGIN()
-            SetFieldAction.new(lFeature.__raw, 'instances', features.indexOf(lValue.id), '-=', true);
-            SetRootFieldAction.new('values', values.indexOf(lValue.id), '-=', false);
-            END()
-            lValue.superDelete();
-        }
-        return ret;
-    }
-
-}
-DNamedElement.subclasses.push(DValue);
-LNamedElement.subclasses.push(LValue);
-
-
-
 @RuntimeAccessible
 export class DModel extends DNamedElement { // DNamedElement
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -3000,39 +2726,227 @@ export class LMap<Context extends LogicContext<DMap> = any, C extends Context = 
 DPointerTargetable.subclasses.push(DMap as any);
 LPointerTargetable.subclasses.push(LMap);
 
+@RuntimeAccessible
+export class DObject extends DPointerTargetable { // extends DNamedElement, m1 class instance
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+
+    // inherit redefine
+    id!: Pointer<DObject, 1, 1, LObject>;
+    parent: Pointer<DModel, 0, 'N', LModel> = [];
+    father!: Pointer<DModel, 1, 1, LModel>;
+    annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
+    name!: string;
+
+    // personal
+    instanceof!: Pointer<DClass, 1, 1, LClass>;
+    features: Pointer<DValue, 0, 'N', LValue> = [];
 
 
-
-/*
-function makeKeyf<NS extends string, N extends string>(n1: NS, n2: N) {
-    return n1 + '' + n2 as `${NS}${N}`
+    public static new(name?: DNamedElement["name"]): DObject {
+        return new Constructors(new DObject('dwc')).DPointerTargetable().DModelElement()
+            .DNamedElement(name).DObject().end();
+    }
 }
-type makeKey<NS extends string, N extends string> =`${NS}${N}`;
-type filter_set_keys<T> = { [K in keyof T]: K extends `set_${string}` ? T[K] : never };
-*/
+
+@RuntimeAccessible
+export class LObject<Context extends LogicContext<DObject> = any, C extends Context = Context>  extends LNamedElement { // extends DNamedElement, m1 class instance
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    public __raw!: DObject;
+    id!: Pointer<DObject, 1, 1, LObject>;
+
+    // inherit redefine
+    parent!: LModel[];
+    father!: LModel;
+    annotations!: LAnnotation[];
+    name!: string;
+
+    // personal
+    instanceof!: LClass;
+    features!: LValue[];
 
 
+    public feature(name: string): (PrimitiveType|LObject)|(PrimitiveType|LObject)[] { this.cannotCall('feature'); return null; }
+    private get_feature(context: Context): (name: string) => (PrimitiveType|LObject)|(PrimitiveType|LObject)[] {
+        return (name: string) => {
+            const lObject = context.proxyObject;
+            const features = lObject.features.filter((value) => {
+                return value.instanceof.name === name
+            });
+            if(features.length > 0) {
+                const matchedFeature = features[0];
+                switch(matchedFeature.value.length) {
+                    case 0: return '';
+                    case 1: return matchedFeature.value[0];
+                    default: return matchedFeature.value;
+                }
+            } return '';
+        }
+    }
+
+    protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DValue, 1, 'N'> {
+        return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DValue, 1, 'N'>,
+            ...context.data.features];
+    }
+
+    protected get_instanceof(context: Context): this["instanceof"] {
+        const pointer = context.data.instanceof;
+        return LPointerTargetable.from(pointer)
+    }
+    protected set_instanceof(val: this["instanceof"], context: Context): boolean {
+        SetFieldAction.new(context.data, 'instanceof', val.id, "", true);
+        return true;
+    }
+
+    protected get_features(context: Context): this['features'] {
+        return context.data.features.map((feature) => {
+            return LPointerTargetable.from(feature)
+        });
+    }
 
 
+    protected get_delete(context: Context): () => void {
+        const ret = () => {
+            const lObject = context.proxyObject;
+            const lClass = lObject.instanceof;
+            const classes = lClass.__raw.instances;
+            const objects = [...(Selectors.getObjects().map((obj) => {return obj.id}))]
+            BEGIN()
+            SetFieldAction.new(lClass.__raw, 'instances', classes.indexOf(lObject.id), '-=', true);
+            SetRootFieldAction.new('objects', objects.indexOf(lObject.id), '-=', false);
+            END()
+            lObject.superDelete();
+        }
+        return ret;
+    }
 
+}
+DNamedElement.subclasses.push(DObject);
+LNamedElement.subclasses.push(LObject);
 
+@RuntimeAccessible
+export class DValue extends DPointerTargetable { // extends DModelElement, m1 value (attribute | reference)
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
+    // inherit redefine
+    id!: Pointer<DValue, 1, 1, LValue>;
+    parent: Pointer<DObject, 0, 'N', LObject> = [];
+    father!: Pointer<DObject, 1, 1, LObject>;
+    annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
 
+    // personal
+    value: string[]|Pointer<DObject, 1, 'N', LObject> = [];
+    instanceof: Pointer<DStructuralFeature, 1, 1, LStructuralFeature> = '';
 
-/*
+    public static new(name?: DNamedElement["name"]): DValue {
+        return new Constructors(new DValue('dwc')).DPointerTargetable().DModelElement()
+            .DNamedElement(name).DValue().end();
+    }
+}
+@RuntimeAccessible
+export class LValue<Context extends LogicContext<DValue> = any, C extends Context = Context>  extends LModelElement { // extends DModelElement, m1 value (attribute | reference)
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    public __raw!: DValue;
+    id!: Pointer<DValue, 1, 1, LValue>;
 
-let a = ``  // ... get from export in index.ts
-a = a.replaceAll(',,', ",")
-let aa = a.split(",").map(a => a.trim().substring(1));
+    // inherit redefine
+    parent!: LObject[];
+    father!: LObject;
+    annotations!: LAnnotation[];
+    // personal
+    value!: string[]|LObject[];
+    instanceof!: LStructuralFeature;
 
-function onlyUnique(value, index, self) { return self.indexOf(value) === index; }
+    protected get_instanceof(context: Context): this["instanceof"] {
+        const pointer = context.data.instanceof;
+        return LPointerTargetable.from(pointer)
+    }
+    protected set_instanceof(val: PackArr<this["instanceof"]>, context: Context): boolean {
+        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        SetFieldAction.new(context.data, 'instanceof', list, "", true);
+        return true;
+    }
 
-aa = aa.filter(onlyUnique).filter( a=> !!a)
-let r = aa.filter(onlyUnique).filter( a=> !!a).map( a=> `export type W${a} = getWParams<L${a}, D${a}>;`).join('\n')
-document.body.innerText = r;
-*/
+    protected get_value(context: Context): (string|LObject)|(string|LObject)[] {
+        const value: (string|LObject)[]= [];
+        const data = context.data;
+        const instaceof = context.proxyObject.instanceof;
+        if(instaceof.className === 'DReference') {
+            const pointers = data.value;
+            for(let pointer of pointers) {
+                if(pointer !== 'null') {
+                    const object: LObject = LObject.fromPointer(pointer);
+                    value.push(object);
+                }
+            }
+        } else { value.push(...context.data.value); }
+        switch(value.length) {
+            case 0: return '';
+            case 1: return value[0];
+            default: return value;
+        }
+    }
 
+    protected set_value(val: (string|LObject)|(string|LObject)[], context: Context): boolean {
+        const list: (string|LObject)[] = (Array.isArray(val)) ? val : [val];
+        SetFieldAction.new(context.data, 'value', list as any, '', false);
+        return true;
+    }
 
+    public rawValue(): void { super.cannotCall('formatted'); }
+    protected get_rawValue(context: Context): string {
+        const values: (string|LObject)|(string|LObject)[] = context.proxyObject.value;
+        const instanceOf = context.proxyObject.instanceof;
+        const stringValues: string[] = [];
+        if(Array.isArray(values)) {
+            for(let value of values) {
+                if(typeof value !== 'string') { stringValues.push(value.feature('name') as string); }
+                else {
+                    if(instanceOf.type.className === 'DEnumerator') {
+                        const enumerator: LEnumerator = LEnumerator.fromPointer(instanceOf.type.id);
+                        let literal: string|undefined = enumerator.literals[parseInt(value)]?.name;
+                        literal = (literal === undefined) ? 'null' : literal;
+                        stringValues.push(literal);
+                    } else { stringValues.push(value); }
+                }
+            }
+            return JSON.stringify(stringValues);
+        } else {
+            const singleton: LObject|string = values as (LObject|string);
+            if(typeof singleton !== 'string') { return JSON.stringify(singleton.feature('name') as string); }
+            else {
+                if(instanceOf.type.className === 'DEnumerator') {
+                    const enumerator: LEnumerator = LEnumerator.fromPointer(instanceOf.type.id);
+                    let literal: string|undefined = enumerator.literals[parseInt(values)]?.name;
+                    literal = (literal === undefined) ? 'null' : literal;
+                    return JSON.stringify(literal);
+                } else { return JSON.stringify(values); }
+            }
+        }
+
+    }
+
+    protected get_delete(context: Context): () => void {
+        const ret = () => {
+            const lValue = context.proxyObject;
+            const lFeature = lValue.instanceof;
+            const features = lFeature.__raw.instances;
+            const values = [...(Selectors.getValues().map((val) => {return val.id}))];
+            BEGIN()
+            SetFieldAction.new(lFeature.__raw, 'instances', features.indexOf(lValue.id), '-=', true);
+            SetRootFieldAction.new('values', values.indexOf(lValue.id), '-=', false);
+            END()
+            lValue.superDelete();
+        }
+        return ret;
+    }
+
+}
+DNamedElement.subclasses.push(DValue);
+LNamedElement.subclasses.push(LValue);
 
 export type WModelElement = getWParams<LModelElement, DModelElement>;
 export type WModel = getWParams<LModel, DModel>;
@@ -3057,6 +2971,7 @@ export type WMap = getWParams<LMap, DMap>;
 export type WFactory_useless_ = getWParams<LFactory_useless_, DFactory_useless_>;
 
 
+/*
 let alld: GObject = {
     DModelElement,
     DModel,
@@ -3097,6 +3012,4 @@ let alll: GObject = {
     LTypedElement,
     LAnnotation,
     LFactory_useless_, LMap};
-
-// let all: any = [...alld, ...alll, EJavaObject,];
-
+*/

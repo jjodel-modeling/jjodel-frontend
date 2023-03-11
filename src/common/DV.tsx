@@ -87,7 +87,7 @@ class DefaultView {
     public static value() {
         return `<div className={'d-flex'}>
             <label className={'d-block ms-1'}>{this.data.name}</label>
-            <label className={'d-block ms-auto'}>{this.data.stringValue}</label>
+            <label className={'d-block ms-auto'}>{this.data.rawValue}</label>
         </div>`
     }
     public static defaultPackage() {

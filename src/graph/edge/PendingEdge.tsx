@@ -4,41 +4,32 @@ import {useStateIfMounted} from "use-state-if-mounted";
 import {connect} from "react-redux";
 import {GObject, LClass, LPointerTargetable, LUser} from "../../joiner";
 import "./edge.scss";
-import LeaderLine from "leader-line-new";
+import Xarrow, {Xwrapper} from "react-xarrows";
 
 function PendingEdgeComponent(props: AllProps) {
 
-    const [mousePosition, setMousePosition] = useStateIfMounted({ x: 0, y: 0 });
-    const [edge, setEdge] = useStateIfMounted<undefined | LeaderLine>(undefined);
+    const source = props.source;
+    const [mousePosition, setMousePosition] = useStateIfMounted({x: 0, y: 0});
+    const options = props.edgeSettings;
 
     useEffect(() => {
-        if(props.source) {
-            const source = document.getElementById(props.source.nodes[0].id);
-            const target = document.getElementById("edge-target");
-            if(source && target) {
-                const options: LeaderLine.Options = {start: source, end: target};
-                options.size = 2; options.color = "black";
-                options.path = "grid"; options.endPlugSize = 3; options.endPlug = "arrow3";
-                if(edge) { edge.position(); }
-                else { setEdge(new LeaderLine(options)); }
-            }
-            const updateMousePosition = (ev: MouseEvent) => { setMousePosition({ x: ev.clientX, y: ev.clientY }); };
+        if(source) {
+            const updateMousePosition = (ev: MouseEvent) => {setMousePosition({x: ev.clientX, y: ev.clientY});};
             window.addEventListener('mousemove', updateMousePosition);
-            return () => { window.removeEventListener('mousemove', updateMousePosition); };
-
-        } else {
-            if(edge) { setEdge(undefined); edge.remove(); }
+            return () => {window.removeEventListener('mousemove', updateMousePosition);};
         }
-    }, [mousePosition, edge, props]);
+    }, );
 
-    return <>
-        <div className={"target"} style={{top: (mousePosition.y - 40) + "px", left: (mousePosition.x - 10) + "px"}}
-             id={"edge-target"}></div>
-    </>;
+    return <Xwrapper>
+        <div style={{top: (mousePosition.y - 70) + "px", left: (mousePosition.x - 5) + "px"}}
+             id={'extend-target'}></div>
+        {source && <Xarrow start={source.nodes[0].id} end={'extend-target'} color={options?.color}
+                           zIndex={999} strokeWidth={options?.size} path={'grid'} />}
+    </Xwrapper>;
 }
 
 interface OwnProps { }
-interface StateProps { user?: LUser, source?: LClass }
+interface StateProps { user?: LUser, source?: LClass, edgeSettings?: GObject }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -46,6 +37,7 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = { } as any;
     ret.user = LPointerTargetable.from(state.isEdgePending.user);
     ret.source = LPointerTargetable.from(state.isEdgePending.source);
+    ret.edgeSettings = state._edgeSettings;
     return ret;
 }
 
