@@ -121,7 +121,7 @@ export class IStore {
         modelElement: Pointer<DModelElement, 0, 1> // if a node is clicked: a node and a view are present, a modelElement might be. a node can exist without a modelElement counterpart.
     };
     users: Pointer<DUser, 1, 'N', LUser>;
-    _edgeSettings = { showAnchor: false, size: 1, color: '#000000' }
+    _edgeSettings = { strokeWidth: 1, color: '#000000', zIndex: 150, path: 'grid' }
 
     viewpoint: Pointer<DViewPoint, 1, 1, LViewPoint> = '';
     viewpoints: Pointer<DViewPoint, 0, 'N', LViewPoint> = [];

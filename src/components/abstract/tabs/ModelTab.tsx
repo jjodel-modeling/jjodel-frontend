@@ -7,7 +7,7 @@ import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import PendingEdge from "../../../graph/edge/PendingEdge";
 import ContextMenu from "../../toolbar/ContextMenu";
-import EdgesManager from "../../../graph/edge/EdgesManager";
+import EdgesManager from "../../../graph/edges/EdgesManager";
 
 
 function ModelTabComponent(props: AllProps) {

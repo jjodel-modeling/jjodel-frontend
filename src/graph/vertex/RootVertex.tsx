@@ -67,7 +67,6 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
         e.stopPropagation();
     }
     const onEnter = (e: React.MouseEvent<HTMLDivElement>) => {
-        console.log(isEdgePending)
         if(isEdgePending && rootProps.data.className === "DClass") {
             const user = rootProps.isEdgePending.user;
             const source = rootProps.isEdgePending.source;

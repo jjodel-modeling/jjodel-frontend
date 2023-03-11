@@ -1,14 +1,13 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
-import type {Pointer, DModel, DGraph} from "../../../joiner";
+import type {DGraph, DModel, Pointer} from "../../../joiner";
 import {LGraph, LModel} from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import PendingEdge from "../../../graph/edge/PendingEdge";
 import ContextMenu from "../../toolbar/ContextMenu";
-import EdgesManager from "../../../graph/edge/EdgesManager";
-import {Xwrapper} from "react-xarrows";
+import EdgesManager from "../../../graph/edges/EdgesManager";
 
 
 function MetamodelTabComponent(props: AllProps) {

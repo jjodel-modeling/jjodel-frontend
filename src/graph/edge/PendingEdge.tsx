@@ -23,8 +23,7 @@ function PendingEdgeComponent(props: AllProps) {
     return <Xwrapper>
         <div style={{top: (mousePosition.y - 70) + "px", left: (mousePosition.x - 5) + "px"}}
              id={'extend-target'}></div>
-        {source && <Xarrow start={source.nodes[0].id} end={'extend-target'} color={options?.color}
-                           zIndex={999} strokeWidth={options?.size} path={'grid'} />}
+        {source && <Xarrow start={source.nodes[0].id} end={'extend-target'} {...options} />}
     </Xwrapper>;
 }
 
