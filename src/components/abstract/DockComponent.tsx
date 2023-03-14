@@ -37,14 +37,21 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
     logger!: TabData;
     box: any;
     initialized: boolean = false;
+    forcerebuildingdockstmp: number = 0;
 
     constructor(props: AllProps, context: any) {
         super(props, context);
         windoww.dockComponent = this;
     }
+
+
     init() {
+        if (this.model?.id === this.props.model.id) return;
+        this.forcerebuildingdockstmp++;
+        windoww.reloadDock = () => { this.forcerebuildingdockstmp++; this.forceUpdate(); }
+        console.log("for load - fixed model id:", this.model?.id + "-->" + this.props.model?.id);
         this.initialized = true;
-        this.model = this.props.model;
+        this.model = this.props.model; // todo: this becomes wrong after loading. keeps old one.
         this.graph = this.props.graph;
         this.metamodel = { title: "Metamodel", group: "1", closable: false, content:
                 <div>
@@ -53,7 +60,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
                     {/*Perche mi chiede source e user come OwnProps se li ho definiti come StateProps ? */}
                     <PendingEdge  source={undefined} user={undefined} />
                     <ToolBar model={this.model.id} />
-                    <DefaultNode data={this.model.id} nodeid={this.graph.id} graphid={this.graph.id} />
+                    <DefaultNode data={this.model.id} nodeid={this.graph.id} graphid={this.graph.id} key={this.model.id} />
                 </div>
         };
         this.structureEditor = { title: "Structure", group: "2", closable: false, content: <StructureEditor /> };
@@ -76,9 +83,15 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
 
     render(): ReactNode {
         if (!this.initialized && this.props.model) this.init();
+        else {
+            this.init(); // fix load crash
+        }
         if (!this.box) this.box = {dockbox: {mode: "horizontal", children: [{children: [{tabs: [{id: "1", title: "loading", group: "2", closable: false, content: <div> loading model... </div> }]}]}]}};
+
+
         return (<>
-            <DockLayout defaultLayout={this.box} style={{position: "absolute", left: 5, top: 5, right: 5, bottom: 5}} />
+            {/* todo: key forces reupdate and re-read this.box. find a better way*/}
+            <DockLayout defaultLayout={this.box} style={{position: "absolute", left: 5, top: 5, right: 5, bottom: 5}} key={this.forcerebuildingdockstmp}/>
         </>);
     }
 }

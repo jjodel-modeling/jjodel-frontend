@@ -54,6 +54,12 @@ console.warn('ts loading store');
 
 export interface EdgeOptions{ id: number, options: LeaderLine.Options, source: string, target: string, counter: number }
 
+// export const statehistory_obsoleteidea: {past: IStore[], current: IStore, future: IStore[]} = { past:[], current: null, future:[] } as any;
+export const statehistory: {
+    [userpointer:Pointer<DUser>]: {undoable:GObject<"delta">[], redoable: GObject<"delta">[] }
+} = { } as any;
+statehistory[DUser.current] = {undoable:[], redoable:[]}; // todo: make it able to combine last 2 changes with a keystroke. reapeat N times to combine N actions. let it "redo" multiple times, it's like recording a macro.
+
 export class IStore {
     logs: Pointer<DLog, 0, 'N', LLog> = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
@@ -142,6 +148,7 @@ export class IStore {
     }
 
     static makeM3Test(fireAction: boolean = true, outElemArray: DPointerTargetable[] = []): DModel {
+        // todo: add pointedby's
         const me: DClass = DClass.new('ModelElement', true);
         const annotation: DClass = DClass.new('Annotation');
         annotation.implements = [me.id];

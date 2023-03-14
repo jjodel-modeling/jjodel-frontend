@@ -1,3 +1,4 @@
+import type {U as UType} from '../../joiner';
 import {
     Action,
     CompositeAction,
@@ -6,7 +7,6 @@ import {
     SetFieldAction,
     SetRootFieldAction,
     Log,
-    U,
     MyError,
     IStore,
     DPointerTargetable,
@@ -15,10 +15,20 @@ import {
     DocString,
     Dictionary,
     RuntimeAccessibleClass,
-    LPointerTargetable, store, windoww, getPath, Selectors, createOrOpenModelTab, PointedBy, PendingPointedByPaths
+    LPointerTargetable,
+    store,
+    windoww,
+    getPath,
+    Selectors,
+    createOrOpenModelTab,
+    PointedBy,
+    PendingPointedByPaths,
+    statehistory, DUser, GObject
 } from "../../joiner";
 import React from "react";
+import {CombineHistoryAction, LoadAction, RedoAction, UndoAction} from "../action/action";
 
+let U = windoww.U as typeof UType;
 
 
 
@@ -158,11 +168,15 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
     for (let action of actions) {
         switch (action.type){
             default: break;
+            case LoadAction.type: return action.value;
             case CreateElementAction.type:
                 const elem: DPointerTargetable = action.value;
                 elem.className = elem.className || elem.constructor.name;
+                let statefoldername = elem.className.substring(1).toLowerCase() + 's';
                 derivedActions.push(
-                    Action.parse(SetRootFieldAction.create(elem.className.substring(1).toLowerCase() + 's', elem.id,'[]', true)));
+                    Action.parse(SetRootFieldAction.create(statefoldername, elem.id,'[]', true)));
+                if (!Array.isArray(elem.pointedBy)) elem.pointedBy = [];
+                elem.pointedBy.push(PointedBy.new(statefoldername));
                 /*if (false && action.isPointer) {
                     if (Array.isArray(action.value)) {
                         const ptr: Pointer[] = action.value;
@@ -258,6 +272,40 @@ let initialState: IStore = null as any;
 let storeLoaded: boolean = false;
 
 export function reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: IStore = initialState, action: Action): IStore{
+    switch(action.type) {
+        case UndoAction.type: return undo(oldState, statehistory[DUser.current].undoable.pop());
+        case RedoAction.type: return undo(oldState, statehistory[DUser.current].redoable.pop(), false);
+        // case CombineHistoryAction.type: return combineHistory(oldState); break;
+        // todo: se al posto di "annullare l'undo" memorizzo l'azione e la rieseguo, posso ripetere l'ultimo passo N volte e questa azione diventa utile per combinare passi e ripetere blocchi di azioni assieme
+        default:
+            let ret = doreducer(oldState, action);
+            statehistory[DUser.current].redoable = [];
+            console.log("setting undoable action:", {ret, oldState0:{...oldState}, oldState});
+            if (oldState !== null) statehistory[DUser.current].undoable.push( U.objectDelta(ret, oldState) );
+            return ret;
+    }
+}
+
+function undo(state: IStore, delta: GObject | undefined, isundo = true): IStore {
+    if (!delta) return state;
+    let undonestate = {...state};
+    //   controlla se vengono shallow-copied solo e tutti gli oggetti nested lungo la catena del percorso delle modifiche
+    //   es: root.a.b.c=3 + root.a.b.d=3 = 4+1 modifiche, 5 shallow copies including the root
+    undorecursive(delta, undonestate);
+    if (isundo) statehistory[DUser.current].redoable.push( U.objectDelta(undonestate, state) ); // reverses from undo to redo and viceversa swapping arguments, so the target result after appliying the delta changes
+    else statehistory[DUser.current].undoable.push( U.objectDelta(undonestate, state) ); // redo is "undoing an undo", reversing his changes just like an undo reverses an ordinary action changes.
+    return undonestate;
+}
+
+function undorecursive(deltalevel: GObject, statelevel: GObject): void {
+    for (let key in deltalevel) {
+        let delta = deltalevel[key];
+        if (delta.__isAdelta) { statelevel[key] = {...statelevel[key]}; undorecursive(statelevel[key], deltalevel[key]); }
+        else { statelevel = {...statelevel}; statelevel[key] = deltalevel[key]; }
+    }
+}
+
+function doreducer/*<S extends StateNoFunc, A extends Action>*/(oldState: IStore = initialState, action: Action): IStore{
     if (!oldState) { oldState = initialState = new IStore(); }
     let ca: CompositeAction;
     console.log('external REDUCER', {action, CEtype:CreateElementAction.type});
@@ -271,6 +319,7 @@ export function reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: I
     } //  setTimeout(afterStoreLoad, 1);
     switch (action.type) {
         case CompositeAction.type: ca = action as CompositeAction; break;
+        case LoadAction.type:
         default:
             if (action.type.indexOf('@@redux/') === 0) {
                 //storeLoaded = true;
@@ -279,8 +328,14 @@ export function reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: I
             ca = new CompositeAction([action], false);
             break;
     }
-    return CompositeActionReducer(oldState, ca);
+    let ret = CompositeActionReducer(oldState, ca);
+    /*if (state.current !== ret) {
+        state.current = ret;
+        state.past.push(ret);
+    }*/
+    return ret;
 }
+
 function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, alll: Dictionary<string, typeof LPointerTargetable>) {
     for (let dname in alld) {
         switch (dname) {
@@ -292,7 +347,7 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
         let d = alld[dname];
         let l = alll['L'+tagless];
         d.logic = l;
-        if (!l) console.log('lllllllll', l, d);
+        if (!l) console.error('lllllllll', l, d);
         // @ts-ignore
         d.singleton = new l('dwc');
         d.structure = d;

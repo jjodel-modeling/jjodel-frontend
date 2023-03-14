@@ -9,6 +9,7 @@ import type {GObject as GObjectt} from "./types";
 import type {Log as LogType} from "../common/U";
 export type {Constructor, AbstractConstructor} from "../joiner/types";
 var windoww = (window as any);
+windoww.windoww = windoww;
 
 
 // console.error('iiiiiiiiiiiiiiii 0');
@@ -53,6 +54,7 @@ export {DLog} from "../model/classes/D";
 export {LLog} from "../model/classes/L";
 // console.error('iiiiiiiiiiiiiiii 4');
 
+export {EcoreParser} from "../api/data";
 // import domain-specific classes
 
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
@@ -110,8 +112,8 @@ export type {WViewElement, WViewTransientProperties} from "../view/viewElement/v
 export {DViewTransientProperties, LViewTransientProperties, LViewElement, DViewElement} from "../view/viewElement/view";
 // console.error('iiiiiiiiiiiiiiii 12', windoww.DViewElement);
 
-export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
-export {IStore, ModelStore, ViewPointState} from "../redux/store";
+export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
+export {IStore, ModelStore, ViewPointState, statehistory} from "../redux/store";
 export {Selectors as Selectorss} from "../redux/selectors/selectors";
 export var Selectors = windoww.Selectors as (GObjectt & typeof SelType);
 export {reducer, jodelInit} from "../redux/reducer/reducer";

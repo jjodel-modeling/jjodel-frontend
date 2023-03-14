@@ -12,7 +12,7 @@ export default class DV {
         return `<div className={"w-100 h-100"}>
             <div className={"default-model"}>
                 <div className={"children"}>
-                    {this.data.childrens.map((pkg, i) => { 
+                    {this.data.childrens.filter(p=> p.name).map((pkg, i) => { 
                         return <DefaultNode key={i} data={pkg.id} />})
                     }
                 </div>

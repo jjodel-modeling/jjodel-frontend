@@ -147,7 +147,29 @@ export class U{
         CreateElementAction.new(new DLog(log));
     }
 
-    // delete this block --> start
+    static multiReplaceAllKV(a: string, kv: string[][] = []): string {
+        const keys: string[] = [];
+        const vals: string[] = [];
+        let i: number;
+        for (i = 0; i < kv.length; i++) { keys.push(kv[i][0]); vals.push(kv[i][0]); }
+        return U.multiReplaceAll(a, keys, vals); }
+
+    static multiReplaceAll(a: string, searchText: string[] = [], replacement: string[] = []): string {
+        Log.ex(searchText.length !== replacement.length, 'search and replacement must be have same length: ' + searchText.length + "vs" + replacement.length + " " +JSON.stringify(searchText) + "   " + JSON.stringify(replacement));
+        let i = -1;
+        while (++i < searchText.length) { a = U.replaceAll(a, searchText[i], replacement[i]); }
+        return a; }
+
+    static replaceAll(str: string, searchText: string, replacement: string, debug: boolean = false, warn: boolean = true): string {
+        if (!str) { return str; }
+        return str.split(searchText).join(replacement); }
+
+    static toFileName(a: string = 'nameless.txt'): string {
+        if (!a) { a = 'nameless.txt'; }
+        a = U.multiReplaceAll(a.trim(), ['\\', '//', ':', '*', '?', '<', '>', '"', '|'],
+            ['[lslash]', '[rslash]', ';', '°', '_', '{', '}', '\'', '!']);
+        return a; }
+
     private static classnameConverter(classname: string): string | null {
         switch (classname) {
             default: return null;
@@ -172,7 +194,6 @@ export class U{
             case "DEnumLiteral": return "enumliterals";
         }
     }
-    // delete this block --> start
 
     public static classnameToRedux(classname: string): string | null {
         return  (classname.substring(1)).toLowerCase() + "s";
@@ -785,13 +806,33 @@ export class U{
         // return U.getAllPrototypes(subconstructor).includes(superconstructor);
     }
 
-    static isObject(obj: GObject|any): boolean { return obj instanceof Object; }
+    static isObject(v: GObject|any, returnIfNull: boolean = true, returnIfUndefined: boolean = false, retIfArray: boolean = false): boolean {
+        if (v === null) { return returnIfNull; }
+        if (v === undefined) { return returnIfUndefined; }
+        if (Array.isArray(v)) { return retIfArray; }
+        // nb: mind that typeof [] === 'object'
+        return typeof v === 'object'; }
 
     static objectFromArrayValues(arr: (string | number)[]): Dictionary<string | number, boolean> {
         let ret: Dictionary = {};
         // todo: improve efficiency
         for (let val of arr) { ret[val] = true; }
         return ret;
+    }
+
+    static toBoolString(bool: boolean, ifNotBoolean: boolean = false): string { return bool === true ? 'true' : (bool === false ? 'false' : '' + ifNotBoolean); }
+    static fromBoolString<T extends any>(str: string | boolean): boolean;
+    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T): boolean | T;
+    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, allowNull?: boolean): boolean | null | T;
+    static fromBoolString<T extends any>(str: string | boolean, defaultVal: T = false as any, allowNull: boolean = false, allowUndefined: boolean = false): boolean | null | undefined | T {
+        str = ('' + str).toLowerCase();
+        if (allowNull && (str === 'null')) return null;
+        if (allowUndefined && (str === 'undefined')) return undefined;
+
+        if (str === "true" || str === 't' || str === '1') return true;
+        // if (defaultVal === true) return str === "false" || str === 'f' || str === '0'; // false solo se è esplicitamente false, true se ambiguo.
+        if (str === "false" || str === 'f' || str === '0') return false;
+        return defaultVal;
     }
 
     static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[], starting: T[], final: T[]} {
@@ -802,6 +843,56 @@ export class U{
         if (!final) final = [];
         ret.removed = Uarr.arraySubtract(starting, final, false); // start & !end
         ret.added = Uarr.arraySubtract(final, starting, false); // end & !start
+        return ret;
+    }
+
+    // returns <"what changed from old to neww"> and in nested objects recursively
+    // todo: how can i tell at what point it's the fina lvalue (might be a nestedobj) and up to when it's a delta to follow and unroll?   using __isAdelta:true ?
+    // NB: this returns the delta that generates the future. if you want the delta that generate the past one, invert parameter order.
+    public static objectDelta<T extends object>(old: T, neww: T, deep: boolean = true): Partial<T>{
+        let newwobj: GObject = neww;
+        let oldobj: GObject = old;
+        if (old === neww) return {};
+        let diff = U.objdiff(old, neww); // todo: optimize this, remove the 3 loops below and add those directly in U.objdiff(old, neww, ret); writing inside the obj in third parameter
+        console.log("objdiff", {old, neww, diff});
+        let ret: GObject = {__isAdelta:true};
+        for (let key in diff.added) { ret[key] = newwobj[key]; }
+        for (let key in diff.changed) {
+            let subold = oldobj[key];
+            let subnew = newwobj[key];
+            if (typeof subold === typeof subnew && typeof subold === "object") { ret[key] = deep ? U.objectDelta(subold, subnew, true) : subnew; }
+            ret[key] = subnew;
+        }
+        for (let key in diff.removed) { ret[key] = undefined; } //newwobj[key]; }
+        return ret as Partial<T>;
+    }
+
+    // difference react-style. lazy check by === equality field by field
+    public static objdiff<T extends GObject>(old:T, neww: T): {removed: Partial<T>, added: Partial<T>, changed: Partial<T>} {
+        // let ret: GObject = {removed:{}, added:{}, changed:{}};
+        let ret: {removed: Partial<T>, added: Partial<T>, changed: Partial<T>}  = {removed:{}, added:{}, changed:{}};
+        if (!neww && !old) { return ret; }
+        if (!neww) { ret.removed = old; return ret; }
+        if (!old) { ret.added = neww; return ret; }
+        let oldkeys: string[] = Object.keys(old);
+        let newkeys: string[] = Object.keys(neww);
+
+        let key: any;
+        for (key of oldkeys) {
+            if (neww[key] === old[key]) continue;
+            if (neww[key] === undefined){
+                if (old[key] !== undefined) { (ret.removed as GObject)[key] = old[key]; continue; }
+                // if (old[key] === undefined) { continue; }
+                continue;
+            }
+            (ret.changed as GObject)[key] = old[key];
+        }
+        for (let key of newkeys) {
+            if (old[key] === undefined){
+                if (neww[key] !== undefined) { continue; }
+                (ret.added as GObject)[key] = neww[key]
+            }
+        }
         return ret;
     }
 }
@@ -2048,23 +2139,7 @@ export class SelectorOutput {
 //         }
 //         return value; }
 //
-//     static multiReplaceAllKV(a: string, kv: string[][] = []): string {
-//         const keys: string[] = [];
-//         const vals: string[] = [];
-//         let i: number;
-//         for (i = 0; i < kv.length; i++) { keys.push(kv[i][0]); vals.push(kv[i][0]); }
-//         return UU.multiReplaceAll(a, keys, vals); }
-//
-//     static multiReplaceAll(a: string, searchText: string[] = [], replacement: string[] = []): string {
-//         UU.pe(!(searchText.length === replacement.length), 'search and replacement must be have same length:', searchText, replacement);
-//         let i = -1;
-//         while (++i < searchText.length) { a = UU.replaceAll(a, searchText[i], replacement[i]); }
-//         return a; }
-//     static toFileName(a: string = 'nameless.txt'): string {
-//         if (!a) { a = 'nameless.txt'; }
-//         a = UU.multiReplaceAll(a.trim(), ['\\', '//', ':', '*', '?', '<', '>', '"', '|'],
-//             ['[lslash]', '[rslash]', ';', '°', '_', '{', '}', '\'', '!']);
-//         return a; }
+
 //
 //     static download(filename: string = 'nameless.txt', text: string = null, debug: boolean = true): void {
 //         if (!text) { return; }

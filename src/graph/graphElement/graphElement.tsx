@@ -108,6 +108,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     static mapViewStuff(state: IStore, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
         let dnode: DGraphElement | undefined = ownProps?.nodeid && state.idlookup[ownProps.nodeid] as any;
         // console.error("ret data:::",  ret.data);
+        // Log.ex(ownProps.view.appliableToClasses[0] === "DModel", "ret:", ret);
         const viewScores = Selectors.getAppliedViews(ret.data, dnode, ret.graph, ownProps.view || null, ownProps.parentViewId || null);
         ret.views = viewScores.map(e => MyProxyHandler.wrap(e.element));
         ret.view = ret.views[0];
@@ -125,6 +126,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : (ownProps.data as any as DModelElement)?.id) as string;
         Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ret, ownProps, state});
         ret.data = MyProxyHandler.wrap(state.idlookup[meid as any]);
+        // Log.ex(!ret.data, "can't find model data:", {meid, state, ownpropsdata:ownProps.data, ownProps});
 
     }
     static mapLGraphElementStuff(state: IStore,
@@ -162,7 +164,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!dnode) {
             let dge = dGraphElementDataClass.new(dataid, parentnodeid, graphid, nodeid);
             let act = CreateElementAction.new(dge, false);
-            console.log("map ge2", {nodeid: nodeid+'', act:{...act}, dge: {...dge}, dgeid: dge.id});
+            console.log("map ge2", {nodeid: nodeid+'', dge: {...dge}, dgeid: dge.id});
         }
         else { ret.node = MyProxyHandler.wrap(dnode); }
     }
