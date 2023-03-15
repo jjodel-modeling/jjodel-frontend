@@ -1,6 +1,8 @@
 import * as jsxtt from 'jsx-transform/lib/jsx.js';
 import $$ from 'jquery';
 import {ReactNode} from "react";
+import * as _pr_json2xml from '../common/libraries/prj_json2xml.js';
+import * as _pr_xml2json from '../common/libraries/prj_xml2json.js';
 // true imports for this file (should all be import type
 import type { DocString } from './types';
 import type {U as UType} from "../common/U";
@@ -16,8 +18,8 @@ windoww.windoww = windoww;
 
 (window as any).$ = $$;
 export const $: JQueryStatic = $$;
-
-
+export const prjson2xml = _pr_json2xml;
+export const prxml2json = _pr_xml2json;
 
 // import types
 //import {$s, GraphPoint, GraphSize, IPoint, ISize, Log, Point, Size, U} from "../common/U";

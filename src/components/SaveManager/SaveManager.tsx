@@ -5,7 +5,7 @@ import {
     LModel,
     LoadAction,
     Log,
-    LPointerTargetable, RedoAction,
+    LPointerTargetable, prjson2xml, prxml2json, RedoAction,
     Selectors,
     statehistory,
     store,
@@ -31,8 +31,10 @@ const SaveManager: FC<SaveManagerProps> = () => (
           <button onClick={(e)=> { undo() }}>Undo</button>
           <button onClick={(e)=> { redo() }}>Redo</button>
           <br />
-          <button onClick={(e)=> { exportEcore() }}>Export</button>
-          <button onClick={(e)=> { importEcore() }}>Import</button>
+          <button onClick={(e)=> { exportEcore() }}>Export JSON</button>
+          <button onClick={(e)=> { importEcore() }}>Import JSON</button>
+          <button onClick={(e)=> { exportEcore(true) }}>Export XML</button>
+          <button onClick={(e)=> { importEcore(true) }}>Import XML</button>
     </div>
     <span id={"export-tmp"} style={{position: "absolute", width: "25vw", bottom:0, overflowY: "scroll", zIndex:10, right:0, background: "white"}}></span>
     </>
@@ -43,9 +45,22 @@ function save(){ tmpsave = store.getState(); localStorage.setItem("tmpsave", JSO
 function load(){ if (!tmpsave) tmpsave = JSON.parse(localStorage.getItem("tmpsave") || 'null'); return LoadAction.new(tmpsave); }
 function undo(){ UndoAction.new(); }
 function redo(){ RedoAction.new(); }
-function exportEcore(): void{ let json = exportEcore0(); let str = JSON.stringify(json); (document.querySelector("#export-tmp") as any).innerText = str; localStorage.setItem("import", str); }
+function exportEcore(toXML: boolean = false): void {
+    let json = exportEcore0();
+    let str = JSON.stringify(json);
+    if (toXML) str = prjson2xml.json2xml(json, '\t');
+    (document.querySelector("#export-tmp") as any).innerText = str;
+    localStorage.setItem("import", str); }
 function exportEcore0(): Json { let loopobj = {}; try { return (LPointerTargetable.wrap(store.getState().models[0]) as LModel).generateEcoreJson(loopobj); } catch(e) { Log.exx("loop in model:", loopobj); } return {"eror": true, loopobj}; }
-function importEcore(){ let str = localStorage.getItem("import") || 'null'; importEcore0(str); }
+function importEcore(fromXML: boolean = false){
+    let inputstring = localStorage.getItem("import") || 'null';
+    let jsonstr = null;
+    if (fromXML) {
+        const xmlDoc = new DOMParser().parseFromString(inputstring,"text/xml");
+        jsonstr = prxml2json.xml2json(xmlDoc, '\t');
+    }
+    importEcore0(jsonstr || inputstring); }
+
 function importEcore0(str: string | null): void {
     console.warn("pre-parse", str);
     console.warn("parsed: ", EcoreParser.parse(str, false));

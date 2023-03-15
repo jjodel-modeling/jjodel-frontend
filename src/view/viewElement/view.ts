@@ -1,3 +1,4 @@
+// eslint-disable-next-line
 import {
     DocString,
     Pointer,
@@ -12,7 +13,6 @@ import {
     RuntimeAccessible,
     MixOnlyFuncs, GObject, Dictionary, DReference, getWParams, LUser, DUser, Constructors, DGraph, DGraphElement
 } from "../../joiner";
-import DV from "../../common/DV";
 
 
 @RuntimeAccessible

@@ -81,7 +81,7 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
     stateProps.preRenderFunc = view.preRenderFunc;
     stateProps.evalContext = evalContext;
     stateProps.template = jsxparsedfunc;
-    console.log('GE settemplatestring:', {stateProps});
+    // console.log('GE settemplatestring:', {stateProps});
 }
 
 @RuntimeAccessible
@@ -139,9 +139,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let graphid: string = isDGraph ? isDGraph.id : ownProps.graphid as string;
         let parentnodeid: string = ownProps.parentnodeid as string;
         let dataid: Pointer<DModelElement, 0, 1, LModelElement> = ownProps.data || null;
-        // if (!nodeid || !graphid) { Log.ee('node id injection failed'); return; }
-        Log.exDev(!nodeid || !graphid, 'node id injection failed'); /*
-        if (!nodeid) {
+        // Log.exDev(!nodeid || !graphid, 'node id injection failed', {ownProps, data: ret.data, name:(ret.data as any)?.name || (ret.data as any)?.className}); /*
+        /*if (!nodeid) {
             nodeid = 'nodeof_' + stateProps.data.id + (stateProps.view.bindVertexSizeToView ? '^' + stateProps.view.id : '') + '^1';
             stateProps.nodeid = U.increaseEndingNumber(nodeid, false, false, id => !idlookup[id]);
             todo: quando il componente si aggiorna questo viene perso, come posso rendere permanente un settaggio di reduxstate in mapstatetoprops? o devo metterlo nello stato normale?
@@ -180,9 +179,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // ret.view = LViewElement.wrap(state.idlookup[vid]);
         // view non deve essere più injected ma calcolata, però devo fare inject della view dell'elemento parent. learn ocl to make view target
         Log.exDev(!ret.view, 'failed to inject view:', {state, ownProps, reduxProps: ret});
-        console.log(!ret.view, 'failed to inject view:', {state, ownProps, reduxProps: ret});
+        // console.log(!ret.view, 'failed to inject view:', {state, ownProps, reduxProps: ret});
         if (ret.view.usageDeclarations) U.objectMergeInPlace(ret, U.evalInContextAndScope(ret.view.usageDeclarations));
-        console.log('GE mapstatetoprops:', {state, ownProps, reduxProps: ret});
+        // console.log('GE mapstatetoprops:', {state, ownProps, reduxProps: ret});
         // ret.model = state.models.length ? LModelElement.wrap(state.models[0]) as LModel : undefined;
         setTemplateString(ret, ownProps);
         // @ts-ignore
@@ -264,11 +263,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // @ts-ignore this
         const parentComponent = this;
         // const windoww = window as any;
-        // console.log('relement ', {type: (re.type as any).WrappedComponent?.name || re.type}, {thiss, mycomponents: windoww.mycomponents, re, props:re.props});
+        let type = (re.type as any).WrappedComponent?.name || re.type;
+        // @ts-ignore
+        console.log('pre-injectingProp ', {type, thiss: this, mycomponents: windoww.mycomponents, re, props:re.props});
         // add "view" (view id) prop as default to sub-elements of any depth to inherit the view of the parent unless the user forced another view to apply
-        switch ((re.type as any).WrappedComponent?.name || re.type) {
+        switch (type) {
             default:
-                console.count('relement default: ' + ((re.type as any).WrappedComponent?.name || re.type));
+                console.count('injectingProp case default: ' + type);
                 return re;
             case windoww.Components.Input.name:
             case windoww.Components.Textarea.name:
@@ -288,6 +289,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             case windoww.Components.Vertex.name:
             case windoww.Components.VertexComponent.name:
                 const injectProps: GraphElementOwnProps = {} as any;
+                // if (!parentComponent.props.node || !parentComponent.props.view) return e;
                 injectProps.parentViewId = parentComponent.props.view.id || parentComponent.props.view; // re.props.view ||  thiss.props.view
                 injectProps.parentnodeid = parentComponent.props.node.id;
                 injectProps.graphid = parentComponent.props.graphid;
@@ -298,11 +300,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 // todo: come butto dei sotto-vertici dentro un vertice contenitore? o dentro un sotto-grafo? senza modificare il jsx ma solo draggando?
                 const dataid = typeof re.props.data === "string" ? re.props.data : re.props.data?.id;
                 const idbasename: string = injectProps.graphid + '^' + dataid;
-                console.log("setting nodeid", {injectProps, props:re.props, re});
+                console.log("injectingProp case GraphElement", {injectProps, props:re.props, re});
                 Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
                 injectProps.nodeid = U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
                 gvidmap[injectProps.nodeid] = true;
                 injectProps.key = injectProps.nodeid; // re.props.key || thiss.props.view.id + '_' + thiss.props.data.id;
+                if (!parentComponent.props.node || !parentComponent.props.view || !injectProps.nodeid) console.log("injectprop failing", {e, re, gvidmap, injectProps}) // todo: tmpfix for ecore import
+                    //@ts-ignore
+                else console.log('injectingProp case GraphElement return ', {type, thiss: this, e, re, gvidmap, injectProps});
+
                 return React.cloneElement(re, injectProps);
         }}.bind(this);
 
@@ -378,7 +384,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         return ret;
     }
-
+/**
+ * package got node id injected
+ * package.render() start
+ *    ge render message
+ *    mapstate of denum before?? crash here?
+ *    inject enum props (not happening?)
+ *    mapstate of denum again after??
+ * package.render() end
+ *
+ * */
     public render(): ReactNode {
         if (this.props.preRenderFunc) U.evalInContextAndScope(this.props.preRenderFunc, this.props.evalContext);
         const rnode: ReactNode = this.getTemplate();
@@ -388,7 +403,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const me: LModelElement = this.props.data as LModelElement; // this.props.model;
 
         const addprops: boolean = true;
-        if (addprops && me && rawRElement) {
+        let fiximport = !!this.props.node; // todo: check if correct approach
+        if (addprops && me && rawRElement && fiximport) {
+            console.log("pre-injecting", {thiss:this, data:this.props.data, props:this.props});
             const onDragTestInject = () => {}; // might inject event handlers like this with cloneelement
             // add view props to GraphElement childrens (any level down)
             const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap(); // todo: per passarla come prop ma mantenerla modificabile
@@ -404,7 +421,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // const injectprops = {a:3, b:4} as DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
         // rnode = React.cloneElement(rnode as ReactElement, injectprops);
 
-        console.log("nodeee", {thiss:this, props:this.props, node: this.props.node});
+        // console.log("nodeee", {thiss:this, props:this.props, node: this.props.node});
         if (false && (this.props.node?.__raw as DGraphElement).containedIn) {
             let $containedIn = $('#' + this.props.node.containedIn);
             let $containerDropArea = $containedIn.find(".VertexContainer");

@@ -4282,7 +4282,7 @@ export class Log{
         if (restArgs === null || restArgs === undefined) { restArgs = []; }
         let str = '[' + prefix + ']' + key + ': ';
         for (let i = 0; i < restArgs.length; i++) {
-            console.log(prefix, {i, restArgs, curr:restArgs[i]});
+            // console.log(prefix, {i, restArgs, curr:restArgs[i]});
             str += '' +
                 (typeof restArgs[i] === 'symbol' ?
                     '' + String(restArgs[i]) :

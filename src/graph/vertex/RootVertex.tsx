@@ -29,7 +29,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     const canBeExtend = isEdgePending &&
                         rootProps.data.className === "DClass" &&
                         source.canExtend(rootProps.data as any as LClass, extendError);
-    console.log("canextend", {src: rootProps.isEdgePending, target:rootProps.data, extendError});
+    //console.log("canextend", {src: rootProps.isEdgePending, target:rootProps.data, extendError});
 
     const [classes, setClasses] = useState<string[]>([]);
 
