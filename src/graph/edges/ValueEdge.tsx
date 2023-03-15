@@ -36,17 +36,20 @@ function ValueEdgeComponent(props: AllProps) {
         }
     });
 
-    return(<>
-        <div style={{borderColor: options.color}} id={middleAnchor} className={'middle-anchor'}></div>
-        <Xarrow start={source.id} end={middleAnchor} showHead={false} {...options} />
-        <Xarrow start={middleAnchor} end={target.id} {...options} />
-    </>);
+    if(props.display) {
+        return(<>
+            <div style={{borderColor: options.color}} id={middleAnchor} className={'middle-anchor'}></div>
+            <Xarrow start={source.id} end={middleAnchor} showHead={false} {...options} />
+            <Xarrow start={middleAnchor} end={target.id} {...options} />
+        </>);
+    } else { return(<></>); }
+
 }
 interface OwnProps {
     sourceID: Pointer<DGraphElement, 1, 1, LGraphElement>;
     targetID: Pointer<DGraphElement, 1, 1, LGraphElement>;
 }
-interface StateProps { source: LGraphElement, target: LGraphElement, options: GObject }
+interface StateProps { source: LGraphElement, target: LGraphElement, options: GObject, display: boolean }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -56,6 +59,7 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     ret.source = LGraphElement.fromPointer(ownProps.sourceID);
     ret.target = LGraphElement.fromPointer(ownProps.targetID);
     ret.options = state._edgeSettings;
+    ret.display = state._edgesDisplayed.referenceM1;
     return ret;
 }
 

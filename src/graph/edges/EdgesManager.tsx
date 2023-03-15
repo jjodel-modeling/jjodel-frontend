@@ -50,23 +50,23 @@ function EdgesManagerComponent(props: AllProps) {
 
     return <div>
         {_references.map((referenceEdge, index) => {
-            const source = referenceEdge.source.nodes[0];
-            const target = referenceEdge.target.nodes[0];
+            const source = referenceEdge.source.node;
+            const target = referenceEdge.target.node;
             const containment = referenceEdge.containment;
             if(source && target) {
                 return(<ReferenceEdge key={index} sourceID={source.id} targetID={target.id} containment={containment} />);
             }
         })}
         {_extends.map((extendEdge, index) => {
-            const source = extendEdge.source.nodes[0];
-            const target = extendEdge.target.nodes[0];
+            const source = extendEdge.source.node;
+            const target = extendEdge.target.node;
             if(source && target) {
                 return(<ExtendEdge key={index} sourceID={source.id} targetID={target.id} />);
             }
         })}
         {_values.map((valueEdge, index) => {
-            const source = valueEdge.source.nodes[0];
-            const target = valueEdge.target.nodes[0];
+            const source = valueEdge.source.node;
+            const target = valueEdge.target.node;
             if(source && target) {
                 return(<ValueEdge key={index} sourceID={source.id} targetID={target.id} />);
             }

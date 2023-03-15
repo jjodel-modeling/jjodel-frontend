@@ -84,6 +84,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     annotations!: LAnnotation[];
     childrens!: (LPackage | LClassifier | LTypedElement | LAnnotation | LObject | LValue)[];
     nodes!: LGraphElement[];
+    node!: LGraphElement | null;
 
     // utilities to go up in the tree (singular names)
     model!: LModel; // utility, follow father chain until get a Model parent or null
@@ -212,7 +213,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         }
     }
 
-    protected get_nodes(context: LogicContext<this>): LGraphElement[] {
+    protected get_nodes(context: Context): LGraphElement[] {
         const nodes: LGraphElement[] = [];
         const nodeElements = $('[data-dataid="' + context.data.id + '"]');
         for (let nodeElement of nodeElements) {
@@ -223,6 +224,12 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             }
         }
         return nodes;
+    }
+
+    protected get_node(context: Context): LGraphElement|null {
+        const nodes = context.proxyObject.nodes;
+        const node = (nodes.length > 0) ? nodes[0] : null;
+        return node;
     }
 
     /*

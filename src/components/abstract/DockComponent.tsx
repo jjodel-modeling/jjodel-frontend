@@ -73,7 +73,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
                             { ...this.treeEditor, id: '2' },
                             { ...this.viewsEditor, id: '3' },
                             { ...this.viewpointEditor, id: '4' },
-                            //{ ...this.styleEditor, id: '5' },
+                            { ...this.styleEditor, id: '5' },
                             { ...this.edgeEditor, id: '6' },
                             { ...this.console, id: '7' },
                         ]}]

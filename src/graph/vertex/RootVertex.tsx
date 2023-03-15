@@ -100,7 +100,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                         }
                     },
                     drag: function(event: GObject, obj: GObject) {
-                        //SetRootFieldAction.new("dragging", {})
+                        SetRootFieldAction.new("dragging", {})
                     },
                     stop: function (event: GObject, obj: GObject) {
                         if(node) {
@@ -128,6 +128,10 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                         // SetRootFieldAction.new("dragging", {})
                     },
                     stop: function(event: GObject, obj: GObject) {
+                        if(node) {
+                            node.width = obj.size.width;
+                            node.height = obj.size.height;
+                        }
                         if(view.onResizeEnd) {
                             try{ eval(view.onResizeEnd); }
                             catch (e) { console.log(e) }

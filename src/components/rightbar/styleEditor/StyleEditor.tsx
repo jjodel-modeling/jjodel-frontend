@@ -10,12 +10,13 @@ function StyleEditorComponent(props: AllProps) {
 
     const selected = props.selected;
     if(selected) {
-        return(<div>
-            <Input obj={selected.node} field={"id"} label={"ID"} type={"text"} readonly={true}/>
-            <Input obj={selected.node} field={"x"} label={"X Position"} type={"number"}/>
-            <Input obj={selected.node} field={"y"} label={"Y Position"} type={"number"} />
-            <Input obj={selected.node} field={"zIndex"} label={"Z Index"} type={"number"} />
-            {JSON.stringify(selected.view)}
+        return(<div className={'p-3'}>
+            {/*<Input obj={selected.node} field={"id"} label={"ID"} type={"text"} readonly={true}/>*/}
+            <Input obj={selected.node} field={"x"} label={"X Position"} type={"number"} readonly={true} />
+            <Input obj={selected.node} field={"y"} label={"Y Position"} type={"number"} readonly={true} />
+            <Input obj={selected.node} field={"width"} label={"Width"} type={"number"} readonly={true} />
+            <Input obj={selected.node} field={"height"} label={"Height"} type={"number"} readonly={true} />
+            <Input obj={selected.node} field={"zIndex"} label={"Z Index"} type={"number"} readonly={true} />
         </div>);
     } else {
         return(<></>);

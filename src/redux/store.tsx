@@ -105,9 +105,8 @@ export class IStore {
 
     contextMenu: {display: boolean, x: number, y: number} = { display: false, x: 0, y: 0 };
 
-    //dragging: {random: number, id: string} = { random: 0, id: "" };
-    edges: EdgeOptions[] = [];
-    edgesCounter: number = 0;
+    //dragging: {random: number, id: string} = { random: 0, id: "" }; fix
+    edges: EdgeOptions[] = [];  // delete
 
     deleted : string[] = [];
 
@@ -121,7 +120,8 @@ export class IStore {
         modelElement: Pointer<DModelElement, 0, 1> // if a node is clicked: a node and a view are present, a modelElement might be. a node can exist without a modelElement counterpart.
     };
     users: Pointer<DUser, 1, 'N', LUser>;
-    _edgeSettings = { strokeWidth: 1, color: '#000000', zIndex: 150, path: 'grid' }
+    _edgeSettings = { strokeWidth: 1, color: '#000000', zIndex: 150, path: 'smooth' }
+    _edgesDisplayed = { extend: true, referenceM2: true, referenceM1: true }
 
     viewpoint: Pointer<DViewPoint, 1, 1, LViewPoint> = '';
     viewpoints: Pointer<DViewPoint, 0, 'N', LViewPoint> = [];
