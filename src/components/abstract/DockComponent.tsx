@@ -46,10 +46,11 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
         this.graphs = this.props.graphs;
 
         this.metamodelTab = { title: "Metamodel", group: "1", closable: false, content:
-            <MetamodelTab modelid={this.metamodel.id} graphid={this.graphs[0].id} />
+            <MetamodelTab modelid={this.metamodel.id}  /> //graphid={this.graphs[0].id}
+
         };
         this.modelTab = { title: "Model", group: "1", closable: false, content:
-            <ModelTab modelid={this.models[0].id} graphid={this.graphs[1].id} metamodelid={this.metamodel.id} />
+            <ModelTab modelid={this.models[0].id} metamodelid={this.metamodel.id} /> //graphid={this.graphs[1].id}
         };
         this.structureEditor = { title: "Structure", group: "2", closable: false, content: <StructureEditor /> };
         this.treeEditor = { title: "Tree View", group: "2", closable: false, content: <TreeEditor /> };

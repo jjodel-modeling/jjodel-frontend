@@ -100,7 +100,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                         }
                     },
                     drag: function(event: GObject, obj: GObject) {
-                        SetRootFieldAction.new("dragging", {})
+                        // SetRootFieldAction.new("dragging", {})
                     },
                     stop: function (event: GObject, obj: GObject) {
                         if(node) {

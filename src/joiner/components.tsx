@@ -18,7 +18,7 @@ export {Graph, GraphComponent} from "../graph/graph/graph"; // require graphelem
 export {DefaultNode, DefaultNodeComponent} from "../graph/defaultNode/DefaultNode"; // require graphelement
 export {Vertex, VertexComponent} from "../graph/vertex/Vertex"; // require overlap, graphelement
 export {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphContainer"; // require vertex, graph
-export {DockLayoutComponent} from "../components/abstract/DockLayoutComponent";
+//export {DockLayoutComponent} from "../components/abstract/DockLayoutComponent";
 export {Edges} from "../graph/edge/Edges";
 
 console.info('components loaded');

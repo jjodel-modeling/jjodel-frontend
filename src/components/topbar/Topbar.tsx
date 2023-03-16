@@ -2,13 +2,16 @@ import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
 import './style.scss';
+import {LModel} from "../../joiner";
 
 
 function Topbar(props: AllProps) {
+    const metamodel = props.metamodel;
 
     const click = (evt: React.MouseEvent<HTMLLabelElement>) => {
         alert('todo')
     }
+
 
     return(<div className={'topbar d-flex'}>
         <div className={'ms-1'}>
@@ -22,13 +25,15 @@ function Topbar(props: AllProps) {
     </div>);
 }
 interface OwnProps {}
-interface StateProps {}
+interface StateProps { metamodel?: LModel }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
+    const pointer = state.metamodel;
+    if(pointer) ret.metamodel = LModel.fromPointer(pointer);
     return ret;
 }
 

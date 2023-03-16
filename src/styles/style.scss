@@ -2,7 +2,7 @@
 
 /* classes */
 .round { border-radius: $radius; }
-.circle { border-radius: 999px; }
+.circle { border-radius: 999px !important; }
 .bg-smoke { background-color: whitesmoke; }
 .class-can-be-extended { border: 2px solid $true !important; border-radius: $radius; }
 .class-cannot-be-extended { border: 2px solid $false !important; border-radius: $radius; }

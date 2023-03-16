@@ -790,7 +790,7 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
                     (DNamedElement.fromPointer(child.id) as DNamedElement).name === name
             });
             if(check.length > 0){
-                UX.info('Cannot rename since the name is already used');
+                alert('This name is already taken!');
                 return true
             }
         }
@@ -1195,7 +1195,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
                 check = lClass.instances.length > 0;
                 if(check) break;
             }
-            if(check) UX.info('You cannot delete the package since there are instances');
+            if(check) alert('Cannot delete the package since there are instances');
             else context.proxyObject.superDelete();
         };
         ret();
@@ -1530,7 +1530,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     protected set_abstract(val: this["abstract"], context: Context): boolean {
         const data = context.data;
         if(val && data.instances.length > 0) {
-            UX.info("You cannot change the abstraction level since you have instances of this class");
+            alert('Cannot change the abstraction level since there are instances of this class');
         } else {
             SetFieldAction.new(data, 'abstract', val);
         }
@@ -1724,7 +1724,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
         const ret = () => {
             if(data.instances.length > 0 || childInstances > 0) {
-                UX.info("Cannot delete the class since there are instances");
+                alert('Cannot delete the class since there are instances');
             } else lData.superDelete();
         }
         ret();
@@ -2459,7 +2459,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.literals;
         const diff = U.arrayDifference(oldList, list);
-        //BEGIN();
+        BEGIN();
         SetFieldAction.new(context.data, 'literals', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -2471,7 +2471,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        //END();
+        END();
         return true;
     }
 /*
@@ -2526,6 +2526,7 @@ export class DModel extends DNamedElement { // DNamedElement
     packages: Pointer<DPackage, 0, 'N', LPackage> = [];
     isMetamodel: boolean = true;
     objects: Pointer<DObject, 0, 'N', LObject> = [];
+    models: Pointer<DModel, 0, 'N', LModel> = [];
 
     public static new(name?: DNamedElement["name"], packages: DModel["packages"] = []): DModel {
         return new Constructors(new DModel('dwc')).DPointerTargetable().DModelElement()
@@ -2549,8 +2550,13 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     annotations!: LAnnotation[];
     name!: string;
     // personal
-    packages!: LPackage[];
     isMetamodel!: boolean;
+
+    // Metamodel
+    packages!: LPackage[];
+    models!: LModel[];
+
+    // Model
     objects!: LObject[];
 
     // utilities to go down in the tree (plural names)
@@ -2565,6 +2571,39 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     allSubAnnotations!: LAnnotation[] | null;
     allSubPackages!: LPackage[] | null;
 
+    protected get_models(context: Context): LModel[] {
+        return LModel.fromPointer(context.data.models);
+    }
+    protected set_models(val: PackArr<this['models']>, context: Context): boolean {
+        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const oldList = context.data.models;
+        const diff = U.arrayDifference(oldList, list);
+        BEGIN();
+        SetFieldAction.new(context.data, 'models', list, '', true);
+        for (let id of diff.added) {
+            SetFieldAction.new(id, 'father', context.data.id, '', true);
+            SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
+        }
+        for (let id of diff.removed as Pointer<DModelElement>[]) {
+            SetFieldAction.new(id, 'father', undefined, '', true);
+            const parent = DPointerTargetable.from(id).parent;
+            U.arrayRemoveAll(parent, context.data.id);
+            SetFieldAction.new(id, 'parent', parent, '', true);
+        }
+        END();
+        return true;
+    }
+
+    protected set_name(val: this['name'], context: Context): boolean {
+        const models: LModel[] = LModel.fromPointer(store.getState()['models']);
+        if(models.filter((model) => { return model.name === val }).length > 0) {
+            alert('This name is already taken!');
+        } else {
+            SetFieldAction.new(context.data, 'name', val, '', false);
+        }
+        return true;
+    }
+
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | (DPackage|DObject), 1, 'N'> {
         let children: Pointer<(DPackage|DObject), 0, 'N', (LPackage|LObject)>;
         if(context.data.isMetamodel) children = context.data.packages;
@@ -2574,15 +2613,15 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     }
 
     protected get_delete(context: Context): () => void {
-        const ret = () => { UX.info('You cannot delete the metamodel'); }
+        const ret = () => { alert('Cannot delete the metamodel!'); }
         return ret;
     }
 
-    protected get_isMetamodel(context: Context): this["isMetamodel"] {
+    protected get_isMetamodel(context: Context): this['isMetamodel'] {
         return context.data.isMetamodel;
     }
-    protected set_isMetamodel(val: boolean, context: Context): boolean {
-        SetFieldAction.new(context.data, 'isMetamodel', val, "", false);
+    protected set_isMetamodel(val: this['isMetamodel'], context: Context): boolean {
+        SetFieldAction.new(context.data, 'isMetamodel', val, '', false);
         return true;
     }
 

@@ -28,10 +28,8 @@ class StructureEditorComponent extends PureComponent<AllProps, ThisState> {
             <div className={"mt-3"}>
                 {Structure.Editor(lModelElement)}
             </div>
-            {/*
             <hr className={'mt-5'} />
             {JSON.stringify(lModelElement)}
-            */}
         </div>;
     }
 }

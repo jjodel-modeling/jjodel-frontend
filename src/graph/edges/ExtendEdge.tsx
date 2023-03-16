@@ -37,6 +37,7 @@ function ExtendEdgeComponent(props: AllProps) {
             });
         }
     });
+
     if(props.display) {
         return(<>
             <div style={{borderColor: options.color}} id={middleAnchor} className={'middle-anchor'}></div>

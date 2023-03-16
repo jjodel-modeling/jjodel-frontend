@@ -1,8 +1,8 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
-import type {Pointer, DModel, DGraph} from "../../../joiner";
-import {LGraph, LModel} from "../../../joiner";
+import type {Pointer, DModel} from "../../../joiner";
+import {LGraph, LModel, DGraph} from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import PendingEdge from "../../../graph/edge/PendingEdge";
@@ -20,7 +20,7 @@ function ModelTabComponent(props: AllProps) {
         <div className={'d-flex'}>
             <ToolBar model={model.id} isMetamodel={model.isMetamodel} metamodelId={props.metamodelid} />
             <div style={{marginLeft: '6.55em'}}>
-                <DefaultNode data={model.id} nodeid={graph.id} graphid={graph.id} />
+                {graph && <DefaultNode data={model.id} nodeid={graph.id} graphid={graph.id} />}
                 <EdgesManager modelid={model.id} />
             </div>
         </div>
@@ -28,10 +28,9 @@ function ModelTabComponent(props: AllProps) {
 }
 interface OwnProps {
     modelid: Pointer<DModel, 1, 1, LModel>,
-    graphid: Pointer<DGraph, 1, 1, LGraph>,
     metamodelid?: Pointer<DModel, 1, 1, LModel>,
 }
-interface StateProps { model: LModel, graph: LGraph }
+interface StateProps { model: LModel, graph?: LGraph }
 interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -39,7 +38,9 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.model = LModel.fromPointer(ownProps.modelid);
-    ret.graph = LGraph.fromPointer(ownProps.graphid);
+    const graphs: DGraph[] = DGraph.fromPointer(state.graphs);
+    const pointers = graphs.filter((graph) => { return graph.model === ownProps.modelid });
+    if(pointers.length > 0) ret.graph = LGraph.fromPointer(pointers[0].id);
     return ret;
 }
 

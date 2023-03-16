@@ -216,14 +216,15 @@ export {
     Overlap,
     GraphsContainer,
     Vertex,    Graph,
-    DockLayoutComponent,
+    // DockLayoutComponent,
     ColorScheme, Edges,
     DataOutputComponent, LoggerComponent, MyInputComponent
 } from './components'
 
-export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file
+//export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file
 export {fakeExport} from './ExecuteOnRead';
 console.info('joiner loaded');
 class Joiner{
     // just to help the file search
 }
+

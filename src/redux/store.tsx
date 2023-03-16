@@ -44,7 +44,7 @@ import {
     LObject,
     LUser,
     LValue, LViewElement,
-    RuntimeAccessible,
+    RuntimeAccessible, SetFieldAction,
     SetRootFieldAction,
 } from "../joiner";
 import React from "react";
@@ -126,6 +126,8 @@ export class IStore {
     viewpoint: Pointer<DViewPoint, 1, 1, LViewPoint> = '';
     viewpoints: Pointer<DViewPoint, 0, 'N', LViewPoint> = [];
 
+    metamodel: Pointer<DModel, 0, 1, LModel> = '';
+
     constructor() {
         // todo: this must become a pointer to idlookup and fire a CreateNewElementAction
         this.currentUser = DUser.new();
@@ -144,12 +146,13 @@ export class IStore {
         const dMetaModel = DModel.new("Metamodel");
         CreateElementAction.new(dMetaModel);
         CreateElementAction.new(DGraph.new(dMetaModel.id));
+        SetRootFieldAction.new('metamodel', dMetaModel.id, '', true);
 
         const primitiveTypes = ['EString', 'EChar', 'EInt', 'EFloat', 'EDouble', 'EByte', 'EShort', 'ELong', 'EBoolean', 'EDate'];
         for (let primitiveType of primitiveTypes) {
             const dPrimitiveType = DClass.new(primitiveType);
             CreateElementAction.new(dPrimitiveType);
-            SetRootFieldAction.new("primitiveTypes", dPrimitiveType.id, '+=', true);
+            SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
         }
         const returnTypes = ['void'];
         for (let returnType of returnTypes) {
@@ -157,10 +160,14 @@ export class IStore {
             CreateElementAction.new(dReturnType);
             SetRootFieldAction.new("returnTypes", dReturnType.id, '+=', true);
         }
+
+
         const dModel: DModel = DModel.new('Model');
         dModel.isMetamodel = false;
         CreateElementAction.new(dModel);
         CreateElementAction.new(DGraph.new(dModel.id));
+        SetFieldAction.new(dMetaModel, 'models', dModel.id, '+=', true);
+
     }
 
     static makeM3Test(fireAction: boolean = true, outElemArray: DPointerTargetable[] = []): DModel {
@@ -200,23 +207,7 @@ export class IStore {
         // let m3view: DViewElement = new DViewElement('m3View', '<p style={{display: "flex", flexFlow: "wrap"}}><h1>m3view {this.data.name + (this.data.id)}</h1><i>{JSON.stringify(Object.keys(this))}</i>' + editinput + '</p>');
         // let editView: DViewElement = makeEditView();
         let graphDefaultViews: DViewElement[] = makeDefaultGraphViews();
-/*
-        let test: DViewElement = new DViewElement('testView', '');
-        test.addSubview(view.id);
-        // test.addSubview(editView.id);
-        test.addSubview(graphView.id);*/
-
         outElemArray.push.call(outElemArray, m3, m3graph, me, annotation, namedElement, attribname, pkg, attriburi, classifierref, pkgref, classe, ...graphDefaultViews);
-        // outElemArray.push(m3view);
-        // outElemArray.push(editView);
-        // outElemArray.push(test);
-        // m3._transient.currentView = view.id;
-        /*
-        if (fireAction)
-            TRANSACTION( () => {
-                // new SetRootFieldAction('models[]', m3);
-                // for (let elem of outElemArray) { DModelElement.persist(elem); }
-            });*/
         return m3;
     }
 }
