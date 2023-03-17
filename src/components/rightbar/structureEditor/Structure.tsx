@@ -1,6 +1,6 @@
 import React, {ReactNode} from "react";
 import type {GObject, LModelElement} from "../../../joiner";
-import {DValue, Input, LOperation, LValue, Select} from "../../../joiner";
+import {DValue, Input, LObject, LOperation, LValue, Select} from "../../../joiner";
 import Value from "./editors/Value";
 
 export default class Structure {
@@ -103,7 +103,24 @@ export default class Structure {
             })}
         </>);
     }
-    public static ValueEditor(me: LModelElement & GObject): ReactNode {
+    public static ObjectEditor(me: LModelElement): ReactNode {
+        const object: LObject = LObject.fromPointer(me.id);
+        let conform = true;
+        for(let feature of object.features) {
+            const upperBound =  feature.instanceof.upperBound;
+            const lowerBound =  feature.instanceof.lowerBound;
+            //todo: fix get_value on LValue
+            const value = feature.value;
+            const length = (Array.isArray(value)) ? value.length : (value === '') ? 0 : 1;
+            conform = (length >= lowerBound && length <= upperBound);
+        }
+
+        return(<div>
+            {conform && <label>This instance is <b className={'text-success'}>CONFORM</b> to {object.instanceof.name}</label>}
+            {!conform && <label>This instance is <b className={'text-danger'}>NOT CONFORM</b> to {object.instanceof.name}</label>}
+        </div>);
+    }
+    public static ValueEditor(me: LModelElement): ReactNode {
         const lValue: LValue = LValue.fromPointer(me.id);
 
         return(<div>
@@ -122,7 +139,7 @@ export default class Structure {
                 case "DEnumerator": return Structure.EnumEditor(lModelElement);
                 case "DEnumLiteral": return Structure.EnumLiteralEditor(lModelElement);
                 case "DOperation": return Structure.OperationEditor(lModelElement);
-                case "DObject" : return <div></div>;
+                case "DObject" : return Structure.ObjectEditor(lModelElement);
                 case "DValue" : return Structure.ValueEditor(lModelElement);
             }
         }

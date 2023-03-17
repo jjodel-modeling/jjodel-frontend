@@ -13,7 +13,7 @@ import {
 } from '../../joiner';
 import './style.scss';
 import {DockContext, DockLayout, PanelData} from "rc-dock";
-import {LayoutData} from "rc-dock/lib/DockData";
+import {BoxData, LayoutData} from "rc-dock/lib/DockData";
 import MetamodelTab from "./tabs/MetamodelTab";
 import StructureEditor from "../rightbar/structureEditor/StructureEditor";
 import TreeEditor from "../rightbar/treeEditor/treeEditor";
@@ -29,15 +29,8 @@ interface ThisState {}
 class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     private dock: DockLayout | null;
     private metamodel = this.props.metamodel;
-
-
-    constructor(props: AllProps, context: any) {
-        super(props, context);
-        this.dock = null;
-    }
-
-    groups = {
-        '1': {
+    private groups = {
+        'group1': {
             floatable: true,
             maximizable: true,
             panelExtra: (panelData: PanelData, context: DockContext) => {
@@ -47,11 +40,49 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
                 </button>);
             }
         },
-        '2': {
+        'group2': {
             floatable: true,
             maximizable: true,
         }
     };
+    private structureEditor = { id: '1', title: 'Structure', group: 'group2', closable: false, content: <StructureEditor /> };
+    private treeEditor = { id: '2', title: 'Tree View', group: 'group2', closable: false, content: <TreeEditor /> };
+    private viewsEditor = { id: '3', title: 'Views', group: 'group2', closable: false, content: <ViewsEditor /> };
+    private styleEditor = { id: '4', title: 'Node', group: 'group2', closable: false, content: <StyleEditor /> };
+    private edgeEditor = { id: '5', title: 'Edges', group: 'group2', closable: false, content: <EdgeEditor /> };
+    private viewpointEditor = { id: '6', title: 'Viewpoints', group: 'group2', closable: false, content: <ViewpointEditor /> };
+    private console = { id: '7', title: 'Console', group: 'group2', closable: false, content: <Console /> };
+
+    private selected = this.props.selected;
+    private views = this.props.views;
+    private moveOnStructure = false;
+    private moveOnViews = false;
+
+
+    constructor(props: AllProps, context: any) {
+        super(props, context);
+        this.dock = null;
+    }
+
+    shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
+        const oldProps = this.props;
+        if(oldProps.selected !== newProps.selected) { this.moveOnStructure = true; return true; }
+        if(oldProps.views !== newProps.views) { this.moveOnViews = true; return true; }
+        return false;
+    }
+
+    componentDidUpdate(prevProps: Readonly<AllProps>, prevState: Readonly<ThisState>, snapshot?: any) {
+        if(this.dock) {
+            if(this.moveOnViews) {
+                this.dock.dockMove(this.viewsEditor, this.dock.find('3'), 'middle');
+                this.moveOnViews = false;
+            }
+            if(this.moveOnStructure) {
+                this.dock.dockMove(this.structureEditor, this.dock.find('1'), 'middle');
+                this.moveOnStructure = false;
+            }
+        }
+    }
 
     addModel(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {
         if(this.metamodel) {
@@ -63,7 +94,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             CreateElementAction.new(model);
             CreateElementAction.new(DGraph.new(model.id));
             SetFieldAction.new(this.metamodel.id, 'models', model.id, '+=', true);
-            const modelTab = { id: model.id, title: 'M1', group: '1', closable: false, content:
+            const modelTab = { id: model.id, title: 'M1', group: 'group1', closable: false, content:
                     <ModelTab modelid={model.id} metamodelid={this.metamodel.id} />
             };
             context.dockMove(modelTab, panelData, 'middle');
@@ -73,37 +104,29 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     render(): ReactNode {
         if(this.metamodel) {
             const layout: LayoutData = { dockbox: { mode: 'horizontal', children: [] }};
-            const metamodelTab = { id: this.metamodel.id, title: 'M2', group: '1', closable: false, content:
+            const metamodelTab = { id: this.metamodel.id, title: 'M2', group: 'group1', closable: false, content:
                     <MetamodelTab modelid={this.metamodel.id} />
             };
             const tabs = [metamodelTab];
             for(let model of this.metamodel.models) {
-                const modelTab = { id: model.id, title: 'M1', group: '1', closable: false, content:
+                const modelTab = { id: model.id, title: 'M1', group: 'group1', closable: false, content:
                         <ModelTab modelid={model.id} metamodelid={this.metamodel.id} />
                 };
                 tabs.push(modelTab);
             }
             layout.dockbox.children.push({tabs});
 
-            const structureEditor = { title: 'Structure', group: '2', closable: false, content: <StructureEditor /> };
-            const treeEditor = { title: 'Tree View', group: '2', closable: false, content: <TreeEditor /> };
-            const viewsEditor = { title: 'Views', group: '2', closable: false, content: <ViewsEditor /> };
-            const styleEditor = { title: 'Node', group: '2', closable: false, content: <StyleEditor /> };
-            const edgeEditor = { title: 'Edges', group: '2', closable: false, content: <EdgeEditor /> };
-            const viewpointEditor = { title: 'Viewpoints', group: '2', closable: false, content: <ViewpointEditor /> };
-            const console = { title: 'Console', group: '2', closable: false, content: <Console /> };
             layout.dockbox.children.push({
                 tabs: [
-                    { ...structureEditor, id: '1' },
-                    { ...treeEditor, id: '2' },
-                    { ...viewsEditor, id: '3' },
-                    { ...viewpointEditor, id: '4' },
-                    { ...styleEditor, id: '5' },
-                    { ...edgeEditor, id: '6' },
-                    { ...console, id: '7' },
+                    this.structureEditor,
+                    this.treeEditor,
+                    this.viewsEditor,
+                    this.viewpointEditor,
+                    this.styleEditor,
+                    this.edgeEditor,
+                    this.console
                 ]
             });
-
 
             return (<DockLayout ref={(dockRef) => { this.dock = dockRef }} defaultLayout={layout}
                                 groups={this.groups} />);
@@ -112,7 +135,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
 }
 
 interface OwnProps { }
-interface StateProps { metamodel?: LModel }
+interface StateProps { metamodel?: LModel, selected: Pointer<DModelElement, 0, 1, LModelElement>, views: number }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -121,6 +144,9 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer = state.metamodel;
     if(pointer) ret.metamodel = LModel.fromPointer(pointer);
+    const selected = state._lastSelected?.modelElement;
+    if(selected) ret.selected = selected;
+    ret.views = state.viewelements.length;
     return ret;
 }
 
