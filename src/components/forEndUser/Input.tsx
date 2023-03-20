@@ -1,8 +1,8 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
-import {DPointerTargetable, GObject, LPointerTargetable, Pointer, SetFieldAction} from "../../joiner";
-import {Tooltip} from "react-tooltip";
+import {DPointerTargetable, GObject, LPointerTargetable, Pointer} from "../../joiner";
+import toast, {Toaster} from 'react-hot-toast';
 
 
 function InputComponent(props: AllProps) {
@@ -16,6 +16,14 @@ function InputComponent(props: AllProps) {
     let css = 'my-auto input ';
     css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
     css += (props.hidden) ? ' hidden-input' : '';
+
+    const notify = () => toast((t) => (
+        <div onClick={() => toast.dismiss(t.id)}>
+            <i className={'p-1 bi bi-info-circle-fill'}>
+                <label className={'ms-1'}>This is the {tooltip}</label>
+            </i>
+        </div>
+    ));
 
     const change = (evt: React.ChangeEvent<HTMLInputElement>) => {
         const target: any = (['checkbox', 'radio'].includes(evt.target.type)) ? evt.target.checked : evt.target.value;
@@ -32,7 +40,12 @@ function InputComponent(props: AllProps) {
         <input spellCheck={false} readOnly={props.readonly} className={css}
                type={type} onChange={change} value={value}
                checked={(['checkbox', 'radio'].includes(type)) ? value : false} />
-        {(tooltip) && <Tooltip>{tooltip}</Tooltip>}
+        {(tooltip) && <div>
+            <button onClick={notify} className={'ms-1 btn btn-primary'}>
+                <i className={'p-1 bi bi-info-lg'}></i>
+            </button>
+            <Toaster position={'bottom-center'} />
+        </div>}
     </div>);
 }
 interface OwnProps {

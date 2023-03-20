@@ -3,7 +3,6 @@ import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
 import {LPointerTargetable, GObject, Pointer, LEnumerator} from "../../joiner";
 import type {LClass, DPointerTargetable} from "../../joiner";
-import {Tooltip} from "react-tooltip";
 
 
 function SelectComponent(props: AllProps) {
@@ -66,7 +65,6 @@ function SelectComponent(props: AllProps) {
                 })}
             </optgroup>}
         </select>
-        {(tooltip) && <Tooltip>{tooltip}</Tooltip>}
     </div>);
 }
 interface OwnProps {

@@ -25,7 +25,6 @@ import {
 } from "../../joiner";
 
 import Editor from "@monaco-editor/react";
-import {Tooltip} from "react-tooltip";
 import "./style.scss";
 
 const crypto = require("crypto");
@@ -70,11 +69,11 @@ class BidirectionalInput extends PureComponent<AllProps, ThisState> {
                     checked = { this.props.type === "checkbox" ? data[this.props.field] as boolean : undefined}
                     {...otherprops} className={(className)} style={this.props.inputstyle}/>
             </label>
-            {(tooltip && false) &&
+            {/*(tooltip && false) &&
                 <Tooltip className={"custom-tooltip"} anchorId={id} noArrow={true} place={'left'} >
                     <i className="bi bi-info-circle"> {tooltip}</i>
                 </Tooltip>
-            }
+            */}
         </>); }
 
 }

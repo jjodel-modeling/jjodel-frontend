@@ -2,7 +2,6 @@ import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
 import {DPointerTargetable, GObject, LPointerTargetable, Pointer} from "../../joiner";
-import {Tooltip} from "react-tooltip";
 
 
 function TextAreaComponent(props: AllProps) {
@@ -30,7 +29,6 @@ function TextAreaComponent(props: AllProps) {
         </label>}
         <textarea spellCheck={false} readOnly={props.readonly} className={css}
                onChange={change} value={value} />
-        {(tooltip) && <Tooltip>{tooltip}</Tooltip>}
     </div>);
 }
 interface OwnProps {
