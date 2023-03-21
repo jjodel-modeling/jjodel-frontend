@@ -272,20 +272,47 @@ let initialState: IStore = null as any;
 let storeLoaded: boolean = false;
 
 export function reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: IStore = initialState, action: Action): IStore{
+    let times: number;
+    let state: IStore;
     switch(action.type) {
-        case UndoAction.type: return undo(oldState, statehistory[DUser.current].undoable.pop());
-        case RedoAction.type: return undo(oldState, statehistory[DUser.current].redoable.pop(), false);
+        case UndoAction.type:
+            times = action.value;
+            state = oldState;
+            Log.exDev(times<=0, "undo must be positive", action);
+            while (times--) {
+                state = undo(state, statehistory[DUser.current].undoable.pop());
+            }
+            return state;
+
+        case RedoAction.type:
+            times = action.value;
+            state = oldState;
+            Log.exDev(times<=0, "redo must be positive", action);
+            while (times--) {
+                state = undo(state, statehistory[DUser.current].redoable.pop(), false);
+            }
+            return state;
         // case CombineHistoryAction.type: return combineHistory(oldState); break;
         // todo: se al posto di "annullare l'undo" memorizzo l'azione e la rieseguo, posso ripetere l'ultimo passo N volte e questa azione diventa utile per combinare passi e ripetere blocchi di azioni assieme
         default:
             let ret = doreducer(oldState, action);
+            if (ret === oldState) return ret;
             statehistory[DUser.current].redoable = [];
-            console.log("setting undoable action:", {ret, oldState0:{...oldState}, oldState});
-            if (oldState !== null) statehistory[DUser.current].undoable.push( U.objectDelta(ret, oldState) );
+            let delta =  U.objectDelta(ret, oldState);
+            if (!filterundoableactions(delta)) return ret;
+            console.log("setting undoable action:", {ret, oldState0:{...oldState}, oldState, delta});
+            if (oldState !== null) statehistory[DUser.current].undoable.push(delta);
             return ret;
     }
 }
 
+function filterundoableactions(delta: Partial<IStore>): boolean {
+    if (!statehistory.globalcanundostate) return false;
+    if (Object.keys(delta).length === 1 && "dragging" in delta) return false;
+    if (Object.keys(delta).length === 1 && "_lastSelected" in delta) return false;
+    if (Object.keys(delta).length === 1 && "contextMenu" in delta) return false;
+    return true;
+}
 function undo(state: IStore, delta: GObject | undefined, isundo = true): IStore {
     if (!delta) return state;
     let undonestate = {...state};
@@ -298,10 +325,16 @@ function undo(state: IStore, delta: GObject | undefined, isundo = true): IStore 
 }
 
 function undorecursive(deltalevel: GObject, statelevel: GObject): void {
+    // statelevel = {...statelevel}; not working if i do it here, just a new var. first time copy id done in caller func undo(). recursive copies are done before recursive step
     for (let key in deltalevel) {
         let delta = deltalevel[key];
-        if (delta.__isAdelta) { statelevel[key] = {...statelevel[key]}; undorecursive(statelevel[key], deltalevel[key]); }
-        else { statelevel = {...statelevel}; statelevel[key] = deltalevel[key]; }
+        console.log("undoing", {delta, key, deltalevel, statelevel})
+        if (key.indexOf("_-") === 0) { delete statelevel[key.substring(2)]; continue; }
+        if (typeof delta === "object") {
+        // if (U.isObject(delta, false, false, true)) {
+            statelevel[key] = {...statelevel[key]};
+            undorecursive(deltalevel[key], statelevel[key]); }
+        else { statelevel[key] = delta; }
     }
 }
 

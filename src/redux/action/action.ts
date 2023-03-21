@@ -260,26 +260,26 @@ SetFieldAction.new(dclass, 'name.5', '') // ok, equivale a dicitura array
 @RuntimeAccessible
 export class RedoAction extends Action {
     static type = 'RedoAction';
-    public static new<F extends boolean = true>(notfire?: F): (F extends false ? boolean : RedoAction) {
-        let act = new RedoAction();
+    public static new<F extends boolean = true>(amount: number = 1, notfire?: F): (F extends false ? boolean : RedoAction) {
+        let act = new RedoAction(amount);
         if (!notfire) return act.fire() as any;
         return act as any;
     }
-    private constructor() {
-        super('', '');
+    private constructor(amount: number = 1) {
+        super('', amount);
         this.className = this.constructor.name;
     }
 }
 @RuntimeAccessible
 export class UndoAction extends Action {
     static type = 'UndoAction';
-    public static new<F extends boolean = true>(notfire?: F): (F extends false ? boolean : UndoAction) {
-        let act = new UndoAction();
+    public static new<F extends boolean = true>(amount: number = 1, notfire?: F): (F extends false ? boolean : UndoAction) {
+        let act = new UndoAction(amount);
         if (!notfire) return act.fire() as any;
         return act as any;
     }
-    private constructor() {
-        super('', '');
+    private constructor(amount: number = 1) {
+        super('', amount);
         this.className = this.constructor.name;
     }
 }

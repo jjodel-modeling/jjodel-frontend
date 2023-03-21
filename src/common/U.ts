@@ -1,5 +1,5 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
-import {ReactElement} from "react";
+import {ChangeEvent, ReactElement} from "react";
 import {isDeepStrictEqual} from "util";
 // import {Mixin} from "ts-mixer";
 import type {
@@ -532,8 +532,10 @@ export class U{
         } } catch(e) { Log.e(true, "Exception while trying to read file as text. Error: |", e, "|", file); }
         Log.e(true, "Wrong file type found: |", file ? file.type : null, "|", file); }
 
-    static fileRead(onChange: (e: JQuery.ChangeEvent, files: FileList | null, contents?: string[]) => void, extensions: string[] | FileReadTypeEnum[], readContent: boolean): void {
-        $(document).on('change', (e) => console.log(e));
+    static fileRead(onChange: (e: Event, files: FileList | null, contents?: string[]) => void, extensions: string[] | FileReadTypeEnum[], readContent: boolean): void {
+        // $(document).on('change', (e) => console.log(e));
+
+        console.log("importEcore: pre file reader");
         myFileReader.show(onChange, extensions, readContent);
     }
 
@@ -854,16 +856,18 @@ export class U{
         let oldobj: GObject = old;
         if (old === neww) return {};
         let diff = U.objdiff(old, neww); // todo: optimize this, remove the 3 loops below and add those directly in U.objdiff(old, neww, ret); writing inside the obj in third parameter
-        console.log("objdiff", {old, neww, diff});
-        let ret: GObject = {__isAdelta:true};
+
+        let ret: GObject = {}; // {__isAdelta:true};
         for (let key in diff.added) { ret[key] = newwobj[key]; }
         for (let key in diff.changed) {
             let subold = oldobj[key];
             let subnew = newwobj[key];
             if (typeof subold === typeof subnew && typeof subold === "object") { ret[key] = deep ? U.objectDelta(subold, subnew, true) : subnew; }
-            ret[key] = subnew;
+            else ret[key] = subnew;
         }
-        for (let key in diff.removed) { ret[key] = undefined; } //newwobj[key]; }
+        // todo: add to variable naming rules: can't start with "_-", like in "_-keyname", it means "keyname" removed in undo delta
+        for (let key in diff.removed) { ret["_-"+key] = undefined; } //newwobj[key]; }
+        console.log("objdiff", {old, neww, diff, ret});
         return ret as Partial<T>;
     }
 
@@ -878,23 +882,207 @@ export class U{
         let newkeys: string[] = Object.keys(neww);
 
         let key: any;
-        for (key of oldkeys) {
-            if (neww[key] === old[key]) continue;
-            if (neww[key] === undefined){
-                if (old[key] !== undefined) { (ret.removed as GObject)[key] = old[key]; continue; }
+        for (key in old) {
+            // if (neww[key] === undefined){
+            if (!(key in neww)){ // if neww have a key with undefined value, it counts (and should) as having that property key defined
+                (ret.removed as GObject)[key] = old[key]; continue;
                 // if (old[key] === undefined) { continue; }
-                continue;
+                // continue;
             }
+            if (neww[key] === old[key]) continue;
             (ret.changed as GObject)[key] = old[key];
         }
-        for (let key of newkeys) {
-            if (old[key] === undefined){
-                if (neww[key] !== undefined) { continue; }
-                (ret.added as GObject)[key] = neww[key]
-            }
+        for (let key in neww) {
+            if (!(key in old)){ (ret.added as GObject)[key] = neww[key]; }
         }
         return ret;
     }
+
+    /*
+    private static findMostNestedSubObject_toomuch<T = {depth: number, path: string, subobj: GObject}>(root:GObject):
+        {root: GObject, most: T, [depth: number]:T} {
+        let ret: {root: GObject, most:T} = {root, most: {} as T};
+        ret.root = root;
+        ret.path = [];
+        for (let key in root) {
+
+        }
+        return ret;} */
+
+    public static findMostNestedSubObject_incomplete<T extends {depth: number, path: string[], subobj: GObject[]}>(root:GObject):
+        {root: GObject, most: T, [depth: number]:T} {
+        let ret: {root: GObject, most:T} = {root, most: {} as T};
+        let sharedret: T = {depth: 0, path: [''], subobj:[root]} as T;
+        ret.root = root;
+        ret.most = sharedret;
+            for (let key in root) {
+                if (typeof root[key] === "object") U.findMostNestedSubObject_recursive_incomplete(root[key], key, 1, sharedret)
+        }
+        return ret;
+    }
+    private static findMostNestedSubObject_recursive_incomplete(obj: GObject, thispath: string, thisdepth: number, bestsharedret: {depth: number, path: string[], subobj: GObject[]} ): void {
+        let isleaf = false; // todo
+        for (let key in obj) {
+
+        }
+        if (isleaf) {
+            if (thisdepth < bestsharedret.depth) return;
+            if (thisdepth > bestsharedret.depth) { // gets overwritten N*dup(N) times if max depth is N, because this is updated once for every depth (except for duplicates. dup(N) = how many subpaths have that depth
+                bestsharedret.depth = thisdepth;
+                bestsharedret.path = [thispath];
+                bestsharedret.subobj = [obj];
+            }
+            else { // equally depth as someone else
+                bestsharedret.path.push(thispath);
+                bestsharedret.subobj.push(obj);
+            }
+        }
+        return;
+    }
+    /*  {a: { b: { c1: 1, c2:2, c3:3 } }, d: 1 }     ---->  {"a.b.c1":1, "a.b.c2":2, "a.b.c3":3. "d":1}*/
+    public static flattenObjectToRoot(obj: GObject, prefix: string = '', pathseparator: string = '.'): GObject{
+        return Object.keys(obj).reduce((acc: GObject, k: string) => {
+            const pre = prefix.length ? prefix + pathseparator : '';
+            if (typeof obj[k] === 'object') Object.assign(acc, U.flattenObjectToRoot(obj[k], pre + k, pathseparator));
+            else acc[pre + k] = obj[k];
+            return acc;
+        }, {});
+    }
+
+    // from {a:{aa:true, ab:"ab"}, b:4} to ["a.aa = true", "a.ab = \"ab\"", "a.b = 4"]
+    // maxkeylength is max length of any individual key, after it it will become: superlongpath --> supe...path
+    // maxsubpaths is how many subpaths are displayed at most. after it it will be: super.rea.lly.long.pa.th --> super.rea.pa.th
+    public static ObjectToAssignementStrings<R extends {str: string, path:string[], fullpath:string[], val: string, fullvalue: string, pathlength?: number}>
+    (obj: GObject, maxkeylength: number = 10, maxsubpaths: number = 6, maxvallength: number = 20, toolongreplacer: string = "…", out?:{best: R}&R[]): {best: string}&string[] {
+        const pathseparator = ".";
+        const valueseparator = " = ";
+        const filterrow = (rowpaths: string[]) => { return !rowpaths.includes("clonedCounter"); };
+        let flatten = U.flattenObjectToRoot(obj, '', pathseparator);
+        let i = -1;
+        let tmp;
+        let ret: {best: string} & string[] = [] as GObject as {best: string} & string[];
+        tmp = (maxkeylength - toolongreplacer.length)/2;
+        let halfpath = { start: Math.floor(tmp), end: Math.ceil(tmp) };
+        tmp = (maxvallength - toolongreplacer.length)/2;
+        let halfval = { start: Math.floor(tmp), end: Math.ceil(tmp) };
+        tmp = (maxsubpaths - toolongreplacer.length)/2;
+        let halfsubpaths = { start: Math.floor(tmp), end: Math.ceil(tmp) };
+
+
+        let bestpathsize = 0;
+        let best: R | null = null;
+        let countsize = (total: number, arrelem: string): number => total + arrelem.length;
+        const filterbest = (row: R) => {
+            row.pathlength = row.fullpath.reduce<number>(countsize, 0);
+            if (!best || bestpathsize < row.pathlength) {
+                best = row; bestpathsize = row.pathlength;
+                if (out) out.best = best;
+                ret.best = best.str;
+            }
+        }
+        console.log("u get assignements", {flatten, obj});
+
+        for (let key in flatten) {
+            let row: R = {fullpath: key.split(pathseparator)} as R;
+            if (!filterrow(row.fullpath)) continue;
+            // stringify(undefined) = undefined, so i add + ""
+            try { row.fullvalue = JSON.stringify(flatten[key]) + ""; } catch(e) { row.fullvalue = "⁜not serializable⁜"; }
+            console.log("U get assignements loop", {row, key, flatten, obj});
+            row.val = row.fullvalue.length <= maxvallength ? row.fullvalue : row.fullvalue.substring(0, halfval.start) + toolongreplacer + row.fullvalue.substring(halfval.start);
+            if (row.fullpath.length > maxsubpaths) {
+                row.path = [...row.fullpath];
+                row.path.splice( halfsubpaths.start, row.fullpath.length - halfsubpaths.start - halfsubpaths.end, toolongreplacer);
+            } else row.path = row.fullpath;
+
+            // row.path = row.fullpath.length <= maxsubpaths ? row.fullpath : [...row.fullpath.slice(0, halfsubpaths.start), ...row.fullpath.toomanyarraycopies];
+            row.path = row.path.map((p: string) => (p.length <= maxkeylength ? p : p.substring(0, halfpath.start) + toolongreplacer + p.substring(p.length - halfpath.end)));
+            if (out) { out.push(row); }
+            row.str = row.path.join(pathseparator) + valueseparator + row.val;
+            ret.push( row.str );
+            filterbest(row);
+        }
+        return ret;
+    }
+
+
+    static download(filename: string = 'nameless.txt', text: string = '', debug: boolean = true): void {
+        if (!text) { return; }
+        filename = U.toFileName(filename);
+        const htmla: HTMLAnchorElement = document.createElement('a');
+        const blob: Blob = new Blob([text], {type: 'text/plain', endings: 'native'});
+        const blobUrl: string = URL.createObjectURL(blob);
+        Log.l(debug, text + '|\r\n| <-- rn, |\n| <--n.');
+        htmla.style.display = 'none';
+        htmla.href = blobUrl;
+        htmla.download = filename;
+        document.body.appendChild(htmla);
+        htmla.click();
+        window.URL.revokeObjectURL(blobUrl);
+        document.body.removeChild(htmla); }
+
+    static formatXml(xml: string): string {
+        const reg = /(>)\s*(<)(\/*)/g;
+        const wsexp = / *(.*) +\n/g;
+        const contexp = /(<.+>)(.+\n)/g;
+        xml = xml.replace(reg, '$1\n$2$3').replace(wsexp, '$1\n').replace(contexp, '$1\n$2');
+        const pad: string = '' || '\t';
+        let formatted = '';
+        const lines = xml.split('\n');
+        let indent = 0;
+        let lastType = 'other';
+        // 4 types of tags - single, closing, opening, other (text, doctype, comment) - 4*4 = 16 transitions
+        const transitions: GObject = {
+            'single->single': 0,
+            'single->closing': -1,
+            'single->opening': 0,
+            'single->other': 0,
+            'closing->single': 0,
+            'closing->closing': -1,
+            'closing->opening': 0,
+            'closing->other': 0,
+            'opening->single': 1,
+            'opening->closing': 0,
+            'opening->opening': 1,
+            'opening->other': 1,
+            'other->single': 0,
+            'other->closing': -1,
+            'other->opening': 0,
+            'other->other': 0
+        };
+        let i = 0;
+        for (i = 0; i < lines.length; i++) {
+            const ln = lines[i];
+
+            // Luca Viggiani 2017-07-03: handle optional <?xml ... ?> declaration
+            if (ln.match(/\s*<\?xml/)) {
+                formatted += ln + '\n';
+                continue;
+            }
+            // ---
+
+            const single = Boolean(ln.match(/<.+\/>/)); // is this line a single tag? ex. <br />
+            const closing = Boolean(ln.match(/<\/.+>/)); // is this a closing tag? ex. </a>
+            const opening = Boolean(ln.match(/<[^!].*>/)); // is this even a tag (that's not <!something>)
+            const type = single ? 'single' : closing ? 'closing' : opening ? 'opening' : 'other';
+            const fromTo = lastType + '->' + type;
+            lastType = type;
+            let padding = '';
+
+            indent += transitions[fromTo];
+            let j: number;
+            for (j = 0; j < indent; j++) {
+                padding += pad;
+            }
+            if (fromTo === 'opening->closing') {
+                formatted = formatted.substr(0, formatted.length - 1) + ln + '\n'; // substr removes line break (\n) from prev loop
+            } else {
+                formatted += padding + ln + '\n';
+            }
+        }
+
+        return formatted.trim(); }
+
+
 }
 
 export class DDate{
@@ -1024,17 +1212,17 @@ export class RawGraph{
 }
 
 export class myFileReader {
-    private static input?: HTMLInputElement;
-    private static fileTypes?: string [];
-    private static onchange?: (e: JQuery.ChangeEvent) => void;
+    private static input: HTMLInputElement = null as any;
+    private static fileTypes: string[] = null as any;
+    private static onchange: (e: Event) => void = null as any;
     // constructor(onchange: (e: ChangeEvent) => void = null, fileTypes: FileReadTypeEnum[] | string[] = null) { myFileReader.setinfos(fileTypes, onchange); }
-    private static setinfos(fileTypes: undefined | FileReadTypeEnum[] | string[], onchange: (e: JQuery.ChangeEvent, files: FileList | null, contents: string[] | undefined ) => void, readcontent: boolean) {
+    private static setinfos(fileTypes: undefined | FileReadTypeEnum[] | string[], onchange: (e: Event, files: FileList | null, contents: string[] | undefined ) => void, readcontent: boolean) {
         myFileReader.fileTypes = (fileTypes || myFileReader.fileTypes) as string[];
         const debug: boolean = false;
         debug&&console.log('fileTypes:', myFileReader.fileTypes, fileTypes);
         myFileReader.input = document.createElement('input');
         const input: HTMLInputElement = myFileReader.input;
-        myFileReader.onchange = function (e: JQuery.ChangeEvent): void {
+        myFileReader.onchange = function (e: Event): void {
             if (!readcontent) { onchange(e, input.files, undefined); return; }
             let contentObj: Dictionary<number, string> = {};
             let fileLetti: number = 0;
@@ -1055,13 +1243,14 @@ export class myFileReader {
         } || myFileReader.onchange;
     }
     private static reset(): void {
-        myFileReader.fileTypes = undefined;
-        myFileReader.onchange = undefined;
-        myFileReader.input = undefined;
+        myFileReader.fileTypes = undefined as any;
+        myFileReader.onchange = undefined as any;
+        myFileReader.input = undefined as any;
     }
-    public static show(onChange: (e: JQuery.ChangeEvent, files: FileList | null, contents?: string[]) => void, extensions: undefined | string[] | FileReadTypeEnum[] = undefined, readContent: boolean): void {
-        if (!myFileReader.input) return;
+    public static show(onChange: (e: Event, files: FileList | null, contents?: string[]) => void, extensions: undefined | string[] | FileReadTypeEnum[] = undefined, readContent: boolean): void {
+        console.log("importEcore: pre file reader", myFileReader.input);
         myFileReader.setinfos(extensions, onChange, readContent);
+        //if (!myFileReader.input) return;
         myFileReader.input.setAttribute('type', 'file');
         if (myFileReader.fileTypes) {
             myFileReader.input.setAttribute('accept', myFileReader.fileTypes.join(','));
@@ -2140,21 +2329,7 @@ export class SelectorOutput {
 //         return value; }
 //
 
-//
-//     static download(filename: string = 'nameless.txt', text: string = null, debug: boolean = true): void {
-//         if (!text) { return; }
-//         filename = UU.toFileName(filename);
-//         const htmla: HTMLAnchorElement = document.createElement('a');
-//         const blob: Blob = new Blob([text], {type: 'text/plain', endings: 'native'});
-//         const blobUrl: string = URL.createObjectURL(blob);
-//         UU.pif(debug, text + '|\r\n| <-- rn, |\n| <--n.');
-//         htmla.style.display = 'none';
-//         htmla.href = blobUrl;
-//         htmla.download = filename;
-//         document.body.appendChild(htmla);
-//         htmla.click();
-//         window.URL.revokeObjectURL(blobUrl);
-//         document.body.removeChild(htmla); }
+
 //
 //     /// arrotonda verso zero.
 //     static trunc(num: number): number {

@@ -3,6 +3,7 @@ import './App.scss';
 import Dock from "./components/abstract/DockComponent";
 import Draggable2 from "./graph/draggable/Draggable2";
 import SaveManager from "./components/SaveManager/SaveManager.lazy";
+import {statehistory} from "./joiner";
 
 
 interface AllProps{}
@@ -13,9 +14,9 @@ export default class App extends PureComponent<AllProps, MPState>{
         super(props);
     }
     render() {
-        return (<>
+        return (<div onClick={() => {statehistory.globalcanundostate = true;} }>
             <SaveManager />
             <Dock />
-        </>);
+        </div>);
     }
 }
