@@ -271,6 +271,17 @@ export class Selectors{
 
     static getViews(condition?: (m: DModel) => boolean): DViewElement[] { return Selectors.getAll(DViewElement); }
 
+    /*static getCurrentView(data: LModelElement): DViewElement {
+        Log.exDevv('todo');
+        return undefined as any;
+    }*/
+    // 2 = explicit exact match (===), 1 = matches a subclass, 0 = implicit match (any *), -1 = not matches
+    private static matchesOclCondition(v: DViewElement, data: LModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
+      if (!v.oclApplyCondition) return ViewEClassMatch.IMPLICIT_MATCH;
+      Log.exDevv('todo view ocl matching');
+      return ViewEClassMatch.EXACT_MATCH;
+    }
+
     /*
     private static matchesOclCondition(v: DViewElement, data: DModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
         if (!v.oclApplyCondition) return ViewEClassMatch.IMPLICIT_MATCH;
@@ -317,7 +328,7 @@ export class Selectors{
     private static matchesMetaClassTarget(v: DViewElement, data: DModelElement): ViewEClassMatch {
         if (!v.appliableToClasses || !v.appliableToClasses.length) return ViewEClassMatch.IMPLICIT_MATCH;
         let ThisClass: typeof DPointerTargetable = RuntimeAccessibleClass.get(data?.className);
-        Log.exDev(!ThisClass, 'unable to find class type:', {v, data});
+        Log.exDev(!ThisClass, 'unable to find class type:', {v, data}); // todo: v = view appliable to DModel, data = proxy<LModel>
         let gotSubclassMatch: boolean = false;
         for (let classtarget of v.appliableToClasses) {
             const ClassTarget: typeof DPointerTargetable = RuntimeAccessibleClass.get(classtarget);
@@ -338,9 +349,9 @@ export class Selectors{
 
 
 
-    private static scoreView(v1: DViewElement, data: DModelElement, hisnode: DGraphElement | undefined, graph: LGraphElement, sameViewPointViews: Pointer<DViewElement, 1, 1>[] = []): number {
+    private static scoreView(v1: DViewElement, data: LModelElement, hisnode: DGraphElement | undefined, graph: LGraphElement, sameViewPointViews: Pointer<DViewElement, 1, 1>[] = []): number {
         // 1° priority: matching by EClass type
-        let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, data);
+        let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, data.__raw);
         // Log.l('score view:', {v1, data, v1MatchingEClassScore});
         if (v1MatchingEClassScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
         // 2° priority: by ocl condition matching
@@ -362,7 +373,10 @@ export class Selectors{
         const sameViewPointSubViews: Pointer<DViewElement, 1, 1>[] = parentView ? parentView.subViews : []; // a viewpoint is a simple view that is targeting a model
         if (selectedView) U.arrayRemoveAll(allViews, selectedView);
         let sortedPriority: Scored<DViewElement>[] = allViews.map(
-            v => new Scored<DViewElement>(Selectors.scoreView(v, data as any as DModelElement, hisnode, graph, sameViewPointSubViews), v)) as Scored<DViewElement>[];
+            // v => new Scored<DViewElement>(Selectors.scoreView(v, data as any as DModelElement, hisnode, graph, sameViewPointSubViews), v)) as Scored<DViewElement>[];
+            (v) => {
+                return new Scored<DViewElement>(Selectors.scoreView(v, data, hisnode, graph, sameViewPointSubViews), v);}
+        ) as Scored<DViewElement>[];
         sortedPriority.sort( (e1, e2) => e2.score - e1.score);
         // todo: prioritize views "childrens" of the view of the graph, so they will display differnet views for the same element in different graphs
         // then sort by  view selector matching: on classtype (eattribute, eoperation, eclass...), on values, upperbound...
@@ -435,16 +449,16 @@ export class Selectors{
         const data = MyProxyHandler.wrap(id) as GObject;
         let lPackage : LPackage | undefined;
         const enumerators: LEnumerator[] = [];
-        if(data.className == "DAttribute") {
+        if(data.className === "DAttribute") {
             const lClass: LClass = MyProxyHandler.wrap(data.father);
             lPackage = MyProxyHandler.wrap(lClass.father);
         }
-        if(data.className == "DParameter") {
+        if(data.className === "DParameter") {
             const lOperation: LOperation = MyProxyHandler.wrap(data.father);
             const lClass: LClass = MyProxyHandler.wrap(lOperation.father);
             lPackage = MyProxyHandler.wrap(lClass.father);
         }
-        if(data.className == "DOperation") {
+        if(data.className === "DOperation") {
             const lClass: LClass = MyProxyHandler.wrap(data.father);
             lPackage = MyProxyHandler.wrap(lClass.father);
         }

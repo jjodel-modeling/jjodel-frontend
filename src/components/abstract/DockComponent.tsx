@@ -34,12 +34,19 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
     console!: TabData;
     box: any;
     initialized: boolean = false;
+    forcerebuildingdockstmp: number = 0;
 
     constructor(props: AllProps, context: any) {
         super(props, context);
         windoww.dockComponent = this;
     }
+
+
     init() {
+        if (this.model?.id === this.props.model.id) return;
+        this.forcerebuildingdockstmp++;
+        windoww.reloadDock = () => { this.forcerebuildingdockstmp++; this.forceUpdate(); }
+        console.log("for load - fixed model id:", this.model?.id + "-->" + this.props.model?.id);
         this.initialized = true;
         this.metamodel = this.props.metamodel;
         this.models = this.props.models;
@@ -59,6 +66,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
         this.edgeEditor = { title: "Edges", group: "2", closable: false, content: <EdgeEditor /> };
         this.viewpointEditor = { title: "Viewpoints", group: "2", closable: false, content: <ViewpointEditor /> };
         this.console = { title: "Console", group: "2", closable: false, content: <Console /> };
+        this.logger = { title: "Logger", group: "2", closable: true, content: <Logger /> };
         this.box = {
             dockbox: {
                 mode: "horizontal", children: [
@@ -85,8 +93,17 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
     }
 
     render(): ReactNode {
-        if(!this.initialized) this.init();
-        return (<DockLayout defaultLayout={this.box} />);
+        if (!this.initialized && this.props.model) this.init();
+        else {
+            this.init(); // fix load crash
+        }
+        // if (!this.box) this.box = {dockbox: {mode: "horizontal", children: [{children: [{tabs: [{id: "1", title: "loading", group: "2", closable: false, content: <div> loading model... </div> }]}]}]}};
+
+
+        return (<>
+            {/* todo: key forces reupdate and re-read this.box. find a better way*/}
+            <DockLayout defaultLayout={this.box} style={{position: "absolute", left: 5, top: 5, right: 5, bottom: 5}} key={this.forcerebuildingdockstmp}/>
+        </>);
     }
 }
 

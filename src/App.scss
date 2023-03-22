@@ -1,0 +1,16 @@
+
+.SaveManager {
+
+  position: absolute;
+  left: 5%;
+  top: 5%;
+  border: 1px solid black;
+  display: inline-block;
+}
+.hoverable{
+  position: relative;
+}
+.hoverable:hover>.preview{ display: none; }
+.hoverable:hover>.content{ display: block; position: absolute; z-index:1;}
+.hoverable>.content{ display: none; }
+

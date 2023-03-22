@@ -417,7 +417,7 @@ export class Constructors<T extends DPointerTargetable>{
     DAnnotation(source?: DAnnotation["source"], details?: DAnnotation["details"]): this {
         const thiss: DAnnotation = this.thiss as any;
         thiss.source = source || '';
-        thiss.details = details || {};
+        thiss.details = details || [];
         return this; }
 
     DPointerTargetable(isUser: boolean = false, id?: string): this {
@@ -469,6 +469,7 @@ export class Constructors<T extends DPointerTargetable>{
     DEnumLiteral(value: DEnumLiteral["value"] = 0): this {
         const thiss: DEnumLiteral = this.thiss as any;
         thiss.value = value;
+        thiss.literal = thiss.name;
         return this; }
 
     DEnumerator( literals: DEnumerator["literals"] = []): this {
@@ -807,6 +808,7 @@ export class PendingPointedByPaths{
 
 @RuntimeAccessible
 export class PointedBy{
+    static list: string[] = ["father", "parent", "annotations", "packages", "type", "subpackages", "classifiers", "exceptions", "parameters", "defaultValue", "instances", "operations", "features", "attributes", "references", "extends", "extendedBy", "implements", "implementedBy", "instanceof", "edges", "target", "opposite", "parameters", "exceptions", "literals"];
     source: string; // elemento da cui parte il puntatore
     // field: keyof DPointerTargetable;
     // il bersaglio non c'è qui, perchè è l'oggetto che contiene questo dentro l'array pointedBy
@@ -829,7 +831,7 @@ export class PointedBy{
     }
     static new(source: DocString<"full path in store including key. like \'idlookup.id.extends\'">, modifier: "-=" | "+=" | undefined = undefined, action?: ParsedAction): PointedBy {
         // let source: DocString<"full path in store including key"> = action.path;
-        if (source.includes("true")) { console.error(this, action); throw new Error("mixed a bool"); }
+        // if (source.includes("true")) { console.error(this, action); throw new Error("mixed a bool"); }
         if (modifier) source = source.substring(0, source.length - (modifier?.length || 0));
         return new PointedBy(source);
     }

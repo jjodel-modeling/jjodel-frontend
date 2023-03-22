@@ -104,6 +104,17 @@ export abstract class Action extends RuntimeAccessibleClass{
     }
 }
 @RuntimeAccessible
+export class LoadAction extends Action {
+    static type = 'LOAD';
+    static new(state: IStore): boolean {  return state && new LoadAction(state).fire(); }
+    constructor(state: IStore, fire: boolean = true) {
+        super('', state, '');
+        this.className = this.constructor.name;
+        if (fire) this.fire();
+    }
+}
+
+@RuntimeAccessible
 export class SetRootFieldAction extends Action {
     static type = 'SET_ROOT_FIELD';
     isPointer: boolean;
@@ -242,10 +253,53 @@ SetFieldAction.new(dclass, 'name.5', '') // ok, equivale a dicitura array
 */
 
 @RuntimeAccessible
+export class RedoAction extends Action {
+    static type = 'RedoAction';
+    public static new<F extends boolean = true>(amount: number = 1, notfire?: F): (F extends false ? boolean : RedoAction) {
+        let act = new RedoAction(amount);
+        if (!notfire) return act.fire() as any;
+        return act as any;
+    }
+    private constructor(amount: number = 1) {
+        super('', amount);
+        this.className = this.constructor.name;
+    }
+}
+@RuntimeAccessible
+export class UndoAction extends Action {
+    static type = 'UndoAction';
+    public static new<F extends boolean = true>(amount: number = 1, notfire?: F): (F extends false ? boolean : UndoAction) {
+        let act = new UndoAction(amount);
+        if (!notfire) return act.fire() as any;
+        return act as any;
+    }
+    private constructor(amount: number = 1) {
+        super('', amount);
+        this.className = this.constructor.name;
+    }
+}
+@RuntimeAccessible
+export class CombineHistoryAction extends Action {
+    static type = 'CombineHistoryAction';
+    public static new<F extends boolean = true>(notfire?: F): (F extends false ? boolean : CombineHistoryAction) {
+        let act = new CombineHistoryAction();
+        if (!notfire) return act.fire() as any;
+        return act as any;
+    }
+    private constructor() {
+        super('', '');
+        this.className = this.constructor.name;
+    }
+}
+@RuntimeAccessible
 export class CreateElementAction extends Action {
     static type = 'CREATE_ELEMENT';
     value!: DPointerTargetable;
-    public static new<F extends boolean = true>(me: DPointerTargetable, notfire?: F): (F extends true ? boolean : CreateElementAction) {
+    public static newBatch<F extends boolean = true>(me: DPointerTargetable[], notfire?: F): (F extends false ? boolean : CreateElementAction)[]{
+        return me.map( (e) => CreateElementAction.new(e, notfire));
+    }
+
+    public static new<F extends boolean = true>(me: DPointerTargetable , notfire?: F): (F extends false ? boolean : CreateElementAction) {
         if ((me as LPointerTargetable).__raw) me = (me as LPointerTargetable).__raw;
         let act = new CreateElementAction(me);
         if (!notfire) return act.fire() as any;

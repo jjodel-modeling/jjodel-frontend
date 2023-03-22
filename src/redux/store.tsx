@@ -28,10 +28,10 @@ import {
     CreateElementAction,
     DAttribute,
     DClass,
+    DModel,
     DEnumerator,
     DEnumLiteral,
     DGraph,
-    DModel,
     DObject,
     DOperation,
     DPackage,
@@ -65,6 +65,15 @@ export interface EdgeOptions{
     target: string
 }
 
+// export const statehistory_obsoleteidea: {past: IStore[], current: IStore, future: IStore[]} = { past:[], current: null, future:[] } as any;
+export const statehistory: {
+        [userpointer:Pointer<DUser>]: {undoable:GObject<"delta">[], redoable: GObject<"delta">[]}
+} & {
+    globalcanundostate: boolean // set to true at first user click }
+} = { globalcanundostate: false} as any;
+statehistory[DUser.current] = {undoable:[], redoable:[]}; // todo: make it able to combine last 2 changes with a keystroke. reapeat N times to combine N actions. let it "redo" multiple times, it's like recording a macro.
+
+(window as any).statehistory = statehistory;
 export class IStore {
     logs: Pointer<DLog, 0, 'N', LLog> = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
@@ -137,7 +146,7 @@ export class IStore {
 
     static fakeinit(store?: IStore): void {
         const graphDefaultViews: DViewElement[] = makeDefaultGraphViews();
-        for (let graphDefaultView of graphDefaultViews) {CreateElementAction.new(graphDefaultView);}
+        for (let graphDefaultView of graphDefaultViews) { CreateElementAction.new(graphDefaultView); }
 
         const viewpoint = DViewPoint.new('Default');
         CreateElementAction.new(viewpoint);
@@ -148,13 +157,15 @@ export class IStore {
         CreateElementAction.new(DGraph.new(dMetaModel.id));
         SetRootFieldAction.new('metamodel', dMetaModel.id, '', true);
 
-        const primitiveTypes = ['EString', 'EChar', 'EInt', 'EFloat', 'EDouble', 'EByte', 'EShort', 'ELong', 'EBoolean', 'EDate'];
+
+        const primitiveTypes = ["EString", "EInt", "EBoolean"];
         for (let primitiveType of primitiveTypes) {
             const dPrimitiveType = DClass.new(primitiveType);
             CreateElementAction.new(dPrimitiveType);
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
         }
-        const returnTypes = ['void'];
+
+        const returnTypes = ["void", "undefined", "null"]; // damiano: you put only void?
         for (let returnType of returnTypes) {
             const dReturnType = DClass.new(returnType);
             CreateElementAction.new(dReturnType);
@@ -318,4 +329,4 @@ type Cconnect = <TStateProps = {}, TDispatchProps = {}, TOwnProps = {}, State = 
 ): InferableComponentEnhancerWithProps<TStateProps & TDispatchProps, TOwnProps>;
 */
 // export const initialState: IStore = new IStore();
-console.info('ts loaded store');
+// console.info('ts loaded store');

@@ -34,7 +34,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
 
     const select = (forUser:Pointer<DUser, 0, 1> = null) => {
         if (!forUser) forUser = DUser.current;
-        // rootProps.node.isSelected[forUser] = true;
+        // rootProps.node.isSelected[forUser] = true; damiano todo: this should be back on
         SetRootFieldAction.new('_lastSelected', {
             node: rootProps.nodeid,
             view: rootProps.view.id,
@@ -83,6 +83,28 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     }
 
     const view: LViewElement|undefined = rootProps.view;
+    /*const sizeStyle: CSSProperties = {};
+    if(rootProps.isVertex) { sizeStyle.position = "absolute"; }
+
+    const edgeRefresh = () => {
+        const nodeid = rootProps.nodeid;
+        if(nodeid) {
+            const sources : LeaderLine[] = (window as any).leaderline.bySource[nodeid] || [];
+            const targets : LeaderLine[] = (window as any).leaderline.byTarget[nodeid] || [];
+            for(let ll of sources) { ll.position(); }
+            for(let ll of targets) { ll.position(); }
+            const subNodes = rootProps.data.subNodes;
+            if(subNodes) {
+                for(let node of subNodes) {
+                    const sources : LeaderLine[] = (window as any).leaderline.bySource[node.id] || [];
+                    const targets : LeaderLine[] = (window as any).leaderline.byTarget[node.id] || [];
+                    for(let ll of sources) { ll.position(); }
+                    for(let ll of targets) { ll.position(); }
+                }
+            }
+        }
+    }*/
+
     useEffect(() => {
         const element: GObject = $('[id="' + rootProps.nodeid + '"]');
         if(element && rootProps.data.className !== 'DModel') {
@@ -163,13 +185,14 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              onContextMenu={onContextMenu}
              onMouseEnter={onEnter}
              onMouseLeave={onLeave}
+             key={rootProps.key/*damiano: why you removed it? (key)*/}
         >
             {props.render}
         </div>
     );
 
 }
-interface OwnProps {props: VertexProps, render: ReactNode}
+interface OwnProps {selected: boolean, props: VertexProps, render: ReactNode}
 interface StateProps {selected: boolean}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;

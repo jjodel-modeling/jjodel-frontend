@@ -39,14 +39,27 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
         let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
         GraphElementComponent.mapLModelStuff(state, ownProps, ret); // not necessary either?
         // GraphElementComponent.mapLGraphElementStuff(state, ownProps, ret, dGraphDataClass); not necessary, it's demanded to sub-components
-        GraphElementComponent.mapViewStuff(state, ret, ownProps);
+        try{
+            GraphElementComponent.mapViewStuff(state, ret, ownProps);
+            (ret as any).skiparenderforloading = false;
+        } catch(e) {
+            (ret as any).skiparenderforloading = true; // model id is updated, but he's still trying to load old model which got replaced and is not in state.
+            /* crashes on loading because old model and new model have different timestamps? looks by id of old model with same number and diffferent timestamp
+        Log.ex(!ret.data, "can't find model data:", {meid, state, ownpropsdata:ownProps.data, ownProps});*/ }
         return ret; }
 
     constructor(props: AllProps, context: any) { super(props, context); }
 
     render(): ReactNode {
+        if ((this.props as any).skiparenderforloading) {
+            console.log("realoading render: ", {thiss:this, data:this.props.data});
+            windoww.bugged = this;
+            console.log("realoading render: ", {thiss:this, data:this.props.data});
+            SetRootFieldAction.new("rerenderforloading", new Date().getTime()); return <div>loading...</div>;}
         const view: LViewElement = this.props.view;
         const modelElement: LModelElement = this.props.data;
+        if (!view) { Log.exx({props: this.props, thiss:this}); }
+        // if (!view) { SetRootFieldAction.new("uselessrefresh_afterload", new Date().getTime()); return <div>Loading...</div>; }
 
         let componentMap: Dictionary<string, (props: GObject, childrens?: (string | React.Component)[]) => ReactElement> = windoww.components;
         let dmodelMap: Dictionary<string, typeof DModelElement> = RuntimeAccessibleClass.classes as any;

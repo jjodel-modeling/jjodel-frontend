@@ -34,6 +34,16 @@ import {
 } from "../../joiner";
 import {PrimitiveType} from "../../joiner/types";
 
+import {
+    AccessModifier, ECoreAnnotation, ECoreAttribute,
+    ECoreClass, ECoreDetail,
+    ECoreEnum,
+    EcoreLiteral, ECoreOperation,
+    ECorePackage,
+    ECoreReference,
+    ECoreRoot
+} from "../../api/data";
+
 
 @Node
 @RuntimeAccessible
@@ -53,6 +63,12 @@ export class DModelElement extends DPointerTargetable{
     public static new(): DModelElement {
         return new Constructors(new DModelElement('dwc')).DPointerTargetable().DModelElement().end();
     }
+}
+
+@Leaf
+@RuntimeAccessible
+export class DAnnotationDetail extends DPointerTargetable{
+    // todo
 }
 
 /*
@@ -101,6 +117,15 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     property!: keyof DModelElement;
     containers!: LNamedElement[]; // list of fathers until the model is reached.
 
+    public generateEcoreJson(loopDetectionloopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json { throw new Error("cannot be called directly, should trigger getter. this is only for correct signature"); }
+    private get_generateEcoreJson(context: Context): (loopdetectionobj: Dictionary<Pointer, DModelElement>) => Json { return (loopdetectionobj) => this.generateEcoreJson_impl(context, loopdetectionobj); }
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj?: Dictionary<Pointer, DModelElement>): Json{ return Log.exDev("generateEcoreJson() should be overridden"); }
+    protected generateEcoreJson_implString(): string {
+        const json: Json = this.generateEcoreJson({});
+        // console.log('generateEcoreJsonString:', json, 'this:',  this);
+        return JSON.stringify(json, null, 4); }
+
+
     protected set_containers(): boolean { return this.cannotSet('containers'); }
     public get_containers(context: Context): LModelElement["containers"]{
         let thiss: LModelElement = context.proxyObject;
@@ -129,21 +154,10 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     // name -> redux (es. DClass -> classs)
     protected get_property(context: Context): this["property"]{
-        let property = context.data.className.toLowerCase();
-        property = property.substring(1);
-        property = property + "s";
-        switch(property) {
-            case 'enumliterals': property = "literals"; break;
-            case 'enumerators': case 'classs': property = 'classifiers'; break;
-            case 'values': property = 'features'; break;
-        }
-        if(context.proxyObject.father.className === "DPackage" && property=== "packages") {
-            property = 'subpackages';
-        }
-        return property as keyof DModelElement;
+        return (context.data.className.substring(1) + "s").toLowerCase() as any;
     }
-    protected targetRemoved(field: keyof DPointerTargetable): void {
-        this.delete();
+    protected targetRemoved(context: Context, field: keyof DPointerTargetable): void {
+        context.proxyObject.delete();
     }
 
     public superDelete(): void {}
@@ -362,14 +376,16 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         if (!dPackage) return ret;
         const lPackage: LPackage = LPointerTargetable.from(dPackage);
         let name = 'class_' + 0;
-        let childrenNames: (string)[] = lPackage.childrens.map( c => (c as LClass).name);
+        let childrenNames: (string)[] = lPackage.childrens.map( c => (c as LClassifier).name);
         name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0);
 
         ret = function(){
+            //BEGIN()
             const dClass = DClass.new(name);
             CreateElementAction.new(dClass);
             let wPackage = WPointerTargetable.fromD(dPackage);
             wPackage.classifiers = [...dPackage.classifiers, dClass];
+            //END()
         }
         ret();
         return ret;
@@ -380,25 +396,34 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         if (!dClass) return () => {};
         const lClass: LClass = LPointerTargetable.from(dClass);
         let name = 'attribute_' + 0;
-        let childrenNames: (string)[] = lClass.attributes.map(c => c.name);
+        let childrenNames: (string)[] = lClass.features.map( c => (c).name);
         name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0);
-        const lType: LClassifier = LClassifier.fromPointer(Selectors.getFirstPrimitiveTypes().id);
+        const lString: LClassifier = LPointerTargetable.from(Selectors.getFirstPrimitiveTypes());
 
         const ret = function () {
-            const dAttribute = DAttribute.new(name);
+            const dAttribute = DAttribute.new(name, lString.id); // damiano: check if i remove secon parameter
+            // BEGIN()
             CreateElementAction.new(dAttribute);
-            BEGIN()
-            SetFieldAction.new(dAttribute, 'type', lType.id, '', true);
-            SetFieldAction.new(dAttribute, 'father', dClass.id, '', true);
-            SetFieldAction.new(dClass, 'attributes', dAttribute.id, '+=', true);
-            END()
-            const targets: Set<DClass> = new Set(); targets.add(dClass);
-            for(let target of targets) {
+
+            const wClass = WPointerTargetable.fromD(dClass);
+            wClass.attributes = [...dClass.attributes, dAttribute];
+            const wAttribute = WPointerTargetable.fromD(dAttribute);
+            wAttribute.type = lString.id;
+            // END()
+            /**
+             * damiano: it was like this in your version??
+             BEGIN()
+             SetFieldAction.new(dAttribute, 'type', lType.id, '', true);
+             SetFieldAction.new(dAttribute, 'father', dClass.id, '', true);
+             SetFieldAction.new(dClass, 'attributes', dAttribute.id, '+=', true);
+             END()
+             const targets: Set<DClass> = new Set(); targets.add(dClass);
+             for(let target of targets) {
                 for(let ext of target.extendedBy) {
                     targets.add(DClass.fromPointer(ext));
                 }
             }
-            for(let target of targets) {
+             for(let target of targets) {
                 for(let instance of target.instances) {
                     const dValue: DValue = DValue.new(dAttribute.name);
                     const dObject: DObject = DObject.fromPointer(instance);
@@ -412,6 +437,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     END()
                 }
             }
+             */
+        /
         }
         ret();
         return ret;
@@ -422,9 +449,20 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         if (!dClass) return () => {};
         const lClass: LClass = LPointerTargetable.from(dClass);
         let name = 'reference_' + 0;
-        const childrenNames: (string)[] = lClass.references.map(c => c.name);
+        const childrenNames: (string)[] = lClass.features.map( c => (c).name);
         name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
 
+        const ret = () =>  {
+            const dReference = DReference.new(name);
+            // BEGIN()
+            CreateElementAction.new(dReference);
+            const wReference = WPointerTargetable.fromD(dReference);
+            wReference.type = dClass.id;
+            const wClass = WPointerTargetable.fromD(dClass);
+            wClass.references = [...dClass.references, dReference];
+            // END()
+        }
+        /*damiano: it was like this in your version
 
         const ret = function () {
             const dReference = DReference.new(name);
@@ -453,7 +491,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     END()
                 }
             }
-        }
+        * */
         ret();
         return ret;
     }
@@ -570,6 +608,57 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     // chiedere al prof: cosa può lanciato come eccezione: se tutte le classi o se solo quelle che estendono Exception
     public addException(exception?: DClassifier): () => void { throw this.wrongAccessMessage("AddException"); }
     public addChild(type: string): void { this.cannotCall('addAttribute', type); }
+/* damiano: why removed? or just moved?
+    protected _addException(dOperation: DOperation, dClass: DClass): void {
+        SetFieldAction.new(dOperation, "exceptions", dClass.id, '+=', true);
+    }
+
+    private static addOperation_ (dClass: DClass, dParameter: DParameter, dOperation: DOperation): void {
+        CreateElementAction.new(dParameter);
+        CreateElementAction.new(dOperation);
+        SetFieldAction.new(dOperation, "parameters", dParameter.id, '+=', true);
+        SetFieldAction.new(dClass, "operations", dOperation.id, '+=', true);
+    }
+    private static addParameter_(dOperation: DOperation, dParameter: DParameter): void {
+        CreateElementAction.new(dParameter);
+        SetFieldAction.new(dOperation, "parameters", dParameter.id, '+=', true);
+    }
+    private static addException_(dOperation: DOperation, dException: DClassifier): void {
+        CreateElementAction.new(dException);
+        SetFieldAction.new(dOperation, "exceptions", dException.id, '+=', true);
+    }
+    private static addReference_(dClass: DClass, dReference: DReference, dRefEdge: DRefEdge): void {
+        CreateElementAction.new(dReference);
+        SetFieldAction.new(dClass, "references", dReference.id, '+=', true);
+        CreateElementAction.new(dRefEdge);
+        // new SetRootFieldAction("refEdges", dRefEdge.id, '+=', true); // todo: la creazione di una ref non dovrebbe automaticamente implicare la creazione di un arco, ma per test per ora ok
+    }
+    private static addAttribute_(dClass: DClass, dAttribute: DAttribute): void {
+        CreateElementAction.new(dAttribute);
+        SetFieldAction.new(dClass, 'attributes', dAttribute.id, '+=', true);
+    }
+    private static addClass_(dPackage: DPackage, dClass: DClass): void {
+        CreateElementAction.new(dClass);
+        SetFieldAction.new(dPackage, 'classifiers', dClass.id, '+=', true);
+    }
+    private static addPackage_(dModel: DModel, dPackage: DPackage): void {
+        CreateElementAction.new(dPackage);
+        SetFieldAction.new(dModel, 'packages', dPackage.id, '+=', true);
+    }
+    private static addSubPackage_(dPackage: DPackage, dSubPackage: DPackage): void {
+        CreateElementAction.new(dSubPackage);
+        SetFieldAction.new(dPackage, 'subpackages', dSubPackage.id, '+=', true);
+    }
+    private static addEnumerator_(dPackage: DPackage, dEnumerator: DEnumerator): void {
+        CreateElementAction.new(dEnumerator);
+        SetFieldAction.new(dPackage, 'classifiers', dEnumerator.id, '+=', true);
+    }
+    private static addEnumLiteral_(dEnum: DEnumerator, dLiteral: DEnumLiteral): void {
+        CreateElementAction.new(dLiteral);
+        SetFieldAction.new(dEnum, "literals", dLiteral.id, '+=', true);
+    }
+
+ */
 }
 
 /*function isValidPointer<T extends DPointerTargetable = DModelElement, LB extends number = 0, UB extends number = 1, RET extends LPointerTargetable = LModelElement>
@@ -625,7 +714,7 @@ export class DAnnotation extends DModelElement { // extends Mixin(DAnnotation0, 
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     // personal
     source!: string;
-    details!: Dictionary<string, string>;
+    details!: DAnnotationDetail[];//Dictionary<string, string>;
 
     public static new(source?: DAnnotation["source"], details?: DAnnotation["details"]): DAnnotation {
         return new Constructors(new DAnnotation('dwc')).DPointerTargetable().DModelElement().DAnnotation(source, details).end();
@@ -650,14 +739,22 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any> extend
     annotations!: LAnnotation[];
     // personal
     source!: string;
-    details: Dictionary<string, string> = {};
+    details!: LAnnotationDetail[];// Dictionary<string, string> = {};
+
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        loopDetectionObj[context.data.id] = context.data;
+        const json: Json = {};
+        EcoreParser.write(json, ECoreAnnotation.source, context.data.source);
+        // EcoreParser.write(json, ECoreAnnotation.references, context.proxyObject.referencesStr);
+        EcoreParser.write(json, ECoreAnnotation.details, context.proxyObject.details.map( d => d.generateEcoreJson(loopDetectionObj)));
+        return json; }
 
     protected get_source(context: Context): this["source"] { return context.data.source; }
     protected set_source(val: this["source"], context: Context): boolean {
         SetFieldAction.new(context.data, 'source', val, '', false);
         return true;
     }
-    protected get_details(context: Context): this["details"] { return context.data.details }
+    protected get_details(context: Context): this["details"] { return TargetableProxyHandler.wrapAll(context.data.details); }
     protected set_details(val: this["details"], context: Context): boolean {
         SetFieldAction.new(context.data, 'details', val);
         return true;
@@ -666,6 +763,19 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any> extend
 
 DModelElement.subclasses.push(DAnnotation);
 LModelElement.subclasses.push(LAnnotation);
+
+@Leaf
+@RuntimeAccessible
+export class LAnnotationDetail<Context extends LogicContext<DAnnotationDetail> = any> extends LModelElement{ // todo
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        // loopDetectionObj[context.data.id] = context.data;
+        const json: Json = {};
+        // if (context.data.name !== null) EcoreParser.write(json, ECoreDetail.key, context.data.name);
+        // if (context.data.value !== null) EcoreParser.write(json, ECoreDetail.value, context.data.value);
+        return json; }
+}
+DModelElement.subclasses.push(DAnnotationDetail);
+LModelElement.subclasses.push(LAnnotationDetail);
 
 /*
 type unarr<T extends any[] | number> = T extends any[] ? T[0] : T;
@@ -752,8 +862,8 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
     // static structure: typeof DNamedElement;
 
     // inherit redefine
-    parent!: LModelElement[]; // todo:     parent!: LNamedElement[];
-    father!: LModelElement;   // todo:     father!: LNamedElement;
+    parent!: LModelElement[];
+    father!: LModelElement;
     annotations!: LAnnotation[];
     // personal
     name!: string;
@@ -778,9 +888,7 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
         return fullname; }
 
 
-    protected get_name(context: Context): this["name"] {
-        return context.data.name;
-    }
+    protected get_name(context: Context): this["name"] { return context.data.name; }
     protected set_name(val: this["name"],  context: Context): boolean {
         let name = val;
         const father = context.proxyObject.father;
@@ -798,6 +906,7 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
         return true;
 
         /*
+        // this autofix removes spaces with _
         if (val.match(/\s/)) val = this._autofix_name(val, context);
         // todo: validate if operation can be completed or need autocorrection, then either return false (invalid parameter cannot complete) or send newVal at redux
         const fixedVal: string = val;
@@ -809,7 +918,7 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
         // NB: NON fare autofix di univocità nome tra i childrens o qualsiasi cosa dipendente dal contesto, questo potrebbe essere valido in alcuni modelli e invalido in altri e modificare un oggetto condiviso.
         return val.replaceAll(/\s/g, '_');
     }
-    protected get_autofix_name(val: string, context: Context): (val: string, context: Context) => string { return this._autofix_name; }
+    protected get_autofix_name(val: string, context: Context): (val: string) => string { return (val: string) => this._autofix_name(val, context); }
     public autofix_name(val: string): string { return this.wrongAccessMessage("autofix_name"); }
 }
 // @RuntimeAccessible export class _WNamedElement extends _WModelElement { }
@@ -877,6 +986,11 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
     name!: string;
     // personal
     type!: LClassifier;
+
+    primitiveType!: LClass;
+    classType!: LClass;
+    enumType!: LEnumerator;
+
     ordered!: boolean;
     unique!: boolean;
     lowerBound!: number;
@@ -886,7 +1000,9 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
 
     protected get_type(context: Context): this["type"] { return LPointerTargetable.from(context.data.type); }
     protected set_type(val: Pack1<this["type"]>, context: Context): boolean {
-        const data = context.data; let instances: LValue[] = [];
+        const data = context.data;
+        let instances: LValue[] = context.proxyObject.instances;
+        /* damiano: riscritto nel rigo di sopra
         if(data.className === 'DAttribute') {
             const lAttribute: LAttribute = LAttribute.fromPointer(data.id);
             instances = [...lAttribute.instances];
@@ -894,7 +1010,9 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         if(data.className === 'DReference') {
             const lReference: LReference = LReference.fromPointer(data.id);
             instances = [...lReference.instances];
-        }
+        }*/
+
+        // damiano: ??
         for(let instance of instances) {
             const wInstance = WPointerTargetable.fromL(instance);
             wInstance.value = [U.initializeValue(val)];
@@ -936,9 +1054,28 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         SetFieldAction.new(context.data, 'required', val);
         return true;
     }
-}
 
-//let wtyped: WTypedElement = null as any;
+    get_typeToEcoreString(context: Context): string {
+        // if (context.data.classType) return EcoreParser.classTypePrefix + context.proxyObject.classType.name;
+        // if (context.data.enumType) return EcoreParser.classTypePrefix + context.proxyObject.enumType.name;
+        // if (context.data.primitiveType) return context.proxyObject.primitiveType.long;
+        return context.proxyObject.type.typeEcoreString; }
+    get_TypeToShortString(context: Context): string {
+        // if (context.data.classType) return '' + context.data.classType.name;
+        // if (context.data.enumType) return '' + context.data.enumType.name;
+        // if (context.data.primitiveType) return '' + context.data.primitiveType.getName();
+        return context.proxyObject.type.typeString; }
+
+    canOverride(context: Context, other: LTypedElement): boolean { // todo: adesso non c'è classtype e primitive type, ma solo type. devo trovare un altro modo di verificare se è il tipo è primitivo o di classe
+        // i primitivi identici sono compatibili
+        if (context.data.id === other.id) return true;
+        // i primitivi diversi sono sempre incompatibili
+        if (!context.proxyObject.classType) return false;
+        // per le classi
+        if (other.classType === other.classType) return true;
+        return context.proxyObject.classType.isExtending(other.classType); }
+
+}
 
 // @RuntimeAccessible export class _WTypedElement extends _WNamedElement { }
 // export type WTypedElement = DTypedElement | LTypedElement | _WTypedElement;
@@ -1010,6 +1147,14 @@ export class LClassifier<Context extends LogicContext<DClassifier> = any> extend
         return true;
     }
 
+    typeEcoreString!: string;
+    typeString!: string;
+    private get_typeEcoreString(context: Context) {
+        return EcoreParser.classTypePrefix + context.data.name;
+    }
+    private get_typeString(context: Context) {
+        return context.data.name;
+    }
 }
 // @RuntimeAccessible export class _WClassifier extends _WNamedElement { }
 // export type WClassifier = DClassifier | LClassifier | _WClassifier;
@@ -1085,11 +1230,32 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     references!: LReference[];
     literals!: LEnumLiteral[];
 
+    protected generateEcoreJson_impltemplate(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        loopDetectionObj[context.data.id] = context.data;
+        const json: GObject = {};
+        return json; }
+
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        loopDetectionObj[context.data.id] = context.data;
+        const model: GObject = {};
+        const d = context.data;
+        let classarr = context.proxyObject.classes.map( c => c.generateEcoreJson(loopDetectionObj));
+        let enumarr = context.proxyObject.enums.map(e => e.generateEcoreJson(loopDetectionObj));
+        const classifiers: Json[] = Array.prototype.concat.call(classarr, enumarr);
+        model[ECorePackage.xmiversion] = '2.0';
+        model[ECorePackage.xmlnsxmi] = 'http://www.omg.org/XMI';
+        model[ECorePackage.xmlnsxsi] = 'http://www.w3.org/2001/XMLSchema-instance';
+        model[ECorePackage.xmlnsecore] = 'http://www.eclipse.org/emf/2002/Ecore';
+        model[ECorePackage.namee] = d.name;
+        model[ECorePackage.nsURI] = d.uri;
+        model[ECorePackage.nsPrefix] = d.prefix;//getModelRoot().namespace();
+        model[ECorePackage.eClassifiers] = classifiers;
+        return model; }
 
     private get_classes(context: Context): LClass[] {
-            let classifiers = DPointerTargetable.fromPointer(context.data.classifiers as Pointer<DClassifier, 1, 1, LClassifier>[]);
-            let enumerators = classifiers.filter(dc => dc?.className === DClass.name ) as DClass[];
-            return LPointerTargetable.from(enumerators.map(e=> e.id)); }
+        let classifiers = DPointerTargetable.fromPointer(context.data.classifiers as Pointer<DClassifier, 1, 1, LClassifier>[]);
+        let enumerators = classifiers.filter(dc => dc?.className === DClass.name ) as DClass[];
+        return LPointerTargetable.from(enumerators.map(e=> e.id)); }
     private get_enums(context: Context): LEnumerator[] { return this.get_enumerators(context); }
     private get_enumerators(context: Context): LEnumerator[] {
         let classifiers = DPointerTargetable.fromPointer(context.data.classifiers as Pointer<DClassifier, 1, 1, LClassifier>[]);
@@ -1234,6 +1400,7 @@ export class DOperation extends DPointerTargetable { // extends DTypedElement
     // personal
     exceptions: Pointer<DClassifier, 0, 'N', LClassifier> = [];
     parameters: Pointer<DParameter, 0, 'N', LParameter> = [];
+    visibility: AccessModifier = AccessModifier.private;
 
     public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], exceptions: DOperation["exceptions"] = [], parameters: DOperation["parameters"] = []): DOperation {
         return new Constructors(new DOperation('dwc')).DPointerTargetable().DModelElement()
@@ -1266,7 +1433,21 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
     // personal
     exceptions!: LClassifier[];
     parameters!: LParameter[];
+    visibility!: AccessModifier;
 
+
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        loopDetectionObj[context.data.id] = context.data;
+        const json: Json = {};
+        json[ECoreOperation.eParameters] = context.proxyObject.parameters.map( par => par.generateEcoreJson(loopDetectionObj));
+        EcoreParser.write(json, ECoreOperation.namee, context.data.name);
+        EcoreParser.write(json, ECoreOperation.eType, context.proxyObject.type.typeEcoreString);
+        EcoreParser.write(json, ECoreOperation.lowerBound, '' + context.data.lowerBound);
+        EcoreParser.write(json, ECoreOperation.upperBound, '' + context.data.upperBound);
+        EcoreParser.write(json, ECoreOperation.eexceptions, context.proxyObject.exceptions.map( (l: LClassifier) => l.typeEcoreString).join(' ')); // todo: not really sure it's this format
+        EcoreParser.write(json, ECoreOperation.ordered, '' + context.data.ordered);
+        EcoreParser.write(json, ECoreOperation.unique, '' + context.data.unique);
+        return json; }
 
     get_childrens_idlist(context: Context): Pointer<DAnnotation | DClassifier | DParameter, 1, 'N'> {
         return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DParameter | DClassifier, 1, 'N'>, ...context.data.exceptions, ...context.data.parameters]; }
@@ -1399,7 +1580,18 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
     required!: boolean;
     // personal
 
-    /*
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        loopDetectionObj[context.data.id] = context.data;
+        const json: Json = {};
+        const l = context.proxyObject;
+        const d = context.data;
+        EcoreParser.write(json, ECoreOperation.lowerBound, '' + d.lowerBound);
+        EcoreParser.write(json, ECoreOperation.upperBound, '' + d.upperBound);
+        EcoreParser.write(json, ECoreOperation.ordered, '' + d.ordered);
+        EcoreParser.write(json, ECoreOperation.unique, '' + d.unique);
+        EcoreParser.write(json, ECoreOperation.eType, '' + l.type.typeEcoreString);
+        return json; }
+/*
     protected get_delete(context: LogicContext<DParameter>): () => void {
         let ret = () => {};
         const dParameter: DParameter = context.data;
@@ -1522,6 +1714,30 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     // utilities to go down in the tree (plural names)
     exceptions!: LClassifier[] | null;
     parameters!: LParameter[] | null;
+
+
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        loopDetectionObj[context.data.id] = context.data;
+        const json: GObject = {};
+        const featurearr: Json[] = [];
+        const operationsarr: Json[] = [];
+        const model: Json = {};
+        let supertypesstr = [];
+        const d = context.data;
+        const l = context.proxyObject;
+        for (let att of l.attributes) { featurearr.push(att.generateEcoreJson(loopDetectionObj)); }
+        for (let ref of l.references) { featurearr.push(ref.generateEcoreJson(loopDetectionObj)); }
+        for (let op of l.operations) { operationsarr.push(op.generateEcoreJson(loopDetectionObj)); }
+
+        model[ECoreClass.xsitype] = 'ecore:EClass';
+        model[ECoreClass.namee] = d.name;
+        model[ECoreClass.interface] = U.toBoolString(d.interface, false);
+        model[ECoreClass.abstract] = U.toBoolString(d.abstract, false);
+        if (d.instanceClassName) model[ECoreClass.instanceTypeName] = d.instanceClassName;
+        model[ECoreClass.eSuperTypes] = l.extends.map( superclass => superclass.typeEcoreString).join(" ");
+        if (featurearr) model[ECoreClass.eStructuralFeatures] = featurearr;
+        if (operationsarr) model[ECoreClass.eOperations] = operationsarr;
+        return json; }
 
     get_childrens_idlist(context: Context): Pointer<DAnnotation | DStructuralFeature | DOperation, 1, 'N'> {
         return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DStructuralFeature, 1, 'N'>, ...context.data.attributes, ...context.data.references, ...context.data.operations]; }
@@ -1716,6 +1932,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
 
     protected get_delete(context: Context): () => void {
+        /// what if there are multiple operations sharing the same exception? exception should not be deleted if operation is.
         const data = context.data;
         const lData = context.proxyObject;
 
@@ -1842,7 +2059,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         // for (i = 0; i < extendedby.length; i++) { extendedby[i].checkViolations(true); }
     }
 
-    public instance(): DObject { this.cannotCall('instance'); return DObject.new(''); }
+    public instance(): DObject { return this.cannotCall('instance'); }
     private get_instance(context: Context): () => DObject {
         return () => {
             const dClass: DClass = context.data;
@@ -1853,6 +2070,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             SetFieldAction.new(dObject, 'instanceof', dClass.id, '', true);
             SetFieldAction.new(dClass, 'instances', dObject.id, '+=', true);
             END()
+            // damiano: weird transaction placement. double-check it
             let father: LClass|undefined = lClass;
             while(father) {
                 for(let dFeature of [...father.attributes, ...father.references]) {
@@ -2152,6 +2370,21 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     target!: LClass[];
     edges!: LEdge[];
 
+
+
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        loopDetectionObj[context.data.id] = context.data;
+        const model: GObject = {};
+        const d = context.data;
+        const l = context.proxyObject;
+        model[ECoreReference.xsitype] = 'ecore:EReference';
+        model[ECoreReference.eType] = l.type.typeEcoreString;
+        model[ECoreReference.namee] = d.name;
+        if (d.lowerBound != null && !isNaN(+d.lowerBound)) { model[ECoreReference.lowerbound] = +d.lowerBound; }
+        if (d.upperBound != null && !isNaN(+d.upperBound)) { model[ECoreReference.upperbound] = +d.upperBound; }
+        if (d.containment != null) { model[ECoreReference.containment] = d.containment; }
+        return model; }
+
     protected get_containment(context: Context): this["containment"] { return context.data.containment; }
     protected set_containment(val: this["containment"], context: Context): boolean {
         SetFieldAction.new(context.data, 'containment', val);
@@ -2300,6 +2533,18 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     // personal
     isID: boolean = false; // ? exist in ecore as "iD" ?
 
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        loopDetectionObj[context.data.id] = context.data;
+        const model = {};
+        const d = context.data;
+        const l = context.proxyObject;
+        EcoreParser.write(model, ECoreAttribute.xsitype, 'ecore:EAttribute');
+        EcoreParser.write(model, ECoreAttribute.eType, l.type.typeEcoreString);
+        EcoreParser.write(model, ECoreAttribute.namee, d.name);
+        EcoreParser.write(model, ECoreAttribute.lowerbound, '' + d.lowerBound);
+        EcoreParser.write(model, ECoreAttribute.upperbound, '' + d.upperBound);
+        return model; }
+
     protected get_ID(context: Context): this["isID"] { return context.data.isID; }
     protected set_ID(val: this["isID"], context: Context): boolean {
         SetFieldAction.new(context.data, 'isID', val);
@@ -2344,6 +2589,8 @@ export class DEnumLiteral extends DPointerTargetable { // DNamedElement
     name!: string;
     // personal
     value: number = 0;
+    ordinal: number=1;
+    literal!: string;
 
     public static new(name?: DNamedElement["name"], value: DEnumLiteral["value"] = 0): DEnumLiteral {
         return new Constructors(new DEnumLiteral('dwc')).DPointerTargetable().DModelElement()
@@ -2367,6 +2614,18 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
     name!: string;
     // personal
     value!: number;
+    ordinal!: number;
+    literal!: string;
+
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        loopDetectionObj[context.data.id] = context.data;
+        const model: Json = {};
+        const d = context.data;
+        model[EcoreLiteral.value] = d.ordinal;
+        model[EcoreLiteral.literal] = d.literal;
+        model[EcoreLiteral.namee] = d.name;
+        return model; }
+
 
     protected get_value(context: Context): this["value"] { return context.data.value; }
     protected set_value(val: this["value"], context: Context): boolean {
@@ -2447,6 +2706,17 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
     // personal
     literals!: LEnumLiteral[];
 
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        loopDetectionObj[context.data.id] = context.data;
+        const model: Json = {};
+        let d = context.data;
+        if (d.instanceClassName) model[ECoreEnum.instanceTypeName] = d.instanceClassName;
+        model[ECoreEnum.xsitype] = 'ecore:EEnum';
+        model[ECoreEnum.namee] = d.name;
+        model[ECoreEnum.serializable] = d.serializable ? "true" : "false";
+        model[ECoreEnum.eLiterals] = context.proxyObject.literals.map(l => l.generateEcoreJson(loopDetectionObj));
+        return model; }
+
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DEnumLiteral, 1, 'N'> {
         return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DEnumLiteral, 1, 'N'>, ...context.data.literals]; }
 
@@ -2506,6 +2776,158 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
 }
 DDataType.subclasses.push(DEnumerator);
 LDataType.subclasses.push(LEnumerator);
+
+
+// damianoo:_ you deleted everything from DObject to LValue included? or just moved them?
+
+@RuntimeAccessible
+export class DObject extends DPointerTargetable { // extends DNamedElement, m1 class instance
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    // static singleton: LObject;
+    // static logic: typeof LObject;
+    // static structure: typeof DObject;
+
+    // inherit redefine
+    id!: Pointer<DObject, 1, 1, LObject>;
+    parent: Pointer<DModel, 0, 'N', LModel> = []; // todo: problema m1 model can contain objects without package, it's only a web of objects with a object root actually.
+    father!: Pointer<DModel, 1, 1, LModel>;
+    annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
+    name!: string;
+    // personal
+    instanceof: Pointer<DClass, 0, 'N'> = [];
+
+
+    public static new(name?: DNamedElement["name"]): DObject {
+        return new Constructors(new DObject('dwc')).DPointerTargetable().DModelElement()
+            .DNamedElement(name).DObject().end();
+    }
+}
+
+@RuntimeAccessible
+export class DModelM1 extends DNamedElement{
+    name!: string;
+    roots!: Pointer<DObject, 1, 'N', LObject> // no package ma LObjects[] (solo quelli isRoot)
+    childrens!: DModelM1["roots"];
+}
+
+@RuntimeAccessible
+export class LModelM1 extends LNamedElement{
+    name!: string;
+    roots!: LObject[];
+    childrens!: LModelM1["roots"];
+}
+DModelM1.subclasses.push(DNamedElement);
+LModelM1.subclasses.push(LNamedElement);
+type DPrimitiveType = DClass;
+type LPrimitiveType = LClass;
+
+
+// problema: o costringo l'utente a fare sempre .value per ricevere il valore invece dei metadati
+// oppure ritorno il valore da subito ma dal valore non posso accedere ai metadati (upperbound...) a meno che non trovi un altor sistema.
+
+// possibile fix: LValue.toString() che ritorna il .value
+
+
+// istanza di m2 class (istanza di Casa)
+@RuntimeAccessible
+export class LObject<Context extends LogicContext<DObject> = any, C extends Context = Context>  extends LNamedElement { // extends DNamedElement, m1 class instance
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    public __raw!: DObject;
+    id!: Pointer<DObject, 1, 1, LObject>;
+    // static singleton: LObject;
+    // static logic: typeof LObject;
+    // static structure: typeof DObject;
+    get_all_subobjects!: LObject[]
+    // + tutte le funzioni di comodità navigazionale del modello, trattarlo un pò come se fosse un modello (e quasi può esserlo)
+
+    // inherit redefine
+    parent!: LModel[]; // todo: problema m1 model can contain objects without package, it's only a web of objects with a object root actually.
+    father!: LModel;
+    annotations!: LAnnotation[];
+    name!: string;
+    // personal
+    instanceof!: LClass[];
+    isRoot!: boolean;
+    value!: Pointer<DValue, 0, 'N'>;
+
+    protected get_instanceof(context: Context): this["instanceof"] {
+        return context.data.instanceof.map((pointer) => {
+            return LPointerTargetable.from(pointer)
+        });
+    }
+    protected set_instanceof(val: PackArr<this["instanceof"]>, context: Context): boolean {
+        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        SetFieldAction.new(context.data, 'instanceof', list, "", true);
+        return true;
+    }
+}
+DNamedElement.subclasses.push(DObject);
+LNamedElement.subclasses.push(LObject);
+
+
+@RuntimeAccessible
+export class DValue extends DPointerTargetable { // extends DModelElement, m1 value (attribute | reference)
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    // static singleton: LValue;
+    // static logic: typeof LValue;
+    // static structure: typeof DValue;
+
+    // inherit redefine
+    id!: Pointer<DValue, 1, 1, LValue>;
+    parent: Pointer<DObject, 0, 'N', LObject> = [];
+    father!: Pointer<DObject, 1, 1, LObject>;
+    annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
+    // personal
+    instanceof: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature> = [];
+
+    public static new(name?: DNamedElement["name"]): DValue {
+        return new Constructors(new DValue('dwc')).DPointerTargetable().DModelElement()
+            .DNamedElement(name).DValue().end();
+    }
+}
+@RuntimeAccessible
+export class LValue<Context extends LogicContext<DValue> = any, C extends Context = Context>  extends LModelElement { // extends DModelElement, m1 value (attribute | reference)
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    public __raw!: DValue;
+    id!: Pointer<DValue, 1, 1, LValue>;
+    // static singleton: LValue;
+    // static logic: typeof LValue;
+    // static structure: typeof DValue;
+
+    // inherit redefine
+    parent!: LObject[]; // todo: problema m1 model can contain objects without package, it's only a web of objects with a object root actually.
+    father!: LObject;
+    annotations!: LAnnotation[];
+    // personal
+    value!: (any | Pointer<DPrimitiveType, 0, 1, LPrimitiveType>[] | Pointer<DObject, 0, 1, LObject>)[]; //  /* PrimitiveType se istanza di attrib*/ | LObject /*se istanza di ref*/ = "casa mia";
+    instanceof!: LStructuralFeature [];
+    /*
+        get_value(){
+            se è istanza di Reference ritorna wrappato il puntatore
+            se è di DAttribute ritorna il val grezzo
+        }
+
+        get_toString() {
+            return this.get_value(context)
+        }*/
+    protected get_instanceof(context: Context): this["instanceof"] {
+        return context.data.instanceof.map((pointer) => {
+            return LPointerTargetable.from(pointer)
+        });
+    }
+    protected set_instanceof(val: PackArr<this["instanceof"]>, context: Context): boolean {
+        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        SetFieldAction.new(context.data, 'instanceof', list, "", true);
+        return true;
+    }
+}
+DNamedElement.subclasses.push(DValue);
+LNamedElement.subclasses.push(LValue);
+
 
 
 @RuntimeAccessible
@@ -2571,6 +2993,15 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     allSubAnnotations!: LAnnotation[] | null;
     allSubPackages!: LPackage[] | null;
 
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        loopDetectionObj[context.data.id] = context.data;
+        const model: GObject = {};
+        const packageArr: Json[] = [];
+        for (let pkg of context.proxyObject.packages) { packageArr.push(pkg.generateEcoreJson(loopDetectionObj)); }
+        // return (context.proxyObject.packages[0])?.generateEcoreJson(loopDetectionObj);
+        model[ECoreRoot.ecoreEPackage] = packageArr;
+        return model; }
+
     protected get_models(context: Context): LModel[] {
         return LModel.fromPointer(context.data.models);
     }
@@ -2603,13 +3034,12 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         }
         return true;
     }
-
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | (DPackage|DObject), 1, 'N'> {
         let children: Pointer<(DPackage|DObject), 0, 'N', (LPackage|LObject)>;
         if(context.data.isMetamodel) children = context.data.packages;
         else children = context.data.objects;
         return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | (DPackage|DObject), 1, 'N'>,
-                ...children];
+            ...children];
     }
 
     protected get_delete(context: Context): () => void {
@@ -2631,7 +3061,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         });
     }
 
-     protected get_packages(context: Context): this["packages"] {
+    protected get_packages(context: Context): this["packages"] {
         return context.data.packages.map((pointer) => {
             return LPointerTargetable.from(pointer)
         });
@@ -2659,10 +3089,10 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
      protected get_classes(context: Context): this["classes"] {
         const s: IStore = store.getState();
         return this.get_allSubPackages(context, s).flatMap(p => p.classes || []);
-     }
+    }
 
     protected get_enums(context: Context): this["enums"] {
-         return this.get_enumerators(context);
+        return this.get_enumerators(context);
     }
 
     protected get_enumerators(context: Context): this["enums"] {
@@ -2993,6 +3423,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 }
 DNamedElement.subclasses.push(DValue);
 LNamedElement.subclasses.push(LValue);
+
+
 
 export type WModelElement = getWParams<LModelElement, DModelElement>;
 export type WModel = getWParams<LModel, DModel>;
