@@ -34,7 +34,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
 
     const select = (forUser:Pointer<DUser, 0, 1> = null) => {
         if (!forUser) forUser = DUser.current;
-        // rootProps.node.isSelected[forUser] = true; damiano todo: this should be back on
+        rootProps.node.isSelected[forUser] = true;
         SetRootFieldAction.new('_lastSelected', {
             node: rootProps.nodeid,
             view: rootProps.view.id,
@@ -185,15 +185,16 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              onContextMenu={onContextMenu}
              onMouseEnter={onEnter}
              onMouseLeave={onLeave}
-             key={rootProps.key/*damiano: why you removed it? (key)*/}
+             key={rootProps.key || rootProps.nodeid}
         >
             {props.render}
         </div>
+
     );
 
 }
-interface OwnProps {selected: boolean, props: VertexProps, render: ReactNode}
-interface StateProps {selected: boolean}
+interface OwnProps {props: VertexProps, render: ReactNode}
+interface StateProps {}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -220,6 +221,8 @@ export const RootVertex = (props: OwnProps, childrens: (string | React.Component
     return <RootVertexConnected {...{...props, childrens}} />;
 }
 export default RootVertex;
+
+
 
 
 

@@ -8,7 +8,7 @@ import {
     DPointerTargetable,
     DtoL,
     END,
-    getWParams,
+    getWParams, GObject,
     IStore,
     Leaf,
     LEdge,
@@ -27,12 +27,12 @@ import {
     Selectors,
     SetFieldAction,
     SetRootFieldAction,
-    store,
-    U,
+    store, TargetableProxyHandler,
+    U, unArr,
     UX,
     WPointerTargetable
 } from "../../joiner";
-import {PrimitiveType} from "../../joiner/types";
+import {Json, PrimitiveType} from "../../joiner/types";
 
 import {
     AccessModifier, ECoreAnnotation, ECoreAttribute,
@@ -40,6 +40,7 @@ import {
     ECoreEnum,
     EcoreLiteral, ECoreOperation,
     ECorePackage,
+    EcoreParser,
     ECoreReference,
     ECoreRoot
 } from "../../api/data";
@@ -401,14 +402,13 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         const lString: LClassifier = LPointerTargetable.from(Selectors.getFirstPrimitiveTypes());
 
         const ret = function () {
-            const dAttribute = DAttribute.new(name, lString.id); // damiano: check if i remove secon parameter
+            const dAttribute = DAttribute.new(name, lString.id);
             // BEGIN()
             CreateElementAction.new(dAttribute);
 
             const wClass = WPointerTargetable.fromD(dClass);
             wClass.attributes = [...dClass.attributes, dAttribute];
-            const wAttribute = WPointerTargetable.fromD(dAttribute);
-            wAttribute.type = lString.id;
+            // const wAttribute = WPointerTargetable.fromD(dAttribute);
             // END()
             /**
              * damiano: it was like this in your version??
@@ -438,7 +438,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 }
             }
              */
-        /
+
         }
         ret();
         return ret;
@@ -595,7 +595,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     // activated by user in JSX
     // todo: this.wrongAccessMessage("addClass");
-    protected cannotCall(name: string, ...params: string[]): void {
+    protected cannotCall(name: string, ...params: string[]): any {
         Log.exDevv(name + ' should never be called directly, but should trigger get_' + name + '(' + params.join(', ') +'), this is only a signature for type checking.'); }
     public addClass(): void { this.cannotCall('addClass'); }
     public addPackage(): void { this.cannotCall('addPackage'); }
@@ -953,6 +953,7 @@ export class DTypedElement extends DPointerTargetable { // Mixin(DTypedElement0,
     parent: Pointer<DModelElement, 0, 'N', LModelElement> = [];
     father!: Pointer<DModelElement, 1, 1, LModelElement>;
     name!: string;
+    instances!: Pointer<DValue, 0, 'N', LValue>;
     // personal
     type!: Pointer<DClassifier, 1, 1, LClassifier>;
     ordered: boolean = true;
@@ -984,6 +985,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
     father!: LModelElement;
     annotations!: LAnnotation[];
     name!: string;
+    instances!: LValue[];
     // personal
     type!: LClassifier;
 
@@ -1385,6 +1387,7 @@ export class DOperation extends DPointerTargetable { // extends DTypedElement
     // static structure: typeof DOperation;
 
     // inherit redefine
+    instances!: never[];
     id!: Pointer<DOperation, 1, 1, LObject>;
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     parent: Pointer<DClass, 0, 'N', LClass> = [];
@@ -1419,6 +1422,7 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
     // static structure: typeof DOperation;
 
     // inherit redefine
+    instances!: never[];
     annotations!: LAnnotation[];
     parent!: LClass[];
     father!: LClass;
@@ -1537,6 +1541,7 @@ export class DParameter extends DPointerTargetable { // extends DTypedElement
     // static structure: typeof DParameter;
 
     // inherit redefine
+    instances!: never[];
     id!: Pointer<DParameter, 1, 1, LParameter>;
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     parent: Pointer<DOperation, 0, 'N', LOperation> = [];
@@ -1567,6 +1572,7 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
     // static structure: typeof DParameter;
 
     // inherit redefine
+    instances!: never[];
     annotations!: LAnnotation[];
     parent!: LOperation[];
     father!: LOperation;
@@ -2781,30 +2787,6 @@ LDataType.subclasses.push(LEnumerator);
 // damianoo:_ you deleted everything from DObject to LValue included? or just moved them?
 
 @RuntimeAccessible
-export class DObject extends DPointerTargetable { // extends DNamedElement, m1 class instance
-    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
-    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    // static singleton: LObject;
-    // static logic: typeof LObject;
-    // static structure: typeof DObject;
-
-    // inherit redefine
-    id!: Pointer<DObject, 1, 1, LObject>;
-    parent: Pointer<DModel, 0, 'N', LModel> = []; // todo: problema m1 model can contain objects without package, it's only a web of objects with a object root actually.
-    father!: Pointer<DModel, 1, 1, LModel>;
-    annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
-    name!: string;
-    // personal
-    instanceof: Pointer<DClass, 0, 'N'> = [];
-
-
-    public static new(name?: DNamedElement["name"]): DObject {
-        return new Constructors(new DObject('dwc')).DPointerTargetable().DModelElement()
-            .DNamedElement(name).DObject().end();
-    }
-}
-
-@RuntimeAccessible
 export class DModelM1 extends DNamedElement{
     name!: string;
     roots!: Pointer<DObject, 1, 'N', LObject> // no package ma LObjects[] (solo quelli isRoot)
@@ -2829,104 +2811,6 @@ type LPrimitiveType = LClass;
 // possibile fix: LValue.toString() che ritorna il .value
 
 
-// istanza di m2 class (istanza di Casa)
-@RuntimeAccessible
-export class LObject<Context extends LogicContext<DObject> = any, C extends Context = Context>  extends LNamedElement { // extends DNamedElement, m1 class instance
-    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
-    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    public __raw!: DObject;
-    id!: Pointer<DObject, 1, 1, LObject>;
-    // static singleton: LObject;
-    // static logic: typeof LObject;
-    // static structure: typeof DObject;
-    get_all_subobjects!: LObject[]
-    // + tutte le funzioni di comodità navigazionale del modello, trattarlo un pò come se fosse un modello (e quasi può esserlo)
-
-    // inherit redefine
-    parent!: LModel[]; // todo: problema m1 model can contain objects without package, it's only a web of objects with a object root actually.
-    father!: LModel;
-    annotations!: LAnnotation[];
-    name!: string;
-    // personal
-    instanceof!: LClass[];
-    isRoot!: boolean;
-    value!: Pointer<DValue, 0, 'N'>;
-
-    protected get_instanceof(context: Context): this["instanceof"] {
-        return context.data.instanceof.map((pointer) => {
-            return LPointerTargetable.from(pointer)
-        });
-    }
-    protected set_instanceof(val: PackArr<this["instanceof"]>, context: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
-        SetFieldAction.new(context.data, 'instanceof', list, "", true);
-        return true;
-    }
-}
-DNamedElement.subclasses.push(DObject);
-LNamedElement.subclasses.push(LObject);
-
-
-@RuntimeAccessible
-export class DValue extends DPointerTargetable { // extends DModelElement, m1 value (attribute | reference)
-    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
-    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    // static singleton: LValue;
-    // static logic: typeof LValue;
-    // static structure: typeof DValue;
-
-    // inherit redefine
-    id!: Pointer<DValue, 1, 1, LValue>;
-    parent: Pointer<DObject, 0, 'N', LObject> = [];
-    father!: Pointer<DObject, 1, 1, LObject>;
-    annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
-    // personal
-    instanceof: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature> = [];
-
-    public static new(name?: DNamedElement["name"]): DValue {
-        return new Constructors(new DValue('dwc')).DPointerTargetable().DModelElement()
-            .DNamedElement(name).DValue().end();
-    }
-}
-@RuntimeAccessible
-export class LValue<Context extends LogicContext<DValue> = any, C extends Context = Context>  extends LModelElement { // extends DModelElement, m1 value (attribute | reference)
-    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
-    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    public __raw!: DValue;
-    id!: Pointer<DValue, 1, 1, LValue>;
-    // static singleton: LValue;
-    // static logic: typeof LValue;
-    // static structure: typeof DValue;
-
-    // inherit redefine
-    parent!: LObject[]; // todo: problema m1 model can contain objects without package, it's only a web of objects with a object root actually.
-    father!: LObject;
-    annotations!: LAnnotation[];
-    // personal
-    value!: (any | Pointer<DPrimitiveType, 0, 1, LPrimitiveType>[] | Pointer<DObject, 0, 1, LObject>)[]; //  /* PrimitiveType se istanza di attrib*/ | LObject /*se istanza di ref*/ = "casa mia";
-    instanceof!: LStructuralFeature [];
-    /*
-        get_value(){
-            se è istanza di Reference ritorna wrappato il puntatore
-            se è di DAttribute ritorna il val grezzo
-        }
-
-        get_toString() {
-            return this.get_value(context)
-        }*/
-    protected get_instanceof(context: Context): this["instanceof"] {
-        return context.data.instanceof.map((pointer) => {
-            return LPointerTargetable.from(pointer)
-        });
-    }
-    protected set_instanceof(val: PackArr<this["instanceof"]>, context: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
-        SetFieldAction.new(context.data, 'instanceof', list, "", true);
-        return true;
-    }
-}
-DNamedElement.subclasses.push(DValue);
-LNamedElement.subclasses.push(LValue);
 
 
 
@@ -3208,21 +3092,22 @@ export class DObject extends DPointerTargetable { // extends DNamedElement, m1 c
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
     // inherit redefine
+    annotations!: never[];
     id!: Pointer<DObject, 1, 1, LObject>;
-    parent: Pointer<DModel, 0, 'N', LModel> = [];
-    father!: Pointer<DModel, 1, 1, LModel>;
-    annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
+    parent: Pointer<DModel | DObject, 0, 'N', LModel | LObject> = [];
+    father!: Pointer<DModel | DObject, 1, 1, LModel | LObject>;
+    // annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
 
     // personal
     instanceof!: Pointer<DClass, 1, 1, LClass>;
     features: Pointer<DValue, 0, 'N', LValue> = [];
 
-
     public static new(name?: DNamedElement["name"]): DObject {
         return new Constructors(new DObject('dwc')).DPointerTargetable().DModelElement()
             .DNamedElement(name).DObject().end();
     }
+
 }
 
 @RuntimeAccessible
@@ -3233,15 +3118,24 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     id!: Pointer<DObject, 1, 1, LObject>;
 
     // inherit redefine
-    parent!: LModel[];
-    father!: LModel;
-    annotations!: LAnnotation[];
+    annotations!: never[];
+    childrens!: LValue[];
+    parent!: (LModel | LObject)[];
+    father!: LModel | LObject;
+    // annotations!: LAnnotation[];
     name!: string;
 
     // personal
+    deep_subobjects!: LObject[]; // damiano: itera features (lvalue[]) deep e vitando di inserire doppioni (salva una mappatura di di già aggiunti e skip se ricompaiono)
+    subobjects!: LObject[];
+    // damiano: + tutte le funzioni di comodità navigazionale del modello, trattarlo un pò come se fosse un modello (e quasi può esserlo)
     instanceof!: LClass;
     features!: LValue[];
+    isRoot!: boolean;
 
+    // damiano: do get childrens id, verifica che lobject.childrens funzioni
+    protected get_isRoot(context: Context): boolean { return context.proxyObject.father.className === DModel.name; }
+    protected set_isRoot(val: never, context: Context): boolean { return this.wrongAccessMessage("isRoot cannot be set directly, change father element instead."); }
 
     public feature(name: string): (PrimitiveType|LObject)|(PrimitiveType|LObject)[] { this.cannotCall('feature'); return null; }
     private get_feature(context: Context): (name: string) => (PrimitiveType|LObject)|(PrimitiveType|LObject)[] {
@@ -3270,8 +3164,9 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         const pointer = context.data.instanceof;
         return LPointerTargetable.from(pointer)
     }
-    protected set_instanceof(val: this["instanceof"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'instanceof', val.id, "", true);
+    protected set_instanceof(val: PackArr<this["instanceof"]>, context: Context): boolean {
+        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        SetFieldAction.new(context.data, 'instanceof', list, "", true);
         return true;
     }
 
@@ -3302,9 +3197,12 @@ DNamedElement.subclasses.push(DObject);
 LNamedElement.subclasses.push(LObject);
 
 @RuntimeAccessible
-export class DValue extends DPointerTargetable { // extends DModelElement, m1 value (attribute | reference)
+export class DValue extends DModelElement { // extends DModelElement, m1 value (attribute | reference)
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    // static singleton: LValue;
+    // static logic: typeof LModelElement;
+    // static structure: typeof DValue;
 
     // inherit redefine
     id!: Pointer<DValue, 1, 1, LValue>;
@@ -3313,8 +3211,9 @@ export class DValue extends DPointerTargetable { // extends DModelElement, m1 va
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
 
     // personal
-    value: string[]|Pointer<DObject, 1, 'N', LObject> = [];
-    instanceof: Pointer<DStructuralFeature, 1, 1, LStructuralFeature> = '';
+    value: PrimitiveType[] | Pointer<DObject, 1, 'N', LObject> = [];
+    instanceof: Pointer<DStructuralFeature, 1, 1, LStructuralFeature> = ''; // todo: maybe min lowerbound 0 if you want to allow free shape objects chiedere prof
+    // conformsTo!: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature>; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
 
     public static new(name?: DNamedElement["name"]): DValue {
         return new Constructors(new DValue('dwc')).DPointerTargetable().DModelElement()
@@ -3329,40 +3228,30 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     id!: Pointer<DValue, 1, 1, LValue>;
 
     // inherit redefine
-    parent!: LObject[];
-    father!: LObject;
-    annotations!: LAnnotation[];
+    parent!: (LObject | LModel)[];
+    father!: LObject | LModel;
     // personal
-    value!: string[]|LObject[];
+    value!: PrimitiveType[] | LObject[];
     instanceof!: LStructuralFeature;
+    conformsTo!: LStructuralFeature[]; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
 
     protected get_instanceof(context: Context): this["instanceof"] {
         const pointer = context.data.instanceof;
         return LPointerTargetable.from(pointer)
     }
-    protected set_instanceof(val: PackArr<this["instanceof"]>, context: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
-        SetFieldAction.new(context.data, 'instanceof', list, "", true);
+    protected set_instanceof(val: Pack1<this["instanceof"]>, context: Context): boolean {
+        // const list = val.map((lItem) => { return Pointers.from(lItem) });
+        let ptr = Pointers.from(val); // damiano: verifica sia un puntatore singolo
+        SetFieldAction.new(context.data, 'instanceof', ptr, "", true);
         return true;
     }
-
-    protected get_value(context: Context): (string|LObject)|(string|LObject)[] {
-        const value: (string|LObject)[]= [];
-        const data = context.data;
-        const instaceof = context.proxyObject.instanceof;
-        if(instaceof.className === 'DReference') {
-            const pointers = data.value;
-            for(let pointer of pointers) {
-                if(pointer !== 'null') {
-                    const object: LObject = LObject.fromPointer(pointer);
-                    value.push(object);
-                }
-            }
-        } else { value.push(...context.data.value); }
-        switch(value.length) {
+    protected get_value(context: Context): this["value"] | this["value"][0] {
+        let ret: any[] = context.data.value as [];
+        if (context.proxyObject.instanceof.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
+        switch(ret.length) {
             case 0: return '';
-            case 1: return value[0];
-            default: return value;
+            case 1: return ret[0];
+            default: return ret;
         }
     }
 
@@ -3372,14 +3261,28 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         return true;
     }
 
-    public rawValue(): void { super.cannotCall('formatted'); }
+    protected get_toString(context: Context): () => string { return () => this._toString(context); }
+    protected _toString(context: Context): string {
+        let val: any = this.get_value(context);
+        if (!val) return val + '';
+        if (!Array.isArray(val)) val = [val];
+        if (context.proxyObject.instanceof.className === DReference.name) val = val.map( (e: GObject) =>  {  return e.instanceof.__raw.name || e; });
+        switch(val.length) {
+            case 0: return '';
+            case 1: return val[0] + '';
+            default: return val + '';
+        }
+    }
+    public rawValue(): void { super.cannotCall('rawValue'); }
+    /*
     protected get_rawValue(context: Context): string {
-        const values: (string|LObject)|(string|LObject)[] = context.proxyObject.value;
+        const values: this["value"] = context.proxyObject.value;
         const instanceOf = context.proxyObject.instanceof;
         const stringValues: string[] = [];
         if(Array.isArray(values)) {
             for(let value of values) {
-                if(typeof value !== 'string') { stringValues.push(value.feature('name') as string); }
+                if (!value) continue;
+                if (typeof value !== 'string') { stringValues.push((value as LObject).feature('name') as string); }
                 else {
                     if(instanceOf.type.className === 'DEnumerator') {
                         const enumerator: LEnumerator = LEnumerator.fromPointer(instanceOf.type.id);
@@ -3404,6 +3307,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
 
     }
+    */
 
     protected get_delete(context: Context): () => void {
         const ret = () => {

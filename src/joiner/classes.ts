@@ -265,6 +265,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     }*/
 
 }
+export function Obsolete<T extends any>( constructor: T & GObject): T { return constructor; }
 export function Leaf<T extends any>( constructor: T & GObject): T { return constructor; }
 export function Node<T extends any>( constructor: T & GObject): T { return constructor; }
 export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {

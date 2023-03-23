@@ -271,42 +271,35 @@ export class Selectors{
 
     static getViews(condition?: (m: DModel) => boolean): DViewElement[] { return Selectors.getAll(DViewElement); }
 
-    /*static getCurrentView(data: LModelElement): DViewElement {
-        Log.exDevv('todo');
-        return undefined as any;
-    }*/
-    // 2 = explicit exact match (===), 1 = matches a subclass, 0 = implicit match (any *), -1 = not matches
-    private static matchesOclCondition(v: DViewElement, data: LModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
-      if (!v.oclApplyCondition) return ViewEClassMatch.IMPLICIT_MATCH;
-      Log.exDevv('todo view ocl matching');
-      return ViewEClassMatch.EXACT_MATCH;
-    }
 
-    /*
-    private static matchesOclCondition(v: DViewElement, data: DModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
-        if (!v.oclApplyCondition) return ViewEClassMatch.IMPLICIT_MATCH;
-        const query = v.oclApplyCondition;
-        if(data.className === 'DObject') {
-            const lObject: LObject = LObject.fromPointer(data.id);
-            if(lObject.instanceof[0].name === query) return ViewEClassMatch.EXACT_MATCH;
-        }
-        return ViewEClassMatch.MISMATCH;
-    }
-     */
 
     private static queryJS(model: LModel, query: string): LPointerTargetable[] {
         try {
             return eval(query);
         } catch (e) { return []; }
     }
+    /*static getCurrentView(data: LModelElement): DViewElement {
+        Log.exDevv('todo');
+        return undefined as any;
+    }*/
 
-    private static matchesOclCondition(v: DViewElement, data: DModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
+
+    private static matchesOclCondition_trueoclversion(v: DViewElement, data: DModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
+        if (!v.oclApplyCondition) return ViewEClassMatch.IMPLICIT_MATCH;
+        const query = v.oclApplyCondition;
+        if(data.className === 'DObject') {
+            const lObject: LObject = LObject.fromPointer(data.id);
+            if (lObject.instanceof.name === query) return ViewEClassMatch.EXACT_MATCH;
+        }
+        return ViewEClassMatch.MISMATCH;
+    }
+
+    // 2 = explicit exact match (===), 1 = matches a subclass, 0 = implicit match (any *), -1 = not matches
+    private static matchesOclCondition(v: DViewElement, data: DModelElement | LModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
         if (!v.query) return ViewEClassMatch.IMPLICIT_MATCH;
 
         const viewpoint = Selectors.getViewpoint();
-        if(v.viewpoint !== viewpoint.id) {
-            return ViewEClassMatch.IMPLICIT_MATCH;
-        }
+        if(v.viewpoint !== viewpoint.id) { return ViewEClassMatch.IMPLICIT_MATCH; }
 
         let query = v.query;
         try {
@@ -314,11 +307,11 @@ export class Selectors{
             query = query.slice(query.indexOf('.'), query.length);
             query = 'model' + query;
             const model = Selectors.getModel(name);
-            if(model) {
+            if (model) {
                 const lModel: LModel = LModel.fromPointer(model.id);
                 const result = Selectors.queryJS(lModel, query).flat();
                 const pointers = Pointers.from(result);
-                if(pointers.includes(data.id)) return ViewEClassMatch.EXACT_MATCH + v.explicitApplicationPriority;
+                if (pointers.includes(data.id)) return ViewEClassMatch.EXACT_MATCH + v.explicitApplicationPriority;
             }
         } catch (e) { console.log('wrong query') }
         return ViewEClassMatch.MISMATCH;

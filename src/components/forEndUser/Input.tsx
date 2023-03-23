@@ -17,7 +17,7 @@ function InputComponent(props: AllProps) {
     css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
     css += (props.hidden) ? ' hidden-input' : '';
 
-    const notify = () => toast((t) => (
+    const notify = () => toast((t: GObject) => (
         <div onClick={() => toast.dismiss(t.id)}>
             <i className={'p-1 bi bi-info-circle-fill'}>
                 <label className={'ms-1'}>This is the {tooltip}</label>

@@ -20,7 +20,6 @@ import {
     windoww,
     getPath,
     Selectors,
-    createOrOpenModelTab,
     PointedBy,
     PendingPointedByPaths,
     statehistory, DUser, GObject

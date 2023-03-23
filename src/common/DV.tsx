@@ -42,7 +42,7 @@ class DefaultView {
         return `<div className={'round bg-white class-view'}>
             <Input jsxLabel={<b className={'class-name'}>EClass:</b>} 
                    obj={this.data.id} field={'name'} hidden={true} />
-            <hr />
+            <hr/>
             <div className={'class-children'}>
                 {this.data.childrens.map((child, index) => {
                     return <DefaultNode key={index} data={child.id}></DefaultNode>
@@ -78,7 +78,7 @@ class DefaultView {
             </label>
             <hr />
             <div className={'object-children'}>
-                {this.data.childrens.map((child, index) => {
+                {this.data.children.map((child, index) => {
                     return <DefaultNode key={index} data={child.id}></DefaultNode>
                 })}
             </div>
@@ -87,7 +87,7 @@ class DefaultView {
     public static value() {
         return `<div className={'d-flex'}>
             <label className={'d-block ms-1'}>{this.data.instanceof.name}</label>
-            <label className={'d-block ms-auto'}>{this.data.rawValue}</label>
+            <label className={'d-block ms-auto'}>{this.data /*damiano todo: verifica se questo chiama il tostring, altrimenti usa this.data.value*/}</label>
         </div>`
     }
     public static defaultPackage() {

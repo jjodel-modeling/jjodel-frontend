@@ -1,6 +1,6 @@
 import React, {CSSProperties, Dispatch, LegacyRef, PureComponent, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import type {
+import {
     AbstractConstructor,
     DAttribute,
     DModelElement,
@@ -11,6 +11,7 @@ import type {
     LClass,
     LEnumerator,
     LModelElement,
+    Obsolete,
     Pointer
 } from "../../joiner";
 import {
@@ -78,6 +79,7 @@ class BidirectionalInput extends PureComponent<AllProps, ThisState> {
 
 }
 
+@Obsolete
 class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
     render(): ReactNode {
         const data = this.props.data;
@@ -90,7 +92,7 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
         delete otherprops.key;
         delete otherprops.setter;
         delete otherprops.getter;
-        const primitives = Selectors.getAllPrimitiveTypes(); // damiano: questo va spostato in mapstate to props
+        const primitives = Selectors.getAllPrimitiveTypes(); // l'intera classe è obsoleta
         // todo: replace with this.props.data.package.classes? but maybe attrib types can be from other packages in same model & from m3 primitive type def. so model.classes & model.meta.classes ?
         const classes: LClass[] = this.props.data.model.classes;
 
@@ -100,13 +102,10 @@ class BidirectionalSelect extends PureComponent<AllSelectProps, ThisState> {
         if(data.className === "DAttribute") { hasVoid = false; hasClasses = false; }
         if(data.className === "DReference") { hasVoid = false; hasPrimitive = false; hasEnumerators = false; }
         if(data.className === "DParameter") { hasVoid = false; }
-        // damiano: questo andrebbe invertito. di default setti tutto a let hasClasses = false, e se è un package lo setti a true.
-        // perchè altrimenti per d-class non previste (GraphElement, annotations...) risulta a true a meno che non le elenchi tutte.
-        // e meglio fare uno switch invece di if-chain
         hasVoid = (this.props.hasVoid !== undefined) ? this.props.hasVoid : hasVoid;
         hasPrimitive = (this.props.hasPrimitive !== undefined) ? this.props.hasPrimitive : hasPrimitive;
         hasClasses = (this.props.hasClasses !== undefined) ? this.props.hasClasses : hasClasses;
-        hasEnumerators = (this.props.hasEnumerators !== undefined) ? this.props.hasEnumerators : hasEnumerators; //damiano: queste pure in mapstate, e se non hasPrimitive si può evitare chiamare il selettore per i primitivi
+        hasEnumerators = (this.props.hasEnumerators !== undefined) ? this.props.hasEnumerators : hasEnumerators;
 
         /*const classnames: {ptr: Pointer, name: string}[] = !hasClasses ? [] : classes.map((c: LClass) => {
             return {ptr: c.id, name: data.package && (c.package?.id === data.package?.id) ? c.name : c.fullname}; });*/

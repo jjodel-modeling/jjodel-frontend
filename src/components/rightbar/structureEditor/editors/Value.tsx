@@ -1,7 +1,8 @@
 import React from "react";
 import {SetFieldAction} from "../../../../redux/action/action";
-import {LEnumerator, LStructuralFeature, Selectors, U} from "../../../../joiner";
+import {LEnumerator, LStructuralFeature, Pointer, Selectors, U} from "../../../../joiner";
 import type {LValue} from "../../../../joiner";
+import { PrimitiveType } from "../../../../joiner/types";
 
 interface Props {value: LValue}
 function Value(props: Props) {
@@ -46,13 +47,13 @@ function Value(props: Props) {
                 <i className={'p-1 bi bi-plus'}></i>
             </button>
         </div>
-        {dValue.value.map((pointer, index) => {
-            if(feature.className === "DAttribute" &&  feature.type.className === "DClass") { // primitive
+        {dValue.value.map((pointer: PrimitiveType | Pointer, index) => {
+            if(feature.className === "DAttribute" && feature.type.className === "DClass") { // primitive
                 return(<div className={'mt-1 d-flex ms-4'} key={index}>
                     <div className={'border border-dark'}></div>
-                    <input onChange={(evt) => {change(evt, index, false)}} className={'input ms-1'}
-                           value={pointer} checked={pointer === 'true'} type={field} step={stepSize} maxLength={maxLength} />
-                    <button className={'btn btn-danger ms-2'} onClick={(evt) => {remove(index)}}>
+                    <input onChange={(evt) => { change(evt, index, false)} } className={'input ms-1'}
+                           value={pointer + ''} checked={pointer === 'true'} type={field} step={stepSize} maxLength={maxLength} />
+                    <button className={'btn btn-danger ms-2'} onClick={(evt) => { remove(index) }}>
                         <i className={'p-1 bi bi-trash3-fill'}></i>
                     </button>
                 </div>);
@@ -62,7 +63,7 @@ function Value(props: Props) {
                 return(<div className={'mt-1 d-flex ms-4'} key={index}>
                     <div className={'border border-dark'}></div>
                     <select onChange={(evt) => {change(evt, index, false)}}
-                            className={'ms-1 select'} value={pointer}>
+                            className={'ms-1 select'} value={pointer+''}>
                         <option value={'null'}>-----</option>
                         {enumerator.literals.map((literal, i) => {
                             return <option key={i} value={i}>{literal.name}</option>
@@ -80,7 +81,7 @@ function Value(props: Props) {
                 return(<div className={'mt-1 d-flex ms-4'} key={index}>
                     <div className={'border border-dark'}></div>
                     <select onChange={(evt) => {change(evt, index, true)}}
-                            className={'ms-1 select'} value={pointer}>
+                            className={'ms-1 select'} value={pointer + ''}>
                         <option value={'null'}>-----</option>
                         {objects.map((object, i) => {
                             return <option key={i} value={object.id}>{object.feature('name')}</option>

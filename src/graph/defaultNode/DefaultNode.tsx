@@ -17,7 +17,7 @@ import {
     LModelElement,
     Log,
     LViewElement,
-    RuntimeAccessibleClass,
+    RuntimeAccessibleClass, SetRootFieldAction,
     Vertex,
     windoww,
 } from "../../joiner";

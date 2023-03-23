@@ -5,7 +5,7 @@ import type {
     DLog,
     DModelElement,
     DParameter,
-    DRefEdge,
+    DRefEdge, GObject,
     LAttribute,
     LClass,
     LClassifier,
@@ -165,7 +165,7 @@ export class IStore {
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
         }
 
-        const returnTypes = ["void", "undefined", "null"]; // damiano: you put only void?
+        const returnTypes = ["void", "undefined", "null"];
         for (let returnType of returnTypes) {
             const dReturnType = DClass.new(returnType);
             CreateElementAction.new(dReturnType);
