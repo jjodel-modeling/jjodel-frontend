@@ -41,7 +41,7 @@
     "react-xarrows": "^2.0.2",
     "sass": "^1.49.9",
     "smart-webcomponents-react": "^9.3.53",
-    "sweetalert2": "^11.1.5",
+    "sweetalert2": "^11.7.3",
     "sweetalert2-react-content": "^4.1.1",
     "ts-mixer": "^6.0.0",
     "typescript": "^4.6.2",

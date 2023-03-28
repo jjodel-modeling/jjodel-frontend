@@ -63,7 +63,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
 interface OwnProps {
     model: Pointer<DModel, 1, 1, LModel>;
     isMetamodel: boolean;
-    metamodelId?: Pointer<DModel, 1, 1, LModel>;
+    metamodelId?: Pointer<DModelElement, 1, 1, LModelElement>;
 }
 
 interface StateProps {

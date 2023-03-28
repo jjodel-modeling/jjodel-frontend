@@ -13,14 +13,6 @@ let oldtimer: any;
 function MetamodelTabComponent(props: AllProps) {
     const model = props.model;
     const graph = props.graph;
-    const [useless_state_var, set_useless_state_var] = useState(0);
-
-    console.log("this metamodel tab:", {id: props.model?.id, model: props.model, props: props, useless_state_var});
-    /*if (!model) {
-         // if (useless_state_var<3)setTimeout( ()=>set_useless_state_var(useless_state_var => useless_state_var + 1), 1000); // forceupdate()
-        // clearTimeout(oldtimer);
-        // oldtimer = setTimeout( () => SetRootFieldAction.new("updatemetamodeltab_temp_fix_to_allow_load", Date.now(), '', false), 1);
-        return <div>Loading save...</div>; }*/
 
     if (!graph) {
         CreateElementAction.new(DGraph.new(model.id));
@@ -47,10 +39,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    // ret.model = LModel.fromPointer(ownProps.modelid);
-    const pointer = state.metamodel;
-    if (pointer) ret.model = LModel.fromPointer(pointer);
-
+    ret.model = LModel.fromPointer(ownProps.modelid);
     const graphs: DGraph[] = DGraph.fromPointer(state.graphs);
     const pointers = graphs.filter((graph) => { return graph.model === ret.model?.id });
     if(pointers.length > 0) ret.graph = LGraph.fromPointer(pointers[0].id);
