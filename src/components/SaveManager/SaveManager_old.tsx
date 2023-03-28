@@ -1,4 +1,6 @@
-import React, {ChangeEvent, Dispatch, FC, PureComponent, ReactNode} from 'react';
+export const fakeexport = {};
+/*
+* import React, {ChangeEvent, Dispatch, FC, PureComponent, ReactNode} from 'react';
 import {
     Dictionary, DUser,
     EcoreParser, GObject, IStore,
@@ -24,24 +26,6 @@ const style = {
     display: "inline-block",
     zIndex: 10
 } as any;
-/*const SaveManagerfc: FC<SaveManagerProps> = () => (
-  <>
-      <div style={ style }>
-          <button onClick={(e)=> { save() }}>Save</button>
-          <button onClick={(e)=> { load() }}>Load</button>
-          <br />
-          <button onClick={(e)=> { undo() }}>Undo</button>
-          <button onClick={(e)=> { redo() }}>Redo</button>
-          <br />
-          <button onClick={(e)=> { exportEcore() }}>Export JSON</button>
-          <button onClick={(e)=> { importEcore() }}>Import JSON</button>
-          <button onClick={(e)=> { exportEcore(true) }}>Export XML</button>
-          <button onClick={(e)=> { importEcore(true) }}>Import XML</button>
-    </div>
-    <span id={"export-tmp"} style={{position: "absolute", width: "25vw", bottom:0, overflowY: "scroll", zIndex:10, right:0, background: "white"}}></span>
-    </>
-);
-*/
 class UndoRedoState{
     hover: boolean = false;
     jsx: any | null;
@@ -51,7 +35,7 @@ class UndoRedoState{
     styleon!: React.CSSProperties;
     styleoff!: React.CSSProperties;
     style!: React.CSSProperties;
-    */
+    * /
 
 }
 // private
@@ -106,7 +90,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
                             out.map(row => <div style={{background: "#ddd", marginLeft: "-20px", height:"fit-content", pointerEvents:"none"}}>{row.fullpath.join(".") + " = " + row.fullvalue}</div>)
                         }</div>
                     </li>
-            })}</>;
+                })}</>;
         let obj: GObject = {};
         obj[key] = {...(this.state as GObject)[key], hover: true, jsx};
         // {undo: {...this.state.undo, hover: true, jsx}}
@@ -154,66 +138,69 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
 }
 
 
-let tmpsave: IStore;
-function save(){ tmpsave = store.getState(); localStorage.setItem("tmpsave", JSON.stringify(tmpsave)); }
-function load(fullstatestr?: string){
-    if (!fullstatestr && tmpsave) return LoadAction.new(tmpsave);
-    fullstatestr = fullstatestr || localStorage.getItem("tmpsave") || 'null'; // priorities: 1) argument from file 2) state variable cached 3) localstorage 4) null prevent crash
-    tmpsave = JSON.parse(fullstatestr);
-    return LoadAction.new(tmpsave); }
 
-function exportEcore(e: React.MouseEvent, toXML: boolean = false, toFile: boolean = true): void {
-    let lmodel: LModel = (LPointerTargetable.wrap(store.getState().models[0]) as LModel)
-    let json = exportEcore0(lmodel);
-    let str = JSON.stringify(json, null, 4);
-    if (toXML) {
-        str = prjson2xml.json2xml(json, '\t');
-        str = U.formatXml(str);
+class SaveManager {
+    private static tmpsave: IStore;
+    static save(){ this.tmpsave = store.getState(); localStorage.setItem("tmpsave", JSON.stringify(this.tmpsave)); }
+    static load(fullstatestr?: string): void {
+        if (!fullstatestr && this.tmpsave)  LoadAction.new(this.tmpsave);
+        fullstatestr = fullstatestr || localStorage.getItem("tmpsave") || 'null'; // priorities: 1) argument from file 2) state variable cached 3) localstorage 4) null prevent crash
+        this.tmpsave = JSON.parse(fullstatestr);
+        LoadAction.new(this.tmpsave); }
+
+    static exportEcore(e: React.MouseEvent, toXML: boolean = false, toFile: boolean = true): void {
+        let lmodel: LModel = (LPointerTargetable.wrap(store.getState().models[0]) as LModel)
+        let json = this.exportEcore0(lmodel);
+        let str = JSON.stringify(json, null, 4);
+        if (toXML) {
+            str = prjson2xml.json2xml(json, '\t');
+            str = U.formatXml(str);
+        }
+
+        if (!toFile) {
+            (document.querySelector("#export-tmp") as any).innerText = str;
+            localStorage.setItem("import", str);
+            return;
+        }
+        U.download((lmodel.name || ((lmodel as any).isMetaModel ? 'M2' : 'M1') + '_unnamed')  + (toXML ? ".xml.ecore" : '.json.ecore'), str);
     }
 
-    if (!toFile) {
-        (document.querySelector("#export-tmp") as any).innerText = str;
-        localStorage.setItem("import", str);
-        return;
+    static exportEcore0(model: LModel): Json { let loopobj = {}; try { return model.generateEcoreJson(loopobj); } catch(e) { Log.exx("loop in model:", loopobj); } return {"eror": true, loopobj}; }
+    static importEcore(e: React.MouseEvent, fromXML: boolean = false, fromfile: boolean = true): void {
+        const extension = ".ecore"; // Selectors.getActiveModel().isM1() ? '.' + Selectors.getActiveModel().metamodel.fullname() : '.ecore';
+        let filestring: string, jsonstring: string;
+        console.log("importEcore: prefromfile");
+        if (!fromfile) {
+            filestring = localStorage.getItem("import") || 'null';
+            if (fromXML) {
+                const xmlDoc = new DOMParser().parseFromString(filestring,"text/xml");
+                filestring = prxml2json.xml2json(xmlDoc, '\t');
+            }
+            return this.importEcore0( filestring); }
+
+        console.log("importEcore: pre file read");
+        U.fileRead((e: Event, files?: FileList | null, fileContents?: string[]) => {
+            Log.ex(!fileContents || !files || fileContents.length !== files.length, 'Failed to get file contents:', files, fileContents);
+            Log.ex(fileContents && fileContents.length > 1, 'Should not be possible to input multiple files.');
+            if (!fileContents) return;
+            if (fileContents.length == 0) return;
+            filestring = fileContents[0];
+            console.log('importEcore filestring input: ', filestring);
+            if (fromXML) {
+                const xmlDoc = new DOMParser().parseFromString(filestring,"text/xml");
+                console.log('importEcore xml:', xmlDoc);
+                jsonstring = prxml2json.xml2json(xmlDoc, '\t');
+                console.log('importEcore jsonstr input: ', jsonstring);
+            }
+            else jsonstring = filestring;
+            this.importEcore0(jsonstring || 'null');
+        }, [extension], true);
     }
-    U.download((lmodel.name || ((lmodel as any).isMetaModel ? 'M2' : 'M1') + '_unnamed')  + (toXML ? ".xml.ecore" : '.json.ecore'), str);
-}
 
-function exportEcore0(model: LModel): Json { let loopobj = {}; try { return model.generateEcoreJson(loopobj); } catch(e) { Log.exx("loop in model:", loopobj); } return {"eror": true, loopobj}; }
-function importEcore(e: React.MouseEvent, fromXML: boolean = false, fromfile: boolean = true){
-    const extension = ".ecore"; // Selectors.getActiveModel().isM1() ? '.' + Selectors.getActiveModel().metamodel.fullname() : '.ecore';
-    let filestring: string, jsonstring: string;
-    console.log("importEcore: prefromfile");
-    if (!fromfile) {
-        filestring = localStorage.getItem("import") || 'null';
-        if (fromXML) {
-            const xmlDoc = new DOMParser().parseFromString(filestring,"text/xml");
-            filestring = prxml2json.xml2json(xmlDoc, '\t');
-        }
-        return importEcore0( filestring); }
-
-    console.log("importEcore: pre file read");
-    U.fileRead((e: Event, files?: FileList | null, fileContents?: string[]) => {
-        Log.ex(!fileContents || !files || fileContents.length !== files.length, 'Failed to get file contents:', files, fileContents);
-        Log.ex(fileContents && fileContents.length > 1, 'Should not be possible to input multiple files.');
-        if (!fileContents) return;
-        if (fileContents.length == 0) return;
-        filestring = fileContents[0];
-        console.log('importEcore filestring input: ', filestring);
-        if (fromXML) {
-            const xmlDoc = new DOMParser().parseFromString(filestring,"text/xml");
-            console.log('importEcore xml:', xmlDoc);
-            jsonstring = prxml2json.xml2json(xmlDoc, '\t');
-            console.log('importEcore jsonstr input: ', jsonstring);
-        }
-        else jsonstring = filestring;
-        importEcore0(jsonstring || 'null');
-    }, [extension], true);
-}
-
-function importEcore0(str: string | null): void {
-    console.warn("pre-parse", str);
-    console.warn("parsed: ", EcoreParser.parse(str, false));
+    static importEcore0(str: string | null): void {
+        console.warn("pre-parse", str);
+        console.warn("parsed: ", EcoreParser.parse(str, false));
+    }
 }
 
 let tmp = {
@@ -258,3 +245,6 @@ export const SaveManagerConnected = connect<StateProps, DispatchProps, OwnProps,
 )(SaveManagerComponent);
 
 export default SaveManagerConnected;
+
+*
+* */

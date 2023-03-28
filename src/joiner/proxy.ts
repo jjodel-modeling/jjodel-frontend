@@ -82,7 +82,7 @@ export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibl
     set(target: T, p: string | number | symbol, value: any, proxyitself: Proxyfied<T>): boolean { throw new Error('proxy set must be overridden'); }
     deleteProperty(target: T, p: string | symbol): boolean { throw new Error('proxy delete must be overridden'); }
 
-    ownKeys(target: T): ArrayLike<string | symbol>{ return Object.keys(target); }
+    ownKeys(target: T): ArrayLike<string | symbol>{ return Object.getOwnPropertyNames(target); }
     static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
         RET extends CAN_THROW extends true ? L : L | undefined  = CAN_THROW extends true ? L : L>
     (data: D | Pointer, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW): RET{
@@ -184,19 +184,26 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         this.className = this.constructor.name;
     }
 
+    // damiano todo: this does not work
     private concatenableHandler(targetObj: ME, propKey: number | string | symbol, proxyitself: Proxyfied<ME>): NotAConcatenation | any[] | string {
+        console.log("concatenableHandler 1", {targetObj, propKey, proxyitself});
         if (propKey in targetObj)  return null as NotAConcatenation;
         const propKeyStr: null | string = U.asString(propKey, null);
         let _index: number = propKeyStr ? propKeyStr.indexOf('_') : -1;
+        console.log("concatenableHandler 2", {targetObj, propKey, propKeyStr, proxyitself, _index});
         if (_index < 0) return null as NotAConcatenation;
 
         let isConcatenable = true;
         let ret: any[] = (propKey as string).split('_').map( (subKey: string) => {
+            console.log("concatenableHandler 3.0", {targetObj, subKey, propKeyStr, proxyitself});
             // se trovo multipli ___ li tratto come spazi aggiuntivi invece che come proprietà '' che ritornano undefined, così posso fare name___surname --> "damiano   di vincenzo"
             let val: any = subKey === '' ? ' ' : this.get(targetObj, subKey, proxyitself);
+            console.log("concatenableHandler 3.1", {targetObj, subKey, val, propKeyStr, proxyitself, isConcatenable});
             isConcatenable = isConcatenable && JsType.isPrimitive(val);
+            console.log("concatenableHandler 3.2", {targetObj, subKey, val, propKeyStr, proxyitself, isConcatenable});
             return val;
         });
+        console.log("concatenableHandler 4", {targetObj, propKey, propKeyStr, proxyitself, ret, isConcatenable});
         return isConcatenable ? ret.join(' ') : ret; }
 
     public get(targetObj: ME, propKey: string | symbol, proxyitself: Proxyfied<ME>): any {
@@ -233,6 +240,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
 
         const proxyacceptables = {typeName:'', $$typeof:''};
+        // check if exist directly in D.key, L.key or through a get_key
         if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.g + (propKey as string)] || propKey in proxyacceptables) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
             if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) return this.lg[this.g + propKey](new LogicContext(proxyitself as any, targetObj));
@@ -261,16 +269,18 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         }
 
         // if not exist check for children names
-        if (propKey !== "childrens"){
+
+        if (typeof propKey === "string" && propKey !== "childrens") {
             let lchildrens: LPointerTargetable[] = this.get(targetObj, 'childrens', proxyitself);
             // let dchildrens: DPointerTargetable[] = lchildrens.map<DPointerTargetable>(l => l.__raw as any);
             let lc: GObject;
+            if (propKey[0] === "@") propKey.substring(1);
             for (lc of lchildrens) {
                 if (lc.name === propKey) return lc;
             }
         }
 
-        // if property do not exist
+        // if property do not exist, try a concatenation
         let concatenationTentative = null;
         try {concatenationTentative = this.concatenableHandler(targetObj, propKey, proxyitself); } catch(e) {}
         if (concatenationTentative !== null) return concatenationTentative;

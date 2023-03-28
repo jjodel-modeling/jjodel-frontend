@@ -14,6 +14,7 @@ function ModelTabComponent(props: AllProps) {
     const model = props.model;
     const graph = props.graph;
 
+    if (!model) return <div>Deleted model... tab removal is still to do</div>;
     return(<div className={'w-100 h-100'}>
         <ContextMenu />
         <PendingEdge />

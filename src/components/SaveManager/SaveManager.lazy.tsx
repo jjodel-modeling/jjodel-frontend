@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+/*import React, { lazy, Suspense } from 'react';
 
 const LazySaveManager = lazy(() => import('./SaveManager'));
 
@@ -9,3 +9,5 @@ const SaveManager = (props: JSX.IntrinsicAttributes & { children?: React.ReactNo
 );
 
 export default SaveManager;
+*/
+export const fakeexport = {}

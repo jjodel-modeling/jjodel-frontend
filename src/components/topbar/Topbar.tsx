@@ -3,7 +3,8 @@ import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
 import './style.scss';
 import {LModel} from "../../joiner";
-
+import {SaveManager} from "./SaveManager";
+import Undoredocomponent from "./undoredocomponent";
 
 function Topbar(props: AllProps) {
     const metamodel = props.metamodel;
@@ -15,8 +16,16 @@ function Topbar(props: AllProps) {
 
     return(<div className={'topbar d-flex'}>
         <div className={'ms-1'}>
-            <label className={'item border round'} onClick={click}>Test 1</label>
-            <label className={'item border round ms-1'} onClick={click}>Test 2</label>
+            <Undoredocomponent />
+
+
+            <button className={'item border round ms-1'} onClick={ SaveManager.save }>Save</button>
+            <button className={'item border round ms-1'} onClick={ ()=>SaveManager.load() }>Load</button>
+
+            <button className={'item border round ms-1'} onClick={ () => SaveManager.exportEcore_click(false, false) }>Export JSON</button>
+            <button className={'item border round ms-1'} onClick={ () => SaveManager.importEcore_click(false, false) }>Import JSON</button>
+            <button className={'item border round ms-1'} onClick={ () => SaveManager.exportEcore_click(true, true) }>Export XML</button>
+            <button className={'item border round ms-1'} onClick={ () => SaveManager.importEcore_click(true, true) }>Import XML</button>
         </div>
         <div className={'ms-auto me-1'}>
             <label className={'item border round'} onClick={click}>Test 3</label>

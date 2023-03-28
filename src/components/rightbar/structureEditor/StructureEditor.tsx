@@ -29,7 +29,11 @@ class StructureEditorComponent extends PureComponent<AllProps, ThisState> {
                 {Structure.Editor(lModelElement)}
             </div>
             <hr className={'mt-5'} />
-            {JSON.stringify(lModelElement)}
+            <div>Exportable Json</div>
+            <span style={{whiteSpace: "pre"}}>{JSON.stringify(lModelElement?.generateEcoreJson(), null, "\t")}</span>
+            <hr className={'mt-5'} />
+            <div>Internal state</div>
+            <span style={{whiteSpace: "pre"}}>{JSON.stringify(lModelElement, null, '\t')}</span>
         </div>;
     }
 }

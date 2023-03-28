@@ -168,9 +168,9 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     viewStyle.overflow = 'hidden'; viewStyle.position = 'absolute';
     viewStyle.display = rootProps.view?.display;
     viewStyle.zIndex = rootProps.node?.zIndex;
-    if(view.adaptWidth) viewStyle.width = '-webkit-fill-available';
+    if (view.adaptWidth) viewStyle.width = view.adaptWidth; // '-webkit-fill-available';
     else viewStyle.height = (rootProps.view.height) && rootProps.view.height + 'px';
-    if(view.adaptHeight) viewStyle.height = '-webkit-fill-available';
+    if (view.adaptHeight) viewStyle.height = view.adaptHeight; //'fit-content'; // '-webkit-fill-available'; if needs to actually fill all it's not a vertex but a field.
     else viewStyle.width = (rootProps.view.width) && rootProps.view.width + 'px';
     return(
         <div id={rootProps.nodeid}

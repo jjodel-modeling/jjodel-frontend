@@ -26,7 +26,7 @@ import {
     RuntimeAccessibleClass,
     Selectors,
     SetFieldAction,
-    SetRootFieldAction,
+    SetRootFieldAction, ShortAttribETypes,
     store, TargetableProxyHandler,
     U, unArr,
     UX,
@@ -120,11 +120,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     public generateEcoreJson(loopDetectionloopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json { throw new Error("cannot be called directly, should trigger getter. this is only for correct signature"); }
     private get_generateEcoreJson(context: Context): (loopdetectionobj: Dictionary<Pointer, DModelElement>) => Json { return (loopdetectionobj) => this.generateEcoreJson_impl(context, loopdetectionobj); }
-    protected generateEcoreJson_impl(context: Context, loopDetectionObj?: Dictionary<Pointer, DModelElement>): Json{ return Log.exDev("generateEcoreJson() should be overridden"); }
-    protected generateEcoreJson_implString(): string {
-        const json: Json = this.generateEcoreJson({});
-        // console.log('generateEcoreJsonString:', json, 'this:',  this);
-        return JSON.stringify(json, null, 4); }
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj?: Dictionary<Pointer, DModelElement>): Json{ return Log.exDevv("generateEcoreJson() should be overridden", context); }
+
 
 
     protected set_containers(): boolean { return this.cannotSet('containers'); }
@@ -397,7 +394,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         if (!dClass) return () => {};
         const lClass: LClass = LPointerTargetable.from(dClass);
         let name = 'attribute_' + 0;
-        let childrenNames: (string)[] = lClass.features.map( c => (c).name);
+        let childrenNames: (string)[] = lClass.attributes.map( c => (c).name);
         name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0);
         const lString: LClassifier = LPointerTargetable.from(Selectors.getFirstPrimitiveTypes());
 
@@ -449,7 +446,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         if (!dClass) return () => {};
         const lClass: LClass = LPointerTargetable.from(dClass);
         let name = 'reference_' + 0;
-        const childrenNames: (string)[] = lClass.features.map( c => (c).name);
+        const childrenNames: (string)[] = lClass.references.map( c => (c).name);
         name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
 
         const ret = () =>  {
@@ -1014,11 +1011,11 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
             instances = [...lReference.instances];
         }*/
 
-        // damiano: ??
+        /* non più necessario: tenta di effettuare un cast autonomamente
         for(let instance of instances) {
             const wInstance = WPointerTargetable.fromL(instance);
             wInstance.value = [U.initializeValue(val)];
-        }
+        }*/
         SetFieldAction.new(context.data, 'type', Pointers.from(val), "", true);
         return true;
     }
@@ -1057,16 +1054,19 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         return true;
     }
 
-    get_typeToEcoreString(context: Context): string {
+    public typeToEcoreString(): string { return this.cannotCall("typeToEcoreString"); }
+    protected get_typeToEcoreString(context: Context): () => string {
         // if (context.data.classType) return EcoreParser.classTypePrefix + context.proxyObject.classType.name;
         // if (context.data.enumType) return EcoreParser.classTypePrefix + context.proxyObject.enumType.name;
         // if (context.data.primitiveType) return context.proxyObject.primitiveType.long;
-        return context.proxyObject.type.typeEcoreString; }
-    get_TypeToShortString(context: Context): string {
+        return ()=> context.proxyObject.type.typeEcoreString; }
+
+    public typeToShortString(): string { return this.cannotCall("typeToShortString"); }
+    protected get_typeToShortString(context: Context): () => string {
         // if (context.data.classType) return '' + context.data.classType.name;
         // if (context.data.enumType) return '' + context.data.enumType.name;
         // if (context.data.primitiveType) return '' + context.data.primitiveType.getName();
-        return context.proxyObject.type.typeString; }
+        return () => context.proxyObject.type.typeString; }
 
     canOverride(context: Context, other: LTypedElement): boolean { // todo: adesso non c'è classtype e primitive type, ma solo type. devo trovare un altro modo di verificare se è il tipo è primitivo o di classe
         // i primitivi identici sono compatibili
@@ -1671,6 +1671,9 @@ export class DClass extends DPointerTargetable { // extends DClassifier
     implements: Pointer<DClass, 0, 'N', LClass> = [];
     implementedBy: Pointer<DClass, 0, 'N', LClass> = [];
 
+    // for m1:
+    hideExcessFeatures: boolean = true; // damiano: se attivo questo e creo una DClass di sistema senza nessuna feature e di nome Object, ho creato lo schema di un oggetto schema-less a cui tutti sono conformi
+
     public static new(name?: DNamedElement["name"], isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false): DClass {
         return new Constructors(new DClass('dwc')).DPointerTargetable().DModelElement()
             .DNamedElement(name).DClassifier().DClass(isInterface, isAbstract).end();
@@ -1727,7 +1730,6 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const json: GObject = {};
         const featurearr: Json[] = [];
         const operationsarr: Json[] = [];
-        const model: Json = {};
         let supertypesstr = [];
         const d = context.data;
         const l = context.proxyObject;
@@ -1735,14 +1737,14 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         for (let ref of l.references) { featurearr.push(ref.generateEcoreJson(loopDetectionObj)); }
         for (let op of l.operations) { operationsarr.push(op.generateEcoreJson(loopDetectionObj)); }
 
-        model[ECoreClass.xsitype] = 'ecore:EClass';
-        model[ECoreClass.namee] = d.name;
-        model[ECoreClass.interface] = U.toBoolString(d.interface, false);
-        model[ECoreClass.abstract] = U.toBoolString(d.abstract, false);
-        if (d.instanceClassName) model[ECoreClass.instanceTypeName] = d.instanceClassName;
-        model[ECoreClass.eSuperTypes] = l.extends.map( superclass => superclass.typeEcoreString).join(" ");
-        if (featurearr) model[ECoreClass.eStructuralFeatures] = featurearr;
-        if (operationsarr) model[ECoreClass.eOperations] = operationsarr;
+        json[ECoreClass.xsitype] = 'ecore:EClass';
+        json[ECoreClass.namee] = d.name;
+        json[ECoreClass.interface] = U.toBoolString(d.interface, false);
+        json[ECoreClass.abstract] = U.toBoolString(d.abstract, false);
+        if (d.instanceClassName) json[ECoreClass.instanceTypeName] = d.instanceClassName;
+        json[ECoreClass.eSuperTypes] = l.extends.map( superclass => superclass.typeEcoreString).join(" ");
+        if (featurearr) json[ECoreClass.eStructuralFeatures] = featurearr;
+        if (operationsarr) json[ECoreClass.eOperations] = operationsarr;
         return json; }
 
     get_childrens_idlist(context: Context): Pointer<DAnnotation | DStructuralFeature | DOperation, 1, 'N'> {
@@ -2625,12 +2627,12 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
 
     protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
         loopDetectionObj[context.data.id] = context.data;
-        const model: Json = {};
+        const json: Json = {};
         const d = context.data;
-        model[EcoreLiteral.value] = d.ordinal;
-        model[EcoreLiteral.literal] = d.literal;
-        model[EcoreLiteral.namee] = d.name;
-        return model; }
+        json[EcoreLiteral.value] = d.ordinal;
+        json[EcoreLiteral.literal] = d.literal;
+        json[EcoreLiteral.namee] = d.name;
+        return json; }
 
 
     protected get_value(context: Context): this["value"] { return context.data.value; }
@@ -2714,14 +2716,14 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
 
     protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
         loopDetectionObj[context.data.id] = context.data;
-        const model: Json = {};
+        const json: Json = {};
         let d = context.data;
-        if (d.instanceClassName) model[ECoreEnum.instanceTypeName] = d.instanceClassName;
-        model[ECoreEnum.xsitype] = 'ecore:EEnum';
-        model[ECoreEnum.namee] = d.name;
-        model[ECoreEnum.serializable] = d.serializable ? "true" : "false";
-        model[ECoreEnum.eLiterals] = context.proxyObject.literals.map(l => l.generateEcoreJson(loopDetectionObj));
-        return model; }
+        if (d.instanceClassName) json[ECoreEnum.instanceTypeName] = d.instanceClassName;
+        json[ECoreEnum.xsitype] = 'ecore:EEnum';
+        json[ECoreEnum.namee] = d.name;
+        json[ECoreEnum.serializable] = d.serializable ? "true" : "false";
+        json[ECoreEnum.eLiterals] = context.proxyObject.literals.map(l => l.generateEcoreJson(loopDetectionObj));
+        return json; }
 
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DEnumLiteral, 1, 'N'> {
         return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DEnumLiteral, 1, 'N'>, ...context.data.literals]; }
@@ -3155,6 +3157,12 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         }
     }
 
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        loopDetectionObj[context.data.id] = context.data;
+        const json: GObject = {};
+        json["export DObject"] = "to do";
+        return json; }
+
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DValue, 1, 'N'> {
         return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DValue, 1, 'N'>,
             ...context.data.features];
@@ -3212,7 +3220,7 @@ export class DValue extends DModelElement { // extends DModelElement, m1 value (
 
     // personal
     value: PrimitiveType[] | Pointer<DObject, 1, 'N', LObject> = [];
-    instanceof: Pointer<DStructuralFeature, 1, 1, LStructuralFeature> = ''; // todo: maybe min lowerbound 0 if you want to allow free shape objects chiedere prof
+    instanceof: Pointer<DAttribute, 1, 1, LAttribute > | Pointer<DReference, 1, 1, LReference> = ''; // todo: maybe min lowerbound 0 if you want to allow free shape objects chiedere prof
     // conformsTo!: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature>; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
 
     public static new(name?: DNamedElement["name"]): DValue {
@@ -3232,8 +3240,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     father!: LObject | LModel;
     // personal
     value!: PrimitiveType[] | LObject[];
-    instanceof!: LStructuralFeature;
-    conformsTo!: LStructuralFeature[]; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
+    instanceof!: LAttribute | LReference;
+    conformsTo!:( LAttribute | LReference)[]; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
 
     protected get_instanceof(context: Context): this["instanceof"] {
         const pointer = context.data.instanceof;
@@ -3245,14 +3253,106 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         SetFieldAction.new(context.data, 'instanceof', ptr, "", true);
         return true;
     }
-    protected get_value(context: Context): this["value"] | this["value"][0] {
-        let ret: any[] = context.data.value as [];
+    protected get_value(context: Context, fitSize: boolean = true): this["value"] & {type: string} {
+        let ret: any[] = [...context.data.value] as [];
         if (context.proxyObject.instanceof.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
-        switch(ret.length) {
-            case 0: return '';
-            case 1: return ret[0];
-            default: return ret;
+        let meta: LAttribute | LReference = context.proxyObject.instanceof as LAttribute;
+        let typestr: string = meta.typeToShortString();
+        if (!Array.isArray(ret)) ret = [];
+        if (fitSize && ret.length < meta.lowerBound) {
+            let times = meta.lowerBound - ret.length;
+            while (times--) ret.push(undefined);
+            // ret.length = meta.lowerBound; not really working for expanding, it says "emptyx10" or so. doing .map() only iterates "existing" elements. behaves like as it's smaller.
         }
+        if (fitSize && ret.length > meta.upperBound) ret.length = meta.upperBound;
+        let numbermax = 0, numbermin = 0;
+        switch (typestr) {
+            default: // it's a reference
+                break;
+            case ShortAttribETypes.EByte:
+                numbermin = -128;
+                numbermax = 127;
+                break;
+            case ShortAttribETypes.EShort:
+                numbermin = -32768;
+                numbermax = 32767;
+                break;
+            case ShortAttribETypes.EInt:
+                numbermin = -2147483648;
+                numbermax = 2147483647;
+                break
+            case ShortAttribETypes.ELong:
+                numbermin = -9223372036854775808;
+                numbermax = 9223372036854775807;
+                break;
+            case ShortAttribETypes.EFloat:
+                numbermin = Number.NEGATIVE_INFINITY;
+                numbermax = Number.POSITIVE_INFINITY;
+                break;
+            case ShortAttribETypes.EString:
+            case ShortAttribETypes.EDate:
+                ret = ret.map( v => v ? v + '' : '');
+                break;
+            case ShortAttribETypes.EChar:
+                ret = ret.map( v => v ? (v + '')[0] : 'A');
+                break;
+            case ShortAttribETypes.EBoolean:
+                ret = ret.map( v => typeof v === "boolean" ? v : U.fromBoolString(v+'', v?.length>0, false));
+                break;
+            case ShortAttribETypes.void: ret = []; break;
+        }
+        if (numbermax !== 0) {
+            // some kind of numeric type
+            ret = ret.map( v => {
+                if (typeof v !== "number") {
+                    if (!v) v = 0;
+                    else if (v === "true") v = 1;
+                    else if (v.constructor?.name=== "Date") v = v.getTime();
+                    else {
+                        console.log("number casting:", v,  U.getFirstNumber(v+'', true), {numbermax, numbermin});
+                        v = U.getFirstNumber(v+'', true);
+                    }
+                }
+                return Math.min(numbermax, Math.max(numbermin, v))
+            });
+        }
+        (ret as GObject).type = typestr;
+        // console.error("type value:", {ret, typestr, meta, fitSize});
+        return ret as any;
+    }
+
+    public valuestring(): string { return this.cannotCall("valuestring"); }
+    private get_valuestring(context: Context): (keepemptyquotes?: boolean)=>string { return (keepemptyquotes?: boolean) => this.valuestring_impl(context, keepemptyquotes); }
+    public valuestring_impl(context: Context, keepemptyquotes?: boolean): string {
+        console.error("valuestring_impl", {context, data:context.data});
+        let val: any[] = this.get_value(context, true);
+        let ret: any;
+        switch (val.length) {
+            case 0: ret = ''; break;
+            case 1: ret = val[0] || val[0] === 0 ? val[0] : ''; break;
+            default:
+                let havestrings: boolean = false;
+                let havepointers: boolean = false;
+                let haveLelements: boolean = false;
+                for (let vall of val) {
+                    if (vall?.__isProxy) haveLelements = true;
+                    else if (typeof vall === "string") { havestrings = true; havepointers = havepointers || vall.includes("Pointer"); }}
+                if (havepointers) {
+                    val = LPointerTargetable.wrapAll(val);
+                }
+                if (haveLelements) {
+                   val = val.map( l => l && (l.name ? ("@" + l.name) : ("#" + l.className)));
+                }
+                if (havestrings) {
+                    let valstr = JSON.stringify(val);
+                    if (!keepemptyquotes) valstr = U.replaceAll(valstr, "\"\"", "");
+                    ret = valstr.substring(1, valstr.length-1);
+                    break;
+                }
+                else ret = val.join(', ');
+        }
+        console.error("valuestring_impl()", {ret, context, data:context.data});
+        return ret;
     }
 
     protected set_value(val: (string|LObject)|(string|LObject)[], context: Context): boolean {
@@ -3260,6 +3360,12 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         SetFieldAction.new(context.data, 'value', list as any, '', false);
         return true;
     }
+
+    protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+        loopDetectionObj[context.data.id] = context.data;
+        const json: GObject = {};
+        json["export DValue"] = "to do";
+        return json; }
 
     protected get_toString(context: Context): () => string { return () => this._toString(context); }
     protected _toString(context: Context): string {

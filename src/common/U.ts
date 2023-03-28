@@ -54,7 +54,7 @@ export class U{
         const pointer: Pointer = typeof classifier === 'string' ? classifier : classifier.id;
         const me: LNamedElement = LNamedElement.fromPointer(pointer);
         switch(me.name) {
-            case 'EString': return 'empty';
+            case 'EString': return '';
             case 'EChar':  return 'a';
             case 'EInt': return '0';
             case 'ELong': return '0';
@@ -324,13 +324,17 @@ export class U{
         // context per accedervi tramite this, possono essere impostati come diversi.
         if (!scope && !context) { Log.ex(true, 'evalInContextAndScope: must specify at least one of scope || context', {codeStr, scope, context}); }
         if (!context) context = scope; // se creo un nuovo contesto pulisco anche lo scope dalle variabili locali di questa funzione.
+
         // scope.this = scope.this || context || scope; non funziona
         // console.log('"with(this){ return eval( \'" + codeStr + "\' ); }"', "with(this){ return eval( '" + codeStr + "' ); }");
         // eslint-disable-next-line no-restricted-syntax,no-with
         // if (allowScope && allowContext) { return function(){ with(this){ return eval( '" + codeStr + "' ); }}.call(scopeAndContext); }
         // if (allowScope && allowContext) { return new Function( "with(this){ return eval( '" + codeStr + "' ); }").call(scopeAndContext); }
         let _ret: T = null as any;
+        if (context) context = {...context};
+        if (scope) scope = {...scope};
         const _eval = {codeStr, context, scope};
+
         /*
         if (allowScope && allowContext) { return new Function( "with(this){ return eval( '" + codeStr.replace(/'/g, "\\'") + "' ); }").call(scopeAndContext); }
         if (!allowScope && allowContext) { return new Function( "return eval( '" + codeStr + "' );").call(scopeAndContext); }
@@ -885,7 +889,8 @@ export class U{
             else ret[key] = subnew;
         }
         // todo: add to variable naming rules: can't start with "_-", like in "_-keyname", it means "keyname" removed in undo delta
-        for (let key in diff.removed) { ret["_-"+key] = undefined; } //newwobj[key]; }
+        let removedprefix = ""; // "_-";
+        for (let key in diff.removed) { ret[removedprefix + key] = undefined; } //newwobj[key]; }
         console.log("objdiff", {old, neww, diff, ret});
         return ret as Partial<T>;
     }
@@ -971,11 +976,11 @@ export class U{
     // from {a:{aa:true, ab:"ab"}, b:4} to ["a.aa = true", "a.ab = \"ab\"", "a.b = 4"]
     // maxkeylength is max length of any individual key, after it it will become: superlongpath --> supe...path
     // maxsubpaths is how many subpaths are displayed at most. after it it will be: super.rea.lly.long.pa.th --> super.rea.pa.th
-    public static ObjectToAssignementStrings<R extends {str: string, path:string[], fullpath:string[], val: string, fullvalue: string, pathlength?: number}>
-    (obj: GObject, maxkeylength: number = 10, maxsubpaths: number = 6, maxvallength: number = 20, toolongreplacer: string = "…", out?:{best: R}&R[]): {best: string}&string[] {
+    public static ObjectToAssignementStrings<R extends {str: string, fullstr: string, path:string[], fullpath:string[], val: string, fullvalue: string, pathlength?: number}>
+    (obj: GObject, maxkeylength: number = 10, maxsubpaths: number = 6, maxvallength: number = 20, toolongreplacer: string = "…", out?:{best: R}&R[], quotestrings: boolean = true): {best: string}&string[] {
         const pathseparator = ".";
         const valueseparator = " = ";
-        const filterrow = (rowpaths: string[]) => { return !rowpaths.includes("clonedCounter"); };
+        const filterrow = (rowpaths: string[]) => { return (!rowpaths.includes("clonedCounter") && !rowpaths.includes("pointedBy")); };
         let flatten = U.flattenObjectToRoot(obj, '', pathseparator);
         let i = -1;
         let tmp;
@@ -992,8 +997,8 @@ export class U{
         let best: R | null = null;
         let countsize = (total: number, arrelem: string): number => total + arrelem.length;
         const filterbest = (row: R) => {
-            row.pathlength = row.fullpath.reduce<number>(countsize, 0);
-            if (!best || bestpathsize < row.pathlength) {
+            row.pathlength = row.fullstr.length; // row.fullpath.reduce<number>(countsize, 0);
+            if (!best || bestpathsize < row.pathlength && filterrow(row.fullpath)) {
                 best = row; bestpathsize = row.pathlength;
                 if (out) out.best = best;
                 ret.best = best.str;
@@ -1002,10 +1007,13 @@ export class U{
         console.log("u get assignements", {flatten, obj});
 
         for (let key in flatten) {
-            let row: R = {fullpath: key.split(pathseparator)} as R;
-            if (!filterrow(row.fullpath)) continue;
+            let row: R = {fullpath: key.split(pathseparator), fullstr: key} as R;
+            // if (!filterrow(row.fullpath)) continue;
             // stringify(undefined) = undefined, so i add + ""
-            try { row.fullvalue = JSON.stringify(flatten[key]) + ""; } catch(e) { row.fullvalue = "⁜not serializable⁜"; }
+            try {
+                if (!quotestrings && typeof flatten[key] === "string") row.fullvalue = flatten[key];
+                else row.fullvalue = JSON.stringify(flatten[key]) + "";
+            } catch(e) { row.fullvalue = "⁜not serializable⁜"; }
             console.log("U get assignements loop", {row, key, flatten, obj});
             row.val = row.fullvalue.length <= maxvallength ? row.fullvalue : row.fullvalue.substring(0, halfval.start) + toolongreplacer + row.fullvalue.substring(halfval.start);
             if (row.fullpath.length > maxsubpaths) {
@@ -1102,6 +1110,43 @@ export class U{
         return formatted.trim(); }
 
 
+    // https://stackoverflow.com/questions/13861254/json-stringify-deep-objects  implementation with depth
+    static circularStringify(obj: GObject, replacer?: null | ((key: string, value: any) => any), space?: string | number, maxDepth_unsupported: number = 100): string {
+        const cache: any[] = [];
+        return JSON.stringify(obj, (key, value: any) => {
+            if (typeof value === 'object' && value !== null) {
+                // Duplicate reference found, discard key
+                if (cache.includes(value)) return "[Circular Reference]"; // might happen both before and after the replacer func
+                if (replacer){
+                    value = replacer(key, value);
+                    if (cache.includes(value)) return "[Circular Reference]"; // might happen both before and after the replacer func
+                }
+                // Store value in our collection
+                cache.push(value);
+            }
+            return value;
+        }, space);
+    }
+
+    static getFirstNumber(s: string, allowDecimalDot: boolean = true, allowDecimalComma: boolean = true, valueifmismatch: any = null): number {
+        let commamode = (allowDecimalComma ? (allowDecimalDot ?"(\\.|\\,)" : "\\,") : (allowDecimalDot ? "\\." : "will not use this regex"));
+        let floatregex = new RegExp("-?" + commamode  + "?\\d+(" + commamode + "\\d{1,2})?");
+        let intregex = /-?\d+/;
+        let ret: any;
+        if (allowDecimalDot || allowDecimalComma) ret = floatregex.exec(s);
+        else ret = intregex.exec(s);
+        console.log({ret, floatregex, intregex, s});
+        ret = ret && ret[0]; // first match
+        if (ret === null) return valueifmismatch;
+
+        let tmpindex:number;
+        if (allowDecimalComma) ret = U.replaceAll(ret, ",", ".");
+        // while (allowDecimalComma && (tmpindex = ret.indexOf(",")) !== ret.lastIndexOf(",")) ret.substring(tmp+1) // ret.indexOf(.)
+        while ((allowDecimalDot || allowDecimalComma) && (tmpindex = ret.indexOf(".")) !== ret.lastIndexOf(".")) ret = ret.substring(tmpindex+1) // ret.indexOf(.)
+        // if (ret[0]==="-" && (ret[1]==="," || ret[1]===".")) ret = "-0."+ret.substring(2); automatically done bu js.    +"-.5" = -0.5
+        return +ret;
+    }
+    static countChars(s: string, substr_or_char: string): number {return s.split(substr_or_char).length - 1; }
 }
 
 export class DDate{

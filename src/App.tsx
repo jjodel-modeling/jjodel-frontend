@@ -5,7 +5,6 @@ import './styles/style.scss';
 //import Dock from "./components/abstract/DockComponent";
 import TopBar from "./components/topbar/Topbar";
 import Dock from "./components/abstract/DockLayout";
-import SaveManager from "./components/SaveManager/SaveManager.lazy";
 import {statehistory} from "./joiner";
 
 interface Props {}

@@ -28,7 +28,7 @@ import ModelTab from "./tabs/ModelTab";
 interface ThisState {}
 class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     private dock: DockLayout | null;
-    private metamodel = this.props.metamodel;
+    // private metamodel: AllProps["metamodel"];
     private groups = {
         'group1': {
             floatable: true,
@@ -62,14 +62,15 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     constructor(props: AllProps, context: any) {
         super(props, context);
         this.dock = null;
+        // this.metamodel = this.props.metamodel;
     }
-
+    /*
     shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
         const oldProps = this.props;
         if(oldProps.selected !== newProps.selected) { this.moveOnStructure = true; return true; }
         if(oldProps.views !== newProps.views) { this.moveOnViews = true; return true; }
         return false;
-    }
+    }*/
 
     componentDidUpdate(prevProps: Readonly<AllProps>, prevState: Readonly<ThisState>, snapshot?: any) {
         if(this.dock) {
@@ -85,32 +86,33 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     }
 
     addModel(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {
-        if(this.metamodel) {
+        if(this.props.metamodel) {
             let name = 'model_' + 0;
-            let modelNames: (string)[] = this.metamodel.models.map( m => m.name);
+            let modelNames: (string)[] = this.props.metamodel.models.map( m => m.name);
             name = U.increaseEndingNumber(name, false, false, (newName) => modelNames.indexOf(newName) >= 0)
             const model: DModel = DModel.new(name);
             model.isMetamodel = false;
             CreateElementAction.new(model);
             CreateElementAction.new(DGraph.new(model.id));
-            SetFieldAction.new(this.metamodel.id, 'models', model.id, '+=', true);
+            SetFieldAction.new(this.props.metamodel.id, 'models', model.id, '+=', true);
             const modelTab = { id: model.id, title: 'M1', group: 'group1', closable: false, content:
-                    <ModelTab modelid={model.id} metamodelid={this.metamodel.id} />
+                    <ModelTab modelid={model.id} metamodelid={this.props.metamodel.id} />
             };
             context.dockMove(modelTab, panelData, 'middle');
         }
     }
 
     render(): ReactNode {
-        if(this.metamodel) {
+        if(this.props.metamodel) {
             const layout: LayoutData = { dockbox: { mode: 'horizontal', children: [] }};
-            const metamodelTab = { id: this.metamodel.id, title: 'M2', group: 'group1', closable: false, content:
-                    <MetamodelTab modelid={this.metamodel.id} />
+            console.log("this metamodel:", {id: this.props.metamodel.id, mm: this.props.metamodel, thiss:this});
+            const metamodelTab = { id: this.props.metamodel.id, title: 'M2', group: 'group1', closable: false, content:
+                    <MetamodelTab modelid={this.props.metamodel.id} key={this.props.metamodel.id} />
             };
             const tabs = [metamodelTab];
-            for(let model of this.metamodel.models) {
+            for(let model of this.props.metamodel.models) {
                 const modelTab = { id: model.id, title: 'M1', group: 'group1', closable: false, content:
-                        <ModelTab modelid={model.id} metamodelid={this.metamodel.id} />
+                        <ModelTab modelid={model.id} metamodelid={this.props.metamodel.id} />
                 };
                 tabs.push(modelTab);
             }
@@ -135,7 +137,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
 }
 
 interface OwnProps { }
-interface StateProps { metamodel?: LModel, selected: Pointer<DModelElement, 0, 1, LModelElement>, views: number }
+interface StateProps { metamodel: LModel; selected: Pointer<DModelElement, 0, 1, LModelElement>, views: number }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -143,7 +145,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer = state.metamodel;
-    if(pointer) ret.metamodel = LModel.fromPointer(pointer);
+    if (pointer) ret.metamodel = LModel.fromPointer(pointer);
     const selected = state._lastSelected?.modelElement;
     if(selected) ret.selected = selected;
     ret.views = state.viewelements.length;

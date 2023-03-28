@@ -151,7 +151,7 @@ export class EcoreParser{
         console.warn("parse.result D", parsedElements);
         this.LinkAllNamesToIDs(parsedElements);
         this.fixNamingConflicts(parsedElements);
-        if (true || persist) {
+        if (persist) {
             CreateElementAction.newBatch(parsedElements);
         }
         windoww.tmpparse = () => LPointerTargetable.wrapAll(parsedElements);
@@ -165,6 +165,7 @@ export class EcoreParser{
         for (let elem of parsedElements) { if (elem.className === DModel.name) { model = elem as any; break; } }
         windoww.tmp3 = () => { SetRootFieldAction.new("models", [model.id], '', false);  }
         SetRootFieldAction.new("models", [model.id], '', false); // it is pointer but no need to update pointedby's this time
+        SetRootFieldAction.new('metamodel', model.id, '', true);
     }
 
     private static LinkAllNamesToIDs(parsedElements: DModelElement[]): void {
@@ -176,15 +177,33 @@ export class EcoreParser{
         let idMap: Dictionary<Pointer, DModelElement> = {};
         let nameMap: Dictionary<string, DModelElement> = {};
         let replacePrimitiveMap: Dictionary<string, DClassifier> = {};
-        replacePrimitiveMap[AttribETypes.EString] = Selectors.getAllPrimitiveTypes()[0];
+        let d_Estring: DClassifier = Selectors.getAllPrimitiveTypes()[0];
+        replacePrimitiveMap[AttribETypes.EString] = d_Estring;
         // todo: do the same for all other primitives
+
+        // let longprefixlength = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore'.length;
+        const typeprefix = "#//";
+        for (let shortkey in AttribETypes){
+            let longkey: string = (AttribETypes as GObject)[shortkey];
+            // fallback for missing type instead of crash
+            if (!replacePrimitiveMap[longkey]) replacePrimitiveMap[longkey] = d_Estring;
+
+            // allow shortcuts to work too
+            replacePrimitiveMap[typeprefix + shortkey] = replacePrimitiveMap[longkey];
+
+        }
+
+
+        for (let ecorename in replacePrimitiveMap) {
+            idMap[replacePrimitiveMap[ecorename].id] = replacePrimitiveMap[ecorename];
+        }
 
         let prereplace = (name: string) => name.replaceAll("#//", ""); // todo: if
         let replaceRules = ["extends", "extendedBy", "exceptions", "type"];
         let dobj: GObject & DModelElement;
 
         for (dobj of parsedElements) {
-            if (dobj.name) nameMap[dobj.name] = dobj;
+            if (dobj.name) { nameMap[dobj.name] = dobj; nameMap[typeprefix + dobj.name] = dobj;}
             idMap[dobj.id] = dobj;
         }
 
@@ -202,15 +221,23 @@ export class EcoreParser{
                     values = [valtmp as string];
                 }
                 for (let value of values) {
+                    if (!value) continue;
                     // console.log("fixalltypes", {replacekey, dobj, value, values});
-                    const isEcorePrimitive = value.indexOf("#//") == 0;
+                    const isType = value.indexOf("#//") == 0;
                     let target: DModelElement = replacePrimitiveMap[value];
                     if (!target) target = nameMap[value];
-                    Log.ex(!target, "LinkAllNames() can't find type target:", {value, nameMap, replacePrimitiveMap, dobj, replacekey});
 
-                    if ("extends") {
+
+                    if (isType) {
+                        console.log("attempt to replace primitive type to his id", {target, dobj, replacekey, value, replacePrimitiveMap, nameMap, idMap});
+                    }
+
+                    if (replacekey === "extends") {
+                        if (!target) continue;
+                        Log.ex(target.className !== DClass.name, "found a class attempting to extend an object that is not a class", {target, dobj, replacePrimitiveMap, nameMap, idMap});
                         (target as DClass).extendedBy.push((dobj as DClass).id);
                     }
+                    Log.ex(!target, "LinkAllNames() can't find type target:", {value, nameMap, replacePrimitiveMap, dobj, replacekey});
                     if (isArray) dobj[replacekey].push(target.id);
                     else dobj[replacekey] = target.id;
                 }
@@ -233,8 +260,11 @@ export class EcoreParser{
             }
             console.log("fixalltypes[]", {ptrkey, valtmp, dobj, values});
             for (let value of values) {
-                console.log("fixalltypes", {ptrkey, valtmp, dobj, value, values});
+                if (!value) continue;
+                // errore: per operazione.type l'import mi restituisce puntatore a oggetto stringa, ma non è tra gli oggetti parsed
                 let target: DModelElement = idMap[value];
+                console.log("fixalltypes", {ptrkey, valtmp, dobj, value, values, target, idMap});
+                if (!target) throw new Error("target undefined");
                 target.pointedBy.push(PointedBy.new("idlookup." + dobj.id + "." + ptrkey));
             }
         }
@@ -364,9 +394,9 @@ export class EcoreParser{
             switch (xsiType) {
                 default: Log.exx( 'unexpected xsi:type: ', xsiType, ' in feature:', child); break;
                 case 'ecore:EAttribute':
-                    this.parseDAttribute(dObject, json, generated); break;
+                    this.parseDAttribute(dObject, child, generated); break;
                 case 'ecore:EReference':
-                    this.parseDReference(dObject, json, generated); break;
+                    this.parseDReference(dObject, child, generated); break;
             }
         }
         /// *** specific end *** ///
@@ -391,7 +421,7 @@ export class EcoreParser{
             }
         }
         for (let child of childs) {
-            this.parseDEnumLiteral(dObject, json, generated);
+            this.parseDEnumLiteral(dObject, child, generated);
         }
 
         /// *** specific end *** ///
@@ -443,6 +473,7 @@ export class EcoreParser{
 
         dObject.type = this.read(json, ECoreReference.eType, this.getEcoreTypeName(parent));
 
+        console.log("attempting to parse dref", {dObject, json, parent, typekey:  ECoreReference.eType})
 
         /// *** specific end *** ///
         return generated; }

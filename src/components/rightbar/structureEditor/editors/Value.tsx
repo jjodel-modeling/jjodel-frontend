@@ -1,6 +1,6 @@
 import React from "react";
 import {SetFieldAction} from "../../../../redux/action/action";
-import {LEnumerator, LStructuralFeature, Pointer, Selectors, U} from "../../../../joiner";
+import {DObject, LEnumerator, LObject, LStructuralFeature, Pointer, Selectors, U} from "../../../../joiner";
 import type {LValue} from "../../../../joiner";
 import { PrimitiveType } from "../../../../joiner/types";
 
@@ -10,6 +10,8 @@ function Value(props: Props) {
     const dValue = lValue.__raw;
     const feature: LStructuralFeature = LStructuralFeature.fromPointer(lValue.instanceof.id);
     let field = 'text'; let stepSize = 1; let maxLength = 524288;
+    let min = -9223372036854775808;
+    let max = 9223372036854775807; // for long, todo: aggiusta per tutti gli altri. in switch
     switch(feature.type.name) {
         case 'EChar': maxLength = 1; break;
         case 'EInt':
@@ -40,6 +42,8 @@ function Value(props: Props) {
         SetFieldAction.new(dValue, 'value', newValues, '', target !== 'null' && isPointer);
     }
 
+    (window as any).test = dValue;
+    console.log("editor value", {dValue, })
     return(<div>
         <div className={'d-flex'}>
             <label className={'ms-1 my-auto'}>Values</label>
@@ -47,53 +51,56 @@ function Value(props: Props) {
                 <i className={'p-1 bi bi-plus'}></i>
             </button>
         </div>
-        {dValue.value.map((pointer: PrimitiveType | Pointer, index) => {
-            if(feature.className === "DAttribute" && feature.type.className === "DClass") { // primitive
-                return(<div className={'mt-1 d-flex ms-4'} key={index}>
+        {
+            feature.className === "DAttribute" && feature.type.className === "DClass" && (lValue.value as PrimitiveType[]).map( (val: PrimitiveType, index) =>
+                <div className={'mt-1 d-flex ms-4'} key={index}>
                     <div className={'border border-dark'}></div>
                     <input onChange={(evt) => { change(evt, index, false)} } className={'input ms-1'}
-                           value={pointer + ''} checked={pointer === 'true'} type={field} step={stepSize} maxLength={maxLength} />
+                           value={val + ''} checked={val === true} min={min} max={max} type={field} step={stepSize} maxLength={maxLength} placeholder={"empty"} />
                     <button className={'btn btn-danger ms-2'} onClick={(evt) => { remove(index) }}>
                         <i className={'p-1 bi bi-trash3-fill'}></i>
                     </button>
-                </div>);
-            }
-            if(feature.className === "DAttribute" &&  feature.type.className === "DEnumerator") { // enumerator
-                const enumerator = feature.type as LEnumerator;
-                return(<div className={'mt-1 d-flex ms-4'} key={index}>
-                    <div className={'border border-dark'}></div>
-                    <select onChange={(evt) => {change(evt, index, false)}}
-                            className={'ms-1 select'} value={pointer+''}>
-                        <option value={'null'}>-----</option>
-                        {enumerator.literals.map((literal, i) => {
-                            return <option key={i} value={i}>{literal.name}</option>
-                        })}
-                    </select>
-                    <button className={'btn btn-danger ms-2'} onClick={(evt) => {remove(index)}}>
-                        <i className={'p-1 bi bi-trash3-fill'}></i>
-                    </button>
-                </div>);
-            }
-            if(feature.className === "DReference") { // reference
+                </div>)
+        }
+        {
+            feature.className === "DAttribute" && feature.type.className === "DEnumerator" && (lValue.value as string[]).map( (val: string, index) => {
+                    const enumerator = feature.type as LEnumerator;
+                    return <div className={'mt-1 d-flex ms-4'} key={index}>
+                        <div className={'border border-dark'}></div>
+                        <select onChange={(evt) => {change(evt, index, false)}}
+                                className={'ms-1 select'} value={val+''}>
+                            <option value={'null'}>-----</option>
+                            {enumerator.literals.map((literal, i) => {
+                                return <option key={i} value={i}>{literal.name}</option>
+                            })}
+                        </select>
+                        <button className={'btn btn-danger ms-2'} onClick={(evt) => {remove(index)}}>
+                            <i className={'p-1 bi bi-trash3-fill'}></i>
+                        </button>
+                    </div>;
+                })
+        }
+        {
+            feature.className === "DReference" && (lValue.value as LObject[]).map( (target: LObject, index) => {
                 const objects = Selectors.getObjects().filter((obj) => {
-                    return obj.instanceof.id === feature.type.id
+                    return obj.instanceof.id === feature.type.id; // todo: move this utility in LClass.instances
                 });
                 return(<div className={'mt-1 d-flex ms-4'} key={index}>
                     <div className={'border border-dark'}></div>
                     <select onChange={(evt) => {change(evt, index, true)}}
-                            className={'ms-1 select'} value={pointer + ''}>
+                            className={'ms-1 select'} value={target?.id + ''}>
                         <option value={'null'}>-----</option>
                         {objects.map((object, i) => {
-                            return <option key={i} value={object.id}>{object.feature('name')}</option>
+                            return <option key={i} value={object.id}>{object.name/*.feature('name')*/}</option>
                         })}
                     </select>
                     <button className={'btn btn-danger ms-2'} onClick={(evt) => {remove(index)}}>
                         <i className={'p-1 bi bi-trash3-fill'}></i>
                     </button>
-                </div>);
-            }
-            return(<></>);
-        })}
+                </div>)
+            })
+
+        }
     </div>)
 }
 

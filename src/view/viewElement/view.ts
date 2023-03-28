@@ -48,8 +48,8 @@ export class DViewElement extends DPointerTargetable {
     oclApplyCondition!: string; // ocl selector
     explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
     defaultVSize!: GraphSize;
-    adaptHeight!: boolean;
-    adaptWidth!: boolean;
+    adaptHeight!: boolean | 'fit-content' | '-webkit-fill-available';
+    adaptWidth!: boolean | 'fit-content' | '-webkit-fill-available';
     width!: number;
     height!: number;
     draggable: boolean = true;

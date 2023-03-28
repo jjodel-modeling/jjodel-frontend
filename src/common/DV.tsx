@@ -3,17 +3,17 @@ const beautify = require('js-beautify').html;
 
 @RuntimeAccessible
 export default class DV {
-    public static modelView(): string { return beautify(`<div className={'root'}>` + DefaultView.model() +'</div>'); }
-    public static packageView(): string { return beautify(`<div className={'root'}>` + DefaultView.package() + '</div>'); }
-    public static classView(): string { return beautify(`<div className={'root'}>` + DefaultView.class()) + '</div>'; }
-    public static attributeView(): string { return beautify(`<div className={'root'}>` + DefaultView.feature() + '</div>'); }
-    public static referenceView(): string { return beautify(`<div className={'root'}>` + DefaultView.feature() + '</div>'); }
-    public static enumeratorView(): string { return beautify(`<div className={'root'}>` + DefaultView.enum() + '</div>'); }
-    public static literalView(): string { return beautify(`<div className={'root'}>` + DefaultView.literal() + '</div>'); }
-    public static operationView(): string { return beautify(`<div className={'root'}>` + DefaultView.operation() + '</div>'); }
-    public static objectView(): string { return beautify(`<div className={'root'}>` + DefaultView.object() + '</div>'); }
-    public static valueView(): string { return beautify(`<div className={'root'}>` + DefaultView.value() + '</div>'); }
-    public static defaultPackage(): string { return beautify(`<div className={'root'}>` + DefaultView.defaultPackage() + '</div>'); }
+    public static modelView(): string { return beautify(`<div className={'root model'}>` + DefaultView.model() +'</div>'); }
+    public static packageView(): string { return beautify(`<div className={'root package'}>` + DefaultView.package() + '</div>'); }
+    public static classView(): string { return beautify(`<div className={'root class'}>` + DefaultView.class()) + '</div>'; }
+    public static attributeView(): string { return beautify(`<div className={'root attribute'}>` + DefaultView.feature() + '</div>'); }
+    public static referenceView(): string { return beautify(`<div className={'root reference'}>` + DefaultView.feature() + '</div>'); }
+    public static enumeratorView(): string { return beautify(`<div className={'root enumerator'}>` + DefaultView.enum() + '</div>'); }
+    public static literalView(): string { return beautify(`<div className={'root literal'}>` + DefaultView.literal() + '</div>'); }
+    public static operationView(): string { return beautify(`<div className={'root operation'}>` + DefaultView.operation() + '</div>'); }
+    public static objectView(): string { return beautify(`<div className={'root object'}>` + DefaultView.object() + '</div>'); }
+    public static valueView(): string { return (`<div className={'root value'}>` + DefaultView.value() + '</div>'); }
+    public static defaultPackage(): string { return beautify(`<div className={'root package'}>` + DefaultView.defaultPackage() + '</div>'); }
 }
 
 class DefaultView {
@@ -63,13 +63,13 @@ class DefaultView {
         </div>`;
     }
     public static feature(): string {
-        return `<Select obj={this.data} field={'type'} label={this.data.name} />`;
+        return `<Select className={'feature-view'} obj={this.data} field={'type'} label={this.data.name} />`;
     }
     public static literal(): string {
-        return `<label className={'d-block text-center'}>{this.data.name}</label>`
+        return `<label className={'d-block text-center literal-view'}>{this.data.name}</label>`
     }
     public static operation(): string {
-        return `<Select obj={this.data.parameters[0]} field={'type'} label={this.data.name} />`;
+        return `<Select className={'operation-view'} obj={this.data.parameters[0]} field={'type'} label={this.data.name} />`;
     }
     public static object(): string {
         return `<div className={'round bg-white object-view'}>
@@ -78,16 +78,16 @@ class DefaultView {
             </label>
             <hr />
             <div className={'object-children'}>
-                {this.data.children.map((child, index) => {
+                {this.data.features.map((child, index) => {
                     return <DefaultNode key={index} data={child.id}></DefaultNode>
                 })}
             </div>
         </div>`;
     }
     public static value() {
-        return `<div className={'d-flex'}>
-            <label className={'d-block ms-1'}>{this.data.instanceof.name}</label>
-            <label className={'d-block ms-auto'}>{this.data /*damiano todo: verifica se questo chiama il tostring, altrimenti usa this.data.value*/}</label>
+        return `<div className={'d-flex value-view'} style={{paddingRight: "6px"}}>
+            <label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>
+            <label className={'d-block ms-auto'}>{this.props.data.valuestring()}</label>
         </div>`
     }
     public static defaultPackage() {

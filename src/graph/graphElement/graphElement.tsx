@@ -32,7 +32,7 @@ import {
 } from "../../joiner";
 
 
-function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
+export function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
     let evalContext: GObject = view.constants ? eval('window.tmp = ' + view.constants) : {};
     evalContext = {...windoww.defaultContext, ...evalContext, model: props.data, ...props};
     windoww.evalContext = evalContext;
