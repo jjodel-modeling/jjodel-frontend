@@ -284,36 +284,19 @@ export class Selectors{
     }*/
 
 
-    private static matchesOclCondition_trueoclversion(v: DViewElement, data: DModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
-        if (!v.oclApplyCondition) return ViewEClassMatch.IMPLICIT_MATCH;
-        const query = v.oclApplyCondition;
-        if(data.className === 'DObject') {
-            const lObject: LObject = LObject.fromPointer(data.id);
-            if (lObject.instanceof.name === query) return ViewEClassMatch.EXACT_MATCH;
-        }
-        return ViewEClassMatch.MISMATCH;
-    }
-
     // 2 = explicit exact match (===), 1 = matches a subclass, 0 = implicit match (any *), -1 = not matches
     private static matchesOclCondition(v: DViewElement, data: DModelElement | LModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
         if (!v.query) return ViewEClassMatch.IMPLICIT_MATCH;
-
+        const query = v.query;
         const viewpoint = Selectors.getViewpoint();
         if(v.viewpoint !== viewpoint.id) { return ViewEClassMatch.IMPLICIT_MATCH; }
-
-        let query = v.query;
+        let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
         try {
-            const name = query.substring(0, query.indexOf('.'));
-            query = query.slice(query.indexOf('.'), query.length);
-            query = 'model' + query;
-            const model = Selectors.getModel(name);
-            if (model) {
-                const lModel: LModel = LModel.fromPointer(model.id);
-                const result = Selectors.queryJS(lModel, query).flat();
-                const pointers = Pointers.from(result);
-                if (pointers.includes(data.id)) return ViewEClassMatch.EXACT_MATCH + v.explicitApplicationPriority;
-            }
-        } catch (e) { console.log('wrong query') }
+            const flag = OCL.filter(false, "src", [data], query, constructors);
+            console.clear(); console.log(flag)
+            if(flag.length > 0) return ViewEClassMatch.EXACT_MATCH + v.explicitApplicationPriority;
+            else return ViewEClassMatch.MISMATCH;
+        } catch (e) { console.error('invalid ocl query'); }
         return ViewEClassMatch.MISMATCH;
     }
 
