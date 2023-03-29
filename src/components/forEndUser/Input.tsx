@@ -19,9 +19,7 @@ function InputComponent(props: AllProps) {
 
     const notify = () => toast((t: GObject) => (
         <div onClick={() => toast.dismiss(t.id)}>
-            <i className={'p-1 bi bi-info-circle-fill'}>
-                <label className={'ms-1'}>This is the {tooltip}</label>
-            </i>
+            <label className={'ms-1'}>{tooltip}</label>
         </div>
     ));
 

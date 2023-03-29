@@ -3,6 +3,7 @@ import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
 import {LPointerTargetable, GObject, Pointer, LEnumerator} from "../../joiner";
 import type {LClass, DPointerTargetable} from "../../joiner";
+import toast, {Toaster} from "react-hot-toast";
 
 
 function SelectComponent(props: AllProps) {
@@ -16,6 +17,12 @@ function SelectComponent(props: AllProps) {
     let css = 'my-auto select ';
     css += (jsxLabel) ? 'ms-1' : 'ms-auto';
     css += (props.hidden) ? ' hidden-input' : '';
+
+    const notify = () => toast((t: GObject) => (
+        <div onClick={() => toast.dismiss(t.id)}>
+            <label className={'ms-1'}>{tooltip}</label>
+        </div>
+    ));
 
     const change = (evt: React.ChangeEvent<HTMLSelectElement>) => {
         const target = evt.target.value;
@@ -65,6 +72,12 @@ function SelectComponent(props: AllProps) {
                 })}
             </optgroup>}
         </select>
+        {(tooltip) && <div>
+            <button onClick={notify} className={'ms-1 btn btn-primary'}>
+                <i className={'p-1 bi bi-info-lg'}></i>
+            </button>
+            <Toaster position={'bottom-center'} />
+        </div>}
     </div>);
 }
 interface OwnProps {
