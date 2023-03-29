@@ -151,12 +151,6 @@ export class IStore {
         CreateElementAction.new(viewpoint);
         SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
 
-        const dMetaModel = DModel.new("Metamodel");
-        CreateElementAction.new(dMetaModel);
-        CreateElementAction.new(DGraph.new(dMetaModel.id));
-        SetRootFieldAction.new('metamodel', dMetaModel.id, '', true);
-
-
         const primitiveTypes = ["EString", "EInt", "EBoolean"];
         for (let primitiveType of primitiveTypes) {
             const dPrimitiveType = DClass.new(primitiveType);
@@ -171,12 +165,17 @@ export class IStore {
             SetRootFieldAction.new("returnTypes", dReturnType.id, '+=', true);
         }
 
+        /*
+        const dMetaModel = DModel.new("Metamodel");
+        CreateElementAction.new(dMetaModel);
+        CreateElementAction.new(DGraph.new(dMetaModel.id));
 
         const dModel: DModel = DModel.new('Model');
         dModel.isMetamodel = false; dModel.father = dMetaModel.id;
         CreateElementAction.new(dModel);
         CreateElementAction.new(DGraph.new(dModel.id));
         SetFieldAction.new(dMetaModel, 'models', dModel.id, '+=', true);
+        */
 
     }
 

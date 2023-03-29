@@ -193,6 +193,20 @@ export class Selectors{
         return dElement;
     }
 
+    static getAllMetamodels(): LModel[] {
+        const state: IStore = store.getState();
+        const dModels = Object.values((state).models);
+        const lModels: LModel[] = LModel.fromPointer(dModels);
+        return lModels.filter((m) => {return m.isMetamodel})
+    }
+
+    static getAllModels(): LModel[] {
+        const state: IStore = store.getState();
+        const dModels = Object.values((state).models);
+        const lModels: LModel[] = LModel.fromPointer(dModels);
+        return lModels.filter((m) => {return !m.isMetamodel})
+    }
+
     //Giordano: end
 
     static getVertex<W extends boolean = true, RP extends boolean = true>(wrap?: W /* = true */, resolvePointers?: RP /**/):
