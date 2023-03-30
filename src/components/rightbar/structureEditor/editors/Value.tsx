@@ -91,7 +91,9 @@ function Value(props: Props) {
                             className={'ms-1 select'} value={target?.id + ''}>
                         <option value={'null'}>-----</option>
                         {objects.map((object, i) => {
-                            return <option key={i} value={object.id}>{object.name/*.feature('name')*/}</option>
+                            return <option key={i} value={object.id}>
+                                {(object.feature('name')) ? object.feature('name') : 'unnamed'}
+                            </option>
                         })}
                     </select>
                     <button className={'btn btn-danger ms-2'} onClick={(evt) => {remove(index)}}>

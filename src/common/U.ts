@@ -35,11 +35,12 @@ import {
     DRefEdge,
     Selectors,
     DReference,
-    DModelElement, WPointerTargetable, LEnumLiteral, DAttribute, DClassifier, LClassifier, LNamedElement
+    DModelElement, WPointerTargetable, LEnumLiteral, DAttribute, DClassifier, LClassifier, LNamedElement, IStore, LModel
 } from "../joiner";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
 console.warn('loading ts U log');
+
 
 @RuntimeAccessible
 export class U{
@@ -48,6 +49,77 @@ export class U{
     static pe(useLog_e: never, ...rest: any): void | never {}
 
     //Giordano: start
+    public static filteredPointedBy(data: LModelElement, label: string): LModelElement[] {
+        const models: LModelElement[] = [];
+        for(let dict of data.pointedBy) {
+            const pointedBy = dict.source.split('.');
+            if(pointedBy.length === 3 && pointedBy[2] === label) {
+                models.push(LModelElement.fromPointer(pointedBy[1]));
+            }
+        }
+        return models;
+    }
+
+    public static getFatherFieldToDelete(data: LModelElement): keyof DModelElement|null {
+        const father = data.father;
+        let field = '';
+        switch(father.className + '|' + data.className) {
+            // DPackage
+            case 'DModel|DPackage': field = 'packages'; break;
+            case 'DPackage|DPackage': field = 'subpackages'; break;
+            // DEnumerator and DClass
+            case 'DPackage|DEnumerator':
+            case 'DPackage|DClass': field = 'classifiers'; break;
+            // DAttribute
+            case 'DClass|DAttribute': field = 'attributes'; break;
+            // DReference
+            case 'DClass|DReference': field = 'references'; break;
+            // DOperation
+            case 'DClass|DOperation': field = 'operations'; break;
+            // DEnumLiteral
+            case 'DEnumerator|DEnumLiteral': field = 'literals'; break;
+            // DObject
+            case 'DModel|DObject': field = 'objects'; break;
+            // DParameter
+            case 'DOperation|DParameter': field = 'parameters'; break;
+            // DValue
+            case 'DObject|DValue': field = 'features'; break;
+            // Error
+            default: return null;
+        }
+        return field as keyof DModelElement;
+    }
+
+    public static getReduxFieldToDelete(data: LModelElement): keyof IStore|null {
+        let field = '';
+        switch(data.className) {
+            // DPackage
+            case 'DPackage': field = 'packages'; break;
+
+            // DClass
+            case 'DClass': field = 'classs'; break;
+            // DEnumerator
+            case 'DEnumerator': field = 'enumerators'; break;
+            // DAttribute
+            case 'DAttribute': field = 'attributes'; break;
+            // DReference
+            case 'DReference': field = 'references'; break;
+            // DOperation
+            case 'DOperation': field = 'operations'; break;
+            // DParameter
+            case 'DParameter': field = 'parameters'; break;
+            // DEnumLiteral
+            case 'DEnumLiteral': field = 'enumliterals'; break;
+            // DObject
+            case 'DObject': field = 'objects'; break;
+            // DValue
+            case 'DValue': field = 'values'; break;
+
+            // Error
+            default: return null;
+        }
+        return field as keyof IStore;
+    }
 
     public static initializeValue(classifier: undefined|DClassifier|LClassifier|Pointer<DClassifier, 1, 1, LClassifier>): string {
         if(!classifier) return 'null';

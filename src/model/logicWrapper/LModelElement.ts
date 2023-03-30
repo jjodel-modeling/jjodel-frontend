@@ -2,13 +2,13 @@ import {
     BEGIN,
     Constructors,
     CreateElementAction,
-    DEdge,
-    DeleteElementAction,
+    DEdge, DeleteElementAction,
     Dictionary,
     DPointerTargetable,
     DtoL,
     END,
-    getWParams, GObject,
+    getWParams,
+    GObject,
     IStore,
     Leaf,
     LEdge,
@@ -25,20 +25,23 @@ import {
     RuntimeAccessible,
     RuntimeAccessibleClass,
     Selectors,
-    SetFieldAction,
-    SetRootFieldAction, ShortAttribETypes,
-    store, TargetableProxyHandler,
-    U, unArr,
-    UX,
+    SetFieldAction, SetRootFieldAction,
+    ShortAttribETypes,
+    store,
+    TargetableProxyHandler,
+    U,
     WPointerTargetable
 } from "../../joiner";
 import {Json, PrimitiveType} from "../../joiner/types";
 
 import {
-    AccessModifier, ECoreAnnotation, ECoreAttribute,
-    ECoreClass, ECoreDetail,
+    AccessModifier,
+    ECoreAnnotation,
+    ECoreAttribute,
+    ECoreClass,
     ECoreEnum,
-    EcoreLiteral, ECoreOperation,
+    EcoreLiteral,
+    ECoreOperation,
     ECorePackage,
     EcoreParser,
     ECoreReference,
@@ -160,55 +163,29 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     public superDelete(): void {}
     protected get_superDelete(context: Context): () => void {
-        const obj = context.proxyObject;
-
-        let property = obj.property;
-        const father = obj.father.id;
-        const pointerPairs = new Set<string[]>();
-
-        for(let pointedBy of obj.pointedBy) {
-            const str = pointedBy.source;
-            const pointer = str.substring(str.indexOf(".") + 1, str.lastIndexOf("."));
-            const label = str.substring(str.lastIndexOf(".") + 1);
-            if(pointer) { pointerPairs.add([pointer, label]); }
-        }
-
-        for(let pair of pointerPairs) {
-            const pointer = pair[0]; const label = pair[1];
-            const deleted = Selectors.getDeleted();
-            const lPointer: LPointerTargetable = LPointerTargetable.fromPointer(pointer);
-            const ignoredLabels = ['extendedBy', 'instances', 'value'];
-            if(lPointer && lPointer.id !== father && !deleted.includes(pointer)) {
-                if(!ignoredLabels.includes(label)) {
-                    SetRootFieldAction.new("deleted", pointer, "+=", false);
-                    lPointer.delete();
-                }
-                if(label === 'value') {
-                    const dValue: DValue = DValue.fromPointer(lPointer.id);
-                    SetFieldAction.new(dValue, 'value', dValue.value.indexOf(obj.id as string), '-=', true);
-                }
-                if(label === 'extendedBy') {
-                    const dClass: DClass = DClass.fromPointer(lPointer.id);
-                    SetFieldAction.new(dClass, label, dClass.extendedBy.indexOf(obj.id as string), '-=', true);
-                }
-            }
-        }
-
-        const dFather = DPointerTargetable.fromPointer(father);
-        const fatherProperties = dFather[property] as string[];
-        const list = fatherProperties.filter((prop) => { return prop !== obj.id });
+        const data = context.proxyObject;
+        const father = data.father.__raw;
+        const fatherFieldName = U.getFatherFieldToDelete(data);
+        const reduxFieldName = U.getReduxFieldToDelete(data);
         const ret = () => {
-            BEGIN();
-            SetFieldAction.new(dFather, property, list, '', false);
-            DeleteElementAction.new(obj.id);
-            END();
-        }
+            if(fatherFieldName) {
+                const fatherField: Pointer<DModelElement, 0, 'N', LModelElement> = father[fatherFieldName] as Pointer<DModelElement, 0, 'N', LModelElement>;
+                SetFieldAction.new(father, fatherFieldName, fatherField.indexOf(data.id), '-=', true);
+            }
+            if(reduxFieldName) {
+                const state = Selectors.getState();
+                const reduxField: Pointer<DModelElement, 0, 'N', LModelElement> = state[reduxFieldName];
+                SetRootFieldAction.new(reduxFieldName, reduxField.indexOf(data.id), '-=', true);
+            }
+            if(data.childrens) { for(let child of data.childrens) { child.delete(); } }
+            DeleteElementAction.new(data.id);
+        };
         return ret;
     }
 
 
     protected get_delete(context: Context): () => void {
-        const ret = () => { context.proxyObject.superDelete() }
+        const ret = () => { context.proxyObject.superDelete(); }
         return ret;
     }
 
@@ -390,6 +367,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
 
     protected get_addAttribute(context: LogicContext<DClass>): () => void {
+        // if there are instaces we must add the attribute to these
         const dClass: DClass | null = (context.data?.className === "DClass") ? {...context.data} as DClass : null;
         if (!dClass) return () => {};
         const lClass: LClass = LPointerTargetable.from(dClass);
@@ -399,34 +377,26 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         const lString: LClassifier = LPointerTargetable.from(Selectors.getFirstPrimitiveTypes());
 
         const ret = function () {
-            const dAttribute = DAttribute.new(name, lString.id);
-            // BEGIN()
+            const dAttribute = DAttribute.new(name);
             CreateElementAction.new(dAttribute);
-
-            const wClass = WPointerTargetable.fromD(dClass);
-            wClass.attributes = [...dClass.attributes, dAttribute];
-            // const wAttribute = WPointerTargetable.fromD(dAttribute);
-            // END()
-            /**
-             * damiano: it was like this in your version??
-             BEGIN()
-             SetFieldAction.new(dAttribute, 'type', lType.id, '', true);
-             SetFieldAction.new(dAttribute, 'father', dClass.id, '', true);
-             SetFieldAction.new(dClass, 'attributes', dAttribute.id, '+=', true);
-             END()
-             const targets: Set<DClass> = new Set(); targets.add(dClass);
-             for(let target of targets) {
+            BEGIN()
+            SetFieldAction.new(dAttribute, 'type', lString.id, '', true);
+            SetFieldAction.new(dAttribute, 'father', dClass.id, '', true);
+            SetFieldAction.new(dClass, 'attributes', dAttribute.id, '+=', true);
+            END()
+            const targets: Set<DClass> = new Set(); targets.add(dClass);
+            for(let target of targets) {
                 for(let ext of target.extendedBy) {
                     targets.add(DClass.fromPointer(ext));
                 }
             }
-             for(let target of targets) {
+            for(let target of targets) {
                 for(let instance of target.instances) {
                     const dValue: DValue = DValue.new(dAttribute.name);
                     const dObject: DObject = DObject.fromPointer(instance);
                     CreateElementAction.new(dValue);
                     BEGIN()
-                    SetFieldAction.new(dValue, 'value', U.initializeValue(lType.id), '+=', false);
+                    SetFieldAction.new(dValue, 'value', U.initializeValue(lString.id), '+=', false);
                     SetFieldAction.new(dValue, 'father', dObject.id, '', true);
                     SetFieldAction.new(dValue, 'instanceof', dAttribute.id, '', true);
                     SetFieldAction.new(dAttribute, 'instances', dValue.id, '+=', true);
@@ -434,32 +404,19 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     END()
                 }
             }
-             */
-
         }
         ret();
         return ret;
     }
 
-    protected get_addReference(context: LogicContext<DClass>): (() => void) {
+    protected get_addReference(context: LogicContext<DClass>): () => void {
+        // if there are instaces we must add the reference to these
         const dClass: DClass | null = (context.data?.className === "DClass") ? context.data : null;
         if (!dClass) return () => {};
         const lClass: LClass = LPointerTargetable.from(dClass);
         let name = 'reference_' + 0;
         const childrenNames: (string)[] = lClass.references.map( c => (c).name);
         name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
-
-        const ret = () =>  {
-            const dReference = DReference.new(name);
-            // BEGIN()
-            CreateElementAction.new(dReference);
-            const wReference = WPointerTargetable.fromD(dReference);
-            wReference.type = dClass.id;
-            const wClass = WPointerTargetable.fromD(dClass);
-            wClass.references = [...dClass.references, dReference];
-            // END()
-        }
-        /*damiano: it was like this in your version
 
         const ret = function () {
             const dReference = DReference.new(name);
@@ -488,7 +445,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     END()
                 }
             }
-        * */
+        }
         ret();
         return ret;
     }
@@ -1355,21 +1312,6 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         return true;
     }
 
-    protected get_delete(context: Context): () => void {
-        const ret = () => {
-            const classes = context.proxyObject.classes;
-            let check = false
-            for(let lClass of classes) {
-                check = lClass.instances.length > 0;
-                if(check) break;
-            }
-            if(check) alert('Cannot delete the package since there are instances');
-            else context.proxyObject.superDelete();
-        };
-        ret();
-        return ret;
-    }
-
 }
 // @RuntimeAccessible export class _WPackage extends _WNamedElement { }
 // export type WPackage = DPackage | LPackage | _WPackage;
@@ -1491,24 +1433,7 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
         //END();
         return true;
     }
-    /*
-    protected get_delete(context: Context): () => void {
-        const dOperation: DOperation = context.data;
-        const dClass: DClass = Selectors.getDElement<DClass>(dOperation.father);
-        const children = new Set([...dOperation.parameters, ...dOperation.exceptions]);
-        for (let dChild of children) {
-            const lChild: LParameter | LClass = LPointerTargetable.from(dChild);
-            lChild.delete(); // be carefull! here we're deleting the return type too
-        }
-        const ret = () => {
-            SetFieldAction.new(dClass, "operations", U.removeFromList(dClass.operations, dOperation.id), '', true);
-            // SetRootFieldAction.new("operations", U.removeFromList(Selectors.getAllOperations(), dOperation.id), '', true);
-            new DeleteElementAction(dOperation);
-        }
-        ret();
-        return ret;
-    }
-    */
+
     protected get_type(context: Context): this["type"] {
         return context.proxyObject.parameters[0].type;
     }
@@ -1597,37 +1522,9 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
         EcoreParser.write(json, ECoreOperation.unique, '' + d.unique);
         EcoreParser.write(json, ECoreOperation.eType, '' + l.type.typeEcoreString);
         return json; }
-/*
-    protected get_delete(context: LogicContext<DParameter>): () => void {
-        let ret = () => {};
-        const dParameter: DParameter = context.data;
-        const dOperation: DOperation = Selectors.getDElement<DOperation>(dParameter.father);
-        if (dOperation.parameters.indexOf(dParameter.id) !== 0) {
-            const dClassifier: DClassifier | undefined = Selectors.getDElement<DClass>(dParameter.type as string); //first parameter is return type so his type is undefined
-            ret = () => {
-                SetFieldAction.new(dOperation,"parameters", U.removeFromList(dOperation.parameters, dParameter.id), '', true);
-                if (dClassifier) {
-                    // SetFieldAction.new(dClassifier, "pointedBy", U.removeFromList(dClassifier.pointedBy, dParameter.id));
-                }
-                // SetRootFieldAction.new("parameters", U.removeFromList(Selectors.getAllParameters(), dParameter.id), '', true);
-                new DeleteElementAction(dParameter);
-            }
-        } else {
-            // when deleting return type (null = void)
-            ret = () => {
-                SetFieldAction.new(dParameter, "type", null as any); // todo while reworking .delete(): null = void, questo setta void e deve essere tenuto come azione diversa dal default delete
-            };
-        }
-        ret();
-        return ret;
-    }
-    */
 }
 DTypedElement.subclasses.push(DParameter);
 LTypedElement.subclasses.push(LParameter);
-
-
-
 
 
 var todoret: any;
@@ -1939,23 +1836,6 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return true;
     }
 
-    protected get_delete(context: Context): () => void {
-        /// what if there are multiple operations sharing the same exception? exception should not be deleted if operation is.
-        const data = context.data;
-        const lData = context.proxyObject;
-
-        let childInstances = 0;
-        for(let child of lData.extendedBy) { childInstances += child.instances.length; }
-
-        const ret = () => {
-            if(data.instances.length > 0 || childInstances > 0) {
-                alert('Cannot delete the class since there are instances');
-            } else lData.superDelete();
-        }
-        ret();
-        return ret;
-    }
-
     public superclasses!: LClass[];
     public allSubClasses!: LClass[];
 
@@ -2095,6 +1975,24 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             }
             return dObject;
         };
+    }
+
+    protected get_delete(context: Context): () => void {
+        const data = context.proxyObject;
+        const ret = () => {
+            const canBeDeleted = data.extendedBy.length === 0 && data.instances.length === 0;
+            if(canBeDeleted) {
+                const pointedBy = U.filteredPointedBy(data, 'type');
+                for(let me of pointedBy) {
+                    SetFieldAction.new(me.__raw as DReference, 'type', me.father.id, '', true);
+                }
+                for(let me of data.extends) {
+                    SetFieldAction.new(me.__raw, 'extendedBy', me.__raw.extendedBy.indexOf(data.id), '-=', true);
+                }
+                data.superDelete();
+            } else { alert('cannot delete the selected class'); }
+        }
+        return ret;
     }
 
 }
@@ -2290,6 +2188,14 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
         SetFieldAction.new(context.data, 'defaultValueLiteral', val, "", false);
         return true;
     }
+    protected get_delete(context: Context): () => void {
+        const data = context.proxyObject;
+        const ret = () => {
+            for(let instance of data.instances) { instance.delete(); }
+            data.superDelete();
+        }
+        return ret;
+    }
 }
 DTypedElement.subclasses.push(DStructuralFeature);
 LTypedElement.subclasses.push(LStructuralFeature);
@@ -2438,7 +2344,6 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         SetFieldAction.new(context.data, 'edges', list, "", true);
         return true;
     }
-
 }
 DStructuralFeature.subclasses.push(DReference);
 LStructuralFeature.subclasses.push(LReference);
@@ -2533,8 +2438,6 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         SetFieldAction.new(context.data, 'isID', val);
         return true;
     }
-
-
 }
 DStructuralFeature.subclasses.push(DAttribute);
 LStructuralFeature.subclasses.push(LAttribute);
@@ -2697,12 +2600,24 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         END();
         return true;
     }
+    protected get_delete(context: Context): () => void {
+        const data = context.proxyObject;
+        const ret = () => {
+            const pointedBy = U.filteredPointedBy(data, 'type');
+            for(let me of pointedBy) {
+                const dString = Selectors.getFirstPrimitiveTypes();
+                SetFieldAction.new(me.__raw as DAttribute, 'type', dString.id, '', true);
+            }
+            data.superDelete();
+        }
+        return ret;
+    }
 }
 DDataType.subclasses.push(DEnumerator);
 LDataType.subclasses.push(LEnumerator);
 
 
-// damianoo:_ you deleted everything from DObject to LValue included? or just moved them?
+// damiano:_ you deleted everything from DObject to LValue included? or just moved them?
 
 @RuntimeAccessible
 export class DModelM1 extends DNamedElement{
@@ -2844,11 +2759,6 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             ...children];
     }
 
-    protected get_delete(context: Context): () => void {
-        const ret = () => { alert('Cannot delete the metamodel!'); }
-        return ret;
-    }
-
     protected get_isMetamodel(context: Context): this['isMetamodel'] {
         return context.data.isMetamodel;
     }
@@ -2917,6 +2827,11 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             tocheck = newtocheck;
         }
         return LPointerTargetable.from(Object.keys(checked), state);
+    }
+
+    protected get_delete(context: Context): () => void {
+        const ret = () => { alert('cannot delete DModel'); }
+        return ret;
     }
 }
 DNamedElement.subclasses.push(DModel);
@@ -3079,9 +2994,8 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         json["export DObject"] = "to do";
         return json; }
 
-    protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DValue, 1, 'N'> {
-        return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DValue, 1, 'N'>,
-            ...context.data.features];
+    protected get_childrens_idlist(context: Context): Pointer<DValue, 1, 'N'> {
+        return [...context.data.features];
     }
 
     protected get_instanceof(context: Context): this["instanceof"] {
@@ -3099,19 +3013,18 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
             return LPointerTargetable.from(feature)
         });
     }
-
-
     protected get_delete(context: Context): () => void {
+        const data = context.proxyObject;
         const ret = () => {
-            const lObject = context.proxyObject;
-            const lClass = lObject.instanceof;
-            const classes = lClass.__raw.instances;
-            const objects = [...(Selectors.getObjects().map((obj) => {return obj.id}))]
-            BEGIN()
-            SetFieldAction.new(lClass.__raw, 'instances', classes.indexOf(lObject.id), '-=', true);
-            SetRootFieldAction.new('objects', objects.indexOf(lObject.id), '-=', false);
-            END()
-            lObject.superDelete();
+            const pointedBy = U.filteredPointedBy(data, 'value');
+            for(let me of pointedBy) {
+                const lValue = me as LValue;
+                const dFather = lValue.father.__raw as DObject;
+                SetFieldAction.new(lValue.__raw, 'value', dFather.features.indexOf(data.id as string), '-=', true);
+            }
+            const me = data.instanceof;
+            SetFieldAction.new(me.__raw, 'instances', me.__raw.instances.indexOf(data.id), '-=', true);
+            data.superDelete();
         }
         return ret;
     }
@@ -3240,6 +3153,25 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     public valuestring(): string { return this.cannotCall("valuestring"); }
     private get_valuestring(context: Context): (keepemptyquotes?: boolean)=>string { return (keepemptyquotes?: boolean) => this.valuestring_impl(context, keepemptyquotes); }
     public valuestring_impl(context: Context, keepemptyquotes?: boolean): string {
+        // temporal fix: DObject reference goes throw error so I add this
+        {
+            const data = context.proxyObject;
+            if(data.instanceof.className === 'DReference') {
+                const names: string[] = [];
+                for(let me of data.value) {
+                    if(me) {
+                        const typed: LObject = me as any as LObject;
+                        if(typed?.feature('name')) names.push(typed.feature('name') as string);
+                        else names.push('unnamed');
+                    } else { names.push('null'); }
+                }
+                switch(names.length) {
+                    case 0: return '';
+                    case 1: return names[0];
+                    default: return JSON.stringify(names);
+                }
+            }
+        }
         console.error("valuestring_impl", {context, data:context.data});
         let val: any[] = this.get_value(context, true);
         let ret: any;
@@ -3295,22 +3227,16 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             default: return val + '';
         }
     }
-    public rawValue(): void { super.cannotCall('rawValue'); }
+
     protected get_delete(context: Context): () => void {
+        const data = context.proxyObject;
         const ret = () => {
-            const lValue = context.proxyObject;
-            const lFeature = lValue.instanceof;
-            const features = lFeature.__raw.instances;
-            const values = [...(Selectors.getValues().map((val) => {return val.id}))];
-            BEGIN()
-            SetFieldAction.new(lFeature.__raw, 'instances', features.indexOf(lValue.id), '-=', true);
-            SetRootFieldAction.new('values', values.indexOf(lValue.id), '-=', false);
-            END()
-            lValue.superDelete();
+            const me = data.instanceof;
+            SetFieldAction.new(me.__raw, 'instances', me.__raw.instances.indexOf(data.id), '-=', true);
+            data.superDelete();
         }
         return ret;
     }
-
 }
 DNamedElement.subclasses.push(DValue);
 LNamedElement.subclasses.push(LValue);
