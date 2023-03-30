@@ -3153,7 +3153,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     public valuestring(): string { return this.cannotCall("valuestring"); }
     private get_valuestring(context: Context): (keepemptyquotes?: boolean)=>string { return (keepemptyquotes?: boolean) => this.valuestring_impl(context, keepemptyquotes); }
     public valuestring_impl(context: Context, keepemptyquotes?: boolean): string {
-        // temporal fix: DObject reference goes throw error so I add this
+        // temporary fix: DObject reference goes throw error so I add this
         {
             const data = context.proxyObject;
             if(data.instanceof.className === 'DReference') {
