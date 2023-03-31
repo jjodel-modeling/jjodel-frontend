@@ -30,6 +30,7 @@ import {
     UX,
     windoww,
 } from "../../joiner";
+import DV from "../../common/DV";
 
 
 export function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
@@ -70,17 +71,7 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
         else if (view.jsxString.indexOf('?.') >= 0)
             Log.ee(errormsg + '\nReminder: ?. operator and empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString, {jsxCodeString, evalContext});
         else Log.ee(errormsg);
-        jsxparsedfunc = () => <div className={'w-100 h-100'}>
-            <div className={"h-100 round bg-white border border-danger"}>
-                <div className={'text-center text-danger'}>
-                    <b>SYNTAX ERROR</b>
-                    <hr />
-                    <label className={'text-center mx-1'}>
-                        The JSX you provide is NOT valid!
-                    </label>
-                </div>
-            </div>
-        </div>;
+        jsxparsedfunc = () => DV.errorView();
     }
 
     stateProps.preRenderFunc = view.preRenderFunc;
@@ -385,8 +376,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         try {
             ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], this.props.evalContext); }
         catch(e: any) {
+            ret = DV.errorView();
+            /*
             Log.exDevv('Error in custom user-defined template:\n' + e.toString() + '\n\n' + this.props.view.jsxString,
                 {templateString: this.props.view.jsxString, evalContext: this.props.evalContext, error: e});
+            */
         }
         return ret;
     }
@@ -415,8 +409,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             const onDragTestInject = () => {}; // might inject event handlers like this with cloneelement
             // add view props to GraphElement childrens (any level down)
             const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap(); // todo: per passarla come prop ma mantenerla modificabile
-            rawRElement = React.cloneElement(rawRElement, {key: this.props.key || this.props.view.id + '_' + me.id, onDragTestInject, children: UX.recursiveMap(rawRElement/*.props.children*/,
-                    (rn: ReactNode) => this.injectProp(rn, subElements))});
+            try {
+                rawRElement = React.cloneElement(rawRElement, {key: this.props.key || this.props.view.id + '_' + me.id, onDragTestInject, children: UX.recursiveMap(rawRElement/*.props.children*/,
+                        (rn: ReactNode) => this.injectProp(rn, subElements))});
+            } catch (e) {
+                rawRElement = DV.errorView();
+            }
             /*console.log('tempdebug', {deepStrictEqual, okeys:Object.keys});
             let isEqual = true;
             try {deepStrictEqual(subElements, this.props.node.subElements)} catch(e) { isEqual = false; }

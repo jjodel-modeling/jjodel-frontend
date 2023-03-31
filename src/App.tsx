@@ -10,7 +10,7 @@ import {statehistory} from "./joiner";
 interface Props {}
 function App(props: Props) {
     return(<div className={'d-flex flex-column h-100 p-1'} onClick={() => {statehistory.globalcanundostate = true;} } >
-        <TopBar />
+        {/*<TopBar />*/}
         <Dock />
     </div>);
 }

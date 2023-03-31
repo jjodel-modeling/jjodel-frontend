@@ -7,7 +7,7 @@ export default class Structure {
     private static BaseEditor(lModelElement: LModelElement) : ReactNode {
         return(<>
             {/*<Input obj={lModelElement} field={"id"} label={"ID"} type={"text"} readonly={true} />*/}
-            <Input obj={lModelElement} field={"name"} label={"Name"} type={"text"} tooltip={"ModelElement name"} />
+            <Input obj={lModelElement} field={"name"} label={"Name"} type={"text"} tooltip={"Element name"} />
         </>);
     }
     public static ModelEditor(lModel: LModelElement): ReactNode {
@@ -23,12 +23,12 @@ export default class Structure {
     public static ClassEditor(lClass: LModelElement): ReactNode {
         return(<>
             {Structure.BaseEditor(lClass)}
-            <Input obj={lClass} field={"abstract"} label={"IsAbstract"} type={"checkbox"} tooltip={"If set to True, the generated implementation class will have the abstract keyword\t"} />
+            <Input obj={lClass} field={"abstract"} label={"IsAbstract"} type={"checkbox"} tooltip={"If set to True, the generated implementation class will have the abstract keyword"} />
             <Input obj={lClass} field={"interface"} label={"IsInterface"} type={"checkbox"} tooltip={"If set to True, only the java interface will be generated. There will be no corresponding implementation class and no create method in the factory"} />
         </>);
     }
     private static DataTypeEditor(lDataType: LModelElement): ReactNode {
-        return(<Input obj={lDataType} field={"serializable"} label={"IsSerializable"} type={"checkbox"} tooltip={"todo"} />);
+        return(<Input obj={lDataType} field={"serializable"} label={"IsSerializable"} type={"checkbox"} tooltip={"It represents whether values of this type will be serialized"} />);
     }
     public static EnumEditor(lEnum: LModelElement): ReactNode {
         return(<>
@@ -38,10 +38,10 @@ export default class Structure {
     }
     private static TypedElementEditor(lTypedElement: LModelElement): ReactNode {
         return(<>
-            <Select obj={lTypedElement} field={"type"} label={"Type"} tooltip={"ModelElement Type"} />
+            <Select obj={lTypedElement} field={"type"} label={"Type"} tooltip={"Element Type"} />
             <Input obj={lTypedElement} field={"lowerBound"} label={"Lower Bound"} type={"number"} tooltip={"Determines the setting of the required property. If lowerBound is 0, the required property will be set to False. Otherwise, the required property will be set to True"} />
             <Input obj={lTypedElement} field={"upperBound"} label={"Upper Bound"} type={"number"} tooltip={"Determines the setting of the many property. If upperBound is 1, the many property will be set to False. Otherwise, the many property will be set to True"} />
-            <Input obj={lTypedElement} field={"ordered"} label={"IsOrdered"} type={"checkbox"} tooltip={"todo"} />
+            <Input obj={lTypedElement} field={"ordered"} label={"IsOrdered"} type={"checkbox"} tooltip={"It represents whether order is meaningful"} />
             <Input obj={lTypedElement} field={"unique"} label={"IsUnique"} type={"checkbox"} tooltip={"Indicates whether a many-valued attribute is allowed to have duplicates"} />
         </>);
     }
@@ -50,9 +50,9 @@ export default class Structure {
             <Input obj={lStructuralFeature} field={"defaultValueLiteral"} label={"Default Value Literal"} type={"text"} tooltip={"Determines the value returned by the get method if the feature has never been set"} />
             <Input obj={lStructuralFeature} field={"changeable"} label={"IsChangeable"} type={"checkbox"} tooltip={"Indicates whether the reference may be modified. If changeable is set to False, no set() method is generated for the reference"} />
             <Input obj={lStructuralFeature} field={"volatile"} label={"IsVolatile"} type={"checkbox"} tooltip={"Indicates whether the reference cannot be cached. If volatile is set to True, the generated class does not contain a field to hold the reference and the generated get() and set() methods for the reference are empty"} />
-            <Input obj={lStructuralFeature} field={"transient"} label={"IsTransient"} type={"checkbox"} tooltip={"Indicates whether the reference should not be stored\t"} />
+            <Input obj={lStructuralFeature} field={"transient"} label={"IsTransient"} type={"checkbox"} tooltip={"Indicates whether the reference should not be stored"} />
             <Input obj={lStructuralFeature} field={"unsettable"} label={"IsUnsettable"} type={"checkbox"} tooltip={"Indicates that the feature may be unset"} />
-            <Input obj={lStructuralFeature} field={"derived"} label={"IsDerived"} type={"checkbox"} tooltip={"todo"} />
+            <Input obj={lStructuralFeature} field={"derived"} label={"IsDerived"} type={"checkbox"} tooltip={"A derived feature typically computes its value from those of other features. It will typically be transient and will often be volatile and not changeable. The default copier won't copy it"} />
         </>);
     }
     public static AttributeEditor(lAttribute: LModelElement): ReactNode {
@@ -60,7 +60,7 @@ export default class Structure {
             {Structure.BaseEditor(lAttribute)}
             {Structure.TypedElementEditor(lAttribute)}
             {Structure.StructuralFeatureEditor(lAttribute)}
-            <Input obj={lAttribute} field={"isID"} label={"IsID"} type={"checkbox"} tooltip={"todo"} />
+            <Input obj={lAttribute} field={"isID"} label={"IsID"} type={"checkbox"} tooltip={"An ID attribute explicitly models the one unique ID of an object"} />
         </>);
     }
     public static ReferenceEditor(lReference: LModelElement): ReactNode {
@@ -98,7 +98,7 @@ export default class Structure {
             })}
             {operation.exceptions.map((exception, index) => {
                 return <div key={index}>
-                    <Input obj={exception.id} field={"name"} label={"Exception"} type={"text"} tooltip={"todo"} />
+                    <Input obj={exception.id} field={"name"} label={"Exception"} type={"text"} tooltip={"Exception name"} />
                 </div>
             })}
         </>);

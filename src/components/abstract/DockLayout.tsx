@@ -79,7 +79,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
 
     shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
         const oldProps = this.props;
-        if(oldProps.selected !== newProps.selected) { this.moveOnStructure = true; return true; }
+        // if(oldProps.selected !== newProps.selected) { this.moveOnStructure = true; return true; }
         if(oldProps.views !== newProps.views) { this.moveOnViews = true; return true; }
         return false;
     }
@@ -98,7 +98,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     }
 
     open(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {
-        let html = `<div><label>OPEN AN EXISTING MODEL</label><br/>`;
+        let html = `<div><b><label class='text-primary'>OPEN AN EXISTING MODEL</label></b><br/>`;
         html += `<select class='mt-2 select' id='select-open-model'>`;
         html += `<optgroup label='Metamodels'>`;
         for(let metamodel of Selectors.getAllMetamodels()) {
@@ -152,7 +152,8 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
 
     }
     addModel(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {
-        let html = `<div><label>CREATE A MODEL</label><br/>`;
+        let html = `<div><b><label class='text-primary'>CREATE A MODEL</label></b><br/>`;
+        html += `<label>The model will be conform to:</label><br/>`;
         html += `<select class='mt-2 select' id='select-add-model'>`;
         html += `<optgroup label='Metamodels'>`;
         for(let metamodel of Selectors.getAllMetamodels()) {

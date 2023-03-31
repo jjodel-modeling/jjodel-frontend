@@ -1,4 +1,5 @@
 import {RuntimeAccessible} from '../joiner';
+import React, {ReactElement} from "react";
 const beautify = require('js-beautify').html;
 
 @RuntimeAccessible
@@ -14,6 +15,7 @@ export default class DV {
     public static objectView(): string { return beautify(`<div className={'root object'}>` + DefaultView.object() + '</div>'); }
     public static valueView(): string { return (`<div className={'root value'}>` + DefaultView.value() + '</div>'); }
     public static defaultPackage(): string { return beautify(`<div className={'root package'}>` + DefaultView.defaultPackage() + '</div>'); }
+    public static errorView(): ReactElement { return DefaultView.error(); }
 }
 
 class DefaultView {
@@ -94,6 +96,20 @@ class DefaultView {
         return `{this.data.childrens.map((child, index) => {
             return <DefaultNode key={index} data={child.id}></DefaultNode>
         })}`;
+    }
+
+    public static error() {
+        return <div className={'w-100 h-100'}>
+            <div className={"h-100 round bg-white border border-danger"}>
+                <div className={'text-center text-danger'}>
+                    <b>SYNTAX ERROR</b>
+                    <hr />
+                    <label className={'text-center mx-1'}>
+                        The JSX you provide is NOT valid!
+                    </label>
+                </div>
+            </div>
+        </div>;
     }
 
 

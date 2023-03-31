@@ -1984,7 +1984,9 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             if(canBeDeleted) {
                 const pointedBy = U.filteredPointedBy(data, 'type');
                 for(let me of pointedBy) {
-                    SetFieldAction.new(me.__raw as DReference, 'type', me.father.id, '', true);
+                    if(me) {
+                        SetFieldAction.new(me.__raw as DReference, 'type', me.father.id, '', true);
+                    }
                 }
                 for(let me of data.extends) {
                     SetFieldAction.new(me.__raw, 'extendedBy', me.__raw.extendedBy.indexOf(data.id), '-=', true);
@@ -2605,8 +2607,10 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         const ret = () => {
             const pointedBy = U.filteredPointedBy(data, 'type');
             for(let me of pointedBy) {
-                const dString = Selectors.getFirstPrimitiveTypes();
-                SetFieldAction.new(me.__raw as DAttribute, 'type', dString.id, '', true);
+                if (me) {
+                    const dString = Selectors.getFirstPrimitiveTypes();
+                    SetFieldAction.new(me.__raw as DAttribute, 'type', dString.id, '', true);
+                }
             }
             data.superDelete();
         }
@@ -3018,9 +3022,11 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         const ret = () => {
             const pointedBy = U.filteredPointedBy(data, 'value');
             for(let me of pointedBy) {
-                const lValue = me as LValue;
-                const dFather = lValue.father.__raw as DObject;
-                SetFieldAction.new(lValue.__raw, 'value', dFather.features.indexOf(data.id as string), '-=', true);
+                if (me) {
+                    const lValue = me as LValue;
+                    const dFather = lValue.father.__raw as DObject;
+                    SetFieldAction.new(lValue.__raw, 'value', dFather.features.indexOf(data.id as string), '-=', true);
+                }
             }
             const me = data.instanceof;
             SetFieldAction.new(me.__raw, 'instances', me.__raw.instances.indexOf(data.id), '-=', true);
