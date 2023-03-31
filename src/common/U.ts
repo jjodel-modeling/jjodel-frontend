@@ -1,42 +1,30 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
-import {ChangeEvent, ReactElement} from "react";
-import {isDeepStrictEqual} from "util";
+import React, {ReactElement} from "react";
 // import {Mixin} from "ts-mixer";
-import type {
-    Constructor,
-    GObject,
-    Dictionary,
-    Temporary, Pack, Pack1, Pointer, AbstractConstructor
-} from "../joiner";
+import type {AbstractConstructor, Constructor, Dictionary, GObject, Pointer, Temporary} from "../joiner";
 import {
-    Json,
-    bool,
-    DocString,
-    JsType,
-    RuntimeAccessibleClass,
-    LPointerTargetable,
-    MixOnlyFuncs,
-    RuntimeAccessible,
-    windoww,
-    MyError,
-    DPointerTargetable,
-    TODO,
-    LogicContext,
-    LModelElement,
-    SetRootFieldAction,
-    DLog,
     CreateElementAction,
-    MyProxyHandler,
-    LReference,
-    LClass,
-    LPackage,
-    LEnumerator,
-    LAttribute,
+    DAttribute,
+    DClassifier,
+    DLog,
+    DModelElement,
+    DPointerTargetable,
     DRefEdge,
-    Selectors,
     DReference,
-    DModelElement, WPointerTargetable, LEnumLiteral, DAttribute, DClassifier, LClassifier, LNamedElement, IStore, LModel
+    IStore,
+    Json,
+    JsType,
+    LClassifier,
+    LModelElement,
+    LNamedElement,
+    LogicContext,
+    MyError,
+    RuntimeAccessible,
+    Selectors,
+    TODO,
+    windoww
 } from "../joiner";
+import Swal from "sweetalert2";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
 console.warn('loading ts U log');
@@ -49,6 +37,19 @@ export class U{
     static pe(useLog_e: never, ...rest: any): void | never {}
 
     //Giordano: start
+
+    public static alert(title: string, text: string) {
+        let html = '<style>body.swal2-no-backdrop .swal2-container {background-color: rgb(0 0 0 / 60%) !important}</style>';
+        html += `<div><b><label class='text-uppercase text-primary'>${title}</label></b><br/>`;
+        html += `<label>${text}</label><br/>`;
+        const result = Swal.fire({
+            html: html,
+            backdrop: false,
+            showCloseButton: true,
+            confirmButtonText: 'GOT IT'
+    })
+    }
+
     public static filteredPointedBy(data: LModelElement, label: string): LModelElement[] {
         const models: LModelElement[] = [];
         for(let dict of data.pointedBy) {
@@ -259,35 +260,7 @@ export class U{
         if (!a) { a = 'nameless.txt'; }
         a = U.multiReplaceAll(a.trim(), ['\\', '//', ':', '*', '?', '<', '>', '"', '|'],
             ['[lslash]', '[rslash]', ';', '°', '_', '{', '}', '\'', '!']);
-        return a; }
-
-    private static classnameConverter(classname: string): string | null {
-        switch (classname) {
-            default: return null;
-            case "DAttribute": return "attributes";
-            case "DReference": return "references";
-            case "DPackage": return "packages";
-        }
-    }
-    public static classnameToObjConverter(classname: string): string | null {
-        switch (classname) {
-            default: return U.classnameConverter(classname);
-            case "DClass": return "classifiers";
-            case "DEnumerator": return "classifiers";
-            case "DEnumLiteral": return "literals";
-        }
-    }
-    public static classnameToReduxConverter(classname: string): string | null {
-        switch (classname) {
-            default: return U.classnameConverter(classname);
-            case "DClass": return "classs";
-            case "DEnumerator": return "enumerators";
-            case "DEnumLiteral": return "enumliterals";
-        }
-    }
-
-    public static classnameToRedux(classname: string): string | null {
-        return  (classname.substring(1)).toLowerCase() + "s";
+        return a;
     }
     //Giordano: end
 

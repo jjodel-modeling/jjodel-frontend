@@ -98,7 +98,8 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     }
 
     open(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {
-        let html = `<div><b><label class='text-primary'>OPEN AN EXISTING MODEL</label></b><br/>`;
+        let html = '<style>body.swal2-no-backdrop .swal2-container {background-color: rgb(0 0 0 / 60%) !important}</style>';
+        html += `<div><b><label class='text-primary'>OPEN AN EXISTING MODEL</label></b><br/>`;
         html += `<select class='mt-2 select' id='select-open-model'>`;
         html += `<optgroup label='Metamodels'>`;
         for(let metamodel of Selectors.getAllMetamodels()) {
@@ -116,7 +117,8 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             preConfirm: () => {
                 const model: HTMLElement|null = document.getElementById('select-open-model');
                 return (model) ? (model as HTMLSelectElement).value : null;
-            }
+            },
+            backdrop: false
         });
         result.then((data) => {
             if(data.isConfirmed && data.value) {
@@ -152,7 +154,8 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
 
     }
     addModel(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {
-        let html = `<div><b><label class='text-primary'>CREATE A MODEL</label></b><br/>`;
+        let html = '<style>body.swal2-no-backdrop .swal2-container {background-color: rgb(0 0 0 / 60%) !important}</style>';
+        html += `<div><b><label class='text-primary'>CREATE A MODEL</label></b><br/>`;
         html += `<label>The model will be conform to:</label><br/>`;
         html += `<select class='mt-2 select' id='select-add-model'>`;
         html += `<optgroup label='Metamodels'>`;
@@ -166,7 +169,8 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             preConfirm: () => {
                 const model: HTMLElement|null = document.getElementById('select-add-model');
                 return (model) ? (model as HTMLSelectElement).value : null;
-            }
+            },
+            backdrop: false
         });
         result.then((data) => {
             if(data.isConfirmed && data.value) {

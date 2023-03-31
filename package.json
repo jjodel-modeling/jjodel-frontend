@@ -35,6 +35,7 @@
     "react-itertools": "^0.0.5",
     "react-json-view": "^1.21.3",
     "react-jsx-parser": "^1.28.3",
+    "react-loader-spinner": "^5.3.4",
     "react-portal": "^4.2.1",
     "react-redux": "^7.2.4",
     "react-scripts": "4.0.3",

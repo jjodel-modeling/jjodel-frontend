@@ -9,7 +9,7 @@ import {
     LGraphElement,
     LModelElement,
     LViewElement,
-    Pointer,
+    Pointer, U,
 } from "../../../joiner";
 import Structure from "./Structure";
 
