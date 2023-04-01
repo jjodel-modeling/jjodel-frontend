@@ -852,7 +852,7 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
                     (DNamedElement.fromPointer(child.id) as DNamedElement).name === name
             });
             if(check.length > 0){
-                alert('This name is already taken!');
+                U.alert('error', 'Cannot rename the selected element since this name is already taken.');
                 return true
             }
         }
@@ -1312,6 +1312,20 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         return true;
     }
 
+    protected get_delete(context: Context): () => void {
+        const data = context.proxyObject;
+        const ret = () => {
+            let canBeDeleted = true;
+            for(let me of data.classes) {
+                if(!canBeDeleted) break;
+                canBeDeleted = me.instances.length === 0;
+            }
+            if(canBeDeleted) { data.superDelete(); }
+            else { U.alert('error', 'Cannot delete the selected package since there are instances.'); }
+        }
+        return ret;
+    }
+
 }
 // @RuntimeAccessible export class _WPackage extends _WNamedElement { }
 // export type WPackage = DPackage | LPackage | _WPackage;
@@ -1651,7 +1665,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     protected set_abstract(val: this["abstract"], context: Context): boolean {
         const data = context.data;
         if(val && data.instances.length > 0) {
-            alert('Cannot change the abstraction level since there are instances of this class');
+            U.alert('error', 'Cannot change the abstraction level since there are instances.');
         } else {
             SetFieldAction.new(data, 'abstract', val);
         }
@@ -1980,7 +1994,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     protected get_delete(context: Context): () => void {
         const data = context.proxyObject;
         const ret = () => {
-            const canBeDeleted = data.extendedBy.length === 0 && data.instances.length === 0;
+            const canBeDeleted = data.instances.length === 0;
             if(canBeDeleted) {
                 const pointedBy = U.filteredPointedBy(data, 'type');
                 for(let me of pointedBy) {
@@ -1991,8 +2005,11 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
                 for(let me of data.extends) {
                     SetFieldAction.new(me.__raw, 'extendedBy', me.__raw.extendedBy.indexOf(data.id), '-=', true);
                 }
+                for(let me of data.extendedBy) {
+                    SetFieldAction.new(me.__raw, 'extends', me.__raw.extends.indexOf(data.id), '-=', true);
+                }
                 data.superDelete();
-            } else { alert('cannot delete the selected class'); }
+            } else { U.alert('error', 'Cannot delete the selected class since there are instances.'); }
         }
         return ret;
     }
@@ -2749,7 +2766,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     protected set_name(val: this['name'], context: Context): boolean {
         const models: LModel[] = LModel.fromPointer(store.getState()['models']);
         if(models.filter((model) => { return model.name === val }).length > 0) {
-            alert('This name is already taken!');
+            U.alert('error', 'Cannot rename the selected element since this name is already taken.');
         } else {
             SetFieldAction.new(context.data, 'name', val, '', false);
         }
@@ -2834,7 +2851,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     }
 
     protected get_delete(context: Context): () => void {
-        const ret = () => { alert('cannot delete DModel'); }
+        const ret = () => { U.alert('error', 'In this version of the tool models cannot be deleted.'); }
         return ret;
     }
 }

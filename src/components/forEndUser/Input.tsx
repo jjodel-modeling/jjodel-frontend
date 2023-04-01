@@ -29,7 +29,7 @@ function InputComponent(props: AllProps) {
     }
 
     return(<div style={{display: (jsxLabel || label) ? 'flex' : 'block'}} className={'p-1'}>
-        {(label && !jsxLabel) && <label className={'my-auto'}>
+        {(label && !jsxLabel) && <label style={{cursor: (tooltip) ? 'help' : 'auto'}} className={'my-auto'} onClick={() => { if(tooltip) notify(); }}>
             {label}
         </label>}
         {(jsxLabel && !label) && <label className={'my-auto'}>
@@ -38,12 +38,7 @@ function InputComponent(props: AllProps) {
         <input spellCheck={false} readOnly={props.readonly} className={css}
                type={type} onChange={change} value={value}
                checked={(['checkbox', 'radio'].includes(type)) ? value : false} />
-        {(tooltip) && <div>
-            <button onClick={notify} className={'ms-1 btn btn-primary'}>
-                <i className={'p-1 bi bi-info-lg'}></i>
-            </button>
-            <Toaster position={'bottom-center'} />
-        </div>}
+        {(tooltip) && <Toaster position={'bottom-center'} />}
     </div>);
 }
 interface OwnProps {

@@ -39,14 +39,20 @@ export class U{
     //Giordano: start
 
     public static alert(title: string, text: string) {
+        let color = 'text-';
+        switch(title.toLowerCase()) {
+            case 'error': color += 'danger'; break;
+            default: color += 'primary'
+        }
         let html = '<style>body.swal2-no-backdrop .swal2-container {background-color: rgb(0 0 0 / 60%) !important}</style>';
-        html += `<div><b><label class='text-uppercase text-primary'>${title}</label></b><br/>`;
-        html += `<label>${text}</label><br/>`;
+        html += `<div><b><label class='fs-5 mb-2 text-uppercase ${color}'>${title}</label></b><hr/>`;
+        html += `<label class='fs-6 mt-3'>${text}</label><br/>`;
         const result = Swal.fire({
             html: html,
             backdrop: false,
             showCloseButton: true,
-            confirmButtonText: 'GOT IT'
+            showConfirmButton: false
+            //confirmButtonText: 'GOT IT'
     })
     }
 

@@ -15,8 +15,11 @@
 .hidden-input { border: 1px dashed transparent; background-color: transparent }
 .hidden-input:focus { border: 1px dashed $border-color; }
 .input[type='color'] { width: min-content; padding: 0.6em; cursor: pointer; }
-.input[type='checkbox'] { width: min-content; cursor: pointer; padding: 0.6em; background-color: $false; }
-.input[type='checkbox']:checked { background-color: $true; }
+.input[type='checkbox'] { background-image: url("../static/svg/false.svg");
+  background-repeat: no-repeat; background-size: cover;
+  width: min-content; cursor: pointer; padding: 0.8em; background-color: transparent; border-radius: 999px }
+.input[type='checkbox']:checked { background-image: url("../static/svg/true.svg");
+  background-repeat: no-repeat; background-size: cover; }
 .select { width: 50%; outline: none; font-size: 0.9rem; height: min-content; border-radius: $radius;
   border: 1px solid $border-color; }
 .select:focus { border: 1px dashed $border-color; }
