@@ -1,5 +1,4 @@
 // import {Mixin} from "ts-mixer";
-import {isDeepStrictEqual} from "util";
 import {
     IsActually, getWParams,
     DMap, LMap, Dictionary,
@@ -87,7 +86,7 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
     }
 
     set_subElements(val: Pointer<DGraphElement, 0, 'N', LGraphElement>, context: LogicContext<DGraphElement>): boolean {
-        if (isDeepStrictEqual(context.data.subElements, val)) return true;
+        // if (isDeepStrictEqual(context.data.subElements, val)) return true;
         SetFieldAction.new(context.data, 'subElements', val, '', true);
         const idlookup = store.getState().idlookup;
         // new subelements

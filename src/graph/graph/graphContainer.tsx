@@ -32,6 +32,7 @@ export class GraphsContainerComponent extends PureComponent<AllProps, ThisState>
         // todo: rendi opzionale obj = this.data.id se non è specificato.
         // const editinput = "<Input obj={this.data.id} field={'name'} getter={val => val.toUpperCase()} setter={(val) => val.toLowerCase()} />";
         // "<Input obj={this.data} field={'name'} getter={val => val.toUpperCase()} setter={(val) => val.toLowerCase()} />";
+        // @ts-ignore
         return (<>
             {
                 this.props.graphs.map( (m: LGraph) => (
@@ -58,7 +59,8 @@ export class GraphsContainerComponent extends PureComponent<AllProps, ThisState>
                             </Graph>
 
                         */}
-                        {this.props.children/*<QA />*/}
+                        {//@ts-ignore
+                            this.props.children/*<QA />*/}
                     </>)
                 )
             }
@@ -107,5 +109,6 @@ const GraphsContainerConnected = connect<StateProps, DispatchProps, OwnProps, IS
 )(GraphsContainerComponent);
 
 export const GraphsContainer = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    // @ts-ignore
     return <GraphsContainerConnected {...{...props, childrens}} />; }
 

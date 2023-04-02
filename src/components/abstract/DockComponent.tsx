@@ -109,6 +109,7 @@ export const DockConnected = connect<StateProps, DispatchProps, OwnProps, IStore
 )(DockComponent);
 
 export const Dock = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    // @ts-ignore
     return <DockConnected {...{...props, childrens}} />;
 }
 export default Dock;

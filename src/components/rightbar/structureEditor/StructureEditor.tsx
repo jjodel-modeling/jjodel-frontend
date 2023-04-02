@@ -70,6 +70,7 @@ export const StructureEditorConnected = connect<StateProps, DispatchProps, OwnPr
 )(StructureEditorComponent);
 
 export const StructureEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    // @ts-ignore
     return <StructureEditorConnected {...{...props, childrens}} />;
 }
 export default StructureEditor;

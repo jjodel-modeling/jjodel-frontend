@@ -19,7 +19,7 @@ function ContextMenuComponent(props: AllProps, state: ThisState) {
     const close = () => { SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); }
 
     if(display && selected) {
-        const jsxList: JSX[] = [];
+        const jsxList: ReactElement[] = [];
         jsxList.push(<div className={"col title text-center"}>{selected.className}</div>);
         jsxList.push(<hr className={"mt-0 mb-0"} />);
         switch (selected.className) {
@@ -33,7 +33,7 @@ function ContextMenuComponent(props: AllProps, state: ThisState) {
         jsxList.push(<div onClick={() => {close(); selected.delete();}} className={"col item"}>Delete</div>);
         return <>
             <div className={"context-menu"} style={{top: position.y - 40, left: position.x - 10}}>
-                {jsxList.map((jsx) => { return jsx; })}
+                {jsxList/*.map((jsx) => { return jsx })*/}
             </div>
         </>;
     } else { return <></>; }
@@ -66,6 +66,7 @@ export const ContextMenuConnected = connect<StateProps, DispatchProps, OwnProps,
 )(ContextMenuComponent);
 
 export const ContextMenu = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    // @ts-ignore
     return <ContextMenuConnected {...{...props, childrens}} />;
 }
 export default ContextMenu;

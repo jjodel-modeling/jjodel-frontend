@@ -92,6 +92,7 @@ export const StyleEditorConnected = connect<StateProps, DispatchProps, OwnProps,
 
 // nb: necessario per usarlo a runtime
 export const StyleEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    // @ts-ignore
     return <StyleEditorConnected {...{...props, childrens}} />; }
 
 if (!windoww.components) windoww.components = {};

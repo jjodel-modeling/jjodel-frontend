@@ -232,7 +232,7 @@ class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
         }
         if (!GetPathHandler.__asArray && !GetPathHandler.__asCalls) {
             if (typeof propKey === "symbol") { this.strbuilder += propKey.toString(); }
-            else this.strbuilder += (this.strbuilder ? '.' : '') + propKey;
+            else this.strbuilder += (this.strbuilder ? '.' : '') + (propKey as string);
         }
         return GetPathHandler.__nested ? proxyitself : {};
     }
