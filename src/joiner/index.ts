@@ -32,7 +32,6 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
     NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually,
     Function, Function2, InOutParam,
     unArr, orArr
-
 } from "./types";
 export type {Pointer, PtrString, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, } from "./classes";
 
@@ -42,10 +41,12 @@ export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicC
 // console.error('iiiiiiiiiiiiiiii 3');
 // import independent generic modules (only dependent from types and RuntimeAccessible
 
-export {Uarr, CSSParser, DDate, RawVertex, $s, ParseNumberOrBooleanOptions,
-    TagNames, RawGraph, RawEdge, myFileReader, AutocompleteMatch,
-    Keystrokes, CSSRuleSorted, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, SelectorOutput, U as UU,
-    Log as Logg, Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/U";
+export {Uarr,  DDate, RawVertex, $s, ParseNumberOrBooleanOptions,
+    RawGraph, RawEdge, myFileReader, AutocompleteMatch,
+    Keystrokes, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, SelectorOutput, U as UU,
+    Log as Logg} from "../common/U";
+export {Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Geom";
+export { CSSRuleSorted, CSSParser, TagNames } from "../common/Uhtml";
 // export {Log as Logg, Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Log";
 export const Log = windoww.Log;
 export {UX} from "../common/UX";

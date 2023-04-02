@@ -259,64 +259,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }*/
 
     static graphVertexID_counter: Dictionary<DocString<'GraphID'>, Dictionary<DocString<'VertexID'>, boolean>> = {}
-    private injectProp = function(e: ReactNode, gvidmap: Dictionary<DocString<'VertexID'>, boolean>): ReactNode {
-        const re: ReactElement | null = U.ReactNodeAsElement(e);
-        if (!re) return e;
-        // @ts-ignore this
-        const parentComponent = this;
-        // const windoww = window as any;
-        let type = (re.type as any).WrappedComponent?.name || re.type;
-        // @ts-ignore
-        console.log('pre-injectingProp ', {type, thiss: this, mycomponents: windoww.mycomponents, re, props:re.props});
-        // add "view" (view id) prop as default to sub-elements of any depth to inherit the view of the parent unless the user forced another view to apply
-        switch (type) {
-            default:
-                console.count('injectingProp case default: ' + type);
-                return re;
-            //Giordano: commented this stuff
-            /*
-            case windoww.Components.Input.name:
-            case windoww.Components.Textarea.name:
-                const objid =  re.props.obj?.id || re.props.obj || parentComponent.props.data.id;
-                const ret = React.cloneElement(re, {key: re.props.key || parentComponent.props.view.id + '_' + parentComponent.props.data.id + '_' + re.props.field, obj: objid, obj2: objid});
-                //console.log('relement Input set props',
-                //    {'re.props.obj.id': re.props.obj?.id, 're.props.obj': re.props.obj, 'thiss.props.data.id': thiss.props.data.id, thiss, re, objid, ret, 'ret.props': ret.props});
-                return ret;
-             */
-            case windoww.Components.GraphElement.name:
-            case windoww.Components.GraphElementComponent.name:
-            case windoww.Components.DefaultNode.name:
-            case windoww.Components.DefaultNodeComponent.name:
-            case windoww.Components.Graph.name:
-            case windoww.Components.GraphComponent.name:
-            //case windoww.Components.Field.name:
-            //case windoww.Components.FieldComponent.name:
-            case windoww.Components.Vertex.name:
-            case windoww.Components.VertexComponent.name:
-                const injectProps: GraphElementOwnProps = {} as any;
-                // if (!parentComponent.props.node || !parentComponent.props.view) return e;
-                injectProps.parentViewId = parentComponent.props.view.id || parentComponent.props.view; // re.props.view ||  thiss.props.view
-                // Giordano add ? because only node go through error
-                injectProps.parentnodeid = parentComponent.props.node?.id;
-                injectProps.graphid = parentComponent.props.graphid;
-                // const vidmap = GraphElementRaw.graphVertexID_counter;
-                // if (!vidmap[injectProps.graphid]) vidmap[injectProps.graphid] = {};
-                // const gvidmap = vidmap[injectProps.graphid];
-                const validVertexIdCondition = (id: string): boolean => gvidmap[id];
-                // todo: come butto dei sotto-vertici dentro un vertice contenitore? o dentro un sotto-grafo? senza modificare il jsx ma solo draggando?
-                const dataid = typeof re.props.data === "string" ? re.props.data : re.props.data?.id;
-                const idbasename: string = injectProps.graphid + '^' + dataid;
-                console.log("injectingProp case GraphElement", {injectProps, props:re.props, re});
-                Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
-                injectProps.nodeid = U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
-                gvidmap[injectProps.nodeid] = true;
-                injectProps.key = injectProps.nodeid; // re.props.key || thiss.props.view.id + '_' + thiss.props.data.id;
-                if (!parentComponent.props.node || !parentComponent.props.view || !injectProps.nodeid) console.log("injectprop failing", {e, re, gvidmap, injectProps}) // todo: tmpfix for ecore import
-                    //@ts-ignore
-                else console.log('injectingProp case GraphElement return ', {type, thiss: this, e, re, gvidmap, injectProps});
 
-                return React.cloneElement(re, injectProps);
-        }}.bind(this);
 
     /*
     makeEvalContext_to_move(view: ViewElement): GObject {
@@ -416,7 +359,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             // add view props to GraphElement childrens (any level down)
             const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap(); // todo: per passarla come prop ma mantenerla modificabile
             rawRElement = React.cloneElement(rawRElement, {key: this.props.key || this.props.view.id + '_' + me.id, onDragTestInject, children: UX.recursiveMap(rawRElement/*.props.children*/,
-                    (rn: ReactNode) => this.injectProp(rn, subElements))});
+                    (rn: ReactNode) => UX.injectProp(this, rn, subElements))});
             /*console.log('tempdebug', {deepStrictEqual, okeys:Object.keys});
             let isEqual = true;
             try {deepStrictEqual(subElements, this.props.node.subElements)} catch(e) { isEqual = false; }
@@ -454,3 +397,33 @@ const GraphElementConnected = connect<GraphElementReduxStateProps, GraphElementD
 export const GraphElement = (props: GraphElementOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     return <GraphElementConnected {...{...props, childrens}} />; }
 console.info('graphElement loaded');
+
+
+
+
+/*
+@RuntimeAccessible
+export class DPoint extends DPointerTargetable {
+    static logic: typeof LPointerTargetable;
+    public x: number;
+    public y: number;
+    constructor(x?: number, y?: number) {
+        super();
+        this.x = +(x ?? 0); // if null | undefined -> 0, else just x
+        this.y = +(y ?? 0);
+    }
+}
+
+@RuntimeAccessible
+export class LPoint extends MixOnlyFuncs(DPoint, LPointerTargetable){
+    static structure: typeof DPoint;
+    static singleton: LPoint;
+    constructor(x?: number, y?: number) {
+        super(x,y);
+        this.init_constructor(x, y);
+    }
+    init_constructor(x?: number, y?: number) {
+        this.superclass.LPointerTargetable(false, undefined);
+        this.superclass.DPoint(x, y);
+    }
+}*/

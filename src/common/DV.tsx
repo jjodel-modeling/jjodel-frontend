@@ -1,4 +1,4 @@
-import {RuntimeAccessible} from '../joiner';
+import {GObject, RuntimeAccessible, ShortAttribETypes} from '../joiner';
 const beautify = require('js-beautify').html;
 
 @RuntimeAccessible
@@ -15,6 +15,22 @@ export default class DV {
     public static valueView(): string { return (`<div className={'root value'}>` + DefaultView.value() + '</div>'); }
     public static defaultPackage(): string { return beautify(`<div className={'root package'}>` + DefaultView.defaultPackage() + '</div>'); }
 }
+
+let valuecolormap: GObject = {};
+valuecolormap[ShortAttribETypes.EBoolean] = "orange";
+valuecolormap[ShortAttribETypes.EByte] = "orange";
+valuecolormap[ShortAttribETypes.EShort] = "orange";
+valuecolormap[ShortAttribETypes.EInt] = "orange";
+valuecolormap[ShortAttribETypes.ELong] = "orange";
+valuecolormap[ShortAttribETypes.EFloat] = "orange";
+valuecolormap[ShortAttribETypes.EDouble] = "orange";
+valuecolormap[ShortAttribETypes.EDate] = "green";
+valuecolormap[ShortAttribETypes.EString] = "green";
+valuecolormap[ShortAttribETypes.EChar] = "green";
+valuecolormap[ShortAttribETypes.void] = "gray";
+
+let valuecolormap_str = JSON.stringify(valuecolormap);
+
 
 class DefaultView {
 
@@ -87,7 +103,8 @@ class DefaultView {
     public static value() {
         return `<div className={'d-flex value-view'} style={{paddingRight: "6px"}}>
             <label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>
-            <label className={'d-block ms-auto'}>{this.props.data.valuestring()}</label>
+            <label className={'d-block ms-auto'} style={{color:` + valuecolormap_str + `[this.props.data.value.type] || "gray"
+            }}>: {this.props.data.valuestring()}</label>
         </div>`
     }
     public static defaultPackage() {
