@@ -45,7 +45,7 @@ import {
     LUser,
     LValue, LViewElement,
     RuntimeAccessible, SetFieldAction,
-    SetRootFieldAction,
+    SetRootFieldAction, ShortAttribETypes,
 } from "../joiner";
 import React from "react";
 import DV from "../common/DV";
@@ -158,19 +158,20 @@ export class IStore {
         SetRootFieldAction.new('metamodel', dMetaModel.id, '', true);
 
 
-        const primitiveTypes = ["EString", "EInt", "EBoolean"];
-        for (let primitiveType of primitiveTypes) {
-            const dPrimitiveType = DClass.new(primitiveType);
+        for (let primitiveType of Object.values(ShortAttribETypes)) {
+            let dPrimitiveType;
+            if (primitiveType === ShortAttribETypes.void) continue; // or make void too without primitiveType = true, but with returnType = true?
+            else dPrimitiveType = DClass.new(primitiveType, false, false, true);
             CreateElementAction.new(dPrimitiveType);
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
         }
-
-        const returnTypes = ["void", "undefined", "null"];
+/*
+        const returnTypes = ["void", "undefined", "null"]; // damiano: rimosso undefined dovrebbe essere come void (in ShortAttribEtypes, null è ritornato solo dalle funzioni che normalmente ritornano qualche DObject, quindi tipizzato con quel DObject
         for (let returnType of returnTypes) {
             const dReturnType = DClass.new(returnType);
             CreateElementAction.new(dReturnType);
             SetRootFieldAction.new("returnTypes", dReturnType.id, '+=', true);
-        }
+        }*/
 
 
         const dModel: DModel = DModel.new('Model');

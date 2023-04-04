@@ -1604,16 +1604,16 @@ export class InputPopup {
 
 export enum ShortAttribETypes {
     void = 'void',
-    EChar  = 'Echar',
+    EChar  = 'EChar',
     EString  = 'EString',
     EDate  = 'EDate',
-    EFloat  = 'EFloat',
-    EDouble  = 'EDouble',
     EBoolean = 'EBoolean',
     EByte  = 'EByte',
     EShort  = 'EShort',
     EInt  = 'EInt',
     ELong  = 'ELong',
+    EFloat  = 'EFloat',
+    EDouble  = 'EDouble',
     /*
   ECharObj  = 'ECharObj',
   EStringObj  = 'EStringObj',
@@ -1628,6 +1628,20 @@ export enum ShortAttribETypes {
   EELIST  = 'EELIST',*/
 
 }
+
+export const ShortAttribSuperTypes: Dictionary<ShortAttribETypes, ShortAttribETypes[]> = {
+    "void"     : [],
+    "EChar"    : [ShortAttribETypes.EString],
+    "EString"  : [],
+    "EDate"    : [],
+    "EBoolean" : [ShortAttribETypes.EByte, ShortAttribETypes.EShort, ShortAttribETypes.EInt, ShortAttribETypes.ELong, ShortAttribETypes.EFloat, ShortAttribETypes.EDouble],
+    "EByte"    : [ShortAttribETypes.EShort, ShortAttribETypes.EInt, ShortAttribETypes.ELong, ShortAttribETypes.EFloat, ShortAttribETypes.EDouble],
+    "EShort"   : [ShortAttribETypes.EInt, ShortAttribETypes.ELong, ShortAttribETypes.EFloat, ShortAttribETypes.EDouble],
+    "EInt"     : [ShortAttribETypes.ELong, ShortAttribETypes.EFloat, ShortAttribETypes.EDouble],
+    "ELong"    : [ShortAttribETypes.EFloat, ShortAttribETypes.EDouble],
+    "EFloat"   : [ShortAttribETypes.EDouble],
+    "EDouble"  : []
+};
 
 /*
 export class EvalOutput<T extends Object> {

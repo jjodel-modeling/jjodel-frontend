@@ -43,7 +43,7 @@ export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicC
 
 export {Uarr,  DDate, RawVertex, $s, ParseNumberOrBooleanOptions,
     RawGraph, RawEdge, myFileReader, AutocompleteMatch,
-    Keystrokes, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, SelectorOutput, U as UU,
+    Keystrokes, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, SelectorOutput, U as UU, ShortAttribSuperTypes,
     Log as Logg} from "../common/U";
 export {Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Geom";
 export { CSSRuleSorted, CSSParser, TagNames } from "../common/Uhtml";

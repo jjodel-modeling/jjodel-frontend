@@ -345,7 +345,7 @@ export class Constructors<T extends DPointerTargetable>{
     DAttribute(): this { return this; }
     DDataType(): this { return this; }
     DObject(): this { return this; }
-    DValue(): this { return this; }
+    DValue(): this {let thiss: DValue = this.thiss as any; thiss.edges = [];  return this; }
     DEdgePoint(): this { return this; }
     DVoidEdge(): this { return this; }
     DVertex(): this { return this; }
@@ -461,10 +461,13 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.exceptions = exceptions;
         return this; }
 
-    DClass(isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false): this {
+    DClass(isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: LClassifier["isPrimitive"] = false): this {
         const thiss: DClass = this.thiss as any;
         thiss.interface = isInterface;
         thiss.abstract = isAbstract;
+        thiss.isPrimitive = isPrimitive;
+        // thiss.isClass = !isPrimitive;
+        // thiss.isEnum = false;
         return this; }
 
     DEnumLiteral(value: DEnumLiteral["value"] = 0): this {
@@ -476,6 +479,8 @@ export class Constructors<T extends DPointerTargetable>{
     DEnumerator( literals: DEnumerator["literals"] = []): this {
         const thiss: DEnumerator = this.thiss as any;
         thiss.literals = literals;
+        // thiss.isClass = false;
+        // thiss.isEnum = true;
         return this; }
 
 }
@@ -730,6 +735,10 @@ export class Pointers{
         return typeof data === "string" ? data : (data as any).id;
     }
 
+    static isPointer(val: any): boolean {
+        // todo: must refine this in a safer way
+        return val?.includes ? val.includes("Pointer") : false;
+    }
 }
 /*
 export type Pack1<L extends LPointerTargetable | undefined | null,
