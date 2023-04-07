@@ -1,4 +1,5 @@
 import {
+    Constructor,
     Constructors,
     DPointerTargetable,
     LPointerTargetable,
@@ -16,8 +17,8 @@ export class DViewPoint extends DPointerTargetable {
     id!: Pointer<DViewPoint, 1, 1, LViewPoint>;
     name!: string;
 
-    public static new(name: string): DViewPoint {
-        return new Constructors(new DViewPoint('dwc')).DPointerTargetable().DViewPoint(name).end();
+    public static new(name: string, persist: boolean = false): DViewPoint {
+        return new Constructors(new DViewPoint('dwc'), undefined, persist, undefined).DPointerTargetable().DViewPoint(name).end();
     }
 }
 

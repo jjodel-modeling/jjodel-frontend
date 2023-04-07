@@ -1,4 +1,5 @@
 import {
+    Constructor,
     Constructors,
     DocString,
     DPointerTargetable,
@@ -35,8 +36,8 @@ export class DViewElement extends DPointerTargetable {
     preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
 
     jsxString!: string; // l'html template
-    usageDeclarations?: string; // example: state
-    forceNodeType?: DocString<'component name'>;
+    // usageDeclarations?: string; // example: state obsolete
+    forceNodeType?: DocString<'component name (Vertex, Field, GraphVertex, Graph)'>;
     scalezoomx: boolean = false; // whether to resize the element normally using width-height or resize it using zoom-scale css
     scalezoomy: boolean = false;
     // not persistent, some not shared. deve essere diverso da utente ad utente perchè dipende dal pan e zoom nel grafo dell'utente attuale.
@@ -63,8 +64,8 @@ export class DViewElement extends DPointerTargetable {
     onResizeEnd: string = '';
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
-                      preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1): DViewElement {
-        return new Constructors(new DViewElement('dwc')).DPointerTargetable().DViewElement(name, jsxString, defaultVSize, usageDeclarations, constants,
+                      preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1 , persist: boolean = false): DViewElement {
+        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined).DPointerTargetable().DViewElement(name, jsxString, defaultVSize, usageDeclarations, constants,
             preRenderFunc, appliableToClasses, oclApplyCondition, priority).end();
     }
 }

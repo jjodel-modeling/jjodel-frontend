@@ -101,6 +101,7 @@ class DefaultView {
         </div>`;
     }
     public static value() {
+        // todo: testa quado c'è solo un valore booleano
         return `<div className={'d-flex value-view'} style={{paddingRight: "6px"}}>
             <label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>
             <label className={'d-block ms-auto'} style={{color:` + valuecolormap_str + `[this.props.data.value.type] || "gray"

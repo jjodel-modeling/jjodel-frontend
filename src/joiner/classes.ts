@@ -92,7 +92,7 @@ import type {
     WValue
 } from "../model/logicWrapper";
 // import type {Pointer} from "./typeconverter";
-import type {CClass, Dictionary, DocString, GObject, orArr, Proxyfied, unArr} from "./types";
+import type {CClass, Constructor, Dictionary, DocString, GObject, orArr, Proxyfied, unArr} from "./types";
 import type {
     DViewElement,
     DViewTransientProperties,
@@ -104,13 +104,13 @@ import type {
 import type {LogicContext} from "./proxy";
 import type {IStore,} from "./index";
 import {
-    Action,
-    DeleteElementAction,
+    Action, BEGIN, CreateElementAction,
+    DeleteElementAction, END,
     GraphPoint,
     GraphSize,
     IPoint,
     Log,
-    ParsedAction,
+    ParsedAction, SetFieldAction,
     SetRootFieldAction,
     store,
     U,
@@ -333,19 +333,186 @@ export type WtoL<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? L
 @RuntimeAccessible
 export class Constructors<T extends DPointerTargetable>{
     private thiss: T;
-    constructor(t:T) { this.thiss = t; }
+    private persist: boolean;
+    fatherType?: Constructor;
+    constructor(t:T, father?: Pointer, persist: boolean = false, fatherType?: Constructor) {
+        this.thiss = t;
+        this.persist = persist;
+        if (this.thiss.hasOwnProperty("father")) {
+            (this.thiss as any).father = father;
+            persist && father && SetFieldAction.new(father, "pointedBy", PointedBy.fromID(t.id, "father" as any), '+=');
+        }
+        this.fatherType = fatherType;
+        if (this.persist) BEGIN()
+    }
     // start(thiss: any): this { this.thiss = thiss; return this; }
-    end(): T { return this.thiss; }
-
+    end(): T {
+        if (this.persist) { let cea = CreateElementAction.new(this.thiss, true); END([cea]); }
+        return this.thiss; }
     DModelElement(): this { return this; }
     DClassifier(): this { return this; }
-    DParameter(): this { return this; }
+    DParameter(): this {
+        let thiss: DParameter = this.thiss as any;
+        this.persist && thiss.father && SetFieldAction.new(thiss.father, "parameters", thiss.id, '+=', true);
+        return this; }
     DStructuralFeature(): this { return this; }
-    DReference(): this { return this; }
-    DAttribute(): this { return this; }
+    DReference(): this {
+        let thiss: DReference = this.thiss as any;
+        // update father's collections (pointedby's here are set automatically)
+        this.persist && thiss.father && SetFieldAction.new(thiss.father, "references", thiss.id, '+=', true);
+        return this; }
+    DAttribute(): this {
+        let thiss: DAttribute = this.thiss as any;
+        // update father's collections (pointedby's here are set automatically)
+        this.persist && thiss.father && SetFieldAction.new(thiss.father, "attributes", thiss.id, '+=', true);
+        return this; }
     DDataType(): this { return this; }
-    DObject(): this { return this; }
-    DValue(): this {let thiss: DValue = this.thiss as any; thiss.edges = [];  return this; }
+    DObject(containedIn?: DValue | DModel): this {
+        let thiss: DObject = this.thiss as any;
+        // update father's collections (pointedby's here are set automatically)
+        // damiano: who is object.father? the one holding the containment ref? there is no child collection? when father o opposite relationship need to be synchronized?
+        // todo: add model.objects to child id list
+        // todo: handlke containedIn pointing to ref?
+        if (this.persist && thiss.father) {
+            if (this.fatherType!.name === "DModel") {
+                this.persist && thiss.father && SetFieldAction.new(thiss.father as Pointer<DModel>, "objects", thiss.id, '+=', true);
+            }
+            else {
+                // object containing object is not in any direct child collection. access through values
+                // this.persist && thiss.father && SetFieldAction.new(thiss.father as Pointer<DObject>, "subpackages", thiss.id, '+=', true);
+            }
+        }
+        return this; }
+    DValue(): this {
+        let thiss: DValue = this.thiss as any; thiss.edges = [];
+        // update father's collections (pointedby's here are set automatically)
+        this.persist && thiss.father && SetFieldAction.new(thiss.father, "features", thiss.id, '+=', true);
+        return this; }
+
+    DAnnotation(source?: DAnnotation["source"], details?: DAnnotation["details"]): this {
+        const thiss: DAnnotation = this.thiss as any;
+        thiss.source = source || '';
+        thiss.details = details || [];
+        if (this.persist && details) {
+            BEGIN()
+            for (let det of details) SetFieldAction.new(det, "pointedBy", PointedBy.fromID(thiss.id, "details"), '+=');
+            // update father's collections (pointedby's here are set automatically)
+            this.persist && thiss.father && SetFieldAction.new(thiss.father, "annotations", thiss.id, '+=', true);
+            END()
+        }
+        return this; }
+
+    DPointerTargetable(isUser: boolean = false, id?: string): this {
+        const thiss: DPointerTargetable = this.thiss as any;
+        thiss.id = id || (isUser ? "USER" : DUser.current) + "_" + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
+        thiss.className = thiss.constructor.name;
+        // this.className = thiss.className;
+        if (this.persist) {
+            // no pointedBy
+        }
+        return this; }
+
+    DUser(isUser: boolean = false, id?: string): this {
+        const thiss: DPointerTargetable = this.thiss as any;
+        thiss.id = 'USER_' + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
+        if (this.persist) {
+            // no pointedBy
+        }
+        return this; }
+
+    DNamedElement(name?: DNamedElement["name"]): this {
+        const thiss: DNamedElement = this.thiss as any;
+        thiss.name = (name !== undefined) ? name || '' : thiss.constructor.name.substring(1) + " 1";
+        if (this.persist) {
+            // no pointedBy
+        }
+        return this; }
+
+    DTypedElement(type?: DTypedElement["type"]): this {
+        const thiss: DTypedElement = this.thiss as any;
+        thiss.type = type as Pointer<DClassifier, 1, 1, LClassifier>;
+        if (this.persist) {
+            type && SetFieldAction.new(type, "pointedBy", PointedBy.fromID(thiss.id, "type"), '+=');
+        }
+        return this; }
+
+    DPackage(uri?: DPackage["uri"], prefix?: DPackage["prefix"]): this {
+        const thiss: DPackage = this.thiss as any;
+        thiss.uri = uri || 'org.jodel-react.username';
+        thiss.prefix = prefix || '';
+        if (this.persist) {
+            // no pointedBy
+            // update father's collections (pointedby's here are set automatically)
+            if (this.persist && thiss.father) {
+                if (this.fatherType!.name === "DModel") {
+                    this.persist && thiss.father && SetFieldAction.new(thiss.father as Pointer<DModel>, "packages", thiss.id, '+=', true);
+                }
+                else {
+                    this.persist && thiss.father && SetFieldAction.new(thiss.father as Pointer<DPackage>, "subpackages", thiss.id, '+=', true);
+                }
+            }
+        }
+        return this; }
+
+    DModel(/* better if you set .packages from package.new() packages: DModel["packages"] = []*/): this {
+        const thiss: DModel = this.thiss as any;
+        thiss.packages = []; // packages;
+        if (this.persist) {
+            //if (packages) for (let pkg of packages) pkg && SetFieldAction.new(pkg, "pointedBy", PointedBy.fromID(thiss.id, "packages"), '+=');
+        }
+        return this; }
+
+    DOperation(exceptions: DOperation["exceptions"] = []/*, parameters: DOperation["parameters"] = []*/): this {
+        const thiss: DOperation = this.thiss as any;
+        // thiss.parameters = parameters;
+        thiss.exceptions = exceptions;
+        if (this.persist) {
+            BEGIN()
+            // if (parameters) for (let par of parameters) SetFieldAction.new(par, "pointedBy", PointedBy.fromID(thiss.id, "parameters"), '+=');
+            if (exceptions) for (let exc of exceptions) SetFieldAction.new(exc, "pointedBy", PointedBy.fromID(thiss.id, "exceptions"), '+=');
+            // update father's collections (pointedby's here are set automatically)
+            this.persist && thiss.father && SetFieldAction.new(thiss.father, "operations", thiss.id, '+=', true);
+            END()
+        }
+        return this; }
+
+    DClass(isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: LClassifier["isPrimitive"] = false): this {
+        const thiss: DClass = this.thiss as any;
+        thiss.interface = isInterface;
+        thiss.abstract = isAbstract;
+        thiss.isPrimitive = isPrimitive;
+        // thiss.isClass = !isPrimitive;
+        // thiss.isEnum = false;
+
+        if (this.persist) {
+            // no pointedBy
+            // update father's collections (pointedby's here are set automatically)
+            this.persist && thiss.father && SetFieldAction.new(thiss.father, "classifiers", thiss.id, '+=', true);
+        }
+        return this; }
+
+    DEnumLiteral(value: DEnumLiteral["value"] = 0): this {
+        const thiss: DEnumLiteral = this.thiss as any;
+        thiss.value = value;
+        thiss.literal = thiss.name;
+        if (this.persist) {
+            // no pointedBy?
+            // update father's collections (pointedby's here are set automatically)
+            this.persist && thiss.father && SetFieldAction.new(thiss.father, "literals", thiss.id, '+=', true);
+        }
+        return this; }
+
+    DEnumerator(/*set it from DLiteral.new() instead literals: DEnumerator["literals"] = []*/): this {
+        const thiss: DEnumerator = this.thiss as any;
+        // thiss.literals = literals;
+        // thiss.isClass = false;
+        // thiss.isEnum = true;
+        if (this.persist) {
+            // if (literals) for (let lit of literals) SetFieldAction.new(lit, "pointedBy", PointedBy.fromID(thiss.id, "literals"), '+=');
+            // update father's collections (pointedby's here are set automatically)
+            this.persist && thiss.father && SetFieldAction.new(thiss.father, "classifiers", thiss.id, '+=', true);
+        }
+        return this; }
     DEdgePoint(): this { return this; }
     DVoidEdge(): this { return this; }
     DVertex(): this { return this; }
@@ -360,6 +527,13 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.model = model;
         thiss.subElements = [];
         if (nodeID) thiss.id = nodeID;
+        if (this.persist) {
+            model && SetFieldAction.new(model, "pointedBy", PointedBy.fromID(thiss.id, "model"), '+=');
+            graphID && SetFieldAction.new(graphID, "pointedBy", PointedBy.fromID(thiss.id, "graph"), '+=');
+            parentNodeID && SetFieldAction.new(thiss.father, "pointedBy", PointedBy.fromID(thiss.id, "father"), '+=');
+            // update collections (pointedby's here are set automatically)
+            parentNodeID && SetFieldAction.new(thiss.father, "subElements", thiss.id, '+=', true);
+        }
         return this;
     }
 
@@ -381,6 +555,10 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.adaptWidth = false;
         thiss.width = 200;
         thiss.height = 100;
+
+        if (this.persist) {
+            // no pointedBy?
+        }
         return this;
     }
 
@@ -405,6 +583,9 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.zoom = new GraphPoint(1, 1);
         thiss.graphSize = new GraphSize(0, 0, 0, 0);  // GraphSize.apply(this, [0, 0, 0 ,0]);
         thiss._subMaps = {zoom: true, graphSize: true}
+        if (this.persist) {
+            // no pointedBy?
+        }
         return this; }
 
     DVoidVertex(defaultVSize: GraphSize): this {
@@ -413,75 +594,11 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.y = defaultVSize.y;
         thiss.w = defaultVSize.w;
         thiss.h = defaultVSize.h;
+        if (this.persist) {
+            // no pointedBy?
+        }
         return this; }
 
-    DAnnotation(source?: DAnnotation["source"], details?: DAnnotation["details"]): this {
-        const thiss: DAnnotation = this.thiss as any;
-        thiss.source = source || '';
-        thiss.details = details || [];
-        return this; }
-
-    DPointerTargetable(isUser: boolean = false, id?: string): this {
-        const thiss: DPointerTargetable = this.thiss as any;
-        thiss.id = id || (isUser ? "USER" : DUser.current) + "_" + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
-        thiss.className = thiss.constructor.name;
-        // this.className = thiss.className;
-        return this; }
-
-    DUser(isUser: boolean = false, id?: string): this {
-        const thiss: DPointerTargetable = this.thiss as any;
-        thiss.id = 'USER_' + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
-        return this; }
-
-    DNamedElement(name?: DNamedElement["name"]): this {
-        const thiss: DNamedElement = this.thiss as any;
-        thiss.name = (name !== undefined) ? name || '' : thiss.constructor.name.substring(1) + " 1";
-        return this; }
-
-    DTypedElement(type?: DTypedElement["type"]): this {
-        const thiss: DTypedElement = this.thiss as any;
-        thiss.type = type as Pointer<DClassifier, 1, 1, LClassifier>;
-        // SetFieldAction.new(dAttribute.type, "pointedBy", dAttribute.id, '+='); // ok only because type is set in D-object instead of L-object
-        return this; }
-
-    DPackage(uri?: DPackage["uri"], prefix?: DPackage["prefix"]): this {
-        const thiss: DPackage = this.thiss as any;
-        thiss.uri = uri || 'org.jodel-react.username';
-        thiss.prefix = prefix || '';
-        return this; }
-
-    DModel(packages: DModel["packages"] = []): this {
-        const thiss: DModel = this.thiss as any;
-        thiss.packages = packages;
-        return this; }
-
-    DOperation(exceptions: DOperation["exceptions"] = [], parameters: DOperation["parameters"] = []): this {
-        const thiss: DOperation = this.thiss as any;
-        thiss.parameters = parameters;
-        thiss.exceptions = exceptions;
-        return this; }
-
-    DClass(isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: LClassifier["isPrimitive"] = false): this {
-        const thiss: DClass = this.thiss as any;
-        thiss.interface = isInterface;
-        thiss.abstract = isAbstract;
-        thiss.isPrimitive = isPrimitive;
-        // thiss.isClass = !isPrimitive;
-        // thiss.isEnum = false;
-        return this; }
-
-    DEnumLiteral(value: DEnumLiteral["value"] = 0): this {
-        const thiss: DEnumLiteral = this.thiss as any;
-        thiss.value = value;
-        thiss.literal = thiss.name;
-        return this; }
-
-    DEnumerator( literals: DEnumerator["literals"] = []): this {
-        const thiss: DEnumerator = this.thiss as any;
-        thiss.literals = literals;
-        // thiss.isClass = false;
-        // thiss.isEnum = true;
-        return this; }
 
 }
 // export const Constructors = new _Constructors();
@@ -502,26 +619,15 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     pointedBy: PointedBy[] = [];
 
 
-    public static new(...a:any): DPointerTargetable { return new Constructors(new DPointerTargetable('dwc')).DPointerTargetable().end(); }
+    public static new(...a:any): DPointerTargetable { //father?: Pointer, persist: boolean = false, fatherType?: Constructor, ...a:any): DPointerTargetable {
+        Log.exx("cannot instantiate abstract class DPointerTargetable");
+        return null as any;
+        // return new Constructors(new DPointerTargetable('dwc'), father, persist, fatherType).DPointerTargetable().end();
+    }
     constructor(fakearg_detectwrongcalls:'dwc') {
         super();
         if (!fakearg_detectwrongcalls) throw new Error( "cannot build D-objects using new keyword, use the static D-Class.new method instead");
     }
-
-/*
-    static init_constructor(thiss: DPointerTargetable, isUser: any = false, id?: any, a?: any, b?:any, c?:any): void {
-        const userid = DUser.current;
-        id = id || (isUser ? '' : userid + "_") + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
-        thiss.id = id;
-        thiss.className = thiss.constructor.name;
-        const clogparam = {thiss, id, isUser, a, b, c,
-            thisid: thiss.id,
-            newid: id || (isUser ? '' : userid + "_") + (DPointerTargetable.maxID++) + "_" + new Date().getTime(),
-            newid2: (isUser ? '' : userid + "_") + (DPointerTargetable.maxID++) + "_" + new Date().getTime()};
-        windoww.clogparam = clogparam;
-        console.log("in static constr", clogparam);
-        // todo store.dispatch(new IdLinkAction(this));
-    }*/
 
     static fromL<LX extends LPointerTargetable,
         DX = LX extends LEnumerator ? LEnumerator : (LX extends LAttribute ? LAttribute : (LX extends LReference ? LReference : (LX extends LRefEdge ? LRefEdge : (LX extends LExtEdge ? LExtEdge : (LX extends LDataType ? LDataType : (LX extends LClass ? LClass : (LX extends LStructuralFeature ? LStructuralFeature : (LX extends LParameter ? LParameter : (LX extends LOperation ? LOperation : (LX extends LEdge ? LEdge : (LX extends LEdgePoint ? LEdgePoint : (LX extends LGraphVertex ? LGraphVertex : (LX extends LModel ? LModel : (LX extends LValue ? LValue : (LX extends LObject ? LObject : (LX extends LEnumLiteral ? LEnumLiteral : (LX extends LPackage ? LPackage : (LX extends LClassifier ? LClassifier : (LX extends LTypedElement ? LTypedElement : (LX extends LVertex ? LVertex : (LX extends LVoidEdge ? LVoidEdge : (LX extends LVoidVertex ? LVoidVertex : (LX extends LGraph ? LGraph : (LX extends LNamedElement ? LNamedElement : (LX extends LAnnotation ? LAnnotation : (LX extends LGraphElement ? LGraphElement : (LX extends LMap ? LMap : (LX extends LModelElement ? LModelElement : (LX extends LUser ? LUser : (LX extends LPointerTargetable ? LPointerTargetable : (ERROR)))))))))))))))))))))))))))))))
@@ -678,8 +784,8 @@ export class Pointers{
         // RET extends Pointer<DPointerTargetable, any, any, LPointerTargetable> = T extends DWL ? DWL["id"] : (T extends DWL[] ? DWL["id"] : null),
         // INF = { PCK:PCK, ISARR: ISARR,  PTR: PTR, DWL: DWL, RET: RET}, // {DD:DD, LL: LL}//
         >(data: T | T[] ): PTR { // RET | RET[] {
-            if (Array.isArray(data)) return data.filter(d => !!d).map(d => (typeof d === "string" ? d : (d as any as DWL).id)) as any;
-            else return (data ? (data as any).id : null);
+        if (Array.isArray(data)) return data.filter(d => !!d).map(d => (typeof d === "string" ? d : (d as any as DWL).id)) as any;
+        else return (data ? (data as any).id : null);
     } // stavolta fai infer so D|l.id
 
 
@@ -702,23 +808,23 @@ export class Pointers{
     public static from<T extends LPointerTargetable>(data:Pack<T[]>): Pointer<LtoD<T>, 1, 1, T>[]; //{TEST0:any};
     public static from<T extends LPointerTargetable>(data:PackArr<T[]>): Pointer<LtoD<T>, 1, 1, T>[]; //{TESTARR:any};
 
-/*
-    public static from(data:undefined): undefined; // | {D:any};
-    public static from<DX extends DPointerTargetable | undefined | null>(data:DX): DX extends DPointerTargetable ? DX["id"] : DX; // | {D:any};
-    public static from<DX extends DPointerTargetable | undefined | null>(data:DX[]): DX extends DPointerTargetable ? DX["id"][] : DX; // | {DD:any};
-    public static from<LX extends LPointerTargetable | undefined | null>(data:LX): LX extends LPointerTargetable ? LX["id"] : LX; // | {L:any};
-    public static from<LX extends LPointerTargetable | undefined | null>(data:LX[]): LX extends LPointerTargetable ? LX["id"][] : LX; // | {LL:any};
-    public static from<WX extends WPointerTargetable | undefined | null>(data:WX): WX extends WPointerTargetable ? WX["id"] : WX; // | {W:any};
-    public static from<WX extends WPointerTargetable | undefined | null>(data:WX[]): WX extends WPointerTargetable ? WX["id"][] : WX; // | {WW:any};
-    public static from<PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable> | undefined | null>(data:PTR): PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable> ? PTR : PTR; // | {P:any};
-    public static from<PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable> | undefined | null>(data:PTR[]): PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable> ? PTR[] : PTR; // | {PP:any};
-    public static from<T extends LPointerTargetable | undefined | null>(data:Pack1<T>): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T> : T; //{TEST1:any};
-    public static from<T extends LPointerTargetable | undefined | null>(data:Pack1<T>[]): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T>[] : T; //{TEST111:any};
-    public static from<T extends LPointerTargetable | undefined | null>(data:Pack<T>): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T>[] : T; //{TEST0:any};
-    public static from<T extends LPointerTargetable | undefined | null>(data:PackArr<T>): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T>[] : T; //{TESTARR:any};
-    // public static from<T extends LPointerTargetable | undefined | null>(data:Pack1<T[]>): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T> : T; //{TEST1:any};
-    // public static from<T extends LPointerTargetable | undefined | null>(data:Pack1<T[]>[]): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T>[] : T; //{TEST111:any};
-    // DDD extends (T extends Pointer<infer D> ? D : 'undefined D'),*/
+    /*
+        public static from(data:undefined): undefined; // | {D:any};
+        public static from<DX extends DPointerTargetable | undefined | null>(data:DX): DX extends DPointerTargetable ? DX["id"] : DX; // | {D:any};
+        public static from<DX extends DPointerTargetable | undefined | null>(data:DX[]): DX extends DPointerTargetable ? DX["id"][] : DX; // | {DD:any};
+        public static from<LX extends LPointerTargetable | undefined | null>(data:LX): LX extends LPointerTargetable ? LX["id"] : LX; // | {L:any};
+        public static from<LX extends LPointerTargetable | undefined | null>(data:LX[]): LX extends LPointerTargetable ? LX["id"][] : LX; // | {LL:any};
+        public static from<WX extends WPointerTargetable | undefined | null>(data:WX): WX extends WPointerTargetable ? WX["id"] : WX; // | {W:any};
+        public static from<WX extends WPointerTargetable | undefined | null>(data:WX[]): WX extends WPointerTargetable ? WX["id"][] : WX; // | {WW:any};
+        public static from<PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable> | undefined | null>(data:PTR): PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable> ? PTR : PTR; // | {P:any};
+        public static from<PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable> | undefined | null>(data:PTR[]): PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable> ? PTR[] : PTR; // | {PP:any};
+        public static from<T extends LPointerTargetable | undefined | null>(data:Pack1<T>): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T> : T; //{TEST1:any};
+        public static from<T extends LPointerTargetable | undefined | null>(data:Pack1<T>[]): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T>[] : T; //{TEST111:any};
+        public static from<T extends LPointerTargetable | undefined | null>(data:Pack<T>): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T>[] : T; //{TEST0:any};
+        public static from<T extends LPointerTargetable | undefined | null>(data:PackArr<T>): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T>[] : T; //{TESTARR:any};
+        // public static from<T extends LPointerTargetable | undefined | null>(data:Pack1<T[]>): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T> : T; //{TEST1:any};
+        // public static from<T extends LPointerTargetable | undefined | null>(data:Pack1<T[]>[]): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T>[] : T; //{TEST111:any};
+        // DDD extends (T extends Pointer<infer D> ? D : 'undefined D'),*/
     public static from<TT extends Pack<LPointerTargetable[]> | undefined | null,
         // @ts-ignore
         T extends (TT extends Pack<infer PTYPE> ? PTYPE : undefined)>(data:T): T extends null | undefined ? T : Pointer<LtoD<T>, 1, 1, T>[]; //{TEST0:any};
@@ -996,17 +1102,17 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         DX extends DPointerTargetable,
 
         RETPTR = UPPARR extends 'UP_is_N' ?
-        (DDDARR[]) : // 0...N
-        (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
-            (LOW extends 1 ? DDD : undefined)  //1...1
-        ),
+            (DDDARR[]) : // 0...N
+            (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
+                (LOW extends 1 ? DDD : undefined)  //1...1
+                ),
 
         // DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : ('ERROR'))))))))))))))))),
         LX = DX extends DEnumerator ? LEnumerator : (DX extends DAttribute ? LAttribute : (DX extends DReference ? LReference : (DX extends DRefEdge ? LRefEdge : (DX extends DExtEdge ? LExtEdge : (DX extends DDataType ? LDataType : (DX extends DClass ? LClass : (DX extends DStructuralFeature ? LStructuralFeature : (DX extends DParameter ? LParameter : (DX extends DOperation ? LOperation : (DX extends DEdge ? LEdge : (DX extends DEdgePoint ? LEdgePoint : (DX extends DGraphVertex ? LGraphVertex : (DX extends DModel ? LModel : (DX extends DValue ? LValue : (DX extends DObject ? LObject : (DX extends DEnumLiteral ? LEnumLiteral : (DX extends DPackage ? LPackage : (DX extends DClassifier ? LClassifier : (DX extends DTypedElement ? LTypedElement : (DX extends DVertex ? LVertex : (DX extends DVoidEdge ? LVoidEdge : (DX extends DVoidVertex ? LVoidVertex : (DX extends DGraph ? LGraph : (DX extends DNamedElement ? LNamedElement : (DX extends DAnnotation ? LAnnotation : (DX extends DGraphElement ? LGraphElement : (DX extends DMap ? LMap : (DX extends DModelElement ? LModelElement : (DX extends DUser ? LUser : (DX extends DPointerTargetable ? LPointerTargetable : (ERROR))))))))))))))))))))))))))))))),
         RET = LX extends 'ERROR' ? RETPTR : (RETPTR extends LX ? RETPTR : LX),
         INFERRED = {ret: RET, RETPTR: RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR[] | DX[])
-    : RET[] {
-    return LPointerTargetable.from(ptr as any); }
+        : RET[] {
+        return LPointerTargetable.from(ptr as any); }
 
     static from<// LOW extends number, UPP extends number | 'N',
         PTR extends Pointer<DPointerTargetable, 0|1, 1|'N', LPointerTargetable> | Pointer[], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
@@ -1250,11 +1356,11 @@ function MixinFakeConstructor() { this.isMixinFakeConstructor = true; }
 export function MixOnlyFuncs<A1 extends any[], I1, S1, A2 extends any[], I2, S2>(c1: Class<A1, I1, S1> & typeof RuntimeAccessibleClass, c2: Class<A2, I2, S2> & typeof RuntimeAccessibleClass):
     CClass<Longest<A1, A2>, I1 & I2
         & {
-            // superclass: Dictionary<string, (/*thiss: I1 & I2,* / ...superConstructorParams:ConstructorParameters<Class<A1, I1, S1>> | ConstructorParameters<Class<A2, I2, S2>>) => void>,
-            superclass1: Dictionary<DocString<'constructor name to make sure the user knows what superclass constructor is calling'>,  (...superConstructor1Params:ConstructorParameters<Class<A1, I1, S1>>) => void>,
-            superclass2: Dictionary<DocString<'constructor name to make sure the user knows what superclass constructor is calling'>,  (...superConstructor2Params:ConstructorParameters<Class<A2, I2, S2>>) => void>,
-            // initt: Class<A1, I1, S1>
-        } & AbstractMixedClass
+        // superclass: Dictionary<string, (/*thiss: I1 & I2,* / ...superConstructorParams:ConstructorParameters<Class<A1, I1, S1>> | ConstructorParameters<Class<A2, I2, S2>>) => void>,
+        superclass1: Dictionary<DocString<'constructor name to make sure the user knows what superclass constructor is calling'>,  (...superConstructor1Params:ConstructorParameters<Class<A1, I1, S1>>) => void>,
+        superclass2: Dictionary<DocString<'constructor name to make sure the user knows what superclass constructor is calling'>,  (...superConstructor2Params:ConstructorParameters<Class<A2, I2, S2>>) => void>,
+        // initt: Class<A1, I1, S1>
+    } & AbstractMixedClass
         // , Omit<Omit<Omit<S1 & S2, 'init_constructor'>, 'logic'>, 'maxID'> & typeof AbstractMixedClass> {
         , S1 & S2 & GObject & typeof AbstractMixedClass> {
     // strategia: passo dei finti valori che copiano i prototipi delle classi sovrascrivendo i costruttori per evitare che chiami i costruttori delle superclassi
@@ -1500,12 +1606,12 @@ export type getWParams<L extends LPointerTargetable, D extends Object> ={
     (Property extends string ? (
         Property extends "id" ? 'id is read-only' :
             //@ts-ignore
-        (L[`set_${Property}`] extends (a:any, b: any, ...b:any)=> any ? // at least 2 params: 1 for val and 1 for Context
-            // damiano todo: if first parameter is Context this should return never. because Context should not be an acceptable set value & it will cause a definition loop because contains a W key
-            // Giordano: add ignore for webpack
-            //@ts-ignore
-            Parameters<L[`set_${Property}`]>[0] // if set_X function is defined, get first param
-            //@ts-ignore
-            : never ///D[Property] | `todo: should define set_${Property}` // default type if it's not assigned = type in the D version
-        )): never)
+            (L[`set_${Property}`] extends (a:any, b: any, ...b:any)=> any ? // at least 2 params: 1 for val and 1 for Context
+                // damiano todo: if first parameter is Context this should return never. because Context should not be an acceptable set value & it will cause a definition loop because contains a W key
+                // Giordano: add ignore for webpack
+                //@ts-ignore
+                Parameters<L[`set_${Property}`]>[0] // if set_X function is defined, get first param
+                //@ts-ignore
+                : never ///D[Property] | `todo: should define set_${Property}` // default type if it's not assigned = type in the D version
+                )): never)
 } // & L

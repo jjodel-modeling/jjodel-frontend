@@ -371,8 +371,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // rnode = React.cloneElement(rnode as ReactElement, injectprops);
 
         // console.log("nodeee", {thiss:this, props:this.props, node: this.props.node});
-        if (false && (this.props.node?.__raw as DGraphElement).containedIn) {
-            let $containedIn = $('#' + this.props.node.containedIn);
+        if (false && (this.props.node?.__raw as DGraphElement).father) {
+            let $containedIn = $('#' + this.props.node.father);
             let $containerDropArea = $containedIn.find(".VertexContainer");
             const droparea = $containerDropArea[0] || $containedIn[0];
             Log.exDev(!droparea, 'invalid vertex container target', {$containedIn, $containerDropArea});

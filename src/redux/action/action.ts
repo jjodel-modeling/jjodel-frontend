@@ -27,10 +27,10 @@ export function ABORT() {
     hasBegun = false;
     pendingActions = [];
 }
-export function END(): boolean | IStore {
+export function END(actionstoPrepend: Action[] = []): boolean | IStore {
     hasBegun = false;
     // for (let action of pendingActions) { }
-    const ca: CompositeAction = new CompositeAction(pendingActions, false);
+    const ca: CompositeAction = new CompositeAction( actionstoPrepend?.length ? [...actionstoPrepend, ...pendingActions] : pendingActions, false);
     pendingActions = [];
     return ca.fire();
 }

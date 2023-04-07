@@ -26,6 +26,10 @@ function Topbar(props: AllProps) {
             <button className={'item border round ms-1'} onClick={ () => SaveManager.importEcore_click(false, false) }>Import JSON</button>
             <button className={'item border round ms-1'} onClick={ () => SaveManager.exportEcore_click(true, true) }>Export XML</button>
             <button className={'item border round ms-1'} onClick={ () => SaveManager.importEcore_click(true, true) }>Import XML</button>
+
+
+            <button className={'item border round ms-1'} onClick={ () => SaveManager.exportLayout_click(false) }>Export Layout</button>
+            <button className={'item border round ms-1'} onClick={ () => SaveManager.importLayout_click(false) }>Import Layout</button>
         </div>
         <div className={'ms-auto me-1'}>
             <label className={'item border round'} onClick={click}>Test 3</label>

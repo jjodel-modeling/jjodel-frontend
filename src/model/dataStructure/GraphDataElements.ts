@@ -1,13 +1,14 @@
 // import {Mixin} from "ts-mixer";
 import {isDeepStrictEqual} from "util";
 import {
+    BEGIN,
     Constructors,
     Dictionary,
     DMap,
     DModelElement,
     DocString,
     DPointerTargetable,
-    DUser,
+    DUser, END,
     getWParams,
     GObject,
     GraphPoint,
@@ -19,11 +20,12 @@ import {
     LogicContext,
     LPointerTargetable,
     MixOnlyFuncs,
-    Node,
+    Node, Pack1, PackArr, Point,
     Pointer,
+    Pointers,
     RuntimeAccessible,
     RuntimeAccessibleClass,
-    SetFieldAction,
+    SetFieldAction, Size,
     store,
     TargetableProxyHandler,
     U
@@ -48,7 +50,7 @@ export class DGraphElement extends DPointerTargetable {
     graph!: Pointer<DGraph, 1, 1, LGraph>; // todo: cerca graphID e rimpiazza / adatta
     model?: Pointer<DModelElement, 0, 1, LModelElement>;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
+    // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
     father!: Pointer<DGraphElement, 1, 1, LGraphElement>;
@@ -72,54 +74,131 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
     // static structure: typeof DGraphElement;
     __raw!: DGraphElement;
     id!: Pointer<DGraphElement, 1, 1, LGraphElement>;
+    father!: LGraphElement;
     graph!: LGraph; //???
     model?: LModelElement;
     isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
-    containedIn?: LGraphElement;
-    subElements!: LGraphElement[];
+    // containedIn?: LGraphElement;
+    subElements!: LGraphElement[]; // shallow, direct subelements
     state!: LMap;
-    allSubNodes!: LGraphElement[];
+    allSubNodes!: LGraphElement[]; // deep, nested subelements
     x!: number;
     y!: number;
-    zIndex!: number;
     width!: number;
-    height!: number;
+    height!: number
+    zIndex!: number;
+    zoom!: GraphPoint;
+    html!: Element;
 
-    get_graph(context: LogicContext<DGraphElement>): LGraph {
+    // fittizi
+    w!:number;
+    h!:number;
+    size!: GraphSize;
+    position!: GraphPoint;
+    htmlSize!: Size; // size and position in global document coordinates.
+    htmlPosition!: Point;
+
+    get_graph(context: Context): LGraph {
         return TargetableProxyHandler.wrap(context.data.graph); }
 
-    set_containedIn(val: DGraphElement["containedIn"], context: LogicContext<DGraphElement>): boolean {
-        SetFieldAction.new(context.data, 'containedIn', val);
-        if (val) SetFieldAction.new(val as any, 'subElements+=', context.data.id);
-        return true;
-    }
+    get_x(context: Context): this["x"] { return context.data.x; }
+    set_x(val: this["x"], context: Context): boolean {
+        SetFieldAction.new(context.data.id, "x", val, undefined, false);
+        return true; }
+    get_y(context: Context): this["y"] { return context.data.y; }
+    set_y(val: this["y"], context: Context): boolean {
+        SetFieldAction.new(context.data.id, "y", val, undefined, false);
+        return true; }
 
-    set_subElements(val: Pointer<DGraphElement, 0, 'N', LGraphElement>, context: LogicContext<DGraphElement>): boolean {
+    get_w(context: Context): this["w"] { return context.data.width; }
+    set_w(val: this["w"], context: Context): boolean {
+        SetFieldAction.new(context.data.id, "width", val, undefined, false);
+        return true; }
+    get_h(context: Context): this["h"] { return context.data.height; }
+    set_h(val: this["h"], context: Context): boolean {
+        SetFieldAction.new(context.data.id, "height", val, undefined, false);
+        return true; }
+
+    get_width(context: Context): this["w"] { return this.get_w(context); }
+    set_width(val: this["w"], context: Context): boolean { return this.set_w(val, context); }
+    get_height(context: Context): this["h"] { return this.get_h(context); }
+    set_height(val: this["h"], context: Context): boolean { return this.set_h(val, context); }
+
+    get_position(context: Context): this["position"] { return new GraphPoint(context.data.x, context.data.y); }
+    set_position(val: this["position"], context: Context): boolean {
+        BEGIN()
+        SetFieldAction.new(context.data.id, "x", val.x, undefined, false);
+        SetFieldAction.new(context.data.id, "y", val.y, undefined, false);
+        END()
+        return true; }
+
+    get_size(context: Context): this["size"] { return new GraphSize(context.data.x, context.data.y, context.data.width, context.data.height); }
+    set_size(val: this["size"], context: Context): boolean {
+        BEGIN()
+        SetFieldAction.new(context.data.id, "x", val.x, undefined, false);
+        SetFieldAction.new(context.data.id, "y", val.y, undefined, false);
+        SetFieldAction.new(context.data.id, "width", val.w, undefined, false);
+        SetFieldAction.new(context.data.id, "height", val.h, undefined, false);
+        END()
+        return true; }
+
+    get_html(context: Context): this["html"] { return $("[node-id='" + context.data.id + "']")[0]; }
+    set_html(val: this["htmlSize"], context: Context): boolean { return this.cannotSet("set_html(). html is generated through jsx. edit the view instead."); }
+
+    get_htmlSize(context: Context): this["htmlSize"] { let html = this.get_html(context); return Size.of(html); }
+    set_htmlSize(val: this["htmlSize"], context: Context): boolean {
+        // might be useful for fixed display size/location elements that stay in place even if you move tab or change zoom. debatable if needed
+        this.cannotSet("set_htmlSize(): todo extra low priority. set GraphSize through set_size instead.");
+        return true; }
+    get_htmlPosition(context: Context): this["htmlPosition"] { return this.get_htmlSize(context).tl(); }
+    set_htmlPosition(val: this["htmlPosition"], context: Context): boolean {
+        // might be useful for fixed display size/location elements that stay in place even if you move tab or change zoom. debatable if needed
+        this.cannotSet("set_htmlPosition(): todo extra low priority. set graph position through set_position instead.");
+        return true; }
+
+    get_zIndex(context: Context): this["zIndex"] { return context.data.zIndex; }
+    set_zIndex(val: this["zIndex"], context: Context): boolean {
+        SetFieldAction.new(context.data.id, "zIndex", val, undefined, false);
+        return true; }
+    get_z(context: Context): this["zIndex"] { return context.data.zIndex; }
+    set_z(val: this["zIndex"], context: Context): boolean { return this.set_zIndex(val, context); }
+/*
+    get_containedIn(context: Context): this["containedIn"] {
+        return context.data.containedIn ? LPointerTargetable.fromPointer(context.data.containedIn) : undefined; }
+    set_containedIn(val: Pack1<this["containedIn"]>, context: LogicContext<DGraphElement>): boolean {
+        let ptr: DGraphElement["containedIn"] = Pointers.from(val) as any;
+        SetFieldAction.new(context.data, 'containedIn', ptr, undefined, true);
+        if (ptr) SetFieldAction.new(ptr as any, 'subElements+=', context.data.id);
+        return true; }*/
+
+    get_subElements(context: Context): this["subElements"] { return LPointerTargetable.fromArr(context.data.subElements); }
+    set_subElements(val: PackArr<this["subElements"]>, context: LogicContext<DGraphElement>): boolean {
         if (isDeepStrictEqual(context.data.subElements, val)) return true;
-        SetFieldAction.new(context.data, 'subElements', val, '', true);
+        let pointers: Pointer<DGraphElement, 0, 'N', LGraphElement> = Pointers.from(val) || [];
+        SetFieldAction.new(context.data, 'subElements', pointers, '', true);
         const idlookup = store.getState().idlookup;
         // new subelements
-        for (let newsubelementid of val) {
+        for (let newsubelementid of pointers) {
             let subelement: DGraphElement = (newsubelementid && idlookup[newsubelementid]) as DGraphElement;
-            if (subelement.containedIn === context.data.id) continue;
-            LPointerTargetable.from(subelement).containedIn = context.data.id as any; // trigger side-action
+            if (subelement.father === context.data.id) continue;
+            LPointerTargetable.from(subelement).father = context.data.id as any; // trigger side-action
         }
         // old subelements
         for (let oldsubelementid of context.data.subElements) {
             let subelement: DGraphElement = (oldsubelementid && idlookup[oldsubelementid]) as DGraphElement;
-            if (subelement.containedIn !== context.data.id) continue;
-            LPointerTargetable.from(subelement).containedIn = null as any; // todo: can this happen? è transitorio o causa vertici senza parent permanenti?
+            if (subelement.father !== context.data.id) continue;
+            LPointerTargetable.from(subelement).father = null as any; // todo: can this happen? è transitorio o causa vertici senza parent permanenti?
         }
         return true;
     }
 
-    get_model(context: LogicContext<DGraphElement>): this["model"] {
+    get_model(context: Context): this["model"] {
         const modelElementId = $('[id="' + context.data.id + '"]')[0].dataset.dataid;
         const lModelElement: LModelElement = LPointerTargetable.from(modelElementId as string);
         return lModelElement;
     }
 
-    private get_allSubNodes(context: Context, state?: IStore): DGraphElement[] {
+    private get_allSubNodes(context: Context, state?: IStore): this["allSubNodes"] {
         // return context.data.packages.map(p => LPointerTargetable.from(p));
         state = state || store.getState();
         let tocheck: Pointer<DGraphElement>[] = context.data.subElements || [];
@@ -138,6 +217,30 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
         return LPointerTargetable.from(Object.keys(checked), state);
     }
 
+
+    get_father(context: Context): this["father"] { return LPointerTargetable.fromPointer(context.data.father); }
+    set_father(val: Pack1<this["father"]>, context: Context): boolean {
+        let ptr: DGraphElement["father"] = Pointers.from(val) as any;
+        SetFieldAction.new(context.data, 'father', ptr, undefined, true);
+        if (ptr) SetFieldAction.new(ptr as any, 'subElements+=', context.data.id);
+        return true; }
+
+    get_isSelected(context: LogicContext<DGraphElement>): this["isSelected"] { return context.data.isSelected; }
+    set_isSelected(val: this["isSelected"], context: LogicContext<DGraphElement>): boolean {
+        return this.cannotSet("graphElement.isSelected(): todo"); }
+
+    get_state(context: LogicContext<DGraphElement>): this["state"] {
+        let state: GObject = context.data.state;
+        for (let key in state) {
+            switch(key) {
+                case "id": break;
+                default: state[key] = LPointerTargetable.wrap(state[key]); break;
+            }
+        }
+        return state as any;
+    }
+    set_state(val: this["state"], context: LogicContext<DGraphElement>): boolean {
+        return this.cannotSet("graphElement.isSelected(): todo"); }
 
 }
 DPointerTargetable.subclasses.push(DGraphElement);
@@ -169,7 +272,7 @@ export class DGraph extends DGraphElement {
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 1, 1, LModelElement>;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
+    // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
     // personal attributes
@@ -216,12 +319,12 @@ export class LGraph extends LGraphElement {
     graph!: LGraph;
     model?: LModelElement;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    containedIn?: LGraphElement;
+    // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
     // personal attributes
     zoom!: GraphPoint;
-    graphSize!: GraphSize;
+    graphSize!: GraphSize; // size internal to the graph, while "size" is instead external size of the vertex holding the graph in GraphVertexes
 
     get_size(context: LogicContext<DGraph>): GraphSize { return context.data.graphSize; }
     get_graphSize(context: LogicContext<DGraph>): GraphSize { return context.data.graphSize; }
@@ -250,7 +353,7 @@ export class DVoidVertex extends DGraphElement {
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
+    // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
     zoom!: GraphPoint;
@@ -283,7 +386,7 @@ export class LVoidVertex extends LGraphElement {
     graph!: LGraph;
     model?: LModelElement;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    containedIn?: LGraphElement;
+    // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
     zoom!: GraphPoint;
@@ -339,7 +442,7 @@ export class DEdgePoint extends DGraphElement { // DVoidVertex
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
+    // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     zoom!: GraphPoint;
     x!: number;
@@ -372,7 +475,7 @@ export class LEdgePoint extends LVoidVertex {
     graph!: LGraph;
     model?: LModelElement;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    containedIn?: LGraphElement;
+    // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     zoom!: GraphPoint;
     x!: number;
@@ -403,7 +506,7 @@ export class DVoidEdge extends DGraphElement {
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
+    // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
 
     // personal attributes
@@ -429,7 +532,7 @@ export class LVoidEdge extends LGraphElement {
     graph!: LGraph;
     model?: LModelElement;
     isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
-    containedIn?: LGraphElement;
+    // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     start!: LModelElement;
     end!: LModelElement
@@ -459,7 +562,7 @@ export class DVertex extends DGraphElement { // DVoidVertex
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
+    // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     zoom!: GraphPoint;
     x!: number;
@@ -490,7 +593,7 @@ export class LVertex extends LVoidVertex {
     graph!: LGraph;
     model?: LModelElement;
     isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
-    containedIn?: LGraphElement;
+    // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     zoom!: GraphPoint;
     x!: number;
@@ -522,7 +625,7 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 1, 1, LModelElement>;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
+    // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     // from graph
     zoom!: GraphPoint;
@@ -568,7 +671,7 @@ export class LGraphVertex extends MixOnlyFuncs(LGraph, LVertex) { // MixOnlyFunc
     graph!: LGraph;
     model?: LModelElement;
     isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
-    containedIn?: LGraphElement;
+    // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     // from graph
     zoom!: GraphPoint;
@@ -609,7 +712,7 @@ export class DEdge extends DVoidEdge { // DVoidEdge
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
+    // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
     start!: Pointer<DModelElement, 1, 1, LModelElement>;
@@ -635,7 +738,7 @@ export class LEdge extends LVoidEdge {
     graph!: LGraph;
     model?: LModelElement;
     isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
-    containedIn!: LGraphElement;
+    // containedIn!: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
     start!: LModelElement;
@@ -660,7 +763,7 @@ export class DExtEdge extends DEdge { // etends DEdge
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
+    // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
     start!: Pointer<DModelElement, 1, 1, LModelElement>;
@@ -687,7 +790,7 @@ export class LExtEdge extends LEdge{
     graph!: LGraph;
     model?: LModelElement;
     isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
-    containedIn!: LGraphElement;
+    // containedIn!: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
     start!: LModelElement;

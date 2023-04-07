@@ -1,5 +1,5 @@
 import {
-    BEGIN,
+    BEGIN, Constructor,
     Constructors,
     CreateElementAction,
     DEdge,
@@ -62,7 +62,9 @@ export class DModelElement extends DPointerTargetable{
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
 
     public static new(): DModelElement {
-        return new Constructors(new DModelElement('dwc')).DPointerTargetable().DModelElement().end();
+        Log.exx("DModelElement is abstract, cannot instantiate");
+        return null as any;
+        //return new Constructors(new DModelElement('dwc')).DPointerTargetable().DModelElement().end();
     }
 }
 
@@ -317,9 +319,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return true;
     }
 
-    protected get_addChild(context: Context): (type:string, exception?: Pack1<LClassifier>) => void { // just for add new, not for add pre-existing.
+    protected get_addChild_obsolete(context: Context): (type:string, ...params: any[]) => void { // just for add new, not for add pre-existing.
         return (type, exception?: Pack1<LClassifier>) => {
-            let ret: (exception?: Pack1<LClassifier>) => void = () => {};
+            let ret: (...params: any[]) => void = () => {};
             switch ((type || '').toLowerCase()){
                 default: Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), context}); break;
                 case "attribute": ret = this.get_addAttribute(context as any); break;
@@ -512,36 +514,40 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         ret();
         return ret;
     }
-
-    protected get_addEnumLiteral(context: LogicContext<DEnumerator>): () => void {
+    public addEnumLiteral(name?: string, value?: number): void { this.cannotCall("addEnumLiteral"); }
+    protected get_addEnumLiteral(context: LogicContext<DEnumerator>): (name?: string, value?: number) => void {
         let ret = () => {};
         const dEnum: DEnumerator | null = (context.data?.className === "DEnumerator") ? context.data : null;
         if (!dEnum) return ret;
-        const lEnum: LEnumerator = LPointerTargetable.from(dEnum);
-        let name = 'literal_' + 0;
-        const childrenNames: (string)[] = lEnum.childrens.map(c => (c as LNamedElement).name);
-        name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
-        ret = () => {
-            const dLiteral = DEnumLiteral.new(name);
-            CreateElementAction.new(dLiteral);
-            const wEnum = WPointerTargetable.fromD(dEnum);
-            wEnum.literals = [...dEnum.literals, dLiteral];
+        ret = (name?: string, value?: number) => {
+            if (!name) {
+                const lEnum: LEnumerator = LPointerTargetable.from(dEnum);
+                name = 'literal_' + 0;
+                const childrenNames: (string)[] = lEnum.childrens.map(c => (c as LNamedElement).name);
+                name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
+            }
+            const dLiteral = DEnumLiteral.new(name, value, dEnum.id, true);
+            // CreateElementAction.new(dLiteral);
+            // const wEnum = WPointerTargetable.fromD(dEnum);
+            // wEnum.literals = [...dEnum.literals, dLiteral];
         }
         ret();
         return ret;
     }
 
+    public addOperation(name?: string): void { this.cannotCall("addOperation"); }
     protected get_addOperation(context: LogicContext<DClass>): () => void {
         let ret = () => {};
         const dClass: DClass | null = (context.data?.className === "DClass") ? context.data : null;
         if(dClass) {
-            const lClass: LClass = LPointerTargetable.from(dClass);
-            let name = 'fx_' + 0;
-            const childrenNames: (string)[] = lClass.childrens.map(c => (c as LNamedElement).name);
-            name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
-
-            ret = () => {
-                const dOperation = DOperation.new(name);
+            ret = (name?: string) => {
+                if (!name) {
+                    const lClass: LClass = LPointerTargetable.from(dClass);
+                    name = 'fx_' + 0;
+                    const childrenNames: (string)[] = lClass.childrens.map(c => (c as LNamedElement).name);
+                    name = U.increaseEndingNumber(name, false, false, (newname) => childrenNames.indexOf(newname) >= 0)
+                }
+                const dOperation = DOperation.new(name, undefined, [], [], dClass.id, true);
                 CreateElementAction.new(dOperation);
                 const wClass = WPointerTargetable.fromD(dClass);
                 wClass.operations = [...dClass.operations, dOperation];
@@ -601,63 +607,11 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     public addAttribute(): void { this.cannotCall('addAttribute'); }
     public addReference(): void { this.cannotCall('addReference'); }
     public addEnumerator(): void { this.cannotCall('addEnumerator'); }
-    public addEnumLiteral(): void { this.cannotCall('addLiteral'); }
-    public addOperation(): void { this.cannotCall('addOperation'); }
     public addParameter(): void { this.cannotCall('addParameter'); }
     // chiedere al prof: cosa può lanciato come eccezione: se tutte le classi o se solo quelle che estendono Exception
     public addException(exception?: DClassifier): () => void { throw this.wrongAccessMessage("AddException"); }
-    public addChild(type: string): void { this.cannotCall('addAttribute', type); }
-/* damiano: why removed? or just moved?
-    protected _addException(dOperation: DOperation, dClass: DClass): void {
-        SetFieldAction.new(dOperation, "exceptions", dClass.id, '+=', true);
-    }
+    public addChild(type: string): void { this.cannotCall("addChild, it's obsolete call specific adders", type); }
 
-    private static addOperation_ (dClass: DClass, dParameter: DParameter, dOperation: DOperation): void {
-        CreateElementAction.new(dParameter);
-        CreateElementAction.new(dOperation);
-        SetFieldAction.new(dOperation, "parameters", dParameter.id, '+=', true);
-        SetFieldAction.new(dClass, "operations", dOperation.id, '+=', true);
-    }
-    private static addParameter_(dOperation: DOperation, dParameter: DParameter): void {
-        CreateElementAction.new(dParameter);
-        SetFieldAction.new(dOperation, "parameters", dParameter.id, '+=', true);
-    }
-    private static addException_(dOperation: DOperation, dException: DClassifier): void {
-        CreateElementAction.new(dException);
-        SetFieldAction.new(dOperation, "exceptions", dException.id, '+=', true);
-    }
-    private static addReference_(dClass: DClass, dReference: DReference, dRefEdge: DRefEdge): void {
-        CreateElementAction.new(dReference);
-        SetFieldAction.new(dClass, "references", dReference.id, '+=', true);
-        CreateElementAction.new(dRefEdge);
-        // new SetRootFieldAction("refEdges", dRefEdge.id, '+=', true); // todo: la creazione di una ref non dovrebbe automaticamente implicare la creazione di un arco, ma per test per ora ok
-    }
-    private static addAttribute_(dClass: DClass, dAttribute: DAttribute): void {
-        CreateElementAction.new(dAttribute);
-        SetFieldAction.new(dClass, 'attributes', dAttribute.id, '+=', true);
-    }
-    private static addClass_(dPackage: DPackage, dClass: DClass): void {
-        CreateElementAction.new(dClass);
-        SetFieldAction.new(dPackage, 'classifiers', dClass.id, '+=', true);
-    }
-    private static addPackage_(dModel: DModel, dPackage: DPackage): void {
-        CreateElementAction.new(dPackage);
-        SetFieldAction.new(dModel, 'packages', dPackage.id, '+=', true);
-    }
-    private static addSubPackage_(dPackage: DPackage, dSubPackage: DPackage): void {
-        CreateElementAction.new(dSubPackage);
-        SetFieldAction.new(dPackage, 'subpackages', dSubPackage.id, '+=', true);
-    }
-    private static addEnumerator_(dPackage: DPackage, dEnumerator: DEnumerator): void {
-        CreateElementAction.new(dEnumerator);
-        SetFieldAction.new(dPackage, 'classifiers', dEnumerator.id, '+=', true);
-    }
-    private static addEnumLiteral_(dEnum: DEnumerator, dLiteral: DEnumLiteral): void {
-        CreateElementAction.new(dLiteral);
-        SetFieldAction.new(dEnum, "literals", dLiteral.id, '+=', true);
-    }
-
- */
 }
 
 /*function isValidPointer<T extends DPointerTargetable = DModelElement, LB extends number = 0, UB extends number = 1, RET extends LPointerTargetable = LModelElement>
@@ -715,8 +669,8 @@ export class DAnnotation extends DModelElement { // extends Mixin(DAnnotation0, 
     source!: string;
     details!: DAnnotationDetail[];//Dictionary<string, string>;
 
-    public static new(source?: DAnnotation["source"], details?: DAnnotation["details"]): DAnnotation {
-        return new Constructors(new DAnnotation('dwc')).DPointerTargetable().DModelElement().DAnnotation(source, details).end();
+    public static new(source?: DAnnotation["source"], details?: DAnnotation["details"], father?: Pointer, persist: boolean = false): DAnnotation {
+        return new Constructors(new DAnnotation('dwc'), father, persist, undefined).DPointerTargetable().DModelElement().DAnnotation(source, details).end();
     }
 }
 
@@ -845,7 +799,9 @@ export class DNamedElement extends DPointerTargetable { // Mixin(DNamedElement0,
     name!: string;
 
     public static new(name?: DNamedElement["name"]): DNamedElement {
-        return new Constructors(new DNamedElement('dwc')).DPointerTargetable().DModelElement().DNamedElement(name).end();
+        Log.exx("DNamedElement is abstract, cannot instantiate");
+        return null as any;
+        // return new Constructors(new DNamedElement('dwc')).DPointerTargetable().DModelElement().DNamedElement(name).end();
     }
 
 }
@@ -965,8 +921,8 @@ export class DTypedElement extends DPointerTargetable { // Mixin(DTypedElement0,
     required!: boolean; // ?
 
 
-    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"]): DTypedElement {
-        return new Constructors(new DTypedElement('dwc')).DPointerTargetable().DModelElement()
+    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = false, fatherType?: Constructor): DTypedElement {
+        return new Constructors(new DTypedElement('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DTypedElement(type).end();
     }
 }
@@ -1123,8 +1079,8 @@ export /*abstract*/ class DClassifier extends DPointerTargetable { // extends DN
     // isInstance(object: EJavaObject): boolean; ?
     // getClassifierID(): number;
 
-    public static new(name?: DNamedElement["name"]): DClassifier {
-        return new Constructors(new DClassifier('dwc')).DPointerTargetable().DModelElement()
+    public static new(name?: DNamedElement["name"], father?: Pointer, persist: boolean = false, fatherType?: Constructor): DClassifier {
+        return new Constructors(new DClassifier('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DClassifier().end();
     }
 }
@@ -1218,8 +1174,8 @@ export class DPackage extends DPointerTargetable { // extends DNamedElement
     uri!: string;
     prefix!: string;
 
-    public static new(name?: DNamedElement["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]): DPackage {
-        return new Constructors(new DPackage('dwc')).DPointerTargetable().DModelElement()
+    public static new(name?: DNamedElement["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"], father?: Pointer, persist: boolean = false, fatherType?: Constructor): DPackage {
+        return new Constructors(new DPackage('dwc'), father, persist, fatherType).DPointerTargetable().DModelElement()
             .DNamedElement(name).DPackage(uri, prefix).end();
     }
 }
@@ -1435,9 +1391,10 @@ export class DOperation extends DPointerTargetable { // extends DTypedElement
     parameters: Pointer<DParameter, 0, 'N', LParameter> = [];
     visibility: AccessModifier = AccessModifier.private;
 
-    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], exceptions: DOperation["exceptions"] = [], parameters: DOperation["parameters"] = []): DOperation {
-        return new Constructors(new DOperation('dwc')).DPointerTargetable().DModelElement()
-            .DNamedElement(name).DTypedElement(type).DOperation(exceptions, parameters).end();
+    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], exceptions: DOperation["exceptions"] = [], parameters: never[] = [],
+                      father?: Pointer, persist: boolean = false, fatherType?: Constructor): DOperation {
+        return new Constructors(new DOperation('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
+            .DNamedElement(name).DTypedElement(type).DOperation(exceptions).end();
     }
 }
 
@@ -1587,8 +1544,8 @@ export class DParameter extends DPointerTargetable { // extends DTypedElement
     required!: boolean;
     // personal
 
-    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"]): DParameter {
-        return new Constructors(new DParameter('dwc')).DPointerTargetable().DModelElement()
+    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = false, fatherType?: Constructor): DParameter {
+        return new Constructors(new DParameter('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DTypedElement(type).DParameter().end();
     }
 }
@@ -1706,8 +1663,9 @@ export class DClass extends DPointerTargetable { // extends DClassifier
     // for m1:
     hideExcessFeatures: boolean = true; // damiano: se attivo questo e creo una DClass di sistema senza nessuna feature e di nome Object, ho creato lo schema di un oggetto schema-less a cui tutti sono conformi
 
-    public static new(name?: DNamedElement["name"], isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: DClass["isPrimitive"] = false): DClass {
-        return new Constructors(new DClass('dwc')).DPointerTargetable().DModelElement()
+    public static new(name?: DNamedElement["name"], isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: DClass["isPrimitive"] = false,
+                      father?: Pointer, persist: boolean = false, fatherType?: Constructor): DClass {
+        return new Constructors(new DClass('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DClassifier().DClass(isInterface, isAbstract, isPrimitive).end();
     }
 
@@ -2166,8 +2124,8 @@ export class DDataType extends DPointerTargetable { // extends DClassifier
     usedBy: Pointer<DAttribute, 0, 'N', LAttribute> = [];
 
 
-    public static new(name?: DNamedElement["name"]): DDataType {
-        return new Constructors(new DDataType('dwc')).DPointerTargetable().DModelElement()
+    public static new(name?: DNamedElement["name"], father?: Pointer, persist: boolean = false, fatherType?: Constructor): DDataType {
+        return new Constructors(new DDataType('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DClassifier().DDataType().end();
     }
 }
@@ -2245,8 +2203,8 @@ export class DStructuralFeature extends DPointerTargetable { // DTypedElement
     derived: boolean = false;
     defaultValue!: (Pointer<DObject, 1, 1, LObject> | PrimitiveType)[];
 
-    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"]): DStructuralFeature {
-        return new Constructors(new DStructuralFeature('dwc')).DPointerTargetable().DModelElement()
+    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = false, fatherType?: Constructor): DStructuralFeature {
+        return new Constructors(new DStructuralFeature('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DTypedElement(type).DStructuralFeature().end();
     }
     // getFeatureID(): number;
@@ -2377,8 +2335,8 @@ export class DReference extends DPointerTargetable { // DStructuralFeature
     target: Pointer<DClass, 0, 'N', LClass> = [];
     edges: Pointer<DEdge, 0, 'N', LEdge> = [];
 
-    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"]): DReference {
-        return new Constructors(new DReference('dwc')).DPointerTargetable().DModelElement()
+    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = false, fatherType?: Constructor): DReference {
+        return new Constructors(new DReference('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DTypedElement(type).DStructuralFeature().DReference().end();
     }
 
@@ -2519,7 +2477,12 @@ DStructuralFeature.subclasses.push(DReference);
 LStructuralFeature.subclasses.push(LReference);
 
 
-
+function has_opposite(oppositename: string, ...comments: string[]): any {
+    // return (c:Constructor, key:string, ):any =>{}
+}
+function obsolete_attribute(...comments: string[]) {
+    return undefined as any; // function(c:Constructor, key:string,): any {}
+}
 
 @RuntimeAccessible
 export class DAttribute extends DPointerTargetable { // DStructuralFeature
@@ -2531,6 +2494,7 @@ export class DAttribute extends DPointerTargetable { // DStructuralFeature
 
     // inherit redefine
     id!: Pointer<DAttribute, 1, 1, LAttribute>;
+    // @has_opposite("father")
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
     type!: Pointer<DClassifier, 1, 1, LClassifier>;
@@ -2546,16 +2510,21 @@ export class DAttribute extends DPointerTargetable { // DStructuralFeature
     unsettable: boolean = false;
     derived: boolean = false;
     defaultValueLiteral!: string;
+    //@obsolete_attribute()
     parent: Pointer<DClass, 0, 'N', LClass> = [];
+
+    //@has_opposite("attributes")
     father!: Pointer<DClass, 1, 1, LClass>;
+
+    //@has_opposite("instanceof")
     instances: Pointer<DValue, 0, 'N', LValue> = [];
     defaultValue!: PrimitiveType[];
 
     // personal
     isID: boolean = false; // ? exist in ecore as "iD" ?
 
-    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"]): DAttribute {
-        return new Constructors(new DAttribute('dwc')).DPointerTargetable().DModelElement()
+    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = false): DAttribute {
+        return new Constructors(new DAttribute('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DTypedElement(type).DStructuralFeature().DAttribute().end();
     }
 }
@@ -2659,8 +2628,8 @@ export class DEnumLiteral extends DPointerTargetable { // DNamedElement
     ordinal: number=1;
     literal!: string;
 
-    public static new(name?: DNamedElement["name"], value: DEnumLiteral["value"] = 0): DEnumLiteral {
-        return new Constructors(new DEnumLiteral('dwc')).DPointerTargetable().DModelElement()
+    public static new(name?: DNamedElement["name"], value: DEnumLiteral["value"] = 0, father?: Pointer, persist: boolean = false, fatherType?: Constructor): DEnumLiteral {
+        return new Constructors(new DEnumLiteral('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DEnumLiteral(value).end();
     }
 }
@@ -2744,9 +2713,9 @@ export class DEnumerator extends DPointerTargetable { // DDataType
     // personal
     literals: Pointer<DEnumLiteral, 0, 'N', LEnumLiteral> = [];
 
-    public static new(name?: DNamedElement["name"], literals: DEnumerator["literals"] = []): DEnumerator {
-        return new Constructors(new DEnumerator('dwc')).DPointerTargetable().DModelElement()
-            .DNamedElement(name).DEnumerator(literals).end();
+    public static new(name?: DNamedElement["name"], literalstoadjust: never[] = [], father?: Pointer, persist: boolean = false, fatherType?: Constructor): DEnumerator {
+        return new Constructors(new DEnumerator('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
+            .DNamedElement(name).DEnumerator().end();
     }
 }
 @RuntimeAccessible
@@ -2900,8 +2869,8 @@ export class DModel extends DNamedElement { // DNamedElement
     objects: Pointer<DObject, 0, 'N', LObject> = [];
     models: Pointer<DModel, 0, 'N', LModel> = [];
 
-    public static new(name?: DNamedElement["name"], packages: DModel["packages"] = []): DModel {
-        return new Constructors(new DModel('dwc')).DPointerTargetable().DModelElement()
+    public static new(name?: DNamedElement["name"], packages: never[] = [], father?: Pointer, persist: boolean = false, fatherType?: Constructor): DModel {
+        return new Constructors(new DModel('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DModel().end();
     }
 }
@@ -3172,7 +3141,7 @@ export class DObject extends DPointerTargetable { // extends DNamedElement, m1 c
     annotations!: never[];
     id!: Pointer<DObject, 1, 1, LObject>;
     parent: Pointer<DModel | DObject, 0, 'N', LModel | LObject> = [];
-    father!: Pointer<DModel | DObject, 1, 1, LModel | LObject>;
+    father!: Pointer<DModel, 1, 1, LModel> |  Pointer<DObject, 1, 1, LObject>;
     // annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
 
@@ -3180,8 +3149,8 @@ export class DObject extends DPointerTargetable { // extends DNamedElement, m1 c
     instanceof!: Pointer<DClass, 1, 1, LClass>;
     features: Pointer<DValue, 0, 'N', LValue> = [];
 
-    public static new(name?: DNamedElement["name"]): DObject {
-        return new Constructors(new DObject('dwc')).DPointerTargetable().DModelElement()
+    public static new(name?: DNamedElement["name"], father?: Pointer, persist: boolean = false, fatherType?: Constructor): DObject {
+        return new Constructors(new DObject('dwc'), father, persist, fatherType).DPointerTargetable().DModelElement()
             .DNamedElement(name).DObject().end();
     }
 
@@ -3371,8 +3340,8 @@ export class DValue extends DModelElement { // extends DModelElement, m1 value (
     edges!: Pointer<DEdge, 0, 'N', LEdge>;
     // conformsTo!: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature>; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
 
-    public static new(name?: DNamedElement["name"]): DValue {
-        return new Constructors(new DValue('dwc')).DPointerTargetable().DModelElement()
+    public static new(name?: DNamedElement["name"], father?: Pointer, persist: boolean = false, fatherType?: Constructor): DValue {
+        return new Constructors(new DValue('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DValue().end();
     }
 }

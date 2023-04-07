@@ -22,7 +22,7 @@ export class SaveManager {
     }
 
     public static exportEcore_click(toXML: boolean = false, toFile: boolean = true): void { // e: React.MouseEvent,
-        let lmodel: LModel = (LPointerTargetable.wrap(store.getState().models[0]) as LModel)
+        let lmodel: LModel = (LPointerTargetable.wrap(store.getState().models[0]) as LModel);
         let json = SaveManager.exportEcore(lmodel);
         let str = JSON.stringify(json, null, "\t");
         if (toXML) {
@@ -73,6 +73,15 @@ export class SaveManager {
     public static exportEcore(model: LModel): Json { let loopobj = {}; try { return model.generateEcoreJson(loopobj); } catch(e) { Log.exx("loop in model:", loopobj); } return {"eror": true, loopobj}; }
     public static importEcore(jsonstr: string | null, loadOnModel: boolean = true): DModelElement[] {
         return EcoreParser.parse(jsonstr, loadOnModel);
+    }
+
+    static exportLayout_click(toFile: boolean) {
+        let lmodel: LModel = (LPointerTargetable.wrap(store.getState().models[0]) as LModel);
+        // lmodel.node?.allSubNodes
+
+    }
+    static importLayout_click(fromFile: boolean) {
+
     }
 }
 

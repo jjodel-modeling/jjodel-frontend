@@ -57,9 +57,10 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 ashtml = false;
             }
             let contextkeys;
+            let objraw = this.state.output?.__raw || (typeof this.state.output === "object" ? this.state.output : "[primitiveValue]") || {};
             if (this.state.expression.trim() === "") contextkeys = ["data", "node", "view"].join(", ");
             else if (this.state.expression.trim() === "this") contextkeys = ["Warning: \"this\" will refer to the Console component instead of a GraphElement component."].join(", ");
-            else contextkeys = Object.getOwnPropertyNames(this.state.output?.__raw || (typeof this.state.output === "object" ? this.state.output : "[primitiveValue]") || {}).join(", ");// || []).join(", ")
+            else contextkeys = Array.isArray(objraw) ? ["array[number]", ...Object.getOwnPropertyNames(objraw).filter( (v: any) => v === +v)].join(", ") : Object.getOwnPropertyNames(objraw).join(", ");// || []).join(", ")
             return(<div className={'p-2 w-100 h-100'}>
                 <textarea spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} />
                 {/*<label>Query {(this.state.expression)}</label>*/}
