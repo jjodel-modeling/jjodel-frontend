@@ -12,7 +12,6 @@ import type {
     LClass,
     LEnumerator,
     LGraphElement,
-    LModelElement,
     LOperation,
     LPackage,
     LRefEdge,
@@ -23,6 +22,7 @@ import type {
 import {
     AbstractConstructor,
     Constructor,
+    LModelElement,
     DModel, LModel,
     DModelElement, DNamedElement, DObject,
     DPointerTargetable, DValue,
@@ -47,6 +47,18 @@ enum ViewEClassMatch { // this acts as a multiplier for explicit priority
 
 @RuntimeAccessible
 export class Selectors{
+
+    static getActiveModel(): null|LModel {
+        let metamodel: null|LModel;
+        let state: IStore & GObject = store.getState();
+        const selected = state._lastSelected?.modelElement;
+        if(selected) {
+            const me = LModelElement.fromPointer(selected)
+            metamodel = (me) ? me.model : null;
+        } else metamodel = null;
+        return metamodel;
+    }
+
     static getAllViewElements(): DViewElement[] {
         // return Object.values(store.getState().idlookup).filter(v => v.className === DViewElement.name) as DViewElement[];
         let state: IStore & GObject = store.getState();

@@ -9,10 +9,11 @@ import {useStateIfMounted} from "use-state-if-mounted";
 import {useEffectOnce} from "usehooks-ts";
 import SplashImage from './static/img/splash.png';
 import {Oval} from "react-loader-spinner";
+import TopBar from "./components/topbar/Topbar";
 
 interface Props {}
 function App(props: Props) {
-    const [splash, setSplash] = useStateIfMounted(true);
+    const [splash, setSplash] = useStateIfMounted(false);
 
     useEffectOnce(() => {
         const promise = new Promise((resolve) => {setTimeout(resolve, 4 * 1000)});
@@ -27,7 +28,7 @@ function App(props: Props) {
         </div>);
     } else {
         return(<div className={'d-flex flex-column h-100 p-1'} onClick={() => {statehistory.globalcanundostate = true;} } >
-            {/*<TopBar />*/}
+            <TopBar />
             <Dock />
         </div>);
     }

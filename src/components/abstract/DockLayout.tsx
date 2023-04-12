@@ -8,8 +8,9 @@ import {
     DModelElement,
     LModel,
     LModelElement,
-    Pointer, Selectors,
-    SetFieldAction, SetRootFieldAction,
+    Pointer,
+    Selectors,
+    SetFieldAction,
     U
 } from '../../joiner';
 import './style.scss';
@@ -26,6 +27,7 @@ import Swal from 'sweetalert2'
 import MetamodelTab from "./tabs/MetamodelTab";
 import ModelTab from "./tabs/ModelTab";
 import InfoTab from "./tabs/InfoTab";
+import PersistanceTab from "./tabs/PersistanceTab";
 
 
 interface ThisState {}
@@ -58,6 +60,8 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             maximizable: true,
         }
     };
+
+    private persistance = { title: "Persistance", group: "2", closable: false, content: <PersistanceTab /> };
     private structureEditor = { id: '1', title: 'Structure', group: 'group2', closable: false, content: <StructureEditor /> };
     private treeEditor = { id: '2', title: 'Tree View', group: 'group2', closable: false, content: <TreeEditor /> };
     private viewsEditor = { id: '3', title: 'Views', group: 'group2', closable: false, content: <ViewsEditor /> };
@@ -199,6 +203,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         layout.dockbox.children.push({tabs: [infoTab]});
         layout.dockbox.children.push({
             tabs: [
+                this.persistance,
                 this.structureEditor,
                 this.treeEditor,
                 this.viewsEditor,

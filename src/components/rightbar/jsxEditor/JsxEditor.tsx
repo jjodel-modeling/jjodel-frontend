@@ -3,24 +3,24 @@ import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
 import {DViewElement, LViewElement, Pointer} from "../../../joiner";
 import Editor from "@monaco-editor/react";
+import {useStateIfMounted} from "use-state-if-mounted";
 
 
 function JsxEditorComponent(props: AllProps) {
     const view = props.view;
-    //const [jsx, setJsx] = useStateIfMounted('');
+    const [jsx, setJsx] = useStateIfMounted(view.jsxString);
 
     const change = (value: string|undefined) => {
-        //if(value !== undefined) setJsx(value);
-        if(value !== undefined) view.jsxString = value;
+        if(value !== undefined) setJsx(value);
+        //if(value !== undefined) view.jsxString = value;
     }
 
-    /*
-    DELETED ON BLUR
-    const blur = (evt: React.FocusEvent<HTMLDivElement>) => { if(jsx) view.jsxString = jsx; }
-    from div: tabIndex={-1} onBlur={blur}
-    */
 
-    return <div style={{marginTop: '2.5em', height: '10em'}}>
+    const blur = (evt: React.FocusEvent<HTMLDivElement>) => {
+        view.jsxString = jsx;
+    }
+
+    return <div style={{marginTop: '2.5em', height: '10em'}} tabIndex={-1} onBlur={blur}>
         <label className={'ms-1'}>JSX Editor</label>
         <Editor className={'mx-1'} onChange={change}
                 defaultLanguage={'html'} defaultValue={view.jsxString} />

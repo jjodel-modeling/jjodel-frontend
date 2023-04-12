@@ -1320,7 +1320,10 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
                 if(!canBeDeleted) break;
                 canBeDeleted = me.instances.length === 0;
             }
-            if(canBeDeleted) { data.superDelete(); }
+            if(canBeDeleted) {
+                // super.delete(context);
+                data.superDelete();
+            }
             else { U.alert('error', 'Cannot delete the selected package since there are instances.'); }
         }
         return ret;

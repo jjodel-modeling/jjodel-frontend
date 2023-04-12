@@ -2,7 +2,7 @@ import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
 import './style.scss';
-import {LModel} from "../../joiner";
+import {LModel, LModelElement, Selectors} from "../../joiner";
 import {SaveManager} from "./SaveManager";
 import Undoredocomponent from "./undoredocomponent";
 
@@ -18,31 +18,35 @@ function Topbar(props: AllProps) {
         <div className={'ms-1'}>
             <Undoredocomponent />
 
+            <label className={'item border round ms-1'}
+                    onClick={() => {if(metamodel) SaveManager.save()}}>Save</label>
+            <label className={'item border round ms-1'}
+                    onClick={() => {if(metamodel) SaveManager.load()}}>Load</label>
 
-            <button className={'item border round ms-1'} onClick={ SaveManager.save }>Save</button>
-            <button className={'item border round ms-1'} onClick={ ()=>SaveManager.load() }>Load</button>
-
-            <button className={'item border round ms-1'} onClick={ () => SaveManager.exportEcore_click(false, false) }>Export JSON</button>
-            <button className={'item border round ms-1'} onClick={ () => SaveManager.importEcore_click(false, false) }>Import JSON</button>
-            <button className={'item border round ms-1'} onClick={ () => SaveManager.exportEcore_click(true, true) }>Export XML</button>
-            <button className={'item border round ms-1'} onClick={ () => SaveManager.importEcore_click(true, true) }>Import XML</button>
-        </div>
-        <div className={'ms-auto me-1'}>
-            <label className={'item border round'} onClick={click}>Test 3</label>
-            <label className={'item border round ms-1'} onClick={click}>Test 4</label>
+            <label className={'item border round ms-1'}
+                    onClick={() => {if(metamodel) SaveManager.exportEcore_click(false, true)}}>Export JSON</label>
+            <label className={'item border round ms-1'}
+                    onClick={() => {if(metamodel) SaveManager.importEcore_click(false, true)}}>Import JSON</label>
+            <label className={'item border round ms-1'}
+                    onClick={() => {if(metamodel) SaveManager.exportEcore_click(true, true)}}>Export XML</label>
+            <label className={'item border round ms-1'}
+                    onClick={() => {if(metamodel) SaveManager.importEcore_click(true, true)}}>Import XML</label>
         </div>
     </div>);
 }
 interface OwnProps {}
-interface StateProps { metamodel?: LModel }
+interface StateProps { metamodel: null|LModel }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    const pointer = state.models[0]; // changed from state.metamodel
-    if(pointer) ret.metamodel = LModel.fromPointer(pointer);
+    const selected = state._lastSelected?.modelElement;
+    if(selected) {
+        const me = LModelElement.fromPointer(selected);
+        ret.metamodel = (me) ? me.model : null;
+    } else ret.metamodel = null;
     return ret;
 }
 
