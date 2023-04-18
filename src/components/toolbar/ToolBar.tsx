@@ -6,7 +6,7 @@ import "./toolbar.scss";
 import {
     DGraphElement,
     DModel,
-    DModelElement,
+    DModelElement, DNamedElement, DObject,
     DPointerTargetable,
     DViewElement,
     LGraphElement,
@@ -49,9 +49,11 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         return(<div className={"toolbar"}>
             {classes?.filter((lClass) => {return !(lClass.abstract)}).map((lClass, index) => {
                 return <div key={index} className={"toolbar-item class"} onClick={() => {
-                    const dObject = lClass.instance();
-                    SetFieldAction.new(dObject, 'father', model.id, '', true);
-                    SetFieldAction.new(model.__raw, 'objects', dObject.id, '+=', true);
+                    DObject.new(lClass.id, model.id, DModel, undefined, true);
+                    // lClass.name.toLowerCase() +
+                    //const dObject = lClass.instance();
+                    //SetFieldAction.new(dObject, 'father', model.id, '', true);
+                    //SetFieldAction.new(model.__raw, 'objects', dObject.id, '+=', true);
                 }}>
                     +{lClass.name}
                 </div>

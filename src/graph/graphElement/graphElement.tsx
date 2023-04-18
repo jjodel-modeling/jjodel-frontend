@@ -165,7 +165,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!dnode) {
             let dge = dGraphElementDataClass.new(dataid, parentnodeid, graphid, nodeid);
             let act = CreateElementAction.new(dge, false);
-            console.log("map ge2", {nodeid: nodeid+'', dge: {...dge}, dgeid: dge.id});
+            // console.log("map ge2", {nodeid: nodeid+'', dge: {...dge}, dgeid: dge.id});
         }
         else { ret.node = MyProxyHandler.wrap(dnode); }
     }
@@ -175,7 +175,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // console.log('dragx GE mapstate', {dGraphDataClass});
         let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
         GraphElementComponent.mapLModelStuff(state, ownProps, ret);
-        console.log("map ge", {ownProps, ret, state});
+        // console.log("map ge", {ownProps, ret, state});
         GraphElementComponent.mapLGraphElementStuff(state, ownProps, ret, dGraphDataClass);
         GraphElementComponent.mapViewStuff(state, ret, ownProps);
         // ret.view = LViewElement.wrap(state.idlookup[vid]);
@@ -348,13 +348,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const rnode: ReactNode = this.getTemplate();
         let rawRElement: ReactElement | null = U.ReactNodeAsElement(rnode);
         // @ts-ignore
-        console.log('GE render', {rnode, rawRElement, props:this.props, name: this.props.data.name});
+        // console.log('GE render', {rnode, rawRElement, props:this.props, name: this.props.data.name});
         const me: LModelElement = this.props.data as LModelElement; // this.props.model;
 
         const addprops: boolean = true;
         let fiximport = !!this.props.node; // todo: check if correct approach
         if (addprops && me && rawRElement && fiximport) {
-            console.log("pre-injecting", {thiss:this, data:this.props.data, props:this.props});
+            // console.log("pre-injecting", {thiss:this, data:this.props.data, props:this.props});
             const onDragTestInject = () => {}; // might inject event handlers like this with cloneelement
             // add view props to GraphElement childrens (any level down)
             const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap(); // todo: per passarla come prop ma mantenerla modificabile

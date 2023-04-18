@@ -295,7 +295,7 @@ export function reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: I
             statehistory[DUser.current].redoable = [];
             let delta =  U.objectDelta(ret, oldState);
             if (!filterundoableactions(delta)) return ret;
-            console.log("setting undoable action:", {ret, oldState0:{...oldState}, oldState, delta});
+            // console.log("setting undoable action:", {ret, oldState0:{...oldState}, oldState, delta});
             if (oldState !== null) statehistory[DUser.current].undoable.push(delta);
             return ret;
     }
@@ -336,7 +336,7 @@ function undorecursive(deltalevel: GObject, statelevel: GObject): void {
 function doreducer/*<S extends StateNoFunc, A extends Action>*/(oldState: IStore = initialState, action: Action): IStore{
     if (!oldState) { oldState = initialState = new IStore(); }
     let ca: CompositeAction;
-    console.log('external REDUCER', {action, CEtype:CreateElementAction.type});
+    // console.log('external REDUCER', {action, CEtype:CreateElementAction.type});
     if (!storeLoaded) {
         // new SetRootFieldAction('forceinit', true);
         storeLoaded = true;

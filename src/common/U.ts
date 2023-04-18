@@ -367,7 +367,7 @@ export class U{
 
     //T extends ( ((...args: any[]) => any) | (() => any)
     public static execInContextAndScope<T extends (...args: any) => any>(func: T, parameters: Parameters<T>, scope?: GObject, context?: GObject): ReturnType<T>{
-        Log.l(true, 'execInCtxScope', {func, parameters, scope, context});
+        Log.l(false, 'execInCtxScope', {func, parameters, scope, context});
         let ret: any;
         const _eval = {context, scope, func, parameters: parameters || []};
         let prefixDeclarations: string = "", postfixDeclarations: string = '';
@@ -891,7 +891,7 @@ export class U{
         // todo: add to variable naming rules: can't start with "_-", like in "_-keyname", it means "keyname" removed in undo delta
         let removedprefix = ""; // "_-";
         for (let key in diff.removed) { ret[removedprefix + key] = undefined; } //newwobj[key]; }
-        console.log("objdiff", {old, neww, diff, ret});
+        // console.log("objdiff", {old, neww, diff, ret});
         return ret as Partial<T>;
     }
 

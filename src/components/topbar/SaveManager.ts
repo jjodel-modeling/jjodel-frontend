@@ -39,39 +39,62 @@ export class SaveManager {
     }
 
     public static importEcore_click(fromXML: boolean = false, fromfile: boolean = true): void {
+        try { this.importEcore_click0(fromXML, fromfile); } catch (e: any) {
+            let str = e?.message?.substring?.(0, 1000) || 'some error';
+            console.log(str);
+            // throw new Error(str);
+        }
+    }
+    public static importEcore_click0(fromXML: boolean = false, fromfile: boolean = true): void {
         const extension = ".ecore"; // Selectors.getActiveModel().isM1() ? '.' + Selectors.getActiveModel().metamodel.fullname() : '.ecore';
-        let filestring: string, jsonstring: string;
+        let filestring: string, jsonstring: string, jsonobj: GObject = undefined as any;
         console.log("importEcore: prefromfile");
         if (!fromfile) {
             filestring = localStorage.getItem("import") || 'null';
             if (fromXML) {
                 const xmlDoc = new DOMParser().parseFromString(filestring,"text/xml");
-                filestring = prxml2json.xml2json(xmlDoc, '\t');
+                jsonobj = prxml2json.xml2jsonobj(xmlDoc, ' ');
             }
-            SaveManager.importEcore(filestring);
+            //if (filestring.includes("\n")) throw new Error(filestring.substring(0, 1000));
+            SaveManager.importEcore(jsonobj || filestring);
             return; }
 
         console.log("importEcore: pre file read");
         U.fileRead((e: Event, files?: FileList | null, fileContents?: string[]) => {
             Log.ex(!fileContents || !files || fileContents.length !== files.length, 'Failed to get file contents:', files, fileContents);
-            Log.ex(fileContents && fileContents.length > 1, 'Should not be possible to input multiple files.');
+            Log.ex(fileContents && fileContents.length > 1, 'Should not be possible to input multiple files yet.');
             if (!fileContents) return;
             if (fileContents.length == 0) return;
             filestring = fileContents[0];
             console.log('importEcore filestring input: ', filestring);
             if (fromXML) {
+                let windoww = window as any;
+                windoww.file = filestring;
+                windoww.todoc = (str: any) => new DOMParser().parseFromString(str,"text/xml");
+                windoww.doctojson = (doc: any) => prxml2json.xml2jsonobj(doc, ' ');
+                // problemi doctojson or xmi parser: \n replacemet causa crash per stringa in posizione invalida. \" anche per attributi inline che iniiano con \\"
+                // filestring = U.multiReplaceAll(filestring, ["\t", "\r", "\n", '&amp;', '&#38;', '&quot;', '&', '\'', '"'], ["\\t", "\\r", "\\n", '\\&', "\\'", '\\"', '\\&', "\\'", '\\"']);//,  "\\t"), "\r", "\\r"), "\n", "\\n");
+
                 const xmlDoc = new DOMParser().parseFromString(filestring,"text/xml");
                 console.log('importEcore xml:', xmlDoc);
-                jsonstring = prxml2json.xml2json(xmlDoc, '\t');
-                console.log('importEcore jsonstr input: ', jsonstring);
+                let jsonstring0 = '';
+                jsonobj = prxml2json.xml2jsonobj(xmlDoc, ' ');//doto: non devo wrappare con \" i nomi di chiavi o valori ma solo i contenuti
+                /*jsonstring = jsonstring0;
+                //jsonstring = U.multiReplaceAll(jsonstring0, ["\t", "\r", "\n", '&amp;', '&#38;', '&quot;', '&', '\'', '"'], ["\\t", "\\r", "\\n", '\\&', "\\'", '\\"', '\\&', "\\'", '\\"']);//,  "\\t"), "\r", "\\r"), "\n", "\\n");
+                *///jsonstring = jsonstring.replaceAll(/(\{|\,)\\n\s*/gm, "")
+                /*if (jsonstring.includes("\n")) throw new Error(jsonstring0.substring(0, 1000)+"\n\n\n\n" + jsonstring.substring(0, 1000));
+                */
+                // jsonstring = JSON.stringify(jsonobj);
+                console.log('importEcore jsonstr input: ', jsonobj);
             }
             else jsonstring = filestring;
-            SaveManager.importEcore(jsonstring || 'null');
+            let end = SaveManager.importEcore(jsonobj || jsonstring || 'null', false);
+            console.error({end});
         }, [extension], true);
     }
 
     public static exportEcore(model: LModel): Json { let loopobj = {}; try { return model.generateEcoreJson(loopobj); } catch(e) { Log.exx("loop in model:", loopobj); } return {"eror": true, loopobj}; }
-    public static importEcore(jsonstr: string | null, loadOnModel: boolean = true): DModelElement[] {
+    public static importEcore(jsonstr: GObject | string | null, loadOnModel: boolean = true): DModelElement[] {
         return EcoreParser.parse(jsonstr, loadOnModel);
     }
 

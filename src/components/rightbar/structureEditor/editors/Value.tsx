@@ -1,6 +1,15 @@
 import React from "react";
 import {SetFieldAction} from "../../../../redux/action/action";
-import {DObject, LEnumerator, LObject, LStructuralFeature, Pointer, Selectors, U} from "../../../../joiner";
+import {
+    DObject,
+    LEnumerator,
+    LObject,
+    LPointerTargetable,
+    LStructuralFeature,
+    Pointer,
+    Selectors,
+    U
+} from "../../../../joiner";
 import type {LValue} from "../../../../joiner";
 import { PrimitiveType } from "../../../../joiner/types";
 
@@ -39,7 +48,8 @@ function Value(props: Props) {
         if(field === 'checkbox') { newValues[index] = (newValues[index] === 'false') ? 'true': 'false'; }
         else { newValues[index] = target; }
 
-        SetFieldAction.new(dValue, 'value', newValues, '', target !== 'null' && isPointer);
+        lValue.value = newValues;
+        // SetFieldAction.new(dValue, 'value', newValues, '', target !== 'null' && isPointer);
     }
 
     (window as any).test = dValue;
@@ -83,7 +93,7 @@ function Value(props: Props) {
         {
             feature.className === "DReference" && (lValue.value as LObject[]).map( (target: LObject, index) => {
                 const objects = Selectors.getObjects().filter((obj) => {
-                    return obj.instanceof.id === feature.type.id; // todo: move this utility in LClass.instances
+                    return obj.instanceof?.id === feature.type?.id; // todo: move this utility in LClass.instances
                 });
                 return(<div className={'mt-1 d-flex ms-4'} key={index}>
                     <div className={'border border-dark'}></div>

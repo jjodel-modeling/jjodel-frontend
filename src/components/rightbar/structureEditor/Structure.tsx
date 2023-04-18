@@ -1,6 +1,18 @@
 import React, {ReactNode} from "react";
 import type {GObject, LModelElement} from "../../../joiner";
-import {DValue, Input, LObject, LOperation, LValue, Select} from "../../../joiner";
+import {
+    DObject,
+    DValue,
+    Input,
+    LModel,
+    LObject,
+    LOperation,
+    LPointerTargetable,
+    LValue,
+    Select,
+    SetFieldAction,
+    store
+} from "../../../joiner";
 import Value from "./editors/Value";
 
 export default class Structure {
@@ -118,7 +130,28 @@ export default class Structure {
         return(<div>
             {conform && <label>This instance is <b className={'text-success'}>CONFORM</b> to {object.instanceof.name}</label>}
             {!conform && <label>This instance is <b className={'text-danger'}>NOT CONFORM</b> to {object.instanceof.name}</label>}
+            {this.forceConform(object)}
         </div>);
+    }
+    public static forceConform(me: LObject) {
+        let mm: LModel = LPointerTargetable.fromPointer(store.getState().metamodel as any);
+
+        return <div>
+            <select onChange={ (event)=>{
+                (window as any).debugmm = mm;
+                (window as any).debugm = me;
+                me.instanceof = event.target.value as any;
+            } }>
+                <optgroup label={mm.name}>
+                    {
+                        (mm.classes || []).map( c =>
+                            <option value={c.id} selected={me.instanceof.id === c.id ? true : undefined}
+                                    >
+                                {c.name}</option>)
+                    }
+                </optgroup>
+            </select>
+        </div>
     }
     public static ValueEditor(me: LModelElement): ReactNode {
         const lValue: LValue = LValue.fromPointer(me.id);

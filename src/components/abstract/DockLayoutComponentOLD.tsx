@@ -146,11 +146,11 @@ export function createOrOpenModelTab(modelName: string, context0?: DockContext, 
         context.dockMove(newTab(model.id, modelName, graphid, model), panelData, 'middle');
         return; }
 
-    model = DModel.new(modelName);
     TRANSACTION(
         () => {
             // model._transient.currentView = LViewElement.findViewFor(model).id;
-            CreateElementAction.new(model);
+            model = DModel.new(modelName, undefined, false, true);
+            // CreateElementAction.new(model);
             CreateElementAction.new(graph);
         }
     );

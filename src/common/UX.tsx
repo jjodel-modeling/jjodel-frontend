@@ -33,7 +33,7 @@ export class UX{
         // add "view" (view id) prop as default to sub-elements of any depth to inherit the view of the parent unless the user forced another view to apply
         switch (type) {
             default:
-                console.count('injectingProp case default: ' + type);
+                // console.count('injectingProp case default: ' + type);
                 return re;
             /*
             case windoww.Components.Input.name:
@@ -64,7 +64,7 @@ export class UX{
                 // todo: come butto dei sotto-vertici dentro un vertice contenitore? o dentro un sotto-grafo? senza modificare il jsx ma solo draggando?
                 const dataid = typeof re.props.data === "string" ? re.props.data : re.props.data?.id;
                 const idbasename: string = injectProps.graphid + '^' + dataid;
-                console.log("setting nodeid", {injectProps, props:re.props, re});
+                // console.log("setting nodeid", {injectProps, props:re.props, re});
                 Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
                 injectProps.nodeid = U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
                 gvidmap[injectProps.nodeid] = true;

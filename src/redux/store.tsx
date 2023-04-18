@@ -161,8 +161,8 @@ export class IStore {
         for (let primitiveType of Object.values(ShortAttribETypes)) {
             let dPrimitiveType;
             if (primitiveType === ShortAttribETypes.void) continue; // or make void too without primitiveType = true, but with returnType = true?
-            else dPrimitiveType = DClass.new(primitiveType, false, false, true);
-            CreateElementAction.new(dPrimitiveType);
+            else dPrimitiveType = DClass.new(primitiveType, false, false, true, undefined, true);
+            // CreateElementAction.new(dPrimitiveType);
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
         }
 /*

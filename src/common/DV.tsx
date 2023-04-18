@@ -57,7 +57,7 @@ class DefaultView {
     public static class(): string {
         return `<div className={'round bg-white class-view'}>
             <Input jsxLabel={<b className={'class-name'}>EClass:</b>} 
-                   obj={this.data.id} field={'name'} hidden={true} />
+                   obj={this.data.id} field={'name'} hidden={true} autosize={true} />
             <hr/>
             <div className={'class-children'}>
                 {this.data.childrens.map((child, index) => {
@@ -69,7 +69,7 @@ class DefaultView {
     public static enum(): string {
         return `<div className={'round bg-white enumerator-view'}>
             <Input jsxLabel={<b className={'enumerator-name'}>EEnum:</b>} 
-                   obj={this.data.id} field={'name'} hidden={true} />
+                   obj={this.data.id} field={'name'} hidden={true} autosize={true} />
             <hr />
             <div className={'enumerator-children'}>
                 {this.data.childrens.map((child, index) => {
@@ -90,7 +90,10 @@ class DefaultView {
     public static object(): string {
         return `<div className={'round bg-white object-view'}>
             <label className={'ms-1'}>
-                <b className={'object-name me-1'}>{this.data.instanceof.name}:</b>{this.data.feature('name')}
+                {/*<b className={'object-name me-1'}>{this.data.instanceof ? this.data.instanceof.name : "Object"}:</b>*/}
+                {/*this.data.feature('name')*/}
+                <Input jsxLabel={<b className={'class-name'}>{this.data.instanceof ? this.data.instanceof.name : "Object"}:</b>} 
+                   obj={this.data.id} field={'name'} hidden={true} autosize={true}/>
             </label>
             <hr />
             <div className={'object-children'}>
@@ -103,7 +106,7 @@ class DefaultView {
     public static value() {
         // todo: testa quado c'è solo un valore booleano
         return `<div className={'d-flex value-view'} style={{paddingRight: "6px"}}>
-            <label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>
+            <label className={'d-block ms-1'}>{this.props.data.instanceof && this.props.data.instanceof.name}</label>
             <label className={'d-block ms-auto'} style={{color:` + valuecolormap_str + `[this.props.data.value.type] || "gray"
             }}>: {this.props.data.valuestring()}</label>
         </div>`

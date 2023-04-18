@@ -16,6 +16,8 @@ function InputComponent(props: AllProps) {
     let css = 'my-auto input ';
     css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
     css += (props.hidden) ? ' hidden-input' : '';
+    let autosize: boolean = props.autosize === undefined ? false : props.autosize; // props.type==="text"
+    css += autosize ? ' autosize-input' : '';
 
     const notify = () => toast((t: GObject) => (
         <div onClick={() => toast.dismiss(t.id)}>
@@ -30,16 +32,21 @@ function InputComponent(props: AllProps) {
         data[field] = target;
     }
 
-    return(<div style={{display: (jsxLabel || label) ? 'flex' : 'block'}} className={'p-1'}>
+    let className = (props as any).className || '';
+    let style = (props as any).style || {};
+    props = {...props, className:'', style:{}} as any;
+    let input = <input spellCheck={false} readOnly={props.readonly} className={css}
+                       type={type} value={value} onChange={change}
+                       checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
+
+    return(<div style={{...{display: (jsxLabel || label) ? 'flex' : 'block'}, ...style}} className={'p-1 ' + className}>
         {(label && !jsxLabel) && <label className={'my-auto'}>
             {label}
         </label>}
         {(jsxLabel && !label) && <label className={'my-auto'}>
             {jsxLabel}
         </label>}
-        <input spellCheck={false} readOnly={props.readonly} className={css}
-               type={type} onChange={change} value={value}
-               checked={(['checkbox', 'radio'].includes(type)) ? value : false} />
+        { autosize ? <div className={ autosize ? "autosize-input-container" : ""} data-value={value}>{input}</div> : input}
         {(tooltip) && <div>
             <button onClick={notify} className={'ms-1 btn btn-primary'}>
                 <i className={'p-1 bi bi-info-lg'}></i>
@@ -58,6 +65,7 @@ interface OwnProps {
     readonly?: boolean;
     tooltip?: string;
     hidden?: boolean;
+    autosize?: boolean;
 }
 interface StateProps { data: LPointerTargetable & GObject; }
 interface DispatchProps { }

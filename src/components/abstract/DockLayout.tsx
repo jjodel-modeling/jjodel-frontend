@@ -90,11 +90,10 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             let name = 'model_' + 0;
             let modelNames: (string)[] = this.props.metamodel.models.map( m => m.name);
             name = U.increaseEndingNumber(name, false, false, (newName) => modelNames.indexOf(newName) >= 0)
-            const model: DModel = DModel.new(name);
-            model.isMetamodel = false;
-            CreateElementAction.new(model);
+            const model: DModel = DModel.new(name, this.props.metamodel.id, false, true);
+
+            // CreateElementAction.new(model);
             CreateElementAction.new(DGraph.new(model.id));
-            SetFieldAction.new(this.props.metamodel.id, 'models', model.id, '+=', true);
             const modelTab = { id: model.id, title: 'M1', group: 'group1', closable: false, content:
                     <ModelTab modelid={model.id} metamodelid={this.props.metamodel.id} />
             };

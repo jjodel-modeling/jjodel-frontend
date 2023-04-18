@@ -145,9 +145,13 @@ export class LocalStorage extends IStorage{
 export class EcoreParser{
     static supportedEcoreVersions = ["http://www.eclipse.org/emf/2002/Ecore"];
     static prefix:string = '@';
-    static parse(ecorejson: string | null, persist: boolean = false): DModelElement[]{
+    static parse(ecorejson: GObject | string | null, persist: boolean = false): DModelElement[]{
         if (!ecorejson) return [];
-        let parsedElements: DModelElement[] = EcoreParser.parseDModel(JSON.parse(ecorejson));
+        let parsedjson: GObject;
+        if (typeof ecorejson === "string") try { parsedjson = JSON.parse(ecorejson); } catch(e) { windoww.temp = ecorejson; Log.exx("error while parsing json:", e, ecorejson.substring(0, 1000)); throw e; }
+        else parsedjson = ecorejson;
+
+        let parsedElements: DModelElement[] = EcoreParser.parseDModel(parsedjson);
         console.warn("parse.result D", parsedElements);
         this.LinkAllNamesToIDs(parsedElements);
         this.fixNamingConflicts(parsedElements);
@@ -288,7 +292,7 @@ export class EcoreParser{
     static parseDModel(json: Json): DModelElement[] {
         let generated: DModelElement[] = [];
         if (!json) { json = {}; }
-        let dObject: DModel = DModel.new();
+        let dObject: DModel = DModel.new(undefined, undefined, false, false);
         generated.push(dObject); // dObject.father = 'modeltmp' as any;
         /// *** specific  *** ///
         const childrens = EcoreParser.getChildrens(json);
