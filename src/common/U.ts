@@ -49,11 +49,12 @@ export class U{
 
     //Giordano: start
 
-    public static initializeValue(classifier: undefined|DClassifier|LClassifier|Pointer<DClassifier, 1, 1, LClassifier>): string {
-        if(!classifier) return 'null';
-        const pointer: Pointer = typeof classifier === 'string' ? classifier : classifier.id;
+    public static initializeValue(typeclassifier: undefined|DClassifier|LClassifier|Pointer<DClassifier, 1, 1, LClassifier>): string {
+        // if(!classifier) return 'null';
+        const pointer: Pointer = typeof typeclassifier === 'string' ? typeclassifier : (typeclassifier as DClassifier)?.id;
         const me: LNamedElement = LNamedElement.fromPointer(pointer);
-        switch(me.name) {
+        switch(me?.name) {
+            default:
             case 'EString': return '';
             case 'EChar':  return 'a';
             case 'EInt': return '0';

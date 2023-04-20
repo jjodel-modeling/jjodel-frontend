@@ -380,11 +380,6 @@ export class Constructors<T extends DPointerTargetable>{
     DDataType(): this { return this; }
     DObject(instanceoff?: DObject["instanceof"]): this {
         let thiss: DObject = this.thiss as any;
-        // update father's collections (pointedby's here are set automatically)
-        // damiano: who is object.father? the one holding the containment ref? there is no child collection? when father o opposite relationship need to be synchronized?
-        // todo: add model.objects to child id list
-        // todo: handle containedIn pointing to ref?
-
 
         if (this.persist && thiss.father) {
             if (this.fatherType!.name === "DModel") {
@@ -488,6 +483,8 @@ export class Constructors<T extends DPointerTargetable>{
             if (instanceoff) SetFieldAction.new(instanceoff, "pointedBy", PointedBy.fromID(thiss.id, "instanceof"), '+=');
             instanceoff && SetFieldAction.new(instanceoff, 'models', thiss.id, '+=', true);
         }
+
+        SetRootFieldAction.new(isMetamodel ? "m2models" : "m1models", thiss.id, "+=", true);
         return this; }
 
     DOperation(exceptions: DOperation["exceptions"] = []/*, parameters: DOperation["parameters"] = []*/): this {
@@ -504,11 +501,14 @@ export class Constructors<T extends DPointerTargetable>{
         }
         return this; }
 
-    DClass(isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: LClassifier["isPrimitive"] = false): this {
+    DClass(isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: LClassifier["isPrimitive"] = false,
+           partial: DClass["partial"] = false, partialdefaultname: DClass["partialdefaultname"] = ''): this {
         const thiss: DClass = this.thiss as any;
         thiss.interface = isInterface;
         thiss.abstract = isAbstract;
         thiss.isPrimitive = isPrimitive;
+        thiss.partial = partial;
+        thiss.partialdefaultname = partialdefaultname;
         // thiss.isClass = !isPrimitive;
         // thiss.isEnum = false;
 
@@ -1276,7 +1276,7 @@ let bb2 = fffff(a);
 @Leaf
 @RuntimeAccessible
 export class DUser extends DPointerTargetable{
-    static current: DocString<Pointer<DUser, 1, 1>> = "currentUserPointerToDo";
+    static current: DocString<Pointer<DUser, 1, 1>> = "Pointer"; // todo
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     cursorPositionX: number = 0;

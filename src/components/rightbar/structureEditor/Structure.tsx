@@ -128,8 +128,10 @@ export default class Structure {
         }
 
         return(<div>
-            {conform && <label>This instance is <b className={'text-success'}>CONFORM</b> to {object.instanceof.name}</label>}
-            {!conform && <label>This instance is <b className={'text-danger'}>NOT CONFORM</b> to {object.instanceof.name}</label>}
+
+            {object.instanceof && conform && <label>This instance is <b className={'text-success'}>CONFORM</b> to {object.instanceof.name}</label>}
+            {object.instanceof && !conform && <label>This instance is <b className={'text-danger'}>NOT CONFORM</b> to {object.instanceof.name}</label>}
+            {!object.instanceof && <label>This instance is <b className={'text-warning'}>SHAPELESS</b></label>}
             {this.forceConform(object)}
         </div>);
     }
@@ -141,14 +143,14 @@ export default class Structure {
                 (window as any).debugmm = mm;
                 (window as any).debugm = me;
                 me.instanceof = event.target.value as any;
-            } }>
+            } } value={me.instanceof?.id || "undefined"}>
                 <optgroup label={mm.name}>
                     {
                         (mm.classes || []).map( c =>
-                            <option value={c.id} selected={me.instanceof.id === c.id ? true : undefined}
-                                    >
-                                {c.name}</option>)
+                            <option value={c.id}>{c.name}</option>
+                        )
                     }
+                    <option value={"undefined"}>Object</option>
                 </optgroup>
             </select>
         </div>

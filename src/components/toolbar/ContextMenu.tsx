@@ -3,7 +3,7 @@ import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import "./style.scss";
 import {CreateElementAction, SetRootFieldAction} from "../../redux/action/action";
-import {LNamedElement} from "../../model/logicWrapper";
+import {DValue, LNamedElement, LValue} from "../../model/logicWrapper";
 import {DViewElement, GObject, LGraphElement, LUser} from "../../joiner";
 
 function ContextMenuComponent(props: AllProps) {
@@ -42,7 +42,7 @@ function ContextMenuComponent(props: AllProps) {
         jsxList.push(<div onClick={() => {close(); addView();}} className={"col item"}>Add View</div>);
         jsxList.push(<div onClick={() => {close(); me.delete();}} className={"col item"}>Delete</div>);
         switch (me.className) {
-            case 'DValue': jsxList.pop(); break;
+            case 'DValue': if ((me as any as LValue).instanceof) jsxList.pop(); break;
             case 'DClass':
                 jsxList.push(<div onClick={() => {
                     close();

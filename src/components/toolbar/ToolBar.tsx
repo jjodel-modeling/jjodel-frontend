@@ -35,6 +35,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     myDictValidator.set("DOperation", addChildrens("parameter", "exception"));
 
 
+    console.log("toolbar", {props, metamodel, isMetamodel, myDictValidator})
     if(isMetamodel) {
         return(<div className={"toolbar"}>
             {myDictValidator.get(lModelElement?.className as string)?.map((item) => {
@@ -45,19 +46,15 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     }
     else {
         const classes = metamodel?.classes;
-        const model = LModel.fromPointer(props.model);
+        const model: LModel = LModel.fromPointer(props.model);
+
         return(<div className={"toolbar"}>
-            {classes?.filter((lClass) => {return !(lClass.abstract)}).map((lClass, index) => {
-                return <div key={index} className={"toolbar-item class"} onClick={() => {
-                    DObject.new(lClass.id, model.id, DModel, undefined, true);
-                    // lClass.name.toLowerCase() +
-                    //const dObject = lClass.instance();
-                    //SetFieldAction.new(dObject, 'father', model.id, '', true);
-                    //SetFieldAction.new(model.__raw, 'objects', dObject.id, '+=', true);
-                }}>
+            {classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
+                return <div key={lClass.id} className={"toolbar-item class"} onClick={() => { model.addObject(lClass.id) }}>
                     +{lClass.name}
                 </div>
             })}
+            <div key={"Object"} className={"toolbar-item class"} onClick={() => { model.addObject(); }}>+Object</div>
         </div>);
     }
 

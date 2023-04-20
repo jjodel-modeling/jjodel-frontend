@@ -101,12 +101,14 @@ class DefaultView {
                     return <DefaultNode key={index} data={child.id}></DefaultNode>
                 })}
             </div>
+            { !this.data.partial ? null : <div className={"add features"}><button className="w-100 p-0 d-block" onClick={()=>{this.data.addValue()}}>+feature</button></div> }
         </div>`;
     }
     public static value() {
         // todo: testa quado c'è solo un valore booleano
         return `<div className={'d-flex value-view'} style={{paddingRight: "6px"}}>
-            <label className={'d-block ms-1'}>{this.props.data.instanceof && this.props.data.instanceof.name}</label>
+             {this.props.data.instanceof && <label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>}
+             {!this.props.data.instanceof && <Input obj={this.data.id} field={'name'} hidden={true} autosize={true} />}
             <label className={'d-block ms-auto'} style={{color:` + valuecolormap_str + `[this.props.data.value.type] || "gray"
             }}>: {this.props.data.valuestring()}</label>
         </div>`

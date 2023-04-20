@@ -152,8 +152,8 @@ export class IStore {
         CreateElementAction.new(viewpoint);
         SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
 
-        const dMetaModel = DModel.new("Metamodel");
-        CreateElementAction.new(dMetaModel);
+        const dMetaModel = DModel.new("Metamodel", undefined, true, true);
+        // CreateElementAction.new(dMetaModel);
         CreateElementAction.new(DGraph.new(dMetaModel.id));
         SetRootFieldAction.new('metamodel', dMetaModel.id, '', true);
 
@@ -161,7 +161,7 @@ export class IStore {
         for (let primitiveType of Object.values(ShortAttribETypes)) {
             let dPrimitiveType;
             if (primitiveType === ShortAttribETypes.void) continue; // or make void too without primitiveType = true, but with returnType = true?
-            else dPrimitiveType = DClass.new(primitiveType, false, false, true, undefined, true);
+            else dPrimitiveType = DClass.new(primitiveType, false, false, true, false, '',undefined, true);
             // CreateElementAction.new(dPrimitiveType);
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
         }

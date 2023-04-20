@@ -1051,9 +1051,13 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     protected get_addPackage(context: Context): this["addPackage"] {
         return (name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]) => DPackage.new(name, uri, prefix, context.data.id, true, DPackage); }
 
-    public addClass(name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"]): DClass { return this.cannotCall("addClass"); }
+    public addClass(name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
+                    isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]): DClass {
+        return this.cannotCall("addClass"); }
     protected get_addClass(context: Context): this["addClass"] {
-        return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"]) => DClass.new(name, isInterface, isAbstract, isPrimitive, context.data.id, true); }
+        return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
+                isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]
+        ) => DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, context.data.id, true); }
 
     public addEnum(...p:Parameters<this["addEnumerator"]>): DEnumerator { return this.addEnumerator(...p); }
     protected get_addEnum(context: Context): this["addEnumerator"] { return this.get_addEnumerator(context); }
@@ -1535,15 +1539,17 @@ export class DClass extends DPointerTargetable { // extends DClassifier
     isPrimitive!: boolean;
     implements: Pointer<DClass, 0, 'N', LClass> = [];
     implementedBy: Pointer<DClass, 0, 'N', LClass> = [];
+    partial!: boolean;
+    partialdefaultname!: string;
 
     // for m1:
     hideExcessFeatures: boolean = true; // damiano: se attivo questo e creo una DClass di sistema senza nessuna feature e di nome Object, ho creato lo schema di un oggetto schema-less a cui tutti sono conformi
 
-    public static new(name?: DNamedElement["name"], isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: DClass["isPrimitive"] = false,
-                      father?: Pointer, persist: boolean = false): DClass {
+    public static new(name?: DNamedElement["name"], isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: DClass["isPrimitive"] = false, partial?: DClass["partial"],
+                      partialDefaultName?: DClass["partialdefaultname"], father?: Pointer, persist: boolean = true): DClass {
         if (!name) name = this.defaultname("concept ", father);
         return new Constructors(new DClass('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
-            .DNamedElement(name).DClassifier().DClass(isInterface, isAbstract, isPrimitive).end();
+            .DNamedElement(name).DClassifier().DClass(isInterface, isAbstract, isPrimitive, partial, partialDefaultName).end();
     }
 
 }
@@ -1588,6 +1594,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     nodes!: LGraphElement[]; // ipotesi, non so se tenerlo
 
     // mia aggiunta:
+    partial!: boolean;
+    partialdefaultname!: string;
     isPrimitive!: boolean;
     isClass!: boolean; // false if it's primitive type
     isEnum!: false;
@@ -1641,6 +1649,11 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DStructuralFeature | DOperation, 1, 'N'> {
         return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DStructuralFeature, 1, 'N'>, ...context.data.attributes, ...context.data.references, ...context.data.operations]; }
+
+    protected set_partial(val: D["partial"], context: Context): boolean { return SetFieldAction.new(context.data.id, "partial", val); }
+    protected get_partial(context: Context): D["partial"] { return context.data.partial; }
+    protected set_partialdefaultname(val: D["partialdefaultname"], context: Context): boolean { return SetFieldAction.new(context.data.id, "partialdefaultname", val, undefined, false); }
+    protected get_partialdefaultname(context: Context): D["partialdefaultname"] { return context.data.partialdefaultname; }
 
     public addAttribute(name?: DAttribute["name"], type?: DAttribute["type"]): DAttribute { return this.cannotCall("addAttribute"); }
     protected get_addAttribute(context: Context): this["addAttribute"] {
@@ -2347,11 +2360,14 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
             return le; }
     }
 
-    public addClass(name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"]): DClass { return this.cannotCall("LReference.addClass"); }
+    public addClass(name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
+                    isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]): DClass {
+        return this.cannotCall("LReference.addClass"); }
     protected get_addClass(context: Context): this["addClass"] {
-        return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"]) => {
+        return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
+                isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]) => {
             BEGIN()
-            let dclass = DClass.new(name, isInterface, isAbstract, isPrimitive, context.proxyObject.package!.id, true);
+            let dclass = DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, context.proxyObject.package!.id, true);
             // SetFieldAction.new(context.data.id, "type", dclass.id);
             this.set_type(dclass.id as any, context);
             END();
@@ -3221,9 +3237,10 @@ export class DObject extends DPointerTargetable { // extends DNamedElement, m1 c
     instanceof!: Pointer<DClass, 0, 1, LClass>;
     features: Pointer<DValue, 0, 'N', LValue> = [];
 
+
     public static new(instanceoff?: DObject["instanceof"], father?: DObject["father"], fatherType?: Constructor, name?: DNamedElement["name"], persist: boolean = false): DObject {
         // if (!name) name = this.defaultname(((meta: LNamedElement) => meta.name + " "), father);
-        if (!name) name = this.defaultname(((meta: LNamedElement) => meta.name + " "), father, instanceoff);
+        if (!name) name = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), father, instanceoff);
         let ret = new Constructors(new DObject('dwc'), father, persist, fatherType).DPointerTargetable().DModelElement()
             .DNamedElement(name).DObject(instanceoff).end();
         return ret;
@@ -3254,8 +3271,8 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     namespace!: string;
     fullname!:string;
     defaultValue!: DClass["defaultValue"];
-    abstract!: boolean;
-    interface!: boolean;
+    // abstract!: boolean;
+    // interface!: boolean;
     // references!: LReference[];
     // attributes!: LAttribute[];
     // operations!: LOperation[];
@@ -3268,6 +3285,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     features!: LValue[];
     referencedBy!: LObject[];
     isRoot!: boolean;
+    readonly partial!: boolean;
 
     protected get_truechildrens(context: Context): this["childrens"] {
         let childs: LValue[] = super.get_childrens(context);
@@ -3279,7 +3297,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
     protected get_childrens(context: Context): this["childrens"] {
         let childs: LValue[] = super.get_childrens(context);
-        if (!context.data.instanceof) return childs;
+        if (!context.data.instanceof || context.proxyObject.instanceof.partial) return childs;
         let conformchildrens: Pointer[] = context.proxyObject.instanceof.childrens.map(c=>c.id);
         return childs.filter( (c) => conformchildrens.includes(c.instanceof?.id) );
     }
@@ -3302,10 +3320,15 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         if (!instanceoff) return "schemaless:Object";
         return this.get_uri(context) + ":" + instanceoff.name; // optimize later in instanceoff.namespace + ":" + instanceoff.name; and implement namespace all around
     }
-    protected set_abstract(val: string, context: Context): boolean { return this.cannotSet("abstract"); }
+    protected set_partialdefaultname(val: DClass["partialdefaultname"], context: Context): boolean { return this.cannotSet("DObject.partialdefaultname()"); }
+    protected get_partialdefaultname(context: Context): DClass["partialdefaultname"] { return context.data.instanceof ? context.proxyObject.instanceof.partialdefaultname : "val_"; }
+    protected set_partial(val: DClass["partial"], context: Context): boolean { return this.cannotSet("DObject.set_partial()"); }
+    protected get_partial(context: Context): DClass["partial"] { return context.proxyObject.instanceof?.partial || true; }
+
+/*    protected set_abstract(val: string, context: Context): boolean { return this.cannotSet("abstract"); }
     protected get_abstract(context: Context): LClass["abstract"] { return context.proxyObject.instanceof.abstract; }
     protected set_interface(val: string, context: Context): boolean { return this.cannotSet("interface"); }
-    protected get_interface(context: Context): LClass["interface"] { return context.proxyObject.instanceof.interface; }
+    protected get_interface(context: Context): LClass["interface"] { return context.proxyObject.instanceof.interface; }*/
     protected set_defaultValue(val: string, context: Context): boolean { return this.cannotSet("defaultValue"); }
     protected get_defaultValue(context: Context): LClass["defaultValue"] { return context.proxyObject.instanceof.defaultValue; }
     protected set_referencedBy(val: string, context: Context): boolean { return this.wrongAccessMessage("referencedBy cannot be set directly. It should be updated automatically as side effect"); }
@@ -3569,7 +3592,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected get_type(context: Context): LStructuralFeature["type"] { return this.get_fromlfeature(context.proxyObject.instanceof, "type"); }
     protected get_fullname(context: Context): LStructuralFeature["fullname"] { return this.get_fromlfeature(context.proxyObject.instanceof, "fullname"); }
     protected get_namespace(context: Context): LStructuralFeature["namespace"] { return this.get_fromlfeature(context.proxyObject.instanceof, "namespace"); }
-    protected get_name(context: Context): LStructuralFeature["name"] { return this.get_fromlfeature(context.proxyObject.instanceof, "name"); }
+    protected get_name(context: Context): LStructuralFeature["name"] { return context.data.instanceof ? this.get_fromlfeature(context.proxyObject.instanceof, "name") : context.data.name || ''; }
 
     protected get_instanceof(context: Context): this["instanceof"] {
         const pointer = context.data.instanceof;
@@ -3618,6 +3641,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 ret = ret.map( (val) => {
                     let l: any = LPointerTargetable.fromPointer(val, state);
                     if (l) {
+                        if (l.className === DEnumLiteral.name) { l = (l as DEnumLiteral).literal; } else
                         if (namedPointers) { l = l.name ? ("@" + l.name) : ("#" + l.className); }
                         else if (ecorePointers && !(meta as LReference).containment){
                             l = l.ecorePointer();
@@ -3628,8 +3652,12 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     return val;
                 })
                 break;
-            default: // it's a reference
+            default: // it's a reference or enum
                 ret = LPointerTargetable.wrapAll(ret);
+                if ((meta as LAttribute)?.type?.className === DEnumerator.name) {
+                    ret = ret.map( (lit: LEnumLiteral) => lit.literal);
+                    break;
+                }
                 if (namedPointers) {
                     ret = ret.map( l => l && (l.name ? ("@" + l.name) : ("#" + l.className)));
                 }
@@ -3735,18 +3763,23 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         let instanceoff: LReference | LAttribute = l.instanceof;
         let isRef: boolean | undefined = (!instanceoff ? undefined : instanceoff.className === DReference.name);
         SetFieldAction.new(context.data, 'value', list as any, '', false);
-        console.log("pre set value actions", l, list);
+        console.log("pre set_value actions", l, list, val, context);
 
         if (!l.instanceof || (instanceoff as LReference).containment) {
             let i = 0;
             for (let v of list) {
-                console.log("loop set value actions", v, context.data, isRef, instanceoff, Pointers.isPointer(v));
+                console.log("loop set_value actions", v, context.data, isRef, instanceoff, Pointers.isPointer(v));
                 i++;
                 if (isRef || instanceoff === undefined && Pointers.isPointer(v)) { // if shapeless obj need to check val by val
-                    console.log("loop set value actions SET", v, context.data, isRef, instanceoff, Pointers.isPointer(v));
+                    console.log("loop set_value actions SET", v, context.data, isRef, instanceoff, Pointers.isPointer(v));
                     SetFieldAction.new(v, "pointedBy", PointedBy.fromID(context.data.id, "values." + i as any), "+=");
+                    SetFieldAction.new(v, "father", context.data.id, undefined, true);
+                    let oldv = context.data.value[i];
+                    // todo: need to update father.contains? removing from old father and updating to new father
+                    // if (Pointers.isPointer(oldv)) SetFieldAction.new(context.data.id, "contains", U.arrayRemoveAll([...context.data.contains], oldv), '', true);
+                    // SetFieldAction.new(context.data.id, "contains", oldv as DObject["id"], undefined, true);
+
                 }
-                SetFieldAction.new(v, "father", context.data.id, undefined, true);
             }
         }
         context.data.isMirage && SetFieldAction.new(context.data, 'isMirage', false, '', false);
@@ -3813,11 +3846,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected get_delete(context: Context): () => void {
         const ret = () => {
             const lValue = context.proxyObject;
-            const lFeature = lValue.instanceof;
-            const features = lFeature.__raw.instances;
+            const lFeature: LAttribute | LReference | undefined = context.data.instanceof ? lValue.instanceof : undefined;
+            const features: DAttribute["instances"] | undefined = lFeature && lFeature.__raw.instances;
             const values = [...(Selectors.getValues().map((val) => {return val.id}))];
             BEGIN()
-            SetFieldAction.new(lFeature.__raw, 'instances', features.indexOf(lValue.id), '-=', true);
+            features && lFeature && SetFieldAction.new(lFeature.__raw, 'instances', (features).indexOf(lValue.id), '-=', true);
             SetRootFieldAction.new('values', values.indexOf(lValue.id), '-=', false);
             END()
             // lValue.superDelete();
