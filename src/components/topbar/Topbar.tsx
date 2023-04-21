@@ -2,9 +2,19 @@ import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
 import './style.scss';
-import {LModel} from "../../joiner";
+import {
+    CreateElementAction, DEdgePoint,
+    DViewElement,
+    DVoidEdge,
+    EdgeBendingMode,
+    GraphPoint, GraphSize,
+    LModel,
+    LVoidEdge,
+    store
+} from "../../joiner";
 import {SaveManager} from "./SaveManager";
 import Undoredocomponent from "./undoredocomponent";
+import {DamEdge} from "../../graph/damedges/damedge";
 
 function Topbar(props: AllProps) {
     const metamodel = props.metamodel;
@@ -33,7 +43,7 @@ function Topbar(props: AllProps) {
         </div>
         <div className={'ms-auto me-1'}>
             <label className={'item border round'} onClick={click}>Test 3</label>
-            <label className={'item border round ms-1'} onClick={click}>Test 4</label>
+            <label className={'item border round ms-1'} onClick={edgetest}>Test edges {edgetestvar}</label>
         </div>
     </div>);
 }
@@ -64,4 +74,48 @@ export const TopBarConnected = connect<StateProps, DispatchProps, OwnProps, ISto
 export const TopBar = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     return <TopBarConnected {...{...props, childrens}} />;
 }
+
+
+
+
+
+let edgetestvar: JSX.Element = <></>;
+//             <ellipse stroke={"black"} fill={"red"} cx={this.props.node.end.x} cy={this.props.node.end.y}
+//                         rx={this.props.node.end.w} ry={this.props.node.end.h} />
+//             <ellipse stroke={"black"} fill={"red"} cx={this.props.node.start.x} cy={this.props.node.start.y}
+//                         rx={this.props.node.start.w} ry={this.props.node.start.h} />
+function edgetest(){
+    let jsx =
+        `<svg>
+            <path stroke={"black"} fill={"none"} d={this.path()}></path>
+            {this.props.node.midnodes.map(mn => <ellipse stroke={"black"} fill={"red"} cx={mn.x} cy={mn.y} rx={mn.w} ry={mn.h} />)}
+        </svg>`
+    let view = DViewElement.new2("edge view", jsx, (d)=> { d.bendingMode = EdgeBendingMode.Line});
+    let midnodejsx = `<div style={{position:"absolute", top: this.data.x+"px", left: this.data.y+"px"}}>midnode</div>`;
+    let midnodeview = DViewElement.new("edgepoint view", midnodejsx);
+    let node: DVoidEdge = DVoidEdge.new();
+    function makeep(x:number, y:number, w=5, h=5) {
+        let e = DEdgePoint.new(undefined, node.id, undefined, undefined, new GraphSize(x, y, w, h));
+        return e.id;
+    }
+    node.midnodes = [makeep(50, 100), makeep(80, 100), makeep(120, 120), makeep(150,120), makeep(150, 80)];
+    CreateElementAction.new(view);
+    CreateElementAction.new(midnodeview);
+    CreateElementAction.new(node);
+    let graphid = store.getState().graphs[0];
+    edgetestvar = <div style={{position:"absolute", zIndex:1000, top:"50px", left:"50px", width:"500px", height:"500px", background:"white", border:"4px solid black"}}>
+        <div style={{height:"100%", width:"100%", position:"relative"}}>
+            <DamEdge view={view.id} graphid={graphid} nodeid={node.id}></DamEdge>
+        </div>
+    </div>
+
+}
+
+
+
+
+
+
+
+
 export default TopBar;

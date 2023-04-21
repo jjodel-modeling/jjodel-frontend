@@ -3,6 +3,7 @@ import {
     Constructors,
     DocString,
     DPointerTargetable,
+    EdgeBendingMode,
     getWParams,
     GraphSize,
     LogicContext,
@@ -34,7 +35,6 @@ export class DViewElement extends DPointerTargetable {
     name!: string;
     constants?: string; // evalutate 1 sola volta all'applicazione della vista o alla creazione dell'elemento.
     preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
-
     jsxString!: string; // l'html template
     usageDeclarations?: string;
     forceNodeType?: DocString<'component name (Vertex, Field, GraphVertex, Graph)'>;
@@ -62,16 +62,23 @@ export class DViewElement extends DPointerTargetable {
     onDragEnd: string = '';
     onResizeStart: string = '';
     onResizeEnd: string = '';
+    bendingMode!: EdgeBendingMode;
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1 , persist: boolean = false): DViewElement {
         return new Constructors(new DViewElement('dwc'), undefined, persist, undefined).DPointerTargetable().DViewElement(name, jsxString, defaultVSize, usageDeclarations, constants,
             preRenderFunc, appliableToClasses, oclApplyCondition, priority).end();
     }
+    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true): DViewElement {
+        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined)
+            .DPointerTargetable().DViewElement(name, jsxString).end(callback);
+    }
 }
 
 @RuntimeAccessible
-export class LViewElement extends LPointerTargetable { // MixOnlyFuncs(DViewElement, LPointerTargetable)
+export class LViewElement<Context extends LogicContext<DViewElement> = any, D extends DViewElement = any>
+    extends LPointerTargetable { // MixOnlyFuncs(DViewElement, LPointerTargetable)
+
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LViewElement;
@@ -116,6 +123,7 @@ export class LViewElement extends LPointerTargetable { // MixOnlyFuncs(DViewElem
     onDragEnd!: string;
     onResizeStart!: string;
     onResizeEnd!: string;
+    bendingMode!: EdgeBendingMode;
 
     get_viewpoint(context: LogicContext<DViewElement>): LViewPoint|undefined {
         const viewpoint = context.data.viewpoint;
@@ -132,10 +140,15 @@ export class LViewElement extends LPointerTargetable { // MixOnlyFuncs(DViewElem
         }
         return subViews;
     }
-    set_generic_entry(context: LogicContext<DViewElement>, key: string, val: any): boolean {
+    set_generic_entry(context: LogicContext<DViewElement>, key: keyof DViewElement, val: any): boolean {
         console.log('set_generic_entry', {context, key, val});
-        SetFieldAction.new(context.data, key as any, val);
+        SetFieldAction.new(context.data, key, val);
         return true;
+    }
+
+    get_bendingMode(context: Context): D["bendingMode"] { return context.data.bendingMode; }
+    set_bendingMode(val: D["bendingMode"], context: Context): boolean {
+        return this.set_generic_entry(context, 'bendingMode', val);
     }
 
     set_defaultVSize(val: GraphSize, context: LogicContext<DViewElement>): boolean {

@@ -9,7 +9,7 @@ import {
     DGraphElement,
     Dictionary,
     DModelElement,
-    DocString,
+    DocString, DViewElement,
     GObject,
     GraphElementDispatchProps,
     GraphElementOwnProps,
@@ -19,9 +19,9 @@ import {
     IStore,
     JSXT,
     LModelElement,
-    Log,
+    Log, LPointerTargetable,
     LViewElement,
-    MyProxyHandler,
+    MyProxyHandler, Overlap,
     Pointer,
     RuntimeAccessible,
     Selectors,
@@ -112,10 +112,18 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     static mapViewStuff(state: IStore, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
         let dnode: DGraphElement | undefined = ownProps?.nodeid && state.idlookup[ownProps.nodeid] as any;
-        const viewScores = Selectors.getAppliedViews(ret.data, dnode, ret.graph, ownProps.view || null, ownProps.parentViewId || null);
-        ret.views = viewScores.map(e => MyProxyHandler.wrap(e.element));
-        ret.view = ret.views[0];
-        (ret as any).viewScores = viewScores; // debug only
+
+        if (ownProps.view) {
+            ret.views = [];
+            ret.view = LPointerTargetable.wrap(ownProps.view) as LViewElement;
+        }
+        else {
+            const viewScores = Selectors.getAppliedViews(ret.data, dnode, ret.graph, ownProps.view || null, ownProps.parentViewId || null);
+            ret.views = viewScores.map(e => MyProxyHandler.wrap(e.element));
+            ret.view = ret.views[0];
+            (ret as any).viewScores = viewScores; // debug only
+        }
+
         /*        if (ownProps.view) {
                     ret.view = DPointerTargetable.wrap(state.idlookup[ownProps.view]);
                 } else {
@@ -125,7 +133,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     static mapLModelStuff(state: IStore, ownProps: GraphElementOwnProps, ret: GraphElementReduxStateProps): void {
         const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : (ownProps.data as any as DModelElement)?.id) as string;
-        Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ret, ownProps, state});
+        // Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ret, ownProps, state});
         ret.data = MyProxyHandler.wrap(state.idlookup[meid as any]);
         // Log.ex(!ret.data, "can't find model data:", {meid, state, ownpropsdata:ownProps.data, ownProps});
 
@@ -150,9 +158,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         ret.graph = idlookup[graphid] as DGraphElement as any; // se non c'è un grafo lo creo
         if (!ret.graph) {
-            let dGraphDataClass = DGraph;
             Log.exDev(!dataid, 'attempted to make a Graph element without model', {dataid, ownProps, ret, thiss:this});
-            if (dataid) CreateElementAction.new(dGraphDataClass.new(dataid, parentnodeid, graphid, graphid)); }
+            if (dataid) CreateElementAction.new(DGraph.new(dataid, parentnodeid, graphid, graphid)); }
         else {
             ret.graph = MyProxyHandler.wrap(ret.graph);
             Log.exDev(ret.graph.__raw.className !== "DGraph", 'graph class is wrong', {graph: ret.graph, ownProps});
@@ -171,9 +178,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     ////// mapper func
-    static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps, dGraphDataClass: typeof DGraphElement = DGraphElement): GraphElementReduxStateProps {
+    static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps, dGraphDataClass: typeof DGraphElement = DGraphElement, startingobj?: GObject): GraphElementReduxStateProps {
         // console.log('dragx GE mapstate', {dGraphDataClass});
-        let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
+        let ret: GraphElementReduxStateProps = (startingobj || {}) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
         GraphElementComponent.mapLModelStuff(state, ownProps, ret);
         // console.log("map ge", {ownProps, ret, state});
         GraphElementComponent.mapLGraphElementStuff(state, ownProps, ret, dGraphDataClass);
@@ -185,7 +192,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (ret.view.usageDeclarations) U.objectMergeInPlace(ret, U.evalInContextAndScope(ret.view.usageDeclarations));
         // console.log('GE mapstatetoprops:', {state, ownProps, reduxProps: ret});
         // ret.model = state.models.length ? LModelElement.wrap(state.models[0]) as LModel : undefined;
-        setTemplateString(ret, ownProps);
+        setTemplateString(ret, ownProps); // todo: this is heavy, should be moved somewhere where it's executed once unless view changes (pre-render with if?)
         // @ts-ignore
         ret.forceupdate = state.forceupdate;
         return ret;
@@ -325,8 +332,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (false && this.props.evalContext.Vertex) {
             setTimeout( () => SetRootFieldAction.new('forceupdate_', 41), 1); // todo: optimize this to avoid triggering it tons of times when a model is loaded.
             return <div>Loading</div>;}
+        let context = {component:this, __proto__:this.props.evalContext};
         try {
-            ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], this.props.evalContext); }
+            ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], context); }
         catch(e: any) {
             Log.exDevv('Error in custom user-defined template:\n' + e.toString() + '\n\n' + this.props.view.jsxString,
                 {templateString: this.props.view.jsxString, evalContext: this.props.evalContext, error: e});
@@ -344,7 +352,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
  *
  * */
     public render(): ReactNode {
-        if (this.props.preRenderFunc) U.evalInContextAndScope(this.props.preRenderFunc, this.props.evalContext);
+        if (this.props.preRenderFunc) U.evalInContextAndScope(this.props.preRenderFunc, {component:this, __proto__:this.props.evalContext});
         const rnode: ReactNode = this.getTemplate();
         let rawRElement: ReactElement | null = U.ReactNodeAsElement(rnode);
         // @ts-ignore
@@ -387,7 +395,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 }
 
 // private
-type AllPropss = GraphElementOwnProps & GraphElementDispatchProps & GraphElementReduxStateProps
+// type AllPropss = GraphElementOwnProps & GraphElementDispatchProps & GraphElementReduxStateProps;
+type AllPropss = Overlap<Overlap<GraphElementOwnProps, GraphElementDispatchProps>, GraphElementReduxStateProps>;
 
 const GraphElementConnected = connect<GraphElementReduxStateProps, GraphElementDispatchProps, GraphElementOwnProps, IStore>(
     GraphElementComponent.mapStateToProps,

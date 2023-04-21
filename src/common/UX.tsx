@@ -54,7 +54,7 @@ export class UX{
             case windoww.Components.Vertex.name:
             case windoww.Components.VertexComponent.name:
                 const injectProps: GraphElementOwnProps = {} as any;
-                injectProps.parentViewId = parentComponent.props.view.id || parentComponent.props.view; // re.props.view ||  thiss.props.view
+                injectProps.parentViewId = parentComponent.props.view.id || (parentComponent.props.view as any); // re.props.view ||  thiss.props.view
                 injectProps.parentnodeid = parentComponent.props.node?.id;
                 injectProps.graphid = parentComponent.props.graphid;
                 // const vidmap = GraphElementRaw.graphVertexID_counter;

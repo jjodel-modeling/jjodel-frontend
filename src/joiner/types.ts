@@ -50,12 +50,22 @@ export type nbool = null | boolean;
 export type bool = boolean;
 export type TODO<T = any> = any;
 export type NonEmptyString = Exclude<string, ''>;
+export enum EdgeBendingMode{
+    "Line"="L", // end
+    "Bezier_quadratic"="Q", // bending1, end
+    "Bezier_cubic"="C", // bending1, bending2, end
+    "Bezier_cubic_mirrored"="S", // bending1, end // when there are multiple bezier curves on a row, this takes a bendingpoint1 from the last bezier curves mirrored https://css-tricks.com/svg-path-syntax-illustrated-guide/
+    "Bezier_quadratic_mirrored"="T", // end // when there are multiple bezier curves on a row, this takes a bendingpoint1 from the last bezier curves mirrored https://css-tricks.com/svg-path-syntax-illustrated-guide/
+    "Elliptical_arc" = "A",// x y, rot, arc sweep, x y super messy not only coords but degrees and booleans mixed with path coords
+}
 
 // export type Subtract<T, K> = {  [L in Exclude<keyof T, K>]: T[L] };
 // Or alternatively, and more concisely, as:
 
 // export type Subtract<T, K> = Pick<T, Exclude<keyof T, K>>;
 export type Subtract<T, K> = Omit<T, keyof K>;
+export type Overlap<T1, T2> =  Omit<T1, keyof T2> & T2;
+
 
 
 

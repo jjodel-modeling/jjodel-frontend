@@ -33,10 +33,11 @@ export {windoww} from './types';
 export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv,
     NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually,
     Function, Function2, InOutParam,
-    unArr, orArr
+    unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap
 } from "./types";
 export type {Pointer, PtrString, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, } from "./classes";
 
+export {EdgeBendingMode} from "./types";
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable, LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible, Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs, LUser, DUser, Pointers, PointedBy, PendingPointedByPaths} from "./classes";
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
@@ -220,7 +221,7 @@ export {
     TextArea, Select, Input, Image, Edge,
     GraphComponent,
     GraphsContainerComponent,
-    Overlap,
+    Overlap as OverlapComponent,
     GraphsContainer,
     Vertex,    Graph,
     // DockLayoutComponent,

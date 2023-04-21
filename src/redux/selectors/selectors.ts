@@ -303,6 +303,7 @@ export class Selectors{
 
     private static matchesMetaClassTarget(v: DViewElement, data: DModelElement): ViewEClassMatch {
         if (!v.appliableToClasses || !v.appliableToClasses.length) return ViewEClassMatch.IMPLICIT_MATCH;
+        if (!data) return ViewEClassMatch.MISMATCH;
         let ThisClass: typeof DPointerTargetable = RuntimeAccessibleClass.get(data?.className);
         Log.exDev(!ThisClass, 'unable to find class type:', {v, data}); // todo: v = view appliable to DModel, data = proxy<LModel>
         let gotSubclassMatch: boolean = false;
@@ -327,7 +328,7 @@ export class Selectors{
 
     private static scoreView(v1: DViewElement, data: LModelElement, hisnode: DGraphElement | undefined, graph: LGraphElement, sameViewPointViews: Pointer<DViewElement, 1, 1>[] = []): number {
         // 1° priority: matching by EClass type
-        let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, data.__raw);
+        let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, data?.__raw);
         // Log.l('score view:', {v1, data, v1MatchingEClassScore});
         if (v1MatchingEClassScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
         // 2° priority: by ocl condition matching

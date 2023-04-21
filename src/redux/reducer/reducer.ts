@@ -17,7 +17,6 @@ import {
     SetRootFieldAction,
     LPointerTargetable,
     store,
-    windoww,
     getPath,
     Selectors,
     PointedBy,
@@ -27,7 +26,8 @@ import {
 import React from "react";
 import {CombineHistoryAction, LoadAction, RedoAction, UndoAction} from "../action/action";
 
-let U = windoww.U as typeof UType;
+let windoww = window as any;
+let U: typeof UType = windoww.U;
 
 function deepCopyButOnlyFollowingPath(oldStateDoNotModify: IStore, action: ParsedAction, prevAction: ParsedAction, newVal: any): IStore {
     let newRoot: IStore = {...oldStateDoNotModify} as IStore;

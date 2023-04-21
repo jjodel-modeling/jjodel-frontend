@@ -352,7 +352,8 @@ export class Constructors<T extends DPointerTargetable>{
         if (this.persist) BEGIN()
     }
     // start(thiss: any): this { this.thiss = thiss; return this; }
-    end(): T {
+    end(simpledatacallback?: (d:T) => void): T {
+        if (simpledatacallback) simpledatacallback(this.thiss); // callback for setting primitive types, not pointers not context-dependant values (name being potentially invalid / chosen according to parent)
         if (this.persist) {
             let cea = CreateElementAction.new(this.thiss, true);
             END([cea]); }
@@ -542,9 +543,13 @@ export class Constructors<T extends DPointerTargetable>{
         }
         return this; }
     DEdgePoint(): this { return this; }
-    DVoidEdge(): this { return this; }
+    DVoidEdge(): this {
+        let thiss: DVoidEdge = this.thiss as any;
+        thiss.midnodes = [];
+        return this; }
     DVertex(): this { return this; }
-    DEdge(): this { return this; }
+    DEdge(): this {
+        return this; }
     DExtEdge(): this { return this; }
     DRefEdge(): this { return this; }
 

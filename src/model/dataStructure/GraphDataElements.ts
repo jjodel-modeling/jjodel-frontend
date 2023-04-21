@@ -57,8 +57,10 @@ export class DGraphElement extends DPointerTargetable {
     x: number = 0;
     y: number = 0;
     zIndex:number = 100;
-    width: number = 300;
-    height: number = 400;
+    w: number=300;
+    h: number=500;
+    // width: number = 300;
+    // height: number = 400;
 
     public static new(model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"]): DGraphElement {
         return new Constructors(new DGraphElement('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID).end();
@@ -110,13 +112,13 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
         SetFieldAction.new(context.data.id, "y", val, undefined, false);
         return true; }
 
-    get_w(context: Context): this["w"] { return context.data.width; }
+    get_w(context: Context): this["w"] { return context.data.w; }
     set_w(val: this["w"], context: Context): boolean {
-        SetFieldAction.new(context.data.id, "width", val, undefined, false);
+        SetFieldAction.new(context.data.id, "w", val, undefined, false);
         return true; }
-    get_h(context: Context): this["h"] { return context.data.height; }
+    get_h(context: Context): this["h"] { return context.data.h; }
     set_h(val: this["h"], context: Context): boolean {
-        SetFieldAction.new(context.data.id, "height", val, undefined, false);
+        SetFieldAction.new(context.data.id, "h", val, undefined, false);
         return true; }
 
     get_width(context: Context): this["w"] { return this.get_w(context); }
@@ -132,13 +134,13 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
         END()
         return true; }
 
-    get_size(context: Context): this["size"] { return new GraphSize(context.data.x, context.data.y, context.data.width, context.data.height); }
+    get_size(context: Context): this["size"] { return new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h); }
     set_size(val: this["size"], context: Context): boolean {
         BEGIN()
         SetFieldAction.new(context.data.id, "x", val.x, undefined, false);
         SetFieldAction.new(context.data.id, "y", val.y, undefined, false);
-        SetFieldAction.new(context.data.id, "width", val.w, undefined, false);
-        SetFieldAction.new(context.data.id, "height", val.h, undefined, false);
+        SetFieldAction.new(context.data.id, "w", val.w, undefined, false);
+        SetFieldAction.new(context.data.id, "h", val.h, undefined, false);
         END()
         return true; }
 
@@ -430,7 +432,7 @@ DGraphElement.subclasses.push(DVoidVertex);
 LGraphElement.subclasses.push(LVoidVertex);
 
 @RuntimeAccessible
-export class DEdgePoint extends DGraphElement { // DVoidVertex
+export class DEdgePoint extends DVoidVertex { // DVoidVertex
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LEdgePoint;
@@ -439,8 +441,9 @@ export class DEdgePoint extends DGraphElement { // DVoidVertex
 
     // inherit redefine
     id!: Pointer<DEdgePoint, 1, 1, LEdgePoint>;
+    father!: Pointer<DVoidEdge, 1, 1, LVoidEdge>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
-    model!: Pointer<DModelElement, 0, 1, LModelElement>;
+    // model!: Pointer<DModelElement, 0, 1, LModelElement>; gets model from this.father (edge)
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
@@ -453,9 +456,9 @@ export class DEdgePoint extends DGraphElement { // DVoidVertex
     // personal attributes
     __isDEdgePoint!: true;
 
-    public static new(model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"],
+    public static new(model: undefined, parentNodeID: DEdgePoint["father"], graphID?: DEdgePoint["graph"], nodeID?: DGraphElement["id"],
                       size: GraphSize = defaultEPSize): DEdgePoint {
-        return new Constructors(new DEdgePoint('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
+        return new Constructors(new DEdgePoint('dwc'), parentNodeID, true).DPointerTargetable().DGraphElement(undefined, parentNodeID, graphID, nodeID)
             .DVoidVertex(size).DEdgePoint().end();
     }
 
@@ -470,7 +473,7 @@ export class LEdgePoint extends LVoidVertex {
     // static structure: typeof DEdgePoint;
 
     // inherit redefine
-    __raw!: DEdgePoint;
+    // __raw!: DEdgePoint;
     id!: Pointer<DEdgePoint, 1, 1, LEdgePoint>;
     graph!: LGraph;
     model?: LModelElement;
@@ -492,56 +495,6 @@ LVoidVertex.subclasses.push(LEdgePoint);
 
 
 
-
-
-
-@RuntimeAccessible
-export class DVoidEdge extends DGraphElement {
-    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
-    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    // static singleton: LVoidEdge;
-    // static logic: typeof LVoidEdge;
-    // static structure: typeof DVoidEdge;
-    id!: Pointer<DVoidEdge, 1, 1, LVoidEdge>;
-    graph!: Pointer<DGraph, 1, 1, LGraph>;
-    model!: Pointer<DModelElement, 0, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
-    // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
-    subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
-
-    // personal attributes
-    start!: Pointer<DModelElement, 1, 1, LModelElement>;
-    end!: Pointer<DModelElement, 1, 1, LModelElement>;
-    __isDVoidEdge!: true;
-
-    public static new(model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"],): DVoidEdge {
-        return new Constructors(new DVoidEdge('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
-            .DVoidEdge().end();
-    }
-}
-
-@RuntimeAccessible
-export class LVoidEdge extends LGraphElement {
-    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
-    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    // static singleton: LVoidEdge;
-    // static logic: typeof LVoidEdge;
-    // static structure: typeof DVoidEdge;
-    __raw!: DVoidEdge;
-    id!: Pointer<DVoidEdge, 1, 1, LVoidEdge>;
-    graph!: LGraph;
-    model?: LModelElement;
-    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
-    // containedIn?: LGraphElement;
-    subElements!: LGraphElement[];
-    start!: LModelElement;
-    end!: LModelElement
-    __isLVoidEdge!: true;
-
-    // personal attributes
-}
-DGraphElement.subclasses.push(DVoidEdge);
-LGraphElement.subclasses.push(LVoidEdge);
 
 
 
@@ -700,6 +653,63 @@ LVertex.subclasses.push(LGraphVertex);
 
 
 
+@RuntimeAccessible
+export class DVoidEdge extends DGraphElement {
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    // static singleton: LVoidEdge;
+    // static logic: typeof LVoidEdge;
+    // static structure: typeof DVoidEdge;
+    id!: Pointer<DVoidEdge, 1, 1, LVoidEdge>;
+    graph!: Pointer<DGraph, 1, 1, LGraph>;
+    model!: Pointer<DModelElement, 0, 1, LModelElement>;
+    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
+    subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
+
+    // personal attributes
+    start!: Pointer<DGraphElement, 1, 1, LGraphElement>;
+    end!: Pointer<DGraphElement, 1, 1, LGraphElement>;
+    __isDVoidEdge!: true;
+    midnodes!: Pointer<DEdgePoint, 1, 1, LEdgePoint>[];
+
+    public static new(model?: DGraphElement["model"], parentNodeID?: DGraphElement["father"], graphID?: DGraphElement["graph"], nodeID?: DGraphElement["id"],): DVoidEdge {
+        return new Constructors(new DVoidEdge('dwc'), graphID, true).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
+            .DVoidEdge().end();
+    }
+}
+
+@RuntimeAccessible
+export class LVoidEdge<Context extends LogicContext<DEdge> = any, D extends DEdge = DEdge> extends LGraphElement {
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    // static singleton: LVoidEdge;
+    // static logic: typeof LVoidEdge;
+    // static structure: typeof DVoidEdge;
+    __raw!: DVoidEdge;
+    id!: Pointer<DVoidEdge, 1, 1, LVoidEdge>;
+    graph!: LGraph;
+    model?: LModelElement;
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
+    // containedIn?: LGraphElement;
+    subElements!: LGraphElement[];
+    start!: LGraphElement;
+    end!: LGraphElement;
+    __isLVoidEdge!: true;
+    midnodes!: LEdgePoint[];
+
+
+    protected get_midnodes(context: Context): this["midnodes"] {
+        return LPointerTargetable.wrapAll(context.data.midnodes);
+    }
+    protected get_start(context: Context): this["start"] { return LPointerTargetable.from(context.data.start); }
+    protected get_end(context: Context): this["end"] { return LPointerTargetable.from(context.data.end); }
+}
+DGraphElement.subclasses.push(DVoidEdge);
+LGraphElement.subclasses.push(LVoidEdge);
+
+
+
 
 @RuntimeAccessible
 export class DEdge extends DVoidEdge { // DVoidEdge
@@ -715,10 +725,11 @@ export class DEdge extends DVoidEdge { // DVoidEdge
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
-    start!: Pointer<DModelElement, 1, 1, LModelElement>;
-    end!: Pointer<DModelElement, 1, 1, LModelElement>;
+    start!: Pointer<DGraphElement, 1, 1, LGraphElement>;
+    end!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     __isDEdge!: true;
     __isDVoidEdge!: true;
+    midnodes!: Pointer<DEdgePoint, 1, 1, LEdgePoint>[];
 
     public static new(model: DGraph["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size: GraphSize = defaultVSize): DEdge {
         return new Constructors(new DEdge('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
@@ -727,7 +738,7 @@ export class DEdge extends DVoidEdge { // DVoidEdge
 }
 
 @RuntimeAccessible
-export class LEdge extends LVoidEdge {
+export class LEdge<Context extends LogicContext<DEdge> = any, D extends DEdge = DEdge> extends LVoidEdge {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LGraphElement;
@@ -741,10 +752,12 @@ export class LEdge extends LVoidEdge {
     // containedIn!: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
-    start!: LModelElement;
-    end!: LModelElement;
+    start!: LGraphElement;
+    end!: LGraphElement;
+    midnodes!: LEdgePoint[];
     __isLEdge!: true;
     __isLVoidEdge!: true;
+
 }
 DVoidEdge.subclasses.push(DEdge);
 LVoidEdge.subclasses.push(LEdge);
@@ -766,8 +779,8 @@ export class DExtEdge extends DEdge { // etends DEdge
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
-    start!: Pointer<DModelElement, 1, 1, LModelElement>;
-    end!: Pointer<DModelElement, 1, 1, LModelElement>;
+    start!: Pointer<DGraphElement, 1, 1, LGraphElement>;
+    end!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     __isDExtEdge!: true;
     __isDEdge!: true;
     __isDVoidEdge!: true;
@@ -793,8 +806,8 @@ export class LExtEdge extends LEdge{
     // containedIn!: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
-    start!: LModelElement;
-    end!: LModelElement;
+    start!: LGraphElement;
+    end!: LGraphElement;
     __isLExtEdge!: true;
     __isLEdge!: true;
     __isLVoidEdge!: true;
@@ -809,8 +822,8 @@ LEdge.subclasses.push(LExtEdge);
 export class DRefEdge extends DEdge { // extends DEdge
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    start!: Pointer<DModelElement, 1, 1, LModelElement>;
-    end!: Pointer<DModelElement, 1, 1, LModelElement>;
+    start!: Pointer<DGraphElement, 1, 1, LGraphElement>;
+    end!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     __isDRefEdge!: true;
 
     public static new(model: DGraph["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"]): DRefEdge {
@@ -823,9 +836,9 @@ export class DRefEdge extends DEdge { // extends DEdge
 export class LRefEdge extends LEdge {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    __raw!: DRefEdge;
-    start!: LModelElement;
-    end!: LModelElement;
+    // __raw!: DRefEdge;
+    start!: LGraphElement;
+    end!: LGraphElement;
     __isLRefEdge!: true;
 }
 DEdge.subclasses.push(DRefEdge);
