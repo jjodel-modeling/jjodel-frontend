@@ -145,13 +145,15 @@ export class LocalStorage extends IStorage{
 export class EcoreParser{
     static supportedEcoreVersions = ["http://www.eclipse.org/emf/2002/Ecore"];
     static prefix:string = '@';
-    static parse(ecorejson: GObject | string | null, persist: boolean = false): DModelElement[]{
+    static parse(ecorejson: GObject | string | null, isMetamodel: boolean, persist: boolean = false): DModelElement[]{
         if (!ecorejson) return [];
         let parsedjson: GObject;
         if (typeof ecorejson === "string") try { parsedjson = JSON.parse(ecorejson); } catch(e) { windoww.temp = ecorejson; Log.exx("error while parsing json:", e, ecorejson.substring(0, 1000)); throw e; }
         else parsedjson = ecorejson;
 
-        let parsedElements: DModelElement[] = EcoreParser.parseDModel(parsedjson);
+        console.log("root parse", ecorejson);
+
+        let parsedElements: DModelElement[] = EcoreParser.parseDModel(parsedjson, isMetamodel);
         console.warn("parse.result D", parsedElements);
         this.LinkAllNamesToIDs(parsedElements);
         this.fixNamingConflicts(parsedElements);
@@ -289,21 +291,25 @@ export class EcoreParser{
         // todo:4 final
     }
 
-    static parseDModel(json: Json): DModelElement[] {
+    static parseDModel(json: Json, isMetamodel: boolean): DModelElement[] {
         let generated: DModelElement[] = [];
         if (!json) { json = {}; }
-        let dObject: DModel = DModel.new(undefined, undefined, false, false);
+        let dObject: DModel = DModel.new(undefined, undefined, isMetamodel, true);
+        console.log("made model", json);
         generated.push(dObject); // dObject.father = 'modeltmp' as any;
         /// *** specific  *** ///
         const childrens = EcoreParser.getChildrens(json);
         const annotations = EcoreParser.getAnnotations(json);
         dObject.name = json[ECoreNamed.namee] as string || "imported_metamodel_1";
+        console.log("made model 2", childrens, annotations);
         for (let child of annotations) {
             EcoreParser.parseDAnnotation(dObject, child, generated);
         }
+        console.log("made annotations");
         for (let child of childrens) {
             EcoreParser.parseDPackage(dObject, child, generated);
         }
+        console.log("made packages");
         return generated;
     }
 
@@ -346,6 +352,8 @@ export class EcoreParser{
         let version = (json[EcoreParser.prefix+"xmlns:ecore"] || '') as string;
         // model.xmi = json[EcoreParser.prefix+"xmlns:xmi"]; // http://www.omg.org/XMI
         // model.xsi = json[EcoreParser.prefix+"xmlns:xsi"]; // http://www.w3.org/2001/XMLSchema-instance
+
+        console.log(json);
         Log.ex(!EcoreParser.supportedEcoreVersions.includes(version), "unsupported ecore version, must be one of:" + EcoreParser.supportedEcoreVersions + " found instead: "+version);
 
         dObject.name = this.read(json, ECoreNamed.namee, 'defaultPackage');

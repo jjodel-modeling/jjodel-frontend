@@ -18,6 +18,7 @@ import PersistanceTab from "./tabs/PersistanceTab";
 
 let windoww = window as any;
 interface ThisState {}
+
 class DockComponent extends PureComponent<AllProps, ThisState> {
     metamodel!: LModel;
     models!: LModel[];

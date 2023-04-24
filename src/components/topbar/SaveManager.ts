@@ -28,21 +28,20 @@ export class SaveManager {
 
     public static exportEcore_click(toXML: boolean = false, toFile: boolean = true): void { // e: React.MouseEvent,
         let lmodel: null|LModel = Selectors.getActiveModel();
-        if(lmodel) {
-            let json = SaveManager.exportEcore(lmodel);
-            let str = JSON.stringify(json, null, "\t");
-            if (toXML) {
-                str = prjson2xml.json2xml(json, '\t');
-                str = U.formatXml(str);
-            }
-
-            if (!toFile) {
-                // (document.querySelector("#export-tmp") as any).innerText = str;
-                localStorage.setItem("import", str);
-                return;
-            }
-            U.download((lmodel.name || ((lmodel as any).isMetaModel ? 'M2' : 'M1') + '_unnamed')  + (toXML ? ".xml.ecore" : '.json.ecore'), str);
+        if (!lmodel) return;
+        let json = SaveManager.exportEcore(lmodel);
+        let str = JSON.stringify(json, null, "\t");
+        if (toXML) {
+            str = prjson2xml.json2xml(json, '\t');
+            str = U.formatXml(str);
         }
+
+        if (!toFile) {
+            // (document.querySelector("#export-tmp") as any).innerText = str;
+            localStorage.setItem("import", str);
+            return;
+        }
+        U.download((lmodel.name || ((lmodel as any).isMetaModel ? 'M2' : 'M1') + '_unnamed')  + (toXML ? ".xml.ecore" : '.json.ecore'), str);
     }
 
     public static importEcore_click(fromXML: boolean = false, fromfile: boolean = true): void {
@@ -63,15 +62,19 @@ export class SaveManager {
                 jsonobj = prxml2json.xml2jsonobj(xmlDoc, ' ');
             }
             //if (filestring.includes("\n")) throw new Error(filestring.substring(0, 1000));
-            SaveManager.importEcore(jsonobj || filestring);
+            SaveManager.importEcore(jsonobj || filestring, true); // todo: trova il modo di determinare se è m1 o m2 senza filename
             return; }
 
         console.log("importEcore: pre file read");
+        let filename;
         U.fileRead((e: Event, files?: FileList | null, fileContents?: string[]) => {
             Log.ex(!fileContents || !files || fileContents.length !== files.length, 'Failed to get file contents:', files, fileContents);
             Log.ex(fileContents && fileContents.length > 1, 'Should not be possible to input multiple files yet.');
             if (!fileContents) return;
             if (fileContents.length == 0) return;
+            // @ts-ignore
+            filename = e.target.files?.[0].name;
+            console.log("file read", {e, fileContents, files, filename});
             filestring = fileContents[0];
             console.log('importEcore filestring input: ', filestring);
             if (fromXML) {
@@ -95,7 +98,9 @@ export class SaveManager {
                 console.log('importEcore jsonstr input: ', jsonobj);
             }
             else jsonstring = filestring;
-            let end = SaveManager.importEcore(jsonobj || jsonstring || 'null', false);
+            let isMetamodel = filename.indexOf(".ecore") === filename.length - ".ecore".length;
+            console.log("ismetamodel", {filename, isMetamodel});
+            let end = SaveManager.importEcore(jsonobj || jsonstring || 'null', isMetamodel,false);
             console.error({end});
         }, [extension], true);
     }
@@ -106,8 +111,8 @@ export class SaveManager {
         catch(e) { Log.exx("loop in model:", loopobj); }
         return {"error": true, loopobj};
     }
-    public static importEcore(jsonstr: GObject | string | null, loadOnModel: boolean = true): DModelElement[] {
-        return EcoreParser.parse(jsonstr, loadOnModel);
+    public static importEcore(jsonstr: GObject | string | null, isMetamodel: boolean, loadOnModel: boolean = true): DModelElement[] {
+        return EcoreParser.parse(jsonstr, isMetamodel, loadOnModel);
     }
 
     static exportLayout_click(toFile: boolean) {

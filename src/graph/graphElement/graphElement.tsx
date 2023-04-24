@@ -355,7 +355,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap(); // todo: per passarla come prop ma mantenerla modificabile
             try {
                 rawRElement = React.cloneElement(rawRElement, {key: this.props.key || this.props.view.id + '_' + me.id, onDragTestInject, children: UX.recursiveMap(rawRElement/*.props.children*/,
-                        (rn: ReactNode) => UX.injectProp(rn, subElements))});
+                        (rn: ReactNode) => UX.injectProp(this, rn, subElements))});
             } catch (e) {
                 rawRElement = DV.errorView();
             }

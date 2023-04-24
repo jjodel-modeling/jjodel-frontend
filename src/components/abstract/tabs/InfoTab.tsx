@@ -25,9 +25,10 @@ function InfoTabComponent(props: AllProps) {
         })}
         <b><label className={'ms-1 text-primary'}>Models ({models.length}):</label></b><br />
         {models.map((model, index) => {
+            console.log(' aaaa', {models, model});
             return(<>
                 <label className={'ms-3'} key={index}>
-                    -{model.name} <b className={'text-success'}>conforms to</b> {(model.father as LModel).name}
+                    -{model.name} <b className={'text-success'}>conforms to</b> {(model.instanceof as LModel).name}
                 </label>
                 <br />
             </>);

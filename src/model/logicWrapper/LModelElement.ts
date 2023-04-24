@@ -340,39 +340,39 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             return ret(...args);
         }
     }
-/*
-    protected get_addPackage(context: Context): (() => void) {
-        let ret = () => {};
-        switch (context.data?.className) {
-            default: break;
-            case "DModel": ret = () => LModelElement.addPackage(context.data as DModel); break;
-            case "DPackage": ret = () => LModelElement.addSubPackage(context.data as DPackage); break;
+    /*
+        protected get_addPackage(context: Context): (() => void) {
+            let ret = () => {};
+            switch (context.data?.className) {
+                default: break;
+                case "DModel": ret = () => LModelElement.addPackage(context.data as DModel); break;
+                case "DPackage": ret = () => LModelElement.addSubPackage(context.data as DPackage); break;
+            }
+            ret();
+            return ret;
         }
-        ret();
-        return ret;
-    }
 
-    private static addPackage(dModel: DModel): void {
-        const lModel: LModel = LModelElement.from(dModel);
-        let name = 'package_' + 0;
-        let childrenNames: (string)[] = lModel.packages.map( p => p.name);
-        name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0)
-        const dPackage = DPackage.new(name);
-        CreateElementAction.new(dPackage);
-        let wModel = WPointerTargetable.fromD(dModel);
-        wModel.packages = [...dModel.packages, dPackage];
-    }
+        private static addPackage(dModel: DModel): void {
+            const lModel: LModel = LModelElement.from(dModel);
+            let name = 'package_' + 0;
+            let childrenNames: (string)[] = lModel.packages.map( p => p.name);
+            name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0)
+            const dPackage = DPackage.new(name);
+            CreateElementAction.new(dPackage);
+            let wModel = WPointerTargetable.fromD(dModel);
+            wModel.packages = [...dModel.packages, dPackage];
+        }
 
-    private static addSubPackage_obsolete(dPackage: never): void {
-        const lPackage: LPackage = LPackage.from(dPackage);
-        let name = 'subpackage_' + 0;
-        let childrenNames: (string)[] = lPackage.childrens.map( p => (p as LPackage).name);
-        name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0)
-        const dSubPackage = DPackage.new(name);
-        CreateElementAction.new(dSubPackage);
-        let wPackage = WPointerTargetable.fromD(dPackage);
-        wPackage.subpackages = [...dPackage.subpackages, dSubPackage];
-    }*/
+        private static addSubPackage_obsolete(dPackage: never): void {
+            const lPackage: LPackage = LPackage.from(dPackage);
+            let name = 'subpackage_' + 0;
+            let childrenNames: (string)[] = lPackage.childrens.map( p => (p as LPackage).name);
+            name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0)
+            const dSubPackage = DPackage.new(name);
+            CreateElementAction.new(dSubPackage);
+            let wPackage = WPointerTargetable.fromD(dPackage);
+            wPackage.subpackages = [...dPackage.subpackages, dSubPackage];
+        }*/
 
     protected get_addException(context: Context): () => void {
         let ret = () => {};
@@ -457,7 +457,7 @@ export class DAnnotation extends DModelElement { // extends Mixin(DAnnotation0, 
     source!: string;
     details!: DAnnotationDetail[];//Dictionary<string, string>;
 
-    public static new(source?: DAnnotation["source"], details?: DAnnotation["details"], father?: Pointer, persist: boolean = false): DAnnotation {
+    public static new(source?: DAnnotation["source"], details?: DAnnotation["details"], father?: Pointer, persist: boolean = true): DAnnotation {
         // if (!name) name = this.defaultname("annotation ", father);
         return new Constructors(new DAnnotation('dwc'), father, persist, undefined).DPointerTargetable().DModelElement().DAnnotation(source, details).end();
     }
@@ -681,7 +681,7 @@ export class DTypedElement extends DPointerTargetable { // Mixin(DTypedElement0,
     required!: boolean; // ?
 
 
-    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = false): DTypedElement {
+    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = true): DTypedElement {
         Log.exx("DTypedElement is abstract, cannot instantiate");
         return null as any;
         //return new Constructors(new DTypedElement('dwc'), father, persist, undefined).DPointerTargetable().DModelElement().DNamedElement(name).DTypedElement(type).end();
@@ -728,21 +728,6 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
     protected set_type(val: Pack1<this["type"]>, context: Context): boolean {
         const data = context.data;
         let instances: LValue[] = context.proxyObject.instances;
-        /* damiano: riscritto nel rigo di sopra
-        if(data.className === 'DAttribute') {
-            const lAttribute: LAttribute = LAttribute.fromPointer(data.id);
-            instances = [...lAttribute.instances];
-        }
-        if(data.className === 'DReference') {
-            const lReference: LReference = LReference.fromPointer(data.id);
-            instances = [...lReference.instances];
-        }*/
-
-        /* non più necessario: tenta di effettuare un cast autonomamente
-        for(let instance of instances) {
-            const wInstance = WPointerTargetable.fromL(instance);
-            wInstance.value = [U.initializeValue(val)];
-        }*/
         SetFieldAction.new(context.data, 'type', Pointers.from(val), "", true);
         return true;
     }
@@ -841,7 +826,7 @@ export /*abstract*/ class DClassifier extends DPointerTargetable { // extends DN
     // isInstance(object: EJavaObject): boolean; ?
     // getClassifierID(): number;
 
-    public static new(name?: DNamedElement["name"], father?: Pointer, persist: boolean = false): DClassifier {
+    public static new(name?: DNamedElement["name"], father?: Pointer, persist: boolean = true): DClassifier {
         Log.exx("DClassifier is abstract, cannot instantiate");
         return null as any;
         // return new Constructors(new DClassifier('dwc'), father, persist, undefined).DPointerTargetable().DModelElement().DNamedElement(name).DClassifier().end();
@@ -938,7 +923,7 @@ export class DPackage extends DPointerTargetable { // extends DNamedElement
     uri!: string;
     prefix!: string;
 
-    public static new(name?: DNamedElement["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"], father?: Pointer, persist: boolean = false, fatherType?: Constructor): DPackage {
+    public static new(name?: DNamedElement["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"], father?: Pointer, persist: boolean = true, fatherType?: Constructor): DPackage {
         if (!name) name = this.defaultname("pkg_", father);
         return new Constructors(new DPackage('dwc'), father, persist, fatherType).DPointerTargetable().DModelElement()
             .DNamedElement(name).DPackage(uri, prefix).end();
@@ -1196,7 +1181,7 @@ export class DOperation extends DPointerTargetable { // extends DTypedElement
     parameters: Pointer<DParameter, 0, 'N', LParameter> = [];
     visibility: AccessModifier = AccessModifier.private;
 
-    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], exceptions: DOperation["exceptions"] = [], father?: Pointer, persist: boolean = false): DOperation {
+    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], exceptions: DOperation["exceptions"] = [], father?: Pointer, persist: boolean = true): DOperation {
         if (!name) name = this.defaultname("fx_", father);
         return new Constructors(new DOperation('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DTypedElement(type).DOperation(exceptions).end();
@@ -1359,7 +1344,7 @@ export class DParameter extends DPointerTargetable { // extends DTypedElement
     required!: boolean;
     // personal
 
-    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = false): DParameter {
+    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = true): DParameter {
         if (!type) type = LPointerTargetable.from(Selectors.getFirstPrimitiveTypes()).id; // default type as string
         if (!name) name = this.defaultname("arg", father);
         return new Constructors(new DParameter('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
@@ -1424,31 +1409,31 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
             return le; }
     }
 
-/*
-    protected get_delete(context: LogicContext<DParameter>): () => void {
-        let ret = () => {};
-        const dParameter: DParameter = context.data;
-        const dOperation: DOperation = Selectors.getDElement<DOperation>(dParameter.father);
-        if (dOperation.parameters.indexOf(dParameter.id) !== 0) {
-            const dClassifier: DClassifier | undefined = Selectors.getDElement<DClass>(dParameter.type as string); //first parameter is return type so his type is undefined
-            ret = () => {
-                SetFieldAction.new(dOperation,"parameters", U.removeFromList(dOperation.parameters, dParameter.id), '', true);
-                if (dClassifier) {
-                    // SetFieldAction.new(dClassifier, "pointedBy", U.removeFromList(dClassifier.pointedBy, dParameter.id));
+    /*
+        protected get_delete(context: LogicContext<DParameter>): () => void {
+            let ret = () => {};
+            const dParameter: DParameter = context.data;
+            const dOperation: DOperation = Selectors.getDElement<DOperation>(dParameter.father);
+            if (dOperation.parameters.indexOf(dParameter.id) !== 0) {
+                const dClassifier: DClassifier | undefined = Selectors.getDElement<DClass>(dParameter.type as string); //first parameter is return type so his type is undefined
+                ret = () => {
+                    SetFieldAction.new(dOperation,"parameters", U.removeFromList(dOperation.parameters, dParameter.id), '', true);
+                    if (dClassifier) {
+                        // SetFieldAction.new(dClassifier, "pointedBy", U.removeFromList(dClassifier.pointedBy, dParameter.id));
+                    }
+                    // SetRootFieldAction.new("parameters", U.removeFromList(Selectors.getAllParameters(), dParameter.id), '', true);
+                    new DeleteElementAction(dParameter);
                 }
-                // SetRootFieldAction.new("parameters", U.removeFromList(Selectors.getAllParameters(), dParameter.id), '', true);
-                new DeleteElementAction(dParameter);
+            } else {
+                // when deleting return type (null = void)
+                ret = () => {
+                    SetFieldAction.new(dParameter, "type", null as any); // while reworking .delete(): null = void, questo setta void e deve essere tenuto come azione diversa dal default delete
+                };
             }
-        } else {
-            // when deleting return type (null = void)
-            ret = () => {
-                SetFieldAction.new(dParameter, "type", null as any); // while reworking .delete(): null = void, questo setta void e deve essere tenuto come azione diversa dal default delete
-            };
+            ret();
+            return ret;
         }
-        ret();
-        return ret;
-    }
-    */
+        */
 }
 DTypedElement.subclasses.push(DParameter);
 LTypedElement.subclasses.push(LParameter);
@@ -1925,7 +1910,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
 
     public instance(): DObject { return this.cannotCall('instance'); }
-    private get_instance_old(context: Context): () => DObject {
+    /*private get_instance_old(context: Context): () => DObject {
         return () => {
             const dClass: DClass = context.data;
             const lClass: LClass = LClass.from(dClass);
@@ -1934,25 +1919,26 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             BEGIN()
             SetFieldAction.new(dObject, 'instanceof', dClass.id, '', true);
             SetFieldAction.new(dClass, 'instances', dObject.id, '+=', true);
-            END()
+
             // damiano: weird transaction placement. double-check it
             let father: LClass|undefined = lClass;
             while(father) {
                 for(let dFeature of [...father.attributes, ...father.references]) {
                     const dValue = DValue.new(dFeature.name); dValue.value = [U.initializeValue(dFeature.type)];
                     CreateElementAction.new(dValue);
-                    BEGIN()
+
                     SetFieldAction.new(dValue, 'father', dObject.id, '', true);
                     SetFieldAction.new(dValue, 'instanceof', dFeature.id, '', true);
                     SetFieldAction.new(dFeature, 'instances', dValue.id, '+=', true);
                     SetFieldAction.new(dObject, 'features', dValue.id, '+=', true);
-                    END()
+
                 }
                 father = (father.extends.length > 0) ? father.extends[0] : undefined;
             }
+            END()
             return dObject;
         };
-    }
+    }*/
 
     protected get_delete(context: Context): () => void {
         const data = context.proxyObject;
@@ -2006,7 +1992,7 @@ export class DDataType extends DPointerTargetable { // extends DClassifier
     // usedBy: Pointer<DAttribute, 0, 'N', LAttribute> = [];
 
 
-    public static new(name?: DNamedElement["name"], father?: Pointer, persist: boolean = false): DDataType {
+    public static new(name?: DNamedElement["name"], father?: Pointer, persist: boolean = true): DDataType {
         Log.exx("DDataType is abstract, cannot instantiate");
         return null as any;
         // if (!name) name = this.defaultname("datatype_", father);
@@ -2088,7 +2074,7 @@ export class DStructuralFeature extends DPointerTargetable { // DTypedElement
     derived: boolean = false;
     defaultValue!: (Pointer<DObject, 1, 1, LObject> | PrimitiveType)[];
 
-    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = false): DStructuralFeature {
+    public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = true): DStructuralFeature {
         Log.exx("DStructuralFeature is abstract, cannot instantiate");
         return null as any;
         // if (!name) name = this.defaultname("feature ", father);
@@ -2183,12 +2169,12 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
         }
         return ret;
     }
-/*
-    protected get_defaultValueLiteral(context: Context): this["defaultValueLiteral"] { return context.data.defaultValueLiteral; }
-    protected set_defaultValueLiteral(val: this["defaultValueLiteral"], context: Context): boolean {
-        SetFieldAction.new(context.data, 'defaultValueLiteral', val, "", false);
-        return true;
-    }*/
+    /*
+        protected get_defaultValueLiteral(context: Context): this["defaultValueLiteral"] { return context.data.defaultValueLiteral; }
+        protected set_defaultValueLiteral(val: this["defaultValueLiteral"], context: Context): boolean {
+            SetFieldAction.new(context.data, 'defaultValueLiteral', val, "", false);
+            return true;
+        }*/
 }
 DTypedElement.subclasses.push(DStructuralFeature);
 LTypedElement.subclasses.push(LStructuralFeature);
@@ -2233,7 +2219,7 @@ export class DReference extends DPointerTargetable { // DStructuralFeature
     target: Pointer<DClass, 0, 'N', LClass> = [];
     edges: Pointer<DEdge, 0, 'N', LEdge> = [];
 
-    public static new(name?: DReference["name"], type?: DReference["type"], father?: DReference["father"], persist: boolean = false): DReference {
+    public static new(name?: DReference["name"], type?: DReference["type"], father?: DReference["father"], persist: boolean = true): DReference {
         if (!type) type = father // default type is self-reference
         if (!name) name = this.defaultname("ref_", father);
         return new Constructors(new DReference('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
@@ -2445,7 +2431,7 @@ export class DAttribute extends DPointerTargetable { // DStructuralFeature
     // personal
     isID: boolean = false; // ? exist in ecore as "iD" ?
 
-    public static new(name?: DAttribute["name"], type?: DAttribute["type"], father?: DAttribute["father"], persist: boolean = false): DAttribute {
+    public static new(name?: DAttribute["name"], type?: DAttribute["type"], father?: DAttribute["father"], persist: boolean = true): DAttribute {
         if (!name) name = this.defaultname("attr_", father);
         if (!type) type = LPointerTargetable.from(Selectors.getFirstPrimitiveTypes()).id; // default type as string
         return new Constructors(new DAttribute('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
@@ -2572,7 +2558,7 @@ export class DEnumLiteral extends DPointerTargetable { // DNamedElement
     ordinal: number=1;
     literal!: string;
 
-    public static new(name?: DNamedElement["name"], value: DEnumLiteral["value"] = 0, father?: Pointer, persist: boolean = false): DEnumLiteral {
+    public static new(name?: DNamedElement["name"], value: DEnumLiteral["value"] = 0, father?: Pointer, persist: boolean = true): DEnumLiteral {
         if (!name) name = this.defaultname("literal ", father);
         return new Constructors(new DEnumLiteral('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DEnumLiteral(value).end();
@@ -2660,7 +2646,7 @@ export class DEnumerator extends DPointerTargetable { // DDataType
     // personal
     literals: Pointer<DEnumLiteral, 0, 'N', LEnumLiteral> = [];
 
-    public static new(name?: DNamedElement["name"], father?: DEnumerator["father"], persist: boolean = false): DEnumerator {
+    public static new(name?: DNamedElement["name"], father?: DEnumerator["father"], persist: boolean = true): DEnumerator {
         if (!name) name = this.defaultname("enum ", father);
         return new Constructors(new DEnumerator('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DEnumerator().end();
@@ -2690,7 +2676,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
     namespace!: string;
     defaultValue!:string[];
     serializable!: boolean;
-     // usedBy!: LAttribute[];
+    // usedBy!: LAttribute[];
     isPrimitive!: false;
     isClass!: false;
     isEnum!: true;
@@ -2824,10 +2810,11 @@ export class DModel extends DNamedElement { // DNamedElement
     models: Pointer<DModel, 0, 'N', LModel> = [];
     instanceof!: Pointer<DModel, 0, 1, LModel>;
 
-    public static new(name?: DNamedElement["name"], instanceoff?: DModel["instanceof"], isMetamodel?: DModel["isMetamodel"], persist: boolean = false): DModel {
+    public static new(name?: DNamedElement["name"], instanceoff?: DModel["instanceof"], isMetamodel?: DModel["isMetamodel"], persist: boolean = true): DModel {
         let dmodels: DModel[] = Selectors.getAll(DModel, undefined, undefined, true, false);
+        console.log("post get all");
         let dmodelnames: string[] = dmodels.map((d: DModel) => d.name);
-        if (!name) name = this.defaultname("model_", ((name: string) => !dmodelnames.includes(name)));
+        if (!name) name = this.defaultname("model_", ((name: string) => dmodelnames.includes(name)));
         return new Constructors(new DModel('dwc'), undefined, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DModel(instanceoff, isMetamodel).end();
     }
@@ -3133,7 +3120,7 @@ export class DObject extends DPointerTargetable { // extends DNamedElement, m1 c
     features: Pointer<DValue, 0, 'N', LValue> = [];
 
 
-    public static new(instanceoff?: DObject["instanceof"], father?: DObject["father"], fatherType?: Constructor, name?: DNamedElement["name"], persist: boolean = false): DObject {
+    public static new(instanceoff?: DObject["instanceof"], father?: DObject["father"], fatherType?: Constructor, name?: DNamedElement["name"], persist: boolean = true): DObject {
         // if (!name) name = this.defaultname(((meta: LNamedElement) => meta.name + " "), father);
         if (!name) name = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), father, instanceoff);
         let ret = new Constructors(new DObject('dwc'), father, persist, fatherType).DPointerTargetable().DModelElement()
@@ -3220,10 +3207,10 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     protected set_partial(val: DClass["partial"], context: Context): boolean { return this.cannotSet("DObject.set_partial()"); }
     protected get_partial(context: Context): DClass["partial"] { return context.proxyObject.instanceof?.partial || true; }
 
-/*    protected set_abstract(val: string, context: Context): boolean { return this.cannotSet("abstract"); }
-    protected get_abstract(context: Context): LClass["abstract"] { return context.proxyObject.instanceof.abstract; }
-    protected set_interface(val: string, context: Context): boolean { return this.cannotSet("interface"); }
-    protected get_interface(context: Context): LClass["interface"] { return context.proxyObject.instanceof.interface; }*/
+    /*    protected set_abstract(val: string, context: Context): boolean { return this.cannotSet("abstract"); }
+        protected get_abstract(context: Context): LClass["abstract"] { return context.proxyObject.instanceof.abstract; }
+        protected set_interface(val: string, context: Context): boolean { return this.cannotSet("interface"); }
+        protected get_interface(context: Context): LClass["interface"] { return context.proxyObject.instanceof.interface; }*/
     protected set_defaultValue(val: string, context: Context): boolean { return this.cannotSet("defaultValue"); }
     protected get_defaultValue(context: Context): LClass["defaultValue"] { return context.proxyObject.instanceof.defaultValue; }
     protected set_referencedBy(val: string, context: Context): boolean { return this.wrongAccessMessage("referencedBy cannot be set directly. It should be updated automatically as side effect"); }
@@ -3237,7 +3224,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                 if (s.className === DObject.name) return s.id;
             }
         }));
-    return targeting; }
+        return targeting; }
 
     // damiano: do get childrens id, verifica che lobject.childrens funzioni
     protected get_isRoot(context: Context): LObject["isRoot"] { return context.proxyObject.father.className === DModel.name; }
@@ -3409,7 +3396,7 @@ export class DValue extends DModelElement { // extends DModelElement, m1 value (
     // conformsTo!: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature>; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
     isMirage!: boolean;
 
-    public static new(name?: DNamedElement["name"], instanceoff?: DValue["instanceof"], val?: DValue["value"], father?: DValue["father"] | DObject, persist: boolean = false, isMirage: boolean = false): DValue {
+    public static new(name?: DNamedElement["name"], instanceoff?: DValue["instanceof"], val?: DValue["value"], father?: DValue["father"] | DObject, persist: boolean = true, isMirage: boolean = false): DValue {
         if (!name) name = this.defaultname("property_", father);
         return new Constructors(new DValue('dwc'), (typeof father === "string" ? father : (father as DObject)?.id), persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name)
@@ -3512,10 +3499,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             namedPointers = namedPointers === contextt ? true : namedPointers;
             ecorePointers = ecorePointers === contextt ? false : ecorePointers;
             shapeless = shapeless === contextt ? false : shapeless;
-            LValue.prototype.get_value(contextt, fitSize, namedPointers, ecorePointers, shapeless);
+            return LValue.prototype.get_value(contextt, fitSize, namedPointers, ecorePointers, shapeless);
         }
     }
-    public getValue(fitSize: boolean = true, namedPointers: boolean = true, ecorePointers: boolean = false, shapeless: boolean = false) { this.cannotCall("getValue"); }
+    public getValue(fitSize: boolean = true, namedPointers: boolean = true, ecorePointers: boolean = false, shapeless: boolean = false): this["value"] {
+        return this.cannotCall("getValue"); }
 
     protected get_value(context: Context, fitSize: boolean = true, namedPointers: boolean = true, ecorePointers: boolean = false, shapeless: boolean = false): this["value"] & {type: string} {
         let ret: any[] = [...context.data.value] as [];
@@ -3707,7 +3695,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
     public rawValue(): void { super.cannotCall('rawValue'); }
     public get_rawValue(context: Context): this["value"]{
-        return ()=>this.get_getValue(context)(false, false, false, true);
+        return (this.get_getValue(context))(false, false, false, true);
     }
     protected get_delete(context: Context): () => void {
         const data = context.proxyObject;

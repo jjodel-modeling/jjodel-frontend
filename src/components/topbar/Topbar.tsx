@@ -11,14 +11,13 @@ import {
     LModel,
     LVoidEdge,
     store,
-    LModelElement, Selectors
+    LModelElement, Selectors, DModelElement, Pointer
 } from "../../joiner";
 import {SaveManager} from "./SaveManager";
 import Undoredocomponent from "./undoredocomponent";
 import {DamEdge} from "../../graph/damedges/damedge";
 
 function Topbar(props: AllProps) {
-    const metamodel = props.metamodel;
 
     const click = (evt: React.MouseEvent<HTMLLabelElement>) => {
         alert('todo')
@@ -30,14 +29,14 @@ function Topbar(props: AllProps) {
             <Undoredocomponent />
 
             <label className={'item border round ms-1'}
-                    onClick={() => {if(metamodel) SaveManager.save()}}>Save</label>
+                    onClick={() => {SaveManager.save()}}>Save</label>
             <label className={'item border round ms-1'}
-                    onClick={() => {if(metamodel) SaveManager.load()}}>Load</label>
+                    onClick={() => {SaveManager.load()}}>Load</label>
 
-            <label className={'item border round ms-1'} onClick={ () => metamodel && SaveManager.exportEcore_click(false, false) }>Export JSON</label>
-            <label className={'item border round ms-1'} onClick={ () => metamodel && SaveManager.importEcore_click(false, false) }>Import JSON</label>
-            <label className={'item border round ms-1'} onClick={ () => metamodel && SaveManager.exportEcore_click(true, true) }>Export XML</label>
-            <label className={'item border round ms-1'} onClick={ () => metamodel && SaveManager.importEcore_click(true, true) }>Import XML</label>
+            <label className={'item border round ms-1'} onClick={ () => SaveManager.exportEcore_click(false, true) }>Export JSON</label>
+            <label className={'item border round ms-1'} onClick={ () => SaveManager.importEcore_click(false, true) }>Import JSON</label>
+            <label className={'item border round ms-1'} onClick={ () => SaveManager.exportEcore_click(true, true) }>Export XML</label>
+            <label className={'item border round ms-1'} onClick={ () => SaveManager.importEcore_click(true, true) }>Import XML</label>
         </div>
         <div className={'ms-auto me-1'}>
             <label className={'item border round ms-1'} onClick={ () => SaveManager.exportLayout_click(false) }>Export Layout</label>
@@ -46,18 +45,15 @@ function Topbar(props: AllProps) {
     </div>);
 }
 interface OwnProps {}
-interface StateProps { metamodel: null|LModel }
+interface StateProps { }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    const selected = state._lastSelected?.modelElement;
-    if(selected) { todo: Selector.getLastModel instead
-        const me = LModelElement.fromPointer(selected);
-        ret.metamodel = (me) ? me.model : null;
-    } else ret.metamodel = null;
+    const selected = Selectors.getLastSelectedModel();
+    //ret.metamodel = selected.m2 || null;
     return ret;
 }
 

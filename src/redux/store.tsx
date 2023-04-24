@@ -48,7 +48,7 @@ import {
     SetRootFieldAction, ShortAttribETypes,
 } from "../joiner";
 import React from "react";
-import DV from "../common/DV";
+import {DV} from "../common/DV";
 import LeaderLine from "leader-line-new";
 import {DViewPoint, LViewPoint} from "../view/viewPoint/viewpoint";
 

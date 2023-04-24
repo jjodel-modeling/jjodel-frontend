@@ -9,7 +9,7 @@ import {
     LOperation,
     LPointerTargetable,
     LValue,
-    Select,
+    Select, Selectors,
     SetFieldAction,
     store
 } from "../../../joiner";
@@ -136,7 +136,7 @@ export default class Structure {
         </div>);
     }
     public static forceConform(me: LObject) {
-        let mm: LModel = LPointerTargetable.fromPointer(store.getState().metamodel as any);
+        let mm: LModel = Selectors.getLastSelectedModel().m2 as LModel; // LPointerTargetable.fromPointer(store.getState().metamodel as any);
 
         return <div>
             <select onChange={ (event)=>{

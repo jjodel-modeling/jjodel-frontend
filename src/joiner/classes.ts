@@ -483,9 +483,9 @@ export class Constructors<T extends DPointerTargetable>{
         if (this.persist) {
             if (instanceoff) SetFieldAction.new(instanceoff, "pointedBy", PointedBy.fromID(thiss.id, "instanceof"), '+=');
             instanceoff && SetFieldAction.new(instanceoff, 'models', thiss.id, '+=', true);
+            SetRootFieldAction.new(isMetamodel ? "m2models" : "m1models", thiss.id, "+=", true);
         }
 
-        SetRootFieldAction.new(isMetamodel ? "m2models" : "m1models", thiss.id, "+=", true);
         return this; }
 
     DOperation(exceptions: DOperation["exceptions"] = []/*, parameters: DOperation["parameters"] = []*/): this {
@@ -545,7 +545,7 @@ export class Constructors<T extends DPointerTargetable>{
     DEdgePoint(): this { return this; }
     DVoidEdge(): this {
         let thiss: DVoidEdge = this.thiss as any;
-        thiss.midnodes = [];
+        (thiss).midnodes = [];
         return this; }
     DVertex(): this { return this; }
     DEdge(): this {
@@ -553,16 +553,16 @@ export class Constructors<T extends DPointerTargetable>{
     DExtEdge(): this { return this; }
     DRefEdge(): this { return this; }
 
-    DGraphElement(model: DGraphElement["model"], parentNodeID?: DGraphElement["father"], graphID?: DGraphElement["graph"], nodeID?: DGraphElement["id"]): this {
+    DGraphElement(model: DGraphElement["model"], parentNodeID?: DGraphElement["father"], parentgraphID?: DGraphElement["graph"], nodeID?: DGraphElement["id"]): this {
         const thiss: DGraphElement = this.thiss as any;
         if (parentNodeID) thiss.father = parentNodeID;
-        if (graphID) thiss.graph = graphID;
+        if (parentgraphID) thiss.graph = parentgraphID;
         thiss.model = model;
         thiss.subElements = [];
         if (nodeID) thiss.id = nodeID;
         if (this.persist) {
             model && SetFieldAction.new(model, "pointedBy", PointedBy.fromID(thiss.id, "model"), '+=');
-            graphID && SetFieldAction.new(graphID, "pointedBy", PointedBy.fromID(thiss.id, "graph"), '+=');
+            parentgraphID && SetFieldAction.new(parentgraphID, "pointedBy", PointedBy.fromID(thiss.id, "graph"), '+=');
             parentNodeID && SetFieldAction.new(thiss.father, "pointedBy", PointedBy.fromID(thiss.id, "father"), '+=');
             // update collections (pointedby's here are set automatically)
             parentNodeID && SetFieldAction.new(thiss.father, "subElements", thiss.id, '+=', true);
@@ -654,6 +654,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
 
     static defaultname<L extends LModelElement = LModelElement>(startingPrefix: string | ((meta:L)=>string), father?: Pointer | DPointerTargetable | ((a:string)=>boolean), metaptr?: Pointer | null): string {
         let lfather: LModelElement;
+        // startingPrefix = "model_", father = ((name: string) => !dmodelnames.includes(name))
         if (father) {
             if (typeof father === "string" || (father as any).className) { // Pointer or D
                 lfather = LPointerTargetable.wrap(father as DModelElement) as LModelElement;

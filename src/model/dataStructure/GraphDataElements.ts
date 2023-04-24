@@ -281,9 +281,13 @@ export class DGraph extends DGraphElement {
     zoom!: GraphPoint;
     graphSize!: GraphSize; // internal size of the graph. can be huge even if the sub-graph is in a small window (scroll)
 
-    public static new(model: DGraph["model"], parentNodeID?: DGraphElement["father"], graphID?: DGraphElement["graph"], nodeID?: DGraphElement["id"] ): DGraph {
-        return new Constructors(new DGraph('dwc')).DPointerTargetable()
-            .DGraphElement(model, parentNodeID, graphID, nodeID).DGraph(model, nodeID).end();
+    public static new(model: DGraph["model"],
+                      parentNodeID?: DGraphElement["father"], // immediate parent
+                      parentgraphID?: DGraphElement["graph"], // graph containing this subgraph (redudant? could get it from father chain)
+                      nodeID?: DGraphElement["id"] // this id
+    ): DGraph {
+        return new Constructors(new DGraph('dwc'), parentNodeID, true, DGraphElement).DPointerTargetable()
+            .DGraphElement(model, parentNodeID, parentgraphID, nodeID).DGraph(model, nodeID).end();
     }
 
 

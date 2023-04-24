@@ -39,6 +39,7 @@ export type {Pointer, PtrString, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD
 
 export {EdgeBendingMode} from "./types";
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable, LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible, Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs, LUser, DUser, Pointers, PointedBy, PendingPointedByPaths} from "./classes";
+
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
 // console.error('iiiiiiiiiiiiiiii 3');
@@ -48,6 +49,7 @@ export {Uarr,  DDate, RawVertex, $s, ParseNumberOrBooleanOptions,
     RawGraph, RawEdge, myFileReader, AutocompleteMatch,
     Keystrokes, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, SelectorOutput, U as UU, ShortAttribSuperTypes,
     Log as Logg} from "../common/U";
+export {DV} from '../common/DV';
 export {Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Geom";
 export { CSSRuleSorted, CSSParser, TagNames } from "../common/Uhtml";
 // export {Log as Logg, Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Log";

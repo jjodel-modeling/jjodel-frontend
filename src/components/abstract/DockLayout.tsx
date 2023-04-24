@@ -2,19 +2,20 @@ import React, {Dispatch, PureComponent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {IStore} from '../../redux/store';
 import {
+    BEGIN,
     CreateElementAction,
     DGraph,
     DModel,
-    DModelElement,
+    DModelElement, END,
     LModel,
-    LModelElement,
+    LModelElement, LPointerTargetable,
     Pointer,
     Selectors,
     SetFieldAction,
     U
 } from '../../joiner';
 import './style.scss';
-import {DockContext, DockLayout, PanelData} from "rc-dock";
+import {DockContext, DockLayout, PanelData, TabData} from "rc-dock";
 import {LayoutData} from "rc-dock/lib/DockData";
 import StructureEditor from "../rightbar/structureEditor/StructureEditor";
 import TreeEditor from "../rightbar/treeEditor/treeEditor";
@@ -28,6 +29,20 @@ import MetamodelTab from "./tabs/MetamodelTab";
 import ModelTab from "./tabs/ModelTab";
 import InfoTab from "./tabs/InfoTab";
 import PersistanceTab from "./tabs/PersistanceTab";
+
+
+export class TabDataMaker {
+    static metamodel (model: LModel | DModel): TabData {
+        if (model.isMetamodel) return { id: model.id, title: model.name, group: 'group1', closable: true, content: <MetamodelTab modelid={model.id} /> };
+        return {} as any;
+    }
+    static model(model: LModel | DModel): TabData {
+        return { id: model.id, title: model.name, group: 'group1', closable: true, content:
+            <ModelTab modelid={model.id} metamodelid={(model.instanceof as any)?.id || model.instanceof} />
+        };
+    }
+
+}
 
 
 interface ThisState {}
@@ -74,7 +89,8 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     private views = this.props.views;
     private moveOnStructure = false;
     private moveOnViews = false;
-
+    private addedModel: LModel[] = [];
+    private removedModel: LModel[] = [];
 
     constructor(props: AllProps, context: any) {
         super(props, context);
@@ -84,7 +100,18 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
         const oldProps = this.props;
         // if(oldProps.selected !== newProps.selected) { this.moveOnStructure = true; return true; }
-        if(oldProps.views !== newProps.views) { this.moveOnViews = true; return true; }
+        if (oldProps.views !== newProps.views) { this.moveOnViews = true; return true; }
+        let diff = U.arrayDifference(newProps.m1.map(l=>l.id), oldProps.m1.map(l=> l.id));
+        if (diff.added.length != 0) {
+            this.addedModel = LPointerTargetable.wrapAll(diff.added);
+            // this.addMetamodel(undefined, this.dock?.context, this.groups.group1, module)
+            // this.moveOnStructure = true;
+            return true; } else this.addedModel = [];
+        if (diff.removed.length != 0 ){
+            this.removedModel = LPointerTargetable.wrapAll(diff.removed);
+            return true;
+            // todo: check if correct
+        }else this.removedModel = [];
         return false;
     }
 
@@ -97,6 +124,9 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             if(this.moveOnStructure) {
                 this.dock.dockMove(this.structureEditor, this.dock.find('1'), 'middle');
                 this.moveOnStructure = false;
+            }
+            if (this.addedModel.length) {
+                this.dock.dockMove(this.structureEditor, this.dock.find('1'), 'middle');
             }
         }
     }
@@ -128,14 +158,10 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             if(data.isConfirmed && data.value) {
                 const model: LModel = LModel.fromPointer(data.value);
                 if(model.isMetamodel) {
-                    const tab = { id: model.id, title: model.name, group: 'group1', closable: true, content:
-                            <MetamodelTab modelid={model.id} />
-                    };
+                    const tab = TabDataMaker.metamodel(model);
                     context.dockMove(tab, panelData, 'middle');
                 } else {
-                    const tab = { id: model.id, title: model.name, group: 'group1', closable: true, content:
-                            <ModelTab modelid={model.id} metamodelid={model.father.id} />
-                    };
+                    const tab = TabDataMaker.model(model);
                     context.dockMove(tab, panelData, 'middle');
                 }
 
@@ -143,17 +169,13 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         });
     }
 
-    addMetamodel(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {
+    addMetamodel(evt: undefined | React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData, model?: DModel) {
         let name = 'metamodel_' + 0;
         let names: (string)[] = Selectors.getAllMetamodels().map(m => m.name);
         name = U.increaseEndingNumber(name, false, false, (newName) => names.indexOf(newName) >= 0)
-        const model: DModel = DModel.new(name);
-        model.isMetamodel = true;
-        CreateElementAction.new(model);
-        CreateElementAction.new(DGraph.new(model.id));
-        const metaModelTab = { id: model.id, title: model.name, group: 'group1', closable: true, content:
-                <MetamodelTab modelid={model.id} />
-        };
+        model = model || DModel.new(name, undefined, true);
+        DGraph.new(model.id);
+        const metaModelTab = TabDataMaker.metamodel(model);
         context.dockMove(metaModelTab, panelData, 'middle');
 
     }
@@ -178,18 +200,19 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         });
         result.then((data) => {
             if(data.isConfirmed && data.value) {
-                const metamodel: LModel = LModel.fromPointer(data.value);
+                let mmid: Pointer<DModel> = data.value;
+                const metamodel: LModel = LModel.fromPointer(mmid);
                 let name = 'model_' + 0;
                 let modelNames: (string)[] = metamodel.models.map(m => m.name);
                 name = U.increaseEndingNumber(name, false, false, (newName) => modelNames.indexOf(newName) >= 0)
-                const model: DModel = DModel.new(name); todo set other pars
-                model.isMetamodel = false; model.father = metamodel.id;
-                CreateElementAction.new(model); remove this
-                CreateElementAction.new(DGraph.new(model.id));
-                SetFieldAction.new(metamodel.id, 'models', model.id, '+=', true);
-                const modelTab = { id: model.id, title: model.name, group: 'group1', closable: true, content:
-                        <ModelTab modelid={model.id} metamodelid={metamodel.id} />
-                };
+                BEGIN()
+                const model: DModel = DModel.new(name, mmid, false, true);
+                DGraph.new(model.id, undefined, undefined);
+                END()
+                // model.isMetamodel = false;
+                // model.father = metamodel.id; // i used instanceof instead
+                // CreateElementAction.new(model);
+                const modelTab = TabDataMaker.model(model);
                 context.dockMove(modelTab, panelData, 'middle');
             }
         });
@@ -220,7 +243,12 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
 }
 
 interface OwnProps { }
-interface StateProps {selected: Pointer<DModelElement, 0, 1, LModelElement>, views: number }
+interface StateProps {
+    selected: Pointer<DModelElement, 0, 1, LModelElement>;
+    views: number;
+    m1: LModel[];
+    m2: LModel[];
+}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -230,6 +258,8 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const selected = state._lastSelected?.modelElement;
     if(selected) ret.selected = selected;
     ret.views = state.viewelements.length;
+    ret.m2 = LPointerTargetable.wrapAll((state as any).m2models || []);
+    ret.m1 = LPointerTargetable.wrapAll((state as any).m1models || []);
     return ret;
 }
 

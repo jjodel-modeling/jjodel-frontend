@@ -36,7 +36,7 @@ export class U{
     private static notNullFilter(e: any) { return !!e; };
     static pe(useLog_e: never, ...rest: any): void | never {}
 
-    //Giordano: start
+        //Giordano: start
     public static alert(title: string, text: string) {
         let color = 'text-';
         switch(title.toLowerCase()) {
@@ -1679,6 +1679,7 @@ export enum ShortAttribETypes {
   EELIST  = 'EELIST',*/
 
 }
+windoww.ShortAttribETypes = ShortAttribETypes;
 
 export const ShortAttribSuperTypes: Dictionary<ShortAttribETypes, ShortAttribETypes[]> = {
     "void"     : [],

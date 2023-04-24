@@ -59,6 +59,20 @@ export class Selectors{
         return metamodel;
     }
 
+    public static getLastSelectedModel<RET extends {m1?:LModel, m2?:LModel, model?:LModel, element?:LModelElement}>(state? :IStore): RET {
+        state = state || store.getState();
+        let me = state._lastSelected?.modelElement;
+        if (!me) return {} as RET;
+        let ret: RET = {element: LPointerTargetable.fromPointer(me, state)} as RET;
+        ret.model = ret.element!.model
+        if (ret.model.isMetamodel) ret.m2 = ret.model;
+        else {
+            ret.m1 = ret.model;
+            ret.m2 = ret.m1.instanceof;
+        }
+        return ret;
+    }
+
     static getAllViewElements(): DViewElement[] {
         // return Object.values(store.getState().idlookup).filter(v => v.className === DViewElement.name) as DViewElement[];
         let state: IStore & GObject = store.getState();
