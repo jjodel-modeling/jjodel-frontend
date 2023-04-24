@@ -22,11 +22,14 @@ function ContextMenuComponent(props: AllProps) {
             const dView: DViewElement = DViewElement.new(me.name + 'View', jsx);
             switch(me.className) {
                 case 'DClass':
-                    dView.query = `model.objects.filter((object) => {return object.instanceof.name === '${me.name}'})`;
+                    dView.query = `context DObject inv: self.instanceof.name = '${me.name}'`;
                     break;
                 case 'DAttribute':
                 case 'DReference':
-                    dView.query = `model.objects.map((obj) => {return obj.childrens.filter((child) => {return child.name === '${me.name}'})})`;
+                    dView.query = `context DValue inv: self.instanceof.name = '${me.name}'`;
+                    break;
+                case 'DObject':
+                    dView.query = `context DObject inv: self.id = '${me.id}'`;
                     break;
             }
             CreateElementAction.new(dView);
@@ -40,7 +43,7 @@ function ContextMenuComponent(props: AllProps) {
         jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={"col item"}>Up</div>);
         jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={"col item"}>Down</div>);
         jsxList.push(<div onClick={() => {close(); addView();}} className={"col item"}>Add View</div>);
-        jsxList.push(<div onClick={() => {close(); me.delete();}} className={"col item"}>Delete</div>);
+        jsxList.push(<div onClick={() => {close(); me?.delete();}} className={"col item"}>Delete</div>);
         switch (me.className) {
             case 'DValue': if ((me as any as LValue).instanceof) jsxList.pop(); break;
             case 'DClass':
@@ -52,7 +55,7 @@ function ContextMenuComponent(props: AllProps) {
         }
     }
     return(<>
-        <div className={"context-menu round"} style={{top: position.y - 40, left: position.x - 10}}>
+        <div className={"context-menu round"} style={{top: position.y - 100, left: position.x - 10}}>
             {jsxList.map((jsx, index) => { return <div key={index}>{jsx}</div>; })}
         </div>
     </>);

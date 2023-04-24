@@ -21,9 +21,7 @@ function InputComponent(props: AllProps) {
 
     const notify = () => toast((t: GObject) => (
         <div onClick={() => toast.dismiss(t.id)}>
-            <i className={'p-1 bi bi-info-circle-fill'}>
-                <label className={'ms-1'}>This is the {tooltip}</label>
-            </i>
+            <label className={'ms-1'}>{tooltip}</label>
         </div>
     ));
 
@@ -39,7 +37,8 @@ function InputComponent(props: AllProps) {
                        type={type} value={value} onChange={change}
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
-    return(<div style={{...{display: (jsxLabel || label) ? 'flex' : 'block'}, ...style}} className={'p-1 ' + className}>
+    return(<div style={{...{display: (jsxLabel || label) ? 'flex' : 'block', cursor: (tooltip) ? 'help' : 'auto'}, ...style}}
+                className={'p-1 ' + className}  onClick={() => { if(tooltip) notify(); }}>
         {(label && !jsxLabel) && <label className={'my-auto'}>
             {label}
         </label>}
@@ -47,12 +46,7 @@ function InputComponent(props: AllProps) {
             {jsxLabel}
         </label>}
         { autosize ? <div className={ autosize ? "autosize-input-container" : ""} data-value={value}>{input}</div> : input}
-        {(tooltip) && <div>
-            <button onClick={notify} className={'ms-1 btn btn-primary'}>
-                <i className={'p-1 bi bi-info-lg'}></i>
-            </button>
-            <Toaster position={'bottom-center'} />
-        </div>}
+        {tooltip && <Toaster position={'bottom-center'} /> }
     </div>);
 }
 interface OwnProps {

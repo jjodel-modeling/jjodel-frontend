@@ -2,7 +2,7 @@ import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
 import type {Pointer, DModel} from "../../../joiner";
-import {LGraph, LModel, DGraph} from "../../../joiner";
+import {LGraph, LModel, DGraph, DModelElement, LModelElement} from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import PendingEdge from "../../../graph/edge/PendingEdge";
@@ -29,7 +29,7 @@ function ModelTabComponent(props: AllProps) {
 }
 interface OwnProps {
     modelid: Pointer<DModel, 1, 1, LModel>,
-    metamodelid?: Pointer<DModel, 1, 1, LModel>,
+    metamodelid?: Pointer<DModelElement, 1, 1, LModelElement>,
 }
 interface StateProps { model: LModel, graph?: LGraph }
 interface DispatchProps { }

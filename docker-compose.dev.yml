@@ -1,12 +1,53 @@
 version: "3.8"
 
 services:
-  app:
-    container_name: jjodel
+
+  frontend:
     image: jjodel:latest
+    container_name: jjodel
     volumes:
     - ./src:/app/src
+    networks:
+      network:
+        ipv4_address: 172.20.0.101
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       - CHOKIDAR_USEPOLLING=true
+
+  backend:
+    image: giordanotin/jjodel-backend:1.0
+    container_name: backend
+    environment:
+      - DJANGO_DATABASE_URL=postgres://postgres:postgres@db:5432/jjodel
+    networks:
+      network:
+        ipv4_address: 172.20.0.102
+    ports:
+      - '8000:8000'
+    depends_on:
+      - db
+
+  db:
+    image: postgres:14.2
+    container_name: db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=jjodel
+    networks:
+      network:
+        ipv4_address: 172.20.0.103
+    ports:
+      - '55434:5432'
+
+volumes:
+  db_data:
+
+networks:
+  network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

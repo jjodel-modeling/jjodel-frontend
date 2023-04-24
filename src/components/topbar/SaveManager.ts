@@ -6,36 +6,43 @@ import {
     LoadAction,
     Log, U,
     LPointerTargetable, prjson2xml, prxml2json,
-    store, RuntimeAccessible, DModelElement
+    store, RuntimeAccessible, DModelElement, SetRootFieldAction, Selectors
 } from '../../joiner';
 
 @RuntimeAccessible
 export class SaveManager {
     private static tmpsave: IStore;
-    static save(){ SaveManager.tmpsave = store.getState(); localStorage.setItem("tmpsave", JSON.stringify(SaveManager.tmpsave)); }
+
+    static save(): void {
+        SaveManager.tmpsave = store.getState();
+        localStorage.setItem("tmpsave", JSON.stringify(SaveManager.tmpsave));
+    }
+
     static load(fullstatestr?: string): void {
         if (!fullstatestr && SaveManager.tmpsave) { LoadAction.new(SaveManager.tmpsave); return; }
         fullstatestr = fullstatestr || localStorage.getItem("tmpsave") || 'null'; // priorities: 1) argument from file 2) state variable cached 3) localstorage 4) null prevent crash
         SaveManager.tmpsave = JSON.parse(fullstatestr);
         LoadAction.new(SaveManager.tmpsave);
-        // SetRootFieldAction.new('metamodel', dMetaModel.id, '', true); already set by loadaction in batch
+        // SetRootFieldAction.new('metamodel', Selectors.getActiveModel()?.id, '', true); already set by loadaction in batch
     }
 
     public static exportEcore_click(toXML: boolean = false, toFile: boolean = true): void { // e: React.MouseEvent,
-        let lmodel: LModel = (LPointerTargetable.wrap(store.getState().models[0]) as LModel);
-        let json = SaveManager.exportEcore(lmodel);
-        let str = JSON.stringify(json, null, "\t");
-        if (toXML) {
-            str = prjson2xml.json2xml(json, '\t');
-            str = U.formatXml(str);
-        }
+        let lmodel: null|LModel = Selectors.getActiveModel();
+        if(lmodel) {
+            let json = SaveManager.exportEcore(lmodel);
+            let str = JSON.stringify(json, null, "\t");
+            if (toXML) {
+                str = prjson2xml.json2xml(json, '\t');
+                str = U.formatXml(str);
+            }
 
-        if (!toFile) {
-            // (document.querySelector("#export-tmp") as any).innerText = str;
-            localStorage.setItem("import", str);
-            return;
+            if (!toFile) {
+                // (document.querySelector("#export-tmp") as any).innerText = str;
+                localStorage.setItem("import", str);
+                return;
+            }
+            U.download((lmodel.name || ((lmodel as any).isMetaModel ? 'M2' : 'M1') + '_unnamed')  + (toXML ? ".xml.ecore" : '.json.ecore'), str);
         }
-        U.download((lmodel.name || ((lmodel as any).isMetaModel ? 'M2' : 'M1') + '_unnamed')  + (toXML ? ".xml.ecore" : '.json.ecore'), str);
     }
 
     public static importEcore_click(fromXML: boolean = false, fromfile: boolean = true): void {
@@ -93,7 +100,12 @@ export class SaveManager {
         }, [extension], true);
     }
 
-    public static exportEcore(model: LModel): Json { let loopobj = {}; try { return model.generateEcoreJson(loopobj); } catch(e) { Log.exx("loop in model:", loopobj); } return {"eror": true, loopobj}; }
+    public static exportEcore(model: LModel): Json {
+        let loopobj = {};
+        try { return model.generateEcoreJson(loopobj); }
+        catch(e) { Log.exx("loop in model:", loopobj); }
+        return {"error": true, loopobj};
+    }
     public static importEcore(jsonstr: GObject | string | null, loadOnModel: boolean = true): DModelElement[] {
         return EcoreParser.parse(jsonstr, loadOnModel);
     }

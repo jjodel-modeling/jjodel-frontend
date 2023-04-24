@@ -1,20 +1,23 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
-import {DPointerTargetable, DViewElement, GObject, LPointerTargetable, LViewElement, Pointer} from "../../../joiner";
+import {DViewElement, LViewElement, Pointer} from "../../../joiner";
 import Editor from "@monaco-editor/react";
 import {useStateIfMounted} from "use-state-if-mounted";
 
 
 function JsxEditorComponent(props: AllProps) {
     const view = props.view;
-    const [jsx, setJsx] = useStateIfMounted('');
+    const [jsx, setJsx] = useStateIfMounted(view.jsxString);
 
     const change = (value: string|undefined) => {
         if(value !== undefined) setJsx(value);
+        //if(value !== undefined) view.jsxString = value;
     }
+
+
     const blur = (evt: React.FocusEvent<HTMLDivElement>) => {
-        if(jsx) view.jsxString = jsx;
+        view.jsxString = jsx;
     }
 
     return <div style={{marginTop: '2.5em', height: '10em'}} tabIndex={-1} onBlur={blur}>

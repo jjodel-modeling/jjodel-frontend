@@ -28,7 +28,7 @@ import {
     SetRootFieldAction,
     U,
     UX,
-    windoww,
+    windoww, DV
 } from "../../joiner";
 
 
@@ -64,23 +64,13 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
         // U.evalInContext({...this, ...evalContext}, res); // todo: remove eval and add new Function() ?
     }
     catch (e: any) {
-        const errormsg = 'Syntax Error in custom user-defined template.';
+        let errormsg = ''; // 'Syntax Error in custom user-defined template.\n';
+        let otherargs: any = {jsxCodeString, evalContext};
         if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0)
-            Log.ee( '\nReminder: nullish operators ".?" and "??" are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString, {jsxCodeString, evalContext});
-        else if (view.jsxString.indexOf('?.') >= 0)
-            Log.ee(errormsg + '\nReminder: ?. operator and empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString, {jsxCodeString, evalContext});
-        else Log.ee(errormsg);
-        jsxparsedfunc = () => <div className={'w-100 h-100'}>
-            <div className={"h-100 round bg-white border border-danger"}>
-                <div className={'text-center text-danger'}>
-                    <b>SYNTAX ERROR</b>
-                    <hr />
-                    <label className={'text-center mx-1'}>
-                        The JSX you provide is NOT valid!
-                    </label>
-                </div>
-            </div>
-        </div>;
+        { errormsg += 'Reminder: nullish operators ".?" and "??" are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
+        else if (view.jsxString.indexOf('?.') >= 0) { errormsg += 'Reminder: ?. operator and empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
+        Log.ee(errormsg, otherargs);
+        jsxparsedfunc = ()=> DV.errorView(errormsg);
     }
 
     stateProps.preRenderFunc = view.preRenderFunc;
@@ -112,7 +102,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     static mapViewStuff(state: IStore, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
         let dnode: DGraphElement | undefined = ownProps?.nodeid && state.idlookup[ownProps.nodeid] as any;
-
         if (ownProps.view) {
             ret.views = [];
             ret.view = LPointerTargetable.wrap(ownProps.view) as LViewElement;
@@ -267,7 +256,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     static graphVertexID_counter: Dictionary<DocString<'GraphID'>, Dictionary<DocString<'VertexID'>, boolean>> = {}
 
-
     /*
     makeEvalContext_to_move(view: ViewElement): GObject {
         let evalContext: GObject = view.constants ? eval('window.tmp = ' + view.constants) : {};
@@ -336,8 +324,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         try {
             ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], context); }
         catch(e: any) {
-            Log.exDevv('Error in custom user-defined template:\n' + e.toString() + '\n\n' + this.props.view.jsxString,
-                {templateString: this.props.view.jsxString, evalContext: this.props.evalContext, error: e});
+            ret = DV.errorView();
         }
         return ret;
     }
@@ -366,8 +353,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             const onDragTestInject = () => {}; // might inject event handlers like this with cloneelement
             // add view props to GraphElement childrens (any level down)
             const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap(); // todo: per passarla come prop ma mantenerla modificabile
-            rawRElement = React.cloneElement(rawRElement, {key: this.props.key || this.props.view.id + '_' + me.id, onDragTestInject, children: UX.recursiveMap(rawRElement/*.props.children*/,
-                    (rn: ReactNode) => UX.injectProp(this, rn, subElements))});
+            try {
+                rawRElement = React.cloneElement(rawRElement, {key: this.props.key || this.props.view.id + '_' + me.id, onDragTestInject, children: UX.recursiveMap(rawRElement/*.props.children*/,
+                        (rn: ReactNode) => UX.injectProp(rn, subElements))});
+            } catch (e) {
+                rawRElement = DV.errorView();
+            }
             /*console.log('tempdebug', {deepStrictEqual, okeys:Object.keys});
             let isEqual = true;
             try {deepStrictEqual(subElements, this.props.node.subElements)} catch(e) { isEqual = false; }
@@ -406,33 +397,3 @@ const GraphElementConnected = connect<GraphElementReduxStateProps, GraphElementD
 export const GraphElement = (props: GraphElementOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     return <GraphElementConnected {...{...props, childrens}} />; }
 console.info('graphElement loaded');
-
-
-
-
-/*
-@RuntimeAccessible
-export class DPoint extends DPointerTargetable {
-    static logic: typeof LPointerTargetable;
-    public x: number;
-    public y: number;
-    constructor(x?: number, y?: number) {
-        super();
-        this.x = +(x ?? 0); // if null | undefined -> 0, else just x
-        this.y = +(y ?? 0);
-    }
-}
-
-@RuntimeAccessible
-export class LPoint extends MixOnlyFuncs(DPoint, LPointerTargetable){
-    static structure: typeof DPoint;
-    static singleton: LPoint;
-    constructor(x?: number, y?: number) {
-        super(x,y);
-        this.init_constructor(x, y);
-    }
-    init_constructor(x?: number, y?: number) {
-        this.superclass.LPointerTargetable(false, undefined);
-        this.superclass.DPoint(x, y);
-    }
-}*/

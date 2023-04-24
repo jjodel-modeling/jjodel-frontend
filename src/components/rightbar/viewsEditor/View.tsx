@@ -16,14 +16,15 @@ function ViewData(props: Props) {
     const back = (evt: React.MouseEvent<HTMLButtonElement>) => {
         SetRootFieldAction.new('stackViews', undefined, '-=', true);
     }
-    const change = (evt: React.ChangeEvent<HTMLSelectElement>) => {
+    const changeVP = (evt: React.ChangeEvent<HTMLSelectElement>) => {
         const value = evt.target.value;
-        if(value !== 'null') {
-            SetFieldAction.new(view.id, 'viewpoint', value, '', true);
-        }
-        else {
-            SetFieldAction.new(view.id, 'viewpoint', '', '', false);
-        }
+        if(value !== 'null') SetFieldAction.new(view.id, 'viewpoint', value, '', true);
+        else SetFieldAction.new(view.id, 'viewpoint', '', '', false);
+    }
+
+    const changeFN = (evt: React.ChangeEvent<HTMLSelectElement>) => {
+        const value = evt.target.value;
+        SetFieldAction.new(view.id, 'forceNodeType', value, '', false);
     }
 
     return(<div>
@@ -37,13 +38,28 @@ function ViewData(props: Props) {
         <Input obj={view} field={"explicitApplicationPriority"} label={"Priority"} type={"number"}/>
         <Input obj={view} field={"width"} label={"Width"} type={"number"}/>
         <Input obj={view} field={"height"} label={"Height"} type={"number"}/>
+
+        <TextArea obj={view} field={"constants"} label={"Constants"} />
+        <TextArea obj={view} field={"preRenderFunc"} label={"PreRender Function"} />
+        <Input obj={view} field={"scalezoomx"} label={"Zoom X"} type={"number"}/>
+        <Input obj={view} field={"scalezoomy"} label={"Zoom Y"} type={"number"}/>
+        <div className={'d-flex p-1'}>
+            <label className={'my-auto'}>Force Node</label>
+            <select className={'my-auto ms-auto select'} value={view.forceNodeType} onChange={changeFN}>
+                <option value={undefined}>-----</option>
+                {['Graph', 'GraphVertex', 'Vertex', 'Field'].map((node, index) => {
+                    return(<option key={index} value={node}>{node}</option>);
+                })}
+            </select>
+        </div>
+
         <Input obj={view} field={"adaptWidth"} label={"Adapt Width"} type={"checkbox"}/>
         <Input obj={view} field={"adaptHeight"} label={"Adapt Height"} type={"checkbox"}/>
         <Input obj={view} field={"draggable"} label={"Draggable"} type={"checkbox"}/>
         <Input obj={view} field={"resizable"} label={"Resizable"} type={"checkbox"}/>
         <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Viewpoint</label>
-            <select className={'my-auto ms-auto select'} value={String(view.viewpoint?.id)} onChange={change}>
+            <select className={'my-auto ms-auto select'} value={String(view.viewpoint?.id)} onChange={changeVP}>
                 <option value={'null'}>-----</option>
                 {viewpoints.map((viewpoint, index) => {
                     return(<option key={index} value={viewpoint.id}>{viewpoint.name}</option>);

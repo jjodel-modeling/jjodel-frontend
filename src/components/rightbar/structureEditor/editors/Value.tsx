@@ -1,5 +1,8 @@
 import React from "react";
-import {SetFieldAction} from "../../../../redux/action/action";
+import type {
+    PrimitiveType,
+    Pointer,
+} from "../../../../joiner";
 import {
     DAttribute, DClass, DEnumerator,
     DObject, DReference, LClass,
@@ -7,12 +10,10 @@ import {
     LObject,
     LPointerTargetable,
     LStructuralFeature,
-    Pointer,
-    Selectors,
+    LValue,
+    Selectors, SetFieldAction,
     U
 } from "../../../../joiner";
-import type {LValue} from "../../../../joiner";
-import { PrimitiveType } from "../../../../joiner/types";
 
 interface Props {value: LValue}
 function Value(props: Props) {

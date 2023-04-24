@@ -13,6 +13,7 @@ import MetamodelTab from "./tabs/MetamodelTab";
 import ModelTab from "./tabs/ModelTab";
 import './style.scss';
 import Console from "../rightbar/console/Console";
+import PersistanceTab from "./tabs/PersistanceTab";
 
 
 let windoww = window as any;
@@ -25,6 +26,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
     metamodelTab!: TabData;
     modelTab!: TabData;
 
+    persistance!: TabData;
     structureEditor!: TabData;
     treeEditor!: TabData;
     viewsEditor!: TabData;
@@ -60,6 +62,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
         this.modelTab = { title: "Model", group: "1", closable: false, content:
             <ModelTab modelid={this.models[0].id} metamodelid={this.metamodel.id} /> //graphid={this.graphs[1].id}
         };
+        this.persistance = { title: "Persistance", group: "2", closable: false, content: <PersistanceTab /> };
         this.structureEditor = { title: "Structure", group: "2", closable: false, content: <StructureEditor /> };
         this.treeEditor = { title: "Tree View", group: "2", closable: false, content: <TreeEditor /> };
         this.viewsEditor = { title: "Views", group: "2", closable: false, content: <ViewsEditor /> };
@@ -79,6 +82,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
                     },
                     {
                         children: [{tabs: [
+                            { ...this.persistance, id: '0' },
                             { ...this.structureEditor, id: '1' },
                             { ...this.treeEditor, id: '2' },
                             { ...this.viewsEditor, id: '3' },

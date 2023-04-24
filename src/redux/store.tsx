@@ -135,7 +135,6 @@ export class IStore {
     viewpoint: Pointer<DViewPoint, 1, 1, LViewPoint> = '';
     viewpoints: Pointer<DViewPoint, 0, 'N', LViewPoint> = [];
 
-    metamodel: Pointer<DModel, 0, 1, LModel> = '';
 
     constructor() {
         // todo: this must become a pointer to idlookup and fire a CreateNewElementAction
@@ -151,12 +150,13 @@ export class IStore {
         const viewpoint = DViewPoint.new('Default');
         CreateElementAction.new(viewpoint);
         SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
-
+/*
         const dMetaModel = DModel.new("Metamodel", undefined, true, true);
         // CreateElementAction.new(dMetaModel);
         CreateElementAction.new(DGraph.new(dMetaModel.id));
         SetRootFieldAction.new('metamodel', dMetaModel.id, '', true);
 
+*/
 
         for (let primitiveType of Object.values(ShortAttribETypes)) {
             let dPrimitiveType;
@@ -173,12 +173,17 @@ export class IStore {
             SetRootFieldAction.new("returnTypes", dReturnType.id, '+=', true);
         }*/
 
+        /*
+        const dMetaModel = DModel.new("Metamodel");
+        CreateElementAction.new(dMetaModel);
+        CreateElementAction.new(DGraph.new(dMetaModel.id));
 
         const dModel: DModel = DModel.new('Model');
-        dModel.isMetamodel = false;
+        dModel.isMetamodel = false; dModel.father = dMetaModel.id;
         CreateElementAction.new(dModel);
         CreateElementAction.new(DGraph.new(dModel.id));
         SetFieldAction.new(dMetaModel, 'models', dModel.id, '+=', true);
+        */
 
     }
 
