@@ -2197,7 +2197,7 @@ export class DReference extends DPointerTargetable { // DStructuralFeature
     id!: Pointer<DReference, 1, 1, LReference>;
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
-    type!: Pointer<DClassifier, 1, 1, LClassifier>;
+    type!: Pointer<DClass, 1, 1, LClass>;
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
@@ -2318,6 +2318,8 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
             END()
             return le; }
     }
+
+    protected set_type(val: Pack1<this["type"]>, context: Context): boolean { return super.set_type(val, context); }
 
     public addClass(name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                     isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]): DClass {
