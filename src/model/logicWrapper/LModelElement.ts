@@ -1814,6 +1814,10 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         this.cannotCall("isExtending"); return false;
     }
 
+    private get_isExtending(context: Context): this["isExtending"] {
+         return null as any; // todo
+    }
+
     private get_superclasses(context: Context, plusThis: boolean = false): LClass[] {
         let i: number;
         const thiss: LClass = context.proxyObject;
@@ -2244,7 +2248,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     annotations!: LAnnotation[];
     name!: string;
     namespace!: string;
-    type!: LClassifier;
+    type!: LClass;
     ordered!: boolean;
     unique!: boolean;
     lowerBound!: number;
@@ -3543,6 +3547,10 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     ret = ret.map( (lit: LEnumLiteral) => lit.literal);
                     break;
                 }
+                // is reference
+                ret = !meta ? ret : ret.filter( (l: LObject) => {
+                    return l.instanceof?.isExtending((meta as LReference).type);
+                });
                 if (namedPointers) {
                     ret = ret.map( l => l && (l.name ? ("@" + l.name) : ("#" + l.className)));
                 }
