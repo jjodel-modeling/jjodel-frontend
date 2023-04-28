@@ -1,4 +1,7 @@
 // export type Class = { new(...args: any[]): any; };
+import type {NotAString, Pointer} from "./classes";
+import type {DAttribute, DPackage} from "../model/logicWrapper";
+
 export declare type Class<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (abstract new (...args: any[]) => InstanceType) & StaticType;
 export declare type CClass<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (new (...args: any[]) => InstanceType) & StaticType;
 interface Caller { caller: any; }
@@ -93,3 +96,19 @@ export type InOutParam<T> = T;
 
 export type IsActually<T> = any; // for some reason typescript complains about circular type references? this is a workaround
 
+type KeysnotOfType<T, TT> = { [P in keyof T as (T[P] extends TT ? never : P)]: T[P] };
+type ObjectWithoutStrings<T> = {
+    [P in keyof T as (T[P] extends string ? never : (T[P] extends string[] ? never : P))]: T[P] // working on arr, keeps single ptrs
+};
+type pureStringsNoPointers<T> = {
+    [P in keyof T as ( T[P] extends Pointer ? (Pointer extends T[P] ? P : (never)): never)]: T[P]
+};
+export type ObjectWithoutPointers<T> = Omit<ObjectWithoutStrings<T> & pureStringsNoPointers<T>, 'pointedBy' | '_storePath'>
+let d: DPackage;
+type aaa = ObjectWithoutPointers<DAttribute>;
+let a: aaa = null as any;
+
+
+
+type refkeys = "parent" | "father" | "parent" | "classifiers" | "childrens" | "classes" | "packages" | "subpackages" | "annotations" | ""
+    | "type" | "attributes" | "references" | "operations" | "parameters" | "..... much more"

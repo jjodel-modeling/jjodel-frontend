@@ -264,7 +264,7 @@ export class Selectors{
             = (state as GObject)[className]
             || (state as GObject)[className.substr(1)]
             || (state as GObject)[className + 's']
-            || (state as GObject)[className.substr(1) + 's']
+            || (state as GObject)[className.substr(1) + 's'];
         Log.exDev(!allIdByClassName, 'cannot find store key:', {state, className, Classe});
         let allDByClassName: D[] | null = null;
         let allLByClassName: L[] | null = null;

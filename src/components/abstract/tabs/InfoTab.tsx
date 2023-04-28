@@ -28,7 +28,7 @@ function InfoTabComponent(props: AllProps) {
             console.log(' aaaa', {models, model});
             return(<>
                 <label className={'ms-3'} key={index}>
-                    -{model.name} <b className={'text-success'}>conforms to</b> {(model.instanceof as LModel).name}
+                    -{model.name} <b className={'text-success'}>{model.instanceof ? "conforms to" : "is shapeless"}</b> {model.instanceof?.name}
                 </label>
                 <br />
             </>);

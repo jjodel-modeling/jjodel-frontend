@@ -51,7 +51,7 @@ import {
     Selectors,
     GObject,
     Dictionary,
-    PointedBy, LPointerTargetable, windoww, SetRootFieldAction
+    PointedBy, LPointerTargetable, windoww, SetRootFieldAction, Constructors, DocString, store, SetFieldAction
 
 } from "../joiner";
 
@@ -145,7 +145,8 @@ export class LocalStorage extends IStorage{
 export class EcoreParser{
     static supportedEcoreVersions = ["http://www.eclipse.org/emf/2002/Ecore"];
     static prefix:string = '@';
-    static parse(ecorejson: GObject | string | null, isMetamodel: boolean, persist: boolean = false): DModelElement[]{
+
+    static parse(ecorejson: GObject | string | null, isMetamodel: boolean, filename: string | undefined, persist: boolean = false): DModelElement[]{
         if (!ecorejson) return [];
         let parsedjson: GObject;
         if (typeof ecorejson === "string") try { parsedjson = JSON.parse(ecorejson); } catch(e) { windoww.temp = ecorejson; Log.exx("error while parsing json:", e, ecorejson.substring(0, 1000)); throw e; }
@@ -153,27 +154,52 @@ export class EcoreParser{
 
         console.log("root parse", ecorejson);
 
-        let parsedElements: DModelElement[] = EcoreParser.parseDModel(parsedjson, isMetamodel);
-        console.warn("parse.result D", parsedElements);
-        this.LinkAllNamesToIDs(parsedElements);
-        this.fixNamingConflicts(parsedElements);
-        if (persist) {
-            CreateElementAction.newBatch(parsedElements);
-        }
+        isMetamodel = !!parsedjson[ECoreRoot.ecoreEPackage];
+
+        Constructors.pause();
+            let parsedElements: DModelElement[] = isMetamodel ? EcoreParser.parseM2Model(parsedjson, filename) : EcoreParser.parseM1Model(parsedjson, undefined, filename);
+            console.warn("parse.result D", parsedElements);
+            this.LinkAllNamesToIDs(parsedElements);
+            this.fixNamingConflicts(parsedElements);
+        Constructors.resume();
+        if (persist) { CreateElementAction.newBatch(parsedElements); }
+        // update m1 object pointers (need them to be persistent to navigate .fathers and get ecore pointer strings using LObject)
+        setTimeout(() => this.fixObjectPointers(parsedElements), 1);
+
         windoww.tmpparse = () => LPointerTargetable.wrapAll(parsedElements);
 
-        this.tempfix_untilopennewtabisdone(parsedElements);
+        this.tempfix_untilopennewtabisdone(parsedElements, isMetamodel);
         return parsedElements;
     }
-    private static tempfix_untilopennewtabisdone(parsedElements: DModelElement[]) {
+    private static fixObjectPointers(parsedElements: DModelElement[]): void {
+        let dobjects: DObject[] = parsedElements.filter(e=>e.className === DObject.name) as any[];
+        let values: DValue[] = parsedElements.filter(e=>e.className === DValue.name) as any[];
+        let lobjects: LObject[] = LPointerTargetable.fromArr(dobjects);
+        let m1pointermap: Dictionary<string, LObject> = { }; //    "//@rootrefname.index@/refname.index/@....etc"
+        for (let o of lobjects){ m1pointermap[o.ecorePointer()] = o; }
+        for (let v of values) {
+            if (v.isMirage) continue;
+            let modified = false;
+            let newvalues = v.value.map((e) => {
+                if (!m1pointermap[e as any]) return e;
+                modified = true;
+                console.log("m1 pointer resolved:", {from:e, to:m1pointermap[e as any].id});
+                return m1pointermap[e as any].id;
+            });
+            if (!modified) continue;
+            let lv: LValue = LPointerTargetable.from(v);
+            lv.value = newvalues;
+        }
+
+    }
+    private static tempfix_untilopennewtabisdone(parsedElements: DModelElement[], isMetamodel: boolean) {
         // replaces current model with parsed model. this needs to be removed to open a new tab later on.
         let model: DModel = null as any;
         for (let elem of parsedElements) { if (elem.className === DModel.name) { model = elem as any; break; } }
-        windoww.tmp3 = () => { SetRootFieldAction.new("models", [model.id], '', false);  }
-        SetRootFieldAction.new("models", [model.id], '', false); // it is pointer but no need to update pointedby's this time
-        SetRootFieldAction.new('metamodel', model.id, '', true);
+        SetRootFieldAction.new(isMetamodel ? "m2models" : "m1models", model.id, '+=', false); // it is pointer but no need to update pointedby's this time
     }
 
+    // resolve eCore pointers to Jodel pointers and set the PointedBy
     private static LinkAllNamesToIDs(parsedElements: DModelElement[]): void {
         // todo: è post-parse che legga i nomi e assegni gli id aggiustando le references e extends settati by name. trova i campi temporanei cercando i @ts-ignore
         // update mref, attribute, parameter type
@@ -251,27 +277,31 @@ export class EcoreParser{
 
         }
 
+        let idlookup: Dictionary<string, DModelElement> = store.getState().idlookup as any;
         for (let ptrkey of PointedBy.list) for(dobj of parsedElements) {
             let valtmp: string | string[] = dobj[ptrkey] as string | string[];
             let values: string[]
-            let isArray = Array.isArray(valtmp);
-            if (isArray) {
+            if (Array.isArray(valtmp)) {
                 values = valtmp as string[];
             }
             else {
                 if (valtmp === undefined) values = [];
                 // if (valtmp === "modeltmp") { dobj[ptrkey] = null; values = []; } // because model.father is null, but i want to error check others and let them crash if missing father
                 else values = [valtmp as string];
-                // todo: fixa i pointedby
             }
             console.log("fixalltypes[]", {ptrkey, valtmp, dobj, values});
             for (let value of values) {
                 if (!value) continue;
                 // errore: per operazione.type l'import mi restituisce puntatore a oggetto stringa, ma non è tra gli oggetti parsed
                 let target: DModelElement = idMap[value];
-                console.log("fixalltypes", {ptrkey, valtmp, dobj, value, values, target, idMap});
-                if (!target) throw new Error("target undefined");
-                target.pointedBy.push(PointedBy.new("idlookup." + dobj.id + "." + ptrkey));
+                if (target) {
+                    target.pointedBy.push(PointedBy.new("idlookup." + dobj.id + "." + ptrkey));
+                } else {
+                    target = idlookup[value];
+                    console.log("fixalltypes", {ptrkey, valtmp, dobj, value, values, target, idMap});
+                    if (!target) throw new Error("target undefined");
+                    SetFieldAction.new(target, "pointedBy", PointedBy.new("idlookup." + dobj.id + "." + ptrkey),'+=', false);
+                }
             }
         }
         // update superclasses
@@ -291,16 +321,16 @@ export class EcoreParser{
         // todo:4 final
     }
 
-    static parseDModel(json: Json, isMetamodel: boolean): DModelElement[] {
+    static parseM2Model(json: Json, filename: string | undefined): DModelElement[] {
         let generated: DModelElement[] = [];
         if (!json) { json = {}; }
-        let dObject: DModel = DModel.new(undefined, undefined, isMetamodel, true);
+        let dObject: DModel = DModel.new( json[ECoreNamed.namee] as string || filename || "imported_metamodel_1", undefined, true, true);
         console.log("made model", json);
         generated.push(dObject); // dObject.father = 'modeltmp' as any;
         /// *** specific  *** ///
         const childrens = EcoreParser.getChildrens(json);
         const annotations = EcoreParser.getAnnotations(json);
-        dObject.name = json[ECoreNamed.namee] as string || "imported_metamodel_1";
+        // dObject.name = json[ECoreNamed.namee] as string || "imported_metamodel_1";
         console.log("made model 2", childrens, annotations);
         for (let child of annotations) {
             EcoreParser.parseDAnnotation(dObject, child, generated);
@@ -313,6 +343,170 @@ export class EcoreParser{
         return generated;
     }
 
+    static parseM1Model(json: Json, meta?: LModel, filename?: string): DModelElement[] {
+        let generated: DModelElement[] = [];
+        if (!json) { json = {}; }
+        /// *** specific  *** ///
+        // this.parseDObject(json, dObject, DModel,undefined, generated);
+        let allmodels: DModel[];
+        if (!meta && filename) {
+            allmodels = Selectors.getAll(DModel);
+            allmodels = allmodels.filter( (m) => m.name === filename);
+            meta = LPointerTargetable.fromD(allmodels[0]);
+        } else allmodels = [];
+
+        let xmlns =  EcoreParser.XMLinlineMarker + "xmlns:";
+        let ns: string | undefined = undefined as any;
+        function findns(key: string): false | string {
+            let pos = key.indexOf(":");
+            if (pos <= 0) return false;
+            return ns = key.substring(0, pos); // through namespace before the name of the root objects;
+            // additional method: through xmlns key
+            // if (key.indexOf(xmlns)) continue; // "-xmlns:org.eclipse.example.modelname": "https://org/eclipse/example/modelname",
+            // ns = key.substring(xmlns.length); break;
+        }
+        outerloop: for (let key0 in json) { // ns can be at most in sublevel 3, this is annoying but i need it at beginning of parsing
+            if (findns(key0)) break;
+            let val0 = json[key0];
+            if (typeof val0 === "object") for (let key1 in val0) {
+                if (findns(key0)) break outerloop;
+            }
+        }
+        if (ns && !meta) {
+            let allpkgs: LPackage[] = Selectors.getAll(DPackage, undefined, undefined, true, true);
+            let matchpkg: LPackage[] = allpkgs.filter( (d) => d.uri === ns);
+            meta = matchpkg[0]?.model;
+            Log.exDev(!meta, "metamodel not found: ", {ns, json, filename, allmodels, allpkgs, matchpkg}) // todo: after tests remove this check and allow shapeless models.
+        }
+
+        let dObject: DModel = DModel.new( filename ? filename+" instance 1" : "imported_model_1", meta?.id, false, true);
+        console.log("made model", json);
+        generated.push(dObject);
+
+        for (let key in json) {
+            switch(key) {
+                case ECoreObject.xmi_version: // this is only on roots
+                    Log.ex(json[key] !== "2.0","The only supported ecore version is \"2.0\", found instead: \""+json[key] +"\"");
+                    break;
+                // case ECoreObject.xmlnsecore:
+                case ECoreObject.xmlns_xmi:
+                    let expected = "http://www.omg.org/XMI";
+                    Log.ex(json[key] !== expected,"Unexpected XMI schema. Should be \""+expected+"\", found instead: \""+json[key] +"\"");
+                    break;
+                default: // a feature name
+                    let val = json[key];
+                    if (!val) continue;
+                    if (key.indexOf(xmlns) === 0) continue; // "-xmlns:org.eclipse.example.modelname": "https://org/eclipse/example/modelname",
+                    if (key[0] === EcoreParser.XMLinlineMarker) key = key.substring(EcoreParser.XMLinlineMarker.length);
+
+                    const namespacedclass: string = key;
+                    const mmclass: LClass | undefined = meta && meta.getClassByNameSpace(namespacedclass);
+                    if (!mmclass) console.log("failed to get mmclass", {meta, key, mmclass})
+                    const roots_for_this_metaclass: Json[] = Array.isArray(val) ? val : [val]; // there might be N roots of class A, M of type B...
+                    for(let rootjson of roots_for_this_metaclass) {
+                        // DObject.new(mmclass.id, dObject.id, DModel, undefined, true)
+                        EcoreParser.parseDObject(rootjson, dObject, DModel, mmclass, generated);
+                    }
+            }
+        }
+        return generated;
+    }
+    /*
+    {
+      "org.eclipse.example.bowling:League": { <-- :classroot
+        "-xmlns:xmi": "http://www.omg.org/XMI",
+        "-xmlns:org.eclipse.example.bowling": "https://org/eclipse/example/bowling",
+        "-xmi:version": "2.0",
+        "Players": [
+          { "-name": "tizio" },
+          { "-name": "asd" }
+        ]
+      }
+    }
+    */
+
+
+    /// In Ecore parsing when you find a value list, it is possible to recover only the type for the meta-feature,<br>
+    /// but an array of Mammals might have some Whales, Pigs, etc mixed in. and you have to get the correct subclass for each
+    static getobjectmetaclass(json: Json, metaSuperClass: LClass): LClass {
+        return metaSuperClass; // todo: comment this and execute below
+        let subclasses: LClass[] | [] = !metaSuperClass ? [] : []; // meta.metaSuperClass todo, enable this case
+        let subclasseshapes: Dictionary<Pointer<DClass>, {l: LClass } & Dictionary<DocString<"feature name">,  LTypedElement["type"]/*feature type*/>> = {}
+        for (let sc of subclasses) {
+            subclasseshapes[sc.id] = {l: sc};
+            let row = subclasseshapes[sc.id];
+            for (let feat of sc.childrens) {
+                let lfeat: LTypedElement = feat as any;
+                let dfeat: DTypedElement = lfeat.__raw as any;
+                if (!dfeat.name || !dfeat.type) continue;
+                row[dfeat.name] = lfeat.type;
+            }
+        }
+        return this.findBestMatch(subclasseshapes, json);
+    }
+    static findBestMatch(
+        m2classes: Dictionary<Pointer<DClass>,  {l: LClass } & Dictionary<DocString<"feature name">, LTypedElement["type"]>>,
+        json: Dictionary<DocString<"feature name">, any/*actual val instead of type*/>): LClass{
+        throw new Error("todo");
+        return null as any;
+    }
+    static parseDObject(json: Json, parent: DModel | DValue, parentType: typeof DModel | typeof DValue, meta: LClass | undefined, generated: DModelElement[]): DModelElement[]{
+        if (!json) { json = {}; }
+        meta = meta && this.getobjectmetaclass(json, meta);
+        // let dObject: DObject = DObject.new(meta?.id, parent.id, parentType, json["name"] as string || "obj_1");
+        // let data: Partial<DObject> = {};
+        let dObject: DObject = DObject.new(meta?.id, parent.id, parentType, json["name"] as string || "obj_1");
+        generated.push(dObject); dObject.father = parent.id;
+        if (parent) {
+            if (parentType === DModel) (parent as DModel).objects.push(dObject.id);
+            else (parent as DValue).value.push(dObject.id);
+        }
+        console.log("made dobject", {json, dObject, meta, metaname: meta?.name});
+        /// *** specific  *** ///
+        for (let key in json) {
+            switch(key) {
+                case ECoreObject.xmi_version: // this is only on roots
+                    Log.ex(json[key] !== "2.0","The only supported ecore version is \"2.0\", found instead: \""+json[key] +"\"");
+                    break;
+                // case ECoreObject.xmlnsecore:
+                case ECoreObject.xmlns_xmi:
+                    let expected = "http://www.omg.org/XMI";
+                    Log.ex(json[key] !== expected,"Unexpected XMI schema. Should be \""+expected+"\", found instead: \""+json[key] +"\"");
+                    break;
+                default: // a feature name
+                    let val = json[key];
+                    if (!val) continue;
+                    if (key[0] === EcoreParser.XMLinlineMarker) key = key.substring(1);
+                    if (key.indexOf("xmlns:") === 0) continue; // "-xmlns:org.eclipse.example.modelname": "https://org/eclipse/example/modelname",
+                    let metafeature: LAttribute | LReference | undefined = meta && (meta as any)["@"+key];
+                    console.log("feature meta", {json, dObject, key, val, metafeature, classmeta: meta});
+                    const values: any[] = Array.isArray(val) ? val : [val];
+                    EcoreParser.parseDValue(key, values, dObject/*father*/, metafeature/*meta*/, generated);
+                    // DValue.new(key, metafeature?.id, values, dObject, true, false);
+            }
+        }
+        return generated;
+    }
+
+    private static parseDValue(name:string | undefined, jsonvalues: any[], parent: DObject, meta: LAttribute | LReference | undefined, generated: DModelElement[]): DModelElement[] {
+        if (!jsonvalues) { jsonvalues = []; }
+        // let dObject: DObject = DObject.new(meta?.id, parent.id, parentType, json["name"] as string || "obj_1");
+        console.log("DValue.new(meta ? undefined : name, meta?.id, jsonvalues, parent.id, true, false)")
+        console.log("DValue.new(", meta ? undefined : name, ",",meta?.id, ",",jsonvalues, ",",parent.id);
+        let dValue: DValue = DValue.new(meta ? undefined : name, meta?.id, [], parent.id, true, false);
+        generated.push(dValue); dValue.father = parent.id;
+        parent.features.push(dValue.id);
+        console.log("made dValue", {jsonvalues, dValue, meta, metaname: meta?.name});
+        if (meta && meta.className === DAttribute.name) { dValue.value = jsonvalues; return generated; }
+
+        for (let v of jsonvalues) {
+            if (typeof v !== "object") { dValue.value.push(v); continue; }
+            // let subdObject: DObject = DObject.new((meta as LReference)?.type.id, parent.id, DValue, undefined);
+            // generated.push(subdObject);
+            EcoreParser.parseDObject(v, dValue, DValue, (meta as LReference)?.type, generated);
+        }
+        return generated;
+    }
 
     static parseDAnnotation(parent: DModelElement, json: Json, generated: DModelElement[]): DModelElement[] {
         if (!generated) generated = [];
@@ -717,6 +911,11 @@ export class ECoreParameter {
     static eType: string;
 }
 
+export class ECoreObject{
+    static xmlns_xmi: string;
+    static xmlns_uri: never; // "-xmlns:org.eclipse.example.modelname": "https://org/eclipse/example/modelname", <b>key is dynamic</b>
+    static xmi_version: string;
+}
 export class XMIModel {
     static type: string;
     static namee: string; }
@@ -741,8 +940,8 @@ ECorePackage.xmlnsxmi = EcoreParser.XMLinlineMarker + 'xmlns:xmi'; // typical va
 ECorePackage.xmlnsxsi = EcoreParser.XMLinlineMarker + 'xmlns:xsi'; // typical value: http://www.w3.org/2001/XMLSchema-instance
 ECorePackage.xmiversion = EcoreParser.XMLinlineMarker + 'xmi:version'; // typical value: "2.0"
 ECorePackage.xmlnsecore = EcoreParser.XMLinlineMarker + 'xmlns:ecore';
-ECorePackage.nsURI = EcoreParser.XMLinlineMarker + 'nsURI'; // typical value: "http://org/eclipse/example/bowling"
-ECorePackage.nsPrefix = EcoreParser.XMLinlineMarker + 'nsPrefix'; // typical value: org.eclipse.example.bowling
+ECorePackage.nsURI = EcoreParser.XMLinlineMarker + 'nsURI'; // typical value: "http://org/eclipse/example/modelname"
+ECorePackage.nsPrefix = EcoreParser.XMLinlineMarker + 'nsPrefix'; // typical value: org.eclipse.example.modelname
 ECorePackage.namee = EcoreParser.XMLinlineMarker + 'name';
 
 ECoreClass.eStructuralFeatures = 'eStructuralFeatures';
@@ -796,5 +995,10 @@ ECoreParameter.lowerBound = EcoreParser.XMLinlineMarker + 'lowerBound'; // "1"
 ECoreParameter.upperBound = EcoreParser.XMLinlineMarker + 'upperBound'; // "2"
 ECoreParameter.eType = EcoreParser.XMLinlineMarker + 'eType'; // "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDoubl
 
+ECoreObject.xmlns_xmi = EcoreParser.XMLinlineMarker + 'xmlns:xmi'; // "http://www.omg.org/XMI"
+// ECoreObject.xmlns_uri = EcoreParser.XMLinlineMarker + 'xmlns:org.eclipse.example.modelname'; // "https://org/eclipse/example/modelname"
+ECoreObject.xmi_version = EcoreParser.XMLinlineMarker + 'xmi:version'; // "2.0"
+
 XMIModel.type = EcoreParser.XMLinlineMarker + 'type';
 XMIModel.namee = EcoreParser.XMLinlineMarker + 'name';
+

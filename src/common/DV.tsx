@@ -41,10 +41,13 @@ class DefaultView {
 
     public static model(): string {
         return `<div className={'model-view'}>
-            {this.data.childrens.map((child, index) => {
+             {this.data.packages.map((child, index) => {
                 return <DefaultNode key={index} data={child.id}></DefaultNode>
             })}
-        </div>`;
+            {this.data.allSubObjects.map((child, index) => {
+                return <DefaultNode key={index} data={child.id}></DefaultNode>
+            })}
+        </div>;`;
     }
 
     public static package(): string {

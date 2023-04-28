@@ -119,8 +119,8 @@ export default class Structure {
         const object: LObject = LObject.fromPointer(me.id);
         let conform = true;
         for(let feature of object.features) {
-            const upperBound =  feature.instanceof.upperBound;
-            const lowerBound =  feature.instanceof.lowerBound;
+            const upperBound =  feature.instanceof ? feature.instanceof.upperBound : -1;
+            const lowerBound =  feature.instanceof ? feature.instanceof.lowerBound : -1;
             //todo: fix get_value on LValue
             const value = feature.value;
             const length = (Array.isArray(value)) ? value.length : (value === '') ? 0 : 1;

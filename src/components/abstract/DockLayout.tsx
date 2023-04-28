@@ -207,7 +207,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
                 name = U.increaseEndingNumber(name, false, false, (newName) => modelNames.indexOf(newName) >= 0)
                 BEGIN()
                 const model: DModel = DModel.new(name, mmid, false, true);
-                DGraph.new(model.id, undefined, undefined);
+                DGraph.new(model.id);
                 END()
                 // model.isMetamodel = false;
                 // model.father = metamodel.id; // i used instanceof instead

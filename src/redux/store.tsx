@@ -215,7 +215,7 @@ export class IStore {
         const m3: DModel = DModel.new('M3');
         m3.packages = [pkg.id];
         // const m3graph: DGraph = DGraph.create(m3.id);
-        const m3graph: DGraph = DGraph.new(m3.id, '', '', '');
+        const m3graph: DGraph = DGraph.new(m3.id);
         // m3.modellingElements = [me.id, annotation.id, namedElement.id, attribname.id, pkg.id, attriburi.id, classifierref.id, pkgref.id, classe.id];
         // dispatching actions
 
