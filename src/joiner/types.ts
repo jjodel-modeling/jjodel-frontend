@@ -104,9 +104,6 @@ type pureStringsNoPointers<T> = {
     [P in keyof T as ( T[P] extends Pointer ? (Pointer extends T[P] ? P : (never)): never)]: T[P]
 };
 export type ObjectWithoutPointers<T> = Omit<ObjectWithoutStrings<T> & pureStringsNoPointers<T>, 'pointedBy' | '_storePath'>
-let d: DPackage;
-type aaa = ObjectWithoutPointers<DAttribute>;
-let a: aaa = null as any;
 
 
 

@@ -45,7 +45,6 @@ function Topbar(props: AllProps) {
         </div>
     </div>);
 }
-todo: upp taiga
 interface OwnProps {}
 interface StateProps { }
 interface DispatchProps {}

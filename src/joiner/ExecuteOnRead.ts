@@ -88,7 +88,6 @@ windoww.Components = Componentss;
 
 
 function afterStoreLoad() {
-    console.error('aaaafter store load');
     jodelInit();
 }
 

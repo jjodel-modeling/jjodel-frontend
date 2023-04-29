@@ -258,7 +258,6 @@ export class Selectors{
         (Classe?: DT, condition?: (e:RET) => boolean, state?: IStore, resolvePointers?: RP /**/, wrap?: W /* = true */): RET[] {
         if (!state) state = store.getState();
         let GClass = (Classe as GObject) || {name:"idlookup"};
-        console.warn('gclass:', GClass);
         const className: string = (GClass?.staticClassName || GClass.name).toLowerCase();
         const allIdByClassName: Pointer<D, 1, 1, L>[]
             = (state as GObject)[className]
@@ -275,7 +274,6 @@ export class Selectors{
             }
         }
         let ret: RET[] = (resolvePointers || wrap ? (wrap ? allLByClassName : allDByClassName) : allIdByClassName) as any[] as RET[];
-        console.log('GetAll pre filter', ret);
         if (!Array.isArray(ret)) ret = Object.values(ret).filter(e => e instanceof Object) as RET[];
         if (condition) return ret.filter( e => condition(e));
         return ret;

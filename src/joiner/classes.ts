@@ -856,7 +856,6 @@ export class Pointers{
     } // stavolta fai infer so D|l.id
 
 
-    static aaa: undefined extends undefined | LPointerTargetable ? true : false;
     public static from<DX extends DPointerTargetable>(data:DX): DX["id"]; // | {D:any};
     public static from<DX extends DPointerTargetable>(data:DX[]): DX["id"][]; // | {DD:any};
     public static from<LX extends LPointerTargetable>(data:LX): LX["id"]; // | {L:any};

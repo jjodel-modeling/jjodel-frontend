@@ -142,7 +142,7 @@ export default class Structure {
             <select onChange={ (event)=>{
                 (window as any).debugmm = mm;
                 (window as any).debugm = me;
-                me.instanceof = event.target.value as any;
+                me.instanceof = event.target.value === "undefined" ? undefined : event.target.value as any;
             } } value={me.instanceof?.id || "undefined"}>
                 <optgroup label={mm.name}>
                     {

@@ -27,6 +27,21 @@
   &:focus{ border: 1px solid transparent; }
 
 }
+.autosize-input-container.labelstyle{
+
+  &>input,
+  &::after{
+    margin: 0 !important;
+    padding: 0 !important;
+    font-weight: lighter;
+    height: 21.61px;
+  }
+  &::after{
+    display: block;
+    left: -0.91px;
+  }
+}
+
 .autosize-input-container {
   position: relative;
   &:focus-within{
@@ -40,7 +55,7 @@
     // visibility: hidden;
 
   }
-  .autosize-input,
+  &>input,
   &::after{ // input and fake element must have same sizes
     // todo: maybe they can be css variables injected with jsx, so can change ::after css rendering from jsx
     font-size: 0.9rem !important;

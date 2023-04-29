@@ -3627,8 +3627,11 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         let idmap: Dictionary<string, LAttribute | LReference> = {};
         for (let a of attrs) { idmap[a.id] = a; }
         for (let a of refs) { idmap[a.id] = a; }
-        for (let v of values) { if(v.__raw.instanceof) delete idmap[v.__raw.instanceof]; }
-        console.log("forceconformity", {attrs, refs, values: values.map(v=> v.__raw.instanceof), idmap});
+        console.log({values, data: context.data, l:context.proxyObject});
+        // damiano: todo quando viene cancellato una feature il puntatore in features e values rimane. use pointedby's
+        // then remove "v &&" "filter in if
+        for (let v of values) { if(v && v.__raw.instanceof) delete idmap[v.__raw.instanceof]; }
+        console.log("forceconformity", {attrs, refs, values: values.map(v=> v && v.__raw.instanceof), idmap});
         for (let id in idmap) {
             // let l = idmap[id];
             context.proxyObject.addValue(undefined, id, [],true);
@@ -3813,18 +3816,18 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected get_value(context: Context, fitSize: boolean = true, namedPointers: boolean = true, ecorePointers: boolean = false, shapeless: boolean = false, keepempties: boolean = false): this["value"] & {type: string} {
         let ret: any[] = [...context.data.value] as [];
         let meta: LAttribute | LReference | undefined = shapeless ? undefined : context.proxyObject.instanceof;
-        let dmeta: DAttribute | DReference = (meta as LAttribute | LReference).__raw;
-        console.log("wrap values", ret);
+        let dmeta: undefined | DAttribute | DReference = meta?.__raw;
+
         if (meta && meta.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
         let typestr: string = meta ? meta.typeToShortString() : "shapeless";
         if (!Array.isArray(ret)) ret = [];
-        if (meta && fitSize && ret.length < dmeta.lowerBound && dmeta.lowerBound <= 0) {
+        if (dmeta && fitSize && ret.length < dmeta.lowerBound && dmeta.lowerBound <= 0) {
             let times = dmeta.lowerBound - ret.length;
             while (times-- > 0) ret.push(undefined);
             // ret.length = meta.lowerBound; not really working for expanding, it says "emptyx10" or so. doing .map() only iterates "existing" elements. behaves like as it's smaller.
         }
-        if (meta && fitSize && ret.length > dmeta.upperBound && dmeta.upperBound >= 0) ret.length = dmeta.upperBound;
-        console.log("get_value", {upperbound:dmeta.upperBound, lowerbound: dmeta.lowerBound, len: ret.length, len0: context.data.value.length});
+        if (dmeta && fitSize && ret.length > dmeta.upperBound && dmeta.upperBound >= 0) ret.length = dmeta.upperBound;
+        //console.log("get_value", {upperbound:dmeta.upperBound, lowerbound: dmeta.lowerBound, len: ret.length, len0: context.data.value.length});
         let numbermax = 0, numbermin = 0;
         switch (typestr) {
             case "shapeless":
@@ -3857,11 +3860,9 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     return keepempties && !l ? true : isExtending;
                 });
                 if (namedPointers) {
-                    console.log("get_values containment ref", {ret0: [...ret], ret, keepempties});
                     ret = ret.map( l => l && (l.name ? ("@" + l.name) : ("#" + l.className)));
                 }
                 else if (ecorePointers && !(meta as LReference).containment){
-                    console.log("get_values normal ref", {ret0: [...ret], ret, keepempties});
                     ret = ret.map( (lval: LObject) => lval && lval.ecorePointer())
                     // throw new Error("values as EcorePointers: todo. for containment do nothing, just nest the obj. for non-containment put the ecore reference string in array vals")
                 }
@@ -3922,7 +3923,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     private get_valuestring(context: Context): this["valuestring"] { return (keepemptyquotes?: boolean) => this.valuestring_impl(context, keepemptyquotes); }
     private valuestring_impl(context: Context, keepemptyquotes?: boolean): string {
         // console.error("valuestring_impl", {context, data:context.data});
-        let val = this.get_value(context, true, true, false, false);
+        let val = this.get_value(context, true, true, false, false, true);
+        // console.log("valuestring_impl", {val});
         let ret: any;
         switch (val.length) {
             case 0: ret = ''; break;

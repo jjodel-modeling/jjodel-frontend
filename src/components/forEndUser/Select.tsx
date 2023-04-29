@@ -43,7 +43,6 @@ function SelectComponent(props: AllProps) {
     const classes: LClass[] = data.model.classes;
     const enumerators: LEnumerator[] = data.model.enumerators;
 
-    console.log("aaa", {data, model: data.model, enumerators, primitives, returns, classes});
     return(<div className={'d-flex p-1'}>
         {(label && !jsxLabel) && <label className={'my-auto'}>
             {label}

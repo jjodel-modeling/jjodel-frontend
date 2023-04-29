@@ -25,7 +25,6 @@ function InfoTabComponent(props: AllProps) {
         })}
         <b><label className={'ms-1 text-primary'}>Models ({models.length}):</label></b><br />
         {models.map((model, index) => {
-            console.log(' aaaa', {models, model});
             return(<>
                 <label className={'ms-3'} key={index}>
                     -{model.name} <b className={'text-success'}>{model.instanceof ? "conforms to" : "is shapeless"}</b> {model.instanceof?.name}

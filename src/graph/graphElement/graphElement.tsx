@@ -65,12 +65,11 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
     }
     catch (e: any) {
         let errormsg = ''; // 'Syntax Error in custom user-defined template.\n';
-        let otherargs: any = {jsxCodeString, evalContext};
+        let otherargs: any = {e, jsxCodeString, evalContext, where:"setTemplateString()", view};
         if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0)
         { errormsg += 'Reminder: nullish operators ".?" and "??" are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
         else if (view.jsxString.indexOf('?.') >= 0) { errormsg += 'Reminder: ?. operator and empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
-        Log.ee(errormsg, otherargs);
-        jsxparsedfunc = ()=> DV.errorView(errormsg);
+        jsxparsedfunc = ()=> DV.errorView(errormsg, otherargs);
     }
 
     stateProps.preRenderFunc = view.preRenderFunc;
@@ -324,7 +323,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         try {
             ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], context); }
         catch(e: any) {
-            ret = DV.errorView();
+            const view: LViewElement = this.props.view; //data._transient.currentView;
+            let errormsg = ''; // 'Syntax Error in custom user-defined template.\n';
+            if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0)
+            { errormsg += 'Reminder: nullish operators ".?" and "??" are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
+            else if (view.jsxString.indexOf('?.') >= 0) { errormsg += 'Reminder: ?. operator and empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
+            ret = DV.errorView(errormsg, {where:"in getTemplate()", e});
         }
         return ret;
     }
@@ -357,7 +361,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 rawRElement = React.cloneElement(rawRElement, {key: this.props.key || this.props.view.id + '_' + me.id, onDragTestInject, children: UX.recursiveMap(rawRElement/*.props.children*/,
                         (rn: ReactNode) => UX.injectProp(this, rn, subElements))});
             } catch (e) {
-                rawRElement = DV.errorView();
+                rawRElement = DV.errorView("error while injecting props to subnodes", {e, rawRElement, key:this.props.key, newid: this.props.view?.id+'_'+me?.id});
             }
             /*console.log('tempdebug', {deepStrictEqual, okeys:Object.keys});
             let isEqual = true;
