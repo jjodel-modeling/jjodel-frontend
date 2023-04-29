@@ -166,7 +166,7 @@ export class IStore {
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
         }
 /*
-        const returnTypes = ["void", "undefined", "null"]; // damiano: rimosso undefined dovrebbe essere come void (in ShortAttribEtypes, null è ritornato solo dalle funzioni che normalmente ritornano qualche DObject, quindi tipizzato con quel DObject
+        const returnTypes = ["void", "undefined", "null"]; // rimosso undefined dovrebbe essere come void (in ShortAttribEtypes, null è ritornato solo dalle funzioni che normalmente ritornano qualche DObject, quindi tipizzato con quel DObject
         for (let returnType of returnTypes) {
             const dReturnType = DClass.new(returnType);
             CreateElementAction.new(dReturnType);

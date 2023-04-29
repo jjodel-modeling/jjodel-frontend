@@ -3561,6 +3561,8 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         }
     }
 
+    public addValue(name?: DValue["name"], instanceoff?: DValue["instanceof"], value?: DValue["value"], isMirage?: boolean): DValue { return this.cannotCall("addValue"); }
+
     protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
         loopDetectionObj[context.data.id] = context.data;
         let asEcoreRoot = (context.proxyObject.isRoot);
@@ -3583,8 +3585,6 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
 
         return json; }
-
-    public addValue(name?: DValue["name"], instanceoff?: DValue["instanceof"], value?: DValue["value"], isMirage?: boolean): DValue { return this.cannotCall("addValue"); }
     protected get_addValue(context: Context): this["addValue"] {
         return (name?: DValue["name"], instanceoff?: DValue["instanceof"], value?: DValue["value"], isMirage?: boolean) => DValue.new(name, instanceoff, value, context.data.id, true, isMirage); }
 
