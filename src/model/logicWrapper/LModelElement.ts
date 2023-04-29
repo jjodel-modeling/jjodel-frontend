@@ -1,3 +1,4 @@
+import type { NotAString } from "../../joiner/classes";
 import {
     BEGIN,
     Constructor,
@@ -54,7 +55,6 @@ import {
     ECoreReference,
     ECoreRoot
 } from "../../api/data";
-import { NotAString } from "../../joiner/classes";
 
 
 @Node
@@ -234,11 +234,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 const reduxField: Pointer<DModelElement, 0, 'N', LModelElement> = state[reduxFieldName];
                 SetRootFieldAction.new(reduxFieldName, reduxField.indexOf(data.id), '-=', true);
             }
-            if (data.childrens) {
-                for (let child of data.childrens) {
-                    child.delete();
-                }
-            }
+            if(data.childrens) { for(let child of data.childrens) { child.delete(); } }
+            const selected = Selectors.getState()._lastSelected?.modelElement;
+            if(selected && selected === data.id) SetRootFieldAction.new('_lastSelected', {}, '', false);
             DeleteElementAction.new(data.id);
         };
         return ret;
@@ -1822,11 +1820,14 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
     public addAttribute(name?: DAttribute["name"], type?: DAttribute["type"]): DAttribute { return this.cannotCall("addAttribute"); }
     protected get_addAttribute(context: Context): this["addAttribute"] {
-        return (name?: DAttribute["name"], type?: DAttribute["type"]) => DAttribute.new(name, type, context.data.id, true); }
+        return (name?: DAttribute["name"], type?: DAttribute["type"]) => DAttribute.new(name, type, context.data.id, true);
+
+    }
 
     public addReference(name?: DReference["name"], type?: DReference["type"]): DReference { return this.cannotCall("addReference"); }
     protected get_addReference(context: Context): this["addReference"] {
-        return (name?: DReference["name"], type?: DReference["type"]) => DReference.new(name, type, context.data.id, true); }
+        return (name?: DReference["name"], type?: DReference["type"]) => DReference.new(name, type, context.data.id, true);
+    }
 
     public addOperation(name?: DOperation["name"], type?: DOperation["type"]): DOperation { return this.cannotCall("addOperation"); }
     protected get_addOperation(context: Context): this["addOperation"] {
@@ -3148,7 +3149,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     public addObject(instanceoff?:DObject["instanceof"], name?: DObject["name"]): DObject { return this.cannotCall("addObject"); }
     protected get_addObject(context: Context): this["addObject"] {
         return (instanceoff?:DObject["instanceof"], name?: DObject["name"]) =>
-            DObject.new(instanceoff, context.data.id, DModel, undefined, true); }
+            DObject.new(instanceoff, context.data.id, DModel, undefined, true);
+    }
 
     protected get_models(context: Context): LModel[] {
         return LModel.fromPointer(context.data.models);

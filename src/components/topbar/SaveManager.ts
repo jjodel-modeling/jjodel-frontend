@@ -62,7 +62,7 @@ export class SaveManager {
                 jsonobj = prxml2json.xml2jsonobj(xmlDoc, ' ');
             }
             //if (filestring.includes("\n")) throw new Error(filestring.substring(0, 1000));
-            SaveManager.importEcore(jsonobj || filestring, true, undefined,true); // todo: trova il modo di determinare se è m1 o m2 senza filename
+            SaveManager.importEcore(jsonobj || filestring, true, undefined, true); // todo: trova il modo di determinare se è m1 o m2 senza filename
             return; }
 
         console.log("importEcore: pre file read");
@@ -100,7 +100,7 @@ export class SaveManager {
             else jsonstring = filestring;
             let isMetamodel = filename.indexOf(".ecore") === filename.length - ".ecore".length;
             console.log("ismetamodel", {filename, isMetamodel});
-            let end = SaveManager.importEcore(jsonobj || jsonstring || 'null', isMetamodel,filename, false);
+            let end = SaveManager.importEcore(jsonobj || jsonstring || 'null', isMetamodel,filename, true);
             console.error({end});
         }, [extension], true);
     }

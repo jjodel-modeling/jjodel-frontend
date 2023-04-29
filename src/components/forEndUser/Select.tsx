@@ -1,7 +1,7 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
-import {LPointerTargetable, GObject, Pointer, LEnumerator} from "../../joiner";
+import {LPointerTargetable, GObject, Pointer, LEnumerator, Selectors, LModelElement} from "../../joiner";
 import type {LClass, DPointerTargetable} from "../../joiner";
 import toast, {Toaster} from "react-hot-toast";
 
@@ -9,6 +9,7 @@ import toast, {Toaster} from "react-hot-toast";
 function SelectComponent(props: AllProps) {
 
     const data = props.data;
+    if(!data) return(<></>);
     const field = props.field;
     const value = (data[field]?.id) ? data[field].id : 'undefined';
     const label: string|undefined = props.label;
@@ -43,11 +44,23 @@ function SelectComponent(props: AllProps) {
     const classes: LClass[] = data.model.classes;
     const enumerators: LEnumerator[] = data.model.enumerators;
 
+    if(!primitives || !classes || !enumerators) {
+        console.clear();
+        console.log('-----PRIMITIVES-----');
+        console.log(primitives);
+
+        console.log('-----CLASSES-----');
+        console.log(classes);
+
+        console.log('-----ENUMERATORS-----');
+        console.log(enumerators);
+        return(<></>);
+    }
     return(<div className={'d-flex p-1'}>
-        {(label && !jsxLabel) && <label className={'my-auto'}>
+        {(label && !jsxLabel) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
             {label}
         </label>}
-        {(jsxLabel && !label) && <label className={'my-auto'}>
+        {(jsxLabel && !label) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
             {jsxLabel}
         </label>}
         <select className={css} value={value} onChange={change}>
@@ -56,7 +69,7 @@ function SelectComponent(props: AllProps) {
                     return <option key={i} value={returnType.id}>{returnType.name}</option>
                 })}
             </optgroup>}
-            {(hasPrimitive && primitives.length > 0) && <optgroup label={'Primitives'}>
+            {(hasPrimitive && primitives) && <optgroup label={'Primitives'}>
                 {primitives.map((primitive, i) => {
                     return <option key={i} value={primitive.id}>{primitive.name}</option>
                 })}
@@ -72,12 +85,7 @@ function SelectComponent(props: AllProps) {
                 })}
             </optgroup>}
         </select>
-        {(tooltip) && <div>
-            <button onClick={notify} className={'ms-1 btn btn-primary'}>
-                <i className={'p-1 bi bi-info-lg'}></i>
-            </button>
-            <Toaster position={'bottom-center'} />
-        </div>}
+        {(tooltip) && <Toaster position={'bottom-center'} />}
     </div>);
 }
 interface OwnProps {

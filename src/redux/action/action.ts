@@ -301,7 +301,7 @@ export class CreateElementAction extends Action {
 
     public static new<F extends boolean = true>(me: DPointerTargetable , notfire?: F): (F extends false ? boolean : CreateElementAction) {
         if ((me as LPointerTargetable).__raw) me = (me as LPointerTargetable).__raw;
-        let act = new CreateElementAction(me);
+        let act = new CreateElementAction(me, !notfire);
         if (!notfire) return act.fire() as any;
         return act as any;
     }

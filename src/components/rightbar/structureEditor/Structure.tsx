@@ -17,15 +17,18 @@ import Value from "./editors/Value";
 
 export default class Structure {
     private static BaseEditor(lModelElement: LModelElement) : ReactNode {
+        if(!lModelElement) return(<></>);
         return(<>
             {/*<Input obj={lModelElement} field={"id"} label={"ID"} type={"text"} readonly={true} />*/}
             <Input obj={lModelElement} field={"name"} label={"Name"} type={"text"} tooltip={"Element name"} />
         </>);
     }
     public static ModelEditor(lModel: LModelElement): ReactNode {
+        if(!lModel) return(<></>);
         return(<>{Structure.BaseEditor(lModel)}</>);
     }
     public static PackageEditor(lPackage: LModelElement): ReactNode {
+        if(!lPackage) return(<></>);
         return(<>
             {Structure.BaseEditor(lPackage)}
             <Input obj={lPackage} field={"uri"} label={"NsURI"} type={"text"} tooltip={"Namespace URI of the package, i.e. the URI that is displayed in the xmlns tag to identify this package in an XMI document"} />
@@ -33,6 +36,7 @@ export default class Structure {
         </>);
     }
     public static ClassEditor(lClass: LModelElement): ReactNode {
+        if(!lClass) return(<></>);
         return(<>
             {Structure.BaseEditor(lClass)}
             <Input obj={lClass} field={"abstract"} label={"IsAbstract"} type={"checkbox"} tooltip={"If set to True, the generated implementation class will have the abstract keyword"} />
@@ -40,15 +44,18 @@ export default class Structure {
         </>);
     }
     private static DataTypeEditor(lDataType: LModelElement): ReactNode {
+        if(!lDataType) return(<></>);
         return(<Input obj={lDataType} field={"serializable"} label={"IsSerializable"} type={"checkbox"} tooltip={"It represents whether values of this type will be serialized"} />);
     }
     public static EnumEditor(lEnum: LModelElement): ReactNode {
+        if(!lEnum) return(<></>);
         return(<>
             {Structure.BaseEditor(lEnum)}
             {Structure.DataTypeEditor(lEnum)}
         </>);
     }
     private static TypedElementEditor(lTypedElement: LModelElement): ReactNode {
+        if(!lTypedElement) return(<></>);
         return(<>
             <Select obj={lTypedElement} field={"type"} label={"Type"} tooltip={"Element Type"} />
             <Input obj={lTypedElement} field={"lowerBound"} label={"Lower Bound"} type={"number"} tooltip={"Determines the setting of the required property. If lowerBound is 0, the required property will be set to False. Otherwise, the required property will be set to True"} />
@@ -58,6 +65,7 @@ export default class Structure {
         </>);
     }
     private static StructuralFeatureEditor(lStructuralFeature: LModelElement): ReactNode {
+        if(!lStructuralFeature) return(<></>);
         return(<>
             <Input obj={lStructuralFeature} field={"defaultValueLiteral"} label={"Default Value Literal"} type={"text"} tooltip={"Determines the value returned by the get method if the feature has never been set"} />
             <Input obj={lStructuralFeature} field={"changeable"} label={"IsChangeable"} type={"checkbox"} tooltip={"Indicates whether the reference may be modified. If changeable is set to False, no set() method is generated for the reference"} />
@@ -68,6 +76,7 @@ export default class Structure {
         </>);
     }
     public static AttributeEditor(lAttribute: LModelElement): ReactNode {
+        if(!lAttribute) return(<></>);
         return(<>
             {Structure.BaseEditor(lAttribute)}
             {Structure.TypedElementEditor(lAttribute)}
@@ -76,6 +85,7 @@ export default class Structure {
         </>);
     }
     public static ReferenceEditor(lReference: LModelElement): ReactNode {
+        if(!lReference) return(<></>);
         return(<>
             {Structure.BaseEditor(lReference)}
             {Structure.TypedElementEditor(lReference)}
@@ -86,6 +96,7 @@ export default class Structure {
         </>);
     }
     public static EnumLiteralEditor(lEnumLiteral: LModelElement): ReactNode {
+        if(!lEnumLiteral) return(<></>);
         return(<>
             {Structure.BaseEditor(lEnumLiteral)}
             <Input obj={lEnumLiteral} field={"value"} label={"Value"} type={"number"} tooltip={"Determines the integer value that is associated with this literal"} />
@@ -94,6 +105,7 @@ export default class Structure {
 
     public static OperationEditor(me: LModelElement): ReactNode {
         const operation: LOperation = LOperation.fromPointer(me.id);
+        if(!operation) return(<></>);
         return(<>
             {Structure.BaseEditor(operation)}
             <Select obj={operation.parameters[0].id} field={'type'} label={'Return'} tooltip={"Method return type"} />
@@ -117,6 +129,7 @@ export default class Structure {
     }
     public static ObjectEditor(me: LModelElement): ReactNode {
         const object: LObject = LObject.fromPointer(me.id);
+        if(!object) return(<></>);
         let conform = true;
         for(let feature of object.features) {
             const upperBound =  feature.instanceof ? feature.instanceof.upperBound : -1;
@@ -132,7 +145,7 @@ export default class Structure {
             {object.instanceof && conform && <label>This instance is <b className={'text-success'}>CONFORM</b> to {object.instanceof.name}</label>}
             {object.instanceof && !conform && <label>This instance is <b className={'text-danger'}>NOT CONFORM</b> to {object.instanceof.name}</label>}
             {!object.instanceof && <label>This instance is <b className={'text-warning'}>SHAPELESS</b></label>}
-            {this.forceConform(object)}
+            {/*this.forceConform(object)*/}
         </div>);
     }
     public static forceConform(me: LObject) {
@@ -157,7 +170,7 @@ export default class Structure {
     }
     public static ValueEditor(me: LModelElement): ReactNode {
         const lValue: LValue = LValue.fromPointer(me.id);
-
+        if(!lValue) return(<></>);
         return(<div>
             <Value value={lValue} />
         </div>);
