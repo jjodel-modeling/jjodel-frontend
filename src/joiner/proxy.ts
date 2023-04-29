@@ -85,7 +85,7 @@ export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibl
     ownKeys(target: T): ArrayLike<string | symbol>{ return Object.getOwnPropertyNames(target); }
     static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
         RET extends CAN_THROW extends true ? L : L | undefined  = CAN_THROW extends true ? L : L>
-    (data: D | Pointer, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW): RET{
+    (data: D | Pointer | undefined, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW): RET{
 
 //    static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable, RET extends boolean = false>
 //        (data: D | Pointer<DViewElement>, baseObjInLookup?: DPointerTargetable, path: string = '', canthrow: RET = false as RET): RET {
@@ -219,6 +219,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
     public get0(targetObj: ME, propKey: string | symbol, proxyitself: Proxyfied<ME>): any {
         // console.log('proxy keysearch', {propKey, targetObj, l: this.l, proxyitself, d: this.d});
+        let canThrowErrors = true;
         if (propKey === "__raw") return targetObj;
 
         if (typeof propKey === "symbol") {
@@ -230,12 +231,12 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 //
         switch(propKey){
             case '__raw': return targetObj;
-            case 'toJSON': return () => targetObj;
+            case '__serialize': return JSON.stringify(targetObj);
             case '__isProxy': return true;
+            case '__random': return Math.random();
             case 'editCount':
             case 'clonedCounter':
                 return targetObj.clonedCounter || 0;
-            case '__random': return Math.random();
         }
 
 
@@ -257,7 +258,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             switch (propKey){
                 default:
                     //constructor.prototype.typeName
-                    // se esiste la proprietà ma non esiste il getter, che fare? do errore.
+                    // se esiste la proprietà ma non esiste il getter, che fare? do errore?
                     // Log.eDevv("dev error: property exist but getter does not: ", propKey, this);
                     // console.error('proxy GET direct match', {targetObj, propKey, ret: this.d[propKey as keyof ME]});
                     // console.error('proxy GET direct match', {l:this.l});
@@ -274,7 +275,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             let lchildrens: LPointerTargetable[] = this.get(targetObj, 'childrens', proxyitself);
             // let dchildrens: DPointerTargetable[] = lchildrens.map<DPointerTargetable>(l => l.__raw as any);
             let lc: GObject;
-            if (propKey[0] === "@") propKey.substring(1);
+            if (propKey[0] === "@") { propKey = propKey.substring(1); canThrowErrors = false; }
             for (lc of lchildrens) {
                 if (lc.name === propKey) return lc;
             }
@@ -284,7 +285,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         let concatenationTentative = null;
         try {concatenationTentative = this.concatenableHandler(targetObj, propKey, proxyitself); } catch(e) {}
         if (concatenationTentative !== null) return concatenationTentative;
-        Log.exx('GET property "'+ (propKey as any)+ '" do not exist in object of type "' + U.getType(this.l) + " DType:" +  U.getType(this.l), {logic: this.l, data: targetObj});
+        Log.ex(canThrowErrors,'GET property "'+ (propKey as any)+ '" do not exist in object of type "' + U.getType(this.l) + " DType:" +  U.getType(this.l), {logic: this.l, data: targetObj});
         return undefined;
         // todo: credo che con espressioni sui tipi siano tipizzabili tutti i return di proprietà note eccetto quelle ottenute per concatenazione.
     }

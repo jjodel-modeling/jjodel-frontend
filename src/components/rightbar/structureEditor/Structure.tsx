@@ -132,8 +132,8 @@ export default class Structure {
         if(!object) return(<></>);
         let conform = true;
         for(let feature of object.features) {
-            const upperBound =  feature.instanceof.upperBound;
-            const lowerBound =  feature.instanceof.lowerBound;
+            const upperBound =  feature.instanceof ? feature.instanceof.upperBound : -1;
+            const lowerBound =  feature.instanceof ? feature.instanceof.lowerBound : -1;
             //todo: fix get_value on LValue
             const value = feature.value;
             const length = (Array.isArray(value)) ? value.length : (value === '') ? 0 : 1;
@@ -155,7 +155,7 @@ export default class Structure {
             <select onChange={ (event)=>{
                 (window as any).debugmm = mm;
                 (window as any).debugm = me;
-                me.instanceof = event.target.value as any;
+                me.instanceof = event.target.value === "undefined" ? undefined : event.target.value as any;
             } } value={me.instanceof?.id || "undefined"}>
                 <optgroup label={mm.name}>
                     {

@@ -15,6 +15,7 @@ function InputComponent(props: AllProps) {
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
     const tooltip = props.tooltip;
     let css = 'my-auto input ';
+    let inputClassName = (props.inputClassName || '');
     css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
     css += (props.hidden) ? ' hidden-input' : '';
     let autosize: boolean = props.autosize === undefined ? false : props.autosize; // props.type==="text"
@@ -34,7 +35,7 @@ function InputComponent(props: AllProps) {
     let className = (props as any).className || '';
     let style = (props as any).style || {};
     props = {...props, className:'', style:{}} as any;
-    let input = <input spellCheck={false} readOnly={props.readonly} className={css}
+    let input = <input spellCheck={false} readOnly={props.readonly} className={css + inputClassName}
                        type={type} value={value} onChange={change}
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
@@ -46,7 +47,8 @@ function InputComponent(props: AllProps) {
         {(jsxLabel && !label) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
             {jsxLabel}
         </label>}
-        { autosize ? <div className={ autosize ? "autosize-input-container" : ""} data-value={value}>{input}</div> : input}
+        { autosize ? <div className={ (autosize ? "autosize-input-container" : "") + (props.asLabel ? " labelstyle" : "")}
+                          data-value={value}>{input}</div> : input}
         {tooltip && <Toaster position={'bottom-center'} /> }
     </div>);
 }
@@ -61,6 +63,8 @@ interface OwnProps {
     tooltip?: string;
     hidden?: boolean;
     autosize?: boolean;
+    inputClassName?: string;
+    asLabel?: boolean
 }
 interface StateProps { data: LPointerTargetable & GObject; }
 interface DispatchProps { }

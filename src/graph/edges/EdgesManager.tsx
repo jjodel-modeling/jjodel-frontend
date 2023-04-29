@@ -28,10 +28,10 @@ function EdgesManagerComponent(props: AllProps) {
     const objects = model.objects;
     const _values: IValueEdge[] = [];
     for(let object of objects) {
-        console.log('testing', object)
+        console.log("features", object.features, object);
         for(let feature of object.features) {
             const instanceOf = feature.instanceof;
-            if(instanceOf.className === 'DReference') {
+            if(instanceOf?.className === 'DReference') {
                 const values = feature.value;
                 if(Array.isArray(values)) {
                     for(let value of values) {
@@ -48,6 +48,7 @@ function EdgesManagerComponent(props: AllProps) {
         }
     }
 
+    return <div> to rework </div>
     return <div>
         {_references.map((referenceEdge, index) => {
             const source = referenceEdge.source.node;

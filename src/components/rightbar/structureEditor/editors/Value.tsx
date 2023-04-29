@@ -19,7 +19,7 @@ interface Props {value: LValue}
 function Value(props: Props) {
     const lValue = props.value;
     const dValue = lValue.__raw;
-    const feature: LStructuralFeature = LStructuralFeature.fromPointer(lValue.instanceof.id);
+    const feature: LStructuralFeature = LStructuralFeature.fromPointer(lValue.instanceof?.id);
     let field = 'text'; let stepSize = 1; let maxLength = 524288;
     let min = -9223372036854775808;
     let max = 9223372036854775807; // for long, todo: aggiusta per tutti gli altri. in switch
@@ -35,16 +35,18 @@ function Value(props: Props) {
         case 'EBoolean': field = 'checkbox'; break;
         case 'EDate': field = 'date'; break;
     }
-    let upperBound = lValue.instanceof.upperBound;
+    let upperBound = lValue.instanceof ? lValue.instanceof.upperBound : -1;
     if (upperBound < 0) upperBound = 999;
 
     const add = (event: React.MouseEvent<HTMLButtonElement>) => {
         SetFieldAction.new(dValue, 'value', U.initializeValue(feature?.type), '+=', false);
     }
     const remove = (index: number) => {
+        // damiano todo: non va bene perchè alcuni elementi sono nascosti e l'indice è sbagliato
         SetFieldAction.new(dValue, 'value', index, '-=', false);
     }
     const change = (event: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>, index: number, isPointer: boolean | undefined) => {
+        // damiano todo: non va bene perchè alcuni elementi sono nascosti e l'indice è sbagliato
         const target = event.target.value;
         const newValues = [...dValue.value];
         if (field === 'checkbox') { newValues[index] = (newValues[index] === 'false') ? 'true': 'false'; }
@@ -94,7 +96,8 @@ function Value(props: Props) {
     else select_options = null;
 
     let rawvalues: any[] = lValue.__raw.value || [];
-    const valueslist = (lValue.value as PrimitiveType[]).map( (val: PrimitiveType | string | LObject, index) =>
+    let filteredvalues = lValue.getValue(true, false, false, false, true);
+    const valueslist = (filteredvalues as PrimitiveType[]).map( (val: PrimitiveType | string | LObject, index) =>
             <div className={'mt-1 d-flex ms-4'} key={index}>
                 <div className={'border border-dark'}></div>
                 { isattr && <input onChange={(evt) => { change(evt, index, false) }} className={'input ms-1'} value={val + ''}
@@ -122,7 +125,7 @@ function Value(props: Props) {
     return(<div>
         <div className={'d-flex'}>
             <label className={'ms-1 my-auto'}>Values</label>
-            <button className={'btn btn-primary ms-auto me-1'} disabled={dValue.value.length >= upperBound} onClick={add}>
+            <button className={'btn btn-primary ms-auto me-1'} disabled={filteredvalues.length >= upperBound} onClick={add}>
                 <i className={'p-1 bi bi-plus'}></i>
             </button>
         </div>

@@ -26,24 +26,22 @@ function Topbar(props: AllProps) {
 
     return(<div className={'topbar d-flex'}>
         <div className={'ms-1'}>
-            {/*
             <Undoredocomponent />
 
             <label className={'item border round ms-1'}
                     onClick={() => {SaveManager.save()}}>Save</label>
             <label className={'item border round ms-1'}
                     onClick={() => {SaveManager.load()}}>Load</label>
-                        <label className={'item border round ms-1'} onClick={ () => SaveManager.exportEcore_click(true, true) }>Export XML</label>
-            <label className={'item border round ms-1'} onClick={ () => SaveManager.importEcore_click(true, true) }>Import XML</label>
-
-            <div className={'ms-auto me-1'}>
-                <label className={'item border round ms-1'} onClick={ () => SaveManager.exportLayout_click(false) }>Export Layout</label>
-                <label className={'item border round ms-1'} onClick={ () => SaveManager.importLayout_click(false) }>Import Layout</label>
-            </div>
-            */}
 
             <label className={'item border round ms-1'} onClick={ () => SaveManager.exportEcore_click(false, true) }>Export JSON</label>
             <label className={'item border round ms-1'} onClick={ () => SaveManager.importEcore_click(false, true) }>Import JSON</label>
+            <label className={'item border round ms-1'} onClick={ () => SaveManager.exportEcore_click(true, true) }>Export XML</label>
+            <label className={'item border round ms-1'} onClick={ () => SaveManager.importEcore_click(true, true) }>Import XML</label>
+        </div>
+        <div className={'ms-auto me-1'}>
+            <label className={'item border round ms-1'} onClick={ () => SaveManager.exportLayout_click(false) }>Export Layout</label>
+            <label className={'item border round ms-1'} onClick={ () => SaveManager.importLayout_click(false) }>Import Layout</label>
+            <label className={'item border round ms-1'} onClick={ () => edgetest() }>Edge test</label>
         </div>
     </div>);
 }

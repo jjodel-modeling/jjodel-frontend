@@ -421,6 +421,5 @@ export function jodelInit() {
 
 // ideally launched before component render, verify it. maybe move the callback to <App> component mounting
 function afterStoreLoad() {
-    console.error('aaaafter store load');
     jodelInit();
 }

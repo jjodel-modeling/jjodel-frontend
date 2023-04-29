@@ -166,7 +166,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
 
     static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
         RET extends CAN_THROW extends true ? L : L | undefined = CAN_THROW extends true ? L : L | undefined>
-    (data: D | Pointer, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW, state?: IStore): CAN_THROW extends true ? L : L | undefined{
+    (data: D | Pointer | undefined, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW, state?: IStore): CAN_THROW extends true ? L : L | undefined{
         if (!data || (data as any).__isProxy) return data as any;
         if (typeof data === 'string') {
             if (!state) state = windoww.store.getState() as IStore;
@@ -334,6 +334,7 @@ export type LtoW<LX extends LPointerTargetable, WX = LX extends LEnumerator ? WE
 export type WtoD<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? DEnumerator : (IN extends WAttribute ? DAttribute : (IN extends WReference ? DReference : (IN extends WRefEdge ? DRefEdge : (IN extends WExtEdge ? DExtEdge : (IN extends WDataType ? DDataType : (IN extends WClass ? DClass : (IN extends WStructuralFeature ? DStructuralFeature : (IN extends WParameter ? DParameter : (IN extends WOperation ? DOperation : (IN extends WEdge ? DEdge : (IN extends WEdgePoint ? DEdgePoint : (IN extends WGraphVertex ? DGraphVertex : (IN extends WModel ? DModel : (IN extends WValue ? DValue : (IN extends WObject ? DObject : (IN extends WEnumLiteral ? DEnumLiteral : (IN extends WPackage ? DPackage : (IN extends WClassifier ? DClassifier : (IN extends WTypedElement ? DTypedElement : (IN extends WVertex ? DVertex : (IN extends WVoidEdge ? DVoidEdge : (IN extends WVoidVertex ? DVoidVertex : (IN extends WGraph ? DGraph : (IN extends WNamedElement ? DNamedElement : (IN extends WAnnotation ? DAnnotation : (IN extends WGraphElement ? DGraphElement : (IN extends WMap ? DMap : (IN extends WModelElement ? DModelElement : (IN extends WUser ? DUser : (IN extends WPointerTargetable ? DPointerTargetable : (IN extends WViewElement ? DViewElement : (IN extends WViewTransientProperties ? DViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
 export type WtoL<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? LEnumerator : (IN extends WAttribute ? LAttribute : (IN extends WReference ? LReference : (IN extends WRefEdge ? LRefEdge : (IN extends WExtEdge ? LExtEdge : (IN extends WDataType ? LDataType : (IN extends WClass ? LClass : (IN extends WStructuralFeature ? LStructuralFeature : (IN extends WParameter ? LParameter : (IN extends WOperation ? LOperation : (IN extends WEdge ? LEdge : (IN extends WEdgePoint ? LEdgePoint : (IN extends WGraphVertex ? LGraphVertex : (IN extends WModel ? LModel : (IN extends WValue ? LValue : (IN extends WObject ? LObject : (IN extends WEnumLiteral ? LEnumLiteral : (IN extends WPackage ? LPackage : (IN extends WClassifier ? LClassifier : (IN extends WTypedElement ? LTypedElement : (IN extends WVertex ? LVertex : (IN extends WVoidEdge ? LVoidEdge : (IN extends WVoidVertex ? LVoidVertex : (IN extends WGraph ? LGraph : (IN extends WNamedElement ? LNamedElement : (IN extends WAnnotation ? LAnnotation : (IN extends WGraphElement ? LGraphElement : (IN extends WMap ? LMap : (IN extends WModelElement ? LModelElement : (IN extends WUser ? LUser : (IN extends WPointerTargetable ? LPointerTargetable : (IN extends WViewElement ? LViewElement : (IN extends WViewTransientProperties ? LViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
 
+let canFireActions: boolean = true;
 @RuntimeAccessible
 export class Constructors<T extends DPointerTargetable>{
     private thiss: T;
@@ -341,6 +342,7 @@ export class Constructors<T extends DPointerTargetable>{
     private callbacks: Function[];
     fatherType?: Constructor;
     constructor(t:T, father?: Pointer, persist: boolean = false, fatherType?: Constructor) {
+        persist = persist && canFireActions;
         this.thiss = t;
         this.persist = persist;
         this.callbacks = [];
@@ -351,6 +353,9 @@ export class Constructors<T extends DPointerTargetable>{
         this.fatherType = fatherType;
         if (this.persist) BEGIN()
     }
+
+    static pause(): void { canFireActions = false; }
+    static resume(): void { canFireActions = true; }
     // start(thiss: any): this { this.thiss = thiss; return this; }
     end(simpledatacallback?: (d:T) => void): T {
         if (simpledatacallback) simpledatacallback(this.thiss); // callback for setting primitive types, not pointers not context-dependant values (name being potentially invalid / chosen according to parent)
@@ -392,8 +397,10 @@ export class Constructors<T extends DPointerTargetable>{
             }
         }
 
-        if (this.persist && instanceoff) this.callbacks.push( () => (LPointerTargetable.wrap(thiss) as LObject).instanceof = instanceoff as any )
-        else thiss.instanceof = undefined as any;
+        if (this.persist && instanceoff) this.callbacks.push( () => {
+            (LPointerTargetable.wrap(thiss) as LObject).instanceof = instanceoff as any;
+        })
+        else thiss.instanceof = instanceoff || null;
          //old ver: this.persist && instanceoff && SetFieldAction.new(thiss.id, "instanceof", instanceoff, undefined, true);
         // update father's collections (pointedby's here are set automatically)
         // this.persist && instanceoff && SetFieldAction.new(instanceoff, "instances", thiss.id, '+=', true);
@@ -403,11 +410,16 @@ export class Constructors<T extends DPointerTargetable>{
     DValue(instanceoff?: DValue["instanceof"], val?: DValue["value"], isMirage?: DValue["isMirage"]): this {
         let thiss: DValue = this.thiss as any; thiss.edges = [];
         thiss.value = val || [];
-        this.persist && instanceoff && SetFieldAction.new(thiss.id, "instanceof", instanceoff, undefined, true);
-        // update father's collections (pointedby's here are set automatically)
-        this.persist && instanceoff && SetFieldAction.new(instanceoff as Pointer<DAttribute>, "instances", thiss.id, '+=', true);
-        this.persist && thiss.father && SetFieldAction.new(thiss.father, "features", thiss.id, '+=', true);
+        thiss.instanceof = instanceoff;
         thiss.isMirage = isMirage || false;
+
+        // update father's collections (pointedby's here are set automatically)
+        if (this.persist && instanceoff) {
+            SetFieldAction.new(thiss.id, "instanceof", instanceoff, undefined, true);
+            SetFieldAction.new(instanceoff as Pointer<DAttribute>, "instances", thiss.id, '+=', true);
+        }
+        else thiss.instanceof = instanceoff;
+        this.persist && thiss.father && SetFieldAction.new(thiss.father, "features", thiss.id, '+=', true);
         return this; }
 
     DAnnotation(source?: DAnnotation["source"], details?: DAnnotation["details"]): this {
@@ -459,7 +471,7 @@ export class Constructors<T extends DPointerTargetable>{
 
     DPackage(uri?: DPackage["uri"], prefix?: DPackage["prefix"]): this {
         const thiss: DPackage = this.thiss as any;
-        thiss.uri = uri || 'org.jodel-react.username';
+        thiss.uri = uri || '';// || 'org.jodel-react.username';
         thiss.prefix = prefix || '';
         if (this.persist) {
             // no pointedBy
@@ -482,7 +494,7 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.isMetamodel = isMetamodel || false;
         if (this.persist) {
             if (instanceoff) SetFieldAction.new(instanceoff, "pointedBy", PointedBy.fromID(thiss.id, "instanceof"), '+=');
-            instanceoff && SetFieldAction.new(instanceoff, 'models', thiss.id, '+=', true);
+            // instanceoff && SetFieldAction.new(instanceoff, 'models', thiss.id, '+=', true);
             SetRootFieldAction.new(isMetamodel ? "m2models" : "m1models", thiss.id, "+=", true);
         }
 
@@ -658,6 +670,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         if (father) {
             if (typeof father === "string" || (father as any).className) { // Pointer or D
                 lfather = LPointerTargetable.wrap(father as DModelElement) as LModelElement;
+                if (!lfather) return (typeof startingPrefix === "string" ? startingPrefix : "unnamed_elem"); // can happen during parse when father ptr exist but it's not in store yet. not a prob
                 if (typeof startingPrefix !== "string") {
                     let meta = LPointerTargetable.from(metaptr as Pointer);
                     startingPrefix = startingPrefix(meta as L);
@@ -843,7 +856,6 @@ export class Pointers{
     } // stavolta fai infer so D|l.id
 
 
-    static aaa: undefined extends undefined | LPointerTargetable ? true : false;
     public static from<DX extends DPointerTargetable>(data:DX): DX["id"]; // | {D:any};
     public static from<DX extends DPointerTargetable>(data:DX[]): DX["id"][]; // | {DD:any};
     public static from<LX extends LPointerTargetable>(data:LX): LX["id"]; // | {L:any};
@@ -1136,7 +1148,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
             (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
                 (LOW extends 1 ? DDD : undefined)  //1...1
                 ),
-        INFERRED = {ret: RET, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR},>(ptr: T, state?: IStore)
+        INFERRED = {ret: RET, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR},>(ptr: T | undefined, state?: IStore)
         : RET {
         // return null as any;
         if (Array.isArray(ptr)) return LPointerTargetable.wrapAll(ptr as any, undefined, '', false, state) as any;
@@ -1660,8 +1672,7 @@ export type getWParams<L extends LPointerTargetable, D extends Object> ={
         Property extends "id" ? 'id is read-only' :
             //@ts-ignore
             (L[`set_${Property}`] extends (a:any, b: any, ...b:any)=> any ? // at least 2 params: 1 for val and 1 for Context
-                // damiano todo: if first parameter is Context this should return never. because Context should not be an acceptable set value & it will cause a definition loop because contains a W key
-                // Giordano: add ignore for webpack
+                // if a set_ first parameter is Context it means the set_ is ill-defined, need to change actual method signature.
                 //@ts-ignore
                 Parameters<L[`set_${Property}`]>[0] // if set_X function is defined, get first param
                 //@ts-ignore

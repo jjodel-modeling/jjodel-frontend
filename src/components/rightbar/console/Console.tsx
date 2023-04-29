@@ -27,7 +27,9 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         let output;
         let context = {...this.props, props: this.props}; // makeEvalContext(this.props as any, {} as any);
         try { output = U.evalInContextAndScope(expression || 'undefined', context, context); }
-        catch (e: any) { output = '<span style="color:red">Invalid Syntax!<br></span>' + e.toString(); }
+        catch (e: any) {
+            console.error("console error", e);
+            output = '<span style="color:red">Invalid Syntax!<br></span>' + e.toString(); }
         this.setState({expression, output});
     }
 

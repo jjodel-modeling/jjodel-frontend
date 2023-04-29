@@ -34,8 +34,6 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     myDictValidator.set("DEnumerator", addChildrens("literal"));
     myDictValidator.set("DOperation", addChildrens("parameter", "exception"));
 
-
-    console.log("toolbar", {props, metamodel, isMetamodel, myDictValidator})
     if(isMetamodel) {
         return(<div className={"toolbar"}>
             {myDictValidator.get(lModelElement?.className as string)?.map((item) => {

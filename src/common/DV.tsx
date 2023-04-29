@@ -18,7 +18,7 @@ export class DV {
     public static objectView(): string { return beautify(`<div className={'root object'}>` + DefaultView.object() + '</div>'); }
     public static valueView(): string { return (`<div className={'root value'}>` + DefaultView.value() + '</div>'); }
     public static defaultPackage(): string { return beautify(`<div className={'root package'}>` + DefaultView.defaultPackage() + '</div>'); }
-    public static errorView(msg?:string | JSX.Element): ReactElement { return DefaultView.error(); }
+    public static errorView(publicmsg: string | JSX.Element, debughiddenmsg?:any): ReactElement { console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg}); return DefaultView.error(publicmsg); }
 }
 
 let valuecolormap: GObject = {};
@@ -41,10 +41,13 @@ class DefaultView {
 
     public static model(): string {
         return `<div className={'model-view'}>
-            {this.data.childrens.map((child, index) => {
+             {this.data.packages.map((child, index) => {
                 return <DefaultNode key={index} data={child.id}></DefaultNode>
             })}
-        </div>`;
+            {this.data.allSubObjects.map((child, index) => {
+                return <DefaultNode key={index} data={child.id}></DefaultNode>
+            })}
+        </div>;`;
     }
 
     public static package(): string {
@@ -120,7 +123,7 @@ class DefaultView {
         // todo: testa quado c' solo un valore booleano
         return `<div className={'d-flex value-view'} style={{paddingRight: "6px"}}>
              {this.props.data.instanceof && <label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>}
-             {!this.props.data.instanceof && <Input obj={this.data.id} field={'name'} hidden={true} autosize={true} />}
+             {!this.props.data.instanceof && <Input asLabel={true} obj={this.data.id} field={'name'} hidden={true} autosize={true} />}
             <label className={'d-block ms-auto'} style={{color:` + valuecolormap_str + `[this.props.data.value.type] || "gray"
             }}>: {this.props.data.valuestring()}</label>
         </div>`
@@ -132,7 +135,7 @@ class DefaultView {
         })}`;
     }
 
-    public static error(msg?:string | JSX.Element) {
+    public static error(msg: undefined | string | JSX.Element) {
         return <div className={'w-100 h-100'}>
             <div className={"h-100 round bg-white border border-danger"}>
                 <div className={'text-center text-danger'}>
