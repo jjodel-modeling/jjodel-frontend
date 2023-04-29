@@ -146,7 +146,7 @@ export class EcoreParser{
     static supportedEcoreVersions = ["http://www.eclipse.org/emf/2002/Ecore"];
     static prefix:string = '@';
 
-    static parse(ecorejson: GObject | string | null, isMetamodel: boolean, filename: string | undefined, persist: boolean = false): DModelElement[]{
+    static parse(ecorejson: GObject | string | null, isMetamodel: boolean, filename: string | undefined, persist: boolean = true): DModelElement[]{
         if (!ecorejson) return [];
         let parsedjson: GObject;
         if (typeof ecorejson === "string") try { parsedjson = JSON.parse(ecorejson); } catch(e) { windoww.temp = ecorejson; Log.exx("error while parsing json:", e, ecorejson.substring(0, 1000)); throw e; }
@@ -162,15 +162,20 @@ export class EcoreParser{
             this.LinkAllNamesToIDs(parsedElements);
             this.fixNamingConflicts(parsedElements);
         Constructors.resume();
-        if (persist) { CreateElementAction.newBatch(parsedElements); }
+        if (persist) {
+            CreateElementAction.newBatch(parsedElements);
+        }
         // update m1 object pointers (need them to be persistent to navigate .fathers and get ecore pointer strings using LObject)
         setTimeout(() => this.fixObjectPointers(parsedElements), 1);
 
         windoww.tmpparse = () => LPointerTargetable.wrapAll(parsedElements);
 
         this.tempfix_untilopennewtabisdone(parsedElements, isMetamodel);
+
+        console.log('parsedElem', parsedElements)
         return parsedElements;
     }
+
     private static fixObjectPointers(parsedElements: DModelElement[]): void {
         let dobjects: DObject[] = parsedElements.filter(e=>e.className === DObject.name) as any[];
         let values: DValue[] = parsedElements.filter(e=>e.className === DValue.name) as any[];

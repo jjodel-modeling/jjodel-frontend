@@ -103,6 +103,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         const oldProps = this.props;
         // if(oldProps.selected !== newProps.selected) { this.moveOnStructure = true; return true; }
         if (oldProps.views !== newProps.views) { this.moveOnViews = true; return true; }
+
         const deltaM2 = U.arrayDifference(oldProps.m2, newProps.m2);
         if (deltaM2.added.length != 0) {
             const addedModels: LModel[] = LModel.wrapAll(deltaM2.added);
@@ -121,6 +122,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             }
             return true;
         }
+
         return false;
     }
 

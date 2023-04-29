@@ -42,9 +42,11 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    const models: LModel[] =
-    ret.metamodels = LModel.fromPointer(state.m2models);
-    ret.models = LModel.fromPointer(state.m1models);
+    // ret.metamodels = LModel.fromPointer(state.m2models);
+    // ret.models = LModel.fromPointer(state.m1models);
+    const models: LModel[] = LModel.fromPointer(state.models);
+    ret.metamodels = models.filter((m) => {return m.isMetamodel});
+    ret.models = models.filter((m) => {return !m.isMetamodel});
     return ret;
 }
 

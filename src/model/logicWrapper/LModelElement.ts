@@ -1820,61 +1820,13 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
     public addAttribute(name?: DAttribute["name"], type?: DAttribute["type"]): DAttribute { return this.cannotCall("addAttribute"); }
     protected get_addAttribute(context: Context): this["addAttribute"] {
-        const dClass: DClass = {...context.data} as DClass;
-        const lString: LClassifier = LPointerTargetable.from(Selectors.getFirstPrimitiveTypes());
-        return (name?: DAttribute["name"], type?: DAttribute["type"]) => {
-            const dAttribute = DAttribute.new(name, type, context.data.id, true);
-            const targets: Set<DClass> = new Set();
-            targets.add(dClass);
-            for (let target of targets) {
-                for (let ext of target.extendedBy) targets.add(DClass.fromPointer(ext));
-            }
-            for (let target of targets) {
-                for (let instance of target.instances) {
-                    const dValue: DValue = DValue.new(dAttribute.name);
-                    const dObject: DObject = DObject.fromPointer(instance);
-                    CreateElementAction.new(dValue);
-                    BEGIN()
-                    todo fix
-                    SetFieldAction.new(dValue, 'value', U.initializeValue(lString.id), '+=', false);
-                    SetFieldAction.new(dValue, 'father', dObject.id, '', true);
-                    SetFieldAction.new(dValue, 'instanceof', dAttribute.id, '', true);
-                    SetFieldAction.new(dAttribute, 'instances', dValue.id, '+=', true);
-                    SetFieldAction.new(dObject, 'features', dValue.id, '+=', true);
-                    END()
-                }
-            }
-            return dAttribute;
-        }
+        return (name?: DAttribute["name"], type?: DAttribute["type"]) => DAttribute.new(name, type, context.data.id, true);
+
     }
 
     public addReference(name?: DReference["name"], type?: DReference["type"]): DReference { return this.cannotCall("addReference"); }
     protected get_addReference(context: Context): this["addReference"] {
-        const dClass: DClass = {...context.data} as DClass;
-        return (name?: DReference["name"], type?: DReference["type"]) => {
-            const dReference = DReference.new(name, type, context.data.id, true);
-            const targets: Set<DClass> = new Set(); targets.add(dClass);
-            for(let target of targets) {
-                for(let ext of target.extendedBy) targets.add(DClass.fromPointer(ext));
-            }
-            for(let target of targets) {
-                for (let instance of target.instances) {
-                    const dValue: DValue = DValue.new(dReference.name);
-                    const dObject: DObject = DObject.fromPointer(instance);
-                    CreateElementAction.new(dValue);
-                    BEGIN()
-                    todo fix
-                    SetFieldAction.new(dValue, 'value', U.initializeValue(dReference.type), '+=', false);
-                    SetFieldAction.new(dValue, 'father', dObject.id, '', true);
-                    SetFieldAction.new(dValue, 'instanceof', dReference.id, '', true);
-                    SetFieldAction.new(dReference, 'instances', dValue.id, '+=', true);
-                    SetFieldAction.new(dObject, 'features', dValue.id, '+=', true);
-                    END()
-                }
-            }
-            return dReference;
-        }
-
+        return (name?: DReference["name"], type?: DReference["type"]) => DReference.new(name, type, context.data.id, true);
     }
 
     public addOperation(name?: DOperation["name"], type?: DOperation["type"]): DOperation { return this.cannotCall("addOperation"); }
@@ -3197,7 +3149,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     public addObject(instanceoff?:DObject["instanceof"], name?: DObject["name"]): DObject { return this.cannotCall("addObject"); }
     protected get_addObject(context: Context): this["addObject"] {
         return (instanceoff?:DObject["instanceof"], name?: DObject["name"]) =>
-            DObject.new(instanceoff, context.data.id, DModel, undefined, true); }
+            DObject.new(instanceoff, context.data.id, DModel, undefined, true);
+    }
 
     protected get_models(context: Context): LModel[] {
         return LModel.fromPointer(context.data.models);
