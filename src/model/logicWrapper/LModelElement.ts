@@ -37,7 +37,7 @@ import {
     TargetableProxyHandler,
     U,
     unArr,
-    WPointerTargetable, DUser
+    WPointerTargetable, DUser, DocString
 } from "../../joiner";
 import {Json, ObjectWithoutPointers, PrimitiveType} from "../../joiner/types";
 
@@ -1273,10 +1273,6 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
             return LPointerTargetable.from(pointer)
         });
     }
-    /**
-     * damiano todo: riscrivere tutti i set_subelements (settare parent e father che sono derivati e mai setatti direttamente)
-     * e tutti i add_element (per pointedby problem qunado aggiornati fuori dallo stato)
-     * */
     protected set_classifiers(val: PackArr<this["classifiers"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.classifiers;
@@ -1705,7 +1701,7 @@ export class DClass extends DPointerTargetable { // extends DClassifier
     partialdefaultname!: string;
 
     // for m1:
-    hideExcessFeatures: boolean = true; // damiano: se attivo questo e creo una DClass di sistema senza nessuna feature e di nome Object, ho creato lo schema di un oggetto schema-less a cui tutti sono conformi
+    // hideExcessFeatures: boolean = true; // isn't it like partial?? // old comment: se attivo questo e creo una DClass di sistema senza nessuna feature e di nome Object, ho creato lo schema di un oggetto schema-less a cui tutti sono conformi
 
     public static new(name?: DNamedElement["name"], isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: DClass["isPrimitive"] = false, partial?: DClass["partial"],
                       partialDefaultName?: DClass["partialdefaultname"], father?: Pointer, persist: boolean = true): DClass {
@@ -1804,7 +1800,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return (deep: boolean = false) => {
             BEGIN()
             let de: D = context.proxyObject.father.addClass(context.data.name, context.data.interface, context.data.abstract, context.data.isPrimitive) as D;
-            de.hideExcessFeatures = context.data.hideExcessFeatures;
+            // de.hideExcessFeatures = context.data.hideExcessFeatures;
             let le: this = LPointerTargetable.fromD(de);
             let we: WClass = le as any;
             we.defaultValue = context.data.defaultValue;
@@ -2154,7 +2150,6 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             SetFieldAction.new(dObject, 'instanceof', dClass.id, '', true);
             SetFieldAction.new(dClass, 'instances', dObject.id, '+=', true);
 
-            // damiano: weird transaction placement. double-check it
             let father: LClass|undefined = lClass;
             while(father) {
                 for(let dFeature of [...father.attributes, ...father.references]) {
@@ -3462,9 +3457,9 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     // operations!: LOperation[];
 
     // personal
-    deep_subobjects!: LObject[]; // damiano: itera features (lvalue[]) deep e vitando di inserire doppioni (salva una mappatura di di già aggiunti e skip se ricompaiono)
+    deep_subobjects!: LObject[]; // todo: itera features (lvalue[]) deep e vitando di inserire doppioni (salva una mappatura di di già aggiunti e skip se ricompaiono)
     subobjects!: LObject[];
-    // damiano: + tutte le funzioni di comodità navigazionale del modello, trattarlo un pò come se fosse un modello (e quasi può esserlo)
+    // + tutte le funzioni di comodità navigazionale del modello, trattarlo un pò come se fosse un modello (e quasi può esserlo)
     instanceof!: LClass;
     features!: LValue[];
     referencedBy!: LObject[];
@@ -3479,11 +3474,28 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
     protected get_allchildrens(context: Context): this["childrens"] { return super.get_childrens(context); }
 
-    protected get_childrens(context: Context): this["childrens"] {
+    protected get_childrens(context: Context, sort: boolean = true): this["childrens"] {
         let childs: LValue[] = super.get_childrens(context);
-        if (!context.data.instanceof || context.proxyObject.instanceof.partial) return childs;
-        let conformchildrens: Pointer[] = context.proxyObject.instanceof.childrens.map(c=>c.id);
-        return childs.filter( (c) => (c.instanceof?.id) && conformchildrens.includes(c.instanceof?.id) );
+        let meta: LClass = context.proxyObject.instanceof;
+        // if (!sort && (!meta || meta.partial)) return childs;
+        let conformchildrens: undefined | Pointer[] = meta && !meta.partial ? meta.childrens.map(c=>c.id) : undefined;
+        if (!sort) {
+            console.log("return get features:", {context, meta, childs, conformchildrens, ret:childs.filter((c) => (c.instanceof?.id) && conformchildrens!.includes(c.instanceof?.id))});
+            if (!conformchildrens) return childs;
+            return childs.filter((c) => (c.instanceof?.id) && conformchildrens!.includes(c.instanceof?.id));
+        }
+
+        let bymetaparent: Dictionary<DocString<"metaparent pointer">, LValue[]> = {};
+        for (let v of childs) {
+            let vmeta = v.instanceof;
+            console.log("get features filtering:", {context, meta, vmeta, v, childs, conformchildrens});
+
+            if (conformchildrens && (!vmeta || !conformchildrens.includes(vmeta.id))) continue;
+            let vmetaid: string = vmeta?.id as string; // undef as key is fine even if compiler complains, so i cast it
+            if (!bymetaparent[vmetaid]) bymetaparent[vmetaid] = [v]; else bymetaparent[vmetaid as any].push(v);
+        }
+        console.log("return get features:", {context, meta, childs, conformchildrens, ret:Object.values(bymetaparent).flat()});
+        return Object.values(bymetaparent).flat();
     }
 
 
@@ -3528,7 +3540,6 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         }));
         return targeting; }
 
-    // damiano: do get childrens id, verifica che lobject.childrens funzioni
     protected get_isRoot(context: Context): LObject["isRoot"] { return context.proxyObject.father.className === DModel.name; }
     protected set_isRoot(val: never, context: Context): boolean { return this.wrongAccessMessage("isRoot cannot be set directly, change father element instead."); }
 
@@ -3549,12 +3560,6 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
             } return '';
         }
     }
-    /*
-    * damiano todo:
-    *          quando setti una ref containment, gli cambi il father.
-    * perchè i value di ref iniziano con valore settato a [null]? fallo partire con []
-    * values selector is bugged for lval. maybe uses instanceof.name as key but it's not unique. use pointer as key ad name as label
-    * */
 
     protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
         loopDetectionObj[context.data.id] = context.data;

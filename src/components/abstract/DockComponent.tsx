@@ -47,8 +47,7 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
 
 
     init() {
-        // if (this.model?.id === this.props.model.id) return; damiano: this was fixing load
-        this.forcerebuildingdockstmp++;
+        this.forcerebuildingdockstmp++; // todo: this and next line might be removed now, verify
         windoww.reloadDock = () => { this.forcerebuildingdockstmp++; this.forceUpdate(); } // for debugging
         // console.log("for load - fixed model id:", this.model?.id + "-->" + this.props.model?.id);
         this.initialized = true;
@@ -99,7 +98,6 @@ class DockComponent extends PureComponent<AllProps, ThisState> {
     }
 
     render(): ReactNode {
-        // if (!this.initialized && this.props.model) this.init(); damiano: this was fixing load
         if (!this.initialized) this.init();
         else {
             this.init(); // fix load crash

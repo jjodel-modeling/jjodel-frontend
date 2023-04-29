@@ -1672,8 +1672,7 @@ export type getWParams<L extends LPointerTargetable, D extends Object> ={
         Property extends "id" ? 'id is read-only' :
             //@ts-ignore
             (L[`set_${Property}`] extends (a:any, b: any, ...b:any)=> any ? // at least 2 params: 1 for val and 1 for Context
-                // damiano todo: if first parameter is Context this should return never. because Context should not be an acceptable set value & it will cause a definition loop because contains a W key
-                // Giordano: add ignore for webpack
+                // if a set_ first parameter is Context it means the set_ is ill-defined, need to change actual method signature.
                 //@ts-ignore
                 Parameters<L[`set_${Property}`]>[0] // if set_X function is defined, get first param
                 //@ts-ignore

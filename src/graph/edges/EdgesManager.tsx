@@ -28,6 +28,7 @@ function EdgesManagerComponent(props: AllProps) {
     const objects = model.objects;
     const _values: IValueEdge[] = [];
     for(let object of objects) {
+        console.log("features", object.features, object);
         for(let feature of object.features) {
             const instanceOf = feature.instanceof;
             if(instanceOf?.className === 'DReference') {
