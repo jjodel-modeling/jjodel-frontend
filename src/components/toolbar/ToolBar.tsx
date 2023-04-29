@@ -54,7 +54,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
                     +{lClass.name}
                 </div>
             })}
-            <div key={"Object"} className={"toolbar-item class"} onClick={() => { model.addObject(); }}>+Object</div>
+            {/*<div key={"Object"} className={"toolbar-item class"} onClick={() => { model.addObject(); }}>+Object</div>*/}
         </div>);
     }
 

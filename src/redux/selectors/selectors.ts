@@ -221,16 +221,14 @@ export class Selectors{
 
     static getAllMetamodels(): LModel[] {
         const state: IStore = store.getState();
-        const dModels = Object.values((state).models);
-        const lModels: LModel[] = LModel.fromPointer(dModels);
-        return lModels.filter((m) => {return m.isMetamodel})
+        const dModels = Object.values((state).m2models);
+        return LModel.fromPointer(dModels);
     }
 
     static getAllModels(): LModel[] {
         const state: IStore = store.getState();
-        const dModels = Object.values((state).models);
-        const lModels: LModel[] = LModel.fromPointer(dModels);
-        return lModels.filter((m) => {return !m.isMetamodel})
+        const dModels = Object.values((state).m1models);
+        return LModel.fromPointer(dModels);
     }
 
     //Giordano: end

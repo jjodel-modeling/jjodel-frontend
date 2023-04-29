@@ -8,6 +8,7 @@ import toast, {Toaster} from 'react-hot-toast';
 function InputComponent(props: AllProps) {
     const data = props.data;
     const field = props.field;
+    if(!data) return(<></>);
     const value = (data[field] !== undefined) ? data[field] : 'undefined';
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
@@ -38,11 +39,11 @@ function InputComponent(props: AllProps) {
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
     return(<div style={{...{display: (jsxLabel || label) ? 'flex' : 'block', cursor: (tooltip) ? 'help' : 'auto'}, ...style}}
-                className={'p-1 ' + className}  onClick={() => { if(tooltip) notify(); }}>
-        {(label && !jsxLabel) && <label className={'my-auto'}>
+                className={'p-1 ' + className}>
+        {(label && !jsxLabel) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
             {label}
         </label>}
-        {(jsxLabel && !label) && <label className={'my-auto'}>
+        {(jsxLabel && !label) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
             {jsxLabel}
         </label>}
         { autosize ? <div className={ autosize ? "autosize-input-container" : ""} data-value={value}>{input}</div> : input}

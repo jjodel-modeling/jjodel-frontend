@@ -135,6 +135,9 @@ export class IStore {
     viewpoint: Pointer<DViewPoint, 1, 1, LViewPoint> = '';
     viewpoints: Pointer<DViewPoint, 0, 'N', LViewPoint> = [];
 
+    m2models: Pointer<DModel, 0, 'N', LModel> = [];
+    m1models: Pointer<DModel, 0, 'N', LModel> = [];
+
 
     constructor() {
         // todo: this must become a pointer to idlookup and fire a CreateNewElementAction

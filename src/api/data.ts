@@ -51,7 +51,7 @@ import {
     Selectors,
     GObject,
     Dictionary,
-    PointedBy, LPointerTargetable, windoww, SetRootFieldAction
+    PointedBy, LPointerTargetable, windoww, SetRootFieldAction, END, BEGIN
 
 } from "../joiner";
 
@@ -142,7 +142,7 @@ export class LocalStorage extends IStorage{
 
 }
 
-export class EcoreParser{
+export class EcoreParser {
     static supportedEcoreVersions = ["http://www.eclipse.org/emf/2002/Ecore"];
     static prefix:string = '@';
     static parse(ecorejson: GObject | string | null, isMetamodel: boolean, persist: boolean = false): DModelElement[]{
@@ -157,9 +157,7 @@ export class EcoreParser{
         console.warn("parse.result D", parsedElements);
         this.LinkAllNamesToIDs(parsedElements);
         this.fixNamingConflicts(parsedElements);
-        if (persist) {
-            CreateElementAction.newBatch(parsedElements);
-        }
+        if (persist) CreateElementAction.newBatch(parsedElements);
         windoww.tmpparse = () => LPointerTargetable.wrapAll(parsedElements);
 
         this.tempfix_untilopennewtabisdone(parsedElements);

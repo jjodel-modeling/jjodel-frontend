@@ -99,7 +99,7 @@ class DefaultView {
     }
 
     public static object(): string {
-        return `<div className={'round bg-white object-view'}>
+        return `<div className={'round bg-white class-view'}>
             <label className={'ms-1'}>
                 <Input jsxLabel={<b className={'class-name'}>{this.data.instanceof ? this.data.instanceof.name : "Object"}:</b>} 
                    obj={this.data.id} field={'name'} hidden={true} autosize={true}/>
@@ -110,7 +110,9 @@ class DefaultView {
                     return <DefaultNode key={index} data={child.id}></DefaultNode>
                 })}
             </div>
-            { !this.data.partial ? null : <div className={"add features"}><button className="w-100 p-0 d-block" onClick={()=>{this.data.addValue()}}>+feature</button></div> }
+            {/*
+                !this.data.partial ? null : <div className={"add features"}><button className="w-100 p-0 d-block" onClick={()=>{this.data.addValue()}}>+feature</button></div> 
+            */}
         </div>`;
     }
 

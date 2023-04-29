@@ -47,13 +47,17 @@ export class TabDataMaker {
 
 interface ThisState {}
 class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
-    private dock: DockLayout | null;
-    // private metamodel: AllProps["metamodel"];
+    private dock: DockLayout|null;
+    private dockPanel!: PanelData;
+    private dockContext!: DockContext;
+
     private groups = {
         'group1': {
             floatable: true,
             maximizable: true,
             panelExtra: (panelData: PanelData, context: DockContext) => {
+                this.dockPanel = panelData;
+                this.dockContext = context;
                 return (<div className={'my-auto'}>
                     <button className={'btn btn-primary me-1'}
                                 onClick={(evt) => this.open(evt, context, panelData)}>
@@ -89,8 +93,6 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     private views = this.props.views;
     private moveOnStructure = false;
     private moveOnViews = false;
-    private addedModel: LModel[] = [];
-    private removedModel: LModel[] = [];
 
     constructor(props: AllProps, context: any) {
         super(props, context);
@@ -101,17 +103,24 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         const oldProps = this.props;
         // if(oldProps.selected !== newProps.selected) { this.moveOnStructure = true; return true; }
         if (oldProps.views !== newProps.views) { this.moveOnViews = true; return true; }
-        let diff = U.arrayDifference(newProps.m1.map(l=>l.id), oldProps.m1.map(l=> l.id));
-        if (diff.added.length != 0) {
-            this.addedModel = LPointerTargetable.wrapAll(diff.added);
-            // this.addMetamodel(undefined, this.dock?.context, this.groups.group1, module)
-            // this.moveOnStructure = true;
-            return true; } else this.addedModel = [];
-        if (diff.removed.length != 0 ){
-            this.removedModel = LPointerTargetable.wrapAll(diff.removed);
+        const deltaM2 = U.arrayDifference(oldProps.m2, newProps.m2);
+        if (deltaM2.added.length != 0) {
+            const addedModels: LModel[] = LModel.wrapAll(deltaM2.added);
+            for(let model of addedModels) {
+                this.addMetamodel(undefined, this.dockContext, this.dockPanel, model.__raw);
+            }
             return true;
-            // todo: check if correct
-        }else this.removedModel = [];
+        }
+
+        const deltaM1 = U.arrayDifference(oldProps.m1, newProps.m1);
+        if (deltaM1.added.length != 0) {
+            const addedModels: LModel[] = LModel.wrapAll(deltaM1.added);
+            for(let model of addedModels) {
+                const modelTab = TabDataMaker.model(model);
+                this.dockContext.dockMove(modelTab, this.dockPanel, 'middle');
+            }
+            return true;
+        }
         return false;
     }
 
@@ -124,9 +133,6 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             if(this.moveOnStructure) {
                 this.dock.dockMove(this.structureEditor, this.dock.find('1'), 'middle');
                 this.moveOnStructure = false;
-            }
-            if (this.addedModel.length) {
-                this.dock.dockMove(this.structureEditor, this.dock.find('1'), 'middle');
             }
         }
     }
@@ -169,7 +175,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         });
     }
 
-    addMetamodel(evt: undefined | React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData, model?: DModel) {
+    addMetamodel(evt: undefined|React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData, model?: DModel) {
         let name = 'metamodel_' + 0;
         let names: (string)[] = Selectors.getAllMetamodels().map(m => m.name);
         name = U.increaseEndingNumber(name, false, false, (newName) => names.indexOf(newName) >= 0)
@@ -193,8 +199,8 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         const result = Swal.fire({
             html: html, showCloseButton: true, confirmButtonText: 'CREATE',
             preConfirm: () => {
-                const model: HTMLElement|null = document.getElementById('select-add-model');
-                return (model) ? (model as HTMLSelectElement).value : null;
+                const metamodel: HTMLElement|null = document.getElementById('select-add-model');
+                return (metamodel) ? (metamodel as HTMLSelectElement).value : null;
             },
             backdrop: false
         });
@@ -206,7 +212,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
                 let modelNames: (string)[] = metamodel.models.map(m => m.name);
                 name = U.increaseEndingNumber(name, false, false, (newName) => modelNames.indexOf(newName) >= 0)
                 BEGIN()
-                const model: DModel = DModel.new(name, mmid, false, true);
+                const model = DModel.new(name, mmid, false, true);
                 DGraph.new(model.id, undefined, undefined);
                 END()
                 // model.isMetamodel = false;
@@ -226,7 +232,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         layout.dockbox.children.push({tabs: [infoTab]});
         layout.dockbox.children.push({
             tabs: [
-                this.persistance,
+                // this.persistance,
                 this.structureEditor,
                 this.treeEditor,
                 this.viewsEditor,
@@ -246,8 +252,8 @@ interface OwnProps { }
 interface StateProps {
     selected: Pointer<DModelElement, 0, 1, LModelElement>;
     views: number;
-    m1: LModel[];
-    m2: LModel[];
+    m2: Pointer<DModel, 0, 'N', LModel>;
+    m1: Pointer<DModel, 0, 'N', LModel>;
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -258,8 +264,8 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const selected = state._lastSelected?.modelElement;
     if(selected) ret.selected = selected;
     ret.views = state.viewelements.length;
-    ret.m2 = LPointerTargetable.wrapAll((state as any).m2models || []);
-    ret.m1 = LPointerTargetable.wrapAll((state as any).m1models || []);
+    ret.m2 = state.m2models;
+    ret.m1 = state.m1models;
     return ret;
 }
 
