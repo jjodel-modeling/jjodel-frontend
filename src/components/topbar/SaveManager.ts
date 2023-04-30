@@ -55,7 +55,7 @@ export class SaveManager {
         }
     }
     public static importEcore_click0(fromXML: boolean = false, fromfile: boolean = true): void {
-        const extensions: string[] = []; // [".ecore"]; // Selectors.getActiveModel().isM1() ? '.' + Selectors.getActiveModel().metamodel.fullname() : '.ecore';
+        const extensions: string[] = [(fromXML ? "*.xml.*" : "*.json.*")]; // [".ecore"]; // Selectors.getActiveModel().isM1() ? '.' + Selectors.getActiveModel().metamodel.fullname() : '.ecore';
         let filestring: string, jsonstring: string, jsonobj: GObject = undefined as any;
         console.log("importEcore: prefromfile");
         if (!fromfile) {

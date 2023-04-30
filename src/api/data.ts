@@ -385,7 +385,7 @@ export class EcoreParser{
             let allpkgs: LPackage[] = Selectors.getAll(DPackage, undefined, undefined, true, true);
             let matchpkg: LPackage[] = allpkgs.filter( (d) => d.uri === ns);
             meta = matchpkg[0]?.model;
-            Log.exDev(!meta, "metamodel not found: ", {ns, json, filename, allmodels, allpkgs, matchpkg}) // todo: after tests remove this check and allow shapeless models.
+            // Log.exDev(!meta, "metamodel not found: ", {ns, json, filename, allmodels, allpkgs, matchpkg}) // todo: after tests remove this check and allow shapeless models.
         }
 
         let modelname = '';
