@@ -113,9 +113,6 @@ class DefaultView {
                     return <DefaultNode key={index} data={child.id}></DefaultNode>
                 })}
             </div>
-            {/*
-                !this.data.partial ? null : <div className={"add features"}><button className="w-100 p-0 d-block" onClick={()=>{this.data.addValue()}}>+feature</button></div> 
-            */}
         </div>`;
     }
 

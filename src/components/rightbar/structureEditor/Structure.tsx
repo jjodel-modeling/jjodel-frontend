@@ -41,6 +41,7 @@ export default class Structure {
             {Structure.BaseEditor(lClass)}
             <Input obj={lClass} field={"abstract"} label={"IsAbstract"} type={"checkbox"} tooltip={"If set to True, the generated implementation class will have the abstract keyword"} />
             <Input obj={lClass} field={"interface"} label={"IsInterface"} type={"checkbox"} tooltip={"If set to True, only the java interface will be generated. There will be no corresponding implementation class and no create method in the factory"} />
+            <Input obj={lClass} field={"partial"} label={"IsPartial"} type={"checkbox"} tooltip={"If set to True, the class will be partial."} />
         </>);
     }
     private static DataTypeEditor(lDataType: LModelElement): ReactNode {
@@ -145,14 +146,24 @@ export default class Structure {
             {object.instanceof && conform && <label>This instance is <b className={'text-success'}>CONFORM</b> to {object.instanceof.name}</label>}
             {object.instanceof && !conform && <label>This instance is <b className={'text-danger'}>NOT CONFORM</b> to {object.instanceof.name}</label>}
             {!object.instanceof && <label>This instance is <b className={'text-warning'}>SHAPELESS</b></label>}
-            {/*this.forceConform(object)*/}
+            {!object.partial ?
+                null :
+                <div className={"d-flex p-1"}>
+                    <label className={'my-auto'}>Features</label>
+                    <button className={'btn btn-primary ms-auto'} onClick={()=>{object.addValue()}}>
+                        <i className={'p-1 bi bi-plus'}></i>
+                    </button>
+                </div>
+            }
+            {this.forceConform(object)}
         </div>);
     }
     public static forceConform(me: LObject) {
         let mm: LModel = Selectors.getLastSelectedModel().m2 as LModel; // LPointerTargetable.fromPointer(store.getState().metamodel as any);
 
-        return <div>
-            <select onChange={ (event)=>{
+        return <div className={'d-flex p-1'}>
+            <label className={'my-auto'}>Force Type</label>
+            <select className={'my-auto ms-auto select'} onChange={ (event)=>{
                 (window as any).debugmm = mm;
                 (window as any).debugm = me;
                 me.instanceof = event.target.value === "undefined" ? undefined : event.target.value as any;

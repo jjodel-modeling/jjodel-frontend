@@ -1752,6 +1752,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     attributes!: LAttribute[];
     referencedBy!: LReference[];
     extends!: LClass[];
+    extendsChain!: LClass[];  // list of all super classes (father, father of father, ...)
     extendedBy!: LClass[];
     nodes!: LGraphElement[]; // ipotesi, non so se tenerlo
 
@@ -1761,14 +1762,86 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     isPrimitive!: boolean;
     isClass!: boolean; // false if it's primitive type
     isEnum!: false;
-    implements: Pointer<DClass, 0, 'N', LClass> = [];
+    implements: Pointer<DClass, 0, 'N', LClass> = [];  //todo: interface
     implementedBy: Pointer<DClass, 0, 'N', LClass> = [];
+
+    ownAttributes!: LAttribute[];
+    ownReferences!: LReference[];
+    ownOperations!: LOperation[];
+    ownChildren!: (LStructuralFeature|LOperation)[];
+
+    inheritedAttributes!: LAttribute[];
+    inheritedReferences!: LReference[];
+    inheritedOperations!: LOperation[];
+    inheritedChildren!: (LStructuralFeature|LOperation)[];
+
+    allAttributes!: LAttribute[];
+    allReferences!: LReference[];
+    allOperations!: LOperation[];
+    allChildren!: (LStructuralFeature|LOperation)[];
+
+
 
     // utilities to go down in the tree (plural names)
     exceptions!: LClassifier[] | null;
     parameters!: LParameter[] | null;
     // [`@${string}`]: LModelElement; todo: try to put it
 
+    protected get_ownAttributes(context: Context): this['ownAttributes'] {
+        return LAttribute.fromPointer(context.data.attributes);
+    }
+    protected get_ownReferences(context: Context): this['ownReferences'] {
+        return LReference.fromPointer(context.data.references);
+    }
+    protected get_ownOperations(context: Context): this['ownOperations'] {
+        return LOperation.fromPointer(context.data.operations);
+    }
+    protected get_ownChildren(context: Context): this['ownChildren'] {
+        return U.arrayMergeInPlace<any>(this.get_ownAttributes(context), this.get_ownReferences(context),
+            this.get_ownOperations(context));
+    }
+
+    private get_extendsChain(context: Context): this['extendsChain'] {
+        let targets: LClass[] = LClass.fromArr(context.data.extends);
+        let alreadyParsed: Dictionary<Pointer, LClass> = {};
+        while(targets.length) {
+            let nextTargets = [];
+            for(let target of targets){
+                if(alreadyParsed[target.id]) continue;
+                alreadyParsed[target.id] = target;
+                for(let father of target.extends) nextTargets.push(father);
+            }
+            targets = nextTargets;
+        }
+        return [...new Set<LClass>(Object.values(alreadyParsed))];
+    }
+
+    protected get_inheritedAttributes(context: Context): this['inheritedAttributes'] {
+        return this.get_extendsChain(context).flatMap((superClass) => superClass.ownAttributes);
+    }
+    protected get_inheritedReferences(context: Context): this['inheritedReferences'] {
+        return this.get_extendsChain(context).flatMap((superClass) => superClass.ownReferences);
+    }
+    protected get_inheritedOperations(context: Context): this['inheritedOperations'] {
+        return this.get_extendsChain(context).flatMap((superClass) => superClass.ownOperations);
+    }
+    protected get_inheritedChildren(context: Context): this['inheritedChildren'] {
+        return U.arrayMergeInPlace<any>(this.get_inheritedAttributes(context), this.get_inheritedReferences(context),
+            this.get_inheritedOperations(context));
+    }
+
+    protected get_allAttributes(context: Context): this['allAttributes'] {
+        return U.arrayMergeInPlace<any>(this.get_ownAttributes(context), this.get_inheritedAttributes(context));
+    }
+    protected get_allReferences(context: Context): this['allReferences'] {
+        return U.arrayMergeInPlace<any>(this.get_ownReferences(context), this.get_inheritedReferences(context));
+    }
+    protected get_allOperations(context: Context): this['allOperations'] {
+        return U.arrayMergeInPlace<any>(this.get_ownOperations(context), this.get_inheritedOperations(context));
+    }
+    protected get_allChildren(context: Context): this['allChildren'] {
+        return U.arrayMergeInPlace<any>(this.get_ownChildren(context), this.get_inheritedChildren(context));
+    }
 
     protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
         loopDetectionObj[context.data.id] = context.data;
@@ -1811,7 +1884,10 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
 
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DStructuralFeature | DOperation, 1, 'N'> {
-        return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DStructuralFeature, 1, 'N'>, ...context.data.attributes, ...context.data.references, ...context.data.operations]; }
+        return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DStructuralFeature, 1, 'N'>, ...context.data.attributes, ...context.data.references, ...context.data.operations];
+    }
+
+
 
     protected set_partial(val: D["partial"], context: Context): boolean { return SetFieldAction.new(context.data.id, "partial", val); }
     protected get_partial(context: Context): D["partial"] { return context.data.partial; }
@@ -3150,7 +3226,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     protected get_addObject(context: Context): this["addObject"] {
         return (instanceoff?:DObject["instanceof"], name?: DObject["name"]) => {
             const dObject = DObject.new(instanceoff, context.data.id, DModel, undefined, true);
-
+            /*
             if(!instanceoff) return dObject;
             let father: LClass|undefined = LClass.fromPointer(instanceoff)?.extends?.[0];
             while(father) {
@@ -3158,6 +3234,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
                     DValue.new(lFeature.name, lFeature.id, undefined, dObject.id);
                 father = (father.extends.length > 0) ? father.extends[0] : undefined;
             }
+            */
             return dObject;
         }
     }
@@ -3490,7 +3567,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         let childs: LValue[] = super.get_childrens(context);
         let meta: LClass = context.proxyObject.instanceof;
         // if (!sort && (!meta || meta.partial)) return childs;
-        let conformchildrens: undefined | Pointer[] = meta && !meta.partial ? meta.childrens.map(c=>c.id) : undefined;
+        let conformchildrens: undefined | Pointer[] = meta && !meta.partial ? meta.allChildren.map(c => c.id) : undefined;
         if (!sort) {
             console.log("return get features:", {context, meta, childs, conformchildrens, ret:childs.filter((c) => (c.instanceof?.id) && conformchildrens!.includes(c.instanceof?.id))});
             if (!conformchildrens) return childs;
@@ -3638,8 +3715,8 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     private _forceConformity(context: Context, meta: D["instanceof"]): void {
         let lmeta = meta && LPointerTargetable.wrap(meta) as this["instanceof"];
         if (!lmeta) return;
-        let attrs = lmeta.attributes;
-        let refs = lmeta.references;
+        let attrs = lmeta.allAttributes;
+        let refs = lmeta.allReferences;
         let values = context.proxyObject.allchildrens;
         let idmap: Dictionary<string, LAttribute | LReference> = {};
         for (let a of attrs) { idmap[a.id] = a; }

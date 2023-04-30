@@ -382,7 +382,7 @@ export class Constructors<T extends DPointerTargetable>{
         let alreadyParsed: Dictionary<Pointer, DClass> = {};
         while(targets.length) {
             let nextTargets = [];
-            for (let target of targets ){
+            for (let target of targets) {
                 if (alreadyParsed[target.id]) continue;
                 alreadyParsed[target.id] = target;
                 for(let ext of target.extendedBy) nextTargets.push(_DClass.fromPointer(ext));
