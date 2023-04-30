@@ -341,7 +341,7 @@ export class Constructors<T extends DPointerTargetable>{
     private persist: boolean;
     private callbacks: Function[];
     fatherType?: Constructor;
-    constructor(t:T, father?: Pointer, persist: boolean = false, fatherType?: Constructor) {
+    constructor(t:T, father?: Pointer, persist: boolean = true, fatherType?: Constructor) {
         persist = persist && canFireActions;
         this.thiss = t;
         this.persist = persist;
@@ -359,13 +359,11 @@ export class Constructors<T extends DPointerTargetable>{
     // start(thiss: any): this { this.thiss = thiss; return this; }
     end(simpledatacallback?: (d:T) => void): T {
         if (simpledatacallback) simpledatacallback(this.thiss); // callback for setting primitive types, not pointers not context-dependant values (name being potentially invalid / chosen according to parent)
-        if (this.persist) {
-            let cea = CreateElementAction.new(this.thiss, true);
-            END([cea]); }
-        setTimeout( () => {
-            for (let cb of this.callbacks) cb();
-        }, 0);
-        return this.thiss; }
+        if (!this.persist) return this.thiss;
+        setTimeout( () => { for (let cb of this.callbacks) cb(); }, 0);
+        END([CreateElementAction.new(this.thiss, true)]);
+        return this.thiss;
+    }
     DModelElement(): this { return this; }
     DClassifier(): this { return this; }
     DParameter(): this {
@@ -373,13 +371,11 @@ export class Constructors<T extends DPointerTargetable>{
         this.persist && thiss.father && SetFieldAction.new(thiss.father, "parameters", thiss.id, '+=', true);
         return this; }
     DStructuralFeature(): this {
-        if(this.thiss.className === 'DOperation') return this;
+        if (this.thiss.className === 'DOperation') return this;
+        if (!this.persist) return this;
         let thiss: DAttribute|DReference = this.thiss as any;
-
-        const _DClass: typeof DClass= windoww.DClass;
+        const _DClass: typeof DClass = windoww.DClass;
         const _DValue: typeof DValue = windoww.DValue;
-
-
         let targets: DClass[] = [_DClass.fromPointer(thiss.father)];
         let alreadyParsed: Dictionary<Pointer, DClass> = {};
         while(targets.length) {
@@ -391,12 +387,13 @@ export class Constructors<T extends DPointerTargetable>{
             }
             targets = nextTargets;
         }
-
-        for(let pointer in alreadyParsed) {
-            for (let instance of alreadyParsed[pointer].instances) {
-                _DValue.new(thiss.name, thiss.id, undefined, instance);
+        this.persist && this.callbacks.push(()=>{
+            for(let pointer in alreadyParsed) {
+                for (let instance of alreadyParsed[pointer].instances) {
+                    _DValue.new(thiss.name, thiss.id, undefined, instance);
+                }
             }
-        }
+        });
 
 
         return this;
@@ -410,6 +407,7 @@ export class Constructors<T extends DPointerTargetable>{
     DAttribute(): this {
         let thiss: DAttribute = this.thiss as any;
         // update father's collections (pointedby's here are set automatically)
+        console.log('dattrmake', {persist:this.persist, father:thiss.father, thiss, id:thiss.id});
         this.persist && thiss.father && SetFieldAction.new(thiss.father, "attributes", thiss.id, '+=', true);
         return this; }
     DDataType(): this { return this; }
@@ -1332,7 +1330,8 @@ export class DUser extends DPointerTargetable{
     // public static singleton: LPointerTargetable;
     id!: Pointer<DUser, 1, 1, LUser>;
     __isUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
-    public static new(id?: DUser["id"]): DUser { return new Constructors(new DUser('dwc')).DPointerTargetable().DUser(id).end(); }
+    public static new(id?: DUser["id"], triggerActions: boolean = true): DUser {
+        return new Constructors(new DUser('dwc'), undefined, false).DPointerTargetable().DUser(id).end(); }
 }
 
 @RuntimeAccessible

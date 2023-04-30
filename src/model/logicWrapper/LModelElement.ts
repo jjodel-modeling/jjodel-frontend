@@ -3973,7 +3973,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         SetFieldAction.new(context.data, 'value', list as any, '', false);
         console.log("pre set_value actions", l, list, val, context);
 
-        if (!l.instanceof || (instanceoff as LReference).containment) {
+        if (!l.instanceof || isRef && (instanceoff as LReference).containment) {
             let i = 0;
             for (let v of list) {
                 console.log("loop set_value actions", v, context.data, isRef, instanceoff, Pointers.isPointer(v));

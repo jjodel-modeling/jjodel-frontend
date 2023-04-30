@@ -329,7 +329,11 @@ export class EcoreParser{
     static parseM2Model(json: Json, filename: string | undefined): DModelElement[] {
         let generated: DModelElement[] = [];
         if (!json) { json = {}; }
-        let dObject: DModel = DModel.new( json[ECoreNamed.namee] as string || filename || "imported_metamodel_1", undefined, true, true);
+        let modelname = json[ECoreNamed.namee] as string;
+        if (!modelname && filename) {
+            let pos = filename.indexOf(".");
+            modelname = pos === -1 ? filename : filename.substring(0, pos); }
+        let dObject: DModel = DModel.new( modelname || "imported_metamodel_1", undefined, true, true);
         console.log("made model", json);
         generated.push(dObject); // dObject.father = 'modeltmp' as any;
         /// *** specific  *** ///
@@ -384,7 +388,11 @@ export class EcoreParser{
             Log.exDev(!meta, "metamodel not found: ", {ns, json, filename, allmodels, allpkgs, matchpkg}) // todo: after tests remove this check and allow shapeless models.
         }
 
-        let dObject: DModel = DModel.new( filename ? filename+" instance 1" : "imported_model_1", meta?.id, false, true);
+        let modelname = '';
+        if (!modelname && filename) {
+            let pos = filename.indexOf(".");
+            modelname = (pos === -1 ? filename : filename.substring(0, pos)); }
+        let dObject: DModel = DModel.new( modelname || "imported_model_1", meta?.id, false, true);
         console.log("made model", json);
         generated.push(dObject);
 

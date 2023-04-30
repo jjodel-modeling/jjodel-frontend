@@ -141,7 +141,7 @@ export class IStore {
 
     constructor() {
         // todo: this must become a pointer to idlookup and fire a CreateNewElementAction
-        this.currentUser = DUser.new();
+        this.currentUser = DUser.new(undefined, false);
         this.users = [this.currentUser.id];
         this.models = [];
     }

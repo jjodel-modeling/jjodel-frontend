@@ -41,7 +41,10 @@ export class SaveManager {
             localStorage.setItem("import", str);
             return;
         }
-        U.download((lmodel.name || ((lmodel as any).isMetaModel ? 'M2' : 'M1') + '_unnamed')  + (toXML ? ".xml.ecore" : '.json.ecore'), str);
+        let ism2 = (lmodel as LModel).isMetamodel;
+        let name = (lmodel.name || (ism2 ? 'M2' : 'M1') + '_unnamed')  + (toXML ? ".xml" : '.json') + "."+ (ism2 ? "ecore" : lmodel.instanceof?.name || "shapeless");
+        console.log("download file:", {name, ism2, toXML, lmodel, instanceof:lmodel.instanceof});
+        U.download(name, str);
     }
 
     public static importEcore_click(fromXML: boolean = false, fromfile: boolean = true): void {
@@ -52,7 +55,7 @@ export class SaveManager {
         }
     }
     public static importEcore_click0(fromXML: boolean = false, fromfile: boolean = true): void {
-        const extension = ".ecore"; // Selectors.getActiveModel().isM1() ? '.' + Selectors.getActiveModel().metamodel.fullname() : '.ecore';
+        const extensions: string[] = []; // [".ecore"]; // Selectors.getActiveModel().isM1() ? '.' + Selectors.getActiveModel().metamodel.fullname() : '.ecore';
         let filestring: string, jsonstring: string, jsonobj: GObject = undefined as any;
         console.log("importEcore: prefromfile");
         if (!fromfile) {
@@ -102,7 +105,7 @@ export class SaveManager {
             console.log("ismetamodel", {filename, isMetamodel});
             let end = SaveManager.importEcore(jsonobj || jsonstring || 'null', isMetamodel,filename, true);
             console.error({end});
-        }, [extension], true);
+        }, extensions, true);
     }
 
     public static exportEcore(model: LModel): Json {

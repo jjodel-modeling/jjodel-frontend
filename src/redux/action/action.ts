@@ -15,22 +15,113 @@ import {
     windoww
 } from "../../joiner";
 
-let pendingActions: Action[] = [];
-let hasBegun = false;
 // transactional-like start of storage modification
 // todo: nested transaction che conti quanti begin hai effettuato e crei una matrice di pendingActions una per ogni livello nested?
-export function BEGIN() {
+
+/*
+// let nestedlevel: number = 0;
+class NestedLevel{
+    level: number;
+    actions: Action[] = [];
+    up:NestedLevel[] = [];
+    down?:NestedLevel;
+
+    constructor(prevLevel?: NestedLevel, actions: Action[] = []) {
+        // this.prev = prev;
+        this.down = prevLevel;
+        this.actions = actions;
+        this.level = prevLevel ? prevLevel.level + 1 : 0;
+    }
+
+    add1(a:Action){ this.actions.push(a); }
+    add(a:Action[]){ this.actions.push(...a); }
+    push(actions:Action[]=[]){
+        this.up.push(new NestedLevel(this, actions));
+    }
+}
+// @Singleton
+class NestedTransactionManager{
+    // private levels: NestedLevel[] = [];
+    public currentLevel?: NestedLevel;
+    // simple array is not good i can have spikes as russian mountains going up and down in deepness it's kinda a matrix or a pile of dishes like below'
+
+
+    /*
+    todo: to debug missing END paired with a begin, seve stack trace of begins and ends
+    * every level must have his own array?
+    * Begin0, Begin1, Begin2, End2, End1, Begin1.1 Begin 1.2....
+    it's a tree!
+    *
+    *
+    * ______begin lv2                              _______Begin1.2
+    * _________________________begin lv1           ___________________Begin1.1
+    * ____________________________________________________________________________________________________ a begin lv0
+    * * /
+    constructor() {}
+    begin(actions: Action[]=[]): void { this.pushLevel(actions); }
+    pushLevel(actions: Action[]=[]): void {
+        if (!this.currentLevel) { this.currentLevel = new NestedLevel(undefined, actions); return; }
+        this.currentLevel.push(actions); }
+    end(){
+        if (!this.currentLevel) return this.finalEnd();
+        this.currentLevel = this.currentLevel?.down; }
+    finalEnd(){
+
+    }
+    // current(): NestedLevel { return this.currentLevel; }
+    addActions(a:Action[]): void { this.currentLevel!.add(a); }
+    addAction(a:Action): void { this.currentLevel!.add1(a); }
+}
+let transactionmanager = new NestedTransactionManager();
+function BEGIN2(){
+    transactionmanager.pushLevel();
+}
+function ABORT2(){
+    transactionmanager.end();
+}
+function END2(){
+
+}*/
+
+export function BEGIN_OLD() {
     pendingActions = [];
     hasBegun = true;
 }
-export function ABORT() {
+export function ABORT_OLD() {
     hasBegun = false;
     pendingActions = [];
 }
-export function END(actionstoPrepend: Action[] = []): boolean | IStore {
+export function END_OLD(actionstoPrepend: Action[] = []): boolean | IStore {
     hasBegun = false;
     // for (let action of pendingActions) { }
     const ca: CompositeAction = new CompositeAction( actionstoPrepend?.length ? [...actionstoPrepend, ...pendingActions] : pendingActions, false);
+    pendingActions = [];
+    return ca.fire();
+}
+
+let pendingActions: Action[] = [];
+let hasBegun = false;
+let deepnessLevel = 0;
+
+export function BEGIN() {
+    hasBegun = true; // redundant but actions are reading this, minimize changes
+    deepnessLevel++;
+}
+export function ABORT() {
+    deepnessLevel--;
+    pendingActions = [];
+}
+export function END(actionstoPrepend: Action[] = []): boolean {
+    deepnessLevel--;
+    if (actionstoPrepend.length) pendingActions = [...actionstoPrepend, ...pendingActions];
+
+    if (deepnessLevel < 0) { console.error("mismatching END()"); deepnessLevel = 0; }
+    if (deepnessLevel === 0) return FINAL_END();
+    return false;
+}
+export function FINAL_END(): boolean{
+    hasBegun = false;
+    const ca: CompositeAction = new CompositeAction(pendingActions, false);
     pendingActions = [];
     return ca.fire();
 }
