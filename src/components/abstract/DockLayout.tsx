@@ -99,31 +99,30 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         this.dock = null;
     }
 
+    OPEN(model: DModel|LModel) {
+        new Promise(resolve => setTimeout(resolve, 100)).then(() => {
+            let tab: TabData;
+            if(model.isMetamodel) tab = TabDataMaker.metamodel(model);
+            else tab = TabDataMaker.model(model);
+            this.dockContext.dockMove(tab, this.dockPanel, 'middle');
+        });
+    }
+
     shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
         const oldProps = this.props;
         // if(oldProps.selected !== newProps.selected) { this.moveOnStructure = true; return true; }
         if (oldProps.views !== newProps.views) { this.moveOnViews = true; return true; }
 
         const deltaM2 = U.arrayDifference(oldProps.m2, newProps.m2);
-        if (deltaM2.added.length != 0) {
-            const addedModels: LModel[] = LModel.wrapAll(deltaM2.added);
-            for(let model of addedModels) {
-                this.addMetamodel(undefined, this.dockContext, this.dockPanel, model.__raw);
-            }
-            return true;
-        }
+        const addedM2: LModel[] = LModel.wrapAll(deltaM2.added);
+        for(let model of addedM2) this.OPEN(model);
 
         const deltaM1 = U.arrayDifference(oldProps.m1, newProps.m1);
-        if (deltaM1.added.length != 0) {
-            const addedModels: LModel[] = LModel.wrapAll(deltaM1.added);
-            for(let model of addedModels) {
-                const modelTab = TabDataMaker.model(model);
-                this.dockContext.dockMove(modelTab, this.dockPanel, 'middle');
-            }
-            return true;
-        }
+        const addedM1: LModel[] = LModel.wrapAll(deltaM1.added);
+        for(let model of addedM1) this.OPEN(model);
 
-        return false;
+        return !!(deltaM2.added.length || deltaM1.added.length);
+
     }
 
     componentDidUpdate(prevProps: Readonly<AllProps>, prevState: Readonly<ThisState>, snapshot?: any) {
@@ -165,14 +164,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         result.then((data) => {
             if(data.isConfirmed && data.value) {
                 const model: LModel = LModel.fromPointer(data.value);
-                if(model.isMetamodel) {
-                    const tab = TabDataMaker.metamodel(model);
-                    context.dockMove(tab, panelData, 'middle');
-                } else {
-                    const tab = TabDataMaker.model(model);
-                    context.dockMove(tab, panelData, 'middle');
-                }
-
+                this.OPEN(model);
             }
         });
     }
@@ -183,9 +175,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         name = U.increaseEndingNumber(name, false, false, (newName) => names.indexOf(newName) >= 0)
         model = model || DModel.new(name, undefined, true);
         DGraph.new(model.id);
-        const metaModelTab = TabDataMaker.metamodel(model);
-        context.dockMove(metaModelTab, panelData, 'middle');
-
+        this.OPEN(model);
     }
     addModel(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {
         let html = '<style>body.swal2-no-backdrop .swal2-container {background-color: rgb(0 0 0 / 60%) !important}</style>';
@@ -217,11 +207,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
                 const model: DModel = DModel.new(name, mmid, false, true);
                 DGraph.new(model.id);
                 END()
-                // model.isMetamodel = false;
-                // model.father = metamodel.id; // i used instanceof instead
-                // CreateElementAction.new(model);
-                const modelTab = TabDataMaker.model(model);
-                context.dockMove(modelTab, panelData, 'middle');
+                this.OPEN(model);
             }
         });
     }

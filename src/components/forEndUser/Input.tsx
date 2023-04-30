@@ -7,8 +7,8 @@ import toast, {Toaster} from 'react-hot-toast';
 
 function InputComponent(props: AllProps) {
     const data = props.data;
-    const field = props.field;
     if(!data) return(<></>);
+    const field = props.field;
     const value = (data[field] !== undefined) ? data[field] : 'undefined';
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;

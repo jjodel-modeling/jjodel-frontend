@@ -376,6 +376,8 @@ export class Constructors<T extends DPointerTargetable>{
         let thiss: DAttribute|DReference = this.thiss as any;
         const _DClass: typeof DClass = windoww.DClass;
         const _DValue: typeof DValue = windoww.DValue;
+
+
         let targets: DClass[] = [_DClass.fromPointer(thiss.father)];
         let alreadyParsed: Dictionary<Pointer, DClass> = {};
         while(targets.length) {

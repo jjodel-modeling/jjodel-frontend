@@ -28,27 +28,18 @@ function EdgesManagerComponent(props: AllProps) {
     const objects = model.objects;
     const _values: IValueEdge[] = [];
     for(let object of objects) {
-        console.log("features", object.features, object);
         for(let feature of object.features) {
             const instanceOf = feature.instanceof;
             if(instanceOf?.className === 'DReference') {
-                const values = feature.value;
-                if(Array.isArray(values)) {
-                    for(let value of values) {
-                        if(value && value !== 'null') {
-                            _values.push({source: object, target: value as LObject})
-                        }
-                    }
-                } else {
-                    if(values && values !== 'null') {
-                        _values.push({source: object, target: values as LObject})
-                    }
+                const valuePointers = feature.__raw.value;
+                for(let pointer of valuePointers) {
+                    _values.push({source: object, target: LObject.fromPointer(pointer as Pointer)});
                 }
             }
         }
     }
 
-    return <div> to rework </div>
+    // return <div> to rework </div>
     return <div>
         {_references.map((referenceEdge, index) => {
             const source = referenceEdge.source.node;

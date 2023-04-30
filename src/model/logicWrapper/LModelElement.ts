@@ -3148,8 +3148,18 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 
     public addObject(instanceoff?:DObject["instanceof"], name?: DObject["name"]): DObject { return this.cannotCall("addObject"); }
     protected get_addObject(context: Context): this["addObject"] {
-        return (instanceoff?:DObject["instanceof"], name?: DObject["name"]) =>
-            DObject.new(instanceoff, context.data.id, DModel, undefined, true);
+        return (instanceoff?:DObject["instanceof"], name?: DObject["name"]) => {
+            const dObject = DObject.new(instanceoff, context.data.id, DModel, undefined, true);
+
+            if(!instanceoff) return dObject;
+            let father: LClass|undefined = LClass.fromPointer(instanceoff)?.extends?.[0];
+            while(father) {
+                for(let lFeature of [...father.attributes, ...father.references])
+                    DValue.new(lFeature.name, lFeature.id, undefined, dObject.id);
+                father = (father.extends.length > 0) ? father.extends[0] : undefined;
+            }
+            return dObject;
+        }
     }
 
     protected get_models(context: Context): LModel[] {
