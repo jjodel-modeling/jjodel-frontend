@@ -47,7 +47,7 @@ class DefaultView {
             {this.data.allSubObjects.map((child, index) => {
                 return <DefaultNode key={index} data={child.id}></DefaultNode>
             })}
-        </div>;`;
+        </div>`;
     }
 
     public static package(): string {

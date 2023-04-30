@@ -373,13 +373,11 @@ export class Constructors<T extends DPointerTargetable>{
         this.persist && thiss.father && SetFieldAction.new(thiss.father, "parameters", thiss.id, '+=', true);
         return this; }
     DStructuralFeature(): this {
+        /*
         if(this.thiss.className === 'DOperation') return this;
         let thiss: DAttribute|DReference = this.thiss as any;
-
         const _DClass: typeof DClass= windoww.DClass;
         const _DValue: typeof DValue = windoww.DValue;
-
-
         let targets: DClass[] = [_DClass.fromPointer(thiss.father)];
         let alreadyParsed: Dictionary<Pointer, DClass> = {};
         while(targets.length) {
@@ -391,14 +389,12 @@ export class Constructors<T extends DPointerTargetable>{
             }
             targets = nextTargets;
         }
-
         for(let pointer in alreadyParsed) {
             for (let instance of alreadyParsed[pointer].instances) {
                 _DValue.new(thiss.name, thiss.id, undefined, instance);
             }
         }
-
-
+        */
         return this;
     }
     DReference(): this {

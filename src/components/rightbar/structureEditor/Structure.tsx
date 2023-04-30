@@ -132,12 +132,12 @@ export default class Structure {
         if(!object) return(<></>);
         let conform = true;
         for(let feature of object.features) {
-            const upperBound =  feature.instanceof ? feature.instanceof.upperBound : -1;
+            let upperBound =  feature.instanceof ? feature.instanceof.upperBound : -1;
+            upperBound = (upperBound === -1) ? 999 : upperBound;
             const lowerBound =  feature.instanceof ? feature.instanceof.lowerBound : -1;
-            //todo: fix get_value on LValue
             const value = feature.value;
-            const length = (Array.isArray(value)) ? value.length : (value === '') ? 0 : 1;
-            conform = (length >= lowerBound && length <= upperBound);
+            // const length = (Array.isArray(value)) ? value.length : (value === '') ? 0 : 1;
+            conform = (value.length >= lowerBound && value.length <= upperBound);
         }
 
         return(<div>

@@ -3,45 +3,68 @@ import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
 import './style.scss';
 import {
-    CreateElementAction, DEdgePoint,
+    CreateElementAction,
+    DEdgePoint,
     DViewElement,
     DVoidEdge,
-    EdgeBendingMode,
-    GraphPoint, GraphSize,
-    LModel,
-    LVoidEdge,
-    store,
-    LModelElement, Selectors, DModelElement, Pointer
+    EdgeBendingMode, GObject,
+    GraphSize,
+    Selectors,
+    store
 } from "../../joiner";
 import {SaveManager} from "./SaveManager";
-import Undoredocomponent from "./undoredocomponent";
 import {DamEdge} from "../../graph/damedges/damedge";
+import toast from "react-hot-toast";
 
 function Topbar(props: AllProps) {
 
-    const click = (evt: React.MouseEvent<HTMLLabelElement>) => {
-        alert('todo')
+    const notify = (text: string) => toast((t: GObject) => (
+        <div onClick={() => toast.dismiss(t.id)}>
+            <label className={'ms-1'}>{text}</label>
+        </div>
+    ));
+
+    const save = (evt: React.MouseEvent<HTMLLabelElement>) => {
+        SaveManager.save();
+        notify('Saved');
+    }
+    const load = (evt: React.MouseEvent<HTMLLabelElement>) => {
+        SaveManager.load();
+    }
+
+    const importJson = (evt: React.MouseEvent<HTMLLabelElement>) => {
+        SaveManager.importEcore_click(false, true);
+    }
+    const exportJson = (evt: React.MouseEvent<HTMLLabelElement>) => {
+        SaveManager.exportEcore_click(false, true);
+    }
+
+    const importXml = (evt: React.MouseEvent<HTMLLabelElement>) => {
+        SaveManager.importEcore_click(true, true);
+    }
+    const exportXml = (evt: React.MouseEvent<HTMLLabelElement>) => {
+        SaveManager.exportEcore_click(true, true);
     }
 
 
     return(<div className={'topbar d-flex'}>
         <div className={'ms-1'}>
+            {/*
             <Undoredocomponent />
+            <div className={'ms-auto me-1'}>
+                <label className={'item border round ms-1'} onClick={ () => SaveManager.exportLayout_click(false) }>Export Layout</label>
+                <label className={'item border round ms-1'} onClick={ () => SaveManager.importLayout_click(false) }>Import Layout</label>
+                <label className={'item border round ms-1'} onClick={ () => edgetest() }>Edge test</label>
+            </div>
+            */}
 
-            <label className={'item border round ms-1'}
-                    onClick={() => {SaveManager.save()}}>Save</label>
-            <label className={'item border round ms-1'}
-                    onClick={() => {SaveManager.load()}}>Load</label>
+            <label className={'item border round ms-1'} onClick={save}>Save</label>
+            <label className={'item border round ms-1'} onClick={load}>Load</label>
 
-            <label className={'item border round ms-1'} onClick={ () => SaveManager.exportEcore_click(false, true) }>Export JSON</label>
-            <label className={'item border round ms-1'} onClick={ () => SaveManager.importEcore_click(false, true) }>Import JSON</label>
-            <label className={'item border round ms-1'} onClick={ () => SaveManager.exportEcore_click(true, true) }>Export XML</label>
-            <label className={'item border round ms-1'} onClick={ () => SaveManager.importEcore_click(true, true) }>Import XML</label>
-        </div>
-        <div className={'ms-auto me-1'}>
-            <label className={'item border round ms-1'} onClick={ () => SaveManager.exportLayout_click(false) }>Export Layout</label>
-            <label className={'item border round ms-1'} onClick={ () => SaveManager.importLayout_click(false) }>Import Layout</label>
-            <label className={'item border round ms-1'} onClick={ () => edgetest() }>Edge test</label>
+            <label className={'item border round ms-1'} onClick={exportJson}>Export JSON</label>
+            <label className={'item border round ms-1'} onClick={importJson}>Import JSON</label>
+            <label className={'item border round ms-1'} onClick={exportXml}>Export XML</label>
+            <label className={'item border round ms-1'} onClick={importXml}>Import XML</label>
         </div>
     </div>);
 }
@@ -53,8 +76,6 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    const selected = Selectors.getLastSelectedModel();
-    //ret.metamodel = selected.m2 || null;
     return ret;
 }
 
