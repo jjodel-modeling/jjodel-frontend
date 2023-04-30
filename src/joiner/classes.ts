@@ -761,7 +761,7 @@ export class PointedBy{
         this.source = source;
     }
     static fromID<D extends DPointerTargetable>(ptr: Pointer<D>, field: keyof D) {
-        return PointedBy.new("idlookup." + ptr + "." + field);
+        return PointedBy.new("idlookup." + ptr + "." + (field as string));
     }
     static new(source: DocString<"full path in store including key. like \'idlookup.id.extends\'">, modifier: "-=" | "+=" | undefined = undefined, action?: ParsedAction): PointedBy {
         // let source: DocString<"full path in store including key"> = action.path;
@@ -1380,6 +1380,8 @@ type RemoveKeysOfType<T, ExcludeType> = Exclude2<T, OnlyKeysOfType<T, ExcludeTyp
 
 // todo: can't automatically convert D to L (generating the type instead of manual defining L) rules are: LClass <--- Pointer<LClass>, LClass[] <-- Pointer<LClass, 0, 'N'>, subobject = ? should not be there
 
+// @ts-ignore
+// @ts-ignore
 /**
  i have a documentation type that is actually a string, but it\'s have a different purpose from the others, and i made a type to keep documentally separated.
  let's say it's
@@ -1421,8 +1423,8 @@ export type getWParams<L extends LPointerTargetable, D extends Object> ={
             //@ts-ignore
         (L[`set_${Property}`] extends (a:any, b: any, ...b:any)=> any ? // at least 2 params: 1 for val and 1 for Context
             // damiano todo: if first parameter is Context this should return never. because Context should not be an acceptable set value & it will cause a definition loop because contains a W key
-            Parameters<L[`set_${Property}`]>[0] // if set_X function is defined, get first param
             //@ts-ignore
+            Parameters<L[`set_${Property}`]>[0] // if set_X function is defined, get first param
             : never ///D[Property] | `todo: should define set_${Property}` // default type if it's not assigned = type in the D version
         )): never)
 } // & L

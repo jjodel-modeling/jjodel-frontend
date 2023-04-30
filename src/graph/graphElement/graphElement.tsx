@@ -100,8 +100,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     public static defaultShouldComponentUpdate<AllProps extends GObject, State extends GObject, Context extends any>
     (instance: React.Component, nextProps: Readonly<AllProps>, nextState: Readonly<State>, nextContext: Context) {
         return (
-            !U.shallowEqual(instance.props, nextProps) ||
-            !U.shallowEqual(instance.state, nextState)
+            true // !U.shallowEqual(instance.props, nextProps) || !U.shallowEqual(instance.state, nextState)
         );
     }
 
@@ -256,53 +255,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }*/
 
     static graphVertexID_counter: Dictionary<DocString<'GraphID'>, Dictionary<DocString<'VertexID'>, boolean>> = {}
-    private injectProp = function(e: ReactNode, gvidmap: Dictionary<DocString<'VertexID'>, boolean>): ReactNode {
-        const re: ReactElement | null = U.ReactNodeAsElement(e);
-        if (!re) return e;
-        // @ts-ignore this
-        const parentComponent = this;
-        // const windoww = window as any;
-        // console.log('relement ', {type: (re.type as any).WrappedComponent?.name || re.type}, {thiss, mycomponents: windoww.mycomponents, re, props:re.props});
-        // add "view" (view id) prop as default to sub-elements of any depth to inherit the view of the parent unless the user forced another view to apply
-        switch ((re.type as any).WrappedComponent?.name || re.type) {
-            default:
-                console.count('relement default: ' + ((re.type as any).WrappedComponent?.name || re.type));
-                return re;
-            case windoww.Components.Input.name:
-            case windoww.Components.Textarea.name:
-                const objid =  re.props.obj?.id || re.props.obj || parentComponent.props.data.id;
-                const ret = React.cloneElement(re, {key: re.props.key || parentComponent.props.view.id + '_' + parentComponent.props.data.id + '_' + re.props.field, obj: objid, obj2: objid});
-                //console.log('relement Input set props',
-                //    {'re.props.obj.id': re.props.obj?.id, 're.props.obj': re.props.obj, 'thiss.props.data.id': thiss.props.data.id, thiss, re, objid, ret, 'ret.props': ret.props});
-                return ret;
-            case windoww.Components.GraphElement.name:
-            case windoww.Components.GraphElementComponent.name:
-            case windoww.Components.DefaultNode.name:
-            case windoww.Components.DefaultNodeComponent.name:
-            case windoww.Components.Graph.name:
-            case windoww.Components.GraphComponent.name:
-            case windoww.Components.Field.name:
-            case windoww.Components.FieldComponent.name:
-            case windoww.Components.Vertex.name:
-            case windoww.Components.VertexComponent.name:
-                const injectProps: GraphElementOwnProps = {} as any;
-                injectProps.parentViewId = parentComponent.props.view.id || parentComponent.props.view; // re.props.view ||  thiss.props.view
-                injectProps.parentnodeid = parentComponent.props.node.id;
-                injectProps.graphid = parentComponent.props.graphid;
-                // const vidmap = GraphElementRaw.graphVertexID_counter;
-                // if (!vidmap[injectProps.graphid]) vidmap[injectProps.graphid] = {};
-                // const gvidmap = vidmap[injectProps.graphid];
-                const validVertexIdCondition = (id: string): boolean => gvidmap[id];
-                // todo: come butto dei sotto-vertici dentro un vertice contenitore? o dentro un sotto-grafo? senza modificare il jsx ma solo draggando?
-                const dataid = typeof re.props.data === "string" ? re.props.data : re.props.data?.id;
-                const idbasename: string = injectProps.graphid + '^' + dataid;
-                console.log("setting nodeid", {injectProps, props:re.props, re});
-                Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
-                injectProps.nodeid = U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
-                gvidmap[injectProps.nodeid] = true;
-                injectProps.key = injectProps.nodeid; // re.props.key || thiss.props.view.id + '_' + thiss.props.data.id;
-                return React.cloneElement(re, injectProps);
-        }}.bind(this);
 
     /*
     makeEvalContext_to_move(view: ViewElement): GObject {
@@ -380,7 +332,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     public render(): ReactNode {
         if (this.props.preRenderFunc) U.evalInContextAndScope(this.props.preRenderFunc, this.props.evalContext);
         const rnode: ReactNode = this.getTemplate();
-        let rawRElement: ReactElement | null = U.ReactNodeAsElement(rnode);
+        let rawRElement: ReactElement | null = UX.ReactNodeAsElement(rnode);
         // @ts-ignore
         console.log('GE render', {rnode, rawRElement, props:this.props, name: this.props.data.name});
         const me: LModelElement = this.props.data as LModelElement; // this.props.model;
@@ -391,7 +343,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             // add view props to GraphElement childrens (any level down)
             const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap(); // todo: per passarla come prop ma mantenerla modificabile
             rawRElement = React.cloneElement(rawRElement, {key: this.props.key || this.props.view.id + '_' + me.id, onDragTestInject, children: UX.recursiveMap(rawRElement/*.props.children*/,
-                    (rn: ReactNode) => this.injectProp(rn, subElements))});
+                    (rn: ReactNode) => UX.injectProp(rn, subElements))});
             /*console.log('tempdebug', {deepStrictEqual, okeys:Object.keys});
             let isEqual = true;
             try {deepStrictEqual(subElements, this.props.node.subElements)} catch(e) { isEqual = false; }

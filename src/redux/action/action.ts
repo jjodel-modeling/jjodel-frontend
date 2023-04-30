@@ -21,21 +21,25 @@ import {
 import Swal from "sweetalert2";
 
 let pendingActions: Action[] = [];
-let hasBegun = false;
+// let hasBegun = false;
 // transactional-like start of storage modification
 // todo: nested transaction che conti quanti begin hai effettuato e crei una matrice di pendingActions una per ogni livello nested?
+let begincounter = 0;
 export function BEGIN() {
-    pendingActions = [];
-    hasBegun = true;
+    if (begincounter == 0) pendingActions = [];
+    begincounter++;
 }
 export function ABORT() {
-    hasBegun = false;
+    console.error("TRANSACTION ABORT", {begincounter, pendingActions});
+    begincounter = 0;
     pendingActions = [];
 }
 export function END(): boolean | IStore {
-    hasBegun = false;
+    begincounter--;
+    if (begincounter < 0) { console.error("transaction END mismatching STARTs", begincounter, pendingActions); begincounter = 0; }
     // for (let action of pendingActions) { }
-    const ca: CompositeAction = new CompositeAction(pendingActions, false);
+    if (begincounter !== 0) return true;
+    const ca: CompositeAction = new CompositeAction([...pendingActions], false);
     pendingActions = [];
     return ca.fire();
 }
@@ -78,9 +82,11 @@ export abstract class Action extends RuntimeAccessibleClass{
     }
 
     fire(forceRelaunch: boolean = false): boolean {
+        console.log('try firing action:', {fires:this.hasFired, forceRelaunch, thiss:this, begincounter});
         if (this.hasFired && !forceRelaunch) return false;
-        if (hasBegun) {
+        if (begincounter) {
             pendingActions.push(this);
+            console.log('pending firing action:', {fires:this.hasFired, forceRelaunch, thiss:this, begincounter, pending: [...pendingActions]});
         } else {
             this.hasFired++;
             let storee = store || windoww.store;
@@ -252,7 +258,8 @@ export class CreateElementAction extends Action {
     value!: DPointerTargetable;
     public static new<F extends boolean = true>(me: DPointerTargetable, notfire?: F): (F extends true ? boolean : CreateElementAction) {
         if ((me as LPointerTargetable).__raw) me = (me as LPointerTargetable).__raw;
-        let act = new CreateElementAction(me);
+        let act = new CreateElementAction(me, false);
+        console.log('firing action create', me, notfire, act, !notfire);
         if (!notfire) return act.fire() as any;
         return act as any;
     }

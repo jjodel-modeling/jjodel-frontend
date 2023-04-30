@@ -226,8 +226,7 @@ export class Selectors{
     private static matchesOclCondition(v: DViewElement, data: DModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
       if (!v.oclApplyCondition) return ViewEClassMatch.IMPLICIT_MATCH;
       Log.exDevv('todo view ocl matching');
-      return ViewEClassMatch.EXACT_MATCH;
-    }
+      return ViewEClassMatch.EXACT_MATCH; }
 
     private static matchesMetaClassTarget(v: DViewElement, data: DModelElement): ViewEClassMatch {
         if (!v.appliableToClasses || !v.appliableToClasses.length) return ViewEClassMatch.IMPLICIT_MATCH;

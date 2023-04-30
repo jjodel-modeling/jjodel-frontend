@@ -67,6 +67,7 @@ export const EdgesManagerConnected = connect<StateProps, DispatchProps, OwnProps
 )(EdgesManagerComponent);
 
 export const EdgesManager = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    // @ts-ignore
     return <EdgesManagerConnected {...{...props, childrens}} />;
 }
 export default EdgesManager;

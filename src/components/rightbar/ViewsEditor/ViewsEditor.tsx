@@ -325,6 +325,7 @@ export const ViewsEditorConnected = connect<StateProps, DispatchProps, OwnProps,
 
 // nb: necessario per usarlo a runtime
 export const ViewsEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    // @ts-ignore
     return <ViewsEditorConnected {...{...props, childrens}} />; }
 
 export default ViewsEditor;

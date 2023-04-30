@@ -60,6 +60,7 @@ export const PendingEdgeConnected = connect<StateProps, DispatchProps, OwnProps,
 )(PendingEdgeComponent);
 
 export const PendingEdge = (props: AllProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    // @ts-ignore
     return <PendingEdgeConnected {...{...props, childrens}} />;
 }
 export default PendingEdge;

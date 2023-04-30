@@ -67,6 +67,7 @@ export class DataOutputComponent extends PureComponent<AllProps, ThisState>{
                                               | 'tomorrow'
                                               | 'tube'
                                               | 'twilight'; */}
+        // @ts-ignore
         return <ReactJson src={this.props.data}
                           collapsed={1}
                           collapseStringsAfterLength={20}
@@ -80,6 +81,7 @@ export class DataOutputComponent extends PureComponent<AllProps, ThisState>{
                           quotesOnKeys={true} shouldCollapse={ false /*((field: CollapsedFieldProps) => { return Object.keys(field.src).length > 3;*/ }
                           sortKeys={false}
                           theme={"rjv-default"}
+            // @ts-ignore
         >{this.props.children}</ReactJson>;
     };
 

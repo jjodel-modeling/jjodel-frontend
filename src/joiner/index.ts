@@ -40,10 +40,8 @@ export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicC
 // console.error('iiiiiiiiiiiiiiii 3');
 // import independent generic modules (only dependent from types and RuntimeAccessible
 
-export {Uarr, CSSParser, DDate, RawVertex, $s, ParseNumberOrBooleanOptions,
-    TagNames, RawGraph, RawEdge, myFileReader, AutocompleteMatch,
-    Keystrokes, CSSRuleSorted, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, SelectorOutput, U as UU,
-    Log as Logg, Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/U";
+export {DDate} from "../common/U";
+export {ISize, Size, GraphSize, GraphPoint, Point, IPoint} from "../common/Geom";
 // export {Log as Logg, Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Log";
 export const Log = windoww.Log;
 export {UX} from "../common/UX";

@@ -32,7 +32,7 @@ class DefaultNodeStatee extends GraphElementStatee { }
 
 // from ownstateprops function getVertexID(props: AllPropss): Pointer<DVoidVertex, 0, 1, LVoidVertex> { return props.vertex?.id; }
 
-export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeState = DefaultNodeStatee>
+export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeState extends DefaultNodeStatee = DefaultNodeStatee>
     extends superclass<AllProps, NodeState>{
 
 

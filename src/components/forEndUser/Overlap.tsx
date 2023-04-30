@@ -58,7 +58,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret; }
 */
 
-(Overlap as React.ComponentClass).defaultProps = {
+(Overlap as any as React.ComponentClass).defaultProps = {
   autosizex: true,
   autosizey: true,
   style: undefined,

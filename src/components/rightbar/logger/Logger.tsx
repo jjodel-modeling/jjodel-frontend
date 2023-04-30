@@ -62,6 +62,7 @@ export const LoggerConnected = connect<StateProps, DispatchProps, OwnProps, ISto
 )(LoggerComponent);
 
 export const Logger = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+    // @ts-ignore
     return <LoggerConnected {...{...props, childrens}} />;
 }
 export default Logger;

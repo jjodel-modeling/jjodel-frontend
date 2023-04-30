@@ -5,8 +5,6 @@ import {AllPropss as VertexProps} from "./Vertex";
 import Draggable, {DraggableData, DraggableEvent} from "react-draggable";
 import RootVertex from "./RootVertex";
 import {useXarrow} from "react-xarrows";
-import {Size} from "../../common/U";
-import {DAttribute, DClass, LPointerTargetable, Pointer, U} from "../../joiner";
 
 interface ThisState {}
 function RootDraggableVertexComponent(props: AllProps, state: ThisState) {
