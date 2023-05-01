@@ -891,6 +891,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         if (isNaN(val)) val = 0;
         else val = Math.max(0, val);
         SetFieldAction.new(context.data, 'lowerBound', val);
+        if (val > context.data.upperBound) SetFieldAction.new(context.data, 'upperBound', val);
         return true;
     }
 
@@ -903,6 +904,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         if (isNaN(val)) val = -1;
         else val = Math.max(-1, val);
         SetFieldAction.new(context.data, 'upperBound', val);
+        if (val !== -1 && val < context.data.lowerBound) SetFieldAction.new(context.data, 'lowerBound', val);
         return true;
     }
 
@@ -3907,7 +3909,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     public getValue(fitSize: boolean = true, namedPointers: boolean = true, ecorePointers: boolean = false, shapeless: boolean = false, keepempties: boolean = false): this["value"] {
         return this.cannotCall("getValue"); }
 
-    protected get_value(context: Context, fitSize: boolean = true, namedPointers: boolean = true, ecorePointers: boolean = false, shapeless: boolean = false, keepempties: boolean = false): this["value"] & {type: string} {
+    protected get_value(context: Context, fitSize: boolean = true, namedPointers: boolean = true, ecorePointers: boolean = false, shapeless: boolean = false, keepempties: boolean = true): this["value"] & {type: string} {
         let ret: any[] = [...context.data.value] as [];
         let meta: LAttribute | LReference | undefined = shapeless ? undefined : context.proxyObject.instanceof;
         let dmeta: undefined | DAttribute | DReference = meta?.__raw;
@@ -3915,13 +3917,13 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         if (meta && meta.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
         let typestr: string = meta ? meta.typeToShortString() : "shapeless";
         if (!Array.isArray(ret)) ret = [];
-        if (dmeta && fitSize && ret.length < dmeta.lowerBound && dmeta.lowerBound <= 0) {
+        if (dmeta && fitSize && ret.length < dmeta.lowerBound && dmeta.lowerBound > 0) {
             let times = dmeta.lowerBound - ret.length;
             while (times-- > 0) ret.push(undefined);
             // ret.length = meta.lowerBound; not really working for expanding, it says "emptyx10" or so. doing .map() only iterates "existing" elements. behaves like as it's smaller.
         }
         if (dmeta && fitSize && ret.length > dmeta.upperBound && dmeta.upperBound >= 0) ret.length = dmeta.upperBound;
-        //console.log("get_value", {upperbound:dmeta.upperBound, lowerbound: dmeta.lowerBound, len: ret.length, len0: context.data.value.length});
+        // console.log("get_value sizefixed", {fitSize, arguments, upperbound:dmeta?.upperBound, lowerbound: dmeta?.lowerBound, len: ret.length, len0: context.data.value.length});
         let numbermax = 0, numbermin = 0;
         switch (typestr) {
             case "shapeless":
