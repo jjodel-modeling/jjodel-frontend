@@ -99,12 +99,18 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         this.dock = null;
     }
 
-    OPEN(model: DModel|LModel) {
+    OPEN(model: DModel|LModel): void {
         new Promise(resolve => setTimeout(resolve, 100)).then(() => {
             let tab: TabData;
             if(model.isMetamodel) tab = TabDataMaker.metamodel(model);
             else tab = TabDataMaker.model(model);
             this.dockContext.dockMove(tab, this.dockPanel, 'middle');
+        });
+    }
+
+    CLOSE(pointer: Pointer<DModel, 1, 1, LModel>): void {
+        new Promise(resolve => setTimeout(resolve, 50)).then(() => {
+            this.dockPanel.tabs = this.dockPanel.tabs.filter(tab => tab.id !== pointer);
         });
     }
 
@@ -115,11 +121,15 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
 
         const deltaM2 = U.arrayDifference(oldProps.m2, newProps.m2);
         const addedM2: LModel[] = LModel.wrapAll(deltaM2.added);
+        const removedM2: Pointer<DModel, 0, 'N', LModel> = deltaM2.removed;
         for(let model of addedM2) this.OPEN(model);
+        for(let pointer of removedM2) this.CLOSE(pointer);
 
         const deltaM1 = U.arrayDifference(oldProps.m1, newProps.m1);
         const addedM1: LModel[] = LModel.wrapAll(deltaM1.added);
+        const removedM1: Pointer<DModel, 0, 'N', LModel> = deltaM1.removed;
         for(let model of addedM1) this.OPEN(model);
+        for(let pointer of removedM1) this.CLOSE(pointer);
 
         return !!(deltaM2.added.length || deltaM1.added.length);
 
