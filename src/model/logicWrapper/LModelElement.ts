@@ -3909,7 +3909,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     public getValue(fitSize: boolean = true, namedPointers: boolean = true, ecorePointers: boolean = false, shapeless: boolean = false, keepempties: boolean = false): this["value"] {
         return this.cannotCall("getValue"); }
 
-    protected get_value(context: Context, fitSize: boolean = true, namedPointers: boolean = true, ecorePointers: boolean = false, shapeless: boolean = false, keepempties: boolean = true): this["value"] & {type: string} {
+    protected get_value(context: Context, fitSize: boolean = true, namedPointers: boolean = false, ecorePointers: boolean = false, shapeless: boolean = false, keepempties: boolean = true): this["value"] & {type: string} {
         let ret: any[] = [...context.data.value] as [];
         let meta: LAttribute | LReference | undefined = shapeless ? undefined : context.proxyObject.instanceof;
         let dmeta: undefined | DAttribute | DReference = meta?.__raw;
@@ -3951,8 +3951,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 // is reference
                 ret = !meta ? ret : ret.filter( (l: LObject) => {
                     // hide values with a value that is not a pointer to correct type (but keep empties if requested)
-                    // damiano: todo isextending
-                    let isExtending = true // l.instanceof?.isExtending((meta as LReference).type);
+                    let isExtending = l.instanceof?.isExtending((meta as LReference).type); // damiano: todo test & debug isextending
                     return keepempties && !l ? true : isExtending;
                 });
                 if (namedPointers) {
@@ -4094,11 +4093,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
     protected get_toString(context: Context): () => string { return () => this._toString(context); }
     protected _toString(context: Context): string {
-        let val: any = this.get_value(context);
+        let val: any = this.get_value(context, true, true, false, false, true);
         if (!val) return val + '';
         if (!Array.isArray(val)) val = [val];
-        if (!context.proxyObject.instanceof) val = val.map( (e: GObject) => { return  e.name ? "@" + e.name : e; });
-        else if (context.proxyObject.instanceof?.className === DReference.name) val = val.map( (e: GObject) => { return e.name ? "@" + e.name : e; });
+        // if (!context.proxyObject.instanceof) val = val.map( (e: GObject) => { return  e.name ? "@" + e.name : e; });
+        // else if (context.proxyObject.instanceof?.className === DReference.name) val = val.map( (e: GObject) => { return e.name ? "@" + e.name : e; });
         switch(val.length) {
             case 0: return '';
             case 1: return val[0] + '';
