@@ -3967,9 +3967,9 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 })
                 break;
             default: // it's a reference or enum
-                ret = LPointerTargetable.wrapAll(ret);
+                ret = ret.map(r => r && LPointerTargetable.wrap(r));
                 if ((meta as LAttribute)?.type?.className === DEnumerator.name) {
-                    ret = ret.map( (lit: LEnumLiteral) => lit.literal);
+                    if (namedPointers) ret = ret.map( (lit?: LEnumLiteral) => lit?.name);
                     break;
                 }
                 // is reference
