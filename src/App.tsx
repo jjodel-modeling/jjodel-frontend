@@ -13,7 +13,7 @@ import TopBar from "./components/topbar/Topbar";
 
 interface Props {}
 function App(props: Props) {
-    const [splash, setSplash] = useStateIfMounted(true);
+    const [splash, setSplash] = useStateIfMounted(false);
 
     useEffectOnce(() => {
         const promise = new Promise((resolve) => {setTimeout(resolve, 4 * 1000)});
