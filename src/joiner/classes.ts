@@ -366,8 +366,9 @@ export class Constructors<T extends DPointerTargetable>{
     }
     DModelElement(): this { return this; }
     DClassifier(): this { return this; }
-    DParameter(): this {
+    DParameter(defaultValue?: any): this {
         let thiss: DParameter = this.thiss as any;
+        thiss.defaultValue = defaultValue;
         this.persist && thiss.father && SetFieldAction.new(thiss.father, "parameters", thiss.id, '+=', true);
         return this; }
     DStructuralFeature(): this {
@@ -529,9 +530,10 @@ export class Constructors<T extends DPointerTargetable>{
 
         return this; }
 
-    DOperation(exceptions: DOperation["exceptions"] = []/*, parameters: DOperation["parameters"] = []*/): this {
+    DOperation(exceptions: DOperation["exceptions"] = [], implementation?: string/*, parameters: DOperation["parameters"] = []*/): this {
         const thiss: DOperation = this.thiss as any;
         // thiss.parameters = parameters;
+        thiss.implementation = implementation || 'return "default placeholder function called";'
         thiss.exceptions = exceptions;
         if (this.persist) {
             BEGIN()

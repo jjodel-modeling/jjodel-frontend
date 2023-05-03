@@ -1386,6 +1386,7 @@ export class DOperation extends DPointerTargetable { // extends DTypedElement
     exceptions: Pointer<DClassifier, 0, 'N', LClassifier> = [];
     parameters: Pointer<DParameter, 0, 'N', LParameter> = [];
     visibility: AccessModifier = AccessModifier.private;
+    implementation!: string;
 
     public static new(name?: DNamedElement["name"], type?: DOperation["type"], exceptions: DOperation["exceptions"] = [], father?: Pointer, persist: boolean = true): DOperation {
         if (!name) name = this.defaultname("fx_", father);
@@ -1427,6 +1428,8 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
     many!: boolean;
     required!: boolean;
     // personal
+    implementation!: string;
+    signatureImplementation!: string; // (param1 /*type*/, param2 = value, ...) => /*return type*/
     exceptions!: LClassifier[];
     parameters!: LParameter[];
     visibility!: AccessModifier;
@@ -1470,6 +1473,25 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
     public addParameter(name?: DParameter["name"], type?: DParameter["type"]): DParameter { return this.cannotCall("addParameter"); }
     protected get_addParameter(context: Context): this["addParameter"] {
         return (name?: DParameter["name"], type?: DParameter["type"]) => DParameter.new(name, type, context.data.id, true); }
+
+    public execute(thiss: LObject, ...params: any): any { return this.cannotCall("execute"); }
+    protected get_execute(context: Context): ((thiss: LObject, ...params: any[])=>any) {
+        return (thiss: LObject, ...params: any) => {
+            let func: Function = eval(context.proxyObject.signatureImplementation + " {\n"+ context.data.implementation + "\n}");
+            func.apply(thiss, params);
+        };
+    }
+    public set_implementation(val: this["implementation"], context: Context): boolean { return SetFieldAction.new(context.data.id, "implementation", val, undefined, false); }
+    public get_implementation(context: Context): this["implementation"] { return context.data.implementation; }
+    public set_signatureImplementation(val: this["signatureImplementation"], context: Context): boolean { return this.cannotSet("signatureImplementation"); }
+    public get_signatureImplementation(context: Context): this["signatureImplementation"] {
+        let operation = context.proxyObject;
+        return "(" +
+            operation.parameters.map(
+                (p) => p.name + (p.defaultValue !== undefined ? "=" + p.defaultValue : "/* :"+p.typeToShortString()+" */")
+            ).join(", ")
+        + ") => /*"+operation.type+"*/";
+    }
 
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DClassifier | DParameter, 1, 'N'> {
         return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DParameter | DClassifier, 1, 'N'>, ...context.data.exceptions, ...context.data.parameters]; }
@@ -1555,6 +1577,7 @@ export class DParameter extends DPointerTargetable { // extends DTypedElement
     upperBound: number = 1;
     many!: boolean;
     required!: boolean;
+    defaultValue!: any;
     // personal
 
     public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = true): DParameter {
@@ -1597,6 +1620,7 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
     many!: boolean;
     required!: boolean;
     // personal
+    defaultValue!: any;
 
     protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
         loopDetectionObj[context.data.id] = context.data;
@@ -3886,7 +3910,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     }
     protected set_instanceof(val: Pack1<this["instanceof"]>, context: Context): boolean {
         // const list = val.map((lItem) => { return Pointers.from(lItem) });
-        let ptr = Pointers.from(val); // damiano: verifica sia un puntatore singolo
+        let ptr = Pointers.from(val);
         SetFieldAction.new(context.data, 'instanceof', ptr, "", true);
         return true;
     }
@@ -3951,7 +3975,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 // is reference
                 ret = !meta ? ret : ret.filter( (l: LObject) => {
                     // hide values with a value that is not a pointer to correct type (but keep empties if requested)
-                    let isExtending = l.instanceof?.isExtending((meta as LReference).type); // damiano: todo test & debug isextending
+                    let isExtending = true; // l.instanceof?.isExtending((meta as LReference).type); // damiano: todo test & debug isextending
                     return keepempties && !l ? true : isExtending;
                 });
                 if (namedPointers) {

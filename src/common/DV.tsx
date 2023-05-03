@@ -15,6 +15,7 @@ export class DV {
     public static enumeratorView(): string { return beautify(`<div className={'root enumerator'}>` + DefaultView.enum() + '</div>'); }
     public static literalView(): string { return beautify(`<div className={'root literal'}>` + DefaultView.literal() + '</div>'); }
     public static operationView(): string { return beautify(`<div className={'root operation'}>` + DefaultView.operation() + '</div>'); }
+    public static operationViewm1(): string { return beautify(`<div className={'root operation'}>` + DefaultView.operationm1() + '</div>'); }
     public static objectView(): string { return beautify(`<div className={'root object'}>` + DefaultView.object() + '</div>'); }
     public static valueView(): string { return (`<div className={'root value'}>` + DefaultView.value() + '</div>'); }
     public static defaultPackage(): string { return beautify(`<div className={'root package'}>` + DefaultView.defaultPackage() + '</div>'); }
@@ -99,6 +100,17 @@ class DefaultView {
 
     public static operation(): string {
         return `<Select className={'operation-view'} obj={this.data.parameters[0]} field={'type'} label={this.data.name} />`;
+    }
+    public static operationm1(): string {
+        return `<div className={'d-flex operationm1-view'} style={{paddingRight: "6px"}}>
+             {<label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>}
+            <label className={'d-block ms-auto hover-root'} style={{color:` + valuecolormap_str + `[this.props.data.value.type] || "gray"
+            }}>→→→{
+                <div className="hover-content">{
+                    <ParameterForm operation = {this.props.data.id} vertical={true} />
+                }
+                }</label>
+        </div>`
     }
 
     public static object(): string {

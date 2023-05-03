@@ -1,9 +1,8 @@
+import type {Overlap, GObject, Pointer, IStore, DPointerTargetable} from "../../joiner";
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../redux/store";
-import {DPointerTargetable, GObject, LPointerTargetable, Pointer} from "../../joiner";
 import toast, {Toaster} from 'react-hot-toast';
-
+import {LPointerTargetable} from "../../joiner";
 
 function InputComponent(props: AllProps) {
     const data = props.data;

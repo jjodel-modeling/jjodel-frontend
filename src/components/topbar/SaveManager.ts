@@ -111,7 +111,7 @@ export class SaveManager {
     public static exportEcore(model: LModel): Json {
         let loopobj = {};
         try { return model.generateEcoreJson(loopobj); }
-        catch(e) { Log.exx("loop in model:", loopobj); }
+        catch(e) { Log.exx("possible loop in model:\t\n" + (e as Error).message, {loopobj, e}); }
         return {"error": true, loopobj};
     }
     public static importEcore(jsonstr: GObject | string | null, isMetamodel: boolean, filename: string | undefined, loadOnModel: boolean = true): DModelElement[] {
