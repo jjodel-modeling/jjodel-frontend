@@ -51,7 +51,7 @@ import {
     Selectors,
     GObject,
     Dictionary,
-    PointedBy, LPointerTargetable, windoww, SetRootFieldAction, Constructors, DocString, store, SetFieldAction
+    PointedBy, LPointerTargetable, windoww, SetRootFieldAction, Constructors, DocString, store, SetFieldAction, Pointers
 
 } from "../joiner";
 
@@ -236,7 +236,7 @@ export class EcoreParser{
         }
 
         let prereplace = (name: string) => name.replaceAll("#//", ""); // todo: if
-        let replaceRules = ["extends", "extendedBy", "exceptions", "type"];
+        let replaceRules = ["extends", /*"extendedBy",*/ "exceptions", "type"];
         let dobj: GObject & DModelElement;
 
         for (dobj of parsedElements) {
@@ -263,10 +263,11 @@ export class EcoreParser{
                     const isType = value.indexOf("#//") == 0;
                     let target: DModelElement = replacePrimitiveMap[value];
                     if (!target) target = nameMap[value];
+                    // if (Pointers.isPointer(value)) { target = value;  if it happen to be a pointer it's a mistake in parser }
 
 
                     if (isType) {
-                        console.log("attempt to replace primitive type to his id", {target, dobj, replacekey, value, replacePrimitiveMap, nameMap, idMap});
+                        console.log("attempt to replace primitive type to his id", {target, dobj, replacekey, value, replacePrimitiveMap, nameMap, idMap, parsedElements});
                     }
 
                     if (replacekey === "extends") {
@@ -628,6 +629,7 @@ export class EcoreParser{
         let dObject: DEnumerator = DEnumerator.new();
         generated.push(dObject); dObject.father = parent.id;
         if (parent) parent.classifiers.push(dObject.id);
+        dObject.name = this.read(json, ECoreNamed.namee, 'Enum_1');
         /// *** specific start *** ///
         for (let key in json) {
             const value = json[key];
