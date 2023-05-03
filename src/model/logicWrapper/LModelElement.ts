@@ -3975,7 +3975,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 // is reference
                 ret = !meta ? ret : ret.filter( (l: LObject) => {
                     // hide values with a value that is not a pointer to correct type (but keep empties if requested)
-                    let isExtending = true; // l.instanceof?.isExtending((meta as LReference).type); // damiano: todo test & debug isextending
+                    //let isExtending = l.instanceof?.isExtending((meta as LReference).type); // damiano: todo test & debug isextending
+                    let isExtending = true;
                     return keepempties && !l ? true : isExtending;
                 });
                 if (namedPointers) {

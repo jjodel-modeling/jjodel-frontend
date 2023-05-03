@@ -51,6 +51,10 @@ function Topbar(props: AllProps) {
         <div className={'ms-1'}>
             {/*
             <Undoredocomponent />
+
+            <label className={'item border round ms-1'} onClick={exportXml}>Export XML</label>
+            <label className={'item border round ms-1'} onClick={importXml}>Import XML</label>
+
             <div className={'ms-auto me-1'}>
                 <label className={'item border round ms-1'} onClick={ () => SaveManager.exportLayout_click(false) }>Export Layout</label>
                 <label className={'item border round ms-1'} onClick={ () => SaveManager.importLayout_click(false) }>Import Layout</label>
@@ -63,8 +67,6 @@ function Topbar(props: AllProps) {
 
             <label className={'item border round ms-1'} onClick={exportJson}>Export JSON</label>
             <label className={'item border round ms-1'} onClick={importJson}>Import JSON</label>
-            <label className={'item border round ms-1'} onClick={exportXml}>Export XML</label>
-            <label className={'item border round ms-1'} onClick={importXml}>Import XML</label>
         </div>
     </div>);
 }

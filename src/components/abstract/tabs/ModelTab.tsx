@@ -13,12 +13,15 @@ import EdgesManager from "../../../graph/edges/EdgesManager";
 function ModelTabComponent(props: AllProps) {
     const model = props.model;
     const graph = props.graph;
-    console.log("graph", {model, graph});
 
-    if (!model) return <div style={{width: "100%", height:"100%", display:"flex"}}><span style={{margin: "auto"}}>Model deleted... tab removal is still to do</span></div>;
+    if (!model) return(<>closed tab</>);
     if (!graph) {
         CreateElementAction.new(DGraph.new(model.id));
-        return <div style={{width: "100%", height: "100%", display: "flex"}}><span style={{margin: "auto"}}>Building the Graph...</span></div>; }
+        return(<div style={{width: "100%", height: "100%", display: "flex"}}>
+            <span style={{margin: "auto"}}>Building the Graph...</span>
+        </div>);
+    }
+
     return(<div className={'w-100 h-100'}>
         <ContextMenu />
         <PendingEdge />
