@@ -19,6 +19,7 @@
     "axios": "^0.21.4",
     "bootstrap": "^5.2.1",
     "bootstrap-icons": "^1.9.1",
+    "firebase": "^9.21.0",
     "html-react-parser": "^3.0.4",
     "jquery": "^3.6.0",
     "jqueryui": "^1.11.1",

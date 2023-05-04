@@ -1,22 +1,35 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
-import API from "../../../api/api";
+import {Firebase} from "../../../firebase";
+import {DModel} from "../../../model/logicWrapper";
 
 
 function PersistanceTabComponent(props: AllProps) {
+    const room = props.room;
+
+    const addAction = async() => {
+        const dModel = DModel.new('firebase-test', undefined, true);
+        // @ts-ignore
+        dModel.pointedBy = []; dModel.father = null; dModel._storePath = null; dModel._subMaps = null;
+        const actions : any = [{type: 'CREATE', obj: {...dModel}}];
+        await Firebase.edit(room, 'actions', actions);
+    }
+
+
     return(<div>
-        <button className={'btn btn-primary'} onClick={() => API.post()}>click</button>
+        <button disabled={!room} onClick={addAction}>create Metamodel</button>
     </div>);
 }
 interface OwnProps {}
-interface StateProps {}
+interface StateProps {room: string}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
+    ret.room = state.room;
     return ret;
 }
 

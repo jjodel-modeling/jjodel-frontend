@@ -138,6 +138,8 @@ export class IStore {
     m2models: Pointer<DModel, 0, 'N', LModel> = [];
     m1models: Pointer<DModel, 0, 'N', LModel> = [];
 
+    room: string = '';
+
 
     constructor() {
         // todo: this must become a pointer to idlookup and fire a CreateNewElementAction
@@ -164,8 +166,11 @@ export class IStore {
         for (let primitiveType of Object.values(ShortAttribETypes)) {
             let dPrimitiveType;
             if (primitiveType === ShortAttribETypes.void) continue; // or make void too without primitiveType = true, but with returnType = true?
-            else dPrimitiveType = DClass.new(primitiveType, false, false, true, false, '',undefined, true);
-            // CreateElementAction.new(dPrimitiveType);
+            else {
+                dPrimitiveType = DClass.new(primitiveType, false, false, true, false, '',undefined, false);
+                dPrimitiveType.id = 'POINTER_' + dPrimitiveType.name.toUpperCase();
+                CreateElementAction.new(dPrimitiveType);
+            }
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
         }
 /*

@@ -33,6 +33,18 @@ console.warn('loading ts U log');
 @RuntimeAccessible
 export class U{
 
+    public static getRandomString(length: number): string {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let randomString = '';
+        let index = 0;
+        while(index < length) {
+            const randomNumber = Math.floor(Math.random() * characters.length);
+            randomString += characters.charAt(randomNumber);
+            index += 1;
+        }
+        return randomString;
+    }
+
     private static notNullFilter(e: any) { return !!e; };
     static pe(useLog_e: never, ...rest: any): void | never {}
 
