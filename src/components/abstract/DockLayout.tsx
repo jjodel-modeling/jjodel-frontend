@@ -29,6 +29,7 @@ import MetamodelTab from "./tabs/MetamodelTab";
 import ModelTab from "./tabs/ModelTab";
 import InfoTab from "./tabs/InfoTab";
 import PersistanceTab from "./tabs/PersistanceTab";
+import {Firebase} from "../../firebase";
 
 
 export class TabDataMaker {
@@ -179,12 +180,13 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         });
     }
 
-    addMetamodel(evt: undefined|React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData, model?: DModel) {
+    async addMetamodel(evt: undefined|React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData, model?: DModel) {
         let name = 'metamodel_' + 0;
         let names: (string)[] = Selectors.getAllMetamodels().map(m => m.name);
         name = U.increaseEndingNumber(name, false, false, (newName) => names.indexOf(newName) >= 0)
         model = model || DModel.new(name, undefined, true);
-        DGraph.new(model.id);
+        if(Selectors.getRoom()) await Firebase.saveAddAction(model);
+        // DGraph.new(model.id);  <-- viene fatto in autamatico ?
         this.OPEN(model);
     }
     addModel(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {

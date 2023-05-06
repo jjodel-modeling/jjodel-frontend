@@ -33,6 +33,7 @@ function RoomManagerComponent(props: AllProps) {
         </div>);
     } else {
         return(<div className={'ms-auto'}>
+            <input className={'input ms-3'} value={room} disabled={true} />
             <label onClick={quit} className={'item border round ms-1 bg-danger'}>Quit Room</label>
         </div>);
     }

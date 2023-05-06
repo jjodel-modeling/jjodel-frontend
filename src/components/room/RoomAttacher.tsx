@@ -3,28 +3,20 @@ import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
 import {doc, onSnapshot} from "@firebase/firestore";
 import {Firebase} from "../../firebase";
-import {DModel, DModelElement, Selectors} from "../../joiner";
+import {Selectors} from "../../joiner";
 
-interface ACTION {type: 'CREATE', obj: any|DModelElement}
 function RoomAttacherComponent(props: AllProps) {
     const room = props.room;
     if(!room) return(<></>);
 
     onSnapshot(doc(Firebase.db, 'rooms', room), (result) => {
+        if(!Selectors.getRoom()) return;
         const data = result.data();
         if(!data) return;
-        const actions = data.actions;
-        if(actions.length === 0 || !actions[0]) return;
-        const action: ACTION = actions[0];
-        const obj = action.obj;
-        if(Selectors.getState().idlookup[obj.id]) return;
-        switch (obj.className) {
-            case 'DModel': DModel.new(obj.name, obj.instanceof, obj.isMetamodel); break;
-            default: break;
-        }
+        for(let action of data.actions) Firebase.loadAction(action);
     });
 
-    return(<>Hello</>);
+    return(<>Attach</>);
 }
 interface OwnProps {}
 interface StateProps {room: string}

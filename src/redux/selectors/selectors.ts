@@ -48,6 +48,11 @@ enum ViewEClassMatch { // this acts as a multiplier for explicit priority
 @RuntimeAccessible
 export class Selectors{
 
+    static getRoom(): string {
+        const state = store.getState();
+        return state.room;
+    }
+
     static getActiveModel(): null|LModel {
         let metamodel: null|LModel;
         let state: IStore & GObject = store.getState();

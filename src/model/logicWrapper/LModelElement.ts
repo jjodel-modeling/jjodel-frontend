@@ -55,6 +55,7 @@ import {
     ECoreReference,
     ECoreRoot
 } from "../../api/data";
+import { Firebase } from "../../firebase";
 
 
 @Node
@@ -743,6 +744,7 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
             }
         }
         SetFieldAction.new(context.data, 'name', name, '', false);
+        Firebase.saveEditAction(context.data.id, 'name', name, '', false);
         return true;
 
         /*
@@ -1211,7 +1213,11 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
 
     public addPackage(name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]): DPackage { return this.cannotCall("addPackage"); }
     protected get_addPackage(context: Context): this["addPackage"] {
-        return (name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]) => DPackage.new(name, uri, prefix, context.data.id, true, DPackage); }
+        return (name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]) => {
+            const me = DPackage.new(name, uri, prefix, context.data.id, true, DPackage);
+            return me;
+        }
+    }
 
     public addClass(name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                     isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]): DClass {
@@ -3222,7 +3228,12 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 
     public addPackage(name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]): DPackage { return this.cannotCall("addPackage"); }
     public get_addPackage(context: Context): ((name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => DPackage) {
-        return (name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => DPackage.new(name, uri, prefix, context.data.id, true, DModel); }
+        return (name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => {
+            const me = DPackage.new(name, uri, prefix, context.data.id, true, DModel);
+            Firebase.saveAddAction(me).then();
+            return me;
+        }
+    }
 
     public addObject(instanceoff?:DObject["instanceof"], name?: DObject["name"]): DObject { return this.cannotCall("addObject"); }
     protected get_addObject(context: Context): this["addObject"] {

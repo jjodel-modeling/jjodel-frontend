@@ -1,6 +1,15 @@
 import {initializeApp} from "firebase/app";
 import {doc, collection, getFirestore, setDoc, updateDoc, CollectionReference, QueryFieldFilterConstraint, where, Query, query, getDocs, or} from '@firebase/firestore';
 import {Env} from "./environment";
+import {
+    CreateElementAction,
+    DModel,
+    DModelElement,
+    DPackage,
+    DPointerTargetable, Pointer,
+    PrimitiveType,
+    Selectors, SetFieldAction, SetRootFieldAction
+} from "../joiner";
 
 type OPERATOR = '=='|'!=';
 export interface CONSTRAINT {field: string, operator: OPERATOR, value: any}
@@ -61,6 +70,78 @@ export class Firebase {
         const collection = 'rooms';
         const DOC = doc(Firebase.db, collection, room);
         await updateDoc(DOC, field, value);
+    }
+
+    static async saveAddAction(me: DModel|DPackage|any): Promise<void> {
+        const room = Selectors.getRoom(); if(!room) return;
+        let action: {[key: string]: PrimitiveType} = {type: 'ADD'}
+        switch(me.className) {
+            case 'DModel':
+                action.classname = me.className;
+                action.id = me.id;
+                action.name = me.name;
+                action.instanceof = me.instanceof;
+                action.isMetamodel = me.isMetamodel;
+                break;
+            case 'DPackage':
+                action.classname = me.className;
+                action.id = me.id;
+                action.father = me.father;
+                action.name = me.name;
+                action.uri = me.uri;
+                action.prefix = me.prefix;
+                break;
+            default: break;
+        }
+        const results = await Firebase.select('rooms', {field: 'code', operator: '==', value: room});
+        await Firebase.edit(room, 'actions', [...results[0].actions, action]);
+    }
+
+    static async saveEditAction(me: string, field: string, val: any, accessModifier: '+='|'', isPointer: boolean): Promise<void> {
+        const room = Selectors.getRoom(); if(!room) return;
+        let action: {[key: string]: PrimitiveType} = {type: 'EDIT'}
+        action.me = me;
+        action.field = field;
+        action.val = val;
+        action.accessModifier = accessModifier;
+        action.isPointer = isPointer;
+        const results = await Firebase.select('rooms', {field: 'code', operator: '==', value: room});
+        await Firebase.edit(room, 'actions', [...results[0].actions, action]);
+    }
+
+    static loadAction(action: {[key: string]: PrimitiveType}): void {
+        switch(action.type) {
+            case 'ADD': return Firebase.loadAddAction(action);
+            case 'EDIT': return Firebase.loadEditAction(action);
+            default: return;
+    }
+    }
+
+    private static loadAddAction(action: {[key: string]: PrimitiveType}): void {
+        const state = Selectors.getState();
+        const obj = state.idlookup[String(action.id)];
+        if(obj) return;
+        let me!: DModelElement;
+        switch (action.classname) {
+            case 'DModel': // @ts-ignore
+                me = DModel.new(action.name, action.instanceof, action.isMetamodel, false);
+                me.id = String(action.id);
+                CreateElementAction.new(me);
+                SetRootFieldAction.new('m2models', me.id, '+=', true);
+                break;
+            case 'DPackage': // @ts-ignore
+                me = DPackage.new(action.name, action.uri, action.prefix, action.father, false, DModel);
+                me.id = String(action.id);
+                CreateElementAction.new(me);
+                SetFieldAction.new(action.father as Pointer<DModel>, 'packages', me.id, '+=', true);
+                break;
+            default: break;
+        }
+    }
+
+    private static loadEditAction(action: {[key: string]: PrimitiveType}): void {
+        // @ts-ignore
+        SetFieldAction.new(action.me, action.field, action.val, action.accessModifier, action.isPointer);
     }
 
 }
