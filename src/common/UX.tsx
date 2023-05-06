@@ -69,6 +69,7 @@ export class UX{
                 injectProps.nodeid = U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
                 gvidmap[injectProps.nodeid] = true;
                 injectProps.key = injectProps.nodeid; // re.props.key || thiss.props.view.id + '_' + thiss.props.data.id;
+                // console.log("cloning jsx:", re, injectProps);
                 return React.cloneElement(re, injectProps);
         }}
 

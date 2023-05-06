@@ -1,12 +1,18 @@
 @import "./variables";
 
+// [data-nodetype="Vertex"]>.root { border: 0.1em solid $border-color; }
+[data-nodetype="Vertex"],
+[data-nodetype="GraphVertex"] {
+  &>*{ border: 0.1em solid $border-color; }
+  &>.ui-resizable-handle{ border: none; }
+}
 
 .root {
   height: -webkit-fill-available;
   width: -webkit-fill-available;
 }
 
-.model-view {
+.model {
   position: absolute;
   height: $fill;
   width: $fill;
@@ -19,10 +25,7 @@
   color: $model-color;
 }
 
-.package-view {
-  height: $fill;
-  width: $fill;
-  border: 0.1em solid $border-color;
+.package {
   border-left: 0.25em solid $package-color
 }
 
@@ -37,10 +40,7 @@
 }
 
 
-.class-view {
-  height: fit-content;
-  width: $fill;
-  border: 0.1em solid $border-color;
+.class {
   border-left: 0.25em solid $class-color
 }
 
@@ -56,15 +56,13 @@
 }
 
 
-.enumerator-view {
-  height: fit-content;
-  width: $fill;
-  border: 0.1em solid $border-color;
-  border-left: 0.25em solid $enum-color
+
+.enumerator { // was: .enumerator-view
+  // height: fit-content;
+  // width: $fill;
+  border-left: 0.25em solid $enum-color;
 }
-.resized>.root.enumerator .enumerator-view{
-  height: -webkit-fill-available;
-}
+// .resized>.root.enumerator .enumerator-view{ height: -webkit-fill-available; }
 
 .enumerator-name {
   font-weight: bold;
@@ -102,10 +100,7 @@
   color: $parameter-color;
 }
 
-.object-view {
-  height: fit-content;
-  width: $fill;
-  border: 0.1em solid $border-color;
+.object {
   border-left: 0.25em solid $object-color
 }
 

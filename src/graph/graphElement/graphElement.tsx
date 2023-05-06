@@ -354,12 +354,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let fiximport = !!this.props.node; // todo: check if correct approach
         if (addprops && me && rawRElement && fiximport) {
             // console.log("pre-injecting", {thiss:this, data:this.props.data, props:this.props});
+            let fixdoubleroot = true;
             const onDragTestInject = () => {}; // might inject event handlers like this with cloneelement
             // add view props to GraphElement childrens (any level down)
             const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap(); // todo: per passarla come prop ma mantenerla modificabile
             try {
                 rawRElement = React.cloneElement(rawRElement, {key: this.props.key || this.props.view.id + '_' + me.id, onDragTestInject, children: UX.recursiveMap(rawRElement/*.props.children*/,
                         (rn: ReactNode) => UX.injectProp(this, rn, subElements))});
+                if(fixdoubleroot) rawRElement = rawRElement.props.children;
+                // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
             } catch (e) {
                 rawRElement = DV.errorView("error while injecting props to subnodes", {e, rawRElement, key:this.props.key, newid: this.props.view?.id+'_'+me?.id});
             }

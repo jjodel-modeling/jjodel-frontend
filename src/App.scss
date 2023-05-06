@@ -35,6 +35,9 @@
   overflow: hidden !important;
   height: -webkit-fill-available;
   width: -webkit-fill-available;
+  &::after{
+    content: '';
+  }
 }
 [data-nodetype="Vertex"], [data-nodetype="VertexGraph"]{
   position: absolute !important;

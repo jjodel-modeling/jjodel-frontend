@@ -109,7 +109,7 @@ export default class Structure {
         if(!operation) return(<></>);
         return(<>
             {Structure.BaseEditor(operation)}
-            <Select obj={operation.parameters[0].id} field={'type'} label={'Return'} tooltip={"Method return type"} />
+            <Select obj={operation.id} field={'type'} label={'Return'} tooltip={"Method return type"} />
             {operation.parameters.map((parameter, index) => {
                 if (index > 0) {
                     return <div key={index}>

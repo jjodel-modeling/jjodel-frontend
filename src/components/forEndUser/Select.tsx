@@ -32,10 +32,10 @@ function SelectComponent(props: AllProps) {
     let hasReturn = false; let hasPrimitive = false; let hasClasses = false; let hasEnumerators = false;
     if(field === 'type') {
         switch (data.className) {
-            case 'DAttribute': hasPrimitive = true; hasEnumerators = true; break;
+            case 'DAttribute': hasPrimitive = hasEnumerators = true; break;
             case 'DReference': hasClasses = true; break;
-            case 'DOperation': hasReturn = true; break;
-            case 'DParameter': hasPrimitive = true; hasClasses = true; hasEnumerators = true; break;
+            case 'DOperation': hasPrimitive = hasClasses = hasEnumerators = hasReturn = true; break;
+            case 'DParameter': hasPrimitive = hasClasses = hasEnumerators = true; break;
         }
     }
     const returns = props.returns;
@@ -92,7 +92,6 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    console.log("crash", {ownProps, obj: ownProps.obj});
     const pointer: Pointer = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
     ret.data = LPointerTargetable.fromPointer(pointer);
     ret.primitives = LPointerTargetable.fromPointer(state.primitiveTypes);

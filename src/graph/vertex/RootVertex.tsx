@@ -30,7 +30,8 @@ function GraphElement(props: AllProps){}
 
 
 function RootVertexComponent(props: AllProps, state: ThisState) {
-    const rootProps = props.props; const node = rootProps.node;
+    const rootProps = props.props;
+    const node: LGraphElement = rootProps.node || LPointerTargetable.wrap(rootProps.nodeid);
     const data = rootProps.data;
     const isEdgePending = !!(rootProps.isEdgePending?.source);
     const user = rootProps.isEdgePending.user;
@@ -39,7 +40,12 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     const canBeExtend = isEdgePending &&
                         rootProps.data.className === "DClass" &&
                         source.canExtend(rootProps.data as any as LClass, extendError);
+    const view: LViewElement|undefined = rootProps.view;
     let [classes, setClasses] = useStateIfMounted<string[]>([data.className]);
+    let currentClonedCounter: number = (view as any)?.clonedCounter;
+    let [viewClonedCounter, setViewClonedCounter] = useStateIfMounted<number>(-1);
+    let viewIsChanged = viewClonedCounter !== currentClonedCounter;
+    if (viewIsChanged) setViewClonedCounter(currentClonedCounter);
     // let [resized, setResized] = useStateIfMounted<boolean>(false);
 
     let nodeType = "NODE_TYPE_ERROR";
@@ -53,11 +59,11 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     if (Array.isArray(props.props.class)) { U.arrayMergeInPlace(classes, props.props.class); }
     else if (props.props.class) { classes.push(props.props.class); }
 
-    const view: LViewElement|undefined = rootProps.view;
     /// EVENT TRIGGER FUCTIONS START
     const select = (forUser:Pointer<DUser, 0, 1> = null) => {
         if (!forUser) forUser = DUser.current;
-        rootProps.node.isSelected[forUser] = true;
+        console.log("crash", {props, rootProps, node});
+        node.isSelected[forUser] = true;
         SetRootFieldAction.new('_lastSelected', {
             node: rootProps.nodeid,
             view: rootProps.view.id,
@@ -132,10 +138,9 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     const htmlRef: RefObject<HTMLDivElement> = useRef(null);
 
     useEffect(() => {
-        const viewIsUpdated = true; // todo, run this only if view is different from old render
-        console.log("useeffect", {htmlRef, name:(props.props.data as any).name, view});
         if (!htmlRef.current) return;
-        if (!viewIsUpdated) return;
+        if (!viewIsChanged) return; // run this only if view is different from old render
+        console.log("useeffect", {htmlRef, name:(props.props.data as any).name, view});
         const element: GObject<"JQuery + ui plugin"> = $(htmlRef.current); // todo: install typings
         switch(nodeType) {
             case "GraphVertex":
@@ -201,7 +206,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     viewStyle.overflow = 'hidden';
     // viewStyle.position = 'relative'; // 'absolute';
     viewStyle.display = rootProps.view?.display;
-    viewStyle.zIndex = rootProps.node?.zIndex;
+    viewStyle.zIndex = node?.zIndex;
     if (view.adaptWidth) viewStyle.width = view.adaptWidth; // '-webkit-fill-available';
     else viewStyle.height = (rootProps.view.height) && rootProps.view.height + 'px';
     if (view.adaptHeight) viewStyle.height = view.adaptHeight; //'fit-content'; // '-webkit-fill-available'; if needs to actually fill all it's not a vertex but a field.
@@ -215,7 +220,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              data-dataid={rootProps.data?.id}
              data-viewid={rootProps.view?.id}
              data-modelname={rootProps.data?.className}
-             data-userselecting={JSON.stringify(rootProps.node?.__raw.isSelected || {})}
+             data-userselecting={JSON.stringify(node?.__raw.isSelected || {})}
              data-nodetype={nodeType}
              style={{...viewStyle}}
              className={classes.join(' ')}

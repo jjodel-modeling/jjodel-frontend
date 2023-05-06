@@ -1388,14 +1388,16 @@ export class DOperation extends DPointerTargetable { // extends DTypedElement
     visibility: AccessModifier = AccessModifier.private;
     implementation!: string;
 
-    public static new(name?: DNamedElement["name"], type?: DOperation["type"], exceptions: DOperation["exceptions"] = [], father?: Pointer, persist: boolean = true): DOperation {
+    public static new(name?: DNamedElement["name"], type?: DOperation["type"], exceptions: DOperation["exceptions"] = [], father?: DOperation["father"], persist: boolean = true): DOperation {
         if (!name) name = this.defaultname("fx_", father);
+        if (!type) type = father;
         return new Constructors(new DOperation('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DTypedElement(type).DOperation(exceptions).end();
     }
 
     static new2(setter: Partial<ObjectWithoutPointers<DOperation>>, father: DOperation["father"], type?: DOperation["type"], name?: string): DOperation {
         if (!name) name = this.defaultname((name || "fx_"), father);
+        if (!type) type = father;
         return new Constructors(new DOperation('dwc'), father, true).DPointerTargetable().DModelElement().DTypedElement(type)
             .DNamedElement(name).DTypedElement(type).DOperation().end((d)=> { Object.assign(d, setter); });
     }
@@ -1477,21 +1479,24 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
     public execute(thiss: LObject, ...params: any): any { return this.cannotCall("execute"); }
     protected get_execute(context: Context): ((thiss: LObject, ...params: any[])=>any) {
         return (thiss: LObject, ...params: any) => {
-            let func: Function = eval(context.proxyObject.signatureImplementation + " {\n"+ context.data.implementation + "\n}");
+            let func: Function = eval(this.get_signatureImplementation(context, true) + " {\n"+ context.data.implementation + "\n}");
             func.apply(thiss, params);
         };
     }
     public set_implementation(val: this["implementation"], context: Context): boolean { return SetFieldAction.new(context.data.id, "implementation", val, undefined, false); }
     public get_implementation(context: Context): this["implementation"] { return context.data.implementation; }
     public set_signatureImplementation(val: this["signatureImplementation"], context: Context): boolean { return this.cannotSet("signatureImplementation"); }
-    public get_signatureImplementation(context: Context): this["signatureImplementation"] {
+    public get_signatureImplementation(context: Context, typedComments: boolean = true): this["signatureImplementation"] {
         let operation = context.proxyObject;
+        let typedcommentpre = typedComments ? "/* :" : ': ' ;
+        let typedcommentpost = typedComments ? " */" : '';
         return "(" +
             operation.parameters.map(
-                (p) => p.name + (p.defaultValue !== undefined ? "=" + p.defaultValue : "/* :"+p.typeToShortString()+" */")
+                (p) => p.name + (p.defaultValue !== undefined ? "=" + p.defaultValue : typedcommentpre + p.typeToShortString() + typedcommentpost)
             ).join(", ")
-        + ") => /*"+operation.type+"*/";
+        + ") => " +typedcommentpre.replace(":", "") + operation.type + typedcommentpost;
     }
+    public get_signature(context: Context): this["signatureImplementation"] { return this.get_signatureImplementation(context, false); }
 
     protected get_childrens_idlist(context: Context): Pointer<DAnnotation | DClassifier | DParameter, 1, 'N'> {
         return [...super.get_childrens_idlist(context) as Pointer<DAnnotation | DParameter | DClassifier, 1, 'N'>, ...context.data.exceptions, ...context.data.parameters]; }
@@ -1532,9 +1537,8 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
         return true;
     }
 
-    protected get_type(context: Context): this["type"] {
-        return context.proxyObject.parameters[0].type;
-    }
+    // protected get_type(context: Context): this["type"] { return context.proxyObject.parameters[0].type; }
+    // protected set_type(val: Pack1<this["type"]>, context: Context): this["type"] { return super.set_type(val, context); }
 
     _mark(b: boolean, superchildren: LOperation, override: string) {
 
