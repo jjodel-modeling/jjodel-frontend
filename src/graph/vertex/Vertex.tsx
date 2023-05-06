@@ -109,7 +109,7 @@ export const Vertex = (props: OwnProps, childrens: (string | React.Component)[] 
     return <VertexConnected {...{...props, childrens}} isGraph={false} isVertex={true} />;
 }
 
-export const Graph = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+export const Graph = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => { // doesn't work?
     return <VertexConnected {...{...props, childrens}} isGraph={true} isVertex={false} />;
 }
 
@@ -120,4 +120,16 @@ export const GraphVertex = (props: OwnProps, childrens: (string | React.Componen
 export const Field = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     return <VertexConnected {...{...props, childrens}} isGraph={false} isVertex={false} />;
 }
+
+let windoww = window as any;
+
+windoww.Vertex = Vertex;
+windoww.Graph = Graph;
+windoww.GraphVertex = GraphVertex;
+windoww.Field = Field;
+
+windoww.VertexComponent = Vertex;
+windoww.GraphComponent = Graph;
+windoww.GraphVertexComponent = GraphVertex;
+windoww.FieldComponent = Field;
 

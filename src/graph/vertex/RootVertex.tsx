@@ -1,5 +1,5 @@
 import {EdgeOptions, IStore} from "../../redux/store";
-import React, {Dispatch, ReactElement, ReactNode, useEffect} from "react";
+import React, {Dispatch, ReactElement, ReactNode, RefObject, useEffect, useRef} from "react";
 import {useStateIfMounted} from "use-state-if-mounted";
 import {connect} from "react-redux";
 import {
@@ -12,14 +12,23 @@ import {
     LViewElement,
     Pointer,
     SetFieldAction,
-    SetRootFieldAction
+    SetRootFieldAction,
+    U
 } from "../../joiner";
 import {AllPropss as VertexProps} from "./Vertex";
 import $ from "jquery";
 import "jqueryui";
 import "jqueryui/jquery-ui.css";
+import { useEffectOnce } from "usehooks-ts";
 
-interface ThisState {}
+interface ThisState {
+    // resized: boolean;
+    classes: string[];
+}
+
+function GraphElement(props: AllProps){}
+
+
 function RootVertexComponent(props: AllProps, state: ThisState) {
     const rootProps = props.props; const node = rootProps.node;
     const data = rootProps.data;
@@ -30,8 +39,22 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     const canBeExtend = isEdgePending &&
                         rootProps.data.className === "DClass" &&
                         source.canExtend(rootProps.data as any as LClass, extendError);
-    const [classes, setClasses] = useStateIfMounted<string[]>([data.className]);
+    let [classes, setClasses] = useStateIfMounted<string[]>([data.className]);
+    // let [resized, setResized] = useStateIfMounted<boolean>(false);
 
+    let nodeType = "NODE_TYPE_ERROR";
+    if ( props.props.isGraph &&  props.props.isVertex) nodeType = "GraphVertex";
+    if ( props.props.isGraph && !props.props.isVertex) nodeType = "Graph";
+    if (!props.props.isGraph &&  props.props.isVertex) nodeType = "Vertex";
+    if (!props.props.isGraph && !props.props.isVertex) nodeType = "Field";
+    classes = [...classes, nodeType];
+    if (Array.isArray(props.props.className)) { U.arrayMergeInPlace(classes, props.props.className); }
+    else if (props.props.className) { classes.push(props.props.className); }
+    if (Array.isArray(props.props.class)) { U.arrayMergeInPlace(classes, props.props.class); }
+    else if (props.props.class) { classes.push(props.props.class); }
+
+    const view: LViewElement|undefined = rootProps.view;
+    /// EVENT TRIGGER FUCTIONS START
     const select = (forUser:Pointer<DUser, 0, 1> = null) => {
         if (!forUser) forUser = DUser.current;
         rootProps.node.isSelected[forUser] = true;
@@ -47,7 +70,8 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
             const source = rootProps.isEdgePending.source;
             if (canBeExtend) {
                 const lClass: LClass = LPointerTargetable.from(rootProps.data.id);
-                SetFieldAction.new(lClass.id, "extendedBy", source.id, "", true); // todo: this should throw a error for wrong type.
+                // SetFieldAction.new(lClass.id, "extendedBy", source.id, "", true); // todo: this should throw a error for wrong type.
+                // todo: use source.addExtends(lClass); or something (source is LClass)
                 SetFieldAction.new(lClass.id, "extendedBy", source.id, "+=", true);
                 SetFieldAction.new(source.id, "extends", lClass.id, "+=", true);
             }
@@ -67,22 +91,21 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
         e.stopPropagation();
     }
     const onEnter = (e: React.MouseEvent<HTMLDivElement>) => {
-        if(isEdgePending && rootProps.data.className === "DClass") {
-            const user = rootProps.isEdgePending.user;
-            const source = rootProps.isEdgePending.source;
-            if(canBeExtend) setClasses([...classes, "class-can-be-extended"]);
+        if (isEdgePending && rootProps.data.className === "DClass") {
+            if (canBeExtend) setClasses([...classes, "class-can-be-extended"]);
             else setClasses([...classes, "class-cannot-be-extended"]);
         }
     }
     const onLeave = (e: React.MouseEvent<HTMLDivElement>) => {
         if(rootProps.data.className === "DClass") {
             setClasses(classes.filter((classname) => {
-                return classname !== "class-can-be-extended" && classname !=="class-cannot-be-extended"
+                return classname !== "class-can-be-extended" && classname !== "class-cannot-be-extended"
             }));
         }
     }
+    /// EVENT TRIGGER FUCTIONS END
 
-    const view: LViewElement|undefined = rootProps.view;
+
     /*const sizeStyle: CSSProperties = {};
     if(rootProps.isVertex) { sizeStyle.position = "absolute"; }
 
@@ -105,14 +128,22 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
         }
     }*/
 
+
+    const htmlRef: RefObject<HTMLDivElement> = useRef(null);
+
     useEffect(() => {
-        const element: GObject = $('[id="' + rootProps.nodeid + '"]');
-        if(element && rootProps.data.className !== 'DModel') {
-            if(view) {
+        const viewIsUpdated = true; // todo, run this only if view is different from old render
+        console.log("useeffect", {htmlRef, name:(props.props.data as any).name, view});
+        if (!htmlRef.current) return;
+        if (!viewIsUpdated) return;
+        const element: GObject<"JQuery + ui plugin"> = $(htmlRef.current); // todo: install typings
+        switch(nodeType) {
+            case "GraphVertex":
+            case "Vertex":
                 element.draggable({
                     cursor: 'grabbing',
                     containment: 'parent',
-                    disabled: !(view.draggable),
+                    // disabled: !(view.draggable),
                     start: function(event: GObject, obj: GObject) {
                         select();
                         SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 });
@@ -137,7 +168,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                 });
                 element.resizable({
                     containment: 'parent',
-                    disabled: !(view.resizable),
+                    // disabled: !(view.resizable),
                     start: function(event: GObject, obj: GObject) {
                         select();
                         SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 });
@@ -147,9 +178,10 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                         }
                     },
                     resize: function(event: GObject, obj: GObject) {
-                        // SetRootFieldAction.new("dragging", {})
+                        // SetRootFieldAction.new("resizing", {})
                     },
                     stop: function(event: GObject, obj: GObject) {
+                        if (!classes.includes("resized")) setClasses([...classes, "resized"]);
                         if(node) {
                             node.width = obj.size.width;
                             node.height = obj.size.height;
@@ -159,26 +191,32 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                             catch (e) { console.log(e) }
                         }
                     }
-                });
-            }
+                });break;
+            case "Graph":
+            case "Field":
         }
     }, )
 
-    const viewStyle: GObject = {};
-    viewStyle.overflow = 'hidden'; viewStyle.position = 'absolute';
+    let viewStyle: GObject = {};
+    viewStyle.overflow = 'hidden';
+    // viewStyle.position = 'relative'; // 'absolute';
     viewStyle.display = rootProps.view?.display;
     viewStyle.zIndex = rootProps.node?.zIndex;
     if (view.adaptWidth) viewStyle.width = view.adaptWidth; // '-webkit-fill-available';
     else viewStyle.height = (rootProps.view.height) && rootProps.view.height + 'px';
     if (view.adaptHeight) viewStyle.height = view.adaptHeight; //'fit-content'; // '-webkit-fill-available'; if needs to actually fill all it's not a vertex but a field.
     else viewStyle.width = (rootProps.view.width) && rootProps.view.width + 'px';
+
+    viewStyle = {};
     return(
-        <div id={rootProps.nodeid}
+        <div ref={htmlRef}
+             id={rootProps.nodeid}
              data-nodeid={rootProps.nodeid}
              data-dataid={rootProps.data?.id}
              data-viewid={rootProps.view?.id}
              data-modelname={rootProps.data?.className}
              data-userselecting={JSON.stringify(rootProps.node?.__raw.isSelected || {})}
+             data-nodetype={nodeType}
              style={{...viewStyle}}
              className={classes.join(' ')}
              onClick={onClick}

@@ -627,10 +627,17 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.oclApplyCondition = '';
         thiss.explicitApplicationPriority = priority;
         thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 350, 200);
-        thiss.adaptHeight = false;
-        thiss.adaptWidth = false;
+        // thiss.adaptHeight = false;
+        // thiss.adaptWidth = false;
+
+
+        thiss.draggable = false;
+        thiss.resizable = false;
+        thiss.adaptWidth = true;
+        thiss.display = 'flex' as any;
         thiss.width = 200;
         thiss.height = 100;
+        thiss.adaptHeight = 'fit-content';
 
         if (this.persist) {
             // no pointedBy?

@@ -27,8 +27,14 @@ function InputComponent(props: AllProps) {
     ));
 
     const change = (evt: React.ChangeEvent<HTMLInputElement>) => {
-        const target: any = (['checkbox', 'radio'].includes(evt.target.type)) ? evt.target.checked : evt.target.value;
-        data[field] = target;
+        let val;
+        switch (evt.target.type) {
+            case "checkbox":
+            case "radio": val = evt.target.checked; break;
+            case "number": val = +evt.target.value; break;
+            default: val = evt.target.value; break;
+        }
+        data[field] = val;
     }
 
     let className = (props as any).className || '';

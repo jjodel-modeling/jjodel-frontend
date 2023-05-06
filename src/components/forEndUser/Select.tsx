@@ -71,6 +71,7 @@ function SelectComponent(props: AllProps) {
                     return <option key={i} value={classifier.id}>{classifier.name}</option>
                 })}
             </optgroup>}
+            {props.options}
         </select>
         {(tooltip) && <Toaster position={'bottom-center'} />}
     </div>);
@@ -82,6 +83,7 @@ interface OwnProps {
     jsxLabel?: ReactNode;
     tooltip?: string;
     hidden?: boolean;
+    options?: JSX.Element;
 }
 interface StateProps { data: LPointerTargetable & GObject; primitives: LClass[]; returns: LClass[]; }
 interface DispatchProps { }
@@ -90,6 +92,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
+    console.log("crash", {ownProps, obj: ownProps.obj});
     const pointer: Pointer = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
     ret.data = LPointerTargetable.fromPointer(pointer);
     ret.primitives = LPointerTargetable.fromPointer(state.primitiveTypes);

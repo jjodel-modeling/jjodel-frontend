@@ -14,3 +14,52 @@
 .hoverable:hover>.content{ display: block; position: absolute; z-index:1;}
 .hoverable>.content{ display: none; }
 
+
+
+
+[data-nodetype]{
+  position: relative;
+  overflow: visible !important;
+  &::after{
+    content: attr(data-nodetype);
+    position: absolute;
+    top: -23px;
+    left: 0;
+    background: red;
+    z-index: 100000;
+  }
+}
+
+[data-nodetype="Graph"]{
+  position: absolute !important;
+  overflow: hidden !important;
+  height: -webkit-fill-available;
+  width: -webkit-fill-available;
+}
+[data-nodetype="Vertex"], [data-nodetype="VertexGraph"]{
+  position: absolute !important;
+}
+
+
+[data-nodetype="GraphVertex"] {
+  width: 50%;
+  height: 50%;
+}
+[data-nodetype="Field"] {
+
+  white-space: nowrap;
+  overflow: hidden !important;
+  &:hover{
+    overflow: visible !important;
+  }
+  &::after {
+    top: unset;
+    left: -33px;
+    float: left;
+    margin-top: -23px;
+  }
+}
+[data-nodetype="Graph"]::after {
+    top: 0px;
+    left: 0px;
+}

@@ -5,9 +5,15 @@ import OclEditor from "../oclEditor/OclEditor";
 import JsxEditor from "../jsxEditor/JsxEditor";
 import Input from "../../forEndUser/Input";
 import type {LViewPoint} from "../../../view/viewPoint/viewpoint";
-import {TextArea} from "../../../joiner";
+import {Select, TextArea} from "../../../joiner";
 
 interface Props { view: LViewElement; viewpoints: LViewPoint[]; }
+
+const objectTypes = ["", "DModel", "DPackage", "DEnumerator", "DEnumLiteral", "DClass", "DAttribute", "DReference", "DOperation", "DParameter", "DObject", "DValue", "DStructuralFeature"];
+let classesOptions =
+    <optgroup label={"Object type"}>{objectTypes.map(
+        (o)=><option key={o} value={o}>{o.length ? o.substring(1) : "anything"}</option>)}
+    </optgroup>;
 
 function ViewData(props: Props) {
     const view = props.view;
@@ -70,6 +76,15 @@ function ViewData(props: Props) {
         <TextArea obj={view} field={'onDragEnd'} label={'OnDragEnd'} />
         <TextArea obj={view} field={'onResizeStart'} label={'OnResizeStart'} />
         <TextArea obj={view} field={'onResizeEnd'} label={'OnResizeEnd'} />
+
+        {/* damiano: qui Select avrebbe fatto comodo, ma è troppo poco generica, remove "data-" se viene generizzata Select */}
+        <div className="p-1" style={{display: "flex"}}><label className="my-auto">Appliable to</label>
+            <select data-obj={view.id} data-field={'appliableToClasses'} data-label={'Appliable to'} data-options={ classesOptions }
+                value={view.appliableToClasses[0] || ''} onChange={(e) => { view.appliableToClasses = e.target.value as any; }}
+                className={"my-auto ms-auto select"}>
+            {classesOptions}
+            </select>
+        </div>
         <OclEditor viewid={view.id} />
         <JsxEditor viewid={view.id} />
     </div>);

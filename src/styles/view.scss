@@ -1,59 +1,129 @@
 @import "./variables";
 
 
-.root { height: inherit; width: inherit; }
-.model-view { position: absolute; height: $fill; width: $fill;
-  background-image: url("../static/svg/graph.svg"); background-repeat: repeat; }
-.model-name { font-weight: bold; color: $model-color; }
+.root {
+  height: -webkit-fill-available;
+  width: -webkit-fill-available;
+}
 
-.package-view { height: $fill; width: $fill;
-  border: 0.1em solid $border-color; border-left: 0.25em solid $package-color}
-.package-name { font-weight: bold; color: $package-color; }
-.package-children { height: $fill; width: $fill; }
+.model-view {
+  position: absolute;
+  height: $fill;
+  width: $fill;
+  background-image: url("../static/svg/graph.svg");
+  background-repeat: repeat;
+}
 
+.model-name {
+  font-weight: bold;
+  color: $model-color;
+}
 
-.class-view { height: $fill; width: $fill;
-  border: 0.1em solid $border-color; border-left: 0.25em solid $class-color}
-.class-name { font-weight: bold; color: $class-color; }
-.class-children { background-color: whitesmoke; height: fit-content; width: $fill; }
+.package-view {
+  height: $fill;
+  width: $fill;
+  border: 0.1em solid $border-color;
+  border-left: 0.25em solid $package-color
+}
 
+.package-name {
+  font-weight: bold;
+  color: $package-color;
+}
 
-.enumerator-view { height: $fill; width: $fill;
-  border: 0.1em solid $border-color; border-left: 0.25em solid $enum-color}
-.enumerator-name { font-weight: bold; color: $enum-color; }
-.enumerator-children { background-color: whitesmoke; height: fit-content; width: $fill; }
-
-.feature-name { font-weight: bold; color: $feature-color; }
-.attribute-name { font-weight: bold; color: $attribute-color; }
-.reference-name { font-weight: bold; color: $reference-color; }
-.operation-name { font-weight: bold; color: $operation-color; }
-.parameter-name { font-weight: bold; color: $parameter-color; }
-
-.object-view { height: $fill; width: $fill;
-  border: 0.1em solid $border-color; border-left: 0.25em solid $object-color}
-.object-name { font-weight: bold; color: $object-color; }
-.object-children { background-color: whitesmoke; height: fit-content; width: $fill; }
-
-.value-name { font-weight: bold; color: $value-color; }
-
-
+.package-children {
+  height: $fill;
+  width: $fill;
+}
 
 
+.class-view {
+  height: fit-content;
+  width: $fill;
+  border: 0.1em solid $border-color;
+  border-left: 0.25em solid $class-color
+}
+
+.class-name {
+  font-weight: bold;
+  color: $class-color;
+}
+
+.class-children {
+  background-color: whitesmoke;
+  height: fit-content;
+  width: $fill;
+}
 
 
+.enumerator-view {
+  height: fit-content;
+  width: $fill;
+  border: 0.1em solid $border-color;
+  border-left: 0.25em solid $enum-color
+}
+.resized>.root.enumerator .enumerator-view{
+  height: -webkit-fill-available;
+}
 
+.enumerator-name {
+  font-weight: bold;
+  color: $enum-color;
+}
 
+.enumerator-children {
+  background-color: whitesmoke;
+  height: fit-content;
+  width: $fill;
+}
 
+.feature-name {
+  font-weight: bold;
+  color: $feature-color;
+}
 
+.attribute-name {
+  font-weight: bold;
+  color: $attribute-color;
+}
 
+.reference-name {
+  font-weight: bold;
+  color: $reference-color;
+}
 
+.operation-name {
+  font-weight: bold;
+  color: $operation-color;
+}
 
+.parameter-name {
+  font-weight: bold;
+  color: $parameter-color;
+}
 
+.object-view {
+  height: fit-content;
+  width: $fill;
+  border: 0.1em solid $border-color;
+  border-left: 0.25em solid $object-color
+}
 
+.object-name {
+  font-weight: bold;
+  color: $object-color;
+}
 
+.object-children {
+  background-color: whitesmoke;
+  height: fit-content;
+  width: $fill;
+}
 
-
-
+.value-name {
+  font-weight: bold;
+  color: $value-color;
+}
 
 
 /*

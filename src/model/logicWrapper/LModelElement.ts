@@ -3572,8 +3572,11 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     // operations!: LOperation[];
 
     // personal
-    deep_subobjects!: LObject[]; // todo: itera features (lvalue[]) deep e vitando di inserire doppioni (salva una mappatura di di già aggiunti e skip se ricompaiono)
-    subobjects!: LObject[];
+    deepSubObjects!: LObject[]; // todo: itera features (lvalue[]) deep e vitando di inserire doppioni (salva una mappatura di di già aggiunti e skip se ricompaiono)
+    subObjects!: LObject[];
+    referenceFeatures!: LValue[]; // subset of features that are references.
+    attributeFeatures!: LValue[]; // subset of features that are attributes.
+    shapelessFeatures!: LValue[]; // subset of features that are not mapped and can have any kind of values.
     // + tutte le funzioni di comodità navigazionale del modello, trattarlo un pò come se fosse un modello (e quasi può esserlo)
     instanceof!: LClass;
     features!: LValue[];
@@ -3595,7 +3598,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         // if (!sort && (!meta || meta.partial)) return childs;
         let conformchildrens: undefined | Pointer[] = meta && !meta.partial ? meta.allChildren.map(c => c.id) : undefined;
         if (!sort) {
-            console.log("return get features:", {context, meta, childs, conformchildrens, ret:childs.filter((c) => (c.instanceof?.id) && conformchildrens!.includes(c.instanceof?.id))});
+            // console.log("return get features:", {context, meta, childs, conformchildrens, ret:childs.filter((c) => (c.instanceof?.id) && conformchildrens!.includes(c.instanceof?.id))});
             if (!conformchildrens) return childs;
             return childs.filter((c) => (c.instanceof?.id) && conformchildrens!.includes(c.instanceof?.id));
         }
@@ -3603,13 +3606,13 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         let bymetaparent: Dictionary<DocString<"metaparent pointer">, LValue[]> = {};
         for (let v of childs) {
             let vmeta = v.instanceof;
-            console.log("get features filtering:", {context, meta, vmeta, v, childs, conformchildrens});
+            // console.log("get features filtering:", {context, meta, vmeta, v, childs, conformchildrens});
 
             if (conformchildrens && (!vmeta || !conformchildrens.includes(vmeta.id))) continue;
             let vmetaid: string = vmeta?.id as string; // undef as key is fine even if compiler complains, so i cast it
             if (!bymetaparent[vmetaid]) bymetaparent[vmetaid] = [v]; else bymetaparent[vmetaid as any].push(v);
         }
-        console.log("return get features:", {context, meta, childs, conformchildrens, ret:Object.values(bymetaparent).flat()});
+        // console.log("return get features:", {context, meta, childs, conformchildrens, ret:Object.values(bymetaparent).flat()});
         return Object.values(bymetaparent).flat();
     }
 
@@ -3654,6 +3657,43 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
             }
         }));
         return targeting; }
+
+    protected get_subObjects(context: Context): this["subObjects"] {
+        let ref_features: LValue[] = this.get_referenceFeatures(context, false).filter( (f) => (f.instanceof as LReference)!.containment );
+        let shapeless_features: LValue[] = this.get_shapelessFeatures(context);
+        let vals: LObject[] = [
+            ...ref_features.flatMap((f) => (f.value as LObject[])).filter((val)=>!!val),
+            ...shapeless_features.flatMap((f) => (f.value as any))
+                .filter((val)=>(!!val && val.className === DObject.name)) as LObject[]
+            ];
+        return vals;
+    }
+
+    protected get_deepSubObjects(context: Context): this["deepSubObjects"] {
+        let alreadyparsed: Dictionary<Pointer, LObject> = {};
+        let arr: LObject[] = this.get_subObjects(context);
+        while(arr.length) {
+            let next: LObject[] = [];
+            for (let obj of arr) {
+                if (alreadyparsed[obj.id]) continue;
+                alreadyparsed[obj.id] = obj;
+                next.push(...obj.subObjects);
+            }
+            arr = next;
+        }
+        return Object.values(alreadyparsed) || [];
+    }
+
+    protected get_referenceFeatures(context: Context, includeshapeless: boolean = false): this["referenceFeatures"] {
+        return context.proxyObject.features.filter((f) => (!f.instanceof ? includeshapeless : f.instanceof.className === DReference.name));
+    }
+    protected get_attributeFeatures(context: Context, includeshapeless: boolean = false): this["attributeFeatures"] {
+        return context.proxyObject.features.filter((f) => (!f.instanceof ? includeshapeless : f.instanceof.className === DAttribute.name));
+    }
+
+    protected get_shapelessFeatures(context: Context): this["shapelessFeatures"] {
+        return context.proxyObject.features.filter((f) => (!f.instanceof));
+    }
 
     protected get_isRoot(context: Context): LObject["isRoot"] { return context.proxyObject.father.className === DModel.name; }
     protected set_isRoot(val: never, context: Context): boolean { return this.wrongAccessMessage("isRoot cannot be set directly, change father element instead."); }
@@ -4084,15 +4124,15 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         let instanceoff: LReference | LAttribute | undefined = l.instanceof;
         let isRef: boolean | undefined = (!instanceoff ? undefined : instanceoff.className === DReference.name);
         SetFieldAction.new(context.data, 'value', list as any, '', false);
-        console.log("pre set_value actions", l, list, val, context);
+        // console.log("pre set_value actions", l, list, val, context);
 
         if (!l.instanceof || isRef && (instanceoff as LReference).containment) {
             let i = 0;
             for (let v of list) {
-                console.log("loop set_value actions", v, context.data, isRef, instanceoff, Pointers.isPointer(v));
+                // console.log("loop set_value actions", v, context.data, isRef, instanceoff, Pointers.isPointer(v));
                 i++;
-                if (isRef || instanceoff === undefined && Pointers.isPointer(v)) { // if shapeless obj need to check val by val
-                    console.log("loop set_value actions SET", v, context.data, isRef, instanceoff, Pointers.isPointer(v));
+                if ((isRef || instanceoff === undefined) && Pointers.isPointer(v)) { // if shapeless obj need to check val by val
+                    // console.log("loop set_value actions SET", {v, data:context.data, isRef, instanceoff, isPtr:Pointers.isPointer(v)});
                     SetFieldAction.new(v, "pointedBy", PointedBy.fromID(context.data.id, "values." + i as any), "+=");
                     SetFieldAction.new(v, "father", context.data.id, undefined, true);
                     let oldv = context.data.value[i];

@@ -53,11 +53,11 @@ export class DViewElement extends DPointerTargetable {
     adaptWidth!: boolean | 'fit-content' | '-webkit-fill-available';
     width!: number;
     height!: number;
-    draggable: boolean = true;
-    resizable: boolean = true;
-    query: string = '';
+    draggable!: boolean;
+    resizable!: boolean;
+    query!: string;
     viewpoint: Pointer<DViewPoint, 0, 1, LViewElement> = '';
-    display: 'block'|'contents' = 'block';
+    display!: 'block'|'contents'|'flex'|string;
     onDragStart: string = '';
     onDragEnd: string = '';
     onResizeStart: string = '';
@@ -125,13 +125,13 @@ export class LViewElement<Context extends LogicContext<DViewElement> = any, D ex
     onResizeEnd!: string;
     bendingMode!: EdgeBendingMode;
 
-    get_viewpoint(context: LogicContext<DViewElement>): LViewPoint|undefined {
+    get_viewpoint(context: Context): LViewPoint|undefined {
         const viewpoint = context.data.viewpoint;
         if(viewpoint) { return LViewPoint.fromPointer(viewpoint); }
         else { return undefined; }
     }
 
-    get_subViews(context: LogicContext<DViewElement>, key: string): LViewElement[]{
+    get_subViews(context: Context, key: string): LViewElement[]{
         let subViewsPointers = context.data.subViews;
         let subViews: LViewElement[] = [];
         for(let pointer of subViewsPointers){
@@ -140,27 +140,32 @@ export class LViewElement<Context extends LogicContext<DViewElement> = any, D ex
         }
         return subViews;
     }
-    set_generic_entry(context: LogicContext<DViewElement>, key: keyof DViewElement, val: any): boolean {
+    set_generic_entry(context: Context, key: keyof DViewElement, val: any): boolean {
         console.log('set_generic_entry', {context, key, val});
         SetFieldAction.new(context.data, key, val);
         return true;
     }
 
+    get_childrens(context: Context): never[] { return []; }
     get_bendingMode(context: Context): D["bendingMode"] { return context.data.bendingMode; }
     set_bendingMode(val: D["bendingMode"], context: Context): boolean {
         return this.set_generic_entry(context, 'bendingMode', val);
     }
 
-    set_defaultVSize(val: GraphSize, context: LogicContext<DViewElement>): boolean {
+    get_appliableToClasses(context: Context): this["appliableToClasses"] { return context.data.appliableToClasses || []; }
+    set_appliableToClasses(val: this["appliableToClasses"], context: Context): boolean {
+        if (!val) val = [];
+        else if (!Array.isArray(val)) val = [val];
+        return this.set_generic_entry(context, "appliableToClasses", val); }
+
+    set_defaultVSize(val: GraphSize, context: Context): boolean {
         console.log('set_defaultVSize', {context, val});
-        return this.set_generic_entry(context, 'defaultVSize', val);
-    }
+        return this.set_generic_entry(context, 'defaultVSize', val); }
     /*
         get___transient(context: LogicContext<this>): LViewTransientProperties {
             return DPointerTargetable.wrap<DViewTransientProperties, LViewTransientProperties>(context.data.__transient, context.data,
                 // @ts-ignore for $ at end of getpath
                 'idlookup.' + context.data.id + '.' + (getPath as LViewElement).__transient.$); }*/
-
 }
 DPointerTargetable.subclasses.push(DViewElement);
 LPointerTargetable.subclasses.push(LViewElement);

@@ -69,9 +69,11 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
         if (view.forceNodeType) switch (view.forceNodeType) {
             default: Log.exDevv('unrecognized View.forceNodeType:' + view.forceNodeType, {view, modelElement});
             return <div>dev error</div>
-            case windoww.Components.GraphElementComponent.name:
-            case windoww.Components.VertexComponent.name:
-            case windoww.Components.FieldComponent.name: return componentMap[view.forceNodeType](this.props, this.props.children);
+            case windoww.GraphElementComponent.name:
+            case windoww.VertexComponent.name:
+            case windoww.FieldComponent.name:
+            case windoww.GraphVertexComponent.name:
+                return componentMap[view.forceNodeType](this.props, this.props.children);
         }
 
         let componentfunction: typeof Graph = null as any;
