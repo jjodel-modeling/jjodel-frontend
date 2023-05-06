@@ -21,7 +21,7 @@
   position: relative;
   overflow: visible !important;
   &::after{
-    content: attr(data-nodetype);
+    content: ''; // attr(data-nodetype);
     position: absolute;
     top: -23px;
     left: 0;
