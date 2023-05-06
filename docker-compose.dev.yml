@@ -9,20 +9,18 @@ services:
     - ./src:/app/src
     networks:
       network:
-        ipv4_address: 172.20.0.101
     ports:
       - '3000:3000'
     environment:
       - CHOKIDAR_USEPOLLING=true
 
   backend:
-    image: giordanotin/jjodel-backend:1.0
+    image: giordanotin/jjodel-backend:1.1
     container_name: backend
     environment:
       - DJANGO_DATABASE_URL=postgres://postgres:postgres@db:5432/jjodel
     networks:
       network:
-        ipv4_address: 172.20.0.102
     ports:
       - '8000:8000'
     depends_on:
@@ -38,9 +36,8 @@ services:
       - POSTGRES_DB=jjodel
     networks:
       network:
-        ipv4_address: 172.20.0.103
     ports:
-      - '55434:5432'
+      - '5432:5432'  # 55434
 
 volumes:
   db_data:
