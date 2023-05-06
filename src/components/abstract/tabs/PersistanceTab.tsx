@@ -1,12 +1,13 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
-import API from "../../../api/api";
+import Persistance from "../../../persistance/api";
 
 
 function PersistanceTabComponent(props: AllProps) {
     return(<div>
-        <button className={'btn btn-primary'} onClick={() => API.post()}>click</button>
+        <button className={'d-block btn btn-primary'} onClick={() => Persistance.post()}>post</button>
+        <button className={'d-block btn btn-primary'} onClick={() => Persistance.get()}>get</button>
     </div>);
 }
 interface OwnProps {}

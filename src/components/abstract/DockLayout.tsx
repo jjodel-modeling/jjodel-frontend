@@ -230,7 +230,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         layout.dockbox.children.push({tabs: [infoTab]});
         layout.dockbox.children.push({
             tabs: [
-                // this.persistance,
+                this.persistance,
                 this.structureEditor,
                 this.treeEditor,
                 this.viewsEditor,
