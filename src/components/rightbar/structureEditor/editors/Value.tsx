@@ -45,18 +45,17 @@ function Value(props: Props) {
         // damiano todo: non va bene perchè alcuni elementi sono nascosti e l'indice è sbagliato
         SetFieldAction.new(dValue, 'value', index, '-=', false);
     }
-    const change = (event: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>, index: number, isPointer: boolean | undefined) => {
+    function changeDValue(event: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>, index: number, isPointer: boolean | undefined) {
         // damiano todo: non va bene perchè alcuni elementi sono nascosti e l'indice è sbagliato
         const target = event.target.value;
         const newValues = [...dValue.value];
-        if (field === 'checkbox') { newValues[index] = (newValues[index] === 'false') ? 'true': 'false'; }
+        if (field === 'checkbox') { newValues[index] = (newValues[index] === 'false'); }
         else { newValues[index] = target; }
+        console.log("setting DValue", {target, newValues, lValue})
         lValue.value = newValues;
         // SetFieldAction.new(dValue, 'value', newValues, '', target !== 'null' && isPointer);
     }
 
-    (window as any).test = dValue;
-    console.log("editor value", {dValue, })
 
     let isattr = false, isenum = false, isref = false, isshapeless = false;
     switch(feature?.className){
@@ -100,20 +99,20 @@ function Value(props: Props) {
     const valueslist = (filteredvalues as PrimitiveType[]).map( (val: PrimitiveType | string | LObject, index) =>
             <div className={'mt-1 d-flex ms-4'} key={index}>
                 <div className={'border border-dark'}></div>
-                { isattr && <input onChange={(evt) => { change(evt, index, false) }} className={'input ms-1'} value={val + ''}
+                { isattr && <input onChange={(evt) => { changeDValue(evt, index, false) }} className={'input ms-1'} value={val + ''}
                                    checked={!!val} min={min} max={max} type={field} step={stepSize} maxLength={maxLength} placeholder={"empty"}/> }
-                { isenum && <select onChange={(evt) => {change(evt, index, false)}} className={'ms-1 select'} value={rawvalues[index]} data-valuedebug={rawvalues[index]}>
+                { isenum && <select onChange={(evt) => {changeDValue(evt, index, false)}} className={'ms-1 select'} value={rawvalues[index]} data-valuedebug={rawvalues[index]}>
                     {<option key="undefined" value={'undefined'}>-----</option>}
                     { select_options }
                 </select>}
-                { isref && <select onChange={(evt) => {change(evt, index, true)}} className={'ms-1 select'} value={rawvalues[index]} data-valuedebug={rawvalues[index]}>
+                { isref && <select onChange={(evt) => {changeDValue(evt, index, true)}} className={'ms-1 select'} value={rawvalues[index]} data-valuedebug={rawvalues[index]}>
                     <option value={'undefined'}>-----</option>
                     {select_options}
                 </select>}
                 { isshapeless && <>
-                    { <select key={index} onChange={(evt) => {change(evt, index, undefined)}} className={'select ms-1'} value={rawvalues[index]}>{select_options}</select> }
+                    { <select key={index} onChange={(evt) => {changeDValue(evt, index, undefined)}} className={'select ms-1'} value={rawvalues[index]}>{select_options}</select> }
                     →
-                    { <input key={index} onChange={(evt) => {change(evt, index, false)}} className={'input ms-1'} value={rawvalues[index]} list={"objectdatalist"} type={"text"} placeholder={"empty"}/> }
+                    { <input key={index} onChange={(evt) => {changeDValue(evt, index, false)}} className={'input ms-1'} value={rawvalues[index]} list={"objectdatalist"} type={"text"} placeholder={"empty"}/> }
                     { /*(val as LObject)?.id && <span>points to {val}</span> */}
                 </>
                 }

@@ -3963,7 +3963,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected set_isMirage(val: this["isMirage"], context: Context): boolean { SetFieldAction.new(context.data, 'isMirage', val, "", false); return true; }
 
     protected get_getValue(context: Context): this["getValue"] {
-        return function (fitSize: boolean = true, namedPointers: boolean = true, ecorePointers: boolean = false, shapeless: boolean = false, keepempties: boolean = false) {
+        return function (fitSize: boolean = true, namedPointers: boolean = true, ecorePointers: boolean = false, shapeless: boolean = false, keepempties: boolean = false, withmetainfo = false) {
             /*let contextt: any = arguments[arguments.length - 1]; // proxy parameter mapping might get crazy with variable arguments
             fitSize = fitSize === contextt ? true : fitSize;
             namedPointers = namedPointers === contextt ? true : namedPointers;
@@ -3971,13 +3971,157 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             shapeless = shapeless === contextt ? false : shapeless;
             shapeless = keepempty === contextt ? false : keepempty;*/
             // console.log("get_getValue", {arguments});
-            return LValue.prototype.get_value(context, fitSize, namedPointers, ecorePointers, shapeless, keepempties);
+            return LValue.prototype.get_value(context, fitSize, namedPointers, ecorePointers, shapeless, keepempties, withmetainfo);
         }
     }
-    public getValue(fitSize: boolean = true, namedPointers: boolean = true, ecorePointers: boolean = false, shapeless: boolean = false, keepempties: boolean = false): this["value"] {
+    public getValue(fitSize: boolean = true, namedPointers: boolean = true, ecorePointers: boolean = false, shapeless: boolean = false, keepempties: boolean = false, withmetainfo: boolean = false): this["value"] {
         return this.cannotCall("getValue"); }
 
-    protected get_value(context: Context, fitSize: boolean = true, namedPointers: boolean = false, ecorePointers: boolean = false, shapeless: boolean = false, keepempties: boolean = true): this["value"] & {type: string} {
+    protected get_value(context: Context, fitSize: boolean = true, namedPointers: boolean = false, ecorePointers: boolean = false, shapeless: boolean = false, keepempties: boolean = true, withmetainfo: boolean = false): this["value"] & {type: string} {
+        let ret: any[] = [...context.data.value] as [];
+        let meta: LAttribute | LReference | undefined = shapeless ? undefined : context.proxyObject.instanceof;
+        let dmeta: undefined | DAttribute | DReference = meta?.__raw;
+
+        if (meta && meta.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
+        let typestr: string = meta ? meta.typeToShortString() : "shapeless";
+        if (!Array.isArray(ret)) ret = [];
+        if (dmeta && fitSize && ret.length < dmeta.lowerBound && dmeta.lowerBound > 0) {
+            let times = dmeta.lowerBound - ret.length;
+            while (times-- > 0) ret.push(undefined);
+            // ret.length = meta.lowerBound; not really working for expanding, it says "emptyx10" or so. doing .map() only iterates "existing" elements. behaves like as it's smaller.
+        }
+        if (dmeta && fitSize && ret.length > dmeta.upperBound && dmeta.upperBound >= 0) ret.length = dmeta.upperBound;
+        // console.log("get_value sizefixed", {fitSize, arguments, upperbound:dmeta?.upperBound, lowerbound: dmeta?.lowerBound, len: ret.length, len0: context.data.value.length});
+        let numbermax = 0, numbermin = 0;
+        // ret is always an array of raw values before this point, eventually padded with lowerbound or trimmed at upperbound
+
+        let index = 0;
+        if (withmetainfo) { ret = ret.map(r => {return {value:r, rawValue: r, index: index++, hidden: false}}); }
+        let mapperfunc: (a:any)=>any = undefined as any;
+        switch (typestr) {
+            case "shapeless":
+                let state: IStore = store.getState();
+                mapperfunc = (val: any) => {
+                    let l: any = LPointerTargetable.fromPointer(val, state);
+                    if (l.className === DEnumLiteral.name) { l = (l as DEnumLiteral).literal; } else
+                    if (namedPointers) { l = l.name ? ("@" + l.name) : ("#" + l.className); }
+                    else if (ecorePointers && !(meta as LReference).containment){
+                        l = l.ecorePointer();
+                        // throw new Error("values as EcorePointers: todo. for containment do nothing, just nest the obj. for non-containment put the ecore reference string in array vals")
+                    }
+                    return l;
+                };
+                if (withmetainfo) ret.forEach((struct) => { struct.value = mapperfunc(struct.value); });
+                else ret = ret.map(mapperfunc);
+                break;
+            default: // it's a reference or enum
+                mapperfunc = (r:any) => r && LPointerTargetable.wrap(r);
+                if (withmetainfo) ret.forEach((struct) => { struct.value = mapperfunc(struct.value); });
+                else ret = ret.map(mapperfunc);;
+
+                // now ret is pointed DEnumLiteral or DObject or MetaInfoStructure<>
+                if ((meta as LAttribute)?.type?.className === DEnumerator.name) {
+                    if (namedPointers) {
+                        mapperfunc = (lit?: LEnumLiteral) => lit?.name;
+                        if (withmetainfo) ret.forEach((struct) => { struct.value = mapperfunc(struct.value); });
+                        else ret = ret.map(mapperfunc);
+                    }
+
+                    let filterfunc = (l: LEnumLiteral) => { if (!l) return keepempties; return l.father?.id === (meta as LAttribute).type.id; };
+                    if (withmetainfo) for(let struct of ret) { struct.hidden = filterfunc(struct.value); }
+                    else ret = ret.filter(filterfunc);
+                    // todo: questo comportamento implica che quando importo un literal come testo da .ecore, devo assegnargli
+                    //  il puntatore al suo literal se trovato, altrimenti resta val[i] di tipo string/shapeless
+                    break;
+                }
+                // is reference with assigned shape (and type) -> filter correct typed targets
+                if (meta) {
+                    let filterfunc = (l: LObject) => {
+                        // hide values with a value that is not a pointer to correct type (but keep empties if requested)
+                        //let isExtending = l.instanceof?.isExtending((meta as LReference).type); // damiano: todo test & debug isextending
+                        let isExtending = true;
+                        return keepempties && !l ? true : isExtending;
+                    };
+                    if (withmetainfo) for(let struct of ret) { struct.hidden = filterfunc(struct.value); }
+                    else ret = ret.filter(filterfunc);
+                }
+                // shaped (with m2-reference) but pointing to a shapeless object. can happen
+                if (namedPointers) {
+                    let mapperfunc = (l:LObject) => l && (l.name ? ("@" + l.name) : (l as GObject)["@"+l.name]?.values?.[0] || ("#" + l.className));
+                    if (withmetainfo) ret.forEach((struct)=>{ struct.value = mapperfunc(struct.value); });
+                    else ret = ret.map(mapperfunc);
+                }
+                else if (ecorePointers && !(meta as LReference).containment){
+                    mapperfunc = (lval: LObject) => lval && lval.ecorePointer();
+                    if (withmetainfo) ret.forEach((struct)=>{ struct.value = mapperfunc(struct.value); });
+                    else ret = ret.map(mapperfunc);
+                    // throw new Error("values as EcorePointers: todo. for containment do nothing, just nest the obj. for non-containment put the ecore reference string in array vals")
+                }
+                break;
+            case ShortAttribETypes.EByte:
+                numbermin = -128;
+                numbermax = 127;
+                break;
+            case ShortAttribETypes.EShort:
+                numbermin = -32768;
+                numbermax = 32767;
+                break;
+            case ShortAttribETypes.EInt:
+                numbermin = -2147483648;
+                numbermax = 2147483647;
+                break
+            case ShortAttribETypes.ELong:
+                numbermin = -9223372036854775808;
+                numbermax = 9223372036854775807;
+                break;
+            case ShortAttribETypes.EFloat:
+                numbermin = Number.NEGATIVE_INFINITY;
+                numbermax = Number.POSITIVE_INFINITY;
+                break;
+            case ShortAttribETypes.EString:
+            case ShortAttribETypes.EDate:
+                mapperfunc = v => v ? v + '' : ''
+                if (withmetainfo) ret.forEach((struct)=>{ struct.value = mapperfunc(struct.value); });
+                else ret = ret.map(mapperfunc);
+                break;
+            case ShortAttribETypes.EChar:
+                mapperfunc = v => v ? (v + '')[0] : 'A';
+                if (withmetainfo) ret.forEach((struct)=>{ struct.value = mapperfunc(struct.value); });
+                else ret = ret.map(mapperfunc);
+                break;
+            case ShortAttribETypes.EBoolean:
+                mapperfunc = v => typeof v === "boolean" ? v : U.fromBoolString(v+'', v?.length>0, false);
+                if (withmetainfo) ret.forEach((struct)=>{ struct.value = mapperfunc(struct.value); });
+                else ret = ret.map(mapperfunc);
+                break;
+            case ShortAttribETypes.void:
+                 if (withmetainfo) ret.forEach((struct)=>struct.hidden = true);
+                 else ret = [];
+                break;
+        }
+        // some kind of numeric type
+        if (numbermax !== 0) {
+            mapperfunc = v => {
+                if (typeof v !== "number") {
+                    if (!v) v = 0;
+                    else if (v === "true") v = 1;
+                    else if (v.constructor?.name=== "Date") v = v.getTime();
+                    else {
+                        console.log("number casting:", v,  U.getFirstNumber(v+'', true), {numbermax, numbermin});
+                        v = U.getFirstNumber(v+'', true);
+                    }
+                }
+                return Math.min(numbermax, Math.max(numbermin, v))
+            };
+            if (withmetainfo) ret.forEach((struct)=>{ struct.value = mapperfunc(struct.value); });
+            else ret = ret.map(mapperfunc);
+        }
+        (ret as GObject).type = typestr;
+        // console.error("type value:", {ret, typestr, meta, fitSize});
+        return ret as any;
+    }
+
+    protected get_value_backup(context: Context, fitSize: boolean = true, namedPointers: boolean = false, ecorePointers: boolean = false, shapeless: boolean = false, keepempties: boolean = true): this["value"] & {type: string} {
         let ret: any[] = [...context.data.value] as [];
         let meta: LAttribute | LReference | undefined = shapeless ? undefined : context.proxyObject.instanceof;
         let dmeta: undefined | DAttribute | DReference = meta?.__raw;
@@ -4132,15 +4276,24 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
         if (!l.instanceof || isRef && (instanceoff as LReference).containment) {
             let i = 0;
+
             for (let v of list) {
                 // console.log("loop set_value actions", v, context.data, isRef, instanceoff, Pointers.isPointer(v));
                 i++;
                 if ((isRef || instanceoff === undefined) && Pointers.isPointer(v)) { // if shapeless obj need to check val by val
                     // console.log("loop set_value actions SET", {v, data:context.data, isRef, instanceoff, isPtr:Pointers.isPointer(v)});
+                    let lval: LObject = LPointerTargetable.fromPointer(v);
+                    let oldContainer: LValue | LModel = lval.father;
                     SetFieldAction.new(v, "pointedBy", PointedBy.fromID(context.data.id, "values." + i as any), "+=");
                     SetFieldAction.new(v, "father", context.data.id, undefined, true);
+                    if (oldContainer.className === DModel.name) continue;
+                    let containerValue = (oldContainer as LValue);
+                    // let oldContainerValues = [...containerValue.__raw.value]; U.arrayRemoveAll(oldContainerValues, v);
+                    let oldContainerValues: Pointer[] = containerValue.__raw.value.map( va => va===v ? undefined as any : va);
+                    SetFieldAction.new(containerValue.id, "value", oldContainerValues, "", true);
+
+                    // todo: verify if works: remove val from old container
                     let oldv = context.data.value[i];
-                    // todo: need to update father.contains? removing from old father and updating to new father
                     // if (Pointers.isPointer(oldv)) SetFieldAction.new(context.data.id, "contains", U.arrayRemoveAll([...context.data.contains], oldv), '', true);
                     // SetFieldAction.new(context.data.id, "contains", oldv as DObject["id"], undefined, true);
 

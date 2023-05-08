@@ -172,7 +172,7 @@ export abstract class Action extends RuntimeAccessibleClass{
         } else {
             this.hasFired++;
             let storee = store || windoww.store;
-            console.log('firing action:', {thiss:this, store, stack:this.src});
+            console.log('firing action:', {field: this.field, val: this.value, stack:this.src, thiss:this});
             storee.dispatch({...this});
         }
         return true;

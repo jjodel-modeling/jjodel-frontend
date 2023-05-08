@@ -142,7 +142,6 @@ export default class Structure {
         }
 
         return(<div>
-
             {object.instanceof && conform && <label className={'p-1'}>This instance is <b className={'text-success'}>CONFORM</b> to {object.instanceof.name}</label>}
             {object.instanceof && !conform && <label className={'p-1'}>This instance is <b className={'text-danger'}>NOT CONFORM</b> to {object.instanceof.name}</label>}
             {!object.instanceof && <label className={'p-1'}>This instance is <b className={'text-warning'}>SHAPELESS</b></label>}

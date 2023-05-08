@@ -6,7 +6,7 @@ import {
     Dictionary,
     DModel,
     DModelElement,
-    DPackage,
+    DPackage, DV,
     GObject,
     GraphElementComponent,
     GraphElementDispatchProps,
@@ -66,17 +66,19 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
 
         let serializableProps = {...this.props, data: this.props.data?.id, view: this.props.view?.id, views: this.props.views?.map( v => v.id )};
         // console.log('dnode render', {props: {...this.props}, serializableProps});
-        if (view.forceNodeType) switch (view.forceNodeType) {
-            default: Log.exDevv('unrecognized View.forceNodeType:' + view.forceNodeType, {view, modelElement});
-            return <div>dev error</div>
-            case windoww.GraphElementComponent.name:
-            case windoww.VertexComponent.name:
-            case windoww.FieldComponent.name:
-            case windoww.GraphVertexComponent.name:
-                return componentMap[view.forceNodeType](this.props, this.props.children);
-        }
-
         let componentfunction: typeof Graph = null as any;
+        if (view.forceNodeType) {
+            switch (view.forceNodeType) {
+                default: Log.exDevv('unrecognized View.forceNodeType:' + view.forceNodeType, {view, modelElement});
+                return <div>dev error</div>
+                case windoww.GraphComponent.name: componentfunction = Graph; break;
+                // case windoww.GraphElementComponent.name:
+                case windoww.VertexComponent.name: componentfunction = Vertex; break;
+                case windoww.FieldComponent.name: componentfunction = Field; break;
+                case windoww.GraphVertexComponent.name: componentfunction = GraphVertex; break; }
+            // console.log("force node type", {requested:view.forceNodeType, G:  windoww.GraphComponent.name, GE: windoww.GraphElementComponent.name, GV: windoww.GraphVertexComponent.name, V: windoww.VertexComponent.name, F:windoww.FieldComponent.name})
+            return componentfunction(serializableProps, this.props.children);}
+
         if (modelElement?.className) switch(modelElement.className) {
             case "DModel": componentfunction = Graph; break;
             case "DPackage": componentfunction = GraphVertex; break;
@@ -100,7 +102,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
         }
         if (componentfunction) return componentfunction(serializableProps, this.props.children);
         // errore: questoon passa gli id correttamente al sottoelemento vertex o field
-        return (<>Error: Node is missing both view and model</>);
+        return DV.errorView("Error: DefaultNode is missing both view and model, please state node type explicitly: Graph, GraphVertex, Vertex or Field");
     }
 
 }

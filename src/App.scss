@@ -19,20 +19,27 @@
 
 [data-nodetype]{
   position: relative;
-  overflow: visible !important;
+  overflow: hidden;
+  &:hover{ overflow: visible; }
   &::after{
     content: attr(data-nodetype);
     position: absolute;
-    top: -23px;
+    top: -24px;
     left: 0;
     background: red;
+    padding: 0 4px;
+    color: white;
     z-index: 100000;
+  }
+  &:hover::after{
+    top: -23px;
   }
 }
 
 [data-nodetype="Graph"]{
   position: absolute !important;
-  overflow: hidden !important;
+  // overflow: hidden;
+  &:hover{ overflow: hidden; }
   height: -webkit-fill-available;
   width: -webkit-fill-available;
   &::after{
@@ -49,15 +56,12 @@
   height: 50%;
 }
 [data-nodetype="Field"] {
-
   white-space: nowrap;
-  overflow: hidden !important;
-  &:hover{
-    overflow: visible !important;
-  }
+  // overflow: hidden;
+  // &:hover{ overflow: visible; }
   &::after {
-    top: unset;
-    left: -33px;
+    top: unset !important;
+    left: -45px;
     float: left;
     margin-top: -23px;
   }

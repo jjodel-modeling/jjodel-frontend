@@ -24,8 +24,9 @@ function SelectComponent(props: AllProps) {
         </div>
     ));
 
-    const change = (evt: React.ChangeEvent<HTMLSelectElement>) => {
+    function SelectChange(evt: React.ChangeEvent<HTMLSelectElement>) {
         const target = evt.target.value;
+        console.log("setting:", {data, field, target});
         data[field] = target;
     }
 
@@ -50,7 +51,7 @@ function SelectComponent(props: AllProps) {
         {(jsxLabel && !label) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
             {jsxLabel}
         </label>}
-        <select className={css} value={value} onChange={change}>
+        <select className={css} value={value} onChange={SelectChange}>
             {(hasReturn && returns.length > 0) && <optgroup label={'Defaults'}>
                 {returns.map((returnType, i) => {
                     return <option key={i} value={returnType.id}>{returnType.name}</option>

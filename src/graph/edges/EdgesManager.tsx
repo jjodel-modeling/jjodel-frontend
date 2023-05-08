@@ -50,15 +50,15 @@ function EdgesManagerComponent(props: AllProps) {
             }
         })}
         {_extends.map((extendEdge, index) => {
-            const source = extendEdge.source.node;
-            const target = extendEdge.target.node;
+            const source = extendEdge.source?.node;
+            const target = extendEdge.target?.node;
             if(source && target) {
                 return(<ExtendEdge key={index} sourceID={source.id} targetID={target.id} />);
             }
         })}
         {_values.map((valueEdge, index) => {
-            const source = valueEdge.source.node;
-            const target = valueEdge.target.node;
+            const source = valueEdge.source?.node;
+            const target = valueEdge.target?.node;
             if(source && target) {
                 return(<ValueEdge key={index} sourceID={source.id} targetID={target.id} />);
             }
