@@ -230,11 +230,14 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         }
 //
         switch(propKey){
+            case 'inspect': // node.js util
             case '__raw': return targetObj;
             case '__serialize': return JSON.stringify(targetObj);
+            case '__isproxy':
             case '__isProxy': return true;
             case '__random': return Math.random();
             case 'editCount':
+            case 'clonedcounter':
             case 'clonedCounter':
                 return targetObj.clonedCounter || 0;
         }

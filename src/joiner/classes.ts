@@ -973,7 +973,7 @@ export class Pointers{
         return typeof data === "string" ? data : (data as any).id;
     }
 
-    static isPointer(val: any): boolean {
+    static isPointer(val: any): val is Pointer {
         // todo: must refine this in a safer way
         return val?.includes ? val.includes("Pointer") : false;
     }

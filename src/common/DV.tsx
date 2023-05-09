@@ -132,7 +132,6 @@ class DefaultView {
     }
 
     public static value() {
-        // todo: testa quado c' solo un valore booleano
         return `<div className={'d-flex root value'} style={{paddingRight: "6px"}}>
              {this.props.data.instanceof && <label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>}
              {!this.props.data.instanceof && <Input asLabel={true} obj={this.data.id} field={'name'} hidden={true} autosize={true} />}

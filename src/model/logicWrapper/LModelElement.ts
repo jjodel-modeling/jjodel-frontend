@@ -111,6 +111,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     id!: Pointer<DModelElement, 1, 1, LModelElement>;
     parent!: LModelElement[];
     father!: LModelElement; // annotations can be childrens of everything. except them fathers are: Model, Package, Classifier(class+enum), Operation
+    public fatherList!: LModelElement[]; // chain of fathers going up recursively
     annotations!: LAnnotation[];
     childrens!: (LPackage | LClassifier | LTypedElement | LAnnotation | LObject | LValue)[];
     nodes!: LGraphElement[];
@@ -200,18 +201,17 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         context.proxyObject.delete();
     }
 
-    public fatherList(): LModelElement[] {
-        return this.cannotCall("fatherList()");
-    }
 
     protected get_fatherList(context: Context): LModelElement[] {
+        let ret: LModelElement[] = [context.proxyObject];
+        let loopdetection: Dictionary<Pointer, boolean> = {};
+        loopdetection[context.data.id] = true;
         let current = this.get_father(context);
-        let ret: LModelElement[] = [current];
-        while (true) {
-            let father = current.father;
-            if (!father || father === current) break;
-            current = father;
+        while (current) {
+            if (loopdetection[current.id]) { console.error("found loop", {loopdetection, ret, current}); return ret; }
+            loopdetection[current.id] = true;
             ret.push(current);
+            current = current.father;
         }
         return ret;
     }
@@ -891,7 +891,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         if (isNaN(val)) val = 0;
         else val = Math.max(0, val);
         SetFieldAction.new(context.data, 'lowerBound', val);
-        if (val > context.data.upperBound) SetFieldAction.new(context.data, 'upperBound', val);
+        if (context.data.upperBound !=-1 && val > context.data.upperBound) SetFieldAction.new(context.data, 'upperBound', val);
         return true;
     }
 
@@ -2143,8 +2143,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             {reason: '', allTargetSuperClasses: []}) => this._canExtend(context, superclass, output);
     }
 
-    public isExtending(superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
-        this.cannotCall("isExtending"); return false;
+    public isExtending(superclass: LClassifier, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
+        return this.cannotCall("isExtending");
     }
 
     private get_isExtending(context: Context): this["isExtending"] {
@@ -3888,7 +3888,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     name!: string;
     namespace!: string;
     fullname!:string;
-    type!: LClassifier;
+    type!: LClassifier; // Classifiers describing PrimitiveTypes or the classes that can be pointed.
     primitiveType!: LClass;
     classType!: LClass;
     enumType!: LEnumerator;
@@ -3923,10 +3923,13 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     conformsTo!:( LAttribute | LReference)[]; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
 
     protected get_edges(context: Context): this["edges"] { return LPointerTargetable.fromPointer(context.data.edges) || []; }
-    protected get_fromlfeature<C, T extends keyof (NonNullable<C>)>(meta: C, key: T): NonNullable<C>[T] { return (meta as any)[key]; }
+    protected get_fromlfeature<C, T extends keyof (NonNullable<C>)>(meta: C, key: T): NonNullable<C>[T] { return meta ? (meta as any)[key] : undefined; }
     protected get_opposite(context: Context): LReference["opposite"] { return this.get_fromlfeature(context.proxyObject.instanceof as LReference, "opposite"); }
     protected get_container(context: Context): LReference["container"] { return this.get_fromlfeature(context.proxyObject.instanceof as LReference, "container"); }
-    protected get_containment(context: Context): LReference["containment"] { return this.get_fromlfeature(context.proxyObject.instanceof as LReference, "containment"); }
+    protected get_containment(context: Context): LReference["containment"] {
+        let iof = context.proxyObject.instanceof;
+        if (!iof) return true; // shapeless
+        return this.get_fromlfeature(iof as LReference, "containment"); }
     // protected get_defaultValueLiteral(context: Context): LStructuralFeature["defaultValueLiteral"] { return this.get_fromlfeature(context.proxyObject.instanceof, "defaultValueLiteral"); }
     protected get_defaultValue(context: Context): LStructuralFeature["defaultValue"] { return this.get_fromlfeature(context.proxyObject.instanceof, "defaultValue"); }
     protected get_defaultderived(context: Context): LStructuralFeature["derived"] { return this.get_fromlfeature(context.proxyObject.instanceof, "derived"); }
@@ -3950,7 +3953,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
     protected get_instanceof(context: Context): this["instanceof"] {
         const pointer = context.data.instanceof;
-        return LPointerTargetable.from(pointer || null)
+        if (!pointer) return undefined;
+        return LPointerTargetable.from(pointer)
     }
     protected set_instanceof(val: Pack1<this["instanceof"]>, context: Context): boolean {
         // const list = val.map((lItem) => { return Pointers.from(lItem) });
@@ -3982,7 +3986,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         let meta: LAttribute | LReference | undefined = shapeless ? undefined : context.proxyObject.instanceof;
         let dmeta: undefined | DAttribute | DReference = meta?.__raw;
 
-        if (meta && meta.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
+        // if (meta && meta.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
         let typestr: string = meta ? meta.typeToShortString() : "shapeless";
         if (!Array.isArray(ret)) ret = [];
         if (dmeta && fitSize && ret.length < dmeta.lowerBound && dmeta.lowerBound > 0) {
@@ -4002,13 +4006,12 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             case "shapeless":
                 let state: IStore = store.getState();
                 mapperfunc = (val: any) => {
+                    if (!val || typeof val !== "string") return val;
                     let l: any = LPointerTargetable.fromPointer(val, state);
+                    if (!l) return val;
                     if (l.className === DEnumLiteral.name) { l = (l as DEnumLiteral).literal; } else
-                    if (namedPointers) { l = l.name ? ("@" + l.name) : ("#" + l.className); }
-                    else if (ecorePointers && !(meta as LReference).containment){
-                        l = l.ecorePointer();
-                        // throw new Error("values as EcorePointers: todo. for containment do nothing, just nest the obj. for non-containment put the ecore reference string in array vals")
-                    }
+                    if (namedPointers) { l = (l.name ? ("@" + l.name) : (l as GObject)["@"+l.name]?.__raw?.values?.[0] || ("#" + l.className));}
+                    else if (ecorePointers){ l = l.ecorePointer(); }
                     return l;
                 };
                 if (withmetainfo) ret.forEach((struct) => { struct.value = mapperfunc(struct.value); });
@@ -4021,17 +4024,18 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
                 // now ret is pointed DEnumLiteral or DObject or MetaInfoStructure<>
                 if ((meta as LAttribute)?.type?.className === DEnumerator.name) {
+
+                    let filterfunc = (l: LEnumLiteral) => { if (!l) return keepempties; return l.father?.id === (meta as LAttribute).type.id; };
+                    if (withmetainfo) for(let struct of ret) { (struct.hidden as any) = !filterfunc(struct.value); } // && 'literal target is not of the correct type requested by metamodel'; }
+                    else ret = ret.filter(filterfunc);
+                    // todo: questo comportamento implica che quando importo un literal come testo da .ecore, devo assegnargli
+                    //  il puntatore al suo literal se trovato, altrimenti resta val[i] di tipo string/shapeless
+
                     if (namedPointers) {
                         mapperfunc = (lit?: LEnumLiteral) => lit?.name;
                         if (withmetainfo) ret.forEach((struct) => { struct.value = mapperfunc(struct.value); });
                         else ret = ret.map(mapperfunc);
                     }
-
-                    let filterfunc = (l: LEnumLiteral) => { if (!l) return keepempties; return l.father?.id === (meta as LAttribute).type.id; };
-                    if (withmetainfo) for(let struct of ret) { struct.hidden = filterfunc(struct.value); }
-                    else ret = ret.filter(filterfunc);
-                    // todo: questo comportamento implica che quando importo un literal come testo da .ecore, devo assegnargli
-                    //  il puntatore al suo literal se trovato, altrimenti resta val[i] di tipo string/shapeless
                     break;
                 }
                 // is reference with assigned shape (and type) -> filter correct typed targets
@@ -4042,12 +4046,12 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                         let isExtending = true;
                         return keepempties && !l ? true : isExtending;
                     };
-                    if (withmetainfo) for(let struct of ret) { struct.hidden = filterfunc(struct.value); }
+                    if (withmetainfo) for(let struct of ret) { struct.hidden = !filterfunc(struct.value); } // && "ref target is not of correct type"; }
                     else ret = ret.filter(filterfunc);
                 }
                 // shaped (with m2-reference) but pointing to a shapeless object. can happen
                 if (namedPointers) {
-                    let mapperfunc = (l:LObject) => l && (l.name ? ("@" + l.name) : (l as GObject)["@"+l.name]?.values?.[0] || ("#" + l.className));
+                    let mapperfunc = (l:LObject) => l && (l.name ? ("@" + l.name) : (l as GObject)["@"+l.name]?.__raw?.values?.[0] || ("#" + l.className));
                     if (withmetainfo) ret.forEach((struct)=>{ struct.value = mapperfunc(struct.value); });
                     else ret = ret.map(mapperfunc);
                 }
@@ -4236,7 +4240,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         let ret: any;
         switch (val.length) {
             case 0: ret = ''; break;
-            case 1: ret = val[0] || val[0] === 0 ? val[0] : ''; break;
+            case 1: ret = val[0]; break;
             default:
                 let havestrings: boolean = val.type === ShortAttribETypes.EString;
                 let havechars: boolean = val.type === ShortAttribETypes.EChar;
@@ -4263,14 +4267,123 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 else ret = val.join(', ');
         }
         // console.error("valuestring_impl()", {ret, context, data:context.data});
-        return ret;
+        return (ret === undefined || ret === null ? '' : ret) + '';
     }
 
+    public setValueAtPosition(index: number, val: this["value"][0], info?: Partial<SetValueAtPoisitionInfoType>): {success: boolean, reason?: string} {
+        return this.cannotCall("setValueAtPosition"); }
+
+    // only use through setValueAtPosition
+    protected _clearValueAtPosition(context: Context, index: number, info0?: Partial<SetValueAtPoisitionInfoType>, skipSettingUndefined: boolean = false) {
+        let info = (info0 || {}) as any as SetValueAtPoisitionInfoType;
+        let oldVal = context.data.value[index];
+        let oldTarget: LObject | undefined = typeof oldVal === "string" ? LObject.fromPointer(oldVal) : undefined;
+        /////////////////////// if oldTarget is LObject, update his pointedBy
+        // if (oldTarget) SetFieldAction.new(oldTarget, "pointedBy" '-=", ... no need? reducer should do this)
+
+        /////////////////////// if ref is containment assign oldTarget father to DModel
+
+        if (info.isContainment === undefined) {
+            if (info.instanceof === undefined) info.instanceof = context.proxyObject.instanceof;
+            info.isContainment = !info.instanceof || (info.instanceof as LReference).containment;
+        }
+        if (info.isContainment && oldTarget?.className === "DObject") {
+            SetFieldAction.new(oldVal as Pointer<DObject>, "father", context.proxyObject.model.id, undefined, true);
+        }
+        if (!skipSettingUndefined) SetFieldAction.new(context.data, 'value.' + index as any, undefined, '', info.isPtr);
+    }
+    protected get_setValueAtPosition(context: Context): ((index: number, val: this["value"][0], info?: Partial<SetValueAtPoisitionInfoType>) => {success: boolean, reason?: string}) {
+        return (index: number, val: this["value"][0] | any, info0?: Partial<SetValueAtPoisitionInfoType>): { success: boolean, reason?: string } => {
+            let isPtr: boolean = undefined as any;
+            let lval: LObject | LEnumLiteral = undefined as any;
+            if (val === null) val = undefined;
+            if (context.data.value[index] === val) return { success: false, reason: "identical assignment" };
+            if ((val as any)?.id && (val as any)?.className) {
+                lval = (val.__isProxy ? val : LPointerTargetable.wrap<DObject>(val));
+                isPtr = !!lval;
+                val = (val as any).id;
+            }
+            let info = (info0 || {}) as any as SetValueAtPoisitionInfoType;
+            if (isPtr === undefined) isPtr = (info.isPtr === undefined ? Pointers.isPointer(val) : info.isPtr);
+
+            // set sideeffect part
+            if ((val !== undefined)) {
+                if (isPtr) {
+                    if (info.type === undefined) info.type = context.proxyObject.type;
+                    if (info.instanceof === undefined) info.instanceof = context.proxyObject.instanceof;
+                    if (info.isContainment === undefined) {
+                        info.isContainment = !info.instanceof || (info.instanceof.className === DReference.name && (info.instanceof as LReference).containment);
+                    }
+                    lval = LPointerTargetable.fromPointer(val);
+                    if (!lval) return {success: false, reason: "invalid pointer: " + lval};
+                    // is enum
+                    if (lval.className === DEnumLiteral.name) {
+                        let lvale: LEnumLiteral = lval as LEnumLiteral;
+                        if (info.instanceof && info.type && (lvale.father.id !== info.type.id)) return {success: false, reason: "target is not of correct literal type"};
+                        // no need to do checks / other sideeffects other than pointedBy i think.
+                    }
+                    // is ref
+                    if (lval.className === DObject.name){
+                        let lvalo = lval as LObject;
+                        let lvalmeta: LClassifier | undefined = lvalo.instanceof;
+                        // if (info.instanceof && info.type && (!(lvalmeta as LClass)?.isExtending(info.type))) return {success: false, reason: "target is not of correct type"}; damiano todo: enable and implement isExtending
+                        if (info.fatherList === undefined) info.fatherList = context.proxyObject.fatherList;
+                        if (info.isContainment) {
+                            if ((info.fatherList as LPointerTargetable[]).map(father => father.id).includes(val))
+                                return {success: false, reason: "cannot create a containment loop"}; // todo: in LReference.set_containment need to forbid setting to true if there is a loop
+                            let oldContainer: LValue | LModel = lvalo.father;
+                            let oldContainerValue: LValue = (oldContainer.className === DModel.name) ? undefined as any : (oldContainer as LValue);
+                            // detach contaied object from old parent
+                            if (oldContainerValue) {
+                                let valarr: any[] = oldContainerValue.__raw.value;
+                                for (let i = 0; i < valarr.length; i++) {
+                                    let v = valarr[i];
+                                    if (v === val) oldContainerValue.setValueAtPosition(i, undefined as any, undefined);
+                                }
+                            }
+                            SetFieldAction.new(val as Pointer<DObject>, "father", context.data.id, undefined, true);
+                        }
+                    }
+                    // automatic? SetFieldAction.new(val as Pointer<DObject>, "pointedBy", PointedBy.fromID(context.data.id, "values." + index as any), "+=");
+                } else {
+                    // loose checks, i can assign any primitive to any primitive (will cast on get)
+                    if (info.instanceof === undefined) info.instanceof = context.proxyObject.instanceof;
+                    let metatype: string = (info.instanceof as LAttribute)?.typeToShortString() || "shapeless";
+                    if (typeof val === "object") {
+                        if (val.constructor === Date && (metatype !== "EString" && metatype !== "EDate" && metatype !== "shapeless"))
+                            return {
+                                success: false,
+                                reason: "dates can only be assigned to values of type string or Date"
+                            };
+                        // return {success: false, reason: "objects are not assignable except for dates"}; maybe i allow this instead
+                    }
+                }
+            }
+
+            // clear sideeffect part
+            this._clearValueAtPosition(context, index, info, true);
+
+            // actual set
+            SetFieldAction.new(context.data, 'value.' + index as any, val, '', isPtr);
+            if (info.setMirage !== false) SetFieldAction.new(context.data, 'isMirage', false, '', false);
+
+            // assegnato a giordano todo: wrap this and set toaster with failure message if it fails or better launch Log.w and bind toasts of different colors to Log funcs
+            return {success: true};
+        }
+    }
     protected set_value(val: (string | Pointer<DObject>)|(string | Pointer<DObject>)[], context: Context): boolean {
         const list: (string | Pointer<DObject>)[] = (Array.isArray(val)) ? val : [val];
+        let modified = false;
+        for (let i = 0; i < list.length; i++) {
+            modified = modified || this.get_setValueAtPosition(context)(i, list[i], {setMirage: false} as any).success;
+        }
+        if (modified) context.data.isMirage && SetFieldAction.new(context.data, 'isMirage', false, '', false);
+        return true;
+
+        // old implementation
         let l = context.proxyObject;
         let instanceoff: LReference | LAttribute | undefined = l.instanceof;
-        let isRef: boolean | undefined = (!instanceoff ? undefined : instanceoff.className === DReference.name);
+        let isRef: boolean | undefined = (!instanceoff ? undefined : instanceoff?.className === DReference.name);
         SetFieldAction.new(context.data, 'value', list as any, '', false);
         // console.log("pre set_value actions", l, list, val, context);
 
@@ -4345,6 +4458,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 DNamedElement.subclasses.push(DValue);
 LNamedElement.subclasses.push(LValue);
 
+type SetValueAtPoisitionInfoType = {setMirage: boolean, isPtr: boolean, type: LValue["type"], instanceof: LValue["instanceof"], isContainment: boolean, fatherList: LValue["fatherList"]};
 
 
 export type WModelElement = getWParams<LModelElement, DModelElement>;
