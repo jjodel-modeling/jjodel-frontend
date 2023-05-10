@@ -43,15 +43,15 @@ export class UX{
                 //console.log('relement Input set props',
                 //    {'re.props.obj.id': re.props.obj?.id, 're.props.obj': re.props.obj, 'thiss.props.data.id': thiss.props.data.id, thiss, re, objid, ret, 'ret.props': ret.props});
                 return ret;*/
-            case windoww.Components.GraphElement.name:
+            // case windoww.Components.GraphElement.name:
             case windoww.Components.GraphElementComponent.name:
-            case windoww.Components.DefaultNode.name:
+            // case windoww.Components.DefaultNode.name:
             case windoww.Components.DefaultNodeComponent.name:
-            case windoww.Components.Graph.name:
+            // case windoww.Components.Graph.name:
             case windoww.Components.GraphComponent.name:
             // case windoww.Components.Field.name:
             // case windoww.Components.FieldComponent.name:
-            case windoww.Components.Vertex.name:
+            // case windoww.Components.Vertex.name:
             case windoww.Components.VertexComponent.name:
                 const injectProps: GraphElementOwnProps = {} as any;
                 injectProps.parentViewId = parentComponent.props.view.id || (parentComponent.props.view as any); // re.props.view ||  thiss.props.view
@@ -69,6 +69,7 @@ export class UX{
                 injectProps.nodeid = U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
                 gvidmap[injectProps.nodeid] = true;
                 injectProps.key = injectProps.nodeid; // re.props.key || thiss.props.view.id + '_' + thiss.props.data.id;
+                // console.log("cloning jsx:", re, injectProps);
                 return React.cloneElement(re, injectProps);
         }}
 

@@ -306,7 +306,7 @@ class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
 
 // private
 interface OwnProps {
-    getter?: ((val: any, baseobj: GObject, key: string) => string); // why there is value here?
+    getter?: ((val: any, baseobj: GObject, key: string) => string); // val is default value used without a getter = baseobj[key]
     setter?: ((val: string|boolean, data?: LPointerTargetable) => any);
     obj: DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
         //LPointerTargetable | (Pointer<DPointerTargetable, 0, 'N', LPointerTargetable> & string);

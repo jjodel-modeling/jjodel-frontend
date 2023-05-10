@@ -24,18 +24,19 @@ function SelectComponent(props: AllProps) {
         </div>
     ));
 
-    const change = (evt: React.ChangeEvent<HTMLSelectElement>) => {
+    function SelectChange(evt: React.ChangeEvent<HTMLSelectElement>) {
         const target = evt.target.value;
+        console.log("setting:", {data, field, target});
         data[field] = target;
     }
 
     let hasReturn = false; let hasPrimitive = false; let hasClasses = false; let hasEnumerators = false;
     if(field === 'type') {
         switch (data.className) {
-            case 'DAttribute': hasPrimitive = true; hasEnumerators = true; break;
+            case 'DAttribute': hasPrimitive = hasEnumerators = true; break;
             case 'DReference': hasClasses = true; break;
-            case 'DOperation': hasReturn = true; break;
-            case 'DParameter': hasPrimitive = true; hasClasses = true; hasEnumerators = true; break;
+            case 'DOperation': hasPrimitive = hasClasses = hasEnumerators = hasReturn = true; break;
+            case 'DParameter': hasPrimitive = hasClasses = hasEnumerators = true; break;
         }
     }
     const returns = props.returns;
@@ -50,7 +51,7 @@ function SelectComponent(props: AllProps) {
         {(jsxLabel && !label) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
             {jsxLabel}
         </label>}
-        <select className={css} value={value} onChange={change}>
+        <select className={css} value={value} onChange={SelectChange}>
             {(hasReturn && returns.length > 0) && <optgroup label={'Defaults'}>
                 {returns.map((returnType, i) => {
                     return <option key={i} value={returnType.id}>{returnType.name}</option>
@@ -71,6 +72,7 @@ function SelectComponent(props: AllProps) {
                     return <option key={i} value={classifier.id}>{classifier.name}</option>
                 })}
             </optgroup>}
+            {props.options}
         </select>
         {(tooltip) && <Toaster position={'bottom-center'} />}
     </div>);
@@ -82,6 +84,7 @@ interface OwnProps {
     jsxLabel?: ReactNode;
     tooltip?: string;
     hidden?: boolean;
+    options?: JSX.Element;
 }
 interface StateProps { data: LPointerTargetable & GObject; primitives: LClass[]; returns: LClass[]; }
 interface DispatchProps { }

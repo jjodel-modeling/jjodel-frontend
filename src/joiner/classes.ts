@@ -92,7 +92,17 @@ import type {
     WValue
 } from "../model/logicWrapper";
 // import type {Pointer} from "./typeconverter";
-import type {CClass, Constructor, Dictionary, DocString, GObject, orArr, Proxyfied, unArr} from "./types";
+import type {
+    CClass,
+    Constructor,
+    Dictionary,
+    DocString,
+    GObject,
+    orArr,
+    PrimitiveType,
+    Proxyfied,
+    unArr
+} from "./types";
 import type {
     DViewElement,
     DViewTransientProperties,
@@ -138,7 +148,25 @@ abstract class AbstractMixedClass {
 }
 
 export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
+    static extendPrototypes(){
+        (Array.prototype as any).joinOriginal = Array.prototype.join;
+        (Array.prototype as any).separator = function(...separators: any[]/*: orArr<(PrimitiveType | null | undefined | JSX.Element)[]>*/): (string|JSX.Element)[]{
+            if (Array.isArray(separators[0])) separators = separators[0]; // case .join([1,2,3])  --> .join(1, 2, 3)
+            console.log("joinn", this, separators, this[0], typeof this[0]);
+            if (typeof this[0] !== "object") return (this as any).joinOriginal(separators);
+            // if JSX
+            // it handles empty cells like it handles '', but this is how native .join() handles them too: [emptyx5, "a", emptyx1, "b"].join(",") ->  ,,,,,a,,b
+            let ret/*:JSX.Element[]*/ = [];
+            for (let i = 0; i < this.length; i++){
+                if (i === 0) {ret.push(this[i]); continue;}
+                ret.push(...separators);
+                ret.push(this[i]);
+            }
+            return ret;
+        }
+    }
     static fixStatics() {
+        this.extendPrototypes();
         // problem: se lo statico è un valore primitivo ne genera una copia.
         for (let classs of Object.values(RuntimeAccessibleClass.annotatedClasses)) {
             let gclass = classs as GObject;
@@ -366,8 +394,9 @@ export class Constructors<T extends DPointerTargetable>{
     }
     DModelElement(): this { return this; }
     DClassifier(): this { return this; }
-    DParameter(): this {
+    DParameter(defaultValue?: any): this {
         let thiss: DParameter = this.thiss as any;
+        thiss.defaultValue = defaultValue;
         this.persist && thiss.father && SetFieldAction.new(thiss.father, "parameters", thiss.id, '+=', true);
         return this; }
     DStructuralFeature(): this {
@@ -529,9 +558,10 @@ export class Constructors<T extends DPointerTargetable>{
 
         return this; }
 
-    DOperation(exceptions: DOperation["exceptions"] = []/*, parameters: DOperation["parameters"] = []*/): this {
+    DOperation(exceptions: DOperation["exceptions"] = [], implementation?: string/*, parameters: DOperation["parameters"] = []*/): this {
         const thiss: DOperation = this.thiss as any;
         // thiss.parameters = parameters;
+        thiss.implementation = implementation || 'return "default placeholder function called";'
         thiss.exceptions = exceptions;
         if (this.persist) {
             BEGIN()
@@ -625,10 +655,17 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.oclApplyCondition = '';
         thiss.explicitApplicationPriority = priority;
         thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 350, 200);
-        thiss.adaptHeight = false;
-        thiss.adaptWidth = false;
+        // thiss.adaptHeight = false;
+        // thiss.adaptWidth = false;
+
+
+        thiss.draggable = false;
+        thiss.resizable = false;
+        thiss.adaptWidth = true;
+        thiss.display = 'flex' as any;
         thiss.width = 200;
         thiss.height = 100;
+        thiss.adaptHeight = 'fit-content';
 
         if (this.persist) {
             // no pointedBy?
@@ -936,7 +973,7 @@ export class Pointers{
         return typeof data === "string" ? data : (data as any).id;
     }
 
-    static isPointer(val: any): boolean {
+    static isPointer(val: any): val is Pointer {
         // todo: must refine this in a safer way
         return val?.includes ? val.includes("Pointer") : false;
     }

@@ -109,7 +109,7 @@ export default class Structure {
         if(!operation) return(<></>);
         return(<>
             {Structure.BaseEditor(operation)}
-            <Select obj={operation.parameters[0].id} field={'type'} label={'Return'} tooltip={"Method return type"} />
+            <Select obj={operation.id} field={'type'} label={'Return'} tooltip={"Method return type"} />
             {operation.parameters.map((parameter, index) => {
                 if (index > 0) {
                     return <div key={index}>
@@ -142,7 +142,6 @@ export default class Structure {
         }
 
         return(<div>
-
             {object.instanceof && conform && <label className={'p-1'}>This instance is <b className={'text-success'}>CONFORM</b> to {object.instanceof.name}</label>}
             {object.instanceof && !conform && <label className={'p-1'}>This instance is <b className={'text-danger'}>NOT CONFORM</b> to {object.instanceof.name}</label>}
             {!object.instanceof && <label className={'p-1'}>This instance is <b className={'text-warning'}>SHAPELESS</b></label>}
