@@ -55,7 +55,6 @@ import {
     ECoreReference,
     ECoreRoot
 } from "../../api/data";
-import { Firebase } from "../../firebase";
 
 
 @Node
@@ -744,7 +743,6 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
             }
         }
         SetFieldAction.new(context.data, 'name', name, '', false);
-        Firebase.saveEditAction(context.data.id, 'name', name, '', false);
         return true;
 
         /*
@@ -3230,7 +3228,6 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     public get_addPackage(context: Context): ((name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => DPackage) {
         return (name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => {
             const me = DPackage.new(name, uri, prefix, context.data.id, true, DModel);
-            Firebase.saveAddAction(me).then();
             return me;
         }
     }

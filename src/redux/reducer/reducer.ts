@@ -25,6 +25,7 @@ import {
 } from "../../joiner";
 import React from "react";
 import {CombineHistoryAction, LoadAction, RedoAction, UndoAction} from "../action/action";
+import {Firebase} from "../../firebase";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -266,7 +267,20 @@ function updateRedundancies_OBSOLETE(state: IStore, oldState:IStore, possibleInc
 let initialState: IStore = null as any;
 let storeLoaded: boolean = false;
 
-export function reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: IStore = initialState, action: Action): IStore{
+export function reducer(oldState: IStore = initialState, action: Action): IStore {
+    const ret = _reducer(oldState, action);
+    if(ret === oldState) return oldState;
+    if(!oldState?.room) return ret;
+    if(action.sender === DUser.current) {
+        const parsedAction = JSON.parse(JSON.stringify(action));
+        delete parsedAction.src;
+        Firebase.addAction(ret.room, parsedAction).then();
+    }
+    return ret;
+
+}
+
+export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: IStore = initialState, action: Action): IStore{
     let times: number;
     let state: IStore;
     switch(action.type) {

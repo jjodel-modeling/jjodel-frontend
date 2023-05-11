@@ -13,7 +13,7 @@ interface IValueEdge { source: LObject, target: LObject }
 function EdgesManagerComponent(props: AllProps) {
     const model = props.model;
 
-    const classes = model.classes ? [...model.classes] : [];
+    const classes = model.classes && Array.isArray(model.classes) ? model.classes : [];
     const _references: IReferenceEdge[] = [];
     const _extends: IExtendEdge[] = [];
     for(let classifier of classes) {

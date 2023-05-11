@@ -1,8 +1,8 @@
 import {
     Dictionary,
     DocString,
-    DPointerTargetable,
-    IStore,
+    DPointerTargetable, DUser,
+    IStore, Json,
     Log,
     LPointerTargetable,
     orArr,
@@ -136,12 +136,14 @@ export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...param
 }
 
 @RuntimeAccessible
-export abstract class Action extends RuntimeAccessibleClass{
+export class Action extends RuntimeAccessibleClass {
     static type = 'ACTION';
     static SubType: {
         vertexSubElements: 'vertexSubElements',
         vertexSize: 'vertexSize'
     };
+    id: Pointer;
+    sender: Pointer<DUser>;
     hasFired: number = 0;
     // targetID: string | undefined;
     // target: IClass = null as any;
@@ -155,6 +157,8 @@ export abstract class Action extends RuntimeAccessibleClass{
     subType?: string; //?
     protected constructor(field: string, value: any, subType?: string){
         super();
+        this.id = 'Pointer_' + Date.now();
+        this.sender = DUser.current;
         this.field = field;
         this.value = value;
         this.type = (this.constructor as any).type;
@@ -192,6 +196,12 @@ export abstract class Action extends RuntimeAccessibleClass{
         if ((actions as Action).className === CompositeAction.name) throw new Error("Composite action cannot be parsed directly, parse composite.actions instead");
         if (!Array.isArray(actions)) return Action.parse1(actions) as RET;
         return actions.map( Action.parse1 ) as RET;
+    }
+
+    static fromJson(json: Json): Action{
+        let action = new Action('dummy', 'dummy');
+        for(let key in json) (action as any)[key] = json[key];
+        return action;
     }
 }
 @RuntimeAccessible

@@ -527,7 +527,8 @@ export class Constructors<T extends DPointerTargetable>{
             SetRootFieldAction.new(isMetamodel ? "m2models" : "m1models", thiss.id, "+=", true);
         }
 
-        return this; }
+        return this;
+    }
 
     DOperation(exceptions: DOperation["exceptions"] = []/*, parameters: DOperation["parameters"] = []*/): this {
         const thiss: DOperation = this.thiss as any;
@@ -1323,7 +1324,7 @@ let bb2 = fffff(a);
 @Leaf
 @RuntimeAccessible
 export class DUser extends DPointerTargetable{
-    static current: DocString<Pointer<DUser, 1, 1>> = "Pointer"; // todo
+    static current: DocString<Pointer<DUser, 1, 1>> = 'Pointer' + Date.now(); // todo
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     cursorPositionX: number = 0;

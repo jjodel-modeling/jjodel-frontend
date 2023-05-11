@@ -1,19 +1,7 @@
 import React, {Dispatch, PureComponent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {IStore} from '../../redux/store';
-import {
-    BEGIN,
-    CreateElementAction,
-    DGraph,
-    DModel,
-    DModelElement, END,
-    LModel,
-    LModelElement, LPointerTargetable,
-    Pointer,
-    Selectors,
-    SetFieldAction,
-    U
-} from '../../joiner';
+import {BEGIN, DGraph, DModel, DModelElement, END, LModel, LModelElement, Pointer, Selectors, U} from '../../joiner';
 import './style.scss';
 import {DockContext, DockLayout, PanelData, TabData} from "rc-dock";
 import {LayoutData} from "rc-dock/lib/DockData";
@@ -29,7 +17,6 @@ import MetamodelTab from "./tabs/MetamodelTab";
 import ModelTab from "./tabs/ModelTab";
 import InfoTab from "./tabs/InfoTab";
 import PersistanceTab from "./tabs/PersistanceTab";
-import {Firebase} from "../../firebase";
 
 
 export class TabDataMaker {
@@ -185,7 +172,6 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         let names: (string)[] = Selectors.getAllMetamodels().map(m => m.name);
         name = U.increaseEndingNumber(name, false, false, (newName) => names.indexOf(newName) >= 0)
         model = model || DModel.new(name, undefined, true);
-        if(Selectors.getRoom()) await Firebase.saveAddAction(model);
         // DGraph.new(model.id);  <-- viene fatto in autamatico ?
         this.OPEN(model);
     }
