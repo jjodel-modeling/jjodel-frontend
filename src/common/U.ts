@@ -231,11 +231,12 @@ export class U{
         }
     }
 
-        // usage example: objectMergeInPlace_conditional(baseobj, (out, key, current) => !out[key] && current[key];
-    static objectMergeInPlace_conditional<A extends object, B extends object>(output: A, condition: (out:A&B, key: string | number, current:B, objarr?: B[], indexOfCurrent?: number) => boolean, ...objarr: B[]): A & B {
-        const out: GObject = output;
+    // usage example: objectMergeInPlace_conditional(baseobj, (out, key, current) => !out[key] && current[key];
+    // culprit of "couldn't find intersection" problem: condition type: (out:A&B, key: string | number, current:B, objarr?: B[], indexOfCurrent?: number) => boolean
+    static objectMergeInPlace_conditional<A extends GObject, B extends GObject>(output: A, condition: (...a:any)=>any, ...objarr: B[]): A & B {
+        const out: GObject<"A & B"> = output;
         let i: number = 0;
-        for (let o of objarr) for (let key in o) { if (condition(out as A&B, key, o, objarr, i++)) out[key] = o[key]; }
+        for (let o of objarr) for (let key in o) { if (condition(out, key, o, objarr, i++)) out[key] = o[key]; }
         return out as  A & B; }
 
     static buildFunctionDocumentation(f: Function): {parameters: {name: string, defaultVal: string | undefined, typedesc: string | null}[], returns: string | undefined, f: Function, fname: string | undefined, isLambda: boolean, signature: string} {
