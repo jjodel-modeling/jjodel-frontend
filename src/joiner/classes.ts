@@ -742,7 +742,6 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
                     let meta = LPointerTargetable.from(metaptr as Pointer);
                     startingPrefix = startingPrefix(meta as L);
                 }
-                console.log({father, lfather});
                 const childrenNames: (string)[] = lfather.children.map(c => (c as LNamedElement).name);
                 return U.increaseEndingNumber(startingPrefix + '0', false, false, (newname) => childrenNames.indexOf(newname) >= 0);
             }
