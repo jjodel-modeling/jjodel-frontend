@@ -44,7 +44,7 @@ export const ViewsEditorConnected = connect<StateProps, DispatchProps, OwnProps,
     mapDispatchToProps
 )(ViewsEditorComponent);
 
-export const ViewsEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <ViewsEditorConnected {...{...props, childrens}} />;
+export const ViewsEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ViewsEditorConnected {...{...props, children}} />;
 }
 export default ViewsEditor;

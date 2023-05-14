@@ -92,8 +92,8 @@ export const TopBarConnected = connect<StateProps, DispatchProps, OwnProps, ISto
     mapDispatchToProps
 )(Topbar);
 
-export const TopBar = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <TopBarConnected {...{...props, childrens}} />;
+export const TopBar = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <TopBarConnected {...{...props, children}} />;
 }
 
 

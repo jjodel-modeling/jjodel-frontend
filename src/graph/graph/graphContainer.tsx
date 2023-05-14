@@ -95,6 +95,6 @@ const GraphsContainerConnected = connect<StateProps, DispatchProps, OwnProps, IS
     mapDispatchToProps
 )(GraphsContainerComponent);
 
-export const GraphsContainer = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <GraphsContainerConnected {...{...props, childrens}} />; }
+export const GraphsContainer = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <GraphsContainerConnected {...{...props, children}} />; }
 

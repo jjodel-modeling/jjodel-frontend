@@ -61,7 +61,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
         if (!view) { Log.exx({props: this.props, thiss:this}); }
         // if (!view) { SetRootFieldAction.new("uselessrefresh_afterload", new Date().getTime()); return <div>Loading...</div>; }
 
-        let componentMap: Dictionary<string, (props: GObject, childrens?: (string | React.Component)[]) => ReactElement> = windoww.components;
+        let componentMap: Dictionary<string, (props: GObject, children?: (string | React.Component)[]) => ReactElement> = windoww.components;
         let dmodelMap: Dictionary<string, typeof DModelElement> = RuntimeAccessibleClass.classes as any;
 
         let serializableProps = {...this.props, data: this.props.data?.id, view: this.props.view?.id, views: this.props.views?.map( v => v.id )};
@@ -121,5 +121,5 @@ const DefaultNodeConnected = connect<DefaultNodeReduxStateProps, DefaultNodeDisp
 // export const Vertex = VertexConnected;
 
 
-export const DefaultNode = (props: DefaultNodeOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <DefaultNodeConnected {...{...props, childrens}} />; }
+export const DefaultNode = (props: DefaultNodeOwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <DefaultNodeConnected {...{...props, children}} />; }

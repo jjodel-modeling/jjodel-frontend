@@ -74,7 +74,7 @@ export default class Structure {
             <Input obj={lStructuralFeature} field={"transient"} label={"IsTransient"} type={"checkbox"} tooltip={"Indicates whether the reference should not be stored"} />
             <Input obj={lStructuralFeature} field={"unsettable"} label={"IsUnsettable"} type={"checkbox"} tooltip={"Indicates that the feature may be unset"} />
             <Input obj={lStructuralFeature} field={"derived"} label={"IsDerived"} type={"checkbox"} tooltip={"A derived feature typically computes its value from those of other features. It will typically be transient and will often be volatile and not changeable. The default copier won't copy it"} />
-        </>);
+        </>); // damiano: derived description tooltip might be wrong
     }
     public static AttributeEditor(lAttribute: LModelElement): ReactNode {
         if(!lAttribute) return(<></>);
@@ -98,9 +98,10 @@ export default class Structure {
     }
     public static EnumLiteralEditor(lEnumLiteral: LModelElement): ReactNode {
         if(!lEnumLiteral) return(<></>);
+        //vv4
         return(<>
             {Structure.BaseEditor(lEnumLiteral)}
-            <Input obj={lEnumLiteral} field={"value"} label={"Value"} type={"number"} tooltip={"Determines the integer value that is associated with this literal"} />
+            <Input obj={lEnumLiteral} field={"value"} label={"Ordinal"} type={"number"} tooltip={"Determines the integer value that is associated with this literal"} />
         </>);
     }
 
@@ -132,11 +133,13 @@ export default class Structure {
         const object: LObject = LObject.fromPointer(me.id);
         if(!object) return(<></>);
         let conform = true;
+        // damiano todo: this is redundant because it's always conform, but those kind of checks are
+        //                 better be done adding a property like lobject.conformsto(lclass)
         for(let feature of object.features) {
             let upperBound =  feature.instanceof ? feature.instanceof.upperBound : -1;
             upperBound = (upperBound === -1) ? 999 : upperBound;
             const lowerBound =  feature.instanceof ? feature.instanceof.lowerBound : -1;
-            const value = feature.value;
+            const value = feature.values;
             // const length = (Array.isArray(value)) ? value.length : (value === '') ? 0 : 1;
             conform = (value.length >= lowerBound && value.length <= upperBound);
         }

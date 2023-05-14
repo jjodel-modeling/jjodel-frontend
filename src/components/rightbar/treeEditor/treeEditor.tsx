@@ -33,7 +33,7 @@ function Child(props: Props) {
             <label className={css + ' ms-1 text-capitalize my-auto'}>{classname}:</label>
             <label className={'ms-1 my-auto'}>{((data as GObject).name) ? (data as GObject).name : 'unnamed'}</label>
         </div>
-        {data.className !== 'DOperation' && data.childrens.map((child, i) => {
+        {data.className !== 'DOperation' && data.children.map((child, i) => {
             return <Child key={i} data={child} />
         })}
     </div>
@@ -53,7 +53,7 @@ function TreeEditorComponent(props: AllProps) {
                 <label className={css + ' ms-1 text-capitalize my-auto'}>{classname}:</label>
                 <label className={'ms-1 my-auto'}>{((data as GObject).name) ? (data as GObject).name : 'unnamed'}</label>
             </div>
-            {data.className !== 'DOperation' && data.childrens.map((child, i) => {
+            {data.className !== 'DOperation' && data.children.map((child, i) => {
                 return <Child key={i} data={child} />
             })}
         </div>
@@ -83,7 +83,7 @@ export const TreeEditorConnected = connect<StateProps, DispatchProps, OwnProps, 
     mapDispatchToProps
 )(TreeEditorComponent);
 
-export const TreeEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <TreeEditorConnected {...{...props, childrens}} />;
+export const TreeEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <TreeEditorConnected {...{...props, children}} />;
 }
 export default TreeEditor;

@@ -76,7 +76,7 @@ export const ExtendEdgeConnected = connect<StateProps, DispatchProps, OwnProps, 
     mapDispatchToProps
 )(ExtendEdgeComponent);
 
-export const ExtendEdge = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <ExtendEdgeConnected {...{...props, childrens}} />;
+export const ExtendEdge = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ExtendEdgeConnected {...{...props, children}} />;
 }
 export default ExtendEdge;

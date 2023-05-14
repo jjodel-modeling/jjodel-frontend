@@ -31,7 +31,7 @@ export const PersistanceTabConnected = connect<StateProps, DispatchProps, OwnPro
     mapDispatchToProps
 )(PersistanceTabComponent);
 
-export const PersistanceTab = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <PersistanceTabConnected {...{...props, childrens}} />;
+export const PersistanceTab = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <PersistanceTabConnected {...{...props, children}} />;
 }
 export default PersistanceTab;

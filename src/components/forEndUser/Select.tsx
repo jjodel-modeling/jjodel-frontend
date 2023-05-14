@@ -111,7 +111,7 @@ export const SelectConnected = connect<StateProps, DispatchProps, OwnProps, ISto
     mapDispatchToProps
 )(SelectComponent);
 
-export const Select = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <SelectConnected {...{...props, childrens}} />;
+export const Select = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <SelectConnected {...{...props, children}} />;
 }
 export default Select;

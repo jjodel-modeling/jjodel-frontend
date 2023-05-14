@@ -49,7 +49,7 @@ export const JsxEditorConnected = connect<StateProps, DispatchProps, OwnProps, I
     mapDispatchToProps
 )(JsxEditorComponent);
 
-export const JsxEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <JsxEditorConnected {...{...props, childrens}} />;
+export const JsxEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <JsxEditorConnected {...{...props, children}} />;
 }
 export default JsxEditor;

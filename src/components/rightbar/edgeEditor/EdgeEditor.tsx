@@ -105,7 +105,7 @@ export const EdgeEditorConnected = connect<StateProps, DispatchProps, OwnProps, 
     mapDispatchToProps
 )(EdgeEditorComponent);
 
-export const EdgeEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <EdgeEditorConnected {...{...props, childrens}} />;
+export const EdgeEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <EdgeEditorConnected {...{...props, children}} />;
 }
 export default EdgeEditor;

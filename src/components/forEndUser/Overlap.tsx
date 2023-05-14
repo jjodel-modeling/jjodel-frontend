@@ -11,11 +11,11 @@ export class Overlap extends PureComponent<AllProps, ThisState>{
     render(): ReactNode {
         console.log('overlap childs:', this.props.children);
         if (!this.props.children || !Array.isArray(this.props.children)) return this.props.children;
-        const childrens = this.props.children; // ? (Array.isArray(this.props.children) ? this.props.children : [this.props.children]) : [];
+        const children = this.props.children; // ? (Array.isArray(this.props.children) ? this.props.children : [this.props.children]) : [];
         return (<>
-            {/*trouble on svg: G elements cannot be styled and rect cannot be nested, i cannot force a container to take size of childrens unless set size with plain js*/}
+            {/*trouble on svg: G elements cannot be styled and rect cannot be nested, i cannot force a container to take size of children unless set size with plain js*/}
             <div className={"overlap-parent" + (this.props.autosizex ? " overlap-child-chooses-width" : "") + (this.props.autosizex ? " overlap-child-chooses-height" : "")} style={{...this.props.style}}>
-                {React.Children.map(childrens, cc => {
+                {React.Children.map(children, cc => {
                         return <div className={"overlap-child-wrapper" + (!this.props.autosizex ? " overlap-parent-chooses-width" : "") + (!this.props.autosizey ? " overlap-parent-chooses-height" : "")}>{cc}</div>
                     })}
             </div>

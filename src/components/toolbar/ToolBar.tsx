@@ -26,13 +26,13 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     const isMetamodel: boolean = props.isMetamodel;
     const metamodel: LModel|undefined = props.metamodel;
     const myDictValidator: Map<string, ReactNode[]> = new Map();
-    const addChildrens = (...items: string[]) => [...ToolBarItem.getItems(lModelElement, items)];
+    const addChildren = (...items: string[]) => [...ToolBarItem.getItems(lModelElement, items)];
 
-    myDictValidator.set("DModel", addChildrens("package"));
-    myDictValidator.set("DPackage", addChildrens("package", "class", "enumerator"));
-    myDictValidator.set("DClass", addChildrens("attribute", "reference", "operation"));
-    myDictValidator.set("DEnumerator", addChildrens("literal"));
-    myDictValidator.set("DOperation", addChildrens("parameter", "exception"));
+    myDictValidator.set("DModel", addChildren("package"));
+    myDictValidator.set("DPackage", addChildren("package", "class", "enumerator"));
+    myDictValidator.set("DClass", addChildren("attribute", "reference", "operation"));
+    myDictValidator.set("DEnumerator", addChildren("literal"));
+    myDictValidator.set("DOperation", addChildren("parameter", "exception"));
 
     if(isMetamodel) {
         return(<div className={"toolbar"}>
@@ -94,8 +94,8 @@ export const ToolBarConnected = connect<StateProps, DispatchProps, OwnProps, ISt
     mapDispatchToProps
 )(ToolBarComponent);
 
-export const ToolBar = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <ToolBarConnected {...{...props, childrens}} />;
+export const ToolBar = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ToolBarConnected {...{...props, children}} />;
 }
 export default ToolBar;
 

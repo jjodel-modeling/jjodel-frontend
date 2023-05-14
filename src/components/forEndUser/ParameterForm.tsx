@@ -86,8 +86,8 @@
 //     mapDispatchToProps
 // )(ParameterFormComponent);
 //
-// export const ParameterForm = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-//     return <FormConnected {...{...props, childrens}} />;
+// export const ParameterForm = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+//     return <FormConnected {...{...props, children}} />;
 // }
 // (window as any).ParameterForm = ParameterForm;
 //

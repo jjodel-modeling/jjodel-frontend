@@ -9,6 +9,7 @@ import type {U as UType} from "../common/U";
 import type {Selectors as SelType} from "../redux/selectors/selectors";
 
 export type {Constructor, AbstractConstructor} from "../joiner/types";
+export type {ValueDetail, SetValueAtPoisitionInfoType} from "../model/logicWrapper/LModelElement";
 var windoww = (window as any);
 windoww.windoww = windoww;
 
@@ -24,11 +25,9 @@ windoww.prxml2json = prxml2json;
 
 // import types
 //import {$s, GraphPoint, GraphSize, IPoint, ISize, Log, Point, Size, U} from "../common/U";
-export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
 
 // nb: export type è un export "finto" che esiste solo in compilazione per fare capire a typescript i tipi. permette export di alias con nomi diversi (l'export normale no)
 export type {GetPath} from './proxy';
-export {windoww} from './types';
 
 export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv,
     NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually,
@@ -37,6 +36,13 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
 } from "./types";
 export type {Pointer, PtrString, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, } from "./classes";
 
+export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
+    WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
+} from "../model/logicWrapper/LModelElement";
+export type {WEdge, WEdgePoint, WExtEdge, WGraph, WRefEdge, WGraphElement, WVoidEdge, WGraphVertex, WVertex, WVoidVertex} from "../model/dataStructure/GraphDataElements";
+
+export {windoww} from './types';
+export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
 export {EdgeBendingMode} from "./types";
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable, LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible, Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs, LUser, DUser, Pointers, PointedBy, PendingPointedByPaths} from "./classes";
 
@@ -45,10 +51,9 @@ export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicC
 // console.error('iiiiiiiiiiiiiiii 3');
 // import independent generic modules (only dependent from types and RuntimeAccessible
 
-export {Uarr,  DDate, RawVertex, $s, ParseNumberOrBooleanOptions,
-    RawGraph, RawEdge, myFileReader, AutocompleteMatch,
+export {Uarr,  DDate, ParseNumberOrBooleanOptions, myFileReader,
     Keystrokes, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, SelectorOutput, U as UU, ShortAttribSuperTypes,
-    Log as Logg} from "../common/U";
+    } from "../common/U";
 export {DV} from '../common/DV';
 export {Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Geom";
 export { CSSRuleSorted, CSSParser, TagNames } from "../common/Uhtml";
@@ -62,11 +67,6 @@ export {LLog} from "../model/classes/L";
 
 export {EcoreParser} from "../api/data";
 // import domain-specific classes
-
-export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
-    WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
-} from "../model/logicWrapper/LModelElement";
-export type {WEdge, WEdgePoint, WExtEdge, WGraph, WRefEdge, WGraphElement, WVoidEdge, WGraphVertex, WVertex, WVoidVertex} from "../model/dataStructure/GraphDataElements";
 
 
 export {

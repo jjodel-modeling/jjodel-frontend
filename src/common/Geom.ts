@@ -491,3 +491,27 @@ export class GraphSize extends ISize<GraphPoint> {
     protected makePoint(x: number, y: number): GraphPoint { return new GraphPoint(x, y) as GraphPoint; }
 
 }
+
+@RuntimeAccessible
+export class Geom {
+
+    static isPositiveZero(m: number): boolean {
+        if (!!Object.is) { return Object.is(m, +0); }
+        return (1 / m === Number.POSITIVE_INFINITY); }
+
+    static isNegativeZero(m: number): boolean {
+        if (!!Object.is) { return Object.is(m, -0); }
+        return (1 / m === Number.NEGATIVE_INFINITY); }
+
+    static TanToRadian(n: number): number { return Geom.DegreeToRad(Geom.TanToDegree(n)); }
+    static TanToDegree(n: number): number {
+        if (Geom.isPositiveZero(n)) { return 0; }
+        if (n === Number.POSITIVE_INFINITY) { return 90; }
+        if (Geom.isNegativeZero(n)) { return 180; }
+        if (n === Number.POSITIVE_INFINITY) { return 270; }
+        return Geom.RadToDegree((window as any).Math.atan(n)); }
+
+    static RadToDegree(radians: number): number { return radians * (180 / Math.PI); }
+    static DegreeToRad(degree: number): number { return degree * (Math.PI / 180); }
+
+}

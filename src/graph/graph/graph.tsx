@@ -65,8 +65,8 @@ const GraphConnected = connect<GraphReduxStateProps, GraphDispatchProps, GraphOw
 )(GraphComponent as any);
 
 // nb: necessario per usarlo a runtime
-export const Graph = (props: GraphOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <GraphConnected {...{...props, childrens}} />; }
+export const Graph = (props: GraphOwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <GraphConnected {...{...props, children}} />; }
 
 // DModel.defaultComponent = Graph;
 // DPackage.defaultComponent = Graph;

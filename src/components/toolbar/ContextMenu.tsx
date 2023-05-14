@@ -95,8 +95,8 @@ export const ContextMenuConnected = connect<StateProps, DispatchProps, OwnProps,
     mapDispatchToProps
 )(ContextMenuComponent);
 
-export const ContextMenu = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <ContextMenuConnected {...{...props, childrens}} />;
+export const ContextMenu = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ContextMenuConnected {...{...props, children}} />;
 }
 export default ContextMenu;
 

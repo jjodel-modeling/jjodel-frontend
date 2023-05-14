@@ -19,7 +19,7 @@ export class Attribute extends Component<any, any> {
             <span>attrib proptest2! {this.props.prop2}</span>
             <div>daa html as var:{daa}</div>
             <div dangerouslySetInnerHTML={{__html: daa}} />
-            <div>childrens {this.props.children}</div>
+            <div>children {this.props.children}</div>
         </div>
     );
     }

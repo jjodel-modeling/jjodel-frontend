@@ -36,7 +36,7 @@ export const ImageConnected = connect<StateProps, DispatchProps, OwnProps, IStor
     mapDispatchToProps
 )(ImageComponent);
 
-export const Image = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <ImageConnected {...{...props, childrens}} />;
+export const Image = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ImageConnected {...{...props, children}} />;
 }
 export default Image;

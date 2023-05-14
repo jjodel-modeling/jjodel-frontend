@@ -5,6 +5,7 @@ import {connect} from "react-redux";
 import {
     BEGIN,
     DClass,
+    Dictionary,
     DUser, END,
     GObject,
     LClass, LGraphElement,
@@ -41,7 +42,10 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                         rootProps.data.className === "DClass" &&
                         source.canExtend(rootProps.data as any as LClass, extendError);
     const view: LViewElement|undefined = rootProps.view;
-    let [classes, setClasses] = useStateIfMounted<string[]>([data.className]);
+    let initialclasses: Dictionary<string, boolean> = {};
+    initialclasses[data.className] = true;
+    let [stateClasses, setClasses] = useStateIfMounted<Dictionary<string, boolean>>(initialclasses);
+    let classes = {...stateClasses};
     let currentClonedCounter: number = (view as any)?.clonedCounter;
     let [viewClonedCounter, setViewClonedCounter] = useStateIfMounted<number>(-1);
     let viewIsChanged = viewClonedCounter !== currentClonedCounter;
@@ -53,11 +57,11 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     if ( props.props.isGraph && !props.props.isVertex) nodeType = "Graph";
     if (!props.props.isGraph &&  props.props.isVertex) nodeType = "Vertex";
     if (!props.props.isGraph && !props.props.isVertex) nodeType = "Field";
-    classes = [...classes, nodeType];
-    if (Array.isArray(props.props.className)) { U.arrayMergeInPlace(classes, props.props.className); }
-    else if (props.props.className) { classes.push(props.props.className); }
-    if (Array.isArray(props.props.class)) { U.arrayMergeInPlace(classes, props.props.class); }
-    else if (props.props.class) { classes.push(props.props.class); }
+    classes[nodeType] = true;
+    if (Array.isArray(props.props.className)) { for (let c of props.props.className) classes[c] = true; }
+    else if (props.props.className) { classes[props.props.className] = true; }
+    if (Array.isArray(props.props.class)) { for (let c of props.props.class) classes[c] = true; }
+    else if (props.props.class) { classes[props.props.class] = true; }
 
     /// EVENT TRIGGER FUCTIONS START
     const select = (forUser:Pointer<DUser, 0, 1> = null) => {
@@ -98,15 +102,17 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     }
     const onEnter = (e: React.MouseEvent<HTMLDivElement>) => {
         if (isEdgePending && rootProps.data.className === "DClass") {
-            if (canBeExtend) setClasses([...classes, "class-can-be-extended"]);
-            else setClasses([...classes, "class-cannot-be-extended"]);
+            stateClasses = {...stateClasses};
+            stateClasses[ canBeExtend ? "class-can-be-extended" : "class-cannot-be-extended" ] = true;
+            setClasses(stateClasses);
         }
     }
     const onLeave = (e: React.MouseEvent<HTMLDivElement>) => {
         if(rootProps.data.className === "DClass") {
-            setClasses(classes.filter((classname) => {
-                return classname !== "class-can-be-extended" && classname !== "class-cannot-be-extended"
-            }));
+            stateClasses = {...stateClasses};
+            delete stateClasses["class-can-be-extended"];
+            delete stateClasses["class-cannot-be-extended"];
+            setClasses(stateClasses);
         }
     }
     /// EVENT TRIGGER FUCTIONS END
@@ -186,7 +192,11 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                         // SetRootFieldAction.new("resizing", {})
                     },
                     stop: function(event: GObject, obj: GObject) {
-                        if (!classes.includes("resized")) setClasses([...classes, "resized"]);
+                        if (!classes["resized"]) {
+                            stateClasses = {...stateClasses};
+                            stateClasses["resized"] = true;
+                            setClasses(stateClasses);
+                        }
                         if(node) {
                             node.width = obj.size.width;
                             node.height = obj.size.height;
@@ -223,7 +233,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              data-userselecting={JSON.stringify(node?.__raw.isSelected || {})}
              data-nodetype={nodeType}
              style={{...viewStyle}}
-             className={classes.join(' ')}
+             className={Object.keys(classes).join(' ')}
              onClick={onClick}
              onContextMenu={onContextMenu}
              onMouseEnter={onEnter}
@@ -260,8 +270,8 @@ export const RootVertexConnected = connect<StateProps, DispatchProps, OwnProps, 
     mapDispatchToProps
 )(RootVertexComponent);
 
-export const RootVertex = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <RootVertexConnected {...{...props, childrens}} />;
+export const RootVertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <RootVertexConnected {...{...props, children}} />;
 }
 export default RootVertex;
 

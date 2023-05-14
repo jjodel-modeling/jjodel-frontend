@@ -391,7 +391,7 @@ export class Selectors{
                 return new Scored<DViewElement>(Selectors.scoreView(v, data, hisnode, graph, sameViewPointSubViews), v);}
         ) as Scored<DViewElement>[];
         sortedPriority.sort( (e1, e2) => e2.score - e1.score);
-        // todo: prioritize views "childrens" of the view of the graph, so they will display differnet views for the same element in different graphs
+        // todo: prioritize views "children" of the view of the graph, so they will display differnet views for the same element in different graphs
         // then sort by  view selector matching: on classtype (eattribute, eoperation, eclass...), on values, upperbound...
         if (selectedView) sortedPriority = [new Scored<DViewElement>('manually assigned' as any, selectedView), ...sortedPriority];
         // sortedPriority = sortedPriority.map( s=> s.element) as any] : sortedPriority.map( s=> s.element) as any;

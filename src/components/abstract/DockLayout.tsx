@@ -278,7 +278,7 @@ export const DockLayoutConnected = connect<StateProps, DispatchProps, OwnProps, 
     mapDispatchToProps
 )(DockLayoutComponent);
 
-export const Dock = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <DockLayoutConnected {...{...props, childrens}} />;
+export const Dock = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <DockLayoutConnected {...{...props, children}} />;
 }
 export default Dock;

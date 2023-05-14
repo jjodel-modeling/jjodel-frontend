@@ -16,8 +16,8 @@ function ViewsData(props: Props) {
     const remove = (evt: React.MouseEvent<HTMLButtonElement>, index:number, value: LViewElement) => {
         DeleteElementAction.new(value.id);
     }
-    const select = (evt: React.MouseEvent<HTMLButtonElement>, value: LViewElement) => {
-        SetRootFieldAction.new('stackViews', value.id, '+=', true);
+    const select = (evt: React.MouseEvent<HTMLButtonElement>, option: LViewElement) => {
+        SetRootFieldAction.new('stackViews', option.id, '+=', true);
     }
 
     return(<div>

@@ -94,7 +94,7 @@ export const InputConnected = connect<StateProps, DispatchProps, OwnProps, IStor
     mapDispatchToProps
 )(InputComponent);
 
-export const Input = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <InputConnected {...{...props, childrens}} />;
+export const Input = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <InputConnected {...{...props, children}} />;
 }
 export default Input;

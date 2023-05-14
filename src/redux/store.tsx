@@ -265,10 +265,10 @@ function makeDefaultGraphViews(): DViewElement[] {
     defaultPackage.draggable = false; defaultPackage.resizable = false; defaultPackage.adaptWidth = false; defaultPackage.adaptHeight = false;
     defaultPackage.query = `metamodel.packages.filter((pkg) => {return pkg.name === 'default'})`;
 
-    pkgview.subViews = [cview.id]; // childrens can use this view too todo: this is temporary
+    pkgview.subViews = [cview.id]; // children can use this view too todo: this is temporary
 
     let alldefaultViews = [mview, pkgview, cview, eview, aview, rview, oview, literalView, objectView, valueView, defaultPackage];
-    mview.subViews = [mview.id, ...alldefaultViews.slice(1).map(e => e.id)]// childrens can use this view too todo: this is temporary, should just be the sliced map of everything else.
+    mview.subViews = [mview.id, ...alldefaultViews.slice(1).map(e => e.id)]// children can use this view too todo: this is temporary, should just be the sliced map of everything else.
     return alldefaultViews;
 }
 
@@ -276,7 +276,7 @@ function makeEditView(): DViewElement{
     // let jsx = <p><h1>edit view of {this.data.name}</h1><Input className={'raw'} obj={this.view.id} field={((getPath as DViewElement).jsxString as any).$}/></p>;
     let jsxstring = '<p style={{display: "flex", flexFlow: "wrap"}}><h1>edit view of {this.data.name}</h1><Textarea obj={this.views[1].id} field={((getPath).jsxString).$}/></p>;';
     let view: DViewElement = DViewElement.new('EditView', jsxstring);
-    view.subViews = [view.id]; // childrens can use this view too, this is indented and likely definitive.
+    view.subViews = [view.id]; // children can use this view too, this is indented and likely definitive.
     return view;
 }
 /*

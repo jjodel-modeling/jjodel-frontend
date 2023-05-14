@@ -81,7 +81,7 @@ export const ReferenceEdgeConnected = connect<StateProps, DispatchProps, OwnProp
     mapDispatchToProps
 )(ReferenceEdgeComponent);
 
-export const ReferenceEdge = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <ReferenceEdgeConnected {...{...props, childrens}} />;
+export const ReferenceEdge = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ReferenceEdgeConnected {...{...props, children}} />;
 }
 export default ReferenceEdge;

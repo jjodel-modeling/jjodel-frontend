@@ -76,7 +76,7 @@ export const ViewpointsEditorConnected = connect<StateProps, DispatchProps, OwnP
     mapDispatchToProps
 )(ViewpointsEditorComponent);
 
-export const ViewpointsEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <ViewpointsEditorConnected {...{...props, childrens}} />;
+export const ViewpointsEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ViewpointsEditorConnected {...{...props, children}} />;
 }
 export default ViewpointsEditor;
