@@ -152,7 +152,8 @@ export class IStore {
         const graphDefaultViews: DViewElement[] = makeDefaultGraphViews();
         for (let graphDefaultView of graphDefaultViews) { CreateElementAction.new(graphDefaultView); }
 
-        const viewpoint = DViewPoint.new('Default');
+        const viewpoint = DViewPoint.new('Default', false);
+        viewpoint.id = 'Pointer_DefaultViewPoint';
         CreateElementAction.new(viewpoint);
         SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
 /*
@@ -168,7 +169,7 @@ export class IStore {
             if (primitiveType === ShortAttribETypes.void) continue; // or make void too without primitiveType = true, but with returnType = true?
             else {
                 dPrimitiveType = DClass.new(primitiveType, false, false, true, false, '',undefined, false);
-                dPrimitiveType.id = 'POINTER_' + dPrimitiveType.name.toUpperCase();
+                dPrimitiveType.id = 'Pointer_' + dPrimitiveType.name.toUpperCase();
                 CreateElementAction.new(dPrimitiveType);
             }
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);

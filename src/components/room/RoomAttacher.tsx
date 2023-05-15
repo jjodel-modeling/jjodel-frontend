@@ -4,7 +4,7 @@ import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
 import {doc, onSnapshot} from "@firebase/firestore";
 import {Firebase} from "../../firebase";
-import {Action, DUser, Selectors} from "../../joiner";
+import {Action, DUser, Selectors, SetRootFieldAction} from "../../joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
 
 function RoomAttacherComponent(props: AllProps) {
@@ -12,9 +12,9 @@ function RoomAttacherComponent(props: AllProps) {
     const [actions, setActions] = useStateIfMounted<Dictionary<Pointer, boolean>>({});
     if(!room) return(<></>);
 
-    onSnapshot(doc(Firebase.db, 'rooms', room), (result) => {
+    onSnapshot(doc(Firebase.db, 'rooms', room), (doc) => {
         if(!Selectors.getRoom()) return;
-        const data = result.data();
+        const data = doc.data();
         if(!data) return;
         for(let action of data.actions.filter((item: GObject) => !actions[item.id])) {
             if(action.sender === DUser.current) continue;
@@ -23,9 +23,11 @@ function RoomAttacherComponent(props: AllProps) {
             receivedAction.fire();
             actions[action.id] = true; setActions(actions);
         }
+    }, (doc) => {
+        SetRootFieldAction.new('room', '', '', false);
     });
 
-    return(<>{DUser.current}</>);
+    return(<></>);
 }
 interface OwnProps {}
 interface StateProps {room: string}

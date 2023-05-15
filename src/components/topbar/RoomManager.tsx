@@ -18,7 +18,10 @@ function RoomManagerComponent(props: AllProps) {
     const join = async() => {
         const constraint: CONSTRAINT = {field: 'code', operator: '==', value: code};
         const results = await Firebase.select('rooms', constraint);
-        if(results.length === 0) return;
+        if(results.length === 0) {
+            U.alert('error', 'Invalid code !');
+            return;
+        }
         SetRootFieldAction.new('room', code, '', false);
     }
     const quit = () => {

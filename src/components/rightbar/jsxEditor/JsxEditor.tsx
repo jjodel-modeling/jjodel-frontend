@@ -23,7 +23,7 @@ function JsxEditorComponent(props: AllProps) {
     return <div style={{marginTop: '2.5em', height: '10em'}} tabIndex={-1} onBlur={blur}>
         <label className={'ms-1'}>JSX Editor</label>
         <Editor className={'mx-1'} onChange={change}
-                defaultLanguage={'html'} defaultValue={view.jsxString} />
+                defaultLanguage={'html'} value={view.jsxString} />
     </div>;
 }
 interface OwnProps { viewid: Pointer<DViewElement, 1, 1, LViewElement>; }
