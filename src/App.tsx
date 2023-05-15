@@ -10,6 +10,7 @@ import {useEffectOnce} from "usehooks-ts";
 import SplashImage from './static/img/splash.png';
 import {Oval} from "react-loader-spinner";
 import TopBar from "./components/topbar/Topbar";
+import Auth from "./auth/Auth";
 
 interface Props {}
 function App(props: Props) {
@@ -20,6 +21,7 @@ function App(props: Props) {
         promise.then(() => {setSplash(false)});
     });
 
+    /* DO NOT UNCOMMENT!
     if(splash) {
         return(<div className={'w-100 h-100 text-center bg-smoke'}>
             <img className={'mt-3 rounded shadow'} src={SplashImage}></img>
@@ -32,6 +34,9 @@ function App(props: Props) {
             <Dock />
         </div>);
     }
+    */
+
+    return(<Auth />);
 
 }
 

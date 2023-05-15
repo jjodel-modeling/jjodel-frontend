@@ -29,4 +29,19 @@ export default class Persistance {
                 console.log(error);
             });
     }
+
+    static test(email: string): void {
+        axios.post(Persistance.url('user'), {
+            username: "test",
+            password: "Password123!",
+            name: "test",
+            mail: email
+        })
+            .then(function (response) {
+                console.log(response);
+            })
+            .catch(function (error) {
+                console.log(error);
+            });
+    }
 }
