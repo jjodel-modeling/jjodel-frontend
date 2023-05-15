@@ -9,20 +9,20 @@ import Swal from "sweetalert2";
 // U-functions that require jsx
 @RuntimeAccessible
 export class UX{
-    static recursiveMap<T extends ReactNode | ReactNode[] | null | undefined>(children: T, fn: (rn: T)=>T): T {
-        const innermap = (child: ReactNode): T => {
+    static recursiveMap<T extends ReactNode | ReactNode[] | null | undefined>(children: T, fn: (rn: T, i: number)=>T): T {
+        const innermap = (child: ReactNode, i: number): T => {
             if (!React.isValidElement(child)) { return child as T; }
             if (child.props.children) {
                 // Giordano: add ignore for webpack
                 //@ts-ignore
                 child = React.cloneElement(child, { children: UX.recursiveMap(child.props.children, fn) });
             }
-            return fn(child as T);
+            return fn(child as T, i);
         };
-        if (!Array.isArray(children)) return innermap(children as ReactNode) as T;
-        return React.Children.map(children, innermap) as T;
+        if (!Array.isArray(children)) return innermap(children as ReactNode, 0) as T;
+        return React.Children.map(children, (c: T, i: number)=>innermap(c, i)) as T;
     }
-    static injectProp(parentComponent: GraphElementComponent, e: ReactNode, gvidmap: Dictionary<DocString<'VertexID'>, boolean>): ReactNode {
+    static injectProp(parentComponent: GraphElementComponent, e: ReactNode, gvidmap_useless: Dictionary<DocString<'VertexID'>, boolean>, parentnodeid: string, index: number): ReactNode {
         const re: ReactElement | null = UX.ReactNodeAsElement(e);
         if (!re) return e;
         // @ts-ignore this
@@ -60,14 +60,14 @@ export class UX{
                 // const vidmap = GraphElementRaw.graphVertexID_counter;
                 // if (!vidmap[injectProps.graphid]) vidmap[injectProps.graphid] = {};
                 // const gvidmap = vidmap[injectProps.graphid];
-                const validVertexIdCondition = (id: string): boolean => gvidmap[id];
+                const validVertexIdCondition = (id: string): boolean => gvidmap_useless[id];
                 // todo: come butto dei sotto-vertici dentro un vertice contenitore? o dentro un sotto-grafo? senza modificare il jsx ma solo draggando?
                 const dataid = typeof re.props.data === "string" ? re.props.data : re.props.data?.id;
-                const idbasename: string = injectProps.graphid + '^' + dataid;
+                const idbasename: string = (injectProps.parentnodeid)+"^"+index;//injectProps.graphid + '^' + dataid;
                 // console.log("setting nodeid", {injectProps, props:re.props, re});
                 Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
                 injectProps.nodeid = U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
-                gvidmap[injectProps.nodeid] = true;
+                gvidmap_useless[injectProps.nodeid] = true;
                 injectProps.key = injectProps.nodeid; // re.props.key || thiss.props.view.id + '_' + thiss.props.data.id;
                 // console.log("cloning jsx:", re, injectProps);
                 return React.cloneElement(re, injectProps);

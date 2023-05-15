@@ -347,7 +347,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const rnode: ReactNode = this.getTemplate();
         let rawRElement: ReactElement | null = U.ReactNodeAsElement(rnode);
         // @ts-ignore
-        // console.log('GE render', {rnode, rawRElement, props:this.props, name: this.props.data.name});
+        console.log('GE render', {thiss: this, rnode, rawRElement, props:this.props, name: this.props.data.name});
         const me: LModelElement = this.props.data as LModelElement; // this.props.model;
 
         const addprops: boolean = true;
@@ -360,7 +360,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap(); // todo: per passarla come prop ma mantenerla modificabile
             try {
                 rawRElement = React.cloneElement(rawRElement, {key: this.props.key || this.props.view.id + '_' + me.id, onDragTestInject, children: UX.recursiveMap(rawRElement/*.props.children*/,
-                        (rn: ReactNode) => UX.injectProp(this, rn, subElements))});
+                        (rn: ReactNode, index: number) => UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index))});
                 if(fixdoubleroot) rawRElement = rawRElement.props.children;
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
             } catch (e) {

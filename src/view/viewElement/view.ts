@@ -1,9 +1,11 @@
 import {
+    BEGIN,
     Constructor,
     Constructors,
     DocString,
     DPointerTargetable,
     EdgeBendingMode,
+    END,
     getWParams,
     GraphSize,
     LogicContext,
@@ -63,6 +65,8 @@ export class DViewElement extends DPointerTargetable {
     onResizeStart: string = '';
     onResizeEnd: string = '';
     bendingMode!: EdgeBendingMode;
+    useViewSize!: boolean;
+    size!: GraphSize;
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1 , persist: boolean = false): DViewElement {
@@ -140,6 +144,19 @@ export class LViewElement<Context extends LogicContext<DViewElement> = any, D ex
         }
         return subViews;
     }
+    get_useViewSize(context: Context): D["useViewSize"] { return context.data.useViewSize; }
+    set_useViewSize(val: D["useViewSize"], context: Context): boolean {
+        let r: boolean = true;
+        BEGIN()
+        if (!context.data.useViewSize && val) r = SetFieldAction.new(context.data.id, "size", {...context.data.defaultVSize} as GraphSize)
+        r = r && SetFieldAction.new(context.data.id,  "useViewSize", val);
+        END()
+        return r; }
+
+    get_size(context: Context): D["useViewSize"] { return context.data.useViewSize ? context.data.size : undefined as any; }
+    set_size(val: D["useViewSize"], context: Context): boolean {
+        return SetFieldAction.new(context.data.id,  "useViewSize", val); }
+
     set_generic_entry(context: Context, key: keyof DViewElement, val: any): boolean {
         console.log('set_generic_entry', {context, key, val});
         SetFieldAction.new(context.data, key, val);
