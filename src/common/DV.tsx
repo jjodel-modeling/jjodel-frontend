@@ -127,9 +127,11 @@ class DefaultView {
     }
 
     public static defaultPackage() {
-        return `{this.data.childrens.map((child, index) => {
-            return <DefaultNode key={index} data={child.id}></DefaultNode>
-        })}`;
+        return `<div className={'bg-white w-100 h-100'}>
+            {this.data.childrens.map((child, index) => {
+                return <DefaultNode key={index} data={child.id}></DefaultNode>
+            })}
+        </div>`;
     }
 
     public static error(msg: undefined | string | JSX.Element) {

@@ -45,7 +45,7 @@ import {
     LUser,
     LValue, LViewElement,
     RuntimeAccessible, SetFieldAction,
-    SetRootFieldAction, ShortAttribETypes,
+    SetRootFieldAction, ShortAttribETypes, Selectors,
 } from "../joiner";
 import React from "react";
 import {DV} from "../common/DV";
@@ -283,7 +283,8 @@ function makeDefaultGraphViews(): DViewElement[] {
 
     const defaultPackage: DViewElement = DViewElement.new('Default Package', DV.defaultPackage());
     defaultPackage.draggable = false; defaultPackage.resizable = false; defaultPackage.adaptWidth = false; defaultPackage.adaptHeight = false;
-    defaultPackage.query = `metamodel.packages.filter((pkg) => {return pkg.name === 'default'})`;
+    defaultPackage.query = `context DPackage inv: self.name = 'default'`;
+    defaultPackage.viewpoint = 'Pointer_DefaultViewPoint';
 
     pkgview.subViews = [cview.id]; // childrens can use this view too todo: this is temporary
 

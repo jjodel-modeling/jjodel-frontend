@@ -20,16 +20,21 @@ function ViewsEditorComponent(props: AllProps) {
     </div>);
 }
 interface OwnProps { }
-interface StateProps { views: LViewElement[]; stackViews: LViewElement[]; viewpoints: LViewPoint[] }
+interface StateProps {
+    views: LViewElement[];
+    stackViews: LViewElement[];
+    viewpoints: LViewPoint[];
+}
 interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    ret.views = LViewElement.fromPointer(state.viewelements.slice(10));
+    ret.views = LViewElement.fromPointer(state.viewelements.slice(10)); // 10
     ret.stackViews = LViewElement.fromPointer(state.stackViews);
     ret.viewpoints = LViewPoint.fromPointer(state.viewpoints);
+    ret.views = ret.views.filter(view => !(view.viewpoint) || view.viewpoint?.id === state.viewpoint);
     return ret;
 }
 
