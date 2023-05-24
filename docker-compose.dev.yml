@@ -39,6 +39,14 @@ services:
     ports:
       - '5432:5432'  # 55434
 
+  memorec:
+    image: giordanotin/memorec:1.0
+    container_name: memorec
+    networks:
+      network:
+    ports:
+      - '8080:8080'
+
 volumes:
   db_data:
 

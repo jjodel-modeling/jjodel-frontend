@@ -21,7 +21,6 @@ function App(props: Props) {
         promise.then(() => {setSplash(false)});
     });
 
-    /* DO NOT UNCOMMENT!
     if(splash) {
         return(<div className={'w-100 h-100 text-center bg-smoke'}>
             <img className={'mt-3 rounded shadow'} src={SplashImage}></img>
@@ -34,10 +33,6 @@ function App(props: Props) {
             <Dock />
         </div>);
     }
-    */
-
-    return(<Auth />);
-
 }
 
 export default App;

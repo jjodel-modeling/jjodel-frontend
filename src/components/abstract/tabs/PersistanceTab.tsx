@@ -2,12 +2,12 @@ import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
 import Persistance from "../../../persistance/api";
+import MemoRec from "../../../memorec/api";
 
 
 function PersistanceTabComponent(props: AllProps) {
     return(<div>
-        <button className={'d-block btn btn-primary'} onClick={() => Persistance.post()}>post</button>
-        <button className={'d-block btn btn-primary'} onClick={() => Persistance.get()}>get</button>
+        <button className={'d-block btn btn-primary'} onClick={() => MemoRec.post()}>post</button>
     </div>);
 }
 interface OwnProps {}
