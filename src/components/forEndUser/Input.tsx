@@ -1,15 +1,17 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
-import {DPointerTargetable, GObject, LPointerTargetable, Pointer} from "../../joiner";
+import {DPointerTargetable, GObject, LModelElement, LPointerTargetable, Pointer} from "../../joiner";
 import toast, {Toaster} from 'react-hot-toast';
 
 
 function InputComponent(props: AllProps) {
     const data = props.data;
     if(!data) return(<></>);
+    const getter = props.getter;
+    const setter = props.setter;
     const field = props.field;
-    const value = (data[field] !== undefined) ? data[field] : 'undefined';
+    const value = (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined';
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
@@ -28,8 +30,11 @@ function InputComponent(props: AllProps) {
     ));
 
     const change = (evt: React.ChangeEvent<HTMLInputElement>) => {
-        const target: any = (['checkbox', 'radio'].includes(evt.target.type)) ? evt.target.checked : evt.target.value;
-        data[field] = target;
+        if(setter) setter(evt.target.value);
+        else {
+            const target = (['checkbox', 'radio'].includes(evt.target.type)) ? evt.target.checked : evt.target.value;
+            data[field] = target;
+        }
     }
 
     let className = (props as any).className || '';
@@ -55,6 +60,8 @@ function InputComponent(props: AllProps) {
 interface OwnProps {
     obj: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
+    getter?: (data: LPointerTargetable) => string;
+    setter?: (value: string|boolean) => void;
     label?: string;
     jsxLabel?: ReactNode;
     type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|

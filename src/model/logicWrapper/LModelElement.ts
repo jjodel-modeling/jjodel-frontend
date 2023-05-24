@@ -1281,7 +1281,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.classifiers;
         const diff = U.arrayDifference(oldList, list);
-        //BEGIN();
+        BEGIN();
         SetFieldAction.new(context.data, 'classifiers', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -1293,7 +1293,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        //END();
+        END();
         return true;
     }
 
@@ -1306,7 +1306,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.subpackages;
         const diff = U.arrayDifference(oldList, list);
-        //BEGIN();
+        BEGIN();
         SetFieldAction.new(context.data, 'subpackages', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -1318,7 +1318,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        //END();
+        END();
         return true;
     }
 
@@ -1498,7 +1498,7 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.parameters;
         const diff = U.arrayDifference(oldList, list);
-        //BEGIN();
+        BEGIN();
         SetFieldAction.new(context.data, 'parameters', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -1510,7 +1510,7 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        //END();
+        END();
         return true;
     }
 
@@ -1956,7 +1956,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.operations;
         const diff = U.arrayDifference(oldList, list);
-        //BEGIN();
+        BEGIN();
         SetFieldAction.new(context.data, 'operations', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -1968,7 +1968,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        //END();
+        END();
         return true;
     }
 
@@ -1979,7 +1979,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.features;
         const diff = U.arrayDifference(oldList, list);
-        //BEGIN();
+        BEGIN();
         SetFieldAction.new(context.data, 'features', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -1991,7 +1991,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        //END();
+        END();
         return true;
     }
 
@@ -2004,7 +2004,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.references;
         const diff = U.arrayDifference(oldList, list);
-        //BEGIN();
+        BEGIN();
         SetFieldAction.new(context.data, 'references', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -2016,7 +2016,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        //END();
+        END();
         return true;
     }
 
@@ -2029,7 +2029,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         const oldList = context.data.attributes;
         const diff = U.arrayDifference(oldList, list);
-        //BEGIN();
+        BEGIN();
         SetFieldAction.new(context.data, 'attributes', list, "", true);
         for (let id of diff.added) {
             SetFieldAction.new(id, 'father', context.data.id, '', true);
@@ -2041,7 +2041,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             U.arrayRemoveAll(parent, context.data.id);
             SetFieldAction.new(id, 'parent', parent, '', true);
         }
-        //END();
+        END();
         return true;
     }
 

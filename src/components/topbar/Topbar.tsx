@@ -68,7 +68,7 @@ function Topbar(props: AllProps) {
         <label className={'item border round ms-1'} onClick={exportJson}>Export JSON</label>
         <label className={'item border round ms-1'} onClick={importJson}>Import JSON</label>
 
-        <RoomManager />
+        {/*<RoomManager />*/}
 
     </div>);
 }
