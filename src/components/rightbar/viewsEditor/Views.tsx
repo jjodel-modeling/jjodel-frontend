@@ -2,22 +2,24 @@ import React from "react";
 import type {LViewElement} from "../../../view/viewElement/view";
 import {CreateElementAction, DeleteElementAction, SetRootFieldAction} from "../../../redux/action/action";
 import {DViewElement} from "../../../view/viewElement/view";
+import {LViewPoint} from "../../../view/viewPoint/viewpoint";
 
-interface Props { views: LViewElement[] }
+interface Props { views: LViewElement[]; }
 function ViewsData(props: Props) {
     const views = props.views;
 
     const add = (evt: React.MouseEvent<HTMLButtonElement>) => {
         const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
-        const dView: DViewElement = DViewElement.new('View', jsx);
-        CreateElementAction.new(dView);
-        SetRootFieldAction.new('stackViews', dView.id, '+=', true);
+        const view: DViewElement = DViewElement.new('View', jsx);
+        CreateElementAction.new(view);
+        SetRootFieldAction.new('stackViews', view.id, '+=', true);
     }
-    const remove = (evt: React.MouseEvent<HTMLButtonElement>, index:number, value: LViewElement) => {
-        DeleteElementAction.new(value.id);
+    const remove = (evt: React.MouseEvent<HTMLButtonElement>, index:number, view: LViewElement) => {
+        SetRootFieldAction.new('viewelements', view.id, '-=', true);
+        DeleteElementAction.new(view.id);
     }
-    const select = (evt: React.MouseEvent<HTMLButtonElement>, option: LViewElement) => {
-        SetRootFieldAction.new('stackViews', option.id, '+=', true);
+    const select = (evt: React.MouseEvent<HTMLButtonElement>, view: LViewElement) => {
+        SetRootFieldAction.new('stackViews', view.id, '+=', true);
     }
 
     return(<div>
@@ -33,7 +35,7 @@ function ViewsData(props: Props) {
                 <button className={'btn btn-success ms-auto'} onClick={(evt) => {select(evt, view)}}>
                     <i className={'p-1 bi bi-info-lg'}></i>
                 </button>
-                <button className={'btn btn-danger ms-1'} disabled={true} onClick={(evt) => {remove(evt, i, view)}}>
+                <button className={'btn btn-danger ms-1'} disabled={false} onClick={(evt) => {remove(evt, i, view)}}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
                 </button>
             </div>

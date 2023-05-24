@@ -31,7 +31,19 @@ console.warn('loading ts U log');
 
 
 @RuntimeAccessible
-export class U{
+export class U {
+
+    public static getRandomString(length: number): string {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let randomString = '';
+        let index = 0;
+        while(index < length) {
+            const randomNumber = Math.floor(Math.random() * characters.length);
+            randomString += characters.charAt(randomNumber);
+            index += 1;
+        }
+        return randomString;
+    }
 
     public static alert(title: string, text: string) {
         let color = 'text-';
@@ -527,7 +539,7 @@ export class U{
         for (let i = 0 ; i < highestTimeoutId ; i++) { clearTimeout(i); }
     }
 
-   static getStackTrace(sliceCalls: number = 2): string[] {
+    static getStackTrace(sliceCalls: number = 2): string[] {
         const ret: string | undefined = Error().stack;
         // try { var a = {}; a.debug(); } catch(ex) { ret = ex.stack; }
         // if (Array.isArray(ret)) return ret;
@@ -793,7 +805,7 @@ export class U{
         }
         return ret;
     }
-   /*  {a: { b: { c1: 1, c2:2, c3:3 } }, d: 1 }     ---->  {"a.b.c1":1, "a.b.c2":2, "a.b.c3":3. "d":1}*/
+    /*  {a: { b: { c1: 1, c2:2, c3:3 } }, d: 1 }     ---->  {"a.b.c1":1, "a.b.c2":2, "a.b.c3":3. "d":1}*/
     public static flattenObjectToRoot(obj: GObject, prefix: string = '', pathseparator: string = '.'): GObject{
         return Object.keys(obj).reduce((acc: GObject, k: string) => {
             const pre = prefix.length ? prefix + pathseparator : '';
@@ -1054,11 +1066,11 @@ export class Uarr{
         return arr1.filter( e => arr2.indexOf(e) >= 0);
     }
 
-     static arraySubtract(arr1: any[], arr2: any[], inPlace: boolean): any[]{
-         let i: number;
-         const ret: any[] = inPlace ? arr1 : [...arr1];
-         for (i = 0; i < arr2.length; i++) { U.arrayRemoveAll(ret, arr2[i]); }
-         return ret; }
+    static arraySubtract(arr1: any[], arr2: any[], inPlace: boolean): any[]{
+        let i: number;
+        const ret: any[] = inPlace ? arr1 : [...arr1];
+        for (i = 0; i < arr2.length; i++) { U.arrayRemoveAll(ret, arr2[i]); }
+        return ret; }
 
 }
 

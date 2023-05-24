@@ -10,13 +10,14 @@ import {useEffectOnce} from "usehooks-ts";
 import SplashImage from './static/img/splash.png';
 import {Oval} from "react-loader-spinner";
 import TopBar from "./components/topbar/Topbar";
+import RoomAttacher from "./components/room/RoomAttacher";
 
 interface Props {}
 function App(props: Props) {
     const [splash, setSplash] = useStateIfMounted(false);
 
     useEffectOnce(() => {
-        const promise = new Promise((resolve) => {setTimeout(resolve, 4 * 1000)});
+        const promise = new Promise((resolve) => {setTimeout(resolve, 3 * 1000)});
         promise.then(() => {setSplash(false)});
     });
 
@@ -30,6 +31,7 @@ function App(props: Props) {
         return(<div className={'d-flex flex-column h-100 p-1'} onClick={() => {statehistory.globalcanundostate = true;} } >
             <TopBar />
             <Dock />
+            {/*<RoomAttacher />*/}
         </div>);
     }
 

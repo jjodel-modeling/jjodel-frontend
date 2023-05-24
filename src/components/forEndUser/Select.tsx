@@ -93,6 +93,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
+    if(!ownProps.obj) return ret;
     const pointer: Pointer = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
     ret.data = LPointerTargetable.fromPointer(pointer);
     ret.primitives = LPointerTargetable.fromPointer(state.primitiveTypes);
