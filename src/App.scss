@@ -14,9 +14,6 @@
 .hoverable:hover>.content{ display: block; position: absolute; z-index:1;}
 .hoverable>.content{ display: none; }
 
-
-
-/*
 [data-nodetype]{
   position: relative;
   overflow: hidden;
@@ -35,7 +32,6 @@
     top: -23px;
   }
 }
-*/
 
 [data-nodetype="Graph"]{
   position: absolute !important;
