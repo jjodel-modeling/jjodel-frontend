@@ -1,7 +1,8 @@
 import {
     BEGIN,
     Constructor,
-    Constructors,
+    Constructors, Dictionary,
+    DModelElement,
     DocString,
     DPointerTargetable,
     EdgeBendingMode,
@@ -14,10 +15,9 @@ import {
     Pointer,
     RuntimeAccessible,
     RuntimeAccessibleClass,
-    SetFieldAction
+    SetFieldAction, DGraphElement, LGraphVertex,
 } from "../../joiner";
 import {DViewPoint, LViewPoint} from "../viewPoint/viewpoint";
-
 
 @RuntimeAccessible
 export class DViewElement extends DPointerTargetable {
@@ -65,8 +65,9 @@ export class DViewElement extends DPointerTargetable {
     onResizeStart: string = '';
     onResizeEnd: string = '';
     bendingMode!: EdgeBendingMode;
-    useViewSize!: boolean;
-    size!: GraphSize;
+    //useSizeFrom!: EuseSizeFrom;
+    storeSize!: boolean;
+    size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>;
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1 , persist: boolean = false): DViewElement {
@@ -80,7 +81,7 @@ export class DViewElement extends DPointerTargetable {
 }
 
 @RuntimeAccessible
-export class LViewElement<Context extends LogicContext<DViewElement> = any, D extends DViewElement = any>
+export class LViewElement<Context extends LogicContext<DViewElement, LViewElement> = any, D extends DViewElement = any>
     extends LPointerTargetable { // MixOnlyFuncs(DViewElement, LPointerTargetable)
 
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -121,18 +122,18 @@ export class LViewElement<Context extends LogicContext<DViewElement> = any, D ex
     draggable!: boolean;
     resizable!: boolean;
     query!: string;
-    viewpoint!: LViewPoint;
+    viewpoint!: LViewPoint | undefined;
     display!: 'block'|'contents';
     onDragStart!: string;
     onDragEnd!: string;
     onResizeStart!: string;
     onResizeEnd!: string;
     bendingMode!: EdgeBendingMode;
+    storeSize!: boolean;
+    protected size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>; // use getSize, updateSize
 
-    get_viewpoint(context: Context): LViewPoint|undefined {
-        const viewpoint = context.data.viewpoint;
-        if(viewpoint) { return LViewPoint.fromPointer(viewpoint); }
-        else { return undefined; }
+    get_viewpoint(context: Context): this["viewpoint"] {
+        return (context.data.viewpoint || undefined) && (LViewPoint.fromPointer(context.data.viewpoint as Pointer<DViewPoint>));
     }
 
     get_subViews(context: Context, key: string): LViewElement[]{
@@ -144,18 +145,56 @@ export class LViewElement<Context extends LogicContext<DViewElement> = any, D ex
         }
         return subViews;
     }
-    get_useViewSize(context: Context): D["useViewSize"] { return context.data.useViewSize; }
-    set_useViewSize(val: D["useViewSize"], context: Context): boolean {
+    /*
+    get_useSizeFrom(context: Context): D["useSizeFrom"] { return context.data.useSizeFrom; }
+    set_useSizeFrom(val: D["useSizeFrom"], context: Context): boolean {
         let r: boolean = true;
         BEGIN()
-        if (!context.data.useViewSize && val) r = SetFieldAction.new(context.data.id, "size", {...context.data.defaultVSize} as GraphSize)
-        r = r && SetFieldAction.new(context.data.id,  "useViewSize", val);
+        if (val === EuseSizeFrom.view && !context.data.size) r = SetFieldAction.new(context.data.id, "size", {});
+        // NB: se setti val == "both", va letto da Graph[viewid][nodeid] e non da view.
+        r = r && SetFieldAction.new(context.data.id,  "useSizeFrom", val, undefined, false);
         END()
-        return r; }
+        return r; }*/
 
-    get_size(context: Context): D["useViewSize"] { return context.data.useViewSize ? context.data.size : undefined as any; }
-    set_size(val: D["useViewSize"], context: Context): boolean {
-        return SetFieldAction.new(context.data.id,  "useViewSize", val); }
+    // protected get_size(context: Context): D["size"] { return context.data.useSizeFrom === EuseSizeFrom.node ? undefined as any : context.data.size; }
+    /* protected set_size(val: D["size"], context: Context): boolean {
+        return SetFieldAction.new(context.data.id,  "size", val); }*/
+
+    // returns the delta of change
+    public updateSize(id: Pointer<DModelElement> | Pointer<DGraphElement>, size: Partial<GraphSize>): void { return this.wrongAccessMessage("updateSize"); }
+    public get_updateSize(context: Context): this["updateSize"] {
+        return (id: Pointer<DModelElement> | Pointer<DGraphElement>, size: Partial<GraphSize>) => {
+            let vp = context.proxyObject.viewpoint;
+            if (!context.data.storeSize) {
+                if (vp?.storeSize) return vp.updateSize(id, size);
+                return undefined;
+            }
+            let vsize = context.data.size[id] || vp?.__raw.size[id] || context.data.defaultVSize || vp?.__raw.defaultVSize;
+            let newSize: GraphSize = new GraphSize();
+            newSize.x = size?.x !== undefined ? size.x : vsize.x;
+            newSize.y = size?.y !== undefined ? size.y : vsize.y;
+            newSize.w = size?.w !== undefined ? size.w : vsize.w;
+            newSize.h = size?.h !== undefined ? size.h : vsize.h;
+            SetFieldAction.new(context.data.id, "size." + id as any, newSize);
+        }
+    }
+
+    public getSize(id: Pointer<DModelElement> | Pointer<DGraphElement>): GraphSize | undefined{ return this.wrongAccessMessage("getSize"); }
+    public get_getSize(context: Context): ((...a:Parameters<this["getSize"]>)=>ReturnType<LViewElement["getSize"]>) {
+        function impl_getSize(id: Pointer<DModelElement> | Pointer<DGraphElement>): ReturnType<LViewElement["getSize"]> {
+            let view = context.data;
+            let ret: GraphSize;
+            if (view.storeSize){
+                ret = view.size[id];
+                if(ret) return ret; }
+            let vp = context.proxyObject.viewpoint;
+            if (vp && view.id !== vp.id && vp.storeSize){
+                ret = vp.size[id];
+                if(ret) return ret; }
+            return undefined;
+        }
+
+        return impl_getSize; }
 
     set_generic_entry(context: Context, key: keyof DViewElement, val: any): boolean {
         console.log('set_generic_entry', {context, key, val});

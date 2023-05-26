@@ -1,5 +1,6 @@
 import type {
     DClassifier,
+    DEdgePoint,
     DExtEdge,
     DGraphElement,
     DLog,
@@ -22,6 +23,8 @@ import type {
     LRefEdge,
     LReference,
     LVertex,
+    DGraphVertex,
+    DVertex,
     Pointer
 } from '../joiner';
 import {
@@ -40,13 +43,15 @@ import {
     DUser,
     DValue,
     DViewElement,
-    getPath, LModel,
+    getPath,
+    LModel,
     LObject,
     LUser,
     LValue, LViewElement,
     RuntimeAccessible, SetFieldAction,
-    SetRootFieldAction, ShortAttribETypes,
+    SetRootFieldAction, ShortAttribETypes
 } from "../joiner";
+
 import React from "react";
 import {DV} from "../common/DV";
 import LeaderLine from "leader-line-new";
@@ -88,11 +93,11 @@ export class IStore {
 
     //// DClass section to fill
     graphs: Pointer<DGraph, 0, 'N', LGraph> = [];
-    voidvertexs: Pointer<DGraph, 0, 'N', LGraphVertex> = [];
-    vertexs: Pointer<DGraph, 0, 'N', LVertex> = [];
-    graphvertexs: Pointer<DGraph, 0, 'N', LGraphVertex> = [];
+    voidvertexs: Pointer<DGraphVertex, 0, 'N', LGraphVertex> = [];
+    vertexs: Pointer<DVertex, 0, 'N', LVertex> = [];
+    graphvertexs: Pointer<DGraphVertex, 0, 'N', LGraphVertex> = [];
 
-    edgepoints: Pointer<DGraph, 0, 'N', LEdgePoint> = [];
+    edgepoints: Pointer<DEdgePoint, 0, 'N', LEdgePoint> = [];
     //my addon
     extEdges: Pointer<DExtEdge, 0, "N", LExtEdge> = [];
     refEdges: Pointer<DRefEdge, 0, "N", LRefEdge> = [];
@@ -150,7 +155,7 @@ export class IStore {
         const graphDefaultViews: DViewElement[] = makeDefaultGraphViews();
         for (let graphDefaultView of graphDefaultViews) { CreateElementAction.new(graphDefaultView); }
 
-        const viewpoint = DViewPoint.new('Default');
+        const viewpoint = DViewPoint.new('Default', '');
         CreateElementAction.new(viewpoint);
         SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
 /*

@@ -1,5 +1,5 @@
 import React from "react";
-import type {LViewElement} from "../../../view/viewElement/view";
+import type {LViewElement} from "../../../joiner";
 import {SetFieldAction, SetRootFieldAction} from "../../../redux/action/action";
 import OclEditor from "../oclEditor/OclEditor";
 import JsxEditor from "../jsxEditor/JsxEditor";
@@ -42,6 +42,17 @@ function ViewData(props: Props) {
         </div>
         <Input obj={view} field={"name"} label={"Name"} type={"text"}/>
         <Input obj={view} field={"explicitApplicationPriority"} label={"Priority"} type={"number"}/>
+        <Input obj={view} field={"storeSize"} label={"Active: the node position depends from the view currently displayed. Inactive: it depends from the graph."} type={"checkbox"} />
+        {/*<Select obj={view} field={"useSizeFrom"} options={
+            <optgroup label="Node position depends from what?">
+                <option value={EuseSizeFrom.view}>View</option>
+                <option value={EuseSizeFrom.node}>Graph: Same position in different views</option>
+                <option value={EuseSizeFrom.node}>Node: Never the same position (default)</option>
+            </optgroup>
+        } tooltip={ "View: Elements with the same view will keep the same position in different graphs\n" +
+                    "Graph: Element in a graph will maintain the position when changing view\n"+
+                    "Node: Ensuring every visual element uses his personal size (default)"
+        }></Select>*/}
         <Input obj={view} field={"width"} label={"Width"} type={"number"}/>
         <Input obj={view} field={"height"} label={"Height"} type={"number"}/>
 

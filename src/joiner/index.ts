@@ -35,10 +35,13 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
     Function, Function2, InOutParam,
     unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap
 } from "./types";
-export type {Pointer, PtrString, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, } from "./classes";
+export type {Pointer, PtrString, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1 } from "./classes";
 
 export {EdgeBendingMode} from "./types";
-export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable, LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible, Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs, LUser, DUser, Pointers, PointedBy, PendingPointedByPaths} from "./classes";
+export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
+    LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,
+    Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs,
+    LUser, DUser, Pointers, PointedBy, PendingPointedByPaths} from "./classes";
 
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';

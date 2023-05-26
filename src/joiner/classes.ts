@@ -92,17 +92,7 @@ import type {
     WValue
 } from "../model/logicWrapper";
 // import type {Pointer} from "./typeconverter";
-import type {
-    CClass,
-    Constructor,
-    Dictionary,
-    DocString,
-    GObject,
-    orArr,
-    PrimitiveType,
-    Proxyfied,
-    unArr
-} from "./types";
+import type {CClass, Constructor, Dictionary, DocString, GObject, orArr, Proxyfied, unArr} from "./types";
 import type {
     DViewElement,
     DViewTransientProperties,
@@ -112,21 +102,24 @@ import type {
     WViewTransientProperties
 } from "../view/viewElement/view";
 import type {LogicContext} from "./proxy";
-import type {IStore,} from "./index";
+import type {IStore} from "./index";
 import {
-    Action, BEGIN, CreateElementAction,
-    DeleteElementAction, END,
+    Action,
+    BEGIN,
+    CreateElementAction,
+    DeleteElementAction,
+    END,
     GraphPoint,
     GraphSize,
     IPoint,
     Log,
-    ParsedAction, Selectors, SetFieldAction,
+    ParsedAction,
+    SetFieldAction,
     SetRootFieldAction,
     store,
     U,
 } from "./index";
 import {DViewPoint} from "../view/viewPoint/viewpoint";
-import value from "../components/rightbar/structureEditor/editors/Value";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -137,6 +130,14 @@ console.warn('ts loading classes');
 
 // annotation @RuntimeAccessible
 // import {store} from "../redux/createStore";
+
+export enum EuseSizeFrom_old {
+    "view"="model & view", // Elements with the same view will keep the same position in different graphs
+    "viewpoint"="model & viewpoint",
+    "graph"="model & graph", // Element in a graph will maintain the position when changing view
+    "node"="node" // Ensuring every visual element uses his personal size (default)
+}
+
 
 abstract class AbstractMixedClass {
     // superclass!: Dictionary<DocString<'parent class name', Class>>;
@@ -655,6 +656,9 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.oclApplyCondition = '';
         thiss.explicitApplicationPriority = priority;
         thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 350, 200);
+        thiss.size = {};
+        thiss.storeSize = false;
+        //thiss.useSizeFrom = EuseSizeFrom.node;
         // thiss.adaptHeight = false;
         // thiss.adaptWidth = false;
 
@@ -673,9 +677,7 @@ export class Constructors<T extends DPointerTargetable>{
         return this;
     }
 
-    DViewPoint(name: string): this {
-        const thiss: DViewPoint = this.thiss as any;
-        thiss.name = name;
+    DViewPoint(): this {
         return this;
     }
 
@@ -1485,6 +1487,14 @@ function invalidSuperClassError(/*callee: Class,*/ scname: string, superclass: C
 }
 // @ts-ignore
 function MixinFakeConstructor() { this.isMixinFakeConstructor = true; }
+export function MixOnlyFuncs2<A1 extends any[], I1, S1, A2 extends any[], I2, S2>(c1: Class<A1, I1, S1> & typeof RuntimeAccessibleClass, c2: Class<A2, I2, S2> & typeof RuntimeAccessibleClass):
+    Class<A1, I1, S1> & Class<A2, I2, S2>{
+    return MixOnlyFuncs(c1, c2) as any;
+}
+export function MixOnlyFuncs3<A1 extends any[], I1, S1, A2 extends any[], I2, S2>(c1: Class<A1, I1, S1> & typeof RuntimeAccessibleClass, c2: Class<A2, I2, S2> & typeof RuntimeAccessibleClass):
+    Class<A1&A2, I1&I2, S1&S2>{
+    return MixOnlyFuncs(c1, c2) as any;
+}
 export function MixOnlyFuncs<A1 extends any[], I1, S1, A2 extends any[], I2, S2>(c1: Class<A1, I1, S1> & typeof RuntimeAccessibleClass, c2: Class<A2, I2, S2> & typeof RuntimeAccessibleClass):
     CClass<Longest<A1, A2>, I1 & I2
         & {

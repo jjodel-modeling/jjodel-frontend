@@ -30,6 +30,7 @@ import {
     TargetableProxyHandler,
     U
 } from "../../joiner";
+import {MixOnlyFuncs2, MixOnlyFuncs3} from "../../joiner/classes";
 
 
 console.warn('ts loading graphDataElement');
@@ -280,6 +281,7 @@ export class DGraph extends DGraphElement {
     // personal attributes
     zoom!: GraphPoint;
     graphSize!: GraphSize; // internal size of the graph. can be huge even if the sub-graph is in a small window (scroll)
+    sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
 
     public static new(model: DGraph["model"],
                       parentNodeID?: DGraphElement["father"], // immediate parent
@@ -312,7 +314,7 @@ export class DGraph extends DGraphElement {
 }
 
 @RuntimeAccessible
-export class LGraph extends LGraphElement {
+export class LGraph<Context extends LogicContext<any> = any, D extends DGraph = any> extends LGraphElement {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LGraph;
@@ -331,7 +333,11 @@ export class LGraph extends LGraphElement {
     // personal attributes
     zoom!: GraphPoint;
     graphSize!: GraphSize; // size internal to the graph, while "size" is instead external size of the vertex holding the graph in GraphVertexes
+    protected sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
 
+
+    // get_sizes(context: Context): D["sizes"] { return context.data.sizes; }
+    //set_sizes(val: D["sizes"], context: Context): boolean { return SetFieldAction.new(context.data.id, "sizes", val); } // todo: se cancello ModelElement, la chiave qui resta? i pointedby non vengono segnati credo.
     get_size(context: LogicContext<DGraph>): GraphSize { return context.data.graphSize; }
     get_graphSize(context: LogicContext<DGraph>): GraphSize { return context.data.graphSize; }
     get_zoom(context: LogicContext<DGraph>): GraphPoint {
@@ -537,7 +543,7 @@ export class DVertex extends DGraphElement { // DVoidVertex
 }
 
 @RuntimeAccessible
-export class LVertex extends LVoidVertex {
+export class LVertex<Context extends LogicContext<any> = any, D = DVertex> extends LVoidVertex {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LVertex;
@@ -578,7 +584,7 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
     // static structure: typeof DGraphVertex;
 
     // inherit redefine
-    id!: Pointer<DGraphVertex, 1, 1, LGraphVertex>;
+    id!: Pointer<DGraphVertex, 1, 1>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 1, 1, LModelElement>;
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
@@ -594,6 +600,8 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
     w!: number;
     h!: number;
     // size!: GraphSize; // virtual
+    // from graph
+    sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
 
     // personal attributes
     __isDVertex!: true;
@@ -614,8 +622,10 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
         thiss.className = this.name;
     }*/
 }
+class LG extends LGraph{}
+class LV extends LVertex{}
 @RuntimeAccessible
-export class LGraphVertex extends MixOnlyFuncs(LGraph, LVertex) { // MixOnlyFuncs(LGraph, LVertex)
+export class LGraphVertex<Context extends LogicContext<any> = any, D extends DGraphVertex = any> extends MixOnlyFuncs(LG, LV) { // MixOnlyFuncs(LGraph, LVertex)
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LGraphVertex;
@@ -624,12 +634,12 @@ export class LGraphVertex extends MixOnlyFuncs(LGraph, LVertex) { // MixOnlyFunc
 
     // inherit redefine
     __raw!: DGraphVertex;
-    id!: Pointer<DGraphVertex, 1, 1, LGraphVertex>;
+    id!: Pointer<DGraphVertex, 1, 1>;
     graph!: LGraph;
     model?: LModelElement;
     isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn?: LGraphElement;
-    subElements!: LGraphElement[];
+    ///////////////////////////////////////// subElements!: LGraphElement[];
     // from graph
     zoom!: GraphPoint;
     graphSize!: GraphSize; // internal size of the graph. can be huge even if the sub-graph is in a small window (scroll)
@@ -640,6 +650,7 @@ export class LGraphVertex extends MixOnlyFuncs(LGraph, LVertex) { // MixOnlyFunc
     w!: number;
     h!: number;
     size!: GraphSize; // virtual
+    protected sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
 
 
     // personal attributes
@@ -867,7 +878,7 @@ document.body.innerText = r;
 export type WExtEdge = getWParams<LExtEdge, DExtEdge>;
 export type WRefEdge = getWParams<LRefEdge, DRefEdge>;
 export type WVoidEdge = getWParams<LVoidEdge, DVoidEdge>;
-export type WGraphVertex = getWParams<LGraphVertex, DGraphVertex>;
+export type WGraphVertex = any; // getWParams<LGraphVertex, DGraphVertex>;
 export type WEdgePoint = getWParams<LEdgePoint, DEdgePoint>;
 export type WVoidVertex = getWParams<LVoidVertex, DVoidVertex>;
 export type WVertex = getWParams<LVertex, DVertex>;

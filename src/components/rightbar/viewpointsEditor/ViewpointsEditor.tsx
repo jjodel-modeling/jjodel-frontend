@@ -15,7 +15,7 @@ function ViewpointsEditorComponent(props: AllProps) {
         viewpoint.name = evt.target.value;
     }
     const add = (evt: React.MouseEvent<HTMLButtonElement>) => {
-        const dViewPoint = DViewPoint.new('ViewPoint');
+        const dViewPoint = DViewPoint.new('ViewPoint', '');
         CreateElementAction.new(dViewPoint);
     }
     const remove = (index: number) => {

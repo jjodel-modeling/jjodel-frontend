@@ -28,7 +28,7 @@ import {
     SetRootFieldAction,
     U,
     UX,
-    windoww, DV
+    windoww, DV, GraphSize, GraphPoint, LVoidVertex
 } from "../../joiner";
 
 
@@ -121,6 +121,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     static mapLModelStuff(state: IStore, ownProps: GraphElementOwnProps, ret: GraphElementReduxStateProps): void {
         const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : (ownProps.data as any as DModelElement)?.id) as string;
+        ret.dataid = meid;
         // Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ret, ownProps, state});
         ret.data = MyProxyHandler.wrap(state.idlookup[meid as any]);
         // Log.ex(!ret.data, "can't find model data:", {meid, state, ownpropsdata:ownProps.data, ownProps});
@@ -183,6 +184,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         setTemplateString(ret, ownProps); // todo: this is heavy, should be moved somewhere where it's executed once unless view changes (pre-render with if?)
         // @ts-ignore
         ret.forceupdate = state.forceupdate;
+
         return ret;
     }
 
@@ -190,6 +192,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const ret: GraphElementDispatchProps = {} as any;
         return ret;
     }
+
+    static graphVertexID_counter: Dictionary<DocString<'GraphID'>, Dictionary<DocString<'VertexID'>, boolean>> = {}
 
 
     _isMounted: boolean;
@@ -253,7 +257,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return () => null;
     }*/
 
-    static graphVertexID_counter: Dictionary<DocString<'GraphID'>, Dictionary<DocString<'VertexID'>, boolean>> = {}
 
     /*
     makeEvalContext_to_move(view: ViewElement): GObject {
@@ -332,16 +335,30 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         return ret;
     }
-/**
- * package got node id injected
- * package.render() start
- *    ge render message
- *    mapstate of denum before?? crash here?
- *    inject enum props (not happening?)
- *    mapstate of denum again after??
- * package.render() end
- *
- * */
+
+    public get_size(): GraphSize | undefined {
+        return this.props.view.getSize(this.props.dataid || this.props.nodeid as string) || this.props.node.size;
+    }
+
+    // set_size(x_or_size_or_point: number, y?: number, w?:number, h?:number): void;
+    set_size(x_or_size_or_point: Partial<GraphPoint>): void;
+    set_size(x_or_size_or_point: Partial<GraphSize>): void;
+    // set_size(x_or_size_or_point: number | GraphSize | GraphPoint, y?: number, w?:number, h?:number): void;
+    set_size(size0: Partial<GraphSize> | Partial<GraphPoint>): void {
+        let size: Partial<GraphSize> = size0 as Partial<GraphSize>;
+        if (this.props.view.storeSize) {
+            let id = (this.props.dataid || this.props.nodeid) as string;
+            this.props.view.updateSize(id, size);
+            return;
+        }
+        let olds = this.props.node.size;
+        size.x = size.x === undefined ? olds.x : size.x;
+        size.y = size.y === undefined ? olds.y : size.y;
+        size.w = size.w === undefined ? olds.w : size.w;
+        size.h = size.h === undefined ? olds.h : size.h;
+        this.props.node.size = size as GraphSize;
+    }
+
     public render(): ReactNode {
         if (this.props.preRenderFunc) U.evalInContextAndScope(this.props.preRenderFunc, {component:this, __proto__:this.props.evalContext});
         const rnode: ReactNode = this.getTemplate();

@@ -1,8 +1,8 @@
 import {
     Constructor,
     Constructors,
-    DPointerTargetable,
-    LPointerTargetable,
+    DPointerTargetable, DViewElement, GraphSize,
+    LPointerTargetable, LViewElement,
     Pointer,
     RuntimeAccessible,
     RuntimeAccessibleClass
@@ -10,24 +10,31 @@ import {
 
 
 @RuntimeAccessible
-export class DViewPoint extends DPointerTargetable {
+export class DViewPoint extends DViewElement {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
     id!: Pointer<DViewPoint, 1, 1, LViewPoint>;
     name!: string;
 
-    public static new(name: string, persist: boolean = false): DViewPoint {
-        return new Constructors(new DViewPoint('dwc'), undefined, persist, undefined).DPointerTargetable().DViewPoint(name).end();
+
+    public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
+                      preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1 , persist: boolean = false): DViewElement {
+        return new Constructors(new DViewPoint('dwc'), undefined, persist, undefined).DPointerTargetable()
+            .DViewElement(name, jsxString, defaultVSize, usageDeclarations, constants,
+            preRenderFunc, appliableToClasses, oclApplyCondition, priority).DViewPoint().end();
+    }
+    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true): DViewElement {
+        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined)
+            .DPointerTargetable().DViewElement(name, jsxString).DViewPoint().end(callback);
     }
 }
 
 @RuntimeAccessible
-export class LViewPoint extends LPointerTargetable {
+export class LViewPoint extends LViewElement {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-
-    public __raw!: DViewPoint;
+    //public __raw!: DViewPoint;
     id!: Pointer<DViewPoint, 1, 1, LViewPoint>;
     name!: string;
 }
