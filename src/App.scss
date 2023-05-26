@@ -16,13 +16,12 @@
 
 
 
-
+/*
 [data-nodetype]{
   position: relative;
   overflow: hidden;
   &:hover{ overflow: visible; }
   &::after{
-    /* uncomment to see node type
     content: attr(data-nodetype);
     position: absolute;
     top: -24px;
@@ -31,12 +30,12 @@
     padding: 0 4px;
     color: white;
     z-index: 100000;
-    */
   }
   &:hover::after{
     top: -23px;
   }
 }
+*/
 
 [data-nodetype="Graph"]{
   position: absolute !important;

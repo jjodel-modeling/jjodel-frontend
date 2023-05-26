@@ -141,9 +141,11 @@ class DefaultView {
     }
 
     public static defaultPackage() {
-        return `{this.data.children.map((child, index) => {
+        return `<div style={{backgroundColor: 'transparent', position: 'fixed', width: '-webkit-fill-available', height: '-webkit-fill-available'}}>
+            {this.data.children.map((child, index) => {
             return <DefaultNode key={index} data={child.id}></DefaultNode>
-        })}`;
+            })}
+        </div>`;
     }
 
     public static error(msg: undefined | string | JSX.Element) {
