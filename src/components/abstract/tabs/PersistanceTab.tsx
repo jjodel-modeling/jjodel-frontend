@@ -1,13 +1,20 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
-import Persistance from "../../../persistance/api";
 import MemoRec from "../../../memorec/api";
+import {useStateIfMounted} from "use-state-if-mounted";
 
 
 function PersistanceTabComponent(props: AllProps) {
+
+    const [data, setData] = useStateIfMounted<any>(null);
+
     return(<div>
-        <button className={'d-block btn btn-primary'} onClick={() => MemoRec.post()}>post</button>
+        <button className={'btn btn-primary'} onClick={async() => setData(await MemoRec.test())}>
+            POST
+        </button>
+        <hr className={'my-2'} />
+        {JSON.stringify(data)}
     </div>);
 }
 interface OwnProps {}

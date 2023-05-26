@@ -1,12 +1,21 @@
-import axios from 'axios';
+import axios, {AxiosResponse} from 'axios';
+import {Json} from "../joiner";
 
 export default class MemoRec {
     static url(path: string): string {
-        return 'http://localhost:8080/' + path + '';
+        return 'http://localhost:8080/' + path;
     }
 
-    static post(): void {
-        const json = {
+    static async post(path: string, obj: Json): Promise<AxiosResponse> {
+        return await axios.post(MemoRec.url(path), obj);
+    }
+
+    static async get(path: string): Promise<AxiosResponse> {
+        return await axios.get(MemoRec.url(path));
+    }
+
+    static async test(): Promise<AxiosResponse> {
+        const obj: Json = {
             "context" : "Book",
             "model" : {
                 "name": "juri.txt",
@@ -139,23 +148,7 @@ export default class MemoRec {
                 ]
             }
         };
-        axios.post(MemoRec.url('structuralFeatures'), json)
-            .then(function (response) {
-                console.log(response);
-            })
-            .catch(function (error) {
-                console.log(error);
-            });
-    }
-
-    static get(): void {
-        axios.get(MemoRec.url('test'))
-            .then(function (response) {
-                console.log(response);
-            })
-            .catch(function (error) {
-                console.log(error);
-            });
+        return await MemoRec.post('structuralFeatures', obj)
     }
 
 }
