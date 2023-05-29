@@ -204,6 +204,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         this._isMounted = false;
         this.id = GraphElementComponent.maxid++;
         GraphElementComponent.all[this.id] = this;
+
 /*
         console.log('GE constructor props:', this.props);
         this.setTemplateString(this.props.view, true);
@@ -345,6 +346,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     set_size(x_or_size_or_point: Partial<GraphSize>): void;
     // set_size(x_or_size_or_point: number | GraphSize | GraphPoint, y?: number, w?:number, h?:number): void;
     set_size(size0: Partial<GraphSize> | Partial<GraphPoint>): void {
+        console.log("set size ge thisss", this);
         let size: Partial<GraphSize> = size0 as Partial<GraphSize>;
         if (this.props.view.storeSize) {
             let id = (this.props.dataid || this.props.nodeid) as string;

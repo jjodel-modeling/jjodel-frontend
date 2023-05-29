@@ -2,8 +2,7 @@ import React, {Dispatch, ReactElement} from "react";
 import {CreateElementAction, SetRootFieldAction} from "../../../redux/action/action";
 import {IStore} from "../../../redux/store";
 import {connect} from "react-redux";
-import {Input, Pointer, U} from "../../../joiner";
-import {DViewPoint, LViewPoint} from "../../../view/viewPoint/viewpoint";
+import {DViewPoint, Input, LViewPoint, Pointer, U} from "../../../joiner";
 
 
 function ViewpointsEditorComponent(props: AllProps) {

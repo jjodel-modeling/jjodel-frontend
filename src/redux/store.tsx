@@ -25,7 +25,8 @@ import type {
     LVertex,
     DGraphVertex,
     DVertex,
-    Pointer
+    Pointer,
+    LViewPoint,
 } from '../joiner';
 import {
     CreateElementAction,
@@ -47,7 +48,7 @@ import {
     LModel,
     LObject,
     LUser,
-    LValue, LViewElement,
+    LValue, LViewElement, DViewPoint,
     RuntimeAccessible, SetFieldAction,
     SetRootFieldAction, ShortAttribETypes
 } from "../joiner";
@@ -55,7 +56,6 @@ import {
 import React from "react";
 import {DV} from "../common/DV";
 import LeaderLine from "leader-line-new";
-import {DViewPoint, LViewPoint} from "../view/viewPoint/viewpoint";
 
 console.warn('ts loading store');
 

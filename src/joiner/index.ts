@@ -119,6 +119,7 @@ export {DExtEdge, DRefEdge, DVoidEdge, LGraphVertex, LRefEdge, LEdgePoint, DVoid
 // console.error('iiiiiiiiiiiiiiii 11', windoww.DViewElement);
 export type {WViewElement, WViewTransientProperties} from "../view/viewElement/view";
 export {DViewTransientProperties, LViewTransientProperties, LViewElement, DViewElement} from "../view/viewElement/view";
+export {DViewPoint, LViewPoint} from "../view/viewPoint/viewpoint";
 // console.error('iiiiiiiiiiiiiiii 12', windoww.DViewElement);
 
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";

@@ -116,10 +116,9 @@ import {
     ParsedAction,
     SetFieldAction,
     SetRootFieldAction,
-    store,
+    store, LViewPoint,
     U,
 } from "./index";
-import {DViewPoint} from "../view/viewPoint/viewpoint";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)

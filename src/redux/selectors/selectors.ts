@@ -33,10 +33,9 @@ import {
     RuntimeAccessible,
     RuntimeAccessibleClass,
     store,
-    U, windoww, Pointers,
+    U, windoww, Pointers,DViewPoint, LViewPoint
 } from "../../joiner";
 import {EdgeOptions} from "../store";
-import {DViewPoint, LViewPoint} from "../../view/viewPoint/viewpoint";
 
 enum ViewEClassMatch { // this acts as a multiplier for explicit priority
     MISMATCH = 0,

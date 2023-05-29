@@ -15,9 +15,8 @@ import {
     Pointer,
     RuntimeAccessible,
     RuntimeAccessibleClass,
-    SetFieldAction, DGraphElement, LGraphVertex,
+    SetFieldAction, DGraphElement, LGraphVertex, DViewPoint, LViewPoint
 } from "../../joiner";
-import {DViewPoint, LViewPoint} from "../viewPoint/viewpoint";
 
 @RuntimeAccessible
 export class DViewElement extends DPointerTargetable {

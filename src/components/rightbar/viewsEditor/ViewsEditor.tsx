@@ -1,10 +1,9 @@
 import React, {Dispatch, ReactElement} from "react";
 import {IStore} from "../../../redux/store";
 import {connect} from "react-redux";
-import {LViewElement} from "../../../view/viewElement/view";
+import {LViewElement, LViewPoint} from "../../../joiner";
 import ViewsData from "./Views";
 import ViewData from "./View";
-import {LViewPoint} from "../../../view/viewPoint/viewpoint";
 
 
 function ViewsEditorComponent(props: AllProps) {

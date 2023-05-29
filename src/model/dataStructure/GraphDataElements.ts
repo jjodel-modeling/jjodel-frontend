@@ -423,11 +423,12 @@ export class LVoidVertex extends LGraphElement {
         if (context.data.y !== val.y) SetFieldAction.new(context.data, 'y', val.y);
         if (context.data.w !== val.w) SetFieldAction.new(context.data, 'w', val.w);
         if (context.data.h !== val.h) SetFieldAction.new(context.data, 'h', val.h);
+        val = new GraphSize(val.x, val.y, val.w, val.h);
         // (context.proxy as unknown as LGraphElement).graph.graphSize
         // update graph boundary too
-        console.log('setsize2, graph:', {context, val});
         const graph: LGraph = this.get_graph(context); // (context.proxyObject as this).get_graph(context);
         const gsize = graph.graphSize;
+        console.log('setsize2, graph:', {context, val, gsize, graph});
         val.boundary(gsize);
         if (val.equals(gsize)) return true;
         graph.graphSize = val;

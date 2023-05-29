@@ -1,10 +1,9 @@
 import React from "react";
-import type {LViewElement} from "../../../joiner";
+import type {LViewElement, LViewPoint, DViewPoint} from "../../../joiner";
 import {SetFieldAction, SetRootFieldAction} from "../../../redux/action/action";
 import OclEditor from "../oclEditor/OclEditor";
 import JsxEditor from "../jsxEditor/JsxEditor";
 import Input from "../../forEndUser/Input";
-import type {LViewPoint} from "../../../view/viewPoint/viewpoint";
 import {Select, TextArea} from "../../../joiner";
 
 interface Props { view: LViewElement; viewpoints: LViewPoint[]; }
