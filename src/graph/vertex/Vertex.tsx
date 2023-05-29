@@ -16,11 +16,10 @@ import {
     LPointerTargetable,
     LUser,
     LVoidVertex,
-    RuntimeAccessibleClass,
-    U,
+    RuntimeAccessibleClass, LViewPoint,
+    U, GraphSize, GraphPoint,
 } from "../../joiner";
 import RootVertex from "./RootVertex";
-import {LViewPoint} from "../../view/viewPoint/viewpoint";
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee {}
@@ -46,9 +45,20 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
     constructor(props: AllProps, context: any) {
         super(props, context);
+
+        setTimeout(()=>{
+            this.get_size = this.get_size.bind(this);
+            this.set_size = this.set_size.bind(this);
+            // this.get_size = console.error as any;
+            this.r = (<RootVertex props={this.props} render={super.render()} super={this} />);
+            this.forceUpdate();
+        },1)
+        this.r = "loading";
     }
+
+    r: any;
     render(): ReactNode {
-        return(<RootVertex props={this.props} render={super.render()} />);
+        return this.r;
     }
 }
 
