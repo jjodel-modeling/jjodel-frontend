@@ -1,5 +1,5 @@
 import axios, {AxiosResponse} from 'axios';
-import {Json} from "../joiner";
+import {Json, LModelElement} from "../joiner";
 
 export default class MemoRec {
     static url(path: string): string {
@@ -14,7 +14,18 @@ export default class MemoRec {
         return await axios.get(MemoRec.url(path));
     }
 
-    static async test(): Promise<AxiosResponse> {
+    static async test(me: LModelElement): Promise<void> {
+        console.clear();
+
+        const model = me.model;
+
+        const classes = model.classes;
+
+        for(let myClass of classes) {
+            const attributes = myClass.attributes;
+            console.log(attributes)
+        }
+
         const obj: Json = {
             "context" : "Book",
             "model" : {
@@ -148,7 +159,9 @@ export default class MemoRec {
                 ]
             }
         };
-        return await MemoRec.post('structuralFeatures', obj)
+
+        const response = await MemoRec.post('structuralFeatures', obj);
+        console.log(response);
     }
 
 }

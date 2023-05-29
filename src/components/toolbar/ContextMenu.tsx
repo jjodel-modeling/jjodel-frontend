@@ -4,7 +4,8 @@ import {connect} from "react-redux";
 import "./style.scss";
 import {CreateElementAction, SetRootFieldAction} from "../../redux/action/action";
 import {DValue, LNamedElement, LValue} from "../../model/logicWrapper";
-import {DViewElement, GObject, LGraphElement, LUser} from "../../joiner";
+import {DViewElement, LGraphElement, LUser} from "../../joiner";
+import MemoRec from "../../memorec/api";
 
 function ContextMenuComponent(props: AllProps) {
 
@@ -40,6 +41,10 @@ function ContextMenuComponent(props: AllProps) {
     if(display && me && node) {
         jsxList.push(<div className={"col title text-center"}>{me.className}</div>);
         jsxList.push(<hr />);
+
+        /* Memorec */
+        jsxList.push(<div onClick={async() => {close(); await MemoRec.test(me);}} className={"col item"}>AI Suggest</div>);
+
         jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={"col item"}>Up</div>);
         jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={"col item"}>Down</div>);
         jsxList.push(<div onClick={() => {close(); addView();}} className={"col item"}>Add View</div>);
