@@ -275,7 +275,9 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         // if not exist check for children names
 
         if (typeof propKey === "string" && propKey !== "childrens") {
-            let lchildrens: LPointerTargetable[] = this.get(targetObj, 'childrens', proxyitself);
+            let lchildrens: LPointerTargetable[];
+            try { lchildrens = this.get(targetObj, 'childrens', proxyitself); }
+            catch (e) { lchildrens = []; }
             // let dchildrens: DPointerTargetable[] = lchildrens.map<DPointerTargetable>(l => l.__raw as any);
             let lc: GObject;
             if (propKey[0] === "@") { propKey = propKey.substring(1); canThrowErrors = false; }

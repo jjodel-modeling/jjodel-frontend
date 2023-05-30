@@ -195,6 +195,11 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
         return true;
     }
 
+    get_isResized(context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] { return context.data.isResized; }
+    set_isResized(val: DVoidVertex["isResized"], context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] {
+        return SetFieldAction.new(context.data.id, "isResized", val);
+    }
+
     get_model(context: Context): this["model"] {
         const modelElementId = $('[id="' + context.data.id + '"]')[0].dataset.dataid;
         const lModelElement: LModelElement = LPointerTargetable.from(modelElementId as string);
@@ -374,6 +379,7 @@ export class DVoidVertex extends DGraphElement {
     y!: number;
     w!: number;
     h!: number;
+    isResized!: boolean;
     // size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
 
     public static new(model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"],
@@ -385,7 +391,7 @@ export class DVoidVertex extends DGraphElement {
 }
 
 @RuntimeAccessible
-export class LVoidVertex extends LGraphElement {
+export class LVoidVertex extends LGraphElement {// <D extends DVoidVertex = any>
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LVoidVertex;
@@ -402,6 +408,7 @@ export class LVoidVertex extends LGraphElement {
     subElements!: LGraphElement[];
     state!: LMap;
     zoom!: GraphPoint;
+    isResized!: boolean;
 
     // personal attributes
     x!: number;
@@ -411,15 +418,20 @@ export class LVoidVertex extends LGraphElement {
     size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
 
     get_size(context: LogicContext<DVoidVertex>): GraphSize {
-        return context.proxyObject as any; // new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h);
+        // return context.proxyObject as any;
+        return new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h);
     }
+    /*get_isResized(context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] { return context.data.isResized; }
+    set_isResized(val: DVoidVertex["isResized"], context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] {
+        return SetFieldAction.new(context.data.id, "isResized", val);
+    }*/
 
     // todo: devo settare che il primo parametro delle funzioni che iniziano con set_ non può essere un logicContext
     set_size(val: GraphSize, context: LogicContext<DVoidVertex>): boolean {
         // todo: graphvertex should use this, but  calls graphelement.set_size instead
         // SetFieldAction.new(context.data, 'size', val, Action.SubType.vertexSize);
         if (!val) { val = defaultVSize; }
-        console.trace('setsize:', {context, val});
+        //console.trace('setsize:', {context, val});
         if (context.data.x !== val.x) SetFieldAction.new(context.data, 'x', val.x);
         if (context.data.y !== val.y) SetFieldAction.new(context.data, 'y', val.y);
         if (context.data.w !== val.w) SetFieldAction.new(context.data, 'w', val.w);
@@ -429,7 +441,7 @@ export class LVoidVertex extends LGraphElement {
         // update graph boundary too
         const graph: LGraph = this.get_graph(context); // (context.proxyObject as this).get_graph(context);
         const gsize = graph.graphSize;
-        console.log('setsize2, graph:', {context, val, gsize, graph});
+        //console.log('setsize2, graph:', {context, val, gsize, graph});
         val.boundary(gsize);
         if (val.equals(gsize)) return true;
         graph.graphSize = val;
@@ -534,6 +546,7 @@ export class DVertex extends DGraphElement { // DVoidVertex
     y!: number;
     w!: number;
     h!: number;
+    isResized!: boolean;
     // size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
     // personal attributes
     __isDVertex!: true;
@@ -566,6 +579,7 @@ export class LVertex<Context extends LogicContext<any> = any, D = DVertex> exten
     w!: number;
     h!: number;
     size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
+    isResized!: boolean;
     // personal attributes
     __isLVertex!: true;
 }
@@ -601,6 +615,7 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
     y!: number;
     w!: number;
     h!: number;
+    isResized!: boolean;
     // size!: GraphSize; // virtual
     // from graph
     sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
@@ -651,6 +666,7 @@ export class LGraphVertex<Context extends LogicContext<any> = any, D extends DGr
     y!: number;
     w!: number;
     h!: number;
+    isResized!: boolean;
     size!: GraphSize; // virtual
     protected sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
 

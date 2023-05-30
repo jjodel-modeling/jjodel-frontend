@@ -4,7 +4,7 @@ import {connect} from "react-redux";
 import "./style.scss";
 import {CreateElementAction, SetRootFieldAction} from "../../redux/action/action";
 import {DValue, LNamedElement, LValue} from "../../model/logicWrapper";
-import {DViewElement, GObject, LGraphElement, LUser} from "../../joiner";
+import {DViewElement, GObject, GraphElementComponent, LGraphElement, LUser, LVoidVertex} from "../../joiner";
 
 function ContextMenuComponent(props: AllProps) {
 
@@ -14,6 +14,9 @@ function ContextMenuComponent(props: AllProps) {
     const me = props.me;
     const node = props.node;
     const jsxList: ReactNode[] = [];
+
+    if (!node) return <></>;
+    // const component = GraphElementComponent.map[node.id];
 
     const close = () => { SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); }
     const addView = () => {
@@ -36,6 +39,10 @@ function ContextMenuComponent(props: AllProps) {
             SetRootFieldAction.new('stackViews', dView.id, '+=', true);
         }
     }
+    const resetSize=() =>{
+        (node as LVoidVertex).isResized = false;
+        // component.updateSize(); automatically done when getSize() is called if recognizes a mismatch
+    }
 
     if(display && me && node) {
         jsxList.push(<div className={"col title text-center"}>{me.className}</div>);
@@ -44,6 +51,7 @@ function ContextMenuComponent(props: AllProps) {
         jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={"col item"}>Down</div>);
         jsxList.push(<div onClick={() => {close(); addView();}} className={"col item"}>Add View</div>);
         jsxList.push(<div onClick={() => {close(); me?.delete();}} className={"col item"}>Delete</div>);
+        if (node.className.includes("Vertex")) jsxList.push(<div onClick={() => { close(); resetSize(); }} className={"col item"}>Reset manual resizing</div>);
         switch (me.className) {
             case 'DValue': if ((me as any as LValue).instanceof) jsxList.pop(); break;
             case 'DClass':

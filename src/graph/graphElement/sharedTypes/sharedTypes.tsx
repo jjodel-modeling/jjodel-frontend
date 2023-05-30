@@ -11,6 +11,7 @@ import type {
     LViewElement,
     Pointer
 } from "../../../joiner";
+import {LClass, LUser} from "../../../joiner";
 
 export class GraphElementStatee {/*
     constructor(preRenderFunc: string | undefined, evalContext: GObject, templatefunc: () => React.ReactNode) {
@@ -26,6 +27,7 @@ export class GraphElementStatee {/*
         this.nodeid = nodeid;
     }*/
     // displayPosition?: GraphSize; // used while dragging to prevent flood of redux events
+    classes!: string[];
 }
 
 export class GraphElementReduxStateProps {
@@ -42,6 +44,9 @@ export class GraphElementReduxStateProps {
     template!: () => ReactNode;
     node!: LGraphElement;
     graph!: LGraph;
+
+    lastSelected!: LModelElement | null;
+    isEdgePending!: { user: LUser, source: LClass };// vertex only
 }
 
 export class GraphElementDispatchProps {

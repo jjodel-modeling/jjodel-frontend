@@ -67,6 +67,7 @@ export class DViewElement extends DPointerTargetable {
     //useSizeFrom!: EuseSizeFrom;
     storeSize!: boolean;
     size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>;
+    lazySizeUpdate!: boolean;
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1 , persist: boolean = false): DViewElement {
@@ -129,6 +130,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     onResizeEnd!: string;
     bendingMode!: EdgeBendingMode;
     storeSize!: boolean;
+    lazySizeUpdate!: boolean;
+    __info_of__lazySizeUpdate: any = {type: "boolean", txt: "When activated, the layout position will only be updated once when the drag or resize operation is completed. (best performance)"}
+
     protected size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>; // use getSize, updateSize
 
     get_viewpoint(context: Context): this["viewpoint"] {

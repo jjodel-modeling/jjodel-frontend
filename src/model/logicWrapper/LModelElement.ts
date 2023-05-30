@@ -258,8 +258,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             if (d.className === father.name) return l as L;
             l = l.father;
             let oldd = d;
-            d = l.__raw;
-            if (oldd === d) return null; // reached end of father chain (a model) without finding the desired parent.
+            d = l?.__raw;
+            if (oldd === d || !l) return null; // reached end of father chain (a model) without finding the desired parent.
         }
     }
 
@@ -375,45 +375,47 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return true;
     }
 
-    protected get_addChild(context: Context): (type: string, ...params: any[]) => void { // just for add new, not for add pre-existing.
+    protected get_addChild(context: Context): (type: string, ...params: any[]) => DModelElement { // just for add new, not for add pre-existing.
         console.log("addchild", context, this);
         return (type, ...args: any) => {
-            let ret: (...params: any[]) => void = () => {
-            };
+            let ret: undefined | ((...params: any[]) => DModelElement);
             switch ((type || '').toLowerCase()) {
                 default:
                     Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), context});
+                    ret = () => undefined as any;
                     break;
                 case "attribute":
-                    ret = (this as any).get_addAttribute(context as any);
+                    ret = this.get_class(context)?.addAttribute;
                     break;
                 case "class":
-                    ret = (this as any).get_addClass(context as any);
+                    let current = context.proxyObject;
+                    ret = this.get_package(context)?.addClass;
+                    //ret = (this as any).get_addClass(context as any);
                     break;
                 case "package":
-                    ret = (this as any).get_addPackage(context as any);
+                    ret = (this.get_package(context) || this.get_model(context))?.addPackage;
                     break;
                 case "reference":
-                    ret = (this as any).get_addReference(context as any);
+                    ret = this.get_class(context)?.addReference;
                     break;
                 case "enumerator":
-                    ret = (this as any).get_addEnumerator(context as any);
+                    ret = this.get_package(context)?.addEnumerator;
                     break;
                 case "literal":
-                    ret = (this as any).get_addLiteral(context as any);
+                    ret = this.get_enum(context)?.addLiteral;
                     break;
                 case "operation":
-                    ret = (this as any).get_addOperation(context as any);
+                    ret = this.get_class(context)?.addOperation;
                     break;
                 case "parameter":
-                    ret = (this as any).get_addParameter(context as any);
+                    ret = this.get_operation(context)?.addParameter;
                     break;
                 //case "exception": ret = ((exception: Pack1<LClassifier>) => { let rett = this.get_addException(context as any); rett(exception); }) as any; break;
                 case "exception":
                     ret = (this as any).get_addException(context as any);
                     break;
             }
-            return ret(...args);
+            return ret ? ret(...args) : null as any;
         }
     }
 
@@ -496,9 +498,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         throw this.wrongAccessMessage("AddException");
     }
 
-    public addChild(type: string): void {
-        this.cannotCall("addChild, it's obsolete call specific adders", type);
-    }
+    public addChild(type: string): DModelElement { return this.cannotCall("addChild", type); }
 
 }
 

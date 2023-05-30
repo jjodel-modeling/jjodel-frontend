@@ -4,55 +4,99 @@ import {IStore} from "../../redux/store";
 import {connect} from "react-redux";
 import "./toolbar.scss";
 import {
-    DGraphElement,
+    DGraphElement, Dictionary,
     DModel,
-    DModelElement, DNamedElement, DObject,
+    DModelElement, DNamedElement, DObject, DocString,
     DPointerTargetable,
     DViewElement,
     LGraphElement,
     LModel,
-    LModelElement,
+    LModelElement, LObject, LValue,
     LViewElement,
     MyProxyHandler,
     Pointer,
     SetFieldAction
 } from "../../joiner";
-import {ToolBarItem} from "./ToolBarItem";
 
 interface ThisState {}
+
+function getItems(data: LModelElement, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildrens">[]>, items: string[]): ReactNode[] {
+    const reactNodes: ReactNode[] = [];
+    for (let item_dname of items) {
+        if (item_dname[0]=="_") {
+            item_dname = item_dname.substring(2);
+            data = data.father || data;
+        }
+        let item = item_dname.substring(1).toLowerCase();
+        reactNodes.push(<div className={"toolbar-item " + item} key={item_dname} onClick={() => {
+            let d = data.addChild(item);
+            if (myDictValidator[item_dname]) select(d);
+        }}>+{item}</div>);
+    }
+    return reactNodes;
+}
+function select(d: DModelElement): DModelElement {
+    setTimeout(()=>$(".Graph [data-dataid='"+d?.id+"']").trigger("click"), 10);
+    return d; }
+
 function ToolBarComponent(props: AllProps, state: ThisState) {
 
     const lModelElement: LModelElement = props.selected?.modelElement ? props.selected?.modelElement : MyProxyHandler.wrap(props.model);
     const isMetamodel: boolean = props.isMetamodel;
     const metamodel: LModel|undefined = props.metamodel;
-    const myDictValidator: Map<string, ReactNode[]> = new Map();
-    const addChildrens = (...items: string[]) => [...ToolBarItem.getItems(lModelElement, items)];
+    // const myDictValidator: Map<string, ReactNode[]> = new Map();
+    const downward: Dictionary<DocString<"DClassName">, DocString<"hisChildrens">[]> = {}
+    const addChildrens = (items: string[]) => items ? getItems(lModelElement, downward, [...new Set(items)]) : [];
 
-    myDictValidator.set("DModel", addChildrens("package"));
-    myDictValidator.set("DPackage", addChildrens("package", "class", "enumerator"));
-    myDictValidator.set("DClass", addChildrens("attribute", "reference", "operation"));
-    myDictValidator.set("DEnumerator", addChildrens("literal"));
-    myDictValidator.set("DOperation", addChildrens("parameter", "exception"));
+    downward["DModel"] = ["DPackage"];
+    downward["DPackage"] = ["DPackage", "DClass", "DEnumerator"];
+    downward["DClass"] = ["DAttribute", "DReference", "DOperation"];
+    downward["DEnumerator"] = ["DLiteral"];
+    downward["DOperation"] = ["DParameter", "DException"];
 
-    if(isMetamodel) {
+    // for (let parentKey in downward) myDictValidator.set(parentKey, addChildrens("package"));
+    let upward: Dictionary<DocString<"DClassName">, DocString<"hisDParents">[]> = {};
+    for (let parentKey in downward){
+        let vals = downward[parentKey];
+        if(!vals) continue;
+        for (let child of vals) {
+            if (!upward[child]) upward[child] = [];
+            upward[child].push(parentKey)
+            upward[child].push(...(downward[parentKey]||[]));
+        }
+    }
+    upward["DPackage"] = ["_pDPackage"]; //, "DModel"];
+    // upward["DClass"] = ["_pDPackage", "DClass", "DEnumerator"];
+
+    if (isMetamodel) {
         return(<div className={"toolbar"}>
-            {myDictValidator.get(lModelElement?.className as string)?.map((item) => {
-                return item;
-            })}
-            <div className={"toolbar-item annotation"} onClick={() => lModelElement.addChild("annotation")}>+annotation</div>
+            <h6>Add sibling</h6>
+            {lModelElement && addChildrens(upward[lModelElement.className])}
+            <hr />
+            <h6>Add sublevel</h6>
+            {lModelElement && addChildrens(downward[lModelElement.className])}
+            <div className={"toolbar-item annotation"} onClick={() => select(lModelElement.addChild("annotation"))}>+annotation</div>
         </div>);
     }
     else {
         const classes = metamodel?.classes;
         const model: LModel = LModel.fromPointer(props.model);
+        const lobj: LObject | undefined = lModelElement.className === "DObject" ? lModelElement as LObject : undefined;
+        const lfeat: LValue | undefined = lModelElement.className === "DValue" ? lModelElement as LValue : undefined;
 
         return(<div className={"toolbar"}>
+            <h5>Add root level</h5>
             {classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
-                return <div key={lClass.id} className={"toolbar-item class"} onClick={() => { model.addObject(lClass.id) }}>
+                return <div key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => { select(model.addObject(lClass.id)) }}>
                     +{lClass.name}
                 </div>
             })}
-            <div key={"Object"} className={"toolbar-item class"} onClick={() => { model.addObject(); }}>+Object</div>
+            <div key={"RawObject"} className={"toolbar-item class"} onClick={() => { select(model.addObject()); }}>+Object</div>
+            <hr />
+            <h5>Add sublevel</h5>
+            {(lobj && (!lobj.instanceof || lobj.partial)) && <div key={"Feature"} className={"toolbar-item feature"} onClick={() => { lobj.addValue(); }}>+Feature</div>}
+            {(lfeat && lfeat.value.length < lfeat.upperBound) && <div key={"Value"} className={"toolbar-item value"} onClick={() => {
+                SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); }}>+Value</div>}
         </div>);
     }
 

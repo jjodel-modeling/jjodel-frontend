@@ -12,7 +12,7 @@
   width: -webkit-fill-available;
 }
 
-.model {
+.Graph.DModel { //damiano: was just .model and breaking things
   position: absolute;
   height: $fill;
   width: $fill;

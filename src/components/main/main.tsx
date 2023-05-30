@@ -3,7 +3,6 @@ import React from "react";
 import ReactDOM from "react-dom";
 import {DockingLayout} from 'smart-webcomponents-react/dockinglayout';
 import {GObject, LoggerComponent, Size} from "../../joiner";
-import ToolboxComponent from "../toolbox/ToolboxComponent";
 import $ from 'jquery';
 import './main.scss';
 
@@ -207,7 +206,6 @@ class TabContainerComponent extends React.Component {
         const consoletab = document.querySelector(".docking-tab-content.bottombar > .console");
         const logger = document.querySelector(".docking-tab-content.bottombar > .logger");
         // if (topbar) ReactDOM.render(<TopbarComponent />, topbar);
-        if (toolbox) ReactDOM.render(<ToolboxComponent />, toolbox);
         if (graphm1) ReactDOM.render(<div> graph-m1-content</div>, graphm1);
         if (graphm2) ReactDOM.render(<div> graph-m2-content</div>, graphm2);
         if (graphm2) ReactDOM.render(<div> graph-m3-content</div>, graphm3);

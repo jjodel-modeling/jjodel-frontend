@@ -27,18 +27,19 @@ class ThisState{
 
 // trasformato in class component così puoi usare il this nella console. e non usa accidentalmente window come contesto
 export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
+    lastNode?: Pointer<DGraphElement>;
     constructor(props: AllProps) {
         super(props);
         this.state = {expression:'', output: null};
         this.change(undefined);
     }
     change = (evt?: React.ChangeEvent<HTMLTextAreaElement>) => {
-        let expression: string | undefined = evt?.target.value.trim() || '';
+        let expression: string | undefined = evt?.target.value.trim() || this.state.expression || '';
         let output;
         // let context = {...this.props, props: this.props}; // makeEvalContext(this.props as any, {} as any);
         let context;
         if (this.props.node?.id) {
-            let component = GraphElementComponent.componentMap[this.props.node.id];
+            let component = GraphElementComponent.map[this.props.node.id];
             context = {...component.props.evalContext};
             context.fromcomponent=true;
         }
@@ -56,45 +57,46 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         const data = this.props.data;/*
         const [expression, setExpression] = useStateIfMounted('data');
         const [output, setOutput] = useStateIfMounted('');*/
+        if (!this.props.node) return <div>Select a node to start</div>
+        if (this.lastNode !== this.props.node.id) this.change(); // force reevaluation if selected node changed
+        this.lastNode = this.props.node.id;
 
-
-        if (data) {
-            let outstr;
-            // try { outstr = U.circularStringify(this.state.output, (key, value)=> { return value.__isProxy ? value.name : value; }, "\t", 1) }
-            (window as any).inspect = util.inspect;
-            (window as any).tmpp = this.state.output;
-            let ashtml: boolean
-            try {
-                let fixproxy = (p: any): any => {
-                    if (p?.__isProxy) return p.__raw || Object.fromEntries(Object.getOwnPropertyNames(p).map(k => [k, p[k]]));
-                    return p;
-                }
-                let output = fixproxy(this.state.output);
-                if (Array.isArray(output) && output[0]?.__isProxy) output = output.map(o => fixproxy(o));
-                outstr = U.replaceAll(convert.toHtml(util.inspect(output, true, 2, true)), "style=\"color:#FFF\"", "style=\"color:#000\"");
-                ashtml = true; }
-            catch(e: any) {
-                outstr = "[circular object]: " + e.toString();
-                ashtml = false;
+        let outstr;
+        // try { outstr = U.circularStringify(this.state.output, (key, value)=> { return value.__isProxy ? value.name : value; }, "\t", 1) }
+        (window as any).inspect = util.inspect;
+        (window as any).tmpp = this.state.output;
+        let ashtml: boolean
+        try {
+            let fixproxy = (p: any): any => {
+                if (p?.__isProxy) return p.__raw || Object.fromEntries(Object.getOwnPropertyNames(p).map(k => [k, p[k]]));
+                return p;
             }
-            let contextkeys;
-            let objraw = this.state.output?.__raw || (typeof this.state.output === "object" ? this.state.output : "[primitiveValue]") || {};
-            if (this.state.expression.trim() === "") contextkeys = ["data", "node", "view"].join(", ");
-            else if (this.state.expression.trim() === "this") contextkeys = ["Warning: \"this\" will refer to the Console component instead of a GraphElement component."].join(", ");
-            else contextkeys = Array.isArray(objraw) ? ["array[number]", ...Object.getOwnPropertyNames(objraw).filter( (v: any) => v === +v)].join(", ") : Object.getOwnPropertyNames(objraw).join(", ");// || []).join(", ")
-            return(<div className={'p-2 w-100 h-100'}>
-                <textarea spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} />
-                {/*<label>Query {(this.state.expression)}</label>*/}
-                <label>On {(data as GObject).name}</label>
-                <hr className={'mt-1 mb-1'} />
-                { ashtml && <div style={{whiteSpace:"pre"}} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
-                { !ashtml && <div style={{whiteSpace:"pre"}}>{ outstr }</div>}
-                <label className={"mt-2"}>Context keys:</label>
-                {
-                    contextkeys
-                }
-            </div>)
-        } else { return(<div></div>) }
+            let output = fixproxy(this.state.output);
+            if (Array.isArray(output) && output[0]?.__isProxy) output = output.map(o => fixproxy(o));
+            outstr = U.replaceAll(convert.toHtml(util.inspect(output, true, 2, true)), "style=\"color:#FFF\"", "style=\"color:#000\"");
+            ashtml = true; }
+        catch(e: any) {
+            outstr = "[circular object]: " + e.toString();
+            ashtml = false;
+        }
+        let contextkeys;
+        let objraw = this.state.output?.__raw || (typeof this.state.output === "object" ? this.state.output : "[primitiveValue]") || {};
+        if (this.state.expression.trim() === "") contextkeys = ["data", "node", "view", "getSize()", "setSize({x:?, y:?, w:?, h:?})", "component"].join(", ");
+        else if (this.state.expression.trim() === "this") contextkeys = ["Warning: \"this\" will refer to the Console component instead of a GraphElement component."].join(", ");
+        else contextkeys = Array.isArray(objraw) ? ["array[number]", ...Object.getOwnPropertyNames(objraw).filter( (v: any) => v === +v)].join(", ") : Object.getOwnPropertyNames(objraw).join(", ");// || []).join(", ")
+        return(<div className={'p-2 w-100 h-100'}>
+            <textarea spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} />
+            {/*<label>Query {(this.state.expression)}</label>*/}
+            <label>On {(data as GObject).name}</label>
+            <hr className={'mt-1 mb-1'} />
+            { ashtml && <div style={{whiteSpace:"pre"}} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
+            { !ashtml && <div style={{whiteSpace:"pre"}}>{ outstr }</div>}
+            <label className={"mt-2"}>Context keys:</label>
+            {
+                contextkeys
+            }
+        </div>)
+
     }
 }
 interface OwnProps {}

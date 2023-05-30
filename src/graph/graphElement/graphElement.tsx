@@ -1,15 +1,16 @@
-import React, {Dispatch, PureComponent, ReactElement, ReactNode,} from "react";
+import React, {CSSProperties, Dispatch, PureComponent, ReactElement, ReactNode, useRef,} from "react";
 import {createPortal} from "react-dom";
 import {connect} from "react-redux";
 import './graphElement.scss';
-
+import type {VertexComponent} from "../../joiner";
 import {
     CreateElementAction,
     DGraph,
     DGraphElement,
     Dictionary,
     DModelElement,
-    DocString, DViewElement,
+    DocString,
+    DViewElement,
     GObject,
     GraphElementDispatchProps,
     GraphElementOwnProps,
@@ -19,23 +20,36 @@ import {
     IStore,
     JSXT,
     LModelElement,
-    Log, LPointerTargetable,
+    Log,
+    LPointerTargetable,
     LViewElement,
-    MyProxyHandler, Overlap,
+    MyProxyHandler,
+    Overlap,
     Pointer,
     RuntimeAccessible,
     Selectors,
     SetRootFieldAction,
     U,
     UX,
-    windoww, DV, GraphSize, GraphPoint, LVoidVertex
+    windoww,
+    DV,
+    GraphSize,
+    GraphPoint,
+    LVoidVertex,
+    DUser,
+    Size,
+    LClass,
+    SetFieldAction,
+    DGraphVertex,
+    DVoidVertex,
 } from "../../joiner";
 
 
 export function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
     let evalContext: GObject = view.constants ? eval('window.tmp = ' + view.constants) : {};
-    let component = GraphElementComponent.componentMap[props.nodeid as Pointer<DGraphElement>];
-    evalContext = {...windoww.defaultContext, ...evalContext, model: props.data, ...props, component, getSize:component?.getSize, setSize: component?.setSize};
+    let component = GraphElementComponent.map[props.nodeid as Pointer<DGraphElement>];
+    let vcomponent = component as VertexComponent;
+    evalContext = {...windoww.defaultContext, ...evalContext, model: props.data, ...props, component, getSize:vcomponent?.getSize, setSize: vcomponent?.setSize};
     windoww.evalContext = evalContext;
     return evalContext;
 }
@@ -82,9 +96,9 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 @RuntimeAccessible
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
     extends PureComponent<AllProps, GraphElementState>{
-    static maxid: number = 0;
     static all: Dictionary<number, GraphElementComponent> = {};
-    static componentMap: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = {};
+    static map: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = {};
+    static maxid: number = 0;
     id: number;
     public static refresh() {
         for (let key in GraphElementComponent.all) {
@@ -195,18 +209,34 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return ret;
     }
 
-    static graphVertexID_counter: Dictionary<DocString<'GraphID'>, Dictionary<DocString<'VertexID'>, boolean>> = {}
-
 
     _isMounted: boolean;
+    hasSetVertexProperties: boolean = false;
+    html: React.RefObject<HTMLElement | undefined>;
     // todo: can be improved by import memoize from "memoize-one"; it is high-order function that memorize the result if params are the same without re-executing it (must not have side effects)
     //  i could use memoization to parse the jsx and to execute the user-defined pre-render function
+
+    select(forUser:Pointer<DUser, 0, 1> = null) {
+        if (!forUser) forUser = DUser.current;
+        this.props.node.isSelected[forUser] = true;
+        SetRootFieldAction.new('_lastSelected', {
+            node: this.props.nodeid,
+            view: this.props.view.id,
+            modelElement: this.props.data?.id
+        });
+    }
+
     constructor(props: AllProps, context: any) {
         super(props, context);
         this._isMounted = false;
         this.id = GraphElementComponent.maxid++;
         GraphElementComponent.all[this.id] = this;
-        GraphElementComponent.componentMap[props.nodeid as Pointer<DGraphElement>] = this;
+        GraphElementComponent.map[props.nodeid as Pointer<DGraphElement>] = this;
+        this.html = React.createRef();
+        let functionsToBind = [this.onClick, this.onLeave, this.onContextMenu, this.onEnter, this.select];
+        for (let f of functionsToBind) (this as any)[f.name] = f.bind(this);
+        // @ts-ignore
+        this.state = {classes:[] as string[]};
 
 /*
         console.log('GE constructor props:', this.props);
@@ -323,9 +353,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
         // console.log('getTemplate:', {props: this.props, template: this.props.template, ctx: this.props.evalContext});
         let ret;
-        if (false && this.props.evalContext.Vertex) {
-            setTimeout( () => SetRootFieldAction.new('forceupdate_', 41), 1); // todo: optimize this to avoid triggering it tons of times when a model is loaded.
-            return <div>Loading</div>;}
         let context = {component:this, __proto__:this.props.evalContext};
         try {
             ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], context); }
@@ -340,43 +367,70 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return ret;
     }
 
-    public getSize(): Readonly<GraphSize> {
-        console.log("get_size("+(this.props?.data as any).name+")", {
-            view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
-            node:this.props.node?.size,
-            default: this.props.view.defaultVSize});
-
-        return this.props.view.getSize(this.props.dataid || this.props.nodeid as string)
-            || this.props.node?.size
-            || this.props.view.defaultVSize;
+    onContextMenu(e: React.MouseEvent<HTMLDivElement>) {
+        this.select();
+        SetRootFieldAction.new("contextMenu", {
+            display: true,
+            x: e.clientX,
+            y: e.clientY
+        });
+        e.preventDefault();
+        e.stopPropagation();
     }
 
-    // setSize(x_or_size_or_point: number, y?: number, w?:number, h?:number): void;
-    setSize(x_or_size_or_point: Partial<GraphPoint>): void;
-    setSize(x_or_size_or_point: Partial<GraphSize>): void;
-    // setSize(x_or_size_or_point: number | GraphSize | GraphPoint, y?: number, w?:number, h?:number): void;
-    setSize(size0: Partial<GraphSize> | Partial<GraphPoint>): void {
-        console.log("setSize("+(this.props?.data as any).name+") thisss", this);
-        let size: Partial<GraphSize> = size0 as Partial<GraphSize>;
-        if (this.props.view.storeSize) {
-            let id = (this.props.dataid || this.props.nodeid) as string;
-            this.props.view.updateSize(id, size);
-            return;
+    onEnter(e: React.MouseEvent<HTMLDivElement>) { // instead of doing it here, might set this class on render, and trigger it visually operative with :hover selector css
+        const isEdgePending = this.props.isEdgePending?.source;
+        if (!isEdgePending || this.props.data.className !== "DClass") return;
+        const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
+        const canBeExtend = isEdgePending.canExtend(this.props.data as any as LClass, extendError);
+
+        if (canBeExtend) this.setState({classes:[...this.state.classes, "class-can-be-extended"]});
+        else this.setState({classes:[...this.state.classes, "class-cannot-be-extended"]});
+    }
+    onLeave(e: React.MouseEvent<HTMLDivElement>) {
+        if (this.props.data.className !== "DClass") return;
+        this.setState({classes: this.state.classes.filter((classname) => {
+            return classname !== "class-can-be-extended" && classname !== "class-cannot-be-extended"
+        })});
+    }
+    onClick(e: React.MouseEvent): void {
+        const isEdgePending = (this.props.isEdgePending?.source);
+        if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
+        if (this.props.data.className !== "DClass") return;
+        SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
+        e.stopPropagation();
+        // const user = this.props.isEdgePending.user;
+        const source = isEdgePending;
+        const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
+        const canBeExtend = isEdgePending.canExtend(this.props.data as any as LClass, extendError);
+        if (canBeExtend) {
+            const lClass: LClass = LPointerTargetable.from(this.props.data.id);
+            // SetFieldAction.new(lClass.id, "extendedBy", source.id, "", true); // todo: this should throw a error for wrong type.
+            // todo: use source.addExtends(lClass); or something (source is LClass)
+            SetFieldAction.new(lClass.id, "extendedBy", source.id, "+=", true);
+            SetFieldAction.new(source.id, "extends", lClass.id, "+=", true);
         }
-        let olds = this.props.node.size;
-        size.x = size.x === undefined ? olds.x : size.x;
-        size.y = size.y === undefined ? olds.y : size.y;
-        size.w = size.w === undefined ? olds.w : size.w;
-        size.h = size.h === undefined ? olds.h : size.h;
-        this.props.node.size = size as GraphSize;
+        SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
+
     }
 
-    public render(): ReactNode {
+    public render(nodeType?:string, styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
+        if (!this.props.node) return "loading";
         if (this.props.preRenderFunc) U.evalInContextAndScope(this.props.preRenderFunc, {component:this, __proto__:this.props.evalContext});
+
+        /// set classes
+        classes.push(this.props.data.className);
+        U.arrayMergeInPlace(classes, this.state.classes);
+        if (Array.isArray(this.props.className)) { U.arrayMergeInPlace(classes, this.props.className); }
+        else if (this.props.className) { classes.push(this.props.className); }
+        if (Array.isArray(this.props.class)) { U.arrayMergeInPlace(classes, this.props.class); }
+        else if (this.props.class) { classes.push(this.props.class); }
+        /// end set classes
+
         const rnode: ReactNode = this.getTemplate();
         let rawRElement: ReactElement | null = U.ReactNodeAsElement(rnode);
         // @ts-ignore
-        console.log('GE render', {thiss: this, rnode, rawRElement, props:this.props, name: this.props.data.name});
+        // console.log('GE render', {thiss: this, rnode, rawRElement, props:this.props, name: this.props.data.name});
         const me: LModelElement = this.props.data as LModelElement; // this.props.model;
 
         const addprops: boolean = true;
@@ -388,9 +442,38 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             // add view props to GraphElement childrens (any level down)
             const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap(); // todo: per passarla come prop ma mantenerla modificabile
             try {
-                rawRElement = React.cloneElement(rawRElement, {key: this.props.key || this.props.view.id + '_' + me.id, onDragTestInject, children: UX.recursiveMap(rawRElement/*.props.children*/,
-                        (rn: ReactNode, index: number) => UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index))});
-                if(fixdoubleroot) rawRElement = rawRElement.props.children;
+                let viewStyle: GObject = {};
+                /*
+                    if (view.adaptWidth) viewStyle.width = view.adaptWidth; // '-webkit-fill-available';
+                    else viewStyle.height = (rootProps.view.height) && rootProps.view.height + 'px';
+                    if (view.adaptHeight) viewStyle.height = view.adaptHeight; //'fit-content'; // '-webkit-fill-available'; if needs to actually fill all it's not a vertex but a field.
+                    else viewStyle.width = (rootProps.view.width) && rootProps.view.width + 'px';
+                    viewStyle = {};
+                */
+                viewStyle.zIndex = this.props.node?.zIndex;
+                viewStyle.display = this.props.view?.display;
+                rawRElement = React.cloneElement(rawRElement,
+                    {
+                        key: this.props.key || this.props.nodeid,
+                        onDragTestInject,
+                        ref: this.html,
+                        id: this.props.nodeid,
+                        "data-nodeid": this.props.nodeid,
+                        "data-dataid": this.props.data?.id,
+                        "data-viewid": this.props.view.id,
+                        "data-modelname": this.props.data?.className,
+                        "data-userselecting": JSON.stringify(this.props.node?.__raw.isSelected || {}),
+                        "data-nodetype": nodeType,
+                        style: {...viewStyle, ...styleoverride},
+                        className: classes.join(' '),
+                        onClick: this.onClick,
+                        onContextMenu:this.onContextMenu,
+                        onMouseEnter:this.onEnter,
+                        onMouseLeave:this.onLeave,
+                        children: UX.recursiveMap(rawRElement/*.props.children*/,
+                            (rn: ReactNode, index: number) => UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index))});
+                fixdoubleroot = false; // need to set the props to new root in that case.
+                if (fixdoubleroot) rawRElement = rawRElement.props.children;
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
             } catch (e) {
                 rawRElement = DV.errorView("error while injecting props to subnodes", {e, rawRElement, key:this.props.key, newid: this.props.view?.id+'_'+me?.id});

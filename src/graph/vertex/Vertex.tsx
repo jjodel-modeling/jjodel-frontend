@@ -17,12 +17,18 @@ import {
     LUser,
     LVoidVertex,
     RuntimeAccessibleClass, LViewPoint,
-    U, GraphSize, GraphPoint,
+    U, GraphSize, GraphPoint, GObject, Size, SetRootFieldAction, SetFieldAction,
 } from "../../joiner";
+import "jqueryui";
+import "jqueryui/jquery-ui.css";
 import RootVertex from "./RootVertex";
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee { forceupdate?: number }
+
+var dragHelper = document.createElement("div");
+dragHelper.style.backgroundColor = "transparent";
+dragHelper.style.outline = "4px solid black";
 
 export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
     extends superclassGraphElementComponent<AllProps, ThisState> {
@@ -61,18 +67,177 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     }
 
     r: any;
+
+    setVertexProperties(){
+        if(!this.props.node || !this.html.current) return;
+        if (this.hasSetVertexProperties) return;
+        this.hasSetVertexProperties = true;
+
+        let html = this.html.current;
+        const $measurable: GObject<"JQuery + ui plugin"> = $(html); // todo: install typings
+        // $element = $(html).find(".measurable").addBack();
+        $measurable.draggable({
+            cursor: 'grabbing',
+            containment: 'parent',
+            opacity: 0.0,
+            disabled: !(this.props.view.draggable),
+            distance: 5,
+            helper: () => { // or "clone",
+                // dragHelper.style.display="block";
+                let size = this.getSize();
+                // let actualSize = Size.of(html);
+                // if (size.w !== actualSize.w || size.h !== actualSize.h) this.setSize({w:actualSize.w, h:actualSize.h});
+                dragHelper.style.width = size.w+"px";
+                dragHelper.style.height = size.h+"px";
+                return dragHelper;
+            },
+
+            // disabled: !(view.draggable),
+            start: (event: GObject, obj: GObject) => {
+                // this.select();
+                SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 }); // todo: should probably be done in a document event
+                if (this.props.view.onDragStart) {
+                    try{ eval(this.props.view.onDragStart); } // todo: eval in context
+                    catch (e) { console.log(e) }
+                }
+            },
+            drag: (event: GObject, obj: GObject) => {
+                // if (!withSetSize) { node.y = obj.position.top; node.x = obj.position.left; } else {
+                if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
+            },
+            stop: (event: GObject, obj: GObject) => {
+                //if (!withSetSize) {  node.y = obj.position.top; node.x = obj.position.left; } else
+                this.setSize({x:obj.position.left, y:obj.position.top});
+                if (this.props.view.onDragEnd) {
+                    try{ eval(this.props.view.onDragEnd); } // todo: eval in context
+                    catch (e) { console.log(e) }
+                }
+            }
+        });
+        let resizeoptions: GObject = {
+            disabled: !(this.props.view.resizable),
+            start: (event: GObject, obj: GObject) => {
+                this.select();
+                if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
+                SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 });
+                if (this.props.view.onResizeStart) {
+                    try{ eval(this.props.view.onResizeStart); }
+                    catch (e) { console.log(e) }
+                }
+            },
+            resize: (event: GObject, obj: GObject) => {
+                if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.position.width, h:obj.position.height});
+                // SetRootFieldAction.new("resizing", {})
+            },
+            stop: (event: GObject, obj: GObject) => {
+                if (!this.state.classes.includes("resized")) this.setState({classes:[...this.state.classes, "resized"]});
+                // if (!withSetSize) { node.width = obj.size.width; node.height = obj.size.height; } else {
+                this.setSize({w:obj.size.width, h:obj.size.height});
+                // console.log("resize setsize:", obj, {w:obj.size.width, h:obj.size.height});
+                if (this.props.view.onResizeEnd) {
+                    try{ eval(this.props.view.onResizeEnd); }
+                    catch (e) { console.log(e) }
+                }
+            }
+        }
+
+        if (this.props.view.lazySizeUpdate) {
+            // this does not accept a func or htmlElem, but only a classname...
+            // and makes his own empty proxy element to resize in his place. inchoherent.
+            resizeoptions.helper = "resizable-helper-bad";
+        }
+        else {
+            resizeoptions.containment = 'parent';
+        }
+        $measurable.resizable(resizeoptions);
+
+    }
+
+
+
+    getSize(): Readonly<GraphSize> {
+        /*console.log("get_size("+(this.props?.data as any).name+")", {
+            view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
+            node:this.props.node?.size,
+            default: this.props.view.defaultVSize});*/
+
+        let ret = this.props.view.getSize(this.props.dataid || this.props.nodeid as string)
+            || this.props.node?.size
+            || this.props.view.defaultVSize;
+        if (this.props.node.isResized) return ret;
+        let actualSize: Partial<Size>&{w:number, h:number} = this.html.current ? Size.of(this.html.current) : {w:0, h:0};
+        if (this.props.view.adaptWidth && ret.w !== actualSize.w) {
+            this.setSize({w:actualSize.w});
+            ret.w = actualSize.w;
+        }
+        if (this.props.view.adaptHeight && ret.h !== actualSize.h) {
+            this.setSize({h:actualSize.h});
+            ret.h = actualSize.h;
+        }
+        return ret;
+    }
+    // setSize(x_or_size_or_point: number, y?: number, w?:number, h?:number): void;
+    setSize(x_or_size_or_point: Partial<GraphPoint>): void;
+    setSize(x_or_size_or_point: Partial<GraphSize>): void;
+    // setSize(x_or_size_or_point: number | GraphSize | GraphPoint, y?: number, w?:number, h?:number): void;
+    setSize(size0: Partial<GraphSize> | Partial<GraphPoint>): void {
+        // console.log("setSize("+(this.props?.data as any).name+") thisss", this);
+        let size: Partial<GraphSize> = size0 as Partial<GraphSize>;
+        if (this.props.view.storeSize) {
+            let id = (this.props.dataid || this.props.nodeid) as string;
+            this.props.view.updateSize(id, size);
+            return;
+        }
+        let olds = this.props.node.size;
+        size.x = size.x === undefined ? olds.x : size.x;
+        size.y = size.y === undefined ? olds.y : size.y;
+        size.w = size.w === undefined ? olds.w : size.w;
+        size.h = size.h === undefined ? olds.h : size.h;
+        this.props.node.size = size as GraphSize;
+    }
+
     render(): ReactNode {
+        if (!this.props.node) return "loading";
+
         // if(!windoww.cpts) windoww.cpts = {};
         // windoww.cpts[this.props.nodeid]=this;
         // console.log("updated");
         //return this.r || <div>loading...</div>;
-        return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+"."+this.state?.forceupdate} />;
+
+        // set classes
+        let nodeType = "NODE_TYPE_ERROR";
+        if ( this.props.isGraph &&  this.props.isVertex) nodeType = "GraphVertex";
+        if ( this.props.isGraph && !this.props.isVertex) nodeType = "Graph";
+        if (!this.props.isGraph &&  this.props.isVertex) nodeType = "Vertex";
+        if (!this.props.isGraph && !this.props.isVertex) nodeType = "Field";
+        let classesoverride = [nodeType];
+        // set classes end
+        let size: Readonly<GraphSize> = this.getSize() as any;
+        let styleoverride: React.CSSProperties = {}
+        switch (nodeType){
+            case "GraphVertex":
+            case "Vertex":
+            case "VoidVertex":
+                styleoverride.top= size.x+"px";
+                styleoverride.left= size.y+"px";
+                let isResized = this.props.node.isResized;
+                if (isResized || !this.props.view.adaptWidth) styleoverride.width = size.w+"px";
+                else styleoverride.width = undefined;
+                if (isResized || !this.props.view.adaptHeight) styleoverride.height = size.h+"px";
+                else styleoverride.height = undefined; // todo: the goal is to reset jqui inline style, but not override user-defined inline style
+                this.setVertexProperties(); break;
+            default: break;
+        }
+
+
+        return super.render(nodeType, styleoverride, classesoverride);
+        // return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+"."+this.state?.forceupdate} />;
     }
 }
 
 class OwnProps extends GraphElementOwnProps {
-    onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    // onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    // onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
     isGraph?: boolean = false;
     isVertex?: boolean = true;
 }
@@ -102,7 +267,7 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
         user: LPointerTargetable.from(state.isEdgePending.user),
         source: LPointerTargetable.from(state.isEdgePending.source)
     };
-    superret.viewpoint = LViewPoint.fromPointer(state.viewpoint);
+    // superret.viewpoint = LViewPoint.fromPointer(state.viewpoint);
     const ret: StateProps = new StateProps();
     U.objectMergeInPlace(superret, ret);
     U.removeEmptyObjectKeys(superret);

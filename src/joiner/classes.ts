@@ -657,13 +657,14 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 351, 201);
         thiss.size = {};
         thiss.storeSize = false;
+        thiss.lazySizeUpdate = false;
         //thiss.useSizeFrom = EuseSizeFrom.node;
         // thiss.adaptHeight = false;
         // thiss.adaptWidth = false;
 
 
-        thiss.draggable = false;
-        thiss.resizable = false;
+        thiss.draggable = true;
+        thiss.resizable = true;
         thiss.adaptWidth = true;
         thiss.display = 'flex' as any;
         thiss.width = 200;
@@ -706,6 +707,7 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.y = defaultVSize.y;
         thiss.w = defaultVSize.w;
         thiss.h = defaultVSize.h;
+        thiss.isResized = false;
         if (this.persist) {
             // no pointedBy?
         }

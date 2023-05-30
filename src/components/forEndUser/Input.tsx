@@ -5,6 +5,7 @@ import toast, {Toaster} from 'react-hot-toast';
 import {LPointerTargetable} from "../../joiner";
 
 function InputComponent(props: AllProps) {
+    // todo: data can be injected with UX, if field is present, can take type from a metainfo like __info_of__
     const data = props.data;
     if(!data) return(<></>);
     const field = props.field;
