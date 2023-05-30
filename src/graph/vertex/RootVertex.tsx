@@ -6,13 +6,14 @@ import {
     BEGIN,
     DClass,
     DUser, END,
-    GObject,
+    GObject, GraphElementComponent, GraphPoint, GraphSize,
     LClass, LGraphElement,
     LPointerTargetable,
     LViewElement,
     Pointer,
     SetFieldAction,
     SetRootFieldAction,
+    Size,
     U
 } from "../../joiner";
 import {AllPropss as VertexProps} from "./Vertex";
@@ -28,7 +29,9 @@ interface ThisState {
 
 function GraphElement(props: AllProps){}
 
-
+var dragHelper = document.createElement("div");
+dragHelper.style.backgroundColor = "transparent";
+dragHelper.style.outline = "4px solid black";
 function RootVertexComponent(props: AllProps, state: ThisState) {
     const rootProps = props.props;
     const node: LGraphElement = rootProps.node || LPointerTargetable.wrap(rootProps.nodeid);
@@ -135,6 +138,10 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     }*/
 
 
+    let size: Readonly<GraphSize> = props.super.getSize() as any; // somehow this returns correct node but not updated
+    let setSize = props.super.setSize;
+
+    let withSetSize: boolean = true;
     const htmlRef: RefObject<HTMLDivElement> = useRef(null);
 
     useEffect(() => {
@@ -148,6 +155,16 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                 element.draggable({
                     cursor: 'grabbing',
                     containment: 'parent',
+                    opacity: 0.0,
+                    helper: function() { // or "clone",
+                        // dragHelper.style.display="block";
+                        let hsize = Size.of(htmlRef.current as Element);
+                        if (size.w !== hsize.w || size.h !== hsize.h) setSize({w:hsize.w, h:hsize.h});
+                        dragHelper.style.width = size.w+"px";
+                        dragHelper.style.height = size.h+"px";
+                        return dragHelper;
+                    },
+
                     // disabled: !(view.draggable),
                     start: function(event: GObject, obj: GObject) {
                         select();
@@ -158,12 +175,26 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                         }
                     },
                     drag: function(event: GObject, obj: GObject) {
+
+                        if(node) {
+                            if (withSetSize) {
+                                setSize({x:obj.position.top, y:obj.position.left});
+                            } else{
+                                node.y = obj.position.top;
+                                node.x = obj.position.left;
+                            }
+                            // node.x = obj.position.top; // damiano: intentional mistake tmp
+                        }
                         // SetRootFieldAction.new("dragging", {})
                     },
                     stop: function (event: GObject, obj: GObject) {
                         if(node) {
-                            node.y = obj.position.top;
-                            node.x = obj.position.left;
+                            if (withSetSize) {
+                                setSize({x:obj.position.top, y:obj.position.left});
+                            } else{
+                                node.y = obj.position.top;
+                                node.x = obj.position.left;
+                            }
                         }
                         if(view.onDragEnd) {
                             try{ eval(view.onDragEnd); }
@@ -188,8 +219,12 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
                     stop: function(event: GObject, obj: GObject) {
                         if (!classes.includes("resized")) setClasses([...classes, "resized"]);
                         if(node) {
-                            node.width = obj.size.width;
-                            node.height = obj.size.height;
+                            if (withSetSize) {
+                                setSize({w:obj.position.width, h:obj.position.height});
+                            } else{
+                                node.width = obj.size.width;
+                                node.height = obj.size.height;
+                            }
                         }
                         if(view.onResizeEnd) {
                             try{ eval(view.onResizeEnd); }
@@ -202,7 +237,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
         }
     }, )
 
-    let viewStyle: GObject = {};
+    let viewStyle: GObject = {};/*
     viewStyle.overflow = 'hidden';
     // viewStyle.position = 'relative'; // 'absolute';
     viewStyle.display = rootProps.view?.display;
@@ -211,8 +246,13 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     else viewStyle.height = (rootProps.view.height) && rootProps.view.height + 'px';
     if (view.adaptHeight) viewStyle.height = view.adaptHeight; //'fit-content'; // '-webkit-fill-available'; if needs to actually fill all it's not a vertex but a field.
     else viewStyle.width = (rootProps.view.width) && rootProps.view.width + 'px';
+    viewStyle = {};*/
+    switch(nodeType){
+        case "GraphVertex":
+            // top: size.x+"px", left: size.x+"px"
+    }
 
-    viewStyle = {};
+    if (!withSetSize) { size = node as any; }
     return(
         <div ref={htmlRef}
              id={rootProps.nodeid}
@@ -222,7 +262,7 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
              data-modelname={rootProps.data?.className}
              data-userselecting={JSON.stringify(node?.__raw.isSelected || {})}
              data-nodetype={nodeType}
-             style={{...viewStyle}}
+             style={{...viewStyle, top: size.x+"px", left: size.x+"px"}}
              className={classes.join(' ')}
              onClick={onClick}
              onContextMenu={onContextMenu}
@@ -236,7 +276,18 @@ function RootVertexComponent(props: AllProps, state: ThisState) {
     );
 
 }
-interface OwnProps {props: VertexProps, render: ReactNode}
+interface OwnProps {
+    props: VertexProps,
+    render: ReactNode,
+    super: GraphElementComponent;
+    /*getSize(): GraphSize | undefined;
+    // set_size(x_or_size_or_point: number, y?: number, w?:number, h?:number): void;
+    setSize(x_or_size_or_point: Partial<GraphPoint>): void;
+    setSize(x_or_size_or_point: Partial<GraphSize>): void;
+    // set_size(x_or_size_or_point: number | GraphSize | GraphPoint, y?: number, w?:number, h?:number): void;
+    setSize(size0: Partial<GraphSize> | Partial<GraphPoint>): void;*/
+}
+
 interface StateProps {}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;

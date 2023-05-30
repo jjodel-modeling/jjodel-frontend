@@ -312,7 +312,7 @@ export class DGraph extends DGraphElement {
     }
 
 }
-
+var nosize = {x:0, y:0, w:0, h:0, nosize:true};
 @RuntimeAccessible
 export class LGraph<Context extends LogicContext<any> = any, D extends DGraph = any> extends LGraphElement {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -338,7 +338,7 @@ export class LGraph<Context extends LogicContext<any> = any, D extends DGraph = 
 
     // get_sizes(context: Context): D["sizes"] { return context.data.sizes; }
     //set_sizes(val: D["sizes"], context: Context): boolean { return SetFieldAction.new(context.data.id, "sizes", val); } // todo: se cancello ModelElement, la chiave qui resta? i pointedby non vengono segnati credo.
-    get_size(context: LogicContext<DGraph>): GraphSize { return context.data.graphSize; }
+    get_size(context: LogicContext<DGraph>): GraphSize { return nosize as any; }
     get_graphSize(context: LogicContext<DGraph>): GraphSize { return context.data.graphSize; }
     get_zoom(context: LogicContext<DGraph>): GraphPoint {
         const zoom: GraphPoint = context.data.zoom;
@@ -416,6 +416,7 @@ export class LVoidVertex extends LGraphElement {
 
     // todo: devo settare che il primo parametro delle funzioni che iniziano con set_ non può essere un logicContext
     set_size(val: GraphSize, context: LogicContext<DVoidVertex>): boolean {
+        // todo: graphvertex should use this, but  calls graphelement.set_size instead
         // SetFieldAction.new(context.data, 'size', val, Action.SubType.vertexSize);
         if (!val) { val = defaultVSize; }
         console.trace('setsize:', {context, val});

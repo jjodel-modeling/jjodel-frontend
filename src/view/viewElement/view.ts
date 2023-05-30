@@ -178,6 +178,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         }
     }
 
+    public get_defaultVSize(context: Context): this["defaultVSize"]{ return context.data.defaultVSize; }
     public getSize(id: Pointer<DModelElement> | Pointer<DGraphElement>): GraphSize | undefined{ return this.wrongAccessMessage("getSize"); }
     public get_getSize(context: Context): ((...a:Parameters<this["getSize"]>)=>ReturnType<LViewElement["getSize"]>) {
         function impl_getSize(id: Pointer<DModelElement> | Pointer<DGraphElement>): ReturnType<LViewElement["getSize"]> {

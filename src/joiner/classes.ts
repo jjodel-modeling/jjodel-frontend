@@ -654,7 +654,7 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.subViews = [];
         thiss.oclApplyCondition = '';
         thiss.explicitApplicationPriority = priority;
-        thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 350, 200);
+        thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 351, 201);
         thiss.size = {};
         thiss.storeSize = false;
         //thiss.useSizeFrom = EuseSizeFrom.node;

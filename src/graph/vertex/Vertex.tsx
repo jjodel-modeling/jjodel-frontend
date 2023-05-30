@@ -22,7 +22,7 @@ import {
 import RootVertex from "./RootVertex";
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
-class ThisStatee extends GraphElementStatee {}
+class ThisStatee extends GraphElementStatee { forceupdate?: number }
 
 export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
     extends superclassGraphElementComponent<AllProps, ThisState> {
@@ -46,19 +46,27 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     constructor(props: AllProps, context: any) {
         super(props, context);
 
+        this.getSize = this.getSize.bind(this);
+        this.setSize = this.setSize.bind(this);
+        // this.state={forceupdate:1};
         setTimeout(()=>{
-            this.get_size = this.get_size.bind(this);
-            this.set_size = this.set_size.bind(this);
+            this.getSize = this.getSize.bind(this);
+            this.setSize = this.setSize.bind(this);
             // this.get_size = console.error as any;
-            this.r = (<RootVertex props={this.props} render={super.render()} super={this} />);
+            // this.r = (<RootVertex props={this.props} render={super.render()} super={this} />);
             this.forceUpdate();
+            this.setState({forceupdate:2});
         },1)
-        this.r = "loading";
+        this.r = null;
     }
 
     r: any;
     render(): ReactNode {
-        return this.r;
+        // if(!windoww.cpts) windoww.cpts = {};
+        // windoww.cpts[this.props.nodeid]=this;
+        // console.log("updated");
+        //return this.r || <div>loading...</div>;
+        return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+"."+this.state?.forceupdate} />;
     }
 }
 

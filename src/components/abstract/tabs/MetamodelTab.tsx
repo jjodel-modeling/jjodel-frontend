@@ -24,9 +24,9 @@ function MetamodelTabComponent(props: AllProps) {
     return(<div className={'w-100 h-100'}>
         <ContextMenu />
         <PendingEdge />
-        <div className={'d-flex'}>
+        <div className={'d-flex h-100'}>
             <ToolBar model={model.id} isMetamodel={model.isMetamodel} />
-            <div style={{marginLeft: '6.55em'}}>
+            <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>
                 {graph && <DefaultNode data={model.id} nodeid={graph.id} graphid={graph.id}/> || <div>Error: missing DGraph prop</div> }
                 <EdgesManager modelid={model.id} />
             </div>

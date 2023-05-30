@@ -1,7 +1,17 @@
 import React, {Dispatch, PureComponent, ReactElement, useEffect} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
-import {GObject, LGraphElement, LModelElement, LViewElement, U} from "../../../joiner";
+import {
+    DGraphElement,
+    GObject,
+    GraphElementComponent,
+    LGraphElement,
+    LModelElement,
+    LViewElement,
+    Pointer,
+    U,
+    windoww
+} from "../../../joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
 import * as util from "util";
 import { makeEvalContext } from "../../../graph/graphElement/graphElement";
@@ -25,7 +35,16 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
     change = (evt?: React.ChangeEvent<HTMLTextAreaElement>) => {
         let expression: string | undefined = evt?.target.value.trim() || '';
         let output;
-        let context = {...this.props, props: this.props}; // makeEvalContext(this.props as any, {} as any);
+        // let context = {...this.props, props: this.props}; // makeEvalContext(this.props as any, {} as any);
+        let context;
+        if (this.props.node?.id) {
+            let component = GraphElementComponent.componentMap[this.props.node.id];
+            context = {...component.props.evalContext};
+            context.fromcomponent=true;
+        }
+        else {
+            context = {...this.props, props: this.props};
+        }
         try { output = U.evalInContextAndScope(expression || 'undefined', context, context); }
         catch (e: any) {
             console.error("console error", e);

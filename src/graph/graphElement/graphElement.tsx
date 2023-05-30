@@ -34,7 +34,8 @@ import {
 
 export function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
     let evalContext: GObject = view.constants ? eval('window.tmp = ' + view.constants) : {};
-    evalContext = {...windoww.defaultContext, ...evalContext, model: props.data, ...props};
+    let component = GraphElementComponent.componentMap[props.nodeid as Pointer<DGraphElement>];
+    evalContext = {...windoww.defaultContext, ...evalContext, model: props.data, ...props, component, getSize:component?.getSize, setSize: component?.setSize};
     windoww.evalContext = evalContext;
     return evalContext;
 }
@@ -83,6 +84,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     extends PureComponent<AllProps, GraphElementState>{
     static maxid: number = 0;
     static all: Dictionary<number, GraphElementComponent> = {};
+    static componentMap: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = {};
     id: number;
     public static refresh() {
         for (let key in GraphElementComponent.all) {
@@ -204,6 +206,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         this._isMounted = false;
         this.id = GraphElementComponent.maxid++;
         GraphElementComponent.all[this.id] = this;
+        GraphElementComponent.componentMap[props.nodeid as Pointer<DGraphElement>] = this;
 
 /*
         console.log('GE constructor props:', this.props);
@@ -337,16 +340,23 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return ret;
     }
 
-    public get_size(): GraphSize | undefined {
-        return this.props.view.getSize(this.props.dataid || this.props.nodeid as string) || this.props.node.size;
+    public getSize(): Readonly<GraphSize> {
+        console.log("get_size("+(this.props?.data as any).name+")", {
+            view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
+            node:this.props.node?.size,
+            default: this.props.view.defaultVSize});
+
+        return this.props.view.getSize(this.props.dataid || this.props.nodeid as string)
+            || this.props.node?.size
+            || this.props.view.defaultVSize;
     }
 
-    // set_size(x_or_size_or_point: number, y?: number, w?:number, h?:number): void;
-    set_size(x_or_size_or_point: Partial<GraphPoint>): void;
-    set_size(x_or_size_or_point: Partial<GraphSize>): void;
-    // set_size(x_or_size_or_point: number | GraphSize | GraphPoint, y?: number, w?:number, h?:number): void;
-    set_size(size0: Partial<GraphSize> | Partial<GraphPoint>): void {
-        console.log("set size ge thisss", this);
+    // setSize(x_or_size_or_point: number, y?: number, w?:number, h?:number): void;
+    setSize(x_or_size_or_point: Partial<GraphPoint>): void;
+    setSize(x_or_size_or_point: Partial<GraphSize>): void;
+    // setSize(x_or_size_or_point: number | GraphSize | GraphPoint, y?: number, w?:number, h?:number): void;
+    setSize(size0: Partial<GraphSize> | Partial<GraphPoint>): void {
+        console.log("setSize("+(this.props?.data as any).name+") thisss", this);
         let size: Partial<GraphSize> = size0 as Partial<GraphSize>;
         if (this.props.view.storeSize) {
             let id = (this.props.dataid || this.props.nodeid) as string;
