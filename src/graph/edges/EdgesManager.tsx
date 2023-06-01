@@ -13,7 +13,7 @@ interface IValueEdge { source: LObject, target: LObject }
 function EdgesManagerComponent(props: AllProps) {
     const model = props.model;
 
-    const classes = model.classes ? [...model.classes] : [];
+    const classes = model.classes && Array.isArray(model.classes) ? model.classes : [];
     const _references: IReferenceEdge[] = [];
     const _extends: IExtendEdge[] = [];
     for(let classifier of classes) {
@@ -31,7 +31,7 @@ function EdgesManagerComponent(props: AllProps) {
         for(let feature of object.features) {
             const instanceOf = feature.instanceof;
             if(instanceOf?.className === 'DReference') {
-                const valuePointers = feature.__raw.value;
+                const valuePointers = feature.__raw.values;
                 for(let pointer of valuePointers) {
                     _values.push({source: object, target: LObject.fromPointer(pointer as Pointer)});
                 }
@@ -88,7 +88,7 @@ export const EdgesManagerConnected = connect<StateProps, DispatchProps, OwnProps
     mapDispatchToProps
 )(EdgesManagerComponent);
 
-export const EdgesManager = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <EdgesManagerConnected {...{...props, childrens}} />;
+export const EdgesManager = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <EdgesManagerConnected {...{...props, children}} />;
 }
 export default EdgesManager;

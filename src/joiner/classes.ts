@@ -465,9 +465,9 @@ export class Constructors<T extends DPointerTargetable>{
 
         return this; }
 
-    DValue(instanceoff?: DValue["instanceof"], val?: DValue["value"], isMirage?: DValue["isMirage"]): this {
+    DValue(instanceoff?: DValue["instanceof"], val?: DValue["values"], isMirage?: DValue["isMirage"]): this {
         let thiss: DValue = this.thiss as any; thiss.edges = [];
-        thiss.value = val || [];
+        thiss.values = val || [];
         thiss.instanceof = instanceoff;
         thiss.isMirage = isMirage || false;
 
@@ -556,7 +556,8 @@ export class Constructors<T extends DPointerTargetable>{
             SetRootFieldAction.new(isMetamodel ? "m2models" : "m1models", thiss.id, "+=", true);
         }
 
-        return this; }
+        return this;
+    }
 
     DOperation(exceptions: DOperation["exceptions"] = [], implementation?: string/*, parameters: DOperation["parameters"] = []*/): this {
         const thiss: DOperation = this.thiss as any;
@@ -591,9 +592,9 @@ export class Constructors<T extends DPointerTargetable>{
         }
         return this; }
 
-    DEnumLiteral(value: DEnumLiteral["value"] = 0): this {
+    DEnumLiteral(value?: DEnumLiteral["value"]): this { // vv4
         const thiss: DEnumLiteral = this.thiss as any;
-        thiss.value = value;
+        thiss.value = value as any; // undef is ok, handled in getter as automatic ordinal index
         thiss.literal = thiss.name;
         if (this.persist) {
             // no pointedBy?
@@ -719,7 +720,7 @@ export class Constructors<T extends DPointerTargetable>{
 
 @RuntimeAccessible
 export class DPointerTargetable extends RuntimeAccessibleClass {
-    static defaultComponent: (ownProps: GObject, childrens?: (string | React.Component)[]) => React.ReactElement;
+    static defaultComponent: (ownProps: GObject, children?: (string | React.Component)[]) => React.ReactElement;
     public static maxID: number = 0;
     public static logic: typeof LPointerTargetable;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -731,6 +732,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     // se viene cancellato un intero oggetto A che contiene una lista di puntatori, gli oggetti che puntano ad A rimuovono A dai loro "poitnedBy",
     // ma gli oggetti puntati da A tramite sotto-oggetti o attributi (subviews...) non vengono aggiornati in "pointedby"
     pointedBy: PointedBy[] = [];
+    public className!: string;
 
 
     static defaultname<L extends LModelElement = LModelElement>(startingPrefix: string | ((meta:L)=>string), father?: Pointer | DPointerTargetable | ((a:string)=>boolean), metaptr?: Pointer | null): string {
@@ -744,8 +746,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
                     let meta = LPointerTargetable.from(metaptr as Pointer);
                     startingPrefix = startingPrefix(meta as L);
                 }
-                console.log({father, lfather});
-                const childrenNames: (string)[] = lfather.childrens.map(c => (c as LNamedElement).name);
+                const childrenNames: (string)[] = lfather.children.map(c => (c as LNamedElement).name);
                 return U.increaseEndingNumber(startingPrefix + '0', false, false, (newname) => childrenNames.indexOf(newname) >= 0);
             }
             else {
@@ -1059,7 +1060,7 @@ export class PendingPointedByPaths{
 
 @RuntimeAccessible
 export class PointedBy{
-    static list: string[] = ["father", "parent", "annotations", "packages", "type", "subpackages", "classifiers", "exceptions", "parameters", "defaultValue", "instances", "operations", "features", "attributes", "references", "extends", "extendedBy", "implements", "implementedBy", "instanceof", "edges", "target", "opposite", "parameters", "exceptions", "literals"];
+    static list: string[] = ["father", "parent", "annotations", "packages", "type", "subpackages", "classifiers", "exceptions", "parameters", "defaultValue", "instances", "operations", "features", "attributes", "references", "extends", "extendedBy", "implements", "implementedBy", "instanceof", "edges", "target", "opposite", "parameters", "exceptions", "literals", "values"];
     source: string; // elemento da cui parte il puntatore
     // field: keyof DPointerTargetable;
     // il bersaglio non c'è qui, perchè è l'oggetto che contiene questo dentro l'array pointedBy
@@ -1132,8 +1133,16 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public static structure: typeof DPointerTargetable;
     public static singleton: LPointerTargetable;
-    public __raw!: DPointerTargetable;
+    public __raw!: D;
     public pointedBy!: PointedBy[];
+
+    public __isProxy!: boolean;
+    public __serialize!: DocString<"json">;
+    private inspect!:D;
+    private clonedCounter!:number;
+    private __random!:number;
+
+    private __info_of__id = {type:"Pointer&lt;this&gt;", txt:"<a href=\"https://github.com/DamianoNaraku/jodel-react/wiki/identifiers\"><span>Unique identifier, and value used to point this object.</span></a>"};
 
     protected wrongAccessMessage(str: string): any {
         let msg = "Method "+str+" should not be called directly, attempting to do so should trigger get_"+str+"(). This is only a signature for type checking.";
@@ -1363,7 +1372,7 @@ let bb2 = fffff(a);
 @Leaf
 @RuntimeAccessible
 export class DUser extends DPointerTargetable{
-    static current: DocString<Pointer<DUser, 1, 1>> = "Pointer"; // todo
+    static current: DocString<Pointer<DUser, 1, 1>> = 'Pointer' + Date.now(); // todo
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     cursorPositionX: number = 0;

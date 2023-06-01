@@ -288,20 +288,20 @@ export const VertexConnected = connect<StateProps, DispatchProps, OwnProps, ISto
     mapDispatchToProps
 )(VertexComponent as any);
 
-export const Vertex = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <VertexConnected {...{...props, childrens}} isGraph={false} isVertex={true} />;
+export const Vertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} />;
 }
 
-export const Graph = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => { // doesn't work?
-    return <VertexConnected {...{...props, childrens}} isGraph={true} isVertex={false} />;
+export const Graph = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => { // doesn't work?
+    return <VertexConnected {...{...props, children}} isGraph={true} isVertex={false} />;
 }
 
-export const GraphVertex = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <VertexConnected {...{...props, childrens}} isGraph={true} isVertex={true} />;
+export const GraphVertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <VertexConnected {...{...props, children}} isGraph={true} isVertex={true} />;
 }
 
-export const Field = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <VertexConnected {...{...props, childrens}} isGraph={false} isVertex={false} />;
+export const Field = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={false} />;
 }
 
 let windoww = window as any;

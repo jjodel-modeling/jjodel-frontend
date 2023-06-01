@@ -41,7 +41,7 @@ export const EdgesManagerConnected = connect<StateProps, DispatchProps, OwnProps
     mapDispatchToProps
 )(EdgesManagerComponent);
 
-export const EdgesManager = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <EdgesManagerConnected {...{...props, childrens}} />;
+export const EdgesManager = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <EdgesManagerConnected {...{...props, children}} />;
 }
 export default EdgesManager;

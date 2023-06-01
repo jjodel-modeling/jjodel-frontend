@@ -15,6 +15,7 @@ import {
 import {SaveManager} from "./SaveManager";
 import {DamEdge} from "../../graph/damedges/damedge";
 import toast from "react-hot-toast";
+import RoomManager from "./RoomManager";
 
 function Topbar(props: AllProps) {
 
@@ -48,26 +49,27 @@ function Topbar(props: AllProps) {
 
 
     return(<div className={'topbar d-flex'}>
-        <div className={'ms-1'}>
-            {/*
-            <Undoredocomponent />
+        {/*
+        <Undoredocomponent />
 
-            <label className={'item border round ms-1'} onClick={exportXml}>Export XML</label>
-            <label className={'item border round ms-1'} onClick={importXml}>Import XML</label>
+        <label className={'item border round ms-1'} onClick={exportXml}>Export XML</label>
+        <label className={'item border round ms-1'} onClick={importXml}>Import XML</label>
 
-            <div className={'ms-auto me-1'}>
-                <label className={'item border round ms-1'} onClick={ () => SaveManager.exportLayout_click(false) }>Export Layout</label>
-                <label className={'item border round ms-1'} onClick={ () => SaveManager.importLayout_click(false) }>Import Layout</label>
-                <label className={'item border round ms-1'} onClick={ () => edgetest() }>Edge test</label>
-            </div>
-            */}
-
-            <label className={'item border round ms-1'} onClick={save}>Save</label>
-            <label className={'item border round ms-1'} onClick={load}>Load</label>
-
-            <label className={'item border round ms-1'} onClick={exportJson}>Export JSON</label>
-            <label className={'item border round ms-1'} onClick={importJson}>Import JSON</label>
+        <div className={'ms-auto me-1'}>
+            <label className={'item border round ms-1'} onClick={ () => SaveManager.exportLayout_click(false) }>Export Layout</label>
+            <label className={'item border round ms-1'} onClick={ () => SaveManager.importLayout_click(false) }>Import Layout</label>
+            <label className={'item border round ms-1'} onClick={ () => edgetest() }>Edge test</label>
         </div>
+        */}
+
+        <label className={'item border round ms-1'} onClick={save}>Save</label>
+        <label className={'item border round ms-1'} onClick={load}>Load</label>
+
+        <label className={'item border round ms-1'} onClick={exportJson}>Export JSON</label>
+        <label className={'item border round ms-1'} onClick={importJson}>Import JSON</label>
+
+        {/*<RoomManager />*/}
+
     </div>);
 }
 interface OwnProps {}
@@ -92,8 +94,8 @@ export const TopBarConnected = connect<StateProps, DispatchProps, OwnProps, ISto
     mapDispatchToProps
 )(Topbar);
 
-export const TopBar = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <TopBarConnected {...{...props, childrens}} />;
+export const TopBar = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <TopBarConnected {...{...props, children}} />;
 }
 
 

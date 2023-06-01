@@ -61,7 +61,7 @@ export const InfoTabConnected = connect<StateProps, DispatchProps, OwnProps, ISt
     mapDispatchToProps
 )(InfoTabComponent);
 
-export const InfoTab = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <InfoTabConnected {...{...props, childrens}} />;
+export const InfoTab = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <InfoTabConnected {...{...props, children}} />;
 }
 export default InfoTab;

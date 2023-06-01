@@ -231,6 +231,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 //
         switch(propKey){
             case 'inspect': // node.js util
+            case '__Raw':
             case '__raw': return targetObj;
             case '__serialize': return JSON.stringify(targetObj);
             case '__isproxy':
@@ -274,14 +275,14 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
         // if not exist check for children names
 
-        if (typeof propKey === "string" && propKey !== "childrens") {
-            let lchildrens: LPointerTargetable[];
-            try { lchildrens = this.get(targetObj, 'childrens', proxyitself); }
-            catch (e) { lchildrens = []; }
-            // let dchildrens: DPointerTargetable[] = lchildrens.map<DPointerTargetable>(l => l.__raw as any);
+        if (typeof propKey === "string" && propKey !== "children") {
+            let lchildren: LPointerTargetable[];
+            try { lchildren = this.get(targetObj, 'children', proxyitself); }
+            catch (e) { lchildren = []; }
+            // let dchildren: DPointerTargetable[] = lchildren.map<DPointerTargetable>(l => l.__raw as any);
             let lc: GObject;
             if (propKey[0] === "@") { propKey = propKey.substring(1); canThrowErrors = false; }
-            for (lc of lchildrens) {
+            for (lc of lchildren) {
                 if (lc.name === propKey) return lc;
             }
         }

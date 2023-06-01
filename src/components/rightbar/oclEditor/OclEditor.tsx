@@ -9,7 +9,7 @@ function OclEditorComponent(props: AllProps) {
     const view = props.view;
 
     const change = (value: string|undefined) => {
-        if(value !== undefined) view.query = value;
+        if (value !== undefined) view.query = value;
     }
 
     return <div style={{height: '5em'}}>
@@ -41,7 +41,7 @@ export const OclEditorConnected = connect<StateProps, DispatchProps, OwnProps, I
     mapDispatchToProps
 )(OclEditorComponent);
 
-export const OclEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <OclEditorConnected {...{...props, childrens}} />;
+export const OclEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <OclEditorConnected {...{...props, children}} />;
 }
 export default OclEditor;

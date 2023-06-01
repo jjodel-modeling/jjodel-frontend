@@ -387,30 +387,30 @@ export const TextareaConnected = connect<StateProps, DispatchProps, OwnProps, IS
 export const HTMLEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalHTMLEditor);
 export const OCLEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalOCLEditor as any);
 
-export const Input = (props: GObject & OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+export const Input = (props: GObject & OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     // props = {...props};
     // delete (props as any).children;
     return <InputConnected {...props} field={props.field} obj={props.obj} />
 }
 
-export const Select = (props: OwnSelectProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <SelectConnected {...props} field={props.field} obj={props.obj} /> // todo: might let directly accept childrens instead of OptionGroups
+export const Select = (props: OwnSelectProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <SelectConnected {...props} field={props.field} obj={props.obj} /> // todo: might let directly accept children instead of OptionGroups
 }
 
-export const Textarea = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+export const Textarea = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     // props = {...props};
     // delete (props as any).children;
     return <TextareaConnected {...props} field={props.field} obj={props.obj} />
 }
 
 
-export const HTMLEditor = (props: GObject & OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+export const HTMLEditor = (props: GObject & OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     // props = {...props};
     // delete (props as any).children;
     return <HTMLEditorConnected {...props} field={props.field} obj={props.obj} />
 }
 
-export const OCLEditor = (props: GObject & OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+export const OCLEditor = (props: GObject & OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <OCLEditorConnected {...props} field={props.field} obj={props.obj} />
 }
 

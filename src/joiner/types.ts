@@ -107,5 +107,5 @@ export type ObjectWithoutPointers<T> = Omit<ObjectWithoutStrings<T> & pureString
 
 
 
-type refkeys = "parent" | "father" | "parent" | "classifiers" | "childrens" | "classes" | "packages" | "subpackages" | "annotations" | ""
+type refkeys = "parent" | "father" | "parent" | "classifiers" | "children" | "classes" | "packages" | "subpackages" | "annotations" | ""
     | "type" | "attributes" | "references" | "operations" | "parameters" | "..... much more"

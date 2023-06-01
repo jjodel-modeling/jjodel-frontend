@@ -1,19 +1,7 @@
 import React, {Dispatch, PureComponent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {IStore} from '../../redux/store';
-import {
-    BEGIN,
-    CreateElementAction,
-    DGraph,
-    DModel,
-    DModelElement, END,
-    LModel,
-    LModelElement, LPointerTargetable,
-    Pointer,
-    Selectors,
-    SetFieldAction,
-    U
-} from '../../joiner';
+import {BEGIN, DGraph, DModel, DModelElement, END, LModel, LModelElement, Pointer, Selectors, U} from '../../joiner';
 import './style.scss';
 import {DockContext, DockLayout, PanelData, TabData} from "rc-dock";
 import {LayoutData} from "rc-dock/lib/DockData";
@@ -179,12 +167,12 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         });
     }
 
-    addMetamodel(evt: undefined|React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData, model?: DModel) {
+    async addMetamodel(evt: undefined|React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData, model?: DModel) {
         let name = 'metamodel_' + 0;
         let names: (string)[] = Selectors.getAllMetamodels().map(m => m.name);
         name = U.increaseEndingNumber(name, false, false, (newName) => names.indexOf(newName) >= 0)
         model = model || DModel.new(name, undefined, true);
-        DGraph.new(model.id);
+        // DGraph.new(model.id);  <-- viene fatto in autamatico ?
         this.OPEN(model);
     }
     addModel(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {
@@ -235,8 +223,8 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
                 this.treeEditor,
                 this.viewsEditor,
                 this.viewpointEditor,
-                this.styleEditor,
-                this.edgeEditor,
+                // this.styleEditor,
+                // this.edgeEditor,
                 this.console
             ]
         });
@@ -278,7 +266,7 @@ export const DockLayoutConnected = connect<StateProps, DispatchProps, OwnProps, 
     mapDispatchToProps
 )(DockLayoutComponent);
 
-export const Dock = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <DockLayoutConnected {...{...props, childrens}} />;
+export const Dock = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <DockLayoutConnected {...{...props, children}} />;
 }
 export default Dock;

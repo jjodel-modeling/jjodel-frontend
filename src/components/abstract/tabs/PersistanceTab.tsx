@@ -1,22 +1,25 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
-import API from "../../../api/api";
+import {Firebase} from "../../../firebase";
+import {DModel} from "../../../model/logicWrapper";
 
 
 function PersistanceTabComponent(props: AllProps) {
+    const room = props.room;
+
     return(<div>
-        <button className={'btn btn-primary'} onClick={() => API.post()}>click</button>
     </div>);
 }
 interface OwnProps {}
-interface StateProps {}
+interface StateProps {room: string}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
+    ret.room = state.room;
     return ret;
 }
 
@@ -31,7 +34,7 @@ export const PersistanceTabConnected = connect<StateProps, DispatchProps, OwnPro
     mapDispatchToProps
 )(PersistanceTabComponent);
 
-export const PersistanceTab = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <PersistanceTabConnected {...{...props, childrens}} />;
+export const PersistanceTab = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <PersistanceTabConnected {...{...props, children}} />;
 }
 export default PersistanceTab;

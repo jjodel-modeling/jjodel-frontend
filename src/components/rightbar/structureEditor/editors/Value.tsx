@@ -1,7 +1,7 @@
 import React from "react";
 import type {
     PrimitiveType,
-    Pointer, DocString, Dictionary, LReference,
+    Pointer, DocString, Dictionary, LReference, ValueDetail
 } from "../../../../joiner";
 import {
     DAttribute, DClass, DEnumerator, DModelElement,
@@ -15,12 +15,6 @@ import {
     U
 } from "../../../../joiner";
 
-type ValueDetail = {
-    value: PrimitiveType | string | LObject;
-    rawValue: PrimitiveType | string | LObject;
-    index: number;
-    hidden: boolean;
-};
 
 interface Props {value: LValue}
 function Value(props: Props) {
@@ -44,15 +38,15 @@ function Value(props: Props) {
     }
     let upperBound = feature ? (feature as LReference | LAttribute).__raw.upperBound : -1;
     if (upperBound < 0) upperBound = 999;
-    let filteredvalues: ValueDetail[] = lValue.getValue(true, false, false, false, true, true) as any;
+    let filteredvalues: ValueDetail[] = lValue.getValues(true, false, false, false, true, true) as any;
 
     const add = (event: React.MouseEvent<HTMLButtonElement>) => {
         // SetFieldAction.new(dValue, 'value', U.initializeValue(feature?.type), '+=', false);
-        SetFieldAction.new(dValue, 'value', undefined, '+=', false);
+        SetFieldAction.new(dValue, 'values', undefined, '+=', false);
     }
     const remove = (index: number, isPointer: boolean | undefined) => {
         if (isPointer === undefined) isPointer = !!(filteredvalues[index].value as any)?.__isProxy; // Pointers.isPointer
-        SetFieldAction.new(dValue, 'value', index, '-=', isPointer);
+        SetFieldAction.new(dValue, 'values', index, '-=', isPointer);
         /*
         let oldValues = filteredvalues.map( v => v.rawValue);
         let newValues = [...oldValues];

@@ -94,6 +94,7 @@ type AllProps = SelectOwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: SelectOwnProps): StateProps {
     const ret: StateProps = {} as any;
+    if (!ownProps.obj) return ret;
     const pointer: Pointer = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
     ret.data = LPointerTargetable.fromPointer(pointer);
     ret.primitives = LPointerTargetable.fromPointer(state.primitiveTypes);
@@ -112,7 +113,7 @@ export const SelectConnected = connect<StateProps, DispatchProps, SelectOwnProps
     mapDispatchToProps
 )(SelectComponent);
 
-export const Select = (props: SelectOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <SelectConnected {...{...props, childrens}} />;
+export const Select = (props: SelectOwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <SelectConnected {...{...props, children}} />;
 }
 export default Select;

@@ -1,12 +1,12 @@
 import React, {Dispatch, ReactElement} from "react";
-import {CreateElementAction, SetRootFieldAction} from "../../../redux/action/action";
+import {CreateElementAction, SetFieldAction, SetRootFieldAction} from "../../../redux/action/action";
 import {IStore} from "../../../redux/store";
 import {connect} from "react-redux";
 import {DViewPoint, Input, LViewPoint, Pointer, U} from "../../../joiner";
 
 
 function ViewpointsEditorComponent(props: AllProps) {
-
+    const views = props.views;
     const viewpoints = props.viewpoints;
     const selected = props.selected;
 
@@ -17,7 +17,9 @@ function ViewpointsEditorComponent(props: AllProps) {
         const dViewPoint = DViewPoint.new('ViewPoint', '');
         CreateElementAction.new(dViewPoint);
     }
-    const remove = (index: number) => {
+    const remove = (index: number, viewpoint: LViewPoint) => {
+        const filteredViews = views.filter(view => view.viewpoint.id === viewpoint.id);
+        for(let view of filteredViews) SetFieldAction.new(view.id, 'viewpoint', null);
         SetRootFieldAction.new('viewpoints', index, '-=', true);
     }
     const select = (viewpoint: LViewPoint) => {
@@ -41,7 +43,7 @@ function ViewpointsEditorComponent(props: AllProps) {
                     <i className={'p-1 bi bi-check2'}></i>
                 </button>
                 <button className={'btn btn-danger ms-1'} disabled={index === 0 || selected.id === viewpoint.id}
-                        onClick={(evt) => {remove(index)}}>
+                        onClick={(evt) => {remove(index, viewpoint)}}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
                 </button>
             </div>
@@ -51,7 +53,8 @@ function ViewpointsEditorComponent(props: AllProps) {
 interface OwnProps { }
 interface StateProps {
     viewpoints: LViewPoint[],
-    selected: LViewPoint
+    selected: LViewPoint,
+    views: LViewElement[]
 }
 interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -61,6 +64,7 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.viewpoints = LViewPoint.fromPointer(state.viewpoints);
     ret.selected = LViewPoint.fromPointer(state.viewpoint);
+    ret.views = LViewElement.fromPointer(state.viewelements.slice(10))
     return ret;
 }
 
@@ -75,7 +79,7 @@ export const ViewpointsEditorConnected = connect<StateProps, DispatchProps, OwnP
     mapDispatchToProps
 )(ViewpointsEditorComponent);
 
-export const ViewpointsEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <ViewpointsEditorConnected {...{...props, childrens}} />;
+export const ViewpointsEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ViewpointsEditorConnected {...{...props, children}} />;
 }
 export default ViewpointsEditor;

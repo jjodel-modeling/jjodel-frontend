@@ -439,7 +439,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             // console.log("pre-injecting", {thiss:this, data:this.props.data, props:this.props});
             let fixdoubleroot = true;
             const onDragTestInject = () => {}; // might inject event handlers like this with cloneelement
-            // add view props to GraphElement childrens (any level down)
+            // add view props to GraphElement children (any level down)
             const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap(); // todo: per passarla come prop ma mantenerla modificabile
             try {
                 let viewStyle: GObject = {};
@@ -513,6 +513,6 @@ const GraphElementConnected = connect<GraphElementReduxStateProps, GraphElementD
     GraphElementComponent.mapDispatchToProps
 )(GraphElementComponent as any);
 
-export const GraphElement = (props: GraphElementOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <GraphElementConnected {...{...props, childrens}} />; }
+export const GraphElement = (props: GraphElementOwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <GraphElementConnected {...{...props, children}} />; }
 console.info('graphElement loaded');

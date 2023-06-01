@@ -63,7 +63,7 @@ export const ModelTabConnected = connect<StateProps, DispatchProps, OwnProps, IS
     mapDispatchToProps
 )(ModelTabComponent);
 
-export const ModelTab = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <ModelTabConnected {...{...props, childrens}} />;
+export const ModelTab = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ModelTabConnected {...{...props, children}} />;
 }
 export default ModelTab;

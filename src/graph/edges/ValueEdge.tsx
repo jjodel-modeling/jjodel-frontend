@@ -74,7 +74,7 @@ export const ValueEdgeConnected = connect<StateProps, DispatchProps, OwnProps, I
     mapDispatchToProps
 )(ValueEdgeComponent);
 
-export const ValueEdge = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <ValueEdgeConnected {...{...props, childrens}} />;
+export const ValueEdge = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ValueEdgeConnected {...{...props, children}} />;
 }
 export default ValueEdge;

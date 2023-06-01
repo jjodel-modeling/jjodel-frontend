@@ -114,6 +114,6 @@ export const EdgeConnected = connect<StateProps, DispatchProps, OwnProps, IStore
     mapDispatchToProps
 )(EdgeComponent as any);
 
-export const DamEdge = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <EdgeConnected {...{...props, childrens}} isGraph={false} isVertex={true} />;
+export const DamEdge = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <EdgeConnected {...{...props, children}} isGraph={false} isVertex={true} />;
 }

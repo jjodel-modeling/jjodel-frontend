@@ -56,7 +56,7 @@ export const EdgesConnected = connect<StateProps, DispatchProps, OwnProps, IStor
     mapDispatchToProps
 )(EdgesComponent);
 
-export const Edges = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <EdgesConnected {...{...props, childrens}} />;
+export const Edges = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <EdgesConnected {...{...props, children}} />;
 }
 export default Edges;

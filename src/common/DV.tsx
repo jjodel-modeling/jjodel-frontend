@@ -57,7 +57,7 @@ class DefaultView {
                    obj={this.data.id} field={'name'} hidden={true} />
             <hr />
             <div className={'package-children'}>
-                {this.data.childrens.map((child, index) => {
+                {this.data.children.map((child, index) => {
                     return <DefaultNode key={index} data={child.id}></DefaultNode>
                 })}
             </div>
@@ -70,7 +70,7 @@ class DefaultView {
                    obj={this.data.id} field={'name'} hidden={true} autosize={true} />
             <hr/>
             <div className={'class-children'}>
-                {this.data.childrens.map((child, index) => {
+                {this.data.children.map((child, index) => {
                     return <DefaultNode key={index} data={child.id}></DefaultNode>
                 })}
             </div>
@@ -83,7 +83,7 @@ class DefaultView {
                    obj={this.data.id} field={'name'} hidden={true} autosize={true} />
             <hr />
             <div className={'enumerator-children'}>
-                {this.data.childrens.map((child, index) => {
+                {this.data.children.map((child, index) => {
                     return <DefaultNode key={index} data={child.id}></DefaultNode>
                 })}
             </div>
@@ -107,7 +107,7 @@ class DefaultView {
     public static operationm1(): string {
         return `<div className={'d-flex root operationm1'} style={{paddingRight: "6px"}}>
              {<label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>}
-            <label className={'d-block ms-auto hover-root'} style={{color:` + valuecolormap_str + `[this.props.data.value.type] || "gray"
+            <label className={'d-block ms-auto hover-root'} style={{color:` + valuecolormap_str + `[this.props.data.values.type] || "gray"
             }}>→→→{
                 <div className="hover-content">{
                     <ParameterForm operation = {this.props.data.id} vertical={true} />
@@ -135,15 +135,17 @@ class DefaultView {
         return `<div className={'d-flex root value'} style={{paddingRight: "6px"}}>
              {this.props.data.instanceof && <label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>}
              {!this.props.data.instanceof && <Input asLabel={true} obj={this.data.id} field={'name'} hidden={true} autosize={true} />}
-            <label className={'d-block ms-auto'} style={{color:` + valuecolormap_str + `[this.props.data.value.type] || "gray"
+            <label className={'d-block ms-auto'} style={{color:` + valuecolormap_str + `[this.props.data.values.type] || "gray"
             }}>: {this.props.data.valuestring()}</label>
         </div>`
     }
 
     public static defaultPackage() {
-        return `{this.data.childrens.map((child, index) => {
+        return `<div style={{backgroundColor: 'transparent', position: 'fixed', width: '-webkit-fill-available', height: '-webkit-fill-available'}}>
+            {this.data.children.map((child, index) => {
             return <DefaultNode key={index} data={child.id}></DefaultNode>
-        })}`;
+            })}
+        </div>`;
     }
 
     public static error(msg: undefined | string | JSX.Element) {

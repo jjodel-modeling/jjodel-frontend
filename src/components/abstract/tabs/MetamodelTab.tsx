@@ -60,7 +60,7 @@ export const MetamodelTabConnected = connect<StateProps, DispatchProps, OwnProps
     mapDispatchToProps
 )(MetamodelTabComponent);
 
-export const MetamodelTab = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <MetamodelTabConnected {...{...props, childrens}} />;
+export const MetamodelTab = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <MetamodelTabConnected {...{...props, children}} />;
 }
 export default MetamodelTab;

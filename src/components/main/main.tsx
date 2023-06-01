@@ -12,15 +12,15 @@ class DragContext{
     public childOrientation: "horizontal" | "vertical" | undefined = undefined;
 
     public label: string | undefined = undefined;
-    public childrens: DragContext[] = [];
+    public children: DragContext[] = [];
     // isContext: boolean = true;
     constructor(parent: DragContext | null){
         this.setType();
-        if (parent) parent.childrens.push(this);
+        if (parent) parent.children.push(this);
     }
     setType(val: string | undefined | null = undefined): this { this.type = val === null ? undefined : "LayoutGroup"; return this; }
-    /*setChildrens(childrens: (DragPanel | DragContext)[]): this {
-        this.childrens = childrens;
+    /*setChildren(children: (DragPanel | DragContext)[]): this {
+        this.children = children;
         return this;
     }*/
     emitObject(): GObject {
@@ -32,7 +32,7 @@ class DragContext{
         if (this.headerPosition) ret.headerPosition = this.headerPosition;
         if (this.content) ret.content = this.content;
         if (this.selected) ret.selected = this.selected;
-        if (this.childrens) ret.items = this.childrens.map( (c) => c.emitObject());
+        if (this.children) ret.items = this.children.map( (c) => c.emitObject());
         return ret;
     }
     setHeader(headerPosition: "none" | undefined): this {
@@ -66,21 +66,21 @@ class DragContext{
 class DragPanel extends DragContext{
     isPanel: boolean = true;
     setType(): this { this.type = "LayoutPanel"; return this; }
-    setChildrens(childrens: (DragTab)[]): this {
-        this.childrens = childrens;
+    setChildren(children: (DragTab)[]): this {
+        this.children = children;
         return this;
     }
 }
 
 class DragTab extends DragContext{
-    childrens!: never[];
+    children!: never[];
     constructor(parent: DragContext | DragPanel){
         super(parent);
     }
     isTab: boolean = true;
     setType(): this { this.type = undefined; return this; }
-    setChildrens(childrens: never[]): this {
-        this.childrens = childrens;
+    setChildren(children: never[]): this {
+        this.children = children;
         return this;
     }
 }

@@ -1,15 +1,18 @@
-import type {Overlap, GObject, Pointer, IStore, DPointerTargetable} from "../../joiner";
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
+import {IStore} from "../../redux/store";
+import {DPointerTargetable, GObject, LModelElement, LPointerTargetable, Pointer} from "../../joiner";
 import toast, {Toaster} from 'react-hot-toast';
-import {LPointerTargetable} from "../../joiner";
+
 
 function InputComponent(props: AllProps) {
     // todo: data can be injected with UX, if field is present, can take type from a metainfo like __info_of__
     const data = props.data;
     if(!data) return(<></>);
+    const getter = props.getter;
+    const setter = props.setter;
     const field = props.field;
-    const value = (data[field] !== undefined) ? data[field] : 'undefined';
+    const value = (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined';
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
@@ -28,14 +31,11 @@ function InputComponent(props: AllProps) {
     ));
 
     const change = (evt: React.ChangeEvent<HTMLInputElement>) => {
-        let val;
-        switch (evt.target.type) {
-            case "checkbox":
-            case "radio": val = evt.target.checked; break;
-            case "number": val = +evt.target.value; break;
-            default: val = evt.target.value; break;
+        if(setter) setter(evt.target.value);
+        else {
+            const target = (['checkbox', 'radio'].includes(evt.target.type)) ? evt.target.checked : evt.target.value;
+            data[field] = target;
         }
-        data[field] = val;
     }
 
     let className = (props as any).className || '';
@@ -61,6 +61,8 @@ function InputComponent(props: AllProps) {
 export interface InputOwnProps {
     obj: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
+    getter?: (data: LPointerTargetable) => string;
+    setter?: (value: string|boolean) => void;
     label?: string;
     jsxLabel?: ReactNode;
     type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|

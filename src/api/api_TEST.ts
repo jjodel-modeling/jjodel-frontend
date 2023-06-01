@@ -39,7 +39,7 @@ field can have subfields but not subvertex!
 vertice, field.
     <Vertex data={m2classobject} viewpoint={currentvp} />
 nello stile determinato dalla coppia m2classObject e currentvp,
-    ci sono in jsx altri this.childrens.map(c=><vertex data= {c} .../>)
+    ci sono in jsx altri this.children.map(c=><vertex data= {c} .../>)
 
 magari anche da altri modelli
 */

@@ -9,7 +9,7 @@
 /coverage
 
 # production
-/build
+
 
 # misc
 .DS_Store
@@ -26,3 +26,6 @@ sandbox/sandbox.tsx
 .idea/*
 .idea/misc.xml
 .idea/jodel-react.iml
+
+# Env
+src/firebase/environment.ts

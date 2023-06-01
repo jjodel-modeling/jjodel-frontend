@@ -45,8 +45,8 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     const isMetamodel: boolean = props.isMetamodel;
     const metamodel: LModel|undefined = props.metamodel;
     // const myDictValidator: Map<string, ReactNode[]> = new Map();
-    const downward: Dictionary<DocString<"DClassName">, DocString<"hisChildrens">[]> = {}
-    const addChildrens = (items: string[]) => items ? getItems(lModelElement, downward, [...new Set(items)]) : [];
+    const downward: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]> = {}
+    const addChildren = (items: string[]) => items ? getItems(lModelElement, downward, [...new Set(items)]) : [];
 
     downward["DModel"] = ["DPackage"];
     downward["DPackage"] = ["DPackage", "DClass", "DEnumerator"];
@@ -54,7 +54,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     downward["DEnumerator"] = ["DLiteral"];
     downward["DOperation"] = ["DParameter", "DException"];
 
-    // for (let parentKey in downward) myDictValidator.set(parentKey, addChildrens("package"));
+    // for (let parentKey in downward) myDictValidator.set(parentKey, addChildren("package"));
     let upward: Dictionary<DocString<"DClassName">, DocString<"hisDParents">[]> = {};
     for (let parentKey in downward){
         let vals = downward[parentKey];
@@ -138,8 +138,8 @@ export const ToolBarConnected = connect<StateProps, DispatchProps, OwnProps, ISt
     mapDispatchToProps
 )(ToolBarComponent);
 
-export const ToolBar = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <ToolBarConnected {...{...props, childrens}} />;
+export const ToolBar = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ToolBarConnected {...{...props, children}} />;
 }
 export default ToolBar;
 

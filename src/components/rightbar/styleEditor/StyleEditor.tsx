@@ -63,8 +63,8 @@ export const StyleEditorConnected = connect<StateProps, DispatchProps, OwnProps,
     mapDispatchToProps
 )(StyleEditorComponent);
 
-export const StyleEditor = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <StyleEditorConnected {...{...props, childrens}} />;
+export const StyleEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <StyleEditorConnected {...{...props, children}} />;
 }
 export default StyleEditor;
 

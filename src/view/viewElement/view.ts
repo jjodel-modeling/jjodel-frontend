@@ -206,7 +206,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return true;
     }
 
-    get_childrens(context: Context): never[] { return []; }
+    get_children(context: Context): never[] { return []; }
     get_bendingMode(context: Context): D["bendingMode"] { return context.data.bendingMode; }
     set_bendingMode(val: D["bendingMode"], context: Context): boolean {
         return this.set_generic_entry(context, 'bendingMode', val);

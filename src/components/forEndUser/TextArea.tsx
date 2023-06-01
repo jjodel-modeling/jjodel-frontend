@@ -64,7 +64,7 @@ export const TextAreaConnected = connect<StateProps, DispatchProps, TextAreaOwnP
     mapDispatchToProps
 )(TextAreaComponent);
 
-export const TextArea = (props: TextAreaOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <TextAreaConnected {...{...props, childrens}} />;
+export const TextArea = (props: TextAreaOwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <TextAreaConnected {...{...props, children}} />;
 }
 export default TextArea;

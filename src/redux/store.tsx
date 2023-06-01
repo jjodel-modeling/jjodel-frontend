@@ -50,7 +50,7 @@ import {
     LUser,
     LValue, LViewElement, DViewPoint,
     RuntimeAccessible, SetFieldAction,
-    SetRootFieldAction, ShortAttribETypes
+    SetRootFieldAction, ShortAttribETypes, Selectors,
 } from "../joiner";
 
 import React from "react";
@@ -115,14 +115,17 @@ export class IStore {
     returnTypes: Pointer<DClass, 0, "N", LClass> = [];
     /// DClass section end
 
-    isEdgePending: {user: Pointer<DUser, 1, 1, LUser>, source: Pointer<DClass, 1, 1, LClass>} = {user: '', source: ''};
+    isEdgePending: { user: Pointer<DUser, 1, 1, LUser>, source: Pointer<DClass, 1, 1, LClass> } = {
+        user: '',
+        source: ''
+    };
 
-    contextMenu: {display: boolean, x: number, y: number} = { display: false, x: 0, y: 0 };
+    contextMenu: { display: boolean, x: number, y: number } = {display: false, x: 0, y: 0};
 
     //dragging: {random: number, id: string} = { random: 0, id: "" }; fix
     edges: EdgeOptions[] = [];  // delete
 
-    deleted : string[] = [];
+    deleted: string[] = [];
 
     objects: Pointer<DObject, 0, 'N', LObject> = [];
     values: Pointer<DValue, 0, 'N', LValue> = [];
@@ -134,14 +137,16 @@ export class IStore {
         modelElement: Pointer<DModelElement, 0, 1> // if a node is clicked: a node and a view are present, a modelElement might be. a node can exist without a modelElement counterpart.
     };
     users: Pointer<DUser, 1, 'N', LUser>;
-    _edgeSettings = { strokeWidth: 1, color: '#000000', zIndex: 150, path: 'smooth' }
-    _edgesDisplayed = { extend: true, referenceM2: true, referenceM1: true }
+    _edgeSettings = {strokeWidth: 1, color: '#000000', zIndex: 150, path: 'smooth'}
+    _edgesDisplayed = {extend: true, referenceM2: true, referenceM1: true}
 
     viewpoint: Pointer<DViewPoint, 1, 1, LViewPoint> = '';
     viewpoints: Pointer<DViewPoint, 0, 'N', LViewPoint> = [];
 
     m2models: Pointer<DModel, 0, 'N', LModel> = [];
     m1models: Pointer<DModel, 0, 'N', LModel> = [];
+
+    room: string = '';
 
 
     constructor() {
@@ -152,137 +157,99 @@ export class IStore {
     }
 
     static fakeinit(store?: IStore): void {
-        const graphDefaultViews: DViewElement[] = makeDefaultGraphViews();
-        for (let graphDefaultView of graphDefaultViews) { CreateElementAction.new(graphDefaultView); }
+        // const graphDefaultViews: DViewElement[] = makeDefaultGraphViews();
+        // for (let graphDefaultView of graphDefaultViews) { CreateElementAction.new(graphDefaultView); }
 
-        const viewpoint = DViewPoint.new('Default', '');
+        const viewpoint = DViewPoint.new('Default', '', false);
+        viewpoint.id = 'Pointer_DefaultViewPoint'; todo don't double create'
         CreateElementAction.new(viewpoint);
         SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
-/*
-        const dMetaModel = DModel.new("Metamodel", undefined, true, true);
-        // CreateElementAction.new(dMetaModel);
-        CreateElementAction.new(DGraph.new(dMetaModel.id));
-        SetRootFieldAction.new('metamodel', dMetaModel.id, '', true);
 
-*/
+        const views: DViewElement[] = makeDefaultGraphViews();
+        for (let view of views) {
+            view.id = 'Pointer_View' + view.name;
+            view.viewpoint = 'Pointer_DefaultViewPoint';
+            CreateElementAction.new(view);
+        }
 
         for (let primitiveType of Object.values(ShortAttribETypes)) {
             let dPrimitiveType;
             if (primitiveType === ShortAttribETypes.void) continue; // or make void too without primitiveType = true, but with returnType = true?
-            else dPrimitiveType = DClass.new(primitiveType, false, false, true, false, '',undefined, true);
-            // CreateElementAction.new(dPrimitiveType);
+            else {
+                dPrimitiveType = DClass.new(primitiveType, false, false, true, false, '', undefined, false);
+                dPrimitiveType.id = 'Pointer_' + dPrimitiveType.name.toUpperCase();
+                CreateElementAction.new(dPrimitiveType);
+            }
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
         }
-/*
+
+        /*
         const returnTypes = ["void", "undefined", "null"]; // rimosso undefined dovrebbe essere come void (in ShortAttribEtypes, null è ritornato solo dalle funzioni che normalmente ritornano qualche DObject, quindi tipizzato con quel DObject
         for (let returnType of returnTypes) {
             const dReturnType = DClass.new(returnType);
             CreateElementAction.new(dReturnType);
             SetRootFieldAction.new("returnTypes", dReturnType.id, '+=', true);
-        }*/
-
-        /*
-        const dMetaModel = DModel.new("Metamodel");
-        CreateElementAction.new(dMetaModel);
-        CreateElementAction.new(DGraph.new(dMetaModel.id));
-
-        const dModel: DModel = DModel.new('Model');
-        dModel.isMetamodel = false; dModel.father = dMetaModel.id;
-        CreateElementAction.new(dModel);
-        CreateElementAction.new(DGraph.new(dModel.id));
-        SetFieldAction.new(dMetaModel, 'models', dModel.id, '+=', true);
+        }
         */
 
-    }
-
-    static makeM3Test(fireAction: boolean = true, outElemArray: DPointerTargetable[] = []): DModel {
-        const me: DClass = DClass.new('ModelElement', true);
-        const annotation: DClass = DClass.new('Annotation');
-        annotation.implements = [me.id];
-        const namedElement: DClass = DClass.new('NamedElement');
-        const attribname: DAttribute = DAttribute.new('name');
-        namedElement.implements = [me.id]; // , classifier.id, namedelement.id, modelelement.id]
-        namedElement.attributes = [attribname.id];
-
-        // todo: uncomment const pkg: DClass = new DClass('M3Package');
-        const pkg: DPackage = DPackage.new('M3Package');
-        const attriburi: DAttribute = DAttribute.new('uri');
-        // todo: uncomment pkg.implements = [namedElement.id];
-        // todo: uncomment pkg.attributes = [attriburi.id];
-        const classifierref: DReference = DReference.new('classifiers');
-        // todo: uncomment pkg.references = [classifierref.id];
-
-        const model: DClass = DClass.new('M3');
-        const pkgref: DReference = DReference.new('package');
-        model.implements = [namedElement.id];
-        //pkgref.type = pkg.id;
-        const classe: DClass = DClass.new('Class', false, true);
-        classifierref.type = classe.id;
-        classe.implements = [namedElement.id]; // , classifier.id, namedelement.id, modelelement.id]
-        /// model itself outside of ecore
-        const m3: DModel = DModel.new('M3');
-        m3.packages = [pkg.id];
-        // const m3graph: DGraph = DGraph.create(m3.id);
-        const m3graph: DGraph = DGraph.new(m3.id);
-        // m3.modellingElements = [me.id, annotation.id, namedElement.id, attribname.id, pkg.id, attriburi.id, classifierref.id, pkgref.id, classe.id];
-        // dispatching actions
-
-
-        const editinput = "<Input className={''} field={'name'} />";
-        // let m3view: DViewElement = new DViewElement('m3View', '<p style={{display: "flex", flexFlow: "wrap"}}><h1>m3view {this.data.name + (this.data.id)}</h1><i>{JSON.stringify(Object.keys(this))}</i>' + editinput + '</p>');
-        // let editView: DViewElement = makeEditView();
-        let graphDefaultViews: DViewElement[] = makeDefaultGraphViews();
-        outElemArray.push.call(outElemArray, m3, m3graph, me, annotation, namedElement, attribname, pkg, attriburi, classifierref, pkgref, classe, ...graphDefaultViews);
-        return m3;
     }
 }
 function makeDefaultGraphViews(): DViewElement[] {
 
-    let mview: DViewElement = DViewElement.new('ModelDefaultView', DV.modelView(), undefined, '', '', '', [DModel.name]);
-    mview.draggable = false; mview.resizable = false; // mview.adaptWidth = true; mview.adaptHeight = true;
-    mview.adaptHeight = '-webkit-fill-available';
-    mview.adaptWidth = '-webkit-fill-available';
+    let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.name]);
+    modelView.draggable = false; modelView.resizable = false;
+    modelView.adaptHeight = '-webkit-fill-available';
+    modelView.adaptWidth = '-webkit-fill-available';
 
-    let pkgview: DViewElement = DViewElement.new('PackageDefaultView', DV.packageView(), undefined, '', '', '', [DPackage.name]);
-    pkgview.width = 500; pkgview.height = 500;
+    let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.name]);
+    packageView.width = 500; packageView.height = 500;
+    packageView.adaptHeight = false;
+    packageView.adaptWidth = false;
 
-    let cview: DViewElement = DViewElement.new('ClassDefaultView', DV.classView(), undefined, '', '', '', [DClass.name]);
+    let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.name]);
+    classView.adaptHeight = 'fit-content';
+    classView.adaptWidth = false;
 
-    let eview: DViewElement = DViewElement.new('EnumDefaultView', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.name]);
+    let enumView: DViewElement = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.name]);
+    enumView.adaptHeight = 'fit-content';
+    enumView.adaptWidth = false;
 
-    let aview: DViewElement = DViewElement.new('AttribDefaultView', DV.attributeView(), undefined, '', '', '', [DAttribute.name]);
+    let attributeView: DViewElement = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.name]);
+    attributeView.draggable = false; attributeView.resizable = false;
+    attributeView.adaptWidth = true; attributeView.display = 'contents';
+    attributeView.height = 0; attributeView.adaptHeight = 'fit-content';
 
+    let referenceView: DViewElement = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.name]);
+    referenceView.draggable = false; referenceView.resizable = false;
+    referenceView.adaptWidth = true; referenceView.display = 'contents';
+    referenceView.height = 0; referenceView.adaptHeight = 'fit-content';
 
-    let rview: DViewElement = DViewElement.new('RefDefaultView', DV.referenceView(), undefined, '', '', '', [DReference.name]);
+    let operationView: DViewElement = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.name]);
+    operationView.draggable = false; operationView.resizable = false;
+    operationView.adaptWidth = true; operationView.display = 'contents';
+    operationView.height = 0; operationView.adaptHeight = 'fit-content';
 
+    let literalView: DViewElement = DViewElement.new('Literal', DV.literalView(), undefined, '', '', '', [DEnumLiteral.name]);
+    literalView.draggable = false; literalView.resizable = false;
+    literalView.adaptWidth = true; literalView.display = 'contents';
+    literalView.height = 0; literalView.adaptHeight = 'fit-content';
 
-    let oview: DViewElement = DViewElement.new('OperationDefaultView', DV.operationView(), undefined, '', '', '', [DOperation.name]);
+    let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.name]);
+    objectView.adaptHeight = 'fit-content';
+    objectView.adaptWidth = false;
 
-
-    let literalView: DViewElement = DViewElement.new('LiteralDefaultView', DV.literalView(), undefined, '', '', '', [DEnumLiteral.name]);
-
-
-    let objectView: DViewElement = DViewElement.new('ObjectDefaultView', DV.objectView(), undefined, '', '', '', [DObject.name]);
-
-    let valueView: DViewElement = DViewElement.new('ValueDefaultView', DV.valueView(), undefined, '', '', '', [DValue.name]);
+    let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.name]);
+    valueView.draggable = false; valueView.resizable = false;
+    valueView.adaptWidth = true; valueView.display = 'contents';
+    valueView.height = 0; valueView.adaptHeight = 'fit-content';
 
     const defaultPackage: DViewElement = DViewElement.new('Default Package', DV.defaultPackage());
-    defaultPackage.draggable = false; defaultPackage.resizable = false; defaultPackage.adaptWidth = false; defaultPackage.adaptHeight = false;
-    defaultPackage.query = `metamodel.packages.filter((pkg) => {return pkg.name === 'default'})`;
+    defaultPackage.draggable = false; defaultPackage.resizable = false;
+    defaultPackage.adaptHeight = '-webkit-fill-available';
+    defaultPackage.adaptWidth = '-webkit-fill-available';
+    defaultPackage.query = `context DPackage inv: self.name = 'default'`;
 
-    pkgview.subViews = [cview.id]; // childrens can use this view too todo: this is temporary
-
-    let alldefaultViews = [mview, pkgview, cview, eview, aview, rview, oview, literalView, objectView, valueView, defaultPackage];
-    mview.subViews = [mview.id, ...alldefaultViews.slice(1).map(e => e.id)]// childrens can use this view too todo: this is temporary, should just be the sliced map of everything else.
-    return alldefaultViews;
-}
-
-function makeEditView(): DViewElement{
-    // let jsx = <p><h1>edit view of {this.data.name}</h1><Input className={'raw'} obj={this.view.id} field={((getPath as DViewElement).jsxString as any).$}/></p>;
-    let jsxstring = '<p style={{display: "flex", flexFlow: "wrap"}}><h1>edit view of {this.data.name}</h1><Textarea obj={this.views[1].id} field={((getPath).jsxString).$}/></p>;';
-    let view: DViewElement = DViewElement.new('EditView', jsxstring);
-    view.subViews = [view.id]; // childrens can use this view too, this is indented and likely definitive.
-    return view;
+    return [modelView, packageView, classView, enumView, attributeView, referenceView, operationView, literalView, objectView, valueView, defaultPackage];
 }
 /*
 class SynchStore{// shared on session
