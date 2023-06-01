@@ -46,7 +46,7 @@ function InputComponent(props: AllProps) {
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
     return(<div style={{...{display: (jsxLabel || label) ? 'flex' : 'block', cursor: (tooltip) ? 'help' : 'auto'}, ...style}}
-                className={'p-1 ' + className}>
+                className={'p-1 ' + className} key={props.key}>
         {(label && !jsxLabel) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
             {label}
         </label>}
@@ -58,7 +58,7 @@ function InputComponent(props: AllProps) {
         {tooltip && <Toaster position={'bottom-center'} /> }
     </div>);
 }
-interface OwnProps {
+export interface InputOwnProps {
     obj: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
     label?: string;
@@ -70,14 +70,15 @@ interface OwnProps {
     hidden?: boolean;
     autosize?: boolean;
     inputClassName?: string;
-    asLabel?: boolean
+    asLabel?: boolean;
+    key?: React.Key | null;
 }
 interface StateProps { data: LPointerTargetable & GObject; }
 interface DispatchProps { }
-type AllProps = OwnProps & StateProps & DispatchProps;
+type AllProps = InputOwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: IStore, ownProps: InputOwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer: Pointer = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
     ret.data = LPointerTargetable.fromPointer(pointer);
@@ -89,13 +90,12 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret;
 }
 
-
-export const InputConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const InputConnected = connect<StateProps, DispatchProps, InputOwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
 )(InputComponent);
 
-export const Input = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+export const Input = (props: InputOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     return <InputConnected {...{...props, childrens}} />;
 }
 export default Input;

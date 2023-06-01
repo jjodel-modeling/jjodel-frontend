@@ -1,6 +1,9 @@
 import ReactJson from 'react-json-view' // npm i react-json-view
+import type { GraphElementOwnProps } from "../joiner";
+import type { InputOwnProps } from '../components/forEndUser/Input';
+import type { SelectOwnProps } from '../components/forEndUser/Select';
+import type { TextAreaOwnProps } from '../components/forEndUser/TextArea';
 import {GObject, Dictionary, DocString, LPointerTargetable, U, Log, GraphElementComponent} from "../joiner";
-import type {GraphElementOwnProps} from "../joiner";
 import {windoww, JsType, RuntimeAccessible} from "../joiner";
 import React, {ReactElement, ReactNode} from "react";
 import withReactContent from "sweetalert2-react-content";
@@ -44,6 +47,16 @@ export class UX{
                 //    {'re.props.obj.id': re.props.obj?.id, 're.props.obj': re.props.obj, 'thiss.props.data.id': thiss.props.data.id, thiss, re, objid, ret, 'ret.props': ret.props});
                 return ret;*/
             // case windoww.Components.GraphElement.name:
+            case windoww.Components.Input.name:
+            case windoww.Components.Select.name:
+            case windoww.Components.TextArea.name:
+                // todo: can i do a injector that if the user provides a ModelElement list raw <div>{this.children}</div> it wraps them in DefaultNode?
+                const injectProps2: InputOwnProps | SelectOwnProps | TextAreaOwnProps = {} as any;
+                const parentnodeid = parentComponent.props.node?.id;
+                injectProps2.obj = re.props.data || (typeof re.props.data === "string" ? re.props.data : re.props.data?.id);
+                injectProps2.key = re.props.key || (parentnodeid + "^input_"+index);
+                // console.log("cloning jsx input:", re, injectProps2);
+                return React.cloneElement(re, injectProps2);
             case windoww.Components.GraphElementComponent.name:
             // case windoww.Components.DefaultNode.name:
             case windoww.Components.DefaultNodeComponent.name:
@@ -60,14 +73,14 @@ export class UX{
                 // const vidmap = GraphElementRaw.graphVertexID_counter;
                 // if (!vidmap[injectProps.graphid]) vidmap[injectProps.graphid] = {};
                 // const gvidmap = vidmap[injectProps.graphid];
-                const validVertexIdCondition = (id: string): boolean => gvidmap_useless[id];
+                // const validVertexIdCondition = (id: string): boolean => gvidmap_useless[id];
                 // todo: come butto dei sotto-vertici dentro un vertice contenitore? o dentro un sotto-grafo? senza modificare il jsx ma solo draggando?
                 const dataid = typeof re.props.data === "string" ? re.props.data : re.props.data?.id;
                 const idbasename: string = (injectProps.parentnodeid)+"^"+index;//injectProps.graphid + '^' + dataid;
                 // console.log("setting nodeid", {injectProps, props:re.props, re});
                 Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
-                injectProps.nodeid = U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
-                gvidmap_useless[injectProps.nodeid] = true;
+                injectProps.nodeid = idbasename; // U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
+                // gvidmap_useless[injectProps.nodeid] = true;
                 injectProps.key = injectProps.nodeid; // re.props.key || thiss.props.view.id + '_' + thiss.props.data.id;
                 // console.log("cloning jsx:", re, injectProps);
                 return React.cloneElement(re, injectProps);

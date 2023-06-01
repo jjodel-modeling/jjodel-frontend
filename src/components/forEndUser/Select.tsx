@@ -44,7 +44,7 @@ function SelectComponent(props: AllProps) {
     const classes: LClass[] = data.model.classes;
     const enumerators: LEnumerator[] = data.model.enumerators;
 
-    return(<div className={'d-flex p-1'}>
+    return(<div className={'d-flex p-1'} key={props.key}>
         {(label && !jsxLabel) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
             {label}
         </label>}
@@ -77,7 +77,7 @@ function SelectComponent(props: AllProps) {
         {(tooltip) && <Toaster position={'bottom-center'} />}
     </div>);
 }
-interface OwnProps {
+export interface SelectOwnProps {
     obj: DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
     label?: string;
@@ -85,13 +85,14 @@ interface OwnProps {
     tooltip?: string;
     hidden?: boolean;
     options?: JSX.Element;
+    key?: React.Key | null;
 }
 interface StateProps { data: LPointerTargetable & GObject; primitives: LClass[]; returns: LClass[]; }
 interface DispatchProps { }
-type AllProps = OwnProps & StateProps & DispatchProps;
+type AllProps = SelectOwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: IStore, ownProps: SelectOwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer: Pointer = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
     ret.data = LPointerTargetable.fromPointer(pointer);
@@ -106,12 +107,12 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const SelectConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const SelectConnected = connect<StateProps, DispatchProps, SelectOwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
 )(SelectComponent);
 
-export const Select = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+export const Select = (props: SelectOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     return <SelectConnected {...{...props, childrens}} />;
 }
 export default Select;

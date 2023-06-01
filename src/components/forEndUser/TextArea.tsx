@@ -20,7 +20,7 @@ function TextAreaComponent(props: AllProps) {
         data[field] = target;
     }
 
-    return(<div style={{display: (jsxLabel || label) ? 'flex' : 'block'}} className={'p-1'}>
+    return(<div style={{display: (jsxLabel || label) ? 'flex' : 'block'}} className={'p-1'} key={props.key}>
         {(label && !jsxLabel) && <label className={'my-auto'}>
             {label}
         </label>}
@@ -31,7 +31,7 @@ function TextAreaComponent(props: AllProps) {
                onChange={change} value={value} />
     </div>);
 }
-interface OwnProps {
+export interface TextAreaOwnProps {
     obj: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
     label?: string;
@@ -39,13 +39,14 @@ interface OwnProps {
     readonly?: boolean;
     tooltip?: string;
     hidden?: boolean;
+    key?: React.Key | null;
 }
 interface StateProps { data: LPointerTargetable & GObject; }
 interface DispatchProps { }
-type AllProps = OwnProps & StateProps & DispatchProps;
+type AllProps = TextAreaOwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: IStore, ownProps: TextAreaOwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer: Pointer = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
     ret.data = LPointerTargetable.fromPointer(pointer);
@@ -58,12 +59,12 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const TextAreaConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const TextAreaConnected = connect<StateProps, DispatchProps, TextAreaOwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
 )(TextAreaComponent);
 
-export const TextArea = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
+export const TextArea = (props: TextAreaOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
     return <TextAreaConnected {...{...props, childrens}} />;
 }
 export default TextArea;
