@@ -56,7 +56,7 @@
 
 [data-nodetype="Graph"]{
   position: absolute !important;
-  // overflow: hidden;
+  overflow: hidden !important;
   &:hover{ overflow: hidden; }
   height: -webkit-fill-available;
   width: -webkit-fill-available;
