@@ -3,7 +3,7 @@ import type {LViewElement, LViewPoint, DViewPoint} from "../../../joiner";
 import {SetFieldAction, SetRootFieldAction} from "../../../redux/action/action";
 import OclEditor from "../oclEditor/OclEditor";
 import JsxEditor from "../jsxEditor/JsxEditor";
-import {Select, TextArea, Input} from "../../../joiner";
+import {Select, TextArea, Input, U} from "../../../joiner";
 
 interface Props { view: LViewElement; viewpoints: LViewPoint[]; }
 
@@ -16,6 +16,8 @@ let classesOptions =
 function ViewData(props: Props) {
     const view = props.view;
     const viewpoints = props.viewpoints;
+    const readOnly = U.getDefaultViewsID().includes(view.id);
+
 
     const back = (evt: React.MouseEvent<HTMLButtonElement>) => {
         SetRootFieldAction.new('stackViews', undefined, '-=', true);
@@ -59,7 +61,8 @@ function ViewData(props: Props) {
         <Input data={view} field={"scalezoomy"} label={"Zoom Y"} type={"number"}/>
         <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Force Node</label>
-            <select className={'my-auto ms-auto select'} value={view.forceNodeType} onChange={changeFN}>
+            <select className={'my-auto ms-auto select'} disabled={readOnly}
+                    value={view.forceNodeType} onChange={changeFN}>
                 <option value={undefined}>-----</option>
                 {['Graph', 'GraphVertex', 'Vertex', 'Field'].map((node, index) => {
                     return(<option key={index} value={node}>{node}</option>);
@@ -69,8 +72,6 @@ function ViewData(props: Props) {
 
         {/*from damiano: il primo StoreSize tooltip funziona, il secondo no. perchè?
         l'html viene popolato correttamente ma risulta opacità 0, puoi cercare di risolverlo tu?*/}
-        <Input data={view} field={"storeSize"} label={"store Size"} tooltip={
-            <div>"Active: the node position depends from the view currently displayed. Inactive: it depends from the graph."</div>} type={"checkbox"} />
         <Input data={view} field={"storeSize"} label={"Store Size"} type={"checkbox"} tooltip={true}/>
         <Input data={view} field={"lazySizeUpdate"} label={"Lazy Update"} type={"checkbox"} tooltip={true}/>
         <Input data={view} field={"adaptWidth"} label={"Adapt Width"} type={"checkbox"}/>
@@ -79,7 +80,8 @@ function ViewData(props: Props) {
         <Input data={view} field={"resizable"} label={"Resizable"} type={"checkbox"}/>
         <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Viewpoint</label>
-            <select className={'my-auto ms-auto select'} value={String(view.viewpoint?.id)} onChange={changeVP}>
+            <select className={'my-auto ms-auto select'} disabled={readOnly}
+                    value={String(view.viewpoint?.id)} onChange={changeVP}>
                 <option value={'null'}>-----</option>
                 {viewpoints.map((viewpoint, index) => {
                     return(<option key={index} value={viewpoint.id}>{viewpoint.name}</option>);
@@ -93,9 +95,9 @@ function ViewData(props: Props) {
 
         {/* damiano: qui Select avrebbe fatto comodo, ma è troppo poco generica, remove "data-" se viene generizzata Select */}
         <div className="p-1" style={{display: "flex"}}><label className="my-auto">Appliable to</label>
-            <select data-obj={view.id} data-field={'appliableToClasses'} data-label={'Appliable to'} data-options={ classesOptions }
+            <select data-obj={view.id} data-field={'appliableToClasses'} data-label={'Appliable to'} data-options={classesOptions}
                 value={view.appliableToClasses[0] || ''} onChange={(e) => { view.appliableToClasses = e.target.value as any; }}
-                className={"my-auto ms-auto select"}>
+                className={"my-auto ms-auto select"} disabled={readOnly}>
             {classesOptions}
             </select>
         </div>

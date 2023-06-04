@@ -1,15 +1,15 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
-import {DPointerTargetable, GObject, Info, LModelElement, LPointerTargetable, Overlap, Pointer} from "../../joiner";
+import {DPointerTargetable, GObject, Info, LPointerTargetable, Overlap, Pointer, U} from "../../joiner";
 import toast, {Toaster} from 'react-hot-toast';
-import {SelectOwnProps} from "./Select";
 
 
 function InputComponent(props: AllProps) {
     // todo: data can be injected with UX, if field is present, can take type from a metainfo like __info_of__
     const data = props.data;
     if(!data) return(<></>);
+    const readOnly = props.readonly || U.getDefaultViewsID().includes(data.id);
     const getter = props.getter;
     const setter = props.setter;
     const field = props.field;
@@ -17,6 +17,7 @@ function InputComponent(props: AllProps) {
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
+    /*
     let tooltip: string | React.ReactElement | Info = props.tooltip === true ? data["__info_of__" + field] : (props.tooltip || undefined);
     if (typeof tooltip === "object" && (tooltip as Info).txt) {
         tooltip = <div className={"tooltip"}>
@@ -24,6 +25,9 @@ function InputComponent(props: AllProps) {
             <span className={"txt"}>{(tooltip as Info).txt}</span>
         </div>;
     }
+    */
+    let tooltip: string = (props.tooltip === true) ? (data["__info_of__" + field]) ? data["__info_of__" + field].txt : '' : '';
+
     let css = 'my-auto input ';
     let inputClassName = (props.inputClassName || '');
     css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
@@ -38,6 +42,7 @@ function InputComponent(props: AllProps) {
     ));
 
     const change = (evt: React.ChangeEvent<HTMLInputElement>) => {
+        if(readOnly) return;
         if(setter) setter(evt.target.value);
         else {
             const target = (['checkbox', 'radio'].includes(evt.target.type)) ? evt.target.checked : evt.target.value;
@@ -48,7 +53,7 @@ function InputComponent(props: AllProps) {
     let className = (props as any).className || '';
     let style = (props as any).style || {};
     props = {...props, className:'', style:{}} as any;
-    let input = <input spellCheck={false} readOnly={props.readonly} className={css + inputClassName}
+    let input = <input spellCheck={false} readOnly={readOnly} className={css + inputClassName}
                        type={type} value={value} onChange={change}
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 

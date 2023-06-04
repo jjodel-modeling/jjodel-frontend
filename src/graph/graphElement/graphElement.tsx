@@ -394,10 +394,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         })});
     }
     onClick(e: React.MouseEvent): void {
+        SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
         const isEdgePending = (this.props.isEdgePending?.source);
         if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
         if (this.props.data.className !== "DClass") return;
-        SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
         e.stopPropagation();
         // const user = this.props.isEdgePending.user;
         const source = isEdgePending;

@@ -80,7 +80,7 @@ statehistory[DUser.current] = {undoable:[], redoable:[]}; // todo: make it able 
 
 (window as any).statehistory = statehistory;
 export class IStore {
-    debug: boolean = true;
+    debug: boolean = false;
     logs: Pointer<DLog, 0, 'N', LLog> = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
     currentUser: DUser;
@@ -225,8 +225,8 @@ function makeDefaultGraphViews(): DViewElement[] {
 
     let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.name]);
 
-    const defaultPackage: DViewElement = DViewElement.new('Default Package', DV.defaultPackage());
-    defaultPackage.query = `context DPackage inv: self.name = 'default'`;
+    const defaultPackage: DViewElement = DViewElement.new('DefaultPackage', DV.defaultPackage());
+    defaultPackage.query = `context DPackage inv: self.name = 'todo default pkg'`;
 
     return [modelView, packageView, classView, enumView, attributeView, referenceView, operationView, literalView, objectView, valueView, defaultPackage];
 }

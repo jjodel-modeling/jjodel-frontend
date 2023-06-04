@@ -137,7 +137,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     bendingMode!: EdgeBendingMode;
     storeSize!: boolean;
     // __info_of__storeSize: Info = {type: ShortAttribETypes.EBoolean, txt:<><div>Whether the node position should depend from the View or the Graph.</div><div>Enabled = share positions on different graphs but changes it if view is changed.</div></>}
-    __info_of__storeSize: Info = {type: ShortAttribETypes.EBoolean, txt: <><div>Active: the node position depends from the view currently displayed.</div><div>Inactive: it depends from the graph.</div></>}
+    __info_of__storeSize: Info = {type: ShortAttribETypes.EBoolean, txt: "Active: the node position depends from the view currently displayed.\nInactive: it depends from the graph."}
     lazySizeUpdate!: boolean;
     __info_of__lazySizeUpdate: Info = {type: ShortAttribETypes.EBoolean,txt: "When activated, the layout position will only be updated once when the drag or resize operation is completed. (best performance)"}
 

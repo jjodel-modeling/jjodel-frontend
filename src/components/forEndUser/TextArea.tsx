@@ -1,12 +1,14 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
-import {DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer} from "../../joiner";
+import {DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer, U} from "../../joiner";
 import {SelectOwnProps} from "./Select";
 
 
 function TextAreaComponent(props: AllProps) {
     const data = props.data;
+    if(!data) return(<></>);
+    const readOnly = props.readonly || U.getDefaultViewsID().includes(data.id);
     const field = props.field;
     const value = (data[field] !== undefined) ? data[field] : 'undefined';
     const label: string|undefined = props.label;
@@ -35,7 +37,7 @@ function TextAreaComponent(props: AllProps) {
         {(jsxLabel && !label) && <label className={'my-auto'}>
             {jsxLabel}
         </label>}
-        <textarea spellCheck={false} readOnly={props.readonly} className={css}
+        <textarea spellCheck={false} readOnly={readOnly} className={css}
                onChange={change} value={value} />
     </div>);
 }

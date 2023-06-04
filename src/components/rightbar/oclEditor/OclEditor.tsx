@@ -1,12 +1,13 @@
-import React, {Dispatch, ReactElement} from "react";
+import React, {Dispatch, ReactElement, useEffect} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
-import {DPointerTargetable, DViewElement, GObject, LPointerTargetable, LViewElement, Pointer} from "../../../joiner";
+import {DViewElement, LViewElement, Pointer, U} from "../../../joiner";
 import Editor from "@monaco-editor/react";
 
 
 function OclEditorComponent(props: AllProps) {
     const view = props.view;
+    const readOnly = U.getDefaultViewsID().includes(view.id);
 
     const change = (value: string|undefined) => {
         if (value !== undefined) view.query = value;
@@ -14,7 +15,7 @@ function OclEditorComponent(props: AllProps) {
 
     return <div style={{height: '5em'}}>
         <label className={'ms-1'}>OCL Editor</label>
-        <Editor className={'mx-1'} onChange={change}
+        <Editor className={'mx-1'} onChange={change} options={{readOnly: readOnly}}
                 defaultLanguage={'js'} value={view.query} />
     </div>;
 }

@@ -18,7 +18,9 @@ function ContextMenuComponent(props: AllProps) {
     if (!node) return <></>;
     // const component = GraphElementComponent.map[node.id];
 
-    const close = () => { SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); }
+    const close = () => {
+        SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
+    }
     const addView = () => {
         if(me) {
             const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
@@ -51,7 +53,7 @@ function ContextMenuComponent(props: AllProps) {
         jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={"col item"}>Down</div>);
         jsxList.push(<div onClick={() => {close(); addView();}} className={"col item"}>Add View</div>);
         jsxList.push(<div onClick={() => {close(); me?.delete();}} className={"col item"}>Delete</div>);
-        if (node.className.includes("Vertex")) jsxList.push(<div onClick={() => { close(); resetSize(); }} className={"col item"}>Reset manual resizing</div>);
+        if (node.className.includes("Vertex")) jsxList.push(<div onClick={() => { close(); resetSize(); }} className={"col item"}>Reset</div>);
         switch (me.className) {
             case 'DValue': if ((me as any as LValue).instanceof) jsxList.pop(); break;
             case 'DClass':
@@ -63,7 +65,8 @@ function ContextMenuComponent(props: AllProps) {
         }
     }
     return(<>
-        <div className={"context-menu round"} style={{top: position.y - 100, left: position.x - 10}}>
+        <div tabIndex={-1} className={"context-menu round"}
+             style={{top: position.y - 100, left: position.x - 10}}>
             {jsxList.map((jsx, index) => { return <div key={index}>{jsx}</div>; })}
         </div>
     </>);

@@ -69,13 +69,14 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     // upward["DClass"] = ["_pDPackage", "DClass", "DEnumerator"];
 
     if (isMetamodel) {
-        return(<div className={"toolbar"}>
-            <h6>Add sibling</h6>
+        return(<div className={"toolbar mt-2"}>
+            <b className={'d-block text-center text-uppercase mb-1'}>Add sibling</b>
             {lModelElement && addChildren(upward[lModelElement.className])}
-            <hr />
-            <h6>Add sublevel</h6>
+            <hr className={'my-2'} />
+            <b className={'d-block text-center text-uppercase mb-1'}>Add sublevel</b>
             {lModelElement && addChildren(downward[lModelElement.className])}
             <div className={"toolbar-item annotation"} onClick={() => select(lModelElement.addChild("annotation"))}>+annotation</div>
+            <hr className={'my-2'} />
         </div>);
     }
     else {
@@ -84,19 +85,20 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         const lobj: LObject | undefined = lModelElement.className === "DObject" ? lModelElement as LObject : undefined;
         const lfeat: LValue | undefined = lModelElement.className === "DValue" ? lModelElement as LValue : undefined;
 
-        return(<div className={"toolbar"}>
-            <h5>Add root level</h5>
+        return(<div className={"toolbar mt-2"}>
+            <b className={'d-block text-center text-uppercase mb-1'}>Add root level</b>
             {classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
                 return <div key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => { select(model.addObject(lClass.id)) }}>
                     +{lClass.name}
                 </div>
             })}
             <div key={"RawObject"} className={"toolbar-item class"} onClick={() => { select(model.addObject()); }}>+Object</div>
-            <hr />
-            <h5>Add sublevel</h5>
+            <hr className={'my-2'} />
+            <b className={'d-block text-center text-uppercase mb-1'}>Add sublevel</b>
             {(lobj && (!lobj.instanceof || lobj.partial)) && <div key={"Feature"} className={"toolbar-item feature"} onClick={() => { lobj.addValue(); }}>+Feature</div>}
             {(lfeat && lfeat.values.length < lfeat.upperBound) && <div key={"Value"} className={"toolbar-item value"} onClick={() => {
                 SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); }}>+Value</div>}
+            <hr className={'my-2'} />
         </div>);
     }
 

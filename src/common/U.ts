@@ -32,6 +32,22 @@ console.warn('loading ts U log');
 
 @RuntimeAccessible
 export class U {
+    public static getDefaultViewsID(): string[] {
+        const views: string[] = []
+        views.push('Pointer_ViewModel');
+        views.push('Pointer_ViewPackage');
+        views.push('Pointer_ViewClass');
+        views.push('Pointer_ViewEnum');
+        views.push('Pointer_ViewAttribute');
+        views.push('Pointer_ViewReference');
+        views.push('Pointer_ViewOperation');
+        views.push('Pointer_ViewLiteral');
+        views.push('Pointer_ViewObject');
+        views.push('Pointer_ViewValue');
+        views.push('Pointer_ViewDefaultPackage');
+        return views;
+    }
+
 
     public static getRandomString(length: number): string {
         const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';

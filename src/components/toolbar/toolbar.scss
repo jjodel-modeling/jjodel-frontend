@@ -12,16 +12,20 @@
   margin-top: 5px;
 }
 .toolbar {
+  b {
+    font-size: 0.75rem;
+    color: rgba(0, 0, 0, 0.75);
+  }
   .package {
     border-left: 2px solid $package-color;
   }
-  .class {
+  .class, .LObject {
     border-left: 2px solid $class-color;
   }
   .enumerator {
     border-left: 2px solid $enum-color;
   }
-  .attribute, .reference, .operation {
+  .attribute, .reference, .operation, .feature {
     border-left: 2px solid $feature-color;
   }
   .parameter, .exception, .literal {

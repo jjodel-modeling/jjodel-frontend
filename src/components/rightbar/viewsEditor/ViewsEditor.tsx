@@ -30,7 +30,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    ret.views = LViewElement.fromPointer(state.viewelements.slice(0));
+    ret.views = LViewElement.fromPointer(state.viewelements);
     ret.stackViews = LViewElement.fromPointer(state.stackViews);
     ret.viewpoints = LViewPoint.fromPointer(state.viewpoints);
     ret.views = ret.views.filter(view => !(view.viewpoint) || view.viewpoint?.id === state.viewpoint);

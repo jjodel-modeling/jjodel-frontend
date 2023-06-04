@@ -71,12 +71,10 @@ function Topbar(props: AllProps) {
         <label className={'item border round ms-1'} onClick={importJson}>Import JSON</label>
 
 
-        <div className={"p-1 "} style={{display: "flex", cursor: "auto"}}>
+        <div hidden={true} className={"p-1 "} style={{display: "flex", cursor: "auto"}}>
             <label className={"my-auto"}>Debug mode</label>
-            <input className={"my-auto input ms-auto"} type={"checkbox"} checked={props.debug} onChange={(e)=>{
-            SetRootFieldAction.new("debug", e.target.checked);
-            }
-            } />
+            <input className={"my-auto input ms-auto"} type={"checkbox"} checked={props.debug}
+                   onChange={(e)=>{SetRootFieldAction.new("debug", e.target.checked);}} />
         </div>
 
         {/*<RoomManager />*/}
