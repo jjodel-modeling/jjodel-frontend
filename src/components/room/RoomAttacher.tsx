@@ -12,7 +12,7 @@ function RoomAttacherComponent(props: AllProps) {
     const [actions, setActions] = useStateIfMounted<Dictionary<Pointer, boolean>>({});
     if(!room) return(<></>);
 
-    onSnapshot(doc(Firebase.db, 'rooms', room), (doc) => {
+    onSnapshot(doc(Firebase.db, 'rooms', room), (doc: GObject) => {
         if(!Selectors.getRoom()) return;
         const data = doc.data();
         if(!data) return;
@@ -23,7 +23,7 @@ function RoomAttacherComponent(props: AllProps) {
             receivedAction.fire();
             actions[action.id] = true; setActions(actions);
         }
-    }, (doc) => {
+    }, (doc: GObject) => {
         SetRootFieldAction.new('room', '', '', false);
     });
 
@@ -52,8 +52,8 @@ export const RoomAttacherConnected = connect<StateProps, DispatchProps, OwnProps
     mapDispatchToProps
 )(RoomAttacherComponent);
 
-export const RoomAttacher = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <RoomAttacherConnected {...{...props, childrens}} />;
+export const RoomAttacher = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <RoomAttacherConnected {...{...props, children}} />;
 }
 
 export default RoomAttacher;

@@ -65,8 +65,8 @@ export const RoomManagerConnected = connect<StateProps, DispatchProps, OwnProps,
     mapDispatchToProps
 )(RoomManagerComponent);
 
-export const RoomManager = (props: OwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <RoomManagerConnected {...{...props, childrens}} />;
+export const RoomManager = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <RoomManagerConnected {...{...props, children}} />;
 }
 
 export default RoomManager;

@@ -3,8 +3,7 @@ import type {LViewElement, LViewPoint, DViewPoint} from "../../../joiner";
 import {SetFieldAction, SetRootFieldAction} from "../../../redux/action/action";
 import OclEditor from "../oclEditor/OclEditor";
 import JsxEditor from "../jsxEditor/JsxEditor";
-import Input from "../../forEndUser/Input";
-import {Select, TextArea} from "../../../joiner";
+import {Select, TextArea, Input} from "../../../joiner";
 
 interface Props { view: LViewElement; viewpoints: LViewPoint[]; }
 
@@ -39,9 +38,8 @@ function ViewData(props: Props) {
                 <i className={'p-1 bi bi-arrow-left'}></i>
             </button>
         </div>
-        <Input obj={view} field={"name"} label={"Name"} type={"text"}/>
-        <Input obj={view} field={"explicitApplicationPriority"} label={"Priority"} type={"number"}/>
-        <Input obj={view} field={"storeSize"} label={"Active: the node position depends from the view currently displayed. Inactive: it depends from the graph."} type={"checkbox"} />
+        <Input data={view} field={"name"} label={"Name"} type={"text"}/>
+        <Input data={view} field={"explicitApplicationPriority"} label={"Priority"} type={"number"}/>
         {/*<Select obj={view} field={"useSizeFrom"} options={
             <optgroup label="Node position depends from what?">
                 <option value={EuseSizeFrom.view}>View</option>
@@ -52,13 +50,13 @@ function ViewData(props: Props) {
                     "Graph: Element in a graph will maintain the position when changing view\n"+
                     "Node: Ensuring every visual element uses his personal size (default)"
         }></Select>*/}
-        <Input obj={view} field={"width"} label={"Width"} type={"number"}/>
-        <Input obj={view} field={"height"} label={"Height"} type={"number"}/>
+        <Input data={view} field={"width"} label={"Width"} type={"number"}/>
+        <Input data={view} field={"height"} label={"Height"} type={"number"}/>
 
-        <TextArea obj={view} field={"constants"} label={"Constants"} />
-        <TextArea obj={view} field={"preRenderFunc"} label={"PreRender Function"} />
-        <Input obj={view} field={"scalezoomx"} label={"Zoom X"} type={"number"}/>
-        <Input obj={view} field={"scalezoomy"} label={"Zoom Y"} type={"number"}/>
+        <TextArea data={view} field={"constants"} label={"Constants"} />
+        <TextArea data={view} field={"preRenderFunc"} label={"PreRender Function"} />
+        <Input data={view} field={"scalezoomx"} label={"Zoom X"} type={"number"}/>
+        <Input data={view} field={"scalezoomy"} label={"Zoom Y"} type={"number"}/>
         <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Force Node</label>
             <select className={'my-auto ms-auto select'} value={view.forceNodeType} onChange={changeFN}>
@@ -69,10 +67,16 @@ function ViewData(props: Props) {
             </select>
         </div>
 
-        <Input obj={view} field={"adaptWidth"} label={"Adapt Width"} type={"checkbox"}/>
-        <Input obj={view} field={"adaptHeight"} label={"Adapt Height"} type={"checkbox"}/>
-        <Input obj={view} field={"draggable"} label={"Draggable"} type={"checkbox"}/>
-        <Input obj={view} field={"resizable"} label={"Resizable"} type={"checkbox"}/>
+        {/*from damiano: il primo StoreSize tooltip funziona, il secondo no. perchè?
+        l'html viene popolato correttamente ma risulta opacità 0, puoi cercare di risolverlo tu?*/}
+        <Input data={view} field={"storeSize"} label={"store Size"} tooltip={
+            <div>"Active: the node position depends from the view currently displayed. Inactive: it depends from the graph."</div>} type={"checkbox"} />
+        <Input data={view} field={"storeSize"} label={"Store Size"} type={"checkbox"} tooltip={true}/>
+        <Input data={view} field={"lazySizeUpdate"} label={"Lazy Update"} type={"checkbox"} tooltip={true}/>
+        <Input data={view} field={"adaptWidth"} label={"Adapt Width"} type={"checkbox"}/>
+        <Input data={view} field={"adaptHeight"} label={"Adapt Height"} type={"checkbox"}/>
+        <Input data={view} field={"draggable"} label={"Draggable"} type={"checkbox"}/>
+        <Input data={view} field={"resizable"} label={"Resizable"} type={"checkbox"}/>
         <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Viewpoint</label>
             <select className={'my-auto ms-auto select'} value={String(view.viewpoint?.id)} onChange={changeVP}>
@@ -82,10 +86,10 @@ function ViewData(props: Props) {
                 })}
             </select>
         </div>
-        <TextArea obj={view} field={'onDragStart'} label={'OnDragStart'} />
-        <TextArea obj={view} field={'onDragEnd'} label={'OnDragEnd'} />
-        <TextArea obj={view} field={'onResizeStart'} label={'OnResizeStart'} />
-        <TextArea obj={view} field={'onResizeEnd'} label={'OnResizeEnd'} />
+        <TextArea data={view} field={'onDragStart'} label={'OnDragStart'} />
+        <TextArea data={view} field={'onDragEnd'} label={'OnDragEnd'} />
+        <TextArea data={view} field={'onResizeStart'} label={'OnResizeStart'} />
+        <TextArea data={view} field={'onResizeEnd'} label={'OnResizeEnd'} />
 
         {/* damiano: qui Select avrebbe fatto comodo, ma è troppo poco generica, remove "data-" se viene generizzata Select */}
         <div className="p-1" style={{display: "flex"}}><label className="my-auto">Appliable to</label>

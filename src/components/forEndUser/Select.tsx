@@ -1,7 +1,7 @@
-import React, {Dispatch, ReactElement, ReactNode} from "react";
+import React, {Dispatch, LegacyRef, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
-import {LPointerTargetable, GObject, Pointer, LEnumerator, Selectors, LModelElement} from "../../joiner";
+import {LPointerTargetable, GObject, Pointer, LEnumerator, Selectors, LModelElement, Overlap} from "../../joiner";
 import type {LClass, DPointerTargetable} from "../../joiner";
 import toast, {Toaster} from "react-hot-toast";
 
@@ -44,7 +44,16 @@ function SelectComponent(props: AllProps) {
     const classes: LClass[] = data.model.classes;
     const enumerators: LEnumerator[] = data.model.enumerators;
 
-    return(<div className={'d-flex p-1'} key={props.key}>
+    const otherprops: GObject = {...props};
+    delete otherprops.data;
+    delete otherprops.getter;
+    delete otherprops.setter;
+    delete otherprops.jsxLabel;
+    delete otherprops.primitives;
+    delete otherprops.returns;
+    delete otherprops.hidden;
+    // todo per giordano: questa cosa non mi setta props.ref.current correttamente, puoi aggiustarlo tu? forse conosci meglio refs
+    return(<div {...otherprops} ref={props.ref as any} className={'d-flex p-1'} >
         {(label && !jsxLabel) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
             {label}
         </label>}
@@ -78,7 +87,7 @@ function SelectComponent(props: AllProps) {
     </div>);
 }
 export interface SelectOwnProps {
-    obj: DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
+    data?: DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
     label?: string;
     jsxLabel?: ReactNode;
@@ -86,16 +95,21 @@ export interface SelectOwnProps {
     hidden?: boolean;
     options?: JSX.Element;
     key?: React.Key | null;
+    ref?: React.RefObject<HTMLElement> | LegacyRef<HTMLElement>;
 }
-interface StateProps { data: LPointerTargetable & GObject; primitives: LClass[]; returns: LClass[]; }
+interface StateProps {
+    data: LPointerTargetable & GObject;
+    primitives: LClass[];
+    returns: LClass[]; }
 interface DispatchProps { }
-type AllProps = SelectOwnProps & StateProps & DispatchProps;
+
+type AllProps = Overlap<SelectOwnProps, Overlap<StateProps, DispatchProps>>;
 
 
 function mapStateToProps(state: IStore, ownProps: SelectOwnProps): StateProps {
     const ret: StateProps = {} as any;
-    if (!ownProps.obj) return ret;
-    const pointer: Pointer = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
+    if (!ownProps.data) return ret;
+    const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
     ret.data = LPointerTargetable.fromPointer(pointer);
     ret.primitives = LPointerTargetable.fromPointer(state.primitiveTypes);
     ret.returns = LPointerTargetable.fromPointer(state.returnTypes);

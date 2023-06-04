@@ -53,8 +53,7 @@ class DefaultView {
 
     public static package(): string {
         return `<div className={'round bg-white root package'}>
-            <Input jsxLabel={<b className={'package-name'}>EPackage:</b>} 
-                   obj={this.data.id} field={'name'} hidden={true} />
+            <Input jsxLabel={<b className={'package-name'}>EPackage:</b>} field={'name'} hidden={true} />
             <hr />
             <div className={'package-children'}>
                 {this.data.children.map((child, index) => {
@@ -67,7 +66,7 @@ class DefaultView {
     public static class(): string {
         return `<div className={'round bg-white root class'}>
             <Input jsxLabel={<b className={'class-name'}>EClass:</b>} 
-                   obj={this.data.id} field={'name'} hidden={true} autosize={true} />
+                   data={this.data.id} field={'name'} hidden={true} autosize={true} />
             <hr/>
             <div className={'class-children'}>
                 {this.data.children.map((child, index) => {
@@ -80,7 +79,7 @@ class DefaultView {
     public static enum(): string {
         return `<div className={'round bg-white root enumerator'}>
             <Input jsxLabel={<b className={'enumerator-name'}>EEnum:</b>} 
-                   obj={this.data.id} field={'name'} hidden={true} autosize={true} />
+                   data={this.data.id} field={'name'} hidden={true} autosize={true} />
             <hr />
             <div className={'enumerator-children'}>
                 {this.data.children.map((child, index) => {
@@ -91,7 +90,7 @@ class DefaultView {
     }
 
     public static feature(): string {
-        return `<Select className={'root feature'} obj={this.data} field={'type'} label={this.data.name} />`;
+        return `<Select className={'root feature'} data={this.data} field={'type'} label={this.data.name} />`;
     }
 
     public static literal(): string {
@@ -99,7 +98,7 @@ class DefaultView {
     }
 
     public static operation(): string {
-        return `<Select className={'root operation'} obj={this.data} field={'type'} label={this.data.name+this.data.signature} />`;
+        return `<Select className={'root operation'} data={this.data} field={'type'} label={this.data.name+this.data.signature} />`;
     }
 
 
@@ -120,7 +119,7 @@ class DefaultView {
         return `<div className={'round bg-white root class'}>
             <label className={'ms-1'}>
                 <Input jsxLabel={<b className={'class-name'}>{this.data.instanceof ? this.data.instanceof.name : "Object"}:</b>} 
-                   obj={this.data.id} field={'name'} hidden={true} autosize={true}/>
+                   data={this.data.id} field={'name'} hidden={true} autosize={true}/>
             </label>
             <hr />
             <div className={'object-children'}>
@@ -134,7 +133,7 @@ class DefaultView {
     public static value() {
         return `<div className={'d-flex root value'} style={{paddingRight: "6px"}}>
              {this.props.data.instanceof && <label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>}
-             {!this.props.data.instanceof && <Input asLabel={true} obj={this.data.id} field={'name'} hidden={true} autosize={true} />}
+             {!this.props.data.instanceof && <Input asLabel={true} data={this.data.id} field={'name'} hidden={true} autosize={true} />}
             <label className={'d-block ms-auto'} style={{color:` + valuecolormap_str + `[this.props.data.values.type] || "gray"
             }}>: {this.props.data.valuestring()}</label>
         </div>`

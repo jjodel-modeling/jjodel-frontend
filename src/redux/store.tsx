@@ -50,7 +50,7 @@ import {
     LUser,
     LValue, LViewElement, DViewPoint,
     RuntimeAccessible, SetFieldAction,
-    SetRootFieldAction, ShortAttribETypes, Selectors,
+    SetRootFieldAction, ShortAttribETypes, Selectors, GraphSize,
 } from "../joiner";
 
 import React from "react";
@@ -80,6 +80,7 @@ statehistory[DUser.current] = {undoable:[], redoable:[]}; // todo: make it able 
 
 (window as any).statehistory = statehistory;
 export class IStore {
+    debug: boolean = true;
     logs: Pointer<DLog, 0, 'N', LLog> = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
     currentUser: DUser;
@@ -160,8 +161,8 @@ export class IStore {
         // const graphDefaultViews: DViewElement[] = makeDefaultGraphViews();
         // for (let graphDefaultView of graphDefaultViews) { CreateElementAction.new(graphDefaultView); }
 
-        const viewpoint = DViewPoint.new('Default', '', false);
-        viewpoint.id = 'Pointer_DefaultViewPoint'; todo don't double create'
+        const viewpoint = DViewPoint.new('Default', '');
+        viewpoint.id = 'Pointer_DefaultViewPoint';
         CreateElementAction.new(viewpoint);
         SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
 
@@ -197,56 +198,34 @@ export class IStore {
 function makeDefaultGraphViews(): DViewElement[] {
 
     let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.name]);
-    modelView.draggable = false; modelView.resizable = false;
-    modelView.adaptHeight = '-webkit-fill-available';
-    modelView.adaptWidth = '-webkit-fill-available';
+    // modelView.draggable = false; modelView.resizable = false; already guaranteed by <Graph />
 
     let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.name]);
-    packageView.width = 500; packageView.height = 500;
-    packageView.adaptHeight = false;
-    packageView.adaptWidth = false;
+    packageView.defaultVSize = new GraphSize(0, 0, 500, 500);
 
     let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.name]);
-    classView.adaptHeight = 'fit-content';
-    classView.adaptWidth = false;
+    classView.adaptWidth = true;
+    classView.adaptHeight = true;
 
     let enumView: DViewElement = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.name]);
-    enumView.adaptHeight = 'fit-content';
-    enumView.adaptWidth = false;
+    enumView.adaptWidth = true;
+    enumView.adaptHeight = true;
 
     let attributeView: DViewElement = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.name]);
-    attributeView.draggable = false; attributeView.resizable = false;
-    attributeView.adaptWidth = true; attributeView.display = 'contents';
-    attributeView.height = 0; attributeView.adaptHeight = 'fit-content';
 
     let referenceView: DViewElement = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.name]);
-    referenceView.draggable = false; referenceView.resizable = false;
-    referenceView.adaptWidth = true; referenceView.display = 'contents';
-    referenceView.height = 0; referenceView.adaptHeight = 'fit-content';
 
     let operationView: DViewElement = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.name]);
-    operationView.draggable = false; operationView.resizable = false;
-    operationView.adaptWidth = true; operationView.display = 'contents';
-    operationView.height = 0; operationView.adaptHeight = 'fit-content';
 
     let literalView: DViewElement = DViewElement.new('Literal', DV.literalView(), undefined, '', '', '', [DEnumLiteral.name]);
-    literalView.draggable = false; literalView.resizable = false;
-    literalView.adaptWidth = true; literalView.display = 'contents';
-    literalView.height = 0; literalView.adaptHeight = 'fit-content';
 
     let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.name]);
-    objectView.adaptHeight = 'fit-content';
-    objectView.adaptWidth = false;
+    objectView.adaptWidth = true;
+    objectView.adaptHeight = true;
 
     let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.name]);
-    valueView.draggable = false; valueView.resizable = false;
-    valueView.adaptWidth = true; valueView.display = 'contents';
-    valueView.height = 0; valueView.adaptHeight = 'fit-content';
 
     const defaultPackage: DViewElement = DViewElement.new('Default Package', DV.defaultPackage());
-    defaultPackage.draggable = false; defaultPackage.resizable = false;
-    defaultPackage.adaptHeight = '-webkit-fill-available';
-    defaultPackage.adaptWidth = '-webkit-fill-available';
     defaultPackage.query = `context DPackage inv: self.name = 'default'`;
 
     return [modelView, packageView, classView, enumView, attributeView, referenceView, operationView, literalView, objectView, valueView, defaultPackage];

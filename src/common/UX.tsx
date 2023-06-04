@@ -47,13 +47,13 @@ export class UX{
                 //    {'re.props.obj.id': re.props.obj?.id, 're.props.obj': re.props.obj, 'thiss.props.data.id': thiss.props.data.id, thiss, re, objid, ret, 'ret.props': ret.props});
                 return ret;*/
             // case windoww.Components.GraphElement.name:
-            case windoww.Components.Input.name:
-            case windoww.Components.Select.name:
-            case windoww.Components.TextArea.name:
+            case windoww.Components.Input.name+"Component":
+            case windoww.Components.Select.name+"Component":
+            case windoww.Components.TextArea.name+"Component":
                 // todo: can i do a injector that if the user provides a ModelElement list raw <div>{this.children}</div> it wraps them in DefaultNode?
                 const injectProps2: InputOwnProps | SelectOwnProps | TextAreaOwnProps = {} as any;
                 const parentnodeid = parentComponent.props.node?.id;
-                injectProps2.obj = re.props.data || (typeof re.props.data === "string" ? re.props.data : re.props.data?.id);
+                injectProps2.data = re.props.data || (typeof parentComponent.props.data === "string" ? parentComponent.props.data : parentComponent.props.data?.id);
                 injectProps2.key = re.props.key || (parentnodeid + "^input_"+index);
                 // console.log("cloning jsx input:", re, injectProps2);
                 return React.cloneElement(re, injectProps2);

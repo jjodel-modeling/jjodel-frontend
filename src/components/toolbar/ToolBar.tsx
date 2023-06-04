@@ -20,7 +20,7 @@ import {
 
 interface ThisState {}
 
-function getItems(data: LModelElement, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildrens">[]>, items: string[]): ReactNode[] {
+function getItems(data: LModelElement, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]>, items: string[]): ReactNode[] {
     const reactNodes: ReactNode[] = [];
     for (let item_dname of items) {
         if (item_dname[0]=="_") {
@@ -71,10 +71,10 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     if (isMetamodel) {
         return(<div className={"toolbar"}>
             <h6>Add sibling</h6>
-            {lModelElement && addChildrens(upward[lModelElement.className])}
+            {lModelElement && addChildren(upward[lModelElement.className])}
             <hr />
             <h6>Add sublevel</h6>
-            {lModelElement && addChildrens(downward[lModelElement.className])}
+            {lModelElement && addChildren(downward[lModelElement.className])}
             <div className={"toolbar-item annotation"} onClick={() => select(lModelElement.addChild("annotation"))}>+annotation</div>
         </div>);
     }
@@ -95,7 +95,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             <hr />
             <h5>Add sublevel</h5>
             {(lobj && (!lobj.instanceof || lobj.partial)) && <div key={"Feature"} className={"toolbar-item feature"} onClick={() => { lobj.addValue(); }}>+Feature</div>}
-            {(lfeat && lfeat.value.length < lfeat.upperBound) && <div key={"Value"} className={"toolbar-item value"} onClick={() => {
+            {(lfeat && lfeat.values.length < lfeat.upperBound) && <div key={"Value"} className={"toolbar-item value"} onClick={() => {
                 SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); }}>+Value</div>}
         </div>);
     }

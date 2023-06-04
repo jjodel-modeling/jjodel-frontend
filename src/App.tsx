@@ -1,19 +1,19 @@
-import React from 'react';
+import React, {Dispatch, ReactElement} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
 //import Dock from "./components/abstract/DockComponent";
 import Dock from "./components/abstract/DockLayout";
-import {statehistory} from "./joiner";
+import {IStore, statehistory} from "./joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
 import {useEffectOnce} from "usehooks-ts";
 import SplashImage from './static/img/splash.png';
 import {Oval} from "react-loader-spinner";
 import TopBar from "./components/topbar/Topbar";
 import RoomAttacher from "./components/room/RoomAttacher";
+import {connect} from "react-redux";
 
-interface Props {}
-function App(props: Props) {
+function App(props: AllProps) {
     const [splash, setSplash] = useStateIfMounted(false);
 
     useEffectOnce(() => {
@@ -28,7 +28,7 @@ function App(props: Props) {
                   color={'#475e6c'} secondaryColor={'#ff8811'} />
         </div>);
     } else {
-        return(<div className={'d-flex flex-column h-100 p-1'} onClick={() => {statehistory.globalcanundostate = true;} } >
+        return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? " debug" : "")} onClick={() => {statehistory.globalcanundostate = true;} } >
             <TopBar />
             <Dock />
             {/*<RoomAttacher />*/}
@@ -37,4 +37,27 @@ function App(props: Props) {
 
 }
 
-export default App;
+interface OwnProps {}
+interface StateProps { debug: boolean; }
+interface DispatchProps {}
+type AllProps = OwnProps & StateProps & DispatchProps;
+
+
+function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+    const ret: StateProps = {} as any;
+    ret.debug = state.debug;
+    return ret;
+}
+
+function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
+    const ret: DispatchProps = {};
+    return ret;
+}
+
+export const AppConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+    mapStateToProps,
+    mapDispatchToProps
+)(App);
+
+
+export default AppConnected;

@@ -1,8 +1,9 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
-import {DPointerTargetable, GObject, LModelElement, LPointerTargetable, Pointer} from "../../joiner";
+import {DPointerTargetable, GObject, Info, LModelElement, LPointerTargetable, Overlap, Pointer} from "../../joiner";
 import toast, {Toaster} from 'react-hot-toast';
+import {SelectOwnProps} from "./Select";
 
 
 function InputComponent(props: AllProps) {
@@ -16,7 +17,13 @@ function InputComponent(props: AllProps) {
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
-    const tooltip = props.tooltip;
+    let tooltip: string | React.ReactElement | Info = props.tooltip === true ? data["__info_of__" + field] : (props.tooltip || undefined);
+    if (typeof tooltip === "object" && (tooltip as Info).txt) {
+        tooltip = <div className={"tooltip"}>
+            <span className={"type"} style={{color: "orange"}}>{":"+tooltip.type+"\t"}</span>
+            <span className={"txt"}>{(tooltip as Info).txt}</span>
+        </div>;
+    }
     let css = 'my-auto input ';
     let inputClassName = (props.inputClassName || '');
     css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
@@ -45,8 +52,16 @@ function InputComponent(props: AllProps) {
                        type={type} value={value} onChange={change}
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
-    return(<div style={{...{display: (jsxLabel || label) ? 'flex' : 'block', cursor: (tooltip) ? 'help' : 'auto'}, ...style}}
-                className={'p-1 ' + className} key={props.key}>
+
+    const otherprops: GObject = {...props};
+    delete otherprops.data;
+    delete otherprops.getter;
+    delete otherprops.setter;
+    delete otherprops.jsxLabel;
+    delete otherprops.hidden;
+
+    return(<div {...otherprops} style={{...{display: (jsxLabel || label) ? 'flex' : 'block', cursor: (tooltip) ? 'help' : 'auto'}, ...style}}
+                className={'p-1 ' + className}>
         {(label && !jsxLabel) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
             {label}
         </label>}
@@ -59,7 +74,7 @@ function InputComponent(props: AllProps) {
     </div>);
 }
 export interface InputOwnProps {
-    obj: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
+    data: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
     getter?: (data: LPointerTargetable) => string;
     setter?: (value: string|boolean) => void;
@@ -68,21 +83,23 @@ export interface InputOwnProps {
     type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|
         'number'|'password'|'radio'|'range'|'tel'|'text'|'time'|'url'|'week';
     readonly?: boolean;
-    tooltip?: string;
+    tooltip?: string | boolean | ReactElement;
     hidden?: boolean;
     autosize?: boolean;
     inputClassName?: string;
     asLabel?: boolean;
     key?: React.Key | null;
 }
-interface StateProps { data: LPointerTargetable & GObject; }
+interface StateProps {
+    data: LPointerTargetable & GObject;
+}
 interface DispatchProps { }
-type AllProps = InputOwnProps & StateProps & DispatchProps;
+type AllProps = Overlap<InputOwnProps, Overlap<StateProps, DispatchProps>>;
 
 
 function mapStateToProps(state: IStore, ownProps: InputOwnProps): StateProps {
     const ret: StateProps = {} as any;
-    const pointer: Pointer = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
+    const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
     ret.data = LPointerTargetable.fromPointer(pointer);
     return ret;
 }
@@ -97,7 +114,8 @@ export const InputConnected = connect<StateProps, DispatchProps, InputOwnProps, 
     mapDispatchToProps
 )(InputComponent);
 
-export const Input = (props: InputOwnProps, childrens: (string | React.Component)[] = []): ReactElement => {
-    return <InputConnected {...{...props, childrens}} />;
+
+export function Input(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement {
+    return <InputConnected {...{...props, children}} />;
 }
-export default Input;
+// export default Input____a;

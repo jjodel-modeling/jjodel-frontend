@@ -17,21 +17,42 @@
 [data-nodetype]{
   position: relative;
   overflow: hidden;
-  &:hover{ overflow: visible; }
-  &::after{
-    content: attr(data-nodetype);
-    position: absolute;
-    top: -24px;
-    left: 0;
-    background: red;
-    padding: 0 4px;
-    color: white;
-    z-index: 100000;
-  }
-  &:hover::after{
-    top: -23px;
-  }
 }
+
+.GraphVertex[data-nodetype="GraphVertex"],
+.Vertex[data-nodetype="Vertex"],
+.VoidVertex[data-nodetype="VoidVertex"],
+.EdgePoint[data-nodetype="EdgePoint"]{
+  position: absolute;
+}
+
+.ui-draggable-dragging{ visibility: hidden; }
+
+.REACT-ROOT.debug{
+  [data-nodetype]{
+    &:hover{ overflow: visible; }
+    &:hover::after{
+      content: attr(data-nodetype);
+      position: absolute;
+      top: -23px;
+      left: 0;
+      background: red;
+      padding: 0 4px;
+      color: white;
+      z-index: 100000;
+    }
+  }
+  [data-nodetype="Field"]:hover::after {
+      top: unset !important;
+      left: -45px;
+      float: left;
+      // margin-top: -23px;
+    }
+}
+
+.lazySizeUpdate.ui-draggable-dragging,
+.REACT-ROOT.debug .ui-draggable-dragging{ visibility: visible; }
+
 
 [data-nodetype="Graph"]{
   position: absolute !important;
@@ -56,14 +77,8 @@
   white-space: nowrap;
   // overflow: hidden;
   // &:hover{ overflow: visible; }
-  &::after {
-    top: unset !important;
-    left: -45px;
-    float: left;
-    margin-top: -23px;
-  }
 }
 [data-nodetype="Graph"]::after {
-    top: 0px;
-    left: 0px;
+  top: 0px;
+  left: 0px;
 }

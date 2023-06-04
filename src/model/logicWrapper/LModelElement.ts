@@ -112,7 +112,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     parent!: LModelElement[];
     father!: LModelElement; // annotations can be children of everything. except them fathers are: Model, Package, Classifier(class+enum), Operation
 
-    private __info_of__father = {type: "LModelElement[]", txt:"<a href=\"https://github.com/DamianoNaraku/jodel-react/wiki/LModelElement\"><span>The element containing this object.</span></a>"};
+    private __info_of__father = {type: "LModelElement", txt:"<a href=\"https://github.com/DamianoNaraku/jodel-react/wiki/LModelElement\"><span>The element containing this object.</span></a>"};
     public fatherList!: LModelElement[]; // chain of fathers going up recursively
     annotations!: LAnnotation[];
     children!: (LPackage | LClassifier | LTypedElement | LAnnotation | LObject | LValue)[];

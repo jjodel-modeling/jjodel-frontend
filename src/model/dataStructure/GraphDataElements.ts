@@ -10,15 +10,15 @@ import {
     DPointerTargetable,
     DUser, END,
     getWParams,
-    GObject,
+    GObject, GraphElementComponent,
     GraphPoint,
     GraphSize,
     IStore,
     Leaf,
     LMap,
-    LModelElement,
+    LModelElement, Log,
     LogicContext,
-    LPointerTargetable,
+    LPointerTargetable, LViewElement,
     MixOnlyFuncs,
     Node, Pack1, PackArr, Point,
     Pointer,
@@ -91,7 +91,7 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
     height!: number
     zIndex!: number;
     zoom!: GraphPoint;
-    html!: Element;
+    html?: Element;
 
     // fittizi
     w!:number;
@@ -100,27 +100,23 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
     position!: GraphPoint;
     htmlSize!: Size; // size and position in global document coordinates.
     htmlPosition!: Point;
+    view!: LViewElement;
+    component!: GraphElementComponent;
 
     get_graph(context: Context): LGraph {
         return TargetableProxyHandler.wrap(context.data.graph); }
 
-    get_x(context: Context): this["x"] { return context.data.x; }
-    set_x(val: this["x"], context: Context): boolean {
-        SetFieldAction.new(context.data.id, "x", val, undefined, false);
-        return true; }
-    get_y(context: Context): this["y"] { return context.data.y; }
-    set_y(val: this["y"], context: Context): boolean {
-        SetFieldAction.new(context.data.id, "y", val, undefined, false);
-        return true; }
+    // set_x(val: this["x"], context: Context): boolean { SetFieldAction.new(context.data.id, "x", val, undefined, false); return true; }
+    // get_x(context: Context): this["x"] { return context.data.x; }
+    get_x(context: Context): this["x"] { return this.get_size(context).x; }
+    set_x(val: this["x"], context: Context): boolean { return this.set_size({x:val}, context); }
+    get_y(context: Context): this["y"] { return this.get_size(context).y; }
+    set_y(val: this["y"], context: Context): boolean { return this.set_size({y:val}, context); }
 
-    get_w(context: Context): this["w"] { return context.data.w; }
-    set_w(val: this["w"], context: Context): boolean {
-        SetFieldAction.new(context.data.id, "w", val, undefined, false);
-        return true; }
-    get_h(context: Context): this["h"] { return context.data.h; }
-    set_h(val: this["h"], context: Context): boolean {
-        SetFieldAction.new(context.data.id, "h", val, undefined, false);
-        return true; }
+    get_w(context: Context): this["w"] { return this.get_size(context).w; }
+    set_w(val: this["w"], context: Context): boolean { return this.set_size({w:val}, context); }
+    get_h(context: Context): this["h"] { return this.get_size(context).h; }
+    set_h(val: this["h"], context: Context): boolean { return this.set_size({h:val}, context); }
 
     get_width(context: Context): this["w"] { return this.get_w(context); }
     set_width(val: this["w"], context: Context): boolean { return this.set_w(val, context); }
@@ -135,20 +131,92 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
         END()
         return true; }
 
-    get_size(context: Context): this["size"] { return new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h); }
-    set_size(val: this["size"], context: Context): boolean {
+    get_sizeold(context: Context): this["size"] { return new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h); }
+    get_component(context: Context): this["component"] { return GraphElementComponent.map[context.data.id]; }
+    get_view(context: Context): this["view"] { return this.get_component(context).props.view; }
+    get_size(context: Context, canTriggerSet: boolean = true): Readonly<GraphSize> {
+        switch(context.data.className){
+            default: return Log.exDevv("unexpected classname in get_size switch: " + context.data.className);
+            case DGraph.name: return nosize as any;
+            // case DField.name:
+            case DGraphElement.name:
+                let graph = this.get_graph(context);
+                return graph.coord(this.get_htmlSize(context));
+            case DVoidVertex.name:
+            case DVertex.name:
+            case DGraphVertex.name: break;
+        }
+        // low prio todo: memoization in proxy, as long state does not change keep a collection Dictionary[object][key] = returnval. it gets emptied when state is updated.
+        /*console.log("get_size("+(this.props?.data as any).name+")", {
+            view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
+            node:this.props.node?.size,
+            default: this.props.view.defaultVSize});*/
+        console.log("getSize() pre", this);
+        let component = this.get_component(context);
+        console.log("getSize() at component", this, component);
+        let view = component.props.view;
+        (window as any).retry = ()=>view.getSize(context.data.id);
+        let ret = view.getSize(context.data.id); // (this.props.dataid || this.props.nodeid as string)
+        console.log("getSize() from view0");
+        console.log("getSize() from view", {ret: ret ? {...ret} : ret});
+        if (!ret) {
+            ret = {x:context.data.x, y:context.data.y, w:context.data.w, h:context.data.h} as any as GraphSize;
+            let def: GraphSize | undefined;
+            console.log("getSize() from node", {ret: ret ? {...ret} : ret});
+            if (undefined===(ret.x)) { if (!def) def = view.defaultVSize; ret.x = def.x;}
+            if (undefined===(ret.y)) { if (!def) def = view.defaultVSize; ret.y = def.y;}
+            if (undefined===(ret.w)) { if (!def) def = view.defaultVSize; ret.w = def.w;}
+            if (undefined===(ret.h)) { if (!def) def = view.defaultVSize; ret.h = def.h;}
+            console.log("getSize() from node merged with defaultVSize", {ret: ret ? {...ret} : ret});
+        }
+
+        if ((context.data as DVoidVertex).isResized) return ret;
+        let html = component.html;
+        let actualSize: Partial<Size> & {w:number, h:number} = html.current ? Size.of(html.current) : {w:0, h:0};
+        let updateSize: boolean = false;
+        if (view.adaptWidth && ret.w !== actualSize.w) {
+            ret.w = actualSize.w;
+            if (canTriggerSet) updateSize = true;
+            // if (canTriggerSet) this.set_size({w:actualSize.w}, context);
+        }
+        if (view.adaptHeight && ret.h !== actualSize.h) {
+            ret.h = actualSize.h;
+            if (canTriggerSet && !updateSize) updateSize = true;
+        }
+        console.log("getSize() from node merged with actualSize", {ret: {...ret}});
+
+        if (updateSize) this.set_size(ret, context);
+        return ret;
+    }
+    // set_size(size: Partial<this["size"]>, context: Context): boolean {
+    set_size(size: {x?:number, y?:number, w?:number, h?:number}, context: Context): boolean {
+        // console.log("setSize("+(this.props?.data as any).name+") thisss", this);
+        if (!size) return false;
+        let view = this.get_view(context)
+        if (view.updateSize(context.data.id, size)) return true;
         BEGIN()
-        SetFieldAction.new(context.data.id, "x", val.x, undefined, false);
-        SetFieldAction.new(context.data.id, "y", val.y, undefined, false);
-        SetFieldAction.new(context.data.id, "w", val.w, undefined, false);
-        SetFieldAction.new(context.data.id, "h", val.h, undefined, false);
+        if (size.x !== undefined) SetFieldAction.new(context.data.id, "x", size.x, undefined, false);
+        if (size.y !== undefined) SetFieldAction.new(context.data.id, "y", size.y, undefined, false);
+        if (size.w !== undefined) SetFieldAction.new(context.data.id, "w", size.w, undefined, false);
+        if (size.h !== undefined) SetFieldAction.new(context.data.id, "h", size.h, undefined, false);
         END()
         return true; }
 
-    get_html(context: Context): this["html"] { return $("[node-id='" + context.data.id + "']")[0]; }
+    get_html(context: Context): this["html"] { return this.get_component(context).html.current || undefined; }
+    // get_html(context: Context): this["html"] { return $("[node-id='" + context.data.id + "']")[0]; }
     set_html(val: this["htmlSize"], context: Context): boolean { return this.cannotSet("set_html(). html is generated through jsx. edit the view instead."); }
 
-    get_htmlSize(context: Context): this["htmlSize"] { let html = this.get_html(context); return Size.of(html); }
+    get_htmlSize(context: Context): this["htmlSize"] {
+        let html = this.get_html(context);
+        return html ? Size.of(html) : new Size(0, 0, 0, 0);
+        /*
+        let graph = this.get_graph(context);
+        if (!html) return nosize as any;
+        let size = Size.of(html);
+        let zoom = graph.zoom;
+        size.x /= zoom.x;
+        size.y /= zoom.y;
+        return size;*/}
     set_htmlSize(val: this["htmlSize"], context: Context): boolean {
         // might be useful for fixed display size/location elements that stay in place even if you move tab or change zoom. debatable if needed
         this.cannotSet("set_htmlSize(): todo extra low priority. set GraphSize through set_size instead.");
@@ -319,7 +387,7 @@ export class DGraph extends DGraphElement {
 }
 var nosize = {x:0, y:0, w:0, h:0, nosize:true};
 @RuntimeAccessible
-export class LGraph<Context extends LogicContext<any> = any, D extends DGraph = any> extends LGraphElement {
+export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph = any> extends LGraphElement {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LGraph;
@@ -338,23 +406,34 @@ export class LGraph<Context extends LogicContext<any> = any, D extends DGraph = 
     // personal attributes
     zoom!: GraphPoint;
     graphSize!: GraphSize; // size internal to the graph, while "size" is instead external size of the vertex holding the graph in GraphVertexes
-    protected sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
+    // protected sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
 
 
     // get_sizes(context: Context): D["sizes"] { return context.data.sizes; }
     //set_sizes(val: D["sizes"], context: Context): boolean { return SetFieldAction.new(context.data.id, "sizes", val); } // todo: se cancello ModelElement, la chiave qui resta? i pointedby non vengono segnati credo.
-    get_size(context: LogicContext<DGraph>): GraphSize { return nosize as any; }
-    get_graphSize(context: LogicContext<DGraph>): GraphSize { return context.data.graphSize; }
-    get_zoom(context: LogicContext<DGraph>): GraphPoint {
+
+    get_graphSize(context: LogicContext<DGraph>):  Readonly<GraphSize> { return context.data.graphSize; }
+    get_zoom(context: Context): GraphPoint {
         const zoom: GraphPoint = context.data.zoom;
         (zoom as any).debug = {rawgraph: context.data, zoomx: context.data.zoom.x, zoomy: context.data.zoom.y}
         return context.data.zoom; }
+
+    toGraphSize(...a:Parameters<this["coord"]>): ReturnType<this["coord"]>{ return this.wrongAccessMessage("toGraphSize"); }
+    coord(htmlSize: Size): GraphSize { return this.wrongAccessMessage("toGraphSize"); }
+    get_coord(context: Context): (htmlSize: Size) => GraphSize {
+        return (htmlSize: Size)=> {
+            let size: Size = this.get_htmlSize(context);
+            let zoom: GraphPoint = this.get_zoom(context);
+            return new GraphSize((htmlSize.x - size.x) / zoom.x, (htmlSize.y - size.y) / zoom.y);
+        }
+    }
+    // get_htmlSize(context: Context): Size { }
 }
 DGraphElement.subclasses.push(DGraph);
 LGraphElement.subclasses.push(LGraph);
 
-export const defaultVSize: GraphSize = new GraphSize(0, 0, 300, 160); // useless?
-export const defaultEPSize: GraphSize = new GraphSize(0, 0, 15, 15); // useless?
+// export const defaultVSize: GraphSize = new GraphSize(0, 0, 300, 160); // useless, now it's in view.DefaultVSize
+// export const defaultEPSize: GraphSize = new GraphSize(0, 0, 15, 15); // useless, now it's in view.DefaultVSize
 
 @RuntimeAccessible
 export class DVoidVertex extends DGraphElement {
@@ -380,10 +459,10 @@ export class DVoidVertex extends DGraphElement {
     w!: number;
     h!: number;
     isResized!: boolean;
-    // size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
+    // size?: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
 
     public static new(model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"],
-                      size: GraphSize = defaultVSize): DVoidVertex {
+                      size?: GraphSize): DVoidVertex {
         return new Constructors(new DVoidVertex('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
             .DVoidVertex(size).end();
     }
@@ -416,21 +495,18 @@ export class LVoidVertex extends LGraphElement {// <D extends DVoidVertex = any>
     w!: number;
     h!: number;
     size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
+    __info_of__size = {type: "?GraphSize", txt: "Size of the vertex, if null it means is utilizing the defaultSize from view. recommended to read component.getSize() instead of this."};
 
-    get_size(context: LogicContext<DVoidVertex>): GraphSize {
-        // return context.proxyObject as any;
-        return new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h);
-    }
-    /*get_isResized(context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] { return context.data.isResized; }
+    get_isResized(context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] { return context.data.isResized; }
     set_isResized(val: DVoidVertex["isResized"], context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] {
         return SetFieldAction.new(context.data.id, "isResized", val);
-    }*/
-
+    }
+/*
     // todo: devo settare che il primo parametro delle funzioni che iniziano con set_ non può essere un logicContext
     set_size(val: GraphSize, context: LogicContext<DVoidVertex>): boolean {
         // todo: graphvertex should use this, but  calls graphelement.set_size instead
         // SetFieldAction.new(context.data, 'size', val, Action.SubType.vertexSize);
-        if (!val) { val = defaultVSize; }
+        if (!val) { return true; } //  val = defaultVSize; }
         //console.trace('setsize:', {context, val});
         if (context.data.x !== val.x) SetFieldAction.new(context.data, 'x', val.x);
         if (context.data.y !== val.y) SetFieldAction.new(context.data, 'y', val.y);
@@ -446,7 +522,7 @@ export class LVoidVertex extends LGraphElement {// <D extends DVoidVertex = any>
         if (val.equals(gsize)) return true;
         graph.graphSize = val;
         return true;
-    }
+    }*/
 
     get_isSelected(context: LogicContext<DVoidVertex>): GObject {
         return DPointerTargetable.mapWrap(context.data.isSelected, context.data, 'idlookup.' + context.data.id + '.isSelected', []);
@@ -476,12 +552,12 @@ export class DEdgePoint extends DVoidVertex { // DVoidVertex
     y!: number;
     w!: number;
     h!: number;
-    size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
+    size?: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
     // personal attributes
     __isDEdgePoint!: true;
 
     public static new(model: undefined, parentNodeID: DEdgePoint["father"], graphID?: DEdgePoint["graph"], nodeID?: DGraphElement["id"],
-                      size: GraphSize = defaultEPSize): DEdgePoint {
+                      size?: GraphSize): DEdgePoint {
         return new Constructors(new DEdgePoint('dwc'), parentNodeID, true).DPointerTargetable().DGraphElement(undefined, parentNodeID, graphID, nodeID)
             .DVoidVertex(size).DEdgePoint().end();
     }
@@ -551,7 +627,7 @@ export class DVertex extends DGraphElement { // DVoidVertex
     // personal attributes
     __isDVertex!: true;
 
-    public static new(model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size: GraphSize = defaultVSize): DVertex {
+    public static new(model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size?: GraphSize): DVertex {
         return new Constructors(new DVertex('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
             .DVoidVertex(size).DVertex().end();
     }
@@ -625,7 +701,7 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
     __isDGraph!: true;
     __isDGraphVertex!: true;
 
-    public static new(model: DGraph["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size: GraphSize = defaultVSize): DGraphVertex {
+    public static new(model: DGraph["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size?: GraphSize): DGraphVertex {
         return new Constructors(new DGraphVertex('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
             .DVoidVertex(size).DVertex().DGraph(model, nodeID).end();
     }
@@ -764,7 +840,7 @@ export class DEdge extends DVoidEdge { // DVoidEdge
     __isDVoidEdge!: true;
     midnodes!: Pointer<DEdgePoint, 1, 1, LEdgePoint>[];
 
-    public static new(model: DGraph["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size: GraphSize = defaultVSize): DEdge {
+    public static new(model: DGraph["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size?: GraphSize): DEdge {
         return new Constructors(new DEdge('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
             .DVoidEdge().DEdge().end();
     }
@@ -818,7 +894,7 @@ export class DExtEdge extends DEdge { // etends DEdge
     __isDEdge!: true;
     __isDVoidEdge!: true;
 
-    public static new(model: DGraph["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size: GraphSize = defaultVSize): DExtEdge {
+    public static new(model: DGraph["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size?: GraphSize): DExtEdge {
         return new Constructors(new DExtEdge('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
             .DVoidEdge().DEdge().DExtEdge().end();
     }

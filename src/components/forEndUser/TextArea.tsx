@@ -1,7 +1,8 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
-import {DPointerTargetable, GObject, LPointerTargetable, Pointer} from "../../joiner";
+import {DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer} from "../../joiner";
+import {SelectOwnProps} from "./Select";
 
 
 function TextAreaComponent(props: AllProps) {
@@ -20,7 +21,14 @@ function TextAreaComponent(props: AllProps) {
         data[field] = target;
     }
 
-    return(<div style={{display: (jsxLabel || label) ? 'flex' : 'block'}} className={'p-1'} key={props.key}>
+    const otherprops: GObject = {...props};
+    delete otherprops.data;
+    delete otherprops.getter;
+    delete otherprops.setter;
+    delete otherprops.jsxLabel;
+    delete otherprops.hidden;
+
+    return(<div {...otherprops} style={{display: (jsxLabel || label) ? 'flex' : 'block'}} className={'p-1'}>
         {(label && !jsxLabel) && <label className={'my-auto'}>
             {label}
         </label>}
@@ -32,7 +40,7 @@ function TextAreaComponent(props: AllProps) {
     </div>);
 }
 export interface TextAreaOwnProps {
-    obj: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
+    data: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
     label?: string;
     jsxLabel?: ReactNode;
@@ -43,12 +51,13 @@ export interface TextAreaOwnProps {
 }
 interface StateProps { data: LPointerTargetable & GObject; }
 interface DispatchProps { }
-type AllProps = TextAreaOwnProps & StateProps & DispatchProps;
+
+type AllProps = Overlap<TextAreaOwnProps, Overlap<StateProps, DispatchProps>>;
 
 
 function mapStateToProps(state: IStore, ownProps: TextAreaOwnProps): StateProps {
     const ret: StateProps = {} as any;
-    const pointer: Pointer = typeof ownProps.obj === 'string' ? ownProps.obj : ownProps.obj.id;
+    const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
     ret.data = LPointerTargetable.fromPointer(pointer);
     return ret;
 }

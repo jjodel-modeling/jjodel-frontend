@@ -18,10 +18,10 @@ export abstract class IPoint extends RuntimeAccessibleClass {
     static init_constructor(thiss: GObject, x: any = 0, y: any = 0, ...a: any): void {
         thiss.id = "POINT_" + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
         thiss.className = thiss.constructor.name;
-        if (x === undefined) thiss.x = undefined as Temporary;
+        if (x === null || x === undefined) thiss.x = undefined as Temporary;
         else if (isNaN(+x)) { thiss.x = 0; }
         else thiss.x = +x;
-        if (y === undefined) thiss.y = undefined as Temporary;
+        if (y === null || y === undefined) thiss.y = undefined as Temporary;
         else if (isNaN(+y)) { thiss.y = 0; }
         else thiss.y = +y;
         thiss.className = this.name;
@@ -191,16 +191,16 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
     static init_constructor(thiss: GObject, x: any = 0, y: any = 0, w: any = 0, h: any = 0, ...a: any): void {
         thiss.id = "SIZE_" + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
         thiss.className = thiss.constructor.name;
-        if (x === null) thiss.x = undefined as Temporary;
+        if (x === null || x === undefined) thiss.x = undefined as Temporary;
         else if (isNaN(+x)) { thiss.x = 0; }
         else thiss.x = +x;
-        if (y === null) thiss.y = undefined as Temporary;
+        if (y === null || y === undefined) thiss.y = undefined as Temporary;
         else if (isNaN(+y)) { thiss.y = 0; }
         else thiss.y = +y;
-        if (w === null) thiss.w = undefined as Temporary;
+        if (w === null || w === undefined) thiss.w = undefined as Temporary;
         else if (isNaN(+w)) { thiss.w = 0; }
         else thiss.w = +w;
-        if (h === null) thiss.h = undefined as Temporary;
+        if (h === null || h === undefined) thiss.h = undefined as Temporary;
         else if (isNaN(+h)) { thiss.h = 0; }
         else thiss.h = +h;
         thiss.className = this.name; }

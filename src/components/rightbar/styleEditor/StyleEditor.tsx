@@ -1,10 +1,7 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
-import {LGraphElement} from "../../../model/dataStructure";
-import {LViewElement} from "../../../view/viewElement/view";
-import {LModelElement} from "../../../model/logicWrapper";
-import Input from "../../forEndUser/Input";
+import {LModelElement, LViewElement, LGraphElement, Input}  from "../../../joiner";
 
 function StyleEditorComponent(props: AllProps) {
 
@@ -12,11 +9,11 @@ function StyleEditorComponent(props: AllProps) {
     if(selected) {
         return(<div className={'p-3'}>
             {/*<Input obj={selected.node} field={"id"} label={"ID"} type={"text"} readonly={true}/>*/}
-            <Input obj={selected.node} field={"x"} label={"X Position"} type={"number"} readonly={true} />
-            <Input obj={selected.node} field={"y"} label={"Y Position"} type={"number"} readonly={true} />
-            <Input obj={selected.node} field={"width"} label={"Width"} type={"number"} readonly={true} />
-            <Input obj={selected.node} field={"height"} label={"Height"} type={"number"} readonly={true} />
-            <Input obj={selected.node} field={"zIndex"} label={"Z Index"} type={"number"} readonly={true} />
+            <Input data={selected.node} field={"x"} label={"X Position"} type={"number"} readonly={true} />
+            <Input data={selected.node} field={"y"} label={"Y Position"} type={"number"} readonly={true} />
+            <Input data={selected.node} field={"width"} label={"Width"} type={"number"} readonly={true} />
+            <Input data={selected.node} field={"height"} label={"Height"} type={"number"} readonly={true} />
+            <Input data={selected.node} field={"zIndex"} label={"Z Index"} type={"number"} readonly={true} />
         </div>);
     } else {
         return(<></>);

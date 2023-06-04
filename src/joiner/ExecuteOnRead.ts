@@ -84,7 +84,17 @@ Components.map(C=> {
 for (let Comp of Components) {
 
 }*/
-windoww.Components = Componentss;
+let wComponents = {...Components}
+for (let key in wComponents) {
+    let index = key.indexOf("Component")
+    if (index === -1) continue;
+    let newkey = key.substring(0, index);
+    if ((Components as any)[newkey]) continue;
+    (wComponents as any)[newkey] = (Components as any)[key];
+}
+
+// (Components as any)["input"] = Components["InputComponent"];
+windoww.Components = wComponents;
 
 
 function afterStoreLoad() {

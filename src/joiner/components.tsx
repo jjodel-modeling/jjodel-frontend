@@ -1,3 +1,9 @@
+import {OCLEditorAce} from "../components/forEndUser/OCLEditor";
+
+export {OclEditor} from "../components/rightbar/oclEditor/OclEditor";
+export {OCLEditorAce} from "../components/forEndUser/OCLEditor"
+
+
 export {Input} from "../components/forEndUser/Input";
 export {TextArea} from "../components/forEndUser/TextArea";
 export {Select} from "../components/forEndUser/Select";
@@ -7,7 +13,6 @@ export {Edge} from "../components/forEndUser/Edge";
 
 export {DataOutputComponent} from "../components/logger/DataOutput";
 export {LoggerComponent} from "../components/logger/loggerComponent";
-export {MyInputComponent} from "../components/abstract/MyInput";
 
 /// import components that must save themselves to global variable to be accessible for user
 
@@ -20,5 +25,7 @@ export {Vertex, VertexComponent, GraphVertex, Field} from "../graph/vertex/Verte
 export {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphContainer"; // require vertex, graph
 //export {DockLayoutComponent} from "../components/abstract/DockLayoutComponent";
 export {Edges} from "../graph/edge/Edges";
+
+
 
 console.info('components loaded');

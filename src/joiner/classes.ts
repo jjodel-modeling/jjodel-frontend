@@ -130,13 +130,6 @@ console.warn('ts loading classes');
 // annotation @RuntimeAccessible
 // import {store} from "../redux/createStore";
 
-export enum EuseSizeFrom_old {
-    "view"="model & view", // Elements with the same view will keep the same position in different graphs
-    "viewpoint"="model & viewpoint",
-    "graph"="model & graph", // Element in a graph will maintain the position when changing view
-    "node"="node" // Ensuring every visual element uses his personal size (default)
-}
-
 
 abstract class AbstractMixedClass {
     // superclass!: Dictionary<DocString<'parent class name', Class>>;
@@ -659,6 +652,7 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.size = {};
         thiss.storeSize = false;
         thiss.lazySizeUpdate = false;
+        thiss.constraints = [];
         //thiss.useSizeFrom = EuseSizeFrom.node;
         // thiss.adaptHeight = false;
         // thiss.adaptWidth = false;
@@ -666,11 +660,11 @@ export class Constructors<T extends DPointerTargetable>{
 
         thiss.draggable = true;
         thiss.resizable = true;
-        thiss.adaptWidth = true;
         thiss.display = 'flex' as any;
         thiss.width = 200;
         thiss.height = 100;
-        thiss.adaptHeight = 'fit-content';
+        thiss.adaptWidth = false;
+        thiss.adaptHeight = false; //'fit-content';
 
         if (this.persist) {
             // no pointedBy?
@@ -702,12 +696,13 @@ export class Constructors<T extends DPointerTargetable>{
         }
         return this; }
 
-    DVoidVertex(defaultVSize: GraphSize): this {
+    DVoidVertex(defaultVSize0?: GraphSize): this {
         const thiss: DVoidVertex = this.thiss as any;
-        thiss.x = defaultVSize.x;
-        thiss.y = defaultVSize.y;
-        thiss.w = defaultVSize.w;
-        thiss.h = defaultVSize.h;
+        let defaultVSize = defaultVSize0 as any;
+        thiss.x = defaultVSize?.x;
+        thiss.y = defaultVSize?.y;
+        thiss.w = defaultVSize?.w;
+        thiss.h = defaultVSize?.h;
         thiss.isResized = false;
         if (this.persist) {
             // no pointedBy?

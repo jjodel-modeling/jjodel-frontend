@@ -97,7 +97,7 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
     extends PureComponent<AllProps, GraphElementState>{
     static all: Dictionary<number, GraphElementComponent> = {};
-    static map: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = {};
+    public static map: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = {};
     static maxid: number = 0;
     id: number;
     public static refresh() {
@@ -455,7 +455,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 rawRElement = React.cloneElement(rawRElement,
                     {
                         key: this.props.key || this.props.nodeid,
-                        onDragTestInject,
+                        // damiano: l'html viene settato correttamente a tutti tranne ad attribute, ref, operation (perchè iniziano con <Select/> as root?
                         ref: this.html,
                         id: this.props.nodeid,
                         "data-nodeid": this.props.nodeid,

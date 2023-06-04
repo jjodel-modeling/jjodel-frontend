@@ -222,13 +222,16 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         let canThrowErrors = true;
         if (propKey === "__raw") return targetObj;
 
-        if (typeof propKey === "symbol") {
-            switch(String(propKey)){
-                default: Log.exDevv('unexpected symbol:', propKey); break;
-                case "Symbol(Symbol.toPrimitive)": return (targetObj as any)[propKey];//  || typeof targetObj;
-            }
+        switch(typeof propKey){
+            case "symbol":
+                switch(String(propKey)){
+                    default: Log.exDevv('unexpected symbol:', propKey); break;
+                    case "Symbol(Symbol.toPrimitive)": return (targetObj as any)[propKey];//  || typeof targetObj;
+                }
+                return null;
+            case "number": return null;
         }
-//
+
         switch(propKey){
             case 'inspect': // node.js util
             case '__Raw':
@@ -242,6 +245,9 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             case 'clonedCounter':
                 return targetObj.clonedCounter || 0;
         }
+        if (propKey[0] === "_" && propKey.indexOf("__info_of__")===0) {
+            return (this.l as GObject)[propKey];
+        }
 
 
         const proxyacceptables = {typeName:'', $$typeof:''};
@@ -254,6 +260,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
             if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) {
                 let getterMethod: Function = this.lg[this.g + propKey]; // || this.defaultGetter;
+                // console.log("gets method", {getterMethod, lg:this.lg, thiss: this});
                 return getterMethod ? getterMethod(new LogicContext(proxyitself as any, targetObj)) : this.defaultGetter(targetObj, propKey, proxyitself);
 
             }

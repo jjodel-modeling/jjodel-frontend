@@ -16,7 +16,7 @@ import {
 } from "../../../joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
 import * as util from "util";
-import { makeEvalContext } from "../../../graph/graphElement/graphElement";
+import {GraphElementComponent, makeEvalContext } from "../../../graph/graphElement/graphElement";
 
 var Convert = require('ansi-to-html');
 var ansiConvert = new Convert();
@@ -91,6 +91,7 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         this.change(undefined);
     }
     change = (evt?: React.ChangeEvent<HTMLTextAreaElement>) => {
+        if (!this) return; // component being destroyed and remade after code hot update
         let expression: string | undefined = evt?.target.value.trim() || this.state.expression || '';
         let output;
         // let context = {...this.props, props: this.props}; // makeEvalContext(this.props as any, {} as any);
@@ -143,6 +144,11 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                     shortcuts = ret.shortcuts;
                     hidden = ret.hiddenkeys;
                     console.log("console result:", {output, ret});
+                }
+                // todo: as i fix the displaying of a LViewElement without replacing it with __raw,
+                //  i will fix window, component and props displaying too i think they crash for props.data, props.view...
+                if (output?._reactInternals) {
+                    output = {"React.Component": {props:"...navigate to expand...", state:"", _isMounted:output._isMounted}}
                 }
                 let format = (val: GObject) => U.replaceAll(ansiConvert.toHtml(util.inspect(val, true, 2, true)), "style=\"color:#FFF\"", "style=\"color:#000\"");
                 outstr = "<h4>Result:</h4>" + format(output);

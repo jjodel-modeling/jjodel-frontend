@@ -32,7 +32,7 @@ export type {GetPath} from './proxy';
 export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv,
     NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually,
     Function, Function2, InOutParam,
-    unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap
+    unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap, Info
 } from "./types";
 export type {Pointer, PtrString, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1 } from "./classes";
 
@@ -111,7 +111,7 @@ export {
     LStructuralFeature, LDataType, LTypedElement, LNamedElement, // DMap, LMap,
     LValue,
 } from "../model/logicWrapper/LModelElement";*/
-export {DExtEdge, DRefEdge, DVoidEdge, LGraphVertex, LRefEdge, LEdgePoint, DVoidVertex, DGraphVertex, DEdgePoint, DVertex, DEdge, LVertex, LGraph, DGraph, LVoidVertex, LVoidEdge, LEdge, LGraphElement, LExtEdge, DGraphElement, defaultVSize} from "../model/dataStructure/GraphDataElements";
+export {DExtEdge, DRefEdge, DVoidEdge, LGraphVertex, LRefEdge, LEdgePoint, DVoidVertex, DGraphVertex, DEdgePoint, DVertex, DEdge, LVertex, LGraph, DGraph, LVoidVertex, LVoidEdge, LEdge, LGraphElement, LExtEdge, DGraphElement} from "../model/dataStructure/GraphDataElements";
 
 
 // export {GraphDragHandler} from "../graph/vertex/GraphDragHandler";
@@ -232,7 +232,7 @@ export {
     Vertex,    Graph,
     // DockLayoutComponent,
     ColorScheme, Edges,
-    DataOutputComponent, LoggerComponent, MyInputComponent
+    DataOutputComponent, LoggerComponent,
 } from './components'
 
 //export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file

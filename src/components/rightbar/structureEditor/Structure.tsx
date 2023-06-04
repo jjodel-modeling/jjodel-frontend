@@ -20,7 +20,7 @@ export default class Structure {
         if(!lModelElement) return(<></>);
         return(<>
             {/*<Input obj={lModelElement} field={"id"} label={"ID"} type={"text"} readonly={true} />*/}
-            <Input obj={lModelElement} field={"name"} label={"Name"} type={"text"} tooltip={"Element name"} />
+            <Input data={lModelElement} field={"name"} label={"Name"} type={"text"} tooltip={"Element name"} />
         </>);
     }
     public static ModelEditor(lModel: LModelElement): ReactNode {
@@ -31,22 +31,22 @@ export default class Structure {
         if(!lPackage) return(<></>);
         return(<>
             {Structure.BaseEditor(lPackage)}
-            <Input obj={lPackage} field={"uri"} label={"NsURI"} type={"text"} tooltip={"Namespace URI of the package, i.e. the URI that is displayed in the xmlns tag to identify this package in an XMI document"} />
-            <Input obj={lPackage} field={"prefix"} label={"NsPrefix"} type={"text"} tooltip={"Namespace prefix that is used when references to instances of the classes in this package are serialized"} />
+            <Input data={lPackage} field={"uri"} label={"NsURI"} type={"text"} tooltip={"Namespace URI of the package, i.e. the URI that is displayed in the xmlns tag to identify this package in an XMI document"} />
+            <Input data={lPackage} field={"prefix"} label={"NsPrefix"} type={"text"} tooltip={"Namespace prefix that is used when references to instances of the classes in this package are serialized"} />
         </>);
     }
     public static ClassEditor(lClass: LModelElement): ReactNode {
         if(!lClass) return(<></>);
         return(<>
             {Structure.BaseEditor(lClass)}
-            <Input obj={lClass} field={"abstract"} label={"IsAbstract"} type={"checkbox"} tooltip={"If set to True, the generated implementation class will have the abstract keyword"} />
-            <Input obj={lClass} field={"interface"} label={"IsInterface"} type={"checkbox"} tooltip={"If set to True, only the java interface will be generated. There will be no corresponding implementation class and no create method in the factory"} />
-            <Input obj={lClass} field={"partial"} label={"IsPartial"} type={"checkbox"} tooltip={"If set to True, the class will be partial."} />
+            <Input data={lClass} field={"abstract"} label={"IsAbstract"} type={"checkbox"} tooltip={"If set to True, the generated implementation class will have the abstract keyword"} />
+            <Input data={lClass} field={"interface"} label={"IsInterface"} type={"checkbox"} tooltip={"If set to True, only the java interface will be generated. There will be no corresponding implementation class and no create method in the factory"} />
+            <Input data={lClass} field={"partial"} label={"IsPartial"} type={"checkbox"} tooltip={"If set to True, the class will be partial."} />
         </>);
     }
     private static DataTypeEditor(lDataType: LModelElement): ReactNode {
         if(!lDataType) return(<></>);
-        return(<Input obj={lDataType} field={"serializable"} label={"IsSerializable"} type={"checkbox"} tooltip={"It represents whether values of this type will be serialized"} />);
+        return(<Input data={lDataType} field={"serializable"} label={"IsSerializable"} type={"checkbox"} tooltip={"It represents whether values of this type will be serialized"} />);
     }
     public static EnumEditor(lEnum: LModelElement): ReactNode {
         if(!lEnum) return(<></>);
@@ -58,22 +58,22 @@ export default class Structure {
     private static TypedElementEditor(lTypedElement: LModelElement): ReactNode {
         if(!lTypedElement) return(<></>);
         return(<>
-            <Select obj={lTypedElement} field={"type"} label={"Type"} tooltip={"Element Type"} />
-            <Input obj={lTypedElement} field={"lowerBound"} label={"Lower Bound"} type={"number"} tooltip={"Determines the setting of the required property. If lowerBound is 0, the required property will be set to False. Otherwise, the required property will be set to True"} />
-            <Input obj={lTypedElement} field={"upperBound"} label={"Upper Bound"} type={"number"} tooltip={"Determines the setting of the many property. If upperBound is 1, the many property will be set to False. Otherwise, the many property will be set to True"} />
-            <Input obj={lTypedElement} field={"ordered"} label={"IsOrdered"} type={"checkbox"} tooltip={"It represents whether order is meaningful"} />
-            <Input obj={lTypedElement} field={"unique"} label={"IsUnique"} type={"checkbox"} tooltip={"Indicates whether a many-valued attribute is allowed to have duplicates"} />
+            <Select data={lTypedElement} field={"type"} label={"Type"} tooltip={"Element Type"} />
+            <Input data={lTypedElement} field={"lowerBound"} label={"Lower Bound"} type={"number"} tooltip={"Determines the setting of the required property. If lowerBound is 0, the required property will be set to False. Otherwise, the required property will be set to True"} />
+            <Input data={lTypedElement} field={"upperBound"} label={"Upper Bound"} type={"number"} tooltip={"Determines the setting of the many property. If upperBound is 1, the many property will be set to False. Otherwise, the many property will be set to True"} />
+            <Input data={lTypedElement} field={"ordered"} label={"IsOrdered"} type={"checkbox"} tooltip={"It represents whether order is meaningful"} />
+            <Input data={lTypedElement} field={"unique"} label={"IsUnique"} type={"checkbox"} tooltip={"Indicates whether a many-valued attribute is allowed to have duplicates"} />
         </>);
     }
     private static StructuralFeatureEditor(lStructuralFeature: LModelElement): ReactNode {
         if(!lStructuralFeature) return(<></>);
         return(<>
-            <Input obj={lStructuralFeature} field={"defaultValueLiteral"} label={"Default Value Literal"} type={"text"} tooltip={"Determines the value returned by the get method if the feature has never been set"} />
-            <Input obj={lStructuralFeature} field={"changeable"} label={"IsChangeable"} type={"checkbox"} tooltip={"Indicates whether the reference may be modified. If changeable is set to False, no set() method is generated for the reference"} />
-            <Input obj={lStructuralFeature} field={"volatile"} label={"IsVolatile"} type={"checkbox"} tooltip={"Indicates whether the reference cannot be cached. If volatile is set to True, the generated class does not contain a field to hold the reference and the generated get() and set() methods for the reference are empty"} />
-            <Input obj={lStructuralFeature} field={"transient"} label={"IsTransient"} type={"checkbox"} tooltip={"Indicates whether the reference should not be stored"} />
-            <Input obj={lStructuralFeature} field={"unsettable"} label={"IsUnsettable"} type={"checkbox"} tooltip={"Indicates that the feature may be unset"} />
-            <Input obj={lStructuralFeature} field={"derived"} label={"IsDerived"} type={"checkbox"} tooltip={"A derived feature typically computes its value from those of other features. It will typically be transient and will often be volatile and not changeable. The default copier won't copy it"} />
+            <Input data={lStructuralFeature} field={"defaultValueLiteral"} label={"Default Value Literal"} type={"text"} tooltip={"Determines the value returned by the get method if the feature has never been set"} />
+            <Input data={lStructuralFeature} field={"changeable"} label={"IsChangeable"} type={"checkbox"} tooltip={"Indicates whether the reference may be modified. If changeable is set to False, no set() method is generated for the reference"} />
+            <Input data={lStructuralFeature} field={"volatile"} label={"IsVolatile"} type={"checkbox"} tooltip={"Indicates whether the reference cannot be cached. If volatile is set to True, the generated class does not contain a field to hold the reference and the generated get() and set() methods for the reference are empty"} />
+            <Input data={lStructuralFeature} field={"transient"} label={"IsTransient"} type={"checkbox"} tooltip={"Indicates whether the reference should not be stored"} />
+            <Input data={lStructuralFeature} field={"unsettable"} label={"IsUnsettable"} type={"checkbox"} tooltip={"Indicates that the feature may be unset"} />
+            <Input data={lStructuralFeature} field={"derived"} label={"IsDerived"} type={"checkbox"} tooltip={"A derived feature typically computes its value from those of other features. It will typically be transient and will often be volatile and not changeable. The default copier won't copy it"} />
         </>); // damiano: derived description tooltip might be wrong
     }
     public static AttributeEditor(lAttribute: LModelElement): ReactNode {
@@ -82,7 +82,7 @@ export default class Structure {
             {Structure.BaseEditor(lAttribute)}
             {Structure.TypedElementEditor(lAttribute)}
             {Structure.StructuralFeatureEditor(lAttribute)}
-            <Input obj={lAttribute} field={"isID"} label={"IsID"} type={"checkbox"} tooltip={"An ID attribute explicitly models the one unique ID of an object"} />
+            <Input data={lAttribute} field={"isID"} label={"IsID"} type={"checkbox"} tooltip={"An ID attribute explicitly models the one unique ID of an object"} />
         </>);
     }
     public static ReferenceEditor(lReference: LModelElement): ReactNode {
@@ -91,9 +91,9 @@ export default class Structure {
             {Structure.BaseEditor(lReference)}
             {Structure.TypedElementEditor(lReference)}
             {Structure.StructuralFeatureEditor(lReference)}
-            <Input obj={lReference} field={"containment"} label={"IsContainment"} type={"checkbox"} tooltip={"Indicates whether the reference is a containment"} />
-            <Input obj={lReference} field={"container"} label={"IsContainer"} type={"checkbox"} tooltip={"Indicates whether the reference is a container. This is the opposite of a containment EReference. If container is true, the generated accessor methods will have container semantics"} />
-            <Input obj={lReference} field={"resolveProxies"} label={"IsResolveProxies"} type={"checkbox"} tooltip={"Indicates whether proxy references should be resolved automatically"} />
+            <Input data={lReference} field={"containment"} label={"IsContainment"} type={"checkbox"} tooltip={"Indicates whether the reference is a containment"} />
+            <Input data={lReference} field={"container"} label={"IsContainer"} type={"checkbox"} tooltip={"Indicates whether the reference is a container. This is the opposite of a containment EReference. If container is true, the generated accessor methods will have container semantics"} />
+            <Input data={lReference} field={"resolveProxies"} label={"IsResolveProxies"} type={"checkbox"} tooltip={"Indicates whether proxy references should be resolved automatically"} />
         </>);
     }
     public static EnumLiteralEditor(lEnumLiteral: LModelElement): ReactNode {
@@ -101,7 +101,7 @@ export default class Structure {
         //vv4
         return(<>
             {Structure.BaseEditor(lEnumLiteral)}
-            <Input obj={lEnumLiteral} field={"value"} label={"Ordinal"} type={"number"} tooltip={"Determines the integer value that is associated with this literal"} />
+            <Input data={lEnumLiteral} field={"value"} label={"Ordinal"} type={"number"} tooltip={"Determines the integer value that is associated with this literal"} />
         </>);
     }
 
@@ -110,21 +110,21 @@ export default class Structure {
         if(!operation) return(<></>);
         return(<>
             {Structure.BaseEditor(operation)}
-            <Select obj={operation.id} field={'type'} label={'Return'} tooltip={"Method return type"} />
+            <Select data={operation.id} field={'type'} label={'Return'} tooltip={"Method return type"} />
             {operation.parameters.map((parameter, index) => {
                 if (index > 0) {
                     return <div key={index}>
                         <label className={'ms-1'}>Parameter</label>
                         <div className={'ms-3'}>
-                            <Input obj={parameter.id} field={"name"} label={'• Name'} type={"text"} tooltip={"Name of the generated argument"} />
-                            <Select obj={parameter.id} field={"type"} label={'• Type'} tooltip={"Argument type"} />
+                            <Input data={parameter.id} field={"name"} label={'• Name'} type={"text"} tooltip={"Name of the generated argument"} />
+                            <Select data={parameter.id} field={"type"} label={'• Type'} tooltip={"Argument type"} />
                         </div>
                     </div>
                 }
             })}
             {operation.exceptions.map((exception, index) => {
                 return <div key={index}>
-                    <Input obj={exception.id} field={"name"} label={"Exception"} type={"text"} tooltip={"Exception name"} />
+                    <Input data={exception.id} field={"name"} label={"Exception"} type={"text"} tooltip={"Exception name"} />
                 </div>
             })}
         </>);

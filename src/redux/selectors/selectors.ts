@@ -333,7 +333,6 @@ export class Selectors{
         let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
         try {
             const flag = OCL.filter(false, "src", [data], query, constructors);
-            console.clear(); console.log(flag)
             if(flag.length > 0) return ViewEClassMatch.EXACT_MATCH + v.explicitApplicationPriority;
             else return ViewEClassMatch.MISMATCH;
         } catch (e) { console.error('invalid ocl query'); }

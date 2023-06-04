@@ -8,8 +8,8 @@ import {
     DViewElement,
     DVoidEdge,
     EdgeBendingMode, GObject,
-    GraphSize,
-    Selectors,
+    GraphSize, Input,
+    Selectors, SetRootFieldAction,
     store
 } from "../../joiner";
 import {SaveManager} from "./SaveManager";
@@ -47,6 +47,8 @@ function Topbar(props: AllProps) {
         SaveManager.exportEcore_click(true, true);
     }
 
+    if (props.debug && !document.body.classList.contains("debug")) document.body.classList.add("debug");
+    else document.body.classList.remove("debug")
 
     return(<div className={'topbar d-flex'}>
         {/*
@@ -68,18 +70,28 @@ function Topbar(props: AllProps) {
         <label className={'item border round ms-1'} onClick={exportJson}>Export JSON</label>
         <label className={'item border round ms-1'} onClick={importJson}>Import JSON</label>
 
+
+        <div className={"p-1 "} style={{display: "flex", cursor: "auto"}}>
+            <label className={"my-auto"}>Debug mode</label>
+            <input className={"my-auto input ms-auto"} type={"checkbox"} checked={props.debug} onChange={(e)=>{
+            SetRootFieldAction.new("debug", e.target.checked);
+            }
+            } />
+        </div>
+
         {/*<RoomManager />*/}
 
     </div>);
 }
 interface OwnProps {}
-interface StateProps { }
+interface StateProps { debug: boolean; }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
+    ret.debug = state.debug;
     return ret;
 }
 

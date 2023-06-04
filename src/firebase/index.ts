@@ -15,6 +15,7 @@ import {
 } from '@firebase/firestore';
 import {Env} from "./environment";
 import firebase from "firebase/compat";
+import { GObject } from "../joiner";
 
 type OPERATOR = '=='|'!=';
 export interface CONSTRAINT {field: string, operator: OPERATOR, value: any}
@@ -55,14 +56,14 @@ export class Firebase {
         if(isAND) q = query(DOC, ...conditions);
         else q = query(DOC, or(...conditions));
         const qs = await getDocs(q);
-        qs.forEach((doc) => {objects.push({...doc.data()})});
+        qs.forEach((doc: GObject) => {objects.push({...doc.data()})});
         return objects;
     }
 
     private static async _selectWithoutConditions(DOC: CollectionReference): Promise<any> {
         const objects: any = [];
         const q = query(DOC); const qs = await getDocs(q);
-        qs.forEach((doc) => {objects.push({...doc.data()})});
+        qs.forEach((doc: GObject) => {objects.push({...doc.data()})});
         return objects
     }
 

@@ -19,9 +19,9 @@ import {
     RuntimeAccessibleClass, LViewPoint,
     U, GraphSize, GraphPoint, GObject, Size, SetRootFieldAction, SetFieldAction,
 } from "../../joiner";
+import $ from "jquery";
 import "jqueryui";
 import "jqueryui/jquery-ui.css";
-import RootVertex from "./RootVertex";
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee { forceupdate?: number }
@@ -63,10 +63,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             this.forceUpdate();
             this.setState({forceupdate:2});
         },1)
-        this.r = null;
     }
 
-    r: any;
 
     setVertexProperties(){
         if(!this.props.node || !this.html.current) return;
@@ -74,8 +72,10 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         this.hasSetVertexProperties = true;
 
         let html = this.html.current;
+
         const $measurable: GObject<"JQuery + ui plugin"> = $(html); // todo: install typings
         // $element = $(html).find(".measurable").addBack();
+        console.log("$$$", $);
         $measurable.draggable({
             cursor: 'grabbing',
             containment: 'parent',
@@ -89,6 +89,9 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 // if (size.w !== actualSize.w || size.h !== actualSize.h) this.setSize({w:actualSize.w, h:actualSize.h});
                 dragHelper.style.width = size.w+"px";
                 dragHelper.style.height = size.h+"px";
+                dragHelper.style.opacity = this.props.view.constraints.length ? "1" : "0.5";
+                if (this.props.view.lazySizeUpdate) dragHelper.classList.add("lazySizeUpdate");
+                else dragHelper.classList.remove("lazySizeUpdate");
                 return dragHelper;
             },
 
@@ -102,11 +105,10 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 }
             },
             drag: (event: GObject, obj: GObject) => {
-                // if (!withSetSize) { node.y = obj.position.top; node.x = obj.position.left; } else {
                 if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
             },
             stop: (event: GObject, obj: GObject) => {
-                //if (!withSetSize) {  node.y = obj.position.top; node.x = obj.position.left; } else
+                console.log("drag stop setsize", {x:obj.position.left, y:obj.position.top});
                 this.setSize({x:obj.position.left, y:obj.position.top});
                 if (this.props.view.onDragEnd) {
                     try{ eval(this.props.view.onDragEnd); } // todo: eval in context
@@ -156,6 +158,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
 
     getSize(): Readonly<GraphSize> {
+        return this.props.node.size;
         /*console.log("get_size("+(this.props?.data as any).name+")", {
             view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
             node:this.props.node?.size,
@@ -165,7 +168,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             || this.props.node?.size
             || this.props.view.defaultVSize;
         if (this.props.node.isResized) return ret;
-        let actualSize: Partial<Size>&{w:number, h:number} = this.html.current ? Size.of(this.html.current) : {w:0, h:0};
+        let actualSize: Partial<Size>&{w:number, h:number} = this.html.current ? Size.of(this.html.current as Element) : {w:0, h:0};
         if (this.props.view.adaptWidth && ret.w !== actualSize.w) {
             this.setSize({w:actualSize.w});
             ret.w = actualSize.w;
@@ -181,6 +184,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     setSize(x_or_size_or_point: Partial<GraphSize>): void;
     // setSize(x_or_size_or_point: number | GraphSize | GraphPoint, y?: number, w?:number, h?:number): void;
     setSize(size0: Partial<GraphSize> | Partial<GraphPoint>): void {
+        return this.props.node.size = size0 as any;
         // console.log("setSize("+(this.props?.data as any).name+") thisss", this);
         let size: Partial<GraphSize> = size0 as Partial<GraphSize>;
         if (this.props.view.storeSize) {
@@ -189,10 +193,10 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             return;
         }
         let olds = this.props.node.size;
-        size.x = size.x === undefined ? olds.x : size.x;
-        size.y = size.y === undefined ? olds.y : size.y;
-        size.w = size.w === undefined ? olds.w : size.w;
-        size.h = size.h === undefined ? olds.h : size.h;
+        size.x = size.x === undefined ? olds?.x : size.x;
+        size.y = size.y === undefined ? olds?.y : size.y;
+        size.w = size.w === undefined ? olds?.w : size.w;
+        size.h = size.h === undefined ? olds?.h : size.h;
         this.props.node.size = size as GraphSize;
     }
 
@@ -218,8 +222,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             case "GraphVertex":
             case "Vertex":
             case "VoidVertex":
-                styleoverride.top= size.x+"px";
-                styleoverride.left= size.y+"px";
+                styleoverride.top= size.y+"px";
+                styleoverride.left= size.x+"px";
                 let isResized = this.props.node.isResized;
                 if (isResized || !this.props.view.adaptWidth) styleoverride.width = size.w+"px";
                 else styleoverride.width = undefined;

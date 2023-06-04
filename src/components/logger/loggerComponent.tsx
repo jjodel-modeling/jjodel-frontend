@@ -1,6 +1,6 @@
 import React, {PureComponent, ReactNode} from "react";
 import './logger.scss';
-import {DataOutputComponent, DDate, Dictionary, GObject, Log, MyInputComponent, U, UnixTimestamp} from "../../joiner";
+import {DataOutputComponent, DDate, Dictionary, GObject, Log, U, UnixTimestamp} from "../../joiner";
 
 // private
 interface ThisState {
@@ -67,9 +67,9 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
                     { allTags.map(tag => <option key={tag} value={tag}>{tag}</option>) }
                 </datalist>
                 <input list={"#logger_" + this.state.id + "_keylist"} value={this.state.searchTag} onChange={ this.changeSearchTag } />
-                <MyInputComponent label={"as RegExp"} type="checkbox" checked={this.state.searchTagAsRegExp} onChange={this.changeRegexpTag} />
-                <MyInputComponent label={"from"} type="datetime-local" value={ new Date(this.state.minDate).toString()} onChange={this.changeMinDate} />
-                <MyInputComponent label={"to"} type="datetime-local" value={ new Date(this.state.maxDate).toString()} onChange={this.changeMaxDate} />
+                {/*<Input label={"as RegExp"} type="checkbox" checked={this.state.searchTagAsRegExp} onChange={this.changeRegexpTag} />
+                <input label={"from"} type="datetime-local" value={ new Date(this.state.minDate).toString()} onChange={this.changeMinDate} />
+                <input label={"to"} type="datetime-local" value={ new Date(this.state.maxDate).toString()} onChange={this.changeMaxDate} /> */}
             </div>
             <ul className={"categories"}>
                 { allCategories.map((cat, i) => <li className={"category cat_"+ i + " " + cat} key={cat} data-active={this.isCatActive(cat)}>{cat}</li>) }

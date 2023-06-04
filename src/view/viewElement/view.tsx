@@ -1,21 +1,25 @@
 import {
-    BEGIN,
-    Constructor,
-    Constructors, Dictionary,
+    Constructors,
+    DGraphElement,
+    Dictionary,
     DModelElement,
     DocString,
     DPointerTargetable,
+    DViewPoint,
     EdgeBendingMode,
-    END,
     getWParams,
+    GObject,
     GraphSize,
+    Info,
     LogicContext,
     LPointerTargetable,
+    LViewPoint,
     MyProxyHandler,
     Pointer,
     RuntimeAccessible,
     RuntimeAccessibleClass,
-    SetFieldAction, DGraphElement, LGraphVertex, DViewPoint, LViewPoint
+    SetFieldAction,
+    ShortAttribETypes
 } from "../../joiner";
 
 @RuntimeAccessible
@@ -50,8 +54,8 @@ export class DViewElement extends DPointerTargetable {
     oclApplyCondition!: string; // ocl selector
     explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
     defaultVSize!: GraphSize;
-    adaptHeight!: boolean | 'fit-content' | '-webkit-fill-available';
-    adaptWidth!: boolean | 'fit-content' | '-webkit-fill-available';
+    adaptHeight!: boolean;// | 'fit-content' | '-webkit-fill-available';
+    adaptWidth!: boolean;
     width!: number;
     height!: number;
     draggable!: boolean;
@@ -59,6 +63,7 @@ export class DViewElement extends DPointerTargetable {
     query!: string;
     viewpoint: Pointer<DViewPoint, 0, 1, LViewElement> = '';
     display!: 'block'|'contents'|'flex'|string;
+    constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
     onDragStart: string = '';
     onDragEnd: string = '';
     onResizeStart: string = '';
@@ -115,10 +120,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     oclApplyCondition!: string; // ocl selector
     explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
     defaultVSize!: GraphSize;
-    adaptHeight!: boolean;
     adaptWidth!: boolean;
-    width!: number;
-    height!: number;
+    adaptHeight!: boolean;
+    __info_of__adaptWidth = {type: "boolean", txt: "Whether the element should expand his width to accomodate his own contents."};
+    __info_of__adaptHeight = {type: "boolean", txt: "Whether the element should expand his height to accomodate his own contents."};
     draggable!: boolean;
     resizable!: boolean;
     query!: string;
@@ -128,10 +133,13 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     onDragEnd!: string;
     onResizeStart!: string;
     onResizeEnd!: string;
+    constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
     bendingMode!: EdgeBendingMode;
     storeSize!: boolean;
+    // __info_of__storeSize: Info = {type: ShortAttribETypes.EBoolean, txt:<><div>Whether the node position should depend from the View or the Graph.</div><div>Enabled = share positions on different graphs but changes it if view is changed.</div></>}
+    __info_of__storeSize: Info = {type: ShortAttribETypes.EBoolean, txt: <><div>Active: the node position depends from the view currently displayed.</div><div>Inactive: it depends from the graph.</div></>}
     lazySizeUpdate!: boolean;
-    __info_of__lazySizeUpdate: any = {type: "boolean", txt: "When activated, the layout position will only be updated once when the drag or resize operation is completed. (best performance)"}
+    __info_of__lazySizeUpdate: Info = {type: ShortAttribETypes.EBoolean,txt: "When activated, the layout position will only be updated once when the drag or resize operation is completed. (best performance)"}
 
     protected size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>; // use getSize, updateSize
 
@@ -164,13 +172,13 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return SetFieldAction.new(context.data.id,  "size", val); }*/
 
     // returns the delta of change
-    public updateSize(id: Pointer<DModelElement> | Pointer<DGraphElement>, size: Partial<GraphSize>): void { return this.wrongAccessMessage("updateSize"); }
+    public updateSize(id: Pointer<DModelElement> | Pointer<DGraphElement>, size: Partial<GraphSize>): boolean { return this.wrongAccessMessage("updateSize"); }
     public get_updateSize(context: Context): this["updateSize"] {
         return (id: Pointer<DModelElement> | Pointer<DGraphElement>, size: Partial<GraphSize>) => {
             let vp = context.proxyObject.viewpoint;
             if (!context.data.storeSize) {
                 if (vp?.storeSize) return vp.updateSize(id, size);
-                return undefined;
+                return false;
             }
             let vsize = context.data.size[id] || vp?.__raw.size[id] || context.data.defaultVSize || vp?.__raw.defaultVSize;
             let newSize: GraphSize = new GraphSize();
@@ -179,6 +187,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             newSize.w = size?.w !== undefined ? size.w : vsize.w;
             newSize.h = size?.h !== undefined ? size.h : vsize.h;
             SetFieldAction.new(context.data.id, "size." + id as any, newSize);
+            return true;
         }
     }
 

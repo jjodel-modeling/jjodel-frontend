@@ -2,7 +2,7 @@ import React, {Dispatch, ReactElement} from "react";
 import {CreateElementAction, SetFieldAction, SetRootFieldAction} from "../../../redux/action/action";
 import {IStore} from "../../../redux/store";
 import {connect} from "react-redux";
-import {DViewPoint, Input, LViewPoint, Pointer, U} from "../../../joiner";
+import {DViewPoint, Input, LViewElement, LViewPoint, Pointer, U} from "../../../joiner";
 
 
 function ViewpointsEditorComponent(props: AllProps) {
@@ -18,7 +18,7 @@ function ViewpointsEditorComponent(props: AllProps) {
         CreateElementAction.new(dViewPoint);
     }
     const remove = (index: number, viewpoint: LViewPoint) => {
-        const filteredViews = views.filter(view => view.viewpoint.id === viewpoint.id);
+        const filteredViews = views.filter(view => view.viewpoint?.id === viewpoint.id);
         for(let view of filteredViews) SetFieldAction.new(view.id, 'viewpoint', null);
         SetRootFieldAction.new('viewpoints', index, '-=', true);
     }

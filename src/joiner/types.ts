@@ -1,6 +1,6 @@
 // export type Class = { new(...args: any[]): any; };
-import type {NotAString, Pointer} from "./classes";
-import type {DAttribute, DPackage} from "../model/logicWrapper";
+import type {ShortAttribETypes, Pointer} from "../joiner";
+import type React from "react";
 
 export declare type Class<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (abstract new (...args: any[]) => InstanceType) & StaticType;
 export declare type CClass<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (new (...args: any[]) => InstanceType) & StaticType;
@@ -27,7 +27,8 @@ export type unArr<T extends any[] | any> = T extends any[] ? T[0] : T;
 type primitiveType = string | number | boolean | symbol | null | undefined;
 export type PrimitiveType = string | number | boolean | null;
 type NotAFunction = NoCaller | NoBind | NoApply | NoCall;
-type NotFunction = GObject & NotAFunction | primitiveType
+type NotFunction = GObject & NotAFunction | primitiveType;
+export type Info = {type: ShortAttribETypes, txt: string | React.ReactElement};
 
 
 export type Empty = any;
