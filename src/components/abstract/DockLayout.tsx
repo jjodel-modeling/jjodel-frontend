@@ -16,8 +16,7 @@ import Swal from 'sweetalert2'
 import MetamodelTab from "./tabs/MetamodelTab";
 import ModelTab from "./tabs/ModelTab";
 import InfoTab from "./tabs/InfoTab";
-import PersistanceTab from "./tabs/PersistanceTab";
-
+import TestTab from "./tabs/TestTab";
 
 export class TabDataMaker {
     static metamodel (model: LModel | DModel): TabData {
@@ -68,7 +67,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         }
     };
 
-    private persistance = { title: "Persistance", group: "2", closable: false, content: <PersistanceTab /> };
+    private test = { title: "Test", group: "2", closable: false, content: <TestTab /> };
     private structureEditor = { id: '1', title: 'Structure', group: 'group2', closable: false, content: <StructureEditor /> };
     private treeEditor = { id: '2', title: 'Tree View', group: 'group2', closable: false, content: <TreeEditor /> };
     private viewsEditor = { id: '3', title: 'Views', group: 'group2', closable: false, content: <ViewsEditor /> };
@@ -218,7 +217,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         layout.dockbox.children.push({tabs: [infoTab]});
         layout.dockbox.children.push({
             tabs: [
-                // this.persistance,
+                this.test,
                 this.structureEditor,
                 this.treeEditor,
                 this.viewsEditor,

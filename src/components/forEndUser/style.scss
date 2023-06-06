@@ -1,1 +1,13 @@
 @import "src/styles/variables";
+
+.tree {
+  & > .DModel > b {color: $model-color}
+  & > .DPackage > b {color: $package-color}
+  & > .DClass > b {color: $class-color}
+  & > .DAttribute > b {color: $attribute-color}
+  & > .DReference > b {color: $reference-color}
+  & > .DEnumerator > b {color: $enum-color}
+  & > .DEnumLiteral > b {color: $literal-color}
+  & > .DOperation > b {color: $operation-color}
+  & > .DParameter > b {color: $parameter-color}
+}

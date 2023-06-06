@@ -1,7 +1,7 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
-import {DPointerTargetable, GObject, Info, LPointerTargetable, Overlap, Pointer, U} from "../../joiner";
+import {DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer, U} from "../../joiner";
 import toast, {Toaster} from 'react-hot-toast';
 
 

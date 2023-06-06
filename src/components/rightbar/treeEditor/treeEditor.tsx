@@ -1,18 +1,7 @@
-import React, {Dispatch, ReactElement, ReactNode} from "react";
+import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
-import {
-    DPointerTargetable,
-    DViewElement,
-    GObject, Input,
-    LModelElement,
-    LPointerTargetable,
-    LViewElement,
-    Pointer, Select, SetRootFieldAction
-} from "../../../joiner";
-import Editor from "@monaco-editor/react";
-import {useStateIfMounted} from "use-state-if-mounted";
-import Structure from "../structureEditor/Structure";
+import {GObject, LModelElement, SetRootFieldAction} from "../../../joiner";
 
 interface Props {data: LModelElement}
 function Child(props: Props) {
