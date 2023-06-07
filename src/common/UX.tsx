@@ -61,7 +61,8 @@ export class UX{
             // case windoww.Components.DefaultNode.name:
             case windoww.Components.DefaultNodeComponent.name:
             // case windoww.Components.Graph.name:
-            case windoww.Components.GraphComponent.name:
+            // case windoww.Components.GraphComponent.name:
+            case "Graph": case "GraphComponent":
             // case windoww.Components.Field.name:
             // case windoww.Components.FieldComponent.name:
             // case windoww.Components.Vertex.name:

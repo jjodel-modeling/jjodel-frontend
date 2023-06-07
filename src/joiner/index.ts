@@ -225,7 +225,6 @@ export {
     VertexComponent,
     GraphElement,
     TextArea, Select, Input, Image, Edge,
-    GraphComponent,
     GraphsContainerComponent,
     Overlap as OverlapComponent,
     GraphsContainer,

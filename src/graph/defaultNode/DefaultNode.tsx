@@ -21,7 +21,9 @@ import {
     Vertex,
     windoww,
 } from "../../joiner";
-import {Field, Graph, GraphVertex} from "../vertex/Vertex";
+import {Field, GraphVertex} from "../vertex/Vertex";
+import {Graph} from "../vertex/Vertex";
+// import {Graph} from "../graph/graph";
 
 const superclass: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 
@@ -71,7 +73,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
             switch (view.forceNodeType) {
                 default: Log.exDevv('unrecognized View.forceNodeType:' + view.forceNodeType, {view, modelElement});
                 return <div>dev error</div>
-                case windoww.GraphComponent.name: componentfunction = Graph; break;
+                case "Graph": case "GraphComponent": componentfunction = Graph; break;
                 // case windoww.GraphElementComponent.name:
                 case windoww.VertexComponent.name: componentfunction = Vertex; break;
                 case windoww.FieldComponent.name: componentfunction = Field; break;
