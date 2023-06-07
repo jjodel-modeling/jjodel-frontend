@@ -1,5 +1,5 @@
 import axios, {AxiosResponse} from 'axios';
-import {Json, LModelElement, LNamedElement, U} from "../joiner";
+import {Json, LModelElement, LNamedElement, SetRootFieldAction, U} from "../joiner";
 import {MemoRecClass, MemoRecModel, MemoRecObject} from "./types";
 
 export default class MemoRec {
@@ -16,6 +16,64 @@ export default class MemoRec {
     }
 
     static async structuralFeature(me: LModelElement): Promise<void> {
+        const data = [
+            [
+                {
+                    "recommendedItem": "address",
+                    "score": 0.8
+                },
+                {
+                    "recommendedItem": "bookTitle",
+                    "score": 0.8
+                },
+                {
+                    "recommendedItem": "edition",
+                    "score": 0.8
+                },
+                {
+                    "recommendedItem": "fromPage",
+                    "score": 0.8
+                },
+                {
+                    "recommendedItem": "isbn",
+                    "score": 0.8
+                },
+                {
+                    "recommendedItem": "month",
+                    "score": 0.8
+                },
+                {
+                    "recommendedItem": "name",
+                    "score": 0.8
+                },
+                {
+                    "recommendedItem": "number",
+                    "score": 0.8
+                },
+                {
+                    "recommendedItem": "series",
+                    "score": 0.8
+                },
+                {
+                    "recommendedItem": "title",
+                    "score": 0.8
+                },
+                {
+                    "recommendedItem": "toPage",
+                    "score": 0.8
+                },
+                {
+                    "recommendedItem": "volume",
+                    "score": 0.8
+                },
+                {
+                    "recommendedItem": "year",
+                    "score": 0.8
+                }
+            ]
+        ];
+        SetRootFieldAction.new('memorec', data);
+        /*
         console.clear();
 
         const named: LNamedElement = LNamedElement.fromPointer(me.id);
@@ -34,10 +92,10 @@ export default class MemoRec {
 
         const memorecObject: MemoRecObject = {context: named.name, model: memorecModel};
 
-
-
         const response = await MemoRec.post('structuralFeatures', memorecObject);
         console.log(response);
+
+        */
     }
 
 }

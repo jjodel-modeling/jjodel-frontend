@@ -138,6 +138,8 @@ export class IStore {
     m2models: Pointer<DModel, 0, 'N', LModel> = [];
     m1models: Pointer<DModel, 0, 'N', LModel> = [];
 
+    memorec: GObject[]|null = null;
+
 
     constructor() {
         // todo: this must become a pointer to idlookup and fire a CreateNewElementAction

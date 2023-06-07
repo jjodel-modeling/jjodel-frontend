@@ -2,114 +2,56 @@ import React, {Dispatch, ReactElement, useState} from "react";
 import {connect} from "react-redux";
 import './style.scss';
 import {IStore} from "../redux/store";
+import {GObject, SetRootFieldAction} from "../joiner";
 
 function PopupComponent(props: AllProps) {
-    const datas = [
-        [
-            {
-                "recommendedItem": "address",
-                "score": 0.8
-            },
-            {
-                "recommendedItem": "bookTitle",
-                "score": 0.8
-            },
-            {
-                "recommendedItem": "edition",
-                "score": 0.8
-            },
-            {
-                "recommendedItem": "fromPage",
-                "score": 0.8
-            },
-            {
-                "recommendedItem": "isbn",
-                "score": 0.8
-            },
-            {
-                "recommendedItem": "month",
-                "score": 0.8
-            },
-            {
-                "recommendedItem": "name",
-                "score": 0.8
-            },
-            {
-                "recommendedItem": "number",
-                "score": 0.8
-            },
-            {
-                "recommendedItem": "series",
-                "score": 0.8
-            },
-            {
-                "recommendedItem": "title",
-                "score": 0.8
-            },
-            {
-                "recommendedItem": "toPage",
-                "score": 0.8
-            },
-            {
-                "recommendedItem": "volume",
-                "score": 0.8
-            },
-            {
-                "recommendedItem": "year",
-                "score": 0.8
-            }
-        ]
-    ];
-    
-    // const popupClose = (event: React.MouseEvent<HTMLButtonElement>) =>
-    return(<div className={'popup'}>
-        <button className={'btn-close'}></button>
-        <div className={'table'}>
+    const memorec = props.memorec;
+    if(!memorec) return(<></>);
 
-        <table>
+    const close = () => {SetRootFieldAction.new('memorec', null)}
+    return(<>
+        <div className={'overlay'}></div>
+        <div className={'popup p-3'}>
+            <div className={'btn-close p-2'} onClick={close}></div>
+            <div className={'table p-3'}>
+                <table>
+                    <thead>
+                        <tr>
+                            <th className={'mx-2'}>Name</th>
+                            <th className={'mx-2'}>Score</th>
+                            <th className={'mx-2'}>Attribute</th>
+                            <th className={'mx-2'}>Reference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>isbn</td>
+                            <td>0.5</td>
+                            <td><button className={'btn btn-primary px-2'}>+</button></td>
+                            <td><button className={'btn btn-primary px-2'}>+</button></td>
+                        </tr>
 
-            <thead>
-
-            </thead>
-            <tbody>
-
-            <tr>
-
-                <th>Name</th>
-                <th>Score</th>
-                <th>Attribute</th>
-                <th>Reference</th>
-            </tr>
-
-            <tr>
-                <td>isbn</td>
-                <td>0.5</td>
-                <td><button className={'button-24'}>+</button></td>
-                <td><button className={'button-24'}>+</button></td>
-            </tr>
-
-            <tr>
-                <td>address</td>
-                <td>0.9</td>
-                <td><button className={'button-24'}>+</button></td>
-                <td><button className={'button-24'}>+</button></td>
-            </tr>
-            </tbody>
-
-
-        </table>
-
+                        <tr>
+                            <td>address</td>
+                            <td>0.9</td>
+                            <td><button className={'btn btn-primary px-2'}>+</button></td>
+                            <td><button className={'btn btn-primary px-2'}>+</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>);
+    </>);
 }
 interface OwnProps {}
-interface StateProps { }
+interface StateProps {memorec: null|GObject[]}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
+    ret.memorec = state.memorec;
     return ret;
 }
 
