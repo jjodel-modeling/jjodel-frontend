@@ -80,7 +80,7 @@ statehistory[DUser.current] = {undoable:[], redoable:[]}; // todo: make it able 
 
 (window as any).statehistory = statehistory;
 export class IStore {
-    debug: boolean = false;
+    debug: boolean = true;
     logs: Pointer<DLog, 0, 'N', LLog> = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
     currentUser: DUser;

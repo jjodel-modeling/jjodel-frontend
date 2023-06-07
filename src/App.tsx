@@ -1,8 +1,7 @@
-import React, {Dispatch, ReactElement} from 'react';
+import React, {Dispatch} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-//import Dock from "./components/abstract/DockComponent";
 import Dock from "./components/abstract/DockLayout";
 import {IStore, statehistory} from "./joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
@@ -14,6 +13,7 @@ import RoomAttacher from "./components/room/RoomAttacher";
 import {connect} from "react-redux";
 
 function App(props: AllProps) {
+    const debug = props.debug;
     const [splash, setSplash] = useStateIfMounted(false);
 
     useEffectOnce(() => {
@@ -31,7 +31,7 @@ function App(props: AllProps) {
         return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? " debug" : "")} onClick={() => {statehistory.globalcanundostate = true;} } >
             <TopBar />
             <Dock />
-            {/*<RoomAttacher />*/}
+            {debug && <RoomAttacher />}
         </div>);
     }
 

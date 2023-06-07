@@ -12,10 +12,10 @@ function TestTabComponent(props: AllProps) {
         <hr />
         <Tree>
             Root
-            <div id={'a'}>
+            <div>
                 Sub Root
-                <div id={'b'}>Leaf</div>
-                <div id={'c'}>Leaf</div>
+                <div>Leaf</div>
+                <div>Leaf</div>
             </div>
         </Tree>
     </div>);

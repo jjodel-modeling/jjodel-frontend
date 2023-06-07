@@ -17,10 +17,6 @@ function Tree(props: TreeProps) {
         setId((data && data.id) ? data.id : U.getRandomString(5));
     })
 
-    useEffect(() => {
-
-    }, [filter])
-
     const setFilter = (): void => {
         if(filter === id) applyFilter('');
         else applyFilter(id);
@@ -50,7 +46,7 @@ function DataTree(props: DataTreeProps) {
         </div>
         {!hide && data.children.map((child: LModelElement) => {
             return(<div className={'ms-2'}>
-                <Tree data={child} depth={[...depth]} />
+                <Tree data={child} depth={depth} />
             </div>);
         })}
     </div>);
@@ -76,7 +72,7 @@ function HtmlTree(props: HtmlTreeProps) {
             const children: (string|ReactNode)[] = (Array.isArray(element.props.children)) ? element.props.children: [element.props.children];
             if(!hide) {
                 return(<div className={'ms-2'}>
-                    <Tree depth={[...depth]}>{children}</Tree>
+                    <Tree depth={depth}>{children}</Tree>
                 </div>);
             }
         })}

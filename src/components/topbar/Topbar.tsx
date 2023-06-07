@@ -7,17 +7,21 @@ import {
     DEdgePoint,
     DViewElement,
     DVoidEdge,
-    EdgeBendingMode, GObject,
-    GraphSize, Input,
-    Selectors, SetRootFieldAction,
+    EdgeBendingMode,
+    GObject,
+    GraphSize,
+    SetRootFieldAction,
     store
 } from "../../joiner";
 import {SaveManager} from "./SaveManager";
 import {DamEdge} from "../../graph/damedges/damedge";
 import toast from "react-hot-toast";
+import Undoredocomponent from "./undoredocomponent";
 import RoomManager from "./RoomManager";
 
 function Topbar(props: AllProps) {
+
+    const debug = props.debug;
 
     const notify = (text: string) => toast((t: GObject) => (
         <div onClick={() => toast.dismiss(t.id)}>
@@ -47,13 +51,14 @@ function Topbar(props: AllProps) {
         SaveManager.exportEcore_click(true, true);
     }
 
-    if (props.debug && !document.body.classList.contains("debug")) document.body.classList.add("debug");
+    if (debug && !document.body.classList.contains("debug")) document.body.classList.add("debug");
     else document.body.classList.remove("debug")
 
     return(<div className={'topbar d-flex'}>
-        {/*
-        <Undoredocomponent />
 
+        {debug && <Undoredocomponent />}
+
+        {/*
         <label className={'item border round ms-1'} onClick={exportXml}>Export XML</label>
         <label className={'item border round ms-1'} onClick={importXml}>Import XML</label>
 
@@ -71,13 +76,13 @@ function Topbar(props: AllProps) {
         <label className={'item border round ms-1'} onClick={importJson}>Import JSON</label>
 
 
-        <div hidden={true} className={"p-1 "} style={{display: "flex", cursor: "auto"}}>
+        <div hidden={false} className={"p-1 "} style={{display: "flex", cursor: "auto"}}>
             <label className={"my-auto"}>Debug mode</label>
-            <input className={"my-auto input ms-auto"} type={"checkbox"} checked={props.debug}
+            <input className={"my-auto input ms-1"} type={"checkbox"} checked={props.debug}
                    onChange={(e)=>{SetRootFieldAction.new("debug", e.target.checked);}} />
         </div>
 
-        {/*<RoomManager />*/}
+        {props.debug && <RoomManager />}
 
     </div>);
 }
