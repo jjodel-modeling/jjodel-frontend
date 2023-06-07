@@ -163,7 +163,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         ret.graph = idlookup[graphid] as DGraphElement as any; // se non c'è un grafo lo creo
         if (!ret.graph) {
-            Log.exDev(!dataid, 'attempted to make a Graph element without model', {dataid, ownProps, ret, thiss:this});
+            // Log.exDev(!dataid, 'attempted to make a Graph element without model', {dataid, ownProps, ret, thiss:this});
             if (dataid) CreateElementAction.new(DGraph.new(dataid, parentnodeid, graphid, graphid)); }
         else {
             ret.graph = MyProxyHandler.wrap(ret.graph);
@@ -380,7 +380,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     onEnter(e: React.MouseEvent<HTMLDivElement>) { // instead of doing it here, might set this class on render, and trigger it visually operative with :hover selector css
         const isEdgePending = this.props.isEdgePending?.source;
-        if (!isEdgePending || this.props.data.className !== "DClass") return;
+        if (!isEdgePending || this.props.data?.className !== "DClass") return;
         const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
         const canBeExtend = isEdgePending.canExtend(this.props.data as any as LClass, extendError);
 
@@ -388,7 +388,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         else this.setState({classes:[...this.state.classes, "class-cannot-be-extended"]});
     }
     onLeave(e: React.MouseEvent<HTMLDivElement>) {
-        if (this.props.data.className !== "DClass") return;
+        if (this.props.data?.className !== "DClass") return;
         this.setState({classes: this.state.classes.filter((classname) => {
             return classname !== "class-can-be-extended" && classname !== "class-cannot-be-extended"
         })});
@@ -396,7 +396,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     onClick(e: React.MouseEvent): void {
         const isEdgePending = (this.props.isEdgePending?.source);
         if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
-        if (this.props.data.className !== "DClass") return;
+        if (this.props.data?.className !== "DClass") return;
         SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
         e.stopPropagation();
         // const user = this.props.isEdgePending.user;
@@ -419,7 +419,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (this.props.preRenderFunc) U.evalInContextAndScope(this.props.preRenderFunc, {component:this, __proto__:this.props.evalContext});
 
         /// set classes
-        classes.push(this.props.data.className);
+        classes.push(this.props.data?.className || 'model-less');
         U.arrayMergeInPlace(classes, this.state.classes);
         if (Array.isArray(this.props.className)) { U.arrayMergeInPlace(classes, this.props.className); }
         else if (this.props.className) { classes.push(this.props.className); }

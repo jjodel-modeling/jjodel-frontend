@@ -28,7 +28,7 @@ import {
     SetFieldAction, Size,
     store,
     TargetableProxyHandler,
-    U
+    U, windoww
 } from "../../joiner";
 import {MixOnlyFuncs2, MixOnlyFuncs3} from "../../joiner/classes";
 
@@ -132,7 +132,9 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
         return true; }
 
     get_sizeold(context: Context): this["size"] { return new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h); }
-    get_component(context: Context): this["component"] { return GraphElementComponent.map[context.data.id]; }
+    get_component(context: Context): this["component"] {
+        // switch(context.data.className) { case DEdgePoint.name: return GraphElementComponent.map[context.data.father]; }
+        return GraphElementComponent.map[context.data.id]; }
     get_view(context: Context): this["view"] { return this.get_component(context).props.view; }
     get_size(context: Context, canTriggerSet: boolean = true): Readonly<GraphSize> {
         switch(context.data.className){
@@ -144,6 +146,7 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
                 return graph.coord(this.get_htmlSize(context));
             case DVoidVertex.name:
             case DVertex.name:
+            case DEdgePoint.name:
             case DGraphVertex.name: break;
         }
         // low prio todo: memoization in proxy, as long state does not change keep a collection Dictionary[object][key] = returnval. it gets emptied when state is updated.
@@ -151,23 +154,21 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
             view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
             node:this.props.node?.size,
             default: this.props.view.defaultVSize});*/
-        console.log("getSize() pre", this);
         let component = this.get_component(context);
-        console.log("getSize() at component", this, component);
+        windoww.debugg = context;
+        console.log("edgee getsize", {component, view:component?.props?.view});
         let view = component.props.view;
         (window as any).retry = ()=>view.getSize(context.data.id);
         let ret = view.getSize(context.data.id); // (this.props.dataid || this.props.nodeid as string)
-        console.log("getSize() from view0");
-        console.log("getSize() from view", {ret: ret ? {...ret} : ret});
+        // console.log("getSize() from view", {ret: ret ? {...ret} : ret});
         if (!ret) {
             ret = {x:context.data.x, y:context.data.y, w:context.data.w, h:context.data.h} as any as GraphSize;
             let def: GraphSize | undefined;
-            console.log("getSize() from node", {ret: ret ? {...ret} : ret});
             if (undefined===(ret.x)) { if (!def) def = view.defaultVSize; ret.x = def.x;}
             if (undefined===(ret.y)) { if (!def) def = view.defaultVSize; ret.y = def.y;}
             if (undefined===(ret.w)) { if (!def) def = view.defaultVSize; ret.w = def.w;}
             if (undefined===(ret.h)) { if (!def) def = view.defaultVSize; ret.h = def.h;}
-            console.log("getSize() from node merged with defaultVSize", {ret: ret ? {...ret} : ret});
+            // console.log("getSize() from node merged with defaultVSize", {ret: ret ? {...ret} : ret});
         }
 
         if ((context.data as DVoidVertex).isResized) return ret;
@@ -183,7 +184,7 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
             ret.h = actualSize.h;
             if (canTriggerSet && !updateSize) updateSize = true;
         }
-        console.log("getSize() from node merged with actualSize", {ret: {...ret}});
+        // console.log("getSize() from node merged with actualSize", {ret: {...ret}});
 
         if (updateSize) this.set_size(ret, context);
         return ret;
@@ -809,7 +810,11 @@ export class LVoidEdge<Context extends LogicContext<DEdge> = any, D extends DEdg
 
 
     protected get_midnodes(context: Context): this["midnodes"] {
-        return LPointerTargetable.wrapAll(context.data.midnodes);
+        // return LPointerTargetable.wrapAll(context.data.midnodes);
+        return LPointerTargetable.wrapAll(context.data.subElements);
+    }
+    protected set_midnodes(val: D["midnodes"], context: Context): boolean {
+        return SetFieldAction.new(context.data.id, "midnodes", val, '', true);
     }
     protected get_start(context: Context): this["start"] { return LPointerTargetable.from(context.data.start); }
     protected get_end(context: Context): this["end"] { return LPointerTargetable.from(context.data.end); }

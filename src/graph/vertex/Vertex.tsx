@@ -17,7 +17,7 @@ import {
     LUser,
     LVoidVertex,
     RuntimeAccessibleClass, LViewPoint,
-    U, GraphSize, GraphPoint, GObject, Size, SetRootFieldAction, SetFieldAction,
+    U, GraphSize, GraphPoint, GObject, Size, SetRootFieldAction, SetFieldAction, DVertex,
 } from "../../joiner";
 import $ from "jquery";
 import "jqueryui";
@@ -244,6 +244,7 @@ class OwnProps extends GraphElementOwnProps {
     // onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
     isGraph?: boolean = false;
     isVertex?: boolean = true;
+    isVoid?: boolean = false;
 }
 
 class StateProps extends GraphElementReduxStateProps {
@@ -261,9 +262,11 @@ export type AllPropss = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     let DGraphElementClass: typeof DGraphElement;
     if (ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraphVertex;
-    else if (ownProps.isVertex && !ownProps.isGraph) DGraphElementClass = DVoidVertex;
+    else if (ownProps.isVertex && !ownProps.isGraph) DGraphElementClass = DVertex;
     else if (!ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraph;
     else DGraphElementClass = DGraphElement;
+
+    if (DGraphElementClass === DVertex && ownProps.isVoid) DGraphElementClass = DVoidVertex;
     const superret: StateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass) as StateProps;
     //superret.lastSelected = state._lastSelected?.modelElement;
     superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
@@ -295,10 +298,17 @@ export const VertexConnected = connect<StateProps, DispatchProps, OwnProps, ISto
 export const Vertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} />;
 }
+export const VoidVertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} isVoid={true}/>;
+}
+/*
+
+using src/graph/graph/graph.tsx instead.
 
 export const Graph = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => { // doesn't work?
     return <VertexConnected {...{...props, children}} isGraph={true} isVertex={false} />;
 }
+*/
 
 export const GraphVertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isGraph={true} isVertex={true} />;
@@ -310,13 +320,15 @@ export const Field = (props: OwnProps, children: (string | React.Component)[] = 
 
 let windoww = window as any;
 
+windoww.VoidVertex = VoidVertex;
 windoww.Vertex = Vertex;
-windoww.Graph = Graph;
+// windoww.Graph = Graph;
 windoww.GraphVertex = GraphVertex;
 windoww.Field = Field;
 
+windoww.VoidVertexComponent = VoidVertex;
 windoww.VertexComponent = Vertex;
-windoww.GraphComponent = Graph;
+// windoww.GraphComponent = Graph;
 windoww.GraphVertexComponent = GraphVertex;
 windoww.FieldComponent = Field;
 

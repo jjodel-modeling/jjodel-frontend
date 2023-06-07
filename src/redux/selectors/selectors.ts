@@ -365,22 +365,30 @@ export class Selectors{
 
 
 
-    private static scoreView(v1: DViewElement, data: LModelElement, hisnode: DGraphElement | undefined, graph: LGraphElement, sameViewPointViews: Pointer<DViewElement, 1, 1>[] = []): number {
-        // 1° priority: matching by EClass type
-        let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, data?.__raw);
-        // Log.l('score view:', {v1, data, v1MatchingEClassScore});
-        if (v1MatchingEClassScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
-        // 2° priority: by ocl condition matching
-        let v1OclScore = Selectors.matchesOclCondition(v1, data);
-        if (v1OclScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
-        // 3° priority by sub-view
-        let v1SubViewScore = Selectors.matchesOclCondition(v1, data);
-        if (v1SubViewScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
-        // second priority: matching by viewpoint / subViews
-        return (v1MatchingEClassScore * v1OclScore * v1SubViewScore) * v1.explicitApplicationPriority; }
+    private static scoreView(v1: DViewElement, data: LModelElement | undefined, hisnode: DGraphElement | undefined, graph: LGraphElement, sameViewPointViews: Pointer<DViewElement, 1, 1>[] = []): number {
+        let datascore: number = 1;
+        let nodescore: number = 1;
+        if (data) {// 1° priority: matching by EClass type
+            let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, data?.__raw);
+            // Log.l('score view:', {v1, data, v1MatchingEClassScore});
+            if (v1MatchingEClassScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
+            // 2° priority: by ocl condition matching
+            let v1OclScore = Selectors.matchesOclCondition(v1, data);
+            if (v1OclScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
+            // 3° priority by sub-view
+            let v1SubViewScore = Selectors.matchesOclCondition(v1, data);
+            if (v1SubViewScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
+            // second priority: matching by viewpoint / subViews
+            datascore = (v1MatchingEClassScore * v1OclScore * v1SubViewScore) * v1.explicitApplicationPriority;
+        }
+        if (hisnode){
+            nodescore = 1; // todo: ocl by node position or other node info
+        }
+        return datascore * nodescore * v1.explicitApplicationPriority;
+    }
 
 
-    static getAppliedViews(data: LModelElement, hisnode: DGraphElement | undefined, graph: LGraphElement,
+    static getAppliedViews(data: LModelElement|undefined, hisnode: DGraphElement | undefined, graph: LGraphElement,
                            selectedViewId: Pointer<DViewElement, 0, 1, LViewElement>, parentViewId: Pointer<DViewElement, 0, 1, LViewElement>): Scored<DViewElement>[] {
         const state : IStore = store.getState();
         const allViews: DViewElement[] = [...Selectors.getAllViewElements()];

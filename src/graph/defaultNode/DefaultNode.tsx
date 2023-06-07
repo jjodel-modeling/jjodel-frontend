@@ -18,10 +18,9 @@ import {
     Log,
     LViewElement,
     RuntimeAccessibleClass, SetRootFieldAction,
-    Vertex,
     windoww,
+    Field, Graph, GraphVertex, Vertex, VoidVertex
 } from "../../joiner";
-import {Field, Graph, GraphVertex} from "../vertex/Vertex";
 
 const superclass: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 
@@ -57,7 +56,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
             console.log("realoading render: ", {thiss:this, data:this.props.data});
             SetRootFieldAction.new("rerenderforloading", new Date().getTime()); return <div>loading...</div>;}
         const view: LViewElement = this.props.view;
-        const modelElement: LModelElement = this.props.data;
+        const modelElement: LModelElement | undefined = this.props.data;
         if (!view) { Log.exx({props: this.props, thiss:this}); }
         // if (!view) { SetRootFieldAction.new("uselessrefresh_afterload", new Date().getTime()); return <div>Loading...</div>; }
 
@@ -99,7 +98,8 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
                 // const dmodel: typeof DModelElement = dmodelMap[modelElement.className];
                 // Log.exDev(!dmodel || !dmodel.defaultComponent, 'invalid model class:', {dmodel, modelElement, view, dmodelMap, componentMap});
                 // return dmodel.defaultComponent(serializableProps, this.props.children);
-        }
+        } else componentfunction = VoidVertex; // model-less, VoidVertex
+
         if (componentfunction) return componentfunction(serializableProps, this.props.children);
         // errore: questoon passa gli id correttamente al sottoelemento vertex o field
         return DV.errorView("Error: DefaultNode is missing both view and model, please state node type explicitly: Graph, GraphVertex, Vertex or Field");

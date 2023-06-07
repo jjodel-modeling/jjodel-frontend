@@ -221,15 +221,18 @@ w.GraphPoint = GraphPoint;
 w.$s = $s;
 */
 export {
-    GraphElementComponent,
-    VertexComponent,
-    GraphElement,
     TextArea, Select, Input, Image, Edge,
-    GraphComponent,
     GraphsContainerComponent,
     Overlap as OverlapComponent,
     GraphsContainer,
-    Vertex,    Graph,
+    GraphElement,
+    Vertex, VoidVertex,
+    Graph, GraphVertex,
+    Field,
+    DefaultNode,
+    GraphElementComponent,
+    VertexComponent,
+    DefaultNodeComponent,
     // DockLayoutComponent,
     ColorScheme, Edges,
     DataOutputComponent, LoggerComponent,

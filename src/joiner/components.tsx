@@ -21,7 +21,7 @@ export {ColorScheme} from "../components/colorScheme/colorScheme";
 export {GraphElement, GraphElementComponent} from "../graph/graphElement/graphElement";
 export {Graph, GraphComponent} from "../graph/graph/graph"; // require graphelement
 export {DefaultNode, DefaultNodeComponent} from "../graph/defaultNode/DefaultNode"; // require graphelement
-export {Vertex, VertexComponent, GraphVertex, Field} from "../graph/vertex/Vertex"; // require overlap, graphelement
+export {Vertex, VoidVertex, GraphVertex, Field, VertexComponent} from "../graph/vertex/Vertex"; // require overlap, graphelement
 export {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphContainer"; // require vertex, graph
 //export {DockLayoutComponent} from "../components/abstract/DockLayoutComponent";
 export {Edges} from "../graph/edge/Edges";

@@ -35,7 +35,7 @@ export class GraphElementReduxStateProps {
     view!: LViewElement;
     views!: LViewElement[]; // all applicable views
     // graphID!: string;
-    data!: LModelElement;
+    data?: LModelElement;
     dataid?: Pointer<DModelElement, 1, 1, LModelElement>;
     // model?: LModel;
     // [userMappedFromRedux: string]: any; // roba che l'utente ha dichiarato di voler prendere dallo stato e redux gli carica nelle props

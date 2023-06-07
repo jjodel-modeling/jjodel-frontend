@@ -82,9 +82,10 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
         let coords = ret.node.midnodes.map( (mn) => mn.x+" "+mn.y);
         if (!coords) coords = [];
         let grouping = groupingsize[svgletter];
+        console.log("edgeee", {coords, svgletter, groupingsize, midnodes:ret.node.midnodes, ret});
         let scoord: GraphPoint = /*ret.node.start?.size.tl() ||*/ new GraphPoint(50, 50);
         let ecoord: GraphPoint = /*ret.node.end?.size.tl() ||*/ new GraphPoint(500, 150);
-        s+= "M " + scoord.x + " " + scoord.y + svgletter + " " + coords.join(", ") + ", " + ecoord.x+" "+ecoord.y;
+        s+= "M " + scoord.x + " " + scoord.y + " " + svgletter + " " + coords.join(", ") + ", " + ecoord.x+" "+ecoord.y;
         /*for (let i = 0; i < coords.length + 1; i++) {
             if (i-1 % grouping === 0) s+= " " + svgletter + " "
             else s+=", ";

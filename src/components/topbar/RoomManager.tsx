@@ -29,13 +29,13 @@ function RoomManagerComponent(props: AllProps) {
     }
 
     if(!room) {
-        return(<div className={'ms-auto'}>
+        return(<div className={'ms-auto'} style={{whiteSpace: "nowrap"}}>
             <label onClick={create} className={'item border round ms-1 bg-success'}>Create Room</label>
             <input className={'input ms-3'} value={code} onChange={evt => setCode(evt.target.value)} />
             <label onClick={join} className={'item border round ms-0 bg-success'}>Join Room</label>
         </div>);
     } else {
-        return(<div className={'ms-auto'}>
+        return(<div className={'ms-auto'} style={{whiteSpace: "nowrap"}}>
             <input className={'input ms-3'} value={room} disabled={true} />
             <label onClick={quit} className={'item border round ms-1 bg-danger'}>Quit Room</label>
         </div>);
