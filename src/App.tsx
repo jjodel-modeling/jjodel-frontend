@@ -11,6 +11,7 @@ import SplashImage from './static/img/splash.png';
 import {Oval} from "react-loader-spinner";
 import TopBar from "./components/topbar/Topbar";
 import Auth from "./auth/Auth";
+import Popup from "./memorec/Popup";
 
 interface Props {}
 function App(props: Props) {
@@ -29,6 +30,7 @@ function App(props: Props) {
         </div>);
     } else {
         return(<div className={'d-flex flex-column h-100 p-1'} onClick={() => {statehistory.globalcanundostate = true;} } >
+            <Popup />
             <TopBar />
             <Dock />
         </div>);

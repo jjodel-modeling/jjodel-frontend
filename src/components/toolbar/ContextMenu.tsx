@@ -43,7 +43,7 @@ function ContextMenuComponent(props: AllProps) {
         jsxList.push(<hr />);
 
         /* Memorec */
-        jsxList.push(<div onClick={async() => {close(); await MemoRec.test(me);}} className={"col item"}>AI Suggest</div>);
+        jsxList.push(<div onClick={async() => {close(); await MemoRec.structuralFeature(me);}} className={"col item"}>AI Suggest</div>);
 
         jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={"col item"}>Up</div>);
         jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={"col item"}>Down</div>);
