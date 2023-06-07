@@ -9,6 +9,15 @@ function TestTabComponent(props: AllProps) {
 
     return(<div>
         {selected ? <Tree data={selected} /> : <label>NULL</label>}
+        <hr />
+        <Tree>
+            Root
+            <div id={'a'}>
+                Sub Root
+                <div id={'b'}>Leaf</div>
+                <div id={'c'}>Leaf</div>
+            </div>
+        </Tree>
     </div>);
 }
 interface OwnProps {}
