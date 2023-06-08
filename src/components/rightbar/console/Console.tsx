@@ -46,7 +46,8 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
         case "object":
             ret.output = output = {...output};
             if ((addLKeys && proxy)) {
-                let Lsingleton: GObject<'L singleton'> = (RuntimeAccessibleClass.get(output.className)!.logic!.singleton);
+                console.log("console output", {output, proxy});
+                let Lsingleton: GObject<'L singleton'> = (RuntimeAccessibleClass.get(output?.className)?.logic?.singleton) || {};
                 let comments: Dictionary<string, string | {type:string, txt:string}> = {};
                 ret.shortcuts = {...Lsingleton};
                 ret.comments = comments;

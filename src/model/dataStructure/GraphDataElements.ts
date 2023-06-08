@@ -150,6 +150,7 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
     get_size(context: Context, canTriggerSet: boolean = true): Readonly<GraphSize> {
         switch(context.data.className){
             default: return Log.exDevv("unexpected classname in get_size switch: " + context.data.className);
+            case DVoidEdge.name:
             case DGraph.name: return nosize as any;
             // case DField.name:
             case DGraphElement.name:

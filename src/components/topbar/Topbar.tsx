@@ -121,18 +121,25 @@ export const TopBar = (props: OwnProps, children: (string | React.Component)[] =
 //                         rx={this.props.node.start.w} ry={this.props.node.start.h} />
 function edgetestclick(){
     let jsxmn_svg = `<ellipse stroke={"black"} fill={"red"} cx={this.props.node.x} cy={this.props.node.y} rx={this.props.node.w} ry={this.props.node.h} />`;
-    let jsxmn_html = `<div style={{borderRadius:"999px", border: "2px solid black", position:"absolute", background:"red",
+    let jsxmn_html = `<div style={{borderRadius:"999px", border: "2px solid black", background:"red", width:(this.props.node.w+50)+"px", height:(this.props.node.h+50)+"px"}} y={this.props.node.y}/>`;
+    let jsxmn_html_nonodeaccess = `<div style={{borderRadius:"999px", border: "2px solid black", background:"red", width:"100%", height:"100%"}} />`;
+
+    let jsxmn_html_manualpos = `<div style={{borderRadius:"999px", border: "2px solid black", position:"absolute", background:"red",
 top:(this.props.node.y-this.props.node.h/2+50)+"px", left:(this.props.node.x-this.props.node.w/2+50)+"px",
 width:(this.props.node.w+50)+"px", height:(this.props.node.h+50)+"px"}} y={this.props.node.y}/>`;
-    let midnodeviewsvg = DViewElement.new2("edgepoint view svg", jsxmn_svg, (d)=>{d.defaultVSize=new GraphSize(0, 0, 5, 5)});
-    let midnodeview = DViewElement.new2("edgepoint view html", jsxmn_html, (d)=>{d.defaultVSize=new GraphSize(0, 0, 5, 5)});
+    let midnodeviewsvg = DViewElement.new2("edgepoint view svg", jsxmn_svg, (d)=>{d.defaultVSize=new GraphSize(0, 0, 5, 5);  d.adaptHeight=true; d.adaptWidth=true; });
+    let midnodeview = DViewElement.new2("edgepoint view html", jsxmn_html_nonodeaccess, (d)=>{d.defaultVSize=new GraphSize(0, 0, 25, 25); /*d.adaptHeight=true; d.adaptWidth=true;*/ });
     let dataid = store.getState().models[0];
     // <g>{this.props.node.midnodes.map((mn) => <VoidVertex nodeid={mn.id+"_svg"} view={"`+midnodeviewsvg.id+`"} />)}</g>
     let jsx =
         `<svg>
-            <path stroke={"black"} fill={"none"} d={this.path()}></path>
+            <path stroke={"black"} fill={"none"} d={this.props.path()}></path>
             {
-                <foreignObject style={{overflow:"visible"}}>{<Vertex nodeid={"midnode1"} view={"` + midnodeview.id + `"} />}</foreignObject>
+                
+                <foreignObject style={{overflow:"visible"}}>
+                    <VoidVertex key={"midnode1"} view={"` + midnodeview.id + `"} />
+                    <VoidVertex />
+                </foreignObject>
             }
         </svg>`;
 
@@ -143,7 +150,7 @@ width:(this.props.node.w+50)+"px", height:(this.props.node.h+50)+"px"}} y={this.
         let e = DEdgePoint.new(undefined, node.id, undefined, undefined, new GraphSize(x, y, w, h));
         return e.id;
     }
-    let makeedgepoints = [makeep(50, 100), makeep(80, 100), makeep(120, 120), makeep(150,120), makeep(150, 80)];
+    // let makeedgepoints = [makeep(50, 100), makeep(80, 100), makeep(120, 120), makeep(150,120), makeep(150, 80)];
     // SetFieldAction.new(node.id, "midnodes",  makeedgepoints, '', true);
     // node.midnodes = [makeep(50, 100), makeep(80, 100), makeep(120, 120), makeep(150,120), makeep(150, 80)];
     // CreateElementAction.new(view); CreateElementAction.new(midnodeview); CreateElementAction.new(node);

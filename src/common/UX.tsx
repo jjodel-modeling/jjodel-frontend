@@ -81,7 +81,7 @@ export class UX{
                 const idbasename: string = re.props.nodeid || (injectProps.parentnodeid)+"^"+index;//injectProps.graphid + '^' + dataid;
                 // console.log("setting nodeid", {injectProps, props:re.props, re});
                 // Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
-                Log.exDev(!injectProps.graphid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
+                Log.exDev(!injectProps.graphid, 'vertex is missing mandatory props (graphid).', {graphid: injectProps.graphid, dataid, props: re.props});
                 injectProps.nodeid = idbasename; // U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
                 // gvidmap_useless[injectProps.nodeid] = true;
                 injectProps.key = injectProps.nodeid; // re.props.key || thiss.props.view.id + '_' + thiss.props.data.id;

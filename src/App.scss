@@ -53,7 +53,10 @@
 .lazySizeUpdate.ui-draggable-dragging,
 .REACT-ROOT.debug .ui-draggable-dragging{ visibility: visible; }
 
-
+body .ui-icon{ // override jqueryui fixed resizable handles at 16px, making drag for small elements impossible.
+  max-width: 33%;
+  max-height: 33%;
+}
 [data-nodetype="Graph"]{
   position: absolute !important;
   overflow: hidden !important;

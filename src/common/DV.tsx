@@ -161,10 +161,10 @@ class DefaultView {
                 <div className={'text-center text-danger'}>
                     <b>SYNTAX ERROR</b>
                     <hr/>
-                    <label className={'text-center mx-1'}>
+                    <label className={'text-center mx-1 d-block'}>
                         The JSX you provide is NOT valid!
                     </label>
-                    {msg && <label className={'text-center mx-1'}>{msg}</label>}
+                    {msg && <label className={'text-center mx-1 d-block'}>{msg}</label>}
                 </div>
             </div>
         </div>;
