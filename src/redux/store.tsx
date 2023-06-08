@@ -222,13 +222,19 @@ function makeDefaultGraphViews(): DViewElement[] {
     let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.name]);
     objectView.adaptWidth = true;
     objectView.adaptHeight = true;
+    let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.name]);
+    voidView.appliableToClasses=["VoidVertex"];
+    voidView.explicitApplicationPriority=2;
+    voidView.adaptWidth = true;
+    voidView.adaptHeight = true;
+    // nb: Error is not a view, just jsx. transform it in a view so users can edit it
 
     let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.name]);
 
     const defaultPackage: DViewElement = DViewElement.new('Default Package', DV.defaultPackage());
     defaultPackage.query = `context DPackage inv: self.name = 'default'`;
 
-    return [modelView, packageView, classView, enumView, attributeView, referenceView, operationView, literalView, objectView, valueView, defaultPackage];
+    return [modelView, packageView, classView, enumView, attributeView, referenceView, operationView, literalView, objectView, valueView, defaultPackage, voidView];
 }
 /*
 class SynchStore{// shared on session

@@ -333,14 +333,14 @@ export class Selectors{
         let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
         try {
             const flag = OCL.filter(false, "src", [data], query, constructors);
-            if(flag.length > 0) return ViewEClassMatch.EXACT_MATCH + v.explicitApplicationPriority;
+            if(flag.length > 0) return ViewEClassMatch.EXACT_MATCH;
             else return ViewEClassMatch.MISMATCH;
         } catch (e) { console.error('invalid ocl query'); }
         return ViewEClassMatch.MISMATCH;
     }
 
 
-    private static matchesMetaClassTarget(v: DViewElement, data: DModelElement): ViewEClassMatch {
+    private static matchesMetaClassTarget(v: DViewElement, data: DModelElement | DGraphElement): ViewEClassMatch {
         if (!v.appliableToClasses || !v.appliableToClasses.length) return ViewEClassMatch.IMPLICIT_MATCH;
         if (!data) return ViewEClassMatch.MISMATCH;
         let ThisClass: typeof DPointerTargetable = RuntimeAccessibleClass.get(data?.className);
@@ -365,7 +365,7 @@ export class Selectors{
 
 
 
-    private static scoreView(v1: DViewElement, data: LModelElement | undefined, hisnode: DGraphElement | undefined, graph: LGraphElement, sameViewPointViews: Pointer<DViewElement, 1, 1>[] = []): number {
+    private static scoreView(v1: DViewElement, data: LModelElement | undefined, node: DGraphElement | undefined, graph: LGraphElement, sameViewPointViews: Pointer<DViewElement, 1, 1>[] = []): number {
         let datascore: number = 1;
         let nodescore: number = 1;
         if (data) {// 1° priority: matching by EClass type
@@ -379,9 +379,11 @@ export class Selectors{
             let v1SubViewScore = Selectors.matchesOclCondition(v1, data);
             if (v1SubViewScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
             // second priority: matching by viewpoint / subViews
-            datascore = (v1MatchingEClassScore * v1OclScore * v1SubViewScore) * v1.explicitApplicationPriority;
+            datascore = (v1MatchingEClassScore * v1OclScore * v1SubViewScore);
         }
-        if (hisnode){
+        if (node){
+            // 1° priority: matching by DGraphElement type
+            let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, node);
             nodescore = 1; // todo: ocl by node position or other node info
         }
         return datascore * nodescore * v1.explicitApplicationPriority;

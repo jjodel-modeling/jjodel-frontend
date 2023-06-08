@@ -286,48 +286,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     // preRenderFunc: funzione evalutata ed eseguita sempre prima del render, ha senso solo per generare effetti collaterali sulle "costanti".
     // jsxString: funzione evalutata una sola volta durante il primo render ed eseguita ad ogni update dei dati.
 
-    /*getDefaultTemplate(): () => ReactNode{
-        // to delete, i will get it from redux props instead of asking them with a func
-        return () => null;
-    }*/
 
-
-    /*
-    makeEvalContext_to_move(view: ViewElement): GObject {
-        let evalContext: GObject = view.constants ? eval('window.tmp = ' + view.constants) : {};
-        evalContext = {...GraphElementRaw.defaultContext, ...evalContext, model: this.props.data, ...this.props};
-        (window as any).evalContext = evalContext;
-        return evalContext;
-    }
-    /*
-    setTemplateStringToDelete_move_in_map_statetoprops(view: ViewElement, fromConstructor: boolean = false): void {
-        // to delete, i will get it from redux props instead of asking them with a func
-        //if (!jsxString) { this.setState({template: this.getDefaultTemplate()}); return; }
-        // sintassi: '||' + anything + (opzionale: '|' + anything)*N_Volte + '||' + jsx oppure direttamente: jsx
-        let colors = ["red", "green", "blallo"];
-        let daa = "daa_var";
-        sposta tutto lo stato non-redux in stato redux e memoizza
-        learn samuro & zeratul
-        // eslint-disable-next-line no-mixed-operators
-        windoww.Input2 = Input;
-        const evalContext = this.makeEvalContext();
-        // const evalContextOld = U.evalInContext(this, constants);
-        // this.setState({evalContext});
-        //console.error({jsx:view.jsxString, view});
-
-        let jsxCodeString: DocString<ReactNode> = JSXT.fromString(view.jsxString, {factory: 'React.createElement'}) as any;
-        const jsxparsedfunc = U.evalInContextAndScope<() => ReactNode>('()=>' + jsxCodeString, evalContext); // U.evalInContext({...this, ...evalContext}, res); // todo: remove eval and add new Function() ?
-
-        let state: GraphElementState = new GraphElementStatee(view.preRenderFunc, evalContext, jsxparsedfunc) as GraphElementState;
-        if (!fromConstructor) this.setState(state);
-        else (this as any).state = state;
-        console.log('parsed:', {state, thisstate: this.state, 'template':jsxparsedfunc, data:this.props.data});
-    }
-    /*
-        setState<K extends keyof MPState>(state: ((prevState: Readonly<MPState>, props: Readonly<AllProps>) => (Pick<MPState, K> | MPState | null)) | Pick<MPState, K> | MPState | null, callback?: () => void): void {
-            if (this._isMounted) super.setState(state, callback);
-            else this.state = state as MPState;
-        }*/
 
     componentDidMount(): void {
         // after first render
@@ -417,9 +376,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     public render(nodeType?:string, styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
         if (!this.props.node) return "loading";
         if (this.props.preRenderFunc) U.evalInContextAndScope(this.props.preRenderFunc, {component:this, __proto__:this.props.evalContext});
+        if (this.props.node.__raw.view !== this.props.view.id) {
+            this.props.node.view = this.props.view;
+            return "updating view...";
+        }
 
         /// set classes
-        classes.push(this.props.data?.className || 'model-less');
+        classes.push(this.props.data?.className || 'DVoid');
         U.arrayMergeInPlace(classes, this.state.classes);
         if (Array.isArray(this.props.className)) { U.arrayMergeInPlace(classes, this.props.className); }
         else if (this.props.className) { classes.push(this.props.className); }
@@ -428,14 +391,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         /// end set classes
 
         const rnode: ReactNode = this.getTemplate();
-        let rawRElement: ReactElement | null = U.ReactNodeAsElement(rnode);
-        // @ts-ignore
-        // console.log('GE render', {thiss: this, rnode, rawRElement, props:this.props, name: this.props.data.name});
-        const me: LModelElement = this.props.data as LModelElement; // this.props.model;
+        let rawRElement: ReactElement | null = UX.ReactNodeAsElement(rnode);
+        const me: LModelElement | undefined = this.props.data; // this.props.model;
+
+        console.log('GE render', {thiss: this, data:me, rnode, rawRElement, props:this.props, name: (me as any)?.name});
 
         const addprops: boolean = true;
         let fiximport = !!this.props.node; // todo: check if correct approach
-        if (addprops && me && rawRElement && fiximport) {
+        if (addprops && rawRElement && fiximport) {
             // console.log("pre-injecting", {thiss:this, data:this.props.data, props:this.props});
             let fixdoubleroot = true;
             const onDragTestInject = () => {}; // might inject event handlers like this with cloneelement
@@ -452,16 +415,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 */
                 viewStyle.zIndex = this.props.node?.zIndex;
                 viewStyle.display = this.props.view?.display;
-                rawRElement = React.cloneElement(rawRElement,
+                rawRElement = React.cloneElement(rawRElement, // i'm cloning a raw html (like div) being root of the rendered view
                     {
                         key: this.props.key || this.props.nodeid,
                         // damiano: l'html viene settato correttamente a tutti tranne ad attribute, ref, operation (perchè iniziano con <Select/> as root?
                         ref: this.html,
                         id: this.props.nodeid,
                         "data-nodeid": this.props.nodeid,
-                        "data-dataid": this.props.data?.id,
+                        "data-dataid": me?.id,
                         "data-viewid": this.props.view.id,
-                        "data-modelname": this.props.data?.className,
+                        "data-modelname": me?.className || "model-less",
                         "data-userselecting": JSON.stringify(this.props.node?.__raw.isSelected || {}),
                         "data-nodetype": nodeType,
                         style: {...viewStyle, ...styleoverride},
@@ -476,7 +439,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 if (fixdoubleroot) rawRElement = rawRElement.props.children;
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
             } catch (e) {
-                rawRElement = DV.errorView("error while injecting props to subnodes", {e, rawRElement, key:this.props.key, newid: this.props.view?.id+'_'+me?.id});
+                rawRElement = DV.errorView("error while injecting props to subnodes", {e, rawRElement, key:this.props.key, newid: this.props.nodeid});
             }
             /*console.log('tempdebug', {deepStrictEqual, okeys:Object.keys});
             let isEqual = true;

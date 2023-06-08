@@ -614,9 +614,6 @@ export class U {
     static getID: Generator<number> = function* idgenerator(): Generator<number> { let i: number = 0; while(true) yield i++; }();
 
 
-
-    static ReactNodeAsElement(e: React.ReactNode): React.ReactElement | null { return e && (e as ReactElement).type ? e as ReactElement : null; }
-
     static getType(param: any): string {
         switch (typeof param) {
             default: return typeof param;

@@ -1,6 +1,6 @@
 import React, {Dispatch, PureComponent, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import './graph.scss';
+// import './graph.scss';
 import {DGraph, DModel, DPointerTargetable, IStore, LGraph, LModel} from "../../joiner";
 
 

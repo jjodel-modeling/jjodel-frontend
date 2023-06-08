@@ -66,7 +66,7 @@ function Topbar(props: AllProps) {
                 <div className={'ms-auto me-1 d-flex'}>
                     <label className={'item border round ms-1'} onClick={ () => SaveManager.exportLayout_click(false) }>Export Layout</label>
                     <label className={'item border round ms-1'} onClick={ () => SaveManager.importLayout_click(false) }>Import Layout</label>
-                    <label className={'item border round ms-1'} onClick={ () => {setEdgeTest(edgetestclick())} }>Edge test</label>
+                    <label className={'item border round ms-1'} onClick={ () => { let e = edgetestclick(); setTimeout(()=> setEdgeTest(e), 10); } }>Edge test</label>
                 </div>
             </>
         }
@@ -115,23 +115,31 @@ export const TopBar = (props: OwnProps, children: (string | React.Component)[] =
 
 
 
-let edgetestvar: JSX.Element = <></>;
 //             <ellipse stroke={"black"} fill={"red"} cx={this.props.node.end.x} cy={this.props.node.end.y}
 //                         rx={this.props.node.end.w} ry={this.props.node.end.h} />
 //             <ellipse stroke={"black"} fill={"red"} cx={this.props.node.start.x} cy={this.props.node.start.y}
 //                         rx={this.props.node.start.w} ry={this.props.node.start.h} />
 function edgetestclick(){
-    let jsxmn = `<ellipse stroke={"black"} fill={"red"} cx={mn.x} cy={mn.y} rx={mn.w} ry={mn.h} />`;
-    let midnodeview = DViewElement.new("edgepoint view", jsxmn);
+    let jsxmn_svg = `<ellipse stroke={"black"} fill={"red"} cx={this.props.node.x} cy={this.props.node.y} rx={this.props.node.w} ry={this.props.node.h} />`;
+    let jsxmn_html = `<div style={{borderRadius:"999px", border: "2px solid black", position:"absolute", background:"red",
+top:(this.props.node.y-this.props.node.h/2+50)+"px", left:(this.props.node.x-this.props.node.w/2+50)+"px",
+width:(this.props.node.w+50)+"px", height:(this.props.node.h+50)+"px"}} y={this.props.node.y}/>`;
+    let midnodeviewsvg = DViewElement.new2("edgepoint view svg", jsxmn_svg, (d)=>{d.defaultVSize=new GraphSize(0, 0, 5, 5)});
+    let midnodeview = DViewElement.new2("edgepoint view html", jsxmn_html, (d)=>{d.defaultVSize=new GraphSize(0, 0, 5, 5)});
+    let dataid = store.getState().models[0];
+    // <g>{this.props.node.midnodes.map((mn) => <VoidVertex nodeid={mn.id+"_svg"} view={"`+midnodeviewsvg.id+`"} />)}</g>
     let jsx =
         `<svg>
             <path stroke={"black"} fill={"none"} d={this.path()}></path>
-            {this.props.node.midnodes.map(mn => <VoidVertex view={"`+midnodeview.id+`"} stroke={"black"} fill={"red"} cx={mn.x} cy={mn.y} rx={mn.w} ry={mn.h} />)}
+            {
+                <foreignObject style={{overflow:"visible"}}>{<Vertex nodeid={"midnode1"} view={"` + midnodeview.id + `"} />}</foreignObject>
+            }
         </svg>`;
 
     let view = DViewElement.new2("edge view", jsx, (d)=> { d.bendingMode = EdgeBendingMode.Line; });
     let node: DVoidEdge = DVoidEdge.new();
     function makeep(x:number, y:number, w=5, h=5) {
+        // return new GraphSize(x, y, w, h);
         let e = DEdgePoint.new(undefined, node.id, undefined, undefined, new GraphSize(x, y, w, h));
         return e.id;
     }
@@ -140,12 +148,11 @@ function edgetestclick(){
     // node.midnodes = [makeep(50, 100), makeep(80, 100), makeep(120, 120), makeep(150,120), makeep(150, 80)];
     // CreateElementAction.new(view); CreateElementAction.new(midnodeview); CreateElementAction.new(node);
     let graphid = store.getState().graphs[0];
-    edgetestvar = <div style={{position:"absolute", zIndex:1000, top:"50px", left:"50px", width:"500px", height:"500px", background:"white", border:"4px solid black"}}>
+    return <div style={{position:"absolute", zIndex:1000, top:"50px", left:"50px", width:"500px", height:"500px", background:"white", border:"4px solid black"}}>
         <div style={{height:"100%", width:"100%", position:"relative"}}>
-            <DamEdge view={view.id} graphid={graphid} nodeid={node.id}></DamEdge>
+            <DamEdge view={view.id} graphid={graphid} nodeid={node.id} />
         </div>
     </div>
-    return edgetestvar;
 
 }
 

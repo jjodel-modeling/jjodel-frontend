@@ -14,6 +14,7 @@ export class DV {
     public static referenceView(): string { return beautify(DefaultView.feature()); }
     public static enumeratorView(): string { return beautify(DefaultView.enum()); }
     public static literalView(): string { return beautify(DefaultView.literal()); }
+    public static voidView(): string { return beautify(DefaultView.void()); }
     public static operationView(): string { return beautify(DefaultView.operation()); }
     public static operationViewm1(): string { return beautify(DefaultView.operationm1()); }
     public static objectView(): string { return beautify(DefaultView.object()); }
@@ -42,15 +43,22 @@ class DefaultView {
 
     public static model(): string {
         return `<div className={'root model'}>
-             {this.data.packages.map((child, index) => {
+             {this.data && this.data.packages.map((child, index) => {
                 return <DefaultNode key={index} data={child.id}></DefaultNode>
             })}
-            {this.data.allSubObjects.map((child, index) => {
+            {this.data && this.data.allSubObjects.map((child, index) => {
                 return <DefaultNode key={index} data={child.id}></DefaultNode>
             })}
+            <DefaultNode />
         </div>`;
     }
 
+    public static void(): string {
+        return `<div className={'round bg-white root void model-less p-1'}>
+            <div>voidvertex element test</div>
+            <div>data: {this.props.data ? this.props.data.name : "empty"}</div>
+        </div>`;
+    }
     public static package(): string {
         return `<div className={'round bg-white root package'}>
             <Input jsxLabel={<b className={'package-name'}>EPackage:</b>} field={'name'} hidden={true} />

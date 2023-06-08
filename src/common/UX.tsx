@@ -12,6 +12,7 @@ import Swal from "sweetalert2";
 // U-functions that require jsx
 @RuntimeAccessible
 export class UX{
+
     static recursiveMap<T extends ReactNode | ReactNode[] | null | undefined>(children: T, fn: (rn: T, i: number)=>T): T {
         const innermap = (child: ReactNode, i: number): T => {
             if (!React.isValidElement(child)) { return child as T; }
@@ -77,9 +78,10 @@ export class UX{
                 // const validVertexIdCondition = (id: string): boolean => gvidmap_useless[id];
                 // todo: come butto dei sotto-vertici dentro un vertice contenitore? o dentro un sotto-grafo? senza modificare il jsx ma solo draggando?
                 const dataid = typeof re.props.data === "string" ? re.props.data : re.props.data?.id;
-                const idbasename: string = (injectProps.parentnodeid)+"^"+index;//injectProps.graphid + '^' + dataid;
+                const idbasename: string = re.props.nodeid || (injectProps.parentnodeid)+"^"+index;//injectProps.graphid + '^' + dataid;
                 // console.log("setting nodeid", {injectProps, props:re.props, re});
-                Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
+                // Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
+                Log.exDev(!injectProps.graphid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
                 injectProps.nodeid = idbasename; // U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
                 // gvidmap_useless[injectProps.nodeid] = true;
                 injectProps.key = injectProps.nodeid; // re.props.key || thiss.props.view.id + '_' + thiss.props.data.id;

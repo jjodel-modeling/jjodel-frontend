@@ -210,9 +210,10 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
         // set classes
         let nodeType = "NODE_TYPE_ERROR";
-        if ( this.props.isGraph &&  this.props.isVertex) nodeType = "GraphVertex";
-        if ( this.props.isGraph && !this.props.isVertex) nodeType = "Graph";
-        if (!this.props.isGraph &&  this.props.isVertex) nodeType = "Vertex";
+        if ( this.props.isGraph &&  this.props.isVertex) nodeType = "GraphVertex"; else
+        if ( this.props.isGraph && !this.props.isVertex) nodeType = "Graph"; else
+        if (!this.props.isGraph &&  this.props.isVertex && (this.props.isVoid || !this.props.data)) nodeType = "VoidVertex"; else
+        if (!this.props.isGraph &&  this.props.isVertex) nodeType = "Vertex"; else
         if (!this.props.isGraph && !this.props.isVertex) nodeType = "Field";
         let classesoverride = [nodeType];
         // set classes end
@@ -296,19 +297,15 @@ export const VertexConnected = connect<StateProps, DispatchProps, OwnProps, ISto
 )(VertexComponent as any);
 
 export const Vertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
-    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} />;
+    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true}/>;
 }
 export const VoidVertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} isVoid={true}/>;
 }
-/*
-
-using src/graph/graph/graph.tsx instead.
 
 export const Graph = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => { // doesn't work?
     return <VertexConnected {...{...props, children}} isGraph={true} isVertex={false} />;
 }
-*/
 
 export const GraphVertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isGraph={true} isVertex={true} />;

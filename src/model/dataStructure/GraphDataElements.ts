@@ -8,7 +8,7 @@ import {
     DModelElement,
     DocString,
     DPointerTargetable,
-    DUser, END,
+    DUser, DViewElement, END,
     getWParams,
     GObject, GraphElementComponent,
     GraphPoint,
@@ -31,6 +31,7 @@ import {
     U, windoww
 } from "../../joiner";
 import {MixOnlyFuncs2, MixOnlyFuncs3} from "../../joiner/classes";
+import type {RefObject} from "react";
 
 
 console.warn('ts loading graphDataElement');
@@ -62,6 +63,7 @@ export class DGraphElement extends DPointerTargetable {
     h: number=500;
     // width: number = 300;
     // height: number = 400;
+    view!: Pointer<DViewElement, 1, 1, LViewElement>;
 
     public static new(model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"]): DGraphElement {
         return new Constructors(new DGraphElement('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID).end();
@@ -135,7 +137,16 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
     get_component(context: Context): this["component"] {
         // switch(context.data.className) { case DEdgePoint.name: return GraphElementComponent.map[context.data.father]; }
         return GraphElementComponent.map[context.data.id]; }
-    get_view(context: Context): this["view"] { return this.get_component(context).props.view; }
+    // get_view(context: Context): this["view"] { return this.get_component(context).props.view; }
+    get_view(context: Context): this["view"] {
+        let c = this.get_component(context);
+        if (c) return c.props.view;
+        return LPointerTargetable.fromPointer(context.data.view); }
+    set_view(val: Pack1<this["view"]>, context: Context){
+        let ptr: DGraphElement["view"] = Pointers.from(val as this["view"]);
+        return SetFieldAction.new(context.data.id, "view", ptr, '', true);
+    }
+
     get_size(context: Context, canTriggerSet: boolean = true): Readonly<GraphSize> {
         switch(context.data.className){
             default: return Log.exDevv("unexpected classname in get_size switch: " + context.data.className);
@@ -157,7 +168,7 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
         let component = this.get_component(context);
         windoww.debugg = context;
         console.log("edgee getsize", {component, view:component?.props?.view});
-        let view = component.props.view;
+        let view = component?.props?.view || this.get_view(context);
         (window as any).retry = ()=>view.getSize(context.data.id);
         let ret = view.getSize(context.data.id); // (this.props.dataid || this.props.nodeid as string)
         // console.log("getSize() from view", {ret: ret ? {...ret} : ret});
@@ -172,8 +183,8 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
         }
 
         if ((context.data as DVoidVertex).isResized) return ret;
-        let html = component.html;
-        let actualSize: Partial<Size> & {w:number, h:number} = html.current ? Size.of(html.current) : {w:0, h:0};
+        let html: RefObject<HTMLElement | undefined> | undefined = component?.html;
+        let actualSize: Partial<Size> & {w:number, h:number} = html?.current ? Size.of(html.current) : {w:0, h:0};
         let updateSize: boolean = false;
         if (view.adaptWidth && ret.w !== actualSize.w) {
             ret.w = actualSize.w;
