@@ -1368,6 +1368,8 @@ let bb2 = fffff(a);
 @RuntimeAccessible
 export class DUser extends DPointerTargetable{
     static current: DocString<Pointer<DUser, 1, 1>> = 'Pointer' + Date.now(); // todo
+    // Session's token that change for every session
+    static token: DocString<Pointer<DUser, 1, 1>> = 'Pointer' + Date.now();
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     cursorPositionX: number = 0;

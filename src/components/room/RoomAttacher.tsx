@@ -17,7 +17,7 @@ function RoomAttacherComponent(props: AllProps) {
         const data = doc.data();
         if(!data) return;
         for(let action of data.actions.filter((item: GObject) => !actions[item.id])) {
-            if(action.sender === DUser.current) continue;
+            if(action.token === DUser.token) continue;
             const receivedAction = Action.fromJson(action);
             receivedAction.hasFired = receivedAction.hasFired - 1;
             receivedAction.fire();

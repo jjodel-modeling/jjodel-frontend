@@ -82,12 +82,11 @@ function Topbar(props: AllProps) {
                    onChange={(e)=>{SetRootFieldAction.new("debug", e.target.checked);}} />
         </div>
 
-        {props.debug && <RoomManager />}
-
+        <RoomManager room={props.room} />
     </div>);
 }
-interface OwnProps {}
-interface StateProps { debug: boolean; }
+interface OwnProps {room?: string}
+interface StateProps {debug: boolean}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 

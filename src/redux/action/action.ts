@@ -145,6 +145,7 @@ export class Action extends RuntimeAccessibleClass {
     };
     id: Pointer;
     sender: Pointer<DUser>;
+    token: Pointer<DUser>;
     hasFired: number = 0;
     // targetID: string | undefined;
     // target: IClass = null as any;
@@ -161,6 +162,7 @@ export class Action extends RuntimeAccessibleClass {
         super();
         this.id = 'Pointer_' + Date.now();
         this.sender = DUser.current;
+        this.token = DUser.token;
         this.field = field;
         this.value = value;
         this.type = (this.constructor as any).type;

@@ -9,7 +9,6 @@ import {useEffectOnce} from "usehooks-ts";
 import SplashImage from './static/img/splash.png';
 import {Oval} from "react-loader-spinner";
 import TopBar from "./components/topbar/Topbar";
-import RoomAttacher from "./components/room/RoomAttacher";
 import {connect} from "react-redux";
 
 function App(props: AllProps) {
@@ -29,16 +28,15 @@ function App(props: AllProps) {
         </div>);
     } else {
         return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? " debug" : "")} onClick={() => {statehistory.globalcanundostate = true;} } >
-            <TopBar />
+            <TopBar room={props.room} />
             <Dock />
-            {debug && <RoomAttacher />}
         </div>);
     }
 
 }
 
-interface OwnProps {}
-interface StateProps { debug: boolean; }
+interface OwnProps {room?: string}
+interface StateProps {debug: boolean}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
