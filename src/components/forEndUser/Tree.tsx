@@ -72,9 +72,13 @@ function HtmlTree(props: HtmlTreeProps) {
                         {element.props['label'] ? element.props['label'] : 'unnamed'}
                     </label>
                 </div>
-                {(!hide && children) && <div className={'ms-2'}>
-                    <Tree depth={depth}>{children}</Tree>
-                </div>}
+                {!hide && children.map((child) => {
+                    return(<div className={'ms-2'}>
+                        <Tree depth={depth}>
+                            {child as any}
+                        </Tree>
+                    </div>);
+                })}
             </>);
         })}
     </div>);

@@ -13,10 +13,10 @@ function TestTabComponent(props: AllProps) {
         <Tree>
             {// @ts-ignore)
                 <div label={<b className={'text-primary'}>Root</b>}>
-                <div>
-                    <div>Leaf #1</div>
-                    <div >Leaf #2</div>
-                </div>
+                    <div>
+                        <div></div>
+                        <div></div>
+                    </div>
             </div>}
         </Tree>
     </div>);
