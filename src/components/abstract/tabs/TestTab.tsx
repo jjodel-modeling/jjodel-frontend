@@ -11,12 +11,13 @@ function TestTabComponent(props: AllProps) {
         {selected ? <Tree data={selected} /> : <label>NULL</label>}
         <hr />
         <Tree>
-            Root
-            <div>
-                Sub Root
-                <div>Leaf</div>
-                <div>Leaf</div>
-            </div>
+            {// @ts-ignore)
+                <div label={<b className={'text-primary'}>Root</b>}>
+                <div>
+                    <div>Leaf #1</div>
+                    <div >Leaf #2</div>
+                </div>
+            </div>}
         </Tree>
     </div>);
 }

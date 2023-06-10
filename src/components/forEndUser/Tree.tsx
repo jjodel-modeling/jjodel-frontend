@@ -61,20 +61,21 @@ function HtmlTree(props: HtmlTreeProps) {
 
     return(<div>
         {data.map((element: string|ReactNode) => {
-            if(!React.isValidElement(element)) return(<div className={'d-flex'}>
-                <button className={'btn'} onClick={setFilter}>
-                    {(hide) ? <i className={'bi bi-eye-slash'}></i> : <i className={'bi bi-eye'}></i>}
-                </button>
-                <label className={'ms-1 my-auto'}>
-                    <b>{element}</b>
-                </label>
-            </div>);
+            if(!React.isValidElement(element)) return(<></>);
             const children: (string|ReactNode)[] = (Array.isArray(element.props.children)) ? element.props.children: [element.props.children];
-            if(!hide) {
-                return(<div className={'ms-2'}>
+            return(<>
+                <div className={'d-flex'}>
+                    <button className={'btn'} onClick={setFilter}>
+                        {(hide) ? <i className={'bi bi-eye-slash'}></i> : <i className={'bi bi-eye'}></i>}
+                    </button>
+                    <label className={'ms-1 my-auto'}>
+                        {element.props['label'] ? element.props['label'] : 'unnamed'}
+                    </label>
+                </div>
+                {(!hide && children) && <div className={'ms-2'}>
                     <Tree depth={depth}>{children}</Tree>
-                </div>);
-            }
+                </div>}
+            </>);
         })}
     </div>);
 }
