@@ -40,7 +40,7 @@ import {
     unArr,
     WPointerTargetable, DUser, DocString
 } from "../../joiner";
-import {Json, ObjectWithoutPointers, orArr, PrimitiveType} from "../../joiner/types";
+import {Info, Json, ObjectWithoutPointers, orArr, PrimitiveType} from "../../joiner/types";
 
 import {
     AccessModifier,
@@ -117,7 +117,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     annotations!: LAnnotation[];
     children!: (LPackage | LClassifier | LTypedElement | LAnnotation | LObject | LValue)[];
     nodes!: LGraphElement[];
-    node!: LGraphElement | null;
+    node!: LGraphElement | undefined;
 
     // utilities to go up in the tree (singular names)
     model!: LModel; // utility, follow father chain until get a Model parent or null
@@ -265,7 +265,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         }
     }
 
-    protected get_nodes(context: Context): LGraphElement[] {
+    protected get_nodes(context: Context): this["nodes"] {
         const nodes: LGraphElement[] = [];
         const nodeElements = $('[data-dataid="' + context.data.id + '"]');
         for (let nodeElement of nodeElements) {
@@ -278,10 +278,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return nodes;
     }
 
-    protected get_node(context: Context): LGraphElement | null {
+    protected get_node(context: Context): this["node"] {
         const nodes = context.proxyObject.nodes;
-        const node = (nodes.length > 0) ? nodes[0] : null;
-        return node;
+        return nodes.filter( n => n.favoriteNode)[0] || nodes[0];
     }
 
     /*
@@ -1788,11 +1787,16 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     attributes!: LAttribute[];
     referencedBy!: LReference[];
     extends!: LClass[];
-    extendsChain!: LClass[];  // list of all super classes (father, father of father, ...)
+    __info_of__extends: Info = {type:"LClass[]", txt: "classes directly extended by this. check also: \"superclasses\"."}
+    extendsChain!: LClass[];  // list of all super classes (father, father of father, ...)  todo: isn't this the same as "superclasses" ? check implementation differeces, eventually remove one.
     extendedBy!: LClass[];
     nodes!: LGraphElement[]; // ipotesi, non so se tenerlo
 
-    // mia aggiunta:
+    // fittizi:
+    public superclasses!: LClass[];
+    __info_of__superclasses: Info = {type:"LClass[]", txt: "all classes directly and indirectly extended by this. same as check also: \"extends\"."}
+    public allSubClasses!: LClass[];
+
     partial!: boolean;
     partialdefaultname!: string;
     isPrimitive!: boolean;
@@ -2137,8 +2141,6 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return true;
     }
 
-    public superclasses!: LClass[];
-    public allSubClasses!: LClass[];
 
     public canExtend(superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
         this.cannotCall("canExtend"); return false;
@@ -2616,7 +2618,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     container!: boolean; //??
     resolveProxies!: boolean;
     opposite?: LReference;
-    target!: LClass[];
+    // target!: LClass[]; replaced by type
     edges!: LEdge[];
 
 
@@ -2659,7 +2661,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
             we.defaultValue = context.data.defaultValue;
             we.type = context.data.type;
             we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
-            we.target = deep ? context.proxyObject.target.map(lchild => lchild.duplicate(deep).id) : context.data.target;
+            // we.target = deep ? context.proxyObject.target.map(lchild => lchild.duplicate(deep).id) : context.data.target;
             END()
             return le; }
     }
@@ -2704,14 +2706,14 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         SetFieldAction.new(context.data, 'opposite', Pointers.from(val) as any as LAnnotation["id"], "", true);
         return true;
     }
-
+/*
     /// todo: why this exist?  why not type?
     protected get_target(context: Context): this["target"] { return context.data.target.map(pointer => LPointerTargetable.from(pointer)); }
     protected set_target(val: PackArr<this["target"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         SetFieldAction.new(context.data, 'target', list, "", true);
         return true;
-    }
+    }*/
 
     protected get_defaultValue(context: Context): this["defaultValue"] { return LPointerTargetable.fromPointer(context.data.defaultValue); }
     protected set_defaultValue(val: PackArr<this["defaultValue"]>, context: Context): boolean {
@@ -3248,6 +3250,33 @@ export class DModel extends DNamedElement { // DNamedElement
 }
 
 @RuntimeAccessible
+export class EdgeStarter<T1=any, T2=any>{ // <T1 extends LPointerTargetable = LPointerTargetable, T2 extends LPointerTargetable = LPointerTargetable>{
+    start: LModelElement;
+    end: LModelElement;
+    startNode: LGraphElement;
+    endNode: LGraphElement;
+    otherEnds: LGraphElement[];
+    constructor(start: LModelElement, end: LModelElement, sn: LGraphElement, en: LGraphElement, otherPossibleEnds: LGraphElement[] = []) {
+        this.start = start;
+        this.end = end;
+        this.startNode = sn;
+        this.endNode = en;
+        this.otherEnds = otherPossibleEnds || end.nodes; }
+    static oneToMany<T1 extends LModelElement = LModelElement, T2 extends LModelElement = LModelElement>(start: T1, ends:T2[]): EdgeStarter<T1, T2>[] {
+        let sn = start.node;
+        if (!sn) return [];
+        let rett: (EdgeStarter | undefined)[] = ends.map( (e) => {
+            if(!e) return undefined;
+            let en = e.node;
+            return en ? new EdgeStarter(start, e, sn as LGraphElement, en) : undefined;
+        });
+        let ret: (EdgeStarter)[] = rett.filter<EdgeStarter>(function(e: EdgeStarter|undefined): e is EdgeStarter { return !!e });
+        // let ret: (EdgeStarter)[] = rett.filter<EdgeStarter>((e): (e is EdgeStarter) => { return !!e });
+        return ret;
+    }
+}
+
+@RuntimeAccessible
 export class LModel<Context extends LogicContext<DModel> = any, C extends Context = Context, D extends DModel = DModel> extends LNamedElement {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -3287,6 +3316,13 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     allSubAnnotations!: LAnnotation[];
     allSubPackages!: LPackage[];
     allSubObjects!: LObject[];
+    suggestedEdges!: {extend: EdgeStarter[], reference:EdgeStarter[], packageDependencies: EdgeStarter[]}; //, model: EdgeStarter[], package:EdgeStarter[], class:EdgeStarter[]};
+    __info_of__suggestedEdges: Info = {type: 'Dictionary<"extend" | "reference" | "packageDependencies" | DmodelName, EdgeStarter[]>', txt: "A map to access all possible kind of edges based on model data." +
+            "<br/>extend and reference are the most commonly used for horizontal references (outside the containment tree schema)." +
+            "<br/>packageDependencies links packages using classes from other packages." +
+           // "<br/>other keys are the names of container data types (mode, package, class, object...) from them to their childrens rendered as Nodes (vertical tree schema)." +
+            // todo: implement the commented part as LGrahElement.vertexs.map(v=>{start:v.parentnode.isVertex ? v.parentnode.id : undefined, end:v.id}).filter(e=>e.start) instead. it's a thing of graph more than model.
+            "<br/> EdgeStarter is a collection of data useful to start a &lt;Edge /&gt; in JSX."}
 
     protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
         loopDetectionObj[context.data.id] = context.data;
@@ -3330,6 +3366,77 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             */
             return dObject;
         }
+    }
+
+    public get_suggestedEdges(context: Context): this["suggestedEdges"]{
+        if (context.data.isMetamodel) return this.get_suggestedEdgesM2(context);
+        return this.get_suggestedEdgesM1(context);
+    }
+    private get_suggestedEdgesM2(context: Context): this["suggestedEdges"]{
+        let ret: this["suggestedEdges"] = {} as any;
+        let s: IStore = store.getState();
+        let classes: LClass[] = this.get_classes(context, s);
+        let references: LReference[] = classes.flatMap(c=>c.references);
+        ret.reference = references.map( (r) => {
+            let sn = r.node;
+            if (!sn) return undefined;
+            let end = r.type;
+            if (end.id === r.id) return undefined;
+            let en = end.node;
+            if (!en) return undefined;
+            return new EdgeStarter(r, end, sn, en);
+        }).filter<EdgeStarter>(function(e):e is EdgeStarter{ return !!e});
+        // ret.extend = classes.flatMap( c => EdgeStarter.oneToMany(c, c.extends));
+
+        let alreadyAdded: Dictionary<Pointer, LClass> = {};
+        // if A extends B1, B2;    B1 extends C1, C2;    and node B1 is hidden. instead of edge from A to B, i display edge from A~C1, A~C2, A~B2
+        function SkipExtendNodeHidden(start: LClass, end: LClass[], rootCall: boolean = true): ({start: LClass, end: LClass, sn: LGraphElement, en: LGraphElement})[] {
+            let ret: {start: LClass, end: LClass, sn: LGraphElement, en: LGraphElement}[] = [] as any;
+            if (rootCall) { alreadyAdded = {}; alreadyAdded[start.id] = start; } // end classes can get added twice if from a different starting subclass path (in classes.flatMap -> each one should have his own dict).
+            // ret.start = start;
+            let sn = start.node;
+            if (!sn) return [];
+            //  let end: LClass[] = start.extends;
+            for (let e of end) {
+                let eid = e.id;
+                if (alreadyAdded[eid]) continue; // without this there might be duplicates if A extends B1, B2;  and both B1 & B2 extends C
+                alreadyAdded[eid] = e;
+                let en = e.node;
+                if (en) { ret.push({start, end:e, sn, en}); continue; } // continue;
+                let secondTierExtends = e.extends;
+                // for (let eend of secondTierExtends) {
+                ret.push(...SkipExtendNodeHidden(start, secondTierExtends, false));
+                //}
+            }
+            return ret;
+        }
+        ret.extend = classes.flatMap(c => SkipExtendNodeHidden(c, c.extends, true)).map( (es) => new EdgeStarter(es.start, es.end, es.sn, es.en));
+
+        let dependencies: {src:LModelElement, ends: LModelElement[]}[] = [...(classes.map(c=>{ return {src:c, ends:c.superclasses}})), ...(references.map(r=> { return {src:r, ends:[r.type]}}))]
+        let pkgdependencies: {src: LPackage, sn: LGraphElement, ends: Dictionary<Pointer, {end:LPackage, en:LGraphElement}>}[] = []; // transform form in dictionary to prevent duplicates
+        //dependencies.map( d=> { let end = d.end.package; return {src:d.src.package, end, endid:end.id}})
+
+        for (let d of dependencies) {
+            let src: LPackage | null = d.src.package;
+            if (!src) continue;
+            let srcnode: LGraphElement | undefined = src.node;
+            if (!srcnode) continue;
+            let ends: Dictionary<Pointer, {end:LPackage, en:LGraphElement}> = {};
+            for (let end of d.ends) {
+                let ep: LPackage|null = end.package;
+                if (!ep) continue;
+                let epnode: LGraphElement | undefined = ep.node;
+                if (!epnode) continue;
+                ends[ep.id] = {end:ep, en:epnode};
+            }
+            pkgdependencies.push( {src, sn:srcnode, ends});
+        }
+        ret.packageDependencies = pkgdependencies.flatMap( pd => ( Object.values(pd.ends).map((end) => new EdgeStarter(pd.src, end.end, pd.sn, end.en)))); // todo: check
+        return ret; }
+
+    private get_suggestedEdgesM1(context: Context): this["suggestedEdges"]{
+        let ret: this["suggestedEdges"] = {todo:true} as any;
+        return ret;// todo
     }
 
     protected get_models(context: Context): LModel[] {
@@ -3425,17 +3532,21 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     protected get_roots(context: Context): this["roots"] {
         return this.get_objects(context).filter( o => o.isRoot);
     }
-    protected get_classes(context: Context): this["classes"] {
-        const s: IStore = store.getState();
+    protected get_classes(context: Context, s?: IStore): this["classes"] {
+        s = s||store.getState();
         return this.get_allSubPackages(context, s).flatMap(p => p.classes || []);
+    }
+    protected get_references(context: Context, s?: IStore): this["references"] {
+        s = s||store.getState();
+        return this.get_classes(context, s).flatMap(p => p.references || []);
     }
 
     protected get_enums(context: Context): this["enums"] {
         return this.get_enumerators(context);
     }
 
-    protected get_enumerators(context: Context): this["enums"] {
-        const s: IStore = store.getState();
+    protected get_enumerators(context: Context, s?: IStore): this["enums"] {
+        s = s||store.getState();
         return this.get_allSubPackages(context, s).flatMap(p => (p.enums || []));
     }
 

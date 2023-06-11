@@ -221,12 +221,12 @@ w.GraphPoint = GraphPoint;
 w.$s = $s;
 */
 export {
-    TextArea, Select, Input, Image, Edge,
+    TextArea, Select, Input, Image, Edge, DamEdge,
     GraphsContainerComponent,
     Overlap as OverlapComponent,
     GraphsContainer,
     GraphElement,
-    Vertex, VoidVertex,
+    Vertex, VoidVertex, EdgePoint,
     Graph, GraphVertex,
     Field,
     DefaultNode,
@@ -235,7 +235,8 @@ export {
     DefaultNodeComponent,
     // DockLayoutComponent,
     ColorScheme, Edges,
-    DataOutputComponent, LoggerComponent,
+    EdgeComponent,
+    DataOutputComponent, LoggerComponent
 } from './components'
 
 //export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file

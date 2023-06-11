@@ -28,7 +28,7 @@ type primitiveType = string | number | boolean | symbol | null | undefined;
 export type PrimitiveType = string | number | boolean | null;
 type NotAFunction = NoCaller | NoBind | NoApply | NoCall;
 type NotFunction = GObject & NotAFunction | primitiveType;
-export type Info = {type: ShortAttribETypes, txt: string | React.ReactElement};
+export type Info = {type: ShortAttribETypes | string, txt: string | React.ReactElement};
 
 
 export type Empty = any;

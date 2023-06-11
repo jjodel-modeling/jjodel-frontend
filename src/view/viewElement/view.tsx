@@ -8,7 +8,7 @@ import {
     DViewPoint,
     EdgeBendingMode,
     getWParams,
-    GObject,
+    GObject, GraphPoint,
     GraphSize,
     Info,
     LogicContext,
@@ -73,6 +73,12 @@ export class DViewElement extends DPointerTargetable {
     storeSize!: boolean;
     size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>;
     lazySizeUpdate!: boolean;
+    edgeStartOffset!: GraphPoint;
+    edgeEndOffset!: GraphPoint;
+    edgeStartOffset_isPercentage!: boolean;
+    edgeEndOffset_isPercentage!: boolean;
+    edgeStartStopAtBoundaries!: boolean;
+    edgeEndStopAtBoundaries!: boolean;
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1 , persist: boolean = false): DViewElement {
@@ -140,6 +146,16 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__storeSize: Info = {type: ShortAttribETypes.EBoolean, txt: <><div>Active: the node position depends from the view currently displayed.</div><div>Inactive: it depends from the graph.</div></>}
     lazySizeUpdate!: boolean;
     __info_of__lazySizeUpdate: Info = {type: ShortAttribETypes.EBoolean,txt: "When activated, the layout position will only be updated once when the drag or resize operation is completed. (best performance)"}
+
+    edgeStartOffset!: GraphPoint;
+    __info_of__edgeStartOffset: Info = {type:"GraphPoint", txt: "location where outgoing edges should start their path, relative to top-upper corner of the element."}
+    edgeEndOffset!: GraphPoint;
+    edgeStartOffset_isPercentage!: boolean;
+    __info_of__edgeStartOffset_isPercentage: Info = {type:"GraphPoint", txt: "Whether edgeStartOffset is an absolute value or a percentage (eg: 50% of top edge, vs 50 pixels on the right)."}
+    edgeEndOffset_isPercentage!: boolean;
+    edgeStartStopAtBoundaries!: boolean;
+    __info_of__edgeStartStopAtBoundaries: Info = {type:"GraphPoint", txt: "Whether outgoing edges should cross the node boundaries overlapping the node or stop at them (edge arrows might enter the node if this is on)."}
+    edgeEndStopAtBoundaries!: boolean;
 
     protected size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>; // use getSize, updateSize
 

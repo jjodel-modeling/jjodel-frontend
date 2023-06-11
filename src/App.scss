@@ -85,3 +85,33 @@ body .ui-icon{ // override jqueryui fixed resizable handles at 16px, making drag
   top: 0px;
   left: 0px;
 }
+
+
+
+//////////// edge paths
+
+svg.hoverable {
+
+  &:has(path.clickable) {
+    &>.preview { visibility: visible; }
+    &>.content { visibility: hidden; }
+  }
+
+  &:has(path.clickable:hover) {
+    &>.preview { visibility: hidden; }
+    &>.content { visibility: visible; }
+  }
+
+}
+// .EdgePoint[data-nodetype="EdgePoint"]>
+// [data-nodetype]:has(>[hoverscale]){ overflow: visible !important; }
+[hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{
+  transform-origin: center;
+  transform: scale(1.3);
+  // todo: temp fix to avoid double trigger because root attributes are duplicated, remove when attributes cloning is fixed
+  &>[hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{ transform: scale(1); }
+  // transform: scale(attr(hoverscale number, 1)); correct but unsupported yet. i'm forced to hardcode a number
+}
+
+//.EdgePoint{ transform: translate(-50%, -50%); }
+

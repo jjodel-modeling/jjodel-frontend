@@ -21,6 +21,36 @@ export class DV {
     public static valueView(): string { return beautify(DefaultView.value()); }
     public static defaultPackage(): string { return beautify(DefaultView.defaultPackage()); }
     public static errorView(publicmsg: string | JSX.Element, debughiddenmsg?:any): ReactElement { console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg}); return DefaultView.error(publicmsg); }
+
+    static edgePointView(): string { return beautify(
+        `<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"red", width:"100%", height:"100%"}} />`
+    )}
+    static edgePointViewSVG(): string { return beautify(
+        `<ellipse stroke={"black"} fill={"red"} cx={"50"} cy={"50"} rx={"20"} ry={"20"} />`
+        //`<ellipse stroke={"black"} fill={"red"} cx={this.props.node.x} cy={this.props.node.y} rx={this.props.node.w} ry={this.props.node.h} />`
+    )}
+
+    static edgeView(): string { return beautify(
+        `<div className={"edge"} style={{overflow: "visible", width:0, height:0}}>
+            <svg className={"hoverable"} style={{width:"100vw", height:"100vh", pointerEvents:"none"}}>
+                <path className={"preview"} strokeWidth={2} stroke={"gray"} fill={"none"} d={this.component.path()} style={{pointerEvents:"none"}}></path>
+                <path className={"content"} strokeWidth={4} stroke={"black"} fill={"none"} d={this.component.path()} style={{pointerEvents:"none"}}></path>
+                {this.component.pathSegments().map( pair => <path className={"clickable"} style={{pointerEvents:"all"}}
+                 strokeWidth={4} stroke={"transparent"} fill={"none"} d={"M"+pair[0].x+" "+pair[0].y+" L"+pair[1].x+" "+pair[1].y}></path>)}
+                <foreignObject style={{overflow:"visible"}}>    </foreignObject>
+            </svg>
+            {
+                false && <EdgePoint key={"midnode1"} view={"Pointer_ViewEdgePoint"} />
+            }{
+                false && <EdgePoint key={"midnode2"} view={"Pointer_ViewEdgePoint"} />
+            }{
+                false && props.children && "this would cause loop no idea why, needs to be fixed to allow passing EdgeNodes here" || []
+            }
+        </div>`
+    )}
+    static edgeView0(): string { return beautify(
+        `<div>edge</div>`
+    )}
 }
 
 let valuecolormap: GObject = {};
@@ -43,13 +73,25 @@ class DefaultView {
 
     public static model(): string {
         return `<div className={'root model'}>
+             {!this.data && "Model data missing."}
+             
+            <div className="edges">
+                {this.data && this.node.allSubNodes.length >=2 &&
+                    <DamEdge view={"Pointer_ViewEdge"} start={this.node.allSubNodes[0]} end={this.node.allSubNodes[1]}>
+                        <EdgePoint key={"midnode1"} view={"Pointer_ViewEdgePoint"} />
+                        <EdgePoint key={"midnode2"} view={"Pointer_ViewEdgePoint"} />
+                    </DamEdge>
+                }
+                {
+                    false && this.data.suggestedEdges.reference.map(se => <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdge"}/>)
+                }
+            </div>
              {this.data && this.data.packages.map((child, index) => {
                 return <DefaultNode key={index} data={child.id}></DefaultNode>
             })}
             {this.data && this.data.allSubObjects.map((child, index) => {
                 return <DefaultNode key={index} data={child.id}></DefaultNode>
             })}
-            <DefaultNode />
         </div>`;
     }
 

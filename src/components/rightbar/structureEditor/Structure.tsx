@@ -164,6 +164,7 @@ export default class Structure {
     public static forceConform(me: LObject) {
         let mm: LModel = Selectors.getLastSelectedModel().m2 as LModel; // LPointerTargetable.fromPointer(store.getState().metamodel as any);
 
+        if (!mm) return <></>
         return <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Force Type</label>
             <select className={'my-auto ms-auto select'} onChange={ (event)=>{
@@ -174,7 +175,7 @@ export default class Structure {
                 <optgroup label={mm.name}>
                     {
                         (mm.classes || []).map( c =>
-                            <option value={c.id}>{c.name}</option>
+                            <option value={c.id}>{c?.name || c.id}</option>
                         )
                     }
                     <option value={"undefined"}>Object</option>

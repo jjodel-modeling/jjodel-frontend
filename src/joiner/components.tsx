@@ -22,10 +22,12 @@ export {GraphElement, GraphElementComponent} from "../graph/graphElement/graphEl
 // export {Graph, GraphComponent} from "../graph/graph/graph"; // require graphelement
 // export {Graph} from "../graph/vertex/Vertex"; // require graphelement
 export {DefaultNode, DefaultNodeComponent} from "../graph/defaultNode/DefaultNode"; // require graphelement
-export {Graph, Vertex, VoidVertex, GraphVertex, Field, VertexComponent} from "../graph/vertex/Vertex"; // require overlap, graphelement
+export {Graph, Vertex, VoidVertex, GraphVertex, Field, EdgePoint, VertexComponent} from "../graph/vertex/Vertex"; // require overlap, graphelement
 export {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphContainer"; // require vertex, graph
 //export {DockLayoutComponent} from "../components/abstract/DockLayoutComponent";
 export {Edges} from "../graph/edge/Edges";
+export {DamEdge, EdgeComponent,} from "../graph/damedges/damedge";
+
 
 
 

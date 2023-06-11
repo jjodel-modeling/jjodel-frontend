@@ -50,7 +50,7 @@ import {
     LUser,
     LValue, LViewElement, DViewPoint,
     RuntimeAccessible, SetFieldAction,
-    SetRootFieldAction, ShortAttribETypes, Selectors, GraphSize,
+    SetRootFieldAction, ShortAttribETypes, Selectors, GraphSize, EdgeBendingMode, DVoidEdge,
 } from "../joiner";
 
 import React from "react";
@@ -195,6 +195,7 @@ export class IStore {
 
     }
 }
+
 function makeDefaultGraphViews(): DViewElement[] {
 
     let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.name]);
@@ -227,6 +228,14 @@ function makeDefaultGraphViews(): DViewElement[] {
     voidView.explicitApplicationPriority=2;
     voidView.adaptWidth = true;
     voidView.adaptHeight = true;
+
+    let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 30, 30), '', '', '', []);
+    let edgePointViewSVG: DViewElement = DViewElement.new('EdgePointSVG', DV.edgePointViewSVG(), new GraphSize(0, 0, 10, 10), '', '', '', []);
+    let edgeView: DViewElement = DViewElement.new('Edge', DV.edgeView(), undefined, '', '', '', [DVoidEdge.name]);
+    // edgeView.forceNodeType="Edge"
+    edgeView.explicitApplicationPriority=2;
+    edgeView.bendingMode = EdgeBendingMode.Line;
+    edgeView.subViews = [edgePointView.id];
     // nb: Error is not a view, just jsx. transform it in a view so users can edit it
 
     let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.name]);
@@ -234,7 +243,7 @@ function makeDefaultGraphViews(): DViewElement[] {
     const defaultPackage: DViewElement = DViewElement.new('Default Package', DV.defaultPackage());
     defaultPackage.query = `context DPackage inv: self.name = 'default'`;
 
-    return [modelView, packageView, classView, enumView, attributeView, referenceView, operationView, literalView, objectView, valueView, defaultPackage, voidView];
+    return [modelView, packageView, classView, enumView, attributeView, referenceView, operationView, literalView, objectView, valueView, defaultPackage, voidView, edgeView, edgePointView, edgePointViewSVG];
 }
 /*
 class SynchStore{// shared on session

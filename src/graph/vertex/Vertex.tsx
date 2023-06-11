@@ -17,11 +17,12 @@ import {
     LUser,
     LVoidVertex,
     RuntimeAccessibleClass, LViewPoint,
-    U, GraphSize, GraphPoint, GObject, Size, SetRootFieldAction, SetFieldAction, DVertex,
+    U, GraphSize, GraphPoint, GObject, Size, SetRootFieldAction, SetFieldAction, DVertex, DVoidEdge, DEdgePoint,
 } from "../../joiner";
 import $ from "jquery";
 import "jqueryui";
 import "jqueryui/jquery-ui.css";
+import {DamEdge} from "../damedges/damedge";
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee { forceupdate?: number }
@@ -210,6 +211,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
         // set classes
         let nodeType = "NODE_TYPE_ERROR";
+        if ( this.props.isEdgePoint) nodeType = "EdgePoint"; else
         if ( this.props.isGraph &&  this.props.isVertex) nodeType = "GraphVertex"; else
         if ( this.props.isGraph && !this.props.isVertex) nodeType = "Graph"; else
         if (!this.props.isGraph &&  this.props.isVertex && (this.props.isVoid || !this.props.data)) nodeType = "VoidVertex"; else
@@ -223,8 +225,15 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             case "GraphVertex":
             case "Vertex":
             case "VoidVertex":
-                styleoverride.top= size.y+"px";
-                styleoverride.left= size.x+"px";
+            case "EdgePoint":
+                if (nodeType === "EdgePoint") {
+                    styleoverride.top = (size.y - size.h/2)+ "px";
+                    styleoverride.left = (size.x - size.w/2) + "px";
+                }
+                else {
+                    styleoverride.top = size.y + "px";
+                    styleoverride.left = size.x + "px";
+                }
                 let isResized = this.props.node.isResized;
                 if (isResized || !this.props.view.adaptWidth) styleoverride.width = size.w+"px";
                 else styleoverride.width = undefined;
@@ -243,6 +252,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 class OwnProps extends GraphElementOwnProps {
     // onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
     // onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    isEdgePoint?: boolean = false;
     isGraph?: boolean = false;
     isVertex?: boolean = true;
     isVoid?: boolean = false;
@@ -262,9 +272,10 @@ export type AllPropss = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     let DGraphElementClass: typeof DGraphElement;
-    if (ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraphVertex;
-    else if (ownProps.isVertex && !ownProps.isGraph) DGraphElementClass = DVertex;
-    else if (!ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraph;
+    if (ownProps.isEdgePoint) DGraphElementClass = DEdgePoint; else
+    if (ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraphVertex; else
+    if (ownProps.isVertex && !ownProps.isGraph) DGraphElementClass = DVertex; else
+    if (!ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraph;
     else DGraphElementClass = DGraphElement;
 
     if (DGraphElementClass === DVertex && ownProps.isVoid) DGraphElementClass = DVoidVertex;
@@ -302,6 +313,9 @@ export const Vertex = (props: OwnProps, children: (string | React.Component)[] =
 export const VoidVertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} isVoid={true}/>;
 }
+export const EdgePoint = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <VertexConnected {...{...props, children}} isGraph={false} isEdgePoint={true}/>;
+}
 
 export const Graph = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => { // doesn't work?
     return <VertexConnected {...{...props, children}} isGraph={true} isVertex={false} />;
@@ -314,7 +328,7 @@ export const GraphVertex = (props: OwnProps, children: (string | React.Component
 export const Field = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isGraph={false} isVertex={false} />;
 }
-
+/*
 let windoww = window as any;
 
 windoww.VoidVertex = VoidVertex;
@@ -327,5 +341,5 @@ windoww.VoidVertexComponent = VoidVertex;
 windoww.VertexComponent = Vertex;
 // windoww.GraphComponent = Graph;
 windoww.GraphVertexComponent = GraphVertex;
-windoww.FieldComponent = Field;
+windoww.FieldComponent = Field;*/
 

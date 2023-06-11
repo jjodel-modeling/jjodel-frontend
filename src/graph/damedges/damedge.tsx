@@ -5,14 +5,15 @@ import {
     DGraph,
     DGraphElement,
     DGraphVertex, Dictionary,
-    DVoidVertex, EdgeBendingMode,
+    DVoidVertex, EdgeBendingMode, GObject,
     GraphElementComponent,
     GraphElementDispatchProps,
     GraphElementOwnProps,
     GraphElementReduxStateProps,
     GraphElementStatee, GraphPoint,
+    GraphSize,
     IStore,
-    LClass, LEdge,
+    LClass, LEdge, LGraphElement,
     LModelElement,
     LPointerTargetable,
     LUser,
@@ -21,6 +22,7 @@ import {
     U,
 } from "../../joiner";
 import {LViewPoint} from "../../view/viewPoint/viewpoint";
+import {EdgeOwnProps} from "../graphElement/sharedTypes/sharedTypes";
 let groupingsize: Dictionary<EdgeBendingMode, number> = {} as any;
 groupingsize[EdgeBendingMode.Line] = 1;
 groupingsize[EdgeBendingMode.Bezier_quadratic] = 2;
@@ -38,34 +40,53 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
 
     constructor(props: AllProps, context: any) {
         super(props, context);
+        let tobind = [this.path, this.pathSegments, this.pathCoords];
+        for (let tb of tobind) (this as GObject)[tb.name] = tb.bind(this);
     }
+
+    path(): string {
+        let coords = this.pathCoords();
+        let svgletter: EdgeBendingMode = (this.props.view.bendingMode || "L");
+        let strings: string[] = coords.map(gp => gp.x+" " + gp.y);
+        return "M"+strings.join(" " + svgletter); }
+
+    pathCoords(): GraphPoint[] {
+        const ret = this.props;
+        let svgletter: EdgeBendingMode = (ret).view.bendingMode;
+        if (!ret.node) return []; // "node missing"
+        let coords: GraphPoint[] = (ret.node.midnodes as { x:number, y:number }[] as GraphPoint[]) || [];
+        let grouping = groupingsize[svgletter];
+        console.log("edgeee", {coords, svgletter, groupingsize, midnodes:ret.node.midnodes, mnraw: ret.node.midnodes.map(mn=>mn.__raw), ret});
+        let scoord: GraphPoint = ret.node.edgeStart || new GraphPoint(10, 10);
+        let ecoord: GraphPoint = ret.node.edgeEnd || new GraphPoint(100, 100);
+        return [scoord, ...coords, ecoord]; }
+
+    pathSegments(): GraphPoint[][]{
+        return U.pairArrayElements(this.pathCoords(), true); }
+
     render(): ReactNode {
        return super.render();
     }
 
 }
 
-class OwnProps extends GraphElementOwnProps {
-    onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    isGraph?: boolean = false;
-    isVertex?: boolean = true;
-}
 
 class StateProps extends GraphElementReduxStateProps {
     node!: LEdge;
     lastSelected!: LModelElement | null;
     isEdgePending!: { user: LUser, source: LClass };
     viewpoint!: LViewPoint;
-    path!: () => string; // svg path builder
+    start!: LGraphElement;
+    end!: LGraphElement;
+
 }
 
 class DispatchProps extends GraphElementDispatchProps {
 }
 
-type AllPropss = Overlap<Overlap<OwnProps, StateProps>, DispatchProps>;
+type AllPropss = Overlap<Overlap<EdgeOwnProps, StateProps>, DispatchProps>;
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: IStore, ownProps: EdgeOwnProps): StateProps {
     const ret: StateProps = new StateProps();
     // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
     ret.isEdgePending = {
@@ -73,26 +94,9 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
         source: LPointerTargetable.from(state.isEdgePending.source)
     };
     ret.viewpoint = LViewPoint.fromPointer(state.viewpoint);
-    ret.path = () => {
-        let s = '';
-        // @ts-ignore
-        console.log("path:", this, ret, s);
-        let svgletter: EdgeBendingMode = (ret).view.bendingMode;
-        if(!ret.node) return "node missing";
-        let coords = ret.node.midnodes.map( (mn) => mn.x+" "+mn.y);
-        if (!coords) coords = [];
-        let grouping = groupingsize[svgletter];
-        console.log("edgeee", {coords, svgletter, groupingsize, midnodes:ret.node.midnodes, mnraw: ret.node.midnodes.map(mn=>mn.__raw), ret});
-        let scoord: GraphPoint = /*ret.node.start?.size.tl() ||*/ new GraphPoint(50, 50);
-        let ecoord: GraphPoint = /*ret.node.end?.size.tl() ||*/ new GraphPoint(500, 150);
-        s+= "M " + scoord.x + " " + scoord.y + " " + svgletter + " " + coords.join(", ") + ", " + ecoord.x+" "+ecoord.y;
-        /*for (let i = 0; i < coords.length + 1; i++) {
-            if (i-1 % grouping === 0) s+= " " + svgletter + " "
-            else s+=", ";
-            s += (i === coords.length ? ecoord.x + " " + ecoord.y : coords[i]);
-        }*/
-        // if (U.isNumber(s[0])) s = "M " + s; else s = "M " + s.substring(1);
-        return s; }
+    ret.start = LPointerTargetable.fromPointer(ownProps.start);
+    ret.end = LPointerTargetable.fromPointer(ownProps.end);
+    console.log("edge", {ret, ownProps});
 
     const superret: StateProps = GraphElementComponent.mapStateToProps(state, ownProps, DEdge, ret) as StateProps;
     // U.objectMergeInPlace(superret, ret);
@@ -110,11 +114,11 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const EdgeConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const EdgeConnected = connect<StateProps, DispatchProps, EdgeOwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
 )(EdgeComponent as any);
 
-export const DamEdge = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const DamEdge = (props: EdgeOwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <EdgeConnected {...{...props, children}} isGraph={false} isVertex={true} />;
 }

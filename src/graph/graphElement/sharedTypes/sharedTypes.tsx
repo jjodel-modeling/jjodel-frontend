@@ -30,6 +30,7 @@ export class GraphElementStatee {/*
     classes!: string[];
 }
 
+
 export class GraphElementReduxStateProps {
     // userexample?: UserState; // todo: make and repace with proxy wrapper "User", or make a "cached" global variable synchronized with redux state for easier access
     view!: LViewElement;
@@ -65,4 +66,13 @@ export class GraphElementOwnProps {
     nodeid?: Pointer<DGraphElement, 1, 1, LGraphElement>; // Injected
     graphid?: Pointer<DGraph, 1, 1, LGraph>; // injected
     parentViewId?: Pointer<DViewElement, 1, 1, LViewElement>// injected
+}
+
+export class EdgeOwnProps extends GraphElementOwnProps {
+    onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    isGraph?: boolean = false;
+    isVertex?: boolean = true;
+    start!: LGraphElement["id"];
+    end!: LGraphElement["id"];
 }

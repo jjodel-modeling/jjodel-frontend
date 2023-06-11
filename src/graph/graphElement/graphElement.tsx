@@ -41,8 +41,10 @@ import {
     LClass,
     SetFieldAction,
     DGraphVertex,
-    DVoidVertex,
+    DVoidVertex, DEdge,
 } from "../../joiner";
+import {end} from "@popperjs/core";
+import { EdgeOwnProps } from "./sharedTypes/sharedTypes";
 
 
 export function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
@@ -93,6 +95,7 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
     // console.log('GE settemplatestring:', {stateProps});
 }
 
+let debugcount = 0;
 @RuntimeAccessible
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
     extends PureComponent<AllProps, GraphElementState>{
@@ -175,7 +178,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         // console.log('dragx GE mapstate addGEStuff', {dGraphElementDataClass, created: new dGraphElementDataClass(false, nodeid, graphid)});
         if (!dnode) {
-            let dge = dGraphElementDataClass.new(dataid, parentnodeid, graphid, nodeid);
+            console.log("making node:", {dGraphElementDataClass, nodeid, parentnodeid, graphid, dataid, ownProps, ret});
+            let dge;
+            if (dGraphElementDataClass === DEdge) {
+                // set start and end from ownprops;
+                let edgeProps: EdgeOwnProps = ownProps as EdgeOwnProps;
+                let start = typeof edgeProps.start === "string" ? edgeProps.start : (edgeProps.start as any).id; // at runtime i found proxy wrapped instead of id, no idea why
+                let end = typeof edgeProps.end === "string" ? edgeProps.end : (edgeProps.end as any).id;
+                dge = DEdge.new(dataid, parentnodeid, graphid, nodeid, start, end)}
+            else dge = dGraphElementDataClass.new(dataid, parentnodeid, graphid, nodeid);
             let act = CreateElementAction.new(dge, false);
             // console.log("map ge2", {nodeid: nodeid+'', dge: {...dge}, dgeid: dge.id});
         }
@@ -183,7 +194,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     ////// mapper func
-    static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps, dGraphDataClass: typeof DGraphElement = DGraphElement, startingobj?: GObject): GraphElementReduxStateProps {
+    static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps, dGraphDataClass: (typeof DGraphElement | typeof DEdge) = DGraphElement, startingobj?: GObject): GraphElementReduxStateProps {
         // console.log('dragx GE mapstate', {dGraphDataClass});
         let ret: GraphElementReduxStateProps = (startingobj || {}) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
         GraphElementComponent.mapLModelStuff(state, ownProps, ret);
@@ -200,7 +211,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         setTemplateString(ret, ownProps); // todo: this is heavy, should be moved somewhere where it's executed once unless view changes (pre-render with if?)
         // @ts-ignore
         ret.forceupdate = state.forceupdate;
-
         return ret;
     }
 
@@ -377,6 +387,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!this.props.node) return "loading";
         if (this.props.preRenderFunc) U.evalInContextAndScope(this.props.preRenderFunc, {component:this, __proto__:this.props.evalContext});
         if (this.props.node.__raw.view !== this.props.view.id) {
+            console.log("UPDATEVIEW ",
+                {lnode:this.props.node, dnode:this.props.node.__raw,
+                    view:this.props.view, data:this.props.data,
+                    vid:this.props.view.id, nview:this.props.node.__raw.view})
             this.props.node.view = this.props.view;
             return "updating view...";
         }
@@ -399,6 +413,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const addprops: boolean = true;
         let fiximport = !!this.props.node; // todo: check if correct approach
         if (addprops && rawRElement && fiximport) {
+            if (windoww.debugcount && debugcount++>windoww.debugcount) throw new Error("stop");
             // console.log("pre-injecting", {thiss:this, data:this.props.data, props:this.props});
             let fixdoubleroot = true;
             const onDragTestInject = () => {}; // might inject event handlers like this with cloneelement

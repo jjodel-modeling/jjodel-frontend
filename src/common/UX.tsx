@@ -3,8 +3,8 @@ import type { GraphElementOwnProps } from "../joiner";
 import type { InputOwnProps } from '../components/forEndUser/Input';
 import type { SelectOwnProps } from '../components/forEndUser/Select';
 import type { TextAreaOwnProps } from '../components/forEndUser/TextArea';
-import {GObject, Dictionary, DocString, LPointerTargetable, U, Log, GraphElementComponent} from "../joiner";
-import {windoww, JsType, RuntimeAccessible} from "../joiner";
+import {GObject, Dictionary, DocString, LPointerTargetable, U, Log, GraphElementComponent,
+    windoww, JsType, RuntimeAccessible, EdgeComponent} from "../joiner";
 import React, {ReactElement, ReactNode} from "react";
 import withReactContent from "sweetalert2-react-content";
 import Swal from "sweetalert2";
@@ -33,11 +33,11 @@ export class UX{
         // const parentComponent = this;
         let type = (re.type as any).WrappedComponent?.name || re.type;
         // const windoww = window as any;
-        // console.log('relement ', {type: (re.type as any).WrappedComponent?.name || re.type}, {thiss, mycomponents: windoww.mycomponents, re, props:re.props});
+        // console.log('ux.injectingProp pre ', {type: (re.type as any).WrappedComponent?.name || re.type}, {mycomponents: windoww.mycomponents, re, props:re.props});
         // add "view" (view id) prop as default to sub-elements of any depth to inherit the view of the parent unless the user forced another view to apply
         switch (type) {
             default:
-                // console.count('injectingProp case default: ' + type);
+                // console.count('ux.injectingProp case default: ' + type);
                 return re;
             /*
             case windoww.Components.Input.name:
@@ -67,6 +67,7 @@ export class UX{
             // case windoww.Components.Field.name:
             // case windoww.Components.FieldComponent.name:
             // case windoww.Components.Vertex.name:
+            case EdgeComponent.name:
             case windoww.Components.VertexComponent.name:
                 const injectProps: GraphElementOwnProps = {} as any;
                 injectProps.parentViewId = parentComponent.props.view.id || (parentComponent.props.view as any); // re.props.view ||  thiss.props.view
@@ -86,6 +87,7 @@ export class UX{
                 // gvidmap_useless[injectProps.nodeid] = true;
                 injectProps.key = injectProps.nodeid; // re.props.key || thiss.props.view.id + '_' + thiss.props.data.id;
                 // console.log("cloning jsx:", re, injectProps);
+                Log.ex((injectProps.nodeid === injectProps.graphid||injectProps.nodeid === injectProps.parentnodeid) && type != "GraphComponent", "User manually assigned a invalid node id. please remove or change prop \"nodeid\"", {type: (re.type as any).WrappedComponent?.name || re.type}, {mycomponents: windoww.mycomponents, re, props:re.props});
                 return React.cloneElement(re, injectProps);
         }}
 

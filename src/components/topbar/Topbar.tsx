@@ -144,12 +144,12 @@ width:(this.props.node.w+50)+"px", height:(this.props.node.h+50)+"px"}} y={this.
         </svg>`;
 
     let view = DViewElement.new2("edge view", jsx, (d)=> { d.bendingMode = EdgeBendingMode.Line; });
-    let node: DVoidEdge = DVoidEdge.new();
-    function makeep(x:number, y:number, w=5, h=5) {
+    // let node: DVoidEdge = DVoidEdge.new();
+    /*function makeep(x:number, y:number, w=5, h=5) {
         // return new GraphSize(x, y, w, h);
         let e = DEdgePoint.new(undefined, node.id, undefined, undefined, new GraphSize(x, y, w, h));
         return e.id;
-    }
+    }*/
     // let makeedgepoints = [makeep(50, 100), makeep(80, 100), makeep(120, 120), makeep(150,120), makeep(150, 80)];
     // SetFieldAction.new(node.id, "midnodes",  makeedgepoints, '', true);
     // node.midnodes = [makeep(50, 100), makeep(80, 100), makeep(120, 120), makeep(150,120), makeep(150, 80)];
@@ -157,7 +157,7 @@ width:(this.props.node.w+50)+"px", height:(this.props.node.h+50)+"px"}} y={this.
     let graphid = store.getState().graphs[0];
     return <div style={{position:"absolute", zIndex:1000, top:"50px", left:"50px", width:"500px", height:"500px", background:"white", border:"4px solid black"}}>
         <div style={{height:"100%", width:"100%", position:"relative"}}>
-            <DamEdge view={view.id} graphid={graphid} nodeid={node.id} />
+            {/*<DamEdge view={view.id} graphid={graphid} />*/}
         </div>
     </div>
 

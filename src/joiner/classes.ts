@@ -613,17 +613,25 @@ export class Constructors<T extends DPointerTargetable>{
         (thiss).midnodes = [];
         return this; }
     DVertex(): this { return this; }
-    DEdge(): this {
+    DEdge(start: DGraphElement["id"], end: DGraphElement["id"]): this {
+        const thiss: DEdge = this.thiss as any;
+        thiss.start = start;
+        thiss.end = end;
+        if (this.persist) {
+            start && SetFieldAction.new(start, "pointedBy", PointedBy.fromID(thiss.id, "start"), '+=');
+            end && SetFieldAction.new(end, "pointedBy", PointedBy.fromID(thiss.id, "end"), '+=');
+        }
         return this; }
     DExtEdge(): this { return this; }
     DRefEdge(): this { return this; }
 
-    DGraphElement(model: DGraphElement["model"], parentNodeID?: DGraphElement["father"], parentgraphID?: DGraphElement["graph"], nodeID?: DGraphElement["id"]): this {
+    DGraphElement(model: DGraphElement["model"]|null|undefined, parentNodeID?: DGraphElement["father"], parentgraphID?: DGraphElement["graph"], nodeID?: DGraphElement["id"]): this {
         const thiss: DGraphElement = this.thiss as any;
         if (parentNodeID) thiss.father = parentNodeID;
         if (parentgraphID) thiss.graph = parentgraphID;
-        thiss.model = model;
+        thiss.model = model||undefined;
         thiss.subElements = [];
+        thiss.favoriteNode = false;
         if (nodeID) thiss.id = nodeID;
         if (this.persist) {
             model && SetFieldAction.new(model, "pointedBy", PointedBy.fromID(thiss.id, "model"), '+=');
@@ -665,6 +673,13 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.height = 100;
         thiss.adaptWidth = false;
         thiss.adaptHeight = false; //'fit-content';
+
+        thiss.edgeStartOffset = new GraphPoint(50, 50);
+        thiss.edgeEndOffset = new GraphPoint(50, 50);
+        thiss.edgeStartOffset_isPercentage = true;
+        thiss.edgeEndOffset_isPercentage = true;
+        thiss.edgeStartStopAtBoundaries = true;
+        thiss.edgeEndStopAtBoundaries = true;
 
         if (this.persist) {
             // no pointedBy?

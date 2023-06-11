@@ -10,7 +10,7 @@ import {
     DModelElement,
     DPointerTargetable,
     DRefEdge,
-    DReference,
+    DReference, GraphPoint,
     IStore,
     Json,
     JsType,
@@ -986,6 +986,16 @@ export class U {
         return +ret;
     }
 
+    private static pairArrayElementsRepeatFunc<T>(val: T, index: number, arr:T[]): T[]{ return [arr[index], arr[index+1]] }
+    private static pairArrayElementsReducerFunc<T>(accumulator: T[][], value: T, index: number, array: T[]):T[][] {
+        if (index % 2 === 0) accumulator.push(array.slice(index, index + 2));
+        return accumulator; }
+
+    // from arr[] to arr[][]. if is with repetitions is: [1,2], [2,3], [3,4]... (ret.length = source.length-1)
+    // if without repetitions is: [1,2], [3,4].... (ret.length = Math.ceil(source.length/2);
+    public static pairArrayElements<T>(arr:T[], withRepetitions:boolean = false):T[][] {
+        if (withRepetitions) { return arr.map(U.pairArrayElementsRepeatFunc).slice(0, arr.length-1); }
+        return arr.reduce( U.pairArrayElementsReducerFunc as ((accumulator: T[][], value: T, index: number, array: T[]) => T[][]), []); }
 }
 export class DDate{
 

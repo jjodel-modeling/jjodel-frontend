@@ -8,29 +8,40 @@ import {
     DModelElement,
     DocString,
     DPointerTargetable,
-    DUser, DViewElement, END,
+    DUser,
+    DViewElement,
+    END,
     getWParams,
-    GObject, GraphElementComponent,
+    GObject,
+    GraphElementComponent,
     GraphPoint,
     GraphSize,
+    Info,
     IStore,
     Leaf,
     LMap,
-    LModelElement, Log,
+    LModelElement,
+    Log,
     LogicContext,
-    LPointerTargetable, LViewElement,
+    LPointerTargetable,
+    LViewElement,
     MixOnlyFuncs,
-    Node, Pack1, PackArr, Point,
+    Node,
+    Pack1,
+    PackArr,
+    Point,
     Pointer,
     Pointers,
     RuntimeAccessible,
     RuntimeAccessibleClass,
-    SetFieldAction, Size,
+    SetFieldAction,
+    ShortAttribETypes,
+    Size,
     store,
     TargetableProxyHandler,
-    U, windoww
+    U,
+    windoww
 } from "../../joiner";
-import {MixOnlyFuncs2, MixOnlyFuncs3} from "../../joiner/classes";
 import type {RefObject} from "react";
 
 
@@ -64,8 +75,8 @@ export class DGraphElement extends DPointerTargetable {
     // width: number = 300;
     // height: number = 400;
     view!: Pointer<DViewElement, 1, 1, LViewElement>;
-
-    public static new(model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"]): DGraphElement {
+    favoriteNode!: boolean;
+    public static new(model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], a?: any, b?:any, c?:any): DGraphElement {
         return new Constructors(new DGraphElement('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID).end();
     }
 
@@ -80,7 +91,7 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
     __raw!: DGraphElement;
     id!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     father!: LGraphElement;
-    graph!: LGraph; //???
+    graph!: LGraph; // todo: can be removed and accessed by navigating .father
     model?: LModelElement;
     isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn?: LGraphElement;
@@ -104,9 +115,19 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
     htmlPosition!: Point;
     view!: LViewElement;
     component!: GraphElementComponent;
+    favoriteNode!: boolean;
+    vertex?: LVoidVertex;
+    __info__of__vertex: Info = {type: "LVoidVertex", txt: "the foremost vertex containing this graphElement, or undefiened."}
+    __info__of__favoriteNode: Info = {type: ShortAttribETypes.EBoolean, txt: "indicates this is the primarly used (by default) node to refer to a modelling element that might have multiple representations. Can be used as favorite target for edges or other."}
+
+    // edgeStart!: GraphPoint; in view
+    // __info__of__edgeStart!: Info = {type:"GraphPoint", txt:"where the outgoing edges should start their paths."};
 
     get_graph(context: Context): LGraph {
         return TargetableProxyHandler.wrap(context.data.graph); }
+    get_vertex(context: Context): this["vertex"] {
+        return this.wrongAccessMessage("get_vertex not implemented yet"); // todo
+    }
 
     // set_x(val: this["x"], context: Context): boolean { SetFieldAction.new(context.data.id, "x", val, undefined, false); return true; }
     // get_x(context: Context): this["x"] { return context.data.x; }
@@ -174,7 +195,11 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
         let ret = view.getSize(context.data.id); // (this.props.dataid || this.props.nodeid as string)
         // console.log("getSize() from view", {ret: ret ? {...ret} : ret});
         if (!ret) {
-            ret = {x:context.data.x, y:context.data.y, w:context.data.w, h:context.data.h} as any as GraphSize;
+            ret = new GraphSize();
+            ret.x = context.data.x;
+            ret.y = context.data.y;
+            ret.w = context.data.w;
+            ret.h = context.data.h;
             let def: GraphSize | undefined;
             if (undefined===(ret.x)) { if (!def) def = view.defaultVSize; ret.x = def.x;}
             if (undefined===(ret.y)) { if (!def) def = view.defaultVSize; ret.y = def.y;}
@@ -303,6 +328,7 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
             }
             tocheck = newtocheck;
         }
+        delete checked[context.data.id];
         return LPointerTargetable.from(Object.keys(checked), state);
     }
 
@@ -795,9 +821,9 @@ export class DVoidEdge extends DGraphElement {
     __isDVoidEdge!: true;
     midnodes!: Pointer<DEdgePoint, 1, 1, LEdgePoint>[];
 
-    public static new(model?: DGraphElement["model"], parentNodeID?: DGraphElement["father"], graphID?: DGraphElement["graph"], nodeID?: DGraphElement["id"],): DVoidEdge {
-        return new Constructors(new DVoidEdge('dwc'), graphID, true).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
-            .DVoidEdge().end();
+    public static new(model: DGraph["model"]|null|undefined, parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID: DGraphElement["id"]|undefined, start: DGraphElement["id"], end: DGraphElement["id"]): DEdge {
+        return new Constructors(new DEdge('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
+            .DVoidEdge().DEdge(start, end).end();
     }
 }
 
@@ -819,6 +845,33 @@ export class LVoidEdge<Context extends LogicContext<DEdge> = any, D extends DEdg
     end!: LGraphElement;
     __isLVoidEdge!: true;
     midnodes!: LEdgePoint[];
+
+    edgeStart!: GraphPoint;
+    __info_of__edgeStart: Info = {type: "GraphPoint", txt: "Where the edge should start his path.<br>Computed by combining different options stored in View and the layout of the starting node."}
+    edgeEnd!: GraphPoint;
+    __info_of__edgeEnd: Info = {type: "GraphPoint", txt: "Where the edge should end his path.<br>Computed by combining different options stored in View and the layout of the starting node."}
+
+
+    get_edgeStart(context: Context): GraphPoint{
+        let view: LViewElement = this.get_view(context);
+        let midNodes: LEdgePoint[] = context.proxyObject.midnodes;
+        let startSize: GraphSize = context.proxyObject.start?.size || new GraphSize(0, 0, 0, 0);
+        let cutAtBoundaries = view.edgeStartStopAtBoundaries;
+        let startoffset: GraphPoint = view.edgeStartOffset;
+        // let lastMidNode: LEdgePoint = midnodes[midnodes.length-1];
+        let firstMidNode: LEdgePoint = midNodes[0];
+        let offset: GraphPoint = view.edgeStartOffset_isPercentage ? new GraphPoint(startoffset.x/100*(0+startSize.w), startoffset.y/100*(0+startSize.h)) : startoffset;
+        let tentativeStart: GraphPoint = startSize.tl().add(offset, false);
+        console.log("edgestart", {offset, startSize, startoffset, is$: view.edgeStartOffset_isPercentage, tentativeStart});
+        function calculateStartingPoint(a:any, ...b:any) { return a;}
+        // todo
+        return calculateStartingPoint(tentativeStart, firstMidNode, cutAtBoundaries);
+    }
+
+    get_edgeEnd(context: Context){
+        //todo
+        return context.proxyObject.end?.size || new GraphPoint(0, 0);
+    }
 
 
     protected get_midnodes(context: Context): this["midnodes"] {
@@ -857,10 +910,6 @@ export class DEdge extends DVoidEdge { // DVoidEdge
     __isDVoidEdge!: true;
     midnodes!: Pointer<DEdgePoint, 1, 1, LEdgePoint>[];
 
-    public static new(model: DGraph["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size?: GraphSize): DEdge {
-        return new Constructors(new DEdge('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
-            .DVoidEdge().DEdge().end();
-    }
 }
 
 @RuntimeAccessible
@@ -910,11 +959,11 @@ export class DExtEdge extends DEdge { // etends DEdge
     __isDExtEdge!: true;
     __isDEdge!: true;
     __isDVoidEdge!: true;
-
+/*
     public static new(model: DGraph["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size?: GraphSize): DExtEdge {
         return new Constructors(new DExtEdge('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
             .DVoidEdge().DEdge().DExtEdge().end();
-    }
+    }*/
 }
 
 @RuntimeAccessible
@@ -951,11 +1000,11 @@ export class DRefEdge extends DEdge { // extends DEdge
     start!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     end!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     __isDRefEdge!: true;
-
+/*
     public static new(model: DGraph["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"]): DRefEdge {
         return new Constructors(new DRefEdge('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID)
             .DVoidEdge().DEdge().DRefEdge().end();
-    }
+    }*/
 
 }
 @RuntimeAccessible

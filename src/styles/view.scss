@@ -1,6 +1,7 @@
 @import "./variables";
 
 // [data-nodetype="Vertex"]>.root { border: 0.1em solid $border-color; }
+// [data-nodetype="EdgePoint"],
 [data-nodetype="VoidVertex"],
 [data-nodetype="Vertex"],
 [data-nodetype="GraphVertex"] {
