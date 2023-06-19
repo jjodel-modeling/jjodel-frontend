@@ -273,8 +273,7 @@ export function reducer(oldState: IStore = initialState, action: Action): IStore
     if(!oldState?.room) return ret;
     // action.sender === DUser.current
     if(action.token === DUser.token) {
-        const parsedAction = JSON.parse(JSON.stringify(action));
-        delete parsedAction.src;
+        const parsedAction: JSON = JSON.parse(JSON.stringify(action));
         Firebase.addAction(ret.room, parsedAction).then();
     }
     return ret;

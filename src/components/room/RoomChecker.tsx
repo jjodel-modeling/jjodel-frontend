@@ -5,6 +5,7 @@ import {useStateIfMounted} from "use-state-if-mounted";
 import App from "../../App";
 import RoomAttacher from "./RoomAttacher";
 import {SetRootFieldAction} from "../../redux/action/action";
+import {SaveManager} from "../topbar/SaveManager";
 
 function RoomChecker() {
     const {id} = useParams();
@@ -15,8 +16,9 @@ function RoomChecker() {
         const constraint: CONSTRAINT = {field: 'code', operator: '==', value: id};
         Firebase.select('rooms', constraint).then((results) => {
             if(results.length) {
-                SetRootFieldAction.new('room', id);
-                setValidCode(true);
+                const result = results[0];
+                if(result.state) SaveManager.load(result.state)
+                SetRootFieldAction.new('room', id); setValidCode(true);
             }
             setLoading(false);
         });

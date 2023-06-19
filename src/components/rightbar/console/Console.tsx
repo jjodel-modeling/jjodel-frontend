@@ -1,22 +1,20 @@
-import React, {Dispatch, PureComponent, ReactElement, useEffect} from "react";
+import React, {Dispatch, PureComponent, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
 import {
     DGraphElement,
     Dictionary,
-    GObject, Json,
+    GObject,
     LGraphElement,
     LModelElement,
     LPointerTargetable,
     LViewElement,
-    RuntimeAccessibleClass,
-    U,
     Pointer,
-    windoww
+    RuntimeAccessibleClass,
+    U
 } from "../../../joiner";
-import {useStateIfMounted} from "use-state-if-mounted";
 import * as util from "util";
-import {GraphElementComponent, makeEvalContext } from "../../../graph/graphElement/graphElement";
+import {GraphElementComponent} from "../../../graph/graphElement/graphElement";
 
 var Convert = require('ansi-to-html');
 var ansiConvert = new Convert();
@@ -115,7 +113,7 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         const data = this.props.data;/*
         const [expression, setExpression] = useStateIfMounted('data');
         const [output, setOutput] = useStateIfMounted('');*/
-        if (!this.props.node) return <div>Select a node to start</div>
+        if (!this.props.node) return(<></>);
         if (this.lastNode !== this.props.node.id) this.change(); // force reevaluation if selected node changed
         this.lastNode = this.props.node.id;
 

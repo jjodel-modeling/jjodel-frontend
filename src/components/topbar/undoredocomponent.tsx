@@ -118,29 +118,26 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
     render(): ReactNode {
         this.undoredolistoutdated = true; // if render is called it means redux state props he's watching (redux-state) changed, so the preview list in component-state is outdated.
         // console.log("undoredomanager", {thiss:this, undo:this.props.undo, props: this.props, state:this.state});
-        return <>
-            <div style={ {
-                display: "inline-block"/*
-                position: "absolute",
-                right: "5%",
-                top: "5%",,
-                zIndex: 10*/
-            } }>
-                {/*<br />*/}
 
+        // simple version without list of changes
+        return(<>
+            <label className={'item border round ms-1'} onClick={(e)=> { this.do_undo(0) }}>Undo ({this.props.undo.length})</label>
+            <label className={'item border round ms-1'} onClick={(e)=> { this.do_redo(0) }}>Redo ({this.props.redo.length})</label>
+        </>);
+
+        // complex version with list of changes
+        return(<>
+            <div style={{display: "inline-block"}}>
                 <span className={"hoverable"} style={{position: "relative", background: "white"}} onMouseEnter={this.undoenter} onMouseLeave={this.undoleave}>
                     <button className={'item border round ms-1'} onClick={(e)=> { this.do_undo(0) }}>Undo ({this.props.undo.length})</button>
                     {this.props.undo.length ? <ul style={{background: "inherit", width: "max-content", zIndex:10000}} className={"content"}>{this.state.undo.jsx}</ul> : null}
                 </span>
-
                 <span className={"hoverable"} style={{position: "relative", background: "white"}} onMouseEnter={this.redoenter} onMouseLeave={this.redoleave}>
                     <button className={'item border round ms-1'} onClick={(e)=> { this.do_redo(0) }}>Redo ({this.props.redo.length})</button>
                     {this.props.redo.length ? <ul style={{background: "inherit", width: "max-content", zIndex:10000}} className={"content"}>{this.state.redo.jsx}</ul> : null}
                 </span>
             </div>
-            {/*<span id={"export-tmp"} style={{position: "absolute", width: "25vw", bottom:0, overflow: "scroll", zIndex:10, right:0,
-                background: "white", whiteSpace: "pre", maxHeight: "100%"}}></span>*/}
-        </>;
+        </>);
     }
 }
 

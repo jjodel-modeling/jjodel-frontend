@@ -2,23 +2,26 @@ import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
 import Tree from "../../forEndUser/Tree";
-import {LModelElement} from "../../../joiner";
+import {LModelElement} from "../../../model/logicWrapper";
 
 function TestTabComponent(props: AllProps) {
-    const selected = props.selected;
+
 
     return(<div>
-        {selected ? <Tree data={selected} /> : <label>NULL</label>}
-        <hr />
         <Tree>
-            {// @ts-ignore)
-                <div label={<b className={'text-primary'}>Root</b>}>
-                    <div>
-                        <div></div>
-                        <div></div>
-                    </div>
+            {//@ts-ignore
+                <div label={'Root'}>
+                    {//@ts-ignore
+                <div label={<b className={'text-primary'}>Sub Root</b>}>
+                    {//@ts-ignore
+                    <div label={<b className={'text-warning'}>Leaf #1</b>}></div>}
+                    {//@ts-ignore
+                    <div label={<b className={'text-warning'}>Leaf #2</b>}></div>}
+                </div>}
             </div>}
         </Tree>
+        <hr className={'my-2'} />
+        <Tree data={props.selected as any} />
     </div>);
 }
 interface OwnProps {}
@@ -41,12 +44,12 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const TestTabConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+const TestTabConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
 )(TestTabComponent);
 
-export const TestTab = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+const TestTab = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <TestTabConnected {...{...props, children}} />;
 }
 export default TestTab;

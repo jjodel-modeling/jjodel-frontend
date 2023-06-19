@@ -155,7 +155,7 @@ export class Action extends RuntimeAccessibleClass {
     type: string;
     public field: string;
     public value: any;
-    private src?: string[];
+    // private src?: string[];
     private stack?: string[];
     subType?: string; //?
     protected constructor(field: string, value: any, subType?: string){
@@ -166,7 +166,7 @@ export class Action extends RuntimeAccessibleClass {
         this.field = field;
         this.value = value;
         this.type = (this.constructor as any).type;
-        this.src = new Error().stack?.split('\n').splice( 4);
+        // this.src = new Error().stack?.split('\n').splice( 4);
         this.subType = subType;
         this.className = this.constructor.name;
     }
@@ -178,7 +178,12 @@ export class Action extends RuntimeAccessibleClass {
         } else {
             this.hasFired++;
             let storee = store || windoww.store;
-            console.log('firing action:', {field: this.field, val: this.value, stack:this.src, thiss:this});
+            console.log('firing action:', {
+                field: this.field,
+                val: this.value,
+                // stack:this.src,
+                thiss:this
+            });
             storee.dispatch({...this});
         }
         return true;

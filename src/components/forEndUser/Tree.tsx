@@ -73,9 +73,10 @@ function HtmlTree(props: HtmlTreeProps) {
                     </label>
                 </div>
                 {!hide && children.map((child) => {
+                    if(!React.isValidElement(child)) return(<></>);
                     return(<div className={'ms-2'}>
                         <Tree depth={depth}>
-                            {child as any}
+                            {child}
                         </Tree>
                     </div>);
                 })}

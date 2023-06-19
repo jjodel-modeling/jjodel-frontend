@@ -13,7 +13,7 @@ import {connect} from "react-redux";
 
 function App(props: AllProps) {
     const debug = props.debug;
-    const [splash, setSplash] = useStateIfMounted(false);
+    const [splash, setSplash] = useStateIfMounted(!debug);
 
     useEffectOnce(() => {
         const promise = new Promise((resolve) => {setTimeout(resolve, 3 * 1000)});
@@ -22,7 +22,7 @@ function App(props: AllProps) {
 
     if(splash) {
         return(<div className={'w-100 h-100 text-center bg-smoke'}>
-            <img className={'mt-3 rounded shadow'} src={SplashImage}></img>
+            <img style={{height: '60%', width: '80%'}} className={'mt-3 rounded shadow'} src={SplashImage}></img>
             <Oval height={80} width={80} wrapperStyle={{justifyContent: 'center'}} wrapperClass={'mt-3'}
                   color={'#475e6c'} secondaryColor={'#ff8811'} />
         </div>);
@@ -56,6 +56,5 @@ export const AppConnected = connect<StateProps, DispatchProps, OwnProps, IStore>
     mapStateToProps,
     mapDispatchToProps
 )(App);
-
 
 export default AppConnected;

@@ -3,24 +3,28 @@ import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
 import './style.scss';
 import {Firebase} from "../../firebase";
-import {SetRootFieldAction, U} from "../../joiner";
+import {U} from "../../joiner";
 import {useNavigate} from "react-router-dom";
 
 function RoomManagerComponent(props: AllProps) {
     const room = (props.room) ? props.room : '';
+    const root = 'http://localhost:3000/jodel-react/';
     const navigate = useNavigate();
 
     const create = async() => {
         const code = U.getRandomString(5);
         await Firebase.add('rooms', code, {code: code, actions: []});
-        navigate('/jodel-react/room/' + code);
+        // navigate('/jodel-react/room/' + code);
+        window.open(root + 'room/' + code, '_blank');
     }
 
-    const share = () => {U.alert('info', 'http://localhost:3000/jodel-react/room/' + room);}
+    const share = () => {U.alert('info', root + 'room/' + room);}
 
     const quit = () => {
-        SetRootFieldAction.new('room', '', '', false);
-        navigate('/jodel-react');
+        // SetRootFieldAction.new('room', '', '', false);
+        // navigate('/jodel-react');
+        window.location.replace(root);
+
     }
 
     if(!room) {
