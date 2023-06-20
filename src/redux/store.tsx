@@ -50,7 +50,7 @@ import {
     LUser,
     LValue, LViewElement, DViewPoint,
     RuntimeAccessible, SetFieldAction,
-    SetRootFieldAction, ShortAttribETypes, Selectors, GraphSize,
+    SetRootFieldAction, ShortAttribETypes, Selectors, GraphSize, LGraphElement, Dictionary, DocString, LModelElement,
 } from "../joiner";
 
 import React from "react";
@@ -80,7 +80,7 @@ statehistory[DUser.current] = {undoable:[], redoable:[]}; // todo: make it able 
 
 (window as any).statehistory = statehistory;
 export class IStore {
-    debug: boolean = false;
+    debug: boolean = true;
     logs: Pointer<DLog, 0, 'N', LLog> = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
     currentUser: DUser;
@@ -148,6 +148,7 @@ export class IStore {
     m1models: Pointer<DModel, 0, 'N', LModel> = [];
 
     room: string = '';
+    selected: Dictionary<Pointer<DUser>, Pointer<DModelElement, 0, 1, LModelElement>> = {};
 
 
     constructor() {

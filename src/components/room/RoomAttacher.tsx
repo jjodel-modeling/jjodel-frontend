@@ -26,6 +26,7 @@ function RoomAttacherComponent(props: AllProps) {
             actions[action.id] = true; setActions(actions);
         }
     }, (doc: GObject) => {
+        alert('error');
         SetRootFieldAction.new('room', '', '', false);
     });
 

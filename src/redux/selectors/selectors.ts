@@ -33,7 +33,7 @@ import {
     RuntimeAccessible,
     RuntimeAccessibleClass,
     store,
-    U, windoww, Pointers,DViewPoint, LViewPoint
+    U, windoww, Pointers, DViewPoint, LViewPoint, Dictionary, DUser
 } from "../../joiner";
 import {EdgeOptions} from "../store";
 
@@ -46,6 +46,11 @@ enum ViewEClassMatch { // this acts as a multiplier for explicit priority
 
 @RuntimeAccessible
 export class Selectors{
+
+    static getSelected(): Dictionary<Pointer<DUser>, Pointer<DModelElement, 0, 1, LModelElement>> {
+        const state = store.getState();
+        return state.selected;
+    }
 
     static getRoom(): string {
         const state = store.getState();

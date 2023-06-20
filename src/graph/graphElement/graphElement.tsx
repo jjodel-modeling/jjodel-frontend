@@ -41,7 +41,7 @@ import {
     LClass,
     SetFieldAction,
     DGraphVertex,
-    DVoidVertex,
+    DVoidVertex, BEGIN, END,
 } from "../../joiner";
 
 
@@ -218,12 +218,19 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     select(forUser:Pointer<DUser, 0, 1> = null) {
         if (!forUser) forUser = DUser.current;
-        this.props.node.isSelected[forUser] = true;
+        // this.props.node.isSelected[forUser] = true;
+        const selected = Selectors.getSelected();
+        BEGIN();
+        if(this.props.data?.id) {
+            selected[forUser] = this.props.data.id;
+            SetRootFieldAction.new('selected', selected);
+        }
         SetRootFieldAction.new('_lastSelected', {
             node: this.props.nodeid,
             view: this.props.view.id,
             modelElement: this.props.data?.id
         });
+        END();
     }
 
     constructor(props: AllProps, context: any) {

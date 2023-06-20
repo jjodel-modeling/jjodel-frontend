@@ -1,40 +1,33 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
-import Tree from "../../forEndUser/Tree";
-import {LModelElement} from "../../../model/logicWrapper";
+import {GObject, Selectors} from "../../../joiner";
+import {useStateIfMounted} from "use-state-if-mounted";
 
 function TestTabComponent(props: AllProps) {
 
+    const [dict, setDict] = useStateIfMounted<GObject>({});
+
+    const click = () => {
+        setDict(Selectors.getSelected());
+    }
 
     return(<div>
-        <Tree>
-            {//@ts-ignore
-                <div label={'Root'}>
-                    {//@ts-ignore
-                <div label={<b className={'text-primary'}>Sub Root</b>}>
-                    {//@ts-ignore
-                    <div label={<b className={'text-warning'}>Leaf #1</b>}></div>}
-                    {//@ts-ignore
-                    <div label={<b className={'text-warning'}>Leaf #2</b>}></div>}
-                </div>}
-            </div>}
-        </Tree>
-        <hr className={'my-2'} />
-        <Tree data={props.selected as any} />
+        <button onClick={click} className={'btn btn-primary'}>Test</button>
+        {Object.keys(dict).map((user) => {
+            return(<div><b>{user}</b>: {dict[user]}</div>)
+        })}
+        {Object.keys(dict).length === 0 && <div>Empty...</div>}
     </div>);
 }
 interface OwnProps {}
-interface StateProps {selected: null|LModelElement}
+interface StateProps {}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    const pointer = state._lastSelected?.modelElement;
-    if(pointer) ret.selected = LModelElement.fromPointer(pointer);
-    else ret.selected = null;
     return ret;
 }
 
