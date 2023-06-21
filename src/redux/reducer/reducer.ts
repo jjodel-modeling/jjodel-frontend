@@ -272,7 +272,8 @@ export function reducer(oldState: IStore = initialState, action: Action): IStore
     if(ret === oldState) return oldState;
     if(!oldState?.room) return ret;
     // action.sender === DUser.current
-    if(action.token === DUser.token) {
+    const ignoredFields = ['contextMenu', '_lastSelected', 'isCleaning'];
+    if(action.token === DUser.token && !ignoredFields.includes(action.field)) {
         const parsedAction: JSON = JSON.parse(JSON.stringify(action));
         Firebase.addAction(ret.room, parsedAction).then();
     }

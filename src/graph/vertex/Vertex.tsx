@@ -226,7 +226,6 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 styleOverride.border = '3px dashed blue';
         }
 
-
         // if(!windoww.cpts) windoww.cpts = {};
         // windoww.cpts[this.props.nodeid]=this;
         // console.log("updated");

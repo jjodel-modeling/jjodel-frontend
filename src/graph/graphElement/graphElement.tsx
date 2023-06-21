@@ -219,8 +219,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     select(forUser:Pointer<DUser, 0, 1> = null) {
         if (!forUser) forUser = DUser.current;
         // this.props.node.isSelected[forUser] = true;
-        const selected = Selectors.getSelected();
+
         BEGIN();
+        const selected = Selectors.getSelected();
         if(this.props.data?.id) {
             selected[forUser] = this.props.data.id;
             SetRootFieldAction.new('selected', selected);

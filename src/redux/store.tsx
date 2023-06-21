@@ -148,6 +148,8 @@ export class IStore {
     m1models: Pointer<DModel, 0, 'N', LModel> = [];
 
     room: string = '';
+    isCleaning: boolean = false;    // check if a room is being cleaned
+
     selected: Dictionary<Pointer<DUser>, Pointer<DModelElement, 0, 1, LModelElement>> = {};
 
 

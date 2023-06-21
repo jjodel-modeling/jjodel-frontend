@@ -3,21 +3,22 @@ import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
 import Dock from "./components/abstract/DockLayout";
-import {IStore, statehistory} from "./joiner";
+import {IStore, statehistory, U} from "./joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
 import {useEffectOnce} from "usehooks-ts";
 import SplashImage from './static/img/splash.png';
 import {Oval} from "react-loader-spinner";
 import TopBar from "./components/topbar/Topbar";
 import {connect} from "react-redux";
+import Cleaning from "./popup/Cleaning";
 
 function App(props: AllProps) {
     const debug = props.debug;
+    const isCleaning = props.isCleaning;
     const [splash, setSplash] = useStateIfMounted(!debug);
 
     useEffectOnce(() => {
-        const promise = new Promise((resolve) => {setTimeout(resolve, 3 * 1000)});
-        promise.then(() => {setSplash(false)});
+        U.sleep(3).then(() => {setSplash(false)});
     });
 
     if(splash) {
@@ -30,13 +31,14 @@ function App(props: AllProps) {
         return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? " debug" : "")} onClick={() => {statehistory.globalcanundostate = true;} } >
             <TopBar room={props.room} />
             <Dock />
+            {isCleaning && <Cleaning />}
         </div>);
     }
 
 }
 
 interface OwnProps {room?: string}
-interface StateProps {debug: boolean}
+interface StateProps {debug: boolean, isCleaning: boolean}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -44,6 +46,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.debug = state.debug;
+    ret.isCleaning = state.isCleaning;
     return ret;
 }
 
