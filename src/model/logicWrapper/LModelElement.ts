@@ -3930,6 +3930,8 @@ export class DValue extends DModelElement { // extends DModelElement, m1 value (
     edges!: Pointer<DEdge, 0, 'N', LEdge>;
     // conformsTo!: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature>; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
     isMirage!: boolean;
+    // IoT Section
+    topic: string = '';
 
     public static new(name?: DNamedElement["name"], instanceoff?: DValue["instanceof"], val?: DValue["values"],
                       father?: DValue["father"] | DObject, persist: boolean = true, isMirage: boolean = false): DValue {
@@ -3980,6 +3982,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     opposite?: LValue; // if DRef have opposite DRef, when you set a value ref you also set a opposite value ref from target to this src. they are always mirroring.
     // target!: LClass[]; is value[]
     edges!: LEdge[];
+    // IoT Section
+    topic!: string;
 
 
     // personal
@@ -4460,6 +4464,14 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             // super.get_delete(context);
         }
         return ret;
+    }
+
+    protected get_topic(context: Context): this["topic"] {
+        return context.data.topic;
+    }
+    protected set_topic(val: string, context: Context): boolean {
+        SetFieldAction.new(context.data, 'topic', val, '', false);
+        return true;
     }
 }
 DNamedElement.subclasses.push(DValue);

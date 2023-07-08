@@ -1,11 +1,12 @@
 import type {Dictionary, GObject, Pointer} from "../../joiner";
-import {Action, DUser, Selectors, SetRootFieldAction, store, U} from "../../joiner";
+import {Action, DUser, Selectors, SetRootFieldAction, U} from "../../joiner";
 import React, {Dispatch, ReactElement, useEffect} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
 import {doc, onSnapshot} from "@firebase/firestore";
 import {Firebase} from "../../firebase";
 import {useStateIfMounted} from "use-state-if-mounted";
+import IotEngine from "./IotEngine";
 
 const ROOM_SIZE_LIMIT = 100;
 function RoomAttacherComponent(props: AllProps) {
@@ -14,6 +15,7 @@ function RoomAttacherComponent(props: AllProps) {
     const [actions, setActions] = useStateIfMounted<Dictionary<Pointer, boolean>>({});
     const [roomSize, setRoomSize] = useStateIfMounted<number>(0);
     const [error, setError] = useStateIfMounted<boolean>(false);
+    const [iotData, setIotData] = useStateIfMounted<GObject>({});
 
     const cleaner = async (): Promise<void> => {
         if(roomSize > ROOM_SIZE_LIMIT) {
@@ -36,6 +38,7 @@ function RoomAttacherComponent(props: AllProps) {
             const data = doc.data(); if(!data) return;
             if(!createdBy) setCreatedBy(data.createdBy);
             setRoomSize(data.actions.length);
+            if(!U.deepEqual(iotData, data.iotData)) setIotData(data.iotData);
             for(let action of data.actions.filter((item: GObject) => !actions[item.id])) {
                 const receivedAction = Action.fromJson(action);
                 if(action.token === DUser.token) continue;
@@ -53,6 +56,7 @@ function RoomAttacherComponent(props: AllProps) {
         <b>{roomSize}</b> Actions <br />
         Created By <b>{createdBy}</b> <br />
         Error: <b>{error + ''}</b>
+        {(DUser.current === createdBy || true) && <IotEngine room={room} data={iotData} />}
     </div>);
 }
 interface OwnProps {}

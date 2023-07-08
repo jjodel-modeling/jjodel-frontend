@@ -11,7 +11,7 @@ function RoomManagerComponent(props: AllProps) {
 
     const create = async() => {
         const code = U.getRandomString(5);
-        await Firebase.add('rooms', code, {code: code, actions: [], createdBy: DUser.current, active: true});
+        await Firebase.add('rooms', code, {code: code, actions: [], createdBy: DUser.current, iotData: {'sensors/1': 22}});
         window.open(root + 'room/' + code, '_blank');
     }
 

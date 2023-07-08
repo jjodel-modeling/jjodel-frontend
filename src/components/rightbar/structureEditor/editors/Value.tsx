@@ -15,6 +15,7 @@ import {
     Selectors,
     SetFieldAction
 } from "../../../../joiner";
+import MqttEditor from "./MqttEditor";
 
 
 interface Props {value: LValue}
@@ -177,6 +178,7 @@ function Value(props: Props) {
         </div>
         { valueslist }
         <hr className={"my-3"} />
+        <MqttEditor valueId={dValue.id} />
     </div>)
 }
 

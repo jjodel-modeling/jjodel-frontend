@@ -33,6 +33,14 @@ console.warn('loading ts U log');
 @RuntimeAccessible
 export class U {
 
+    public static deepEqual (x: GObject, y: GObject): boolean {
+        const ok = Object.keys, tx = typeof x, ty = typeof y;
+        return x && y && tx === 'object' && tx === ty ? (
+            ok(x).length === ok(y).length &&
+            ok(x).every(key => U.deepEqual(x[key], y[key]))
+        ) : (x === y);
+    }
+
     public static sleep(s: number): Promise<void> {
         return new Promise((resolve) => setTimeout(resolve, s * 1000));
     }
