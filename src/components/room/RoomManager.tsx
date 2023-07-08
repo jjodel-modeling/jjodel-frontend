@@ -1,40 +1,35 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
-import './style.scss';
+import '../topbar/style.scss';
 import {Firebase} from "../../firebase";
-import {U} from "../../joiner";
-import {useNavigate} from "react-router-dom";
+import {DUser, U} from "../../joiner";
 
 function RoomManagerComponent(props: AllProps) {
     const room = (props.room) ? props.room : '';
     const root = 'http://localhost:3000/jodel-react/';
-    const navigate = useNavigate();
 
     const create = async() => {
         const code = U.getRandomString(5);
-        await Firebase.add('rooms', code, {code: code, actions: []});
-        // navigate('/jodel-react/room/' + code);
+        await Firebase.add('rooms', code, {code: code, actions: [], createdBy: DUser.current, active: true});
         window.open(root + 'room/' + code, '_blank');
     }
 
     const share = () => {U.alert('info', root + 'room/' + room);}
 
-    const quit = () => {
-        // SetRootFieldAction.new('room', '', '', false);
-        // navigate('/jodel-react');
+    const quit = async() => {
+        await Firebase.removeRoom(room);
         window.location.replace(root);
-
     }
 
     if(!room) {
         return(<div className={'ms-auto'}>
-            <label onClick={create} className={'item border round ms-1 bg-primary'}>Create Room</label>
+            <label onClick={create} className={'item border round ms-1 bg-primary'}>Collaborative</label>
         </div>);
     } else {
         return(<div className={'ms-auto'}>
-            <label onClick={share} className={'item border round ms-1 bg-primary'}>Share Room</label>
-            <label onClick={quit} className={'item border round ms-1 bg-danger'}>Quit Room</label>
+            <label onClick={share} className={'item border round ms-1 bg-primary'}>Share</label>
+            <label onClick={quit} className={'item border round ms-1 bg-danger'}>Quit</label>
         </div>);
     }
 

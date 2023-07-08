@@ -116,7 +116,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 }
             },
             drag: (event: GObject, obj: GObject) => {
-                if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
+                /* Giordano: I comment this for efficiency */
+                // if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
             },
             stop: (event: GObject, obj: GObject) => {
                 console.log("drag stop setsize", {x:obj.position.left, y:obj.position.top});
@@ -214,16 +215,17 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     render(): ReactNode {
         if (!this.props.node) return 'Loading...';
 
-        const styleOverride: React.CSSProperties = {}
+
+        const cssOverride: string[] = [];
 
         let selected = false;
         for(let me of Object.values(this.props.selected))
             if(me?.id === this.props.dataid) selected = true;
         if(selected) {
             if(this.props.dataid === this.props.selected[DUser.current]?.id)
-                styleOverride.border = '3px dashed red';
+                cssOverride.push('selected-by-me');
             else
-                styleOverride.border = '3px dashed blue';
+                cssOverride.push('selected-by-others');
         }
 
         // if(!windoww.cpts) windoww.cpts = {};
@@ -237,7 +239,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         if ( this.props.isGraph && !this.props.isVertex) nodeType = "Graph";
         if (!this.props.isGraph &&  this.props.isVertex) nodeType = "Vertex";
         if (!this.props.isGraph && !this.props.isVertex) nodeType = "Field";
-        const classesOverride = [nodeType];
+        const classesOverride = [nodeType, ...cssOverride];
+        const styleOverride: React.CSSProperties = {};
         // set classes end
         const size: Readonly<GraphSize> = this.getSize() as any;
         switch (nodeType){

@@ -217,12 +217,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     //  i could use memoization to parse the jsx and to execute the user-defined pre-render function
 
     select(forUser:Pointer<DUser, 0, 1> = null) {
+        const id = this.props.data?.id;
         if (!forUser) forUser = DUser.current;
         // this.props.node.isSelected[forUser] = true;
 
         BEGIN();
         const selected = Selectors.getSelected();
-        if(this.props.data?.id) {
+        if(id) {
             selected[forUser] = this.props.data.id;
             SetRootFieldAction.new('selected', selected);
         }

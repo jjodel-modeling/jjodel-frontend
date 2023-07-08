@@ -17,7 +17,7 @@ import {SaveManager} from "./SaveManager";
 import {DamEdge} from "../../graph/damedges/damedge";
 import toast from "react-hot-toast";
 import Undoredocomponent from "./undoredocomponent";
-import RoomManager from "./RoomManager";
+import RoomManager from "../room/RoomManager";
 
 function Topbar(props: AllProps) {
 
