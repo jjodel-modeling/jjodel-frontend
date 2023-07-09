@@ -7,11 +7,18 @@ import {DUser, U} from "../../joiner";
 
 function RoomManagerComponent(props: AllProps) {
     const room = (props.room) ? props.room : '';
+    const iot = props.iot;
     const root = 'http://localhost:3000/jodel-react/';
 
-    const create = async() => {
+    const create = async(iot: boolean) => {
         const code = U.getRandomString(5);
-        await Firebase.add('rooms', code, {code: code, actions: [], createdBy: DUser.current, iotData: {'sensors/1': 22}});
+        await Firebase.add('rooms', code, {
+            code: code,
+            actions: [],
+            createdBy: DUser.current,
+            iot: iot,
+            iotData: {'sensors/1': 22, 'sensors/2': 13}}
+        );
         window.open(root + 'room/' + code, '_blank');
     }
 
@@ -23,26 +30,29 @@ function RoomManagerComponent(props: AllProps) {
     }
 
     if(!room) {
-        return(<div className={'ms-auto'}>
-            <label onClick={create} className={'item border round ms-1 bg-primary'}>Collaborative</label>
+        return(<div >
+            <label onClick={() => create(true)} className={'item border round ms-1 bg-primary px-2'}>IoT</label>
+            <label onClick={() => create(false)} className={'item border round ms-1 bg-primary'}>Collaborative</label>
         </div>);
     } else {
+        if(iot === null) return(<></>);
         return(<div className={'ms-auto'}>
-            <label onClick={share} className={'item border round ms-1 bg-primary'}>Share</label>
+            {(!iot) && <label onClick={share} className={'item border round ms-1 bg-primary'}>Share</label>}
             <label onClick={quit} className={'item border round ms-1 bg-danger'}>Quit</label>
         </div>);
     }
 
 }
 interface OwnProps {room?: string}
-interface StateProps {}
+interface StateProps {iot: null|boolean}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    return ret;
+    const iot = state.iot;
+    return {iot};
 }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {

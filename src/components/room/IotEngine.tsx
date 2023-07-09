@@ -25,8 +25,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const values: LValue[] = LValue.fromArr(state.values);
-    values.filter(value => !value.topic);
-    return {values: values};
+    return {values: values.filter(value => value.topic !== '')};
 }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {

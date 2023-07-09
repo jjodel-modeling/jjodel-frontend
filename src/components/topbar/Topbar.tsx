@@ -82,7 +82,9 @@ function Topbar(props: AllProps) {
                    onChange={(e)=>{SetRootFieldAction.new("debug", e.target.checked);}} />
         </div>
 
-        <RoomManager room={props.room} />
+        <div className={'ms-auto d-flex'}>
+            <RoomManager room={props.room} />
+        </div>
     </div>);
 }
 interface OwnProps {room?: string}

@@ -151,6 +151,8 @@ export class IStore {
     isCleaning: boolean = false;    // check if a room is being cleaned
 
     selected: Dictionary<Pointer<DUser>, Pointer<DModelElement, 0, 1, LModelElement>> = {};
+    iot: null|boolean = null;
+    topics: string[] = [];
 
 
     constructor() {

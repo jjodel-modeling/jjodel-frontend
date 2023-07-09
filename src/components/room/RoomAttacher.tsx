@@ -8,13 +8,14 @@ import {Firebase} from "../../firebase";
 import {useStateIfMounted} from "use-state-if-mounted";
 import IotEngine from "./IotEngine";
 
-const ROOM_SIZE_LIMIT = 100;
+const ROOM_SIZE_LIMIT = 200;
 function RoomAttacherComponent(props: AllProps) {
     const room = props.room;
     const [createdBy, setCreatedBy] = useStateIfMounted<string>('');
     const [actions, setActions] = useStateIfMounted<Dictionary<Pointer, boolean>>({});
     const [roomSize, setRoomSize] = useStateIfMounted<number>(0);
     const [error, setError] = useStateIfMounted<boolean>(false);
+    const [iot, setIot] = useStateIfMounted<boolean|null>(null);
     const [iotData, setIotData] = useStateIfMounted<GObject>({});
 
     const cleaner = async (): Promise<void> => {
@@ -39,6 +40,10 @@ function RoomAttacherComponent(props: AllProps) {
             if(!createdBy) setCreatedBy(data.createdBy);
             setRoomSize(data.actions.length);
             if(!U.deepEqual(iotData, data.iotData)) setIotData(data.iotData);
+            if(iot === null) {
+                setIot(data.iot);
+                SetRootFieldAction.new('iot', data.iot, '', false);
+            }
             for(let action of data.actions.filter((item: GObject) => !actions[item.id])) {
                 const receivedAction = Action.fromJson(action);
                 if(action.token === DUser.token) continue;
@@ -51,11 +56,10 @@ function RoomAttacherComponent(props: AllProps) {
         () => {}
     );
 
+    const css = (roomSize > 150) ? 'text-danger' : (roomSize > 100) ? 'text-warning' : 'text-success';
 
     return(<div className={'border bg-white p-3 round m-1'} style={{bottom: 0, right: 0, position: 'absolute', zIndex: 999}}>
-        <b>{roomSize}</b> Actions <br />
-        Created By <b>{createdBy}</b> <br />
-        Error: <b>{error + ''}</b>
+        <b className={css}>{roomSize}</b> Actions <br />
         {(DUser.current === createdBy || true) && <IotEngine room={room} data={iotData} />}
     </div>);
 }
