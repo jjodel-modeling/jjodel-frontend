@@ -17,8 +17,11 @@ function RoomManagerComponent(props: AllProps) {
             actions: [],
             createdBy: DUser.current,
             iot: iot,
-            iotData: {'sensors/1': 22, 'sensors/2': 13}}
-        );
+            iotData: {
+                'sensors/healthMonitor/glycemiaMonitor/glycemia': 87.9,
+                'sensors/healthMonitor/heartRateMonitor/heartRate': 79.9
+            }
+        });
         window.open(root + 'room/' + code, '_blank');
     }
 

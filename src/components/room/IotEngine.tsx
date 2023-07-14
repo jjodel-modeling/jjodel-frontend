@@ -11,7 +11,7 @@ function IotEngineComponent(props: AllProps) {
             const topic = value.topic;
             let rawValue = 0;
             if(data[topic]) rawValue = data[topic];
-            value.setValueAtPosition(0, rawValue);
+            if(value.values.length === 0 || value.values[0] !== rawValue) value.setValueAtPosition(0, rawValue);
         }
     })
 
