@@ -98,6 +98,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 let size = this.getSize();
                 // let actualSize = Size.of(html);
                 // if (size.w !== actualSize.w || size.h !== actualSize.h) this.setSize({w:actualSize.w, h:actualSize.h});
+                // @ts-ignore
                 dragHelper.style.width = size.w+"px";
                 dragHelper.style.height = size.h+"px";
                 dragHelper.style.opacity = this.props.view.constraints.length ? "1" : "0.5";

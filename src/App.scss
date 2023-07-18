@@ -51,7 +51,9 @@
 }
 
 .lazySizeUpdate.ui-draggable-dragging,
-.REACT-ROOT.debug .ui-draggable-dragging{ visibility: visible; }
+.REACT-ROOT.debug,
+.ui-draggable-dragging,
+.REACT_ROOT { visibility: visible; }
 
 
 [data-nodetype="Graph"]{
