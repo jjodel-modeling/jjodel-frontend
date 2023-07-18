@@ -3,7 +3,7 @@ version: "3.8"
 services:
 
   frontend:
-    build: ./
+    image: jjodel:latest
     container_name: jjodel
     volumes:
     - ./src:/app/src
@@ -13,6 +13,39 @@ services:
       - '3000:3000'
     environment:
       - CHOKIDAR_USEPOLLING=true
+
+  backend:
+    image: giordanotin/jjodel-backend:1.1
+    container_name: backend
+    environment:
+      - DJANGO_DATABASE_URL=postgres://postgres:postgres@db:5432/jjodel
+    networks:
+      network:
+    ports:
+      - '8000:8000'
+    depends_on:
+      - db
+
+  db:
+    image: postgres:14.2
+    container_name: db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=jjodel
+    networks:
+      network:
+    ports:
+      - '5432:5432'  # 55434
+
+  memorec:
+    image: giordanotin/memorec:1.2
+    container_name: memorec
+    networks:
+      network:
+    ports:
+      - '8080:8080'
 
 volumes:
   db_data:

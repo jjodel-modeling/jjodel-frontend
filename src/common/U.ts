@@ -92,6 +92,16 @@ export class U {
         })
     }
 
+    public static popup(element: any) {
+        let html = '<style>body.swal2-no-backdrop .swal2-container {background-color: rgb(0 0 0 / 60%) !important}</style>'+ element;
+        const result = Swal.fire({
+            html: html,
+            backdrop: false,
+            showCloseButton: true,
+            showConfirmButton: false
+            //confirmButtonText: 'GOT IT'
+        })
+    }
     public static filteredPointedBy(data: LModelElement, label: string): LModelElement[] {
         const models: LModelElement[] = [];
         for(let dict of data.pointedBy) {

@@ -154,6 +154,8 @@ export class IStore {
     iot: null|boolean = null;
     topics: string[] = [];
 
+    memorec: GObject[]|null = null;
+
 
     constructor() {
         // todo: this must become a pointer to idlookup and fire a CreateNewElementAction
