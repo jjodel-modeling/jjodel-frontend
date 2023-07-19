@@ -13,14 +13,15 @@ function ReferenceEdgeComponent(props: AllProps) {
     const source = props.source;
     const target = props.target;
     const containment = props.containment;
-    let options = props.options;
+    let startOptions = props.options;
+    let endOptions = props.options;
     if(containment) {
-        options = {
-            ...options,
+        startOptions = {
+            ...startOptions,
             showTail: true,
             tailSize: 15,
             tailShape: {svgElem: <rect style={{
-                    rotate: '45deg', fill: 'white', strokeWidth: '0.1', stroke: options.color,
+                    rotate: '45deg', fill: 'white', strokeWidth: '0.1', stroke: startOptions.color,
                 }} width='.5pt' height='.5pt' />, offsetForward: 1}
         }
     }
@@ -44,9 +45,9 @@ function ReferenceEdgeComponent(props: AllProps) {
 
     if(props.display) {
         return(<>
-            <div style={{borderColor: options.color}} id={middleAnchor} className={'middle-anchor'}></div>
-            <Xarrow start={source.id} end={middleAnchor} {...options} showHead={false} />
-            <Xarrow start={middleAnchor} end={target.id} {...options} />
+            <div style={{borderColor: startOptions.color}} id={middleAnchor} className={'middle-anchor'}></div>
+            <Xarrow start={source.id} end={middleAnchor} {...startOptions} showHead={false} />
+            <Xarrow start={middleAnchor} end={target.id} {...endOptions} />
         </>);
     } else { return(<></>); }
 

@@ -3,7 +3,7 @@ version: "3.8"
 services:
 
   frontend:
-    image: jjodel:latest
+    build: ./
     container_name: jjodel
     volumes:
     - ./src:/app/src
@@ -40,7 +40,7 @@ services:
       - '5432:5432'  # 55434
 
   memorec:
-    image: giordanotin/memorec:1.2
+    image: giordanotin/memorec:1.4
     container_name: memorec
     networks:
       network:
@@ -55,4 +55,4 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.21.0.0/16

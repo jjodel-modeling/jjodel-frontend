@@ -1,22 +1,43 @@
 import {IStore} from "../../redux/store";
-import React, {Dispatch, ReactElement, ReactNode} from "react";
+import React, {Dispatch, ReactElement, ReactNode, useEffect} from "react";
 import {connect} from "react-redux";
 import "./style.scss";
 import {CreateElementAction, SetRootFieldAction} from "../../redux/action/action";
-import {DValue, LNamedElement, LValue} from "../../model/logicWrapper";
-import {DViewElement, LGraphElement, LUser} from "../../joiner";
+import {
+    DValue,
+    DViewElement,
+    GObject,
+    LClass,
+    LGraphElement,
+    LNamedElement,
+    LPackage,
+    LUser,
+    LValue
+} from "../../joiner";
 import MemoRec from "../../memorec/api";
+import {useStateIfMounted} from "use-state-if-mounted";
 
 function ContextMenuComponent(props: AllProps) {
 
     const user = props.user;
     const display = props.display;
     const position = props.position;
-    const me = props.me;
+    const me = props.me; //refer to selected
     const node = props.node;
     const jsxList: ReactNode[] = [];
+    const [memorec, setMemorec] = useStateIfMounted<{data:GObject[], type:'class'|'package'}|null>(null);
+    const [suggestedName, setSuggestedName] = useStateIfMounted('');
 
-    const close = () => { SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); }
+
+    useEffect(() => {
+        if(!display) close();
+    },[display])
+
+    const close = () => {
+        setSuggestedName('');
+        setMemorec(null);
+        SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
+    }
     const addView = () => {
         if(me) {
             const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
@@ -37,14 +58,43 @@ function ContextMenuComponent(props: AllProps) {
             SetRootFieldAction.new('stackViews', dView.id, '+=', true);
         }
     }
+    const structuralFeature = async () => {
+        if(!me) return;
+        const data = await MemoRec.structuralFeature(me);
+        setMemorec(data);
+    }
+    const classifier = async() => {
+        if (!me) return;
+        const data = await MemoRec.classifier(me);
+        setMemorec(data);
+    }
 
+    const suggestOnClass = (isAttribute:boolean) => {
+        if(!me) return;
+        const lClass: LClass = LClass.fromPointer(me.id);
+        if(isAttribute) lClass.addAttribute(suggestedName);
+        else lClass.addReference(suggestedName);
+        //add attribute/refence to class
+        close();
+
+    }
+    const suggestOnPackage = () => {
+        if(!me) return;
+        const lPackage: LPackage = LPackage.fromPointer(me.id);
+        lPackage.addClass(suggestedName);
+        //add class to package
+        close();
+    }
     if(display && me && node) {
         jsxList.push(<div className={"col title text-center"}>{me.className}</div>);
         jsxList.push(<hr />);
 
         /* Memorec */
-        jsxList.push(<div onClick={async() => {close(); await MemoRec.structuralFeature(me);}} className={"col item"}>AI Suggest</div>);
-
+        if(me.className === 'DClass')
+            jsxList.push(<div onClick={structuralFeature} className={"col item"}>AI Suggest <i
+                className="bi bi-arrow-right-short"></i></div>);
+        if(me.className === 'DPackage')
+            jsxList.push(<div onClick={classifier} className={"col item"}>AI Suggest</div>);
         jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={"col item"}>Up</div>);
         jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={"col item"}>Down</div>);
         jsxList.push(<div onClick={() => {close(); addView();}} className={"col item"}>Add View</div>);
@@ -59,10 +109,32 @@ function ContextMenuComponent(props: AllProps) {
                 break;
         }
     }
+
     return(<>
+
         <div className={"context-menu round"} style={{top: position.y - 100, left: position.x - 10}}>
             {jsxList.map((jsx, index) => { return <div key={index}>{jsx}</div>; })}
         </div>
+
+        {(memorec) && <div className={"context-menu round"} style={{top: position.y - 100, left: position.x + 130}}>
+
+            {(memorec && memorec.data?.map((obj) => {
+                return (<div>
+                    <div className={"col item2"} onClick={() => setSuggestedName(obj.recommendedItem)}>
+                        {obj.recommendedItem} : {obj.score}
+                    </div>
+                </div>)
+            })) }
+
+        </div>}
+        {(memorec && suggestedName) && <div className={"context-menu round"} style={{top: position.y - 100, left: position.x + 270}}>
+
+            {(memorec?.type === 'class') ? <>
+                <div> <div className={'col item2'} onClick={() =>suggestOnClass(true)} >attribute</div> </div>
+                <div><div className={'col item2'} onClick={() =>suggestOnClass(false)} >reference</div> </div>
+            </> : <div> <div className={'col item2'} onClick={() =>suggestOnPackage()}> class </div> </div>}
+        </div>
+        }
     </>);
 }
 interface OwnProps {}
@@ -104,4 +176,3 @@ export const ContextMenu = (props: OwnProps, childrens: (string | React.Componen
     return <ContextMenuConnected {...{...props, childrens}} />;
 }
 export default ContextMenu;
-

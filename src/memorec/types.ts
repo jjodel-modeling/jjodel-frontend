@@ -4,13 +4,13 @@ export interface MemoRecObject {
 
 }
 
- export interface MemoRecModel {
+export interface MemoRecModel {
     name: string;
-    methodDeclarations: MemoRecClass[];
+    methodDeclarations: MemoRecNamed[];
 
 }
 
- export interface MemoRecClass {
+export interface MemoRecNamed {
     name: string;
     methodInvocations: string[];
 }

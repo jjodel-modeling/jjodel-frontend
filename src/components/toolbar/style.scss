@@ -1,10 +1,20 @@
 .context-menu {
   position: absolute;
   background: white;
-  width: 100px;
+  width: 130px;
   right: 0;
-  z-index: 999;
+  z-index: 9999;
   border: 1px solid black;
+}
+
+.context-menu > div >.item2 {
+  text-align: left;
+  cursor: pointer;
+  font-size: .8rem;
+}
+.context-menu > div >.item2:hover {
+  background:#f1f3f7;
+  color: #3f51b5;
 }
 
 .context-menu > div > .title {

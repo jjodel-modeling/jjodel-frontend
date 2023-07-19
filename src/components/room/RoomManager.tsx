@@ -16,11 +16,7 @@ function RoomManagerComponent(props: AllProps) {
             code: code,
             actions: [],
             createdBy: DUser.current,
-            iot: iot,
-            iotData: {
-                'sensors/healthMonitor/glycemiaMonitor/glycemia': 87.9,
-                'sensors/healthMonitor/heartRateMonitor/heartRate': 79.9
-            }
+            iot: iot
         });
         window.open(root + 'room/' + code, '_blank');
     }

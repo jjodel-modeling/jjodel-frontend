@@ -1,6 +1,6 @@
 import axios, {AxiosResponse} from 'axios';
-import {Json, LModelElement, LNamedElement, SetRootFieldAction, U} from "../joiner";
-import {MemoRecClass, MemoRecModel, MemoRecObject} from "./types";
+import {GObject, LModelElement, LNamedElement} from "../joiner";
+import {MemoRecModel, MemoRecNamed, MemoRecObject} from "./types";
 
 export default class MemoRec {
     static url(path: string): string {
@@ -15,73 +15,16 @@ export default class MemoRec {
         return await axios.get(MemoRec.url(path));
     }
 
-    static async structuralFeature(me: LModelElement): Promise<void> {
-        const data = [
-            [
-                {
-                    "recommendedItem": "address",
-                    "score": 0.8
-                },
-                {
-                    "recommendedItem": "bookTitle",
-                    "score": 0.8
-                },
-                {
-                    "recommendedItem": "edition",
-                    "score": 0.8
-                },
-                {
-                    "recommendedItem": "fromPage",
-                    "score": 0.8
-                },
-                {
-                    "recommendedItem": "isbn",
-                    "score": 0.8
-                },
-                {
-                    "recommendedItem": "month",
-                    "score": 0.8
-                },
-                {
-                    "recommendedItem": "name",
-                    "score": 0.8
-                },
-                {
-                    "recommendedItem": "number",
-                    "score": 0.8
-                },
-                {
-                    "recommendedItem": "series",
-                    "score": 0.8
-                },
-                {
-                    "recommendedItem": "title",
-                    "score": 0.8
-                },
-                {
-                    "recommendedItem": "toPage",
-                    "score": 0.8
-                },
-                {
-                    "recommendedItem": "volume",
-                    "score": 0.8
-                },
-                {
-                    "recommendedItem": "year",
-                    "score": 0.8
-                }
-            ]
-        ];
-        SetRootFieldAction.new('memorec', data);
-        /*
+    static async structuralFeature(me: LModelElement): Promise<{data:GObject[], type:'class'|'package'}> {
+
         console.clear();
 
         const named: LNamedElement = LNamedElement.fromPointer(me.id);
         const model = me.model;
         const classes = model.classes;
 
-        const memorecClasses: MemoRecClass[] = [];
 
+        const memorecClasses: MemoRecNamed[] = [];
 
         for(let myClass of classes) {
             const attributes = myClass.attributes.map(x => x.name);
@@ -91,11 +34,41 @@ export default class MemoRec {
         const memorecModel: MemoRecModel = {name: model.name, methodDeclarations: memorecClasses};
 
         const memorecObject: MemoRecObject = {context: named.name, model: memorecModel};
+        console.log('input', memorecObject);
 
         const response = await MemoRec.post('structuralFeatures', memorecObject);
         console.log(response);
 
-        */
+        const data:GObject[] = response.data.slice(0, 10);
+        data.sort((a,b) => b.score - a.score);
+        // SetRootFieldAction.new('memorec', {data: response.data, type: 'class'});
+        return {data: data, type: 'class'};
+
     }
 
+    static async classifier(me: LModelElement): Promise<{data:GObject[], type:'class'|'package'}> {
+        console.clear();
+        const named: LNamedElement = LNamedElement.fromPointer(me.id);
+        const model = me.model;
+        const packages= model.packages;
+
+        const memorecPackages: MemoRecNamed[] = [];
+
+        for(let myPackage of packages) {
+            const classes = myPackage.classes.map(x => x.name);
+            memorecPackages.push({name: myPackage.name, methodInvocations: classes});
+        }
+        const memorecModel: MemoRecModel = {name: model.name, methodDeclarations: memorecPackages};
+
+        const memorecObject: MemoRecObject = {context: named.name, model: memorecModel};
+        console.log('input', memorecObject);
+
+        const response = await MemoRec.post('classes', memorecObject);
+        console.log(response);
+
+        const data:GObject[] = response.data.slice(0, 10);
+        data.sort((a,b) => b.score - a.score);
+        //SetRootFieldAction.new('memorec', {data: response.data, type: 'package'}); //setta l'oggetto memorec
+        return {data: data, type: 'package'};
+    }
 }
