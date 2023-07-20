@@ -1,6 +1,5 @@
+Instructions (docker is required):
 
-## Online release
-https://damianonaraku.github.io/jodel-react/build/
-
-## Learning
-To learn React, check out the [React documentation](https://reactjs.org/).
+  - Clone the repository: https://github.com/DamianoNaraku/jodel-react.git
+  - Run: docker compose up -d
+  - Go to: http://localhost:3000
