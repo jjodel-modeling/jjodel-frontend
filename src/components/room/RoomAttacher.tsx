@@ -27,9 +27,6 @@ function RoomAttacherComponent(props: AllProps) {
         }
     }
 
-    useEffect(() => {
-        // cleaner().then(() => console.log(`Room ${room} cleaned.`));
-    }, [roomSize])
 
     if(!room) return(<></>);
 
@@ -58,10 +55,7 @@ function RoomAttacherComponent(props: AllProps) {
 
     const css = (roomSize > 150) ? 'text-danger' : (roomSize > 100) ? 'text-warning' : 'text-success';
 
-    return(<div className={'border bg-white p-3 round m-1'} style={{bottom: 0, right: 0, position: 'absolute', zIndex: 999}}>
-        {/*<b className={css}>{roomSize}</b> Actions <br />*/}
-        {(DUser.current === createdBy || true) && <IotEngine room={room} data={iotData} />}
-    </div>);
+    return(<></>);
 }
 interface OwnProps {}
 interface StateProps {room: string}
