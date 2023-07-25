@@ -11,7 +11,7 @@ import type {
     LViewElement,
     Pointer
 } from "../../../joiner";
-import {LClass, LUser} from "../../../joiner";
+import {Dictionary, DUser, LClass, LUser} from "../../../joiner";
 
 export class GraphElementStatee {/*
     constructor(preRenderFunc: string | undefined, evalContext: GObject, templatefunc: () => React.ReactNode) {

@@ -125,9 +125,9 @@
 }
 
 .selected-by-others {
-  border: 1px solid red;
+  border: 1px dashed red;
   & > * {
-    cursor: wait;
+    cursor: not-allowed;
   }
 }
 

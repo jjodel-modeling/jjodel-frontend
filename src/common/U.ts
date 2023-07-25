@@ -33,6 +33,19 @@ console.warn('loading ts U log');
 @RuntimeAccessible
 export class U {
 
+    public static fatherChain(me: LModelElement): Pointer<DModelElement, 0, 'N', LModelElement> {
+        const fathers: Pointer<DModelElement, 0, 'N', LModelElement>= [me.id];
+        const toCheck: LModelElement[] = [me];
+        while(toCheck.length > 0) {
+            const element = toCheck.pop();
+            if(element && element.father) {
+                fathers.push(element.father.id);
+                toCheck.push(element.father);
+            }
+        }
+        return fathers;
+    }
+
     public static deepEqual (x: GObject, y: GObject): boolean {
         const ok = Object.keys, tx = typeof x, ty = typeof y;
         return x && y && tx === 'object' && tx === ty ? (

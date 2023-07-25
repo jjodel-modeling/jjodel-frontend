@@ -1,33 +1,30 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../../redux/store";
-import {GObject, Selectors} from "../../../joiner";
+import {DUser, GObject, LModelElement, Selectors, U} from "../../../joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
 
 function TestTabComponent(props: AllProps) {
 
-    const [dict, setDict] = useStateIfMounted<GObject>({});
+    const selected = props.selected;
 
     const click = () => {
-        setDict(Selectors.getSelected());
     }
 
     return(<div>
-        <button onClick={click} className={'btn btn-primary'}>Test</button>
-        {Object.keys(dict).map((user) => {
-            return(<div><b>{user}</b>: {dict[user]}</div>)
-        })}
-        {Object.keys(dict).length === 0 && <div>Empty...</div>}
+        <button onClick={click}>click</button>
+        {selected?.id}
     </div>);
 }
 interface OwnProps {}
-interface StateProps {}
+interface StateProps {selected: LModelElement|null}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
+    ret.selected = LModelElement.fromPointer(state.selected[DUser.current] as any);
     return ret;
 }
 

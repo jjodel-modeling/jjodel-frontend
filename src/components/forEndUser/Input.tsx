@@ -1,13 +1,32 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {IStore} from "../../redux/store";
-import {DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer, U} from "../../joiner";
+import {
+    Dictionary,
+    DPointerTargetable, DUser,
+    GObject,
+    LModelElement,
+    LPointerTargetable,
+    Overlap,
+    Pointer,
+    Selectors,
+    U
+} from "../../joiner";
 import toast, {Toaster} from 'react-hot-toast';
 
 
 function InputComponent(props: AllProps) {
     // todo: data can be injected with UX, if field is present, can take type from a metainfo like __info_of__
     const data = props.data;
+    const selected = props.selected;
+    const fathers = U.fatherChain(data as LModelElement);
+    let editable = true;
+    for(let father of fathers) {
+        const user = Object.keys(selected).find(key => selected[key]?.id === father);
+        if(user && user !== DUser.current) editable = false;
+        if(!editable) break;
+    }
+
     if(!data) return(<></>);
     const readOnly = props.readonly || U.getDefaultViewsID().includes(data.id);
     const getter = props.getter;
@@ -53,7 +72,7 @@ function InputComponent(props: AllProps) {
     let className = (props as any).className || '';
     let style = (props as any).style || {};
     props = {...props, className:'', style:{}} as any;
-    let input = <input spellCheck={false} readOnly={readOnly} className={css + inputClassName}
+    let input = <input key={'input.' + data.id} spellCheck={false} readOnly={readOnly || !editable} className={css + inputClassName}
                        type={type} value={value} onChange={change}
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
@@ -97,6 +116,8 @@ export interface InputOwnProps {
 }
 interface StateProps {
     data: LPointerTargetable & GObject;
+    selected: Dictionary<Pointer<DUser>, LModelElement|null>;
+
 }
 interface DispatchProps { }
 type AllProps = Overlap<InputOwnProps, Overlap<StateProps, DispatchProps>>;
@@ -106,6 +127,13 @@ function mapStateToProps(state: IStore, ownProps: InputOwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
     ret.data = LPointerTargetable.fromPointer(pointer);
+    const selected = state.selected;
+    ret.selected = {};
+    for(let user of Object.keys(selected)) {
+        const pointer = selected[user];
+        if(pointer) ret.selected[user] = LModelElement.fromPointer(pointer);
+        else ret.selected[user] = null;
+    }
     return ret;
 }
 

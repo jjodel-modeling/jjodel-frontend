@@ -377,14 +377,20 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     onContextMenu(e: React.MouseEvent<HTMLDivElement>) {
+        e.preventDefault();
+        e.stopPropagation();
+        const selected = Selectors.getSelected();
+        const id = this.props.dataid;
+        const alreadySelected = Object.keys(selected).filter(function(key) {
+            return selected[key] === id;
+        });
+        if(alreadySelected.length > 0) return;
         this.select();
         SetRootFieldAction.new("contextMenu", {
             display: true,
             x: e.clientX,
             y: e.clientY
         });
-        e.preventDefault();
-        e.stopPropagation();
     }
 
     onEnter(e: React.MouseEvent<HTMLDivElement>) { // instead of doing it here, might set this class on render, and trigger it visually operative with :hover selector css
@@ -403,11 +409,18 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         })});
     }
     onClick(e: React.MouseEvent): void {
+        e.stopPropagation();
+        const selected = Selectors.getSelected();
+        const id = this.props.dataid;
+        const alreadySelected = Object.keys(selected).filter(function(key) {
+            return selected[key] === id;
+        });
+        if(alreadySelected.length > 0) return;
+
         SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
         const isEdgePending = (this.props.isEdgePending?.source);
         if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
         if (this.props.data.className !== "DClass") return;
-        e.stopPropagation();
         // const user = this.props.isEdgePending.user;
         const source = isEdgePending;
         const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
