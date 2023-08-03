@@ -52,6 +52,7 @@ export class LogicContext<
         }*/
 }
 
+RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LogicContext);
 @RuntimeAccessible
 export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, WPointerTargetable> {
     data: GObject;
@@ -67,7 +68,7 @@ export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, W
         this.className = this.constructor.name;
     }
 }
-
+RuntimeAccessibleClass.set_extend(LogicContext, MapLogicContext);
 @RuntimeAccessible
 export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibleClass implements ProxyHandler<T>{
     s: string = 'set_';
@@ -93,7 +94,7 @@ export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibl
 
     static isProxy(data: GObject): boolean { return data?.__isProxy || false; }
 }
-
+RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, MyProxyHandler);
 export type GetPath<T = GObject> = T;
 /*
 * handling proxy += and proxy -=
@@ -158,8 +159,7 @@ class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
         }
     }
 }
-
-
+RuntimeAccessibleClass.set_extend(MyProxyHandler, GetPathHandler);
 @RuntimeAccessible
 export class TargetableProxyHandler<ME extends GObject = DModelElement, LE extends LPointerTargetable = LModelElement> extends MyProxyHandler<ME> {
 // permette di fare cose tipo: user.name_surname che ritorna la concatenazione di nome e cognome anche se il campo name_surname non esiste.
@@ -365,7 +365,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         // will i ever use it? dovrei pasare una funzione invece di una classe, quindi in questo caso credo wrappi solo il costruttore
     }*/
 }
-
+RuntimeAccessibleClass.set_extend(MyProxyHandler, TargetableProxyHandler);
 @RuntimeAccessible
 export class MapProxyHandler extends TargetableProxyHandler<Dictionary, LPointerTargetable> {
     // todo: sposta alcune funzioni da TargetableProxy a MyProxy e fai estendere direttamente MyProxy a questa classe
@@ -399,9 +399,7 @@ export class MapProxyHandler extends TargetableProxyHandler<Dictionary, LPointer
         delete target[key];
         return true; }
 }
-
-
-
+RuntimeAccessibleClass.set_extend(MyProxyHandler, MapProxyHandler);
 // 15-20 min + 5 di domande entro il 1° ottobre, discussione 10-12 ottobre
 export const getPath: GetPath = new Proxy( {}, new GetPathHandler());
 (window as any).getPath = getPath;

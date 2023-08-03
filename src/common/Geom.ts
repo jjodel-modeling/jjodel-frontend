@@ -3,12 +3,15 @@ import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleCl
 
 @RuntimeAccessible
 export abstract class IPoint extends RuntimeAccessibleClass {
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public x!: number;
     public y!: number;
 
-    public static getM? = function(firstPt: IPoint, secondPt: IPoint): number { return (firstPt.y - secondPt.y) / (firstPt.x - secondPt.x); }
     // @ts-ignore static getM is not null but must be declared nullable to achieve subclass mixing
-    public static getQ? = function(firstPt: IPoint, secondPt: IPoint): number { return firstPt.y - (IPoint.getM(firstPt, secondPt) * firstPt.x);  }
+    // public static getM? = function(firstPt: IPoint, secondPt: IPoint): number { return (firstPt.y - secondPt.y) / (firstPt.x - secondPt.x); }
+    public static getM(firstPt: IPoint, secondPt: IPoint): number { return (firstPt.y - secondPt.y) / (firstPt.x - secondPt.x); }
+    public static getQ(firstPt: IPoint, secondPt: IPoint): number { return firstPt.y - (IPoint.getM(firstPt, secondPt) * firstPt.x);  }
 
     public constructor(x: number = 0, y: number = 0) {
         super(); // super('dwc');
@@ -32,6 +35,8 @@ export abstract class IPoint extends RuntimeAccessibleClass {
 
     protected abstract new(): this;
     public duplicate(): this { const ret = this.new(); ret.clone(this); return ret; }
+
+    public distanceFromPoint(tentativeEnd: IPoint) { return this.subtract(tentativeEnd, true).absolute(); }
 
     public subtract(p2: IPoint, newInstance: boolean): this {
         Log.e(!p2, 'subtract argument must be a valid point: ', p2);
@@ -63,16 +68,28 @@ export abstract class IPoint extends RuntimeAccessibleClass {
         for (i = 0; i < p.length; i++) { p0.subtract(p[i], true); }
         return p0; }
 
-    public multiply(pt: this, newInstance: boolean = false): this {
+    public multiply(pt: this | number, newInstance: boolean = false): this {
         let ret: this = (newInstance ? this.duplicate() : this);
-        ret.x *= pt.x;
-        ret.y *= pt.y;
+        if (typeof pt === "number") {
+            ret.x *= pt;
+            ret.y /= pt;
+        }
+        else {
+            ret.x *= pt.x;
+            ret.y *= pt.y;
+        }
         return ret; }
 
-    public divide(pt: this, newInstance: boolean = false): this {
+    public divide(pt: this | number, newInstance: boolean = false): this {
         let ret = (newInstance ? this.duplicate() : this);
-        ret.x /= pt.x;
-        ret.y /= pt.y;
+        if (typeof pt === "number") {
+            ret.x /= pt;
+            ret.y /= pt;
+        }
+        else {
+            ret.x /= pt.x;
+            ret.y /= pt.y;
+        }
         return ret; }
 
     public multiplyScalar(scalar: number, newInstance: boolean): this {
@@ -159,7 +176,9 @@ export class GraphPoint extends IPoint{
         return g.toGraphCoord(p); }
 
     protected new(): this { return new GraphPoint() as this;}
+
 }
+
 
 @RuntimeAccessible
 export class Point extends IPoint{
@@ -173,9 +192,13 @@ export class Point extends IPoint{
     protected new(): this { return new Point() as this;}
 }
 
-
+RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, IPoint);
+RuntimeAccessibleClass.set_extend(IPoint, GraphPoint);
+RuntimeAccessibleClass.set_extend(IPoint, Point);
 @RuntimeAccessible
 export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibleClass {
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public x!: number;
     public y!: number;
     public w!: number;
@@ -215,16 +238,18 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
     }
 
     protected abstract makePoint(x: number, y: number): PT;
-    protected abstract new(): this;
+    protected abstract new(...args:any): this;
     public clone(json: this): this { this.x = json.x; this.y = json.y; this.w = json.w; this.h = json.h; return this; }
     public duplicate(): this { return this.new().clone(this); }
 
-    public add(pt2: this | PT): void {
-        this.x += pt2.x;
-        this.y += pt2.y;
-        if (!('w' in pt2)) return;
-        this.w += (pt2 as ISize).w;
-        this.h += (pt2 as ISize).h; }
+    public add(pt2: this | PT, newInstance?: boolean): this {
+        let p1: this;
+        if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
+        p1.x += pt2.x;
+        p1.y += pt2.y;
+        if (!('w' in pt2)) return p1;
+        p1.w += (pt2 as ISize).w;
+        p1.h += (pt2 as ISize).h; return p1; }
 
     public subtract(pt2: this | PT): this {
         this.x -= pt2.x;
@@ -247,11 +272,14 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
         this.w /= (pt2 as ISize).w;
         this.h /= (pt2 as ISize).h; }
 
-    public tl(): PT { return this.makePoint(   this.x,             this.y         ); }
-    public tr(): PT { return this.makePoint(this.x + this.w,    this.y         ); }
-    public bl(): PT { return this.makePoint(   this.x,          this.y + this.h); }
-    public br(): PT { return this.makePoint(this.x + this.w, this.y + this.h); }
+    public tl(): PT {     return this.makePoint(   this.x,                 this.y             ); }
+    public tr(): PT {     return this.makePoint(this.x + this.w,        this.y             ); }
+    public bl(): PT {     return this.makePoint(   this.x,              this.y + this.h    ); }
+    public br(): PT {     return this.makePoint(this.x + this.w,     this.y + this.h    ); }
+    public center(): PT { return this.makePoint(this.x + this.w / 2, this.y + this.h / 2); }
+    public relativePoint(xPercent: number, yPercent: number): PT { return this.makePoint(this.x + this.w * xPercent, this.y + this.h * yPercent); }
     public equals(size: this): boolean { return this.x === size.x && this.y === size.y && this.w === size.w && this.h === size.h; }
+
     /// field-wise Math.min()
     public min(minSize: this, clone: boolean): this {
         const ret: this = clone ? this.new() : this;
@@ -328,6 +356,7 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
 
 @RuntimeAccessible
 export class Size extends ISize<Point> {
+    static subclasses: any[] = [];
     private static sizeofvar: HTMLElement;
     private static $sizeofvar: JQuery<HTMLElement>;
     private dontMixWithGraphSize: any;
@@ -380,7 +409,7 @@ export class Size extends ISize<Point> {
         return new Size(minX, minY, maxX - minX, maxY - minY); }
 
     protected makePoint(x: number, y: number): Point { return new Point(x, y); }
-    protected new(): this { return new Size() as this; }
+    protected new(...args:any): this { return new Size(...args) as this; }
 }
 
 @RuntimeAccessible
@@ -394,10 +423,16 @@ export class GraphSize extends ISize<GraphPoint> {
         const maxY = Math.max(firstPt.y, secondPt.y);
         return new GraphSize(minX, minY, maxX - minX, maxY - minY); }
 
+
     public static closestIntersection(vertexGSize: GraphSize, prevPt: GraphPoint, pt0: GraphPoint, gridAlign?: GraphPoint): GraphPoint | null {
+        let ret = GraphSize.closestIntersection0(vertexGSize, prevPt, pt0, gridAlign) as any;
+        Log.exDev(!Geom.isOnEdge(ret, vertexGSize), 'ClosestIntersection failed. not on Vertex edge.');
+        return ret;
+    }
+    private static closestIntersection0(vertexGSize: GraphSize, prevPt: GraphPoint, pt0: GraphPoint, gridAlign?: GraphPoint): GraphPoint | null {
         let pt: GraphPoint | null = pt0.duplicate();
-        const m = GraphPoint.getM?.(prevPt, pt) as number;
-        const q = GraphPoint.getQ?.(prevPt, pt) as number;
+        const m = GraphPoint.getM(prevPt, pt) as number;
+        const q = GraphPoint.getQ(prevPt, pt) as number;
         // U.pe( Math.abs((pt.y - m * pt.x) - (prevPt.y - m * prevPt.x)) > .001, 'wrong math in Q:', (pt.y - m * pt.x), ' vs ', (prevPt.y - m * prevPt.x));
         /*const isL = prevPt.x < pt.x;
     const isT = prevPt.y < pt.y;
@@ -487,13 +522,16 @@ export class GraphSize extends ISize<GraphPoint> {
         return pt; }
 
 
-    protected new(): this { return new GraphSize() as this; }
+    protected new(...args: any): this { return new GraphSize(...args) as this; }
     protected makePoint(x: number, y: number): GraphPoint { return new GraphPoint(x, y) as GraphPoint; }
 
 }
 
+RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, ISize);
+RuntimeAccessibleClass.set_extend(ISize, Size);
+RuntimeAccessibleClass.set_extend(ISize, GraphSize);
 @RuntimeAccessible
-export class Geom {
+export class Geom extends RuntimeAccessibleClass {
 
     static isPositiveZero(m: number): boolean {
         if (!!Object.is) { return Object.is(m, +0); }
@@ -514,4 +552,47 @@ export class Geom {
     static RadToDegree(radians: number): number { return radians * (180 / Math.PI); }
     static DegreeToRad(degree: number): number { return degree * (Math.PI / 180); }
 
+
+
+     private static GeomTolerance = 0; // 0.001;
+     static isOnEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
+         return Geom.isOnHorizontalEdges(pt, shape, tolerance) || Geom.isOnVerticalEdges(pt, shape, tolerance); }
+
+     static isOnVerticalEdges(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
+         return Geom.isOnLeftEdge(pt, shape, tolerance) || Geom.isOnRightEdge(pt, shape, tolerance); }
+
+     static isOnHorizontalEdges(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
+         return Geom.isOnTopEdge(pt, shape, tolerance) || Geom.isOnBottomEdge(pt, shape, tolerance); }
+
+     static isOnRightEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
+         if (!pt || !shape) { return false; }
+         if (tolerance) return Math.abs(pt.x - (shape.x + shape.w)) < tolerance
+             && ( pt.y - (shape.y) > tolerance && pt.y - (shape.y + shape.h) < tolerance);
+         return (pt.x === shape.x + shape.w) && (pt.y >= shape.y && pt.y <= shape.y + shape.h);
+
+     }
+
+     static isOnLeftEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
+         if (!pt || !shape) { return false; }
+         if (tolerance) return Math.abs(pt.x - shape.x) < tolerance
+             && (pt.y - (shape.y) > tolerance && pt.y - (shape.y + shape.h) < tolerance);
+         return (pt.x === shape.x) && (pt.y >= shape.y && pt.y <= shape.y + shape.h);
+     }
+
+     static isOnTopEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
+         if (!pt || !shape) { return false; }
+         if (tolerance) return Math.abs(pt.y - shape.y) < tolerance
+             && (pt.x - (shape.x) > tolerance && pt.x - (shape.x + shape.w) < tolerance);
+         return (pt.y === shape.y) && (pt.x >= shape.x && pt.x <= shape.x + shape.w);
+     }
+
+     static isOnBottomEdge(pt: GraphPoint, shape: GraphSize, tolerance?: number): boolean {
+         if (!pt || !shape) { return false; }
+         if (tolerance) return Math.abs(pt.y - shape.y + shape.h) < tolerance
+             && (pt.x - (shape.x) > tolerance && pt.x - (shape.x + shape.w) < tolerance);
+         return (pt.y === shape.y + shape.h) && (pt.x >= shape.x && pt.x <= shape.x + shape.w);
+     }
+
 }
+
+RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, Geom);

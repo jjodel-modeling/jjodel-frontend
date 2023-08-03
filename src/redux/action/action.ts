@@ -138,6 +138,8 @@ export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...param
 
 @RuntimeAccessible
 export class Action extends RuntimeAccessibleClass {
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     static type = 'ACTION';
     static SubType: {
         vertexSubElements: 'vertexSubElements',
@@ -219,6 +221,8 @@ export class LoadAction extends Action {
 
 @RuntimeAccessible
 export class SetRootFieldAction extends Action {
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     static type = 'SET_ROOT_FIELD';
     isPointer: boolean;
 
@@ -267,6 +271,7 @@ export class SetRootFieldAction extends Action {
     }
 }
 
+
 // todo: ma non so come, fare in modo che [], +=, -=, siano disponibili solo se la chiave è il nome di un attributo di tipo array
 type arrayFieldNameTypes<D> = keyof D | `${string & keyof D}[]` | `${string & keyof D}+=` | `${string & keyof D}-=` | `${string & keyof D}.${number}` | `${string & keyof D}[${number}]`;
 type AccessModifier = '' | '[]' | '+=' | '-=' | `.${number}` | `[${number}]` | undefined;
@@ -277,22 +282,22 @@ type StrictExclude<T, U> = T extends U ? U extends T ? never : T : T;
 @RuntimeAccessible
 export class SetFieldAction extends SetRootFieldAction {
     static type = 'SET_ME_FIELD';
-/*
-    static new<
-        D extends DPointerTargetable,
-        T extends (keyof D),
-        AM extends AccessModifier | undefined = ''
-        >(me: D | Pointer<D>,
-          field: T,
-          val: string | string[],
-          accessModifier: AM | undefined,
-          isPointer: boolean): boolean;*/
+    /*
+        static new<
+            D extends DPointerTargetable,
+            T extends (keyof D),
+            AM extends AccessModifier | undefined = ''
+            >(me: D | Pointer<D>,
+              field: T,
+              val: string | string[],
+              accessModifier: AM | undefined,
+              isPointer: boolean): boolean;*/
     static new<
         D extends DPointerTargetable,
         T extends (keyof D),
         VAL extends
             D[T] extends string | string[] ? 'must specify "isPointer" parameter' :
-            (AM extends undefined | '' ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : '_error_'))),
+                (AM extends undefined | '' ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : '_error_'))),
         // VAL extends (AM extends undefined | '' ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : '_error_'))),
         /*VAL extends (AM extends undefined | '' ? (D[T] extends any[] ? StrictExclude<D[T], string[]> : StrictExclude<D[T], string>) :
             (AM extends '-=' ?
@@ -325,7 +330,7 @@ export class SetFieldAction extends SetRootFieldAction {
         VAL extends (AM extends undefined | '' ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : '_error_'))),
         ISPOINTER extends boolean | "todo: ISPOINTER type = boolean but required only if val is UnArr< string > = string | string[], maybe do with override",
         AM extends AccessModifier | undefined = undefined,
-    // T extends arrayFieldNameTypes<D> = any
+        // T extends arrayFieldNameTypes<D> = any
         >(me: D | Pointer<D>, field: T, val: VAL, accessModifier: AM | undefined = undefined, isPointer?: ISPOINTER): boolean {
         if (accessModifier) (field as any) += accessModifier;
         return new SetFieldAction(me, field, val, false, isPointer as boolean).fire();
@@ -394,6 +399,9 @@ export class CombineHistoryAction extends Action {
         this.className = this.constructor.name;
     }
 }
+
+
+
 @RuntimeAccessible
 export class CreateElementAction extends Action {
     static type = 'CREATE_ELEMENT';
@@ -427,6 +435,8 @@ export class DeleteElementAction extends SetFieldAction {
         this.fire();
     }
 }
+
+
 /*
 
 @RuntimeAccessible
@@ -458,3 +468,16 @@ export class ParsedAction extends SetRootFieldAction {
     executionCount!: number;
 
 }
+
+
+RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, Action);
+RuntimeAccessibleClass.set_extend(Action, LoadAction);
+RuntimeAccessibleClass.set_extend(Action, SetRootFieldAction);
+RuntimeAccessibleClass.set_extend(SetRootFieldAction, SetFieldAction);
+RuntimeAccessibleClass.set_extend(SetFieldAction, DeleteElementAction);
+RuntimeAccessibleClass.set_extend(Action, RedoAction as any);
+RuntimeAccessibleClass.set_extend(Action, UndoAction as any);
+RuntimeAccessibleClass.set_extend(Action, CreateElementAction as any);
+RuntimeAccessibleClass.set_extend(Action, CombineHistoryAction as any);
+RuntimeAccessibleClass.set_extend(Action, CompositeAction as any);
+RuntimeAccessibleClass.set_extend(SetRootFieldAction, ParsedAction as any);

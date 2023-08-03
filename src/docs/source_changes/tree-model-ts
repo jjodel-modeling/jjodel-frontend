@@ -1,0 +1,68 @@
+// Project: https://github.com/joaonuno/tree-model-js
+// Definitions by: Abhas Bhattacharya <https://github.com/bendtherules>
+// TypeScript Version: 2.2
+// edited by damiano di vincenzo
+
+export = TreeModel;
+
+declare class TreeModel<T extends Object = Object> {
+    constructor(config?: TreeModel.Config<T>);
+
+    private config: TreeModel.Config<T>;
+
+    safe_parse<T>(model: TreeModel.Model<T>): TreeModel.Node<T>;
+    parse<T>(model: TreeModel.Model<T>): TreeModel.Node<T>;
+}
+
+declare namespace TreeModel {
+    class Node<T> {
+        constructor(config: Config<T>, model: Model<T>);
+
+        isRoot(): boolean;
+        hasChildren(): boolean;
+        addChild(child: Node<T>): Node<T>;
+        addChildAtIndex(child: Node<T>, index: number): Node<T>;
+        setIndex(index: number): Node<T>;
+        getPath(): Array<Node<T>>;
+        getIndex(): number;
+
+        walk(options: Options, fn: NodeVisitorFunction<T>, ctx?: object): void;
+        walk(fn: NodeVisitorFunction<T>, ctx?: object): void;
+
+        all(options: Options, fn: NodeVisitorFunction<T>, ctx?: object): Array<Node<T>>;
+        all(fn: NodeVisitorFunction<T>, ctx?: object): Array<Node<T>>;
+
+        first(options: Options, fn: NodeVisitorFunction<T>, ctx?: object): Node<T> | undefined;
+        first(fn: NodeVisitorFunction<T>, ctx?: object): Node<T> | undefined;
+
+        drop(): Node<T>;
+        children: Node<T>[];
+        config: Config<T>;
+        model: Model<T>;
+        [propName: string]: any; // is this really necessary? can it have dynamic properties that cannot be listed and typed individually?
+    }
+
+    interface Config<T> {
+        /**
+         * The name for the children array property. Default is "children".
+         */
+        childrenPropertyName?: keyof T;
+        modelComparatorFn?: ComparatorFunction<T>;
+        [propName: string]: any;
+    }
+
+    interface Options {
+        strategy: StrategyName;
+    }
+
+    type StrategyName = "pre" | "post" | "breadth";
+
+    type ComparatorFunction<T> = (node1: Node<T>, node2: Node<T>) => number; // this was typed as bool, but from js source it looks to be a number. results are confronted with <= 0
+    type NodeVisitorFunction<T> = (visitingNode: Node<T>) => boolean;
+
+    type Model<T> = T;
+    // this was "T & { children?: Array<Model<T>> }"
+    // it was partially wrong because the children key is not always "children", but a custom key in config.
+    // since it re-typed it as "keyof T", it is already guaranteed to be a key of T without adding the  & { customkeyname?: Array<Model<T>> }
+    // actually that whole type definition is redundant.
+}

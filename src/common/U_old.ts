@@ -2343,48 +2343,6 @@
 // //     static arraySubstringSlice<T>(arr: Array<T>, start: number, end: number = null): Array<T> { return arr ? arr.slice(start, end) : arr; }
 // //
 // //
-// //     private static GeomTolerance = 0; // 0.001;
-// //     static isOnEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = null): boolean {
-// //         return UU.isOnHorizontalEdges(pt, shape, tolerance) || UU.isOnVerticalEdges(pt, shape, tolerance); }
-// //
-// //     static isOnVerticalEdges(pt: GraphPoint, shape: GraphSize, tolerance: number = null): boolean {
-// //         return UU.isOnLeftEdge(pt, shape, tolerance) || UU.isOnRightEdge(pt, shape, tolerance); }
-// //
-// //     static isOnHorizontalEdges(pt: GraphPoint, shape: GraphSize, tolerance: number = null): boolean {
-// //         return UU.isOnTopEdge(pt, shape, tolerance) || UU.isOnBottomEdge(pt, shape, tolerance); }
-// //
-// //     static isOnRightEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = null): boolean {
-// //         if (!pt || !shape) { return null; }
-// //         if (tolerance === null) tolerance = UU.GeomTolerance;
-// //         if (tolerance) return Math.abs(pt.x - (shape.x + shape.w)) < tolerance
-// //             && ( pt.y - (shape.y) > tolerance && pt.y - (shape.y + shape.h) < tolerance);
-// //         return (pt.x === shape.x + shape.w) && (pt.y >= shape.y && pt.y <= shape.y + shape.h);
-// //
-// //     }
-// //
-// //     static isOnLeftEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = null): boolean {
-// //         if (!pt || !shape) { return null; }
-// //         if (tolerance === null) tolerance = UU.GeomTolerance;
-// //         if (tolerance) return Math.abs(pt.x - shape.x) < tolerance
-// //             && (pt.y - (shape.y) > tolerance && pt.y - (shape.y + shape.h) < tolerance);
-// //         return (pt.x === shape.x) && (pt.y >= shape.y && pt.y <= shape.y + shape.h);
-// //     }
-// //
-// //     static isOnTopEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = null): boolean {
-// //         if (!pt || !shape) { return null; }
-// //         if (tolerance === null) tolerance = UU.GeomTolerance;
-// //         if (tolerance) return Math.abs(pt.y - shape.y) < tolerance
-// //             && (pt.x - (shape.x) > tolerance && pt.x - (shape.x + shape.w) < tolerance);
-// //         return (pt.y === shape.y) && (pt.x >= shape.x && pt.x <= shape.x + shape.w);
-// //     }
-// //
-// //     static isOnBottomEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = null): boolean {
-// //         if (!pt || !shape) { return null; }
-// //         if (tolerance === null) tolerance = UU.GeomTolerance;
-// //         if (tolerance) return Math.abs(pt.y - shape.y + shape.h) < tolerance
-// //             && (pt.x - (shape.x) > tolerance && pt.x - (shape.x + shape.w) < tolerance);
-// //         return (pt.y === shape.y + shape.h) && (pt.x >= shape.x && pt.x <= shape.x + shape.w);
-// //     }
 // //     // usage: var scope1 = makeEvalContext("variable declariation list"); scope1("another eval like: x *=3;");
 // //     // remarks: variable can be declared only on the first call, further calls on a created context can only modify the context without expanding it.
 // //

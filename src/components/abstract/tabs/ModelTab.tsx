@@ -29,7 +29,7 @@ function ModelTabComponent(props: AllProps) {
             <ToolBar model={model.id} isMetamodel={model.isMetamodel} metamodelId={props.metamodelid} />
             <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>
                 {graph && <DefaultNode data={model.id} nodeid={graph.id} graphid={graph.id} />}
-                <EdgesManager modelid={model.id} />
+                {false && <EdgesManager modelid={model.id} />}
             </div>
         </div>
     </div>);

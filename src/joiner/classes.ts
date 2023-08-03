@@ -119,6 +119,9 @@ import {
     store, LViewPoint,
     U,
 } from "./index";
+import {Geom} from "../common/Geom";
+import {Tree} from "functional-red-black-tree";
+import TreeModel from "tree-model";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -141,11 +144,25 @@ abstract class AbstractMixedClass {
 }
 
 export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    static extendTree: TreeModel.Node<typeof RuntimeAccessibleClass>// Tree<string, typeof RuntimeAccessibleClass>;
+
+    static set_extend(superclass: typeof RuntimeAccessibleClass, subclass: typeof RuntimeAccessibleClass): void{
+        if (!superclass.hasOwnProperty("subclasses")) superclass.subclasses = [subclass];
+        else if (superclass.subclasses.indexOf(subclass) === -1) superclass.subclasses.push(subclass);
+        if (!subclass.hasOwnProperty("_extends")) subclass._extends = [superclass];
+        else if (subclass._extends.indexOf(superclass) === -1) subclass._extends.push(superclass);
+    }
+
     static extendPrototypes(){
+        (Array.prototype as any).contains = function (o:any): boolean{
+            return this.indexOf(o) !== -1;
+        };
         (Array.prototype as any).joinOriginal = Array.prototype.join;
         (Array.prototype as any).separator = function(...separators: any[]/*: orArr<(PrimitiveType | null | undefined | JSX.Element)[]>*/): (string|JSX.Element)[]{
             if (Array.isArray(separators[0])) separators = separators[0]; // case .join([1,2,3])  --> .join(1, 2, 3)
-            console.log("joinn", this, separators, this[0], typeof this[0]);
+            // console.log("separators debug", this, separators, this[0], typeof this[0]);
             if (typeof this[0] !== "object") return (this as any).joinOriginal(separators);
             // if JSX
             // it handles empty cells like it handles '', but this is how native .join() handles them too: [emptyx5, "a", emptyx1, "b"].join(",") ->  ,,,,,a,,b
@@ -242,12 +259,21 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     public static get<T extends typeof RuntimeAccessibleClass = typeof RuntimeAccessibleClass>(dclassname: string, annotated = false)
         : T & {logic?: typeof LPointerTargetable} { return (annotated ? RuntimeAccessibleClass.annotatedClasses : this.classes)[dclassname] as any; }
 
-    public static extends(className: string, superClassName: string, returnIfEqual: boolean = true): boolean {
-        let superclass = RuntimeAccessibleClass.get(superClassName);
-        const thisclass = RuntimeAccessibleClass.get(className);
-        if (superclass === thisclass) return returnIfEqual;
+    public static extends(className: string | typeof RuntimeAccessibleClass, superClassName: string| typeof RuntimeAccessibleClass, returnIfEqual: boolean = true): boolean {
+        const superclass = typeof superClassName === "string" ? RuntimeAccessibleClass.get(superClassName) : superClassName;
+        const thisclass = typeof className === "string" ? RuntimeAccessibleClass.get(className) : className;
         if (!superclass || !thisclass) return false;
-        return (thisclass instanceof superclass); // todo: check if works with constructors
+        console.log("extends.1:", {thisclass, superclass});
+        console.log("extends.2:", {iof:(thisclass instanceof superclass),
+            tree: !!(RuntimeAccessibleClass.extendTree.first((node) => node.model === superclass)?.first((node) => node.model === thisclass))});
+        if (superclass === thisclass) return returnIfEqual;
+        // for (let aaa in RuntimeAccessibleClass.extendTree.find(superClassName)) { }
+
+        return (thisclass instanceof superclass)
+            ||
+            !!(RuntimeAccessibleClass.extendTree.first((node) => node.model === superclass)
+                ?.first((node) => node.model === thisclass))
+            ;// || true; // todo:noes not work with constructors
     }
 
     getAllPrototypeSuperClasses(): GObject[] {
@@ -304,7 +330,7 @@ export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
     (constructor as any).staticClassName = constructor.name;
     // @ts-ignore
     console.log('runtimeaccessible annotation:', {thiss:this, constructor});
-//    const classnameFixedConstructor = constructor; //  function (...args) { let obj = new constructor(...args); obj.init?.(); obj.init0?.(); return obj; }
+    //    const classnameFixedConstructor = constructor; //  function (...args) { let obj = new constructor(...args); obj.init?.(); obj.init0?.(); return obj; }
 
     // @ts-ignore
     let outerthis = this;
@@ -452,7 +478,7 @@ export class Constructors<T extends DPointerTargetable>{
             (LPointerTargetable.wrap(thiss) as LObject).instanceof = instanceoff as any;
         })
         else thiss.instanceof = instanceoff || null;
-         //old ver: this.persist && instanceoff && SetFieldAction.new(thiss.id, "instanceof", instanceoff, undefined, true);
+        //old ver: this.persist && instanceoff && SetFieldAction.new(thiss.id, "instanceof", instanceoff, undefined, true);
         // update father's collections (pointedby's here are set automatically)
         // this.persist && instanceoff && SetFieldAction.new(instanceoff, "instances", thiss.id, '+=', true);
 
@@ -608,18 +634,23 @@ export class Constructors<T extends DPointerTargetable>{
         }
         return this; }
     DEdgePoint(): this { return this; }
-    DVoidEdge(): this {
+    DEdge(): this {
         let thiss: DVoidEdge = this.thiss as any;
-        (thiss).midnodes = [];
         return this; }
     DVertex(): this { return this; }
-    DEdge(start: DGraphElement["id"], end: DGraphElement["id"]): this {
+    DVoidEdge(start: DGraphElement["id"] | DGraphElement | LGraphElement | DModelElement["id"] | DModelElement | LModelElement,
+          end: DGraphElement["id"] | DGraphElement | LGraphElement | DModelElement["id"] | DModelElement | LModelElement,
+          longestLabel: DEdge["longestLabel"], labels: DEdge["labels"]): this {
         const thiss: DEdge = this.thiss as any;
-        thiss.start = start;
-        thiss.end = end;
+        let startid: DGraphElement["id"] = (windoww.LGraphElement as typeof LGraphElement).getNodeId(start);
+        let endid: DGraphElement["id"] = (windoww.LGraphElement as typeof LGraphElement).getNodeId(end);
+        Log.ex(!startid || !endid, "cannot create an edge without start or ending nodes", {start, end, startid, endid});
+        thiss.midnodes = [];
+        thiss.start = startid;
+        thiss.end = endid;
         if (this.persist) {
-            start && SetFieldAction.new(start, "pointedBy", PointedBy.fromID(thiss.id, "start"), '+=');
-            end && SetFieldAction.new(end, "pointedBy", PointedBy.fromID(thiss.id, "end"), '+=');
+            startid && SetFieldAction.new(startid, "pointedBy", PointedBy.fromID(thiss.id, "start"), '+=');
+            endid && SetFieldAction.new(endid, "pointedBy", PointedBy.fromID(thiss.id, "end"), '+=');
         }
         return this; }
     DExtEdge(): this { return this; }
@@ -838,6 +869,8 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     static from0(a: any, ...aa: any): any { return null; }
     static writeable<LX extends LPointerTargetable, WX = LtoW<LX>>(l: LX): WX { return l as any; }
 }
+
+RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, DPointerTargetable);
 /*
 let d0: LClassifier = null as any;
 let ptrr: Pointer<DPackage, 1, 'N', LPackage> = null as any;
@@ -980,7 +1013,7 @@ export class Pointers{
     public static from(data:(null | undefined)[]): []; // | {Dnn:any};
     public static from(data:(null | undefined) | (null | undefined)[]): []; // | {Dn0:any};
 
-// function from<PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:unknown | unknown[]): PTR | PTR[] | GObject {
+    // function from<PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:unknown | unknown[]): PTR | PTR[] | GObject {
     public static from<T extends LClass, PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:unknown | unknown[]): null | PTR | PTR[]{
         if (!data) return null;
         if (Array.isArray(data)) return data.filter(d => !!d).map(d => (typeof d === "string" ? d : (d as any).id)) as any;
@@ -1300,6 +1333,8 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
 
     // static from0(a: any, ...aa: any): any { return null; }
 }
+
+RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LPointerTargetable);
 /*
 let pttr: Pointer<DClassifier, 0, 1, LClassifier> = null as any;
 let ptrany: Pointer<DClassifier, 0|1, 1|'N'>[] = null as any;
@@ -1361,9 +1396,8 @@ export class WPointerTargetable extends DPointerTargetable{
 
     static fromD<DX extends DPointerTargetable, WX extends DtoW<DX>>(data: DX): WX { return LPointerTargetable.fromD(data) as any; }
 }
-DPointerTargetable.subclasses.push(LPointerTargetable);
-DPointerTargetable.subclasses.push(WPointerTargetable);
-
+RuntimeAccessibleClass.set_extend(DPointerTargetable, LPointerTargetable);
+RuntimeAccessibleClass.set_extend(DPointerTargetable, WPointerTargetable);
 function fffff<DX, LX = DX extends DRefEdge ? LRefEdge : 'not'>( t: DX): LX { return null as any; }
 let a: DGraphElement = null as any;
 let bbb = LPointerTargetable.from(a);
@@ -1406,9 +1440,8 @@ export class LUser extends LPointerTargetable { // MixOnlyFuncs(DUser, LPointerT
     __isUser!: true;
     cursorPosition!: IPoint; //todo
 }
-DPointerTargetable.subclasses.push(DUser);
-LPointerTargetable.subclasses.push(LUser);
-
+RuntimeAccessibleClass.set_extend(DPointerTargetable, DUser);
+RuntimeAccessibleClass.set_extend(LPointerTargetable, LUser);
 export type WUser = getWParams<LUser, DUser>;
 
 @RuntimeAccessible
@@ -1670,8 +1703,8 @@ function buildWrapSignature(maxdepth = 100) {
 
     console.log("depsorted", depsorted);
 
-// console.log("map");
-// console.table(depsorted.map(dn => {let d = window[dn]; return !d ? "" :{name:d.name, scount: d.subclasses.length, subclasses:d.subclasses}}));
+    // console.log("map");
+    // console.table(depsorted.map(dn => {let d = window[dn]; return !d ? "" :{name:d.name, scount: d.subclasses.length, subclasses:d.subclasses}}));
 
 
     let goalSignature = "function wrap<DX extends D, LX = DX extends D2 ? L2: (DX extends D3 ? L3: (DX extends D ? L : ERROR))>(data: DX): LX {";
@@ -1737,11 +1770,11 @@ type RemoveKeysOfType<T, ExcludeType> = Exclude2<T, OnlyKeysOfType<T, ExcludeTyp
  and i use it to define objects
 
  class C {
-   str: StringOf<Date>;
-   str2: StringOf<number>;
-   purestring: string;
-   num: number
- }
+           str: StringOf<Date>;
+           str2: StringOf<number>;
+           purestring: string;
+           num: number
+         }
  now i want to crete a derivate type that excludes all properties of type StringOf from C
 
 
@@ -1762,9 +1795,9 @@ type RemoveKeysOfType<T, ExcludeType> = Exclude2<T, OnlyKeysOfType<T, ExcludeTyp
 export type getWParams<L extends LPointerTargetable, D extends Object> ={
     // [Property in keyof ValidObj<L>]: L[Property] extends never ? never : L[Property]
     [Property in keyof L]:/*
-    Property extends "opposite" ? LReference | DReference | Pointer<DReference> :
-    Property extends "parent" ? LModelElement | DModelElement | Pointer<DModelElement> :
-    Property extends "annotations" ? LAnnotation | DAnnotation | Pointer<DAnnotation> :*/
+            Property extends "opposite" ? LReference | DReference | Pointer<DReference> :
+            Property extends "parent" ? LModelElement | DModelElement | Pointer<DModelElement> :
+            Property extends "annotations" ? LAnnotation | DAnnotation | Pointer<DAnnotation> :*/
     (Property extends string ? (
         Property extends "id" ? 'id is read-only' :
             //@ts-ignore

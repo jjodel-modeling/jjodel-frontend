@@ -22,7 +22,7 @@ export class DViewPoint extends DViewElement {
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1 , persist: boolean = false): DViewElement {
         return new Constructors(new DViewPoint('dwc'), undefined, persist, undefined).DPointerTargetable()
             .DViewElement(name, jsxString, defaultVSize, usageDeclarations, constants,
-            preRenderFunc, appliableToClasses, oclApplyCondition, priority).DViewPoint().end();
+                preRenderFunc, appliableToClasses, oclApplyCondition, priority).DViewPoint().end();
     }
     public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true): DViewElement {
         return new Constructors(new DViewElement('dwc'), undefined, persist, undefined)
@@ -39,6 +39,5 @@ export class LViewPoint extends LViewElement {
     name!: string;
 }
 
-DPointerTargetable.subclasses.push(DViewPoint);
-LPointerTargetable.subclasses.push(LViewPoint);
-
+RuntimeAccessibleClass.set_extend(DPointerTargetable, DViewPoint);
+RuntimeAccessibleClass.set_extend(LPointerTargetable, LViewPoint);

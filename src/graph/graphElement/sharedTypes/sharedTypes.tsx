@@ -1,5 +1,6 @@
 import React, {CSSProperties, ReactNode} from "react";
 import type {
+    DEdge,
     DGraph,
     DGraphElement,
     DModelElement,
@@ -9,9 +10,9 @@ import type {
     LGraphElement,
     LModelElement,
     LViewElement,
-    Pointer
+    Pointer, PrimitiveType
 } from "../../../joiner";
-import {LClass, LUser} from "../../../joiner";
+import {LClass, LEdge, LUser, LViewPoint} from "../../../joiner";
 
 export class GraphElementStatee {/*
     constructor(preRenderFunc: string | undefined, evalContext: GObject, templatefunc: () => React.ReactNode) {
@@ -75,4 +76,15 @@ export class EdgeOwnProps extends GraphElementOwnProps {
     isVertex?: boolean = true;
     start!: LGraphElement["id"];
     end!: LGraphElement["id"];
+    label?: DEdge["longestLabel"];
+    labels?: DEdge["labels"];
+}
+
+export class EdgeStateProps extends GraphElementReduxStateProps {
+    node!: LEdge;
+    lastSelected!: LModelElement | null;
+    isEdgePending!: { user: LUser, source: LClass };
+    viewpoint!: LViewPoint;
+    start!: LGraphElement;
+    end!: LGraphElement;
 }

@@ -35,9 +35,10 @@ export class DV {
             <svg className={"hoverable"} style={{width:"100vw", height:"100vh", pointerEvents:"none"}}>
                 <path className={"preview"} strokeWidth={2} stroke={"gray"} fill={"none"} d={this.component.path()} style={{pointerEvents:"none"}}></path>
                 <path className={"content"} strokeWidth={4} stroke={"black"} fill={"none"} d={this.component.path()} style={{pointerEvents:"none"}}></path>
-                {this.component.pathSegments().map( pair => <path className={"clickable"} style={{pointerEvents:"all"}}
-                 strokeWidth={4} stroke={"transparent"} fill={"none"} d={"M"+pair[0].x+" "+pair[0].y+" L"+pair[1].x+" "+pair[1].y}></path>)}
-                <foreignObject style={{overflow:"visible"}}>    </foreignObject>
+                // {this.component.pathSegments().map( pair => <path className={"clickable"} style={{pointerEvents:"all"}}
+                {this.edge.pathSegments.map( (s => <>
+                <path className={"clickable"} style={{pointerEvents:"all"}} strokeWidth={4} stroke={"transparent"} fill={"none"} d={s.d}></path>
+                 {s.label &&<><text textAnchor="middle">{s.label}</text><foreignObject style={{x:s(.startp.x + s.endp.x)/2+"px", y:s(.startp.y + s.endp.y)/2+"px"}}>{s.label}</foreignObject><>}
             </svg>
             {
                 false && <EdgePoint key={"midnode1"} view={"Pointer_ViewEdgePoint"} />
@@ -75,15 +76,16 @@ class DefaultView {
         return `<div className={'root model'}>
              {!this.data && "Model data missing."}
              
-            <div className="edges">
+            <div className="edges" style={{zIndex:101, position: "absolute"}}>
                 {this.data && this.node.allSubNodes.length >=2 &&
-                    <DamEdge view={"Pointer_ViewEdge"} start={this.node.allSubNodes[0]} end={this.node.allSubNodes[1]}>
+                    <DamEdge view={"Pointer_ViewEdge"} start={this.node.allSubNodes[0]} end={this.node.allSubNodes[1]}> label={"first 2 nodes"}
                         <EdgePoint key={"midnode1"} view={"Pointer_ViewEdgePoint"} />
                         <EdgePoint key={"midnode2"} view={"Pointer_ViewEdgePoint"} />
                     </DamEdge>
                 }
                 {
-                    false && this.data.suggestedEdges.reference.map(se => <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdge"}/>)
+                    true && this.data.suggestedEdges.reference &&
+                    this.data.suggestedEdges.reference.map(se => <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdge"} />)
                 }
             </div>
              {this.data && this.data.packages.map((child, index) => {
@@ -140,7 +142,7 @@ class DefaultView {
     }
 
     public static feature(): string {
-        return `<Select className={'root feature'} data={this.data} field={'type'} label={this.data.name} />`;
+        return `<div><Select className={'root feature'} data={this.data} field={'type'} label={this.data.name} /></div>`;
     }
 
     public static literal(): string {

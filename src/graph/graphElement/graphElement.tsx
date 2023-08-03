@@ -2,7 +2,7 @@ import React, {CSSProperties, Dispatch, PureComponent, ReactElement, ReactNode, 
 import {createPortal} from "react-dom";
 import {connect} from "react-redux";
 import './graphElement.scss';
-import type {VertexComponent} from "../../joiner";
+import type {VertexComponent, EdgeStateProps} from "../../joiner";
 import {
     CreateElementAction,
     DGraph,
@@ -41,8 +41,9 @@ import {
     LClass,
     SetFieldAction,
     DGraphVertex,
-    DVoidVertex, DEdge,
+    DVoidVertex, DEdge, LEdge, LUser, LViewPoint, LGraphElement,
 } from "../../joiner";
+
 import {end} from "@popperjs/core";
 import { EdgeOwnProps } from "./sharedTypes/sharedTypes";
 
@@ -182,12 +183,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             let dge;
             if (dGraphElementDataClass === DEdge) {
                 // set start and end from ownprops;
-                let edgeProps: EdgeOwnProps = ownProps as EdgeOwnProps;
-                let start = typeof edgeProps.start === "string" ? edgeProps.start : (edgeProps.start as any).id; // at runtime i found proxy wrapped instead of id, no idea why
-                let end = typeof edgeProps.end === "string" ? edgeProps.end : (edgeProps.end as any).id;
-                dge = DEdge.new(dataid, parentnodeid, graphid, nodeid, start, end)}
+                let edgeProps: EdgeStateProps = ret as EdgeStateProps;
+                let edgeOwnProps: EdgeOwnProps = ownProps as EdgeOwnProps;
+                let start = edgeProps.start.id; //typeof edgeProps.start === "string" ? edgeProps.start : (edgeProps.start as any).id; // at runtime i found proxy wrapped instead of id, no idea why
+                let end = edgeProps.end.id; // typeof edgeProps.end === "string" ? edgeProps.end : (edgeProps.end as any).id;
+                let longestLabel = edgeOwnProps.label;
+                let labels = edgeOwnProps.labels;
+                dge = DEdge.new(dataid, parentnodeid, graphid, nodeid, start, end, longestLabel, labels )}
             else dge = dGraphElementDataClass.new(dataid, parentnodeid, graphid, nodeid);
-            let act = CreateElementAction.new(dge, false);
+            // let act = CreateElementAction.new(dge, false);
             // console.log("map ge2", {nodeid: nodeid+'', dge: {...dge}, dgeid: dge.id});
         }
         else { ret.node = MyProxyHandler.wrap(dnode); }

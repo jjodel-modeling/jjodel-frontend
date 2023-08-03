@@ -1,4 +1,5 @@
 import {
+    Action,
     Constructors,
     DGraphElement,
     Dictionary,
@@ -252,9 +253,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 // @ts-ignore for $ at end of getpath
                 'idlookup.' + context.data.id + '.' + (getPath as LViewElement).__transient.$); }*/
 }
-DPointerTargetable.subclasses.push(DViewElement);
-LPointerTargetable.subclasses.push(LViewElement);
-
+RuntimeAccessibleClass.set_extend(DPointerTargetable, DViewElement);
+RuntimeAccessibleClass.set_extend(LPointerTargetable, LViewElement);
 export type WViewElement = getWParams<LViewElement, DPointerTargetable>;
 
 @RuntimeAccessible
@@ -265,6 +265,7 @@ export class DViewTransientProperties extends RuntimeAccessibleClass{
     // private: DViewPrivateTransientProperties;
 }
 
+RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, DViewTransientProperties);
 @RuntimeAccessible
 export class LViewTransientProperties extends LPointerTargetable{
     static structure: typeof DPointerTargetable;
@@ -273,20 +274,19 @@ export class LViewTransientProperties extends LPointerTargetable{
 
     // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
     // private!: LViewPrivateTransientProperties;
-/*
-    get_private(context: LogicContext<DViewTransientProperties>): LViewPrivateTransientProperties {
-        return LViewTransientProperties.wrap(context.data.private, context.proxy.baseObjInLookup, context.proxy.additionalPath + '.private'); }*/
-/*
-    get_isSelected(logicContext: LogicContext<TargetableProxyHandler<DViewTransientProperties>, DViewTransientProperties>): Proxyfied<Dictionary> {
-        // @ts-ignore for $ at end of getpath
-        console.log('GET_ISSELECTED handler func');
-        return TargetableProxyHandler.getMap(logicContext.data.isSelected, logicContext, logicContext.proxy.additionalPath + '.' + (getPath as this).isSelected.$);
-    }*/
+    /*
+        get_private(context: LogicContext<DViewTransientProperties>): LViewPrivateTransientProperties {
+            return LViewTransientProperties.wrap(context.data.private, context.proxy.baseObjInLookup, context.proxy.additionalPath + '.private'); }*/
+    /*
+        get_isSelected(logicContext: LogicContext<TargetableProxyHandler<DViewTransientProperties>, DViewTransientProperties>): Proxyfied<Dictionary> {
+            // @ts-ignore for $ at end of getpath
+            console.log('GET_ISSELECTED handler func');
+            return TargetableProxyHandler.getMap(logicContext.data.isSelected, logicContext, logicContext.proxy.additionalPath + '.' + (getPath as this).isSelected.$);
+        }*/
 }
 
-DPointerTargetable.subclasses.push(DViewTransientProperties);
-LPointerTargetable.subclasses.push(LViewTransientProperties);
-
+RuntimeAccessibleClass.set_extend(DPointerTargetable, DViewTransientProperties);
+RuntimeAccessibleClass.set_extend(LPointerTargetable, LViewTransientProperties);
 export type WViewTransientProperties = getWParams<LViewTransientProperties, DViewTransientProperties>;
 
 /*

@@ -1,5 +1,5 @@
 // export type Class = { new(...args: any[]): any; };
-import type {ShortAttribETypes, Pointer} from "../joiner";
+import type {ShortAttribETypes, Pointer, RuntimeAccessibleClass} from "../joiner";
 import type React from "react";
 
 export declare type Class<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (abstract new (...args: any[]) => InstanceType) & StaticType;
@@ -24,11 +24,15 @@ interface NoCall { call?: never; }
 export type orArr<T> = T | T[];
 export type unArr<T extends any[] | any> = T extends any[] ? T[0] : T;
 
-type primitiveType = string | number | boolean | symbol | null | undefined;
-export type PrimitiveType = string | number | boolean | null;
+// type primitiveType = string | number | boolean | symbol | null | undefined;
+export type PrimitiveType = string | number | boolean | null | undefined;
 type NotAFunction = NoCaller | NoBind | NoApply | NoCall;
-type NotFunction = GObject & NotAFunction | primitiveType;
-export type Info = {type: ShortAttribETypes | string, txt: string | React.ReactElement};
+type NotFunction = GObject & NotAFunction | PrimitiveType;
+export type Info = {
+    type?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
+    readType?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
+    writeType?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
+    txt: string | React.ReactElement};
 
 
 export type Empty = any;
@@ -54,13 +58,23 @@ export type nbool = null | boolean;
 export type bool = boolean;
 export type TODO<T = any> = any;
 export type NonEmptyString = Exclude<string, ''>;
-export enum EdgeBendingMode{
+export enum EdgeBendingMode {
     "Line"="L", // end
     "Bezier_quadratic"="Q", // bending1, end
     "Bezier_cubic"="C", // bending1, bending2, end
     "Bezier_cubic_mirrored"="S", // bending1, end // when there are multiple bezier curves on a row, this takes a bendingpoint1 from the last bezier curves mirrored https://css-tricks.com/svg-path-syntax-illustrated-guide/
     "Bezier_quadratic_mirrored"="T", // end // when there are multiple bezier curves on a row, this takes a bendingpoint1 from the last bezier curves mirrored https://css-tricks.com/svg-path-syntax-illustrated-guide/
     "Elliptical_arc" = "A",// x y, rot, arc sweep, x y super messy not only coords but degrees and booleans mixed with path coords
+    "Bezier_QT"="QT", // first a Quadratic, then N quadratic mirrored
+    "Bezier_CS"="CS", // first a Quadratic, then N quadratic mirrored
+}
+export enum EdgeGapMode {
+    "gap" = "gap",
+    "autoFill" = "autoFill",
+    "lineFill" = "lineFill",
+    "arcFill" = "arcFill",
+    "center" = "center",
+    "average" = "average",
 }
 
 // export type Subtract<T, K> = {  [L in Exclude<keyof T, K>]: T[L] };

@@ -20,9 +20,10 @@ import {
     LVoidVertex, Overlap,
     RuntimeAccessibleClass,
     U,
+    EdgeOwnProps, EdgeStateProps,
+    LViewPoint
 } from "../../joiner";
-import {LViewPoint} from "../../view/viewPoint/viewpoint";
-import {EdgeOwnProps} from "../graphElement/sharedTypes/sharedTypes";
+
 let groupingsize: Dictionary<EdgeBendingMode, number> = {} as any;
 groupingsize[EdgeBendingMode.Line] = 1;
 groupingsize[EdgeBendingMode.Bezier_quadratic] = 2;
@@ -71,34 +72,25 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
 }
 
 
-class StateProps extends GraphElementReduxStateProps {
-    node!: LEdge;
-    lastSelected!: LModelElement | null;
-    isEdgePending!: { user: LUser, source: LClass };
-    viewpoint!: LViewPoint;
-    start!: LGraphElement;
-    end!: LGraphElement;
-
-}
 
 class DispatchProps extends GraphElementDispatchProps {
 }
 
-type AllPropss = Overlap<Overlap<EdgeOwnProps, StateProps>, DispatchProps>;
+type AllPropss = Overlap<Overlap<EdgeOwnProps, EdgeStateProps>, DispatchProps>;
 
-function mapStateToProps(state: IStore, ownProps: EdgeOwnProps): StateProps {
-    const ret: StateProps = new StateProps();
+function mapStateToProps(state: IStore, ownProps: EdgeOwnProps): EdgeStateProps {
+    const ret: EdgeStateProps = new EdgeStateProps();
     // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
     ret.isEdgePending = {
         user: LPointerTargetable.from(state.isEdgePending.user),
         source: LPointerTargetable.from(state.isEdgePending.source)
     };
     ret.viewpoint = LViewPoint.fromPointer(state.viewpoint);
-    ret.start = LPointerTargetable.fromPointer(ownProps.start);
-    ret.end = LPointerTargetable.fromPointer(ownProps.end);
+    ret.start = LPointerTargetable.fromPointer(LGraphElement.getNodeId(ownProps.start));
+    ret.end = LPointerTargetable.fromPointer(LGraphElement.getNodeId(ownProps.end));
     console.log("edge", {ret, ownProps});
 
-    const superret: StateProps = GraphElementComponent.mapStateToProps(state, ownProps, DEdge, ret) as StateProps;
+    const superret: EdgeStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DEdge, ret) as EdgeStateProps;
     // U.objectMergeInPlace(superret, ret);
     // U.removeEmptyObjectKeys(superret);
     // console.error(superret, ret); throw Error("aaa");
@@ -114,7 +106,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const EdgeConnected = connect<StateProps, DispatchProps, EdgeOwnProps, IStore>(
+export const EdgeConnected = connect<EdgeStateProps, DispatchProps, EdgeOwnProps, IStore>(
     mapStateToProps,
     mapDispatchToProps
 )(EdgeComponent as any);

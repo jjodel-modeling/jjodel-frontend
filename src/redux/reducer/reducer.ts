@@ -26,6 +26,7 @@ import {
 import React from "react";
 import {CombineHistoryAction, LoadAction, RedoAction, UndoAction} from "../action/action";
 import {Firebase} from "../../firebase";
+import TreeModel from 'tree-model';
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -377,7 +378,19 @@ function doreducer/*<S extends StateNoFunc, A extends Action>*/(oldState: IStore
     }*/
     return ret;
 }
+function setSubclasses(dict:Dictionary<string, typeof RuntimeAccessibleClass>){
 
+    let tree = new TreeModel({
+        childrenPropertyName: "subclasses"
+    });
+    for (let key in dict){
+        let constructor = dict[key];
+        if(!constructor.hasOwnProperty("subclasses")) constructor.subclasses = [];
+    }
+    RuntimeAccessibleClass.extendTree = (tree as any).safe_parse(RuntimeAccessibleClass);
+
+}
+windoww.TreeModel = TreeModel;
 function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, alll: Dictionary<string, typeof LPointerTargetable>) {
     for (let dname in alld) {
         switch (dname) {
@@ -398,9 +411,9 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
         l.singleton = d.singleton;
         l.structure = d.structure;
 
-        if (!d.subclasses) d.subclasses = [];
+        // if (!d.subclasses) d.subclasses = [];
         // @ts-ignore
-        for (let sc of d.subclasses) { if (!sc["_extends"]) sc["_extends"] = [];  sc["_extends"].push(d); }
+        // for (let sc of d.subclasses) { if (!sc["_extends"]) sc["_extends"] = [];  sc["_extends"].push(d); }
     }
 }
 
@@ -412,6 +425,8 @@ export function jodelInit() {
     let dClassesmap: Dictionary<string, typeof DPointerTargetable> = dClasses.reduce((acc: any,curr)=> (acc[curr] = RuntimeAccessibleClass.get(curr), acc),{});
     let lClassesmap: Dictionary<string, typeof LPointerTargetable> = lClasses.reduce((acc: any,curr)=> (acc[curr] = RuntimeAccessibleClass.get(curr), acc),{});
     buildLSingletons(dClassesmap, lClassesmap);
+    setSubclasses(dClassesmap);
+    setSubclasses(lClassesmap);
 
 
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};

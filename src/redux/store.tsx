@@ -270,7 +270,8 @@ export class LUserState extends MixOnlyFuncs(DUserState, LPointerTargetable) {
     // nope, la selezione è vertex-wise, e il vertex è graph-dependent. la view è graph-indipendent. selection: Dictionary<Pointer<User, 1, 1>, Pointer<DGraphElement, 0, 'N'>[]> = {};
 
 }
-DPointerTargetable.subclasses.push(DUserState);*/
+RuntimeAccessibleClass.set_extend(DPointerTargetable, DUserState);
+*/
 
 @RuntimeAccessible
 export class ViewPointState extends DPointerTargetable{

@@ -534,10 +534,8 @@ per la get esiste solo _get_x, non "get_x"
 * */
 // @RuntimeAccessible export class _WModelElement extends LModelElement { }
 // export type WModelElement = DModelElement | LModelElement | _WModelElement;
-DPointerTargetable.subclasses.push(DModelElement);
-DPointerTargetable.subclasses.push(LModelElement);
-
-
+RuntimeAccessibleClass.set_extend(DPointerTargetable, DModelElement);
+RuntimeAccessibleClass.set_extend(DPointerTargetable, LModelElement);
 @Leaf
 @RuntimeAccessible
 export class DAnnotation extends DModelElement { // extends Mixin(DAnnotation0, DModelElement)
@@ -627,9 +625,8 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
     }
 }
 
-DModelElement.subclasses.push(DAnnotation);
-LModelElement.subclasses.push(LAnnotation);
-
+RuntimeAccessibleClass.set_extend(DModelElement, DAnnotation);
+RuntimeAccessibleClass.set_extend(LModelElement, LAnnotation);
 @Leaf
 @RuntimeAccessible
 export class LAnnotationDetail<Context extends LogicContext<DAnnotationDetail> = any> extends LModelElement { // todo
@@ -654,9 +651,8 @@ export class LAnnotationDetail<Context extends LogicContext<DAnnotationDetail> =
     }
 }
 
-DModelElement.subclasses.push(DAnnotationDetail);
-LModelElement.subclasses.push(LAnnotationDetail);
-
+RuntimeAccessibleClass.set_extend(DModelElement, DAnnotationDetail);
+RuntimeAccessibleClass.set_extend(LModelElement, LAnnotationDetail);
 @Node
 @RuntimeAccessible
 export class DNamedElement extends DPointerTargetable { // Mixin(DNamedElement0, DAnnotation)
@@ -772,10 +768,8 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
 
 // @RuntimeAccessible export class _WNamedElement extends _WModelElement { }
 // export type WNamedElement = DNamedElement | LNamedElement | _WNamedElement;
-DModelElement.subclasses.push(DNamedElement);
-LModelElement.subclasses.push(LNamedElement);
-
-
+RuntimeAccessibleClass.set_extend(DModelElement, DNamedElement);
+RuntimeAccessibleClass.set_extend(LModelElement, LNamedElement);
 @RuntimeAccessible
 export class DTypedElement extends DPointerTargetable { // Mixin(DTypedElement0, DNamedElement)
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -968,10 +962,8 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
 
 // @RuntimeAccessible export class _WTypedElement extends _WNamedElement { }
 // export type WTypedElement = DTypedElement | LTypedElement | _WTypedElement;
-DNamedElement.subclasses.push(DTypedElement);
-LNamedElement.subclasses.push(LTypedElement);
-
-
+RuntimeAccessibleClass.set_extend(DNamedElement, DTypedElement);
+RuntimeAccessibleClass.set_extend(LNamedElement, LTypedElement);
 @RuntimeAccessible
 export /*abstract*/
 class DClassifier extends DPointerTargetable { // extends DNamedElement
@@ -1085,10 +1077,8 @@ export class LClassifier<Context extends LogicContext<DClassifier> = any> extend
 
 // @RuntimeAccessible export class _WClassifier extends _WNamedElement { }
 // export type WClassifier = DClassifier | LClassifier | _WClassifier;
-DNamedElement.subclasses.push(DClassifier);
-LNamedElement.subclasses.push(LClassifier);
-
-
+RuntimeAccessibleClass.set_extend(DNamedElement, DClassifier);
+RuntimeAccessibleClass.set_extend(LNamedElement, LClassifier);
 @RuntimeAccessible
 export class DPackage extends DPointerTargetable { // extends DNamedElement
     // static _super = DNamedElement;
@@ -1360,10 +1350,8 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
 }
 // @RuntimeAccessible export class _WPackage extends _WNamedElement { }
 // export type WPackage = DPackage | LPackage | _WPackage;
-DNamedElement.subclasses.push(DPackage);
-LNamedElement.subclasses.push(LPackage);
-
-
+RuntimeAccessibleClass.set_extend(DNamedElement, DPackage);
+RuntimeAccessibleClass.set_extend(LNamedElement, LPackage);
 @Leaf
 @RuntimeAccessible
 export class DOperation extends DPointerTargetable { // extends DTypedElement
@@ -1557,12 +1545,8 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
         return undefined;
     }
 }
-DTypedElement.subclasses.push(DOperation);
-LTypedElement.subclasses.push(LOperation);
-
-
-
-
+RuntimeAccessibleClass.set_extend(DTypedElement, DOperation);
+RuntimeAccessibleClass.set_extend(LTypedElement, LOperation);
 @Leaf
 @RuntimeAccessible
 export class DParameter extends DPointerTargetable { // extends DTypedElement
@@ -1687,10 +1671,8 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
         }
         */
 }
-DTypedElement.subclasses.push(DParameter);
-LTypedElement.subclasses.push(LParameter);
-
-
+RuntimeAccessibleClass.set_extend(DTypedElement, DParameter);
+RuntimeAccessibleClass.set_extend(LTypedElement, LParameter);
 @RuntimeAccessible
 export class DClass extends DPointerTargetable { // extends DClassifier
     // static _super = DClassifier;
@@ -2308,10 +2290,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
 
 }
-DClassifier.subclasses.push(DClass);
-LClassifier.subclasses.push(LClass);
-
-
+RuntimeAccessibleClass.set_extend(DClassifier, DClass);
+RuntimeAccessibleClass.set_extend(LClassifier, LClass);
 @RuntimeAccessible
 export class DDataType extends DPointerTargetable { // extends DClassifier
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -2381,13 +2361,8 @@ export class LDataType<Context extends LogicContext<DDataType> = any, C extends 
 
 }
 
-DClassifier.subclasses.push(DDataType);
-LClassifier.subclasses.push(LDataType);
-
-
-
-
-
+RuntimeAccessibleClass.set_extend(DClassifier, DDataType);
+RuntimeAccessibleClass.set_extend(LClassifier, LDataType);
 @RuntimeAccessible
 export class DStructuralFeature extends DPointerTargetable { // DTypedElement
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -2520,10 +2495,8 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
             return true;
         }*/
 }
-DTypedElement.subclasses.push(DStructuralFeature);
-LTypedElement.subclasses.push(LStructuralFeature);
-
-
+RuntimeAccessibleClass.set_extend(DTypedElement, DStructuralFeature);
+RuntimeAccessibleClass.set_extend(LTypedElement, LStructuralFeature);
 @RuntimeAccessible
 export class DReference extends DPointerTargetable { // DStructuralFeature
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -2706,14 +2679,14 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         SetFieldAction.new(context.data, 'opposite', Pointers.from(val) as any as LAnnotation["id"], "", true);
         return true;
     }
-/*
-    /// todo: why this exist?  why not type?
-    protected get_target(context: Context): this["target"] { return context.data.target.map(pointer => LPointerTargetable.from(pointer)); }
-    protected set_target(val: PackArr<this["target"]>, context: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
-        SetFieldAction.new(context.data, 'target', list, "", true);
-        return true;
-    }*/
+    /*
+        /// todo: why this exist?  why not type?
+        protected get_target(context: Context): this["target"] { return context.data.target.map(pointer => LPointerTargetable.from(pointer)); }
+        protected set_target(val: PackArr<this["target"]>, context: Context): boolean {
+            const list = val.map((lItem) => { return Pointers.from(lItem) });
+            SetFieldAction.new(context.data, 'target', list, "", true);
+            return true;
+        }*/
 
     protected get_defaultValue(context: Context): this["defaultValue"] { return LPointerTargetable.fromPointer(context.data.defaultValue); }
     protected set_defaultValue(val: PackArr<this["defaultValue"]>, context: Context): boolean {
@@ -2734,10 +2707,8 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         return true;
     }
 }
-DStructuralFeature.subclasses.push(DReference);
-LStructuralFeature.subclasses.push(LReference);
-
-
+RuntimeAccessibleClass.set_extend(DStructuralFeature, DReference);
+RuntimeAccessibleClass.set_extend(LStructuralFeature, LReference);
 function has_opposite(oppositename: string, ...comments: string[]): any {
     // return (c:Constructor, key:string, ):any =>{}
 }
@@ -2894,9 +2865,8 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         return true; }
 
 }
-DStructuralFeature.subclasses.push(DAttribute);
-LStructuralFeature.subclasses.push(LAttribute);
-
+RuntimeAccessibleClass.set_extend(DStructuralFeature, DAttribute);
+RuntimeAccessibleClass.set_extend(LStructuralFeature, LAttribute);
 @Leaf
 @RuntimeAccessible
 export class DEnumLiteral extends DPointerTargetable { // DNamedElement
@@ -3007,9 +2977,8 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
 
 
 }
-DNamedElement.subclasses.push(DEnumLiteral);
-LNamedElement.subclasses.push(LEnumLiteral);
-
+RuntimeAccessibleClass.set_extend(DNamedElement, DEnumLiteral);
+RuntimeAccessibleClass.set_extend(LNamedElement, LEnumLiteral);
 @Leaf
 @RuntimeAccessible
 export class DEnumerator extends DPointerTargetable { // DDataType
@@ -3179,10 +3148,8 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         return ret;
     }
 }
-DDataType.subclasses.push(DEnumerator);
-LDataType.subclasses.push(LEnumerator);
-
-
+RuntimeAccessibleClass.set_extend(DDataType, DEnumerator);
+RuntimeAccessibleClass.set_extend(LDataType, LEnumerator);
 @RuntimeAccessible
 export class DModelM1 extends DNamedElement{
     name!: string;
@@ -3197,8 +3164,8 @@ export class LModelM1 extends LNamedElement{
     children!: LModelM1["roots"];
 
 }
-DModelM1.subclasses.push(DNamedElement);
-LModelM1.subclasses.push(LNamedElement);
+RuntimeAccessibleClass.set_extend(DModelM1, DNamedElement);
+RuntimeAccessibleClass.set_extend(LModelM1, LNamedElement);
 type DPrimitiveType = DClass;
 type LPrimitiveType = LClass;
 
@@ -3320,7 +3287,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     __info_of__suggestedEdges: Info = {type: 'Dictionary<"extend" | "reference" | "packageDependencies" | DmodelName, EdgeStarter[]>', txt: "A map to access all possible kind of edges based on model data." +
             "<br/>extend and reference are the most commonly used for horizontal references (outside the containment tree schema)." +
             "<br/>packageDependencies links packages using classes from other packages." +
-           // "<br/>other keys are the names of container data types (mode, package, class, object...) from them to their childrens rendered as Nodes (vertical tree schema)." +
+            // "<br/>other keys are the names of container data types (mode, package, class, object...) from them to their childrens rendered as Nodes (vertical tree schema)." +
             // todo: implement the commented part as LGrahElement.vertexs.map(v=>{start:v.parentnode.isVertex ? v.parentnode.id : undefined, end:v.id}).filter(e=>e.start) instead. it's a thing of graph more than model.
             "<br/> EdgeStarter is a collection of data useful to start a &lt;Edge /&gt; in JSX."}
 
@@ -3606,10 +3573,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return (uri: string)=>context.proxyObject.allSubPackages.filter((p)=>p.uri === uri)[0]; }
 
 }
-DNamedElement.subclasses.push(DModel);
-LNamedElement.subclasses.push(LModel);
-
-
+RuntimeAccessibleClass.set_extend(DNamedElement, DModel);
+RuntimeAccessibleClass.set_extend(LNamedElement, LModel);
 @RuntimeAccessible
 export abstract class DFactory_useless_ extends DPointerTargetable { // DModelElement
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -3656,6 +3621,8 @@ export abstract class LFactory_useless_<Context extends LogicContext<DFactory_us
 
 // DModelElement.subclasses.push('DFactory_useless_'); // because it's abstract and cannot be used as a value, it's pure type definition
 // DModelElement.subclasses.push('LFactory_useless_'); // because it's abstract and cannot be used as a value, it's pure type definition
+// RuntimeAccessibleClass.set_extend(DModelElement, DFactory_useless_);
+// RuntimeAccessibleClass.set_extend(LModelElement, LFactory_useless_);
 
 @RuntimeAccessible
 export class EJavaObject{
@@ -3688,9 +3655,8 @@ export class LMap<Context extends LogicContext<DMap> = any, C extends Context = 
     __isLMap!: true;
     // id!: Pointer<DModelElement, 1, 1, LModelElement>;
 }
-DPointerTargetable.subclasses.push(DMap as any);
-LPointerTargetable.subclasses.push(LMap);
-
+RuntimeAccessibleClass.set_extend(DPointerTargetable, DMap as any);
+RuntimeAccessibleClass.set_extend(LPointerTargetable, LMap);
 @RuntimeAccessible
 export class DObject extends DPointerTargetable { // extends DNamedElement, m1 class instance
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -4015,9 +3981,8 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     }
 
 }
-DNamedElement.subclasses.push(DObject);
-LNamedElement.subclasses.push(LObject);
-
+RuntimeAccessibleClass.set_extend(DNamedElement, DObject);
+RuntimeAccessibleClass.set_extend(LNamedElement, LObject);
 @RuntimeAccessible
 export class DValue extends DModelElement { // extends DModelElement, m1 value (attribute | reference)
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -4573,9 +4538,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         return ret;
     }
 }
-DNamedElement.subclasses.push(DValue);
-LNamedElement.subclasses.push(LValue);
-
+RuntimeAccessibleClass.set_extend(DNamedElement, DValue);
+RuntimeAccessibleClass.set_extend(LNamedElement, LValue);
 export type ValueDetail = {
     value: LValue["value"];
     rawValue: DValue["values"][0]; // PrimitiveType | Pointer<DObject> | Pointer<DEnumLiteral>

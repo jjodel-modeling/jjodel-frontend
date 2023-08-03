@@ -996,6 +996,29 @@ export class U {
     public static pairArrayElements<T>(arr:T[], withRepetitions:boolean = false):T[][] {
         if (withRepetitions) { return arr.map(U.pairArrayElementsRepeatFunc).slice(0, arr.length-1); }
         return arr.reduce( U.pairArrayElementsReducerFunc as ((accumulator: T[][], value: T, index: number, array: T[]) => T[][]), []); }
+
+    // removes line // and block /**/ comments  todo: can likely be improved by a regular expression
+    public static decomment_all(str: string): string { return this.decomment_line(this.decomment_block(str)); }
+    // removes line comments //
+    public static decomment_line(str: string, trimLines: boolean = true): string {
+        return str
+            .split("\n")
+            .map(s=> { let i = s.indexOf("//"); s = (i === -1 ? s : s.substring(i)); return trimLines ? s.trim() : s; } )
+            .join("\n");
+    }
+    // removes block comments /**/
+    public static decomment_block(str: string): string {
+        // let maxcomments = 100;
+        while(true){
+            // if (--maxcomments===0) break;
+            let s: number = str.indexOf("/*");
+            if (s === -1) break;
+            let e: number = str.indexOf("*/", s+1);
+            if (e === -1) e = str.length;
+            str = str.substring(0, s) + str.substring(e+2);
+        }
+        return str; }
+
 }
 export class DDate{
 

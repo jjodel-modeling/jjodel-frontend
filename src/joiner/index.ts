@@ -42,7 +42,7 @@ export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute,
 export type {WEdge, WEdgePoint, WExtEdge, WGraph, WRefEdge, WGraphElement, WVoidEdge, WGraphVertex, WVertex, WVoidVertex} from "../model/dataStructure/GraphDataElements";
 
 export {windoww} from './types';
-export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
+export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps, EdgeStateProps, EdgeOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
 export {EdgeBendingMode} from "./types";
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,

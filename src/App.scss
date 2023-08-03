@@ -92,6 +92,9 @@ body .ui-icon{ // override jqueryui fixed resizable handles at 16px, making drag
 
 svg.hoverable {
 
+  path{
+    pointer-events: visiblestroke;
+  }
   &:has(path.clickable) {
     &>.preview { visibility: visible; }
     &>.content { visibility: hidden; }
