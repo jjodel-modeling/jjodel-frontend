@@ -71,12 +71,16 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 
     // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
     let jsxCodeString: DocString<ReactNode>;
+    let jsxparsedfunc: () => React.ReactNode;
     try { jsxCodeString = JSXT.fromString(view.jsxString, {factory: 'React.createElement'}); }
     catch (e: any) {
-        Log.eDevv('Syntax Error in custom user-defined template. try to remove typescript typings:\n\n' +e.toString() + '\n\n' + view.jsxString, {evalContext});
-        jsxCodeString = '<div>Syntax error 1</div>';
+        Log.eDevv();
+        stateProps.preRenderFunc = view.preRenderFunc;
+        stateProps.evalContext = evalContext;
+        stateProps.template = () => DV.errorView(e.message.split("\n")[0],
+            {msg: 'Syntax Error in custom user-defined template. try to remove typescript typings.', evalContext, e, view, jsx:view.jsxString});
+        return;
     }
-    let jsxparsedfunc: () => React.ReactNode;
     try {
         jsxparsedfunc = U.evalInContextAndScope<() => ReactNode>('()=>{ return ' + jsxCodeString + '}', evalContext);
         // U.evalInContext({...this, ...evalContext}, res); // todo: remove eval and add new Function() ?
@@ -188,7 +192,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let start = edgeProps.start.id; //typeof edgeProps.start === "string" ? edgeProps.start : (edgeProps.start as any).id; // at runtime i found proxy wrapped instead of id, no idea why
                 let end = edgeProps.end.id; // typeof edgeProps.end === "string" ? edgeProps.end : (edgeProps.end as any).id;
                 let longestLabel = edgeOwnProps.label;
-                let labels = edgeOwnProps.labels;
+                let labels = edgeOwnProps.labels || [];
                 dge = DEdge.new(dataid, parentnodeid, graphid, nodeid, start, end, longestLabel, labels )}
             else dge = dGraphElementDataClass.new(dataid, parentnodeid, graphid, nodeid);
             // let act = CreateElementAction.new(dge, false);
@@ -335,6 +339,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0)
             { errormsg += 'Reminder: nullish operators ".?" and "??" are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
             else if (view.jsxString.indexOf('?.') >= 0) { errormsg += 'Reminder: ?. operator and empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
+            if (!errormsg) errormsg = (e.message||"\n").split("\n")[0];
             ret = DV.errorView(errormsg, {where:"in getTemplate()", e});
         }
         return ret;

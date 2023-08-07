@@ -1,5 +1,28 @@
-export const uselessexport = {}
-
+export const uselessexport = {};
+/*let s: any, e: any; let edge: any;
+let jsx = <div className={"edge"} style={{overflow: "visible", width:0, height:0}}>
+    <svg className={"hoverable"} style={{width:"100vw", height:"100vh", pointerEvents:"none"}}>
+        <path className={"preview"} strokeWidth={2} stroke={"gray"} fill={"none"} d={edge.d} style={{pointerEvents:"none"}}></path>
+        <path className={"content"} strokeWidth={4} stroke={"black"} fill={"none"} d={edge.d} style={{pointerEvents:"none"}}></path>
+        {edge.segments.all.map((s) => <>
+            <path className={"clickable"} style={{pointerEvents:"all"}} strokeWidth={4} stroke={"transparent"} fill={"none"} d={s.dpart}></path>
+            {s.label &&<div>
+                <text textAnchor="middle">{s.label}</text>
+                <foreignObject >{s.label}</foreignObject></div>
+                    }
+            </div>)
+            </svg>
+            {
+                false &&
+                <EdgePoint key={"midnode1"} view={"Pointer_ViewEdgePoint"} />
+            }{
+                false &&
+                <EdgePoint key={"midnode2"} view={"Pointer_ViewEdgePoint"} />
+            }{
+                false && props.children && "this would cause loop no idea why, needs to be fixed to allow passing EdgeNodes here" || []
+            }
+                </div>
+*/
 /*
 
 only first package to package or package to class edge is visible

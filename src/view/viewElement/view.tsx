@@ -22,6 +22,7 @@ import {
     SetFieldAction,
     ShortAttribETypes
 } from "../../joiner";
+import { EdgeGapMode } from "../../joiner/types";
 
 @RuntimeAccessible
 export class DViewElement extends DPointerTargetable {
@@ -142,6 +143,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     onResizeEnd!: string;
     constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
     bendingMode!: EdgeBendingMode;
+    edgeGapMode!: EdgeGapMode;
+    __info_of__bendingMode: Info = {type: '"L" | "Q" | "C" | "T" | "S" | "A" | "QT" | "CS"', txt: <><div>How Svg path should use the EdgePoints <a href={"https://css-tricks.com/svg-path-syntax-illustrated-guide/"}>to bend his shape</a></div></>}
+    __info_of__edgeGapMode: Info = {type: '"gap" | "average" | "autoFill" | "lineFill" | "arcFill"', txt: <><div></div></>}
+
     storeSize!: boolean;
     // __info_of__storeSize: Info = {type: ShortAttribETypes.EBoolean, txt:<><div>Whether the node position should depend from the View or the Graph.</div><div>Enabled = share positions on different graphs but changes it if view is changed.</div></>}
     __info_of__storeSize: Info = {type: ShortAttribETypes.EBoolean, txt: <><div>Active: the node position depends from the view currently displayed.</div><div>Inactive: it depends from the graph.</div></>}
@@ -158,7 +163,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__edgeStartStopAtBoundaries: Info = {type:"GraphPoint", txt: "Whether outgoing edges should cross the node boundaries overlapping the node or stop at them (edge arrows might enter the node if this is on)."}
     edgeEndStopAtBoundaries!: boolean;
 
-    protected size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>; // use getSize, updateSize
+    protected size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>; // use getSize, updateSize;
 
     get_viewpoint(context: Context): this["viewpoint"] {
         return (context.data.viewpoint || undefined) && (LViewPoint.fromPointer(context.data.viewpoint as Pointer<DViewPoint>));

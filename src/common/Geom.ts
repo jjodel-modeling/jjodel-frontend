@@ -36,7 +36,11 @@ export abstract class IPoint extends RuntimeAccessibleClass {
     protected abstract new(): this;
     public duplicate(): this { const ret = this.new(); ret.clone(this); return ret; }
 
-    public distanceFromPoint(tentativeEnd: IPoint) { return this.subtract(tentativeEnd, true).absolute(); }
+    public distanceFromPoint(tentativeEnd: IPoint, skipSqrt: boolean = false): number {
+        let d_pow2 = (this.x - tentativeEnd.x)**2 + (this.y - tentativeEnd.y)**2;
+        return skipSqrt ? d_pow2 : Math.sqrt(d_pow2);
+        // return this.subtract(tentativeEnd, true).absolute();
+    }
 
     public subtract(p2: IPoint, newInstance: boolean): this {
         Log.e(!p2, 'subtract argument must be a valid point: ', p2);
@@ -525,6 +529,7 @@ export class GraphSize extends ISize<GraphPoint> {
     protected new(...args: any): this { return new GraphSize(...args) as this; }
     protected makePoint(x: number, y: number): GraphPoint { return new GraphPoint(x, y) as GraphPoint; }
 
+    closestPoint(pt: GraphPoint): GraphPoint { return Geom.closestPoint(this, pt); }
 }
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, ISize);
@@ -554,45 +559,108 @@ export class Geom extends RuntimeAccessibleClass {
 
 
 
-     private static GeomTolerance = 0; // 0.001;
-     static isOnEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
-         return Geom.isOnHorizontalEdges(pt, shape, tolerance) || Geom.isOnVerticalEdges(pt, shape, tolerance); }
+    private static GeomTolerance = 0; // 0.001;
+    static isOnEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
+        return Geom.isOnHorizontalEdges(pt, shape, tolerance) || Geom.isOnVerticalEdges(pt, shape, tolerance); }
 
-     static isOnVerticalEdges(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
-         return Geom.isOnLeftEdge(pt, shape, tolerance) || Geom.isOnRightEdge(pt, shape, tolerance); }
+    static isOnVerticalEdges(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
+        return Geom.isOnLeftEdge(pt, shape, tolerance) || Geom.isOnRightEdge(pt, shape, tolerance); }
 
-     static isOnHorizontalEdges(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
-         return Geom.isOnTopEdge(pt, shape, tolerance) || Geom.isOnBottomEdge(pt, shape, tolerance); }
+    static isOnHorizontalEdges(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
+        return Geom.isOnTopEdge(pt, shape, tolerance) || Geom.isOnBottomEdge(pt, shape, tolerance); }
 
-     static isOnRightEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
-         if (!pt || !shape) { return false; }
-         if (tolerance) return Math.abs(pt.x - (shape.x + shape.w)) < tolerance
-             && ( pt.y - (shape.y) > tolerance && pt.y - (shape.y + shape.h) < tolerance);
-         return (pt.x === shape.x + shape.w) && (pt.y >= shape.y && pt.y <= shape.y + shape.h);
+    static isOnRightEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
+        if (!pt || !shape) { return false; }
+        if (tolerance) return Math.abs(pt.x - (shape.x + shape.w)) < tolerance
+            && ( pt.y - (shape.y) > tolerance && pt.y - (shape.y + shape.h) < tolerance);
+        return (pt.x === shape.x + shape.w) && (pt.y >= shape.y && pt.y <= shape.y + shape.h);
+    }
 
-     }
+    static isOnLeftEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
+        if (!pt || !shape) { return false; }
+        if (tolerance) return Math.abs(pt.x - shape.x) < tolerance
+            && (pt.y - (shape.y) > tolerance && pt.y - (shape.y + shape.h) < tolerance);
+        return (pt.x === shape.x) && (pt.y >= shape.y && pt.y <= shape.y + shape.h);
+    }
 
-     static isOnLeftEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
-         if (!pt || !shape) { return false; }
-         if (tolerance) return Math.abs(pt.x - shape.x) < tolerance
-             && (pt.y - (shape.y) > tolerance && pt.y - (shape.y + shape.h) < tolerance);
-         return (pt.x === shape.x) && (pt.y >= shape.y && pt.y <= shape.y + shape.h);
-     }
+    static isOnTopEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
+        if (!pt || !shape) { return false; }
+        if (tolerance) return Math.abs(pt.y - shape.y) < tolerance
+            && (pt.x - (shape.x) > tolerance && pt.x - (shape.x + shape.w) < tolerance);
+        return (pt.y === shape.y) && (pt.x >= shape.x && pt.x <= shape.x + shape.w);
+    }
 
-     static isOnTopEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
-         if (!pt || !shape) { return false; }
-         if (tolerance) return Math.abs(pt.y - shape.y) < tolerance
-             && (pt.x - (shape.x) > tolerance && pt.x - (shape.x + shape.w) < tolerance);
-         return (pt.y === shape.y) && (pt.x >= shape.x && pt.x <= shape.x + shape.w);
-     }
+    static isOnBottomEdge(pt: GraphPoint, shape: GraphSize, tolerance?: number): boolean {
+        if (!pt || !shape) { return false; }
+        if (tolerance) return Math.abs(pt.y - shape.y + shape.h) < tolerance
+            && (pt.x - (shape.x) > tolerance && pt.x - (shape.x + shape.w) < tolerance);
+        return (pt.y === shape.y + shape.h) && (pt.x >= shape.x && pt.x <= shape.x + shape.w);
+    }
 
-     static isOnBottomEdge(pt: GraphPoint, shape: GraphSize, tolerance?: number): boolean {
-         if (!pt || !shape) { return false; }
-         if (tolerance) return Math.abs(pt.y - shape.y + shape.h) < tolerance
-             && (pt.x - (shape.x) > tolerance && pt.x - (shape.x + shape.w) < tolerance);
-         return (pt.y === shape.y + shape.h) && (pt.x >= shape.x && pt.x <= shape.x + shape.w);
-     }
+    static closestPoint(size: GraphSize, pt: GraphPoint): GraphPoint {
+        let top_closest = Geom.closestPointToSegment(size.tl(), size.tr(), pt);
+        let bot_closest = Geom.closestPointToSegment(size.bl(), size.br(), pt);
+        let left_closest = Geom.closestPointToSegment(size.tl(), size.bl(), pt);
+        let right_closest = Geom.closestPointToSegment(size.tr(), size.br(), pt);
 
+        let top_distance = top_closest.distanceFromPoint(pt, false);
+        let bot_distance = bot_closest.distanceFromPoint(pt, false);
+        let left_distance = left_closest.distanceFromPoint(pt, false);
+        let right_distance = right_closest.distanceFromPoint(pt, false);
+
+        let min_distance = Math.min(top_distance, bot_distance, left_distance, right_distance);
+        if (min_distance === top_distance) return top_closest;
+        if (min_distance === bot_distance) return bot_closest;
+        if (min_distance === left_distance) return left_closest;
+        return right_closest;
+    }
+    static isMinusZero(number: number) {return 1/number == -Infinity;}
+    static closestPointToSegment(segStart: GraphPoint, segEnd:GraphPoint, pt: GraphPoint): GraphPoint{
+        // 1) find equation of line passing for start, end.
+        // 2) then find all perpendicular lines, then the perpendicular line that pass through pt
+        // 3) find intersection between Line(s,e) and line of point 2.
+        // 4A) IF intersection is part of segment(s,e) that is closest.
+        // 4B) ELSE, one of the 2 extremes of the segment is closest.
+
+        let x_intersect: number, y_intersect: number;
+        let s = segStart;
+        let e = segEnd;
+        let mse = (e.y - s.y) / (e.x - s.x);
+        if (mse === Number.POSITIVE_INFINITY || mse === Number.NEGATIVE_INFINITY) {
+            // s and e are both on the same y vertical line (same x)      // new GraphPoint(segStart.x, pt.y);
+            x_intersect = segStart.x;
+            y_intersect = pt.y;
+            // 1), 2), 3) all done shortcut
+        } else if (mse === 0 || Geom.isNegativeZero(mse)) {
+            // s and e are both on the same x horizontal line (same y)    // new GraphPoint(pt.x, segStart.y);
+            x_intersect = pt.x;
+            y_intersect = segStart.y
+            // 1), 2), 3) all done shortcut
+        }
+        else {
+            let q = s.y - mse*s.x; // y = mx + q           q = y-mx
+            // 1) done
+            let pmse = -1/mse; // perpendicular to mse
+            let pq = pt.y - pmse*pt.x;
+            // 2) done
+            //  m1 * x + q1 = y    -->   m1 * x + q1 = m2 * x + q2    -->    (m1-m2)x = q2-q1      -->     x=(q2-q1)/(m1-m2)
+            x_intersect = (pq-q)/(mse-pmse);
+            y_intersect = mse*(x_intersect) + q; //  y = mx +q
+            // 3) done
+        }
+
+        let maxX: number, minX: number;
+        let maxY: number, minY: number;
+        if (s.x > e.x) { maxX = s.x; minX = e.x; } else {  maxX = e.x; minX = s.x; }
+        if (s.y > e.y) { maxY = s.y; minY = e.y; } else {  maxY = e.y; minY = s.y; }
+        if (x_intersect >= minX && x_intersect <= maxX && y_intersect >= minY && y_intersect <= maxY) return new GraphPoint(x_intersect, y_intersect);
+        // 4A) IF done
+
+        let sdist = (s.x - x_intersect)**2 + (s.y - y_intersect)**2;  // actual distance is sqrt() of this, but i just need to find closest, not correct distance.
+        let edist = (e.x - x_intersect)**2 + (e.y - y_intersect)**2;
+        return (sdist < edist) ? new GraphPoint(s.x, s.y) : new GraphPoint(e.x, e.y);
+        // 4B) ELSE done
+    }
 }
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, Geom);

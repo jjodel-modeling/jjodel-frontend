@@ -1,8 +1,8 @@
-import type {ShortAttribETypes as SAType} from '../joiner';
+import {ShortAttribETypes as SAType, U} from '../joiner';
 import {GObject, RuntimeAccessible} from '../joiner';
 import React, {ReactElement} from "react";
-const beautify = require('js-beautify').html;
-
+// const beautify = require('js-beautify').html; // BEWARE: this adds some newline that might be breaking and introduce syntax errors in our JSX parser
+const beautify = (s: any)=>s;
 let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 
 @RuntimeAccessible
@@ -20,7 +20,9 @@ export class DV {
     public static objectView(): string { return beautify(DefaultView.object()); }
     public static valueView(): string { return beautify(DefaultView.value()); }
     public static defaultPackage(): string { return beautify(DefaultView.defaultPackage()); }
-    public static errorView(publicmsg: string | JSX.Element, debughiddenmsg?:any): ReactElement { console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg}); return DefaultView.error(publicmsg); }
+    public static errorView(publicmsg: string | JSX.Element, debughiddenmsg?:any): ReactElement {
+        let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error: ", "") : publicmsg;
+        console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg}); return DefaultView.error(visibleMessage); }
 
     static edgePointView(): string { return beautify(
         `<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"red", width:"100%", height:"100%"}} />`
@@ -33,12 +35,11 @@ export class DV {
     static edgeView(): string { return beautify(
         `<div className={"edge"} style={{overflow: "visible", width:0, height:0}}>
             <svg className={"hoverable"} style={{width:"100vw", height:"100vh", pointerEvents:"none"}}>
-                <path className={"preview"} strokeWidth={2} stroke={"gray"} fill={"none"} d={this.component.path()} style={{pointerEvents:"none"}}></path>
-                <path className={"content"} strokeWidth={4} stroke={"black"} fill={"none"} d={this.component.path()} style={{pointerEvents:"none"}}></path>
-                // {this.component.pathSegments().map( pair => <path className={"clickable"} style={{pointerEvents:"all"}}
-                {this.edge.pathSegments.map( (s => <>
-                <path className={"clickable"} style={{pointerEvents:"all"}} strokeWidth={4} stroke={"transparent"} fill={"none"} d={s.d}></path>
-                 {s.label &&<><text textAnchor="middle">{s.label}</text><foreignObject style={{x:s(.startp.x + s.endp.x)/2+"px", y:s(.startp.y + s.endp.y)/2+"px"}}>{s.label}</foreignObject><>}
+                <path className={"preview"} strokeWidth={2} stroke={"gray"} fill={"none"} d={this.edge.d} style={{pointerEvents:"none"}}></path>
+                <path className={"content"} strokeWidth={4} stroke={"black"} fill={"none"} d={this.edge.d} style={{pointerEvents:"none"}}></path>             
+                {this.edge.segments.all.map(s => <><path className={"clickable"} style={{pointerEvents:"all"}} strokeWidth={4} stroke={"transparent"} fill={"none"} d={s.dpart}></path>
+                    {s.label &&<><text textAnchor="middle">{s.label}</text><foreignObject style={{x:(s.start.pt.x + s.end.pt.x)/2+"px", y:(s.start.pt.y + s.end.pt.y)/2+"px"}}>{s.label}</foreignObject></>}
+                 </>)}
             </svg>
             {
                 false && <EdgePoint key={"midnode1"} view={"Pointer_ViewEdgePoint"} />
