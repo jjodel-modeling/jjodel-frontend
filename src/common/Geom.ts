@@ -428,9 +428,9 @@ export class GraphSize extends ISize<GraphPoint> {
         return new GraphSize(minX, minY, maxX - minX, maxY - minY); }
 
 
-    public static closestIntersection(vertexGSize: GraphSize, prevPt: GraphPoint, pt0: GraphPoint, gridAlign?: GraphPoint): GraphPoint | null {
-        let ret = GraphSize.closestIntersection0(vertexGSize, prevPt, pt0, gridAlign) as any;
-        Log.exDev(!Geom.isOnEdge(ret, vertexGSize), 'ClosestIntersection failed. not on Vertex edge.');
+    public static closestIntersection(size: GraphSize, prevPt: GraphPoint, pt0: GraphPoint, gridAlign?: GraphPoint): GraphPoint | null {
+        let ret = GraphSize.closestIntersection0(size, prevPt, pt0, gridAlign) as any;
+        // Log.exDev(!Geom.isOnEdge(ret, size), 'ClosestIntersection failed. not on Vertex edge.', {ret, size, prevPt, pt0, gridAlign});
         return ret;
     }
     private static closestIntersection0(vertexGSize: GraphSize, prevPt: GraphPoint, pt0: GraphPoint, gridAlign?: GraphPoint): GraphPoint | null {

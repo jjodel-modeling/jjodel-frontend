@@ -86,8 +86,12 @@ function mapStateToProps(state: IStore, ownProps: EdgeOwnProps): EdgeStateProps 
         source: LPointerTargetable.from(state.isEdgePending.source)
     };
     ret.viewpoint = LViewPoint.fromPointer(state.viewpoint);
-    ret.start = LPointerTargetable.fromPointer(LGraphElement.getNodeId(ownProps.start));
-    ret.end = LPointerTargetable.fromPointer(LGraphElement.getNodeId(ownProps.end));
+    let startnodeid = LGraphElement.getNodeId(ownProps.start);
+    let endnodeid = LGraphElement.getNodeId(ownProps.end);
+    ret.start = LPointerTargetable.fromPointer(startnodeid);
+    ret.end = LPointerTargetable.fromPointer(endnodeid);
+    // ret.key = ownProps.key || (startnodeid || (ownProps.start as any)?.id || ownProps.start) + "~" + (endnodeid || (ownProps.end as any)?.id || ownProps.end);
+    // key is already used as key || nodeid on super.render()
     console.log("edge", {ret, ownProps});
 
     const superret: EdgeStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DEdge, ret) as EdgeStateProps;

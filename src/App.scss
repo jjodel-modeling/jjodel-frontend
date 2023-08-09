@@ -100,7 +100,7 @@ svg.hoverable {
     &>.content { visibility: hidden; }
   }
 
-  &:has(path.clickable:hover) {
+  &:hover:has(path.clickable) {
     &>.preview { visibility: hidden; }
     &>.content { visibility: visible; }
   }

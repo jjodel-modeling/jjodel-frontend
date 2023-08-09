@@ -71,6 +71,7 @@ export class DViewElement extends DPointerTargetable {
     onResizeStart: string = '';
     onResizeEnd: string = '';
     bendingMode!: EdgeBendingMode;
+    edgeGapMode!: EdgeGapMode;
     //useSizeFrom!: EuseSizeFrom;
     storeSize!: boolean;
     size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>;

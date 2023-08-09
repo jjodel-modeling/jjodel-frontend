@@ -41,7 +41,7 @@ import {
     LClass,
     SetFieldAction,
     DGraphVertex,
-    DVoidVertex, DEdge, LEdge, LUser, LViewPoint, LGraphElement,
+    DVoidVertex, DEdge, LEdge, LUser, LViewPoint, LGraphElement, RuntimeAccessibleClass,
 } from "../../joiner";
 
 import {end} from "@popperjs/core";
@@ -52,7 +52,9 @@ export function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
     let evalContext: GObject = view.constants ? eval('window.tmp = ' + view.constants) : {};
     let component = GraphElementComponent.map[props.nodeid as Pointer<DGraphElement>];
     let vcomponent = component as VertexComponent;
-    evalContext = {...windoww.defaultContext, ...evalContext, model: props.data, ...props, component, getSize:vcomponent?.getSize, setSize: vcomponent?.setSize};
+    evalContext = {...windoww.defaultContext, ...evalContext, model: props.data, ...props,
+        edge: (RuntimeAccessibleClass.extends(props.node?.className, "DVoidEdge") ? props.node : undefined),
+        component, getSize:vcomponent?.getSize, setSize: vcomponent?.setSize};
     windoww.evalContext = evalContext;
     return evalContext;
 }
@@ -101,6 +103,8 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 }
 
 let debugcount = 0;
+let debug = true;
+let maxRenderCounter = 300;
 @RuntimeAccessible
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
     extends PureComponent<AllProps, GraphElementState>{
@@ -193,8 +197,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let end = edgeProps.end.id; // typeof edgeProps.end === "string" ? edgeProps.end : (edgeProps.end as any).id;
                 let longestLabel = edgeOwnProps.label;
                 let labels = edgeOwnProps.labels || [];
-                dge = DEdge.new(dataid, parentnodeid, graphid, nodeid, start, end, longestLabel, labels )}
-            else dge = dGraphElementDataClass.new(dataid, parentnodeid, graphid, nodeid);
+                dge = (DEdge as any).new(dataid, parentnodeid, graphid, nodeid, start, end, longestLabel, labels);
+                ret.node = (ret as any).edge = MyProxyHandler.wrap(dge);
+            }
+            else {
+                console.log("dGraphElementDataClass", dGraphElementDataClass);
+                dge = dGraphElementDataClass.new(dataid, parentnodeid, graphid, nodeid);
+                ret.node =  MyProxyHandler.wrap(dge);
+            }
             // let act = CreateElementAction.new(dge, false);
             // console.log("map ge2", {nodeid: nodeid+'', dge: {...dge}, dgeid: dge.id});
         }
@@ -219,6 +229,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         setTemplateString(ret, ownProps); // todo: this is heavy, should be moved somewhere where it's executed once unless view changes (pre-render with if?)
         // @ts-ignore
         ret.forceupdate = state.forceupdate;
+        // @ts-ignore
+        ret.key = ret.key || ownProps.key;
         return ret;
     }
 
@@ -231,6 +243,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     _isMounted: boolean;
     hasSetVertexProperties: boolean = false;
     html: React.RefObject<HTMLElement | undefined>;
+    lastViewChanges: {t: number, vid: Pointer<DViewElement>, v: LViewElement, key?: string}[];
     // todo: can be improved by import memoize from "memoize-one"; it is high-order function that memorize the result if params are the same without re-executing it (must not have side effects)
     //  i could use memoization to parse the jsx and to execute the user-defined pre-render function
 
@@ -246,6 +259,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     constructor(props: AllProps, context: any) {
         super(props, context);
+        this.lastViewChanges = [];
         this._isMounted = false;
         this.id = GraphElementComponent.maxid++;
         GraphElementComponent.all[this.id] = this;
@@ -330,6 +344,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
         // console.log('getTemplate:', {props: this.props, template: this.props.template, ctx: this.props.evalContext});
         let ret;
+        // Log.exDev(debug && maxRenderCounter-- < 0, "loop involving render");
         let context = {component:this, __proto__:this.props.evalContext};
         try {
             ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], context); }
@@ -396,6 +411,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!this.props.node) return "loading";
         if (this.props.preRenderFunc) U.evalInContextAndScope(this.props.preRenderFunc, {component:this, __proto__:this.props.evalContext});
         if (this.props.node.__raw.view !== this.props.view.id) {
+
+            let thischange = {t: Date.now(), vid: this.props.node.__raw.view, newvid:this.props.view.id, v: this.props.node.view, newv: this.props.view, key:this.props.key};
+            this.lastViewChanges.push(thischange);
+            // nan -> false <200 = true
+            if (this.lastViewChanges[this.lastViewChanges.length-20]?.t - thischange.t < 200) { // important! NaN<1  and NaN>1 are both false
+                // if 3 views changed in <= 0.2 sec
+                Log.exDevv("loop in updating View assigned to node. The cause might be missing or invalid keys on GraphElement JSX nodes.", {change_log:this.lastViewChanges, component: this});
+            }
+            // vpackage and vedge are swapping endlessly here. can it be a key conflict?
             console.log("UPDATEVIEW ",
                 {lnode:this.props.node, dnode:this.props.node.__raw,
                     view:this.props.view, data:this.props.data,
@@ -417,7 +441,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let rawRElement: ReactElement | null = UX.ReactNodeAsElement(rnode);
         const me: LModelElement | undefined = this.props.data; // this.props.model;
 
-        console.log('GE render', {thiss: this, data:me, rnode, rawRElement, props:this.props, name: (me as any)?.name});
+        // \console.log('GE render', {thiss: this, data:me, rnode, rawRElement, props:this.props, name: (me as any)?.name});
 
         const addprops: boolean = true;
         let fiximport = !!this.props.node; // todo: check if correct approach
@@ -441,8 +465,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 viewStyle.display = this.props.view?.display;
                 rawRElement = React.cloneElement(rawRElement, // i'm cloning a raw html (like div) being root of the rendered view
                     {
-                        key: this.props.key || this.props.nodeid,
-                        // damiano: l'html viene settato correttamente a tutti tranne ad attribute, ref, operation (perchè iniziano con <Select/> as root?
+                        key: this.props.key || this.props.nodeid, // this key is not safe and user must still specify key in <Node> components. check comment at UX.injectProps()
+                        // damiano: l'html viene settato correttamente a tutti tranne ad attribute, ref, operation (è perchè iniziano con <Select/> as root?)
                         ref: this.html,
                         id: this.props.nodeid,
                         "data-nodeid": this.props.nodeid,
@@ -458,7 +482,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         onMouseEnter:this.onEnter,
                         onMouseLeave:this.onLeave,
                         children: UX.recursiveMap(rawRElement/*.props.children*/,
-                            (rn: ReactNode, index: number) => UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index))});
+                            (rn: ReactNode, index: number, depthIndexes: number[]) => UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes))});
                 fixdoubleroot = false; // need to set the props to new root in that case.
                 if (fixdoubleroot) rawRElement = rawRElement.props.children;
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});

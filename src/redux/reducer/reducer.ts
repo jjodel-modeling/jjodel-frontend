@@ -205,7 +205,7 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
         const prevAction: ParsedAction = actions[i-1];
         const action: ParsedAction = actions[i];
         const actiontype = action.type.indexOf('@@') === 0 ? 'redux' : action.type;
-        console.log('executing action:', {action, actiontype, count: ++action.executionCount});
+        console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
 
         switch (actiontype) {
             /*

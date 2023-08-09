@@ -1,4 +1,13 @@
 export const uselessexport = {};
+
+/*
+*
+* <path className={"clickable"} style={{pointerEvents:"all"}} strokeWidth={4} stroke={"transparent"} fill={"none"} d={s.dpart}></path>,
+                    s.label &&[<text textAnchor="middle">{s.label}</text>,
+                    s.label && <foreignObject style={{x:(s.start.pt.x + s.end.pt.x)/2+"px", y:(s.start.pt.y + s.end.pt.y)/2+"px"}}>{s.label}</foreignObject>
+
+                 *
+                 * */
 /*let s: any, e: any; let edge: any;
 let jsx = <div className={"edge"} style={{overflow: "visible", width:0, height:0}}>
     <svg className={"hoverable"} style={{width:"100vw", height:"100vh", pointerEvents:"none"}}>

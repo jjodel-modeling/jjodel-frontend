@@ -78,6 +78,7 @@ export class EdgeOwnProps extends GraphElementOwnProps {
     end!: LGraphElement["id"];
     label?: DEdge["longestLabel"];
     labels?: DEdge["labels"];
+    key?: string;
 }
 
 export class EdgeStateProps extends GraphElementReduxStateProps {
@@ -87,4 +88,5 @@ export class EdgeStateProps extends GraphElementReduxStateProps {
     viewpoint!: LViewPoint;
     start!: LGraphElement;
     end!: LGraphElement;
+    // key: string;
 }

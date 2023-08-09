@@ -39,7 +39,7 @@ export type {Pointer, PtrString, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
     WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
 } from "../model/logicWrapper/LModelElement";
-export type {WEdge, WEdgePoint, WExtEdge, WGraph, WRefEdge, WGraphElement, WVoidEdge, WGraphVertex, WVertex, WVoidVertex} from "../model/dataStructure/GraphDataElements";
+export type {WEdge, WEdgePoint, WExtEdge, WGraph, WRefEdge, WGraphElement, WVoidEdge, WGraphVertex, WVertex, WVoidVertex, EdgeSegment, EdgeFillSegment} from "../model/dataStructure/GraphDataElements";
 
 export {windoww} from './types';
 export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps, EdgeStateProps, EdgeOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
@@ -128,6 +128,7 @@ export {Selectors as Selectorss} from "../redux/selectors/selectors";
 export var Selectors = windoww.Selectors as (GObjectt & typeof SelType);
 export {reducer, jodelInit} from "../redux/reducer/reducer";
 export {store} from "../redux/createStore";
+export {Debug} from "../debugtools/debug";
 
 export {OCL} from "../ocl/ocl";
 

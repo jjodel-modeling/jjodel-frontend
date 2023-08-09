@@ -35,11 +35,12 @@ export class DV {
     static edgeView(): string { return beautify(
         `<div className={"edge"} style={{overflow: "visible", width:0, height:0}}>
             <svg className={"hoverable"} style={{width:"100vw", height:"100vh", pointerEvents:"none"}}>
-                <path className={"preview"} strokeWidth={2} stroke={"gray"} fill={"none"} d={this.edge.d} style={{pointerEvents:"none"}}></path>
-                <path className={"content"} strokeWidth={4} stroke={"black"} fill={"none"} d={this.edge.d} style={{pointerEvents:"none"}}></path>             
-                {this.edge.segments.all.map(s => <><path className={"clickable"} style={{pointerEvents:"all"}} strokeWidth={4} stroke={"transparent"} fill={"none"} d={s.dpart}></path>
-                    {s.label &&<><text textAnchor="middle">{s.label}</text><foreignObject style={{x:(s.start.pt.x + s.end.pt.x)/2+"px", y:(s.start.pt.y + s.end.pt.y)/2+"px"}}>{s.label}</foreignObject></>}
-                 </>)}
+                <path className={"preview"} strokeWidth={2} stroke={"gray"} fill={"none"} d={this.edge.d}></path>
+                {this.edge.segments.all.flatMap(s => [
+                    <path className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={4} stroke={"black"} fill={"none"} d={s.dpart}></path>,
+                    s.label && <text textAnchor="middle">{s.label}</text>,
+                    s.label && <foreignObject style={{overflow: "visible", height:"24px", width:"300px", x:(s.start.pt.x + s.end.pt.x)/2+"px", y:(s.start.pt.y + s.end.pt.y)/2+"px"}}><div>{s.label}</div></foreignObject>
+                ])}
             </svg>
             {
                 false && <EdgePoint key={"midnode1"} view={"Pointer_ViewEdgePoint"} />
@@ -75,22 +76,14 @@ class DefaultView {
 
     public static model(): string {
         return `<div className={'root model'}>
-             {!this.data && "Model data missing."}
-             
-            <div className="edges" style={{zIndex:101, position: "absolute"}}>
-                {this.data && this.node.allSubNodes.length >=2 &&
-                    <DamEdge view={"Pointer_ViewEdge"} start={this.node.allSubNodes[0]} end={this.node.allSubNodes[1]}> label={"first 2 nodes"}
-                        <EdgePoint key={"midnode1"} view={"Pointer_ViewEdgePoint"} />
-                        <EdgePoint key={"midnode2"} view={"Pointer_ViewEdgePoint"} />
-                    </DamEdge>
-                }
-                {
+            {!this.data && "Model data missing."}
+            <div className="edges" style={{zIndex:101, position: "absolute"}}>{
                     true && this.data.suggestedEdges.reference &&
-                    this.data.suggestedEdges.reference.map(se => <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdge"} />)
+                    this.data.suggestedEdges.reference.map(se => <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdge"} key={se.start.node.id+"~"+se.end.node.id}/>)
                 }
             </div>
-             {this.data && this.data.packages.map((child, index) => {
-                return <DefaultNode key={index} data={child.id}></DefaultNode>
+             {this.data && this.data.packages.map((pkg, index) => {
+                return <DefaultNode key={pkg.id} data={pkg.id}></DefaultNode>
             })}
             {this.data && this.data.allSubObjects.map((child, index) => {
                 return <DefaultNode key={index} data={child.id}></DefaultNode>

@@ -276,7 +276,7 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
     if (ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraphVertex; else
     if (ownProps.isVertex && !ownProps.isGraph) DGraphElementClass = DVertex; else
     if (!ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraph;
-    else DGraphElementClass = DGraphElement;
+    else DGraphElementClass = DGraphElement; // DField;
 
     if (DGraphElementClass === DVertex && ownProps.isVoid) DGraphElementClass = DVoidVertex;
     const superret: StateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass) as StateProps;

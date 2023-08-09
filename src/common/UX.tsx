@@ -13,20 +13,25 @@ import Swal from "sweetalert2";
 @RuntimeAccessible
 export class UX{
 
-    static recursiveMap<T extends ReactNode | ReactNode[] | null | undefined>(children: T, fn: (rn: T, i: number)=>T): T {
-        const innermap = (child: ReactNode, i: number): T => {
+    static recursiveMap<T extends ReactNode | ReactNode[] | null | undefined>(children: T, fn: (rn: T, i: number, depthIndices: number[])=>T, depthIndices: number[] = []): T {
+        // NB: depthIndices is correct but if there is an expression children evaluated to false like {false && <jsx>},
+        // it counts as children iterated regardless. so html indices might be apparently off, but like this is even safer as indices won't change when conditions are changed.
+        const innermap = (child: ReactNode, i1: number, depthIndices: number[]): T => {
             if (!React.isValidElement(child)) { return child as T; }
             if (child.props.children) {
+                // let deeperDepthIndices = [...depthIndices, i1];  // depthIndices; //
+                // should probably change deeperDepthIndices in [...deeperDepthIndices, i] in next uncommented line.
                 // Giordano: add ignore for webpack
                 //@ts-ignore
-                child = React.cloneElement(child, { children: UX.recursiveMap(child.props.children, fn) });
+                child = React.cloneElement(child, { children: UX.recursiveMap(child.props.children,
+                        (e: T, i2: number, ii) => fn(e, i2, ii), depthIndices) });
             }
-            return fn(child as T, i);
+            return fn(child as T, i1, depthIndices);
         };
-        if (!Array.isArray(children)) return innermap(children as ReactNode, 0) as T;
-        return React.Children.map(children, (c: T, i: number)=>innermap(c, i)) as T;
+        if (!Array.isArray(children)) return innermap(children as ReactNode, 0, [...depthIndices, 0]) as T;
+        return React.Children.map(children, (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as T;
     }
-    static injectProp(parentComponent: GraphElementComponent, e: ReactNode, gvidmap_useless: Dictionary<DocString<'VertexID'>, boolean>, parentnodeid: string, index: number): ReactNode {
+    static injectProp(parentComponent: GraphElementComponent, e: ReactNode, gvidmap_useless: Dictionary<DocString<'VertexID'>, boolean>, parentnodeid: string, index: number, indices: number[]): ReactNode {
         const re: ReactElement | null = UX.ReactNodeAsElement(e);
         if (!re) return e;
         // @ts-ignore this
@@ -55,8 +60,9 @@ export class UX{
                 const injectProps2: InputOwnProps | SelectOwnProps | TextAreaOwnProps = {} as any;
                 const parentnodeid = parentComponent.props.node?.id;
                 injectProps2.data = re.props.data || (typeof parentComponent.props.data === "string" ? parentComponent.props.data : parentComponent.props.data?.id);
+                // !IMPORTANT! this key does not remove the responsability of adding keys to <GraphElement>s. this is assigning the key to the first returned element by component A,
+                // but react needs to distinguish component A from other components, and he still doesn't have a key. in fact this is useless as this component can only have 1 child
                 injectProps2.key = re.props.key || (parentnodeid + "^input_"+index);
-                // console.log("cloning jsx input:", re, injectProps2);
                 return React.cloneElement(re, injectProps2);
             case windoww.Components.GraphElementComponent.name:
             // case windoww.Components.DefaultNode.name:
@@ -79,7 +85,7 @@ export class UX{
                 // const validVertexIdCondition = (id: string): boolean => gvidmap_useless[id];
                 // todo: come butto dei sotto-vertici dentro un vertice contenitore? o dentro un sotto-grafo? senza modificare il jsx ma solo draggando?
                 const dataid = typeof re.props.data === "string" ? re.props.data : re.props.data?.id;
-                const idbasename: string = re.props.nodeid || (injectProps.parentnodeid)+"^"+index;//injectProps.graphid + '^' + dataid;
+                const idbasename: string = re.props.nodeid || (injectProps.parentnodeid)+"^"+indices.join(",");//injectProps.graphid + '^' + dataid;
                 // console.log("setting nodeid", {injectProps, props:re.props, re});
                 // Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
                 Log.exDev(!injectProps.graphid, 'vertex is missing mandatory props (graphid).', {graphid: injectProps.graphid, dataid, props: re.props});

@@ -93,6 +93,7 @@ import type {
 } from "../model/logicWrapper";
 // import type {Pointer} from "./typeconverter";
 import type {CClass, Constructor, Dictionary, DocString, GObject, orArr, Proxyfied, unArr} from "./types";
+import {EdgeBendingMode, EdgeGapMode, PrimitiveType} from "./types";
 import type {
     DViewElement,
     DViewTransientProperties,
@@ -102,7 +103,7 @@ import type {
     WViewTransientProperties
 } from "../view/viewElement/view";
 import type {LogicContext} from "./proxy";
-import type {IStore} from "./index";
+import type {EdgeSegment, IStore, EdgeFillSegment} from "./index";
 import {
     Action,
     BEGIN,
@@ -116,11 +117,9 @@ import {
     ParsedAction,
     SetFieldAction,
     SetRootFieldAction,
-    store, LViewPoint,
+    store,
     U,
 } from "./index";
-import {Geom} from "../common/Geom";
-import {Tree} from "functional-red-black-tree";
 import TreeModel from "tree-model";
 
 var windoww = window as any;
@@ -263,9 +262,9 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         const superclass = typeof superClassName === "string" ? RuntimeAccessibleClass.get(superClassName) : superClassName;
         const thisclass = typeof className === "string" ? RuntimeAccessibleClass.get(className) : className;
         if (!superclass || !thisclass) return false;
-        console.log("extends.1:", {thisclass, superclass});
-        console.log("extends.2:", {iof:(thisclass instanceof superclass),
-            tree: !!(RuntimeAccessibleClass.extendTree.first((node) => node.model === superclass)?.first((node) => node.model === thisclass))});
+        //console.trace("extends.1:", {thisclass, superclass});
+        // console.log("extends.2:", {iof:(thisclass instanceof superclass),
+        //     tree: !!(RuntimeAccessibleClass.extendTree.first((node) => node.model === superclass)?.first((node) => node.model === thisclass))});
         if (superclass === thisclass) return returnIfEqual;
         // for (let aaa in RuntimeAccessibleClass.extendTree.find(superClassName)) { }
 
@@ -380,6 +379,7 @@ export type LtoD<LX extends LPointerTargetable, DX = LX extends LEnumerator ? DE
 export type LtoW<LX extends LPointerTargetable, WX = LX extends LEnumerator ? WEnumerator : (LX extends LAttribute ? WAttribute : (LX extends LReference ? WReference : (LX extends LRefEdge ? WRefEdge : (LX extends LExtEdge ? WExtEdge : (LX extends LDataType ? WDataType : (LX extends LClass ? WClass : (LX extends LStructuralFeature ? WStructuralFeature : (LX extends LParameter ? WParameter : (LX extends LOperation ? WOperation : (LX extends LEdge ? WEdge : (LX extends LEdgePoint ? WEdgePoint : (LX extends LGraphVertex ? WGraphVertex : (LX extends LModel ? WModel : (LX extends LValue ? WValue : (LX extends LObject ? WObject : (LX extends LEnumLiteral ? WEnumLiteral : (LX extends LPackage ? WPackage : (LX extends LClassifier ? WClassifier : (LX extends LTypedElement ? WTypedElement : (LX extends LVertex ? WVertex : (LX extends LVoidEdge ? WVoidEdge : (LX extends LVoidVertex ? WVoidVertex : (LX extends LGraph ? WGraph : (LX extends LNamedElement ? WNamedElement : (LX extends LAnnotation ? WAnnotation : (LX extends LGraphElement ? WGraphElement : (LX extends LMap ? WMap : (LX extends LModelElement ? WModelElement : (LX extends LUser ? WUser : (LX extends LPointerTargetable ? WPointerTargetable : (ERROR)))))))))))))))))))))))))))))))> = WX;
 export type WtoD<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? DEnumerator : (IN extends WAttribute ? DAttribute : (IN extends WReference ? DReference : (IN extends WRefEdge ? DRefEdge : (IN extends WExtEdge ? DExtEdge : (IN extends WDataType ? DDataType : (IN extends WClass ? DClass : (IN extends WStructuralFeature ? DStructuralFeature : (IN extends WParameter ? DParameter : (IN extends WOperation ? DOperation : (IN extends WEdge ? DEdge : (IN extends WEdgePoint ? DEdgePoint : (IN extends WGraphVertex ? DGraphVertex : (IN extends WModel ? DModel : (IN extends WValue ? DValue : (IN extends WObject ? DObject : (IN extends WEnumLiteral ? DEnumLiteral : (IN extends WPackage ? DPackage : (IN extends WClassifier ? DClassifier : (IN extends WTypedElement ? DTypedElement : (IN extends WVertex ? DVertex : (IN extends WVoidEdge ? DVoidEdge : (IN extends WVoidVertex ? DVoidVertex : (IN extends WGraph ? DGraph : (IN extends WNamedElement ? DNamedElement : (IN extends WAnnotation ? DAnnotation : (IN extends WGraphElement ? DGraphElement : (IN extends WMap ? DMap : (IN extends WModelElement ? DModelElement : (IN extends WUser ? DUser : (IN extends WPointerTargetable ? DPointerTargetable : (IN extends WViewElement ? DViewElement : (IN extends WViewTransientProperties ? DViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
 export type WtoL<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? LEnumerator : (IN extends WAttribute ? LAttribute : (IN extends WReference ? LReference : (IN extends WRefEdge ? LRefEdge : (IN extends WExtEdge ? LExtEdge : (IN extends WDataType ? LDataType : (IN extends WClass ? LClass : (IN extends WStructuralFeature ? LStructuralFeature : (IN extends WParameter ? LParameter : (IN extends WOperation ? LOperation : (IN extends WEdge ? LEdge : (IN extends WEdgePoint ? LEdgePoint : (IN extends WGraphVertex ? LGraphVertex : (IN extends WModel ? LModel : (IN extends WValue ? LValue : (IN extends WObject ? LObject : (IN extends WEnumLiteral ? LEnumLiteral : (IN extends WPackage ? LPackage : (IN extends WClassifier ? LClassifier : (IN extends WTypedElement ? LTypedElement : (IN extends WVertex ? LVertex : (IN extends WVoidEdge ? LVoidEdge : (IN extends WVoidVertex ? LVoidVertex : (IN extends WGraph ? LGraph : (IN extends WNamedElement ? LNamedElement : (IN extends WAnnotation ? LAnnotation : (IN extends WGraphElement ? LGraphElement : (IN extends WMap ? LMap : (IN extends WModelElement ? LModelElement : (IN extends WUser ? LUser : (IN extends WPointerTargetable ? LPointerTargetable : (IN extends WViewElement ? LViewElement : (IN extends WViewTransientProperties ? LViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
+export type labelfunc = (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
 
 let canFireActions: boolean = true;
 @RuntimeAccessible
@@ -641,13 +641,17 @@ export class Constructors<T extends DPointerTargetable>{
     DVoidEdge(start: DGraphElement["id"] | DGraphElement | LGraphElement | DModelElement["id"] | DModelElement | LModelElement,
           end: DGraphElement["id"] | DGraphElement | LGraphElement | DModelElement["id"] | DModelElement | LModelElement,
           longestLabel: DEdge["longestLabel"], labels: DEdge["labels"]): this {
-        const thiss: DEdge = this.thiss as any;
+        const thiss: DVoidEdge = this.thiss as any;
         let startid: DGraphElement["id"] = (windoww.LGraphElement as typeof LGraphElement).getNodeId(start);
         let endid: DGraphElement["id"] = (windoww.LGraphElement as typeof LGraphElement).getNodeId(end);
         Log.ex(!startid || !endid, "cannot create an edge without start or ending nodes", {start, end, startid, endid});
         thiss.midnodes = [];
         thiss.start = startid;
         thiss.end = endid;
+        // thiss.labels = undefined;
+        let ll: labelfunc = (e: LVoidEdge, s: EdgeSegment, allNodes: LGraphElement[], allSegments: EdgeSegment[]
+        ) => (s.start.ge?.model as any)?.name + " ~ " + (s.end.ge?.model as any)?.name + "(" + s.length.toFixed(1) + ")";
+        thiss.longestLabel = ll;
         if (this.persist) {
             startid && SetFieldAction.new(startid, "pointedBy", PointedBy.fromID(thiss.id, "start"), '+=');
             endid && SetFieldAction.new(endid, "pointedBy", PointedBy.fromID(thiss.id, "end"), '+=');
@@ -711,6 +715,8 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.edgeEndOffset_isPercentage = true;
         thiss.edgeStartStopAtBoundaries = true;
         thiss.edgeEndStopAtBoundaries = true;
+        thiss.bendingMode = EdgeBendingMode.Line;
+        thiss.edgeGapMode = EdgeGapMode.gap;
 
         if (this.persist) {
             // no pointedBy?
