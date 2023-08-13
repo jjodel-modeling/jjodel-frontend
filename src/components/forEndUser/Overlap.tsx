@@ -1,6 +1,6 @@
 import React, {CSSProperties, PureComponent, ReactChild, ReactNode} from "react";
 // import { connect } from "react-redux";
-// import {IStore} from "../../redux/store";
+// import {DState} from "../../redux/store";
 import './overlap.scss';
 
 // private
@@ -47,7 +47,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 ////// mapper func
 /*
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     /// to fill
     return ret; }
@@ -65,7 +65,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
   children: [],
 } as OwnProps; // todo: se esporto con connect fose devo farlo al risultato della connect
 export default Overlap;
-/*connect<StateProps, DispatchProps, OwnProps, IStore>(
+/*connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(Overlap);*/

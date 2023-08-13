@@ -1,8 +1,7 @@
-import {IStore} from "../../redux/store";
 import React, {Dispatch, ReactElement, useEffect} from "react";
 import {useStateIfMounted} from "use-state-if-mounted";
 import {connect} from "react-redux";
-import {GObject, LClass, LPointerTargetable, LUser} from "../../joiner";
+import {DState, GObject, LClass, LPointerTargetable, LUser} from "../../joiner";
 import "./edge.scss";
 import Xarrow, {Xwrapper} from "react-xarrows";
 
@@ -32,7 +31,7 @@ interface StateProps { user?: LUser, source?: LClass, edgeSettings?: GObject }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = { } as any;
     ret.user = LPointerTargetable.from(state.isEdgePending.user);
     ret.source = LPointerTargetable.from(state.isEdgePending.source);
@@ -46,7 +45,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const PendingEdgeConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const PendingEdgeConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(PendingEdgeComponent);

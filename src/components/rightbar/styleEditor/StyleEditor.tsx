@@ -1,6 +1,6 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../../redux/store";
+import {DState} from "../../../redux/store";
 import {LModelElement, LViewElement, LGraphElement, Input}  from "../../../joiner";
 
 function StyleEditorComponent(props: AllProps) {
@@ -31,7 +31,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     let ret: StateProps = {};
     const selected = state._lastSelected;
     if(selected) {
@@ -55,7 +55,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const StyleEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const StyleEditorConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(StyleEditorComponent);

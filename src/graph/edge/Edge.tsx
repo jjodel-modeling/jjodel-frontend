@@ -1,4 +1,4 @@
-import {IStore} from "../../redux/store";
+import {DState} from "../../redux/store";
 import React, {Dispatch, ReactElement, useEffect} from "react";
 import {connect} from "react-redux";
 import {LGraphElement} from "../../model/dataStructure";
@@ -99,7 +99,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const edgeSettings = state._edgeSettings;
     const showAnchor = false //edgeSettings.showAnchor;
     const size = edgeSettings.strokeWidth;
@@ -114,7 +114,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const EdgeConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const EdgeConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(EdgeComponent);

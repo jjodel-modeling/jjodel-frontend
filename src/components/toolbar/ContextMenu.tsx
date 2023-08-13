@@ -1,10 +1,9 @@
-import {IStore} from "../../redux/store";
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import "./style.scss";
 import {CreateElementAction, SetRootFieldAction} from "../../redux/action/action";
 import {DValue, LNamedElement, LValue} from "../../model/logicWrapper";
-import {DViewElement, GObject, GraphElementComponent, LGraphElement, LUser, LVoidVertex} from "../../joiner";
+import {DViewElement, GObject, GraphElementComponent, LGraphElement, LUser, LVoidVertex, DState} from "../../joiner";
 
 function ContextMenuComponent(props: AllProps) {
 
@@ -80,7 +79,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const user = LUser.from(state.currentUser);
     const display = state.contextMenu.display;
     const position = {x: state.contextMenu.x, y: state.contextMenu.y}
@@ -98,7 +97,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const ContextMenuConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const ContextMenuConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(ContextMenuComponent);

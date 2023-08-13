@@ -1,8 +1,8 @@
 import React, {Dispatch, ReactElement, useState} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../redux/store";
 import './style.scss';
 import {
+    DState,
     CreateElementAction,
     DEdgePoint,
     DViewElement,
@@ -90,7 +90,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.debug = state.debug;
     return ret;
@@ -102,7 +102,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const TopBarConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const TopBarConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(Topbar);

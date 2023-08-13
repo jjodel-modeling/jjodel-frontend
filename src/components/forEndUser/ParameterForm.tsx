@@ -2,7 +2,7 @@
 //     Overlap,
 //     GObject,
 //     Pointer,
-//     IStore,
+//     DState,
 //     DPointerTargetable,
 //     LOperation,
 //     Dictionary,
@@ -66,7 +66,7 @@
 // type AllProps = Overlap<OwnProps, Overlap<StateProps, DispatchProps>>;
 //
 //
-// function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+// function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
 //     const ret: StateProps = {} as any;
 //     const objectptr: Pointer = typeof ownProps.object === 'string' ? ownProps.object : ownProps.object.id;
 //     ret.object = LPointerTargetable.fromPointer(objectptr);

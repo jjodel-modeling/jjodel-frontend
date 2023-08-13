@@ -1,8 +1,7 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../../redux/store";
 import type {Pointer, DModel} from "../../../joiner";
-import {LGraph, LModel, DGraph, DModelElement, LModelElement} from "../../../joiner";
+import {DState, LGraph, LModel, DGraph, DModelElement, LModelElement} from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import PendingEdge from "../../../graph/edge/PendingEdge";
@@ -40,7 +39,7 @@ interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     // ret.metamodels = LModel.fromPointer(state.m2models);
     // ret.models = LModel.fromPointer(state.m1models);
@@ -56,7 +55,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const InfoTabConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const InfoTabConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(InfoTabComponent);

@@ -11,7 +11,7 @@
 //     DPointerTargetable,
 //     DRefEdge,
 //     DReference,
-//     IStore,
+//     DState,
 //     Json,
 //     JsType,
 //     LClassifier,

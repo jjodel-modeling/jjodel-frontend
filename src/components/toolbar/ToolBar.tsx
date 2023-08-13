@@ -1,9 +1,8 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
-import {IStore} from "../../redux/store";
-
 import {connect} from "react-redux";
 import "./toolbar.scss";
 import {
+    DState,
     DGraphElement, Dictionary,
     DModel,
     DModelElement, DNamedElement, DObject, DocString,
@@ -15,12 +14,12 @@ import {
     LViewElement,
     MyProxyHandler,
     Pointer,
-    SetFieldAction
+    SetFieldAction, RuntimeAccessibleClass, DVoidEdge, DEdge, DEdgePoint
 } from "../../joiner";
 
 interface ThisState {}
 
-function getItems(data: LModelElement, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]>, items: string[]): ReactNode[] {
+function getItems(data: LModelElement, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]>, items: string[], node?:LGraphElement): ReactNode[] {
     const reactNodes: ReactNode[] = [];
     for (let item_dname of items) {
         if (item_dname[0]=="_") {
@@ -29,8 +28,20 @@ function getItems(data: LModelElement, myDictValidator: Dictionary<DocString<"DC
         }
         let item = item_dname.substring(1).toLowerCase();
         reactNodes.push(<div className={"toolbar-item " + item} key={item_dname} onClick={() => {
-            let d = data.addChild(item);
-            if (myDictValidator[item_dname]) select(d);
+            switch(item_dname){
+                case DVoidEdge.name:
+                case DEdge.name:
+                    // no add edges through toolbar for now
+                    break;
+                case DEdgePoint.name:
+                    let edge: LVoidEdge = node as LVoidEdge;
+                    edge.mi
+                    DEdgePoint.new() ??? nope? this should be made by render() so how i trigger it?
+                    need another colection to instruct the edge what to render in jsx through edge.something.map( o => <EdgePoint data={o} />)
+                default:
+                    let d = data.addChild(item);
+                    if (myDictValidator[item_dname]) select(d); break;
+            }
         }}>+{item}</div>);
     }
     return reactNodes;
@@ -38,15 +49,18 @@ function getItems(data: LModelElement, myDictValidator: Dictionary<DocString<"DC
 function select(d: DModelElement): DModelElement {
     setTimeout(()=>$(".Graph [data-dataid='"+d?.id+"']").trigger("click"), 10);
     return d; }
+function selectNode(d: DGraphElement): DGraphElement {
+    setTimeout(()=>$(".Graph [data-nodeid='"+d?.id+"']").trigger("click"), 10);
+    return d; }
 
 function ToolBarComponent(props: AllProps, state: ThisState) {
-
     const lModelElement: LModelElement = props.selected?.modelElement ? props.selected?.modelElement : MyProxyHandler.wrap(props.model);
+    const node: LGraphElement | undefined = props.selected?.node;
     const isMetamodel: boolean = props.isMetamodel;
     const metamodel: LModel|undefined = props.metamodel;
     // const myDictValidator: Map<string, ReactNode[]> = new Map();
     const downward: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]> = {}
-    const addChildren = (items: string[]) => items ? getItems(lModelElement, downward, [...new Set(items)]) : [];
+    const addChildren = (items: string[]) => items ? getItems(lModelElement, downward, [...new Set(items)], node) : [];
 
     downward["DModel"] = ["DPackage"];
     downward["DPackage"] = ["DPackage", "DClass", "DEnumerator"];
@@ -68,6 +82,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     upward["DPackage"] = ["_pDPackage"]; //, "DModel"];
     // upward["DClass"] = ["_pDPackage", "DClass", "DEnumerator"];
 
+    if (RuntimeAccessibleClass.extends(props.selectedNode, DVoidEdge))
     if (isMetamodel) {
         return(<div className={"toolbar"}>
             <h6>Add sibling</h6>
@@ -115,7 +130,7 @@ interface StateProps {
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.selectedid = state._lastSelected;
     ret.selected = ret.selectedid && {
@@ -133,7 +148,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const ToolBarConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const ToolBarConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(ToolBarComponent);

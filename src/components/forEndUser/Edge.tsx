@@ -1,7 +1,7 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../redux/store";
 import Xarrow from "react-xarrows";
+import {DState} from "../../joiner";
 
 
 function EdgeComponent(props: AllProps) {
@@ -21,7 +21,7 @@ interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     return ret;
 }
@@ -32,7 +32,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const EdgeConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const EdgeConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(EdgeComponent);

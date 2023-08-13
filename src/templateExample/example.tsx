@@ -1,6 +1,6 @@
 import React, {Dispatch, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
-import {IStore} from "../joiner";
+import {DState} from "../joiner";
 import './example.scss';
 
 // private
@@ -39,7 +39,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 ////// mapper func
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     /// to fill
     return ret; }
@@ -50,7 +50,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret; }
 
 
-export default connect<StateProps, DispatchProps, OwnProps, IStore>(
+export default connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(ExampleComponent);

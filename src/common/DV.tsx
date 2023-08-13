@@ -39,7 +39,13 @@ export class DV {
                 {this.edge.segments.all.flatMap(s => [
                     <path className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={4} stroke={"black"} fill={"none"} d={s.dpart}></path>,
                     s.label && <text textAnchor="middle">{s.label}</text>,
-                    s.label && <foreignObject style={{overflow: "visible", height:"24px", width:"300px", x:(s.start.pt.x + s.end.pt.x)/2+"px", y:(s.start.pt.y + s.end.pt.y)/2+"px"}}><div>{s.label}</div></foreignObject>
+                    s.label && <foreignObject style={{overflow: "visible", height:"0", width:"0", whiteSpace:"pre", x:(s.start.pt.x + s.end.pt.x)/2+"px", y:(s.start.pt.y + s.end.pt.y)/2+"px"}}>
+                    <div
+                     style={{width: "fit-content",
+                     // first transform is h-center. second is rotate, third adds [0, 50%] of 50% vertical offset AFTER rotation to take label out of edge. fourth is to add a margin.
+                      transform: "translate(-50%, 0%) rotate("+s.rad+"rad) translate(0%, -"+(1-0.5*Math.abs(Math.abs(s.rad)%Math.PI)/(Math.PI/2))*100+"%)"+
+                     " translate(0%, -5px"}}>{s.label}</div>
+                    </foreignObject>
                 ])}
             </svg>
             {
@@ -69,6 +75,7 @@ valuecolormap[ShortAttribETypes.EString] = "green";
 valuecolormap[ShortAttribETypes.EChar] = "green";
 valuecolormap[ShortAttribETypes.void] = "gray";
 
+// &&[]bn
 let valuecolormap_str = JSON.stringify(valuecolormap);
 
 
@@ -77,16 +84,19 @@ class DefaultView {
     public static model(): string {
         return `<div className={'root model'}>
             {!this.data && "Model data missing."}
+            <div className="fake edges" style={{zIndex:101, position: "absolute"}}>
+                {this.data.children.length > 1 && this.data.children[1].node && <DamEdge start={this.data.children[0].node} end={this.data.children[1].node} view={"Pointer_ViewEdge"} key={"pkg"}/>  }
+            </div>
             <div className="edges" style={{zIndex:101, position: "absolute"}}>{
                     true && this.data.suggestedEdges.reference &&
-                    this.data.suggestedEdges.reference.map(se => <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdge"} key={se.start.node.id+"~"+se.end.node.id}/>)
+                    this.data.suggestedEdges.reference.map(se => !se.vertexOverlaps && <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdge"} key={se.start.node.id+"~"+se.end.node.id}/>)
                 }
             </div>
              {this.data && this.data.packages.map((pkg, index) => {
                 return <DefaultNode key={pkg.id} data={pkg.id}></DefaultNode>
             })}
             {this.data && this.data.allSubObjects.map((child, index) => {
-                return <DefaultNode key={index} data={child.id}></DefaultNode>
+                return <DefaultNode key={child.id} data={child.id}></DefaultNode>
             })}
         </div>`;
     }
@@ -103,7 +113,7 @@ class DefaultView {
             <hr />
             <div className={'package-children'}>
                 {this.data.children.map((child, index) => {
-                    return <DefaultNode key={index} data={child.id}></DefaultNode>
+                    return <DefaultNode key={child.id} data={child.id}></DefaultNode>
                 })}
             </div>
         </div>`;
@@ -114,11 +124,10 @@ class DefaultView {
             <Input jsxLabel={<b className={'class-name'}>EClass:</b>} 
                    data={this.data.id} field={'name'} hidden={true} autosize={true} />
             <hr/>
-            <div className={'class-children'}>
-                {this.data.children.map((child, index) => {
-                    return <DefaultNode key={index} data={child.id}></DefaultNode>
-                })}
-            </div>
+            {/* i kept them separated because i want them in this order. i could have used data.children once, or put all in same container to mix them. */}
+            <div className={'class-children'}>{ this.data.attributes.map(c => <DefaultNode key={c.id} data={c.id} />) }</div>
+            <div className={'class-children'}>{ this.data.references.map(c => <DefaultNode key={c.id} data={c.id} />) }</div>
+            <div className={'class-children'}>{ this.data.operations.map(c => <DefaultNode key={c.id} data={c.id} />) }</div>
         </div>`;
     }
 
@@ -129,7 +138,7 @@ class DefaultView {
             <hr />
             <div className={'enumerator-children'}>
                 {this.data.children.map((child, index) => {
-                    return <DefaultNode key={index} data={child.id}></DefaultNode>
+                    return <DefaultNode key={child.id} data={child.id}></DefaultNode>
                 })}
             </div>
         </div>`;
@@ -170,7 +179,7 @@ class DefaultView {
             <hr />
             <div className={'object-children'}>
                 {this.data.features.map((child, index) => {
-                    return <DefaultNode key={index} data={child.id}></DefaultNode>
+                    return <DefaultNode key={child.id} data={child.id}></DefaultNode>
                 })}
             </div>
         </div>`;
@@ -188,7 +197,7 @@ class DefaultView {
     public static defaultPackage() {
         return `<div style={{backgroundColor: 'transparent', position: 'fixed', width: '-webkit-fill-available', height: '-webkit-fill-available'}}>
             {this.data.children.map((child, index) => {
-            return <DefaultNode key={index} data={child.id}></DefaultNode>
+            return <DefaultNode key={child.id} data={child.id}></DefaultNode>
             })}
         </div>`;
     }

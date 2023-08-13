@@ -86,7 +86,7 @@ export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibl
     ownKeys(target: T): ArrayLike<string | symbol>{ return Object.getOwnPropertyNames(target); }
     static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
         RET extends CAN_THROW extends true ? L : L | undefined  = CAN_THROW extends true ? L : L>
-    (data: D | Pointer | undefined, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW): RET{
+    (data: D | Pointer | undefined | null, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW): RET{
 
 //    static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable, RET extends boolean = false>
 //        (data: D | Pointer<DViewElement>, baseObjInLookup?: DPointerTargetable, path: string = '', canthrow: RET = false as RET): RET {
@@ -258,12 +258,15 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
 
 
+            // if specific custom getter exist
             if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) {
                 let getterMethod: Function = this.lg[this.g + propKey]; // || this.defaultGetter;
                 // console.log("gets method", {getterMethod, lg:this.lg, thiss: this});
-                return getterMethod ? getterMethod(new LogicContext(proxyitself as any, targetObj)) : this.defaultGetter(targetObj, propKey, proxyitself);
+                if (getterMethod) return getterMethod(new LogicContext(proxyitself as any, targetObj));
 
             }
+            // if custom generic getter exist
+            if (this.lg._defaultGetter) return this.lg._defaultGetter(new LogicContext(proxyitself as any, targetObj), propKey);
 
 
             switch (propKey){

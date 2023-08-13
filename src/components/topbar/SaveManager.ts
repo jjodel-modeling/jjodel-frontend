@@ -1,6 +1,6 @@
 import {
     Dictionary, DUser,
-    EcoreParser, GObject, IStore,
+    EcoreParser, GObject, DState,
     Json,
     LModel,
     LoadAction,
@@ -11,7 +11,7 @@ import {
 
 @RuntimeAccessible
 export class SaveManager {
-    private static tmpsave: IStore;
+    private static tmpsave: DState;
 
     static save(): void {
         SaveManager.tmpsave = store.getState();

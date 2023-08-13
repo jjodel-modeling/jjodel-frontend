@@ -1,7 +1,6 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../redux/store";
-import {DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer} from "../../joiner";
+import {DState, DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer} from "../../joiner";
 import {SelectOwnProps} from "./Select";
 
 
@@ -55,7 +54,7 @@ interface DispatchProps { }
 type AllProps = Overlap<TextAreaOwnProps, Overlap<StateProps, DispatchProps>>;
 
 
-function mapStateToProps(state: IStore, ownProps: TextAreaOwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: TextAreaOwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
     ret.data = LPointerTargetable.fromPointer(pointer);
@@ -68,7 +67,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const TextAreaConnected = connect<StateProps, DispatchProps, TextAreaOwnProps, IStore>(
+export const TextAreaConnected = connect<StateProps, DispatchProps, TextAreaOwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(TextAreaComponent);

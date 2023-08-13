@@ -1,4 +1,4 @@
-import type { NotAString } from "../../joiner/classes";
+import type { LVoidVertex } from "../../joiner";
 import {
     BEGIN,
     Constructor,
@@ -11,7 +11,7 @@ import {
     END,
     getWParams,
     GObject,
-    IStore,
+    DState,
     Leaf,
     LEdge,
     LGraphElement,
@@ -38,8 +38,7 @@ import {
     TargetableProxyHandler,
     U,
     unArr,
-    WPointerTargetable, DUser, DocString
-} from "../../joiner";
+    WPointerTargetable, DUser, DocString, GraphSize} from "../../joiner";
 import {Info, Json, ObjectWithoutPointers, orArr, PrimitiveType} from "../../joiner/types";
 
 import {
@@ -1233,15 +1232,15 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         return LPointerTargetable.from(enumerators.map(e=> e.id)); }
 
     private get_allSubClasses(context: Context): LClass[] {
-        const s: IStore = store.getState();
+        const s: DState = store.getState();
         return this.get_allSubPackages(context, s).flatMap(p => p.classes || []); }
     private get_allSubEnums(context: Context): LEnumerator[] { return this.get_allSubEnumerators(context); }
     private get_allSubEnumerators(context: Context): LEnumerator[] {
-        const s: IStore = store.getState();
+        const s: DState = store.getState();
         return this.get_allSubPackages(context, s).flatMap(p => (p.enums || []));
     }
 
-    private get_allSubPackages(context: Context, state?: IStore): LPackage[] {
+    private get_allSubPackages(context: Context, state?: DState): LPackage[] {
         // return context.data.packages.map(p => LPointerTargetable.from(p));
         state = state || store.getState();
         let tocheck: Pointer<DPackage>[] = context.data.subpackages || [];
@@ -3222,13 +3221,30 @@ export class EdgeStarter<T1=any, T2=any>{ // <T1 extends LPointerTargetable = LP
     end: LModelElement;
     startNode: LGraphElement;
     endNode: LGraphElement;
+    startVertex: LVoidVertex;
+    endVertex: LVoidVertex;
+    startSize: GraphSize;
+    endSize: GraphSize;
+    startVertexSize: GraphSize;
+    endVertexSize: GraphSize;
     otherEnds: LGraphElement[];
+    overlaps: boolean;
+    vertexOverlaps: boolean;
     constructor(start: LModelElement, end: LModelElement, sn: LGraphElement, en: LGraphElement, otherPossibleEnds: LGraphElement[] = []) {
         this.start = start;
         this.end = end;
         this.startNode = sn;
         this.endNode = en;
-        this.otherEnds = otherPossibleEnds || end.nodes; }
+        this.otherEnds = otherPossibleEnds || end.nodes;
+        this.startSize = sn.size;
+        this.endSize = en.size;
+        this.startVertex = sn.vertex as any;
+        this.endVertex = en.vertex as any;
+        this.startVertexSize = this.startVertex === sn ? this.startSize : this.startVertex.size;
+        this.endVertexSize = this.endVertex === en ? this.endSize : this.endVertex.size;
+        this.overlaps = this.startSize?.isOverlapping(this.endSize);
+        this.vertexOverlaps = this.startVertexSize?.isOverlapping(this.endVertexSize);
+    }
     static oneToMany<T1 extends LModelElement = LModelElement, T2 extends LModelElement = LModelElement>(start: T1, ends:T2[]): EdgeStarter<T1, T2>[] {
         let sn = start.node;
         if (!sn) return [];
@@ -3336,12 +3352,25 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     }
 
     public get_suggestedEdges(context: Context): this["suggestedEdges"]{
-        if (context.data.isMetamodel) return this.get_suggestedEdgesM2(context);
-        return this.get_suggestedEdgesM1(context);
+        let ret: this["suggestedEdges"];
+        if (context.data.isMetamodel) ret = this.get_suggestedEdgesM2(context);
+        else ret = this.get_suggestedEdgesM1(context);
+        /*
+        ret.extend = ret.extend || [];
+        ret.packageDependencies = ret.packageDependencies || [];
+        ret.reference = ret.reference || [];
+
+        console.log("suggested edges, pre filter", {...ret});
+        ret.extend = ret.extend.filter( r => !r.startNode.size.isOverlapping(r.endNode.size));
+        ret.packageDependencies = ret.packageDependencies.filter( r => !r.startNode.size.isOverlapping(r.endNode.size));
+        ret.reference = ret.reference.filter( r => !r.startNode.size.isOverlapping(r.endNode.size));
+
+        console.log("suggested edges, post filter", {...ret});*/
+        return ret;
     }
     private get_suggestedEdgesM2(context: Context): this["suggestedEdges"]{
         let ret: this["suggestedEdges"] = {} as any;
-        let s: IStore = store.getState();
+        let s: DState = store.getState();
         let classes: LClass[] = this.get_classes(context, s);
         let references: LReference[] = classes.flatMap(c=>c.references);
         ret.reference = references.map( (r) => {
@@ -3499,11 +3528,11 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     protected get_roots(context: Context): this["roots"] {
         return this.get_objects(context).filter( o => o.isRoot);
     }
-    protected get_classes(context: Context, s?: IStore): this["classes"] {
+    protected get_classes(context: Context, s?: DState): this["classes"] {
         s = s||store.getState();
         return this.get_allSubPackages(context, s).flatMap(p => p.classes || []);
     }
-    protected get_references(context: Context, s?: IStore): this["references"] {
+    protected get_references(context: Context, s?: DState): this["references"] {
         s = s||store.getState();
         return this.get_classes(context, s).flatMap(p => p.references || []);
     }
@@ -3512,12 +3541,12 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return this.get_enumerators(context);
     }
 
-    protected get_enumerators(context: Context, s?: IStore): this["enums"] {
+    protected get_enumerators(context: Context, s?: DState): this["enums"] {
         s = s||store.getState();
         return this.get_allSubPackages(context, s).flatMap(p => (p.enums || []));
     }
 
-    protected get_allSubPackages(context: Context, state?: IStore): this["allSubPackages"] {
+    protected get_allSubPackages(context: Context, state?: DState): this["allSubPackages"] {
         state = state || store.getState();
         let tocheck: Pointer<DPackage>[] = context.data.packages || [];
         let checked: Dictionary<Pointer, true> = {};
@@ -3533,7 +3562,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         }
         return LPointerTargetable.from(Object.keys(checked), state);
     }
-    protected get_allSubObjects(context: Context, state?: IStore): this["allSubObjects"] {
+    protected get_allSubObjects(context: Context, state?: DState): this["allSubObjects"] {
         state = state || store.getState();
         return (Selectors.getAll(DObject, undefined, state, true, true) as LObject[]).filter( (o: LObject) => o.model.id === context.data.id);
         /*
@@ -3575,6 +3604,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 }
 RuntimeAccessibleClass.set_extend(DNamedElement, DModel);
 RuntimeAccessibleClass.set_extend(LNamedElement, LModel);
+
+
 @RuntimeAccessible
 export abstract class DFactory_useless_ extends DPointerTargetable { // DModelElement
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -3791,7 +3822,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     protected get_defaultValue(context: Context): LClass["defaultValue"] { return context.proxyObject.instanceof.defaultValue; }
     protected set_referencedBy(val: string, context: Context): boolean { return this.wrongAccessMessage("referencedBy cannot be set directly. It should be updated automatically as side effect"); }
     protected get_referencedBy(context: Context): LObject["referencedBy"] {
-        let state: IStore = store.getState();
+        let state: DState = store.getState();
         let targeting: LObject[] = LPointerTargetable.fromArr(context.data.pointedBy.map( p => {
             let s: GObject = state;
             for (let key of PointedBy.getPathArr(p)) {
@@ -4166,7 +4197,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         };
         switch (typestr) {
             case "shapeless":
-                let state: IStore = store.getState();
+                let state: DState = store.getState();
                 mapperfunc = (val: any) => {
                     if (!val || typeof val !== "string") return val;
                     let l: any = LPointerTargetable.fromPointer(val, state);

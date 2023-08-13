@@ -4,7 +4,7 @@ import {
     Constructor, DGraph,
     DModelElement, DPointerTargetable,
     GObject,
-    IStore,
+    DState,
     LModelElement, LPointerTargetable, OCL, Pointer,
     RuntimeAccessibleClass,
     Selectors,
@@ -54,7 +54,7 @@ class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
 
     private ocltextchanged(oclText0: string| boolean): string{
         let oclText = ''+oclText0;
-        let state: IStore = windoww.store.getState();
+        let state: DState = windoww.store.getState();
         let dmp: DModelElement[] = Selectors.getAllMP(state);
         let lmp: LModelElement[] = Selectors.wrap(dmp, state);
 
@@ -137,7 +137,7 @@ interface DispatchProps {
 
 // private
 type AllProps = OwnProps & StateProps & DispatchProps;
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     console.log("ownProps.obj", ({state, ownProps:{...ownProps}}));
     if (!ownProps.obj) return ret;
@@ -148,7 +148,7 @@ function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     const ret: DispatchProps = {} as any;
     return ret; }
-export const OCLEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(mapStateToProps, mapDispatchToProps)(BidirectionalOCLEditor as any);
+export const OCLEditorConnected = connect<StateProps, DispatchProps, OwnProps, DState>(mapStateToProps, mapDispatchToProps)(BidirectionalOCLEditor as any);
 
 export const OCLEditorAce = (props: GObject & OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <OCLEditorConnected {...props} field={props.field} obj={props.obj} />

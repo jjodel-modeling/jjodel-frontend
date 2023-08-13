@@ -1,9 +1,8 @@
+import type {LClass, DPointerTargetable} from "../../joiner";
 import React, {Dispatch, LegacyRef, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../redux/store";
-import {LPointerTargetable, GObject, Pointer, LEnumerator, Selectors, LModelElement, Overlap} from "../../joiner";
-import type {LClass, DPointerTargetable} from "../../joiner";
 import toast, {Toaster} from "react-hot-toast";
+import {DState, LPointerTargetable, GObject, Pointer, LEnumerator, Selectors, LModelElement, Overlap} from "../../joiner";
 
 
 function SelectComponent(props: AllProps) {
@@ -106,7 +105,7 @@ interface DispatchProps { }
 type AllProps = Overlap<SelectOwnProps, Overlap<StateProps, DispatchProps>>;
 
 
-function mapStateToProps(state: IStore, ownProps: SelectOwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: SelectOwnProps): StateProps {
     const ret: StateProps = {} as any;
     if (!ownProps.data) return ret;
     const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
@@ -122,7 +121,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const SelectConnected = connect<StateProps, DispatchProps, SelectOwnProps, IStore>(
+export const SelectConnected = connect<StateProps, DispatchProps, SelectOwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(SelectComponent);

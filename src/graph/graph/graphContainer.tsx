@@ -1,7 +1,7 @@
 import React, {Dispatch, PureComponent, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 // import './graph.scss';
-import {DGraph, DModel, DPointerTargetable, IStore, LGraph, LModel} from "../../joiner";
+import {DGraph, DModel, DPointerTargetable, DState, LGraph, LModel} from "../../joiner";
 
 
 // private
@@ -76,7 +76,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 ////// mapper func
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     console.log('mapStateToProps', {ret, state, ownProps, models: state.models})
     ret.models = state.models.length ? state.models.map( (mid) => mid && DPointerTargetable.wrap(state.idlookup[mid] as DModel)) as LModel[] : [];
@@ -90,7 +90,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret; }
 
 
-const GraphsContainerConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+const GraphsContainerConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(GraphsContainerComponent);

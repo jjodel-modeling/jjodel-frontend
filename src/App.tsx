@@ -4,7 +4,7 @@ import './styles/view.scss';
 import './styles/style.scss';
 //import Dock from "./components/abstract/DockComponent";
 import Dock from "./components/abstract/DockLayout";
-import {IStore, statehistory} from "./joiner";
+import {DState, statehistory} from "./joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
 import {useEffectOnce} from "usehooks-ts";
 import SplashImage from './static/img/splash.png';
@@ -43,7 +43,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.debug = state.debug;
     return ret;
@@ -54,7 +54,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret;
 }
 
-export const AppConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const AppConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(App);

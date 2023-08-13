@@ -10,7 +10,7 @@ import {
     GraphElementOwnProps,
     GraphElementReduxStateProps,
     GraphElementStatee,
-    IStore,
+    DState,
     LClass,
     LModelElement,
     LPointerTargetable,
@@ -270,7 +270,7 @@ class DispatchProps extends GraphElementDispatchProps {
 
 export type AllPropss = OwnProps & StateProps & DispatchProps;
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     let DGraphElementClass: typeof DGraphElement;
     if (ownProps.isEdgePoint) DGraphElementClass = DEdgePoint; else
     if (ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraphVertex; else
@@ -302,7 +302,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const VertexConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const VertexConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(VertexComponent as any);

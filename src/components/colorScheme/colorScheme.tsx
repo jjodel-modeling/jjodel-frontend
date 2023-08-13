@@ -1,6 +1,6 @@
 import React, {Dispatch, PureComponent, ReactNode} from "react";
 import {connect} from "react-redux";
-import type {DGraph, Dictionary, DocString, IStore, Pointer} from "../../joiner";
+import type {DGraph, Dictionary, DocString, DState, Pointer} from "../../joiner";
 import './defaultColorScheme.scss';
 
 // private
@@ -42,7 +42,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 ////// mapper func
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.userMadeColorScheme = {};
     return ret; }
@@ -52,7 +52,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     /// to fill
     return ret; }
 
-export const ColorScheme = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const ColorScheme = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(ColorSchemeComponent);

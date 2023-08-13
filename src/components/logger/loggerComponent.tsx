@@ -132,7 +132,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 ////// mapper func
 
 /*
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     /// to fill
     return ret; }
@@ -142,7 +142,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     /// to fill
     return ret; }
 
-export const LoggerComponentConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const LoggerComponentConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(LoggerComponent);*/

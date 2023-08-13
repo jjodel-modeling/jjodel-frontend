@@ -7,7 +7,7 @@ import {
     Dictionary,
     DocString,
     DPointerTargetable,
-    IStore,
+    DState,
     Log,
     MyError,
     ParsedAction,
@@ -31,8 +31,8 @@ import TreeModel from 'tree-model';
 let windoww = window as any;
 let U: typeof UType = windoww.U;
 
-function deepCopyButOnlyFollowingPath(oldStateDoNotModify: IStore, action: ParsedAction, prevAction: ParsedAction, newVal: any): IStore {
-    let newRoot: IStore = {...oldStateDoNotModify} as IStore;
+function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: ParsedAction, prevAction: ParsedAction, newVal: any): DState {
+    let newRoot: DState = {...oldStateDoNotModify} as DState;
     let current: any = newRoot;
     if (!action.path?.length) throw new MyError("path length must be at least 1", {action});
     let gotChanged: boolean = false; // dovrebbe cambiare sempre, se non cambia non lancio neanche l'azione e non faccio la shallow copy, ma non si sa mai, così posso evitare un render se succede l' "insuccedibile"
@@ -150,7 +150,7 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: IStore, action: Parse
 
 
 // const pendingPointedByPaths: {from: DocString<"Path in store">, field: DocString<"keyof object found in from path">, to: Pointer}[] = [];
-function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction): IStore {
+function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction): DState {
     // per via di thunk se arrivo qui lo stato cambia sicuro in mono-client non synchro (non ri-assegno valori equivalenti)
     // todo: ma se arrivano in ordine sbagliato da altri client? posso permetterlo?
     let actions: ParsedAction[];
@@ -236,7 +236,7 @@ function CompositeActionReducer(oldState: IStore, actionBatch: CompositeAction):
     return newState;
 }
 
-function updateRedundancies_OBSOLETE(state: IStore, oldState:IStore, possibleInconsistencies: Dictionary<DocString<'subtype'>, (Pointer | DPointerTargetable)[]>): IStore {
+function updateRedundancies_OBSOLETE(state: DState, oldState:DState, possibleInconsistencies: Dictionary<DocString<'subtype'>, (Pointer | DPointerTargetable)[]>): DState {
     for (let subType in possibleInconsistencies)
     switch (subType) {
         default: break;
@@ -265,10 +265,10 @@ function updateRedundancies_OBSOLETE(state: IStore, oldState:IStore, possibleInc
     return state;
 }
 
-let initialState: IStore = null as any;
+let initialState: DState = null as any;
 let storeLoaded: boolean = false;
 
-export function reducer(oldState: IStore = initialState, action: Action): IStore {
+export function reducer(oldState: DState = initialState, action: Action): DState {
     const ret = _reducer(oldState, action);
     if(ret === oldState) return oldState;
     if(!oldState?.room) return ret;
@@ -281,9 +281,9 @@ export function reducer(oldState: IStore = initialState, action: Action): IStore
 
 }
 
-export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: IStore = initialState, action: Action): IStore{
+export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action): DState{
     let times: number;
-    let state: IStore;
+    let state: DState;
     switch(action.type) {
         case UndoAction.type:
             times = action.value;
@@ -316,16 +316,16 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
     }
 }
 
-function filterundoableactions(delta: Partial<IStore>): boolean {
+function filterundoableactions(delta: Partial<DState>): boolean {
     if (!statehistory.globalcanundostate) return false;
     if (Object.keys(delta).length === 1 && "dragging" in delta) return false;
     if (Object.keys(delta).length === 1 && "_lastSelected" in delta) return false;
     if (Object.keys(delta).length === 1 && "contextMenu" in delta) return false;
     return true;
 }
-function undo(state: IStore, delta: GObject | undefined, isundo = true): IStore {
+function undo(state: DState, delta: GObject | undefined, isundo = true): DState {
     if (!delta) return state;
-    let undonestate = {...state};
+    let undonestate: DState = {...state} as DState;
     //   controlla se vengono shallow-copied solo e tutti gli oggetti nested lungo la catena del percorso delle modifiche
     //   es: root.a.b.c=3 + root.a.b.d=3 = 4+1 modifiche, 5 shallow copies including the root
     undorecursive(delta, undonestate);
@@ -348,8 +348,8 @@ function undorecursive(deltalevel: GObject, statelevel: GObject): void {
     }
 }
 
-function doreducer/*<S extends StateNoFunc, A extends Action>*/(oldState: IStore = initialState, action: Action): IStore{
-    if (!oldState) { oldState = initialState = new IStore(); }
+function doreducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action): DState{
+    if (!oldState) { oldState = initialState = DState.new(); }
     let ca: CompositeAction;
     // console.log('external REDUCER', {action, CEtype:CreateElementAction.type});
     if (!storeLoaded) {
@@ -442,7 +442,7 @@ export function jodelInit() {
         lclass.structure = dclass;
     }*/
 
-    IStore.fakeinit();
+    DState.fakeinit();
 //    setTimeout( () => createOrOpenModelTab('m3'), 1);
     // GraphDragHandler.init();
 

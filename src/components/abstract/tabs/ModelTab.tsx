@@ -1,8 +1,7 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../../redux/store";
 import type {Pointer, DModel} from "../../../joiner";
-import {LGraph, LModel, DGraph, DModelElement, LModelElement, CreateElementAction} from "../../../joiner";
+import {DState, LGraph, LModel, DGraph, DModelElement, LModelElement, CreateElementAction} from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import PendingEdge from "../../../graph/edge/PendingEdge";
@@ -16,7 +15,7 @@ function ModelTabComponent(props: AllProps) {
 
     if (!model) return(<>closed tab</>);
     if (!graph) {
-        CreateElementAction.new(DGraph.new(model.id));
+        CreateElementAction.new(DGraph.new(0, model.id));
         return(<div style={{width: "100%", height: "100%", display: "flex"}}>
             <span style={{margin: "auto"}}>Building the Graph...</span>
         </div>);
@@ -43,7 +42,7 @@ interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.model = LModel.fromPointer(ownProps.modelid);
     const graphs: DGraph[] = DGraph.fromPointer(state.graphs);
@@ -58,7 +57,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const ModelTabConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const ModelTabConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(ModelTabComponent);

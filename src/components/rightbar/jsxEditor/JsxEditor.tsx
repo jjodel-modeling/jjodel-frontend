@@ -1,9 +1,8 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../../redux/store";
-import {DViewElement, LViewElement, Pointer} from "../../../joiner";
 import Editor from "@monaco-editor/react";
 import {useStateIfMounted} from "use-state-if-mounted";
+import {DState, DViewElement, LViewElement, Pointer} from "../../../joiner";
 
 
 function JsxEditorComponent(props: AllProps) {
@@ -32,7 +31,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.view = LViewElement.fromPointer(ownProps.viewid);
     return ret;
@@ -44,7 +43,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const JsxEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const JsxEditorConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(JsxEditorComponent);

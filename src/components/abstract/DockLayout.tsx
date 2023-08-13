@@ -1,10 +1,10 @@
 import React, {Dispatch, PureComponent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
-import {IStore} from '../../redux/store';
-import {BEGIN, DGraph, DModel, DModelElement, END, LModel, LModelElement, Pointer, Selectors, U} from '../../joiner';
-import './style.scss';
 import {DockContext, DockLayout, PanelData, TabData} from "rc-dock";
 import {LayoutData} from "rc-dock/lib/DockData";
+import Swal from 'sweetalert2'
+import './style.scss';
+import {DState, BEGIN, DGraph, DModel, DModelElement, END, LModel, LModelElement, Pointer, Selectors, U} from '../../joiner';
 import StructureEditor from "../rightbar/structureEditor/StructureEditor";
 import TreeEditor from "../rightbar/treeEditor/treeEditor";
 import ViewsEditor from "../rightbar/viewsEditor/ViewsEditor";
@@ -12,7 +12,6 @@ import StyleEditor from "../rightbar/styleEditor/StyleEditor";
 import EdgeEditor from "../rightbar/edgeEditor/EdgeEditor";
 import ViewpointEditor from "../rightbar/viewpointsEditor/ViewpointsEditor";
 import Console from "../rightbar/console/Console";
-import Swal from 'sweetalert2'
 import MetamodelTab from "./tabs/MetamodelTab";
 import ModelTab from "./tabs/ModelTab";
 import InfoTab from "./tabs/InfoTab";
@@ -203,7 +202,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
                 name = U.increaseEndingNumber(name, false, false, (newName) => modelNames.indexOf(newName) >= 0)
                 BEGIN()
                 const model: DModel = DModel.new(name, mmid, false, true);
-                DGraph.new(model.id);
+                DGraph.new(0, model.id);
                 END()
                 this.OPEN(model);
             }
@@ -245,7 +244,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     const selected = state._lastSelected?.modelElement;
     if(selected) ret.selected = selected;
@@ -261,7 +260,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const DockLayoutConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const DockLayoutConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(DockLayoutComponent);

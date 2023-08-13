@@ -1,8 +1,6 @@
 import React, {Dispatch, ReactElement} from "react";
-import {CreateElementAction, SetFieldAction, SetRootFieldAction} from "../../../redux/action/action";
-import {IStore} from "../../../redux/store";
 import {connect} from "react-redux";
-import {DViewPoint, Input, LViewElement, LViewPoint, Pointer, U} from "../../../joiner";
+import {CreateElementAction, SetFieldAction, SetRootFieldAction, DState, DViewPoint, Input, LViewElement, LViewPoint, Pointer, U} from "../../../joiner";
 
 
 function ViewpointsEditorComponent(props: AllProps) {
@@ -60,7 +58,7 @@ interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.viewpoints = LViewPoint.fromPointer(state.viewpoints);
     ret.selected = LViewPoint.fromPointer(state.viewpoint);
@@ -74,7 +72,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const ViewpointsEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const ViewpointsEditorConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(ViewpointsEditorComponent);

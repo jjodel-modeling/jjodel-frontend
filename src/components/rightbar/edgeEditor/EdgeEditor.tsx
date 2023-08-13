@@ -1,7 +1,6 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../../redux/store";
-import {GObject, SetRootFieldAction} from "../../../joiner";
+import {DState, GObject, SetRootFieldAction} from "../../../joiner";
 
 
 function EdgeEditorComponent(props: AllProps) {
@@ -80,7 +79,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     const edgeSettings = state._edgeSettings;
     ret.strokeWidth = edgeSettings.strokeWidth;
@@ -100,7 +99,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const EdgeEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const EdgeEditorConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(EdgeEditorComponent);

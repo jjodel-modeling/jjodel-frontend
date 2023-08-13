@@ -1,8 +1,7 @@
-import {IStore} from "../../redux/store";
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import type {GObject, Pointer, DModel} from "../../joiner";
-import {Edges, LModel, LReference} from "../../joiner";
+import {Edges, LModel, LReference, DState} from "../../joiner";
 
 function EdgesManagerComponent(props: AllProps) {
     const model = props.model;
@@ -24,7 +23,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = { } as any;
     ret.model = LModel.fromPointer(ownProps.modelid);
     return ret;
@@ -36,7 +35,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const EdgesManagerConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const EdgesManagerConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(EdgesManagerComponent);

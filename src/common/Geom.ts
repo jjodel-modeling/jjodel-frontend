@@ -11,7 +11,10 @@ export abstract class IPoint extends RuntimeAccessibleClass {
     // @ts-ignore static getM is not null but must be declared nullable to achieve subclass mixing
     // public static getM? = function(firstPt: IPoint, secondPt: IPoint): number { return (firstPt.y - secondPt.y) / (firstPt.x - secondPt.x); }
     public static getM(firstPt: IPoint, secondPt: IPoint): number { return (firstPt.y - secondPt.y) / (firstPt.x - secondPt.x); }
-    public static getQ(firstPt: IPoint, secondPt: IPoint): number { return firstPt.y - (IPoint.getM(firstPt, secondPt) * firstPt.x);  }
+    public static getQ(firstPt: IPoint, secondPt: IPoint, m?: number): number {
+        if (m === undefined) m = IPoint.getM(firstPt, secondPt);
+        return firstPt.y - (m * firstPt.x);
+    }
 
     public constructor(x: number = 0, y: number = 0) {
         super(); // super('dwc');
@@ -29,6 +32,8 @@ export abstract class IPoint extends RuntimeAccessibleClass {
         else thiss.y = +y;
         thiss.className = this.name;
     }
+
+    public raw(): {x: number, y: number} { return {x: this.x, y: this.y}; }
 
     public toString(): string { return '(' + this.x + ', ' + this.y + ')'; }
     public clone(other: { x: number, y: number }): this { this.x = other.x; this.y = other.y; return this; }
@@ -301,6 +306,7 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
         return ret; }
 
     public intersection(size: this): this | null {
+        if (!size) return null;
         // anche "isinside"
         let startx, starty, endx, endy;
         startx = Math.max(this.x, size.x);
@@ -428,7 +434,45 @@ export class GraphSize extends ISize<GraphPoint> {
         return new GraphSize(minX, minY, maxX - minX, maxY - minY); }
 
 
-    public static closestIntersection(size: GraphSize, prevPt: GraphPoint, pt0: GraphPoint, gridAlign?: GraphPoint): GraphPoint | null {
+    public static closestIntersection(size: GraphSize, pt0: GraphPoint, targetPt: GraphPoint, gridAlign?: GraphPoint): GraphPoint | undefined {
+        let pt: GraphPoint = pt0.duplicate();
+        const m = GraphPoint.getM(targetPt, pt);
+        const q = GraphPoint.getQ(targetPt, pt);
+        // if perfectly vertical line
+        if (m === Number.POSITIVE_INFINITY/* && q === Number.NEGATIVE_INFINITY*/) {
+            // top center
+            if (Math.abs(targetPt.y - size.y) <= Math.abs(targetPt.y - size.y - size.h)) return new GraphPoint(pt0.x, size.y);
+            // bottom center
+            else return new GraphPoint(pt0.x, size.y + size.h);
+        }
+        let tl = size.tl(), tr = size.tr(),
+            bl = size.bl(), br = size.br();
+        let allowT: boolean, allowB: boolean,
+            allowL: boolean, allowR: boolean;
+        /*let distanceT: number = Number.POSITIVE_INFINITY, distanceB: number = Number.POSITIVE_INFINITY,
+            distanceL: number = Number.POSITIVE_INFINITY, distanceR: number = Number.POSITIVE_INFINITY;*/
+        let intersectionT: GraphPoint | undefined, intersectionB: GraphPoint | undefined,
+            intersectionL: GraphPoint | undefined, intersectionR: GraphPoint | undefined;
+
+
+        allowT = Geom.isNumberBetween(tl.y, bl.y, targetPt.y);
+        allowB = Geom.isNumberBetween(bl.y, tl.y, targetPt.y);
+        allowL = Geom.isNumberBetween(tl.x, tr.x, targetPt.x);
+        allowR = Geom.isNumberBetween(tr.x, tl.x, targetPt.x);
+        console.log("closest intersection pt0", {size, targetPt, pt0:pt0.raw(), gridAlign, tl:tl.raw(), tr:tr.raw(), bl:bl.raw(), br:br.raw()});
+        console.log("closest intersection pt0.5 bottom", {bl, "a":  "Geom.isNumberBetween("+bl.y+", "+tl.y+", "+targetPt.y+") = " + allowB});
+        console.log("closest intersection pt1", {allowT, allowB, allowL, allowR});
+        if (!(allowT || allowB || allowL || allowR)) return undefined; // point is internal to size
+        if (allowT) intersectionT = Geom.lineToSegmentIntersection(tl, tr, q, m); else
+        if (allowB) intersectionB = Geom.lineToSegmentIntersection(bl, br, q, m); // NOT else, (T|B) AND (L|R) can happen, or just 1 or 0 of those.
+        if (allowL) intersectionL = Geom.lineToSegmentIntersection(tl, bl, q, m); else
+        if (allowR) intersectionR = Geom.lineToSegmentIntersection(tr, br, q, m);
+
+        console.log("closest intersection pt2", {intersectionT, intersectionB, intersectionL, intersectionR});
+        // only 1 intersection can happen
+        return intersectionT || intersectionB || intersectionL || intersectionR;
+    }
+    public static closestIntersection_old(size: GraphSize, prevPt: GraphPoint, pt0: GraphPoint, gridAlign?: GraphPoint): GraphPoint | null {
         let ret = GraphSize.closestIntersection0(size, prevPt, pt0, gridAlign) as any;
         // Log.exDev(!Geom.isOnEdge(ret, size), 'ClosestIntersection failed. not on Vertex edge.', {ret, size, prevPt, pt0, gridAlign});
         return ret;
@@ -463,19 +507,55 @@ export class GraphSize extends ISize<GraphPoint> {
     this.owner.mark(this.owner.toHtmlCoord(B), false, 'violet');
     this.owner.mark(this.owner.toHtmlCoord(L), false, 'red');
     this.owner.mark(this.owner.toHtmlCoord(R), false, 'orange');*/
+        console.log("intersect pt1:", {T, B, L, R});
         if ( (B.x >= pt.x && B.x <= prevPt.x) || (B.x >= prevPt.x && B.x <= pt.x) ) { } else { B = null; }
         if ( (T.x >= pt.x && T.x <= prevPt.x) || (T.x >= prevPt.x && T.x <= pt.x) ) { } else { T = null; }
         if ( (L.y >= pt.y && L.y <= prevPt.y) || (L.y >= prevPt.y && L.y <= pt.y) ) { } else { L = null; }
         if ( (R.y >= pt.y && R.y <= prevPt.y) || (R.y >= prevPt.y && R.y <= pt.y) ) { } else { R = null; }
+        console.log("intersect pt2:", {T, B, L, R});
+        function closestmix(pt: GraphPoint, closest: GraphPoint, segStart: GraphPoint, segEnd: GraphPoint, mode: "TB" | "LR"): void {
+            // changes pt
+            pt.x = closest.x; pt.y = closest.y; return;
+            let main: "x" | "y", sub: "x" | "y";
+            if (mode === "TB") { main = "y"; sub = "x"; } else { main = "x"; sub = "y"; }
+            pt[main] = closest[main];
+            // if T[sub] is inside the top segment, take T[sub], otherwise closest between size.tl[sub] and size.tr[sub]
+            // pt[sub] = Math.max(segStart[sub], Math.min(segStart[sub], closest[sub]));
+            if (closest[sub] <= segEnd[sub] && closest[sub] >= segStart[sub]) pt[sub] = closest[sub];
+            else if (Math.abs(closest[sub]-segEnd[sub]) < Math.abs(closest[sub]-segStart[sub])) pt[sub] = segEnd[sub];
+            else pt[sub] = segStart[sub];
+        }
+        function closestmix2(pt: GraphPoint, closest: GraphPoint, segStart: GraphPoint, segEnd: GraphPoint, mode: "TB" | "LR"): void {
+            // changes closest
+            let main: "x" | "y", sub: "x" | "y";
+            if (mode === "TB") { main = "y"; sub = "x"; } else { main = "x"; sub = "y"; }
+            // closest[main] = pt[main];
+            // if T[sub] is inside the top segment, take T[sub], otherwise closest between size.tl[sub] and size.tr[sub]
+            // pt[sub] = Math.max(segStart[sub], Math.min(segStart[sub], closest[sub]));
+            if (closest[sub] <= segEnd[sub] && closest[sub] >= segStart[sub]) {/*no-op*/}
+            else if (Math.abs(closest[sub]-segEnd[sub]) < Math.abs(closest[sub]-segStart[sub])) closest[sub] = segEnd[sub];
+            else closest[sub] = segStart[sub];
+        }
+        console.log("intersect pt2.5:");
+        try{
+            if(T) closestmix2(pt, T, vertexGSize.tl(), vertexGSize.tr(), "TB");
+            if(B) closestmix2(pt, B, vertexGSize.bl(), vertexGSize.br(), "TB");
+            if(R) closestmix2(pt, R, vertexGSize.tr(), vertexGSize.br(), "LR");
+            if(L) closestmix2(pt, L, vertexGSize.tl(), vertexGSize.bl(), "LR");
+        } catch(e){ console.error("intersect error",e)}
         // console.log('superstiti step1: (LTBR):', L, T, B, R);
+        console.log("intersect pt2.9:");
         const vicinanzaT = !T ? Number.POSITIVE_INFINITY : ((T.x - pt.x) * (T.x - pt.x)) + ((T.y - pt.y) * (T.y - pt.y));
         const vicinanzaB = !B ? Number.POSITIVE_INFINITY : ((B.x - pt.x) * (B.x - pt.x)) + ((B.y - pt.y) * (B.y - pt.y));
         const vicinanzaL = !L ? Number.POSITIVE_INFINITY : ((L.x - pt.x) * (L.x - pt.x)) + ((L.y - pt.y) * (L.y - pt.y));
         const vicinanzaR = !R ? Number.POSITIVE_INFINITY : ((R.x - pt.x) * (R.x - pt.x)) + ((R.y - pt.y) * (R.y - pt.y));
         const closest = Math.min(vicinanzaT, vicinanzaB, vicinanzaL, vicinanzaR);
+        console.log("intersect pt3:", {vicinanzaT, vicinanzaB, vicinanzaL, vicinanzaR, closest});
+
         // console.log( 'closest:', closest);
         // succede quando pt e prevPt sono entrambi all'interno del rettangolo del vertice.
         // L'edge non è visibile e il valore ritornato è irrilevante.
+
         if (closest === Number.POSITIVE_INFINITY) {
             /* top center */
             pt = vertexGSize.tl();
@@ -484,14 +564,21 @@ export class GraphSize extends ISize<GraphPoint> {
             /* bottom center */
             pt = vertexGSize.br();
             pt.x -= vertexGSize.w / 2; } else
-        if (closest === vicinanzaT) { pt = T; } else
-        if (closest === vicinanzaB) { pt = B; } else
-        if (closest === vicinanzaR) { pt = R; } else
-        if (closest === vicinanzaL) { pt = L; }
+        if (closest === vicinanzaT && T) {
+            closestmix(pt, T as any, vertexGSize.tl(), vertexGSize.tr(), "TB");
+            /*pt.y = T.y;
+            // if T.x is inside the top segment, take T.x, otherwise closest between size.tl.x and size.tr.x
+            if ((T.x <= tr.x && T.x >= tl.x)) pt.x = T.x;
+            else if (Math.abs(T.x-tr.x) < Math.abs(T.x-tl.x)) pt.x = tr.x;
+            else pt.x = tl.x;*/
+        }
+        if (closest === vicinanzaB) { closestmix(pt, B as any, vertexGSize.bl(), vertexGSize.br(), "TB"); } else
+        if (closest === vicinanzaR) { closestmix(pt, R as any, vertexGSize.tr(), vertexGSize.br(), "LR"); } else
+        if (closest === vicinanzaL) { closestmix(pt, L as any, vertexGSize.tl(), vertexGSize.bl(), "LR"); }
 
         if (!gridAlign) { return pt; }
         if (!pt) return null;
-        if ((pt === T || pt === B || isNaN(closest)) && gridAlign.x) {
+        if (gridAlign.x && (pt === T || pt === B || isNaN(closest))) {
             const floorX: number = Math.floor(pt.x / gridAlign.x) * gridAlign.x;
             const ceilX: number = Math.ceil(pt.x / gridAlign.x) * gridAlign.x;
             let closestX;
@@ -507,7 +594,7 @@ export class GraphSize extends ISize<GraphPoint> {
             if (closestX >= vertexGSize.x && closestX <= vertexGSize.x + vertexGSize.w) { pt.x = farthestX;
                 // if no intersection are inside the vertex (ignore grid)
             } else { /* do nothing */ }
-        } else if ((pt === L || pt === R) && gridAlign.y) {
+        } else if (gridAlign.y && (pt === L || pt === R)) {
             const floorY: number = Math.floor(pt.y / gridAlign.y) * gridAlign.y;
             const ceilY: number = Math.ceil(pt.y / gridAlign.y) * gridAlign.y;
             let closestY;
@@ -572,28 +659,28 @@ export class Geom extends RuntimeAccessibleClass {
     static isOnRightEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
         if (!pt || !shape) { return false; }
         if (tolerance) return Math.abs(pt.x - (shape.x + shape.w)) < tolerance
-            && ( pt.y - (shape.y) > tolerance && pt.y - (shape.y + shape.h) < tolerance);
+            && ( pt.y - shape.y > tolerance && pt.y - (shape.y + shape.h) < tolerance);
         return (pt.x === shape.x + shape.w) && (pt.y >= shape.y && pt.y <= shape.y + shape.h);
     }
 
     static isOnLeftEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
         if (!pt || !shape) { return false; }
         if (tolerance) return Math.abs(pt.x - shape.x) < tolerance
-            && (pt.y - (shape.y) > tolerance && pt.y - (shape.y + shape.h) < tolerance);
+            && (pt.y - shape.y > tolerance && pt.y - (shape.y + shape.h) < tolerance);
         return (pt.x === shape.x) && (pt.y >= shape.y && pt.y <= shape.y + shape.h);
     }
 
     static isOnTopEdge(pt: GraphPoint, shape: GraphSize, tolerance: number = Geom.GeomTolerance): boolean {
         if (!pt || !shape) { return false; }
         if (tolerance) return Math.abs(pt.y - shape.y) < tolerance
-            && (pt.x - (shape.x) > tolerance && pt.x - (shape.x + shape.w) < tolerance);
+            && (pt.x - shape.x > tolerance && pt.x - (shape.x + shape.w) < tolerance);
         return (pt.y === shape.y) && (pt.x >= shape.x && pt.x <= shape.x + shape.w);
     }
 
     static isOnBottomEdge(pt: GraphPoint, shape: GraphSize, tolerance?: number): boolean {
         if (!pt || !shape) { return false; }
         if (tolerance) return Math.abs(pt.y - shape.y + shape.h) < tolerance
-            && (pt.x - (shape.x) > tolerance && pt.x - (shape.x + shape.w) < tolerance);
+            && (pt.x - shape.x > tolerance && pt.x - (shape.x + shape.w) < tolerance);
         return (pt.y === shape.y + shape.h) && (pt.x >= shape.x && pt.x <= shape.x + shape.w);
     }
 
@@ -661,6 +748,60 @@ export class Geom extends RuntimeAccessibleClass {
         return (sdist < edist) ? new GraphPoint(s.x, s.y) : new GraphPoint(e.x, e.y);
         // 4B) ELSE done
     }
+
+    static lineToSegmentIntersection(segStart: GraphPoint, segEnd: GraphPoint, q: number, m: number): GraphPoint | undefined {
+        if (segStart.x === segEnd.x){
+            let y = m*segStart.x + q;
+            if (Geom.isNumberBetween(y, segStart.y, segEnd.y)) return new GraphPoint(segStart.x, y);
+            else return undefined;
+        }
+        else if (segStart.y === segEnd.y) {
+            let x = (segStart.y-q)/m;
+            if (Geom.isNumberBetween(x, segStart.x, segEnd.x)) return new GraphPoint(x, segStart.y);
+            else return undefined;
+            //
+        }
+
+        let m2 = segStart.getM(segEnd);
+        let q2 = IPoint.getQ(segStart, segEnd);
+        if (m === m2) {
+            if (q2 === q) return segStart; // line and segment coincident
+            return undefined; // parallel
+        }
+        let intersect = Geom.lineToLineIntersection(m, q, m2, q2);
+        if (intersect && Geom.isNumberBetween(intersect.x, segStart.x, segEnd.x) && Geom.isNumberBetween(intersect.y, segStart.y, segEnd.y)) return intersect;
+        else return undefined;
+    }
+
+    static isNumberBetween(target: number, s: number, e: number): boolean {
+        let max = Math.max(s, e);
+        let min = Math.min(s, e);
+        return target >= min && target <= max; }
+
+    private static lineToLineIntersection(m: number, q: number, m2: number, q2: number, retIfParallel: any = undefined, retIfCoincident: any = undefined): undefined | GraphPoint {
+        if (m === m2) {
+            if (q === q2) return retIfCoincident;
+            return retIfParallel;
+        }
+        if (m === Number.POSITIVE_INFINITY || m === Number.NEGATIVE_INFINITY || m2 === Number.POSITIVE_INFINITY || m2 === Number.NEGATIVE_INFINITY) {
+            // m or m2 are a vertical line, Q must be invalid too and i don't have a single point of the line.
+            // it's actually infinite possible vertical parallel lines.
+            return undefined;
+        }
+        /*
+            y = mx + q
+            y = nx + w
+            -->
+            mx + q = nx + w
+            -->
+            mx - nx = w - q
+            -->
+            x (m - n) = w - q
+            -->
+            x = (w - q)/(m - n)
+        */
+        let x = (q2-q)/(m-m2);
+        return new GraphPoint(x, m*x+q); }
 }
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, Geom);

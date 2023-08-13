@@ -10,6 +10,13 @@ export class Debug {
         allids.nodes = nodeids;
         allids.components = Object.values(window.GraphElementComponent.all);
         return allids; }
+    static timeoutTasks(){}
+    static largeTimeoutTasks(){
+        window.model = window.LPointerTargetable.wrap(s().model?.[0]);
+    }
 
 }
+
+setTimeout(Debug.timeoutTasks, 500);
+setTimeout(Debug.largeTimeoutTasks, 5000);
 window.Debug = Debug;

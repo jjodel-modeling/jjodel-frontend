@@ -1,6 +1,6 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../redux/store";
+import {DState} from "../../redux/store";
 import {DPointerTargetable, GObject, Info, LModelElement, LPointerTargetable, Overlap, Pointer} from "../../joiner";
 import toast, {Toaster} from 'react-hot-toast';
 import {SelectOwnProps} from "./Select";
@@ -97,7 +97,7 @@ interface DispatchProps { }
 type AllProps = Overlap<InputOwnProps, Overlap<StateProps, DispatchProps>>;
 
 
-function mapStateToProps(state: IStore, ownProps: InputOwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: InputOwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
     ret.data = LPointerTargetable.fromPointer(pointer);
@@ -109,7 +109,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret;
 }
 
-export const InputConnected = connect<StateProps, DispatchProps, InputOwnProps, IStore>(
+export const InputConnected = connect<StateProps, DispatchProps, InputOwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(InputComponent);

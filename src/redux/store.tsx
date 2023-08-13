@@ -1,4 +1,4 @@
-import type {
+import {
     DClassifier,
     DEdgePoint,
     DExtEdge,
@@ -27,6 +27,7 @@ import type {
     DVertex,
     Pointer,
     LViewPoint,
+    Pointers,
 } from '../joiner';
 import {
     CreateElementAction,
@@ -48,14 +49,25 @@ import {
     LModel,
     LObject,
     LUser,
-    LValue, LViewElement, DViewPoint,
-    RuntimeAccessible, SetFieldAction,
-    SetRootFieldAction, ShortAttribETypes, Selectors, GraphSize, EdgeBendingMode, DVoidEdge,
+    LValue,
+    LViewElement,
+    DViewPoint,
+    RuntimeAccessible,
+    SetFieldAction,
+    SetRootFieldAction,
+    ShortAttribETypes,
+    Selectors,
+    GraphSize,
+    EdgeBendingMode,
+    DVoidEdge,
+    RuntimeAccessibleClass,
+    LogicContext, LPointerTargetable, store, LModelElement, LGraphElement, Dictionary, Constructor, Constructors,
 } from "../joiner";
 
 import React from "react";
 import {DV} from "../common/DV";
 import LeaderLine from "leader-line-new";
+import {ObjectWithoutPointers} from "../joiner/types";
 
 console.warn('ts loading store');
 
@@ -79,11 +91,18 @@ export const statehistory: {
 statehistory[DUser.current] = {undoable:[], redoable:[]}; // todo: make it able to combine last 2 changes with a keystroke. reapeat N times to combine N actions. let it "redo" multiple times, it's like recording a macro.
 
 (window as any).statehistory = statehistory;
-export class IStore {
+@RuntimeAccessible
+export class DState extends DPointerTargetable{
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    static new(): DState {
+        return new Constructors(new DState('dwc'), undefined, false, undefined).DPointerTargetable().DState().end();
+    }
+
     debug: boolean = true;
     logs: Pointer<DLog, 0, 'N', LLog> = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
-    currentUser: DUser;
+    currentUser!: DUser;
 
     viewelements: Pointer<DViewElement, 0, 'N', LViewElement> = [];
     stackViews: Pointer<DViewElement, 0, 'N', LViewElement> = [];
@@ -137,7 +156,7 @@ export class IStore {
         view: Pointer<DViewElement, 1, 1>,
         modelElement: Pointer<DModelElement, 0, 1> // if a node is clicked: a node and a view are present, a modelElement might be. a node can exist without a modelElement counterpart.
     };
-    users: Pointer<DUser, 1, 'N', LUser>;
+    users!: Pointer<DUser, 1, 'N', LUser>;
     _edgeSettings = {strokeWidth: 1, color: '#000000', zIndex: 150, path: 'smooth'}
     _edgesDisplayed = {extend: true, referenceM2: true, referenceM1: true}
 
@@ -150,14 +169,7 @@ export class IStore {
     room: string = '';
 
 
-    constructor() {
-        // todo: this must become a pointer to idlookup and fire a CreateNewElementAction
-        this.currentUser = DUser.new(undefined, false);
-        this.users = [this.currentUser.id];
-        this.models = [];
-    }
-
-    static fakeinit(store?: IStore): void {
+    static fakeinit(store?: DState): void {
         // const graphDefaultViews: DViewElement[] = makeDefaultGraphViews();
         // for (let graphDefaultView of graphDefaultViews) { CreateElementAction.new(graphDefaultView); }
 
@@ -202,7 +214,7 @@ function makeDefaultGraphViews(): DViewElement[] {
     // modelView.draggable = false; modelView.resizable = false; already guaranteed by <Graph />
 
     let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.name]);
-    packageView.defaultVSize = new GraphSize(0, 0, 500, 500);
+    packageView.defaultVSize = new GraphSize(0, 0, 400, 500);
 
     let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.name]);
     classView.adaptWidth = true;
@@ -213,8 +225,9 @@ function makeDefaultGraphViews(): DViewElement[] {
     enumView.adaptHeight = true;
 
     let attributeView: DViewElement = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.name]);
-
+    // attributeView.zIndex = 0;
     let referenceView: DViewElement = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.name]);
+    // referenceView.zIndex = 10;
 
     let operationView: DViewElement = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.name]);
 
@@ -245,33 +258,6 @@ function makeDefaultGraphViews(): DViewElement[] {
 
     return [modelView, packageView, classView, enumView, attributeView, referenceView, operationView, literalView, objectView, valueView, defaultPackage, voidView, edgeView, edgePointView, edgePointViewSVG];
 }
-/*
-class SynchStore{// shared on session
-
-}
-class AsynchStore{ // user private
-    pendingUserAction: UserPendingAction[];
-}*/
-/*
-@RuntimeAccessible
-export class DUserState extends DPointerTargetable {
-    pointerPosition?: GraphPoint;
-    // nope, la selezione è vertex-wise, e il vertex è graph-dependent. la view è graph-indipendent. selection: Dictionary<Pointer<User, 1, 1>, Pointer<DGraphElement, 0, 'N'>[]> = {};
-    constructor() {
-        super(true);
-        this.className = this.constructor.name;
-    }
-}
-
-@RuntimeAccessible
-export class LUserState extends MixOnlyFuncs(DUserState, LPointerTargetable) {
-    pointerPosition?: GraphPoint;
-    defaultView!: LViewElement;
-    // nope, la selezione è vertex-wise, e il vertex è graph-dependent. la view è graph-indipendent. selection: Dictionary<Pointer<User, 1, 1>, Pointer<DGraphElement, 0, 'N'>[]> = {};
-
-}
-RuntimeAccessibleClass.set_extend(DPointerTargetable, DUserState);
-*/
 
 @RuntimeAccessible
 export class ViewPointState extends DPointerTargetable{
@@ -294,11 +280,48 @@ export class ModelStore {
         this._meta = value;
     }
 }
-/*
-type Cconnect = <TStateProps = {}, TDispatchProps = {}, TOwnProps = {}, State = DefaultState>(
-    mapStateToProps: MapStateToPropsParam<TStateProps, TOwnProps, State>,
-    mapDispatchToProps: MapDispatchToPropsNonObject<TDispatchProps, TOwnProps>
-): InferableComponentEnhancerWithProps<TStateProps & TDispatchProps, TOwnProps>;
-*/
-// export const initialState: IStore = new IStore();
-// console.info('ts loaded store');
+
+
+
+@RuntimeAccessible
+export class LState<Context extends LogicContext<DState> = any, C extends Context = Context, D extends DState = DState> extends LPointerTargetable {
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    public __raw!: DPointerTargetable & DState;
+    public static structure: typeof DPointerTargetable;
+    public static singleton: LPointerTargetable;
+    // return type is wrong, but have to extend the static method of RuntimeAccessibleClass which is completely different and returns a class constructor.
+    static get<T2 extends typeof RuntimeAccessibleClass & { logic?: typeof LPointerTargetable | undefined; }>(): T2 & LState { return LState.wrap(store.getState() as any) as any; }
+    contextMenu!: {display: boolean, x: number, y: number};
+    currentUser!: LUser;
+    debug!: boolean;
+    room!: string;
+    _lastSelected?: {modelElement?: LModelElement, node?: LGraphElement, view?: LViewElement};
+    idlookup!:Dictionary<Pointer, DPointerTargetable>;
+
+    get_contextMenu(c: Context): this["contextMenu"] { return c.data.contextMenu; }
+    get_currentUser(c: Context): this["currentUser"] { return LState.wrap(c.data.currentUser) as LUser; }
+    get_debug(c: Context): this["debug"] { return c.data.debug; }
+    get_room(c: Context): this["room"] { return c.data.room; }
+    get_idlookup(c: Context): this["idlookup"] { return c.data.idlookup; }
+    get__lastSelected(c: Context): this["_lastSelected"] {
+        let ls = c.data._lastSelected;
+        return ls && {modelElement: LState.wrap(ls.modelElement), node: LState.wrap(ls.node), view: LState.wrap(ls.view)}; }
+
+    _defaultCollectionGetter(c: Context, k: keyof DState): LPointerTargetable[] { return LPointerTargetable.fromPointer(c.data[k] as any); }
+    _defaultGetter(c: Context, k: keyof DState) {
+        console.log("default Getter");
+        let v = c.data[k];
+        if (Array.isArray(v)) {
+            if (v.length === 0) return [];
+            else if (Pointers.isPointer(v[0] as any)) return this._defaultCollectionGetter(c, k);
+            return v;
+        }
+        return v;
+    }
+}
+
+// console.error("dpt" +DPointerTargetable, DPointerTargetable);
+RuntimeAccessibleClass.set_extend(DPointerTargetable, DState);
+RuntimeAccessibleClass.set_extend(LPointerTargetable, LState);
+

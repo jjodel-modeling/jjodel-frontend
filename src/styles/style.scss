@@ -88,3 +88,8 @@
 /* tags */
 hr { margin: 0 0 !important; }
 label { height: min-content; font-size: 0.9rem; font-weight: lighter; }
+
+[rad]{
+  transform-origin: center;
+  transform: rotate(attr(rad));
+}

@@ -11,7 +11,7 @@ import {
     DPointerTargetable,
     DRefEdge,
     DReference, GraphPoint,
-    IStore,
+    DState,
     Json,
     JsType,
     LClassifier,
@@ -104,7 +104,7 @@ export class U {
         return field as keyof DModelElement;
     }
 
-    public static getReduxFieldToDelete(data: LModelElement): keyof IStore|null {
+    public static getReduxFieldToDelete(data: LModelElement): keyof DState|null {
         let field = '';
         switch(data.className) {
             // DPackage
@@ -132,7 +132,7 @@ export class U {
             // Error
             default: return null;
         }
-        return field as keyof IStore;
+        return field as keyof DState;
     }
 
     public static initializeValue(typeclassifier: undefined|DClassifier|LClassifier|Pointer<DClassifier, 1, 1, LClassifier>): string {

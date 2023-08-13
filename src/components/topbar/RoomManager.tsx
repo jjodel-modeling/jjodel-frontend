@@ -1,10 +1,9 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../redux/store";
 import './style.scss';
 import {CONSTRAINT, Firebase} from "../../firebase";
-import {SetRootFieldAction, U} from "../../joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
+import {SetRootFieldAction, U, DState} from "../../joiner";
 
 function RoomManagerComponent(props: AllProps) {
     const room = props.room;
@@ -48,7 +47,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.room = state.room;
     return ret;
@@ -60,7 +59,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const RoomManagerConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const RoomManagerConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(RoomManagerComponent);

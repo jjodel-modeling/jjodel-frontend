@@ -1,7 +1,7 @@
 import React, {Dispatch, PureComponent, ReactElement, useEffect} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../../redux/store";
 import {
+    DState,
     DGraphElement,
     Dictionary,
     GObject, Json,
@@ -200,7 +200,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     let ptr;
     ptr = state._lastSelected?.modelElement;
@@ -218,7 +218,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const ConsoleConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const ConsoleConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(ConsoleComponent);

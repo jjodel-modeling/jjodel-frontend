@@ -1,8 +1,7 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../../redux/store";
 import type {DModel, Pointer} from "../../../joiner";
-import {CreateElementAction, DGraph, LGraph, LModel} from "../../../joiner";
+import {DState, CreateElementAction, DGraph, LGraph, LModel} from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import PendingEdge from "../../../graph/edge/PendingEdge";
@@ -15,7 +14,7 @@ function MetamodelTabComponent(props: AllProps) {
 
     if (!model) return(<>closed tab</>);
     if (!graph) {
-        CreateElementAction.new(DGraph.new(model.id));
+        CreateElementAction.new(DGraph.new(0, model.id));
         return(<div style={{width: "100%", height: "100%", display: "flex"}}>
             <span style={{margin: "auto"}}>Building the Graph...</span>
         </div>);
@@ -40,7 +39,7 @@ interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.model = LModel.fromPointer(ownProps.modelid);
     const graphs: DGraph[] = DGraph.fromPointer(state.graphs);
@@ -55,7 +54,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const MetamodelTabConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const MetamodelTabConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(MetamodelTabComponent);

@@ -2,7 +2,7 @@ import {
     Dictionary,
     DocString,
     DPointerTargetable, DUser,
-    IStore, Json,
+    DState, Json,
     Log,
     LPointerTargetable,
     orArr,
@@ -92,7 +92,7 @@ export function ABORT_OLD() {
     hasBegun = false;
     pendingActions = [];
 }
-export function END_OLD(actionstoPrepend: Action[] = []): boolean | IStore {
+export function END_OLD(actionstoPrepend: Action[] = []): boolean | DState {
     hasBegun = false;
     // for (let action of pendingActions) { }
     const ca: CompositeAction = new CompositeAction( actionstoPrepend?.length ? [...actionstoPrepend, ...pendingActions] : pendingActions, false);
@@ -129,7 +129,7 @@ export function FINAL_END(): boolean{
 
 // make class isinstorage e mettici il path studia annotazioni per annotare gli oggett in modo che vengano rwappati prima di farli ritornare se sono annotati
 // minor todo: type as (...args: infer P) => any) ?
-export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...params: Parameters<F>): boolean | IStore {
+export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...params: Parameters<F>): boolean | DState {
     BEGIN();
     // minor todo: potrei fare l'override di Error() per fare in modo che gli errori vengano presi anche se non uso TRANSACTION o try-catch ?
     try { func(...params); } catch(e) { Log.ee('Transaction failed:', e); ABORT(); return false; }
@@ -211,8 +211,8 @@ export class Action extends RuntimeAccessibleClass {
 @RuntimeAccessible
 export class LoadAction extends Action {
     static type = 'LOAD';
-    static new(state: IStore): boolean {  return state && new LoadAction(state).fire(); }
-    constructor(state: IStore, fire: boolean = true) {
+    static new(state: DState): boolean {  return state && new LoadAction(state).fire(); }
+    constructor(state: DState, fire: boolean = true) {
         super('', state, '');
         this.className = this.constructor.name;
         if (fire) this.fire();

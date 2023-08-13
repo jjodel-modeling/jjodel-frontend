@@ -73,7 +73,7 @@ LObject.singleton = new LObject();
 LModelElementTransientProperties.singleton = new LModelElementTransientProperties();
 */
 export const fakeExport = {}; // just to import-execute this file
-// IStore.fakeinit();
+// DState.fakeinit();
 // Symbol.prototype.toString = function(): string { alert('symbol to string'); return String(this); }
 
 let Components = Componentss;

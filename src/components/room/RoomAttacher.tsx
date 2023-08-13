@@ -1,11 +1,10 @@
 import type {Dictionary, GObject, Pointer} from "../../joiner";
 import React, {Dispatch, ReactElement} from "react";
+import {useStateIfMounted} from "use-state-if-mounted";
 import {connect} from "react-redux";
-import {IStore} from "../../redux/store";
 import {doc, onSnapshot} from "@firebase/firestore";
 import {Firebase} from "../../firebase";
-import {Action, DUser, Selectors, SetRootFieldAction} from "../../joiner";
-import {useStateIfMounted} from "use-state-if-mounted";
+import {Action, DUser, Selectors, SetRootFieldAction, DState} from "../../joiner";
 
 function RoomAttacherComponent(props: AllProps) {
     const room = props.room;
@@ -35,7 +34,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.room = state.room;
     return ret;
@@ -47,7 +46,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const RoomAttacherConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const RoomAttacherConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(RoomAttacherComponent);

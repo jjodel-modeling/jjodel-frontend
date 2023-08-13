@@ -66,7 +66,8 @@ export class GraphElementOwnProps {
     parentnodeid?: Pointer<DGraphElement, 1, 1, LGraphElement>; // Injected
     nodeid?: Pointer<DGraphElement, 1, 1, LGraphElement>; // Injected
     graphid?: Pointer<DGraph, 1, 1, LGraph>; // injected
-    parentViewId?: Pointer<DViewElement, 1, 1, LViewElement>// injected
+    parentViewId?: Pointer<DViewElement, 1, 1, LViewElement>; // injected
+    htmlindex?: number; // injected
 }
 
 export class EdgeOwnProps extends GraphElementOwnProps {

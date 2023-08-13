@@ -5,7 +5,7 @@ import {
     DModelElement,
     DPointerTargetable,
     DViewElement,
-    IStore,
+    DState,
     LGraphElement,
     LModelElement,
     LViewElement,
@@ -49,7 +49,7 @@ interface DispatchProps {}
 
 type AllProps = OwnProps & StateProps & DispatchProps;
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.selectedid = state._lastSelected;
     ret.selected = ret.selectedid && {
@@ -65,7 +65,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const StructureEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const StructureEditorConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(StructureEditorComponent);

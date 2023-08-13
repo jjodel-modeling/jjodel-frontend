@@ -17,7 +17,7 @@ import {
     GraphElementReduxStateProps,
     GraphElementStatee,
     InOutParam,
-    IStore,
+    DState,
     JSXT,
     LModelElement,
     Log,
@@ -127,7 +127,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         );
     }
 
-    static mapViewStuff(state: IStore, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
+    static mapViewStuff(state: DState, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
         let dnode: DGraphElement | undefined = ownProps?.nodeid && state.idlookup[ownProps.nodeid] as any;
         if (ownProps.view) {
             ret.views = [];
@@ -147,7 +147,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 }*/
     }
 
-    static mapLModelStuff(state: IStore, ownProps: GraphElementOwnProps, ret: GraphElementReduxStateProps): void {
+    static mapLModelStuff(state: DState, ownProps: GraphElementOwnProps, ret: GraphElementReduxStateProps): void {
         const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : (ownProps.data as any as DModelElement)?.id) as string;
         ret.dataid = meid;
         // Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ret, ownProps, state});
@@ -156,7 +156,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     }
 
-    static mapLGraphElementStuff(state: IStore,
+    static mapLGraphElementStuff(state: DState,
                                  ownProps: GraphElementOwnProps,
                                  ret: GraphElementReduxStateProps,
                                  dGraphElementDataClass: typeof DGraphElement = DGraphElement,
@@ -176,7 +176,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         ret.graph = idlookup[graphid] as DGraphElement as any; // se non c'è un grafo lo creo
         if (!ret.graph) {
             // Log.exDev(!dataid, 'attempted to make a Graph element without model', {dataid, ownProps, ret, thiss:this});
-            if (dataid) CreateElementAction.new(DGraph.new(dataid, parentnodeid, graphid, graphid)); }
+            if (dataid) CreateElementAction.new(DGraph.new(0, dataid, parentnodeid, graphid, graphid)); }
         else {
             ret.graph = MyProxyHandler.wrap(ret.graph);
             Log.exDev(ret.graph.__raw.className !== "DGraph", 'graph class is wrong', {graph: ret.graph, ownProps});
@@ -197,12 +197,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let end = edgeProps.end.id; // typeof edgeProps.end === "string" ? edgeProps.end : (edgeProps.end as any).id;
                 let longestLabel = edgeOwnProps.label;
                 let labels = edgeOwnProps.labels || [];
-                dge = (DEdge as any).new(dataid, parentnodeid, graphid, nodeid, start, end, longestLabel, labels);
+                dge = (DEdge as any).new(ownProps.htmlindex, dataid, parentnodeid, graphid, nodeid, start, end, longestLabel, labels);
                 ret.node = (ret as any).edge = MyProxyHandler.wrap(dge);
             }
             else {
                 console.log("dGraphElementDataClass", dGraphElementDataClass);
-                dge = dGraphElementDataClass.new(dataid, parentnodeid, graphid, nodeid);
+                dge = dGraphElementDataClass.new(ownProps.htmlindex as number, dataid, parentnodeid, graphid, nodeid);
                 ret.node =  MyProxyHandler.wrap(dge);
             }
             // let act = CreateElementAction.new(dge, false);
@@ -212,7 +212,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     ////// mapper func
-    static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps, dGraphDataClass: (typeof DGraphElement | typeof DEdge) = DGraphElement, startingobj?: GObject): GraphElementReduxStateProps {
+    static mapStateToProps(state: DState, ownProps: GraphElementOwnProps, dGraphDataClass: (typeof DGraphElement | typeof DEdge) = DGraphElement, startingobj?: GObject): GraphElementReduxStateProps {
         // console.log('dragx GE mapstate', {dGraphDataClass});
         let ret: GraphElementReduxStateProps = (startingobj || {}) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
         GraphElementComponent.mapLModelStuff(state, ownProps, ret);
@@ -461,13 +461,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     else viewStyle.width = (rootProps.view.width) && rootProps.view.width + 'px';
                     viewStyle = {};
                 */
-                viewStyle.zIndex = this.props.node?.zIndex;
+                viewStyle.order = viewStyle.zIndex = this.props.node?.zIndex;
                 viewStyle.display = this.props.view?.display;
                 rawRElement = React.cloneElement(rawRElement, // i'm cloning a raw html (like div) being root of the rendered view
                     {
-                        key: this.props.key || this.props.nodeid, // this key is not safe and user must still specify key in <Node> components. check comment at UX.injectProps()
-                        // damiano: l'html viene settato correttamente a tutti tranne ad attribute, ref, operation (è perchè iniziano con <Select/> as root?)
+                        key: this.props.key, // this key is not safe. because the component has already been made,
+                        // this would be the key of the first sub-component, which is always 1 so doesn't need a key (and is not even a component but a html node in 99% of cases)
+                        // could remove it safely but i'm keeping it for debug so i can read keys as html attributes.
                         ref: this.html,
+                        // damiano: ref html viene settato correttamente a tutti tranne ad attribute, ref, operation (è perchè iniziano con <Select/> as root?)
                         id: this.props.nodeid,
                         "data-nodeid": this.props.nodeid,
                         "data-dataid": me?.id,
@@ -475,7 +477,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         "data-modelname": me?.className || "model-less",
                         "data-userselecting": JSON.stringify(this.props.node?.__raw.isSelected || {}),
                         "data-nodetype": nodeType,
-                        style: {...viewStyle, ...styleoverride},
+                        // "data-order": this.props.node?.zIndex,
+                        style: {...viewStyle, order:this.props.node.z, ...styleoverride},
                         className: classes.join(' '),
                         onClick: this.onClick,
                         onContextMenu:this.onContextMenu,
@@ -519,7 +522,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 // type AllPropss = GraphElementOwnProps & GraphElementDispatchProps & GraphElementReduxStateProps;
 type AllPropss = Overlap<Overlap<GraphElementOwnProps, GraphElementDispatchProps>, GraphElementReduxStateProps>;
 
-const GraphElementConnected = connect<GraphElementReduxStateProps, GraphElementDispatchProps, GraphElementOwnProps, IStore>(
+const GraphElementConnected = connect<GraphElementReduxStateProps, GraphElementDispatchProps, GraphElementOwnProps, DState>(
     GraphElementComponent.mapStateToProps,
     GraphElementComponent.mapDispatchToProps
 )(GraphElementComponent as any);

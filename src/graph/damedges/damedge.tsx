@@ -12,7 +12,7 @@ import {
     GraphElementReduxStateProps,
     GraphElementStatee, GraphPoint,
     GraphSize,
-    IStore,
+    DState,
     LClass, LEdge, LGraphElement,
     LModelElement,
     LPointerTargetable,
@@ -78,7 +78,7 @@ class DispatchProps extends GraphElementDispatchProps {
 
 type AllPropss = Overlap<Overlap<EdgeOwnProps, EdgeStateProps>, DispatchProps>;
 
-function mapStateToProps(state: IStore, ownProps: EdgeOwnProps): EdgeStateProps {
+function mapStateToProps(state: DState, ownProps: EdgeOwnProps): EdgeStateProps {
     const ret: EdgeStateProps = new EdgeStateProps();
     // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
     ret.isEdgePending = {
@@ -110,7 +110,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const EdgeConnected = connect<EdgeStateProps, DispatchProps, EdgeOwnProps, IStore>(
+export const EdgeConnected = connect<EdgeStateProps, DispatchProps, EdgeOwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(EdgeComponent as any);

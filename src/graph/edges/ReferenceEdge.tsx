@@ -1,4 +1,4 @@
-import {IStore} from "../../redux/store";
+import {DState} from "../../redux/store";
 import React, {Dispatch, ReactElement, useEffect} from "react";
 import {connect} from "react-redux";
 import {DGraphElement, LGraphElement} from "../../model/dataStructure";
@@ -61,7 +61,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = { } as any;
     ret.source = LGraphElement.fromPointer(ownProps.sourceID);
     ret.target = LGraphElement.fromPointer(ownProps.targetID);
@@ -76,7 +76,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const ReferenceEdgeConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const ReferenceEdgeConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(ReferenceEdgeComponent);

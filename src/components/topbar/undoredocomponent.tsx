@@ -1,7 +1,7 @@
 import React, {Dispatch, PureComponent, ReactNode} from 'react';
 import {
     Dictionary, DUser,
-    GObject, IStore,
+    GObject, DState,
     Log, U, RedoAction,
     statehistory,
     UndoAction, store,
@@ -55,7 +55,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         RedoAction.new(index+1);
         this.redoenter();
     }
-    printablePointer(pathsegment: string, state: IStore){
+    printablePointer(pathsegment: string, state: DState){
         let obj = state.idlookup[pathsegment] as GObject;
         if (!obj) return pathsegment;
         if (obj.name) return "@"+obj.name;
@@ -66,7 +66,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
     undoredoenter = (key: string = "undo") => {
         console.log("statemanager undo update", {thiss:this, undo:this.props.undo, redo: this.props.redo, props: this.props, state:this.state});
         if (!this.undoredolistoutdated) return;
-        let s: IStore = store.getState();
+        let s: DState = store.getState();
         let jsx = <>
             {
                 [...(this.props as GObject)[key]].reverse().slice(0, this.props.maxlistsize).map((delta, index) => {
@@ -145,7 +145,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
 }
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.undo = statehistory[DUser.current].undoable;
     ret.redo = statehistory[DUser.current].redoable;
@@ -158,7 +158,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     /// to fill
     return ret; }
 
-export const SaveManagerConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const SaveManagerConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(SaveManagerComponent);

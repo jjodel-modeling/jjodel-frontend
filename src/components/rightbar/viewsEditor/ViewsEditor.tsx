@@ -1,5 +1,5 @@
 import React, {Dispatch, ReactElement} from "react";
-import {IStore} from "../../../redux/store";
+import {DState} from "../../../redux/store";
 import {connect} from "react-redux";
 import {LViewElement, LViewPoint} from "../../../joiner";
 import ViewsData from "./Views";
@@ -28,7 +28,7 @@ interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.views = LViewElement.fromPointer(state.viewelements.slice(0));
     ret.stackViews = LViewElement.fromPointer(state.stackViews);
@@ -43,7 +43,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const ViewsEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const ViewsEditorConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(ViewsEditorComponent);

@@ -1,7 +1,7 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../../redux/store";
 import {
+    DState,
     DPointerTargetable,
     DViewElement,
     GObject, Input,
@@ -65,7 +65,7 @@ interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer = state._lastSelected?.modelElement;
     if(pointer) ret.data = LModelElement.fromPointer(pointer);
@@ -78,7 +78,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const TreeEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const TreeEditorConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(TreeEditorComponent);

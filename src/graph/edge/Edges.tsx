@@ -1,4 +1,4 @@
-import {IStore} from "../../redux/store";
+import {DState} from "../../redux/store";
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {LClass, LGraphElement, LModelElement, LReference, MyProxyHandler,} from "../../joiner";
@@ -40,7 +40,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {};
     return ret;
 }
@@ -51,7 +51,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const EdgesConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const EdgesConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(EdgesComponent);

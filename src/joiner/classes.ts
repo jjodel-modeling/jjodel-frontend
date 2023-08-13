@@ -103,7 +103,7 @@ import type {
     WViewTransientProperties
 } from "../view/viewElement/view";
 import type {LogicContext} from "./proxy";
-import type {EdgeSegment, IStore, EdgeFillSegment} from "./index";
+import type {EdgeSegment, DState, EdgeFillSegment} from "./index";
 import {
     Action,
     BEGIN,
@@ -196,17 +196,17 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
 
     static wrapAll<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
         RET extends CAN_THROW extends true ? L[] : L[] = CAN_THROW extends true ? L[] : L[] >
-    (data: D[] | Pointer<DPointerTargetable, 0, 'N'>, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW, state?: IStore): CAN_THROW extends true ? L[] : L[] {
+    (data: D[] | Pointer<DPointerTargetable, 0, 'N'>, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW, state?: DState): CAN_THROW extends true ? L[] : L[] {
         if (!Array.isArray(data)) return [];
         return data.map( d => DPointerTargetable.wrap(d, baseObjInLookup, path, canThrow, state)) as L[];
     }
 
     static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
         RET extends CAN_THROW extends true ? L : L | undefined = CAN_THROW extends true ? L : L | undefined>
-    (data: D | Pointer | undefined, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW, state?: IStore): CAN_THROW extends true ? L : L | undefined{
+    (data: D | Pointer | undefined | null, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW, state?: DState): CAN_THROW extends true ? L : L | undefined{
         if (!data || (data as any).__isProxy) return data as any;
         if (typeof data === 'string') {
-            if (!state) state = windoww.store.getState() as IStore;
+            if (!state) state = windoww.store.getState() as DState;
             data = state.idlookup[data] as unknown as D;
             if (!data) {
                 if (canThrow) return windoww.Log.exx('Cannot wrap:', {data, baseObjInLookup, path});
@@ -409,8 +409,17 @@ export class Constructors<T extends DPointerTargetable>{
         if (!this.persist) return this.thiss;
         setTimeout( () => { for (let cb of this.callbacks) cb(); }, 0);
         END([CreateElementAction.new(this.thiss, true)]);
-        return this.thiss;
-    }
+        return this.thiss; }
+
+
+    DState(): this {
+        let thiss: DState = this.thiss as any;
+        // todo: this must become a pointer to idlookup and fire a CreateNewElementAction
+        thiss.currentUser = DUser.new(undefined, false);
+        thiss.users = [thiss.currentUser.id];
+        thiss.models = [];
+        return this; }
+
     DModelElement(): this { return this; }
     DClassifier(): this { return this; }
     DParameter(defaultValue?: any): this {
@@ -514,7 +523,7 @@ export class Constructors<T extends DPointerTargetable>{
 
     DPointerTargetable(isUser: boolean = false, id?: string): this {
         const thiss: DPointerTargetable = this.thiss as any;
-        thiss.id = id || (isUser ? "USER" : DUser.current) + "_" + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
+        thiss.id = id || new Date().getTime() + "_" + (isUser ? "USER" : DUser.current) + "_" + (DPointerTargetable.maxID++);
         thiss.className = thiss.constructor.name;
         // this.className = thiss.className;
         if (this.persist) {
@@ -646,6 +655,7 @@ export class Constructors<T extends DPointerTargetable>{
         let endid: DGraphElement["id"] = (windoww.LGraphElement as typeof LGraphElement).getNodeId(end);
         Log.ex(!startid || !endid, "cannot create an edge without start or ending nodes", {start, end, startid, endid});
         thiss.midnodes = [];
+        thiss.midPoints = []; // the logic part which instructs to generate the midnodes
         thiss.start = startid;
         thiss.end = endid;
         // thiss.labels = undefined;
@@ -660,13 +670,15 @@ export class Constructors<T extends DPointerTargetable>{
     DExtEdge(): this { return this; }
     DRefEdge(): this { return this; }
 
-    DGraphElement(model: DGraphElement["model"]|null|undefined, parentNodeID?: DGraphElement["father"], parentgraphID?: DGraphElement["graph"], nodeID?: DGraphElement["id"]): this {
+    DGraphElement(model: DGraphElement["model"]|null|undefined, parentNodeID: DGraphElement["father"]|undefined, parentgraphID: DGraphElement["graph"]|undefined,
+                  nodeID: DGraphElement["id"]|undefined, htmlindex: number): this {
         const thiss: DGraphElement = this.thiss as any;
         if (parentNodeID) thiss.father = parentNodeID;
         if (parentgraphID) thiss.graph = parentgraphID;
         thiss.model = model||undefined;
         thiss.subElements = [];
         thiss.favoriteNode = false;
+        thiss.zIndex = htmlindex;
         if (nodeID) thiss.id = nodeID;
         if (this.persist) {
             model && SetFieldAction.new(model, "pointedBy", PointedBy.fromID(thiss.id, "model"), '+=');
@@ -835,7 +847,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
             (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
                 (LOW extends 1 ? DDD : undefined)  //1...1
                 ),
-        INFERRED = {ret: RET, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR},>(ptr: T, s?: IStore)
+        INFERRED = {ret: RET, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR},>(ptr: T, s?: DState)
         : RET {
         s = s || store.getState();
         if (Array.isArray(ptr)) {
@@ -867,7 +879,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         // DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : ('ERROR'))))))))))))))))),
         DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LRefEdge ? DRefEdge : (LX extends LExtEdge ? DExtEdge : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LEdge ? DEdge : (LX extends LEdgePoint ? DEdgePoint : (LX extends LGraphVertex ? DGraphVertex : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LVertex ? DVertex : (LX extends LVoidEdge ? DVoidEdge : (LX extends LVoidVertex ? DVoidVertex : (LX extends LGraph ? DGraph : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : (LX extends LGraphElement ? DGraphElement : (LX extends LMap ? DMap : (LX extends LModelElement ? DModelElement : (LX extends LUser ? DUser : (LX extends LPointerTargetable ? DPointerTargetable : (ERROR))))))))))))))))))))))))))))))),
         RET = DX extends 'ERROR' ? RETPTR : (RETPTR extends DX ? RETPTR : DX),
-        INFERRED = {ret: RET, RETPTR:RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR | LX, s?: IStore)
+        INFERRED = {ret: RET, RETPTR:RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR | LX, s?: DState)
         : RET {
         s = s || store.getState();
         return s.idlookup[ptr as string] as any;
@@ -1066,7 +1078,7 @@ export class PendingPointedByPaths{
 
     // tmp fields, not sure what i need
     public action!: ParsedAction; // todo: remove
-    static new(action: ParsedAction, oldState: IStore): PendingPointedByPaths {
+    static new(action: ParsedAction, oldState: DState): PendingPointedByPaths {
         const ptr: Pointer = action.value;
         const target: DPointerTargetable | null = oldState.idlookup[ptr as string];
         let pendingPointedBy = new PendingPointedByPaths(action.path, ptr);
@@ -1081,11 +1093,11 @@ export class PendingPointedByPaths{
         this.stackTrace = U.getStackTrace();
     }
     static attemptimplementationdelete(pb: PointedBy) {
-        let state: IStore = store.getState();
+        let state: DState = store.getState();
         let objectChain = U.followPath(state, pb.source);
     }
 
-    public attemptResolve(state: IStore): ParsedAction | null {
+    public attemptResolve(state: DState): ParsedAction | null {
         if (this.canBeResolved(state)) return this.resolve();
         return null;
     }
@@ -1096,12 +1108,12 @@ export class PendingPointedByPaths{
     }
 
     public saveForLater(): void { PendingPointedByPaths.all.push(this); }
-    private canBeResolved(state: IStore): boolean {
+    private canBeResolved(state: DState): boolean {
         this.solveAttempts++;
         if (this.solveAttempts >= PendingPointedByPaths.maxSolveAttempts) Log.ex("pending PointedBy action is not revolved for too long, some pointer was wrongly set up.", this.stackTrace, this, state);
         return !!state.idlookup[this.to]; }
 
-    static getSolveableActions(oldState: IStore): ParsedAction[] {
+    static getSolveableActions(oldState: DState): ParsedAction[] {
         let allClone = [...this.all]; // necessary because the array will remove some elements during iteration as they are solved.
         return allClone.map( p => p.attemptResolve(oldState)).filter(p => (!!p)) as ParsedAction[];
     }
@@ -1140,7 +1152,7 @@ export class PointedBy{
 
 
 
-    public static remove(oldValue: Pointer | undefined, action: ParsedAction, state: IStore, casee: "+=" | "-=" | undefined = undefined): IStore {
+    public static remove(oldValue: Pointer | undefined, action: ParsedAction, state: DState, casee: "+=" | "-=" | undefined = undefined): DState {
         if (!oldValue) return state;
         let oldtarget: DPointerTargetable = state.idlookup[oldValue];// todo: if += -=
         if (!oldtarget) return state;
@@ -1148,7 +1160,7 @@ export class PointedBy{
         let actionpath: string = action.path.substring(0, action.path.length -(casee?.length || 0))
         for (let i = 0; i < oldtarget.pointedBy.length; i++) { if (oldtarget.pointedBy[i].source === actionpath) {index = i; break; } }
         if (index >= 0) {
-            state = {...state};
+            state = {...state} as DState;
             state.idlookup = {...state.idlookup};
             state.idlookup[oldValue] =  {...oldtarget, pointedBy: [...oldtarget.pointedBy]} as any;
             state.idlookup[oldValue].pointedBy.splice(index, 1) // in-place edit
@@ -1157,7 +1169,7 @@ export class PointedBy{
         return state;
     }
 
-    public static add(newtargetptr: Pointer | undefined, action: ParsedAction, state: IStore, casee: "+=" | "-=" | undefined = undefined): IStore {
+    public static add(newtargetptr: Pointer | undefined, action: ParsedAction, state: DState, casee: "+=" | "-=" | undefined = undefined): DState {
         if (!newtargetptr) return state;
         // todo: if can't be done because newtarget doesn't exist, build an action from this and set it pending.
         let newtarget: DPointerTargetable = state.idlookup[newtargetptr];
@@ -1166,7 +1178,7 @@ export class PointedBy{
             return state;
         }
         let oldtarget = {...newtarget, pointedBy: [...newtarget.pointedBy]}
-        state = {...state};
+        state = {...state} as DState;
         state.idlookup = {...state.idlookup};
         state.idlookup[newtargetptr] = {...newtarget, pointedBy:  [...newtarget.pointedBy, PointedBy.new(action.path, casee)]} as any;
         // console.warn('pointedby add:', {from: oldtarget.pointedBy, to: state.idlookup[newtargetptr].pointedBy, obj: state.idlookup[newtargetptr]});
@@ -1275,7 +1287,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
             (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
                 (LOW extends 1 ? DDD : undefined)  //1...1
                 ),
-        INFERRED = {ret: RET, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR},>(ptr: T | undefined, state?: IStore)
+        INFERRED = {ret: RET, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR},>(ptr: T | undefined, state?: DState)
         : RET {
         // return null as any;
         if (Array.isArray(ptr)) return LPointerTargetable.wrapAll(ptr as any, undefined, '', false, state) as any;
@@ -1330,7 +1342,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         // DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : ('ERROR'))))))))))))))))),
         LX = DX extends DEnumerator ? LEnumerator : (DX extends DAttribute ? LAttribute : (DX extends DReference ? LReference : (DX extends DRefEdge ? LRefEdge : (DX extends DExtEdge ? LExtEdge : (DX extends DDataType ? LDataType : (DX extends DClass ? LClass : (DX extends DStructuralFeature ? LStructuralFeature : (DX extends DParameter ? LParameter : (DX extends DOperation ? LOperation : (DX extends DEdge ? LEdge : (DX extends DEdgePoint ? LEdgePoint : (DX extends DGraphVertex ? LGraphVertex : (DX extends DModel ? LModel : (DX extends DValue ? LValue : (DX extends DObject ? LObject : (DX extends DEnumLiteral ? LEnumLiteral : (DX extends DPackage ? LPackage : (DX extends DClassifier ? LClassifier : (DX extends DTypedElement ? LTypedElement : (DX extends DVertex ? LVertex : (DX extends DVoidEdge ? LVoidEdge : (DX extends DVoidVertex ? LVoidVertex : (DX extends DGraph ? LGraph : (DX extends DNamedElement ? LNamedElement : (DX extends DAnnotation ? LAnnotation : (DX extends DGraphElement ? LGraphElement : (DX extends DMap ? LMap : (DX extends DModelElement ? LModelElement : (DX extends DUser ? LUser : (DX extends DPointerTargetable ? LPointerTargetable : (ERROR))))))))))))))))))))))))))))))),
         RET = LX extends 'ERROR' ? RETPTR : (RETPTR extends LX ? RETPTR : LX),
-        INFERRED = {ret: RET, RETPTR: RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR | DX, s?: IStore)
+        INFERRED = {ret: RET, RETPTR: RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR | DX, s?: DState)
         : RET {
         // return null as any;
         if (Array.isArray(ptr)) return LPointerTargetable.wrapAll(ptr) as any;

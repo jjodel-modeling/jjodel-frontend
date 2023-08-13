@@ -13,7 +13,7 @@ import {
     GraphElementOwnProps,
     GraphElementReduxStateProps,
     GraphElementStatee,
-    IStore,
+    DState,
     LModelElement,
     Log,
     LViewElement,
@@ -35,7 +35,7 @@ class DefaultNodeStatee extends GraphElementStatee { }
 //@ts-ignore
 export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeState = DefaultNodeStatee> extends superclass<AllProps, NodeState>{
 
-    static mapStateToProps(state: IStore, ownProps: GraphElementOwnProps): GraphElementReduxStateProps {
+    static mapStateToProps(state: DState, ownProps: GraphElementOwnProps): GraphElementReduxStateProps {
         let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
         GraphElementComponent.mapLModelStuff(state, ownProps, ret); // not necessary either?
         // GraphElementComponent.mapLGraphElementStuff(state, ownProps, ret, dGraphDataClass); not necessary, it's demanded to sub-components
@@ -115,7 +115,7 @@ class DefaultNodeDispatchProps extends GraphElementDispatchProps {}
 type AllPropss = DefaultNodeOwnProps & DefaultNodeReduxStateProps & DefaultNodeDispatchProps;
 
 
-const DefaultNodeConnected = connect<DefaultNodeReduxStateProps, DefaultNodeDispatchProps, DefaultNodeOwnProps, IStore>(
+const DefaultNodeConnected = connect<DefaultNodeReduxStateProps, DefaultNodeDispatchProps, DefaultNodeOwnProps, DState>(
     DefaultNodeComponent.mapStateToProps,
     DefaultNodeComponent.mapDispatchToProps
 )(DefaultNodeComponent as any);
