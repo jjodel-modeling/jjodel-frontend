@@ -33,8 +33,8 @@ export class DV {
     )}
 
     static edgeView(): string { return beautify(
-        `<div className={"edge"} style={{overflow: "visible", width:0, height:0}}>
-            <svg className={"hoverable"} style={{width:"100vw", height:"100vh", pointerEvents:"none"}}>
+        `<div className={"edge"} style={{overflow: "visible", width:"100%", height:"100%", pointerEvents:"none"}}>
+            <svg className={"hoverable"} style={{width:"100vw", height:"100vh", pointerEvents:"none", overflow: "visible"}}>
                 <path className={"preview"} strokeWidth={2} stroke={"gray"} fill={"none"} d={this.edge.d}></path>
                 {this.edge.segments.all.flatMap(s => [
                     <path className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={4} stroke={"black"} fill={"none"} d={s.dpart}></path>,
@@ -49,6 +49,14 @@ export class DV {
                 ])}
             </svg>
             {
+                edge.midPoints.map( m => <EdgePoint data={undefined} initialSize={m} key={m.id} view={"Pointer_ViewEdgePoint"} /> )
+            }{
+                edge.end.model.attributes.map( (m, index, arr) => <EdgePoint data={m.id} initialSize={(parent) => {
+                    let segs = parent.segments.segments;
+                    let pos = segs[0].start.pt.multiply(1-(index+1)/(arr.length+1), true).add(segs[segs.length-1].end.pt.multiply((index+1)/(arr.length+1), true));
+                    console.trace("initial ep", {segs, pos, ratio:(index+1)/(arr.length+1), s:segs[0].start.pt, e:segs[segs.length-1].end.pt});
+                    return {...pos, w:55, h:55}}} key={m.id} view={"Pointer_ViewEdgePoint"} /> )
+            }{
                 false && <EdgePoint key={"midnode1"} view={"Pointer_ViewEdgePoint"} />
             }{
                 false && <EdgePoint key={"midnode2"} view={"Pointer_ViewEdgePoint"} />
@@ -56,9 +64,6 @@ export class DV {
                 false && props.children && "this would cause loop no idea why, needs to be fixed to allow passing EdgeNodes here" || []
             }
         </div>`
-    )}
-    static edgeView0(): string { return beautify(
-        `<div>edge</div>`
     )}
 }
 
@@ -87,9 +92,9 @@ class DefaultView {
             <div className="fake edges" style={{zIndex:101, position: "absolute"}}>
                 {this.data.children.length > 1 && this.data.children[1].node && <DamEdge start={this.data.children[0].node} end={this.data.children[1].node} view={"Pointer_ViewEdge"} key={"pkg"}/>  }
             </div>
-            <div className="edges" style={{zIndex:101, position: "absolute"}}>{
+            <div className="edges" style={{zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}>{
                     true && this.data.suggestedEdges.reference &&
-                    this.data.suggestedEdges.reference.map(se => !se.vertexOverlaps && <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdge"} key={se.start.node.id+"~"+se.end.node.id}/>)
+                    this.data.suggestedEdges.reference.map(se => (true || !se.vertexOverlaps) && <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdge"} key={se.start.node.id+"~"+se.end.node.id}/>)
                 }
             </div>
              {this.data && this.data.packages.map((pkg, index) => {

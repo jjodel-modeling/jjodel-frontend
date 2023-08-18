@@ -13,6 +13,7 @@ import type {
     Pointer, PrimitiveType
 } from "../../../joiner";
 import {LClass, LEdge, LUser, LViewPoint} from "../../../joiner";
+import {InitialVertexSize} from "../../../joiner/types";
 
 export class GraphElementStatee {/*
     constructor(preRenderFunc: string | undefined, evalContext: GObject, templatefunc: () => React.ReactNode) {
@@ -68,6 +69,7 @@ export class GraphElementOwnProps {
     graphid?: Pointer<DGraph, 1, 1, LGraph>; // injected
     parentViewId?: Pointer<DViewElement, 1, 1, LViewElement>; // injected
     htmlindex?: number; // injected
+    initialSize?: InitialVertexSize;
 }
 
 export class EdgeOwnProps extends GraphElementOwnProps {

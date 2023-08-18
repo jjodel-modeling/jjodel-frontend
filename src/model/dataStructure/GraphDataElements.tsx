@@ -3,6 +3,7 @@ import {isDeepStrictEqual} from "util";
 import {
     BEGIN,
     Constructors,
+    CoordinateMode,
     Dictionary,
     DMap,
     DModelElement,
@@ -45,8 +46,7 @@ import {
     windoww
 } from "../../joiner";
 import type {RefObject} from "react";
-import {Geom} from "../../common/Geom";
-import {EdgeGapMode} from "../../joiner/types";
+import {EdgeGapMode, InitialVertexSize} from "../../joiner/types";
 import {labelfunc} from "../../joiner/classes";
 
 
@@ -89,7 +89,7 @@ export class DGraphElement extends DPointerTargetable {
 
 }
 @RuntimeAccessible
-export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C extends Context = Context> extends LPointerTargetable {
+export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C extends Context = Context> extends LPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     static getNodeId<L extends LGraphElement, D extends DGraphElement>(o:L | D | Pointer<D> | LModelElement | DModelElement | Pointer<DModelElement>): Pointer<D> {
@@ -141,8 +141,14 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
     __info__of__vertex: Info = {type: "LVoidVertex", txt: "the foremost vertex containing this graphElement, or undefiened."}
     __info__of__favoriteNode: Info = {type: ShortAttribETypes.EBoolean, txt: "indicates this is the primarly used (by default) node to refer to a modelling element that might have multiple representations. Can be used as favorite target for edges or other."}
 
-    // edgeStart!: GraphPoint; in view
-    // __info__of__edgeStart!: Info = {type:"GraphPoint", txt:"where the outgoing edges should start their paths."};
+    startPoint!: GraphPoint;
+    endPoint!: GraphPoint;
+    __info_of__startPoint: Info = {type: "GraphPoint", txt:<span>Where the outgoing edges should start their paths.
+            <br/>Obtained by combining anchoring point offset specified in view, before snapping to a Vertex border.
+            <br/>Defaults in outer coordinates.</span>};
+    __info_of__endPoint: Info = {type: "GraphPoint", txt:<span>Where the incoming edges should end their paths.
+            <br/>Obtained by combining anchoring point offset specified in view, before snapping to a Vertex border.
+            <br/>Defaults in outer coordinates.</span>};
 
     get_outerGraph(context: Context): LGraph {
         // todo: this relies on the fact that GraphVertex are not passing their own id to their childrens, but the parent graph id
@@ -187,6 +193,7 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
         }
         return undefined;
     }
+
     get_innerGraph(context: Context): LGraph {
         let lcurrent: LGraphElement = LPointerTargetable.fromPointer(context.data.father);
         let dcurrent = lcurrent.__raw;
@@ -297,7 +304,7 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
         //console.log("edgee getsize", {component, view:component?.props?.view});
         let view = component?.props?.view || this.get_view(context);
         (window as any).retry = ()=>view.getSize(context.data.id);
-        let ret = view.getSize(context.data.id); // (this.props.dataid || this.props.nodeid as string)
+        let ret: GraphSize = view.getSize(context.data.id) as any; // (this.props.dataid || this.props.nodeid as string)
         // console.log("getSize() from view", {ret: ret ? {...ret} : ret});
         if (!ret) {
             ret = new GraphSize();
@@ -305,6 +312,7 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
             ret.y = context.data.y;
             ret.w = context.data.w;
             ret.h = context.data.h;
+            if (context.data.className === DEdgePoint.name) { ret = (this as any as LEdgePoint).decodePosCoords(context, ret, view); }
             let def: GraphSize | undefined;
             if (undefined===(ret.x)) { if (!def) def = view.defaultVSize; ret.x = def.x;}
             if (undefined===(ret.y)) { if (!def) def = view.defaultVSize; ret.y = def.y;}
@@ -333,16 +341,17 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
         return ret;
     }
     // set_size(size: Partial<this["size"]>, context: Context): boolean {
-    set_size(size: {x?:number, y?:number, w?:number, h?:number}, context: Context): boolean {
+    set_size(size: Partial<GraphSize>, c: Context): boolean {
         // console.log("setSize("+(this.props?.data as any).name+") thisss", this);
         if (!size) return false;
-        let view = this.get_view(context)
-        if (view.updateSize(context.data.id, size)) return true;
+        let view = this.get_view(c);
+        if (c.data.className === DEdgePoint.name) size = (this as any as LEdgePoint).encodePosCoords(c as any, size, view);
+        if (view.updateSize(c.data.id, size)) return true;
         BEGIN()
-        if (size.x !== undefined) SetFieldAction.new(context.data.id, "x", size.x, undefined, false);
-        if (size.y !== undefined) SetFieldAction.new(context.data.id, "y", size.y, undefined, false);
-        if (size.w !== undefined) SetFieldAction.new(context.data.id, "w", size.w, undefined, false);
-        if (size.h !== undefined) SetFieldAction.new(context.data.id, "h", size.h, undefined, false);
+        if (size.x !== c.data.x && size.x !== undefined) SetFieldAction.new(c.data.id, "x", size.x, undefined, false);
+        if (size.y !== c.data.y && size.y !== undefined) SetFieldAction.new(c.data.id, "y", size.y, undefined, false);
+        if (size.w !== c.data.w && size.w !== undefined) SetFieldAction.new(c.data.id, "w", size.w, undefined, false);
+        if (size.h !== c.data.h && size.h !== undefined) SetFieldAction.new(c.data.id, "h", size.h, undefined, false);
         END()
         return true; }
 
@@ -474,6 +483,26 @@ export class LGraphElement <Context extends LogicContext<DGraphElement> = any, C
     }
     set_state(val: this["state"], context: LogicContext<DGraphElement>): boolean {
         return this.cannotSet("graphElement.isSelected(): todo"); }
+
+
+
+    // for edges
+    public get_startPoint(c: Context|undefined, size?: GraphSize, view?: LViewElement): GraphPoint { return this.get_startEndPoint(c, size, view, true); }
+    public get_endPoint(c: Context|undefined, size?: GraphSize, view?: LViewElement): GraphPoint { return this.get_startEndPoint(c, size, view, false); }
+    private get_startEndPoint(c: Context|undefined, size?: GraphSize, view?: LViewElement, isStart:boolean=true): GraphPoint {
+        if (!size) {
+            if (c) size = this.get_size(c) as any; else size = Log.exDevv("invalid arguments in get_startEndPoint", {arguments});
+        }
+        if (!view) {
+            // if (c) view = this.get_view(c); else view = Log.exDevv("invalid arguments in get_startPoint", {arguments});
+            view = c && this.get_view(c) || Log.exDevv("invalid arguments in get_startEndPoint", {arguments});
+        }
+        let offset: GraphPoint = (view as LViewElement)[isStart ? "edgeStartOffset" : "edgeEndOffset"];
+        let isPercentage: boolean = (view as LViewElement)[isStart ? "edgeStartOffset_isPercentage" : "edgeEndOffset_isPercentage"];
+        if (!size) size = new GraphSize(0, 0, 0, 0);
+        if (isPercentage) offset = new GraphPoint(offset.x/100*(size.w), offset.y/100*(size.h));
+        return size.tl().add(offset, false);
+    }
 
 }
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DGraphElement);
@@ -637,7 +666,7 @@ export class DVoidVertex extends DGraphElement {
     // size?: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
 
     public static new(htmlindex: number, model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"],
-                      size?: GraphSize): DVoidVertex {
+                      size?: InitialVertexSize): DVoidVertex {
         return new Constructors(new DVoidVertex('dwc')).DPointerTargetable().DGraphElement(model, parentNodeID, graphID, nodeID, htmlindex)
             .DVoidVertex(size).end();
     }
@@ -645,7 +674,7 @@ export class DVoidVertex extends DGraphElement {
 }
 
 @RuntimeAccessible
-export class LVoidVertex extends LGraphElement {// <D extends DVoidVertex = any>
+export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C extends Context = Context> extends LGraphElement {// <D extends DVoidVertex = any>
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LVoidVertex;
@@ -702,6 +731,8 @@ export class LVoidVertex extends LGraphElement {// <D extends DVoidVertex = any>
     get_isSelected(context: LogicContext<DVoidVertex>): GObject {
         return DPointerTargetable.mapWrap(context.data.isSelected, context.data, 'idlookup.' + context.data.id + '.isSelected', []);
     }
+
+
 }
 RuntimeAccessibleClass.set_extend(DGraphElement, DVoidVertex);
 RuntimeAccessibleClass.set_extend(LGraphElement, LVoidVertex);
@@ -717,7 +748,7 @@ export class DEdgePoint extends DVoidVertex { // DVoidVertex
     id!: Pointer<DEdgePoint, 1, 1, LEdgePoint>;
     father!: Pointer<DVoidEdge, 1, 1, LVoidEdge>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
-    // model!: Pointer<DModelElement, 0, 1, LModelElement>; gets model from this.father (edge)
+    model!: Pointer<DModelElement, 0, 1, LModelElement>; // todo: if null gets model from this.father (edge)?
     isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
@@ -730,8 +761,8 @@ export class DEdgePoint extends DVoidVertex { // DVoidVertex
     // personal attributes
     __isDEdgePoint!: true;
 
-    public static new(htmlindex: number, model: undefined, parentNodeID: DEdgePoint["father"], graphID?: DEdgePoint["graph"], nodeID?: DGraphElement["id"],
-                      size?: GraphSize): DEdgePoint {
+    public static new(htmlindex: number, model: DEdgePoint["model"] | undefined, parentNodeID: DEdgePoint["father"], graphID?: DEdgePoint["graph"], nodeID?: DGraphElement["id"],
+                      size?: InitialVertexSize): DEdgePoint {
         return new Constructors(new DEdgePoint('dwc'), parentNodeID, true).DPointerTargetable()
             .DGraphElement(undefined, parentNodeID, graphID, nodeID, htmlindex)
             .DVoidVertex(size).DEdgePoint().end();
@@ -740,7 +771,7 @@ export class DEdgePoint extends DVoidVertex { // DVoidVertex
 }
 
 @RuntimeAccessible
-export class LEdgePoint extends LVoidVertex {
+export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extends Context = Context> extends LVoidVertex {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LEdgePoint;
@@ -748,6 +779,7 @@ export class LEdgePoint extends LVoidVertex {
     // static structure: typeof DEdgePoint;
 
     // inherit redefine
+    father!: LVoidEdge;
     // __raw!: DEdgePoint;
     id!: Pointer<DEdgePoint, 1, 1, LEdgePoint>;
     graph!: LGraph;
@@ -763,6 +795,115 @@ export class LEdgePoint extends LVoidVertex {
     size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
     // personal attributes
     __isLEdgePoint!: true;
+
+    // from x,y as coords, to x%,y% as % of ((1-val)%*startpt) + ((val)%*endpt)
+    decodePosCoords<T extends Partial<GraphSize> | Partial<GraphPoint>>(c: Context, size: T&any, view: LViewElement): T {
+        if (!view) view = this.get_view(c);
+        let edgePointCoordMode = view.edgePointCoordMode;
+        if (edgePointCoordMode === CoordinateMode.absolute) return size;
+        let le: LVoidEdge = c.proxyObject.father;
+        let sp: GraphPoint = le.startPoint;
+        let ep: GraphPoint = le.endPoint;
+        let ret: any = (("w" in size || "h" in size) ? new GraphSize() : new GraphPoint()); // GObject<Partial<GraphSize>>;
+        switch (edgePointCoordMode) {
+            default: return Log.exDevv("translatePosCoords() invalid coordinate mode", {mode:edgePointCoordMode, view});
+            // case CoordinateMode.absolute: return size;
+            case CoordinateMode.relativePercent:
+                // let s = this.getBasicSize(c);
+                // MATH:
+                // size.x = sp.x*x% + ep.x*(1-x%)
+                // size.x = sp.x*x% + ep.x - ep.x*x%
+                // size.x - ep.x= (sp.x - ep.x)*x%
+                // (size.x - ep.x) / (sp.x - ep.x) = x% // actually i inverted <sp, ep> in first equation, so reverse them in result too.
+                if (size.x !== undefined) ret.x = (1 - size.x) * sp.x + (size.x) * ep.x;
+                if (size.y !== undefined) ret.y = (1 - size.y) * sp.y + (size.y) * ep.y;
+                break;
+            case CoordinateMode.relativeOffset:
+                // offset = sp - size
+                // size = offset - sp
+                // in reverse: actualsize = offset, size=offset
+                let offsetsp = new GraphPoint(size.x - sp.x, size.y - sp.y);
+                let offsetep = new GraphPoint(size.x - ep.x, size.y - ep.y);
+                // if the start and endpoint of the edge didn't move, offsetsp = offsetep.
+                // if they moved, those 2 are discordant --> i pick middle
+                offsetsp.add(offsetep, false).divide(2, false);
+                if (size.x !== undefined) ret.x = offsetsp.x;
+                if (size.y !== undefined) ret.y = offsetsp.y;
+                break;
+        }
+        if (size.x === undefined) delete ret.x;
+        if (size.y === undefined) delete ret.y;
+        if ((size as any).w === undefined) delete ret.w; else ret.w = size.w;
+        if ((size as any).h === undefined) delete ret.h; else ret.h = size.h;
+        return ret;
+    }
+    encodePosCoords<T extends Partial<GraphSize> | Partial<GraphPoint>>(c: Context, size: T, view: LViewElement): T {
+        if (!view) view = this.get_view(c);
+        let edgePointCoordMode = view.edgePointCoordMode;
+        if (edgePointCoordMode === CoordinateMode.absolute) return size;
+        let le: LVoidEdge = c.proxyObject.father;
+        let sp: GraphPoint = le.startPoint;
+        let ep: GraphPoint = le.endPoint;
+        let ret: any = (("w" in size || "h" in size) ? new GraphSize() : new GraphPoint()); // GObject<Partial<GraphSize>>;
+        switch (edgePointCoordMode) {
+            default: return Log.exDevv("translatePosCoords() invalid coordinate mode", {mode:edgePointCoordMode, view});
+            // case CoordinateMode.absolute: return size;
+            case CoordinateMode.relativePercent:
+                // let s = this.getBasicSize(c);
+                // MATH:
+                // size.x = sp.x*x% + ep.x*(1-x%)
+                // size.x = sp.x*x% + ep.x - ep.x*x%
+                // size.x - ep.x= (sp.x - ep.x)*x%
+                // (size.x - ep.x) / (sp.x - ep.x) = x% // actually i inverted <sp, ep> in first equation, so reverse them in result too.
+                if (size.x !== undefined) ret.x = (size.x - sp.x) / (ep.x - sp.x);
+                if (size.y !== undefined) ret.y = (size.y - sp.y) / (ep.y - sp.y);
+                break;
+            case CoordinateMode.relativeOffset:
+                if (size.x) ret.x = [sp.x - size.x, ep.x - size.x];
+                if (size.y) ret.y = [sp.y - size.y, ep.y - size.y];
+                break;
+        }
+        if (size.x === undefined) delete ret.x;
+        if (size.y === undefined) delete ret.y;
+        if ((size as any).w === undefined) delete ret.w; else ret.w = (size as any).w;
+        if ((size as any).h === undefined) delete ret.h; else ret.h = (size as any).h;
+        return ret;
+    }
+/*
+    getBasicSize(c: Context): GraphSize {
+        let le: LVoidEdge = c.proxyObject.father;
+        let sp: GraphPoint = le.startPoint;
+        let ep: GraphPoint = le.endPoint;
+        let pos = sp.multiply({x: c.data.x, y: c.data.y}, true).add(ep.multiply({x: 1-c.data.x, y: 1-c.data.y}, true), false);
+        return new GraphSize(pos.x, pos.y, c.data.w, c.data.w);
+    }
+**/
+    /*get_size(c: Context, canTriggerSet: boolean = true): GraphSize{
+        let ret = this.getBasicSize(c);
+        if (c.data.isResized) return ret;
+        let html: RefObject<HTMLElement | undefined> | undefined = component?.html;
+        let actualSize: Partial<Size> & {w:number, h:number} = html?.current ? Size.of(html.current) : {w:0, h:0};
+        if (!ret.equals(actualSize)) {
+            let updateSize: boolean = false;
+            let view = this.get_view(c);
+            if (view.adaptWidth && ret.w !== actualSize.w) {
+                ret.w = actualSize.w;
+                if (canTriggerSet) updateSize = true;
+                // if (canTriggerSet) this.set_size({w:actualSize.w}, context);
+            }
+            if (view.adaptHeight && ret.h !== actualSize.h) {
+                ret.h = actualSize.h;
+                if (canTriggerSet && !updateSize) updateSize = true;
+            }
+            // console.log("getSize() from node merged with actualSize", {ret: {...ret}});
+            if (updateSize) this.set_size(ret, c);
+        }
+        return ret;
+    }
+    set_size(v: GraphSize, c: Context) {
+
+    }*/
+
 }
 RuntimeAccessibleClass.set_extend(DVoidVertex, DEdgePoint);
 RuntimeAccessibleClass.set_extend(LVoidVertex, LEdgePoint);
@@ -939,7 +1080,7 @@ export class DVoidEdge extends DGraphElement {
     end!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     __isDVoidEdge!: true;
 
-    midPoints!: MidPoint[]; // the logic part which instructs to generate the midnodes
+    midPoints!: InitialVertexSize[]; // the logic part which instructs to generate the midnodes
     midnodes!: Pointer<DEdgePoint, 1, 1, LEdgePoint>[];
 
     longestLabel!: PrimitiveType | labelfunc;
@@ -952,19 +1093,27 @@ export class DVoidEdge extends DGraphElement {
             .DVoidEdge(start, end, longestLabel, labels).end();
     }
 }
-
+/*
 @RuntimeAccessible
-export class MidPoint extends RuntimeAccessibleClass{
-    x!: number;
-    y!: number;
-    w!: number;
-    h!: number;
-    constructor(x: number=5, y: number=5, w: number=5, h: number=5) {
-        super();
-    }
+export class MidPoint{
+    readonly id: string; // not really a pointer, it's not on store.
+    x?: number; y?: number;
+    readonly w?: number; // if it's modified it's not ever here (initial size) but on DEdgePoint that is a Node.
+    readonly h?: number;/*
+    constructor2(x: number=5, y: number=5, w: number=5, h: number=5) {
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+    }* /
+constructor(id: string, w: number=5, h: number=5) {
+    this.id = id;
+    this.w = w;
+    this.h = h;
 }
+}*/
 @RuntimeAccessible
-export class EdgeSegment extends RuntimeAccessibleClass{
+export class EdgeSegment{
     index: number;
     prev: EdgeSegment | undefined;
     start: segmentmaker;
@@ -1143,22 +1292,24 @@ export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends 
     start!: LGraphElement;
     end!: LGraphElement;
     __isLVoidEdge!: true;
-    midPoints!: MidPoint[]; // the logic part which instructs to generate the midnodes
+    midPoints!: InitialVertexSize[]; // the logic part which instructs to generate the midnodes
     midnodes!: LEdgePoint[];
 
+/*
+replaced by startPoint
     edgeStart!: GraphPoint;
     edgeStart_inner!: GraphPoint;
     edgeStart_outer!: GraphPoint;
     __info_of__edgeStart: Info = {type: "GraphPoint", txt: "Same as edgeStart_outer."}
-    __info_of__edgeStart_outer: Info = {type: "GraphPoint", txt: "Where the edge should start his path, in coordinates relative at the root Graph.<br>Computed by combining different options stored in View and the layout of the starting node."}
-    __info_of__edgeStart_inner: Info = {type: "GraphPoint", txt: "Where the edge should start his path, in coordinates relative at the most nested Graph.<br>Computed by combining different options stored in View and the layout of the starting node."}
+    __info_of__edgeStart_outer: Info = {type: "GraphPoint", txt: "Where the edge should start his path, in coordinates relative at the root Graph.<br>Computed by combining the anchor offset option in View and the size of the starting node."}
+    __info_of__edgeStart_inner: Info = {type: "GraphPoint", txt: "Where the edge should start his path, in coordinates relative at the most nested Graph.<br>Computed by combining the anchor offset option in View and the size of the starting node."}
     edgeEnd!: GraphPoint;
     edgeEnd_inner!: GraphPoint;
     edgeEnd_outer!: GraphPoint;
     __info_of__edgeEnd: Info = {type: "GraphPoint", txt: "Same as edgeEnd_outer."}
-    __info_of__edgeEnd_outer: Info = {type: "GraphPoint", txt: "Where the edge should end his path, in coordinates relative at the root Graph.<br>Computed by combining different options stored in View and the layout of the ending node."}
-    __info_of__edgeEnd_inner: Info = {type: "GraphPoint", txt: "Where the edge should end his path, in coordinates relative at the most nested Graph.<br>Computed by combining different options stored in View and the layout of the ending node."}
-
+    __info_of__edgeEnd_outer: Info = {type: "GraphPoint", txt: "Where the edge should end his path, in coordinates relative at the root Graph.<br>Computed by combining the anchor offset option in View and the size of the starting node."}
+    __info_of__edgeEnd_inner: Info = {type: "GraphPoint", txt: "Where the edge should end his path, in coordinates relative at the most nested Graph.<br>Computed by combining the anchor offset option in View and the size of the starting node."}
+*/
 
 
 //    label!: PrimitiveType; should never be read change their documentation in write only. their values is "read" in this.segments
@@ -1201,7 +1352,16 @@ export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends 
             Log.exx("edge longestLabel invalid type, must be a primitive value, a function or an array of such.", d.longestLabel);
         }
     */
-    private get_label_impl(c: Context, segment: EdgeSegment, nodes: this["allNodes"], segments: EdgeSegment[]): PrimitiveType | undefined {
+    public get_midPoints(c: Context):this["midPoints"] { return c.data.midPoints; }
+    public addMidPoint(v: this["midPoints"][0]): boolean { return this.wrongAccessMessage("addMidPoint"); }
+    public get_addMidPoint(c: Context): (v: this["midPoints"][0]) => boolean { return (v:this["midPoints"][0]) => this.impl_addMidPoints(v, c); }
+    public set_midPoints(val: this["midPoints"], c: Context): boolean {
+        return SetFieldAction.new(c.data.id, "midPoints", val, undefined, false);
+    }
+    protected impl_addMidPoints(val: this["midPoints"][0], c: Context): boolean {
+        return SetFieldAction.new(c.data.id, "midPoints", val, '+=', false);
+    }
+    protected get_label_impl(c: Context, segment: EdgeSegment, nodes: this["allNodes"], segments: EdgeSegment[]): PrimitiveType | undefined {
         let key: "longestLabel" | "labels" = segment.isLongest ? "longestLabel" : "labels"; // : keyof this
         // if (isLongestSegment) return this.get_longestLabel_impl(d, l, nodes, index):
         const d = c.data;
@@ -1242,42 +1402,31 @@ export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends 
         }
         Log.exx("edge labels invalid type, must be a primitive value, a function or an array of such.", d.labels);
     }*/
-    get_edgeStart(context: Context): GraphPoint{ return this.get_edgeStart_Outer(context); }
-    get_edgeStart_Outer(c: Context): GraphPoint{
-        console.log("get_edgeStart_Outer", {out:this.get_outerGraph(c), pos:this.get_edgeStart_inner(c), inner:this.get_innerGraph(c)});
-        // problema: inner graph qua è di edge che è sempre situato nella root. dovrebbe essere innergraph del target?
-        return this.get_outerGraph(c).translateSize(this.get_edgeStart_inner(c), this.get_start(c).innerGraph);
+
+    __info_of__startPoint: Info = {type: "GraphPoint", txt:<span>startPoint of this.start (element originating the edge). Defaults in outer coordinates.</span>};
+    __info_of__endPoint: Info = {type: "GraphPoint", txt:<span>endPoint of this.end (element originating the edge). Defaults in outer coordinates.</span>};
+    public get_startPoint(context: Context): GraphPoint{ return this.get_startPoint_Outer(context); }
+    public get_endPoint(context: Context): GraphPoint{ return this.get_endPoint_Outer(context); }
+    public get_startPoint_Outer(c: Context): GraphPoint{
+        console.log("get_edgeStart_Outer", {out:this.get_outerGraph(c), pos:this.get_startPoint_inner(c), inner:this.get_start(c).innerGraph});
+        return this.get_outerGraph(c).translateSize(this.get_startPoint_inner(c), this.get_start(c).innerGraph);
     }
-    get_edgeStart_inner(c: Context): GraphPoint{ return this.get_edgeStartEnd_inner(c, true); }
-    private get_edgeStartEnd_inner(c: Context, isStart: boolean): GraphPoint{
-        // todo: obsolete, use get segment instead
-        /*let view: LViewElement = this.get_view(c);
-        let midNodes: LEdgePoint[] = this.get_midnodes(c);
-        let startSize: GraphSize = (isStart ? this.get_start(c) : this.get_end(c))?.size || new GraphSize(0, 0, 0, 0);
-        let cutAtBoundaries = view.edgeStartStopAtBoundaries;
-        let startoffset: GraphPoint = view.edgeStartOffset;
-        let firstMidNode: LEdgePoint = isStart ? midNodes[0] : midNodes[midNodes.length-1];
-        let offset: GraphPoint = view.edgeStartOffset_isPercentage ? new GraphPoint(startoffset.x/100*(0+startSize.w), startoffset.y/100*(0+startSize.h)) : startoffset;
-        let tentativeStart: GraphPoint = startSize.tl().add(offset, false);
-        console.log("edgestart", {offset, startSize, startoffset, is$: view.edgeStartOffset_isPercentage, tentativeStart});
-        function calculateStartingPoint(a:any, ...b:any) { return a;}*/
-        // todo
-        // this.get_segment(c, start, end, c.proxyObject.allNodes, start.view, end.view, cutAtBoundaries)
-        //return calculateStartingPoint(tentativeStart, firstMidNode, cutAtBoundaries);
-        return null as any;
+    public get_endPoint_Outer(c: Context): GraphPoint{
+        console.log("get_edgeEnd_Outer", {out:this.get_outerGraph(c), pos:this.get_endPoint_inner(c), inner:this.get_end(c).innerGraph});
+        return this.get_outerGraph(c).translateSize(this.get_endPoint_inner(c), this.get_end(c).innerGraph);
     }
+
+    public get_startPoint_inner(c: Context): GraphPoint{ return this.get_edgeStartEnd_inner(c, true); }
+    public get_endPoint_inner(c: Context): GraphPoint{ return this.get_edgeStartEnd_inner(c, false); }
+    private get_edgeStartEnd_inner(c: Context, isStart: boolean): GraphPoint{ return isStart ? this.get_start(c).startPoint : this.get_end(c).endPoint; }
     segments!: {all: EdgeSegment[], segments: EdgeSegment[], fillers: EdgeSegment[]};
     segments_inner!: {all: EdgeSegment[], segments: EdgeSegment[], fillers: EdgeSegment[]};
     segments_outer!: {all: EdgeSegment[], segments: EdgeSegment[], fillers: EdgeSegment[]};
     __info_of__segments: Info = {type: "{all:T, segments:T, fillers:T} where T is EdgeSegment",
-        txt:<span>Collection of segments connecting in order vertex and EdgePoint without intersecting their area.<br/>fillers are arcs generated by view.edgeGapMode being autofill, arcfill or linefill.</span>}
-    /*    pathSegments!: EdgePathSegment[];
-        __info_of__pathSegments: Info = {type: EdgePathSegment.name, txt:<span>Collection of segments aimed to be rendered in svg path, length of this array is allNodes.length % svg letter sise specified on view.</span>}
+        txt:<span>Collection of segments connecting in order vertex and EdgePoint without intersecting their area, aimed to be rendered in svg path.
+            <br/>fillers are arcs generated by view.edgeGapMode being autofill, arcfill or linefill.
+            <br/>length of this.segments array is Math.ceil(allNodes.length / svg_letter_size) specified on view.</span>}
 
-        public get_pathSegments(c: Context): this["segments"] {
-            let ret = [];
-            ret.length = c.proxyObject.allNodes% this.svgLetterSize(c.proxyObject.view.bendingMode);
-        }*/
     private svgLetterSize( s: string): {first:number, others: number} {
         switch (s) {
             default: return Log.exDevv("unexpected svg path letter: \"" + s + "\"", s);
@@ -1294,19 +1443,26 @@ export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends 
 
     }
 
-    private get_points(allNodes: LGraphElement[], outer: boolean): segmentmaker[] {
-        function getAnchorOffset(size: GraphSize, offset: GraphPoint, isPercentage: boolean) {
+    private get_points_impl(allNodes: LGraphElement[], outer: boolean): segmentmaker[] {
+        function getAnchorOffset(size: GraphSize, view: LViewElement) {
+            let offset: GraphPoint = view.edgeStartOffset;
+            let isPercentage: boolean = view.edgeStartOffset_isPercentage
             if (!size) size = new GraphSize(0, 0, 0, 0);
             if (isPercentage) offset = new GraphPoint(offset.x/100*(size.w), offset.y/100*(size.h));
             return size.tl().add(offset, false);
         }
         const all: segmentmaker[] = allNodes.map((ge) => {
             let ret: segmentmaker = { view: ge.view, size: outer ? ge.outerSize : ge.innerSize, ge} as any;
-            ret.pt = getAnchorOffset(ret.size, ret.view.edgeStartOffset, ret.view.edgeStartOffset_isPercentage);
+            // ret.pt = ge.startPoint;
+            ret.pt = (LEdgePoint.singleton as LEdgePoint).get_startPoint(undefined as any, ret.size, ret.view);
+            ret.pt = getAnchorOffset(ret.size, ret.view);
             return ret; }
         );
         return all;
     }
+    private get_points(allNodes: LGraphElement[], outer: boolean = false): segmentmaker[]{ return this.get_points_impl(allNodes, outer); }
+    private get_points_outer(allNodes: LGraphElement[]): segmentmaker[]{ return this.get_points_impl(allNodes, true); }
+    private get_points_inner(allNodes: LGraphElement[]): segmentmaker[]{ return this.get_points_impl(allNodes, false); }
     public d!: string;
     public __info_of__d: Info = {type: ShortAttribETypes.EString, txt:"the full suggested path of SVG path \"d\" attribute, merging all segments."}
     public get_d(c: Context) {

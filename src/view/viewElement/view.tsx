@@ -1,6 +1,6 @@
 import {
     Action,
-    Constructors,
+    Constructors, CoordinateMode,
     DGraphElement,
     Dictionary,
     DModelElement,
@@ -82,6 +82,7 @@ export class DViewElement extends DPointerTargetable {
     edgeEndOffset_isPercentage!: boolean;
     edgeStartStopAtBoundaries!: boolean;
     edgeEndStopAtBoundaries!: boolean;
+    edgePointCoordMode!: CoordinateMode;
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1 , persist: boolean = false): DViewElement {
@@ -163,6 +164,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     edgeStartStopAtBoundaries!: boolean;
     __info_of__edgeStartStopAtBoundaries: Info = {type:"GraphPoint", txt: "Whether outgoing edges should cross the node boundaries overlapping the node or stop at them (edge arrows might enter the node if this is on)."}
     edgeEndStopAtBoundaries!: boolean;
+    edgePointCoordMode!: CoordinateMode;
 
     protected size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>; // use getSize, updateSize;
 
@@ -209,7 +211,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             newSize.y = size?.y !== undefined ? size.y : vsize.y;
             newSize.w = size?.w !== undefined ? size.w : vsize.w;
             newSize.h = size?.h !== undefined ? size.h : vsize.h;
-            SetFieldAction.new(context.data.id, "size." + id as any, newSize);
+            if (!newSize.equals(vsize)) SetFieldAction.new(context.data.id, "size." + id as any, newSize);
             return true;
         }
     }

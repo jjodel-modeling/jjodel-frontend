@@ -41,7 +41,7 @@ import {
     LClass,
     SetFieldAction,
     DGraphVertex,
-    DVoidVertex, DEdge, LEdge, LUser, LViewPoint, LGraphElement, RuntimeAccessibleClass,
+    DVoidVertex, DEdge, LEdge, LUser, LViewPoint, LGraphElement, RuntimeAccessibleClass, DEdgePoint,
 } from "../../joiner";
 
 import {end} from "@popperjs/core";
@@ -189,6 +189,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!dnode) {
             console.log("making node:", {dGraphElementDataClass, nodeid, parentnodeid, graphid, dataid, ownProps, ret});
             let dge;
+            if (dGraphElementDataClass === DEdgePoint) {
+                console.log("dGraphElementDataClass en", dGraphElementDataClass);
+                let initialSize = ownProps.initialSize;
+                dge = DEdgePoint.new(ownProps.htmlindex as number, dataid||undefined, parentnodeid, graphid, nodeid, initialSize);
+                ret.node =  MyProxyHandler.wrap(dge);
+            }
             if (dGraphElementDataClass === DEdge) {
                 // set start and end from ownprops;
                 let edgeProps: EdgeStateProps = ret as EdgeStateProps;
@@ -202,7 +208,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             }
             else {
                 console.log("dGraphElementDataClass", dGraphElementDataClass);
-                dge = dGraphElementDataClass.new(ownProps.htmlindex as number, dataid, parentnodeid, graphid, nodeid);
+                let initialSize = ownProps.initialSize;
+                dge = dGraphElementDataClass.new(ownProps.htmlindex as number, dataid, parentnodeid, graphid, nodeid, initialSize);
                 ret.node =  MyProxyHandler.wrap(dge);
             }
             // let act = CreateElementAction.new(dge, false);
@@ -461,6 +468,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     else viewStyle.width = (rootProps.view.width) && rootProps.view.width + 'px';
                     viewStyle = {};
                 */
+                // viewStyle.pointerEvents = "all";
                 viewStyle.order = viewStyle.zIndex = this.props.node?.zIndex;
                 viewStyle.display = this.props.view?.display;
                 rawRElement = React.cloneElement(rawRElement, // i'm cloning a raw html (like div) being root of the rendered view

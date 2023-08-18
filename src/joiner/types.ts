@@ -1,6 +1,7 @@
 // export type Class = { new(...args: any[]): any; };
-import type {ShortAttribETypes, Pointer, RuntimeAccessibleClass} from "../joiner";
+import type {ShortAttribETypes, Pointer, RuntimeAccessibleClass, EdgeSegment} from "../joiner";
 import type React from "react";
+import {LEdgePoint, LGraphElement, LVoidEdge, LVoidVertex} from "../joiner";
 
 export declare type Class<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (abstract new (...args: any[]) => InstanceType) & StaticType;
 export declare type CClass<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (new (...args: any[]) => InstanceType) & StaticType;
@@ -122,5 +123,15 @@ export type ObjectWithoutPointers<T> = Omit<ObjectWithoutStrings<T> & pureString
 
 
 
-type refkeys = "parent" | "father" | "parent" | "classifiers" | "children" | "classes" | "packages" | "subpackages" | "annotations" | ""
+type refkeys = "parent" | "father" | "classifiers" | "children" | "classes" | "packages" | "subpackages" | "annotations" | ""
     | "type" | "attributes" | "references" | "operations" | "parameters" | "..... much more"
+
+
+
+export type InitialSizeField = number ;// | ((segment: EdgeSegment) => number);
+export type InitialVertexSizeObj = Partial<{
+    id: InitialSizeField | DocString<"Just something to be used as a react key. doesn't need to be a proper Pointer id">,
+    w: InitialSizeField, h: InitialSizeField, x: InitialSizeField, y: InitialSizeField}>;
+export type InitialVertexSizeFunc = ((parent: LVoidEdge|LGraphElement, thiss: LVoidVertex|LEdgePoint)=>InitialVertexSizeObj);
+export type InitialVertexSize =  undefined | InitialVertexSizeObj | InitialVertexSizeFunc; // | ((segment: EdgeSegment) => privateTempIVS);
+

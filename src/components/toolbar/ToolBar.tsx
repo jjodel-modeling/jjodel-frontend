@@ -14,17 +14,17 @@ import {
     LViewElement,
     MyProxyHandler,
     Pointer,
-    SetFieldAction, RuntimeAccessibleClass, DVoidEdge, DEdge, DEdgePoint
+    SetFieldAction, RuntimeAccessibleClass, DVoidEdge, DEdge, DEdgePoint, EdgeSegment, LVoidEdge, Constructors
 } from "../../joiner";
 
 interface ThisState {}
 
-function getItems(data: LModelElement, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]>, items: string[], node?:LGraphElement): ReactNode[] {
+function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]>, items: string[], node?:LGraphElement): ReactNode[] {
     const reactNodes: ReactNode[] = [];
     for (let item_dname of items) {
         if (item_dname[0]=="_") {
             item_dname = item_dname.substring(2);
-            data = data.father || data;
+            data = data?.father || data;
         }
         let item = item_dname.substring(1).toLowerCase();
         reactNodes.push(<div className={"toolbar-item " + item} key={item_dname} onClick={() => {
@@ -35,10 +35,21 @@ function getItems(data: LModelElement, myDictValidator: Dictionary<DocString<"DC
                     break;
                 case DEdgePoint.name:
                     let edge: LVoidEdge = node as LVoidEdge;
-                    edge.mi
-                    DEdgePoint.new() ??? nope? this should be made by render() so how i trigger it?
-                    need another colection to instruct the edge what to render in jsx through edge.something.map( o => <EdgePoint data={o} />)
+                    if (!myDictValidator[item_dname]) return;
+                    let longestSeg: EdgeSegment = undefined as any; // just because compiler does not know it is always found through the for loop
+                    let longestIndex: number=0;
+                    let segms = edge.segments.segments;
+                    for (; longestIndex < segms.length; longestIndex++) if (segms[longestIndex].isLongest) { longestSeg = segms[longestIndex]; break;}
+                    // let index = edge.segments.all.findIndex((s: EdgeSegment) => s.isLongest);
+                    let newmp = {...(longestSeg.start.pt.add(longestSeg.end.pt, true).divide(2)), w: 5, h: 5, id: Constructors.makeID()};
+                    let mp = [...edge.midPoints];
+                    mp.splice(longestIndex, 0, newmp);
+                    edge.midPoints = mp;
+                    selectNode(newmp);
+                    break;
+                    // edge.addMidPoint(, index)
                 default:
+                    if (!data || !myDictValidator) return;
                     let d = data.addChild(item);
                     if (myDictValidator[item_dname]) select(d); break;
             }
@@ -47,10 +58,10 @@ function getItems(data: LModelElement, myDictValidator: Dictionary<DocString<"DC
     return reactNodes;
 }
 function select(d: DModelElement): DModelElement {
-    setTimeout(()=>$(".Graph [data-dataid='"+d?.id+"']").trigger("click"), 10);
+    if (d && d.id) setTimeout(()=>$(".Graph [data-dataid='"+d?.id+"']").trigger("click"), 10);
     return d; }
-function selectNode(d: DGraphElement): DGraphElement {
-    setTimeout(()=>$(".Graph [data-nodeid='"+d?.id+"']").trigger("click"), 10);
+function selectNode(d: DGraphElement|{id: string}): any {
+    if (d && d.id) setTimeout(()=>$(".Graph [data-nodeid='"+d?.id+"']").trigger("click"), 10);
     return d; }
 
 function ToolBarComponent(props: AllProps, state: ThisState) {
@@ -68,8 +79,12 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     downward["DEnumerator"] = ["DLiteral"];
     downward["DOperation"] = ["DParameter", "DException"];
 
+    // nodes
+    downward["DEdge"] = ["DEdgePoint"]
+    downward["DVoidEdge"] = ["DEdgePoint"]
+
     // for (let parentKey in downward) myDictValidator.set(parentKey, addChildren("package"));
-    let upward: Dictionary<DocString<"DClassName">, DocString<"hisDParents">[]> = {};
+    let upward: Dictionary<DocString<"DClassName (model)">, DocString<"hisDParents">[]> = {};
     for (let parentKey in downward){
         let vals = downward[parentKey];
         if(!vals) continue;
@@ -79,10 +94,13 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             upward[child].push(...(downward[parentKey]||[]));
         }
     }
-    upward["DPackage"] = ["_pDPackage"]; //, "DModel"];
+
+    // exceptions:
+    upward["DPackage"] = ["_pDPackage"]; //, "DModel"]; because from a package, i don't want to prompt the user to create a model in toolbar.
+    upward["DEdgeNode"] = []; //, "DEdge", "DVoidEdge"]; because from a edgeNode, i don't want to prompt the user to create a edge in toolbar.
     // upward["DClass"] = ["_pDPackage", "DClass", "DEnumerator"];
 
-    if (RuntimeAccessibleClass.extends(props.selectedNode, DVoidEdge))
+    // if (RuntimeAccessibleClass.extends(props.selected?.node?.className, DVoidEdge)) { }
     if (isMetamodel) {
         return(<div className={"toolbar"}>
             <h6>Add sibling</h6>

@@ -52,7 +52,6 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
     constructor(props: AllProps, context: any) {
         super(props, context);
-
         this.getSize = this.getSize.bind(this);
         this.setSize = this.setSize.bind(this);
         // this.state={forceupdate:1};
@@ -226,7 +225,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             case "Vertex":
             case "VoidVertex":
             case "EdgePoint":
-                if (nodeType === "EdgePoint") {
+                if (false && nodeType === "EdgePoint") {
                     styleoverride.top = (size.y - size.h/2)+ "px";
                     styleoverride.left = (size.x - size.w/2) + "px";
                 }
@@ -313,9 +312,10 @@ export const Vertex = (props: OwnProps, children: (string | React.Component)[] =
 export const VoidVertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} isVoid={true}/>;
 }
-export const EdgePoint = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const EdgePoint = function EdgePoint (props: OwnProps, children: (string | React.Component)[] = []): ReactElement {
     return <VertexConnected {...{...props, children}} isGraph={false} isEdgePoint={true}/>;
 }
+// todo: name them all or verify the name is still usable.
 
 export const Graph = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => { // doesn't work?
     return <VertexConnected {...{...props, children}} isGraph={true} isVertex={false} />;
@@ -328,6 +328,7 @@ export const GraphVertex = (props: OwnProps, children: (string | React.Component
 export const Field = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isGraph={false} isVertex={false} />;
 }
+(window as any).componentdebug = {Graph, GraphVertex, Field, Vertex, VoidVertex, EdgePoint, VertexConnected, VertexComponent};
 /*
 let windoww = window as any;
 

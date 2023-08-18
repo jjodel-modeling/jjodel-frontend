@@ -92,7 +92,10 @@ import type {
     WValue
 } from "../model/logicWrapper";
 // import type {Pointer} from "./typeconverter";
-import type {CClass, Constructor, Dictionary, DocString, GObject, orArr, Proxyfied, unArr} from "./types";
+import type {
+    CClass, Constructor, Dictionary, DocString, GObject, InitialVertexSize,
+    InitialVertexSizeFunc, InitialVertexSizeObj, orArr, Proxyfied, unArr
+} from "./types";
 import {EdgeBendingMode, EdgeGapMode, PrimitiveType} from "./types";
 import type {
     DViewElement,
@@ -121,6 +124,7 @@ import {
     U,
 } from "./index";
 import TreeModel from "tree-model";
+import {cssNumber} from "jquery";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -258,7 +262,8 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     public static get<T extends typeof RuntimeAccessibleClass = typeof RuntimeAccessibleClass>(dclassname: string, annotated = false)
         : T & {logic?: typeof LPointerTargetable} { return (annotated ? RuntimeAccessibleClass.annotatedClasses : this.classes)[dclassname] as any; }
 
-    public static extends(className: string | typeof RuntimeAccessibleClass, superClassName: string| typeof RuntimeAccessibleClass, returnIfEqual: boolean = true): boolean {
+    public static extends(className?: string | typeof RuntimeAccessibleClass, superClassName?: string| typeof RuntimeAccessibleClass, returnIfEqual: boolean = true): boolean {
+        if (!className || !superClassName) return false;
         const superclass = typeof superClassName === "string" ? RuntimeAccessibleClass.get(superClassName) : superClassName;
         const thisclass = typeof className === "string" ? RuntimeAccessibleClass.get(className) : className;
         if (!superclass || !thisclass) return false;
@@ -380,6 +385,7 @@ export type LtoW<LX extends LPointerTargetable, WX = LX extends LEnumerator ? WE
 export type WtoD<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? DEnumerator : (IN extends WAttribute ? DAttribute : (IN extends WReference ? DReference : (IN extends WRefEdge ? DRefEdge : (IN extends WExtEdge ? DExtEdge : (IN extends WDataType ? DDataType : (IN extends WClass ? DClass : (IN extends WStructuralFeature ? DStructuralFeature : (IN extends WParameter ? DParameter : (IN extends WOperation ? DOperation : (IN extends WEdge ? DEdge : (IN extends WEdgePoint ? DEdgePoint : (IN extends WGraphVertex ? DGraphVertex : (IN extends WModel ? DModel : (IN extends WValue ? DValue : (IN extends WObject ? DObject : (IN extends WEnumLiteral ? DEnumLiteral : (IN extends WPackage ? DPackage : (IN extends WClassifier ? DClassifier : (IN extends WTypedElement ? DTypedElement : (IN extends WVertex ? DVertex : (IN extends WVoidEdge ? DVoidEdge : (IN extends WVoidVertex ? DVoidVertex : (IN extends WGraph ? DGraph : (IN extends WNamedElement ? DNamedElement : (IN extends WAnnotation ? DAnnotation : (IN extends WGraphElement ? DGraphElement : (IN extends WMap ? DMap : (IN extends WModelElement ? DModelElement : (IN extends WUser ? DUser : (IN extends WPointerTargetable ? DPointerTargetable : (IN extends WViewElement ? DViewElement : (IN extends WViewTransientProperties ? DViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
 export type WtoL<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? LEnumerator : (IN extends WAttribute ? LAttribute : (IN extends WReference ? LReference : (IN extends WRefEdge ? LRefEdge : (IN extends WExtEdge ? LExtEdge : (IN extends WDataType ? LDataType : (IN extends WClass ? LClass : (IN extends WStructuralFeature ? LStructuralFeature : (IN extends WParameter ? LParameter : (IN extends WOperation ? LOperation : (IN extends WEdge ? LEdge : (IN extends WEdgePoint ? LEdgePoint : (IN extends WGraphVertex ? LGraphVertex : (IN extends WModel ? LModel : (IN extends WValue ? LValue : (IN extends WObject ? LObject : (IN extends WEnumLiteral ? LEnumLiteral : (IN extends WPackage ? LPackage : (IN extends WClassifier ? LClassifier : (IN extends WTypedElement ? LTypedElement : (IN extends WVertex ? LVertex : (IN extends WVoidEdge ? LVoidEdge : (IN extends WVoidVertex ? LVoidVertex : (IN extends WGraph ? LGraph : (IN extends WNamedElement ? LNamedElement : (IN extends WAnnotation ? LAnnotation : (IN extends WGraphElement ? LGraphElement : (IN extends WMap ? LMap : (IN extends WModelElement ? LModelElement : (IN extends WUser ? LUser : (IN extends WPointerTargetable ? LPointerTargetable : (IN extends WViewElement ? LViewElement : (IN extends WViewTransientProperties ? LViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
 export type labelfunc = (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
+export enum CoordinateMode { "absolute"="absolute", "relativePercent" = "relative%", "relativeOffset"="relativeOffset"}
 
 let canFireActions: boolean = true;
 @RuntimeAccessible
@@ -407,8 +413,11 @@ export class Constructors<T extends DPointerTargetable>{
     end(simpledatacallback?: (d:T) => void): T {
         if (simpledatacallback) simpledatacallback(this.thiss); // callback for setting primitive types, not pointers not context-dependant values (name being potentially invalid / chosen according to parent)
         if (!this.persist) return this.thiss;
-        setTimeout( () => { for (let cb of this.callbacks) cb(); }, 0);
-        END([CreateElementAction.new(this.thiss, true)]);
+        if (this.callbacks.length) {
+            setTimeout(() => {for (let cb of this.callbacks) cb();}, 0);
+        }
+        END([CreateElementAction.new(this.thiss, true)])
+        /// todo: warning: there is a begin and end at constructor and end() methods, do not use BEGIN+END/TRANSACTION inside
         return this.thiss; }
 
 
@@ -513,17 +522,18 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.source = source || '';
         thiss.details = details || [];
         if (this.persist && details) {
-            BEGIN()
+            //BEGIN() Constructors is always already inside a transaction
             for (let det of details) SetFieldAction.new(det, "pointedBy", PointedBy.fromID(thiss.id, "details"), '+=');
             // update father's collections (pointedby's here are set automatically)
             this.persist && thiss.father && SetFieldAction.new(thiss.father, "annotations", thiss.id, '+=', true);
-            END()
+            //END()
         }
         return this; }
 
+    static makeID(): Pointer{ return new Date().getTime() + "_" + DUser.current + "_" + (DPointerTargetable.maxID++) }
     DPointerTargetable(isUser: boolean = false, id?: string): this {
         const thiss: DPointerTargetable = this.thiss as any;
-        thiss.id = id || new Date().getTime() + "_" + (isUser ? "USER" : DUser.current) + "_" + (DPointerTargetable.maxID++);
+        thiss.id = id || Constructors.makeID();
         thiss.className = thiss.constructor.name;
         // this.className = thiss.className;
         if (this.persist) {
@@ -533,7 +543,7 @@ export class Constructors<T extends DPointerTargetable>{
 
     DUser(id?: DUser["id"]): this {
         const thiss: DPointerTargetable = this.thiss as any;
-        thiss.id = id ? id :  'USER_' + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
+        thiss.id = id ||  new Date().getTime() + '_USER_' + (DPointerTargetable.maxID++);
         if (this.persist) {
             // no pointedBy
         }
@@ -593,12 +603,12 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.implementation = implementation || 'return "default placeholder function called";'
         thiss.exceptions = exceptions;
         if (this.persist) {
-            BEGIN()
+            //BEGIN()
             // if (parameters) for (let par of parameters) SetFieldAction.new(par, "pointedBy", PointedBy.fromID(thiss.id, "parameters"), '+=');
             if (exceptions) for (let exc of exceptions) SetFieldAction.new(exc, "pointedBy", PointedBy.fromID(thiss.id, "exceptions"), '+=');
             // update father's collections (pointedby's here are set automatically)
             this.persist && thiss.father && SetFieldAction.new(thiss.father, "operations", thiss.id, '+=', true);
-            END()
+            //END()
         }
         return this; }
 
@@ -708,6 +718,7 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.storeSize = false;
         thiss.lazySizeUpdate = false;
         thiss.constraints = [];
+        thiss.edgePointCoordMode = CoordinateMode.absolute; // CoordinateMode.relativeOffset;
         //thiss.useSizeFrom = EuseSizeFrom.node;
         // thiss.adaptHeight = false;
         // thiss.adaptWidth = false;
@@ -760,14 +771,47 @@ export class Constructors<T extends DPointerTargetable>{
         }
         return this; }
 
-    DVoidVertex(defaultVSize0?: GraphSize): this {
+    DVoidVertex(defaultVSize?: InitialVertexSize): this {
         const thiss: DVoidVertex = this.thiss as any;
-        let defaultVSize = defaultVSize0 as any;
-        thiss.x = defaultVSize?.x;
-        thiss.y = defaultVSize?.y;
-        thiss.w = defaultVSize?.w;
-        thiss.h = defaultVSize?.h;
+        /*[]{}<>
+?'^~
+&&||\+
+6nb*/
+        let defaultVSizeObj: InitialVertexSizeObj;
+        let defaultVSizeFunc: InitialVertexSizeFunc;
         thiss.isResized = false;
+        if (typeof defaultVSize === "function") {
+            let func = function() {
+                BEGIN() // this executes after the Constructor.end() so it's necessary to start a new transaction
+                let lvertex: LVoidVertex = LPointerTargetable.fromD(thiss);
+                defaultVSizeFunc = defaultVSize as any;
+                try{
+                    defaultVSizeObj = defaultVSizeFunc(lvertex.father, lvertex);
+                }
+                catch (e) {
+                    Log.e("Error in user DefaultVSize function:", {e, f:defaultVSizeFunc, functionText:defaultVSizeFunc.toString()});
+                }
+                if (defaultVSizeObj) {
+                    if (defaultVSizeObj.x !== undefined) lvertex.x = defaultVSizeObj.x;
+                    if (defaultVSizeObj.y !== undefined) lvertex.y = defaultVSizeObj.y;
+                    if (defaultVSizeObj.w !== undefined) lvertex.w = defaultVSizeObj.w;
+                    if (defaultVSizeObj.h !== undefined) lvertex.h = defaultVSizeObj.h;
+                }
+                END()
+                return defaultVSizeObj;
+            }
+            windoww.debugep = func;
+            if (this.persist) this.callbacks.push(()=>setTimeout(func, 1)) // because i want to be sure the parent node exists too, not just this node.
+        }
+        else {
+            defaultVSizeObj = defaultVSize as any;
+            if (defaultVSizeObj) {
+                thiss.x = defaultVSizeObj.x as any;
+                thiss.y = defaultVSizeObj.y as any;
+                thiss.w = defaultVSizeObj.w as any;
+                thiss.h = defaultVSizeObj.h as any;
+            }
+        }
         if (this.persist) {
             // no pointedBy?
         }

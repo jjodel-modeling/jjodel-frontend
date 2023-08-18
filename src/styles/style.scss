@@ -83,7 +83,9 @@
 .select:focus { border: 1px dashed $border-color; }
 .btn { padding: 0 0.1em; line-height: normal; border-radius: $radius; }
 
-
+[data-nodetype="EdgePoint"]{
+  pointer-events: all; // fix because edge root have pointerEvents none, and this is contained in edge
+}
 
 /* tags */
 hr { margin: 0 0 !important; }

@@ -41,10 +41,10 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
 
     constructor(props: AllProps, context: any) {
         super(props, context);
-        let tobind = [this.path, this.pathSegments, this.pathCoords];
+        let tobind: Function[] = []; //[this.path, this.pathSegments, this.pathCoords];
         for (let tb of tobind) (this as GObject)[tb.name] = tb.bind(this);
     }
-
+/*
     path(): string {
         let coords = this.pathCoords();
         let svgletter: EdgeBendingMode = (this.props.view.bendingMode || "L");
@@ -58,13 +58,13 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
         let coords: GraphPoint[] = (ret.node.midnodes as { x:number, y:number }[] as GraphPoint[]) || [];
         let grouping = groupingsize[svgletter];
         console.log("edgeee", {coords, svgletter, groupingsize, midnodes:ret.node.midnodes, mnraw: ret.node.midnodes.map(mn=>mn.__raw), ret});
-        let scoord: GraphPoint = ret.node.edgeStart || new GraphPoint(10, 10);
-        let ecoord: GraphPoint = ret.node.edgeEnd || new GraphPoint(100, 100);
+        let scoord: GraphPoint = ret.node.startPoint || new GraphPoint(10, 10);
+        let ecoord: GraphPoint = ret.node.endPoint || new GraphPoint(100, 100);
         return [scoord, ...coords, ecoord]; }
 
     pathSegments(): GraphPoint[][]{
         return U.pairArrayElements(this.pathCoords(), true); }
-
+*/
     render(): ReactNode {
        return super.render();
     }

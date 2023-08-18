@@ -77,27 +77,27 @@ export abstract class IPoint extends RuntimeAccessibleClass {
         for (i = 0; i < p.length; i++) { p0.subtract(p[i], true); }
         return p0; }
 
-    public multiply(pt: this | number, newInstance: boolean = false): this {
+    public multiply(pt: Partial<this> | number, newInstance: boolean = false): this {
         let ret: this = (newInstance ? this.duplicate() : this);
         if (typeof pt === "number") {
             ret.x *= pt;
-            ret.y /= pt;
+            ret.y *= pt;
         }
         else {
-            ret.x *= pt.x;
-            ret.y *= pt.y;
+            if ("x" in pt) ret.x *= pt.x as number;
+            if ("y" in pt) ret.y *= pt.y as number;
         }
         return ret; }
 
-    public divide(pt: this | number, newInstance: boolean = false): this {
+    public divide(pt: Partial<this> | number, newInstance: boolean = false): this {
         let ret = (newInstance ? this.duplicate() : this);
         if (typeof pt === "number") {
             ret.x /= pt;
             ret.y /= pt;
         }
         else {
-            ret.x /= pt.x;
-            ret.y /= pt.y;
+            ret.x /= pt.x as number;
+            ret.y /= pt.y as number;
         }
         return ret; }
 

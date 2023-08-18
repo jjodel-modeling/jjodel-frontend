@@ -1,7 +1,12 @@
 export const uselessexport = {};
 
 /*
-*
+
+[]{}<>
+?'^~
+&&||\+
+6nb
+
 * <path className={"clickable"} style={{pointerEvents:"all"}} strokeWidth={4} stroke={"transparent"} fill={"none"} d={s.dpart}></path>,
                     s.label &&[<text textAnchor="middle">{s.label}</text>,
                     s.label && <foreignObject style={{x:(s.start.pt.x + s.end.pt.x)/2+"px", y:(s.start.pt.y + s.end.pt.y)/2+"px"}}>{s.label}</foreignObject>

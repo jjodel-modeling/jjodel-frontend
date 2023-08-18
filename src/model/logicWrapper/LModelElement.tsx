@@ -115,6 +115,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     public fatherList!: LModelElement[]; // chain of fathers going up recursively
     annotations!: LAnnotation[];
     children!: (LPackage | LClassifier | LTypedElement | LAnnotation | LObject | LValue)[];
+    __info_of_children__: Info = {type: "LModelElement[]", txt: <div>Merging of all the subelement collections (attributes, references, parameters...) except annotations</div>}
     nodes!: LGraphElement[];
     node!: LGraphElement | undefined;
 
