@@ -25,7 +25,7 @@ export class DV {
         console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg}); return DefaultView.error(visibleMessage); }
 
     static edgePointView(): string { return beautify(
-        `<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"red", width:"100%", height:"100%"}} />`
+        `<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"transparent", width:"100%", height:"100%"}} />`
     )}
     static edgePointViewSVG(): string { return beautify(
         `<ellipse stroke={"black"} fill={"red"} cx={"50"} cy={"50"} rx={"20"} ry={"20"} />`

@@ -385,7 +385,13 @@ export type LtoW<LX extends LPointerTargetable, WX = LX extends LEnumerator ? WE
 export type WtoD<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? DEnumerator : (IN extends WAttribute ? DAttribute : (IN extends WReference ? DReference : (IN extends WRefEdge ? DRefEdge : (IN extends WExtEdge ? DExtEdge : (IN extends WDataType ? DDataType : (IN extends WClass ? DClass : (IN extends WStructuralFeature ? DStructuralFeature : (IN extends WParameter ? DParameter : (IN extends WOperation ? DOperation : (IN extends WEdge ? DEdge : (IN extends WEdgePoint ? DEdgePoint : (IN extends WGraphVertex ? DGraphVertex : (IN extends WModel ? DModel : (IN extends WValue ? DValue : (IN extends WObject ? DObject : (IN extends WEnumLiteral ? DEnumLiteral : (IN extends WPackage ? DPackage : (IN extends WClassifier ? DClassifier : (IN extends WTypedElement ? DTypedElement : (IN extends WVertex ? DVertex : (IN extends WVoidEdge ? DVoidEdge : (IN extends WVoidVertex ? DVoidVertex : (IN extends WGraph ? DGraph : (IN extends WNamedElement ? DNamedElement : (IN extends WAnnotation ? DAnnotation : (IN extends WGraphElement ? DGraphElement : (IN extends WMap ? DMap : (IN extends WModelElement ? DModelElement : (IN extends WUser ? DUser : (IN extends WPointerTargetable ? DPointerTargetable : (IN extends WViewElement ? DViewElement : (IN extends WViewTransientProperties ? DViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
 export type WtoL<IN extends WPointerTargetable, OUT = IN extends WEnumerator ? LEnumerator : (IN extends WAttribute ? LAttribute : (IN extends WReference ? LReference : (IN extends WRefEdge ? LRefEdge : (IN extends WExtEdge ? LExtEdge : (IN extends WDataType ? LDataType : (IN extends WClass ? LClass : (IN extends WStructuralFeature ? LStructuralFeature : (IN extends WParameter ? LParameter : (IN extends WOperation ? LOperation : (IN extends WEdge ? LEdge : (IN extends WEdgePoint ? LEdgePoint : (IN extends WGraphVertex ? LGraphVertex : (IN extends WModel ? LModel : (IN extends WValue ? LValue : (IN extends WObject ? LObject : (IN extends WEnumLiteral ? LEnumLiteral : (IN extends WPackage ? LPackage : (IN extends WClassifier ? LClassifier : (IN extends WTypedElement ? LTypedElement : (IN extends WVertex ? LVertex : (IN extends WVoidEdge ? LVoidEdge : (IN extends WVoidVertex ? LVoidVertex : (IN extends WGraph ? LGraph : (IN extends WNamedElement ? LNamedElement : (IN extends WAnnotation ? LAnnotation : (IN extends WGraphElement ? LGraphElement : (IN extends WMap ? LMap : (IN extends WModelElement ? LModelElement : (IN extends WUser ? LUser : (IN extends WPointerTargetable ? LPointerTargetable : (IN extends WViewElement ? LViewElement : (IN extends WViewTransientProperties ? LViewTransientProperties : (ERROR)))))))))))))))))))))))))))))))))> = OUT;
 export type labelfunc = (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
-export enum CoordinateMode { "absolute"="absolute", "relativePercent" = "relative%", "relativeOffset"="relativeOffset"}
+export enum CoordinateMode {
+    "absolute"              = "absolute",
+    "relativePercent"       = "relative%",
+    "relativeOffset"        = "relativeOffset",
+    "relativeOffsetStart"   = "relativeOffsetStart",
+    "relativeOffsetEnd"     = "relativeOffsetEnd",
+}
 
 let canFireActions: boolean = true;
 @RuntimeAccessible
@@ -718,7 +724,6 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.storeSize = false;
         thiss.lazySizeUpdate = false;
         thiss.constraints = [];
-        thiss.edgePointCoordMode = CoordinateMode.absolute; // CoordinateMode.relativeOffset;
         //thiss.useSizeFrom = EuseSizeFrom.node;
         // thiss.adaptHeight = false;
         // thiss.adaptWidth = false;
@@ -738,8 +743,9 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.edgeEndOffset_isPercentage = true;
         thiss.edgeStartStopAtBoundaries = true;
         thiss.edgeEndStopAtBoundaries = true;
-        thiss.bendingMode = EdgeBendingMode.Line;
+        thiss.bendingMode = EdgeBendingMode.Bezier_quadratic;
         thiss.edgeGapMode = EdgeGapMode.gap;
+        thiss.edgePointCoordMode = CoordinateMode.relativeOffset;
 
         if (this.persist) {
             // no pointedBy?

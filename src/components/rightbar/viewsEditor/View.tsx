@@ -3,7 +3,8 @@ import type {LViewElement, LViewPoint, DViewPoint} from "../../../joiner";
 import {SetFieldAction, SetRootFieldAction} from "../../../redux/action/action";
 import OclEditor from "../oclEditor/OclEditor";
 import JsxEditor from "../jsxEditor/JsxEditor";
-import {Select, TextArea, Input} from "../../../joiner";
+import {Select, TextArea, Input, EdgeBendingMode, CoordinateMode} from "../../../joiner";
+import {EdgeGapMode} from "../../../joiner/types";
 
 interface Props { view: LViewElement; viewpoints: LViewPoint[]; }
 
@@ -90,8 +91,30 @@ function ViewData(props: Props) {
         <TextArea data={view} field={'onDragEnd'} label={'OnDragEnd'} />
         <TextArea data={view} field={'onResizeStart'} label={'OnResizeStart'} />
         <TextArea data={view} field={'onResizeEnd'} label={'OnResizeEnd'} />
+        <section><h1>Edge options</h1>
+            <select data-data={view} data-field={"bendingMode"} onChange={(e)=> view.bendingMode = e.target.value as any} value={view.bendingMode} data-value={view.bendingMode}>
+                <optgroup label={"How the edge should bend to address EdgePoints"}>{
+                    Object.keys(EdgeBendingMode).map( k => <option value={(EdgeBendingMode as any)[k]}>{k}</option>)
+                }</optgroup></select>
 
-        {/* damiano: qui Select avrebbe fatto comodo, ma è troppo poco generica, remove "data-" se viene generizzata Select */}
+            <Input data={view} field={"edgeEndStopAtBoundaries"} />
+            {/*view.*/}
+            {}
+        </section>
+        <section><h1>EdgePoint options</h1>
+            <select data-data={view} data-field={"edgePointCoordMode"} onChange={(e)=> view.edgePointCoordMode = e.target.value as any}
+                    value={view.edgePointCoordMode} data-value={view.edgePointCoordMode}>
+                <optgroup label={"How the edge should bend to address EdgePoints"}>{
+                    Object.keys(CoordinateMode).map( k => <option value={(CoordinateMode as any)[k]}>{k}</option>)
+                }</optgroup></select>
+            <select data-data={view} data-field={"edgeGapMode"} onChange={(e)=> view.edgeGapMode = e.target.value as any}
+                    value={view.edgeGapMode} data-value={view.edgeGapMode}>
+                <optgroup label={"How to stop upon meeting an EdgePoint"}>{
+                    Object.keys(EdgeGapMode).map( k => <option value={(EdgeGapMode as any)[k]}>{k}</option>)
+                }</optgroup></select>
+        </section>
+
+        {/* damiano: qui Select component avrebbe fatto comodo al posto del select nativo, ma è troppo poco generica*/}
         <div className="p-1" style={{display: "flex"}}><label className="my-auto">Appliable to</label>
             <select data-obj={view.id} data-field={'appliableToClasses'} data-label={'Appliable to'} data-options={ classesOptions }
                 value={view.appliableToClasses[0] || ''} onChange={(e) => { view.appliableToClasses = e.target.value as any; }}

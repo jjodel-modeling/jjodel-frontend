@@ -438,6 +438,7 @@ export class GraphSize extends ISize<GraphPoint> {
         let pt: GraphPoint = pt0.duplicate();
         const m = GraphPoint.getM(targetPt, pt);
         const q = GraphPoint.getQ(targetPt, pt);
+        console.log("closestIntersection()", {size, pt0, targetPt, m, q});
         // if perfectly vertical line
         if (m === Number.POSITIVE_INFINITY/* && q === Number.NEGATIVE_INFINITY*/) {
             // top center
@@ -459,16 +460,16 @@ export class GraphSize extends ISize<GraphPoint> {
         allowB = Geom.isNumberBetween(bl.y, tl.y, targetPt.y);
         allowL = Geom.isNumberBetween(tl.x, tr.x, targetPt.x);
         allowR = Geom.isNumberBetween(tr.x, tl.x, targetPt.x);
-        console.log("closest intersection pt0", {size, targetPt, pt0:pt0.raw(), gridAlign, tl:tl.raw(), tr:tr.raw(), bl:bl.raw(), br:br.raw()});
-        console.log("closest intersection pt0.5 bottom", {bl, "a":  "Geom.isNumberBetween("+bl.y+", "+tl.y+", "+targetPt.y+") = " + allowB});
-        console.log("closest intersection pt1", {allowT, allowB, allowL, allowR});
+        console.log("closestIntersection pt0", {size, targetPt, pt0:pt0.raw(), gridAlign, tl:tl.raw(), tr:tr.raw(), bl:bl.raw(), br:br.raw()});
+        console.log("closestIntersection pt0.5 bottom", {bl, "a":  "Geom.isNumberBetween("+bl.y+", "+tl.y+", "+targetPt.y+") = " + allowB});
+        console.log("closestIntersection pt1", {allowT, allowB, allowL, allowR});
         if (!(allowT || allowB || allowL || allowR)) return undefined; // point is internal to size
         if (allowT) intersectionT = Geom.lineToSegmentIntersection(tl, tr, q, m); else
         if (allowB) intersectionB = Geom.lineToSegmentIntersection(bl, br, q, m); // NOT else, (T|B) AND (L|R) can happen, or just 1 or 0 of those.
         if (allowL) intersectionL = Geom.lineToSegmentIntersection(tl, bl, q, m); else
         if (allowR) intersectionR = Geom.lineToSegmentIntersection(tr, br, q, m);
 
-        console.log("closest intersection pt2", {intersectionT, intersectionB, intersectionL, intersectionR});
+        console.log("closestIntersection pt2", {intersectionT, intersectionB, intersectionL, intersectionR});
         // only 1 intersection can happen
         return intersectionT || intersectionB || intersectionL || intersectionR;
     }
