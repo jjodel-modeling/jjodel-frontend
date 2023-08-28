@@ -1,12 +1,37 @@
 import {
+    Constructors,
+    CreateElementAction,
+    DAttribute,
+    DClass,
     DClassifier,
     DEdgePoint,
+    DEnumerator,
+    DEnumLiteral,
     DExtEdge,
+    DGraph,
     DGraphElement,
+    DGraphVertex,
+    Dictionary,
     DLog,
+    DModel,
     DModelElement,
+    DObject,
+    DOperation,
+    DPackage,
     DParameter,
-    DRefEdge, GObject,
+    DPointerTargetable,
+    DRefEdge,
+    DReference,
+    DUser,
+    DValue,
+    DVertex,
+    DViewElement,
+    DViewPoint,
+    DVoidEdge,
+    EdgeBendingMode,
+    EdgeHead,
+    GObject,
+    GraphSize,
     LAttribute,
     LClass,
     LClassifier,
@@ -15,59 +40,36 @@ import {
     LEnumLiteral,
     LExtEdge,
     LGraph,
+    LGraphElement,
     LGraphVertex,
     LLog,
+    LModel,
+    LModelElement,
+    LObject,
+    LogicContext,
     LOperation,
     LPackage,
     LParameter,
+    LPointerTargetable,
     LRefEdge,
     LReference,
-    LVertex,
-    DGraphVertex,
-    DVertex,
-    Pointer,
-    LViewPoint,
-    Pointers,
-} from '../joiner';
-import {
-    CreateElementAction,
-    DAttribute,
-    DClass,
-    DModel,
-    DEnumerator,
-    DEnumLiteral,
-    DGraph,
-    DObject,
-    DOperation,
-    DPackage,
-    DPointerTargetable,
-    DReference,
-    DUser,
-    DValue,
-    DViewElement,
-    getPath,
-    LModel,
-    LObject,
     LUser,
     LValue,
+    LVertex,
     LViewElement,
-    DViewPoint,
+    LViewPoint,
+    Pointer,
+    Pointers,
     RuntimeAccessible,
-    SetFieldAction,
+    RuntimeAccessibleClass,
     SetRootFieldAction,
     ShortAttribETypes,
-    Selectors,
-    GraphSize,
-    EdgeBendingMode,
-    DVoidEdge,
-    RuntimeAccessibleClass,
-    LogicContext, LPointerTargetable, store, LModelElement, LGraphElement, Dictionary, Constructor, Constructors,
-} from "../joiner";
+    store,
+} from '../joiner';
 
 import React from "react";
 import {DV} from "../common/DV";
 import LeaderLine from "leader-line-new";
-import {ObjectWithoutPointers} from "../joiner/types";
 
 console.warn('ts loading store');
 
@@ -244,11 +246,28 @@ function makeDefaultGraphViews(): DViewElement[] {
 
     let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 30, 30), '', '', '', []);
     let edgePointViewSVG: DViewElement = DViewElement.new('EdgePointSVG', DV.edgePointViewSVG(), new GraphSize(0, 0, 10, 10), '', '', '', []);
-    let edgeView: DViewElement = DViewElement.new('Edge', DV.edgeView(), undefined, '', '', '', [DVoidEdge.name]);
+    let edgeViews: DViewElement[] = [];
+    function makeEdgeView(name: string, type: EdgeHead, head: boolean, tail: boolean, dashing: boolean): DViewElement{
+        let ev = DViewElement.new("EdgeView"+name, DV.edgeView(type,
+            head ? DV.svgHeadTail("Head", type) : "", tail ? DV.svgHeadTail("Tail", type) : "", dashing ? "10.5,9,0,0" : undefined),
+            undefined, '', '', '', [DVoidEdge.name]);
+        edgeViews.push(ev);
+        return ev;
+    }
+    makeEdgeView("Association", EdgeHead.reference,     true,   false,  false);
+    makeEdgeView("Dependency",  EdgeHead.reference,     true,   false,  true);
+    makeEdgeView("Inheritance", EdgeHead.extend,        true,   false,  false);
+    makeEdgeView("Dependency",  EdgeHead.extend,        true,   false,  true);
+    makeEdgeView("Aggregation", EdgeHead.aggregation,   false,  true,   false);
+    makeEdgeView("Composition", EdgeHead.composition,   false,  true,   false);
+
     // edgeView.forceNodeType="Edge"
-    edgeView.explicitApplicationPriority=2;
-    edgeView.bendingMode = EdgeBendingMode.Line;
-    edgeView.subViews = [edgePointView.id];
+
+    for (let ev of edgeViews){
+        ev.explicitApplicationPriority = 2;
+        ev.bendingMode = EdgeBendingMode.Line;
+        ev.subViews = [edgePointView.id];
+    }
     // nb: Error is not a view, just jsx. transform it in a view so users can edit it
 
     let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.name]);
@@ -256,7 +275,7 @@ function makeDefaultGraphViews(): DViewElement[] {
     const defaultPackage: DViewElement = DViewElement.new('Default Package', DV.defaultPackage());
     defaultPackage.query = `context DPackage inv: self.name = 'default'`;
 
-    return [modelView, packageView, classView, enumView, attributeView, referenceView, operationView, literalView, objectView, valueView, defaultPackage, voidView, edgeView, edgePointView, edgePointViewSVG];
+    return [modelView, packageView, classView, enumView, attributeView, referenceView, operationView, literalView, objectView, valueView, defaultPackage, voidView, ...edgeViews, edgePointView, edgePointViewSVG];
 }
 
 @RuntimeAccessible

@@ -183,7 +183,7 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             return(<div className={'p-2 w-100 h-100'}>
                 <textarea spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} />
                 {/*<label>Query {(this.state.expression)}</label>*/}
-                <label>On {(data as GObject)?.name || "model-less node (" + this.props.node.className + ")"}</label>
+                <label>On {((data as GObject)?.name || "model-less node (" + this.props.node.className + ")") + " - " + this.props.node?.className}</label>
                 <hr className={'mt-1 mb-1'} />
                 { ashtml && <div style={{whiteSpace:"pre"}} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
                 { !ashtml && <div style={{whiteSpace:"pre"}}>{ outstr }</div>}

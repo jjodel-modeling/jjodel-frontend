@@ -853,7 +853,7 @@ export class U {
                 if (!quotestrings && typeof flatten[key] === "string") row.fullvalue = flatten[key];
                 else row.fullvalue = JSON.stringify(flatten[key]) + "";
             } catch(e) { row.fullvalue = "⁜not serializable⁜"; }
-            console.log("U get assignements loop", {row, key, flatten, obj});
+            // console.log("U get assignements loop", {row, key, flatten, obj});
             row.val = row.fullvalue.length <= maxvallength ? row.fullvalue : row.fullvalue.substring(0, halfval.start) + toolongreplacer + row.fullvalue.substring(halfval.start);
             if (row.fullpath.length > maxsubpaths) {
                 row.path = [...row.fullpath];
@@ -1102,6 +1102,13 @@ export class Uarr{
         for (i = 0; i < arr2.length; i++) { U.arrayRemoveAll(ret, arr2[i]); }
         return ret; }
 
+    static equals<T extends any>(a1: T[], a2: T[], deep: boolean): boolean {
+        Log.ex(deep, "deep array comparison is not supported yet");
+        if (!a1 || !a2) return false;
+        if (a1.length !== a2.length) return false;
+        for (let i = 0; i < a1.length; i++) if (a1[i] !== a2[i]) return false;
+        return true;
+    }
 }
 
 export class FocusHistoryEntry {

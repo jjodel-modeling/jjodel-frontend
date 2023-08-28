@@ -66,7 +66,13 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
         return U.pairArrayElements(this.pathCoords(), true); }
 */
     render(): ReactNode {
-       return super.render();
+        if (!this.props.node) return "loading";
+        // set classes
+        let nodeType = "Edge";
+        let classesoverride = [nodeType];
+        // set classes end
+        let styleoverride: React.CSSProperties = {}
+        return super.render(nodeType, styleoverride, classesoverride);
     }
 
 }
@@ -92,7 +98,7 @@ function mapStateToProps(state: DState, ownProps: EdgeOwnProps): EdgeStateProps 
     ret.end = LPointerTargetable.fromPointer(endnodeid);
     // ret.key = ownProps.key || (startnodeid || (ownProps.start as any)?.id || ownProps.start) + "~" + (endnodeid || (ownProps.end as any)?.id || ownProps.end);
     // key is already used as key || nodeid on super.render()
-    console.log("edge", {ret, ownProps});
+    // console.log("edge", {ret, ownProps});
 
     const superret: EdgeStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DEdge, ret) as EdgeStateProps;
     // U.objectMergeInPlace(superret, ret);

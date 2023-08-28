@@ -3,24 +3,42 @@ import {connect} from "react-redux";
 import "./toolbar.scss";
 import {
     DState,
-    DGraphElement, Dictionary,
+    DGraphElement,
+    Dictionary,
     DModel,
-    DModelElement, DNamedElement, DObject, DocString,
+    DModelElement,
+    DNamedElement,
+    DObject,
+    DocString,
     DPointerTargetable,
     DViewElement,
     LGraphElement,
     LModel,
-    LModelElement, LObject, LValue,
+    LModelElement,
+    LObject,
+    LValue,
     LViewElement,
     MyProxyHandler,
     Pointer,
-    SetFieldAction, RuntimeAccessibleClass, DVoidEdge, DEdge, DEdgePoint, EdgeSegment, LVoidEdge, Constructors
+    SetFieldAction,
+    RuntimeAccessibleClass,
+    DVoidEdge,
+    DEdge,
+    DEdgePoint,
+    EdgeSegment,
+    LVoidEdge,
+    Constructors,
+    WVoidEdge,
+    Log,
+    LEdgePoint
 } from "../../joiner";
+import {InitialVertexSizeObj} from "../../joiner/types";
 
 interface ThisState {}
 
 function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]>, items: string[], node?:LGraphElement): ReactNode[] {
     const reactNodes: ReactNode[] = [];
+    // todo: does myDictValidator have any reason to exist? if something is invalid it should not make it on toolbar jsx generated list
     for (let item_dname of items) {
         if (item_dname[0]=="_") {
             item_dname = item_dname.substring(2);
@@ -28,26 +46,52 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
         }
         let item = item_dname.substring(1).toLowerCase();
         reactNodes.push(<div className={"toolbar-item " + item} key={item_dname} onClick={() => {
+            console.log("toolbar click:", {item_dname, data, myDictValidator, items, node});
             switch(item_dname){
                 case DVoidEdge.name:
                 case DEdge.name:
                     // no add edges through toolbar for now
                     break;
                 case DEdgePoint.name:
-                    let edge: LVoidEdge = node as LVoidEdge;
-                    if (!myDictValidator[item_dname]) return;
+                    let ledge: LVoidEdge = (node as LEdgePoint | LVoidEdge).edge;
+                    let dedge: DVoidEdge = ledge.__raw;
+                    let wedge: WVoidEdge = ledge as any;
+                    console.log("toolbar click:", {item_dname, data, skip:!myDictValidator[item_dname], items, ledge});
+                    // if (!myDictValidator[item_dname]) return;
                     let longestSeg: EdgeSegment = undefined as any; // just because compiler does not know it is always found through the for loop
                     let longestIndex: number=0;
-                    let segms = edge.segments.segments;
+                    let segms = ledge.segments.segments;
+                    // longestIndex = segms.length - 1;// i just put it at end because this edgepoint
                     for (; longestIndex < segms.length; longestIndex++) if (segms[longestIndex].isLongest) { longestSeg = segms[longestIndex]; break;}
                     // let index = edge.segments.all.findIndex((s: EdgeSegment) => s.isLongest);
-                    let newmp = {...(longestSeg.start.pt.add(longestSeg.end.pt, true).divide(2)), w: 5, h: 5, id: Constructors.makeID()};
-                    let mp = [...edge.midPoints];
+                    let newmp: InitialVertexSizeObj = {...(longestSeg.start.pt.add(longestSeg.end.pt, true).divide(2)), w: 15, h: 15, index:longestIndex};
+                    // @ts-ignore
+                    newmp.x -= newmp.w/2; newmp.y -= newmp.h/2;
+
+                    newmp.id = Constructors.makeID();
+                    let subelements = [...dedge.subElements];
+                    let prevNodeid = longestSeg.start.ge.id;
+                    let prevnodeindex = subelements.indexOf(prevNodeid);
+                    if (prevnodeindex === -1) {
+                        if (prevNodeid === dedge.start) prevnodeindex = 0; // first and last are not subelements
+                        else if (prevNodeid === dedge.end) prevnodeindex = subelements.length;
+                        else Log.exDevv("edgepoint insert position not found", {subelements, prevNodeid, longestSeg, dedge, ledge});
+                    } else prevnodeindex += 1;
+                    let goodway = true; // not working// todo: keep his true branch and remove this when finished debug. false crashed for missing father on subelements, guess i need more delay??
+                    if (goodway) newmp.index = prevnodeindex;
+                    // delete (newmp as any).id;
+                    let mp = [...dedge.midPoints];
                     mp.splice(longestIndex, 0, newmp);
-                    edge.midPoints = mp;
-                    selectNode(newmp);
+                    wedge.midPoints = mp;
+                    //
+                    let olddebug = [...subelements];
+                    subelements.splice(prevnodeindex, 0, newmp.id as string);
+                    console.log("injecting ep", {prevnodeindex, newmp, prevNodeid, longestSeg, old: olddebug, new: subelements, ledge, dedge});
+                    // this might break pointers too
+                    let fixorder = () => { wedge.subElements = subelements; }
+                    if (!goodway) setTimeout( fixorder, 1); // need to wait edgepoint creation
+                    // selectNode(newmp);
                     break;
-                    // edge.addMidPoint(, index)
                 default:
                     if (!data || !myDictValidator) return;
                     let d = data.addChild(item);
@@ -105,9 +149,11 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         return(<div className={"toolbar"}>
             <h6>Add sibling</h6>
             {lModelElement && addChildren(upward[lModelElement.className])}
+            {node && addChildren(upward[node.className])}
             <hr />
-            <h6>Add sublevel</h6>
+            <h6>Add subLevel</h6>
             {lModelElement && addChildren(downward[lModelElement.className])}
+            {node && addChildren(downward[node.className])}
             <div className={"toolbar-item annotation"} onClick={() => select(lModelElement.addChild("annotation"))}>+annotation</div>
         </div>);
     }
@@ -130,6 +176,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             {(lobj && (!lobj.instanceof || lobj.partial)) && <div key={"Feature"} className={"toolbar-item feature"} onClick={() => { lobj.addValue(); }}>+Feature</div>}
             {(lfeat && lfeat.values.length < lfeat.upperBound) && <div key={"Value"} className={"toolbar-item value"} onClick={() => {
                 SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); }}>+Value</div>}
+            {node && addChildren(downward[node.className])}
         </div>);
     }
 

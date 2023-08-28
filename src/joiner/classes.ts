@@ -183,7 +183,6 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         // problem: se lo statico è un valore primitivo ne genera una copia.
         for (let classs of Object.values(RuntimeAccessibleClass.annotatedClasses)) {
             let gclass = classs as GObject;
-            console.log('fix statics', {gclass, s: gclass.s});
             for (let statickey in gclass.s) { gclass[statickey] = gclass.s[statickey]; }
         }
     }
@@ -333,7 +332,7 @@ export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
     //constructor.prototype.typeName = constructor.name;
     (constructor as any).staticClassName = constructor.name;
     // @ts-ignore
-    console.log('runtimeaccessible annotation:', {thiss:this, constructor});
+    // console.log('runtimeaccessible annotation:', {thiss:this, constructor});
     //    const classnameFixedConstructor = constructor; //  function (...args) { let obj = new constructor(...args); obj.init?.(); obj.init0?.(); return obj; }
 
     // @ts-ignore
@@ -341,7 +340,7 @@ export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
     // @ts-ignore
     const classnameFixedConstructorDoNotRenameWithoutSearchStrings = function (...args) {
         // @ts-ignore
-        console.log('runtimeaccessible annotation inner:', {thiss:this, outerthis, constructor});
+        // console.log('runtimeaccessible annotation inner:', {thiss:this, outerthis, constructor});
         // @ts-ignore
         let obj = new constructor(...args);
         obj.classNameFromAnnotation = constructor.name;
@@ -352,7 +351,7 @@ export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
         // obj.init0?.();
         obj.initBase?.();
         // @ts-ignore
-        console.log('runtimeaccessible annotation inner end:', {thiss:this, outerthis, constructor, obj});
+        // console.log('runtimeaccessible annotation inner end:', {thiss:this, outerthis, constructor, obj});
         return obj; }
     RuntimeAccessibleClass.annotatedClasses[constructor.name] = classnameFixedConstructorDoNotRenameWithoutSearchStrings as any as typeof RuntimeAccessibleClass;
 
@@ -393,6 +392,15 @@ export enum CoordinateMode {
     "relativeOffsetEnd"     = "relativeOffsetEnd",
 }
 
+export enum EdgeHead {
+    composition = "EdgeComposition",
+    aggregation = "EdgeAggregation",
+    reference   = "EdgeReference",
+    extend      = "EdgeExtend"
+}
+
+
+
 let canFireActions: boolean = true;
 @RuntimeAccessible
 export class Constructors<T extends DPointerTargetable>{
@@ -417,11 +425,14 @@ export class Constructors<T extends DPointerTargetable>{
     static resume(): void { canFireActions = true; }
     // start(thiss: any): this { this.thiss = thiss; return this; }
     end(simpledatacallback?: (d:T) => void): T {
+        console.log("doing callbacks", this.callbacks, this);
         if (simpledatacallback) simpledatacallback(this.thiss); // callback for setting primitive types, not pointers not context-dependant values (name being potentially invalid / chosen according to parent)
         if (!this.persist) return this.thiss;
         if (this.callbacks.length) {
             setTimeout(() => {for (let cb of this.callbacks) cb();}, 0);
         }
+        Log.ex(windoww.ddebug, "stop");
+        DPointerTargetable.pendingCreation[this.thiss.id] = this.thiss; // todo: removable?
         END([CreateElementAction.new(this.thiss, true)])
         /// todo: warning: there is a begin and end at constructor and end() methods, do not use BEGIN+END/TRANSACTION inside
         return this.thiss; }
@@ -481,7 +492,6 @@ export class Constructors<T extends DPointerTargetable>{
     DAttribute(): this {
         let thiss: DAttribute = this.thiss as any;
         // update father's collections (pointedby's here are set automatically)
-        console.log('dattrmake', {persist:this.persist, father:thiss.father, thiss, id:thiss.id});
         this.persist && thiss.father && SetFieldAction.new(thiss.father, "attributes", thiss.id, '+=', true);
         return this; }
     DDataType(): this { return this; }
@@ -540,6 +550,8 @@ export class Constructors<T extends DPointerTargetable>{
     DPointerTargetable(isUser: boolean = false, id?: string): this {
         const thiss: DPointerTargetable = this.thiss as any;
         thiss.id = id || Constructors.makeID();
+        console.log("DPointerTargetable id", {id, tid: thiss.id})
+
         thiss.className = thiss.constructor.name;
         // this.className = thiss.className;
         if (this.persist) {
@@ -687,7 +699,7 @@ export class Constructors<T extends DPointerTargetable>{
     DRefEdge(): this { return this; }
 
     DGraphElement(model: DGraphElement["model"]|null|undefined, parentNodeID: DGraphElement["father"]|undefined, parentgraphID: DGraphElement["graph"]|undefined,
-                  nodeID: DGraphElement["id"]|undefined, htmlindex: number): this {
+                  htmlindex: number): this {
         const thiss: DGraphElement = this.thiss as any;
         if (parentNodeID) thiss.father = parentNodeID;
         if (parentgraphID) thiss.graph = parentgraphID;
@@ -695,7 +707,7 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.subElements = [];
         thiss.favoriteNode = false;
         thiss.zIndex = htmlindex;
-        if (nodeID) thiss.id = nodeID;
+        //  if (nodeID) thiss.id = nodeID;
         if (this.persist) {
             model && SetFieldAction.new(model, "pointedBy", PointedBy.fromID(thiss.id, "model"), '+=');
             parentgraphID && SetFieldAction.new(parentgraphID, "pointedBy", PointedBy.fromID(thiss.id, "graph"), '+=');
@@ -758,16 +770,12 @@ export class Constructors<T extends DPointerTargetable>{
     }
 
     static DGraph_maxID: number = 0;
-    private static DGraph_makeID(modelid: DGraph["model"]): Pointer<DGraph, 1, 1, LGraph> {
-        if (!modelid) {
-            throw new Error("graph without model, currently not supported.");
-            return '_GraphWithoutModel_';
-        }
+    public static DGraph_makeID(modelid: DGraph["model"]): Pointer<DGraph, 1, 1, LGraph> {
+        if (!modelid) modelid = "shapeless";
         return modelid + '^graph' + Constructors.DGraph_maxID++;
     }
-    DGraph(model: DGraph["model"], id: string | undefined): this {
+    DGraph(): this {
         const thiss: DGraph = this.thiss as any;
-        thiss.id = id || Constructors.DGraph_makeID(model);
         thiss.graph = thiss.id;
         thiss.zoom = new GraphPoint(1, 1);
         thiss.graphSize = new GraphSize(0, 0, 0, 0);  // GraphSize.apply(this, [0, 0, 0 ,0]);
@@ -783,41 +791,64 @@ export class Constructors<T extends DPointerTargetable>{
 ?'^~
 &&||\+
 6nb*/
-        let defaultVSizeObj: InitialVertexSizeObj;
+        let defaultVSizeObj: InitialVertexSizeObj | undefined;
         let defaultVSizeFunc: InitialVertexSizeFunc;
         thiss.isResized = false;
-        if (typeof defaultVSize === "function") {
-            let func = function() {
-                BEGIN() // this executes after the Constructor.end() so it's necessary to start a new transaction
-                let lvertex: LVoidVertex = LPointerTargetable.fromD(thiss);
-                defaultVSizeFunc = defaultVSize as any;
-                try{
-                    defaultVSizeObj = defaultVSizeFunc(lvertex.father, lvertex);
-                }
-                catch (e) {
-                    Log.e("Error in user DefaultVSize function:", {e, f:defaultVSizeFunc, functionText:defaultVSizeFunc.toString()});
-                }
-                if (defaultVSizeObj) {
-                    if (defaultVSizeObj.x !== undefined) lvertex.x = defaultVSizeObj.x;
-                    if (defaultVSizeObj.y !== undefined) lvertex.y = defaultVSizeObj.y;
-                    if (defaultVSizeObj.w !== undefined) lvertex.w = defaultVSizeObj.w;
-                    if (defaultVSizeObj.h !== undefined) lvertex.h = defaultVSizeObj.h;
-                }
-                END()
-                return defaultVSizeObj;
+        let func: undefined | (() => void);
+        if (defaultVSize) {
+            func = () => {
+            BEGIN() // this executes after the Constructor.end() so it's necessary to start a new transaction
+            // fromPointer because i need to pick the one from the store that might be updated
+            //    with a view or other data instead of the D version i have here
+            let lvertex: LVoidVertex = LPointerTargetable.fromD(thiss);
+            if (typeof defaultVSize !== "function") {
+                defaultVSizeObj = defaultVSize;
+                //defaultVSizeFunc = () => defaultVSizeObj;
             }
-            windoww.debugep = func;
-            if (this.persist) this.callbacks.push(()=>setTimeout(func, 1)) // because i want to be sure the parent node exists too, not just this node.
-        }
-        else {
-            defaultVSizeObj = defaultVSize as any;
+            else {
+                defaultVSizeFunc = defaultVSize;
+                try { defaultVSizeObj = defaultVSizeFunc(lvertex.father, lvertex); }
+                catch (e) { Log.e("Error in user DefaultVSize function:", {e, defaultVSizeFunc, txt:defaultVSizeFunc.toString()}); }
+            }
             if (defaultVSizeObj) {
-                thiss.x = defaultVSizeObj.x as any;
-                thiss.y = defaultVSizeObj.y as any;
-                thiss.w = defaultVSizeObj.w as any;
-                thiss.h = defaultVSizeObj.h as any;
+                if (!this.persist) lvertex = thiss as any;
+                if (defaultVSizeObj.x !== undefined) lvertex.x = defaultVSizeObj.x;
+                if (defaultVSizeObj.y !== undefined) lvertex.y = defaultVSizeObj.y;
+                if (defaultVSizeObj.w !== undefined) lvertex.w = defaultVSizeObj.w;
+                if (defaultVSizeObj.h !== undefined) lvertex.h = defaultVSizeObj.h;
+
+                if ((defaultVSizeObj as any).index >= 0 && this.persist && thiss.className === "DEdgePoint") {
+                    let updateEPindex = () => {
+                        let lep = lvertex as LEdgePoint;
+                        let le: LVoidEdge = lep.father;
+                        let de: DVoidEdge = le.__raw;
+                        let subelements = [...de.subElements];
+                        let presubelements = [...subelements]; // a
+                        U.arrayRemoveAll(subelements, thiss.id);
+                        subelements.splice(defaultVSizeObj?.index as number, 0, thiss.id);
+                        // console.log("setting subelements", {presubelements, subelements, de, le, thiss});
+                        le.subElements = subelements as any;
+                        // todo: this might break "pointedBy" x984
+                    }
+                    // updateEPindex();
+                    // it's already wrapped in a callback
+                    // but needs a second one because after node is created, id is auto-appended to this collection
+                    // and i need to rewrite that append by inserting my own customized index position
+                    console.log("setting subelements 0", {updateEPindex});
+                    setTimeout(updateEPindex, 0);
+                    // NB: do not use this.callbacks.push because the body of this func is executed after Constructors.end() so end() can never find and execute it.
+                }
             }
+            END() }
         }
+
+        // func = ... the if (defaultVSizeObj) above
+        if (func) {
+            if (this.persist) this.callbacks.push(func as Function); // because i want to be sure the parent node exists too, not just this node.
+            // if (this.persist) this.callbacks.push(() => setTimeout(func as Function, 1)); // because i want to be sure the parent node exists too, not just this node.
+            else func();
+        }
+
         if (this.persist) {
             // no pointedBy?
         }
@@ -842,6 +873,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     // ma gli oggetti puntati da A tramite sotto-oggetti o attributi (subviews...) non vengono aggiornati in "pointedby"
     pointedBy: PointedBy[] = [];
     public className!: string;
+    static pendingCreation: Dictionary<Pointer, DPointerTargetable> = {};
 
 
     static defaultname<L extends LModelElement = LModelElement>(startingPrefix: string | ((meta:L)=>string), father?: Pointer | DPointerTargetable | ((a:string)=>boolean), metaptr?: Pointer | null): string {
@@ -1268,7 +1300,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     }
 
 
-    protected cannotSet(field: string): boolean { return Log.exx('"' + field + '" field is read-only', this); }
+    protected cannotSet(field: string): any { return Log.exx('"' + field + '" field is read-only', this); }
     protected get_id(context: Context): this["id"] { return context.data.id; }
     protected set_id(): boolean { return this.cannotSet('id'); }
 

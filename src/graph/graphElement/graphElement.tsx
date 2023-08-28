@@ -41,7 +41,7 @@ import {
     LClass,
     SetFieldAction,
     DGraphVertex,
-    DVoidVertex, DEdge, LEdge, LUser, LViewPoint, LGraphElement, RuntimeAccessibleClass, DEdgePoint,
+    DVoidVertex, DEdge, LEdge, LUser, LViewPoint, LGraphElement, RuntimeAccessibleClass, DEdgePoint, DPointerTargetable,
 } from "../../joiner";
 
 import {end} from "@popperjs/core";
@@ -185,16 +185,19 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         let dnode: DGraphElement = idlookup[nodeid] as DGraphElement;
 
+
         // console.log('dragx GE mapstate addGEStuff', {dGraphElementDataClass, created: new dGraphElementDataClass(false, nodeid, graphid)});
-        if (!dnode) {
-            console.log("making node:", {dGraphElementDataClass, nodeid, parentnodeid, graphid, dataid, ownProps, ret});
+        if (!dnode && !DPointerTargetable.pendingCreation[nodeid]) {
+            console.log("making node:", {dGraphElementDataClass, nodeid, parentnodeid, graphid, dataid, ownProps, ret,
+                pendings: {...DPointerTargetable.pendingCreation}, pending:DPointerTargetable.pendingCreation[nodeid]});
+            // so this is called once, but createaction is triggered twice only for edgepoints? it works if i create it through console.
             let dge;
-            if (dGraphElementDataClass === DEdgePoint) {
-                console.log("dGraphElementDataClass en", dGraphElementDataClass);
+            /*
+            if (dGraphElementDataClass === DEdgePoint) { // made it same as dvertex
                 let initialSize = ownProps.initialSize;
-                dge = DEdgePoint.new(ownProps.htmlindex as number, dataid||undefined, parentnodeid, graphid, nodeid, initialSize);
+                dge = DEdgePoint.new(ownProps.htmlindex as number, dataid, parentnodeid, graphid, nodeid, initialSize);
                 ret.node =  MyProxyHandler.wrap(dge);
-            }
+            } else*/
             if (dGraphElementDataClass === DEdge) {
                 // set start and end from ownprops;
                 let edgeProps: EdgeStateProps = ret as EdgeStateProps;
@@ -207,7 +210,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 ret.node = (ret as any).edge = MyProxyHandler.wrap(dge);
             }
             else {
-                console.log("dGraphElementDataClass", dGraphElementDataClass);
                 let initialSize = ownProps.initialSize;
                 dge = dGraphElementDataClass.new(ownProps.htmlindex as number, dataid, parentnodeid, graphid, nodeid, initialSize);
                 ret.node =  MyProxyHandler.wrap(dge);
@@ -426,13 +428,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 // if 3 views changed in <= 0.2 sec
                 Log.exDevv("loop in updating View assigned to node. The cause might be missing or invalid keys on GraphElement JSX nodes.", {change_log:this.lastViewChanges, component: this});
             }
-            // vpackage and vedge are swapping endlessly here. can it be a key conflict?
-            console.log("UPDATEVIEW ",
-                {lnode:this.props.node, dnode:this.props.node.__raw,
-                    view:this.props.view, data:this.props.data,
-                    vid:this.props.view.id, nview:this.props.node.__raw.view})
+
+            /*console.log("UPDATEVIEW ", {lnode:this.props.node, dnode:this.props.node.__raw, dstore: windoww.s().idlookup[this.props.node.__raw.id], view:this.props.view,
+                 data:this.props.data, vid:this.props.view.id, nview:this.props.node.__raw.view});*/
             this.props.node.view = this.props.view;
-            return "updating view...";
+            return "Updating view...";
         }
 
         /// set classes
@@ -451,14 +451,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // \console.log('GE render', {thiss: this, data:me, rnode, rawRElement, props:this.props, name: (me as any)?.name});
 
         const addprops: boolean = true;
-        let fiximport = !!this.props.node; // todo: check if correct approach
+        let fiximport = !!this.props.node;
         if (addprops && rawRElement && fiximport) {
-            if (windoww.debugcount && debugcount++>windoww.debugcount) throw new Error("stop");
+            if (windoww.debugcount && debugcount++>windoww.debugcount) throw new Error("debug triggered stop");
             // console.log("pre-injecting", {thiss:this, data:this.props.data, props:this.props});
             let fixdoubleroot = true;
             const onDragTestInject = () => {}; // might inject event handlers like this with cloneelement
             // add view props to GraphElement children (any level down)
-            const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap(); // todo: per passarla come prop ma mantenerla modificabile
+            const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap();
             try {
                 let viewStyle: GObject = {};
                 /*

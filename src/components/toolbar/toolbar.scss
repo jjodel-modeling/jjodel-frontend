@@ -6,29 +6,29 @@
   background: whitesmoke;
   z-index: 1;
   box-shadow: 6px 0 4px -4px #999, -6px 0 4px -4px #999;
-}
-.toolbar > .toolbar-item {
-  cursor: pointer;
-  margin-top: 5px;
-}
-.toolbar {
+
+  >.toolbar-item {
+    cursor: pointer;
+    margin-top: 5px;
+    border-left: 2px solid;
+  }
   .package {
-    border-left: 2px solid $package-color;
+    border-left-color: $package-color;
   }
   .class {
-    border-left: 2px solid $class-color;
+    border-left-color: $class-color;
   }
   .enumerator {
-    border-left: 2px solid $enum-color;
+    border-left-color: $enum-color;
   }
-  .attribute, .reference, .operation {
-    border-left: 2px solid $feature-color;
+  .attribute, .reference, .operation, .parameter, .exception, .literal {
+    border-left-color: $feature-color;
   }
-  .parameter, .exception, .literal {
-    border-left: 2px solid $feature-color;
+  .edgepoint, .edge, .vertex, .voidvertex, .voidedge{
+    border-left-color: $vertex-color;
   }
   .annotation {
-    border-left: 2px solid $annotation-color;
+    border-left-color: $annotation-color;
   }
   .object {
     border-left: 2px solid $object-color;

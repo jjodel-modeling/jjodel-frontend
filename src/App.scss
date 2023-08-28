@@ -85,13 +85,14 @@ body .ui-icon{ // override jqueryui fixed resizable handles at 16px, making drag
   top: 0px;
   left: 0px;
 }
+/*
 *:has(>[data-nodetype]){
   display: flex;
   flex-wrap: wrap;
   flex-direction: column;
   // counter-reset: line-number-mycounter 0;
 }
-/*
+
 [data-nodetype]{
   // counter-increment: line-number-mycounter 1;
   //noinspection CssInvalidPropertyValue

@@ -1,4 +1,4 @@
-import {ShortAttribETypes as SAType, U} from '../joiner';
+import {DocString, EdgeHead, ShortAttribETypes as SAType, U} from '../joiner';
 import {GObject, RuntimeAccessible} from '../joiner';
 import React, {ReactElement} from "react";
 // const beautify = require('js-beautify').html; // BEWARE: this adds some newline that might be breaking and introduce syntax errors in our JSX parser
@@ -32,10 +32,43 @@ export class DV {
         //`<ellipse stroke={"black"} fill={"red"} cx={this.props.node.x} cy={this.props.node.y} rx={this.props.node.w} ry={this.props.node.h} />`
     )}
 
-    static edgeView(): string { return beautify(
-        `<div className={"edge"} style={{overflow: "visible", width:"100%", height:"100%", pointerEvents:"none"}}>
+    static svgHeadTail(head: "Head" | "Tail", type: EdgeHead): string {
+        let inner: string;
+        switch(type) {
+            default:
+                inner = "edge '" + head + "' with type: '" +type + "' not found";
+                break;
+            case EdgeHead.extend:
+                inner = '<path d={"M "+edge.headSize.w/2+" 0 L 0 "+edge.headSize.h+" L "+edge.headSize.w+" "+edge.headSize.h+" Z"}' +
+                    ' fill="#fff" stroke={edge.strokeColor} stroke-width={edge.strokeWidth}></path>';
+                break;
+            case EdgeHead.reference:
+                inner = `<path d={"M 0 " + edge.headSize.h + " L " + edge.headSize.w/2 + " 0 L " + edge.headSize.w + " " + edge.headSize.h}
+                                fill="transparent" stroke={edge.strokeColor} stroke-width={edge.strokeWidth}></path>`;
+                break;
+            case EdgeHead.aggregation:
+                inner = `<path d={"M 0" + edge.headSize.h/2 + " L " + edge.headSize.w/2 + " 0 L " +
+                    edge.headSize.w + " " + edge.headSize.h/2 + " L " + edge.headSize.w/2 + " " + edge.headSize.h + " Z"}
+                                fill="#fff" stroke={edge.strokeColor} stroke-width={edge.strokeWidth}></path>`;
+                break;
+            case EdgeHead.composition:
+                inner = `<path d={"M 0" + edge.headSize.h/2 + " L " + edge.headSize.w/2 + " 0 L " +
+                    edge.headSize.w + " " + edge.headSize.h/2 + " L " + edge.headSize.w/2 + " " + edge.headSize.h + " Z"}
+                                fill="#000" stroke={edge.strokeColor} stroke-width={edge.strokeWidth}></path>`;
+                break;
+                /* `<svg width="20" height="20" viewBox="0 0 20 20" style={overflow: "visible"}>
+                                            <path d={"M 10 0 L 0 20 L 20 20 Z"} fill="#ffffff" stroke="#808080" stroke-width="1"></path>
+                                         </svg>`;*/
+        }
+        return `<g className={"edge`+head + ` ` + type +`} transform={"rotate("+edge.startdeg+" "+ edge.startPointCropped.toString(false, " ")}
+                    style="/* transform: rotate3d(xcenter, ycenter, zcenter??, 90deg); */">`+ inner +`</g>`
+    }
+    static edgeView(modename: EdgeHead, head: DocString<"JSX">, tail: DocString<"JSX">, dashing: string | undefined): string { return beautify(
+        `<div className={"edge ` + modename + `"} style={{overflow: "visible", width:"100%", height:"100%", pointerEvents:"none"}}>
             <svg className={"hoverable"} style={{width:"100vw", height:"100vh", pointerEvents:"none", overflow: "visible"}}>
-                <path className={"preview"} strokeWidth={2} stroke={"gray"} fill={"none"} d={this.edge.d}></path>
+                { /* edge full segment */ }
+                <path className={"preview"} strokeWidth={2} stroke={"gray"} fill={"none"} d={this.edge.d} stroke-dasharray="` + dashing + `"></path>
+                { /* edge separate segments */ }
                 {this.edge.segments.all.flatMap(s => [
                     <path className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={4} stroke={"black"} fill={"none"} d={s.dpart}></path>,
                     s.label && <text textAnchor="middle">{s.label}</text>,
@@ -47,15 +80,22 @@ export class DV {
                      " translate(0%, -5px"}}>{s.label}</div>
                     </foreignObject>
                 ])}
+            { /* edge head */ }
+            ` + head + `
+            { /* edge tail */ }
+            ` + tail + `
             </svg>
+            { /* interactively added edgepoints */ }
             {
-                edge.midPoints.map( m => <EdgePoint data={undefined} initialSize={m} key={m.id} view={"Pointer_ViewEdgePoint"} /> )
+                edge.midPoints.map( m => <EdgePoint data={edge.father.model.id} initialSize={m} key={m.id} view={"Pointer_ViewEdgePoint"} /> )
             }{
+                
                 edge.end.model.attributes.map( (m, index, arr) => <EdgePoint data={m.id} initialSize={(parent) => {
                     let segs = parent.segments.segments;
                     let pos = segs[0].start.pt.multiply(1-(index+1)/(arr.length+1), true).add(segs[segs.length-1].end.pt.multiply((index+1)/(arr.length+1), true));
-                    console.trace("initial ep", {segs, pos, ratio:(index+1)/(arr.length+1), s:segs[0].start.pt, e:segs[segs.length-1].end.pt});
+                    // console.trace("initial ep", {segs, pos, ratio:(index+1)/(arr.length+1), s:segs[0].start.pt, e:segs[segs.length-1].end.pt});
                     return {...pos, w:55, h:55}}} key={m.id} view={"Pointer_ViewEdgePoint"} /> )
+                    
             }{
                 false && <EdgePoint key={"midnode1"} view={"Pointer_ViewEdgePoint"} />
             }{

@@ -86,6 +86,12 @@
 [data-nodetype="EdgePoint"]{
   pointer-events: all; // fix because edge root have pointerEvents none, and this is contained in edge
 }
+[data-nodetype="Edge"]{
+  position: absolute;
+  overflow: visible;
+  top: 0;
+  height: 0;
+}
 
 /* tags */
 hr { margin: 0 0 !important; }
@@ -93,5 +99,5 @@ label { height: min-content; font-size: 0.9rem; font-weight: lighter; }
 
 [rad]{
   transform-origin: center;
-  transform: rotate(attr(rad));
+  transform: rotate(attr(rad)); // not working properly
 }

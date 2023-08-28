@@ -88,6 +88,7 @@ export class UX{
                 // todo: come butto dei sotto-vertici dentro un vertice contenitore? o dentro un sotto-grafo? senza modificare il jsx ma solo draggando? React-portals?
                 const dataid = (typeof re.props.data === "string" ? re.props.data : re.props.data?.id) || "shapeless";
                 let idbasename: string;
+                if (re.props.initialSize?.id) { idbasename = re.props.initialSize?.id; } else
                 if (re.props.nodeid) { idbasename = (injectProps.parentnodeid) + "^" + re.props.nodeid; } else
                 switch (type) {
                     default:

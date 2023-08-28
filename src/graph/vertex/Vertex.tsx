@@ -75,7 +75,6 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
         const $measurable: GObject<"JQuery + ui plugin"> = $(html); // todo: install typings
         // $element = $(html).find(".measurable").addBack();
-        console.log("$$$", $);
         $measurable.draggable({
             cursor: 'grabbing',
             containment: 'parent',
@@ -216,6 +215,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         if (!this.props.isGraph &&  this.props.isVertex && (this.props.isVoid || !this.props.data)) nodeType = "VoidVertex"; else
         if (!this.props.isGraph &&  this.props.isVertex) nodeType = "Vertex"; else
         if (!this.props.isGraph && !this.props.isVertex) nodeType = "Field";
+
         let classesoverride = [nodeType];
         // set classes end
         let size: Readonly<GraphSize> = this.getSize() as any;

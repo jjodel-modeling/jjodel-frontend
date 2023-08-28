@@ -168,6 +168,21 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
             case LoadAction.type: return action.value;
             case CreateElementAction.type:
                 const elem: DPointerTargetable = action.value;
+
+                if (oldState.idlookup[elem.id]) {
+                console.error("rejected CreateElementAction, roolback occurring:", {action, elem:{...elem},
+                    preexistingValue: {...oldState.idlookup[elem.id]}, isEqual: elem === oldState.idlookup[elem.id] });
+                    return oldState;
+                    /*
+                    action.value = "An element with that id already existed.";
+                    action.path = action.field = "CreateActionRejected";
+                    action.className = SetRootFieldAction.name;
+                    action.type = SetRootFieldAction.type;
+                    action.pathArray = [action.path]; //a
+                    action.isPointer = false;
+                    // just to log it in undo-redo action list and have a feedback*/
+                    break;
+                }
                 elem.className = elem.className || elem.constructor.name;
                 let statefoldername = elem.className.substring(1).toLowerCase() + 's';
                 derivedActions.push(
@@ -431,7 +446,6 @@ export function jodelInit() {
 
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
 
-    console.log('EXecute on read RuntimeClasses:', {dClasses, allClasses: {...RuntimeAccessibleClass.classes}});
     /*for (let dclassname of dClasses) {
         const dclass = RuntimeAccessibleClass.get(dclassname) as typeof DPointerTargetable;
         const lclass = RuntimeAccessibleClass.get('L' + dclassname.substr(1)) as typeof LPointerTargetable;

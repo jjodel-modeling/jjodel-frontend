@@ -35,7 +35,10 @@ export abstract class IPoint extends RuntimeAccessibleClass {
 
     public raw(): {x: number, y: number} { return {x: this.x, y: this.y}; }
 
-    public toString(): string { return '(' + this.x + ', ' + this.y + ')'; }
+    public toString(letters: boolean=true, separator: string = " "): string {
+        if (letters) return  JSON.stringify({x:this.x, y: this.y});
+        else return this.x + separator + this.y + separator;
+    }
     public clone(other: { x: number, y: number }): this { this.x = other.x; this.y = other.y; return this; }
 
     protected abstract new(): this;
@@ -237,7 +240,10 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
         else thiss.h = +h;
         thiss.className = this.name; }
 
-    public toString(): string { return JSON.stringify({x: this.x, y: this.y, w: this.w, h: this.h}); }
+    public toString(letters: boolean=true, separator: string = " "): string {
+        if (letters) return JSON.stringify({x: this.x, y: this.y, w: this.w, h: this.h});
+        else return this.x + separator + this.y + separator + this.w + separator + this.h;
+    }
 
     public set(x?: number, y?: number, w?: number, h?: number): void {
         if (x !== undefined) (this.x = +x);
@@ -438,7 +444,7 @@ export class GraphSize extends ISize<GraphPoint> {
         let pt: GraphPoint = pt0.duplicate();
         const m = GraphPoint.getM(targetPt, pt);
         const q = GraphPoint.getQ(targetPt, pt);
-        console.log("closestIntersection()", {size, pt0, targetPt, m, q});
+        // console.log("closestIntersection()", {size, pt0, targetPt, m, q});
         // if perfectly vertical line
         if (m === Number.POSITIVE_INFINITY/* && q === Number.NEGATIVE_INFINITY*/) {
             // top center
@@ -460,16 +466,15 @@ export class GraphSize extends ISize<GraphPoint> {
         allowB = Geom.isNumberBetween(bl.y, tl.y, targetPt.y);
         allowL = Geom.isNumberBetween(tl.x, tr.x, targetPt.x);
         allowR = Geom.isNumberBetween(tr.x, tl.x, targetPt.x);
-        console.log("closestIntersection pt0", {size, targetPt, pt0:pt0.raw(), gridAlign, tl:tl.raw(), tr:tr.raw(), bl:bl.raw(), br:br.raw()});
-        console.log("closestIntersection pt0.5 bottom", {bl, "a":  "Geom.isNumberBetween("+bl.y+", "+tl.y+", "+targetPt.y+") = " + allowB});
-        console.log("closestIntersection pt1", {allowT, allowB, allowL, allowR});
+        // console.log("closestIntersection pt0", {size, targetPt, pt0:pt0.raw(), gridAlign,
+        //     corners:{tl:tl.raw(), tr:tr.raw(), bl:bl.raw(), br:br.raw()}, allows:{allowT, allowB, allowL, allowR}});
         if (!(allowT || allowB || allowL || allowR)) return undefined; // point is internal to size
         if (allowT) intersectionT = Geom.lineToSegmentIntersection(tl, tr, q, m); else
         if (allowB) intersectionB = Geom.lineToSegmentIntersection(bl, br, q, m); // NOT else, (T|B) AND (L|R) can happen, or just 1 or 0 of those.
         if (allowL) intersectionL = Geom.lineToSegmentIntersection(tl, bl, q, m); else
         if (allowR) intersectionR = Geom.lineToSegmentIntersection(tr, br, q, m);
 
-        console.log("closestIntersection pt2", {intersectionT, intersectionB, intersectionL, intersectionR});
+        // console.log("closestIntersection pt2", {intersectionT, intersectionB, intersectionL, intersectionR});
         // only 1 intersection can happen
         return intersectionT || intersectionB || intersectionL || intersectionR;
     }

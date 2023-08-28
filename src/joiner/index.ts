@@ -47,7 +47,7 @@ export {EdgeBendingMode} from "./types";
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,
     Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs,
-    LUser, DUser, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode} from "./classes";
+    LUser, DUser, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead} from "./classes";
 
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';

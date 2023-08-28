@@ -65,7 +65,8 @@ export enum EdgeBendingMode {
     "Bezier_cubic"="C", // bending1, bending2, end
     "Bezier_cubic_mirrored"="S", // bending1, end // when there are multiple bezier curves on a row, this takes a bendingpoint1 from the last bezier curves mirrored https://css-tricks.com/svg-path-syntax-illustrated-guide/
     "Bezier_quadratic_mirrored"="T", // end // when there are multiple bezier curves on a row, this takes a bendingpoint1 from the last bezier curves mirrored https://css-tricks.com/svg-path-syntax-illustrated-guide/
-    "Elliptical_arc" = "A",// x y, rot, arc sweep, x y super messy not only coords but degrees and booleans mixed with path coords
+    "Elliptical_arc" = "A",// x y, rot, arc sweep, x y.  x,y are coords. rot is angle [0, 360), arc & sweep are {0,1}
+    // can do elliptical arc with a single EP. rotation i take it from rotating the actual EP. arc & sweep i take it from node state (maybe rotation too)
     "Bezier_QT"="QT", // first a Quadratic, then N quadratic mirrored
     "Bezier_CS"="CS", // first a Quadratic, then N quadratic mirrored
 }
@@ -121,17 +122,13 @@ type pureStringsNoPointers<T> = {
 };
 export type ObjectWithoutPointers<T> = Omit<ObjectWithoutStrings<T> & pureStringsNoPointers<T>, 'pointedBy' | '_storePath'>
 
-
-
 type refkeys = "parent" | "father" | "classifiers" | "children" | "classes" | "packages" | "subpackages" | "annotations" | ""
     | "type" | "attributes" | "references" | "operations" | "parameters" | "..... much more"
 
-
-
 export type InitialSizeField = number ;// | ((segment: EdgeSegment) => number);
 export type InitialVertexSizeObj = Partial<{
-    id: InitialSizeField | DocString<"Just something to be used as a react key. doesn't need to be a proper Pointer id">,
+    id?: DocString<"Just something to be used as a react key. doesn't need to be a proper Pointer id">,
+    index?: number, // where the EdgePoint should be inserted
     w: InitialSizeField, h: InitialSizeField, x: InitialSizeField, y: InitialSizeField}>;
 export type InitialVertexSizeFunc = ((parent: LVoidEdge|LGraphElement, thiss: LVoidVertex|LEdgePoint)=>InitialVertexSizeObj);
 export type InitialVertexSize =  undefined | InitialVertexSizeObj | InitialVertexSizeFunc; // | ((segment: EdgeSegment) => privateTempIVS);
-
