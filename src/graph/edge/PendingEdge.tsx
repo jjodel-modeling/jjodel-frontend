@@ -33,9 +33,9 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = { } as any;
-    ret.user = LPointerTargetable.from(state.isEdgePending.user);
+/*    ret.user = LPointerTargetable.from(state.isEdgePending.user);
     ret.source = LPointerTargetable.from(state.isEdgePending.source);
-    ret.edgeSettings = state._edgeSettings;
+    ret.edgeSettings = state._edgeSettings;*/
     return ret;
 }
 

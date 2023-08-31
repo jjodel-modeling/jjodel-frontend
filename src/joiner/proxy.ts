@@ -330,6 +330,9 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             if (typeof propKey !== 'symbol' && this.s + propKey in this.lg) return this.lg[this.s + propKey](value, new LogicContext(proxyitself as any, targetObj));
 
 
+
+            // if custom generic getter exist
+            if (this.lg._defaultSetter) return this.lg._defaultSetter(value, new LogicContext(proxyitself as any, targetObj), propKey);
             if (enableFallbackSetter) {
                 return this.defaultSetter(targetObj as any as DPointerTargetable, propKey as string, value, proxyitself);
                 // new SetFieldAction(new LogicContext(proxyitself as any, targetObj).data as any, propKey as string, value); return true;
@@ -341,6 +344,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         // if property do not exist
         let breakpoint = 1;
 
+        // if custom generic getter exist
+        if (this.lg._defaultSetter) return this.lg._defaultSetter(value, new LogicContext(proxyitself as any, targetObj), propKey);
         if (enableFallbackSetter && typeof (propKey === "string") && ((propKey as string)[0] === '_' || (propKey as string).indexOf('tmp') > 0)) {
             return this.defaultSetter(targetObj as any as DPointerTargetable, propKey as string, value, proxyitself);
             // new SetFieldAction(new LogicContext(proxyitself as any, targetObj).data as any, propKey as string, value); return true;

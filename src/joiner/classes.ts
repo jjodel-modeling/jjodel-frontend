@@ -758,6 +758,10 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.bendingMode = EdgeBendingMode.Bezier_quadratic;
         thiss.edgeGapMode = EdgeGapMode.gap;
         thiss.edgePointCoordMode = CoordinateMode.relativeOffset;
+        /// edge
+
+        thiss.edgeHeadSize = new GraphPoint(20, 20);
+        thiss.edgeTailSize = new GraphPoint(20, 20);
 
         if (this.persist) {
             // no pointedBy?
@@ -1122,7 +1126,7 @@ export class Pointers{
 
     static isPointer(val: any): val is Pointer {
         // todo: must refine this in a safer way
-        return val?.includes ? val.includes("Pointer") : false;
+        return typeof val === "string" ? val.includes("Pointer") : false;
     }
 }
 /*

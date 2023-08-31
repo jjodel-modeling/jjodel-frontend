@@ -1,5 +1,6 @@
 import {
     Constructors,
+    CoordinateMode,
     CreateElementAction,
     DAttribute,
     DClass,
@@ -31,6 +32,7 @@ import {
     EdgeBendingMode,
     EdgeHead,
     GObject,
+    GraphPoint,
     GraphSize,
     LAttribute,
     LClass,
@@ -159,8 +161,6 @@ export class DState extends DPointerTargetable{
         modelElement: Pointer<DModelElement, 0, 1> // if a node is clicked: a node and a view are present, a modelElement might be. a node can exist without a modelElement counterpart.
     };
     users!: Pointer<DUser, 1, 'N', LUser>;
-    _edgeSettings = {strokeWidth: 1, color: '#000000', zIndex: 150, path: 'smooth'}
-    _edgesDisplayed = {extend: true, referenceM2: true, referenceM1: true}
 
     viewpoint: Pointer<DViewPoint, 1, 1, LViewPoint> = '';
     viewpoints: Pointer<DViewPoint, 0, 'N', LViewPoint> = [];
@@ -217,6 +217,7 @@ function makeDefaultGraphViews(): DViewElement[] {
 
     let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.name]);
     packageView.defaultVSize = new GraphSize(0, 0, 400, 500);
+    packageView.preRenderFunc = "() => { return {pname: this.data.name+\"pre\"}; }"
 
     let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.name]);
     classView.adaptWidth = true;
@@ -246,28 +247,47 @@ function makeDefaultGraphViews(): DViewElement[] {
 
     let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 30, 30), '', '', '', []);
     let edgePointViewSVG: DViewElement = DViewElement.new('EdgePointSVG', DV.edgePointViewSVG(), new GraphSize(0, 0, 10, 10), '', '', '', []);
+    edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
+
     let edgeViews: DViewElement[] = [];
-    function makeEdgeView(name: string, type: EdgeHead, head: boolean, tail: boolean, dashing: boolean): DViewElement{
-        let ev = DViewElement.new("EdgeView"+name, DV.edgeView(type,
-            head ? DV.svgHeadTail("Head", type) : "", tail ? DV.svgHeadTail("Tail", type) : "", dashing ? "10.5,9,0,0" : undefined),
-            undefined, '', '', '', [DVoidEdge.name]);
+    let size0: GraphPoint = new GraphPoint(0, 0), size1: GraphPoint = new GraphPoint(20, 20), size2: GraphPoint = new GraphPoint(40, 20);
+    let edgePreRenderFunc: string = `()=>({
+            segments: this.edge.segments,
+            strokeColor: "gray",
+            strokeWidth: "2px",
+            strokeColorHover: "black",
+            strokeWidthHover: "4px",
+        })`;
+    function makeEdgeView(name: string, type: EdgeHead, headSize: GraphPoint | undefined, tailSize: GraphPoint | undefined, dashing: boolean): DViewElement{
+        let ev = DViewElement.new2("Edge"+name, DV.edgeView(type,
+                headSize ? DV.svgHeadTail("Head", type) : "", tailSize ? DV.svgHeadTail("Tail", type) : "", dashing ? "10.5,9,0,0" : undefined),
+            (v: DViewElement) => {
+                v.explicitApplicationPriority = 2;
+                v.bendingMode = EdgeBendingMode.Line;
+                v.appliableToClasses = [DVoidEdge.name];
+                v.edgeHeadSize = headSize || size0;
+                v.edgeTailSize = tailSize || size0;
+                v.preRenderFunc = edgePreRenderFunc;
+        });
         edgeViews.push(ev);
         return ev;
     }
-    makeEdgeView("Association", EdgeHead.reference,     true,   false,  false);
-    makeEdgeView("Dependency",  EdgeHead.reference,     true,   false,  true);
-    makeEdgeView("Inheritance", EdgeHead.extend,        true,   false,  false);
-    makeEdgeView("Dependency",  EdgeHead.extend,        true,   false,  true);
-    makeEdgeView("Aggregation", EdgeHead.aggregation,   false,  true,   false);
-    makeEdgeView("Composition", EdgeHead.composition,   false,  true,   false);
+
+    makeEdgeView("Association", EdgeHead.reference,             size1,   undefined,  false);
+    makeEdgeView("Dependency",  EdgeHead.reference,             size1,   undefined,  true);
+    makeEdgeView("Inheritance", EdgeHead.extend,                size1,   undefined,  false);
+    makeEdgeView("Dependency",  EdgeHead.extend,                size1,   undefined,  true);
+    makeEdgeView("Aggregation", EdgeHead.aggregation,   undefined,      size2,      false);
+    makeEdgeView("Composition", EdgeHead.composition,   undefined,      size2,      false);
 
     // edgeView.forceNodeType="Edge"
 
+    /*
     for (let ev of edgeViews){
         ev.explicitApplicationPriority = 2;
         ev.bendingMode = EdgeBendingMode.Line;
         ev.subViews = [edgePointView.id];
-    }
+    }*/
     // nb: Error is not a view, just jsx. transform it in a view so users can edit it
 
     let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.name]);

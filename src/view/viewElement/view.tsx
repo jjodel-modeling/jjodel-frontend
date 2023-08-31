@@ -1,5 +1,5 @@
 import {
-    Action,
+    Action, bool,
     Constructors, CoordinateMode,
     DGraphElement,
     Dictionary,
@@ -83,9 +83,12 @@ export class DViewElement extends DPointerTargetable {
     edgeStartStopAtBoundaries!: boolean;
     edgeEndStopAtBoundaries!: boolean;
     edgePointCoordMode!: CoordinateMode;
+    edgeHeadSize!: GraphPoint;
+    edgeTailSize!: GraphPoint;
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
-                      preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1 , persist: boolean = false): DViewElement {
+                      preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '',
+                      priority: number = 1 , persist: boolean = false): DViewElement {
         return new Constructors(new DViewElement('dwc'), undefined, persist, undefined).DPointerTargetable().DViewElement(name, jsxString, defaultVSize, usageDeclarations, constants,
             preRenderFunc, appliableToClasses, oclApplyCondition, priority).end();
     }
@@ -165,14 +168,32 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__edgeStartStopAtBoundaries: Info = {type:"GraphPoint", txt: "Whether outgoing edges should cross the node boundaries overlapping the node or stop at them (edge arrows might enter the node if this is on)."}
     edgeEndStopAtBoundaries!: boolean;
     edgePointCoordMode!: CoordinateMode;
-
+    // edge
+    edgeHeadSize!: GraphPoint;
+    edgeTailSize!: GraphPoint;
+    edgeStrokeWidth!: number;
     protected size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>; // use getSize, updateSize;
 
-    get_viewpoint(context: Context): this["viewpoint"] {
+
+    public get_edgeHeadSize(c: Context): this["edgeHeadSize"] { return new GraphPoint(c.data.edgeHeadSize.x, c.data.edgeHeadSize.y); }
+    public get_edgeTailSize(c: Context): this["edgeTailSize"] { return new GraphPoint(c.data.edgeTailSize.x, c.data.edgeTailSize.y); }
+    public set_edgeHeadSize(v: Partial<this["edgeHeadSize"]>, c: Context): boolean {
+        let s = c.data.edgeHeadSize || new GraphPoint(0, 0);
+        if (!("x" in v)) v.x = s.x;
+        if (!("y" in v)) v.y = s.y;
+        return SetFieldAction.new(c.data.id, "edgeHeadSize", v as GraphPoint, '', false); }
+    public set_edgeTailSize(v: Partial<this["edgeTailSize"]>, c: Context): boolean {
+        let s = c.data.edgeTailSize || new GraphPoint(0, 0);
+        if (!("x" in v)) v.x = s.x;
+        if (!("y" in v)) v.y = s.y;
+        return SetFieldAction.new(c.data.id, "edgeTailSize", v as GraphPoint, '', false); }
+
+    public get_viewpoint(context: Context): this["viewpoint"] {
         return (context.data.viewpoint || undefined) && (LViewPoint.fromPointer(context.data.viewpoint as Pointer<DViewPoint>));
     }
 
-    get_subViews(context: Context, key: string): LViewElement[]{
+
+    public get_subViews(context: Context, key: string): LViewElement[]{
         let subViewsPointers = context.data.subViews;
         let subViews: LViewElement[] = [];
         for(let pointer of subViewsPointers){

@@ -44,7 +44,7 @@ export class GraphElementReduxStateProps {
     // [userMappedFromRedux: string]: any; // roba che l'utente ha dichiarato di voler prendere dallo stato e redux gli carica nelle props
     preRenderFunc?: string;
     evalContext!: Json;
-    template!: () => ReactNode;
+    template!: string;
     node!: LGraphElement;
     graph!: LGraph;
 

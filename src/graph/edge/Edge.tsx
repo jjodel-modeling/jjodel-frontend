@@ -100,12 +100,12 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const edgeSettings = state._edgeSettings;
+    /*const edgeSettings = state._edgeSettings;
     const showAnchor = false //edgeSettings.showAnchor;
     const size = edgeSettings.strokeWidth;
     const color = edgeSettings.color;
-    const ret: StateProps = { showAnchor, size, color };
-    return ret;
+    const ret: StateProps = { showAnchor, size, color };*/
+    return {} as any;
 }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {

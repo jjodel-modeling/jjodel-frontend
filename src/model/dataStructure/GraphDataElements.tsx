@@ -19,7 +19,7 @@ import {
     GraphElementComponent,
     GraphPoint,
     GraphSize,
-    Info,
+    Info, IPoint,
     Leaf,
     LMap,
     LModelElement,
@@ -154,10 +154,6 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             <br/>Obtained by combining anchoring point offset specified in view, before snapping to a Vertex border.
             <br/>Defaults in outer coordinates.</span>};
 
-    get_outerGraph(context: Context): LGraph {
-        // todo: this relies on the fact that GraphVertex are not passing their own id to their childrens, but the parent graph id
-        return TargetableProxyHandler.wrap(context.data.graph);
-    }
     __info_of__graph: Info = {type:"", txt:""};
     innerGraph!: LGraph;
     __info_of__innnerGraph: Info = {type:"", txt:""};
@@ -168,6 +164,41 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __info_of__graphAncestors: Info = {type:"LGraph[]",
         txt:"<span>collection of the stack of Graphs containing the current element where [0] is the most nested graph, and last is root graph.</span>"};
     graphAncestors!: LGraph[];
+
+    protected _defaultCollectionGetter(c: Context, k: keyof Context["data"]): LPointerTargetable[] { return LPointerTargetable.fromPointer((c.data as any)[k]); }
+    protected _defaultGetter(c: Context, k: keyof Context["data"]): any {
+        console.log("default Getter");
+        if (k in c.data) {
+            let v = (c.data as any)[k];
+            if (Array.isArray(v)) {
+                if (v.length === 0) return [];
+                else if (Pointers.isPointer(v[0] as any)) return this._defaultCollectionGetter(c, k);
+                return v;
+            } else return v;
+        }
+        let ret: any;
+        let view = this.get_view(c);
+        try { ret = (view as any)[k] } catch (e) { Log.ee("Could not find get_ property \"" + k + "\" in node or view.", {c, view, k}); return undefined; }
+        return ret;
+    }
+
+    protected _defaultSetter(v: any, c: Context, k: keyof Context["data"]): any {
+        console.log("default Setter");
+        if (k in c.data) {
+            let isPointer: boolean;
+            if (Array.isArray(v)) {
+                if (v.length === 0) isPointer = true; // assumed, should not cause harm if it is not.
+                // it will delete remove an entry in pointedBy from all oldValue entries in the array that should not be present anyway.
+                // like oldVal.map( id => U.arrayRemove(LData.wrap(id).pointedBy, c.data.this_id)
+                else isPointer = Pointers.isPointer(v[0] as any);
+            } else isPointer = false;
+            return SetFieldAction.new(c.data.id, k as any, v, '', isPointer);
+        }
+        let view = this.get_view(c);
+        try { (view as any)[k] = v; } catch (e) { Log.ee("Could not find set_ property \"" + k + "\" in node or view.", {c, v, k, view}); return false; }
+        return true;
+    }
+
     get_graphAncestors(c: Context): LGraph[] {
         let current = c.proxyObject;
         let next = current.father;
@@ -179,6 +210,10 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             next = next.father;
         }
         return ret;
+    }
+    get_outerGraph(context: Context): LGraph {
+        // todo: this relies on the fact that GraphVertex are not passing their own id to their childrens, but the parent graph id
+        return TargetableProxyHandler.wrap(context.data.graph);
     }
     get_vertex(context: Context): this["vertex"] {
         let lcurrent: LGraphElement = LPointerTargetable.fromPointer(context.data.id);
@@ -743,6 +778,7 @@ export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C exte
     }
 
 
+
 }
 RuntimeAccessibleClass.set_extend(DGraphElement, DVoidVertex);
 RuntimeAccessibleClass.set_extend(LGraphElement, LVoidVertex);
@@ -1225,7 +1261,7 @@ export class EdgeSegment{
 
     makeD(index: number, gapMode: EdgeGapMode): string {
         this.m = GraphPoint.getM(this.start.pt, this.end.pt);
-        this.rad = Math.atan(this.m);
+        this.rad = Geom.mToRad(this.m, this.start.pt, this.end.pt);
 
         let svgLetter = this.svgLetter; // caller makes sure to pass right letter and resolve "CS" mixed letters. // this.bendingModeToLetter(bendingMode, index);
         // caller sends inverted pts as normal coords
@@ -1393,14 +1429,82 @@ replaced by startPoint
 
     // get_label(c: Context): this["label"] { return this.get_longestLabel(c); }
     // get_longestLabel(c: Context): this["label"] { return this.get_label_impl(c.data, c.proxyObject); }
-    public get_allNodes(c: Context): this["allNodes"] { return [this.get_start(c), ...this.get_midnodes(c), this.get_end(c)]; }
+    public headPos_impl(c: Context, isHead: boolean, headSize0?: GraphPoint, segment0?: EdgeSegment, zoom0?: GraphPoint): GraphSize & {rad: number} {
+        let segment: EdgeSegment = segment0 || this.get_segments(c).segments[0];
+        // let v: LViewElement = this.get_view(c);
+        let tmp: any = headSize0 || this.get_view(c).edgeHeadSize;
+        let zoom: GraphPoint = zoom0 || this.get_graph(c).zoom;
+        let headPos: GraphSize & {rad: number} = (new GraphSize(0, 0, tmp.x, tmp.y) as any); //.multiply({w:zoom.x, h:zoom.y});
+        let useBezierPoints = true;
+        let start: GraphPoint, end: GraphPoint;
+        let m: number;
+        if (useBezierPoints) {
+            if (isHead) {
+                start = segment.end.pt;
+                end = (segment.bezier[segment.bezier.length - 1] || segment.start).pt;
+            } else {
+                start = segment.start.pt;
+                end = (segment.bezier[0] || segment.end).pt;
+            }
+            m = GraphPoint.getM(start, end);
+        } else {
+            if (isHead) { start = segment.end.pt; end = segment.start.pt; }
+            else { start = segment.start.pt; end = segment.end.pt; }
+            m = segment.m;
+        }
+        // first find the center of where it should be positioned
+        // let center: GraphPoint;
+        // let distance: number = Math.sqrt(headPos.w*headPos.w + headPos.h*headPos.h);
+        // let isVertical = m >=1 ;
+        let x4headsize = new GraphSize(start.x - headPos.w, start.y - headPos.h, headPos.w*2, headPos.h*2);
+        // first intersection is segment origin. second is found with the box containing all possible edgeHead positions that touch the startPoint
+        // (doing x4 his shape and placing 4 "rectangles" all around startPoint) to cover all possible segment directions.
+        // or finding first direction (vertical if m >1, horizontal if m<0) and vector direction and intersecting with only the "correct" placed edgeHead rectangle.
+        // then the intersection will likely not fall on the extreme angle of EdgeHead and i can re-center edgeHead
+        // so that first and second intersections are equal spaced with the center segment
+        let secondIntersection: GraphPoint | undefined;
+        let segmentDistance = start.distanceFromPoint(end);
+        if (segmentDistance <= Math.sqrt(headPos.w**2 + headPos.h**2)){
+            let safeDistance = Math.max(headPos.w, headPos.h)*5;
+            end = new GraphPoint( end.y + safeDistance, end.y + m * safeDistance); // move the point away so it doesn't intersect anymore. i just need direction
+            // too small to fit edgeHead, i simply put it centered on the whole segment
+            // secondIntersection = end;
+        }
+        secondIntersection = GraphSize.closestIntersection(x4headsize, start, end, undefined);
+        if (!secondIntersection) return Log.exx("failed to intersect edge head", {x4headsize, segment, headPos, c, start, end, useBezierPoints});
+        tmp = secondIntersection.add(start, false).divide(2); // center of edgehead
+        headPos.x = tmp.x - headPos.w / 2; // tl corner
+        headPos.y = tmp.y - headPos.h / 2; // tl corner
+        headPos.rad = Geom.mToRad(m, start, end);
+        /*
+        devo trovare la distanza tra il centro dell'egeHead e il punto di inizio in termini assoluti, così tramite M trovo distanza in x e y. o trovarla in altro modo
+        if (segment.m === Number.POSITIVE_INFINITY || segment.m === Number.NEGATIVE_INFINITY) {
+            center = segment.start.pt.add({x:0, y: distance}, true); }
+        else { center = segment.start.pt.add({x:segment.m*headPos.w/2, y:segment.m*headPos.h/2
+         this is wrong, cannot be the same for x and y, i should invert the line equation for x?}, true); }
+        headPos.x = center.x - headPos.w / 2;
+        headPos.y = center.y - headPos.h / 2;*/
+        console.log("head intersected", {headPos, secondIntersection, x4headsize, segment, c, start, end, useBezierPoints});
 
-    public get_edge(c: Context): this{ return c.proxyObject as this; }
-    public set_edge(v: any, c: Context): false { return this.cannotSet("edge field, on an edge element"); }
-    public get_midPoints(c: Context):this["midPoints"] { return c.data.midPoints; }
+        return headPos;
+    }
+
+    public headPos(headSize0?: GraphPoint, segment0?: EdgeSegment, zoom0?: GraphPoint): GraphSize & {rad: number} {
+        return this.wrongAccessMessage("This is not headPos() implementation. it is just for typings. use the getter"); }
+    public tailPos(headSize0?: GraphPoint, segment0?: EdgeSegment, zoom0?: GraphPoint): GraphSize & {rad: number} {
+        return this.wrongAccessMessage("This is not tailPos() implementation. it is just for typings. use the getter"); }
+    protected get_headPos(c: Context): this["headPos"] {
+        return (headSize?: GraphPoint, segment?: EdgeSegment, zoom?: GraphPoint) => this.headPos_impl(c, true, headSize, segment, zoom); }
+    protected get_tailPos(c: Context): this["tailPos"] {
+        return (headSize?: GraphPoint, segment?: EdgeSegment, zoom?: GraphPoint) => this.headPos_impl(c, false, headSize, segment, zoom); }
+    protected get_allNodes(c: Context): this["allNodes"] { return [this.get_start(c), ...this.get_midnodes(c), this.get_end(c)]; }
+
+    protected get_edge(c: Context): this{ return c.proxyObject as this; }
+    protected set_edge(v: any, c: Context): false { return this.cannotSet("edge field, on an edge element"); }
+    protected get_midPoints(c: Context):this["midPoints"] { return c.data.midPoints; }
     public addMidPoint(v: this["midPoints"][0]): boolean { return this.wrongAccessMessage("addMidPoint"); }
-    public get_addMidPoint(c: Context): (v: this["midPoints"][0]) => boolean { return (v:this["midPoints"][0]) => this.impl_addMidPoints(v, c); }
-    public set_midPoints(val: this["midPoints"], c: Context): boolean {
+    protected get_addMidPoint(c: Context): (v: this["midPoints"][0]) => boolean { return (v:this["midPoints"][0]) => this.impl_addMidPoints(v, c); }
+    protected set_midPoints(val: this["midPoints"], c: Context): boolean {
         return SetFieldAction.new(c.data.id, "midPoints", val, undefined, false);
     }
     protected impl_addMidPoints(val: this["midPoints"][0], c: Context): boolean {
@@ -1464,13 +1568,14 @@ replaced by startPoint
     public get_startPoint_inner(c: Context): GraphPoint{ return this.get_edgeStartEnd_inner(c, true); }
     public get_endPoint_inner(c: Context): GraphPoint{ return this.get_edgeStartEnd_inner(c, false); }
     private get_edgeStartEnd_inner(c: Context, isStart: boolean): GraphPoint{ return isStart ? this.get_start(c).startPoint : this.get_end(c).endPoint; }
-    segments!: {all: EdgeSegment[], segments: EdgeSegment[], fillers: EdgeSegment[]};
-    segments_inner!: {all: EdgeSegment[], segments: EdgeSegment[], fillers: EdgeSegment[]};
-    segments_outer!: {all: EdgeSegment[], segments: EdgeSegment[], fillers: EdgeSegment[]};
-    __info_of__segments: Info = {type: "{all:T, segments:T, fillers:T} where T is EdgeSegment",
+    segments!: {all: EdgeSegment[], segments: EdgeSegment[], fillers: EdgeSegment[], head: GraphSize&{rad:number}, tail: GraphSize&{rad:number}};
+    segments_inner!: {all: EdgeSegment[], segments: EdgeSegment[], fillers: EdgeSegment[], head: GraphSize&{rad:number}, tail: GraphSize&{rad:number}};
+    segments_outer!: {all: EdgeSegment[], segments: EdgeSegment[], fillers: EdgeSegment[], head: GraphSize&{rad:number}, tail: GraphSize&{rad:number}};
+    __info_of__segments: Info = {type: "{all:T, segments:T, fillers:T, head: GraphSize&{rad:number}, tail: as head} where T is EdgeSegment",
         txt:<span>Collection of segments connecting in order vertex and EdgePoint without intersecting their area, aimed to be rendered in svg path.
             <br/>fillers are arcs generated by view.edgeGapMode being autofill, arcfill or linefill.
-            <br/>length of this.segments array is Math.ceil(allNodes.length / svg_letter_size) specified on view.</span>}
+            <br/>length of this.segments array is Math.ceil(allNodes.length / svg_letter_size) specified on view.
+            <br/>"head" and "tail" are the position and angle of eventual edge decorators. Refer to this.headPos documentation.</span>}
 
     private svgLetterSize(s: string, addM: boolean = true, doublingMidPoints: boolean = true): {first:number, others: number} {
         let ret: {first:number, others: number};
@@ -1557,22 +1662,7 @@ replaced by startPoint
         let gapMode: EdgeGapMode = v.edgeGapMode;
         let segmentSize = this.svgLetterSize(bm, false, true);
         let increase: number = segmentSize.first;
-
-
-
-
-        // segmentSize.others += 1;
         let segment: EdgeSegment | undefined;
-
-        let firstSvgLetter: SvgLetter = bm[0] as SvgLetter;
-        let secondSvgLetter: SvgLetter = (bm[1] || bm[0]) as SvgLetter;
-
-        function getSvgLetter(index: number): SvgLetter{
-            // if (index === 0) return SvgLetter.M;
-            // if (index === 1) return bm[0] as SvgLetter;
-            if (index === 0) return firstSvgLetter;
-            return secondSvgLetter; }
-
         /// grouping points according to SvgLetter
         for (let i = 0; i < all.length - 1; ) {
             // let start = all[i], end = all[i+increase];
@@ -1595,11 +1685,14 @@ replaced by startPoint
         let longestLabel = c.data.longestLabel;
         this.setLabels(c, ret, allNodes, longestLabel);
         // console.log("getSegments() labeled:", {main:ret, fillSegments});
-        let rett = {all: [...ret, ...fillSegments], segments: ret, fillers: fillSegments};
+        let rett: this["segments"] = {all: [...ret, ...fillSegments], segments: ret, fillers: fillSegments} as any;
         for (let i = 0; i < rett.all.length; i++) {
             let s = rett.all[i];
             s.makeD(i, gapMode);
         }
+        let zoom = new GraphPoint(1, 1);
+        rett.head = this.headPos_impl(c, true, v.edgeHeadSize, rett.segments[rett.segments.length - 1], zoom);
+        rett.tail = this.headPos_impl(c, false, v.edgeTailSize, rett.segments[0], zoom);
         return rett;
     }
     private setLabels(c: Context, segments: EdgeSegment[], allNodes: this["allNodes"], longestLabel: D["longestLabel"]): void {

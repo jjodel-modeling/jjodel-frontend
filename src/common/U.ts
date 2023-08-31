@@ -330,8 +330,8 @@ export class U {
         // if (allowScope && allowContext) { return function(){ with(this){ return eval( '" + codeStr + "' ); }}.call(scopeAndContext); }
         // if (allowScope && allowContext) { return new Function( "with(this){ return eval( '" + codeStr + "' ); }").call(scopeAndContext); }
         let _ret: T = null as any;
-        if (context) context = {...context};
-        if (scope) scope = {...scope};
+        if (context) context = {...context, __proto__: context.__proto__};
+        if (scope) scope = {...scope, __proto__: scope.__proto__};
         const _eval = {codeStr, context, scope};
 
         /*

@@ -55,7 +55,7 @@ export function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
     evalContext = {...windoww.defaultContext, ...evalContext, model: props.data, ...props,
         edge: (RuntimeAccessibleClass.extends(props.node?.className, "DVoidEdge") ? props.node : undefined),
         component, getSize:vcomponent?.getSize, setSize: vcomponent?.setSize};
-    windoww.evalContext = evalContext;
+    // windoww.evalContext = evalContext;
     return evalContext;
 }
 
@@ -79,10 +79,10 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
         Log.eDevv();
         stateProps.preRenderFunc = view.preRenderFunc;
         stateProps.evalContext = evalContext;
-        stateProps.template = () => DV.errorView(e.message.split("\n")[0],
+        stateProps.template = DV.errorView_string(e.message.split("\n")[0],
             {msg: 'Syntax Error in custom user-defined template. try to remove typescript typings.', evalContext, e, view, jsx:view.jsxString});
         return;
-    }
+    }/*
     try {
         jsxparsedfunc = U.evalInContextAndScope<() => ReactNode>('()=>{ return ' + jsxCodeString + '}', evalContext);
         // U.evalInContext({...this, ...evalContext}, res); // todo: remove eval and add new Function() ?
@@ -94,11 +94,11 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
         { errormsg += 'Reminder: nullish operators ".?" and "??" are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
         else if (view.jsxString.indexOf('?.') >= 0) { errormsg += 'Reminder: ?. operator and empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
         jsxparsedfunc = ()=> DV.errorView(errormsg, otherargs);
-    }
+    }*/
 
     stateProps.preRenderFunc = view.preRenderFunc;
     stateProps.evalContext = evalContext;
-    stateProps.template = jsxparsedfunc;
+    stateProps.template = jsxCodeString;
     // console.log('GE settemplatestring:', {stateProps});
 }
 
@@ -352,20 +352,75 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 '<div><input value="{name}" onInput="{setName}"></input><p>c1:{this.state.c1}</p><Attribute prop1={daa} prop2={1 + 1.5} stringPropdaa=\"daa\" /><ul>{colors.map( color => <li>color: {color}</li>)}</ul></div>');
         }*/
         // console.log('getTemplate:', {props: this.props, template: this.props.template, ctx: this.props.evalContext});
-        let ret;
+
         // Log.exDev(debug && maxRenderCounter-- < 0, "loop involving render");
-        let context = {component:this, __proto__:this.props.evalContext};
-        try {
-            ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], context); }
-        catch(e: any) {
+        let context: GObject = {component:this, __proto__:this.props.evalContext};
+        context._context = context;
+
+        let displayError = (e: Error, where: string) => {
             const view: LViewElement = this.props.view; //data._transient.currentView;
-            let errormsg = ''; // 'Syntax Error in custom user-defined template.\n';
-            if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0)
-            { errormsg += 'Reminder: nullish operators ".?" and "??" are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
-            else if (view.jsxString.indexOf('?.') >= 0) { errormsg += 'Reminder: ?. operator and empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
-            if (!errormsg) errormsg = (e.message||"\n").split("\n")[0];
-            ret = DV.errorView(errormsg, {where:"in getTemplate()", e});
+            let errormsg = (where === "preRenderFunc" ? "Pre-Render " : "") +(e.message||"\n").split("\n")[0];
+            if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0) {
+                errormsg += '\n\nReminder: nullish operators ".?" and "??" are not supported.'; }
+            else if (view.jsxString.indexOf('?.') >= 0) { errormsg += '\n\nReminder: ?. operator and empty tags <></> are not supported.'; }
+            else if (e.message.indexOf("Unexpected token '<'")) { errormsg += '\n\nDid you forgot to close a html </tag>?'; }
+            try {
+                let ee = e.stack || "";
+                let stackerrorlast = ee.split("\n")[1];
+
+                let icol = stackerrorlast.lastIndexOf(":");
+                let jsxString = view.jsxString;
+                // let col = stackerrorlast.substring(icol+1);
+                let irow = stackerrorlast.lastIndexOf(":", icol-1);
+                let stackerrorlinenum: GObject = {
+                    row: Number.parseInt(stackerrorlast.substring(irow+1, icol)),
+                    col: Number.parseInt(stackerrorlast.substring(icol+1)) };
+                let linesPre = 1;
+                let linesPost = 1;
+                let jsxlines = jsxString.split("\n");
+                let culpritlinesPre: string[] = jsxlines.slice(stackerrorlinenum.row-linesPre-1, stackerrorlinenum.row - 1);
+                let culpritline: string = jsxlines[stackerrorlinenum.row - 1]; // stack start counting lines from 1
+                let culpritlinesPost: string[] = jsxlines.slice(stackerrorlinenum.row, stackerrorlinenum.row + linesPost);
+                console.error("errr", {jsxlines, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
+
+                let rowPre = culpritline.substring(0, stackerrorlinenum.col)
+                let rowPost = culpritline.substring(stackerrorlinenum.col);
+                let caretCursor = "▓" // ⵊ ꕯ 𝙸 Ꮖ
+                if (stackerrorlinenum.col < culpritline.length && stackerrorlast.indexOf("main.chunk.js") === -1) {
+                    let jsxcode =
+                        <div style={{fontFamily: "monospaced sans-serif", color:"#444"}}>
+                            { culpritlinesPre.map(l => <div>{l}</div>) }
+                            <div>{rowPre} <b style={{color:"red"}}> {caretCursor} </b> {rowPost}</div>
+                            { culpritlinesPost.map(l => <div>{l}</div>) }
+                        </div>;
+                    console.error("errr", {e, ee, jsxlines, jsxcode, rowPre, rowPost, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
+                    errormsg += " @line " + stackerrorlinenum.row + ":" + stackerrorlinenum.col;
+                    return DV.errorView(<div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template: this.props.template, view: this.props.view});
+                } else {
+                    // it means it is likely accessing a minified.js src code, sending generic error without source mapping
+                }
+            } catch(e2) {
+                Log.eDevv("internal error in error view", {e, e2, where} );
+            }
+            return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: this.props.template, view: this.props.view});
         }
+
+        try {
+            console.log("prerenderfunc pre execution", "("+this.props.preRenderFunc+")()", context);
+            if (this.props.preRenderFunc) {
+                let obj = U.evalInContextAndScope<GObject>("("+this.props.preRenderFunc+")()", [], context);
+                console.log("prerenderfunc executed", obj);
+                for (let key in obj) { context[key] = obj[key]; }
+            }
+        }
+        catch(e: any) { return displayError(e, "preRenderFunc");  }
+        let ret;
+        try {
+            ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + this.props.template + '})()', context);
+            // ret = this.props.template();
+            // ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], {});
+        }
+        catch(e: any) { return displayError(e, "getTemplate"); }
         return ret;
     }
 
@@ -418,7 +473,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     public render(nodeType?:string, styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
         if (!this.props.node) return "loading";
-        if (this.props.preRenderFunc) U.evalInContextAndScope(this.props.preRenderFunc, {component:this, __proto__:this.props.evalContext});
         if (this.props.node.__raw.view !== this.props.view.id) {
 
             let thischange = {t: Date.now(), vid: this.props.node.__raw.view, newvid:this.props.view.id, v: this.props.node.view, newv: this.props.view, key:this.props.key};
@@ -445,6 +499,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         /// end set classes
 
         const rnode: ReactNode = this.getTemplate();
+        console.log("get template " + this.props.node?.className , {t: this.props.template, rnode});
         let rawRElement: ReactElement | null = UX.ReactNodeAsElement(rnode);
         const me: LModelElement | undefined = this.props.data; // this.props.model;
 
@@ -498,7 +553,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 if (fixdoubleroot) rawRElement = rawRElement.props.children;
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
             } catch (e) {
-                rawRElement = DV.errorView("error while injecting props to subnodes", {e, rawRElement, key:this.props.key, newid: this.props.nodeid});
+
+                rawRElement = U.evalInContextAndScope<ReactElement>('()=>{ return ' +
+                    DV.errorView("error while injecting props to subnodes",
+                        {e, rawRElement, key:this.props.key, newid: this.props.nodeid}) + '}',
+                    {});
+
+                // rawRElement = DV.errorView("error while injecting props to subnodes", {e, rawRElement, key:this.props.key, newid: this.props.nodeid});
             }
             /*console.log('tempdebug', {deepStrictEqual, okeys:Object.keys});
             let isEqual = true;

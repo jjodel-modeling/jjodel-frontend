@@ -56,10 +56,10 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = { } as any;
-    ret.source = LGraphElement.fromPointer(ownProps.sourceID);
+/*    ret.source = LGraphElement.fromPointer(ownProps.sourceID);
     ret.target = LGraphElement.fromPointer(ownProps.targetID);
     ret.options = state._edgeSettings;
-    ret.display = state._edgesDisplayed.referenceM1;
+    ret.display = state._edgesDisplayed.referenceM1;*/
     return ret;
 }
 

@@ -58,7 +58,7 @@ export abstract class IPoint extends RuntimeAccessibleClass {
         p1.y -= p2.y;
         return p1; }
 
-    public add(p2: IPoint, newInstance: boolean): this {
+    public add(p2: { x: number, y: number }, newInstance: boolean): this {
         Log.e(!p2, 'add argument must be a valid point: ', p2);
         let p1: this;
         if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
@@ -257,35 +257,42 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
     public clone(json: this): this { this.x = json.x; this.y = json.y; this.w = json.w; this.h = json.h; return this; }
     public duplicate(): this { return this.new().clone(this); }
 
-    public add(pt2: this | PT, newInstance?: boolean): this {
-        let p1: this;
-        if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
-        p1.x += pt2.x;
-        p1.y += pt2.y;
-        if (!('w' in pt2)) return p1;
-        p1.w += (pt2 as ISize).w;
-        p1.h += (pt2 as ISize).h; return p1; }
+    public add(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this {
+        let thiss = newInstance ? this.duplicate() : this;
+        if (typeof pt2 === "number") { thiss.x += pt2; thiss.y += pt2; thiss.w += pt2; thiss.h += pt2; return thiss; }
+        if (pt2.x !== undefined) thiss.x += pt2.x;
+        if (pt2.y !== undefined) thiss.y += pt2.y;
+        if (pt2.w !== undefined) thiss.w += pt2.w;
+        if (pt2.h !== undefined) thiss.h += pt2.h;
+        return thiss; }
 
-    public subtract(pt2: this | PT): this {
-        this.x -= pt2.x;
-        this.y -= pt2.y;
-        if (!('w' in pt2)) return this;
-        this.w -= (pt2 as ISize).w;
-        this.h -= (pt2 as ISize).h; return this; }
+    public subtract(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this {
+        let thiss = newInstance ? this.duplicate() : this;
+        if (typeof pt2 === "number") { thiss.x -= pt2; thiss.y -= pt2; thiss.w -= pt2; thiss.h -= pt2; return thiss; }
+        if (pt2.x !== undefined) thiss.x -= pt2.x;
+        if (pt2.y !== undefined) thiss.y -= pt2.y;
+        if (pt2.w !== undefined) thiss.w -= pt2.w;
+        if (pt2.h !== undefined) thiss.h -= pt2.h;
+        return thiss; }
 
-    public multiply(pt2: this | PT): void {
-        this.x *= pt2.x;
-        this.y *= pt2.y;
-        if (!('w' in pt2)) return;
-        this.w *= (pt2 as ISize).w;
-        this.h *= (pt2 as ISize).h; }
+    public multiply(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this {
+        let thiss = newInstance ? this.duplicate() : this;
+        if (typeof pt2 === "number") { thiss.x *= pt2; thiss.y *= pt2; thiss.w *= pt2; thiss.h *= pt2; return thiss; }
+        if (pt2.x !== undefined) thiss.x *= pt2.x;
+        if (pt2.y !== undefined) thiss.y *= pt2.y;
+        if (pt2.w !== undefined) thiss.w *= pt2.w;
+        if (pt2.h !== undefined) thiss.h *= pt2.h;
+        return thiss; }
 
-    public divide(pt2: this | PT): void {
-        this.x /= pt2.x;
-        this.y /= pt2.y;
-        if (!('w' in pt2)) return;
-        this.w /= (pt2 as ISize).w;
-        this.h /= (pt2 as ISize).h; }
+    public divide(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this {
+        let thiss = newInstance ? this.duplicate() : this;
+        if (typeof pt2 === "number") { thiss.x /= pt2; thiss.y /= pt2; thiss.w /= pt2; thiss.h /= pt2; return thiss; }
+        if (pt2.x !== undefined) thiss.x /= pt2.x;
+        if (pt2.y !== undefined) thiss.y /= pt2.y;
+        if (pt2.w !== undefined) thiss.w /= pt2.w;
+        if (pt2.h !== undefined) thiss.h /= pt2.h;
+        return thiss; }
+
 
     public tl(): PT {     return this.makePoint(   this.x,                 this.y             ); }
     public tr(): PT {     return this.makePoint(this.x + this.w,        this.y             ); }
@@ -440,10 +447,10 @@ export class GraphSize extends ISize<GraphPoint> {
         return new GraphSize(minX, minY, maxX - minX, maxY - minY); }
 
 
-    public static closestIntersection(size: GraphSize, pt0: GraphPoint, targetPt: GraphPoint, gridAlign?: GraphPoint): GraphPoint | undefined {
+    public static closestIntersection(size: GraphSize, pt0: GraphPoint, targetPt: GraphPoint, gridAlign?: GraphPoint, m0?:number, q0?:number): GraphPoint | undefined {
         let pt: GraphPoint = pt0.duplicate();
-        const m = GraphPoint.getM(targetPt, pt);
-        const q = GraphPoint.getQ(targetPt, pt);
+        const m = m0 || GraphPoint.getM(targetPt, pt);
+        const q = q0 || GraphPoint.getQ(targetPt, pt);
         // console.log("closestIntersection()", {size, pt0, targetPt, m, q});
         // if perfectly vertical line
         if (m === Number.POSITIVE_INFINITY/* && q === Number.NEGATIVE_INFINITY*/) {
@@ -808,6 +815,23 @@ export class Geom extends RuntimeAccessibleClass {
         */
         let x = (q2-q)/(m-m2);
         return new GraphPoint(x, m*x+q); }
+    // @param start, end: are for determining direction. every m is a line that can be seen in 2 direction
+    static mToRad(m: number, start: GraphPoint, end: GraphPoint): number {
+        let rad: number;
+        if (start.x === end.x) {
+            rad = (start.y < end.y) ? Math.PI * 3/2 :  Math.PI / 2;
+        } else {
+            // console.log("rad diagonal", {base:  Math.atan(m), add: start.x > end.x, sx: start.x, ex: end.x});
+            rad = Math.atan(m) + (start.x > end.x ? 0 : Math.PI);
+        }
+        return rad; }
+
+    // intersect a rectangle with a line or segment (if end parameter is specified)
+    // @return: [0, 2] intersections
+    static lineToSizeIntersection_TODO(size: GraphSize, m: number, startLine: GraphPoint, endIfSegment?: GraphPoint): [] | [GraphPoint] | [GraphPoint, GraphPoint] {
+         // todo: use GraphSize.closestIntersection which is close. it is size-segment returning only the closest intersection
+        return [];
+    }
 }
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, Geom);

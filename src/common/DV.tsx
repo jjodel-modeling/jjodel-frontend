@@ -20,7 +20,10 @@ export class DV {
     public static objectView(): string { return beautify(DefaultView.object()); }
     public static valueView(): string { return beautify(DefaultView.value()); }
     public static defaultPackage(): string { return beautify(DefaultView.defaultPackage()); }
-    public static errorView(publicmsg: string | JSX.Element, debughiddenmsg?:any): ReactElement {
+    public static errorView_string(publicmsg: string | JSX.Element, debughiddenmsg?:any): string {
+        let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error: ", "") : publicmsg;
+        console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg}); return DefaultView.error_string(visibleMessage); }
+    public static errorView(publicmsg: string | JSX.Element, debughiddenmsg?:any): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error: ", "") : publicmsg;
         console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg}); return DefaultView.error(visibleMessage); }
 
@@ -34,51 +37,67 @@ export class DV {
 
     static svgHeadTail(head: "Head" | "Tail", type: EdgeHead): string {
         let inner: string;
+        let headstr = head==="Head" ? "this.segments.head" : "this.segments.tail";
+        let styleTranslate = "{}"; // '{transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px)"}';
+        let styleTranslateRotate = '{transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px) rotate(" + (' + headstr + '.rad) + "rad)",' +
+            ' "transformOrigin":'+headstr+'.w/2+"px "+ '+headstr+'.h/2+"px"}';
+        let styleRotate = 'style={{transform:"rotate(" + ' + headstr + '.rad + "rad), transformOrigin:"noooope  not center"}}'; // edgeHead EdgeReference
+        let attrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={this.strokeColor} strokeWidth={this.strokeWidth}
+ className={"edge` + head + ` ` + type +` preview"}></path>\n`;
+        let path: string;
+        let hoverAttrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={this.strokeColorHover} strokeWidth={this.strokeWidthHover}
+ className={"edge` + head + ` ` + type +` clickable content"}></path>\n`;
         switch(type) {
             default:
                 inner = "edge '" + head + "' with type: '" +type + "' not found";
                 break;
             case EdgeHead.extend:
-                inner = '<path d={"M "+edge.headSize.w/2+" 0 L 0 "+edge.headSize.h+" L "+edge.headSize.w+" "+edge.headSize.h+" Z"}' +
-                    ' fill="#fff" stroke={edge.strokeColor} stroke-width={edge.strokeWidth}></path>';
+                path = `<path d={"M 0 0   L " + `+headstr+`.w + " " + `+headstr+`.h/2 + "   L 0 " + `+headstr+`.h + "Z" } fill="#fff" `;
+                inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.reference:
-                inner = `<path d={"M 0 " + edge.headSize.h + " L " + edge.headSize.w/2 + " 0 L " + edge.headSize.w + " " + edge.headSize.h}
-                                fill="transparent" stroke={edge.strokeColor} stroke-width={edge.strokeWidth}></path>`;
+                path = `<path d={"M 0 0   L " + `+headstr+`.w + " " + `+headstr+`.h/2 + "   L 0 " + `+headstr+`.h } fill="none" `;
+                inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.aggregation:
-                inner = `<path d={"M 0" + edge.headSize.h/2 + " L " + edge.headSize.w/2 + " 0 L " +
-                    edge.headSize.w + " " + edge.headSize.h/2 + " L " + edge.headSize.w/2 + " " + edge.headSize.h + " Z"}
-                                fill="#fff" stroke={edge.strokeColor} stroke-width={edge.strokeWidth}></path>`;
+                path = `<path d={"M 0" + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
+                    `+headstr+`.w + " " +`+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"} fill="#fff" `;
+                inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.composition:
-                inner = `<path d={"M 0" + edge.headSize.h/2 + " L " + edge.headSize.w/2 + " 0 L " +
-                    edge.headSize.w + " " + edge.headSize.h/2 + " L " + edge.headSize.w/2 + " " + edge.headSize.h + " Z"}
-                                fill="#000" stroke={edge.strokeColor} stroke-width={edge.strokeWidth}></path>`;
+                path = `<path d={"M 0" + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
+                    `+headstr+`.w + " " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"} fill="#000" `;
+                inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
                 /* `<svg width="20" height="20" viewBox="0 0 20 20" style={overflow: "visible"}>
-                                            <path d={"M 10 0 L 0 20 L 20 20 Z"} fill="#ffffff" stroke="#808080" stroke-width="1"></path>
+                                            <path d={"M 10 0 L 0 20 L 20 20 Z"} fill="#ffffff" stroke="#808080" strokeWidth="1"></path>
                                          </svg>`;*/
+                //  style={transform: "rotate3d(xcenter, ycenter, zcenter??, 90deg)"}
         }
-        return `<g className={"edge`+head + ` ` + type +`} transform={"rotate("+edge.startdeg+" "+ edge.startPointCropped.toString(false, " ")}
-                    style="/* transform: rotate3d(xcenter, ycenter, zcenter??, 90deg); */">`+ inner +`</g>`
+        //  transform={"rotate("+`+headstr+`.rad+"rad "+ this.segments.all[0].start.pt.toString(false, " ")}
+        return inner; // no wrap because of .hoverable > .preview  on root & subelements must be consecutive
+        // return `<g className="edge`+head + ` ` + type +`" style={` + styleTranslate + `}>\n`+ inner +`</g>`
     }
+
+    // about label rotation in .edge > foreignObect > div (label)
+    // first transform is h-center. second is rotate, third adds [0, 50%] of 50% vertical offset AFTER rotation to take label out of edge. fourth is to add a margin.
     static edgeView(modename: EdgeHead, head: DocString<"JSX">, tail: DocString<"JSX">, dashing: string | undefined): string { return beautify(
         `<div className={"edge ` + modename + `"} style={{overflow: "visible", width:"100%", height:"100%", pointerEvents:"none"}}>
             <svg className={"hoverable"} style={{width:"100vw", height:"100vh", pointerEvents:"none", overflow: "visible"}}>
                 { /* edge full segment */ }
-                <path className={"preview"} strokeWidth={2} stroke={"gray"} fill={"none"} d={this.edge.d} stroke-dasharray="` + dashing + `"></path>
+                <path className={"preview"} strokeWidth={this.strokeWidth} stroke={this.strokeColor} fill={"none"} d={this.edge.d} strokeDasharray="` + dashing + `"></path>
                 { /* edge separate segments */ }
-                {this.edge.segments.all.flatMap(s => [
-                    <path className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={4} stroke={"black"} fill={"none"} d={s.dpart}></path>,
+                { console.warn("inside jxs", {thiss:this, segments:this.segments}) && null }
+                {this.segments.all.flatMap(s => [
+                    <path className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={this.strokeWidthHover} stroke={this.strokeColorHover} fill={"none"} d={s.dpart}></path>,
                     s.label && <text textAnchor="middle">{s.label}</text>,
                     s.label && <foreignObject style={{overflow: "visible", height:"0", width:"0", whiteSpace:"pre", x:(s.start.pt.x + s.end.pt.x)/2+"px", y:(s.start.pt.y + s.end.pt.y)/2+"px"}}>
                     <div
                      style={{width: "fit-content",
-                     // first transform is h-center. second is rotate, third adds [0, 50%] of 50% vertical offset AFTER rotation to take label out of edge. fourth is to add a margin.
                       transform: "translate(-50%, 0%) rotate("+s.rad+"rad) translate(0%, -"+(1-0.5*Math.abs(Math.abs(s.rad)%Math.PI)/(Math.PI/2))*100+"%)"+
-                     " translate(0%, -5px"}}>{s.label}</div>
+                     " translate(0%, -5px"}}>{s.m.toFixed(2)+"m | "+this.segments.head.rad.toFixed(2) +"rad | " + s.label}</div>
                     </foreignObject>
+                    
                 ])}
             { /* edge head */ }
             ` + head + `
@@ -130,11 +149,14 @@ class DefaultView {
         return `<div className={'root model'}>
             {!this.data && "Model data missing."}
             <div className="fake edges" style={{zIndex:101, position: "absolute"}}>
-                {this.data.children.length > 1 && this.data.children[1].node && <DamEdge start={this.data.children[0].node} end={this.data.children[1].node} view={"Pointer_ViewEdge"} key={"pkg"}/>  }
+                {this.data.children.length > 1 && this.data.children[1].node
+                 && <DamEdge start={this.data.children[0].node} end={this.data.children[1].node} view={"Pointer_ViewEdgeDependency"} key={"pkg"}/>  }
             </div>
             <div className="edges" style={{zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}>{
                     true && this.data.suggestedEdges.reference &&
-                    this.data.suggestedEdges.reference.map(se => (true || !se.vertexOverlaps) && <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdge"} key={se.start.node.id+"~"+se.end.node.id}/>)
+                    this.data.suggestedEdges.reference.map(
+                        se => (true || !se.vertexOverlaps)
+                         && <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdgeAssociation"} key={se.start.node.id+"~"+se.end.node.id}/>)
                 }
             </div>
              {this.data && this.data.packages.map((pkg, index) => {
@@ -154,7 +176,9 @@ class DefaultView {
     }
     public static package(): string {
         return `<div className={'round bg-white root package'}>
-            <Input jsxLabel={<b className={'package-name'}>EPackage:</b>} field={'name'} hidden={true} />
+            { /*<Input jsxLabel={<b className={'package-name'}>EPackage:</b>} field={'name'} hidden={true} />*/ }
+            { console.log("evalcontex:", {thiss: this, pname: this.pname, c: this._context}) && null}
+            <Input jsxLabel={<b>{this.pname}:</b>} field={'name'} hidden={true} />
             <hr />
             <div className={'package-children'}>
                 {this.data.children.map((child, index) => {
@@ -248,18 +272,28 @@ class DefaultView {
     }
 
     public static error(msg: undefined | string | JSX.Element) {
-        return <div className={'w-100 h-100'}>
-            <div className={"h-100 round bg-white border border-danger"}>
-                <div className={'text-center text-danger'}>
-                    <b>SYNTAX ERROR</b>
-                    <hr/>
-                    <label className={'text-center mx-1 d-block'}>
-                        The JSX you provide is NOT valid!
-                    </label>
-                    {msg && <label className={'text-center mx-1 d-block'}>{msg}</label>}
-                </div>
+        return <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"min-content"}}>
+            <div className={'text-center text-danger'} style={{background:"#fff7"}}>
+                <b>SYNTAX ERROR</b>
+                <hr/>
+                <label className={'text-center mx-1 d-block'}>
+                    The JSX you provide is NOT valid!
+                </label>
+                {msg && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>{msg}</label>}
             </div>
         </div>;
+    }
+    public static error_string(msg: undefined | string | JSX.Element): string {
+        return `<div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"min-content"}}>
+            <div className={'text-center text-danger'} style={{background:"#fff7"}}>
+                <b>SYNTAX ERROR</b>
+                <hr/>
+                <label className={'text-center mx-1 d-block'}>
+                    The JSX you provide is NOT valid!
+                </label>
+                ` + (msg ? `<label className={'text-center mx-1 d-block'} style={{color:"black"}>{"` + msg + `"}</label>` : "") + `
+            </div>
+        </div>`;
     }
 
 }

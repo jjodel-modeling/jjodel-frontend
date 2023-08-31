@@ -80,8 +80,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as any;
-    const edgeSettings = state._edgeSettings;
+    const ret: StateProps = {} as any;/*
     ret.strokeWidth = edgeSettings.strokeWidth;
     ret.zIndex = edgeSettings.zIndex;
     ret.color = edgeSettings.color;
@@ -89,7 +88,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const edgesDisplayed = state._edgesDisplayed;
     ret.extend = edgesDisplayed.extend;
     ret.referenceM2 = edgesDisplayed.referenceM2;
-    ret.referenceM1 = edgesDisplayed.referenceM1;
+    ret.referenceM1 = edgesDisplayed.referenceM1;*/
     return ret;
 }
 
