@@ -11,7 +11,8 @@ import {
     QueryFieldFilterConstraint,
     setDoc,
     updateDoc,
-    where
+    where,
+    deleteDoc
 } from '@firebase/firestore';
 import {Env} from "./environment";
 import firebase from "firebase/compat";
@@ -78,10 +79,17 @@ export class Firebase {
         await updateDoc(DOC, field, value);
     }
 
+    static async remove(id: string, path: string): Promise<void> {
+        const DOC = doc(Firebase.db, path, id);
+        await deleteDoc(DOC);
+    }
+
     static async addAction(room: string, action: JSON): Promise<void> {
-        const collection = 'rooms';
-        const DOC = doc(Firebase.db, collection, room);
-        await updateDoc(DOC, 'actions', firebase.firestore.FieldValue.arrayUnion(action));
+        await Firebase.edit(room, 'actions', firebase.firestore.FieldValue.arrayUnion(action));
+    }
+
+    static async removeRoom(room: string): Promise<void> {
+        await Firebase.remove(room, 'rooms');
     }
 
 }

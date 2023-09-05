@@ -15,8 +15,8 @@ import Console from "../rightbar/console/Console";
 import MetamodelTab from "./tabs/MetamodelTab";
 import ModelTab from "./tabs/ModelTab";
 import InfoTab from "./tabs/InfoTab";
-import PersistanceTab from "./tabs/PersistanceTab";
-
+import TestTab from "./tabs/TestTab";
+import IotTab from "./tabs/IotTab";
 
 export class TabDataMaker {
     static metamodel (model: LModel | DModel): TabData {
@@ -67,12 +67,13 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         }
     };
 
-    private persistance = { title: "Persistance", group: "2", closable: false, content: <PersistanceTab /> };
+    private test = { id: '999', title: "Test", group: "2", closable: false, content: <TestTab /> };
+    private iotEditor = { id: '0', title: 'Config', group: 'group2', closable: false, content: <IotTab /> };
     private structureEditor = { id: '1', title: 'Structure', group: 'group2', closable: false, content: <StructureEditor /> };
     private treeEditor = { id: '2', title: 'Tree View', group: 'group2', closable: false, content: <TreeEditor /> };
     private viewsEditor = { id: '3', title: 'Views', group: 'group2', closable: false, content: <ViewsEditor /> };
     private styleEditor = { id: '4', title: 'Node', group: 'group2', closable: false, content: <StyleEditor /> };
-    private edgeEditor = { id: '5', title: 'Edges', group: 'group2', closable: false, content: <EdgeEditor /> };
+    private edgeEditor = { id: '5', title: 'Edges', group: 'group2', closable: true, content: <EdgeEditor /> };
     private viewpointEditor = { id: '6', title: 'Viewpoints', group: 'group2', closable: false, content: <ViewpointEditor /> };
     private console = { id: '7', title: 'Console', group: 'group2', closable: false, content: <Console /> };
 
@@ -80,6 +81,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     private views = this.props.views;
     private moveOnStructure = false;
     private moveOnViews = false;
+    private iotLoaded = false;
 
     constructor(props: AllProps, context: any) {
         super(props, context);
@@ -118,7 +120,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         for(let model of addedM1) this.OPEN(model);
         for(let pointer of removedM1) this.CLOSE(pointer);
 
-        return !!(deltaM2.added.length || deltaM1.added.length);
+        return !!(deltaM2.added.length || deltaM1.added.length || this.props.iot);
 
     }
 
@@ -127,10 +129,27 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             if(this.moveOnViews) {
                 this.dock.dockMove(this.viewsEditor, this.dock.find('3'), 'middle');
                 this.moveOnViews = false;
+                return;
             }
             if(this.moveOnStructure) {
                 this.dock.dockMove(this.structureEditor, this.dock.find('1'), 'middle');
                 this.moveOnStructure = false;
+                return;
+            }
+            if(this.props.iot && !this.iotLoaded) {
+                const layout = this.dock.getLayout();
+                const tabs = [
+                    this.iotEditor,
+                    this.structureEditor,
+                    this.treeEditor,
+                    this.viewsEditor,
+                    this.viewpointEditor,
+                    this.console,
+                    this.edgeEditor
+                ];
+                layout.dockbox.children[1] = {tabs};
+                this.dock.setLayout(layout);
+                this.iotLoaded = true;
             }
         }
     }
@@ -215,18 +234,18 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             <InfoTab />
         };
         layout.dockbox.children.push({tabs: [infoTab]});
-        layout.dockbox.children.push({
-            tabs: [
-                // this.persistance,
-                this.structureEditor,
-                this.treeEditor,
-                this.viewsEditor,
-                this.viewpointEditor,
-                // this.styleEditor,
-                // this.edgeEditor,
-                this.console
-            ]
-        });
+        const tabs = [
+            // this.test,
+            this.iotEditor,
+            this.structureEditor,
+            this.treeEditor,
+            this.viewsEditor,
+            this.viewpointEditor,
+            // this.styleEditor,
+            this.edgeEditor,
+            this.console
+        ];
+        layout.dockbox.children.push({tabs});
 
         return (<DockLayout ref={(dockRef) => { this.dock = dockRef }} defaultLayout={layout}
                             groups={this.groups} />);
@@ -239,6 +258,7 @@ interface StateProps {
     views: number;
     m2: Pointer<DModel, 0, 'N', LModel>;
     m1: Pointer<DModel, 0, 'N', LModel>;
+    iot: null|boolean;
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -251,6 +271,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.views = state.viewelements.length;
     ret.m2 = state.m2models;
     ret.m1 = state.m1models;
+    ret.iot = state.iot;
     return ret;
 }
 

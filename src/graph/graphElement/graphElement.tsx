@@ -41,8 +41,13 @@ import {
     LClass,
     SetFieldAction,
     DGraphVertex,
-    DVoidVertex, DEdge, LEdge, LUser, LViewPoint, LGraphElement, RuntimeAccessibleClass, DEdgePoint, DPointerTargetable,
+    DVoidVertex, DEdge,
+    LEdge, LUser, LViewPoint,
+    LGraphElement, RuntimeAccessibleClass,
+    DEdgePoint, DPointerTargetable,
+    BEGIN, END,
 } from "../../joiner";
+
 
 import {end} from "@popperjs/core";
 import { EdgeOwnProps } from "./sharedTypes/sharedTypes";
@@ -104,7 +109,7 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 
 let debugcount = 0;
 let debug = true;
-let maxRenderCounter = 300;
+let maxRenderCounter = Number.POSITIVE_INFINITY;
 @RuntimeAccessible
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
     extends PureComponent<AllProps, GraphElementState>{
@@ -257,13 +262,22 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     //  i could use memoization to parse the jsx and to execute the user-defined pre-render function
 
     select(forUser:Pointer<DUser, 0, 1> = null) {
+        const id = this.props.data?.id;
         if (!forUser) forUser = DUser.current;
-        this.props.node.isSelected[forUser] = true;
+        // this.props.node.isSelected[forUser] = true;
+
+        BEGIN();
+        const selected = Selectors.getSelected();
+        if(id) {
+            selected[forUser] = this.props.data.id;
+            SetRootFieldAction.new('selected', selected);
+        }
         SetRootFieldAction.new('_lastSelected', {
             node: this.props.nodeid,
             view: this.props.view.id,
             modelElement: this.props.data?.id
         });
+        END();
     }
 
     constructor(props: AllProps, context: any) {
@@ -425,14 +439,20 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     onContextMenu(e: React.MouseEvent<HTMLDivElement>) {
+        e.preventDefault();
+        e.stopPropagation();
+        const selected = Selectors.getSelected();
+        const id = this.props.dataid;
+        const alreadySelected = Object.keys(selected).filter(function(key) {
+            return selected[key] === id;
+        });
+        if(alreadySelected.length > 0) return;
         this.select();
         SetRootFieldAction.new("contextMenu", {
             display: true,
             x: e.clientX,
             y: e.clientY
         });
-        e.preventDefault();
-        e.stopPropagation();
     }
 
     onEnter(e: React.MouseEvent<HTMLDivElement>) { // instead of doing it here, might set this class on render, and trigger it visually operative with :hover selector css
@@ -451,9 +471,18 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         })});
     }
     onClick(e: React.MouseEvent): void {
+        e.stopPropagation();
+        const selected = Selectors.getSelected();
+        const id = this.props.dataid;
+        const alreadySelected = Object.keys(selected).filter(function(key) {
+            return selected[key] === id;
+        });
+        if(alreadySelected.length > 0) return;
+
+        SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
         const isEdgePending = (this.props.isEdgePending?.source);
         if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
-        if (this.props.data?.className !== "DClass") return;
+        if (this.props.data.className !== "DClass") return;
         SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
         e.stopPropagation();
         // const user = this.props.isEdgePending.user;

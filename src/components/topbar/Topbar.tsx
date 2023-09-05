@@ -7,18 +7,25 @@ import {
     DEdgePoint,
     DViewElement,
     DVoidEdge,
-    EdgeBendingMode, GObject,
-    GraphSize, Input,
-    Selectors, SetFieldAction, SetRootFieldAction,
+    EdgeBendingMode,
+    GObject,
+    GraphSize,
+    Input,
+    Selectors,
+    SetFieldAction,
+    SetRootFieldAction,
     store
 } from "../../joiner";
 import {SaveManager} from "./SaveManager";
 import {DamEdge} from "../../graph/damedges/damedge";
 import toast from "react-hot-toast";
-import RoomManager from "./RoomManager";
 import Undoredocomponent from "./undoredocomponent";
+import RoomManager from "../room/RoomManager";
 
 function Topbar(props: AllProps) {
+
+    const debug = props.debug;
+
     const notify = (text: string) => toast((t: GObject) => (
         <div onClick={() => toast.dismiss(t.id)}>
             <label className={'ms-1'}>{text}</label>
@@ -48,7 +55,7 @@ function Topbar(props: AllProps) {
         SaveManager.exportEcore_click(true, true);
     }
 
-    if (props.debug && !document.body.classList.contains("debug")) document.body.classList.add("debug");
+    if (debug && !document.body.classList.contains("debug")) document.body.classList.add("debug");
     else document.body.classList.remove("debug")
 
     return(<div className={'topbar d-flex'}>
@@ -66,26 +73,25 @@ function Topbar(props: AllProps) {
                 <div className={'ms-auto me-1 d-flex'}>
                     <label className={'item border round ms-1'} onClick={ () => SaveManager.exportLayout_click(false) }>Export Layout</label>
                     <label className={'item border round ms-1'} onClick={ () => SaveManager.importLayout_click(false) }>Import Layout</label>
-                    <label className={'item border round ms-1'} onClick={ () => { let e = edgetestclick(); setTimeout(()=> setEdgeTest(e), 10); } }>Edge test</label>
                 </div>
             </>
         }
 
-        <label style={{display: "flex", cursor: "auto", margin:"auto"}}>
-            <span style={{margin:"0 5px"}}>Debug mode</span>
+        <label className={"p-1 "} style={{display: "flex", cursor: "auto"}}>
+            <label className={"my-auto"}>Debug mode</label>
             <input className={"my-auto input ms-auto"} type={"checkbox"} checked={props.debug} onChange={(e)=>{
             SetRootFieldAction.new("debug", e.target.checked);
             }
             } />
         </label>
 
-        {props.debug && <RoomManager />}
-        {props.debug && edgetest}
-
+        <div className={'ms-auto d-flex'}>
+            <RoomManager room={props.room} />
+        </div>
     </div>);
 }
-interface OwnProps {}
-interface StateProps { debug: boolean; }
+interface OwnProps {room?: string}
+interface StateProps {debug: boolean}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 

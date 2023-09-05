@@ -10,11 +10,15 @@ import {
     DModelElement,
     DPointerTargetable,
     DRefEdge,
-    DReference, GraphPoint,
+    DReference,
+    GraphPoint,
     DState,
+    DUser,
+    LUser,
     Json,
     JsType,
     LClassifier,
+    LGraphElement,
     LModelElement,
     LNamedElement,
     LogicContext,
@@ -32,6 +36,48 @@ console.warn('loading ts U log');
 
 @RuntimeAccessible
 export class U {
+
+    public static fatherChain(me: LModelElement): Pointer<DModelElement, 0, 'N', LModelElement> {
+        const fathers: Pointer<DModelElement, 0, 'N', LModelElement>= [me.id];
+        const toCheck: LModelElement[] = [me];
+        while(toCheck.length > 0) {
+            const element = toCheck.pop();
+            if(element && element.father) {
+                fathers.push(element.father.id);
+                toCheck.push(element.father);
+            }
+        }
+        return fathers;
+    }
+
+    public static deepEqual (x: GObject, y: GObject): boolean {
+        const ok = Object.keys, tx = typeof x, ty = typeof y;
+        return x && y && tx === 'object' && tx === ty ? (
+            ok(x).length === ok(y).length &&
+            ok(x).every(key => U.deepEqual(x[key], y[key]))
+        ) : (x === y);
+    }
+
+    public static sleep(s: number): Promise<void> {
+        return new Promise((resolve) => setTimeout(resolve, s * 1000));
+    }
+
+    public static getDefaultViewsID(): string[] {
+        const views: string[] = []
+        views.push('Pointer_ViewModel');
+        views.push('Pointer_ViewPackage');
+        views.push('Pointer_ViewClass');
+        views.push('Pointer_ViewEnum');
+        views.push('Pointer_ViewAttribute');
+        views.push('Pointer_ViewReference');
+        views.push('Pointer_ViewOperation');
+        views.push('Pointer_ViewLiteral');
+        views.push('Pointer_ViewObject');
+        views.push('Pointer_ViewValue');
+        views.push('Pointer_ViewDefaultPackage');
+        return views;
+    }
+
 
     public static getRandomString(length: number): string {
         const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -63,6 +109,16 @@ export class U {
         })
     }
 
+    public static popup(element: any) {
+        let html = '<style>body.swal2-no-backdrop .swal2-container {background-color: rgb(0 0 0 / 60%) !important}</style>'+ element;
+        const result = Swal.fire({
+            html: html,
+            backdrop: false,
+            showCloseButton: true,
+            showConfirmButton: false
+            //confirmButtonText: 'GOT IT'
+        })
+    }
     public static filteredPointedBy(data: LModelElement, label: string): LModelElement[] {
         const models: LModelElement[] = [];
         for(let dict of data.pointedBy) {

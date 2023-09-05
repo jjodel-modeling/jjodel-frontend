@@ -169,6 +169,13 @@ export class DState extends DPointerTargetable{
     m1models: Pointer<DModel, 0, 'N', LModel> = [];
 
     room: string = '';
+    isCleaning: boolean = false;    // check if a room is being cleaned
+
+    selected: Dictionary<Pointer<DUser>, Pointer<DModelElement, 0, 1, LModelElement>> = {};
+    iot: null|boolean = null;
+    topics: string[] = [];
+
+    memorec: GObject[]|null = null;
 
 
     static fakeinit(store?: DState): void {
@@ -294,8 +301,8 @@ function makeDefaultGraphViews(): DViewElement[] {
 
     let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.name]);
 
-    const defaultPackage: DViewElement = DViewElement.new('Default Package', DV.defaultPackage());
-    defaultPackage.query = `context DPackage inv: self.name = 'default'`;
+    const defaultPackage: DViewElement = DViewElement.new('DefaultPackage', DV.defaultPackage());
+    defaultPackage.query = `context DPackage inv: self.name = 'todo default pkg'`;
 
     return [modelView, packageView, classView, enumView, attributeView, referenceView, operationView, literalView, objectView, valueView, defaultPackage, voidView, ...edgeViews, edgePointView, edgePointViewSVG];
 }

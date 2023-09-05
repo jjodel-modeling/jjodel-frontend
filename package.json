@@ -41,6 +41,7 @@
     "react-loader-spinner": "^5.3.4",
     "react-portal": "^4.2.1",
     "react-redux": "^7.2.4",
+    "react-router-dom": "^6.12.1",
     "react-scripts": "4.0.3",
     "react-xarrows": "^2.0.2",
     "sass": "^1.49.9",

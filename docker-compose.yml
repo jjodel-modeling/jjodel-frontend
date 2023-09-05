@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+
+  frontend:
+    build: ./
+    container_name: jjodel
+    ports:
+      - '3000:3000'
+
+  memorec:
+    image: giordanotin/memorec:1.4
+    container_name: memorec
+    ports:
+      - '8080:8080'

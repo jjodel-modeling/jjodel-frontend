@@ -1,8 +1,8 @@
 import React from "react";
 import type {LViewElement} from "../../../view/viewElement/view";
-import {CreateElementAction, DeleteElementAction, SetRootFieldAction} from "../../../redux/action/action";
 import {DViewElement} from "../../../view/viewElement/view";
-import {LViewPoint} from "../../../view/viewPoint/viewpoint";
+import {CreateElementAction, DeleteElementAction, SetRootFieldAction} from "../../../redux/action/action";
+import {U} from "../../../joiner";
 
 interface Props { views: LViewElement[]; }
 function ViewsData(props: Props) {
@@ -35,7 +35,8 @@ function ViewsData(props: Props) {
                 <button className={'btn btn-success ms-auto'} onClick={(evt) => {select(evt, view)}}>
                     <i className={'p-1 bi bi-info-lg'}></i>
                 </button>
-                <button className={'btn btn-danger ms-1'} disabled={false} onClick={(evt) => {remove(evt, i, view)}}>
+                <button className={'btn btn-danger ms-1'} disabled={U.getDefaultViewsID().includes(view.id)}
+                        onClick={(evt) => {remove(evt, i, view)}}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
                 </button>
             </div>

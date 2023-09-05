@@ -200,7 +200,20 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     }
 
     render(): ReactNode {
-        if (!this.props.node) return "loading";
+        if (!this.props.node) return 'Loading...';
+
+
+        const cssOverride: string[] = [];
+
+        let selected = false;
+        for(let me of Object.values(this.props.selected))
+            if(me?.id === this.props.dataid) selected = true;
+        if(selected) {
+            if(this.props.dataid === this.props.selected[DUser.current]?.id)
+                cssOverride.push('selected-by-me');
+            else
+                cssOverride.push('selected-by-others');
+        }
 
         // if(!windoww.cpts) windoww.cpts = {};
         // windoww.cpts[this.props.nodeid]=this;
@@ -216,34 +229,28 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         if (!this.props.isGraph &&  this.props.isVertex) nodeType = "Vertex"; else
         if (!this.props.isGraph && !this.props.isVertex) nodeType = "Field";
 
-        let classesoverride = [nodeType];
+        const classesOverride = [nodeType, ...cssOverride];
+        const styleOverride: React.CSSProperties = {};
         // set classes end
-        let size: Readonly<GraphSize> = this.getSize() as any;
-        let styleoverride: React.CSSProperties = {}
+        const size: Readonly<GraphSize> = this.getSize() as any;
         switch (nodeType){
             case "GraphVertex":
             case "Vertex":
             case "VoidVertex":
             case "EdgePoint":
-                if (false && nodeType === "EdgePoint") {
-                    styleoverride.top = (size.y - size.h/2)+ "px";
-                    styleoverride.left = (size.x - size.w/2) + "px";
-                }
-                else {
-                    styleoverride.top = size.y + "px";
-                    styleoverride.left = size.x + "px";
-                }
+                styleOverride.top= size.y+"px";
+                styleOverride.left= size.x+"px";
                 let isResized = this.props.node.isResized;
-                if (isResized || !this.props.view.adaptWidth) styleoverride.width = size.w+"px";
-                else styleoverride.width = undefined;
-                if (isResized || !this.props.view.adaptHeight) styleoverride.height = size.h+"px";
-                else styleoverride.height = undefined; // todo: the goal is to reset jqui inline style, but not override user-defined inline style
+                if (isResized || !this.props.view.adaptWidth) styleOverride.width = size.w+"px";
+                else styleOverride.width = undefined;
+                if (isResized || !this.props.view.adaptHeight) styleOverride.height = size.h+"px";
+                else styleOverride.height = undefined; // todo: the goal is to reset jqui inline style, but not override user-defined inline style
                 this.setVertexProperties(); break;
             default: break;
         }
 
 
-        return super.render(nodeType, styleoverride, classesoverride);
+        return super.render(nodeType, styleOverride, classesOverride);
         // return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+"."+this.state?.forceupdate} />;
     }
 }
@@ -260,6 +267,7 @@ class OwnProps extends GraphElementOwnProps {
 class StateProps extends GraphElementReduxStateProps {
     node!: LVoidVertex;
     lastSelected!: LModelElement | null;
+    selected!: Dictionary<Pointer<DUser>, LModelElement|null>;
     isEdgePending!: { user: LUser, source: LClass };
     viewpoint!: LViewPoint
 }
@@ -281,6 +289,16 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const superret: StateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass) as StateProps;
     //superret.lastSelected = state._lastSelected?.modelElement;
     superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
+
+    const selected = state.selected;
+    superret.selected = {};
+    for(let user of Object.keys(selected)) {
+        const pointer = selected[user];
+        if (pointer) superret.selected[user] = LModelElement.fromPointer(pointer);
+        else superret.selected[user] = null;
+    }
+
+
     superret.isEdgePending = {
         user: LPointerTargetable.from(state.isEdgePending.user),
         source: LPointerTargetable.from(state.isEdgePending.source)

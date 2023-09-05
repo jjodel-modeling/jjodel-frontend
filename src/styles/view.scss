@@ -125,6 +125,17 @@
   color: $value-color;
 }
 
+.selected-by-me {
+  border: 1px dashed black;
+}
+
+.selected-by-others {
+  border: 1px dashed red;
+  & > * {
+    cursor: not-allowed;
+  }
+}
+
 
 /*
 .default-model { position: absolute;  background-image: url("../static/svg/graph.svg"); background-repeat: repeat; height: 100%; width: 100% }

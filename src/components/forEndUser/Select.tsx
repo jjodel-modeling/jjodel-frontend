@@ -2,13 +2,21 @@ import type {LClass, DPointerTargetable} from "../../joiner";
 import React, {Dispatch, LegacyRef, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import toast, {Toaster} from "react-hot-toast";
-import {DState, LPointerTargetable, GObject, Pointer, LEnumerator, Selectors, LModelElement, Overlap} from "../../joiner";
+import {DState,
+    LPointerTargetable,
+    GObject,
+    Pointer,
+    LEnumerator,
+    Selectors,
+    LModelElement,
+    Overlap} from "../../joiner";
 
 
 function SelectComponent(props: AllProps) {
     const data = props.data;
     if(!data) return(<></>);
     const field = props.field;
+    const readOnly = props.readonly || U.getDefaultViewsID().includes(data.id);
     const value = (data[field]?.id) ? data[field].id : 'undefined';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
@@ -24,6 +32,7 @@ function SelectComponent(props: AllProps) {
     ));
 
     function SelectChange(evt: React.ChangeEvent<HTMLSelectElement>) {
+        if(readOnly) return;
         const target = evt.target.value;
         console.log("setting:", {data, field, target});
         data[field] = target;
@@ -95,6 +104,7 @@ export interface SelectOwnProps {
     options?: JSX.Element;
     key?: React.Key | null;
     ref?: React.RefObject<HTMLElement> | LegacyRef<HTMLElement>;
+    readonly?: boolean;
 }
 interface StateProps {
     data: LPointerTargetable & GObject;

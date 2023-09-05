@@ -6,7 +6,10 @@
   background: whitesmoke;
   z-index: 1;
   box-shadow: 6px 0 4px -4px #999, -6px 0 4px -4px #999;
-
+  b {
+    font-size: 0.75rem;
+    color: rgba(0, 0, 0, 0.75);
+  }
   >.toolbar-item {
     cursor: pointer;
     margin-top: 5px;
@@ -21,7 +24,7 @@
   .enumerator {
     border-left-color: $enum-color;
   }
-  .attribute, .reference, .operation, .parameter, .exception, .literal {
+  .attribute, .reference, .operation, .feature, .parameter, .exception, .literal {
     border-left-color: $feature-color;
   }
   .edgepoint, .edge, .vertex, .voidvertex, .voidedge{
@@ -30,7 +33,7 @@
   .annotation {
     border-left-color: $annotation-color;
   }
-  .object {
+  .object, .LObject {
     border-left: 2px solid $object-color;
   }
 }

@@ -3,7 +3,12 @@ import type {LViewElement, LViewPoint, DViewPoint} from "../../../joiner";
 import {SetFieldAction, SetRootFieldAction} from "../../../redux/action/action";
 import OclEditor from "../oclEditor/OclEditor";
 import JsxEditor from "../jsxEditor/JsxEditor";
-import {Select, TextArea, Input, EdgeBendingMode, CoordinateMode} from "../../../joiner";
+import {U,
+    Select,
+    TextArea,
+    Input,
+    EdgeBendingMode,
+    CoordinateMode} from "../../../joiner";
 import {EdgeGapMode} from "../../../joiner/types";
 
 interface Props { view: LViewElement; viewpoints: LViewPoint[]; }
@@ -17,6 +22,7 @@ let classesOptions =
 function ViewData(props: Props) {
     const view = props.view;
     const viewpoints = props.viewpoints;
+    const readOnly = U.getDefaultViewsID().includes(view.id);
 
     const back = (evt: React.MouseEvent<HTMLButtonElement>) => {
         SetRootFieldAction.new('stackViews', undefined, '-=', true);
@@ -60,7 +66,8 @@ function ViewData(props: Props) {
         <Input data={view} field={"scalezoomy"} label={"Zoom Y"} type={"number"}/>
         <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Force Node</label>
-            <select className={'my-auto ms-auto select'} value={view.forceNodeType} onChange={changeFN}>
+            <select className={'my-auto ms-auto select'} disabled={readOnly}
+                    value={view.forceNodeType} onChange={changeFN}>
                 <option value={undefined}>-----</option>
                 {['Graph', 'GraphVertex', 'Vertex', 'Field'].map((node, index) => {
                     return(<option key={index} value={node}>{node}</option>);
@@ -80,7 +87,8 @@ function ViewData(props: Props) {
         <Input data={view} field={"resizable"} label={"Resizable"} type={"checkbox"}/>
         <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Viewpoint</label>
-            <select className={'my-auto ms-auto select'} value={String(view.viewpoint?.id)} onChange={changeVP}>
+            <select className={'my-auto ms-auto select'} disabled={readOnly}
+                    value={String(view.viewpoint?.id)} onChange={changeVP}>
                 <option value={'null'}>-----</option>
                 {viewpoints.map((viewpoint, index) => {
                     return(<option key={index} value={viewpoint.id}>{viewpoint.name}</option>);
@@ -91,17 +99,28 @@ function ViewData(props: Props) {
         <TextArea data={view} field={'onDragEnd'} label={'OnDragEnd'} />
         <TextArea data={view} field={'onResizeStart'} label={'OnResizeStart'} />
         <TextArea data={view} field={'onResizeEnd'} label={'OnResizeEnd'} />
+        <div className="p-1" style={{display: "flex"}}><label className="my-auto">Appliable to</label>
+            <select data-obj={view.id} data-field={'appliableToClasses'} data-label={'Appliable to'} data-options={classesOptions}
+                    value={view.appliableToClasses[0] || ''} onChange={(e) => { view.appliableToClasses = e.target.value as any; }}
+                    className={"my-auto ms-auto select"} disabled={readOnly}>
+                {classesOptions}
+            </select>
+        </div>
         <section><h1>Edge options</h1>
-            <select data-data={view} data-field={"bendingMode"} onChange={(e)=> view.bendingMode = e.target.value as any} value={view.bendingMode} data-value={view.bendingMode}>
-                <optgroup label={"How the edge should bend to address EdgePoints"}>{
-                    Object.keys(EdgeBendingMode).map( k => <option value={(EdgeBendingMode as any)[k]}>{k}</option>)
-                }</optgroup></select>
+            <b>to do</b>
+            <div style={{display: "none"}}>
+                <select data-data={view} data-field={"bendingMode"} onChange={(e)=> view.bendingMode = e.target.value as any} value={view.bendingMode} data-value={view.bendingMode}>
+                    <optgroup label={"How the edge should bend to address EdgePoints"}>{
+                        Object.keys(EdgeBendingMode).map( k => <option value={(EdgeBendingMode as any)[k]}>{k}</option>)
+                    }</optgroup></select>
 
-            <Input data={view} field={"edgeEndStopAtBoundaries"} />
-            {/*view.*/}
-            {}
+                <Input data={view} field={"edgeEndStopAtBoundaries"} />
+                {/*view.*/}
+            </div>
         </section>
         <section><h1>EdgePoint options</h1>
+            <b>to do</b>
+            <div style={{display: "none"}}>
             <select data-data={view} data-field={"edgePointCoordMode"} onChange={(e)=> view.edgePointCoordMode = e.target.value as any}
                     value={view.edgePointCoordMode} data-value={view.edgePointCoordMode}>
                 <optgroup label={"How the edge should bend to address EdgePoints"}>{
@@ -112,6 +131,7 @@ function ViewData(props: Props) {
                 <optgroup label={"How to stop upon meeting an EdgePoint"}>{
                     Object.keys(EdgeGapMode).map( k => <option value={(EdgeGapMode as any)[k]}>{k}</option>)
                 }</optgroup></select>
+            </div>
         </section>
 
         {/* damiano: qui Select component avrebbe fatto comodo al posto del select nativo, ma è troppo poco generica*/}

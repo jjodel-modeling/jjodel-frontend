@@ -1,19 +1,21 @@
 import React from "react";
-import type {
-    PrimitiveType,
-    Pointer, DocString, Dictionary, LReference, ValueDetail
-} from "../../../../joiner";
+import type {Dictionary, DocString, LReference, Pointer, ValueDetail} from "../../../../joiner";
 import {
-    DAttribute, DClass, DEnumerator, DModelElement,
-    DObject, DReference, LAttribute, LClass,
-    LEnumerator, LEnumLiteral, LModelElement,
+    DAttribute,
+    DClass,
+    DEnumerator,
+    DReference,
+    LAttribute,
+    LClass,
+    LEnumerator,
     LObject,
     LPointerTargetable,
     LStructuralFeature,
-    LValue, Pointers,
-    Selectors, SetFieldAction,
-    U
+    LValue,
+    Selectors,
+    SetFieldAction
 } from "../../../../joiner";
+import MqttEditor from "./MqttEditor";
 
 
 interface Props {value: LValue}
@@ -175,6 +177,8 @@ function Value(props: Props) {
             </button>
         </div>
         { valueslist }
+        <hr className={"my-3"} />
+        <MqttEditor valueId={dValue.id} />
     </div>)
 }
 

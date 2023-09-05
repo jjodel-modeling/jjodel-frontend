@@ -4,15 +4,15 @@ import './index.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min';
-import App from './App';
 import {Provider} from "react-redux";
 import {jodelInit, store} from "./joiner";
+import Router from "./router/Router";
 
 function start() {
     jodelInit();
     ReactDOM.render(
         <Provider store={store}>
-            <App/>
+            <Router />
         </Provider>,
         document.getElementById('root')
     );
