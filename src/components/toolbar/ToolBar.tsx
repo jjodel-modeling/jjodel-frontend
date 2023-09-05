@@ -124,8 +124,8 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     downward["DOperation"] = ["DParameter", "DException"];
 
     // nodes
-    downward["DEdge"] = ["DEdgePoint"]
-    downward["DVoidEdge"] = ["DEdgePoint"]
+    // downward["DEdge"] = ["DEdgePoint"]
+    // downward["DVoidEdge"] = ["DEdgePoint"]
 
     // for (let parentKey in downward) myDictValidator.set(parentKey, addChildren("package"));
     let upward: Dictionary<DocString<"DClassName (model)">, DocString<"hisDParents">[]> = {};

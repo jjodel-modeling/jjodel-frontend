@@ -167,7 +167,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
     protected _defaultCollectionGetter(c: Context, k: keyof Context["data"]): LPointerTargetable[] { return LPointerTargetable.fromPointer((c.data as any)[k]); }
     protected _defaultGetter(c: Context, k: keyof Context["data"]): any {
-        console.log("default Getter");
+        //console.log("default Getter");
         if (k in c.data) {
             let v = (c.data as any)[k];
             if (Array.isArray(v)) {
@@ -1183,7 +1183,8 @@ export class EdgeSegment{
     d!: string;
     dpart!: string; //  a segment of the whole path
     m!: number; // m coefficient of the line between start and end.
-    rad!: number; // degrees as inclination of the segment, used for labels.
+    rad!: number; // for head and tails: radian angle of the segment.
+    radLabels!: number; // for labels: it flips the angle when it's < PI/2 so the text is never upside down
 
     isLongest!: boolean;
     label!: PrimitiveType | JSX.Element | undefined;
@@ -1262,6 +1263,7 @@ export class EdgeSegment{
     makeD(index: number, gapMode: EdgeGapMode): string {
         this.m = GraphPoint.getM(this.start.pt, this.end.pt);
         this.rad = Geom.mToRad(this.m, this.start.pt, this.end.pt);
+        this.radLabels = Math.atan(this.m);
 
         let svgLetter = this.svgLetter; // caller makes sure to pass right letter and resolve "CS" mixed letters. // this.bendingModeToLetter(bendingMode, index);
         // caller sends inverted pts as normal coords
@@ -1432,7 +1434,13 @@ replaced by startPoint
     public headPos_impl(c: Context, isHead: boolean, headSize0?: GraphPoint, segment0?: EdgeSegment, zoom0?: GraphPoint): GraphSize & {rad: number} {
         let segment: EdgeSegment = segment0 || this.get_segments(c).segments[0];
         // let v: LViewElement = this.get_view(c);
-        let tmp: any = headSize0 || this.get_view(c).edgeHeadSize;
+        let tmp: any = headSize0 || (isHead ? this.get_view(c).edgeHeadSize : this.get_view(c).edgeTailSize);
+        if (!tmp || tmp.x === 0 || tmp.y === 0) {
+            // head or tail missing
+            tmp = new GraphSize(0, 0, 0, 0);
+            tmp.rad = 0;
+            return tmp;
+        }
         let zoom: GraphPoint = zoom0 || this.get_graph(c).zoom;
         let headPos: GraphSize & {rad: number} = (new GraphSize(0, 0, tmp.x, tmp.y) as any); //.multiply({w:zoom.x, h:zoom.y});
         let useBezierPoints = true;
@@ -1484,7 +1492,7 @@ replaced by startPoint
          this is wrong, cannot be the same for x and y, i should invert the line equation for x?}, true); }
         headPos.x = center.x - headPos.w / 2;
         headPos.y = center.y - headPos.h / 2;*/
-        console.log("head intersected", {headPos, secondIntersection, x4headsize, segment, c, start, end, useBezierPoints});
+        // console.log("head intersected", {headPos, secondIntersection, x4headsize, segment, c, start, end, useBezierPoints});
 
         return headPos;
     }
@@ -1660,6 +1668,7 @@ replaced by startPoint
         let ret: EdgeSegment[] = [];
         let bm: EdgeBendingMode = v.bendingMode;
         let gapMode: EdgeGapMode = v.edgeGapMode;
+        console.log("vbm", {bm, v, vraw:v.__raw});
         let segmentSize = this.svgLetterSize(bm, false, true);
         let increase: number = segmentSize.first;
         let segment: EdgeSegment | undefined;

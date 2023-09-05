@@ -60,12 +60,12 @@ export class DV {
                 inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.aggregation:
-                path = `<path d={"M 0" + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
+                path = `<path d={"M 0 " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
                     `+headstr+`.w + " " +`+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"} fill="#fff" `;
                 inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.composition:
-                path = `<path d={"M 0" + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
+                path = `<path d={"M 0 " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
                     `+headstr+`.w + " " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"} fill="#000" `;
                 inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
@@ -85,19 +85,20 @@ export class DV {
         `<div className={"edge ` + modename + `"} style={{overflow: "visible", width:"100%", height:"100%", pointerEvents:"none"}}>
             <svg className={"hoverable"} style={{width:"100vw", height:"100vh", pointerEvents:"none", overflow: "visible"}}>
                 { /* edge full segment */ }
-                <path className={"preview"} strokeWidth={this.strokeWidth} stroke={this.strokeColor} fill={"none"} d={this.edge.d} strokeDasharray="` + dashing + `"></path>
+                <path className={"preview"} strokeWidth={this.strokeWidth}
+                stroke={this.strokeColor} fill={"none"} d={this.edge.d} strokeDasharray="` + dashing + `"></path>
                 { /* edge separate segments */ }
                 { console.warn("inside jxs", {thiss:this, segments:this.segments}) && null }
                 {this.segments.all.flatMap(s => [
-                    <path className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={this.strokeWidthHover} stroke={this.strokeColorHover} fill={"none"} d={s.dpart}></path>,
-                    s.label && <text textAnchor="middle">{s.label}</text>,
+                    <path className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={this.strokeWidthHover}
+                    stroke={s.length > this.strokeLengthLimit && this.strokeColorLong || this.strokeColorHover}
+                     fill={"none"} d={s.dpart}></path>,
                     s.label && <foreignObject style={{overflow: "visible", height:"0", width:"0", whiteSpace:"pre", x:(s.start.pt.x + s.end.pt.x)/2+"px", y:(s.start.pt.y + s.end.pt.y)/2+"px"}}>
                     <div
                      style={{width: "fit-content",
-                      transform: "translate(-50%, 0%) rotate("+s.rad+"rad) translate(0%, -"+(1-0.5*Math.abs(Math.abs(s.rad)%Math.PI)/(Math.PI/2))*100+"%)"+
-                     " translate(0%, -5px"}}>{s.m.toFixed(2)+"m | "+this.segments.head.rad.toFixed(2) +"rad | " + s.label}</div>
+                      transform: "translate(-50%, 0%) rotate("+s.radLabels+"rad) translate(0%, -"+(1-0.5*Math.abs(Math.abs(s.radLabels)%Math.PI)/(Math.PI/2))*100+"%)"+
+                     " translate(0%, -5px"}}>{s.label}</div>
                     </foreignObject>
-                    
                 ])}
             { /* edge head */ }
             ` + head + `
@@ -148,15 +149,16 @@ class DefaultView {
     public static model(): string {
         return `<div className={'root model'}>
             {!this.data && "Model data missing."}
-            <div className="fake edges" style={{zIndex:101, position: "absolute"}}>
-                {this.data.children.length > 1 && this.data.children[1].node
-                 && <DamEdge start={this.data.children[0].node} end={this.data.children[1].node} view={"Pointer_ViewEdgeDependency"} key={"pkg"}/>  }
-            </div>
-            <div className="edges" style={{zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}>{
+            <div className="edges" style={{zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}>{[
                     true && this.data.suggestedEdges.reference &&
                     this.data.suggestedEdges.reference.map(
-                        se => (true || !se.vertexOverlaps)
-                         && <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdgeAssociation"} key={se.start.node.id+"~"+se.end.node.id}/>)
+                        se => (!se.vertexOverlaps)
+                         && <DamEdge start={se.start.father} end={se.end} view={"Pointer_ViewEdge" + ( se.start.model.containment && "Composition" || "Association")} key={se.start.node.id+"~"+se.end.node.id}/>)
+                         ,
+                    true && this.data.suggestedEdges.extend &&
+                    this.data.suggestedEdges.extend.map(
+                        se => (!se.vertexOverlaps)
+                         && <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdgeInheritance"} key={se.start.node.id+"~"+se.end.node.id}/>)]
                 }
             </div>
              {this.data && this.data.packages.map((pkg, index) => {

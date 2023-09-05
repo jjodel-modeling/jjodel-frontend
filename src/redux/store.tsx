@@ -250,12 +250,14 @@ function makeDefaultGraphViews(): DViewElement[] {
     edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
 
     let edgeViews: DViewElement[] = [];
-    let size0: GraphPoint = new GraphPoint(0, 0), size1: GraphPoint = new GraphPoint(20, 20), size2: GraphPoint = new GraphPoint(40, 20);
+    let size0: GraphPoint = new GraphPoint(0, 0), size1: GraphPoint = new GraphPoint(20, 20), size2: GraphPoint = new GraphPoint(20, 20); // todo: riportalo in 40,20
     let edgePreRenderFunc: string = `()=>({
             segments: this.edge.segments,
             strokeColor: "gray",
             strokeWidth: "2px",
             strokeColorHover: "black",
+            strokeColorLong: "red",
+            strokeLengthLimit: 300,
             strokeWidthHover: "4px",
         })`;
     function makeEdgeView(name: string, type: EdgeHead, headSize: GraphPoint | undefined, tailSize: GraphPoint | undefined, dashing: boolean): DViewElement{
@@ -268,7 +270,7 @@ function makeDefaultGraphViews(): DViewElement[] {
                 v.edgeHeadSize = headSize || size0;
                 v.edgeTailSize = tailSize || size0;
                 v.preRenderFunc = edgePreRenderFunc;
-        });
+        }, false);
         edgeViews.push(ev);
         return ev;
     }
@@ -349,7 +351,7 @@ export class LState<Context extends LogicContext<DState> = any, C extends Contex
 
     _defaultCollectionGetter(c: Context, k: keyof DState): LPointerTargetable[] { return LPointerTargetable.fromPointer(c.data[k] as any); }
     _defaultGetter(c: Context, k: keyof DState) {
-        console.log("default Getter");
+        //console.log("default Getter");
         let v = c.data[k];
         if (Array.isArray(v)) {
             if (v.length === 0) return [];
