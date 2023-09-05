@@ -691,8 +691,8 @@ export class Constructors<T extends DPointerTargetable>{
         ) => /*defining the edge label (e.start.model as any)?.name + " ~ " + (e.end.model as any)?.name */" (" + s.length.toFixed(1) + ")";
         thiss.longestLabel = ll;
         if (this.persist) {
-            startid && SetFieldAction.new(startid, "pointedBy", PointedBy.fromID(thiss.id, "start"), '+=');
-            endid && SetFieldAction.new(endid, "pointedBy", PointedBy.fromID(thiss.id, "end"), '+=');
+            startid && SetFieldAction.new(startid, "pointedBy", PointedBy.fromID<DVoidEdge>(thiss.id, "start"), '+=');
+            endid && SetFieldAction.new(endid, "pointedBy", PointedBy.fromID<DVoidEdge>(thiss.id, "end"), '+=');
         }
         return this; }
     DExtEdge(): this { return this; }
@@ -709,9 +709,9 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.zIndex = htmlindex;
         //  if (nodeID) thiss.id = nodeID;
         if (this.persist) {
-            model && SetFieldAction.new(model, "pointedBy", PointedBy.fromID(thiss.id, "model"), '+=');
-            parentgraphID && SetFieldAction.new(parentgraphID, "pointedBy", PointedBy.fromID(thiss.id, "graph"), '+=');
-            parentNodeID && SetFieldAction.new(thiss.father, "pointedBy", PointedBy.fromID(thiss.id, "father"), '+=');
+            model && SetFieldAction.new(model, "pointedBy", PointedBy.fromID<DGraphElement>(thiss.id, "model"), '+=');
+            parentgraphID && SetFieldAction.new(parentgraphID, "pointedBy", PointedBy.fromID<DGraphElement>(thiss.id, "graph"), '+=');
+            parentNodeID && SetFieldAction.new(thiss.father, "pointedBy", PointedBy.fromID<DGraphElement>(thiss.id, "father"), '+=');
             // update collections (pointedby's here are set automatically)
             parentNodeID && SetFieldAction.new(thiss.father, "subElements", thiss.id, '+=', true);
         }

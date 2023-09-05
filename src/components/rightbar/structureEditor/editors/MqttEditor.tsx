@@ -1,5 +1,5 @@
 import React, {Dispatch, ReactElement} from 'react';
-import {DValue, Input, IStore, LValue, Pointer} from "../../../../joiner";
+import {DValue, Input, DState, LValue, Pointer} from "../../../../joiner";
 import {connect} from "react-redux";
 
 
@@ -33,7 +33,7 @@ interface DispatchProps {}
 
 type AllProps = OwnProps & StateProps & DispatchProps;
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const lValue = LValue.fromPointer(ownProps.valueId);
     const room = state.room;
     const topics = state.topics;
@@ -46,7 +46,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const MqttEditorConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const MqttEditorConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(MqttEditorComponent);

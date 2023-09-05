@@ -11,7 +11,8 @@ import {
     LViewElement,
     Pointer,
     RuntimeAccessibleClass,
-    U
+    U,
+    windoww
 } from "../../../joiner";
 import * as util from "util";
 import {GraphElementComponent} from "../../../graph/graphElement/graphElement";
@@ -90,21 +91,22 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         this.change = this.change.bind(this);
         this.change(undefined);
     }
+    private _context: GObject = {};
     change(evt?: React.ChangeEvent<HTMLTextAreaElement>) {
         if (!this) return; // component being destroyed and remade after code hot update
         let expression: string | undefined = evt?.target.value.trim() || this.state.expression || '';
         let output;
         // let context = {...this.props, props: this.props}; // makeEvalContext(this.props as any, {} as any);
-        let context;
+
         if (this.props.node?.id) {
             let component = GraphElementComponent.map[this.props.node.id];
-            context = {...component.props.evalContext};
-            context.fromcomponent=true;
+            this._context = {...component.props.evalContext};
+            this._context.fromcomponent = true;
         }
         else {
-            context = {...this.props, props: this.props};
+            this._context = {...this.props, props: this.props};
         }
-        try { output = U.evalInContextAndScope(expression || 'undefined', context, context); }
+        try { output = U.evalInContextAndScope(expression || 'undefined', this._context, this._context); }
         catch (e: any) {
             console.error("console error", e);
             output = '<span style="color:red">Invalid Syntax!<br></span>' + e.toString(); }
@@ -178,6 +180,8 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             if (this.state.expression.trim() === "") contextkeys = ["data", "node", "view", "getSize()", "setSize({x:?, y:?, w:?, h:?})", "component"].join(", ");
             else if (this.state.expression.trim() === "this") contextkeys = ["Warning: \"this\" will refer to the Console component instead of a GraphElement component."].join(", ");
             else contextkeys = Array.isArray(objraw) ? ["array[number]", ...Object.keys(Array.prototype)].join("</br>") : Object.getOwnPropertyNames(objraw).join(", ");// || []).join(", ")
+
+            this.setNativeConsoleVariables();
             return(<div className={'p-2 w-100 h-100'}>
                 <textarea spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} />
                 {/*<label>Query {(this.state.expression)}</label>*/}
@@ -190,6 +194,16 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                     contextkeys
                 }
             </div>)
+    }
+
+    private setNativeConsoleVariables(): void { // just fordebugging
+        let context = this._context;
+        windoww.context = context;
+        windoww.data = context.data;
+        windoww.node = context.node;
+        windoww.edge = context.edge;
+        windoww.output = this.state.output;
+        if (context.data?.model) windoww.model = context.data?.model;
     }
 }
 interface OwnProps {}

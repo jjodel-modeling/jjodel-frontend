@@ -45,7 +45,7 @@ export class DV {
         let attrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={this.strokeColor} strokeWidth={this.strokeWidth}
  className={"edge` + head + ` ` + type +` preview"}></path>\n`;
         let path: string;
-        let hoverAttrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={this.strokeColorHover} strokeWidth={this.strokeWidthHover}
+        let hoverAttrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={this.segments.all[0]&&(this.segments.all[0].length > this.strokeLengthLimit )&& this.strokeColorLong || this.strokeColorHover} strokeWidth={this.strokeWidthHover}
  className={"edge` + head + ` ` + type +` clickable content"}></path>\n`;
         switch(type) {
             default:
@@ -97,7 +97,7 @@ export class DV {
                     <div
                      style={{width: "fit-content",
                       transform: "translate(-50%, 0%) rotate("+s.radLabels+"rad) translate(0%, -"+(1-0.5*Math.abs(Math.abs(s.radLabels)%Math.PI)/(Math.PI/2))*100+"%)"+
-                     " translate(0%, -5px"}}>{s.label}</div>
+                     " translate(0%, -5px", color: this.strokeColor}}>{s.label}</div>
                     </foreignObject>
                 ])}
             { /* edge head */ }
@@ -153,7 +153,7 @@ class DefaultView {
                     true && this.data.suggestedEdges.reference &&
                     this.data.suggestedEdges.reference.map(
                         se => (!se.vertexOverlaps)
-                         && <DamEdge start={se.start.father} end={se.end} view={"Pointer_ViewEdge" + ( se.start.model.containment && "Composition" || "Association")} key={se.start.node.id+"~"+se.end.node.id}/>)
+                         && <DamEdge start={se.start.father} end={se.end} view={"Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association")} key={se.start.node.id+"~"+se.end.node.id}/>)
                          ,
                     true && this.data.suggestedEdges.extend &&
                     this.data.suggestedEdges.extend.map(

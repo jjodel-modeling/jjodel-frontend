@@ -1,7 +1,6 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../../redux/store";
-import {SetRootFieldAction} from "../../../joiner";
+import {DState, SetRootFieldAction} from "../../../joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
 
 
@@ -53,7 +52,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const iot = state.iot;
     return {iot};
 }
@@ -64,7 +63,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-const IotTabConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+const IotTabConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(IotTabComponent);

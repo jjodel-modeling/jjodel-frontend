@@ -1,9 +1,8 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {IStore} from "../../redux/store";
 import '../topbar/style.scss';
 import {Firebase} from "../../firebase";
-import {DUser, U} from "../../joiner";
+import {DUser, DState, U} from "../../joiner";
 
 function RoomManagerComponent(props: AllProps) {
     const room = (props.room) ? props.room : '';
@@ -48,7 +47,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     const iot = state.iot;
     return {iot};
@@ -60,7 +59,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const RoomManagerConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const RoomManagerConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(RoomManagerComponent);

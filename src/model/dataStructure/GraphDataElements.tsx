@@ -635,7 +635,7 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     get_graphSize(context: LogicContext<DGraph>):  Readonly<GraphSize> { return context.data.graphSize; }
     get_zoom(context: Context): GraphPoint {
         const zoom: GraphPoint = context.data.zoom;
-        (zoom as any).debug = {rawgraph: context.data, zoomx: context.data.zoom.x, zoomy: context.data.zoom.y}
+        // (zoom as any).debug = {rawgraph: context.data.__raw, zoomx: context.data.zoom.x, zoomy: context.data.zoom.y}
         return context.data.zoom; }
 
     toGraphSize(...a:Parameters<this["coord"]>): ReturnType<this["coord"]>{ return this.wrongAccessMessage("toGraphSize"); }

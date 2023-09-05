@@ -268,8 +268,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         BEGIN();
         const selected = Selectors.getSelected();
-        if(id) {
-            selected[forUser] = this.props.data.id;
+        if (id) {
+            selected[forUser] = id;
             SetRootFieldAction.new('selected', selected);
         }
         SetRootFieldAction.new('_lastSelected', {
@@ -482,14 +482,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
         const isEdgePending = (this.props.isEdgePending?.source);
         if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
+        if (!this.props.data) return;
         if (this.props.data.className !== "DClass") return;
         SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
         e.stopPropagation();
         // const user = this.props.isEdgePending.user;
         const source = isEdgePending;
         const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
-        const canBeExtend = isEdgePending.canExtend(this.props.data as any as LClass, extendError);
-        if (canBeExtend) {
+        const canBeExtend = this.props.data && isEdgePending.canExtend(this.props.data as LClass, extendError);
+        if (canBeExtend && this.props.data) {
             const lClass: LClass = LPointerTargetable.from(this.props.data.id);
             // SetFieldAction.new(lClass.id, "extendedBy", source.id, "", true); // todo: this should throw a error for wrong type.
             // todo: use source.addExtends(lClass); or something (source is LClass)

@@ -1,8 +1,7 @@
 import React, {Dispatch, ReactElement, useState} from "react";
 import {connect} from "react-redux";
 import './style.scss';
-import {IStore} from "../redux/store";
-import {GObject, SetRootFieldAction} from "../joiner";
+import {DState, GObject, SetRootFieldAction} from "../joiner";
 
 function PopupComponent(props: AllProps) {
     const memorec = props.memorec;
@@ -49,7 +48,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.memorec = state.memorec;
     return ret;
@@ -61,7 +60,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const PopupConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const PopupConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(PopupComponent);

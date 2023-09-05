@@ -1,5 +1,5 @@
 import React, {Dispatch, ReactElement, useEffect} from 'react';
-import {GObject, IStore, LValue} from "../../joiner";
+import {GObject, DState, LValue} from "../../joiner";
 import {connect} from "react-redux";
 
 function IotEngineComponent(props: AllProps) {
@@ -23,7 +23,7 @@ interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
-function mapStateToProps(state: IStore, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const values: LValue[] = LValue.fromArr(state.values);
     return {values: values.filter(value => value.topic !== '')};
 }
@@ -34,7 +34,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const IotEngineConnected = connect<StateProps, DispatchProps, OwnProps, IStore>(
+export const IotEngineConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(IotEngineComponent);

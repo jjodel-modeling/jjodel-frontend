@@ -17,7 +17,7 @@ import {
     LUser,
     LVoidVertex,
     RuntimeAccessibleClass, LViewPoint,
-    U, GraphSize, GraphPoint, GObject, Size, SetRootFieldAction, SetFieldAction, DVertex, DVoidEdge, DEdgePoint,
+    U, GraphSize, GraphPoint, GObject, Size, SetRootFieldAction, SetFieldAction, DVertex, DVoidEdge, DEdgePoint, DUser, Dictionary, Pointer,
 } from "../../joiner";
 import $ from "jquery";
 import "jqueryui";
@@ -208,8 +208,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         let selected = false;
         for(let me of Object.values(this.props.selected))
             if(me?.id === this.props.dataid) selected = true;
-        if(selected) {
-            if(this.props.dataid === this.props.selected[DUser.current]?.id)
+        if (selected) {
+            if (this.props.dataid === this.props.selected[DUser.current]?.id)
                 cssOverride.push('selected-by-me');
             else
                 cssOverride.push('selected-by-others');
