@@ -1,27 +1,27 @@
 {
   "files": {
-    "main.css": "/jodel-react/static/css/main.9e0db121.chunk.css",
-    "main.js": "/jodel-react/static/js/main.d83ab6e3.chunk.js",
-    "main.js.map": "/jodel-react/static/js/main.d83ab6e3.chunk.js.map",
-    "runtime-main.js": "/jodel-react/static/js/runtime-main.6fd9b46e.js",
-    "runtime-main.js.map": "/jodel-react/static/js/runtime-main.6fd9b46e.js.map",
-    "static/css/2.2ffb7ffe.chunk.css": "/jodel-react/static/css/2.2ffb7ffe.chunk.css",
-    "static/js/2.e9d9cda5.chunk.js": "/jodel-react/static/js/2.e9d9cda5.chunk.js",
-    "static/js/2.e9d9cda5.chunk.js.map": "/jodel-react/static/js/2.e9d9cda5.chunk.js.map",
-    "index.html": "/jodel-react/index.html",
-    "static/css/2.2ffb7ffe.chunk.css.map": "/jodel-react/static/css/2.2ffb7ffe.chunk.css.map",
-    "static/css/main.9e0db121.chunk.css.map": "/jodel-react/static/css/main.9e0db121.chunk.css.map",
-    "static/js/2.e9d9cda5.chunk.js.LICENSE.txt": "/jodel-react/static/js/2.e9d9cda5.chunk.js.LICENSE.txt",
-    "static/media/bootstrap-icons.css": "/jodel-react/static/media/bootstrap-icons.ea98e12d.woff2",
-    "static/media/view.scss": "/jodel-react/static/media/graph.050121cf.svg",
-    "static/media/splash.70a592ca.png": "/jodel-react/static/media/splash.70a592ca.png",
-    "static/media/style.scss": "/jodel-react/static/media/toggle-on.48413808.svg"
+    "main.css": "/jodel-react/dist/static/css/main.bc4cbaef.chunk.css",
+    "main.js": "/jodel-react/dist/static/js/main.d83ab6e3.chunk.js",
+    "main.js.map": "/jodel-react/dist/static/js/main.d83ab6e3.chunk.js.map",
+    "runtime-main.js": "/jodel-react/dist/static/js/runtime-main.a89d513b.js",
+    "runtime-main.js.map": "/jodel-react/dist/static/js/runtime-main.a89d513b.js.map",
+    "static/css/2.036c53c3.chunk.css": "/jodel-react/dist/static/css/2.036c53c3.chunk.css",
+    "static/js/2.42d324a7.chunk.js": "/jodel-react/dist/static/js/2.42d324a7.chunk.js",
+    "static/js/2.42d324a7.chunk.js.map": "/jodel-react/dist/static/js/2.42d324a7.chunk.js.map",
+    "index.html": "/jodel-react/dist/index.html",
+    "static/css/2.036c53c3.chunk.css.map": "/jodel-react/dist/static/css/2.036c53c3.chunk.css.map",
+    "static/css/main.bc4cbaef.chunk.css.map": "/jodel-react/dist/static/css/main.bc4cbaef.chunk.css.map",
+    "static/js/2.42d324a7.chunk.js.LICENSE.txt": "/jodel-react/dist/static/js/2.42d324a7.chunk.js.LICENSE.txt",
+    "static/media/bootstrap-icons.css": "/jodel-react/dist/static/media/bootstrap-icons.ea98e12d.woff2",
+    "static/media/view.scss": "/jodel-react/dist/static/media/graph.050121cf.svg",
+    "static/media/splash.70a592ca.png": "/jodel-react/dist/static/media/splash.70a592ca.png",
+    "static/media/style.scss": "/jodel-react/dist/static/media/toggle-on.48413808.svg"
   },
   "entrypoints": [
-    "static/js/runtime-main.6fd9b46e.js",
-    "static/css/2.2ffb7ffe.chunk.css",
-    "static/js/2.e9d9cda5.chunk.js",
-    "static/css/main.9e0db121.chunk.css",
+    "static/js/runtime-main.a89d513b.js",
+    "static/css/2.036c53c3.chunk.css",
+    "static/js/2.42d324a7.chunk.js",
+    "static/css/main.bc4cbaef.chunk.css",
     "static/js/main.d83ab6e3.chunk.js"
   ]
 }
