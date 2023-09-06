@@ -18,8 +18,8 @@ function App(props: AllProps) {
     const [splash, setSplash] = useStateIfMounted(!debug);
 
     useEffectOnce(() => {
-        setSplash(false);
-        // U.sleep(3).then(() => {setSplash(false)});
+        if(debug) setSplash(false);
+        else U.sleep(3).then(() => {setSplash(false)});
     });
 
     if(splash) {
@@ -30,12 +30,10 @@ function App(props: AllProps) {
         </div>);
     } else {
         return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? " debug" : "")} onClick={() => {statehistory.globalcanundostate = true;} } >
-            {/*<TopBar room={props.room} />*/}
-            {/*<Dock />*/}
-            {JSON.stringify(process.env)}
-
-
-            {/*isCleaning && <Cleaning />*/}
+            {<TopBar room={props.room} />}
+            {<Dock />}
+            {/*U.getFromEnvironment('test')*/}
+            {isCleaning && <Cleaning />}
         </div>);
     }
 

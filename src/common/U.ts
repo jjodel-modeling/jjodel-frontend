@@ -37,6 +37,10 @@ console.warn('loading ts U log');
 @RuntimeAccessible
 export class U {
 
+    public static getFromEnvironment(variable: string): undefined|string|number|boolean {
+        return process.env['REACT_APP_' + variable.toUpperCase()];
+    }
+
     public static fatherChain(me: LModelElement): Pointer<DModelElement, 0, 'N', LModelElement> {
         const fathers: Pointer<DModelElement, 0, 'N', LModelElement>= [me.id];
         const toCheck: LModelElement[] = [me];
