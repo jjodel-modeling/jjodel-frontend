@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": false,
   "commentnodeversion": "16.13.0?",
-  "homepage": "https://damianonaraku.github.io/jodel-react",
+  "homepage": "https://damianonaraku.github.io/jodel-react/build",
   "dependencies": {
     "@monaco-editor/react": "^4.3.1",
     "@popperjs/core": "^2.11.6",
@@ -69,7 +69,7 @@
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
     "pushmde": "git push mdegroup",
-    "old_deploygh": "ng build --base-href \"/jjodel/dist/jjodel/\"",
+    "old_deploygh": "ng build --base-href \"/jjodel/build/jjodel/\"",
     "old_deployghclean": "rd .\\dist\\ /S /Q && rd .\\out-tsc\\ /S /Q",
     "old_deployghComment": "to force update: deployghclean, (maybe github push), deploygh, github push, wait 2 min"
   },

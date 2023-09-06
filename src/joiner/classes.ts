@@ -324,8 +324,10 @@ export function Abstract<T extends any>( constructor: T & GObject): T { return c
 export function Instantiable<T extends any>(constructor: T & GObject, instanceConstructor?: Constructor): T { return constructor; } // for m2 cklasses that have m1 instances
 export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
     // console.log('DecoratorTest', {constructor, arguments});
+    let predebug = {...RuntimeAccessibleClass.classes};
     // @ts-ignore
     RuntimeAccessibleClass.classes[constructor.name] = constructor as any as typeof RuntimeAccessibleClass;
+    console.log("setting runtime accessible", {key: constructor.name, constructor, pre: predebug, post: {...RuntimeAccessibleClass.classes}});
     if (!window[constructor.name]) (window[constructor.name] as any) = constructor;
     constructor.prototype.className = constructor.name;
     //constructor.prototype.$$typeof = constructor.name;
