@@ -94,6 +94,7 @@
   "devDependencies": {
     "@types/jquery": "^3.5.5",
     "@types/react-beautiful-dnd": "^13.1.1",
+    "dotenv-webpack": "^8.0.1",
     "gh-pages": "^4.0.0"
   }
 }

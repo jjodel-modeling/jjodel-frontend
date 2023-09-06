@@ -31,6 +31,7 @@ import TreeModel from 'tree-model';
 let windoww = window as any;
 let U: typeof UType = windoww.U;
 
+
 function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: ParsedAction, prevAction: ParsedAction, newVal: any): DState {
     let newRoot: DState = {...oldStateDoNotModify} as DState;
     let current: any = newRoot;

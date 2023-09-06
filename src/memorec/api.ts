@@ -2,6 +2,7 @@ import axios, {AxiosResponse} from 'axios';
 import {GObject, LModelElement, LNamedElement} from "../joiner";
 import {MemoRecModel, MemoRecNamed, MemoRecObject} from "./types";
 
+
 export default class MemoRec {
     static url(path: string): string {
         return 'http://localhost:8080/' + path;
