@@ -1,8 +1,8 @@
 {
   "files": {
     "main.css": "/jodel-react/build/static/css/main.f246d666.chunk.css",
-    "main.js": "/jodel-react/build/static/js/main.d83ab6e3.chunk.js",
-    "main.js.map": "/jodel-react/build/static/js/main.d83ab6e3.chunk.js.map",
+    "main.js": "/jodel-react/build/static/js/main.95edb63f.chunk.js",
+    "main.js.map": "/jodel-react/build/static/js/main.95edb63f.chunk.js.map",
     "runtime-main.js": "/jodel-react/build/static/js/runtime-main.882b43a5.js",
     "runtime-main.js.map": "/jodel-react/build/static/js/runtime-main.882b43a5.js.map",
     "static/css/2.9a7d02e4.chunk.css": "/jodel-react/build/static/css/2.9a7d02e4.chunk.css",
@@ -22,6 +22,6 @@
     "static/css/2.9a7d02e4.chunk.css",
     "static/js/2.e67fe0f0.chunk.js",
     "static/css/main.f246d666.chunk.css",
-    "static/js/main.d83ab6e3.chunk.js"
+    "static/js/main.95edb63f.chunk.js"
   ]
 }
