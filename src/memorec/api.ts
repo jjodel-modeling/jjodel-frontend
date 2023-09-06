@@ -2,6 +2,12 @@ import axios, {AxiosResponse} from 'axios';
 import {GObject, LModelElement, LNamedElement} from "../joiner";
 import {MemoRecModel, MemoRecNamed, MemoRecObject} from "./types";
 
+/*
+
+per cors policy il client deve mandare richioeste allo stesso server.
+quindi le deve mandare a node.js e node.js server deve rimandarle a spring con un proxy server
+
+*/
 export default class MemoRec {
     static url(path: string): string {
         return 'http://localhost:8080/' + path;
