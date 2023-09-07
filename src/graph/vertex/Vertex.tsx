@@ -208,11 +208,15 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         let selected = false;
         for(let me of Object.values(this.props.selected))
             if(me?.id === this.props.dataid) selected = true;
+
         if (selected) {
+            cssOverride.push('selected-by-me');
+            /*
             if (this.props.dataid === this.props.selected[DUser.current]?.id)
                 cssOverride.push('selected-by-me');
             else
                 cssOverride.push('selected-by-others');
+            */
         }
 
         // if(!windoww.cpts) windoww.cpts = {};

@@ -92,4 +92,13 @@ export class Firebase {
         await Firebase.remove(room, 'rooms');
     }
 
+    static async removeAllRooms(): Promise<void> {
+        const rooms = await Firebase.select('rooms');
+        for(let room of rooms) {
+            const code = room.code;
+            console.log('DELETING ROOM: ' + code);
+            await Firebase.removeRoom(code)
+        }
+    }
+
 }

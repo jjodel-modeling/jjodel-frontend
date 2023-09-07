@@ -61,12 +61,12 @@ function Topbar(props: AllProps) {
     return(<div className={'topbar d-flex'}>
         <label className={'item border round ms-1'} onClick={save}>Save</label>
         <label className={'item border round ms-1'} onClick={load}>Load</label>
-        {props.debug && <Undoredocomponent /> }
+        {debug && <Undoredocomponent /> }
 
         <label className={'item border round ms-1'} onClick={exportJson}>Export JSON</label>
         <label className={'item border round ms-1'} onClick={importJson}>Import JSON</label>
 
-        {props.debug && <>
+        {debug && <>
                 <label className={'item border round ms-1'} onClick={exportXml}>Export XML</label>
                 <label className={'item border round ms-1'} onClick={importXml}>Import XML</label>
 
@@ -79,10 +79,9 @@ function Topbar(props: AllProps) {
 
         <label className={"p-1 "} style={{display: "flex", cursor: "auto"}}>
             <label className={"my-auto"}>Debug mode</label>
-            <input className={"my-auto input ms-auto"} type={"checkbox"} checked={props.debug} onChange={(e)=>{
-            SetRootFieldAction.new("debug", e.target.checked);
-            }
-            } />
+            <input className={"my-auto input ms-auto"} type={"checkbox"} checked={props.debug}
+                   onChange={(e)=>{SetRootFieldAction.new("debug", e.target.checked)}}
+            />
         </label>
 
         <div className={'ms-auto d-flex'}>
