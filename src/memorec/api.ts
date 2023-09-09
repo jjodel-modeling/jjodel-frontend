@@ -1,5 +1,5 @@
-import axios, {AxiosResponse} from 'axios';
-import {GObject, LModelElement, LNamedElement} from "../joiner";
+import axios, {AxiosRequestConfig, AxiosResponse} from 'axios';
+import {GObject, LModelElement, LNamedElement, U} from "../joiner";
 import {MemoRecModel, MemoRecNamed, MemoRecObject} from "./types";
 
 /*
@@ -8,22 +8,25 @@ per cors policy il client deve mandare richieste allo stesso server.
 quindi le deve mandare a node.js e node.js server deve rimandarle a spring con un proxy server
 
 */
+
 export default class MemoRec {
     static url(path: string): string {
-        return 'http://localhost:8080/' + path;
+        return U.getFromEnvironment('memorec_url') + path;
     }
 
     static async post(path: string, obj: MemoRecObject): Promise<AxiosResponse> {
-        return await axios.post(MemoRec.url(path), obj);
-    }
-
-    static async get(path: string): Promise<AxiosResponse> {
-        return await axios.get(MemoRec.url(path));
+        console.clear();
+        const config: AxiosRequestConfig = {};
+        config.proxy = {
+            protocol: U.getFromEnvironment('proxy_protocol') as string,
+            host: U.getFromEnvironment('proxy_host') as string,
+            port: U.getFromEnvironment('proxy_port') as number
+        };
+        console.log('config', config);
+        return await axios.post(MemoRec.url(path), obj, config);
     }
 
     static async structuralFeature(me: LModelElement): Promise<{data:GObject[], type:'class'|'package'}> {
-
-        console.clear();
 
         const named: LNamedElement = LNamedElement.fromPointer(me.id);
         const model = me.model;
@@ -34,7 +37,8 @@ export default class MemoRec {
 
         for(let myClass of classes) {
             const attributes = myClass.attributes.map(x => x.name);
-            memorecClasses.push({name: myClass.name, methodInvocations: attributes});
+            const references = myClass.references.map(x => x.name);
+            memorecClasses.push({name: myClass.name, methodInvocations: [...attributes, ...references]});
         }
 
         const memorecModel: MemoRecModel = {name: model.name, methodDeclarations: memorecClasses};
