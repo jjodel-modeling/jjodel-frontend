@@ -11,9 +11,10 @@ quindi le deve mandare a node.js e node.js server deve rimandarle a spring con u
 
 export default class MemoRec {
     static url(path: string): string {
-        return U.getFromEnvironment('memorec_url') + path;
+        return U.getFromEnvironment('memorec_url') + path + '?q=proxy';
     }
 
+    /* AXIOS
     static async post(path: string, obj: MemoRecObject): Promise<AxiosResponse> {
         console.clear();
         const config: AxiosRequestConfig = {};
@@ -24,6 +25,18 @@ export default class MemoRec {
         };
         console.log('config', config);
         return await axios.post(MemoRec.url(path), obj, config);
+    }
+    */
+
+    static async post(path: string, obj: MemoRecObject): Promise<any> {
+        console.clear();
+        const response = await fetch(MemoRec.url(path), {
+            method: 'POST',
+            body: JSON.stringify({...obj}),
+            headers: {'Content-type': 'application/json'}
+        });
+        const responseJson = await response.json();
+        return {'data': responseJson};
     }
 
     static async structuralFeature(me: LModelElement): Promise<{data:GObject[], type:'class'|'package'}> {
@@ -51,6 +64,7 @@ export default class MemoRec {
 
         const data:GObject[] = response.data.slice(0, 10);
         data.sort((a,b) => b.score - a.score);
+
         // SetRootFieldAction.new('memorec', {data: response.data, type: 'class'});
         return {data: data, type: 'class'};
 
