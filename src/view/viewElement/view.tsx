@@ -115,63 +115,137 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     // own properties
     bindVertexSizeToView!: boolean;
+    __info_of__bindVertexSizeToView: Info = {txt: 'empty', isNode: false, isEdge: false, isEdgePoint: false}
+
     name!: string;
+    __info_of__name: Info = {txt: 'empty', isNode: true, isEdge: true, isEdgePoint: true}
+
     constants?: string; // evalutate 1 sola volta all'applicazione della vista o alla creazione dell'elemento.
+    __info_of__constants: Info = {txt: 'empty', isNode: true, isEdge: true, isEdgePoint: true}
+
     preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
+    __info_of__preRenderFunc: Info = {txt: 'empty', isNode: true, isEdge: true, isEdgePoint: true}
 
     jsxString!: string; // l'html template
+    __info_of__jsxString: Info = {txt: 'empty', isNode: true, isEdge: true, isEdgePoint: true}
+
     usageDeclarations?: string; // example: state
+    __info_of__usageDeclarations: Info = {txt: 'empty', isNode: true, isEdge: true, isEdgePoint: true}
+
     forceNodeType?: DocString<'component name'>;
+    __info_of__forceNodeType: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+
     scalezoomx!: boolean; // whether to resize the element normally using width-height or resize it using zoom-scale css
+    __info_of__scalezoomx: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+
     scalezoomy!: boolean;
+    __info_of__scalezoomy: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+
     // not persistent, some not shared. deve essere diverso da utente ad utente perchè dipende dal pan e zoom nel grafo dell'utente attuale.
     // facendo pan su grafo html sposti gli elementi, per simulare uno spostamento del grafo e farlo sembrare illimitato.
     // __transient: DViewTransientProperties;
     storeTemporaryPositions!: boolean; // if true updates vertex position every X millisecond while dragging, if false updates it once when the vertex is released.
+
     appliableToClasses!: string[]; // class names: DModel, DPackage, DAttribute...
+    __info_of__appliableToClasses: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+
     subViews!: LViewElement[];
+    __info_of__subViews: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+
     oclApplyCondition!: string; // ocl selector
+    __info_of__oclApplyCondition: Info = {txt: 'empty', isNode: true, isEdge: true, isEdgePoint: true}
+
     explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
+    __info_of__explicitApplicationPriority: Info = {txt: 'empty', isNode: true, isEdge: true, isEdgePoint: true}
+
     defaultVSize!: GraphSize;
+    __info_of__defaultVSize: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+
     adaptWidth!: boolean;
+    __info_of__adaptWidth: Info = {type: 'boolean', txt: 'Whether the element should expand his width to accomodate his own contents.', isNode: true, isEdge: false, isEdgePoint: false}
+
     adaptHeight!: boolean;
-    __info_of__adaptWidth = {type: "boolean", txt: "Whether the element should expand his width to accomodate his own contents."};
-    __info_of__adaptHeight = {type: "boolean", txt: "Whether the element should expand his height to accomodate his own contents."};
+    __info_of__adaptHeight: Info = {type: 'boolean', txt: 'Whether the element should expand his height to accomodate his own contents.', isNode: true, isEdge: false, isEdgePoint: false}
+
+
     draggable!: boolean;
+    __info_of__draggable: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+
     resizable!: boolean;
+    __info_of__resizable: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+
     query!: string;
+    __info_of__query: Info = {txt: 'empty', isNode: true, isEdge: true, isEdgePoint: true}
+
     viewpoint!: LViewPoint | undefined;
+    __info_of__viewpoint: Info = {txt: 'empty', isNode: true, isEdge: true, isEdgePoint: true}
+
     display!: 'block'|'contents';
+    __info_of__display: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+
     onDragStart!: string;
+    __info_of__onDragStart: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+
     onDragEnd!: string;
+    __info_of__onDragEnd: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+
     onResizeStart!: string;
+    __info_of__onResizeStart: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+
     onResizeEnd!: string;
+    __info_of__onResizeEnd: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+
     constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
+    __info_of__constraints: Info = {txt: 'empty', isNode: false, isEdge: false, isEdgePoint: false}
+
+
     bendingMode!: EdgeBendingMode;
+    __info_of__bendingMode: Info = {isNode: false, isEdge: true, isEdgePoint: false, type: '"L" | "Q" | "C" | "T" | "S" | "A" | "QT" | "CS"', txt: <><div>How Svg path should use the EdgePoints <a href={"https://css-tricks.com/svg-path-syntax-illustrated-guide/"}>to bend his shape</a></div></>}
+
     edgeGapMode!: EdgeGapMode;
-    __info_of__bendingMode: Info = {type: '"L" | "Q" | "C" | "T" | "S" | "A" | "QT" | "CS"', txt: <><div>How Svg path should use the EdgePoints <a href={"https://css-tricks.com/svg-path-syntax-illustrated-guide/"}>to bend his shape</a></div></>}
-    __info_of__edgeGapMode: Info = {type: '"gap" | "average" | "autoFill" | "lineFill" | "arcFill"', txt: <><div></div></>}
+    __info_of__edgeGapMode: Info = {isNode: false, isEdge: true, isEdgePoint: false, type: '"gap" | "average" | "autoFill" | "lineFill" | "arcFill"', txt: <><div></div></>}
 
     storeSize!: boolean;
-    // __info_of__storeSize: Info = {type: ShortAttribETypes.EBoolean, txt:<><div>Whether the node position should depend from the View or the Graph.</div><div>Enabled = share positions on different graphs but changes it if view is changed.</div></>}
-    __info_of__storeSize: Info = {type: ShortAttribETypes.EBoolean, txt: "Active: the node position depends from the view currently displayed.\nInactive: it depends from the graph."}
+    __info_of__storeSize: Info = {isNode: true, isEdge: true, isEdgePoint: true, type: ShortAttribETypes.EBoolean, txt: "Active: the node position depends from the view currently displayed.\nInactive: it depends from the graph."}
+
     lazySizeUpdate!: boolean;
-    __info_of__lazySizeUpdate: Info = {type: ShortAttribETypes.EBoolean,txt: "When activated, the layout position will only be updated once when the drag or resize operation is completed. (best performance)"}
+    __info_of__lazySizeUpdate: Info = {isNode: true, isEdge: true, isEdgePoint: true, type: ShortAttribETypes.EBoolean,txt: "When activated, the layout position will only be updated once when the drag or resize operation is completed. (best performance)"}
 
     edgeStartOffset!: GraphPoint;
-    __info_of__edgeStartOffset: Info = {type:"GraphPoint", txt: "location where outgoing edges should start their path, relative to top-upper corner of the element."}
+    __info_of__edgeStartOffset: Info = {isNode: false, isEdge: true, isEdgePoint: false, type:"GraphPoint", txt: "location where outgoing edges should start their path, relative to top-upper corner of the element."}
+
     edgeEndOffset!: GraphPoint;
+    __info_of__edgeEndOffset: Info = {txt: 'empty', isNode: false, isEdge: true, isEdgePoint: false}
+
+
     edgeStartOffset_isPercentage!: boolean;
-    __info_of__edgeStartOffset_isPercentage: Info = {type:"GraphPoint", txt: "Whether edgeStartOffset is an absolute value or a percentage (eg: 50% of top edge, vs 50 pixels on the right)."}
+    __info_of__edgeStartOffset_isPercentage: Info = {isNode: false, isEdge: true, isEdgePoint: false,  type:"GraphPoint", txt: "Whether edgeStartOffset is an absolute value or a percentage (eg: 50% of top edge, vs 50 pixels on the right)."}
+
     edgeEndOffset_isPercentage!: boolean;
+    __info_of__edgeEndOffset_isPercentage: Info = {txt: 'empty', isNode: false, isEdge: true, isEdgePoint: false}
+
+
     edgeStartStopAtBoundaries!: boolean;
-    __info_of__edgeStartStopAtBoundaries: Info = {type:"GraphPoint", txt: "Whether outgoing edges should cross the node boundaries overlapping the node or stop at them (edge arrows might enter the node if this is on)."}
+    __info_of__edgeStartStopAtBoundaries: Info = {isNode: false, isEdge: true, isEdgePoint: false, type:"GraphPoint", txt: "Whether outgoing edges should cross the node boundaries overlapping the node or stop at them (edge arrows might enter the node if this is on)."}
+
     edgeEndStopAtBoundaries!: boolean;
+    __info_of__edgeEndStopAtBoundaries: Info = {txt: 'empty', isNode: false, isEdge: true, isEdgePoint: false}
+
+
     edgePointCoordMode!: CoordinateMode;
+    __info_of__edgePointCoordMode: Info = {txt: 'empty', isNode: false, isEdge: true, isEdgePoint: false}
+
+
     // edge
     edgeHeadSize!: GraphPoint;
+    __info_of__edgeHeadSize: Info = {txt: 'empty', isNode: false, isEdge: true, isEdgePoint: false}
+
     edgeTailSize!: GraphPoint;
+    __info_of__edgeTailSize: Info = {txt: 'empty', isNode: false, isEdge: true, isEdgePoint: false}
+
     edgeStrokeWidth!: number;
+    __info_of__edgeStrokeWidth: Info = {txt: 'empty', isNode: false, isEdge: true, isEdgePoint: false}
+
     protected size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>; // use getSize, updateSize;
 
 

@@ -33,7 +33,9 @@ export type Info = {
     type?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
     readType?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
     writeType?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
-    txt: string | React.ReactElement};
+    isNode?: boolean, isEdge?: boolean, isEdgePoint?:boolean,
+    txt: string | React.ReactElement,
+};
 
 
 export type Empty = any;
