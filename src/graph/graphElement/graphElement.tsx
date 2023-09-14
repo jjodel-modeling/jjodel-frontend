@@ -291,8 +291,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         GraphElementComponent.all[this.id] = this;
         GraphElementComponent.map[props.nodeid as Pointer<DGraphElement>] = this;
         this.html = React.createRef();
-        let functionsToBind = [this.onClick, this.onLeave, this.onContextMenu, this.onEnter, this.select];
-        for (let f of functionsToBind) (this as any)[f.name] = f.bind(this);
+        // let functionsToBind = [this.onClick, this.onLeave, this.onContextMenu, this.onEnter, this.select];
+        this.onClick = this.onClick.bind(this);
+        this.onLeave = this.onLeave.bind(this);
+        this.onContextMenu = this.onContextMenu.bind(this);
+        this.onEnter = this.onEnter.bind(this);
+        this.select = this.select.bind(this);
+        // for (let f of functionsToBind) (this as any)[f.name] = f.bind(this);
         // @ts-ignore
         this.state = {classes:[] as string[]};
 

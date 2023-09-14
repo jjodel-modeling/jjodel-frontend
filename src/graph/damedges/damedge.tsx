@@ -42,8 +42,6 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
 
     constructor(props: AllProps, context: any) {
         super(props, context);
-        let tobind: Function[] = []; //[this.path, this.pathSegments, this.pathCoords];
-        for (let tb of tobind) (this as GObject)[tb.name] = tb.bind(this);
     }
 /*
     path(): string {
