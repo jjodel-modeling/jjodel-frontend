@@ -20,7 +20,9 @@ module.exports = (env) => {
                 'process.env.NODE_ENV': JSON.stringify(env.NODE_ENV),
             }),
         ],
+        mode: 'development',
         optimization: {
+            minimize: false/*
             minimizer  : [
                 new UglifyJSPlugin({
                     cache        : true,
@@ -33,9 +35,9 @@ module.exports = (env) => {
                     sourceMap    : true
                 })
 
-            ]
+            ]*/
         },
-        module   : {
+        module: {
             rules: [
                 {
                     test   : /\.js$/,
