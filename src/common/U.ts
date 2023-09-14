@@ -394,8 +394,10 @@ export class U {
         // if (allowScope && allowContext) { return new Function( "with(this){ return eval( '" + codeStr + "' ); }").call(scopeAndContext); }
         let _ret: T = null as any;
         console.log("pre eval 0", {scope0, sproto: scope0?.__proto__, context0, cproto: context0?.__proto__});
-        let scope: GObject | undefined = scope0 && {...scope0, __proto__: scope0.__proto__};
-        let context: GObject | undefined = context0 && {...context0, __proto__: context0.__proto__};
+        let scope: GObject | undefined;
+        let context: GObject | undefined;
+        if (scope0) { scope = {...scope0, __proto__: scope0.__proto__}; scope.__proto__ = scope0.__proto__; } else scope = undefined;
+        if (context0) { context = {...context0, __proto__: context0.__proto__}; context.__proto__ = context0.__proto__; } else context = undefined;
         if (!context) context = scope; // se creo un nuovo contesto pulisco anche lo scope dalle variabili locali di questa funzione.
         const _eval = {codeStr, context, scope};
         console.log("pre eval 1", {scope, sproto: scope?.__proto__, context, cproto: context?.__proto__});
