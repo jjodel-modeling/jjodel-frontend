@@ -257,10 +257,10 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
 
     // @ts-ignore
-    private get_until_parent<D extends Constructor, L extends DtoL<InstanceType<D>>>(l: LModelElement, d: DModelElement, father: D): L | null {
+    private get_until_parent<D extends Constructor, L extends DtoL<InstanceType<D>>>(l: LModelElement, d: DModelElement, father: typeof D): L | null {
         while (true) {
             // console.log('get_until_parent', {l, d, father}, {dname: d.className, fname: father.name});
-            if (d.className === (father.name || father.name)) return l as L;
+            if (d.className === (father.cname || father.name)) return l as L;
             l = l.father;
             let oldd = d;
             d = l?.__raw;

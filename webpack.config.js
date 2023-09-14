@@ -20,7 +20,7 @@ module.exports = (env) => {
                 'process.env.NODE_ENV': JSON.stringify(env.NODE_ENV),
             }),
         ],
-        mode: 'development',
+        mode: 'development', // always dev to prevent minimization
         optimization: {
             minimize: false/*
             minimizer  : [
@@ -36,22 +36,6 @@ module.exports = (env) => {
                 })
 
             ]*/
-        },
-        module: {
-            rules: [
-                {
-                    test   : /\.js$/,
-                    include: [/src/],
-                    use    : [
-                        {
-                            loader : 'babel-loader',
-                            options: {
-                                presets: ['@babel/preset-env']
-                            }
-                        }
-                    ],
-                },
-            ]
         },
     };
 };
