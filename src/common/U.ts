@@ -386,7 +386,6 @@ export class U {
         // scope per accedere a variabili direttamente "x + y"
         // context per accedervi tramite this, possono essere impostati come diversi.
         if (!scope && !context) { Log.ex(true, 'evalInContextAndScope: must specify at least one of scope || context', {codeStr, scope, context}); }
-        if (!context) context = scope; // se creo un nuovo contesto pulisco anche lo scope dalle variabili locali di questa funzione.
 
         // scope.this = scope.this || context || scope; non funziona
         // console.log('"with(this){ return eval( \'" + codeStr + "\' ); }"', "with(this){ return eval( '" + codeStr + "' ); }");
@@ -394,9 +393,13 @@ export class U {
         // if (allowScope && allowContext) { return function(){ with(this){ return eval( '" + codeStr + "' ); }}.call(scopeAndContext); }
         // if (allowScope && allowContext) { return new Function( "with(this){ return eval( '" + codeStr + "' ); }").call(scopeAndContext); }
         let _ret: T = null as any;
-        if (context) context = {...context, __proto__: context.__proto__};
+        console.log("pre eval 0", {scope, sproto:scope?.__proto__, context, cproto:context?.__proto__});
         if (scope) scope = {...scope, __proto__: scope.__proto__};
+        if (context) context = {...context, __proto__: context.__proto__};
+        if (!context) context = scope; // se creo un nuovo contesto pulisco anche lo scope dalle variabili locali di questa funzione.
         const _eval = {codeStr, context, scope};
+        console.log("pre eval 1", {scope, sproto:scope?.__proto__, context, cproto:context?.__proto__});
+
 
         /*
         if (allowScope && allowContext) { return new Function( "with(this){ return eval( '" + codeStr.replace(/'/g, "\\'") + "' ); }").call(scopeAndContext); }
@@ -425,7 +428,7 @@ export class U {
             _ret = new (Function as any)(prefixDeclarations + "return eval( " + codeStr + " );" + postfixDeclarations).call(context);
             delete (context as any)._eval; } else
         if (!scope && context) {
-            console.log('pre eval jsx C:', context, 'body:', {codeStr, Input: windoww.Input, _eval,
+            console.log('pre eval jsx C:', {context, codeStr, Input: windoww.Input, _eval,
                 f:new (Function as any)(prefixDeclarations + "return eval( this._eval.codeStr );" + postfixDeclarations)});
             _ret = new (Function as any)( "return eval( this._eval._codeStr );").call(context); } else
         if (scope && !context) {

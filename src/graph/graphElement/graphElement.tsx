@@ -88,7 +88,8 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
         stateProps.template = DV.errorView_string(e.message.split("\n")[0],
             {msg: 'Syntax Error in custom user-defined template. try to remove typescript typings.', evalContext, e, view, jsx:view.jsxString});
         return;
-    }/*
+    }
+    /*
     try {
         jsxparsedfunc = U.evalInContextAndScope<() => ReactNode>('()=>{ return ' + jsxCodeString + '}', evalContext);
         // U.evalInContext({...this, ...evalContext}, res); // todo: remove eval and add new Function() ?
