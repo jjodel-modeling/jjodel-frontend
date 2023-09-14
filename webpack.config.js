@@ -20,6 +20,37 @@ module.exports = (env) => {
                 'process.env.NODE_ENV': JSON.stringify(env.NODE_ENV),
             }),
         ],
+        optimization: {
+            minimizer  : [
+                new UglifyJSPlugin({
+                    cache        : true,
+                    parallel     : true,
+                    uglifyOptions: {
+                        compress: true,
+                        ecma    : 6,
+                        mangle  : false
+                    },
+                    sourceMap    : true
+                })
+
+            ]
+        },
+        module   : {
+            rules: [
+                {
+                    test   : /\.js$/,
+                    include: [/src/],
+                    use    : [
+                        {
+                            loader : 'babel-loader',
+                            options: {
+                                presets: ['@babel/preset-env']
+                            }
+                        }
+                    ],
+                },
+            ]
+        },
     };
 };
 
