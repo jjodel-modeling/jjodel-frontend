@@ -95,7 +95,13 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
                 default:
                     if (!data || !myDictValidator) return;
                     let d = data.addChild(item);
-                    if (myDictValidator[item_dname]) select(d); break;
+                    try {
+                        let d2 = (d as any)();
+                        if (myDictValidator[item_dname]) select(d2);
+                    } catch(e) {
+                        if (myDictValidator[item_dname]) select(d);
+                    }
+                    break;
             }
         }}>+{item}</div>);
     }
