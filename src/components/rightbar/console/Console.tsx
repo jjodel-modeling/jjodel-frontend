@@ -84,6 +84,7 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
     return ret; }
 
 export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
+    public static cname: string = "ConsoleComponent";
     lastNode?: Pointer<DGraphElement>;
     constructor(props: AllProps) {
         super(props);
@@ -238,4 +239,8 @@ export const ConsoleConnected = connect<StateProps, DispatchProps, OwnProps, DSt
 export const Console = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <ConsoleConnected {...{...props, children}} />;
 }
+
+ConsoleComponent.cname = "ConsoleComponent";
+ConsoleConnected.cname = "ConsoleConnected";
+Console.cname = "Console";
 export default Console;

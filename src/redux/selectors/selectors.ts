@@ -46,6 +46,7 @@ enum ViewEClassMatch { // this acts as a multiplier for explicit priority
 
 @RuntimeAccessible
 export class Selectors{
+    public static cname: string = "Selectors";
 
     static getSelected(): Dictionary<Pointer<DUser>, Pointer<DModelElement, 0, 1, LModelElement>> {
         const state = store.getState();
@@ -265,7 +266,7 @@ export class Selectors{
         (Classe?: DT, condition?: (e:RET) => boolean, state?: DState, resolvePointers?: RP /**/, wrap?: W /* = true */): RET[] {
         if (!state) state = store.getState();
         let GClass = (Classe as GObject) || {name:"idlookup"};
-        const className: string = (GClass?.staticClassName || GClass.name).toLowerCase();
+        const className: string = (GClass?.staticClassName || GClass.cname).toLowerCase();
         const allIdByClassName: Pointer<D, 1, 1, L>[]
             = (state as GObject)[className]
             || (state as GObject)[className.substr(1)]

@@ -6,6 +6,7 @@ import {RuntimeAccessible} from "../../../joiner";
 
 @RuntimeAccessible
 export class Attribute extends Component<any, any> {
+    public static cname: string = "Attribute";
     render() {
         window[('' + 'attrib') as any] = this as any;
         const dynamic = "@@@@@";

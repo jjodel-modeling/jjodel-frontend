@@ -8,6 +8,7 @@ interface ThisState {
 }
 
 class ColorSchemeComponent extends PureComponent<AllProps, ThisState>{
+    static cname: string = "ColorSchemeComponent";
     constructor(props: AllProps, context: any) {
         super(props, context);
     }
@@ -56,4 +57,9 @@ export const ColorScheme = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(ColorSchemeComponent);
+
+
+
+ColorSchemeComponent.cname = "ColorSchemeComponent";
+ColorScheme.cname = "ColorScheme";
 export default ColorScheme;

@@ -106,4 +106,8 @@ export const EdgeEditorConnected = connect<StateProps, DispatchProps, OwnProps, 
 export const EdgeEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <EdgeEditorConnected {...{...props, children}} />;
 }
+
+EdgeEditorComponent.cname = "EdgeEditorComponent";
+EdgeEditorConnected.cname = "EdgeEditorConnected";
+EdgeEditor.cname = "EdgeEditor";
 export default EdgeEditor;

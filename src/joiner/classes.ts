@@ -150,6 +150,8 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     static extendTree: TreeModel.Node<typeof RuntimeAccessibleClass>// Tree<string, typeof RuntimeAccessibleClass>;
+    // static name: never; // it breaks with minification, don't use it
+    static cname: string;
 
     static set_extend(superclass: typeof RuntimeAccessibleClass, subclass: typeof RuntimeAccessibleClass): void{
         if (!superclass.hasOwnProperty("subclasses")) superclass.subclasses = [subclass];
@@ -326,13 +328,13 @@ export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
     // console.log('DecoratorTest', {constructor, arguments});
     let predebug = {...RuntimeAccessibleClass.classes};
     // @ts-ignore
-    RuntimeAccessibleClass.classes[constructor.name] = constructor as any as typeof RuntimeAccessibleClass;
-    console.log("setting runtime accessible", {key: constructor.name, constructor, pre: predebug, post: {...RuntimeAccessibleClass.classes}});
-    if (!window[constructor.name]) (window[constructor.name] as any) = constructor;
-    constructor.prototype.className = constructor.name;
-    //constructor.prototype.$$typeof = constructor.name;
-    //constructor.prototype.typeName = constructor.name;
-    (constructor as any).staticClassName = constructor.name;
+    RuntimeAccessibleClass.classes[constructor.cname] = constructor as any as typeof RuntimeAccessibleClass;
+    console.log("setting runtime accessible", {key: constructor.cname, constructor, pre: predebug, post: {...RuntimeAccessibleClass.classes}});
+    if (!window[constructor.cname]) (window[constructor.cname] as any) = constructor;
+    constructor.prototype.className = constructor.cname;
+    //constructor.prototype.$$typeof = constructor.cname;
+    //constructor.prototype.typeName = constructor.cname;
+    (constructor as any).staticClassName = constructor.cname;
     // @ts-ignore
     // console.log('runtimeaccessible annotation:', {thiss:this, constructor});
     //    const classnameFixedConstructor = constructor; //  function (...args) { let obj = new constructor(...args); obj.init?.(); obj.init0?.(); return obj; }
@@ -345,8 +347,8 @@ export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
         // console.log('runtimeaccessible annotation inner:', {thiss:this, outerthis, constructor});
         // @ts-ignore
         let obj = new constructor(...args);
-        obj.classNameFromAnnotation = constructor.name;
-        obj.className = constructor.name;
+        obj.classNameFromAnnotation = constructor.cname;
+        obj.className = constructor.cname;
         //obj.prototype.$$typeof = constructor.name;
         // obj.prototype.typeName = constructor.name;
         // obj.init?.();
@@ -355,7 +357,7 @@ export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
         // @ts-ignore
         // console.log('runtimeaccessible annotation inner end:', {thiss:this, outerthis, constructor, obj});
         return obj; }
-    RuntimeAccessibleClass.annotatedClasses[constructor.name] = classnameFixedConstructorDoNotRenameWithoutSearchStrings as any as typeof RuntimeAccessibleClass;
+    RuntimeAccessibleClass.annotatedClasses[constructor.cname] = classnameFixedConstructorDoNotRenameWithoutSearchStrings as any as typeof RuntimeAccessibleClass;
 
     for (let key in constructor) (classnameFixedConstructorDoNotRenameWithoutSearchStrings as GObject)[key] = constructor[key];
     // constructor.constructor = classnameFixedConstructorDoNotRenameWithoutSearchStrings; return constructor;
@@ -406,10 +408,11 @@ export enum EdgeHead {
 let canFireActions: boolean = true;
 @RuntimeAccessible
 export class Constructors<T extends DPointerTargetable>{
+    public static cname: string = "Constructors";
     private thiss: T;
     private persist: boolean;
     private callbacks: Function[];
-    fatherType?: Constructor;
+    fatherType?: typeof RuntimeAccessibleClass;
     constructor(t:T, father?: Pointer, persist: boolean = true, fatherType?: Constructor) {
         persist = persist && canFireActions;
         this.thiss = t;
@@ -419,7 +422,7 @@ export class Constructors<T extends DPointerTargetable>{
             (this.thiss as any).father = father;
             persist && father && SetFieldAction.new(father, "pointedBy", PointedBy.fromID(t.id, "father" as any), '+=');
         }
-        this.fatherType = fatherType;
+        this.fatherType = fatherType as any;
         if (this.persist) BEGIN()
     }
 
@@ -501,7 +504,7 @@ export class Constructors<T extends DPointerTargetable>{
         let thiss: DObject = this.thiss as any;
 
         if (this.persist && thiss.father) {
-            if (this.fatherType!.name === "DModel") {
+            if (this.fatherType!.cname === "DModel") {
                 this.persist && thiss.father && SetFieldAction.new(thiss.father as Pointer<DModel>, "objects", thiss.id, '+=', true);
             }
             else {
@@ -554,7 +557,7 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.id = id || Constructors.makeID();
         console.log("DPointerTargetable id", {id, tid: thiss.id})
 
-        thiss.className = thiss.constructor.name;
+        thiss.className = (thiss.constructor as typeof RuntimeAccessibleClass).cname;
         // this.className = thiss.className;
         if (this.persist) {
             // no pointedBy
@@ -593,7 +596,7 @@ export class Constructors<T extends DPointerTargetable>{
             // no pointedBy
             // update father's collections (pointedby's here are set automatically)
             if (this.persist && thiss.father) {
-                if (this.fatherType!.name === "DModel") {
+                if (this.fatherType!.cname === "DModel") {
                     this.persist && thiss.father && SetFieldAction.new(thiss.father as Pointer<DModel>, "packages", thiss.id, '+=', true);
                 }
                 else {
@@ -866,6 +869,7 @@ export class Constructors<T extends DPointerTargetable>{
 
 @RuntimeAccessible
 export class DPointerTargetable extends RuntimeAccessibleClass {
+    public static cname: string = "DPointerTargetable";
     static defaultComponent: (ownProps: GObject, children?: (string | React.Component)[]) => React.ReactElement;
     public static maxID: number = 0;
     public static logic: typeof LPointerTargetable;
@@ -994,6 +998,7 @@ type Pack<D extends DPointerTargetable, L extends LPointerTargetable = DtoL<D>, 
 
 @RuntimeAccessible
 export class Pointers{
+    public static cname: string = "Pointers";
     static filterValid<P extends (Pointer | Pointer[]) = any, RET = P extends Pointer[] ? P : P | null>
     (p: P): P | null {
         const pointerval: DPointerTargetable | DPointerTargetable[] = DPointerTargetable.from(p);
@@ -1158,6 +1163,7 @@ aa.parent = ptrr;*/
 
 @RuntimeAccessible
 export class PendingPointedByPaths{
+    public static cname: string = "PendingPointedByPaths";
     static all: PendingPointedByPaths[] = [];
     // static pendingMoreThanTwice: ParsedAction[] = [];
     static maxSolveAttempts: number = 20;
@@ -1209,6 +1215,7 @@ export class PendingPointedByPaths{
 
 @RuntimeAccessible
 export class PointedBy{
+    public static cname: string = "PointedBy";
     static list: string[] = ["father", "parent", "annotations", "packages", "type", "subpackages", "classifiers", "exceptions", "parameters", "defaultValue", "instances", "operations", "features", "attributes", "references", "extends", "extendedBy", "implements", "implementedBy", "instanceof", "edges", "target", "opposite", "parameters", "exceptions", "literals", "values"];
     source: string; // elemento da cui parte il puntatore
     // field: keyof DPointerTargetable;
@@ -1278,6 +1285,7 @@ type AnyPointer = Pointer<DPointerTargetable, number, number|'N', LPointerTarget
 
 @RuntimeAccessible
 export class LPointerTargetable<Context extends LogicContext<DPointerTargetable> = any, D extends DPointerTargetable = DPointerTargetable> extends DPointerTargetable {
+    public static cname: string = "LPointerTargetable";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public static structure: typeof DPointerTargetable;
@@ -1522,6 +1530,7 @@ let bb2 = fffff(a);
 @Leaf
 @RuntimeAccessible
 export class DUser extends DPointerTargetable{
+    public static cname: string = "DUser";
     static current: DocString<Pointer<DUser, 1, 1>> = 'Pointer' + Date.now(); // todo
     // Session's token that change for every session
     static token: DocString<Pointer<DUser, 1, 1>> = 'Pointer' + Date.now();
@@ -1539,6 +1548,7 @@ export class DUser extends DPointerTargetable{
 
 @RuntimeAccessible
 export class LUser extends LPointerTargetable { // MixOnlyFuncs(DUser, LPointerTargetable)
+    public static cname: string = "LUser";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // public static structure: typeof DPointerTargetable;
@@ -1554,18 +1564,19 @@ export type WUser = getWParams<LUser, DUser>;
 
 @RuntimeAccessible
 export class MyError extends Error {
+    static cname: string = "MyError";
     constructor(message?: string, ...otherMsg: any[]) {
         // 'Error' breaks prototype chain here
         super(message);
         const proto = (this as any).__proto__;
 
-        console.error(proto.constructor.name, message, ...otherMsg);
+        console.error(proto.constructor.cname || proto.constructor.name, message, ...otherMsg);
         // restore prototype chain
         const actualProto = new.target.prototype;
 
         if (Object.setPrototypeOf) { Object.setPrototypeOf(this, actualProto); }
         else { (this as any).__proto__ = actualProto; }
-        (this as any).className = this.constructor.name;
+        (this as any).className = (this.constructor as typeof MyError).cname;
     }
 }
 
@@ -1681,8 +1692,8 @@ export function MixOnlyFuncs<A1 extends any[], I1, S1, A2 extends any[], I2, S2>
 
 
     let ret = Mixin(c1noconstructor, c2noconstructor);
-    let c1name = c1.name === 'classnameFixedConstructorDoNotRenameWithoutSearchStrings' ? c1.prototype.className : c1.name;
-    let c2name = c2.name === 'classnameFixedConstructorDoNotRenameWithoutSearchStrings' ? c2.prototype.className : c2.name;
+    let c1name = (c1.cname || c1.name) === 'classnameFixedConstructorDoNotRenameWithoutSearchStrings' ? c1.prototype.className : c1.cname || c1.name;
+    let c2name = (c2.cname || c2.name) === 'classnameFixedConstructorDoNotRenameWithoutSearchStrings' ? c2.prototype.className : c2.cname || c2.name;
     //ret.prototype['superclass'] = {};
     // ret.prototype['superclass'][c1name] = c1.prototype.init_constructor || invalidSuperClassError(c1name, c1);
     // ret.prototype['superclass'][c2name] = c2.init_constructor || invalidSuperClassError(c2name, c2);

@@ -52,4 +52,8 @@ export const JsxEditorConnected = connect<StateProps, DispatchProps, OwnProps, D
 export const JsxEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <JsxEditorConnected {...{...props, children}} />;
 }
+
+JsxEditorComponent.cname = "JsxEditorComponent";
+JsxEditorConnected.cname = "JsxEditorConnected";
+JsxEditor.cname = "JsxEditor";
 export default JsxEditor;

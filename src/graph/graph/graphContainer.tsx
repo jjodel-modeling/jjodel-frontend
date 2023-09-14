@@ -8,6 +8,7 @@ import {DGraph, DModel, DPointerTargetable, DState, LGraph, LModel} from "../../
 interface ThisState { }
 
 export class GraphsContainerComponent extends PureComponent<AllProps, ThisState>{
+    public static cname: string = "GraphsContainerComponent";
     constructor(props: AllProps, context: any) {
         super(props, context);
     }
@@ -98,3 +99,7 @@ const GraphsContainerConnected = connect<StateProps, DispatchProps, OwnProps, DS
 export const GraphsContainer = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <GraphsContainerConnected {...{...props, children}} />; }
 
+
+GraphsContainer.cname = "GraphsContainer";
+GraphsContainerConnected.cname = "GraphsContainerConnected";
+GraphsContainerComponent.cname = "GraphsContainerComponent";

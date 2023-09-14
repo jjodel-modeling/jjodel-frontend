@@ -18,6 +18,7 @@ interface ThisState {
 }
 
 class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
+    static cname: string = "BidirectionalOCLEditor";
 
     oclContainer? : LegacyRef<HTMLDivElement>
     editor? : any
@@ -96,7 +97,6 @@ class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
     }
 }
 
-
 // private
 interface OwnProps {
     getter?: ((val: any, baseobj: GObject, key: string) => string); // val is default value used without a getter = baseobj[key]
@@ -149,7 +149,11 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     const ret: DispatchProps = {} as any;
     return ret; }
 export const OCLEditorConnected = connect<StateProps, DispatchProps, OwnProps, DState>(mapStateToProps, mapDispatchToProps)(BidirectionalOCLEditor as any);
-
+OCLEditorConnected.cname = "OCLEditorConnected";
 export const OCLEditorAce = (props: GObject & OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <OCLEditorConnected {...props} field={props.field} obj={props.obj} />
 }
+
+BidirectionalOCLEditor.cname = "BidirectionalOCLEditor";
+OCLEditorConnected.cname = "OCLEditorConnected";
+OCLEditorAce.cname = "OCLEditorAce";

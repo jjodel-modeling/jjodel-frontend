@@ -95,6 +95,7 @@ function SelectComponent(props: AllProps) {
         {(tooltip) && <Toaster position={'bottom-center'} />}
     </div>);
 }
+SelectComponent.cname = "SelectComponent";
 export interface SelectOwnProps {
     data?: DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
@@ -140,4 +141,9 @@ export const SelectConnected = connect<StateProps, DispatchProps, SelectOwnProps
 export const Select = (props: SelectOwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <SelectConnected {...{...props, children}} />;
 }
+
+
+SelectComponent.cname = "SelectComponent";
+SelectConnected.cname = "SelectConnected";
+Select.cname = "Select";
 export default Select;

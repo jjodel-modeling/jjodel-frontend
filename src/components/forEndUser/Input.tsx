@@ -97,6 +97,7 @@ function InputComponent(props: AllProps) {
         {tooltip && <Toaster position={'bottom-center'} /> }
     </div>);
 }
+InputComponent.cname = "InputComponent";
 export interface InputOwnProps {
     data: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
@@ -151,4 +152,8 @@ export const InputConnected = connect<StateProps, DispatchProps, InputOwnProps, 
 export function Input(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement {
     return <InputConnected {...{...props, children}} />;
 }
+
+InputComponent.cname = "InputComponent";
+InputConnected.cname = "InputConnected";
+Input.cname = "Input";
 // export default Input____a;

@@ -7,6 +7,8 @@ import {GObject} from "../../joiner";
 interface ThisState { }
 
 export class DataOutputComponent extends PureComponent<AllProps, ThisState>{
+    static cname: string = "DataOutputComponent";
+
     render(): ReactNode {
         {/* themes:
                                         export interface ThemeObject {

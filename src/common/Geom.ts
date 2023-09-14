@@ -3,6 +3,7 @@ import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleCl
 
 @RuntimeAccessible
 export abstract class IPoint extends RuntimeAccessibleClass {
+    static cname: string = "IPoint";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public x!: number;
@@ -30,7 +31,7 @@ export abstract class IPoint extends RuntimeAccessibleClass {
         if (y === null || y === undefined) thiss.y = undefined as Temporary;
         else if (isNaN(+y)) { thiss.y = 0; }
         else thiss.y = +y;
-        thiss.className = this.name;
+        thiss.className = this.cname;
     }
 
     public raw(): {x: number, y: number} { return {x: this.x, y: this.y}; }
@@ -178,6 +179,7 @@ export abstract class IPoint extends RuntimeAccessibleClass {
 
 @RuntimeAccessible
 export class GraphPoint extends IPoint{
+    static cname: string = "GraphPoint";
     private dontmixwithPoint: any;
     public static fromEvent(e: JQuery.ClickEvent | JQuery.MouseMoveEvent | JQuery.MouseUpEvent | JQuery.MouseDownEvent | JQuery.MouseEnterEvent | JQuery.MouseLeaveEvent | JQuery.MouseEventBase)
         : GraphPoint | null {
@@ -194,6 +196,7 @@ export class GraphPoint extends IPoint{
 
 @RuntimeAccessible
 export class Point extends IPoint{
+    static cname: string = "Point";
     private dontmixwithGPoint: any;
     /// https://stackoverflow.com/questions/6073505/what-is-the-difference-between-screenx-y-clientx-y-and-pagex-y
     public static fromEvent(e: JQuery.ClickEvent | JQuery.MouseMoveEvent | JQuery.MouseUpEvent | JQuery.MouseDownEvent | JQuery.MouseEnterEvent | JQuery.MouseLeaveEvent | JQuery.MouseEventBase)
@@ -209,6 +212,7 @@ RuntimeAccessibleClass.set_extend(IPoint, GraphPoint);
 RuntimeAccessibleClass.set_extend(IPoint, Point);
 @RuntimeAccessible
 export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibleClass {
+    static cname: string = "ISize";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public x!: number;
@@ -225,7 +229,7 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
 
     static init_constructor(thiss: GObject, x: any = 0, y: any = 0, w: any = 0, h: any = 0, ...a: any): void {
         thiss.id = "SIZE_" + (DPointerTargetable.maxID++) + "_" + new Date().getTime();
-        thiss.className = thiss.constructor.name;
+        thiss.className = (thiss.constructor as typeof RuntimeAccessibleClass).cname;
         if (x === null || x === undefined) thiss.x = undefined as Temporary;
         else if (isNaN(+x)) { thiss.x = 0; }
         else thiss.x = +x;
@@ -238,7 +242,7 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
         if (h === null || h === undefined) thiss.h = undefined as Temporary;
         else if (isNaN(+h)) { thiss.h = 0; }
         else thiss.h = +h;
-        thiss.className = this.name; }
+        thiss.className = this.cname; }
 
     public toString(letters: boolean=true, separator: string = " "): string {
         if (letters) return JSON.stringify({x: this.x, y: this.y, w: this.w, h: this.h});
@@ -379,6 +383,7 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
 
 @RuntimeAccessible
 export class Size extends ISize<Point> {
+    static cname: string = "Size";
     static subclasses: any[] = [];
     private static sizeofvar: HTMLElement;
     private static $sizeofvar: JQuery<HTMLElement>;
@@ -437,6 +442,7 @@ export class Size extends ISize<Point> {
 
 @RuntimeAccessible
 export class GraphSize extends ISize<GraphPoint> {
+    static cname: string = "GraphSize";
     private dontMixWithSize: any;
 
     public static fromPoints(firstPt: GraphPoint, secondPt: GraphPoint): GraphSize {
@@ -637,6 +643,7 @@ RuntimeAccessibleClass.set_extend(ISize, Size);
 RuntimeAccessibleClass.set_extend(ISize, GraphSize);
 @RuntimeAccessible
 export class Geom extends RuntimeAccessibleClass {
+    static cname: string = "Geom";
 
     static isPositiveZero(m: number): boolean {
         if (!!Object.is) { return Object.is(m, +0); }

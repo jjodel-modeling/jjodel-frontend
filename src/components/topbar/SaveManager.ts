@@ -11,6 +11,7 @@ import {
 
 @RuntimeAccessible
 export class SaveManager {
+    public static cname: string = "SaveManager";
     private static tmpsave: DState;
 
     static save(): void {

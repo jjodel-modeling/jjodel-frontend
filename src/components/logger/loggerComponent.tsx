@@ -15,6 +15,7 @@ interface ThisState {
 }
 
 export class LoggerComponent extends PureComponent<AllProps, ThisState>{
+    public static cname: string = "LoggerComponent";
     public static loggers: LoggerComponent[] = [];
     private static max_id: number = 0;
     public static Log(category: string, key: string, data: any[]): void{

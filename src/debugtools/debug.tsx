@@ -1,5 +1,9 @@
 // @ts-nocheck
+import { RuntimeAccessible } from "../joiner";
+
+@RuntimeAccessible
 export class Debug {
+    public static cname: string = "Debug";
     // counts how many times each node is rendered in a component.
     static getComponentMap(){
         let nodes = Object.values(window.GraphElementComponent.all).map(a=>a.props.node).filter(a=>!!a);

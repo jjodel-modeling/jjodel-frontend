@@ -8,6 +8,8 @@ interface ThisState {
 }
 
 export class Overlap extends PureComponent<AllProps, ThisState>{
+    static cname: string = "Overlap";
+
     render(): ReactNode {
         console.log('overlap childs:', this.props.children);
         if (!this.props.children || !Array.isArray(this.props.children)) return this.props.children;
@@ -58,7 +60,7 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret; }
 */
 
-(Overlap as React.ComponentClass).defaultProps = {
+(Overlap as any).defaultProps = {
   autosizex: true,
   autosizey: true,
   style: undefined,

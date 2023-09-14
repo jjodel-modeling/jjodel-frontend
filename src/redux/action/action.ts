@@ -138,6 +138,7 @@ export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...param
 
 @RuntimeAccessible
 export class Action extends RuntimeAccessibleClass {
+    public static cname: string = "Action";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     static type = 'ACTION';
@@ -170,7 +171,7 @@ export class Action extends RuntimeAccessibleClass {
         this.type = (this.constructor as any).type;
         // this.src = new Error().stack?.split('\n').splice( 4);
         this.subType = subType;
-        this.className = this.constructor.name;
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
     }
 
     fire(forceRelaunch: boolean = false): boolean {
@@ -204,7 +205,7 @@ export class Action extends RuntimeAccessibleClass {
     }
 
     static parse<T extends Action | Action[], RET extends T extends any[] ? ParsedAction[] : ParsedAction>(actions: T): RET {
-        if ((actions as Action).className === CompositeAction.name) throw new Error("Composite action cannot be parsed directly, parse composite.actions instead");
+        if ((actions as Action).className === CompositeAction.cname) throw new Error("Composite action cannot be parsed directly, parse composite.actions instead");
         if (!Array.isArray(actions)) return Action.parse1(actions) as RET;
         return actions.map( Action.parse1 ) as RET;
     }
@@ -217,17 +218,19 @@ export class Action extends RuntimeAccessibleClass {
 }
 @RuntimeAccessible
 export class LoadAction extends Action {
+    public static cname: string = "LoadAction";
     static type = 'LOAD';
     static new(state: DState): boolean {  return state && new LoadAction(state).fire(); }
     constructor(state: DState, fire: boolean = true) {
         super('', state, '');
-        this.className = this.constructor.name;
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         if (fire) this.fire();
     }
 }
 
 @RuntimeAccessible
 export class SetRootFieldAction extends Action {
+    public static cname: string = "SetRootFieldAction";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     static type = 'SET_ROOT_FIELD';
@@ -262,7 +265,7 @@ export class SetRootFieldAction extends Action {
 
     protected constructor(fullpath: string, value: any = undefined, fire: boolean = true, isPointer: boolean = false) {
         super(fullpath, value, undefined);
-        this.className = this.constructor.name;
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         this.isPointer = isPointer;
         if (fire) this.fire();
     }
@@ -288,6 +291,7 @@ type StrictExclude<T, U> = T extends U ? U extends T ? never : T : T;
 
 @RuntimeAccessible
 export class SetFieldAction extends SetRootFieldAction {
+    public static cname: string = "SetFieldAction";
     static type = 'SET_ME_FIELD';
     /*
         static new<
@@ -348,7 +352,7 @@ export class SetFieldAction extends SetRootFieldAction {
     protected constructor(me: DPointerTargetable | Pointer, field: string, val: any, fire: boolean = true, isPointer: boolean = false) {
         Log.exDev(!me, 'BaseObject missing in SetFieldAction', {me, field, val});
         super('idlookup.' + ((me as DPointerTargetable).id || me) + ( field ? '.' + field : ''), val, false, isPointer);
-        this.className = this.constructor.name;
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         if (fire) this.fire();
     }
 }
@@ -369,6 +373,7 @@ SetFieldAction.new(dclass, 'name.5', '') // ok, equivale a dicitura array
 
 @RuntimeAccessible
 export class RedoAction extends Action {
+    public static cname: string = "RedoAction";
     static type = 'RedoAction';
     public static new<F extends boolean = true>(amount: number = 1, notfire?: F): (F extends false ? boolean : RedoAction) {
         let act = new RedoAction(amount);
@@ -377,11 +382,12 @@ export class RedoAction extends Action {
     }
     private constructor(amount: number = 1) {
         super('', amount);
-        this.className = this.constructor.name;
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
     }
 }
 @RuntimeAccessible
 export class UndoAction extends Action {
+    public static cname: string = "UndoAction";
     static type = 'UndoAction';
     public static new<F extends boolean = true>(amount: number = 1, notfire?: F): (F extends false ? boolean : UndoAction) {
         let act = new UndoAction(amount);
@@ -390,12 +396,13 @@ export class UndoAction extends Action {
     }
     private constructor(amount: number = 1) {
         super('', amount);
-        this.className = this.constructor.name;
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
     }
 }
 @RuntimeAccessible
 export class CombineHistoryAction extends Action {
-    static type = 'CombineHistoryAction';
+    public static cname: string = "CombineHistoryAction";
+    static type = 'CombineHistoryAcCombineHistoryActiontion';
     public static new<F extends boolean = true>(notfire?: F): (F extends false ? boolean : CombineHistoryAction) {
         let act = new CombineHistoryAction();
         if (!notfire) return act.fire() as any;
@@ -403,7 +410,7 @@ export class CombineHistoryAction extends Action {
     }
     private constructor() {
         super('', '');
-        this.className = this.constructor.name;
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
     }
 }
 
@@ -411,6 +418,7 @@ export class CombineHistoryAction extends Action {
 
 @RuntimeAccessible
 export class CreateElementAction extends Action {
+    public static cname: string = "CreateElementAction";
     static type = 'CREATE_ELEMENT';
     value!: DPointerTargetable;
     public static newBatch<F extends boolean = true>(me: DPointerTargetable[], notfire?: F): (F extends false ? boolean : CreateElementAction)[]{
@@ -425,7 +433,7 @@ export class CreateElementAction extends Action {
     }
     private constructor(me: DPointerTargetable, fire: boolean = true) {
         super('idlookup.' + me.id, me);
-        this.className = this.constructor.name;
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         this.value = me;
         if (fire) this.fire();
     }
@@ -433,12 +441,13 @@ export class CreateElementAction extends Action {
 
 @RuntimeAccessible
 export class DeleteElementAction extends SetFieldAction {
+    public static cname: string = "DeleteElementAction";
     static type = 'DELETE_ELEMENT';
     public static new(me: Pack1<LPointerTargetable>): boolean {
         return new DeleteElementAction(me as any).fire(); }
     constructor(me: DPointerTargetable | Pointer) {
         super((me as DPointerTargetable).id || me, '', undefined);
-        this.className = this.constructor.name;
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         this.fire();
     }
 }
@@ -456,6 +465,7 @@ export class IDLinkAction extends Action{
 
 @RuntimeAccessible
 export class CompositeAction extends Action {
+    public static cname: string = "CompositeAction";
     static type: string = 'COMPOSITE_ACTION';
     actions: Action[] = [];
 
@@ -463,17 +473,17 @@ export class CompositeAction extends Action {
     constructor(actions: Action[], launch: boolean = false) {
         super('', '');
         this.actions = actions;
-        this.className = this.constructor.name;
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         if (launch) this.fire();
     }
 }
 
 @RuntimeAccessible
 export class ParsedAction extends SetRootFieldAction {
+    public static cname: string = "ParsedAction"; // NB: actually this is never created but "converted" from other actions by adding fields
     path!: string; // path to a property in the store "something.like.this"
     pathArray!: string[]; // path splitted "like.1.this"
     executionCount!: number;
-
 }
 
 

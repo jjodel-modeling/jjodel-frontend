@@ -14,6 +14,7 @@ import {
 // U-functions that require jsx
 @RuntimeAccessible
 export class UX{
+    static cname: string = "UX";
 
     static recursiveMap<T extends ReactNode | ReactNode[] | null | undefined>(children: T, fn: (rn: T, i: number, depthIndices: number[])=>T, depthIndices: number[] = []): T {
         // NB: depthIndices is correct but if there is an expression children evaluated to false like {false && <jsx>},
@@ -55,9 +56,9 @@ export class UX{
                 //    {'re.props.obj.id': re.props.obj?.id, 're.props.obj': re.props.obj, 'thiss.props.data.id': thiss.props.data.id, thiss, re, objid, ret, 'ret.props': ret.props});
                 return ret;*/
             // case windoww.Components.GraphElement.name:
-            case windoww.Components.Input.name+"Component":
-            case windoww.Components.Select.name+"Component":
-            case windoww.Components.TextArea.name+"Component":
+            case windoww.Components.Input.cname+"Component":
+            case windoww.Components.Select.cname+"Component":
+            case windoww.Components.TextArea.cname+"Component":
                 // todo: can i do a injector that if the user provides a ModelElement list raw <div>{this.children}</div> it wraps them in DefaultNode?
                 const injectProps2: InputOwnProps | SelectOwnProps | TextAreaOwnProps = {} as any;
                 const parentnodeid = parentComponent.props.node?.id;
@@ -66,17 +67,17 @@ export class UX{
                 // but react needs to distinguish component A from other components, and he still doesn't have a key. in fact this is useless as this component can only have 1 child
                 injectProps2.key = re.props.key || (parentnodeid + "^input_"+index);
                 return React.cloneElement(re, injectProps2);
-            case windoww.Components.GraphElementComponent.name:
+            case windoww.Components.GraphElementComponent.cname:
             // case windoww.Components.DefaultNode.name:
-            case windoww.Components.DefaultNodeComponent.name:
+            case windoww.Components.DefaultNodeComponent.cname:
             // case windoww.Components.Graph.name:
-            // case windoww.Components.GraphComponent.name:
+            // case windoww.Components.GraphComponent.cname:
             case "Graph": case "GraphComponent":
             // case windoww.Components.Field.name:
-            // case windoww.Components.FieldComponent.name:
+            // case windoww.Components.FieldComponent.cname:
             // case windoww.Components.Vertex.name:
-            case EdgeComponent.name:
-            case windoww.Components.VertexComponent.name:
+            case EdgeComponent.cname:
+            case windoww.Components.VertexComponent.cname:
                 const injectProps: GraphElementOwnProps = {} as any;
                 injectProps.parentViewId = parentComponent.props.view.id || (parentComponent.props.view as any); // re.props.view ||  thiss.props.view
                 injectProps.parentnodeid = parentComponent.props.node?.id;
@@ -94,10 +95,10 @@ export class UX{
                     default:
                         idbasename = injectProps.parentnodeid + "^" + dataid + "N";
                         break;
-                    case windoww.Components.EdgePoint.name:
+                    case windoww.Components.EdgePoint.cname:
                         idbasename = injectProps.parentnodeid + "^" + (dataid || re.props.startingSize?.id || indices.join(",")) + "EP";
                         break;
-                    case EdgeComponent.name: case "DamEdge":
+                    case EdgeComponent.cname: case "DamEdge":
                         let edgeProps:EdgeOwnProps = re.props;
                         let edgestart_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.start as any).id || edgeProps.start;
                         let edgeend_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.end as any).id || edgeProps.end;
@@ -111,7 +112,7 @@ export class UX{
                 injectProps.htmlindex = indices[indices.length - 1]; // re.props.node ? re.props.node.htmlindex : indices[indices.length - 1];
                 injectProps.key = re.props.key || injectProps.nodeid;
                 // console.log("cloning jsx:", re, injectProps);
-                Log.ex((injectProps.nodeid === injectProps.graphid||injectProps.nodeid === injectProps.parentnodeid) && type != "GraphComponent", "User manually assigned a invalid node id. please remove or change prop \"nodeid\"", {type: (re.type as any).WrappedComponent?.name || re.type}, {mycomponents: windoww.mycomponents, re, props:re.props});
+                Log.ex((injectProps.nodeid === injectProps.graphid||injectProps.nodeid === injectProps.parentnodeid) && type != "GraphComponent", "User manually assigned a invalid node id. please remove or change prop \"nodeid\"", {type: (re.type as any).WrappedComponent?.cname || re.type}, {mycomponents: windoww.mycomponents, re, props:re.props});
                 return React.cloneElement(re, injectProps);
         }}
 

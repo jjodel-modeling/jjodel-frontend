@@ -44,6 +44,7 @@ type R = {str: string, fullstr: string, path:string[], fullpath:string[], val: s
 // private
 type AllProps = OwnProps & StateProps & DispatchProps;
 export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
+    public static cname: string = "SaveManagerComponent";
     private undoredolistoutdated: boolean;
     do_undo = (index: number) => {
         console.error("undo(" + index + ")");

@@ -16,6 +16,8 @@ import {
 import Value from "./editors/Value";
 
 export default class Structure {
+    public static cname: string = "Structure";
+
     private static BaseEditor(lModelElement: LModelElement) : ReactNode {
         if(!lModelElement) return(<></>);
         return(<>

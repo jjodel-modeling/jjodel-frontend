@@ -82,4 +82,8 @@ export const TextAreaConnected = connect<StateProps, DispatchProps, TextAreaOwnP
 export const TextArea = (props: TextAreaOwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <TextAreaConnected {...{...props, children}} />;
 }
+
+TextAreaComponent.cname = "TextAreaComponent";
+TextAreaConnected.cname = "TextAreaConnected";
+TextArea.cname = "TextArea";
 export default TextArea;

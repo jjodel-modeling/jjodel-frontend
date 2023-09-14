@@ -26,10 +26,11 @@ import { EdgeGapMode } from "../../joiner/types";
 
 @RuntimeAccessible
 export class DViewElement extends DPointerTargetable {
+    public static cname: string = "DViewElement";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LViewElement;
-    // static logic: typeof LViewElement;
+    // static logic: typeof LViewDViewElementElement;
     // static structure: typeof DViewElement;
 
     // inherited redefine
@@ -101,6 +102,7 @@ export class DViewElement extends DPointerTargetable {
 @RuntimeAccessible
 export class LViewElement<Context extends LogicContext<DViewElement, LViewElement> = any, D extends DViewElement = any>
     extends LPointerTargetable { // MixOnlyFuncs(DViewElement, LPointerTargetable)
+    public static cname: string = "LViewElement";
 
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -362,6 +364,7 @@ export type WViewElement = getWParams<LViewElement, DPointerTargetable>;
 
 @RuntimeAccessible
 export class DViewTransientProperties extends RuntimeAccessibleClass{
+    public static cname: string = "DViewTransientProperties";
     static logic: typeof LPointerTargetable;
     _isDViewTransientProperties!: true;
     // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
@@ -371,6 +374,7 @@ export class DViewTransientProperties extends RuntimeAccessibleClass{
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, DViewTransientProperties);
 @RuntimeAccessible
 export class LViewTransientProperties extends LPointerTargetable{
+    public static cname: string = "LViewTransientProperties";
     static structure: typeof DPointerTargetable;
     static singleton: LViewTransientProperties;
     _isLViewTransientProperties!: true;

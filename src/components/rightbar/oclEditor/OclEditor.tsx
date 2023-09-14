@@ -45,4 +45,8 @@ export const OclEditorConnected = connect<StateProps, DispatchProps, OwnProps, D
 export const OclEditor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <OclEditorConnected {...{...props, children}} />;
 }
+
+OclEditorComponent.cname = "OclEditorComponent";
+OclEditorConnected.cname = "OclEditorConnected";
+OclEditor.cname = "OclEditor";
 export default OclEditor;

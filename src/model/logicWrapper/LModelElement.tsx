@@ -59,6 +59,7 @@ import {
 @Node
 @RuntimeAccessible
 export class DModelElement extends DPointerTargetable {
+    public static cname: string = "DModelElement";
     // static _super = DPointerTargetable;
     // static logic: typeof LModelElement;
     // static structure: typeof DModelElement;
@@ -81,6 +82,7 @@ export class DModelElement extends DPointerTargetable {
 @Leaf
 @RuntimeAccessible
 export class DAnnotationDetail extends DPointerTargetable {
+    public static cname: string = "DAnnotationDetail";
     // todo
 }
 
@@ -93,6 +95,7 @@ type Pack<D extends DPointerTargetable, L extends LPointerTargetable = DtoL<D>, 
 @Abstract
 @RuntimeAccessible
 export class LModelElement<Context extends LogicContext<DModelElement> = any, D extends DModelElement = DModelElement> extends LPointerTargetable {
+    public static cname: string = "LModelElement";
     // extends Mixin(DModelElement0, LPointerTargetable)
     // static logic: typeof LModelElement;
     // static structure: typeof DModelElement;
@@ -144,7 +147,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
 
     public duplicate(deep: boolean = true): this {
-        return this.cannotCall(this.constructor.name + "duplicate() class is abstract");
+        return this.cannotCall(((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate() class is abstract");
     }
 
     public addAnnotation(source?: DAnnotation["source"], details?: DAnnotation["details"]): DAnnotation {
@@ -257,7 +260,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     private get_until_parent<D extends Constructor, L extends DtoL<InstanceType<D>>>(l: LModelElement, d: DModelElement, father: D): L | null {
         while (true) {
             // console.log('get_until_parent', {l, d, father}, {dname: d.className, fname: father.name});
-            if (d.className === father.name) return l as L;
+            if (d.className === (father.name || father.name)) return l as L;
             l = l.father;
             let oldd = d;
             d = l?.__raw;
@@ -539,6 +542,7 @@ RuntimeAccessibleClass.set_extend(DPointerTargetable, LModelElement);
 @Leaf
 @RuntimeAccessible
 export class DAnnotation extends DModelElement { // extends Mixin(DAnnotation0, DModelElement)
+    public static cname: string = "DAnnotation";
     // static singleton: LAnnotation;
     // static logic: typeof LAnnotation;
     // static structure: typeof DAnnotation;
@@ -562,6 +566,7 @@ export class DAnnotation extends DModelElement { // extends Mixin(DAnnotation0, 
 @Node
 @RuntimeAccessible
 export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D extends DAnnotation = DAnnotation> extends LModelElement {
+    public static cname: string = "LAnnotation";
     // Mixin(DAnnotation0, LModelElement)
     // @ts-ignore
     __namee!: "LAnnotation" = "LAnnotation";
@@ -591,7 +596,7 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
     }
 
     public duplicate(deep: boolean = true): this {
-        return this.cannotCall(this.constructor.name + "duplicate()");
+        return this.cannotCall(((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()");
     }
 
     protected get_duplicate(context: Context): ((deep?: boolean) => this) {
@@ -630,6 +635,7 @@ RuntimeAccessibleClass.set_extend(LModelElement, LAnnotation);
 @Leaf
 @RuntimeAccessible
 export class LAnnotationDetail<Context extends LogicContext<DAnnotationDetail> = any> extends LModelElement { // todo
+    public static cname: string = "LAnnotationDetail";
     father!: LAnnotation;
 
     protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
@@ -641,7 +647,7 @@ export class LAnnotationDetail<Context extends LogicContext<DAnnotationDetail> =
     }
 
     public duplicate(deep: boolean = true): this {
-        return this.cannotCall(this.constructor.name + "duplicate()");
+        return this.cannotCall(((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()");
     }
 
     protected get_duplicate(context: Context): ((deep?: boolean) => this) {
@@ -656,6 +662,7 @@ RuntimeAccessibleClass.set_extend(LModelElement, LAnnotationDetail);
 @Node
 @RuntimeAccessible
 export class DNamedElement extends DPointerTargetable { // Mixin(DNamedElement0, DAnnotation)
+    public static cname: string = "DNamedElement";
     // static _super = DAnnotation;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -682,6 +689,7 @@ export class DNamedElement extends DPointerTargetable { // Mixin(DNamedElement0,
 @Abstract
 @RuntimeAccessible
 export class LNamedElement<Context extends LogicContext<DNamedElement> = any> extends LModelElement { // Mixin(DNamedElement0, DAnnotation)
+    public static cname: string = "LNamedElement";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // public __raw!: DNamedElement;
@@ -772,6 +780,7 @@ RuntimeAccessibleClass.set_extend(DModelElement, DNamedElement);
 RuntimeAccessibleClass.set_extend(LModelElement, LNamedElement);
 @RuntimeAccessible
 export class DTypedElement extends DPointerTargetable { // Mixin(DTypedElement0, DNamedElement)
+    public static cname: string = "DTypedElement";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LTypedElement;
@@ -805,6 +814,7 @@ export class DTypedElement extends DPointerTargetable { // Mixin(DTypedElement0,
 @Abstract
 @RuntimeAccessible
 export class LTypedElement<Context extends LogicContext<DTypedElement> = any> extends LNamedElement { // extends Mixin(DTypedElement0, LNamedElement)
+    public static cname: string = "LTypedElement";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DTypedElement;
@@ -996,6 +1006,7 @@ class DClassifier extends DPointerTargetable { // extends DNamedElement
 @Abstract
 @RuntimeAccessible
 export class LClassifier<Context extends LogicContext<DClassifier> = any> extends LNamedElement { // extends DNamedElement
+    public static cname: string = "LClassifier";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DClassifier;
@@ -1046,11 +1057,11 @@ export class LClassifier<Context extends LogicContext<DClassifier> = any> extend
     }
 
     protected get_isClass(context: Context): this["isClass"] {
-        return (context.data as DClass).isPrimitive ? false : context.data.className === DClass.name;
+        return (context.data as DClass).isPrimitive ? false : context.data.className === DClass.cname;
     }
 
     protected get_isEnum(context: Context): this["isEnum"] {
-        return context.data.className === DEnumerator.name;
+        return context.data.className === DEnumerator.cname;
     }
 
     protected set_defaultValue(val: this["defaultValue"] | DClassifier["defaultValue"], context: Context): boolean {
@@ -1081,6 +1092,7 @@ RuntimeAccessibleClass.set_extend(DNamedElement, DClassifier);
 RuntimeAccessibleClass.set_extend(LNamedElement, LClassifier);
 @RuntimeAccessible
 export class DPackage extends DPointerTargetable { // extends DNamedElement
+    public static cname: string = "DPackage";
     // static _super = DNamedElement;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -1129,6 +1141,7 @@ export class DPackage extends DPointerTargetable { // extends DNamedElement
 @Leaf
 @RuntimeAccessible
 export class LPackage<Context extends LogicContext<DPackage> = any, C extends Context = Context, D extends DPackage = DPackage> extends LNamedElement { // extends DNamedElement
+    public static cname: string = "LPackage";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DPackage;
@@ -1185,7 +1198,8 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         model[ECorePackage.eClassifiers] = classifiers;
         return model; }
 
-    public duplicate(deep: boolean = true): this { return this.cannotCall( this.constructor.name + "duplicate()"); }
+    public duplicate(deep: boolean = true): this {
+        return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => this) {
         return (deep: boolean = false) => {
             BEGIN()
@@ -1224,12 +1238,12 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
 
     protected get_classes(context: Context): LClass[] {
         let classifiers = DPointerTargetable.fromPointer(context.data.classifiers as Pointer<DClassifier, 1, 1, LClassifier>[]);
-        let enumerators = classifiers.filter(dc => dc?.className === DClass.name ) as DClass[];
+        let enumerators = classifiers.filter(dc => dc?.className === DClass.cname ) as DClass[];
         return LPointerTargetable.from(enumerators.map(e=> e.id)); }
     protected get_enums(context: Context): LEnumerator[] { return this.get_enumerators(context); }
     protected get_enumerators(context: Context): LEnumerator[] {
         let classifiers = DPointerTargetable.fromPointer(context.data.classifiers as Pointer<DClassifier, 1, 1, LClassifier>[]);
-        let enumerators = classifiers.filter(dc => dc?.className === DEnumerator.name ) as DEnumerator[];
+        let enumerators = classifiers.filter(dc => dc?.className === DEnumerator.cname ) as DEnumerator[];
         return LPointerTargetable.from(enumerators.map(e=> e.id)); }
 
     private get_allSubClasses(context: Context): LClass[] {
@@ -1355,6 +1369,7 @@ RuntimeAccessibleClass.set_extend(LNamedElement, LPackage);
 @Leaf
 @RuntimeAccessible
 export class DOperation extends DPointerTargetable { // extends DTypedElement
+    public static cname: string = "DOperation";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LOperation;
@@ -1400,6 +1415,7 @@ export class DOperation extends DPointerTargetable { // extends DTypedElement
 @Node
 @RuntimeAccessible
 export class LOperation<Context extends LogicContext<DOperation> = any, C extends Context = Context, D extends DOperation = DOperation>  extends LTypedElement { // extends DTypedElement
+    public static cname: string = "LOperation";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DOperation;
@@ -1443,7 +1459,8 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
         EcoreParser.write(json, ECoreOperation.unique, '' + context.data.unique);
         return json; }
 
-    public duplicate(deep: boolean = true): this { return this.cannotCall( this.constructor.name + "duplicate()"); }
+    public duplicate(deep: boolean = true): this {
+        return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => this) {
         return (deep: boolean = false) => {
             BEGIN()
@@ -1550,6 +1567,7 @@ RuntimeAccessibleClass.set_extend(LTypedElement, LOperation);
 @Leaf
 @RuntimeAccessible
 export class DParameter extends DPointerTargetable { // extends DTypedElement
+    public static cname: string = "DParameter";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LParameter;
@@ -1590,6 +1608,7 @@ export class DParameter extends DPointerTargetable { // extends DTypedElement
 @Leaf
 @RuntimeAccessible
 export class LParameter<Context extends LogicContext<DParameter> = any, C extends Context = Context, D extends DParameter = DParameter>  extends LTypedElement { // extends DTypedElement
+    public static cname: string = "LParameter";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DParameter;
@@ -1627,7 +1646,8 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
         EcoreParser.write(json, ECoreOperation.eType, '' + l.type.typeEcoreString);
         return json; }
 
-    public duplicate(deep: boolean = true): this { return this.cannotCall( this.constructor.name + "duplicate()"); }
+    public duplicate(deep: boolean = true): this {
+        return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => this) {
         return (deep: boolean = false) => {
             BEGIN()
@@ -1675,6 +1695,7 @@ RuntimeAccessibleClass.set_extend(DTypedElement, DParameter);
 RuntimeAccessibleClass.set_extend(LTypedElement, LParameter);
 @RuntimeAccessible
 export class DClass extends DPointerTargetable { // extends DClassifier
+    public static cname: string = "DClass";
     // static _super = DClassifier;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -1737,6 +1758,7 @@ export class DClass extends DPointerTargetable { // extends DClassifier
 @Node
 @RuntimeAccessible
 export class LClass<D extends DClass = DClass, Context extends LogicContext<DClass> = any, C extends Context = Context>  extends LClassifier{ // extends DClassifier
+    public static cname: string = "LClass";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DClass;
@@ -1888,7 +1910,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return json; }
 
 
-    public duplicate(deep: boolean = true): this { return this.cannotCall( this.constructor.name + "duplicate()"); }
+    public duplicate(deep: boolean = true): this {
+        return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => this) {
         return (deep: boolean = false) => {
             BEGIN()
@@ -2294,6 +2317,7 @@ RuntimeAccessibleClass.set_extend(DClassifier, DClass);
 RuntimeAccessibleClass.set_extend(LClassifier, LClass);
 @RuntimeAccessible
 export class DDataType extends DPointerTargetable { // extends DClassifier
+    public static cname: string = "DDataType";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LDataType;
@@ -2327,6 +2351,7 @@ export class DDataType extends DPointerTargetable { // extends DClassifier
 @Abstract
 @RuntimeAccessible
 export class LDataType<Context extends LogicContext<DDataType> = any, C extends Context = Context> extends LClassifier { // extends DClassifier
+    public static cname: string = "LDataType";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DDataType;
@@ -2365,6 +2390,7 @@ RuntimeAccessibleClass.set_extend(DClassifier, DDataType);
 RuntimeAccessibleClass.set_extend(LClassifier, LDataType);
 @RuntimeAccessible
 export class DStructuralFeature extends DPointerTargetable { // DTypedElement
+    public static cname: string = "DStructuralFeature";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LStructuralFeature;
@@ -2406,6 +2432,7 @@ export class DStructuralFeature extends DPointerTargetable { // DTypedElement
 @Abstract
 @RuntimeAccessible
 export class LStructuralFeature<Context extends LogicContext<DStructuralFeature> = any, C extends Context = Context>  extends LTypedElement { // DTypedElement
+    public static cname: string = "LStructuralFeature";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DStructuralFeature;
@@ -2499,6 +2526,7 @@ RuntimeAccessibleClass.set_extend(DTypedElement, DStructuralFeature);
 RuntimeAccessibleClass.set_extend(LTypedElement, LStructuralFeature);
 @RuntimeAccessible
 export class DReference extends DPointerTargetable { // DStructuralFeature
+    public static cname: string = "DReference";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LReference;
@@ -2556,6 +2584,7 @@ export class DReference extends DPointerTargetable { // DStructuralFeature
 @Leaf
 @RuntimeAccessible
 export class LReference<Context extends LogicContext<DReference> = any, C extends Context = Context, D extends DReference = DReference>  extends LStructuralFeature {
+    public static cname: string = "LReference";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DReference;
@@ -2609,7 +2638,8 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         if (d.containment != null) { model[ECoreReference.containment] = d.containment; }
         return model; }
 
-    public duplicate(deep: boolean = true): this { return this.cannotCall( this.constructor.name + "duplicate()"); }
+    public duplicate(deep: boolean = true): this {
+        return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => this) {
         return (deep: boolean = false) => {
             BEGIN()
@@ -2718,6 +2748,7 @@ function obsolete_attribute(...comments: string[]) {
 
 @RuntimeAccessible
 export class DAttribute extends DPointerTargetable { // DStructuralFeature
+    public static cname: string = "DAttribute";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LAttribute;
@@ -2773,6 +2804,7 @@ export class DAttribute extends DPointerTargetable { // DStructuralFeature
 @Instantiable // (LValue)
 @RuntimeAccessible
 export class LAttribute <Context extends LogicContext<DAttribute> = any, C extends Context = Context, D extends DAttribute = DAttribute> extends LStructuralFeature { // DStructuralFeature
+    public static cname: string = "LAttribute";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DAttribute;
@@ -2819,7 +2851,8 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         return model; }
 
 
-    public duplicate(deep: boolean = true): this { return this.cannotCall( this.constructor.name + "duplicate()"); }
+    public duplicate(deep: boolean = true): this {
+        return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => this) {
         return (deep: boolean = false) => {
             BEGIN()
@@ -2870,6 +2903,7 @@ RuntimeAccessibleClass.set_extend(LStructuralFeature, LAttribute);
 @Leaf
 @RuntimeAccessible
 export class DEnumLiteral extends DPointerTargetable { // DNamedElement
+    public static cname: string = "DEnumLiteral";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LAttribute;
@@ -2903,6 +2937,7 @@ export class DEnumLiteral extends DPointerTargetable { // DNamedElement
 @Leaf
 @RuntimeAccessible
 export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C extends Context = Context, D extends DEnumLiteral = DEnumLiteral>  extends LNamedElement { // DNamedElement
+    public static cname: string = "LEnumLiteral";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DEnumLiteral;
@@ -2940,7 +2975,8 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
         return () => context.data.value; }
 
 
-    public duplicate(deep: boolean = true): this { return this.cannotCall( this.constructor.name + "duplicate()"); }
+    public duplicate(deep: boolean = true): this {
+        return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => this) {
         return (deep: boolean = false) => {
             BEGIN()
@@ -2982,6 +3018,7 @@ RuntimeAccessibleClass.set_extend(LNamedElement, LEnumLiteral);
 @Leaf
 @RuntimeAccessible
 export class DEnumerator extends DPointerTargetable { // DDataType
+    public static cname: string = "DEnumerator";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LEnumerator;
@@ -3019,6 +3056,7 @@ export class DEnumerator extends DPointerTargetable { // DDataType
 @Node
 @RuntimeAccessible
 export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C extends Context = Context, D extends DEnumerator = DEnumerator> extends LDataType { // DDataType
+    public static cname: string = "LEnumerator";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DEnumerator;
@@ -3058,7 +3096,8 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         json[ECoreEnum.eLiterals] = context.proxyObject.literals.map(l => l.generateEcoreJson(loopDetectionObj));
         return json; }
 
-    public duplicate(deep: boolean = true): this { return this.cannotCall( this.constructor.name + "duplicate()"); }
+    public duplicate(deep: boolean = true): this {
+        return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => this) {
         return (deep: boolean = false) => {
             BEGIN()
@@ -3152,6 +3191,7 @@ RuntimeAccessibleClass.set_extend(DDataType, DEnumerator);
 RuntimeAccessibleClass.set_extend(LDataType, LEnumerator);
 @RuntimeAccessible
 export class DModelM1 extends DNamedElement{
+    public static cname: string = "DModelM1";
     name!: string;
     roots!: Pointer<DObject, 1, 'N', LObject> // no package ma LObjects[] (solo quelli isRoot)
     children!: DModelM1["roots"];
@@ -3159,6 +3199,7 @@ export class DModelM1 extends DNamedElement{
 
 @RuntimeAccessible
 export class LModelM1 extends LNamedElement{
+    public static cname: string = "LModelM1";
     name!: string;
     roots!: LObject[];
     children!: LModelM1["roots"];
@@ -3181,6 +3222,7 @@ type LPrimitiveType = LClass;
 
 @RuntimeAccessible
 export class DModel extends DNamedElement { // DNamedElement
+    public static cname: string = "DModel";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LModel;
@@ -3218,6 +3260,7 @@ export class DModel extends DNamedElement { // DNamedElement
 
 @RuntimeAccessible
 export class EdgeStarter<T1=any, T2=any>{ // <T1 extends LPointerTargetable = LPointerTargetable, T2 extends LPointerTargetable = LPointerTargetable>{
+    public static cname: string = "EdgeStarter";
     start: LModelElement;
     end: LModelElement;
     startNode: LGraphElement;
@@ -3262,6 +3305,7 @@ export class EdgeStarter<T1=any, T2=any>{ // <T1 extends LPointerTargetable = LP
 
 @RuntimeAccessible
 export class LModel<Context extends LogicContext<DModel> = any, C extends Context = Context, D extends DModel = DModel> extends LNamedElement {
+    public static cname: string = "LModel";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DModel;
@@ -3609,6 +3653,7 @@ RuntimeAccessibleClass.set_extend(LNamedElement, LModel);
 
 @RuntimeAccessible
 export abstract class DFactory_useless_ extends DPointerTargetable { // DModelElement
+    public static cname: string = "DFactory_useless_";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LFactory_useless_;
@@ -3630,6 +3675,7 @@ export abstract class DFactory_useless_ extends DPointerTargetable { // DModelEl
 }
 @RuntimeAccessible
 export abstract class LFactory_useless_<Context extends LogicContext<DFactory_useless_> = any, C extends Context = Context>  extends LModelElement {
+    public static cname: string = "LFactory_useless_";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DFactory_useless_;
@@ -3658,12 +3704,14 @@ export abstract class LFactory_useless_<Context extends LogicContext<DFactory_us
 
 @RuntimeAccessible
 export class EJavaObject{
+    public static cname: string = "EJavaObject";
 
 }// ??? EDataType instance?
 
 
 @RuntimeAccessible
 export class DMap extends Object { // DPointerTargetable
+    public static cname: string = "DMap";
     // static logic: typeof LModelElement;
     // static structure: typeof DModelElement;
     // static singleton: LModelElement;
@@ -3679,6 +3727,7 @@ export class DMap extends Object { // DPointerTargetable
 
 @RuntimeAccessible
 export class LMap<Context extends LogicContext<DMap> = any, C extends Context = Context>  extends LPointerTargetable {
+    public static cname: string = "LMap";
     // static logic: typeof LModelElement;
     // static structure: typeof DModelElement;
     // static singleton: LModelElement;
@@ -3691,6 +3740,7 @@ RuntimeAccessibleClass.set_extend(DPointerTargetable, DMap as any);
 RuntimeAccessibleClass.set_extend(LPointerTargetable, LMap);
 @RuntimeAccessible
 export class DObject extends DPointerTargetable { // extends DNamedElement, m1 class instance
+    public static cname: string = "DObject";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
@@ -3720,6 +3770,7 @@ export class DObject extends DPointerTargetable { // extends DNamedElement, m1 c
 
 @RuntimeAccessible
 export class LObject<Context extends LogicContext<DObject> = any, C extends Context = Context, D extends DObject = DObject> extends LNamedElement { // extends DNamedElement, m1 class instance
+    public static cname: string = "LObject";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DObject;
@@ -3796,7 +3847,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     // protected get_fromlclass<T extends keyof (LClass)>(meta: LClass, key: T): LClass[T] { return meta[key]; }
     protected get_model(context: Context): LModelElement["model"] {
         let l: LValue | LObject | LModel = context.proxyObject;
-        while (l && l.className !== DModel.name) l = l.father;
+        while (l && l.className !== DModel.cname) l = l.father;
         return l as LModel; }
     // protected set_name(val: string, context: Context): boolean { return this.cannotSet("name"); }
     protected get_name(context: Context): LClass["name"] { return context.data.name || context.proxyObject.instanceof.name; }
@@ -3829,7 +3880,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
             for (let key of PointedBy.getPathArr(p)) {
                 s = s[key];
                 if (!s) return null;
-                if (s.className === DObject.name) return s.id;
+                if (s.className === DObject.cname) return s.id;
             }
         }));
         return targeting; }
@@ -3840,7 +3891,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         let vals: LObject[] = [
             ...ref_features.flatMap((f) => (f.values as LObject[])).filter((val)=>!!val),
             ...shapeless_features.flatMap((f) => (f.values as any))
-                .filter((val)=>(!!val && val.className === DObject.name)) as LObject[]
+                .filter((val)=>(!!val && val.className === DObject.cname)) as LObject[]
         ];
         return vals;
     }
@@ -3861,17 +3912,17 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     }
 
     protected get_referenceFeatures(context: Context, includeshapeless: boolean = false): this["referenceFeatures"] {
-        return context.proxyObject.features.filter((f) => (!f.instanceof ? includeshapeless : f.instanceof.className === DReference.name));
+        return context.proxyObject.features.filter((f) => (!f.instanceof ? includeshapeless : f.instanceof.className === DReference.cname));
     }
     protected get_attributeFeatures(context: Context, includeshapeless: boolean = false): this["attributeFeatures"] {
-        return context.proxyObject.features.filter((f) => (!f.instanceof ? includeshapeless : f.instanceof.className === DAttribute.name));
+        return context.proxyObject.features.filter((f) => (!f.instanceof ? includeshapeless : f.instanceof.className === DAttribute.cname));
     }
 
     protected get_shapelessFeatures(context: Context): this["shapelessFeatures"] {
         return context.proxyObject.features.filter((f) => (!f.instanceof));
     }
 
-    protected get_isRoot(context: Context): LObject["isRoot"] { return context.proxyObject.father.className === DModel.name; }
+    protected get_isRoot(context: Context): LObject["isRoot"] { return context.proxyObject.father.className === DModel.cname; }
     protected set_isRoot(val: never, context: Context): boolean { return this.wrongAccessMessage("isRoot cannot be set directly, change father element instead."); }
 
     public feature(name: string): (PrimitiveType|LObject)|(PrimitiveType|LObject)[] { this.cannotCall('feature'); return null; }
@@ -4005,8 +4056,8 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     protected get_ecorePointer(context: Context): () => string {
         let lastvisited: Pointer<DObject, 1, 1, LObject> = context.data.id;
         return () => "@//" + this.get_fatherList(context).map( (f: LModelElement | LObject | LValue) => {
-            if (f.className === DObject.name) { lastvisited = (f as LObject).id; return ''; }
-            if (f.className === DModel.name) { return ''; }
+            if (f.className === DObject.cname) { lastvisited = (f as LObject).id; return ''; }
+            if (f.className === DModel.cname) { return ''; }
             console.log("get_ecorepointer", f, f.__raw, lastvisited);
             return (f as LValue).name + "." + ((f as LValue).__raw.values.indexOf(lastvisited));
         }).filter(v=>!!v).join("@/");
@@ -4017,6 +4068,7 @@ RuntimeAccessibleClass.set_extend(DNamedElement, DObject);
 RuntimeAccessibleClass.set_extend(LNamedElement, LObject);
 @RuntimeAccessible
 export class DValue extends DModelElement { // extends DModelElement, m1 value (attribute | reference)
+    public static cname: string = "DValue";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LValue;
@@ -4051,6 +4103,7 @@ export class DValue extends DModelElement { // extends DModelElement, m1 value (
 }
 @RuntimeAccessible
 export class LValue<Context extends LogicContext<DValue> = any, C extends Context = Context, D extends DValue = DValue> extends LModelElement { // extends DModelElement, m1 value (attribute | reference)
+    public static cname: string = "LValue";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DValue;
@@ -4207,7 +4260,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     if (!val || typeof val !== "string") return val;
                     let l: any = LPointerTargetable.fromPointer(val, state);
                     if (!l) return val;
-                    if (l.className === DEnumLiteral.name) { l = (l as DEnumLiteral).literal; } else
+                    if (l.className === DEnumLiteral.cname) { l = (l as DEnumLiteral).literal; } else
                     if (namedPointers) { l = (l.name ? ("@" + l.name) : (l as GObject)["@"+l.name]?.__raw?.values?.[0] || ("#" + l.className));}
                     else if (ecorePointers){ l = l.ecorePointer(); }
                     return l;
@@ -4221,7 +4274,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 else ret = ret.map(mapperfunc);
 
                 // now ret is pointed DEnumLiteral or DObject or MetaInfoStructure<>
-                if ((meta as LAttribute)?.type?.className === DEnumerator.name) {
+                if ((meta as LAttribute)?.type?.className === DEnumerator.cname) {
                     // replace numeric literals, mapped to literal ordinal. can happen with type switches
                     if (true) {
                         mapperfunc = (lit: LEnumLiteral|number) => {
@@ -4415,18 +4468,18 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     if (info.type === undefined) info.type = context.proxyObject.type;
                     if (info.instanceof === undefined) info.instanceof = context.proxyObject.instanceof;
                     if (info.isContainment === undefined) {
-                        info.isContainment = !info.instanceof || (info.instanceof.className === DReference.name && (info.instanceof as LReference).containment);
+                        info.isContainment = !info.instanceof || (info.instanceof.className === DReference.cname && (info.instanceof as LReference).containment);
                     }
                     lval = LPointerTargetable.fromPointer(val);
                     if (!lval) return {success: false, reason: "invalid pointer: " + lval};
                     // is enum
-                    if (lval.className === DEnumLiteral.name) {
+                    if (lval.className === DEnumLiteral.cname) {
                         let lvale: LEnumLiteral = lval as LEnumLiteral;
                         if (info.instanceof && info.type && (lvale.father.id !== info.type.id)) return {success: false, reason: "target is not of correct literal type"};
                         // no need to do checks / other sideeffects other than pointedBy i think.
                     }
                     // is ref
-                    if (lval.className === DObject.name){
+                    if (lval.className === DObject.cname){
                         let lvalo = lval as LObject;
                         let lvalmeta: LClassifier | undefined = lvalo.instanceof;
                         // if (info.instanceof && info.type && (!(lvalmeta as LClass)?.isExtending(info.type))) return {success: false, reason: "target is not of correct type"}; damiano todo: enable and implement isExtending
@@ -4435,7 +4488,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                             if ((info.fatherList as LPointerTargetable[]).map(father => father.id).includes(val))
                                 return {success: false, reason: "cannot create a containment loop"}; // todo: in LReference.set_containment need to forbid setting to true if there is a loop
                             let oldContainer: LValue | LModel = lvalo.father;
-                            let oldContainerValue: LValue = (oldContainer.className === DModel.name) ? undefined as any : (oldContainer as LValue);
+                            let oldContainerValue: LValue = (oldContainer.className === DModel.cname) ? undefined as any : (oldContainer as LValue);
                             // detach contaied object from old parent
                             if (oldContainerValue) {
                                 let valarr: any[] = oldContainerValue.__raw.values;
@@ -4486,7 +4539,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         // old implementation
         let l = context.proxyObject;
         let instanceoff: LReference | LAttribute | undefined = l.instanceof;
-        let isRef: boolean | undefined = (!instanceoff ? undefined : instanceoff?.className === DReference.name);
+        let isRef: boolean | undefined = (!instanceoff ? undefined : instanceoff?.className === DReference.cname);
         SetFieldAction.new(context.data, 'values', list as any, '', false);
         // console.log("pre set_values actions", l, list, val, context);
 
@@ -4503,7 +4556,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     let oldContainer: LValue | LModel = lval.father;
                     SetFieldAction.new(v, "pointedBy", PointedBy.fromID(context.data.id, "values." + i as any), "+=");
                     SetFieldAction.new(v, "father", context.data.id, undefined, true);
-                    if (oldContainer.className === DModel.name) continue;
+                    if (oldContainer.className === DModel.cname) continue;
                     let containerValue = (oldContainer as LValue);
                     // let oldContainerValues = [...containerValue.__raw.value]; U.arrayRemoveAll(oldContainerValues, v);
                     let oldContainerValues: Pointer[] = containerValue.__raw.values.map( va => va===v ? undefined as any : va);

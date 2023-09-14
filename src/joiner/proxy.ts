@@ -32,13 +32,14 @@ export class LogicContext<
     // PF extends MyProxyHandler<DX> = MyProxyHandler<DX>,
     WX = DtoW<DX>
     > extends RuntimeAccessibleClass{
+    public static cname: string = "LogicContext";
     // public proxyfyFunction: PF;
     public proxyObject: LX;
     public data: DX;// & GObject;
     public write: WX;
     constructor(proxyObject: LX, data: DX) {
         super();
-        this.className = this.constructor.name;
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         this.data = data;
         this.proxyObject = proxyObject;
         this.write = proxyObject as any;
@@ -55,6 +56,7 @@ export class LogicContext<
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LogicContext);
 @RuntimeAccessible
 export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, WPointerTargetable> {
+    public static cname: string = "MapLogicContext";
     data: GObject;
     path: string;
     subMaps: string[];
@@ -65,12 +67,13 @@ export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, W
         this.data = data;
         this.path = path;
         this.subMaps = subMaps;
-        this.className = this.constructor.name;
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
     }
 }
 RuntimeAccessibleClass.set_extend(LogicContext, MapLogicContext);
 @RuntimeAccessible
 export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibleClass implements ProxyHandler<T>{
+    public static cname: string = "MyProxyHandler";
     s: string = 'set_';
     g: string = 'get_';
     /*get(target: T, p: string | number | symbol, proxyitself: Proxyfied<T>): boolean {
@@ -162,6 +165,7 @@ class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
 RuntimeAccessibleClass.set_extend(MyProxyHandler, GetPathHandler);
 @RuntimeAccessible
 export class TargetableProxyHandler<ME extends GObject = DModelElement, LE extends LPointerTargetable = LModelElement> extends MyProxyHandler<ME> {
+    public static cname: string = "TargetableProxyHandler";
 // permette di fare cose tipo: user.name_surname che ritorna la concatenazione di nome e cognome anche se il campo name_surname non esiste.
     lg: LE & GObject; // to disable type check easily and access 'set_' + varname dynamically
     l: LE;
@@ -181,7 +185,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         this.additionalPath = additionalPath;
         this.l = l as LE;
         this.lg = this.l;
-        this.className = this.constructor.name;
+        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
     }
 
     // damiano todo: this does not work
@@ -376,6 +380,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 RuntimeAccessibleClass.set_extend(MyProxyHandler, TargetableProxyHandler);
 @RuntimeAccessible
 export class MapProxyHandler extends TargetableProxyHandler<Dictionary, LPointerTargetable> {
+    public static cname: string = "MapProxyHandler";
     // todo: sposta alcune funzioni da TargetableProxy a MyProxy e fai estendere direttamente MyProxy a questa classe
     public subMapKeys: Dictionary<string, any | Dictionary<DocString<'nested map keys'>>>;
 

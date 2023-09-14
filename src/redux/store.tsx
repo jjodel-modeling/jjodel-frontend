@@ -97,6 +97,7 @@ statehistory[DUser.current] = {undoable:[], redoable:[]}; // todo: make it able 
 (window as any).statehistory = statehistory;
 @RuntimeAccessible
 export class DState extends DPointerTargetable{
+    public static cname: string = "DState";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     static new(): DState {
@@ -219,34 +220,34 @@ export class DState extends DPointerTargetable{
 
 function makeDefaultGraphViews(): DViewElement[] {
 
-    let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.name]);
+    let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname]);
     // modelView.draggable = false; modelView.resizable = false; already guaranteed by <Graph />
 
-    let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.name]);
+    let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname]);
     packageView.defaultVSize = new GraphSize(0, 0, 400, 500);
     packageView.preRenderFunc = "() => { return {pname: this.data.name+\"pre\"}; }"
 
-    let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.name]);
+    let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.cname]);
     classView.adaptWidth = true;
     classView.adaptHeight = true;
 
-    let enumView: DViewElement = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.name]);
+    let enumView: DViewElement = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.cname]);
     enumView.adaptWidth = true;
     enumView.adaptHeight = true;
 
-    let attributeView: DViewElement = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.name]);
+    let attributeView: DViewElement = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.cname]);
     // attributeView.zIndex = 0;
-    let referenceView: DViewElement = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.name]);
+    let referenceView: DViewElement = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.cname]);
     // referenceView.zIndex = 10;
 
-    let operationView: DViewElement = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.name]);
+    let operationView: DViewElement = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.cname]);
 
-    let literalView: DViewElement = DViewElement.new('Literal', DV.literalView(), undefined, '', '', '', [DEnumLiteral.name]);
+    let literalView: DViewElement = DViewElement.new('Literal', DV.literalView(), undefined, '', '', '', [DEnumLiteral.cname]);
 
-    let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.name]);
+    let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.cname]);
     objectView.adaptWidth = true;
     objectView.adaptHeight = true;
-    let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.name]);
+    let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.cname]);
     voidView.appliableToClasses=["VoidVertex"];
     voidView.explicitApplicationPriority=2;
     voidView.adaptWidth = true;
@@ -273,7 +274,7 @@ function makeDefaultGraphViews(): DViewElement[] {
             (v: DViewElement) => {
                 v.explicitApplicationPriority = 2;
                 v.bendingMode = EdgeBendingMode.Line;
-                v.appliableToClasses = [DVoidEdge.name];
+                v.appliableToClasses = [DVoidEdge.cname];
                 v.edgeHeadSize = headSize || size0;
                 v.edgeTailSize = tailSize || size0;
                 v.preRenderFunc = edgePreRenderFunc;
@@ -299,7 +300,7 @@ function makeDefaultGraphViews(): DViewElement[] {
     }*/
     // nb: Error is not a view, just jsx. transform it in a view so users can edit it
 
-    let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.name]);
+    let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname]);
 
     const defaultPackage: DViewElement = DViewElement.new('DefaultPackage', DV.defaultPackage());
     defaultPackage.query = `context DPackage inv: self.name = 'todo default pkg'`;
@@ -309,6 +310,7 @@ function makeDefaultGraphViews(): DViewElement[] {
 
 @RuntimeAccessible
 export class ViewPointState extends DPointerTargetable{
+    public static cname: string = "ViewPointState";
     name: string = '';
 }
 
@@ -316,10 +318,11 @@ export class ViewPointState extends DPointerTargetable{
 
 @RuntimeAccessible
 export class ModelStore {
+    public static cname: string = "ModelStore";
     private _meta!: ModelStore | string; // todo: credo sia un Pointer? roba vecchia. oldcomment: // string memorizzata nello store, logicamente si comporta come una reference perchè usi la stringa per recuperare un modelstore (il tipo modelstore è di documentazione)
     instances!: (ModelStore | string)[];
 
-    // todo: figata! getter e setter senza proxy??
+    // getter e setter senza proxy
     get meta(): ModelStore | string {
         return this._meta;
     }
@@ -333,6 +336,7 @@ export class ModelStore {
 
 @RuntimeAccessible
 export class LState<Context extends LogicContext<DState> = any, C extends Context = Context, D extends DState = DState> extends LPointerTargetable {
+    public static cname: string = "LState";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DPointerTargetable & DState;

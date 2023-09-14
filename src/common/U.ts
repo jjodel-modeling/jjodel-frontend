@@ -26,7 +26,7 @@ import {
     RuntimeAccessible,
     Selectors,
     TODO,
-    windoww
+    windoww, RuntimeAccessibleClass
 } from "../joiner";
 import Swal from "sweetalert2";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
@@ -36,6 +36,7 @@ console.warn('loading ts U log');
 
 @RuntimeAccessible
 export class U {
+    static cname: string = "U";
 
     public static getFromEnvironment(variable: string): string|number|boolean {
         const value = process.env['REACT_APP_' + variable.toUpperCase()];
@@ -406,6 +407,8 @@ export class U {
         if (scope) {
             if (U.isStrict) {
                 for (let key in scope) {
+                    key = key.trim();
+                    if (!key) continue;
                     // anche se li assegno non cambiano i loro valori nel contesto fuori dall'eval, quindi lancio eccezioni con const.
                     prefixDeclarations += "const " + key + " = this." + key + "; ";
                     postfixDeclarations = "";
@@ -417,11 +420,17 @@ export class U {
         }
         if (scope && context) {
             (context as any)._eval = _eval;
-            //console.log('pre eval jsx:', context, 'body:', {codeStr, Input: windoww.Input});
-            _ret = new (Function as any)(prefixDeclarations + "return eval( this._eval.codeStr );" + postfixDeclarations).call(context);
+            console.log('pre eval jsx SC:', context, 'body:', {codeStr, Input: windoww.Input, _eval,
+                f:prefixDeclarations + "return eval( " + codeStr + " );" + postfixDeclarations});
+            _ret = new (Function as any)(prefixDeclarations + "return eval( " + codeStr + " );" + postfixDeclarations).call(context);
             delete (context as any)._eval; } else
-        if (!scope && context) { _ret = new (Function as any)( "return eval( this._eval._codeStr );").call(context); } else
+        if (!scope && context) {
+            console.log('pre eval jsx C:', context, 'body:', {codeStr, Input: windoww.Input, _eval,
+                f:new (Function as any)(prefixDeclarations + "return eval( this._eval.codeStr );" + postfixDeclarations)});
+            _ret = new (Function as any)( "return eval( this._eval._codeStr );").call(context); } else
         if (scope && !context) {
+            console.log('pre eval jsx S:', context, 'body:', {codeStr, Input: windoww.Input, _eval,
+                f:new (Function as any)(prefixDeclarations + "return eval( this._eval.codeStr );" + postfixDeclarations)});
             // NB: potrei creare lo scope con "let key = value;" per ogni chiave, ma dovrei fare json stringify e non è una serializzazione perfetta e può dare eccezioni(circolarità)
             // console.log({isStrict: U.isStrict, eval: "eval(" + prefixDeclarations + codeStr + postfixDeclarations + ")"});
             _ret = eval(prefixDeclarations + codeStr + postfixDeclarations); }
@@ -483,7 +492,7 @@ export class U {
     private static evalContextFunction(code: string): any { eval(code); }
 */
     public static highOrderFunctionExampleTyped<T extends (...args: any[]) => ReturnType<T>>(func: T): (...funcArgs: Parameters<T>) => ReturnType<T> {
-        const funcName = func.name;
+        const funcName = (func as any).cname || func.name;
 
         // Return a new function that tracks how long the original took
         return (...args: Parameters<T>): ReturnType<T> => {
@@ -681,7 +690,7 @@ export class U {
         switch (typeof param) {
             default: return typeof param;
             case 'object':
-                return param?.constructor?.name || param?.className || "{_rawobject_}";
+                return (param?.constructor as typeof RuntimeAccessibleClass)?.cname || param?.className || "{_rawobject_}";
             case 'function': // and others
                 return "geType for function todo: distinguish betweeen arrow and classic";
         }
@@ -1084,6 +1093,7 @@ export class U {
 
 }
 export class DDate{
+    static cname: string = "DDate";
 
     public static addDay(date: Date, offset: number, inplace: boolean): Date {
         const ret: Date = inplace ? date : new Date(date);
@@ -1152,8 +1162,9 @@ export class myFileReader {
     }
 
 }
-
+@RuntimeAccessible
 export class Uarr{
+    static cname: string = "UArr";
     public static arrayIntersection<T>(arr1: T[], arr2: T[]): T[]{
         if (!arr1 || ! arr2) return null as any;
         return arr1.filter( e => arr2.indexOf(e) >= 0);
@@ -1175,6 +1186,7 @@ export class Uarr{
 }
 
 export class FocusHistoryEntry {
+    static cname: string = "FocusHistoryEntry";
     time: Date;
     evt: JQuery.FocusInEvent;
     element: Element;
@@ -1317,13 +1329,15 @@ export class ParseNumberOrBooleanOptions{
 
 @RuntimeAccessible
 export class Log{
+    static cname: string = "Log";
     constructor() { }
     // public static history: Dictionary<string, Dictionary<string, any[]>> = {}; // history['pe']['key'] = ...parameters
     public static lastError: any[];
     private static loggerMapping: Dictionary<string, LoggerInterface[]> = {} // takes function name returns logger list
-    public static registerLogger(logger: LoggerInterface, triggerAt: (typeof windoww.U.pe) & {name: string}) {
-        if (!Log.loggerMapping[triggerAt.name]) Log.loggerMapping[triggerAt.name] = [];
-        Log.loggerMapping[triggerAt.name].push(logger);
+    public static registerLogger(logger: LoggerInterface, triggerAt: (typeof windoww.U.pe) & {name: string, cname:string}) {
+        let tname: string = (triggerAt as any).cname || (triggerAt as any).name;
+        if (!Log.loggerMapping[tname]) Log.loggerMapping[tname] = [];
+        Log.loggerMapping[tname].push(logger);
     }
 
     static disableConsole(){

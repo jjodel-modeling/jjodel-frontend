@@ -11,6 +11,7 @@ import {
 
 @RuntimeAccessible
 export class DViewPoint extends DViewElement {
+    public static cname: string = "DViewPoint";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
@@ -32,6 +33,7 @@ export class DViewPoint extends DViewElement {
 
 @RuntimeAccessible
 export class LViewPoint extends LViewElement {
+    public static cname: string = "LViewPoint";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     //public __raw!: DViewPoint;

@@ -186,8 +186,8 @@ export class EcoreParser{
     }
 
     private static fixObjectPointers(parsedElements: DModelElement[]): void {
-        let dobjects: DObject[] = parsedElements.filter(e=>e.className === DObject.name) as any[];
-        let values: DValue[] = parsedElements.filter(e=>e.className === DValue.name) as any[];
+        let dobjects: DObject[] = parsedElements.filter(e=>e.className === DObject.cname) as any[];
+        let values: DValue[] = parsedElements.filter(e=>e.className === DValue.cname) as any[];
         let lobjects: LObject[] = LPointerTargetable.fromArr(dobjects);
         let m1pointermap: Dictionary<string, LObject> = { }; //    "//@rootrefname.index@/refname.index/@....etc"
         for (let o of lobjects){ m1pointermap[o.ecorePointer()] = o; }
@@ -209,7 +209,7 @@ export class EcoreParser{
     private static tempfix_untilopennewtabisdone(parsedElements: DModelElement[], isMetamodel: boolean) {
         // replaces current model with parsed model. this needs to be removed to open a new tab later on.
         let model: DModel = null as any;
-        for (let elem of parsedElements) { if (elem.className === DModel.name) { model = elem as any; break; } }
+        for (let elem of parsedElements) { if (elem.className === DModel.cname) { model = elem as any; break; } }
         SetRootFieldAction.new(isMetamodel ? "m2models" : "m1models", model.id, '+=', false); // it is pointer but no need to update pointedby's this time
     }
 
@@ -276,7 +276,7 @@ export class EcoreParser{
 
                     if (replacekey === "extends") {
                         if (!target) continue;
-                        Log.ex(target.className !== DClass.name, "found a class attempting to extend an object that is not a class", {target, dobj, replacePrimitiveMap, nameMap, idMap});
+                        Log.ex(target.className !== DClass.cname, "found a class attempting to extend an object that is not a class", {target, dobj, replacePrimitiveMap, nameMap, idMap});
                         (target as DClass).extendedBy.push((dobj as DClass).id);
                     }
                     Log.ex(!target, "LinkAllNames() can't find type target:", {value, nameMap, replacePrimitiveMap, dobj, replacekey});
@@ -292,12 +292,12 @@ export class EcoreParser{
         function DfromPtr<T extends DPointerTargetable>(id: Pointer<T>|null|undefined): T{ return !id ? undefined as any : (idMap[id] || idlookup[id]); }
         function getLiteral(id: Pointer<DEnumerator>, ordinal: number): DEnumLiteral { return LPointerTargetable.fromD(DfromPtr(id))?.ordinals[ordinal]?.__raw; }
         for (let elem of parsedElements) {
-            if (elem.className !== DValue.name) continue;
+            if (elem.className !== DValue.cname) continue;
             let dval: DValue = elem as DValue;
             let meta: DAttribute | DReference = DfromPtr(dval.instanceof as Pointer<DAttribute|DReference>);
             if (!meta) continue;
             let type: DEnumerator = DfromPtr(meta.type) as DEnumerator;
-            if (!type || type.className !== DEnumLiteral.name) continue;
+            if (!type || type.className !== DEnumLiteral.cname) continue;
             let mapper = (v: unknown): Pointer<DEnumLiteral> => {
                 if (typeof v !== "number") { Log.e("found non-numeric value in a literal value.", v, dval); return v as any; }
                 let l = getLiteral(type.id, v);
@@ -537,7 +537,7 @@ export class EcoreParser{
         generated.push(dValue); dValue.father = parent.id;
         parent.features.push(dValue.id);
         console.log("made dValue", {jsonvalues, dValue, meta, metaname: meta?.name});
-        if (meta && meta.className === DAttribute.name) { dValue.values = jsonvalues; return generated; }
+        if (meta && meta.className === DAttribute.cname) { dValue.values = jsonvalues; return generated; }
 
         for (let v of jsonvalues) {
             if (typeof v !== "object") { dValue.values.push(v); continue; }
@@ -837,7 +837,7 @@ export class EcoreParser{
         return val; }
 
     private static getEcoreTypeName(parent: DClassifier): string {
-        if (parent.className === DEnumerator.name || parent.className === DClass.name) return this.classTypePrefix + this.name;
+        if (parent.className === DEnumerator.cname || parent.className === DClass.cname) return this.classTypePrefix + this.name;
         // return Type.classTypePrefix + parent.parent.name; problem: need L-object to navigate
         return Log.ex("getEcoreTypeName failed", parent);
     }

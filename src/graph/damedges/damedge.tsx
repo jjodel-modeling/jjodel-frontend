@@ -38,6 +38,7 @@ class ThisStatee extends GraphElementStatee {}
 
 export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
     extends superclassGraphElementComponent<AllProps, ThisState> {
+    public static cname: string = "EdgeComponent";
 
     constructor(props: AllProps, context: any) {
         super(props, context);
@@ -124,3 +125,7 @@ export const EdgeConnected = connect<EdgeStateProps, DispatchProps, EdgeOwnProps
 export const DamEdge = (props: EdgeOwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <EdgeConnected {...{...props, children}} isGraph={false} isVertex={true} />;
 }
+
+EdgeComponent.cname = "EdgeComponent";
+EdgeConnected.cname = "EdgeConnected";
+DamEdge.cname = "DamEdge";

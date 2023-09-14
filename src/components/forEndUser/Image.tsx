@@ -39,4 +39,8 @@ export const ImageConnected = connect<StateProps, DispatchProps, OwnProps, DStat
 export const Image = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <ImageConnected {...{...props, children}} />;
 }
+
+ImageComponent.cname = "ImageComponent";
+ImageConnected.cname = "ImageConnected";
+Image.cname = "Image";
 export default Image;

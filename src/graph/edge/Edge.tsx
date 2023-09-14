@@ -122,4 +122,8 @@ export const EdgeConnected = connect<StateProps, DispatchProps, OwnProps, DState
 export const Edge = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <EdgeConnected {...{...props, children}} />;
 }
+
+EdgeComponent.cname = "EdgeComponent";
+EdgeConnected.cname = "EdgeConnected";
+Edge.cname = "Edge";
 export default Edge;

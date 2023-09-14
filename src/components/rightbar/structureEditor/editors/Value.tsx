@@ -67,11 +67,11 @@ function Value(props: Props) {
     let isattr = false, isenum = false, isref = false, isshapeless = false;
     switch(feature?.className){
         default: isshapeless = true; break;
-        case DAttribute.name:
-            if (feature.type.className === DClass.name) isattr = true; else
-            if (feature.type.className === DEnumerator.name) isenum = true;
+        case DAttribute.cname:
+            if (feature.type.className === DClass.cname) isattr = true; else
+            if (feature.type.className === DEnumerator.cname) isenum = true;
             break;
-        case DReference.name: isref = true; break;
+        case DReference.cname: isref = true; break;
     }
 
     // let pointables: {objects:LObject[], literals: LEnumLiteral[]};

@@ -1,5 +1,5 @@
 import {OclEngine} from "@stekoe/ocl.js"
-import {Constructor, GObject, RuntimeAccessible} from "../joiner";
+import {Constructor, GObject, RuntimeAccessible, RuntimeAccessibleClass} from "../joiner";
 import {OclResult} from "@stekoe/ocl.js/dist/components/OclResult";
 
 let windoww = window as any;
@@ -8,7 +8,6 @@ export class Company {
     static all: Company[] = [];
     constructor(public name: string ='cname', public employee: Persona[]=[], public manager: Persona|null = null) { Company.all.push(this); }
 }
-@RuntimeAccessible
 export class Persona {
     static all: Persona[] = [];
     constructor(public name: string='pname', public age: number=18, public isUnemployed: boolean=true){ Persona.all.push(this) }
@@ -24,8 +23,8 @@ export class OCL{
 
 
             const typeregister: GObject = {};
-            typeregister[constructor.name] = constructor;
-            for (let type of typeused) { typeregister[type.name] = type; }
+            typeregister[(constructor as any as typeof RuntimeAccessibleClass).cname || constructor.name] = constructor;
+            for (let type of typeused) { typeregister[(type as any as typeof RuntimeAccessibleClass).cname || type.name] = type; }
             oclEngine.registerTypes(typeregister);
             oclEngine.addOclExpression(oclexp);
         }
@@ -53,7 +52,7 @@ export class OCL{
         var oclEngine = OclEngine.create();
         var oclResult = null;
         const typeregister: GObject = {};
-        for (let type of typeused) { typeregister[type.name] = type; }
+        for (let type of typeused) { typeregister[(type as any as typeof RuntimeAccessibleClass).cname || type.name] = type; }
         oclEngine.registerTypes(typeregister);
         if (!oclexp) oclexp = "context Persona inv: self.age>0";
         oclEngine.addOclExpression(oclexp);

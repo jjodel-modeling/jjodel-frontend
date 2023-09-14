@@ -19,7 +19,7 @@ import {
     LViewElement,
     RuntimeAccessibleClass, SetRootFieldAction,
     windoww,
-    Field, Graph, GraphVertex, Vertex, VoidVertex
+    Field, Graph, GraphVertex, Vertex, VoidVertex, RuntimeAccessible
 } from "../../joiner";
 // import {Field, Graph, GraphVertex} from "../vertex/Vertex";
 
@@ -32,8 +32,10 @@ class DefaultNodeStatee extends GraphElementStatee { }
 
 
 // Giordano: add ignore for webpack
+@RuntimeAccessible
 //@ts-ignore
 export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeState = DefaultNodeStatee> extends superclass<AllProps, NodeState>{
+    public static cname: string = "DefaultNodeComponent";
 
     static mapStateToProps(state: DState, ownProps: GraphElementOwnProps): GraphElementReduxStateProps {
         let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
@@ -72,10 +74,10 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
                 default: Log.exDevv('unrecognized View.forceNodeType:' + view.forceNodeType, {view, modelElement});
                 return <div>dev error</div>
                 case "Graph": case "GraphComponent": componentfunction = Graph; break;
-                // case windoww.GraphElementComponent.name:
-                case windoww.VertexComponent.name: componentfunction = Vertex; break;
-                case windoww.FieldComponent.name: componentfunction = Field; break;
-                case windoww.GraphVertexComponent.name: componentfunction = GraphVertex; break; }
+                // case windoww.GraphElementComponent.cname:
+                case windoww.VertexComponent.cname: componentfunction = Vertex; break;
+                case windoww.FieldComponent.cname: componentfunction = Field; break;
+                case windoww.GraphVertexComponent.cname: componentfunction = GraphVertex; break; }
             // console.log("force node type", {requested:view.forceNodeType, G:  windoww.GraphComponent.name, GE: windoww.GraphElementComponent.name, GV: windoww.GraphVertexComponent.name, V: windoww.VertexComponent.name, F:windoww.FieldComponent.name})
             return componentfunction(serializableProps, this.props.children);}
 
@@ -124,3 +126,8 @@ const DefaultNodeConnected = connect<DefaultNodeReduxStateProps, DefaultNodeDisp
 
 export const DefaultNode = (props: DefaultNodeOwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <DefaultNodeConnected {...{...props, children}} />; }
+
+
+DefaultNodeComponent.cname = "DefaultNodeComponent";
+DefaultNodeConnected.cname = "DefaultNodeConnected";
+DefaultNode.cname = "DefaultNode";

@@ -33,6 +33,7 @@ dragHelper.style.outline = "4px solid black";
 
 export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
     extends superclassGraphElementComponent<AllProps, ThisState> {
+    public static cname: string = "VertexComponent";
 
     /*
     shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
@@ -351,6 +352,31 @@ export const Field = (props: OwnProps, children: (string | React.Component)[] = 
     return <VertexConnected {...{...props, children}} isGraph={false} isVertex={false} />;
 }
 (window as any).componentdebug = {Graph, GraphVertex, Field, Vertex, VoidVertex, EdgePoint, VertexConnected, VertexComponent};
+
+
+Graph.cname = "Graph";
+GraphVertex.cname = "GraphVertex";
+Field.cname = "Field";
+Vertex.cname = "Vertex";
+VoidVertex.cname = "VoidVertex";
+EdgePoint.cname = "EdgePoint";
+
+// GraphConnected.cname = "GraphConnected";
+// GraphVertexConnected.cname = "GraphVertexConnected";
+// FieldConnected.cname = "FieldConnected";
+VertexConnected.cname = "VertexConnected";
+// VoidVertexConnected.cname = "VoidVertexConnected";
+// EdgePointConnected.cname = "EdgePointConnected";
+
+// GraphComponent.cname = "GraphComponent";
+// GraphVertexComponent.cname = "GraphVertexComponent";
+// FieldComponent.cname = "FieldComponent";
+VertexComponent.cname = "VertexComponent";
+// VoidVertexComponent.cname = "VoidVertexComponent";
+// EdgePointComponent.cname = "EdgePointComponent";
+
+
+
 /*
 let windoww = window as any;
 

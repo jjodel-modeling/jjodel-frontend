@@ -184,7 +184,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
                     // just to log it in undo-redo action list and have a feedback*/
                     break;
                 }
-                elem.className = elem.className || elem.constructor.name;
+                elem.className = elem.className || (elem.constructor as typeof RuntimeAccessibleClass).cname || elem.constructor.name;
                 let statefoldername = elem.className.substring(1).toLowerCase() + 's';
                 derivedActions.push(
                     Action.parse(SetRootFieldAction.create(statefoldername, elem.id,'[]', true)));
@@ -414,8 +414,10 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
         switch (dname) {
             case "DeleteElementAction": continue;
             case "DV": continue;
+            case "Debug": continue;
             default: break;
         }
+        if ((dname[1] || "").toLowerCase() === dname[1]) continue; // if second letter is lowercase, it's not a "D" class
         let tagless = dname.substring(1);
         let d = alld[dname];
         let l = alll['L'+tagless];

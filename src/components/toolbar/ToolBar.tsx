@@ -48,11 +48,11 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
         reactNodes.push(<div className={"toolbar-item " + item} key={item_dname} onClick={() => {
             console.log("toolbar click:", {item_dname, data, myDictValidator, items, node});
             switch(item_dname){
-                case DVoidEdge.name:
-                case DEdge.name:
+                case DVoidEdge.cname:
+                case DEdge.cname:
                     // no add edges through toolbar for now
                     break;
-                case DEdgePoint.name:
+                case DEdgePoint.cname:
                     let ledge: LVoidEdge = (node as LEdgePoint | LVoidEdge).edge;
                     let dedge: DVoidEdge = ledge.__raw;
                     let wedge: WVoidEdge = ledge as any;

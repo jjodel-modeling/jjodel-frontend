@@ -85,4 +85,7 @@ function HtmlTree(props: HtmlTreeProps) {
     </div>);
 }
 
+Tree.cname = "Tree";
+DataTree.cname = "DataTree";
+HtmlTree.cname = "HtmlTree";
 export default Tree;

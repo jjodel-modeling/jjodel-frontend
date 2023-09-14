@@ -113,6 +113,7 @@ let maxRenderCounter = Number.POSITIVE_INFINITY;
 @RuntimeAccessible
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
     extends PureComponent<AllProps, GraphElementState>{
+    public static cname: string = "GraphElementComponent";
     static all: Dictionary<number, GraphElementComponent> = {};
     public static map: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = {};
     static maxid: number = 0;
@@ -395,12 +396,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let culpritlinesPre: string[] = jsxlines.slice(stackerrorlinenum.row-linesPre-1, stackerrorlinenum.row - 1);
                 let culpritline: string = jsxlines[stackerrorlinenum.row - 1]; // stack start counting lines from 1
                 let culpritlinesPost: string[] = jsxlines.slice(stackerrorlinenum.row, stackerrorlinenum.row + linesPost);
-                console.error("errr", {jsxlines, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
+                console.error("errr", {e, jsxlines, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
 
-                let rowPre = culpritline.substring(0, stackerrorlinenum.col)
-                let rowPost = culpritline.substring(stackerrorlinenum.col);
                 let caretCursor = "▓" // ⵊ ꕯ 𝙸 Ꮖ
-                if (stackerrorlinenum.col < culpritline.length && stackerrorlast.indexOf("main.chunk.js") === -1) {
+                if (culpritline && stackerrorlinenum.col < culpritline.length && stackerrorlast.indexOf("main.chunk.js") === -1) {
+                    let rowPre = culpritline.substring(0, stackerrorlinenum.col);
+                    let rowPost = culpritline.substring(stackerrorlinenum.col);
                     let jsxcode =
                         <div style={{fontFamily: "monospaced sans-serif", color:"#444"}}>
                             { culpritlinesPre.map(l => <div>{l}</div>) }
@@ -430,6 +431,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         catch(e: any) { return displayError(e, "preRenderFunc");  }
         let ret;
         try {
+            console.log("executing template:", {final:'(()=>{ return ' + this.props.template + '})()', context});
             ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + this.props.template + '})()', context);
             // ret = this.props.template();
             // ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], {});
@@ -625,3 +627,8 @@ const GraphElementConnected = connect<GraphElementReduxStateProps, GraphElementD
 export const GraphElement = (props: GraphElementOwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <GraphElementConnected {...{...props, children}} />; }
 console.info('graphElement loaded');
+
+
+GraphElementComponent.cname = "GraphElementComponent";
+GraphElementConnected.cname = "GraphElementConnected";
+GraphElement.cname = "GraphElement";
