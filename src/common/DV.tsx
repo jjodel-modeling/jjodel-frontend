@@ -180,9 +180,10 @@ class DefaultView {
         return `<div className={'round bg-white root package'}>
             { /*<Input jsxLabel={<b className={'package-name'}>EPackage:</b>} field={'name'} hidden={true} />*/ }
             { console.log("evalcontex:", {thiss: this, pname: this.pname, c: this._context}) && null}
-            <Input jsxLabel={<b>{this.pname}:</b>} field={'name'} hidden={true} />
+            {/*<Input jsxLabel={<b>{this.pname}:</b>} field={'name'} hidden={true} />*/}
             <hr />
             <div className={'package-children'}>
+            
                 {this.data.children.map((child, index) => {
                     return <DefaultNode key={child.id} data={child.id}></DefaultNode>
                 })}

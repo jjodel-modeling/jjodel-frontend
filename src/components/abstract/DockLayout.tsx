@@ -236,7 +236,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         layout.dockbox.children.push({tabs: [infoTab]});
         const tabs = [
             // this.test,
-            this.iotEditor,
+            // this.iotEditor,
             this.structureEditor,
             this.treeEditor,
             this.viewsEditor,

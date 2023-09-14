@@ -5,7 +5,6 @@ import {LViewElement, LViewPoint} from "../../../joiner";
 import ViewsData from "./Views";
 import ViewData from "./View";
 
-
 function ViewsEditorComponent(props: AllProps) {
 
     const views = props.views;

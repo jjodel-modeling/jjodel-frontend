@@ -37,11 +37,14 @@ console.warn('loading ts U log');
 @RuntimeAccessible
 export class U {
 
-    public static getFromEnvironment(variable: string): undefined|string|number|boolean {
-        return process.env['REACT_APP_' + variable.toUpperCase()];
+    public static getFromEnvironment(variable: string): string|number|boolean {
+        const value = process.env['REACT_APP_' + variable.toUpperCase()];
+        if(value !== undefined) return value;
+        return 0;
     }
 
     public static fatherChain(me: LModelElement): Pointer<DModelElement, 0, 'N', LModelElement> {
+        if(!me) return [];  // without this line go through delete error
         const fathers: Pointer<DModelElement, 0, 'N', LModelElement>= [me.id];
         const toCheck: LModelElement[] = [me];
         while(toCheck.length > 0) {

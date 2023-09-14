@@ -23,6 +23,7 @@
     "firebase": "^9.21.0",
     "functional-red-black-tree": "^1.0.1",
     "html-react-parser": "^3.0.4",
+    "http-proxy-middleware": "^2.0.6",
     "jquery": "^3.6.0",
     "jqueryui": "^1.11.1",
     "js-beautify": "^1.14.7",

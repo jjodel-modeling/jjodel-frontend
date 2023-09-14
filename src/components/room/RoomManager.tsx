@@ -2,12 +2,16 @@ import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import '../topbar/style.scss';
 import {Firebase} from "../../firebase";
-import {DUser, DState, U} from "../../joiner";
+import {DUser, DState, U, SetRootFieldAction} from "../../joiner";
+import {SaveManager} from "../topbar/SaveManager";
+import {useStateIfMounted} from "use-state-if-mounted";
 
 function RoomManagerComponent(props: AllProps) {
+    const debug = props.debug;
     const room = (props.room) ? props.room : '';
     const iot = props.iot;
     const root = 'http://localhost:3000/jodel-react/';
+    const [loading, setLoading] = useStateIfMounted(false);
 
     const create = async(iot: boolean) => {
         const code = U.getRandomString(5);
@@ -27,9 +31,18 @@ function RoomManagerComponent(props: AllProps) {
         window.location.replace(root);
     }
 
+    const deleteAllRoms = async() => {
+        setLoading(true);
+        console.clear();
+        await Firebase.removeAllRooms();
+        setLoading(false);
+    }
+
     if(!room) {
         return(<div >
-            <label onClick={() => create(true)} className={'item border round ms-1 bg-primary px-2'}>IoT</label>
+            <label>Loading: {loading + ''}</label>
+            {debug && <label onClick={() => create(true)} className={'item border round ms-1 bg-primary px-2'}>IoT</label>}
+            {debug && <label onClick={deleteAllRoms} className={'item border round ms-1 bg-danger px-2'}>Delete All Roms</label>}
             <label onClick={() => create(false)} className={'item border round ms-1 bg-primary'}>Collaborative</label>
         </div>);
     } else {
@@ -42,7 +55,7 @@ function RoomManagerComponent(props: AllProps) {
 
 }
 interface OwnProps {room?: string}
-interface StateProps {iot: null|boolean}
+interface StateProps {iot: null|boolean, debug: boolean}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -50,7 +63,8 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     const iot = state.iot;
-    return {iot};
+    const debug = state.debug;
+    return {iot, debug};
 }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {

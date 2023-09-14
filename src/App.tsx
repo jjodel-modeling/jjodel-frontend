@@ -32,7 +32,6 @@ function App(props: AllProps) {
         return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? " debug" : "")} onClick={() => {statehistory.globalcanundostate = true;} } >
             {<TopBar room={props.room} />}
             {<Dock />}
-            {/*U.getFromEnvironment('test')*/}
             {isCleaning && <Cleaning />}
         </div>);
     }

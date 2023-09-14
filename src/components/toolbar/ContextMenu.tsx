@@ -62,6 +62,7 @@ function ContextMenuComponent(props: AllProps) {
         const data = await MemoRec.structuralFeature(me);
         setMemorec(data);
     }
+
     const classifier = async() => {
         if (!me) return;
         const data = await MemoRec.classifier(me);
@@ -117,8 +118,8 @@ function ContextMenuComponent(props: AllProps) {
 
         {(memorec) && <div className={"context-menu round"} style={{top: position.y - 100, left: position.x + 130}}>
 
-            {(memorec && memorec.data?.map((obj) => {
-                return (<div>
+            {(memorec && memorec.data?.map((obj, index) => {
+                return (<div key={index}>
                     <div className={"col item2"} onClick={() => setSuggestedName(obj.recommendedItem)}>
                         {obj.recommendedItem} : {obj.score}
                     </div>

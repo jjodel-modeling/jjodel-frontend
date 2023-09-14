@@ -7,6 +7,8 @@ import 'bootstrap/dist/js/bootstrap.bundle.min';
 import {Provider} from "react-redux";
 import {jodelInit, store} from "./joiner";
 import Router from "./router/Router";
+import axios from 'axios';
+
 
 function start() {
     jodelInit();

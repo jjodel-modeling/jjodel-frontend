@@ -446,8 +446,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const alreadySelected = Object.keys(selected).filter(function(key) {
             return selected[key] === id;
         });
-        if(alreadySelected.length > 0) return;
-        this.select();
+        if(alreadySelected.length === 0) this.select();
         SetRootFieldAction.new("contextMenu", {
             display: true,
             x: e.clientX,
@@ -477,15 +476,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const alreadySelected = Object.keys(selected).filter(function(key) {
             return selected[key] === id;
         });
-        if(alreadySelected.length > 0) return;
-
         SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
+        if(alreadySelected.length > 0) return;
         const isEdgePending = (this.props.isEdgePending?.source);
         if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
         if (!this.props.data) return;
         if (this.props.data.className !== "DClass") return;
-        SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
-        e.stopPropagation();
         // const user = this.props.isEdgePending.user;
         const source = isEdgePending;
         const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}

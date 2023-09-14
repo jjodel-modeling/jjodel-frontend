@@ -9,6 +9,7 @@ function Router() {
         <Routes>
             <Route path={''} element={<App />} />
             <Route path={root} element={<App />} />
+            <Route path={root + 'build'} element={<App />} />
             <Route path={root + 'room/:id'} element={<RoomChecker />} />
             <Route path={'*'} element={<b>404: Not Found</b>} />
         </Routes>
