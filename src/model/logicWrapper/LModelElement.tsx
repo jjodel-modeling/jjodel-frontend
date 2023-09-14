@@ -380,8 +380,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
 
     protected get_addChild(context: Context): (type: string, ...params: any[]) => DModelElement { // just for add new, not for add pre-existing.
-        console.log("addchild", context, this);
+        console.log("get_addchild", context, this);
         return (type, ...args: any) => {
+            console.log("addchild()", {type, args, context, thiss:this});
             let ret: undefined | ((...params: any[]) => DModelElement);
             switch ((type || '').toLowerCase()) {
                 default:
@@ -1216,7 +1217,10 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
 
     public addPackage(name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]): DPackage { return this.cannotCall("addPackage"); }
     protected get_addPackage(context: Context): this["addPackage"] {
+        console.log("Package.get_addPackage()", {context, thiss:this});
         return (name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]) => {
+            console.log("Package.addPackage()", {name, uri, prefix, context, thiss:this});
+
             const me = DPackage.new(name, uri, prefix, context.data.id, true, DPackage);
             return me;
         }
@@ -3373,7 +3377,9 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 
     public addPackage(name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]): DPackage { return this.cannotCall("addPackage"); }
     public get_addPackage(context: Context): ((name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => DPackage) {
+        console.log("Model.addPackage()", {context, thiss: this});
         return (name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => {
+            console.log("Model.addPackage()", {name, uri, prefix, context, thiss: this}); //
             const me = DPackage.new(name, uri, prefix, context.data.id, true, DModel);
             return me;
         }
