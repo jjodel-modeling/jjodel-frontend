@@ -61,6 +61,7 @@ export function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
         edge: (RuntimeAccessibleClass.extends(props.node?.className, "DVoidEdge") ? props.node : undefined),
         component, getSize:vcomponent?.getSize, setSize: vcomponent?.setSize};
     // windoww.evalContext = evalContext;
+    console.log("proto makeevalcontext", {evalContext, proto:evalContext.__proto__});
     return evalContext;
 }
 
@@ -371,6 +372,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // Log.exDev(debug && maxRenderCounter-- < 0, "loop involving render");
         let context: GObject = {component:this, __proto__:this.props.evalContext};
         context._context = context;
+        console.log("proto gettemplate", {context, proto:context.__proto__});
 
         let displayError = (e: Error, where: string) => {
             const view: LViewElement = this.props.view; //data._transient.currentView;

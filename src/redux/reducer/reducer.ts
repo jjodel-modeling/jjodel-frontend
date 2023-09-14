@@ -450,7 +450,7 @@ export function jodelInit() {
 
 
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
-    windoww.React = React;
+    // windoww.React = React;
 
     /*for (let dclassname of dClasses) {
         const dclass = RuntimeAccessibleClass.get(dclassname) as typeof DPointerTargetable;
