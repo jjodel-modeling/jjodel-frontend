@@ -381,11 +381,11 @@ export class U {
     // if the context (this) is missing it will take the scope as context.
     // warn: cannot set different scope and context, "this" della funzione sovrascrive anche il "this" interno allo scope come chiave dell'oggetto
     // warn: if you modify
-    public static evalInContextAndScope<T = any>(codeStr: string, scope?: GObject, context?: GObject): T {
+    public static evalInContextAndScope<T = any>(codeStr: string, scope0?: GObject, context0?: GObject): T {
         // console.log('evalInContextAndScope', {codeStr, scope, context});
         // scope per accedere a variabili direttamente "x + y"
         // context per accedervi tramite this, possono essere impostati come diversi.
-        if (!scope && !context) { Log.ex(true, 'evalInContextAndScope: must specify at least one of scope || context', {codeStr, scope, context}); }
+        if (!scope0 && !context0) { Log.ex(true, 'evalInContextAndScope: must specify at least one of scope || context', {codeStr, scope0, context0}); }
 
         // scope.this = scope.this || context || scope; non funziona
         // console.log('"with(this){ return eval( \'" + codeStr + "\' ); }"', "with(this){ return eval( '" + codeStr + "' ); }");
@@ -393,12 +393,12 @@ export class U {
         // if (allowScope && allowContext) { return function(){ with(this){ return eval( '" + codeStr + "' ); }}.call(scopeAndContext); }
         // if (allowScope && allowContext) { return new Function( "with(this){ return eval( '" + codeStr + "' ); }").call(scopeAndContext); }
         let _ret: T = null as any;
-        console.log("pre eval 0", {scope, sproto:scope?.__proto__, context, cproto:context?.__proto__});
-        if (scope) scope = {...scope, __proto__: scope.__proto__};
-        if (context) context = {...context, __proto__: context.__proto__};
+        console.log("pre eval 0", {scope0, sproto: scope0?.__proto__, context0, cproto: context0?.__proto__});
+        let scope: GObject | undefined = scope0 && {...scope0, __proto__: scope0.__proto__};
+        let context: GObject | undefined = context0 && {...context0, __proto__: context0.__proto__};
         if (!context) context = scope; // se creo un nuovo contesto pulisco anche lo scope dalle variabili locali di questa funzione.
         const _eval = {codeStr, context, scope};
-        console.log("pre eval 1", {scope, sproto:scope?.__proto__, context, cproto:context?.__proto__});
+        console.log("pre eval 1", {scope, sproto: scope?.__proto__, context, cproto: context?.__proto__});
 
 
         /*
