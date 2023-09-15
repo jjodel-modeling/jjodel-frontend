@@ -121,7 +121,7 @@ function ContextMenuComponent(props: AllProps) {
             {(memorec && memorec.data?.map((obj, index) => {
                 return (<div key={index}>
                     <div className={"col item2"} onClick={() => setSuggestedName(obj.recommendedItem)}>
-                        {obj.recommendedItem} : {obj.score}
+                        {obj.recommendedItem} : {Math.round(obj.score * 100) / 100}
                     </div>
                 </div>)
             })) }

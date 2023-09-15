@@ -1,18 +1,13 @@
-import axios, {AxiosRequestConfig, AxiosResponse} from 'axios';
-import {GObject, LModelElement, LNamedElement, U} from "../joiner";
+import axios, {AxiosResponse} from 'axios';
+import {GObject, LModelElement, LNamedElement} from "../joiner";
 import {MemoRecModel, MemoRecNamed, MemoRecObject} from "./types";
 
-/*
-
-per cors policy il client deve mandare richieste allo stesso server.
-quindi le deve mandare a node.js e node.js server deve rimandarle a spring con un proxy server
-
-*/
 
 export default class MemoRec {
     static async post(path: string, obj: MemoRecObject): Promise<AxiosResponse> {
         console.clear();
-        return await axios.post('/' + path, obj);
+        console.log(obj);
+        return await axios.post('/memorec/' + path, obj);
     }
 
     static async structuralFeature(me: LModelElement): Promise<{data:GObject[], type:'class'|'package'}> {
@@ -20,7 +15,6 @@ export default class MemoRec {
         const named: LNamedElement = LNamedElement.fromPointer(me.id);
         const model = me.model;
         const classes = model.classes;
-
 
         const memorecClasses: MemoRecNamed[] = [];
 
@@ -38,10 +32,9 @@ export default class MemoRec {
         const response = await MemoRec.post('structuralFeatures', memorecObject);
         console.log(response);
 
-        const data:GObject[] = response.data.slice(0, 10);
+        const data: GObject[] = response.data.slice(0, 10);
         data.sort((a,b) => b.score - a.score);
 
-        // SetRootFieldAction.new('memorec', {data: response.data, type: 'class'});
         return {data: data, type: 'class'};
 
     }
@@ -68,7 +61,6 @@ export default class MemoRec {
 
         const data:GObject[] = response.data.slice(0, 10);
         data.sort((a,b) => b.score - a.score);
-        //SetRootFieldAction.new('memorec', {data: response.data, type: 'package'}); //setta l'oggetto memorec
         return {data: data, type: 'package'};
     }
 }
