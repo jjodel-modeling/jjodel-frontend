@@ -22,7 +22,8 @@ module.exports = (env) => {
         ],
         mode: 'development', // always dev to prevent minimization
         optimization: {
-            minimize: false/*
+            minimize: false
+            /*
             minimizer  : [
                 new UglifyJSPlugin({
                     cache        : true,

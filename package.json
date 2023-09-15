@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": false,
   "commentnodeversion": "16.13.0?",
-  "homepage": "https://damianonaraku.github.io/jodel-react/build",
+  "homepage": "https://damianonaraku.github.io/",
   "dependencies": {
     "@monaco-editor/react": "^4.3.1",
     "@popperjs/core": "^2.11.6",
@@ -58,21 +58,29 @@
     "webpack-cli": "^4.9.1"
   },
   "scripts": {
+    "____________________________________production______________________________": "",
+    "start-rewired": "react-app-rewired start",
+    "debug": "npm start && echo http://localhost:3000/ click this using CTRL+SFHIT",
+    "test-rewired": "react-app-rewired test",
+    "serve": "serve -s build",
+    "______________________________________deploy________________________________": "",
+    "build-rewired": "react-app-rewired build",
+    "postbuild-rewired": "npm run serve",
+    "dev": "docker-compose -f docker-compose.dev.yml up",
+    "________________________________other_build_modes___________________________": "",
+    "___________________________________misc_utilities___________________________": "",
+    "pushmde": "git push mdegroup",
     "nv": "nvm install 16.13.0",
+    "eject__dangerous__": "react-scripts eject",
+    "____________________________________old_archive_____________________________": "",
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "test": "react-scripts test",
     "start-ssl": "react-scripts --openssl-legacy-provider start",
     "build-ssl": "react-scripts --openssl-legacy-provider build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "manual_debug": "echo http://localhost:3000/ click this using CTRL+SFHIT",
-    "dev": "docker-compose -f docker-compose.dev.yml up",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build",
-    "pushmde": "git push mdegroup",
-    "old_deploygh": "ng build --base-href \"/jjodel/build/jjodel/\"",
-    "old_deployghclean": "rd .\\dist\\ /S /Q && rd .\\out-tsc\\ /S /Q",
-    "old_deployghComment": "to force update: deployghclean, (maybe github push), deploygh, github push, wait 2 min"
+    "predeploy_old": "npm run build",
+    "deploy_old": "gh-pages -d build",
+    "prebuild-rewired-local": "set PUBLIC_URL=/build/"
   },
   "eslintConfig": {
     "extends": [
@@ -96,6 +104,7 @@
     "@types/jquery": "^3.5.5",
     "@types/react-beautiful-dnd": "^13.1.1",
     "dotenv-webpack": "^8.0.1",
-    "gh-pages": "^4.0.0"
+    "gh-pages": "^4.0.0",
+    "react-app-rewired": "^2.2.1"
   }
 }
