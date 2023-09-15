@@ -1,17 +1,17 @@
 {
   "files": {
-    "main.css": "/static/css/main.926463f6.css",
-    "main.js": "/static/js/main.289c38c8.js",
-    "main.css.map": "/static/css/main.926463f6.css.map",
-    "main.js.map": "/static/js/main.289c38c8.js.map",
-    "index.html": "/index.html",
-    "static/media/bootstrap-icons.css": "/static/media/bootstrap-icons.ea98e12d.woff2",
-    "static/media/view.scss": "/static/media/graph.050121cf.svg",
-    "static/media/splash.png": "/static/media/splash.70a592ca.png",
-    "static/media/style.scss": "/static/media/toggle-on.48413808.svg"
+    "main.css": "/jodel-react/build/static/css/main.ba19dec7.css",
+    "main.js": "/jodel-react/build/static/js/main.0a02131c.js",
+    "main.css.map": "/jodel-react/build/static/css/main.ba19dec7.css.map",
+    "main.js.map": "/jodel-react/build/static/js/main.0a02131c.js.map",
+    "index.html": "/jodel-react/build/index.html",
+    "static/media/bootstrap-icons.css": "/jodel-react/build/static/media/bootstrap-icons.ea98e12d.woff2",
+    "static/media/view.scss": "/jodel-react/build/static/media/graph.050121cf.svg",
+    "static/media/splash.png": "/jodel-react/build/static/media/splash.70a592ca.png",
+    "static/media/style.scss": "/jodel-react/build/static/media/toggle-on.48413808.svg"
   },
   "entrypoints": [
-    "static/css/main.926463f6.css",
-    "static/js/main.289c38c8.js"
+    "static/css/main.ba19dec7.css",
+    "static/js/main.0a02131c.js"
   ]
 }

@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": false,
   "commentnodeversion": "16.13.0?",
-  "homepage": "https://damianonaraku.github.io/",
+  "homepage": "https://damianonaraku.github.io/jodel-react/build/",
+  "homepage-local-deploy": "https://damianonaraku.github.io/",
+  "homepage-gitpages-deploy": "https://damianonaraku.github.io/jodel-react/build/",
   "dependencies": {
     "@monaco-editor/react": "^4.3.1",
     "@popperjs/core": "^2.11.6",
