@@ -8,6 +8,7 @@ function Router() {
     return(<BrowserRouter>
         <Routes>
             <Route path={''} element={<App />} />
+            <Route path={'jjodel'} element={<App />} />
             <Route path={root} element={<App />} />
             <Route path={root + 'build'} element={<App />} />
             <Route path={root + 'room/:id'} element={<RoomChecker />} />
