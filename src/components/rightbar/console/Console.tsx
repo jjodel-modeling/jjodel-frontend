@@ -28,7 +28,7 @@ class ThisState{
 
 // trasformato in class component così puoi usare il this nella console. e non usa accidentalmente window come contesto
 
-let hiddenkeys = ["pointedBy", "clonedCounter", "parent", "_subMaps", "inspect", "__random"];
+let hiddenkeys = ["jsxString", "pointedBy", "clonedCounter", "parent", "_subMaps", "inspect", "__random"];
 function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLKeys: boolean = true):
     { output: any, shortcuts?: GObject<'L singleton'>, comments?: Dictionary<string, string | {type:string, txt:string}>, hiddenkeys?: GObject} {
 

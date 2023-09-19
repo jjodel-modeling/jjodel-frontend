@@ -26,3 +26,4 @@ sandbox/sandbox.tsx
 .idea/*
 .idea/misc.xml
 .idea/jodel-react.iml
+sandbox.tsx

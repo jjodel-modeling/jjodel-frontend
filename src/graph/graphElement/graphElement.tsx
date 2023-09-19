@@ -60,8 +60,6 @@ export function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
     evalContext = {...windoww.defaultContext, ...evalContext, model: props.data, ...props,
         edge: (RuntimeAccessibleClass.extends(props.node?.className, "DVoidEdge") ? props.node : undefined),
         component, getSize:vcomponent?.getSize, setSize: vcomponent?.setSize};
-    // windoww.evalContext = evalContext;
-    console.log("proto makeevalcontext", {evalContext, proto:evalContext.__proto__});
     return evalContext;
 }
 
@@ -195,9 +193,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
 
         // console.log('dragx GE mapstate addGEStuff', {dGraphElementDataClass, created: new dGraphElementDataClass(false, nodeid, graphid)});
-        if (!dnode && !DPointerTargetable.pendingCreation[nodeid]) {
+        if (!dnode && !DPointerTargetable.pendingCreation[nodeid]) {/*
             console.log("making node:", {dGraphElementDataClass, nodeid, parentnodeid, graphid, dataid, ownProps, ret,
-                pendings: {...DPointerTargetable.pendingCreation}, pending:DPointerTargetable.pendingCreation[nodeid]});
+                pendings: {...DPointerTargetable.pendingCreation}, pending:DPointerTargetable.pendingCreation[nodeid]});*/
             // so this is called once, but createaction is triggered twice only for edgepoints? it works if i create it through console.
             let dge;
             /*
@@ -378,7 +376,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // Log.exDev(debug && maxRenderCounter-- < 0, "loop involving render");
         let context: GObject = {component:this, __proto__:this.props.evalContext};
         context._context = context;
-        console.log("proto gettemplate", {context, proto:context.__proto__});
 
         let displayError = (e: Error, where: string) => {
             const view: LViewElement = this.props.view; //data._transient.currentView;
@@ -630,7 +627,7 @@ const GraphElementConnected = connect<GraphElementReduxStateProps, GraphElementD
 
 export const GraphElement = (props: GraphElementOwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <GraphElementConnected {...{...props, children}} />; }
-console.info('graphElement loaded');
+// console.info('graphElement loaded');
 
 
 GraphElementComponent.cname = "GraphElementComponent";

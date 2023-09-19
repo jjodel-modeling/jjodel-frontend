@@ -329,7 +329,7 @@ export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
     let predebug = {...RuntimeAccessibleClass.classes};
     // @ts-ignore
     RuntimeAccessibleClass.classes[constructor.cname] = constructor as any as typeof RuntimeAccessibleClass;
-    console.log("setting runtime accessible", {key: constructor.cname, constructor, pre: predebug, post: {...RuntimeAccessibleClass.classes}});
+    // console.log("setting runtime accessible", {key: constructor.cname, constructor, pre: predebug, post: {...RuntimeAccessibleClass.classes}});
     if (!window[constructor.cname]) (window[constructor.cname] as any) = constructor;
     constructor.prototype.className = constructor.cname;
     //constructor.prototype.$$typeof = constructor.cname;
@@ -430,7 +430,6 @@ export class Constructors<T extends DPointerTargetable>{
     static resume(): void { canFireActions = true; }
     // start(thiss: any): this { this.thiss = thiss; return this; }
     end(simpledatacallback?: (d:T) => void): T {
-        console.log("doing callbacks", this.callbacks, this);
         if (simpledatacallback) simpledatacallback(this.thiss); // callback for setting primitive types, not pointers not context-dependant values (name being potentially invalid / chosen according to parent)
         if (!this.persist) return this.thiss;
         if (this.callbacks.length) {
@@ -555,8 +554,6 @@ export class Constructors<T extends DPointerTargetable>{
     DPointerTargetable(isUser: boolean = false, id?: string): this {
         const thiss: DPointerTargetable = this.thiss as any;
         thiss.id = id || Constructors.makeID();
-        console.log("DPointerTargetable id", {id, tid: thiss.id})
-
         thiss.className = (thiss.constructor as typeof RuntimeAccessibleClass).cname;
         // this.className = thiss.className;
         if (this.persist) {
@@ -1703,7 +1700,7 @@ export function MixOnlyFuncs<A1 extends any[], I1, S1, A2 extends any[], I2, S2>
     ret.prototype['superclass2'][c2name] = c2.init_constructor || invalidSuperClassError(c2name, c2);
     return ret;
 }
-console.warn('ts loaded classes');
+// console.info('ts loaded classes');
 
 
 

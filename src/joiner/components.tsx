@@ -31,4 +31,4 @@ export {DamEdge, EdgeComponent,} from "../graph/damedges/damedge";
 
 
 
-console.info('components loaded');
+// console.info('components loaded');

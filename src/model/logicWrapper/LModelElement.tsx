@@ -380,9 +380,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
 
     protected get_addChild(context: Context): (type: string, ...params: any[]) => DModelElement { // just for add new, not for add pre-existing.
-        console.log("get_addchild", context, this);
         return (type, ...args: any) => {
-            console.log("addchild()", {type, args, context, thiss:this});
             let ret: undefined | ((...params: any[]) => DModelElement);
             switch ((type || '').toLowerCase()) {
                 default:
@@ -398,9 +396,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     //ret = (this as any).get_addClass(context as any);
                     break;
                 case "package":
-                    console.log("addchild package()", {get_package:this.get_package, get_model: this.get_model,
-                        getresult: (this.get_package(context) || this.get_model(context)), addPackage:(this.get_package(context) || this.get_model(context))?.addPackage});
-
                     ret = (this.get_package(context) || this.get_model(context))?.addPackage;
                     break;
                 case "reference":
@@ -423,7 +418,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     ret = (this as any).get_addException(context as any);
                     break;
             }
-            console.log("addchild return()", {ret});
             return ret ? ret(...args) : null as any;
         }
     }

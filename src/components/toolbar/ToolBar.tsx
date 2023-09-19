@@ -46,7 +46,6 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
         }
         let item = item_dname.substring(1).toLowerCase();
         reactNodes.push(<div className={"toolbar-item " + item} key={item_dname} onClick={() => {
-            console.log("toolbar click:", {item_dname, data, myDictValidator, items, node});
             switch(item_dname){
                 case DVoidEdge.cname:
                 case DEdge.cname:
@@ -56,7 +55,6 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
                     let ledge: LVoidEdge = (node as LEdgePoint | LVoidEdge).edge;
                     let dedge: DVoidEdge = ledge.__raw;
                     let wedge: WVoidEdge = ledge as any;
-                    console.log("toolbar click:", {item_dname, data, skip:!myDictValidator[item_dname], items, ledge});
                     // if (!myDictValidator[item_dname]) return;
                     let longestSeg: EdgeSegment = undefined as any; // just because compiler does not know it is always found through the for loop
                     let longestIndex: number=0;

@@ -322,7 +322,6 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         }
 
 
-        console.log("Vertex,styleoverride", {nodeType, styleOverride, isResized: this.props.node.isResized, node: this.props.node})
         return super.render(nodeType, styleOverride, classesOverride);
         // return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+"."+this.state?.forceupdate} />;
     }

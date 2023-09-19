@@ -1701,7 +1701,6 @@ replaced by startPoint
         let ret: EdgeSegment[] = [];
         let bm: EdgeBendingMode = v.bendingMode;
         let gapMode: EdgeGapMode = v.edgeGapMode;
-        console.log("vbm", {bm, v, vraw:v.__raw});
         let segmentSize = this.svgLetterSize(bm, false, true);
         let increase: number = segmentSize.first;
         let segment: EdgeSegment | undefined;
