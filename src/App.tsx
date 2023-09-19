@@ -10,11 +10,11 @@ import SplashImage from './static/img/splash.png';
 import {Oval} from "react-loader-spinner";
 import TopBar from "./components/topbar/Topbar";
 import {connect} from "react-redux";
-import Cleaning from "./popup/Cleaning";
+import Loader from "./components/loader/Loader";
 
 function App(props: AllProps) {
     const debug = props.debug;
-    const isCleaning = props.isCleaning;
+    const isLoading = props.isLoading;
     const [splash, setSplash] = useStateIfMounted(!debug);
 
     useEffectOnce(() => {
@@ -30,16 +30,16 @@ function App(props: AllProps) {
         </div>);
     } else {
         return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? " debug" : "")} onClick={() => {statehistory.globalcanundostate = true;} } >
+            {isLoading && <Loader isLoading={isLoading} />}
             {<TopBar room={props.room} />}
             {<Dock />}
-            {isCleaning && <Cleaning />}
         </div>);
     }
 
 }
 
 interface OwnProps {room?: string}
-interface StateProps {debug: boolean, isCleaning: boolean}
+interface StateProps {debug: boolean, isLoading: boolean}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -47,7 +47,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.debug = state.debug;
-    ret.isCleaning = state.isCleaning;
+    ret.isLoading = state.isLoading;
     return ret;
 }
 

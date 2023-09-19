@@ -22,7 +22,7 @@ export default class Structure {
         if(!lModelElement) return(<></>);
         return(<>
             {/*<Input obj={lModelElement} field={"id"} label={"ID"} type={"text"} readonly={true} />*/}
-            <Input data={lModelElement} field={"name"} label={"Name"} type={"text"} tooltip={"Element name"} />
+            <Input key={`input.name.${lModelElement.id}`} data={lModelElement} field={"name"} label={"Name"} type={"text"} tooltip={"Element name"} />
         </>);
     }
     public static ModelEditor(lModel: LModelElement): ReactNode {
@@ -33,22 +33,22 @@ export default class Structure {
         if(!lPackage) return(<></>);
         return(<>
             {Structure.BaseEditor(lPackage)}
-            <Input data={lPackage} field={"uri"} label={"NsURI"} type={"text"} tooltip={"Namespace URI of the package, i.e. the URI that is displayed in the xmlns tag to identify this package in an XMI document"} />
-            <Input data={lPackage} field={"prefix"} label={"NsPrefix"} type={"text"} tooltip={"Namespace prefix that is used when references to instances of the classes in this package are serialized"} />
+            <Input key={`input.uri.${lPackage.id}`} data={lPackage} field={"uri"} label={"NsURI"} type={"text"} tooltip={"Namespace URI of the package, i.e. the URI that is displayed in the xmlns tag to identify this package in an XMI document"} />
+            <Input key={`input.prefix.${lPackage.id}`} data={lPackage} field={"prefix"} label={"NsPrefix"} type={"text"} tooltip={"Namespace prefix that is used when references to instances of the classes in this package are serialized"} />
         </>);
     }
     public static ClassEditor(lClass: LModelElement): ReactNode {
         if(!lClass) return(<></>);
         return(<>
             {Structure.BaseEditor(lClass)}
-            <Input data={lClass} field={"abstract"} label={"IsAbstract"} type={"checkbox"} tooltip={"If set to True, the generated implementation class will have the abstract keyword"} />
-            <Input data={lClass} field={"interface"} label={"IsInterface"} type={"checkbox"} tooltip={"If set to True, only the java interface will be generated. There will be no corresponding implementation class and no create method in the factory"} />
-            <Input data={lClass} field={"partial"} label={"IsPartial"} type={"checkbox"} tooltip={"If set to True, the class will be partial."} />
+            <Input key={`input.abstract.${lClass.id}`} data={lClass} field={"abstract"} label={"IsAbstract"} type={"checkbox"} tooltip={"If set to True, the generated implementation class will have the abstract keyword"} />
+            <Input key={`input.interface.${lClass.id}`} data={lClass} field={"interface"} label={"IsInterface"} type={"checkbox"} tooltip={"If set to True, only the java interface will be generated. There will be no corresponding implementation class and no create method in the factory"} />
+            <Input key={`input.partial.${lClass.id}`} data={lClass} field={"partial"} label={"IsPartial"} type={"checkbox"} tooltip={"If set to True, the class will be partial."} />
         </>);
     }
     private static DataTypeEditor(lDataType: LModelElement): ReactNode {
         if(!lDataType) return(<></>);
-        return(<Input data={lDataType} field={"serializable"} label={"IsSerializable"} type={"checkbox"} tooltip={"It represents whether values of this type will be serialized"} />);
+        return(<Input key={`input.serializable.${lDataType.id}`} data={lDataType} field={"serializable"} label={"IsSerializable"} type={"checkbox"} tooltip={"It represents whether values of this type will be serialized"} />);
     }
     public static EnumEditor(lEnum: LModelElement): ReactNode {
         if(!lEnum) return(<></>);
@@ -60,11 +60,11 @@ export default class Structure {
     private static TypedElementEditor(lTypedElement: LModelElement): ReactNode {
         if(!lTypedElement) return(<></>);
         return(<>
-            <Select data={lTypedElement} field={"type"} label={"Type"} tooltip={"Element Type"} />
-            <Input data={lTypedElement} field={"lowerBound"} label={"Lower Bound"} type={"number"} tooltip={"Determines the setting of the required property. If lowerBound is 0, the required property will be set to False. Otherwise, the required property will be set to True"} />
-            <Input data={lTypedElement} field={"upperBound"} label={"Upper Bound"} type={"number"} tooltip={"Determines the setting of the many property. If upperBound is 1, the many property will be set to False. Otherwise, the many property will be set to True"} />
-            <Input data={lTypedElement} field={"ordered"} label={"IsOrdered"} type={"checkbox"} tooltip={"It represents whether order is meaningful"} />
-            <Input data={lTypedElement} field={"unique"} label={"IsUnique"} type={"checkbox"} tooltip={"Indicates whether a many-valued attribute is allowed to have duplicates"} />
+            <Select key={`input.type.${lTypedElement.id}`} data={lTypedElement} field={"type"} label={"Type"} tooltip={"Element Type"} />
+            <Input key={`input.lowerBound.${lTypedElement.id}`} data={lTypedElement} field={"lowerBound"} label={"Lower Bound"} type={"number"} tooltip={"Determines the setting of the required property. If lowerBound is 0, the required property will be set to False. Otherwise, the required property will be set to True"} />
+            <Input key={`input.upperBound.${lTypedElement.id}`} data={lTypedElement} field={"upperBound"} label={"Upper Bound"} type={"number"} tooltip={"Determines the setting of the many property. If upperBound is 1, the many property will be set to False. Otherwise, the many property will be set to True"} />
+            <Input key={`input.ordered.${lTypedElement.id}`} data={lTypedElement} field={"ordered"} label={"IsOrdered"} type={"checkbox"} tooltip={"It represents whether order is meaningful"} />
+            <Input key={`input.unique.${lTypedElement.id}`} data={lTypedElement} field={"unique"} label={"IsUnique"} type={"checkbox"} tooltip={"Indicates whether a many-valued attribute is allowed to have duplicates"} />
         </>);
     }
     private static StructuralFeatureEditor(lStructuralFeature: LModelElement): ReactNode {

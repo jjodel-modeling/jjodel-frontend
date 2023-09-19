@@ -32,6 +32,7 @@ interface StateProps {
     maxlistsize: number;
     undo: GObject<"delta">[],
     redo: GObject<"delta">[],
+    debug: boolean
 }
 
 // private
@@ -119,23 +120,15 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
     render(): ReactNode {
         this.undoredolistoutdated = true; // if render is called it means redux state props he's watching (redux-state) changed, so the preview list in component-state is outdated.
         // console.log("undoredomanager", {thiss:this, undo:this.props.undo, props: this.props, state:this.state});
-
-        // simple version without list of changes
-        return(<>
-            <label className={'item border round ms-1'} onClick={(e)=> { this.do_undo(0) }}>Undo ({this.props.undo.length})</label>
-            <label className={'item border round ms-1'} onClick={(e)=> { this.do_redo(0) }}>Redo ({this.props.redo.length})</label>
-        </>);
-
-        // complex version with list of changes
         return(<>
             <div style={{display: "inline-block"}}>
                 <span className={"hoverable"} style={{position: "relative", background: "white"}} onMouseEnter={this.undoenter} onMouseLeave={this.undoleave}>
                     <button className={'item border round ms-1'} onClick={(e)=> { this.do_undo(0) }}>Undo ({this.props.undo.length})</button>
-                    {this.props.undo.length ? <ul style={{background: "inherit", width: "max-content", zIndex:10000}} className={"content"}>{this.state.undo.jsx}</ul> : null}
+                    {this.props.debug && this.props.undo.length ? <ul style={{background: "inherit", width: "max-content", zIndex:10000}} className={"content"}>{this.state.undo.jsx}</ul> : null}
                 </span>
                 <span className={"hoverable"} style={{position: "relative", background: "white"}} onMouseEnter={this.redoenter} onMouseLeave={this.redoleave}>
                     <button className={'item border round ms-1'} onClick={(e)=> { this.do_redo(0) }}>Redo ({this.props.redo.length})</button>
-                    {this.props.redo.length ? <ul style={{background: "inherit", width: "max-content", zIndex:10000}} className={"content"}>{this.state.redo.jsx}</ul> : null}
+                    {this.props.debug && this.props.redo.length ? <ul style={{background: "inherit", width: "max-content", zIndex:10000}} className={"content"}>{this.state.redo.jsx}</ul> : null}
                 </span>
             </div>
         </>);
@@ -148,6 +141,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.undo = statehistory[DUser.current].undoable;
     ret.redo = statehistory[DUser.current].redoable;
     ret.maxlistsize = 10;
+    ret.debug = state.debug;
     /// to fill
     return ret; }
 
