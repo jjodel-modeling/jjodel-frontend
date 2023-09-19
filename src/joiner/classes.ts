@@ -736,7 +736,7 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 351, 201);
         thiss.size = {};
         thiss.storeSize = false;
-        thiss.lazySizeUpdate = false;
+        thiss.lazySizeUpdate = true;
         thiss.constraints = [];
         //thiss.useSizeFrom = EuseSizeFrom.node;
         // thiss.adaptHeight = false;

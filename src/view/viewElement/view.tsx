@@ -1,6 +1,6 @@
 import {
-    Action, bool,
-    Constructors, CoordinateMode,
+    Constructors,
+    CoordinateMode,
     DGraphElement,
     Dictionary,
     DModelElement,
@@ -9,7 +9,8 @@ import {
     DViewPoint,
     EdgeBendingMode,
     getWParams,
-    GObject, GraphPoint,
+    GObject,
+    GraphPoint,
     GraphSize,
     Info,
     LogicContext,
@@ -22,7 +23,7 @@ import {
     SetFieldAction,
     ShortAttribETypes
 } from "../../joiner";
-import { EdgeGapMode } from "../../joiner/types";
+import {EdgeGapMode} from "../../joiner/types";
 
 @RuntimeAccessible
 export class DViewElement extends DPointerTargetable {
@@ -77,6 +78,7 @@ export class DViewElement extends DPointerTargetable {
     storeSize!: boolean;
     size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>;
     lazySizeUpdate!: boolean;
+    __info_of__lazySizeUpdate: Info = {isNode: true, type: ShortAttribETypes.EBoolean, txt: <div>If true updates the node position only when the drag action is finished.</div>}
     edgeStartOffset!: GraphPoint;
     edgeEndOffset!: GraphPoint;
     edgeStartOffset_isPercentage!: boolean;
@@ -154,77 +156,93 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     subViews!: LViewElement[];
     __info_of__subViews: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
 
-    oclApplyCondition!: string; // ocl selector
-    __info_of__oclApplyCondition: Info = {txt: 'empty', isNode: true, isEdge: true, isEdgePoint: true}
 
     explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
-    __info_of__explicitApplicationPriority: Info = {txt: 'empty', isNode: true, isEdge: true, isEdgePoint: true}
+    __info_of__explicitApplicationPriority: Info = {isGlobal: true, type: ShortAttribETypes.EByte,
+        txt: 'Application priority of view. If multiple views match an element, the highest priority will render the main jsx,' +
+            'lowest priorities will only inject css and secondary jsx decorators (this part is still to do)'}
 
     defaultVSize!: GraphSize;
-    __info_of__defaultVSize: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+    __info_of__defaultVSize: Info = {isNode:true, type: GraphSize, txt: 'Starting size of the node'}
 
     adaptWidth!: boolean;
-    __info_of__adaptWidth: Info = {type: 'boolean', txt: 'Whether the element should expand his width to accomodate his own contents.', isNode: true, isEdge: false, isEdgePoint: false}
+    __info_of__adaptWidth: Info = {isNode:true, type: ShortAttribETypes.EBoolean, txt: 'Whether the element should expand his width to accomodate his own contents.'}
 
     adaptHeight!: boolean;
-    __info_of__adaptHeight: Info = {type: 'boolean', txt: 'Whether the element should expand his height to accomodate his own contents.', isNode: true, isEdge: false, isEdgePoint: false}
-
+    __info_of__adaptHeight: Info = {isNode:true, type: ShortAttribETypes.EBoolean, txt: 'Whether the element should expand his height to accomodate his own contents.'}
 
     draggable!: boolean;
-    __info_of__draggable: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+    __info_of__draggable: Info = {type: ShortAttribETypes.EBoolean, isNode: true, txt: 'if the element can be dragged'}
 
     resizable!: boolean;
-    __info_of__resizable: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+    __info_of__resizable: Info = {type: ShortAttribETypes.EBoolean, isNode: true, txt: 'if the element can be resized'}
+
+    oclApplyCondition!: string; // ocl selector
+    __info_of__oclApplyCondition: Info = {hidden:true, type: ShortAttribETypes.EString, isGlobal: true, // TODO: what's the difference with this.query?
+        txt: 'OCL Query selector to determine which nodes or model elements should apply this view'}
 
     query!: string;
-    __info_of__query: Info = {txt: 'empty', isNode: true, isEdge: true, isEdgePoint: true}
+    __info_of__query: Info = {hidden:true, type: ShortAttribETypes.EString, isGlobal: true, txt: 'OCL Query selector to determine which nodes or model elements should apply this view'}
 
     viewpoint!: LViewPoint | undefined;
-    __info_of__viewpoint: Info = {txt: 'empty', isNode: true, isEdge: true, isEdgePoint: true}
+    __info_of__viewpoint: Info = {hidden: true, type: LViewPoint, txt: 'empty'}
 
     display!: 'block'|'contents';
-    __info_of__display: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+    __info_of__display: Info = {obsolete: true, isNode: true,
+        txt: 'complete css injection instead'}
 
     onDragStart!: string;
-    __info_of__onDragStart: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+    __info_of__onDragStart: Info = {todo: true, isNode: true,
+        txt: 'not supported yet'}
 
     onDragEnd!: string;
-    __info_of__onDragEnd: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+    __info_of__onDragEnd: Info = {todo: true, isNode: true,
+        txt: 'not supported yet'}
 
     onResizeStart!: string;
-    __info_of__onResizeStart: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+    __info_of__onResizeStart: Info = {todo: true, isNode: true,
+        txt: 'not supported yet'}
 
     onResizeEnd!: string;
-    __info_of__onResizeEnd: Info = {txt: 'empty', isNode: true, isEdge: false, isEdgePoint: false}
+    __info_of__onResizeEnd: Info = {todo: true, isNode: true,
+        txt: 'not supported yet'}
 
     constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
-    __info_of__constraints: Info = {txt: 'empty', isNode: false, isEdge: false, isEdgePoint: false}
+    __info_of__constraints: Info = {todo: true, isNode: true,
+        txt: 'not supported yet'}
 
 
     bendingMode!: EdgeBendingMode;
-    __info_of__bendingMode: Info = {isNode: false, isEdge: true, isEdgePoint: false, type: '"L" | "Q" | "C" | "T" | "S" | "A" | "QT" | "CS"', txt: <><div>How Svg path should use the EdgePoints <a href={"https://css-tricks.com/svg-path-syntax-illustrated-guide/"}>to bend his shape</a></div></>}
+    __info_of__bendingMode: Info = {isEdge: true, enum: EdgeBendingMode, type: '"L" | "Q" | "C" | "T" | "S" | "A" | "QT" | "CS"',
+        txt: <><div>How Svg path should use the EdgePoints <a href={"https://css-tricks.com/svg-path-syntax-illustrated-guide/"}>to bend his shape</a></div></>}
 
     edgeGapMode!: EdgeGapMode;
-    __info_of__edgeGapMode: Info = {isNode: false, isEdge: true, isEdgePoint: false, type: '"gap" | "average" | "autoFill" | "lineFill" | "arcFill"', txt: <><div></div></>}
+    __info_of__edgeGapMode: Info = {isEdge: true, enum: EdgeGapMode, type: '"gap" | "average" | "autoFill" | "lineFill" | "arcFill"',
+        txt: <><div>How the segment should treat the EdgePoint interruptions.\n<br/>"gap" leaves an empty space to not overlap the EdgePoint,
+            \n<br/>"linefill" makes the edge stop at the EdgePoint borders, but then connects the gap with a line...</div></>}
 
     storeSize!: boolean;
-    __info_of__storeSize: Info = {isNode: true, isEdge: true, isEdgePoint: true, type: ShortAttribETypes.EBoolean, txt: "Active: the node position depends from the view currently displayed.\nInactive: it depends from the graph."}
+    __info_of__storeSize: Info = {isNode: true, type: ShortAttribETypes.EBoolean,
+        txt: "Active: the node position depends from the view currently displayed.\nInactive: it depends from the graph."}
 
     lazySizeUpdate!: boolean;
-    __info_of__lazySizeUpdate: Info = {isNode: true, isEdge: true, isEdgePoint: true, type: ShortAttribETypes.EBoolean,txt: "When activated, the layout position will only be updated once when the drag or resize operation is completed. (best performance)"}
+    __info_of__lazySizeUpdate: Info = { isGlobal: true, type: ShortAttribETypes.EBoolean,
+        txt: "When activated, the layout position will only be updated once when the drag or resize operation is completed. (best performance)"}
 
     edgeStartOffset!: GraphPoint;
-    __info_of__edgeStartOffset: Info = {isNode: false, isEdge: true, isEdgePoint: false, type:"GraphPoint", txt: "location where outgoing edges should start their path, relative to top-upper corner of the element."}
+    __info_of__edgeStartOffset: Info = {isEdge: true, type: GraphPoint, txt: "location where outgoing edges should start their path, relative to top-upper corner of the element."}
 
     edgeEndOffset!: GraphPoint;
-    __info_of__edgeEndOffset: Info = {txt: 'empty', isNode: false, isEdge: true, isEdgePoint: false}
+    __info_of__edgeEndOffset: Info = {isEdge: true,  type: GraphPoint, txt: 'same as this.edgeStartOffset'}
 
 
     edgeStartOffset_isPercentage!: boolean;
-    __info_of__edgeStartOffset_isPercentage: Info = {isNode: false, isEdge: true, isEdgePoint: false,  type:"GraphPoint", txt: "Whether edgeStartOffset is an absolute value or a percentage (eg: 50% of top edge, vs 50 pixels on the right)."}
+    __info_of__edgeStartOffset_isPercentage: Info = { isEdge: true,
+        type:ShortAttribETypes.EBoolean, txt: "Whether edgeStartOffset is an absolute value or a percentage (eg: 50% of top edge, vs 50 pixels on the right)."}
 
     edgeEndOffset_isPercentage!: boolean;
-    __info_of__edgeEndOffset_isPercentage: Info = {txt: 'empty', isNode: false, isEdge: true, isEdgePoint: false}
+    __info_of__edgeEndOffset_isPercentage: Info = {isEdge: true,
+        type:ShortAttribETypes.EBoolean, txt: "Whether edgeStartOffset is an absolute value or a percentage (eg: 50% of top edge, vs 50 pixels on the right)."}
 
 
     edgeStartStopAtBoundaries!: boolean;

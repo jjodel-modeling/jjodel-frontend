@@ -1,7 +1,8 @@
 import type { GObject } from "../joiner";
 import { U } from "../joiner";
+export const useless = 1;
+/*
 type NodeVisitorFunction<T> = (visitingNode: Node<T>) => boolean;
-
 export class BinaryTree<T extends GObject>{
     protected childrenKey: keyof T | ((node:T) => T);
     root: T;
@@ -12,4 +13,4 @@ export class BinaryTree<T extends GObject>{
 
 export class Node<T extends GObject>{
 
-}
+}*/

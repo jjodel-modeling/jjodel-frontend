@@ -11,7 +11,7 @@ function EdgePointData(props: Props) {
     return(<>
         <section><h1>EdgePoint options</h1>
             <b>to do</b>
-            <div style={{display: "none"}}>
+            <div>
                 <select data-data={view} data-field={"edgePointCoordMode"} onChange={(e)=> view.edgePointCoordMode = e.target.value as any}
                         value={view.edgePointCoordMode} data-value={view.edgePointCoordMode}>
                     <optgroup label={"How the edge should bend to address EdgePoints"}>{

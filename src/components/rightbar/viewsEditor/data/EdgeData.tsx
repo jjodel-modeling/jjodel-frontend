@@ -10,7 +10,7 @@ function EdgeData(props: Props) {
     return(<>
         <section><h1>Edge options</h1>
             <b>to do</b>
-            <div style={{display: "none"}}>
+            <div>
                 <select data-data={view} data-field={"bendingMode"} onChange={(e)=> view.bendingMode = e.target.value as any} value={view.bendingMode} data-value={view.bendingMode}>
                     <optgroup label={"How the edge should bend to address EdgePoints"}>{
                         Object.keys(EdgeBendingMode).map( k => <option value={(EdgeBendingMode as any)[k]}>{k}</option>)

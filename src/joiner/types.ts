@@ -33,7 +33,14 @@ export type Info = {
     type?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
     readType?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
     writeType?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
-    isNode?: boolean, isEdge?: boolean, isEdgePoint?:boolean,
+    obsolete?: boolean, // hidden because is about to be removed
+    hidden?: boolean, // hidden for other reason (like autogeneration is faulty and is manually generated)
+    todo?: boolean, // features that should not be listed yet in the view editor
+    isGlobal?: boolean, // for things that are common to all graph elements like jsx
+    isNode?: boolean,
+    isEdge?: boolean,
+    isEdgePoint?:boolean,
+    enum?:GObject,
     txt: string | React.ReactElement,
 };
 
