@@ -59,12 +59,12 @@ export abstract class IPoint extends RuntimeAccessibleClass {
         p1.y -= p2.y;
         return p1; }
 
-    public add(p2: { x: number, y: number }, newInstance: boolean): this {
+    public add(p2: { x?: number, y?: number }, newInstance: boolean): this {
         Log.e(!p2, 'add argument must be a valid point: ', p2);
         let p1: this;
         if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
-        p1.x += p2.x;
-        p1.y += p2.y;
+        if (p2.x !== undefined) p1.x += p2.x;
+        if (p2.y !== undefined) p1.y += p2.y;
         return p1; }
 
     public addAll(p: IPoint[], newInstance: boolean): this {
@@ -81,15 +81,15 @@ export abstract class IPoint extends RuntimeAccessibleClass {
         for (i = 0; i < p.length; i++) { p0.subtract(p[i], true); }
         return p0; }
 
-    public multiply(pt: Partial<this> | number, newInstance: boolean = false): this {
+    public multiply(pt: {x?: number, y?: number} | number, newInstance: boolean = false): this {
         let ret: this = (newInstance ? this.duplicate() : this);
         if (typeof pt === "number") {
             ret.x *= pt;
             ret.y *= pt;
         }
         else {
-            if ("x" in pt) ret.x *= pt.x as number;
-            if ("y" in pt) ret.y *= pt.y as number;
+            if (pt.x !== undefined) ret.x *= pt.x;
+            if (pt.y !== undefined) ret.y *= pt.y;
         }
         return ret; }
 
@@ -389,11 +389,17 @@ export class Size extends ISize<Point> {
     private static $sizeofvar: JQuery<HTMLElement>;
     private dontMixWithGraphSize: any;
 
-    public static of(element0: Element, debug: boolean = false): Size {
+    /**
+     * measure a node size
+     * @param {Element} element0 - the emelemnt to measure;
+     * @param {boolean} sizePostTransform - includes css transform instructions for computing his size. like transform: scale(1.5)
+     * */
+    public static of(element0: Element, sizePostTransform: boolean = true): Size {
         let element: HTMLElement = element0 as HTMLElement;
-        Log.l(debug, 'sizeof()',  element);
-        Log.e(element as any === document, 'trying to measure document.');
-        if (element as any === document) { element = document.body as any; }
+        if (element as unknown === document) {
+            Log.ww('trying to measure document, rerouted to measuring body.');
+            element = document.body as any;
+        }
         const $element = $(element);
         Log.e(!element || element.tagName === 'foreignObject', 'sizeof()', 'SvgForeignElementObject have a bug with size, measure a child instead.', element);
         let tmp;
@@ -415,9 +421,15 @@ export class Size extends ISize<Point> {
         }
         tmp = $element.offset() as JQuery.Coordinates; // made sure cannot be undefined by removing display:none
         size = new Size(tmp.left, tmp.top, 0, 0);
-        tmp = element.getBoundingClientRect();
-        size.w = tmp.width;
-        size.h = tmp.height;
+        if (sizePostTransform) {
+            tmp = element.getBoundingClientRect();
+            size.w = tmp.width;
+            size.h = tmp.height;
+        }
+        else {
+            size.w = element.offsetWidth;
+            size.h = element.offsetHeight;
+        }
         // restore visibility
         for (let i = 0; i < ancestors.length; i++) {
             if (displayStyles[i] === ancestors[i].style?.display) continue;

@@ -134,7 +134,72 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             stop: (event: GObject, obj: GObject) => {
                 if (!this.state.classes.includes("resized")) this.setState({classes:[...this.state.classes, "resized"]});
                 // if (!withSetSize) { node.width = obj.size.width; node.height = obj.size.height; } else {
-                this.setSize({w:obj.size.width, h:obj.size.height});
+                let absolutemode = true; // this one is less tested and safe, but should work even if html container is sized 0. best if made to work
+                let newSize: Partial<GraphSize>;
+                if (absolutemode) {
+                    let nativeevt: MouseEvent = event.originalEvent.originalEvent;
+                    let htmlSize = Size.of(event.target, false);
+                    newSize = this.props.node.graph.translateHtmlSize(htmlSize);
+                    /*n
+                    this is some pixels off, i think because inner coords are post the border of the container element,
+                     and the innermost graph size have coords before his borders, so the translation is off by the amount
+                      of border width of the innermost graph (and package default view does have a border)
+                       so in graph coord translate function should add: outersize.add( x: innergraph.html.getFinalComputedCSS("border-width-left"), y: ...border-width-top
+
+                    let cursorSize = new GraphSize(0, 0, nativeevt.clientX, nativeevt.clientY);//
+                    newSize = htmlSize.duplicate() as any; // .subtract( {w:cursorSize.x, h:cursorSize.y}, true);
+                    let handleClasses: string[] = [...event.originalEvent.target.classList];
+                    let handleKeyLength = 14; // equal to "ui-resizable-".length + 1;
+                    let handleClassName = handleClasses.find( // i check both length and indexOf, because i must match "ui-resizable-se" but not "ui-resizable-handle"
+                        (e) => (e.length === handleKeyLength || e.length === handleKeyLength + 1) && e.indexOf("ui-resizable-")===0);
+
+                    let handleType = handleClassName ? handleClassName.substring(13) : "";
+                    switch (handleType) {
+                        default: case "": case "se":
+                            delete newSize.x;
+                            delete newSize.y;
+                            newSize.w = cursorSize.w - htmlSize.x;
+                            newSize.h = cursorSize.h - htmlSize.y;
+                            break;
+                        case "n": case "s":
+                            delete newSize.x;
+                            delete newSize.y;
+                            delete newSize.w;
+                            newSize.h = cursorSize.h - htmlSize.y;
+                            break;
+                        case "e": case "W":
+                            delete newSize.x;
+                            delete newSize.y;
+                            newSize.w = cursorSize.w - htmlSize.x;
+                            delete newSize.h;
+                            break;
+                        case "nw":
+                            let br = htmlSize.br();
+                            newSize.x = cursorSize.x;
+                            newSize.y = cursorSize.y;
+                            newSize.w = br.x - cursorSize.w;
+                            newSize.h = br.y - cursorSize.h;
+                            break;
+                        case "ne":
+                            delete newSize.x;
+                            newSize.y = cursorSize.y;
+                            delete newSize.w;
+                            delete newSize.h;
+                        case "?":
+                            delete newSize.x;
+                            delete newSize.y;
+                            delete newSize.w;
+                            delete newSize.h;
+                            break;
+                    }*/
+                    // n, e, s, w, ne, se, sw, nw
+                    // almost, but: there is a few pix error. and: if i drag through horizontal or vertical handles it acts as if i used diagonal handle
+                    // console.log("resizing", {newSize, cursorSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
+                    console.log("resizing", {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
+                }
+                else newSize = {w:obj.size.width, h:obj.size.height};
+                // evt coordinates: clientX, layerX, offsetX, pageX, screenX
+                this.setSize(newSize);
                 // console.log("resize setsize:", obj, {w:obj.size.width, h:obj.size.height});
                 if (this.props.view.onResizeEnd) {
                     try{ eval(this.props.view.onResizeEnd); }
@@ -184,9 +249,11 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     setSize(x_or_size_or_point: Partial<GraphSize>): void;
     // setSize(x_or_size_or_point: number | GraphSize | GraphPoint, y?: number, w?:number, h?:number): void;
     setSize(size0: Partial<GraphSize> | Partial<GraphPoint>): void {
-        return this.props.node.size = size0 as any;
+        let size: {x?:number, y?: number, w?:number, h?:number} = size0;
+        if (size.w !== undefined && size.w < 0) size.w = 0;
+        if (size.h !== undefined && size.h < 0) size.h = 0;
+        return this.props.node.size = size as any;
         // console.log("setSize("+(this.props?.data as any).name+") thisss", this);
-        let size: Partial<GraphSize> = size0 as Partial<GraphSize>;
         if (this.props.view.storeSize) {
             let id = (this.props.dataid || this.props.nodeid) as string;
             this.props.view.updateSize(id, size);
@@ -255,6 +322,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         }
 
 
+        console.log("Vertex,styleoverride", {nodeType, styleOverride, isResized: this.props.node.isResized, node: this.props.node})
         return super.render(nodeType, styleOverride, classesOverride);
         // return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+"."+this.state?.forceupdate} />;
     }

@@ -362,8 +362,13 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             // console.log("getSize() from node merged with defaultVSize", {ret: ret ? {...ret} : ret});
         }
         if (context.data.className === DEdgePoint.cname) { ret = (this as any as LEdgePoint).decodePosCoords(context, ret, view); }
-
-        if ((context.data as DVoidVertex).isResized) return ret;
+/*
+        if ((context.data as DVoidVertex).isResized) {
+            return ret;
+        }*/
+        if (!canTriggerSet) {
+            return ret;
+        }
         let html: RefObject<HTMLElement | undefined> | undefined = component?.html;
         let actualSize: Partial<Size> & {w:number, h:number} = html?.current ? Size.of(html.current) : {w:0, h:0};
         let updateSize: boolean = false;
@@ -629,7 +634,8 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     state!: LMap;
     // personal attributes
     zoom!: GraphPoint;
-    graphSize!: GraphSize; // size internal to the graph, while "size" is instead external size of the vertex holding the graph in GraphVertexes
+    graphSize!: GraphSize; // alias for offset
+    offset!: GraphSize; //  size internal to the graph, while "size" is instead external size of the vertex holding the graph in GraphVertexes
     // protected sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
 
 
@@ -652,10 +658,21 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
         }
     }
     // get_htmlSize(context: Context): Size { }
-    __info_of__translateSize: Info = {type:"function(GraphSize, Graph) --> GraphSize",
-        txt:"Translate the position of an element from his coordinates to the coordinate system of another graph.\n" +
-            "The other graph must be an ancestor containing the current Graph calling this function."}
     translateSize<T extends GraphSize|GraphPoint>(ret: T, innerGraph: LGraph): T { return this.wrongAccessMessage("translateSize()"); }
+    translateHtmlSize<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(size: T): G { return this.wrongAccessMessage("translateHtmlSize()"); }
+    __info_of__offset: Info = {type:GraphSize, txt:"size internal to the graph, including internal scroll and panning."};
+    __info_of__graphSize: Info = {type:GraphSize, txt:"Alias of this.offset"};
+    __info_of__translateSize: Info = {type:"(T, Graph)=>T where T is GraphSize | GraphPoint", txt:"Translates a coordinate set from the local coordinates of a SubGraph to this Graph containing it."};
+    __info_of__translateHtmlSize: Info = {type:"(Size|Point) => GraphSize|GraphPoint", txt:"Translate page\'s viewport coordinate set to this graph coordinate set."};
+    get_translateHtmlSize<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(c: Context): ((size: T) => G) {
+        return (size: T): G => {
+            let graphHtmlSize = this.get_htmlSize(c);
+            let a = size.subtract(graphHtmlSize.tl(), true);
+            let b = a.add({x:c.data.graphSize.x, y:c.data.graphSize.y}, false);
+            return b.multiply(c.data.zoom, false) as any as G;
+        }
+    }
+
     get_translateSize<T extends GraphSize|GraphPoint>(c: Context): ((size: T, innerGraph: LGraph) => T) {
         return (size: T, innerGraph: LGraph): T => {
             innerGraph = LPointerTargetable.wrap(innerGraph) as LGraph;

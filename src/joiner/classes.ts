@@ -761,7 +761,7 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.edgeStartStopAtBoundaries = true;
         thiss.edgeEndStopAtBoundaries = true;
         thiss.bendingMode = EdgeBendingMode.Bezier_quadratic;
-        thiss.edgeGapMode = EdgeGapMode.gap;
+        thiss.edgeGapMode = EdgeGapMode.center;
         thiss.edgePointCoordMode = CoordinateMode.relativeOffset;
         /// edge
 

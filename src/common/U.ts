@@ -393,14 +393,12 @@ export class U {
         // if (allowScope && allowContext) { return function(){ with(this){ return eval( '" + codeStr + "' ); }}.call(scopeAndContext); }
         // if (allowScope && allowContext) { return new Function( "with(this){ return eval( '" + codeStr + "' ); }").call(scopeAndContext); }
         let _ret: T = null as any;
-        console.log("pre eval 0", {scope0, sproto: scope0?.__proto__, context0, cproto: context0?.__proto__});
         let scope: GObject | undefined;
         let context: GObject | undefined;
         if (scope0) { scope = {...scope0, __proto__: scope0.__proto__}; scope.__proto__ = scope0.__proto__; } else scope = undefined;
         if (context0) { context = {...context0, __proto__: context0.__proto__}; context.__proto__ = context0.__proto__; } else context = undefined;
         if (!context) context = scope; // se creo un nuovo contesto pulisco anche lo scope dalle variabili locali di questa funzione.
         const _eval = {codeStr, context, scope};
-        console.log("pre eval 1", {scope, sproto: scope?.__proto__, context, cproto: context?.__proto__});
 
 
         /*
@@ -425,17 +423,11 @@ export class U {
         }
         if (scope && context) {
             (context as any)._eval = _eval;
-            console.log('pre eval jsx SC:', context, 'body:', {codeStr, Input: windoww.Input, _eval,
-                f:prefixDeclarations + "return eval( " + codeStr + " );" + postfixDeclarations});
             _ret = new (Function as any)(prefixDeclarations + "return eval( " + codeStr + " );" + postfixDeclarations).call(context);
             delete (context as any)._eval; } else
         if (!scope && context) {
-            console.log('pre eval jsx C:', {context, codeStr, Input: windoww.Input, _eval,
-                f:new (Function as any)(prefixDeclarations + "return eval( this._eval.codeStr );" + postfixDeclarations)});
             _ret = new (Function as any)( "return eval( this._eval._codeStr );").call(context); } else
         if (scope && !context) {
-            console.log('pre eval jsx S:', context, 'body:', {codeStr, Input: windoww.Input, _eval,
-                f:new (Function as any)(prefixDeclarations + "return eval( this._eval.codeStr );" + postfixDeclarations)});
             // NB: potrei creare lo scope con "let key = value;" per ogni chiave, ma dovrei fare json stringify e non è una serializzazione perfetta e può dare eccezioni(circolarità)
             // console.log({isStrict: U.isStrict, eval: "eval(" + prefixDeclarations + codeStr + postfixDeclarations + ")"});
             _ret = eval(prefixDeclarations + codeStr + postfixDeclarations); }

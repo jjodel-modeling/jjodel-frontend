@@ -429,17 +429,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
 
         try {
-            console.log("prerenderfunc pre execution", "("+this.props.preRenderFunc+")()", context);
             if (this.props.preRenderFunc) {
                 let obj = U.evalInContextAndScope<GObject>("("+this.props.preRenderFunc+")()", [], context);
-                console.log("prerenderfunc executed", obj);
                 for (let key in obj) { context[key] = obj[key]; }
             }
         }
         catch(e: any) { return displayError(e, "preRenderFunc");  }
         let ret;
         try {
-            console.log("executing template:", {final:'(()=>{ return ' + this.props.template + '})()', context});
             ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + this.props.template + '})()', context);
             // ret = this.props.template();
             // ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], {});
@@ -535,7 +532,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         /// end set classes
 
         const rnode: ReactNode = this.getTemplate();
-        console.log("get template " + this.props.node?.className , {t: this.props.template, rnode});
         let rawRElement: ReactElement | null = UX.ReactNodeAsElement(rnode);
         const me: LModelElement | undefined = this.props.data; // this.props.model;
 

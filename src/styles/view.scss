@@ -126,11 +126,11 @@
 }
 
 .selected-by-me {
-  border: 1px dashed black;
+  outline: 1px dashed black;
 }
 
 .selected-by-others {
-  border: 1px dashed red;
+  outline: 1px dashed red;
   & > * {
     cursor: not-allowed;
   }
