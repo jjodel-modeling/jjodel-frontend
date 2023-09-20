@@ -104,7 +104,7 @@ export class DState extends DPointerTargetable{
         return new Constructors(new DState('dwc'), undefined, false, undefined).DPointerTargetable().DState().end();
     }
 
-    debug: boolean = true;
+    debug: boolean = false;
     logs: Pointer<DLog, 0, 'N', LLog> = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
     currentUser!: DUser;
@@ -176,15 +176,10 @@ export class DState extends DPointerTargetable{
     iot: null|boolean = null;
     topics: string[] = [];
 
-    memorec: GObject[]|null = null;
-
     isLoading: boolean = false;
 
 
-    static fakeinit(store?: DState): void {
-        // const graphDefaultViews: DViewElement[] = makeDefaultGraphViews();
-        // for (let graphDefaultView of graphDefaultViews) { CreateElementAction.new(graphDefaultView); }
-
+    static init(store?: DState): void {
         const viewpoint = DViewPoint.new('Default', '');
         viewpoint.id = 'Pointer_DefaultViewPoint';
         CreateElementAction.new(viewpoint);
@@ -207,16 +202,6 @@ export class DState extends DPointerTargetable{
             }
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
         }
-
-        /*
-        const returnTypes = ["void", "undefined", "null"]; // rimosso undefined dovrebbe essere come void (in ShortAttribEtypes, null è ritornato solo dalle funzioni che normalmente ritornano qualche DObject, quindi tipizzato con quel DObject
-        for (let returnType of returnTypes) {
-            const dReturnType = DClass.new(returnType);
-            CreateElementAction.new(dReturnType);
-            SetRootFieldAction.new("returnTypes", dReturnType.id, '+=', true);
-        }
-        */
-
     }
 }
 

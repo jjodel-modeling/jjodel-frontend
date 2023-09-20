@@ -3,38 +3,22 @@ import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
 import Dock from "./components/abstract/DockLayout";
-import {DState, statehistory, U} from "./joiner";
-import {useStateIfMounted} from "use-state-if-mounted";
-import {useEffectOnce} from "usehooks-ts";
-import SplashImage from './static/img/splash.png';
-import {Oval} from "react-loader-spinner";
+import {DState, statehistory} from "./joiner";
 import TopBar from "./components/topbar/Topbar";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
+import Navbar from "./components/navbar/Navbar";
 
 function App(props: AllProps) {
     const debug = props.debug;
     const isLoading = props.isLoading;
-    const [splash, setSplash] = useStateIfMounted(!debug);
 
-    useEffectOnce(() => {
-        if(debug) setSplash(false);
-        else U.sleep(3).then(() => {setSplash(false)});
-    });
-
-    if(splash) {
-        return(<div className={'w-100 h-100 text-center bg-smoke'}>
-            <img style={{height: '60%', width: '80%'}} className={'mt-3 rounded shadow'} src={SplashImage}></img>
-            <Oval height={80} width={80} wrapperStyle={{justifyContent: 'center'}} wrapperClass={'mt-3'}
-                  color={'#475e6c'} secondaryColor={'#ff8811'} />
-        </div>);
-    } else {
-        return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? " debug" : "")} onClick={() => {statehistory.globalcanundostate = true;} } >
-            {isLoading && <Loader isLoading={isLoading} />}
-            {<TopBar room={props.room} />}
-            {<Dock />}
-        </div>);
-    }
+    return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? " debug" : "")}
+                onClick={e => statehistory.globalcanundostate = true}>
+        {isLoading && <Loader isLoading={isLoading} />}
+        <Navbar />
+        {<Dock />}
+    </div>);
 
 }
 
@@ -62,3 +46,12 @@ export const AppConnected = connect<StateProps, DispatchProps, OwnProps, DState>
 )(App);
 
 export default AppConnected;
+
+
+/* SPLASH SCREEN
+return(<div className={'w-100 h-100 text-center bg-smoke'}>
+    <img style={{height: '60%', width: '80%'}} className={'mt-3 rounded shadow'} src={SplashImage}></img>
+    <Oval height={80} width={80} wrapperStyle={{justifyContent: 'center'}} wrapperClass={'mt-3'}
+          color={'#475e6c'} secondaryColor={'#ff8811'} />
+</div>);
+*/

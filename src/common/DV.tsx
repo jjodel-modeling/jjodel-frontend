@@ -147,7 +147,7 @@ let valuecolormap_str = JSON.stringify(valuecolormap);
 class DefaultView {
 
     public static model(): string {
-        return `<div className={'root model'}>
+        return `<div className={'root'}>
             {!this.data && "Model data missing."}
             <div className="edges" style={{zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}>{[
                     true && this.data.suggestedEdges.reference &&

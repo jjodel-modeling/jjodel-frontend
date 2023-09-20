@@ -9,7 +9,6 @@ import StructureEditor from "../rightbar/structureEditor/StructureEditor";
 import TreeEditor from "../rightbar/treeEditor/treeEditor";
 import ViewsEditor from "../rightbar/viewsEditor/ViewsEditor";
 import StyleEditor from "../rightbar/styleEditor/StyleEditor";
-import EdgeEditor from "../rightbar/edgeEditor/EdgeEditor";
 import ViewpointEditor from "../rightbar/viewpointsEditor/ViewpointsEditor";
 import Console from "../rightbar/console/Console";
 import MetamodelTab from "./tabs/MetamodelTab";
@@ -73,7 +72,6 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     private treeEditor = { id: '2', title: 'Tree View', group: 'group2', closable: false, content: <TreeEditor /> };
     private viewsEditor = { id: '3', title: 'Views', group: 'group2', closable: false, content: <ViewsEditor /> };
     private styleEditor = { id: '4', title: 'Node', group: 'group2', closable: false, content: <StyleEditor /> };
-    private edgeEditor = { id: '5', title: 'Edges', group: 'group2', closable: true, content: <EdgeEditor /> };
     private viewpointEditor = { id: '6', title: 'Viewpoints', group: 'group2', closable: false, content: <ViewpointEditor /> };
     private console = { id: '7', title: 'Console', group: 'group2', closable: false, content: <Console /> };
 
@@ -145,7 +143,6 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
                     this.viewsEditor,
                     this.viewpointEditor,
                     this.console,
-                    this.edgeEditor
                 ];
                 layout.dockbox.children[1] = {tabs};
                 this.dock.setLayout(layout);
@@ -242,7 +239,6 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             this.viewsEditor,
             this.viewpointEditor,
             // this.styleEditor,
-            this.edgeEditor,
             this.console
         ];
         layout.dockbox.children.push({tabs});

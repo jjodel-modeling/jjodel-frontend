@@ -1,8 +1,7 @@
 @import "src/styles/variables";
 
 .toolbar {
-  width: 6.5em;
-  min-width: 6.5em;
+  width: 10em;
   background: whitesmoke;
   z-index: 1;
   box-shadow: 6px 0 4px -4px #999, -6px 0 4px -4px #999;
@@ -11,10 +10,12 @@
     color: rgba(0, 0, 0, 0.75);
   }
   >.toolbar-item {
+    display: flex;
     cursor: pointer;
-    margin-top: 5px;
-    border-left: 2px solid;
+    padding: 2px;
+    // border-left: 2px solid;
   }
+  /*
   .package {
     border-left-color: $package-color;
   }
@@ -36,4 +37,5 @@
   .object, .LObject {
     border-left: 2px solid $object-color;
   }
+  */
 }

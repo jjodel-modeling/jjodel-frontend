@@ -33,6 +33,7 @@ import {
     LEdgePoint
 } from "../../joiner";
 import {InitialVertexSizeObj} from "../../joiner/types";
+import ModellingIcon from "./ModellingIcon";
 
 interface ThisState {}
 
@@ -45,7 +46,7 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
             data = data?.father || data;
         }
         let item = item_dname.substring(1).toLowerCase();
-        reactNodes.push(<div className={"toolbar-item " + item} key={item_dname} onClick={() => {
+        reactNodes.push(<div className={'toolbar-item'} key={item_dname} onClick={() => {
             switch(item_dname){
                 case DVoidEdge.cname:
                 case DEdge.cname:
@@ -101,7 +102,10 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
                     }
                     break;
             }
-        }}>+{item}</div>);
+        }}>
+            <ModellingIcon name={item} />
+            <span className={'ms-1 text-capitalize'}>{item}</span>
+        </div>);
     }
     return reactNodes;
 }
@@ -158,7 +162,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             <b className={'d-block text-center text-uppercase mb-1'}>Add sublevel</b>
             {lModelElement && addChildren(downward[lModelElement.className])}
             {node && addChildren(downward[node.className])}
-            <div className={"toolbar-item annotation"} onClick={() => select(lModelElement.addChild("annotation"))}>+annotation</div>
+            {/*<div className={"toolbar-item annotation"} onClick={() => select(lModelElement.addChild("annotation"))}>+annotation</div>*/}
             <hr className={'my-2'} />
         </div>);
     }
@@ -172,15 +176,22 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             <b className={'d-block text-center text-uppercase mb-1'}>Add root level</b>
             {classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
                 return <div key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => { select(model.addObject(lClass.id)) }}>
-                    +{lClass.name}
+                    <ModellingIcon name={'object'} />
+                    <span className={'ms-1 text-capitalize'}>{lClass.name}</span>
                 </div>
             })}
-            <div key={"RawObject"} className={"toolbar-item class"} onClick={() => { select(model.addObject()); }}>+Object</div>
+            <div key={"RawObject"} className={'toolbar-item'} onClick={e => select(model.addObject())}>
+                <ModellingIcon name={'object'} />
+                <span className={'ms-1 text-capitalize'}>Object</span>
+            </div>
             <hr className={'my-2'} />
             <b className={'d-block text-center text-uppercase mb-1'}>Add sublevel</b>
             {(lobj && (!lobj.instanceof || lobj.partial)) && <div key={"Feature"} className={"toolbar-item feature"} onClick={() => { lobj.addValue(); }}>+Feature</div>}
             {(lfeat && lfeat.values.length < lfeat.upperBound) && <div key={"Value"} className={"toolbar-item value"} onClick={() => {
-                SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); }}>+Value</div>}
+                SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); }}>
+                <ModellingIcon name={'value'} />
+                <span className={'ms-1 text-capitalize'}>value</span>
+            </div>}
             {node && addChildren(downward[node.className])}
             <hr className={'my-2'} />
         </div>);

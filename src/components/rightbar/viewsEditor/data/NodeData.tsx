@@ -43,9 +43,8 @@ function NodeData(props: Props) {
             </select>
         </div>
         {/*from damiano: il primo StoreSize tooltip funziona, il secondo no. perchè? l'html viene popolato correttamente ma risulta opacità 0, puoi cercare di risolverlo tu?*/}
-        <Input data={view} field={"storeSize"} label={"store Size"} tooltip={
+        <Input data={view} field={"storeSize"} label={"Store Size"} tooltip={
             <div>"Active: the node position depends from the view currently displayed. Inactive: it depends from the graph."</div>} type={"checkbox"} />
-        <Input data={view} field={"storeSize"} label={"Store Size"} type={"checkbox"} tooltip={true}/>
         <Input data={view} field={"lazySizeUpdate"} label={"Lazy Update"} type={"checkbox"} tooltip={true}/>
 
         <div className="p-1" style={{display: "flex"}}><label className="my-auto">Appliable to</label>

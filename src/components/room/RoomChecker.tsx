@@ -9,10 +9,10 @@ import {SaveManager} from "../topbar/SaveManager";
 
 function RoomChecker() {
     const {id} = useParams();
-    const [loading, setLoading] = useStateIfMounted(true);
     const [validCode, setValidCode] = useStateIfMounted(false);
 
     useEffectOnce(() => {
+        SetRootFieldAction.new('isLoading', true);
         const constraint: CONSTRAINT = {field: 'code', operator: '==', value: id};
         Firebase.select('rooms', constraint).then((results) => {
             if(results.length) {
@@ -20,11 +20,10 @@ function RoomChecker() {
                 if(result.state) SaveManager.load(result.state)
                 SetRootFieldAction.new('room', id); setValidCode(true);
             }
-            setLoading(false);
+            SetRootFieldAction.new('isLoading', false);
         });
     })
 
-    if(loading) return(<div>Loading...</div>);
     if(validCode) return(<>
         <App room={id} />
         <RoomAttacher />

@@ -18,8 +18,13 @@
   position: absolute;
   height: $fill;
   width: $fill;
-  background-image: url("../static/svg/graph.svg");
-  background-repeat: repeat;
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.1) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.1) 1.5px, transparent 1.5px),
+    linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+  background-position: -1.5px -1.5px, -1.5px -1.5px, -1px -1px, -1px -1px;
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
 }
 
 .model-name {

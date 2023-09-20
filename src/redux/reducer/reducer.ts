@@ -438,37 +438,15 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
 }
 
 export function jodelInit() {
+    SetRootFieldAction.new('isLoading', true);
     RuntimeAccessibleClass.fixStatics();
-
-    let dClasses: string[] = RuntimeAccessibleClass.getAllNames().filter( rc => rc[0] === 'D');
-    let lClasses: string[] = RuntimeAccessibleClass.getAllNames().filter( rc => rc[0] === 'L');
-    let dClassesmap: Dictionary<string, typeof DPointerTargetable> = dClasses.reduce((acc: any,curr)=> (acc[curr] = RuntimeAccessibleClass.get(curr), acc),{});
-    let lClassesmap: Dictionary<string, typeof LPointerTargetable> = lClasses.reduce((acc: any,curr)=> (acc[curr] = RuntimeAccessibleClass.get(curr), acc),{});
-    buildLSingletons(dClassesmap, lClassesmap);
-    setSubclasses(dClassesmap);
-    setSubclasses(lClassesmap);
-
-
+    let dClasses: string[] = RuntimeAccessibleClass.getAllNames().filter(rc => rc[0] === 'D');
+    let lClasses: string[] = RuntimeAccessibleClass.getAllNames().filter(rc => rc[0] === 'L');
+    let dClassesMap: Dictionary<string, typeof DPointerTargetable> = dClasses.reduce((acc: GObject, curr) => (acc[curr] = RuntimeAccessibleClass.get(curr), acc),{});
+    let lClassesMap: Dictionary<string, typeof LPointerTargetable> = lClasses.reduce((acc: GObject, curr)=> (acc[curr] = RuntimeAccessibleClass.get(curr), acc),{});
+    buildLSingletons(dClassesMap, lClassesMap); setSubclasses(dClassesMap); setSubclasses(lClassesMap);
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
-    // windoww.React = React;
+    DState.init();
+    SetRootFieldAction.new('isLoading', false);
 
-    /*for (let dclassname of dClasses) {
-        const dclass = RuntimeAccessibleClass.get(dclassname) as typeof DPointerTargetable;
-        const lclass = RuntimeAccessibleClass.get('L' + dclassname.substr(1)) as typeof LPointerTargetable;
-        dclass.logic = lclass;
-        console.log('EXecute on read set singletons:', {dclass, lclass});
-        if (!lclass) continue;
-        lclass.singleton = new lclass();
-        lclass.structure = dclass;
-    }*/
-
-    DState.fakeinit();
-//    setTimeout( () => createOrOpenModelTab('m3'), 1);
-    // GraphDragHandler.init();
-
-}
-
-// ideally launched before component render, verify it. maybe move the callback to <App> component mounting
-function afterStoreLoad() {
-    jodelInit();
 }

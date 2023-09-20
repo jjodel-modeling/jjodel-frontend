@@ -15,7 +15,8 @@ function OclEditorComponent(props: AllProps) {
 
     return <div style={{height: '5em'}}>
         <label className={'ms-1'}>OCL Editor</label>
-        <Editor className={'mx-1'} onChange={change} options={{readOnly: readOnly}}
+        <Editor className={'mx-1'} onChange={change}
+                options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                 defaultLanguage={'js'} value={view.query} />
     </div>;
 }

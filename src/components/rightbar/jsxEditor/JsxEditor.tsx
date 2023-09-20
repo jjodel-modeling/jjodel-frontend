@@ -1,8 +1,8 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import Editor from "@monaco-editor/react";
 import {useStateIfMounted} from "use-state-if-mounted";
 import {DState, DViewElement, LViewElement, Pointer, U} from "../../../joiner";
+import Editor from "@monaco-editor/react";
 
 
 function JsxEditorComponent(props: AllProps) {
@@ -12,7 +12,6 @@ function JsxEditorComponent(props: AllProps) {
 
     const change = (value: string|undefined) => {
         if(value !== undefined) setJsx(value);
-        //if(value !== undefined) view.jsxString = value;
     }
 
 
@@ -20,10 +19,11 @@ function JsxEditorComponent(props: AllProps) {
         view.jsxString = jsx;
     }
 
-    return <div style={{marginTop: '2.5em', height: '10em'}} tabIndex={-1} onBlur={blur}>
+    return <div style={{height: '20em'}} tabIndex={-1} onBlur={blur}>
         <label className={'ms-1'}>JSX Editor</label>
-        <Editor className={'mx-1'} onChange={change} options={{readOnly: readOnly}}
-                defaultLanguage={'html'} value={view.jsxString} />
+        <Editor className={'mx-1'} onChange={change}
+                options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
+                defaultLanguage={'html'}  value={view.jsxString} />
     </div>;
 }
 interface OwnProps { viewid: Pointer<DViewElement, 1, 1, LViewElement>; }

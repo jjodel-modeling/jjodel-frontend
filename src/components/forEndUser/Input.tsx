@@ -31,14 +31,15 @@ function InputComponent(props: AllProps) {
     const getter = props.getter;
     const setter = props.setter;
     const field = props.field;
-    let __value = (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined';
+    let __value = (!data) ? 'undefined' : (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined';
     const [value, setValue] = useStateIfMounted(__value);
     const [isTouched, setIsTouched] = useStateIfMounted(false);
 
     useEffect(() => {
         // I check if the value that I have in my local state is being edited by other <Input />
-        if(value !== data[field] && !isTouched){
-            setValue((getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined');
+        const oldValue = (!data) ? 'undefined' : (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined'
+        if(value !== oldValue && !isTouched){
+            setValue(oldValue);
             setIsTouched(false);
         }
     })
@@ -73,15 +74,26 @@ function InputComponent(props: AllProps) {
     ));
 
     const change = (evt: React.ChangeEvent<HTMLInputElement>) => {
-        setValue(evt.target.value);
-        setIsTouched(true);     // I'm editing the element in my local state.
+        const isBoolean = (['checkbox', 'radio'].includes(evt.target.type));
+        if(isBoolean) {
+            const target = evt.target.checked;
+            if(setter) setter(target);
+            else data[field] = target;
+        } else {
+            setValue(evt.target.value);
+            setIsTouched(true);     // I'm editing the element in my local state.
+        }
     }
 
-    const blur = (evt: React.FocusEvent<HTMLInputElement, Element>) => {
-        if(readOnly) return;
-        const target = (['checkbox', 'radio'].includes(evt.target.type)) ? evt.target.checked : evt.target.value;
-        if(setter) setter(target);
-        else data[field] = target;
+    const blur = (evt: React.FocusEvent<HTMLInputElement>) => {
+        const isBoolean = (['checkbox', 'radio'].includes(evt.target.type));
+        if(readOnly || isBoolean) return;
+        const target = evt.target.value;
+        const oldValue = (!data) ? 'undefined' : (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined'
+        if(target !== oldValue) {
+            if(setter) setter(target);
+            else data[field] = target;
+        }
         // I terminate my editing, so I communicate it to other <Input /> that render the same field.
         setIsTouched(false);
     }

@@ -19,12 +19,11 @@ export class SaveManager {
         localStorage.setItem("tmpsave", JSON.stringify(SaveManager.tmpsave));
     }
 
-    static load(fullstatestr?: string): void {
-        if (!fullstatestr && SaveManager.tmpsave) { LoadAction.new(SaveManager.tmpsave); return; }
-        fullstatestr = fullstatestr || localStorage.getItem("tmpsave") || 'null'; // priorities: 1) argument from file 2) state variable cached 3) localstorage 4) null prevent crash
-        SaveManager.tmpsave = JSON.parse(fullstatestr);
+    static load(state?: string): void {
+        if (!state && SaveManager.tmpsave) { LoadAction.new(SaveManager.tmpsave); return; }
+        state = state || localStorage.getItem('tmpsave') || 'null'; // priorities: 1) argument from file 2) state variable cached 3) localstorage 4) null prevent crash
+        SaveManager.tmpsave = JSON.parse(state);
         LoadAction.new(SaveManager.tmpsave);
-        // SetRootFieldAction.new('metamodel', Selectors.getActiveModel()?.id, '', true); already set by loadaction in batch
     }
 
     public static exportEcore_click(toXML: boolean = false, toFile: boolean = true): void { // e: React.MouseEvent,

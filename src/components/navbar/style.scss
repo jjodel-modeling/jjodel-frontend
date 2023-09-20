@@ -1,0 +1,69 @@
+@import "../../styles/variables";
+
+.my-navbar {
+  width: 100%;
+  display: flex;
+  background-color: whitesmoke;
+}
+
+.my-navbar>.logo {
+  height: 100%; width: 5em;
+  display: block;
+  justify-content: center;
+}
+
+.my-navbar>.first-row, .my-navbar>.second-row {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+}
+
+.project-name {
+  padding: 2px 8px;
+  display: inline;
+  font-size: 18px;
+  white-space: nowrap;
+}
+
+.second-row>.my-nav-item {
+  padding: 6px 6px 6px 9px;
+  font-size: 14px;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.second-row>.my-nav-item:hover {
+  color: #0d6efd;
+}
+
+.tab {
+  position: absolute;
+  z-index: 999; top: 9%;
+  box-shadow: 0 0 2px #C0C0C0;
+  background: whitesmoke;
+  border-radius: 4px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: lightgray;
+  padding: 3px;
+}
+
+.tab-item {
+  cursor: pointer;
+  padding: 7px 30px 7px 30px;
+  font-size: 12px;
+}
+.tab-item:hover {
+  background-color: #e0e0e0;
+}
+.tab>.extension {
+  position: absolute;
+  z-index: 999; top: 0; left: 101.5%;
+  box-shadow: 0 0 2px #C0C0C0;
+  background: whitesmoke;
+  border-radius: 4px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: lightgray;
+  padding: 3px;
+}
