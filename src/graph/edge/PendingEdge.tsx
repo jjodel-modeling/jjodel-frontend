@@ -9,7 +9,6 @@ function PendingEdgeComponent(props: AllProps) {
 
     const source = props.source;
     const [mousePosition, setMousePosition] = useStateIfMounted({x: 0, y: 0});
-    const options = props.edgeSettings;
 
     useEffect(() => {
         if(source) {
@@ -20,9 +19,10 @@ function PendingEdgeComponent(props: AllProps) {
     }, );
 
     return <Xwrapper>
-        <div style={{top: mousePosition.y - 100, left: mousePosition.x - 10}}
+        <div style={{zIndex: -999, top: mousePosition.y - 100, left: mousePosition.x - 10}}
              id={'extend-target'}></div>
-        {source && <Xarrow start={source.nodes[0].id} end={'extend-target'} {...options} />}
+        {source && <Xarrow start={source.nodes[0].id} end={'extend-target'} zIndex={999}
+                           showHead={true} headSize={20} showTail={false} color={'rgba(0, 0, 0, 0.5)'} strokeWidth={1} />}
     </Xwrapper>;
 }
 
@@ -33,9 +33,8 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = { } as any;
-/*    ret.user = LPointerTargetable.from(state.isEdgePending.user);
+    ret.user = LPointerTargetable.from(state.isEdgePending.user);
     ret.source = LPointerTargetable.from(state.isEdgePending.source);
-    ret.edgeSettings = state._edgeSettings;*/
     return ret;
 }
 

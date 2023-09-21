@@ -62,7 +62,7 @@ function InputComponent(props: AllProps) {
         </div>;
     }
     */
-    let tooltip: string = (props.tooltip === true) ? (data["__info_of__" + field]) ? data["__info_of__" + field].txt : '' : '';
+    let tooltip: string = (props.tooltip === true) ? (data["__info_of__" + field]) ? data["__info_of__" + field].txt : '' : props.tooltip;
 
     let css = 'my-auto input ';
     let inputClassName = (props.inputClassName || '');
@@ -118,12 +118,12 @@ function InputComponent(props: AllProps) {
 
 
 
-    return(<div {...otherprops} style={{...{display: (jsxLabel || label) ? 'flex' : 'block', cursor: (tooltip) ? 'help' : 'auto'}, ...style}}
+    return(<div {...otherprops} style={{...{display: (jsxLabel || label) ? 'flex' : 'block', ...style}}}
                                 className={'p-1 ' + className}>
-        {(label && !jsxLabel) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
+        {(label && !jsxLabel) && <label className={'my-auto'}  style={{cursor: (tooltip) ? 'help' : 'auto'}} onClick={() => {if(tooltip) notify()}}>
             {label}
         </label>}
-        {(jsxLabel && !label) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
+        {(jsxLabel && !label) && <label className={'my-auto'} style={{cursor: (tooltip) ? 'help' : 'auto'}}  onClick={() => {if(tooltip) notify()}}>
             {jsxLabel}
         </label>}
         {autosize ? <div className={ (autosize ? "autosize-input-container" : "") + (props.asLabel ? " labelstyle" : "")}
