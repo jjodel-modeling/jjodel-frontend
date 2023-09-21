@@ -34,7 +34,7 @@ function InputComponent(props: AllProps) {
     const getter = props.getter;
     const setter = props.setter;
     const field = props.field;
-    let __value = (!data) ? 'undefined' : (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined';
+    let __value = (!data) ? 'undefined' : ((getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined');
     const [value, setValue] = useStateIfMounted(__value);
     const [isTouched, setIsTouched] = useStateIfMounted(false);
 
@@ -48,8 +48,8 @@ function InputComponent(props: AllProps) {
     })
 
 
-    if(!data) return(<></>);
-    const readOnly = props.readonly || U.getDefaultViewsID().includes(data.id);
+    if (!data) return(<></>);
+    const readOnly = (props.readonly !== undefined) ? props.readonly : U.getDefaultViewsID().includes(data.id);
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
@@ -62,10 +62,9 @@ function InputComponent(props: AllProps) {
         </div>;
     }
     */
-    let tooltip: string = (props.tooltip === true) ? (data["__info_of__" + field]) ? data["__info_of__" + field].txt : '' : props.tooltip;
+    let tooltip: string = (props.tooltip === true) ? ((data["__info_of__" + field]) ? data["__info_of__" + field].txt: '') : props.tooltip;
 
     let css = 'my-auto input ';
-    let inputClassName = (props.inputClassName || '');
     css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
     css += (props.hidden) ? ' hidden-input' : '';
     let autosize: boolean = props.autosize === undefined ? false : props.autosize; // props.type==="text"
@@ -78,9 +77,10 @@ function InputComponent(props: AllProps) {
 
     const change = (evt: React.ChangeEvent<HTMLInputElement>) => {
         const isBoolean = (['checkbox', 'radio'].includes(evt.target.type));
-        if(isBoolean) {
+        if (isBoolean) {
+            if (readOnly) return;
             const target = evt.target.checked;
-            if(setter) setter(target);
+            if (setter) setter(target);
             else data[field] = target;
         } else {
             setValue(evt.target.value);
@@ -90,47 +90,51 @@ function InputComponent(props: AllProps) {
 
     const blur = (evt: React.FocusEvent<HTMLInputElement>) => {
         const isBoolean = (['checkbox', 'radio'].includes(evt.target.type));
-        if(readOnly || isBoolean) return;
+        if (readOnly || isBoolean) return;
         const target = evt.target.value;
         const oldValue = (!data) ? 'undefined' : (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined'
-        if(target !== oldValue) {
-            if(setter) setter(target);
+        if (target !== oldValue) {
+            if (setter) setter(target);
             else data[field] = target;
         }
         // I terminate my editing, so I communicate it to other <Input /> that render the same field.
         setIsTouched(false);
     }
 
-    let className = (props as any).className || '';
-    let style = (props as any).style || {};
-    props = {...props, className:'', style:{}} as any;
-    let input = <input key={`${field}.${data.id}`} spellCheck={false} readOnly={readOnly || (!editable && false)} className={css + inputClassName}
+    const otherprops: GObject = {...props};
+    delete otherprops.data;
+    delete otherprops.field;
+    delete otherprops.getter;
+    delete otherprops.setter;
+    delete otherprops.label;
+    delete otherprops.jsxLabel;
+    delete otherprops.tooltip;
+    delete otherprops.hidden;
+    delete otherprops.inputStyle;
+    delete otherprops.children;
+    delete otherprops.selected;
+    let input = <input {...otherprops}
+                       key={`${field}.${data.id}`}
+                       className={props.inputClassName || css}
+                       style={props.inputStyle}
+                       spellCheck={false}
+                       readOnly={readOnly || (!editable && false)}
                        type={type} value={value} onChange={change} onBlur={blur}
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
+    return(<label className={'p-1'} {...otherprops}
+                  style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor: tooltip ? 'help' : 'auto', ...((props as any).style || {})}}>
 
-    const otherprops: GObject = {...props};
-    delete otherprops.data;
-    delete otherprops.getter;
-    delete otherprops.setter;
-    delete otherprops.jsxLabel;
-    delete otherprops.hidden;
+        { label && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>{label}</label> }
 
+        {jsxLabel && <label style={{cursor: (tooltip) ? 'help' : 'auto'}} onClick={() => {if(tooltip) notify()}}>{jsxLabel}</label>}
 
-
-    return(<div {...otherprops} style={{...{display: (jsxLabel || label) ? 'flex' : 'block', ...style}}}
-                                className={'p-1 ' + className}>
-        {(label && !jsxLabel) && <label className={'my-auto'}  style={{cursor: (tooltip) ? 'help' : 'auto'}} onClick={() => {if(tooltip) notify()}}>
-            {label}
-        </label>}
-        {(jsxLabel && !label) && <label className={'my-auto'} style={{cursor: (tooltip) ? 'help' : 'auto'}}  onClick={() => {if(tooltip) notify()}}>
-            {jsxLabel}
-        </label>}
         {autosize ? <div className={ (autosize ? "autosize-input-container" : "") + (props.asLabel ? " labelstyle" : "")}
                           data-value={value}>{input}</div> : input}
         {tooltip && <Toaster position={'bottom-center'} /> }
-</div>);
+    </label>);
 }
+
 InputComponent.cname = "InputComponent";
 export interface InputOwnProps {
     data: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
@@ -141,17 +145,20 @@ export interface InputOwnProps {
     jsxLabel?: ReactNode;
     type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|
     'number'|'password'|'radio'|'range'|'tel'|'text'|'time'|'url'|'week';
+    className?: string;
+    style?: GObject;
     readonly?: boolean;
     tooltip?: string | boolean | ReactElement;
     hidden?: boolean;
     autosize?: boolean;
     inputClassName?: string;
+    inputStyle?: GObject;
     asLabel?: boolean;
     key?: React.Key | null;
 }
 interface StateProps {
     data: LPointerTargetable & GObject;
-    // selected: Dictionary<Pointer<DUser>, LModelElement|null>;
+    // selected: Dictionary<Pointer<DUser>, LModelElement | null>;
 }
 interface DispatchProps { }
 type AllProps = Overlap<InputOwnProps, Overlap<StateProps, DispatchProps>>;
@@ -179,10 +186,8 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret;
 }
 
-export const InputConnected = connect<StateProps, DispatchProps, InputOwnProps, DState>(
-    mapStateToProps,
-    mapDispatchToProps
-)(InputComponent);
+export const InputConnected =
+    connect<StateProps, DispatchProps, InputOwnProps, DState>(mapStateToProps, mapDispatchToProps)(InputComponent);
 
 
 export function Input(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement {

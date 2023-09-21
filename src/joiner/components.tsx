@@ -27,7 +27,7 @@ export {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphCon
 //export {DockLayoutComponent} from "../components/abstract/DockLayoutComponent";
 export {Edges} from "../graph/edge/Edges";
 export {DamEdge, EdgeComponent,} from "../graph/damedges/damedge";
-
+export {GenericInput} from "../components/forEndUser/GenericInput"
 
 
 

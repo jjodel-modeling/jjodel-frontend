@@ -178,7 +178,7 @@ class DefaultView {
     }
     public static package(): string {
         return `<div className={'round bg-white root package'}>
-            { /*<Input jsxLabel={<b className={'package-name'}>EPackage:</b>} field={'name'} hidden={true} />*/ }
+            { /*<Input jsxLabel={<b className={'my-auto package-name'}>EPackage:</b>} field={'name'} hidden={true} />*/ }
             { /*console.log("evalcontex:", {thiss: this, pname: this.pname, c: this._context}) && null*/ }
             {/*<Input jsxLabel={<b>{this.pname}:</b>} field={'name'} hidden={true} />*/}
             <hr />
@@ -193,7 +193,7 @@ class DefaultView {
 
     public static class(): string {
         return `<div className={'round bg-white root class'}>
-            <Input jsxLabel={<b className={'class-name'}>EClass:</b>} 
+            <Input jsxLabel={<b className={'my-auto class-name'}>EClass:</b>}
                    data={this.data.id} field={'name'} hidden={true} autosize={true} />
             <hr/>
             {/* i kept them separated because i want them in this order. i could have used data.children once, or put all in same container to mix them. */}
@@ -205,7 +205,7 @@ class DefaultView {
 
     public static enum(): string {
         return `<div className={'round bg-white root enumerator'}>
-            <Input jsxLabel={<b className={'enumerator-name'}>EEnum:</b>} 
+            <Input jsxLabel={<b className={'my-auto enumerator-name'}>EEnum:</b>} 
                    data={this.data.id} field={'name'} hidden={true} autosize={true} />
             <hr />
             <div className={'enumerator-children'}>
@@ -217,7 +217,7 @@ class DefaultView {
     }
 
     public static feature(): string {
-        return `<div><Select className={'root feature'} data={this.data} field={'type'} label={this.data.name} /></div>`;
+        return `<div><Select className={'d-flex p-1'} data={this.data} field={'type'} label={this.data.name} /></div>`;
     }
 
     public static literal(): string {
@@ -225,7 +225,7 @@ class DefaultView {
     }
 
     public static operation(): string {
-        return `<Select className={'root operation'} data={this.data} field={'type'} label={this.data.name+this.data.signature} />`;
+        return `<Select className={'d-flex p-1'} data={this.data} field={'type'} label={this.data.name+this.data.signature} />`;
     }
 
 
@@ -245,7 +245,7 @@ class DefaultView {
     public static object(): string {
         return `<div className={'round bg-white root class'}>
             <label className={'ms-1'}>
-                <Input jsxLabel={<b className={'class-name'}>{this.data.instanceof ? this.data.instanceof.name : "Object"}:</b>} 
+                <Input jsxLabel={<b className={'my-auto class-name'}>{this.data.instanceof ? this.data.instanceof.name : "Object"}:</b>} 
                    data={this.data.id} field={'name'} hidden={true} autosize={true}/>
             </label>
             <hr />
@@ -261,7 +261,7 @@ class DefaultView {
         return `<div className={'d-flex root value'} style={{paddingRight: "6px"}}>
              {this.props.data.instanceof && <label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>}
              {!this.props.data.instanceof && <Input asLabel={true} data={this.data.id} field={'name'} hidden={true} autosize={true} />}
-            <label className={'d-block ms-auto'} style={{color:` + valuecolormap_str + `[this.props.data.values.type] || "gray"
+            <label className={'d-block m-auto'} style={{color:` + valuecolormap_str + `[this.props.data.values.type] || "gray"
             }}>: {this.props.data.valuestring()}</label>
         </div>`
     }

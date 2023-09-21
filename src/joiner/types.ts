@@ -1,7 +1,17 @@
 // export type Class = { new(...args: any[]): any; };
 import type {ShortAttribETypes, Pointer, RuntimeAccessibleClass, EdgeSegment} from "../joiner";
 import type React from "react";
-import {LEdgePoint, LGraphElement, LVoidEdge, LVoidVertex} from "../joiner";
+import {
+    AttribETypes,
+    CoordinateMode,
+    EdgeHead,
+    EGraphElements, EModelElements,
+    LEdgePoint,
+    LGraphElement,
+    LVoidEdge,
+    LVoidVertex
+} from "../joiner";
+import {AccessModifier} from "../api/data";
 
 export declare type Class<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (abstract new (...args: any[]) => InstanceType) & StaticType;
 export declare type CClass<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (new (...args: any[]) => InstanceType) & StaticType;
@@ -30,7 +40,9 @@ export type PrimitiveType = string | number | boolean | null | undefined;
 type NotAFunction = NoCaller | NoBind | NoApply | NoCall;
 type NotFunction = GObject & NotAFunction | PrimitiveType;
 export type Info = {
-    type?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
+    txt: string | React.ReactElement,
+    type?: ShortAttribETypes | string | typeof RuntimeAccessibleClass | GObject<"Enum">,
+    label?: JSX.Element | string,
     readType?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
     writeType?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
     obsolete?: boolean, // hidden because is about to be removed
@@ -40,8 +52,14 @@ export type Info = {
     isNode?: boolean,
     isEdge?: boolean,
     isEdgePoint?:boolean,
-    enum?:GObject,
-    txt: string | React.ReactElement,
+    enum?:GObject, // todo: remove or use it
+    pattern?: string // regexp validation
+    min?: number; // for numeric types
+    max?: number; // for numeric types
+    positive?: boolean; // for numeric types
+    digits?: number; // for decimal types validation
+    step?: number// for decimal types numeric spinner increase
+
 };
 
 

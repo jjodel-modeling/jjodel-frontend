@@ -12,13 +12,13 @@ import {DState,
     LModelElement,
     Overlap} from "../../joiner";
 
-
+// todo: this is too hardcoded for Pointers and class->attributes etc. need to make it more generic
 function SelectComponent(props: AllProps) {
     const data = props.data;
     if(!data) return(<></>);
     const field = props.field;
-    const readOnly = props.readonly || U.getDefaultViewsID().includes(data.id);
-    const value = (data[field]?.id) ? data[field].id : 'undefined';
+    const readOnly = props.readonly; // || U.getDefaultViewsID().includes(data.id);
+    const value = data[field]?.id || data[field] || 'undefined';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
     const tooltip = props.tooltip;
@@ -61,15 +61,17 @@ function SelectComponent(props: AllProps) {
     delete otherprops.primitives;
     delete otherprops.returns;
     delete otherprops.hidden;
-    // todo per giordano: questa cosa non mi setta props.ref.current correttamente, puoi aggiustarlo tu? forse conosci meglio refs
-    return(<div {...otherprops} ref={props.ref as any} className={'d-flex p-1'} >
-        {(label && !jsxLabel) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
+    return(<label ref={props.ref as any} className={'d-flex p-1'} {...otherprops}>
+        {(label || jsxLabel) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
             {label}
-        </label>}
-        {(jsxLabel && !label) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
             {jsxLabel}
         </label>}
-        <select className={css} value={value} onChange={SelectChange}>
+        <select {...otherprops}
+            className={props.inputClassName || css}
+            style={props.inputStyle}
+            value={value}
+            onChange={SelectChange}>
+
             {(hasReturn && returns.length > 0) && <optgroup label={'Defaults'}>
                 {returns.map((returnType, i) => {
                     return <option key={i} value={returnType.id}>{returnType.name}</option>
@@ -93,7 +95,7 @@ function SelectComponent(props: AllProps) {
             {props.options}
         </select>
         {(tooltip) && <Toaster position={'bottom-center'} />}
-    </div>);
+    </label>);
 }
 SelectComponent.cname = "SelectComponent";
 export interface SelectOwnProps {
@@ -105,8 +107,12 @@ export interface SelectOwnProps {
     hidden?: boolean;
     options?: JSX.Element;
     key?: React.Key | null;
+    className?: string;
+    style?: GObject;
     ref?: React.RefObject<HTMLElement> | LegacyRef<HTMLElement>;
     readonly?: boolean;
+    inputClassName?: string;
+    inputStyle?: GObject;
 }
 interface StateProps {
     data: LPointerTargetable & GObject;

@@ -108,7 +108,7 @@ import type {
 import type {LogicContext} from "./proxy";
 import type {EdgeSegment, DState, EdgeFillSegment} from "./index";
 import {
-    Action,
+    Action, AttribETypes,
     BEGIN,
     CreateElementAction,
     DeleteElementAction,
@@ -119,12 +119,13 @@ import {
     Log,
     ParsedAction,
     SetFieldAction,
-    SetRootFieldAction,
+    SetRootFieldAction, ShortAttribETypes,
     store,
     U,
 } from "./index";
 import TreeModel from "tree-model";
 import {cssNumber} from "jquery";
+import {AccessModifier} from "../api/data";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -1925,3 +1926,31 @@ export type getWParams<L extends LPointerTargetable, D extends Object> ={
                 : never ///D[Property] | `todo: should define set_${Property}` // default type if it's not assigned = type in the D version
                 )): never)
 } // & L
+
+
+export enum EGraphElements {
+    "GraphElement"=  "GraphElement",
+    "Field" ="GraphElement", // just an alias for now.
+    "Vertex"= "Vertex",
+    "todo" = "todo"
+}
+export enum EModelElements{
+    // concrete m2
+    "(m2) Model" = "DModel",
+    "(m2) Package" = "DPackage",
+    "(m2) Class" = "DClass",
+    "(m2) Enum" = "DEnumerator",
+    "(m2) Literal" = "DEnumLiteral",
+    "(m2) Operation" = "DOperation",
+    "(m2) Parameter" = "DParameter",
+    "(m2) Attribute" = "DAttribute",
+    "(m2) Reference" = "DReference",
+    "(m2) Annotation" = "DAnnotation",
+    // abstract m2
+    "(abstract m2) Feature" = "DStructuralFeature",
+    "(abstract m2) Classifier" = "DClassifier",
+    // concrete m1
+    "(m1) Object" = "DObject",
+    "(m1) Value" = "DValue",
+}
+

@@ -1,12 +1,15 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {CreateElementAction, SetFieldAction, SetRootFieldAction, DState, DViewPoint, Input, LViewElement, LViewPoint, Pointer, U} from "../../../joiner";
+import {useStateIfMounted} from "use-state-if-mounted";
 
 
 function ViewpointsEditorComponent(props: AllProps) {
     const views = props.views;
     const viewpoints = props.viewpoints;
     const selected = props.selected;
+
+    const [hoverID, setHoverID] = useStateIfMounted('');
 
     const editName = (evt: React.ChangeEvent<HTMLInputElement>, viewpoint: LViewPoint) => {
         viewpoint.name = evt.target.value;
@@ -32,8 +35,11 @@ function ViewpointsEditorComponent(props: AllProps) {
             </button>
         </div>
         {viewpoints.map((viewpoint, index) => {
-            return <div key={index} className={'d-flex p-1 mt-1 border round'}
-                        style={{ backgroundColor: (selected.id === viewpoint.id) ? 'white' : 'transparent'}}>
+            return <div key={viewpoint.id} className={'d-flex p-1 mt-1 border round'}
+                        onMouseEnter={(e) => setHoverID(viewpoint.id)}
+                        onMouseLeave={(e) => setHoverID('')}
+                        style={{ backgroundColor: (selected.id === viewpoint.id) ? 'white' :
+                                (hoverID === viewpoint.id ? "var(--bs-border-color)" : 'transparent')}}>
                 <input className={'p-0 input hidden-input'} value={viewpoint.name} type={'text'}
                        onChange={(evt) => {editName(evt, viewpoint)}} disabled={index === 0} />
                 <button className={'btn btn-success ms-auto'} disabled={selected.id === viewpoint.id}

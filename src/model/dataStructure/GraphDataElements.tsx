@@ -1374,7 +1374,7 @@ export class EdgeSegment{
         this.length = this.start.pt.distanceFromPoint(this.end.pt);
     }
 }
-export enum SvgLetter{ "L"="L" , "M"="M", "S"="S", "C"="C", "Q"="Q", "A"="A", "T"="T"}
+
 export class EdgeFillSegment extends EdgeSegment{
     public static cname: string = "EdgeFillSegment";
     makeD(index: number, gapMode: EdgeGapMode): string {

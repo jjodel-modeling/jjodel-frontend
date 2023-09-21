@@ -174,7 +174,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let dataid: Pointer<DModelElement, 0, 1, LModelElement> = ownProps.data || null;
         // Log.exDev(!nodeid || !graphid, 'node id injection failed', {ownProps, data: ret.data, name:(ret.data as any)?.name || (ret.data as any)?.className}); /*
         /*if (!nodeid) {
-            nodeid = 'nodeof_' + stateProps.data.id + (stateProps.view.bindVertexSizeToView ? '^' + stateProps.view.id : '') + '^1';
+            nodeid = 'nodeof_' + stateProps.data.id + (stateProps.view.storeSize ? '^' + stateProps.view.id : '') + '^1';
             stateProps.nodeid = U.increaseEndingNumber(nodeid, false, false, id => !idlookup[id]);
             todo: quando il componente si aggiorna questo viene perso, come posso rendere permanente un settaggio di reduxstate in mapstatetoprops? o devo metterlo nello stato normale?
         }*/
@@ -309,7 +309,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 /*
     onMountBindID() {
-        /*if (!this.props.view.bindVertexSizeToView) {
+        /*if (!this.props.view.storeSize) {
             // get position from view itself
             nodeid = 'nodeof_' + this.props.data.id;
             if (!store.getState().idlookup[nodeid]){
@@ -329,7 +329,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     generateId(): Pointer<DGraphElement, 1, 1, LGraphElement> {
         // if (this.state.nodeid) return this.state.nodeid;
-        let ret: string = 'nodeof_' + this.props.data.id + (this.props.view.bindVertexSizeToView ? '^' + this.props.view.id : '') + '^1';
+        let ret: string = 'nodeof_' + this.props.data.id + (this.props.view.storeSize ? '^' + this.props.view.id : '') + '^1';
         const idlookup = store.getState().idlookup;
         ret = U.increaseEndingNumber(ret, false, false, id => !idlookup[id]);
         return ret;
