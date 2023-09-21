@@ -32,7 +32,7 @@ function RoomAttacherComponent(props: AllProps) {
             for(let action of data.actions.filter((item: GObject) => !actions[item.id])) {
                 const receivedAction = Action.fromJson(action);
                 if(action.token === DUser.token) continue;
-                console.log('FB: Executing Action:' + action.id + ' from ' + action.token);
+                console.log('FB: Executing Action', action);
                 receivedAction.hasFired = receivedAction.hasFired - 1;
                 receivedAction.fire();
                 actions[action.id] = true; setActions(actions);

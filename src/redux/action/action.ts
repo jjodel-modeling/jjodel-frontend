@@ -13,7 +13,7 @@ import {
     store,
     U,
     unArr,
-    windoww
+    windoww, GObject
 } from "../../joiner";
 
 // transactional-like start of storage modification
@@ -212,6 +212,7 @@ export class Action extends RuntimeAccessibleClass {
 
     static fromJson(json: Json): Action{
         let action = new Action('dummy', 'dummy');
+        for(let key in action) delete (action as GObject)[key]; // resetting the action
         for(let key in json) (action as any)[key] = json[key];
         return action;
     }

@@ -28,7 +28,7 @@ function RoomChecker() {
         <App room={id} />
         <RoomAttacher />
     </>);
-    return(<div>Invalid code</div>)
+    else return(<div>Invalid code</div>)
 }
 
 export default RoomChecker;

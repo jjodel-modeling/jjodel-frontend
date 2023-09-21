@@ -104,7 +104,7 @@ export class DState extends DPointerTargetable{
         return new Constructors(new DState('dwc'), undefined, false, undefined).DPointerTargetable().DState().end();
     }
 
-    debug: boolean = false;
+    debug: boolean = true;
     logs: Pointer<DLog, 0, 'N', LLog> = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
     currentUser!: DUser;
@@ -172,7 +172,8 @@ export class DState extends DPointerTargetable{
     room: string = '';
     isCleaning: boolean = false;    // check if a room is being cleaned
 
-    selected: Dictionary<Pointer<DUser>, Pointer<DModelElement, 0, 1, LModelElement>> = {};
+    //selected: Dictionary<Pointer<DUser>, Pointer<DModelElement, 0, 1, LModelElement>> = {};
+    selected: Pointer<DModelElement, 0, 1, LModelElement> = '';
     iot: null|boolean = null;
     topics: string[] = [];
 
@@ -290,7 +291,7 @@ function makeDefaultGraphViews(): DViewElement[] {
     let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname]);
 
     const defaultPackage: DViewElement = DViewElement.new('DefaultPackage', DV.defaultPackage());
-    defaultPackage.query = `context DPackage inv: self.name = 'todo default pkg'`;
+    defaultPackage.query = `context DPackage inv: self.name = 'defaultPKG'`;
 
     return [modelView, packageView, classView, enumView, attributeView, referenceView, operationView, literalView, objectView, valueView, defaultPackage, voidView, ...edgeViews, edgePointView, edgePointViewSVG];
 }

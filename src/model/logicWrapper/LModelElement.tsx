@@ -2552,7 +2552,7 @@ export class DReference extends DPointerTargetable { // DStructuralFeature
     transient: boolean = false;
     unsettable: boolean = false;
     derived: boolean = false;
-    defaultValueLiteral!: string;
+    defaultValueLiteral: string = '';
     parent: Pointer<DClass, 0, 'N', LClass> = [];
     father!: Pointer<DClass, 1, 1, LClass>;
     instances: Pointer<DValue, 0, 'N', LValue> = [];
@@ -2774,7 +2774,7 @@ export class DAttribute extends DPointerTargetable { // DStructuralFeature
     transient: boolean = false;
     unsettable: boolean = false;
     derived: boolean = false;
-    defaultValueLiteral!: string;
+    defaultValueLiteral: string = '';
     //@obsolete_attribute()
     parent: Pointer<DClass, 0, 'N', LClass> = [];
 

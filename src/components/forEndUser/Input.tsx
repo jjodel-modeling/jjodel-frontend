@@ -19,14 +19,17 @@ import {useStateIfMounted} from "use-state-if-mounted";
 function InputComponent(props: AllProps) {
     // todo: data can be injected with UX, if field is present, can take type from a metainfo like __info_of__
     const data = props.data;
-    const selected = props.selected;
+    // const selected = props.selected;
     const fathers = U.fatherChain(data as LModelElement);
     let editable = true;
+
+    /*  Uncomment this when we have user authentication: if a user is on a ME, it cannot be edited.
     for(let father of fathers) {
         const user = Object.keys(selected).find(key => selected[key]?.id === father);
         if(user && user !== DUser.current) editable = false;
         if(!editable) break;
     }
+    */
 
     const getter = props.getter;
     const setter = props.setter;
@@ -101,7 +104,7 @@ function InputComponent(props: AllProps) {
     let className = (props as any).className || '';
     let style = (props as any).style || {};
     props = {...props, className:'', style:{}} as any;
-    let input = <input key={`${field}.${data.id}`} spellCheck={false} readOnly={readOnly || !editable} className={css + inputClassName}
+    let input = <input key={`${field}.${data.id}`} spellCheck={false} readOnly={readOnly || (!editable && false)} className={css + inputClassName}
                        type={type} value={value} onChange={change} onBlur={blur}
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
@@ -130,58 +133,60 @@ function InputComponent(props: AllProps) {
 }
 InputComponent.cname = "InputComponent";
 export interface InputOwnProps {
-data: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
-field: string;
-getter?: (data: LPointerTargetable) => string;
-setter?: (value: string|boolean) => void;
-label?: string;
-jsxLabel?: ReactNode;
-type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|
-'number'|'password'|'radio'|'range'|'tel'|'text'|'time'|'url'|'week';
-readonly?: boolean;
-tooltip?: string | boolean | ReactElement;
-hidden?: boolean;
-autosize?: boolean;
-inputClassName?: string;
-asLabel?: boolean;
-key?: React.Key | null;
+    data: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
+    field: string;
+    getter?: (data: LPointerTargetable) => string;
+    setter?: (value: string|boolean) => void;
+    label?: string;
+    jsxLabel?: ReactNode;
+    type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|
+    'number'|'password'|'radio'|'range'|'tel'|'text'|'time'|'url'|'week';
+    readonly?: boolean;
+    tooltip?: string | boolean | ReactElement;
+    hidden?: boolean;
+    autosize?: boolean;
+    inputClassName?: string;
+    asLabel?: boolean;
+    key?: React.Key | null;
 }
 interface StateProps {
-data: LPointerTargetable & GObject;
-selected: Dictionary<Pointer<DUser>, LModelElement|null>;
-
+    data: LPointerTargetable & GObject;
+    // selected: Dictionary<Pointer<DUser>, LModelElement|null>;
 }
 interface DispatchProps { }
 type AllProps = Overlap<InputOwnProps, Overlap<StateProps, DispatchProps>>;
 
 
 function mapStateToProps(state: DState, ownProps: InputOwnProps): StateProps {
-const ret: StateProps = {} as any;
-const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
-ret.data = LPointerTargetable.fromPointer(pointer);
-const selected = state.selected;
-ret.selected = {};
-for(let user of Object.keys(selected)) {
-const pointer = selected[user];
-if(pointer) ret.selected[user] = LModelElement.fromPointer(pointer);
-else ret.selected[user] = null;
-}
-return ret;
+    const ret: StateProps = {} as any;
+    const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
+    ret.data = LPointerTargetable.fromPointer(pointer);
+    /*
+    const selected = state.selected;
+    ret.selected = {};
+    for(let user of Object.keys(selected)) {
+        const pointer = selected[user];
+        if(pointer) ret.selected[user] = LModelElement.fromPointer(pointer);
+        else ret.selected[user] = null;
+    }
+
+    */
+    return ret;
 }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
-const ret: DispatchProps = {};
-return ret;
+    const ret: DispatchProps = {};
+    return ret;
 }
 
 export const InputConnected = connect<StateProps, DispatchProps, InputOwnProps, DState>(
-mapStateToProps,
-mapDispatchToProps
+    mapStateToProps,
+    mapDispatchToProps
 )(InputComponent);
 
 
 export function Input(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement {
-return <InputConnected {...{...props, children}} />;
+    return <InputConnected {...{...props, children}} />;
 }
 
 InputComponent.cname = "InputComponent";

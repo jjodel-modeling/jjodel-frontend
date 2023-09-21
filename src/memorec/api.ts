@@ -5,8 +5,6 @@ import {MemoRecModel, MemoRecNamed, MemoRecObject} from "./types";
 
 export default class MemoRec {
     static async post(path: string, obj: MemoRecObject): Promise<AxiosResponse> {
-        console.clear();
-        console.log(obj);
         return await axios.post('/memorec/' + path, obj);
     }
 
@@ -32,7 +30,7 @@ export default class MemoRec {
         const response = await MemoRec.post('structuralFeatures', memorecObject);
         console.log(response);
 
-        const data: GObject[] = response.data.slice(0, 10);
+        const data: GObject[] = response.data;
         data.sort((a,b) => b.score - a.score);
 
         return {data: data, type: 'class'};
@@ -59,7 +57,7 @@ export default class MemoRec {
         const response = await MemoRec.post('classes', memorecObject);
         console.log(response);
 
-        const data:GObject[] = response.data.slice(0, 10);
+        const data:GObject[] = response.data;
         data.sort((a,b) => b.score - a.score);
         return {data: data, type: 'package'};
     }

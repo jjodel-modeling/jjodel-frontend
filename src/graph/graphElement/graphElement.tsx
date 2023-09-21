@@ -267,18 +267,18 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!forUser) forUser = DUser.current;
         // this.props.node.isSelected[forUser] = true;
 
-        BEGIN();
+        //BEGIN();
         const selected = Selectors.getSelected();
         if (id) {
-            selected[forUser] = id;
-            SetRootFieldAction.new('selected', selected);
+            //selected[forUser] = id;
+            SetRootFieldAction.new('selected', id, '', true);
         }
         SetRootFieldAction.new('_lastSelected', {
             node: this.props.nodeid,
             view: this.props.view.id,
             modelElement: this.props.data?.id
         });
-        END();
+        //END();
     }
 
     constructor(props: AllProps, context: any) {
@@ -447,10 +447,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         e.stopPropagation();
         const selected = Selectors.getSelected();
         const id = this.props.dataid;
-        const alreadySelected = Object.keys(selected).filter(function(key) {
-            return selected[key] === id;
-        });
-        if(alreadySelected.length === 0) this.select();
+        const alreadySelected = selected === id;
+        if(!alreadySelected) this.select();
         SetRootFieldAction.new("contextMenu", {
             display: true,
             x: e.clientX,
@@ -477,11 +475,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         e.stopPropagation();
         const selected = Selectors.getSelected();
         const id = this.props.dataid;
-        const alreadySelected = Object.keys(selected).filter(function(key) {
-            return selected[key] === id;
-        });
+        const alreadySelected = selected === id;
         SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
-        if(alreadySelected.length > 0) return;
+        if(alreadySelected) return;
         const isEdgePending = (this.props.isEdgePending?.source);
         if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
         if (!this.props.data) return;

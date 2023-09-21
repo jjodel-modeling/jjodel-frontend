@@ -235,10 +235,10 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             // this.test,
             // this.iotEditor,
             this.structureEditor,
+            this.styleEditor,
             this.treeEditor,
             this.viewsEditor,
             this.viewpointEditor,
-            // this.styleEditor,
             this.console
         ];
         layout.dockbox.children.push({tabs});

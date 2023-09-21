@@ -7,9 +7,10 @@ import EOperation from '../../static/icon/modelling/operation.png';
 import EEnumerator from '../../static/icon/modelling/enumerator.png';
 import ELiteral from '../../static/icon/modelling/literal.png';
 
-interface Props {name: string}
+interface Props {name: string, className?: string}
 function ModellingIcon(props: Props) {
     const name = props.name;
+    const className = props.className ? props.className : '';
     switch (name) {
         case 'package': return(<img width={16} height={16} className={'d-block'} src={EPackage} />);
         case 'object':
@@ -21,7 +22,7 @@ function ModellingIcon(props: Props) {
         case 'literal': return(<img width={16} height={16} className={'d-block'} src={ELiteral} />);
         case 'value':
         default:
-            return(<img width={16} height={16} className={'d-block'} src={EAttribute} />);
+            return(<img width={16} height={16} className={`d-block ${className}`} src={EAttribute} />);
     }
 }
 

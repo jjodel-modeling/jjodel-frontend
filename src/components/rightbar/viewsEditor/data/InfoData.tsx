@@ -37,7 +37,7 @@ function InfoData(props: Props) {
         <div className="p-1" style={{display: "flex"}}><label className="my-auto">Appliable to</label>
             <select data-obj={view.id} data-field={'appliableToClasses'} data-label={'Appliable to'} data-options={ classesOptions }
                     value={view.appliableToClasses[0] || ''} onChange={(e) => { view.appliableToClasses = e.target.value as any; }}
-                    className={"my-auto ms-auto select"}>
+                    className={"my-auto ms-auto select"} disabled={readOnly}>
                 {classesOptions}
             </select>
         </div>

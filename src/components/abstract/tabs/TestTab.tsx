@@ -23,7 +23,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    ret.selected = LModelElement.fromPointer(state.selected[DUser.current] as any);
+    ret.selected = null;
     return ret;
 }
 

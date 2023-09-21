@@ -48,7 +48,7 @@ enum ViewEClassMatch { // this acts as a multiplier for explicit priority
 export class Selectors{
     public static cname: string = "Selectors";
 
-    static getSelected(): Dictionary<Pointer<DUser>, Pointer<DModelElement, 0, 1, LModelElement>> {
+    static getSelected(): Pointer<DModelElement, 0, 1, LModelElement> {
         const state = store.getState();
         return state.selected;
     }

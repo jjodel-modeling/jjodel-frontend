@@ -5,15 +5,16 @@ import {LModelElement, LViewElement, LGraphElement, Input}  from "../../../joine
 
 function StyleEditorComponent(props: AllProps) {
     const selected = props.selected;
+    const editable = true;
     if(!selected) return(<></>);
     return(<div className={'p-3'}>
         {/*<Input obj={selected.node} field={"id"} label={"ID"} type={"text"} readonly={true}/>*/}
-        <Input data={selected.node} field={"x"} label={"X Position"} type={"number"} readonly={true} />
-        <Input data={selected.node} field={"y"} label={"Y Position"} type={"number"} readonly={true} />
-        <Input data={selected.node} field={"width"} label={"Width"} type={"number"} readonly={true} />
-        <Input data={selected.node} field={"height"} label={"Height"} type={"number"} readonly={true} />
-        <Input data={selected.node} field={"zIndex"} label={"Z Index"} type={"number"} readonly={true} />
-        <Input data={selected.node} field={"selectedBy"} label={"Selected By"} type={"text"} readonly={true} />
+        <Input data={selected.node} field={"x"} label={"X Position"} type={"number"} readonly={!editable} />
+        <Input data={selected.node} field={"y"} label={"Y Position"} type={"number"} readonly={!editable} />
+        <Input data={selected.node} field={"width"} label={"Width"} type={"number"} readonly={!editable} />
+        <Input data={selected.node} field={"height"} label={"Height"} type={"number"} readonly={!editable} />
+        <Input data={selected.node} field={"zIndex"} label={"Z Index"} type={"number"} readonly={!editable} />
+        {/*<Input data={selected.node} field={"selectedBy"} label={"Selected By"} type={"text"} readonly={!editable} />*/}
     </div>);
 
 }

@@ -5,7 +5,7 @@ import {DState, CreateElementAction, DGraph, LGraph, LModel} from "../../../join
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import PendingEdge from "../../../graph/edge/PendingEdge";
-import ContextMenu from "../../toolbar/ContextMenu";
+import ContextMenu from "../../contextMenu/ContextMenu";
 import EdgesManager from "../../../graph/edges/EdgesManager";
 
 function MetamodelTabComponent(props: AllProps) {

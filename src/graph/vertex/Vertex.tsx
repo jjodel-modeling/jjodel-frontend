@@ -272,20 +272,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
 
         const cssOverride: string[] = [];
-
-        let selected = false;
-        for(let me of Object.values(this.props.selected))
-            if(me?.id === this.props.dataid) selected = true;
-
-        if (selected) {
-            cssOverride.push('selected-by-me');
-            /*
-            if (this.props.dataid === this.props.selected[DUser.current]?.id)
-                cssOverride.push('selected-by-me');
-            else
-                cssOverride.push('selected-by-others');
-            */
-        }
+        const selected = this.props.selected;
+        if(selected && selected.id === this.props.dataid) cssOverride.push('selected-by-me');
 
         // if(!windoww.cpts) windoww.cpts = {};
         // windoww.cpts[this.props.nodeid]=this;
@@ -339,7 +327,8 @@ class OwnProps extends GraphElementOwnProps {
 class StateProps extends GraphElementReduxStateProps {
     node!: LVoidVertex;
     lastSelected!: LModelElement | null;
-    selected!: Dictionary<Pointer<DUser>, LModelElement|null>;
+    //selected!: Dictionary<Pointer<DUser>, LModelElement|null>;
+    selected!: LModelElement|null;
     isEdgePending!: { user: LUser, source: LClass };
     viewpoint!: LViewPoint
 }
@@ -362,13 +351,15 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     //superret.lastSelected = state._lastSelected?.modelElement;
     superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
 
-    const selected = state.selected;
+    superret.selected = (state.selected) ? LModelElement.fromPointer(state.selected) : null;
+    /*  Uncomment this when we have user authentication.
     superret.selected = {};
     for(let user of Object.keys(selected)) {
         const pointer = selected[user];
         if (pointer) superret.selected[user] = LModelElement.fromPointer(pointer);
         else superret.selected[user] = null;
     }
+    */
 
 
     superret.isEdgePending = {

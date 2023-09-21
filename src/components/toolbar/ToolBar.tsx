@@ -1,6 +1,6 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import "./toolbar.scss";
+import "./style.scss";
 import {
     DState,
     DGraphElement,
@@ -33,7 +33,7 @@ import {
     LEdgePoint
 } from "../../joiner";
 import {InitialVertexSizeObj} from "../../joiner/types";
-import ModellingIcon from "./ModellingIcon";
+import ModellingIcon from "../forEndUser/ModellingIcon";
 
 interface ThisState {}
 
