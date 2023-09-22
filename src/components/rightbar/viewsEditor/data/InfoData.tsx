@@ -26,7 +26,7 @@ function InfoData(props: Props) {
         <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Viewpoint</label>
             <select className={'my-auto ms-auto select'} disabled={readOnly}
-                    value={String(view.viewpoint?.id)} onChange={changeVP}>
+                    defaultValue={view.viewpoint ? view.viewpoint.id : 'null'} onChange={changeVP}>
                 <option value={'null'}>-----</option>
                 {viewpoints.map((viewpoint, index) => {
                     return(<option key={index} value={viewpoint.id}>{viewpoint.name}</option>);
