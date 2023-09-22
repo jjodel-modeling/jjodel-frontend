@@ -1,13 +1,14 @@
-import {DocString, EdgeHead, GObject, RuntimeAccessible, ShortAttribETypes as SAType, U} from '../joiner';
-import React from "react";
-import ReactDomServer from 'react-dom/server';
-const beautify = (s: string) => s;
+import {DocString, EdgeHead, ShortAttribETypes as SAType, U} from '../joiner';
+import {GObject, RuntimeAccessible} from '../joiner';
+import React, {ReactElement} from "react";
+// const beautify = require('js-beautify').html; // BEWARE: this adds some newline that might be breaking and introduce syntax errors in our JSX parser
+const beautify = (s: any)=>s;
 let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 
 @RuntimeAccessible
 export class DV {
     static cname: string = "DV";
-    public static modelView(): string { return beautify(DefaultView.model()); }
+    public static modelView(): string { return beautify(DefaultView.model()); } // damiano: che fa beautify? magari potremmo settarlo in LView.set_jsx invece che solo qui, così viene formattato anche l'input utente?
     public static packageView(): string { return beautify(DefaultView.package()); }
     public static classView(): string { return beautify(DefaultView.class()); }
     public static attributeView(): string { return beautify(DefaultView.feature()); }
@@ -28,7 +29,7 @@ export class DV {
         console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg}); return DefaultView.error(visibleMessage); }
 
     static edgePointView(): string { return beautify(
-        `<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"inherit", width:"100%", height:"100%"}} />`
+        `<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"white", width:"100%", height:"100%"}} />`
     )}
     static edgePointViewSVG(): string { return beautify(
         `<ellipse stroke={"black"} fill={"red"} cx={"50"} cy={"50"} rx={"20"} ry={"20"} />`
@@ -82,11 +83,19 @@ export class DV {
     // about label rotation in .edge > foreignObect > div (label)
     // first transform is h-center. second is rotate, third adds [0, 50%] of 50% vertical offset AFTER rotation to take label out of edge. fourth is to add a margin.
     static edgeView(modename: EdgeHead, head: DocString<"JSX">, tail: DocString<"JSX">, dashing: string | undefined): string { return beautify(
-        `<div className={"edge ` + modename + `"} style={{overflow: "visible", width:"100vw", height:"100vh", pointerEvents:"none"}}>
-            <svg className={"hoverable"} style={{width:"100vw", height:"100vh", pointerEvents:"none", overflow: "visible"}}>
-                { /* edge full segment */ }
-                <path className={"preview"} strokeWidth={strokeWidth}
-                stroke={strokeColor} fill={"none"} d={edge.d} strokeDasharray="` + dashing + `"></path>
+        `<div className={"hoverable edge hide-ep ` + modename + `"} style={{overflow: "visible", width:"100vw", height:"100vh", pointerEvents:"none"}}>
+            <svg style={{width:"100vw", height:"100vh", pointerEvents:"none", overflow: "visible"}}>
+                { /* edge full paths
+               
+                 first is preview path, normally seen
+                 third (segmented) is path onHover
+                 second is to enlarge the hover area of path.preview to the same as path.content, so i avoid hover loop enter-leave and graphical flashing
+                
+                */ }
+                <path className={"preview"} strokeWidth={strokeWidth} stroke={strokeColor}
+                fill={"none"} d={edge.d} strokeDasharray="` + dashing + `"></path>
+                <path className={"preview"} strokeWidth={strokeWidthHover} stroke={"transparent"}
+                fill={"none"} d={edge.d} strokeDasharray="` + dashing + `"></path>
                 { /* edge separate segments */ }
                 {segments.all.flatMap(s => [
                     <path className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={strokeWidthHover}
@@ -108,7 +117,6 @@ export class DV {
             {
                 edge.midPoints.map( m => <EdgePoint data={edge.father.model.id} initialSize={m} key={m.id} view={"Pointer_ViewEdgePoint"} /> )
             }{
-                
                 edge.end.model.attributes.map( (m, index, arr) => <EdgePoint data={m.id} initialSize={(parent) => {
                     let segs = parent.segments.segments;
                     let pos = segs[0].start.pt.multiply(1-(index+1)/(arr.length+1), true).add(segs[segs.length-1].end.pt.multiply((index+1)/(arr.length+1), true));
@@ -177,7 +185,7 @@ class DefaultView {
     }
     public static package(): string {
         return `<div className={'round bg-white root package'}>
-            { /*<Input jsxLabel={<b className={'package-name'}>EPackage:</b>} field={'name'} hidden={true} />*/ }
+            { /*<Input jsxLabel={<b className={'my-auto package-name'}>EPackage:</b>} field={'name'} hidden={true} />*/ }
             { /*console.log("evalcontex:", {thiss: this, pname: pname, c: _context}) && null*/ }
             {/*<Input jsxLabel={<b>{pname}:</b>} field={'name'} hidden={true} />*/}
             <hr />
@@ -194,6 +202,8 @@ class DefaultView {
         return `<div className={'round bg-white root class'}>
             <Input jsxLabel={<b className={'class-name'}>EClass:</b>} 
                    data={data.id} field={'name'} hidden={true} autosize={true} />
+            <Input jsxLabel={<b className={'my-auto class-name'}>EClass:</b>}
+                   data={data.id} field={'name'} hidden={true} autosize={true} />
             <hr/>
             {/* i kept them separated because i want them in this order. i could have used data.children once, or put all in same container to mix them. */}
             <div className={'class-children'}>{ data.attributes.map(c => <DefaultNode key={c.id} data={c.id} />) }</div>
@@ -204,7 +214,7 @@ class DefaultView {
 
     public static enum(): string {
         return `<div className={'round bg-white root enumerator'}>
-            <Input jsxLabel={<b className={'enumerator-name'}>EEnum:</b>} 
+            <Input jsxLabel={<b className={'my-auto enumerator-name'}>EEnum:</b>} 
                    data={data.id} field={'name'} hidden={true} autosize={true} />
             <hr />
             <div className={'enumerator-children'}>
@@ -219,6 +229,7 @@ class DefaultView {
         return `<div className={'w-100'}>
             <Select className={'root feature'} data={data} field={'type'} label={data.name} />
         </div>`;
+        return `<div><Select className={'d-flex p-1'} data={data} field={'type'} label={data.name} /></div>`;
     }
 
     public static literal(): string {
@@ -231,6 +242,7 @@ class DefaultView {
             <Select className={'root operation'} data={data} field={'type'} 
                     label={data.name + ' () => '} />
         </div>`;
+        return `<Select className={'d-flex p-1'} data={data} field={'type'} label={data.name+data.signature} />`;
     }
 
 
@@ -250,7 +262,7 @@ class DefaultView {
     public static object(): string {
         return `<div className={'round bg-white root class'}>
             <label className={'ms-1'}>
-                <Input jsxLabel={<b className={'class-name'}>{data.instanceof ? data.instanceof.name : "Object"}:</b>} 
+                <Input jsxLabel={<b className={'my-auto class-name'}>{data.instanceof ? data.instanceof.name : "Object"}:</b>} 
                    data={data.id} field={'name'} hidden={true} autosize={true}/>
             </label>
             <hr />
@@ -266,7 +278,7 @@ class DefaultView {
         return `<div className={'d-flex root value'} style={{paddingRight: "6px"}}>
              {props.data.instanceof && <label className={'d-block ms-1'}>{props.data.instanceof.name}</label>}
              {!props.data.instanceof && <Input asLabel={true} data={data.id} field={'name'} hidden={true} autosize={true} />}
-            <label className={'d-block ms-auto'} style={{color:` + valuecolormap_str + `[props.data.values.type] || "gray"
+            <label className={'d-block m-auto'} style={{color:` + valuecolormap_str + `[props.data.values.type] || "gray"
             }}>: {props.data.valuestring()}</label>
         </div>`
     }

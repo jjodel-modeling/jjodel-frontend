@@ -29,6 +29,7 @@ import {
     windoww, RuntimeAccessibleClass
 } from "../joiner";
 import Swal from "sweetalert2";
+import {AccessModifier} from "../api/data";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
 console.warn('loading ts U log');
@@ -1096,6 +1097,10 @@ export class U {
         }
         return str; }
 
+    static uppercaseFirstLetter<T extends (string | GObject<"jsx">)>(str: T): T {
+        if (typeof str !== "string") return str;
+        return str.charAt(0).toUpperCase() + str.slice(1) as T;
+    }
 }
 export class DDate{
     static cname: string = "DDate";

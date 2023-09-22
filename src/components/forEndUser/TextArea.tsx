@@ -7,54 +7,85 @@ import {DState,
     U,
     Overlap, Pointer} from "../../joiner";
 import {SelectOwnProps} from "./Select";
+import {useStateIfMounted} from "use-state-if-mounted";
 
 
 function TextAreaComponent(props: AllProps) {
     const data = props.data;
-    if(!data) return(<></>);
-    const readOnly = props.readonly || U.getDefaultViewsID().includes(data.id);
+    const readOnly = (props.readonly !== undefined) ? props.readonly : U.getDefaultViewsID().includes(data.id);
     const field = props.field;
-    const value = (data[field] !== undefined) ? data[field] : 'undefined';
+    const getter = props.getter;
+    const setter = props.setter;
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
-    const tooltip = props.tooltip;
+    let __value = (!data) ? 'undefined' : ((getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined');
+    const [value, setValue] = useStateIfMounted(__value);
+    const [isTouched, setIsTouched] = useStateIfMounted(false);
+    if (!data) return(<></>);
     let css = 'my-auto input ';
     css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
     css += (props.hidden) ? ' hidden-input' : '';
 
+
     const change = (evt: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const target: string = evt.target.value;
-        data[field] = target;
+        setValue(evt.target.value);
+        setIsTouched(true);     // I'm editing the element in my local state.
+    }
+
+    const blur = (evt: React.FocusEvent<HTMLTextAreaElement>) => {
+        if (readOnly) return;
+        const target = evt.target.value;
+        const oldValue = (!data) ? 'undefined' : (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined'
+        if (target !== oldValue) {
+            if (setter) setter(target);
+            else data[field] = target;
+        }
+        // I terminate my editing, so I communicate it to other <Input /> that render the same field.
+        setIsTouched(false);
     }
 
     const otherprops: GObject = {...props};
     delete otherprops.data;
+    delete otherprops.field;
     delete otherprops.getter;
     delete otherprops.setter;
+    delete otherprops.label;
     delete otherprops.jsxLabel;
+    delete otherprops.tooltip;
     delete otherprops.hidden;
+    delete otherprops.inputStyle;
+    delete otherprops.children;
+    delete otherprops.selected;
 
-    return(<div {...otherprops} style={{display: (jsxLabel || label) ? 'flex' : 'block'}} className={'p-1'}>
+    return(<div style={{display: (jsxLabel || label) ? 'flex' : 'block'}} className={'p-1'} {...otherprops}>
         {(label && !jsxLabel) && <label className={'my-auto'}>
             {label}
         </label>}
         {(jsxLabel && !label) && <label className={'my-auto'}>
             {jsxLabel}
         </label>}
-        <textarea spellCheck={false} readOnly={readOnly} className={css}
-               onChange={change} value={value} />
+        <textarea spellCheck={false} readOnly={readOnly} className={props.inputClassName || css} style={props.inputStyle}
+                  onChange={change} onBlur={blur} value={value} />
     </div>);
 }
+
 export interface TextAreaOwnProps {
     data: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
     label?: string;
+    getter?: (data: LPointerTargetable) => string;
+    setter?: (value: string|boolean) => void;
     jsxLabel?: ReactNode;
     readonly?: boolean;
     tooltip?: string;
     hidden?: boolean;
     key?: React.Key | null;
+    className?: string;
+    inputClassName?: string;
+    style?: GObject;
+    inputStyle?: GObject;
 }
+
 interface StateProps { data: LPointerTargetable & GObject; }
 interface DispatchProps { }
 

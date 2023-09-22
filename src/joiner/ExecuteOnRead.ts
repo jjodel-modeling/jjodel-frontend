@@ -1,4 +1,16 @@
-import {jodelInit, windoww} from "../joiner";
+import {
+    AttribETypes,
+    CoordinateMode,
+    EdgeBendingMode,
+    EdgeHead,
+    EGraphElements,
+    EModelElements,
+    jodelInit,
+    ShortAttribETypes,
+    windoww,
+    AccessModifier,
+    EdgeGapMode
+} from "../joiner";
 import * as Componentss from '../joiner/components';
 
 
@@ -95,7 +107,27 @@ for (let key in wComponents) {
 
 // (Components as any)["input"] = Components["InputComponent"];
 windoww.Components = wComponents;
+windoww.enumerators = {};
 
+
+(window as any).ShortAttribETypes = ShortAttribETypes;
+(window as any).enumerators.ShortAttribETypes = ShortAttribETypes;
+(window as any).AccessModifier = AccessModifier;
+(window as any).enumerators.AccessModifier = AccessModifier;
+(window as any).AttribETypes = AttribETypes;
+(window as any).enumerators.AttribETypes = AttribETypes;
+(window as any).CoordinateMode = CoordinateMode;
+(window as any).enumerators.CoordinateMode = CoordinateMode;
+(window as any).EdgeHead = EdgeHead;
+(window as any).enumerators.EdgeHead = EdgeHead;
+(window as any).EGraphElements = EGraphElements;
+(window as any).enumerators.EGraphElements = EGraphElements;
+(window as any).EModelElements = EModelElements;
+(window as any).enumerators.EModelElements = EModelElements;
+(window as any).EdgeGapMode = EdgeGapMode;
+(window as any).enumerators.EdgeGapMode = EdgeGapMode;
+(window as any).EdgeBendingMode = EdgeBendingMode;
+(window as any).enumerators.EdgeBendingMode = EdgeBendingMode;
 
 function afterStoreLoad() {
     jodelInit();

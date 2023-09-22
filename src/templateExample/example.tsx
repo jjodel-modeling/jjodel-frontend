@@ -1,14 +1,16 @@
 import React, {Dispatch, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
-import {DState} from "../joiner";
+import {DState, Input} from "../joiner";
 import './example.scss';
+import {InputConnected} from "../components/forEndUser/Input";
 
 // private
 interface ThisState {
     listAllStateVariables: boolean,
 }
 
-class ExampleComponent extends PureComponent<AllProps, ThisState>{
+class ExampleComponent_disconnected extends PureComponent<AllProps, ThisState>{
+    static cname: string;
     constructor(props: AllProps, context: any) {
         super(props, context);
     }
@@ -50,7 +52,11 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret; }
 
 
-export default connect<StateProps, DispatchProps, OwnProps, DState>(
+export const ExampleComponent = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
-)(ExampleComponent);
+)(ExampleComponent_disconnected);
+
+
+ExampleComponent_disconnected.cname = "ExampleComponent_disconnected";
+ExampleComponent.cname = "ExampleComponent";

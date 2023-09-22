@@ -7,12 +7,17 @@
   border: 1px solid black;
   display: inline-block;
 }
+.capitalize-first-letter:first-letter {
+  // works only on "block" elements? not even flex?
+  text-transform: uppercase;
+}
+
 .hoverable{
   position: relative;
 }
-.hoverable:hover>.preview{ display: none; }
-.hoverable:hover>.content{ display: block; position: absolute; z-index:1;}
-.hoverable>.content{ display: none; }
+.hoverable:hover>.preview, .hoverable:hover>svg>.preview{ display: none; }
+.hoverable:hover>.content, .hoverable:hover>svg>.content{ display: block; position: absolute; z-index:1;}
+.hoverable>.content, .hoverable>svg>.content{ display: none; }
 
 [data-nodetype]{
   position: relative;
@@ -104,7 +109,9 @@ body .ui-icon{ // override jqueryui fixed resizable handles at 16px, making drag
 }*/
 
 //////////// edge paths
-
+.hoverable>.preview, .hoverable>svg>.preview{
+  pointer-events: all;
+}
 svg.hoverable {
 
   path{
@@ -115,7 +122,8 @@ svg.hoverable {
     &>.content { visibility: hidden; }
   }
 
-  &:hover:has(path.clickable) {
+  &:hover:has(path.clickable),
+  &:focus-within:has(path.clickable) {
     &>.preview { visibility: hidden; }
     &>.content { visibility: visible; }
   }
@@ -129,6 +137,15 @@ svg.hoverable {
   // todo: temp fix to avoid double trigger because root attributes are duplicated, remove when attributes cloning is fixed
   &>[hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{ transform: scale(1); }
   // transform: scale(attr(hoverscale number, 1)); correct but unsupported yet. i'm forced to hardcode a number
+}
+
+[data-nodetype="Edge"]>.hide-ep [data-nodetype="EdgePoint"]{
+  display: none !important;
+}
+
+[data-nodetype="Edge"]>.hide-ep:hover [data-nodetype="EdgePoint"],
+[data-nodetype="Edge"]>.hide-ep:focus-within [data-nodetype="EdgePoint"]{
+  display: block !important;
 }
 
 //.EdgePoint{ transform: translate(-50%, -50%); }

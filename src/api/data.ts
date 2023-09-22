@@ -861,6 +861,7 @@ export class ECoreAnnotation {
     static source: string;
     static references: string;
     static details: string;}
+
 export class ECoreNamed {
     static namee: string; }
 

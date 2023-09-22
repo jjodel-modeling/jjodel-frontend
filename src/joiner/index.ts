@@ -8,8 +8,6 @@ import type {DocString, GObject as GObjectt} from './types';
 import type {U as UType} from "../common/U";
 import type {Selectors as SelType} from "../redux/selectors/selectors";
 
-export type {Constructor, AbstractConstructor} from "../joiner/types";
-export type {ValueDetail, SetValueAtPoisitionInfoType} from "../model/logicWrapper/LModelElement";
 var windoww = (window as any);
 windoww.windoww = windoww;
 
@@ -32,22 +30,22 @@ export type {GetPath} from './proxy';
 export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv,
     NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually,
     Function, Function2, InOutParam,
-    unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap, Info
+    unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap, Info,
+    Constructor, AbstractConstructor
 } from "./types";
 export type {Pointer, PtrString, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1 } from "./classes";
-
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
     WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
+    ValueDetail, SetValueAtPoisitionInfoType
 } from "../model/logicWrapper/LModelElement";
 export type {WEdge, WEdgePoint, WExtEdge, WGraph, WRefEdge, WGraphElement, WVoidEdge, WGraphVertex, WVertex, WVoidVertex, EdgeSegment, EdgeFillSegment} from "../model/dataStructure/GraphDataElements";
 
-export {windoww} from './types';
+export {windoww, EdgeBendingMode, EdgeGapMode} from './types';
 export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps, EdgeStateProps, EdgeOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
-export {EdgeBendingMode} from "./types";
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,
     Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs,
-    LUser, DUser, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead} from "./classes";
+    LUser, DUser, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements} from "./classes";
 
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
@@ -68,7 +66,7 @@ export {DLog} from "../model/classes/D";
 export {LLog} from "../model/classes/L";
 // console.error('iiiiiiiiiiiiiiii 4');
 
-export {EcoreParser} from "../api/data";
+export {EcoreParser, AccessModifier} from "../api/data";
 // import domain-specific classes
 
 
@@ -238,7 +236,7 @@ export {
     // DockLayoutComponent,
     ColorScheme, Edges,
     EdgeComponent,
-    DataOutputComponent, LoggerComponent
+    DataOutputComponent, LoggerComponent, GenericInput
 } from './components'
 
 //export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file

@@ -464,18 +464,18 @@ export class GraphSize extends ISize<GraphPoint> {
         const maxY = Math.max(firstPt.y, secondPt.y);
         return new GraphSize(minX, minY, maxX - minX, maxY - minY); }
 
-
-    public static closestIntersection(size: GraphSize, pt0: GraphPoint, targetPt: GraphPoint, gridAlign?: GraphPoint, m0?:number, q0?:number): GraphPoint | undefined {
-        let pt: GraphPoint = pt0.duplicate();
+    // both pt and targetPt are readonly-safe parameters
+    public static closestIntersection(size: GraphSize, pt: GraphPoint, targetPt: GraphPoint, gridAlign?: GraphPoint, m0?:number, q0?:number): GraphPoint | undefined {
+        // let pt: GraphPoint = pt0.duplicate();
         const m = m0 || GraphPoint.getM(targetPt, pt);
         const q = q0 || GraphPoint.getQ(targetPt, pt);
         // console.log("closestIntersection()", {size, pt0, targetPt, m, q});
         // if perfectly vertical line
         if (m === Number.POSITIVE_INFINITY/* && q === Number.NEGATIVE_INFINITY*/) {
             // top center
-            if (Math.abs(targetPt.y - size.y) <= Math.abs(targetPt.y - size.y - size.h)) return new GraphPoint(pt0.x, size.y);
+            if (Math.abs(targetPt.y - size.y) <= Math.abs(targetPt.y - size.y - size.h)) return pt;
             // bottom center
-            else return new GraphPoint(pt0.x, size.y + size.h);
+            else return new GraphPoint(pt.x, size.y + size.h);
         }
         let tl = size.tl(), tr = size.tr(),
             bl = size.bl(), br = size.br();

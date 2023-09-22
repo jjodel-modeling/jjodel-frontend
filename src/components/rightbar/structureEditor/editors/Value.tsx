@@ -147,24 +147,24 @@ function Value(props: Props) {
             val.hidden ? null :
             <div className={'mt-1 d-flex ms-4'} key={index}>
                 <div className={'border border-dark'}></div>
-                { isattr && <input onChange={(evt) => { changeDValue(evt, index, false) }} className={'input ms-1'} value={val.value + ''}
+                { isattr && <input onChange={(evt) => { changeDValue(evt, index, false) }} className={'input m-auto ms-1'} value={val.value + ''}
                                    checked={!!val.value} min={min} max={max} type={field} step={stepSize} maxLength={maxLength} placeholder={"empty"}/> }
-                { isenum && <select onChange={(evt) => {changeDValue(evt, index, true)}} className={'ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
+                { isenum && <select onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
                     {<option key="undefined" value={'undefined'}>-----</option>}
                     { select_options }
                 </select>}
-                { isref && <select onChange={(evt) => {changeDValue(evt, index, true)}} className={'ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
+                { isref && <select onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
                     <option value={'undefined'}>-----</option>
                     {select_options}
                 </select>}
                 { isshapeless && <>
-                    { <select key={index} onChange={(evt) => {changeDValue(evt, index, undefined)}} className={'select ms-1'} value={val.rawValue+''}>{select_options}</select> }
-                    →
-                    { <input key={"raw"+index} onChange={(evt) => {changeDValue(evt, index, false)}} className={'input ms-1'} value={val.rawValue+''} list={"objectdatalist"} type={"text"} placeholder={"empty"}/> }
+                    { <input key={"raw"+index} onChange={(evt) => {changeDValue(evt, index, false)}} className={'input m-auto ms-1'} value={val.rawValue+''} list={"objectdatalist"} type={"text"} placeholder={"empty"}/> }
+                    <span className={"ms-1 my-auto"}>→</span>
+                    { <select key={index} onChange={(evt) => {changeDValue(evt, index, undefined)}} className={'select m-auto ms-1'} value={val.rawValue+''}>{select_options}</select> }
                     { /*(val as LObject)?.id && <span>points to {val}</span> */}
                 </>
                 }
-                <button className={'btn btn-danger ms-2'} onClick={(evt) => {remove(index, isPtr)}}>
+                <button className={'btn btn-danger m-auto ms-2'} onClick={(evt) => {remove(index, isPtr)}}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
                 </button>
         </div>);

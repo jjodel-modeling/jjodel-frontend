@@ -1,28 +1,40 @@
 import React from 'react';
-import {CoordinateMode, LViewElement} from '../../../../joiner';
-import {EdgeGapMode} from "../../../../joiner/types";
+import {
+    Dictionary,
+    DViewElement,
+    EdgeBendingMode,
+    GenericInput,
+    GObject,
+    Info,
+    Input,
+    LViewElement,
+    LViewPoint
+} from '../../../../joiner';
 
 interface Props {view: LViewElement, readonly: boolean}
 
 function EdgePointData(props: Props) {
     const view = props.view;
     const readOnly = props.readonly;
+    let l: GObject & LViewElement = LViewElement.singleton as any;
+    let prefixLength = "__info_of__".length;
+    let rows: JSX.Element[] = [];
+    for (let fullkey in l) {
+        if (fullkey[0] !== "_" || fullkey.indexOf("__info_of__") !== 0) continue;
+        let info: Info = l[fullkey];
+        // infos[key] = info;
+        let key: string = fullkey.substring(prefixLength);
+        if (info.hidden || info.obsolete || info.todo) continue;
+        if (!info.isEdgePoint) continue;
+        rows.push(//<div className={"d-flex mx-3 mt-1  w-100"}>{
+            <GenericInput rootClassName={"mx-3 mt-1 d-flex"} className={"d-flex"} data={view} field={key as any} infoof={info} disabled={readOnly}/>
+            // }</div>
+        );
+    }
 
     return(<>
-        <section><h1>EdgePoint options</h1>
-            <b>to do</b>
-            <div>
-                <select data-data={view} data-field={"edgePointCoordMode"} onChange={(e)=> view.edgePointCoordMode = e.target.value as any}
-                        value={view.edgePointCoordMode} data-value={view.edgePointCoordMode}>
-                    <optgroup label={"How the edge should bend to address EdgePoints"}>{
-                        Object.keys(CoordinateMode).map( k => <option value={(CoordinateMode as any)[k]}>{k}</option>)
-                    }</optgroup></select>
-                <select data-data={view} data-field={"edgeGapMode"} onChange={(e)=> view.edgeGapMode = e.target.value as any}
-                        value={view.edgeGapMode} data-value={view.edgeGapMode}>
-                    <optgroup label={"How to stop upon meeting an EdgePoint"}>{
-                        Object.keys(EdgeGapMode).map( k => <option value={(EdgeGapMode as any)[k]}>{k}</option>)
-                    }</optgroup></select>
-            </div>
+        <section>
+            {rows}
         </section>
     </>);
 }
