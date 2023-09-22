@@ -1284,7 +1284,10 @@ export class EdgeSegment{
         let prev: EdgeSegment | undefined = this.prev;
         if (!prev) return;
         let prevedgemakerbezier: segmentmaker = (prev.bezier[prev.bezier.length-1] || prev.start);
-        let mirroredBezier: segmentmaker = {...prevedgemakerbezier, pt: EdgeSegment.invertLastBezierPt(prevedgemakerbezier.pt, prev.end.pt)};
+        let mirroredBezier: segmentmaker = {...prevedgemakerbezier,
+            pt: EdgeSegment.invertLastBezierPt(prevedgemakerbezier.pt, prev.end.pt),
+            uncutPt: EdgeSegment.invertLastBezierPt(prevedgemakerbezier.uncutPt, prev.end.uncutPt),
+        };
         this.bezier = [mirroredBezier, ...this.bezier];
         // always only 1 assumed pt both in cubic and quadratic.
         // let next: this | undefined = this.segments[this.index+1];
@@ -1309,14 +1312,17 @@ export class EdgeSegment{
                 let bezierpts = [...this.bezier.map( b => b.pt), this.end.pt];
                 let finalpart = svgLetter + " " + bezierpts.map((p)=> p.x + " " + p.y).join(", ");
                 this.dpart = "M " + this.start.pt.x + " " + this.start.pt.y + ", " + finalpart;
+                let bezierptsUncut = [...this.bezier.map( b => b.uncutPt), this.end.pt]; // uncutPt exist for start and end too, but i want to use the cut one for those. or edgehead is off
+                let finalpartUncut = svgLetter + " " + bezierptsUncut.map((p)=> p.x + " " + p.y).join(", ");
+                this.d = (index === 0 ? "M" + this.start.pt.x + " " + this.start.pt.y + ", " : "") + finalpartUncut;
+
                 //midp = [this.startp, ...this.midp];
                 // d = M sp X mp2 ep // X = custom letter
                 // dpart = T sp X mp2 ep // S = S if X = C,
                 // sp is the startingpoint from the prev node, which might be != from endpoint of last node if last node have w>0 && h>0
                 // so i'm "filling" the gap with a T, or L arc wich can use only 1 parameter (they are the only 1-parameter arcs)
-                let startletter: string;
                 if (this.prev && this.prev.end.pt.equals(this.start.pt)) gapMode = EdgeGapMode.average; // if the 2 points coincide, i use any 1 of the gapmodes that are continuous
-                switch (gapMode){
+                /*switch (gapMode){
                     case EdgeGapMode.center:
                     case EdgeGapMode.average:
                         // continuous gap modes. they only differ in how the "joining" point is found, but not in how they behave after that.
@@ -1331,7 +1337,7 @@ export class EdgeSegment{
                                  case SvgLetter.L: case SvgLetter.M:
                                      startletter = SvgLetter.L + " "; break;
                              }
-                         }*/
+                         }* /
                         if (index) {
                             this.d = finalpart;
                         }
@@ -1346,7 +1352,7 @@ export class EdgeSegment{
                         break;
                     default:
                         Log.exDevv("unexpected EdgeGapMode:" + gapMode, {gapMode});
-                }
+                }*/
                 break;
             default: return Log.exDevv("unexpected bending mode length:" + this.svgLetter + " or fillMode: " + gapMode, {bendingMode: this.svgLetter, index, gapMode});
         }
@@ -1399,7 +1405,7 @@ export class EdgeFillSegment extends EdgeSegment{
 }
 
 
-type segmentmaker = {size: GraphSize, view: LViewElement, ge: LGraphElement, pt: GraphPoint};
+type segmentmaker = {size: GraphSize, view: LViewElement, ge: LGraphElement, pt: GraphPoint, uncutPt: GraphPoint};
 @RuntimeAccessible
 export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends DEdge = DEdge> extends LGraphElement {
     public static cname: string = "LVoidEdge";
@@ -1657,18 +1663,20 @@ replaced by startPoint
             return size.tl().add(offset, false);
         }
         const all: segmentmaker[] = allNodes.flatMap((ge, i) => {
-            let base: segmentmaker = {view: ge.view, size: outer ? ge.outerSize : ge.innerSize, ge, pt: null as any};
+            let base: segmentmaker = {view: ge.view, size: outer ? ge.outerSize : ge.innerSize, ge, pt: null as any, uncutPt: null as any};
             let rets: segmentmaker | undefined;// = base as any;
             let rete: segmentmaker | undefined;// = {...base} as any;
             if (i !== 0){
                 rete = {...base};
                 rete.pt = (LEdgePoint.singleton as LEdgePoint).get_endPoint(undefined as any, rete.size, rete.view);
                 rete.pt = getAnchorOffset(rete.size, rete.view.edgeStartOffset, rete.view.edgeStartOffset_isPercentage);
+                rete.uncutPt = rete.pt;
             }
             if (i !== allNodes.length - 1){
                 rets = {...base};
                 rets.pt = (LEdgePoint.singleton as LEdgePoint).get_startPoint(undefined as any, rets.size, rets.view);
                 rets.pt = getAnchorOffset(rets.size, rets.view.edgeStartOffset, rets.view.edgeStartOffset_isPercentage);
+                rets.uncutPt = rets.pt;
             }
             // ret.pt = ge.startPoint
             return rets && rete ? [rete, rets] : (rets ? [rets] : [rete as segmentmaker]); }
@@ -1764,7 +1772,7 @@ replaced by startPoint
         // cut i === 0 is cut regardless of gapmode.
         if (canCutStart) {
             ci = GraphSize.closestIntersection(ret[0].start.size, ret[0].start.pt, (ret[0].bezier[0] || ret[0].end).pt, grid);
-            if (ci)  ret[0].start.pt = ci;
+            if (ci) ret[0].start.pt = ci;
             /*
             ret[0].start.pt =
                 GraphSize.closestIntersection(ret[0].start.size, ret[0].start.pt, (ret[0].bezier[0] || ret[0].end).pt, grid) as any
@@ -1817,13 +1825,17 @@ replaced by startPoint
                         // they merge if just 1 of cutting sides are true. (and if they are both false we don't even enter the for loop)
                         curr.start.pt.add(prev.end.pt, false).divide(2, false);
                         prev.end.pt = curr.start.pt.duplicate() // intentionally not the same pt because during snap to edge they can temporarly diverge.again,
+                        prev.start.uncutPt = prev.start.pt;
+                        prev.end.uncutPt = prev.end.pt;
                         break;
                     // center: first move it to center of edgePoint/node, then snap to edge.
                     // this mode might be as well deleted, it can be specified with anchor points
                     case EdgeGapMode.center:
-                        doEndCut = true; doStartCut = true;
+                        doEndCut = false; doStartCut = false;
                         curr.start.pt = curr.start.size.tl().add(curr.start.size.br(), false).divide(2, false);
                         prev.end.pt = curr.start.pt.duplicate(); // intentionally not the same pt because during snap to edge they can diverge.again,
+                        prev.start.uncutPt = prev.start.pt; // only update them when point moves without being cut (average and center)
+                        prev.end.uncutPt = prev.end.pt;
                         break;
                     default:
                         return Log.exDevv("unexpected EdgeGapMode:" + gapMode);
