@@ -1,41 +1,30 @@
-import type {LClass, DPointerTargetable} from "../../joiner";
-import React, {Dispatch, LegacyRef, ReactElement, ReactNode} from "react";
-import {connect} from "react-redux";
-import toast, {Toaster} from "react-hot-toast";
-import {DState,
-    U,
-    LPointerTargetable,
-    GObject,
-    Pointer,
-    LEnumerator,
-    Selectors,
-    LModelElement,
-    Overlap} from "../../joiner";
+import type {DPointerTargetable, LClass} from '../../joiner';
+import {DState, GObject, LEnumerator, LPointerTargetable, Overlap, Pointer} from '../../joiner';
+import React, {Dispatch, LegacyRef, ReactElement, ReactNode} from 'react';
+import {connect} from 'react-redux';
+import {useStateIfMounted} from 'use-state-if-mounted';
+import './style.scss';
 
 // todo: this is too hardcoded for Pointers and class->attributes etc. need to make it more generic
 function SelectComponent(props: AllProps) {
     const data = props.data;
+    const [showTooltip, setShowTooltip] = useStateIfMounted(false);
     if(!data) return(<></>);
     const field = props.field;
     const readOnly = props.readonly; // || U.getDefaultViewsID().includes(data.id);
     const value = data[field]?.id || data[field] || 'undefined';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
-    const tooltip = props.tooltip;
+    let tooltip: string|undefined = (props.tooltip === true) ? ((data['__info_of__' + field]) ? data['__info_of__' + field].txt: '') : props.tooltip;
+    tooltip = (tooltip) ? tooltip : '';
     let css = 'my-auto select ';
     css += (jsxLabel) ? 'ms-1' : 'ms-auto';
     css += (props.hidden) ? ' hidden-input' : '';
 
-    const notify = () => toast((t: GObject) => (
-        <div onClick={() => toast.dismiss(t.id)}>
-            <label className={'ms-1'}>{tooltip}</label>
-        </div>
-    ));
-
     function SelectChange(evt: React.ChangeEvent<HTMLSelectElement>) {
         if(readOnly) return;
         const target = evt.target.value;
-        console.log("setting:", {data, field, target});
+        console.log('setting:', {data, field, target});
         data[field] = target;
     }
 
@@ -61,11 +50,19 @@ function SelectComponent(props: AllProps) {
     delete otherprops.primitives;
     delete otherprops.returns;
     delete otherprops.hidden;
-    return(<label ref={props.ref as any} className={'d-flex p-1'} {...otherprops}>
-        {(label || jsxLabel) && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>
-            {label}
-            {jsxLabel}
-        </label>}
+    return(<div ref={props.ref as any} className={'d-flex p-1'} {...otherprops}>
+
+        <label onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)}
+               className={(label || jsxLabel) ? 'd-block' : 'd-none'}>
+            {(label) ? label : (jsxLabel) ? jsxLabel : ''}
+        </label>
+
+        {(tooltip && showTooltip) && <div className={'my-tooltip'}>
+            <b className={'text-center text-capitalize'}>{field}</b>
+            <br />
+            <label>{tooltip}</label>
+        </div>}
+
         <select {...otherprops}
             className={props.inputClassName || css}
             style={props.inputStyle}
@@ -94,16 +91,15 @@ function SelectComponent(props: AllProps) {
             </optgroup>}
             {props.options}
         </select>
-        {(tooltip) && <Toaster position={'bottom-center'} />}
-    </label>);
+    </div>);
 }
-SelectComponent.cname = "SelectComponent";
+SelectComponent.cname = 'SelectComponent';
 export interface SelectOwnProps {
     data?: DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
     label?: string;
     jsxLabel?: ReactNode;
-    tooltip?: string;
+    tooltip?: boolean|string;
     hidden?: boolean;
     options?: JSX.Element;
     key?: React.Key | null;
@@ -149,7 +145,7 @@ export const Select = (props: SelectOwnProps, children: (string | React.Componen
 }
 
 
-SelectComponent.cname = "SelectComponent";
-SelectConnected.cname = "SelectConnected";
-Select.cname = "Select";
+SelectComponent.cname = 'SelectComponent';
+SelectConnected.cname = 'SelectConnected';
+Select.cname = 'Select';
 export default Select;

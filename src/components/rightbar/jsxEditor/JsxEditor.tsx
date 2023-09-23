@@ -20,7 +20,7 @@ function JsxEditorComponent(props: AllProps) {
     }
 
     return <div style={{height: '20em'}} tabIndex={-1} onBlur={blur}>
-        <label className={'ms-1'}>JSX Editor</label>
+        <label className={'ms-1 mb-1'}>JSX Editor</label>
         <Editor className={'mx-1'} onChange={change}
                 options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                 defaultLanguage={'html'}  value={view.jsxString} />

@@ -1,29 +1,18 @@
-import React, {Dispatch, ReactElement, ReactNode, useEffect} from "react";
-import {connect} from "react-redux";
-import {DState} from "../../redux/store";
-import {
-    Dictionary,
-    DPointerTargetable, DUser,
-    GObject,
-    LModelElement,
-    LPointerTargetable,
-    Overlap,
-    Pointer,
-    Selectors,
-    U
-} from "../../joiner";
-import toast, {Toaster} from 'react-hot-toast';
-import {useStateIfMounted} from "use-state-if-mounted";
+import React, {Dispatch, ReactElement, ReactNode, useEffect} from 'react';
+import {connect} from 'react-redux';
+import {DState} from '../../redux/store';
+import {DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer, U} from '../../joiner';
+import {useStateIfMounted} from 'use-state-if-mounted';
+import './style.scss';
 
 
 function InputComponent(props: AllProps) {
     // todo: data can be injected with UX, if field is present, can take type from a metainfo like __info_of__
     const data = props.data;
-    // const selected = props.selected;
-    const fathers = U.fatherChain(data as LModelElement);
     let editable = true;
 
     /*  Uncomment this when we have user authentication: if a user is on a ME, it cannot be edited.
+    const fathers = U.fatherChain(data as LModelElement);
     for(let father of fathers) {
         const user = Object.keys(selected).find(key => selected[key]?.id === father);
         if(user && user !== DUser.current) editable = false;
@@ -37,6 +26,7 @@ function InputComponent(props: AllProps) {
     let __value = (!data) ? 'undefined' : ((getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined');
     const [value, setValue] = useStateIfMounted(__value);
     const [isTouched, setIsTouched] = useStateIfMounted(false);
+    const [showTooltip, setShowTooltip] = useStateIfMounted(false);
 
     useEffect(() => {
         // I check if the value that I have in my local state is being edited by other <Input />
@@ -53,27 +43,14 @@ function InputComponent(props: AllProps) {
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
-    /*
-    let tooltip: string | React.ReactElement | Info = props.tooltip === true ? data["__info_of__" + field] : (props.tooltip || undefined);
-    if (typeof tooltip === "object" && (tooltip as Info).txt) {
-        tooltip = <div className={"tooltip"}>
-            <span className={"type"} style={{color: "orange"}}>{":"+tooltip.type+"\t"}</span>
-            <span className={"txt"}>{(tooltip as Info).txt}</span>
-        </div>;
-    }
-    */
-    let tooltip: string = (props.tooltip === true) ? ((data["__info_of__" + field]) ? data["__info_of__" + field].txt: '') : props.tooltip;
+    let tooltip: string|undefined = (props.tooltip === true) ? ((data['__info_of__' + field]) ? data['__info_of__' + field].txt: '') : props.tooltip;
+    tooltip = (tooltip) ? tooltip : '';
 
     let css = 'my-auto input ';
     css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
     css += (props.hidden) ? ' hidden-input' : '';
-    let autosize: boolean = props.autosize === undefined ? false : props.autosize; // props.type==="text"
+    let autosize: boolean = props.autosize === undefined ? false : props.autosize; // props.type==='text'
     css += autosize ? ' autosize-input' : '';
-    const notify = () => toast((t: GObject) => (
-        <div onClick={() => toast.dismiss(t.id)}>
-            <label className={'ms-1'}>{tooltip}</label>
-        </div>
-    ));
 
     const change = (evt: React.ChangeEvent<HTMLInputElement>) => {
         const isBoolean = (['checkbox', 'radio'].includes(evt.target.type));
@@ -122,20 +99,27 @@ function InputComponent(props: AllProps) {
                        type={type} value={value} onChange={change} onBlur={blur}
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
-    return(<label className={'p-1'} {...otherprops}
-                  style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor: tooltip ? 'help' : 'auto', ...((props as any).style || {})}}>
+    return(<div className={'p-1'} {...otherprops}
+                  style={{display: (jsxLabel || label) ? 'flex' : 'block', ...(props.style || {})}}>
 
-        { label && <label className={'my-auto'} onClick={() => {if(tooltip) notify()}}>{label}</label> }
+        <label onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)}
+               className={(label || jsxLabel) ? 'd-block' : 'd-none'}>
+            {(label) ? label : (jsxLabel) ? jsxLabel : ''}
+        </label>
 
-        {jsxLabel && <label style={{cursor: (tooltip) ? 'help' : 'auto'}} onClick={() => {if(tooltip) notify()}}>{jsxLabel}</label>}
+        {(tooltip && showTooltip) && <div className={'my-tooltip'}>
+            <b className={'text-center text-capitalize'}>{field}</b>
+            <br />
+            <label>{tooltip}</label>
+        </div>}
 
-        {autosize ? <div className={ (autosize ? "autosize-input-container" : "") + (props.asLabel ? " labelstyle" : "")}
+
+        {autosize ? <div className={ (autosize ? 'autosize-input-container' : '') + (props.asLabel ? ' labelstyle' : '')}
                           data-value={value}>{input}</div> : input}
-        {tooltip && <Toaster position={'bottom-center'} /> }
-    </label>);
+    </div>);
 }
 
-InputComponent.cname = "InputComponent";
+InputComponent.cname = 'InputComponent';
 export interface InputOwnProps {
     data: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
@@ -194,7 +178,6 @@ export function Input(props: InputOwnProps, children: (string | React.Component)
     return <InputConnected {...{...props, children}} />;
 }
 
-InputComponent.cname = "InputComponent";
-InputConnected.cname = "InputConnected";
-Input.cname = "Input";
-// export default Input____a;
+InputComponent.cname = 'InputComponent';
+InputConnected.cname = 'InputConnected';
+Input.cname = 'Input';

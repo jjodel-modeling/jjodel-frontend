@@ -728,8 +728,8 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.appliableToClasses = appliableToClasses;
         thiss.jsxString = jsxString;
         thiss.usageDeclarations = usageDeclarations;
-        thiss.constants = constants;
-        thiss.preRenderFunc = preRenderFunc;
+        thiss.constants = constants ? constants : '{}';
+        thiss.preRenderFunc = preRenderFunc ? preRenderFunc : '() => {return{}}';
         // thiss.__transient = new DViewTransientProperties();
         thiss.subViews = [];
         thiss.oclApplyCondition = '';

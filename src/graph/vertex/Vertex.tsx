@@ -29,7 +29,7 @@ class ThisStatee extends GraphElementStatee { forceupdate?: number }
 
 var dragHelper = document.createElement("div");
 dragHelper.style.backgroundColor = "transparent";
-dragHelper.style.outline = "4px solid black";
+dragHelper.style.outline = "1px dashed black";
 
 export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
     extends superclassGraphElementComponent<AllProps, ThisState> {

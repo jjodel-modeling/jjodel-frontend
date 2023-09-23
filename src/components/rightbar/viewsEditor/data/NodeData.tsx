@@ -17,7 +17,7 @@ function NodeData(props: Props) {
         SetFieldAction.new(view.id, 'forceNodeType', value, '', false);
     }
 
-    return(<>
+    return(<section className={'p-3'}>
         {/*<Select obj={view} field={"useSizeFrom"} options={
             <optgroup label="Node position depends from what?">
                 <option value={EuseSizeFrom.view}>View</option>
@@ -32,7 +32,7 @@ function NodeData(props: Props) {
         <Input data={view} field={"height"} label={"Height"} type={"number"}/>
         {/*<Input data={view} field={"scalezoomx"} label={"Zoom X"} type={"number"}/>*/}
         {/*<Input data={view} field={"scalezoomy"} label={"Zoom Y"} type={"number"}/>*/}
-        <div className={'d-flex p-1'}>
+        {/*<div className={'d-flex p-1'}>
             <label className={'my-auto'}>Force Node</label>
             <select className={'my-auto ms-auto select'} disabled={readOnly}
                     value={view.forceNodeType} onChange={changeFN}>
@@ -41,19 +41,12 @@ function NodeData(props: Props) {
                     return(<option key={index} value={node}>{node}</option>);
                 })}
             </select>
-        </div>
+        </div>*/}
         {/*from damiano: il primo StoreSize tooltip funziona, il secondo no. perchè? l'html viene popolato correttamente ma risulta opacità 0, puoi cercare di risolverlo tu?*/}
         <Input data={view} field={"storeSize"} label={"Store Size"} tooltip={
             <div>"Active: the node position depends from the view currently displayed. Inactive: it depends from the graph."</div>} type={"checkbox"} />
         <Input data={view} field={"lazySizeUpdate"} label={"Lazy Update"} type={"checkbox"} tooltip={true}/>
 
-        <div className="p-1" style={{display: "flex"}}><label className="my-auto">Appliable to</label>
-            <select data-obj={view.id} data-field={'appliableToClasses'} data-label={'Appliable to'} data-options={classesOptions}
-                    value={view.appliableToClasses[0] || ''} onChange={(e) => { view.appliableToClasses = e.target.value as any; }}
-                    className={"my-auto ms-auto select"} disabled={readOnly}>
-                {classesOptions}
-            </select>
-        </div>
         <Input data={view} field={"adaptWidth"} label={"Adapt Width"} type={"checkbox"}/>
         <Input data={view} field={"adaptHeight"} label={"Adapt Height"} type={"checkbox"}/>
         <Input data={view} field={"draggable"} label={"Draggable"} type={"checkbox"}/>
@@ -62,7 +55,7 @@ function NodeData(props: Props) {
         <TextArea data={view} field={'onDragEnd'} label={'OnDragEnd'} />
         <TextArea data={view} field={'onResizeStart'} label={'OnResizeStart'} />
         <TextArea data={view} field={'onResizeEnd'} label={'OnResizeEnd'} />
-    </>);
+    </section>);
 }
 
 export default NodeData;

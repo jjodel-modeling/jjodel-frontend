@@ -33,11 +33,12 @@ function ViewsData(props: Props) {
             </button>
         </div>
         {views.map((view, i) => {
-            return <div key={view.id} className={'d-flex p-1 mt-1 border round'}
+            return <div key={view.id} className={'d-flex p-1 mt-1 border round mx-1'}
+                        tabIndex={-1}
                         onMouseEnter={(e) => setHoverID(view.id)}
                         onMouseLeave={(e) => setHoverID('')}
                         onClick={(evt) => {select(evt, view)}}
-                        style={ hoverID === view.id ? { background: "var(--bs-border-color)"} : {}}>
+                        style={{cursor: 'pointer', background: hoverID === view.id ? '#E0E0E0' : 'transparent'}}>
                 <label className={'my-auto'}>{view?.name}</label>
                 <button className={'btn btn-success ms-auto'} onClick={(evt) => {select(evt, view)}}>
                     <i className={'p-1 bi bi-info-lg'}></i>

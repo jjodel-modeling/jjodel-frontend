@@ -20,7 +20,7 @@ function InfoData(props: Props) {
         else SetFieldAction.new(view.id, 'viewpoint', '', '', false);
     }
 
-    return(<>
+    return(<section className={'p-3'}>
         <Input data={view} field={"name"} label={"Name"} type={"text"}/>
         <Input data={view} field={"explicitApplicationPriority"} label={"Priority"} type={"number"}/>
         <div className={'d-flex p-1'}>
@@ -34,15 +34,15 @@ function InfoData(props: Props) {
             </select>
         </div>
         {/* damiano: qui Select component avrebbe fatto comodo al posto del select nativo, ma è troppo poco generica*/}
-        <div className="p-1" style={{display: "flex"}}><label className="my-auto">Appliable to</label>
+        {/*<div className="p-1" style={{display: "flex"}}><label className="my-auto">Appliable to</label>
             <select data-obj={view.id} data-field={'appliableToClasses'} data-label={'Appliable to'} data-options={ classesOptions }
                     value={view.appliableToClasses[0] || ''} onChange={(e) => { view.appliableToClasses = e.target.value as any; }}
                     className={"my-auto ms-auto select"} disabled={readOnly}>
                 {classesOptions}
             </select>
-        </div>
+        </div>*/}
         <OclEditor viewid={view.id} />
-    </>);
+    </section>);
 }
 
 export default InfoData;

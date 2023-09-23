@@ -1,8 +1,7 @@
-import React, {Dispatch, ReactElement, useEffect} from "react";
+import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import Editor from "@monaco-editor/react";
-import {U,
-    DState, DPointerTargetable, DViewElement, GObject, LPointerTargetable, LViewElement, Pointer} from "../../../joiner";
+import {DState, DViewElement, LViewElement, Pointer, U} from "../../../joiner";
 
 
 function OclEditorComponent(props: AllProps) {
@@ -14,7 +13,7 @@ function OclEditorComponent(props: AllProps) {
     }
 
     return <div style={{height: '5em'}}>
-        <label className={'ms-1'}>OCL Editor</label>
+        <label className={'ms-1 mb-1'}>OCL Editor</label>
         <Editor className={'mx-1'} onChange={change}
                 options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                 defaultLanguage={'js'} value={view.query} />
