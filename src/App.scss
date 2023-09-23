@@ -29,6 +29,8 @@
 .VoidVertex[data-nodetype="VoidVertex"],
 .EdgePoint[data-nodetype="EdgePoint"]{
   position: absolute;
+  min-width:2px;
+  min-height:2px;
 }
 
 .ui-draggable-dragging{ visibility: hidden; }
@@ -143,9 +145,16 @@ svg.hoverable {
   display: none !important;
 }
 
-[data-nodetype="Edge"]>.hide-ep:hover [data-nodetype="EdgePoint"],
-[data-nodetype="Edge"]>.hide-ep:focus-within [data-nodetype="EdgePoint"]{
-  display: block !important;
+[data-nodetype="Edge"]:hover,
+[data-nodetype="Edge"]:active,
+[data-nodetype="Edge"]:focus-within{
+
+  &>.hide-ep [data-nodetype="EdgePoint"]{
+    display: block !important;
+
+    &>.ui-resizable-handle{ border: none;
+    }
+  }
 }
 
 //.EdgePoint{ transform: translate(-50%, -50%); }

@@ -730,6 +730,8 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.usageDeclarations = usageDeclarations;
         thiss.constants = constants;
         thiss.preRenderFunc = preRenderFunc;
+        thiss.onDragEnd = thiss.onDragStart = thiss.whileDragging =
+        thiss.onResizeEnd = thiss.onResizeStart = thiss.whileResizing = '';
         // thiss.__transient = new DViewTransientProperties();
         thiss.subViews = [];
         thiss.oclApplyCondition = '';

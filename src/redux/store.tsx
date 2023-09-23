@@ -235,6 +235,14 @@ function makeDefaultGraphViews(): DViewElement[] {
     let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.cname]);
     objectView.adaptWidth = true;
     objectView.adaptHeight = true;
+    objectView.onDragEnd = `
+        console.log("xattr pre");
+        let xattr = data["@x"];
+        console.log("xattr", {xattr, thiss:this});
+        if (!xattr) return;
+        xattr.value = data.size.x;`;
+
+
     let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.cname]);
     voidView.appliableToClasses=["VoidVertex"];
     voidView.explicitApplicationPriority=2;

@@ -366,6 +366,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (oldProps.view !== newProps.view) { this.setTemplateString(newProps.view); }
     }*/
 
+    protected getContext(): GObject{
+        let context: GObject = {component:this, __proto__:this.props.evalContext};
+        context._context = context;
+        return context;
+    }
+
     private getTemplate(): ReactNode {
         /*if (!this.state.template) {
             this.setTemplateString('{c1: 118}', '()=>{this.setState({c1: this.state.c1+1})}',
@@ -374,8 +380,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // console.log('getTemplate:', {props: this.props, template: this.props.template, ctx: this.props.evalContext});
 
         // Log.exDev(debug && maxRenderCounter-- < 0, "loop involving render");
-        let context: GObject = {component:this, __proto__:this.props.evalContext};
-        context._context = context;
+        let context: GObject = this.getContext();
 
         let displayError = (e: Error, where: string) => {
             const view: LViewElement = this.props.view; //data._transient.currentView;

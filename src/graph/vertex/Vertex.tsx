@@ -17,7 +17,7 @@ import {
     LUser,
     LVoidVertex,
     RuntimeAccessibleClass, LViewPoint,
-    U, GraphSize, GraphPoint, GObject, Size, SetRootFieldAction, SetFieldAction, DVertex, DVoidEdge, DEdgePoint, DUser, Dictionary, Pointer,
+    U, GraphSize, GraphPoint, GObject, Size, SetRootFieldAction, SetFieldAction, DVertex, DVoidEdge, DEdgePoint, DUser, Dictionary, Pointer, Log,
 } from "../../joiner";
 import $ from "jquery";
 import "jqueryui";
@@ -66,15 +66,31 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         },1)
     }
 
+    protected doMeasurableEvent(type: "onDragStart" | "onDragEnd" | "whileDragging" | "onResizeStart" | "onResizeEnd" | "whileResizing"): void {
+        let measurableCode = this.props.view[type];
+        console.log("xattr doevent check",  {type, measurableCode});
+        if (!measurableCode) return;
+        let context: GObject = null as any;
+        try{
+            context = this.getContext();
+            measurableCode = measurableCode.trim();
+            if (measurableCode[0]!=='(' || measurableCode.indexOf("function") !== 0) {
+                measurableCode = "()=>{" + measurableCode + "}";
+            }
+            measurableCode = "(" + measurableCode + ")()";
+            console.log("xattr doevent success",  {context, measurableCode});
+            U.evalInContextAndScope<GObject>(measurableCode, context, context);
+        }
+        catch (e: any) { Log.ee('Error in "'+type+'" ' + e.message, {e, measurableCode, context}); }
+    }
 
     setVertexProperties(){
         if(!this.props.node || !this.html.current) return;
         if (this.hasSetVertexProperties) return;
         this.hasSetVertexProperties = true;
-
         let html = this.html.current;
-
         const $measurable: GObject<"JQuery + ui plugin"> = $(html); // todo: install typings
+
         // $element = $(html).find(".measurable").addBack();
         $measurable.draggable({
             cursor: 'grabbing',
@@ -99,21 +115,15 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             start: (event: GObject, obj: GObject) => {
                 // this.select();
                 SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 }); // todo: should probably be done in a document event
-                if (this.props.view.onDragStart) {
-                    try{ eval(this.props.view.onDragStart); } // todo: eval in context
-                    catch (e) { console.log(e) }
-                }
+                this.doMeasurableEvent("onDragStart");
             },
             drag: (event: GObject, obj: GObject) => {
                 if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
+                this.doMeasurableEvent("whileDragging");
             },
             stop: (event: GObject, obj: GObject) => {
-                console.log("drag stop setsize", {x:obj.position.left, y:obj.position.top});
                 this.setSize({x:obj.position.left, y:obj.position.top});
-                if (this.props.view.onDragEnd) {
-                    try{ eval(this.props.view.onDragEnd); } // todo: eval in context
-                    catch (e) { console.log(e) }
-                }
+                this.doMeasurableEvent("onDragEnd");
             }
         });
         let resizeoptions: GObject = {
@@ -121,15 +131,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             start: (event: GObject, obj: GObject) => {
                 this.select();
                 if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
-                SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 });
-                if (this.props.view.onResizeStart) {
-                    try{ eval(this.props.view.onResizeStart); }
-                    catch (e) { console.log(e) }
-                }
+                SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 }); // todo: does it really need to be on resize event?
+                this.doMeasurableEvent("onResizeStart");
             },
             resize: (event: GObject, obj: GObject) => {
                 if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.position.width, h:obj.position.height});
-                // SetRootFieldAction.new("resizing", {})
+                this.doMeasurableEvent("whileResizing");
             },
             stop: (event: GObject, obj: GObject) => {
                 if (!this.state.classes.includes("resized")) this.setState({classes:[...this.state.classes, "resized"]});
@@ -201,10 +208,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 // evt coordinates: clientX, layerX, offsetX, pageX, screenX
                 this.setSize(newSize);
                 // console.log("resize setsize:", obj, {w:obj.size.width, h:obj.size.height});
-                if (this.props.view.onResizeEnd) {
-                    try{ eval(this.props.view.onResizeEnd); }
-                    catch (e) { console.log(e) }
-                }
+                this.doMeasurableEvent("onResizeEnd");
+
             }
         }
 

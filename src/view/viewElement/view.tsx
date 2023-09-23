@@ -69,10 +69,12 @@ export class DViewElement extends DPointerTargetable {
     viewpoint: Pointer<DViewPoint, 0, 1, LViewElement> = '';
     display!: 'block'|'contents'|'flex'|string;
     constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
-    onDragStart: string = '';
-    onDragEnd: string = '';
-    onResizeStart: string = '';
-    onResizeEnd: string = '';
+    onDragStart!: string;
+    onDragEnd!: string;
+    whileDragging!: string;
+    onResizeStart!: string;
+    onResizeEnd!: string;
+    whileResizing!: string;
     bendingMode!: EdgeBendingMode;
     edgeGapMode!: EdgeGapMode;
     //useSizeFrom!: EuseSizeFrom;
@@ -218,12 +220,20 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__onDragEnd: Info = {todo: true, isNode: true, type: "Function():void",
         txt: 'not supported yet'}
 
+    whileDragging!: string;
+    __info_of__whileDragging: Info = {todo: true, isNode: true, type: "Function():void",
+        txt: 'not supported yet'}
+
     onResizeStart!: string;
     __info_of__onResizeStart: Info = {todo: true, isNode: true, type: "Function():void",
         txt: 'not supported yet'}
 
     onResizeEnd!: string;
     __info_of__onResizeEnd: Info = {todo: true, isNode: true, type: "Function():void",
+        txt: 'not supported yet'}
+
+    whileResizing!: string;
+    __info_of__whileResizing: Info = {todo: true, isNode: true, type: "Function():void",
         txt: 'not supported yet'}
 
     constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];

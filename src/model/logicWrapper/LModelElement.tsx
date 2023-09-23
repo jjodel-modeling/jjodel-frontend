@@ -4204,6 +4204,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected set_isMirage(val: this["isMirage"], context: Context): boolean { SetFieldAction.new(context.data, 'isMirage', val, "", false); return true; }
 
     // individual value getters
+    // if withMetaInfo, returns a wrapper for the first non-empty value found containing his index and metainfo
     protected get_value<T extends boolean>(context: Context, namedPointers: boolean = false, ecorePointers: boolean = false,
                                            shapeless: boolean = false, keepempties: boolean = true, withmetainfo: T = false as T): T extends true ? ValueDetail : this["value"]{
         return this.get_values(context, true, namedPointers, ecorePointers, shapeless, keepempties, withmetainfo, 1)[0] as any;
@@ -4580,7 +4581,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
     protected set_value(val: D["values"][0], context: Context): boolean {
         let v: ValueDetail = this.get_value(context, false, false, false, true, true);
-        let r = this.setValueAtPosition(v?.index || 0, val);
+        let r = this.get_setValueAtPosition(context)(v?.index || 0, val);
         Log.e(!r.success,  r.reason);
         return r.success;
     }
