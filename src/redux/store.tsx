@@ -236,11 +236,14 @@ function makeDefaultGraphViews(): DViewElement[] {
     objectView.adaptWidth = true;
     objectView.adaptHeight = true;
     objectView.onDragEnd = `
-        console.log("xattr pre");
-        let xattr = data["@x"];
-        console.log("xattr", {xattr, thiss:this});
-        if (!xattr) return;
-        xattr.value = data.size.x;`;
+// easy binding
+data.$z = node.y;
+data.$y = node.y.toFixed(2);
+//  explicit way
+let x = data.$x;
+if (x) x.value = node.size.x;
+
+`;
 
 
     let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.cname]);
@@ -249,7 +252,7 @@ function makeDefaultGraphViews(): DViewElement[] {
     voidView.adaptWidth = true;
     voidView.adaptHeight = true;
 
-    let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 30, 30), '', '', '', []);
+    let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '', []);
     let edgePointViewSVG: DViewElement = DViewElement.new('EdgePointSVG', DV.edgePointViewSVG(), new GraphSize(0, 0, 10, 10), '', '', '', []);
     edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
 

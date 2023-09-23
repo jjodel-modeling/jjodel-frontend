@@ -1,24 +1,30 @@
-import React, {CSSProperties, Dispatch, PureComponent, ReactElement, ReactNode, useRef,} from "react";
+import React, {Dispatch, PureComponent, ReactElement, ReactNode,} from "react";
 import {createPortal} from "react-dom";
 import {connect} from "react-redux";
 import './graphElement.scss';
-import type {VertexComponent, EdgeStateProps} from "../../joiner";
+import type {EdgeStateProps, VertexComponent} from "../../joiner";
 import {
     CreateElementAction,
+    DEdge,
     DGraph,
     DGraphElement,
     Dictionary,
     DModelElement,
     DocString,
+    DPointerTargetable,
+    DState,
+    DUser,
+    DV,
     DViewElement,
+    EMeasurableEvents,
     GObject,
     GraphElementDispatchProps,
     GraphElementOwnProps,
     GraphElementReduxStateProps,
     GraphElementStatee,
     InOutParam,
-    DState,
     JSXT,
+    LClass,
     LModelElement,
     Log,
     LPointerTargetable,
@@ -27,30 +33,15 @@ import {
     Overlap,
     Pointer,
     RuntimeAccessible,
+    RuntimeAccessibleClass,
     Selectors,
+    SetFieldAction,
     SetRootFieldAction,
     U,
     UX,
     windoww,
-    DV,
-    GraphSize,
-    GraphPoint,
-    LVoidVertex,
-    DUser,
-    Size,
-    LClass,
-    SetFieldAction,
-    DGraphVertex,
-    DVoidVertex, DEdge,
-    LEdge, LUser, LViewPoint,
-    LGraphElement, RuntimeAccessibleClass,
-    DEdgePoint, DPointerTargetable,
-    BEGIN, END,
 } from "../../joiner";
-
-
-import {end} from "@popperjs/core";
-import { EdgeOwnProps } from "./sharedTypes/sharedTypes";
+import {EdgeOwnProps} from "./sharedTypes/sharedTypes";
 
 
 export function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
@@ -261,6 +252,23 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     lastViewChanges: {t: number, vid: Pointer<DViewElement>, v: LViewElement, key?: string}[];
     // todo: can be improved by import memoize from "memoize-one"; it is high-order function that memorize the result if params are the same without re-executing it (must not have side effects)
     //  i could use memoization to parse the jsx and to execute the user-defined pre-render function
+
+    protected doMeasurableEvent(type: EMeasurableEvents): void {
+        let measurableCode: string = null as any;
+        let context: GObject = null as any;
+        try{
+            measurableCode = (this.props.view)[type];
+            if (!measurableCode) return;
+            context = this.getContext();
+            measurableCode = measurableCode.trim();
+            if (measurableCode[0]!=='(' || measurableCode.indexOf("function") !== 0) {
+                measurableCode = "()=>{" + measurableCode + "}";
+            }
+            measurableCode = "(" + measurableCode + ")()";
+            U.evalInContextAndScope<GObject>(measurableCode, context, context);
+        }
+        catch (e: any) { Log.ee('Error in "'+type+'" ' + e.message, {e, measurableCode, context}); }
+    }
 
     select(forUser:Pointer<DUser, 0, 1> = null) {
         const id = this.props.data?.id;
@@ -519,6 +527,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             this.props.node.view = this.props.view;
             return "Updating view...";
         }
+
+        this.doMeasurableEvent(EMeasurableEvents.onDataUpdate);
 
         /// set classes
         classes.push(this.props.data?.className || 'DVoid');

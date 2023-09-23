@@ -134,6 +134,50 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     property!: keyof DModelElement;
     containers!: LNamedElement[]; // list of fathers until the model is reached.
 
+
+
+    [key: `@${string}`]: LModelElement;
+    [key: `$${string}`]: LModelElement;
+
+    // protected _defaultGetter(c: Context, k: keyof Context["data"]): any {}
+    protected _defaultSetter(val: any, c: Context, k: keyof Context["data"] & string): boolean {
+        if (!["@", "$"].includes(k[0])) return false;
+        let target: LPointerTargetable = (c.proxyObject as GObject)[k];
+        if (!target) return false;
+        let l;
+        let tClassName: string = target.className;
+
+        // messanger classNames (pass it to next sublevel)
+        navigationloop: while(true) {
+            switch (tClassName) {
+                default: break navigationloop;
+                case DPackage.cname:
+                case DClass.cname:
+                case DEnumerator.cname:
+                case DObject.cname:
+                    target = (target as LModelElement).children[0]; continue navigationloop;
+            }
+        }
+
+        // actiong classNames
+        switch (tClassName) {
+            default: Log.ex("default setter not supported for model element: " + c.data.className, {c, k, val, target}); return false;
+            case DEnumLiteral.cname:
+                l = target as LEnumLiteral;
+                switch (typeof val){
+                    default: return false;
+                    case "string": l.literal = val; return true;
+                    case "number": l.ordinal = val; return true;
+                }
+                return false;
+            case DValue.cname:
+                // makes object.$x = 1      be equivalent to object.$x.value = 1 (or values if is arr)
+                l = target as LValue;
+                l.values = val;
+                return true;
+        }
+    }
+
     public generateEcoreJson(loopDetectionloopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
         throw new Error("cannot be called directly, should trigger getter. this is only for correct signature");
     }
@@ -3335,7 +3379,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     roots!: LObject[];
 
     // utilities to go down in the tree (plural names)
-    enums!: LEnumerator[];
+    enums!: LEnumerator[]; // alias for enumerators
+    enumerators!: LEnumerator[];
     classes!: LClass[];
     operations!: LOperation[];
     parameters!: LParameter[];
@@ -4446,7 +4491,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
         if (info.isContainment === undefined) {
             if (info.instanceof === undefined) info.instanceof = context.proxyObject.instanceof;
-            info.isContainment = !info.instanceof || (info.instanceof as LReference).containment;
+            if (info.instanceof){
+                if (info.instanceof.className === DReference.cname) { info.isContainment = (info.instanceof as LReference).containment; }
+                else info.isContainment = false;
+            }
+            else { info.isContainment = true; }
         }
         if (info.isContainment && oldTarget?.className === "DObject") {
             SetFieldAction.new(oldVal as Pointer<DObject>, "father", context.proxyObject.model.id, undefined, true);

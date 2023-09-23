@@ -1,28 +1,38 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import {
+    DEdgePoint,
     DGraph,
     DGraphElement,
     DGraphVertex,
+    DState,
+    DVertex,
     DVoidVertex,
+    EMeasurableEvents,
+    GObject,
     GraphElementComponent,
     GraphElementDispatchProps,
     GraphElementOwnProps,
     GraphElementReduxStateProps,
     GraphElementStatee,
-    DState,
+    GraphPoint,
+    GraphSize,
     LClass,
     LModelElement,
+    Log,
     LPointerTargetable,
     LUser,
+    LViewElement,
+    LViewPoint,
     LVoidVertex,
-    RuntimeAccessibleClass, LViewPoint,
-    U, GraphSize, GraphPoint, GObject, Size, SetRootFieldAction, SetFieldAction, DVertex, DVoidEdge, DEdgePoint, DUser, Dictionary, Pointer, Log,
+    RuntimeAccessibleClass,
+    SetRootFieldAction,
+    Size,
+    U,
 } from "../../joiner";
 import $ from "jquery";
 import "jqueryui";
 import "jqueryui/jquery-ui.css";
-import {DamEdge} from "../damedges/damedge";
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee { forceupdate?: number }
@@ -66,163 +76,172 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         },1)
     }
 
-    protected doMeasurableEvent(type: "onDragStart" | "onDragEnd" | "whileDragging" | "onResizeStart" | "onResizeEnd" | "whileResizing"): void {
-        let measurableCode = this.props.view[type];
-        console.log("xattr doevent check",  {type, measurableCode});
-        if (!measurableCode) return;
-        let context: GObject = null as any;
-        try{
-            context = this.getContext();
-            measurableCode = measurableCode.trim();
-            if (measurableCode[0]!=='(' || measurableCode.indexOf("function") !== 0) {
-                measurableCode = "()=>{" + measurableCode + "}";
-            }
-            measurableCode = "(" + measurableCode + ")()";
-            console.log("xattr doevent success",  {context, measurableCode});
-            U.evalInContextAndScope<GObject>(measurableCode, context, context);
-        }
-        catch (e: any) { Log.ee('Error in "'+type+'" ' + e.message, {e, measurableCode, context}); }
-    }
 
+    draggableOptions: GObject | undefined;
+    resizableOptions: GObject | undefined;
     setVertexProperties(){
-        if(!this.props.node || !this.html.current) return;
+        if (!this.props.node || !this.html.current) return;
         if (this.hasSetVertexProperties) return;
         this.hasSetVertexProperties = true;
         let html = this.html.current;
         const $measurable: GObject<"JQuery + ui plugin"> = $(html); // todo: install typings
 
+        let view: LViewElement = this.props.view;
+        let isDraggable: boolean = view.draggable;
+        let isResizable: boolean = view.resizable;
         // $element = $(html).find(".measurable").addBack();
-        $measurable.draggable({
-            cursor: 'grabbing',
-            containment: 'parent',
-            opacity: 0.0,
-            disabled: !(this.props.view.draggable),
-            distance: 5,
-            helper: () => { // or "clone",
-                // dragHelper.style.display="block";
-                let size = this.getSize();
-                // let actualSize = Size.of(html);
-                // if (size.w !== actualSize.w || size.h !== actualSize.h) this.setSize({w:actualSize.w, h:actualSize.h});
-                dragHelper.style.width = size.w+"px";
-                dragHelper.style.height = size.h+"px";
-                dragHelper.style.opacity = this.props.view.constraints.length ? "1" : "0.5";
-                if (this.props.view.lazySizeUpdate) dragHelper.classList.add("lazySizeUpdate");
-                else dragHelper.classList.remove("lazySizeUpdate");
-                return dragHelper;
-            },
-
-            // disabled: !(view.draggable),
-            start: (event: GObject, obj: GObject) => {
-                // this.select();
-                SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 }); // todo: should probably be done in a document event
-                this.doMeasurableEvent("onDragStart");
-            },
-            drag: (event: GObject, obj: GObject) => {
-                if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
-                this.doMeasurableEvent("whileDragging");
-            },
-            stop: (event: GObject, obj: GObject) => {
-                this.setSize({x:obj.position.left, y:obj.position.top});
-                this.doMeasurableEvent("onDragEnd");
-            }
-        });
-        let resizeoptions: GObject = {
-            disabled: !(this.props.view.resizable),
-            start: (event: GObject, obj: GObject) => {
-                this.select();
-                if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
-                SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 }); // todo: does it really need to be on resize event?
-                this.doMeasurableEvent("onResizeStart");
-            },
-            resize: (event: GObject, obj: GObject) => {
-                if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.position.width, h:obj.position.height});
-                this.doMeasurableEvent("whileResizing");
-            },
-            stop: (event: GObject, obj: GObject) => {
-                if (!this.state.classes.includes("resized")) this.setState({classes:[...this.state.classes, "resized"]});
-                // if (!withSetSize) { node.width = obj.size.width; node.height = obj.size.height; } else {
-                let absolutemode = true; // this one is less tested and safe, but should work even if html container is sized 0. best if made to work
-                let newSize: Partial<GraphSize>;
-                if (absolutemode) {
-                    let nativeevt: MouseEvent = event.originalEvent.originalEvent;
-                    let htmlSize = Size.of(event.target, false);
-                    newSize = this.props.node.graph.translateHtmlSize(htmlSize);
-                    /*n
-                    this is some pixels off, i think because inner coords are post the border of the container element,
-                     and the innermost graph size have coords before his borders, so the translation is off by the amount
-                      of border width of the innermost graph (and package default view does have a border)
-                       so in graph coord translate function should add: outersize.add( x: innergraph.html.getFinalComputedCSS("border-width-left"), y: ...border-width-top
-
-                    let cursorSize = new GraphSize(0, 0, nativeevt.clientX, nativeevt.clientY);//
-                    newSize = htmlSize.duplicate() as any; // .subtract( {w:cursorSize.x, h:cursorSize.y}, true);
-                    let handleClasses: string[] = [...event.originalEvent.target.classList];
-                    let handleKeyLength = 14; // equal to "ui-resizable-".length + 1;
-                    let handleClassName = handleClasses.find( // i check both length and indexOf, because i must match "ui-resizable-se" but not "ui-resizable-handle"
-                        (e) => (e.length === handleKeyLength || e.length === handleKeyLength + 1) && e.indexOf("ui-resizable-")===0);
-
-                    let handleType = handleClassName ? handleClassName.substring(13) : "";
-                    switch (handleType) {
-                        default: case "": case "se":
-                            delete newSize.x;
-                            delete newSize.y;
-                            newSize.w = cursorSize.w - htmlSize.x;
-                            newSize.h = cursorSize.h - htmlSize.y;
-                            break;
-                        case "n": case "s":
-                            delete newSize.x;
-                            delete newSize.y;
-                            delete newSize.w;
-                            newSize.h = cursorSize.h - htmlSize.y;
-                            break;
-                        case "e": case "W":
-                            delete newSize.x;
-                            delete newSize.y;
-                            newSize.w = cursorSize.w - htmlSize.x;
-                            delete newSize.h;
-                            break;
-                        case "nw":
-                            let br = htmlSize.br();
-                            newSize.x = cursorSize.x;
-                            newSize.y = cursorSize.y;
-                            newSize.w = br.x - cursorSize.w;
-                            newSize.h = br.y - cursorSize.h;
-                            break;
-                        case "ne":
-                            delete newSize.x;
-                            newSize.y = cursorSize.y;
-                            delete newSize.w;
-                            delete newSize.h;
-                        case "?":
-                            delete newSize.x;
-                            delete newSize.y;
-                            delete newSize.w;
-                            delete newSize.h;
-                            break;
-                    }*/
-                    // n, e, s, w, ne, se, sw, nw
-                    // almost, but: there is a few pix error. and: if i drag through horizontal or vertical handles it acts as if i used diagonal handle
-                    // console.log("resizing", {newSize, cursorSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
-                    console.log("resizing", {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
-                }
-                else newSize = {w:obj.size.width, h:obj.size.height};
-                // evt coordinates: clientX, layerX, offsetX, pageX, screenX
-                this.setSize(newSize);
-                // console.log("resize setsize:", obj, {w:obj.size.width, h:obj.size.height});
-                this.doMeasurableEvent("onResizeEnd");
-
-            }
-        }
-
-        if (this.props.view.lazySizeUpdate) {
-            // this does not accept a func or htmlElem, but only a classname...
-            // and makes his own empty proxy element to resize in his place. inchoherent.
-            resizeoptions.helper = "resizable-helper-bad";
-        }
+        if (!isDraggable) $measurable.draggable("disable")
+        else if (this.draggableOptions) $measurable.draggable("enable")
         else {
-            resizeoptions.containment = 'parent';
-        }
-        $measurable.resizable(resizeoptions);
+            // first setup only
+            this.draggableOptions = {
+                cursor: 'grabbing',
+                containment: 'parent',
+                opacity: 0.0,
+                disabled: !(isDraggable), // this does not work, i think because once set the first time the whole declaration is not re-applied. would need to undo draggable
+                distance: 5,
+                helper: () => { // or "clone",
+                    // dragHelper.style.display="block";
+                    let size = this.getSize();
+                    // let actualSize = Size.of(html);
+                    // if (size.w !== actualSize.w || size.h !== actualSize.h) this.setSize({w:actualSize.w, h:actualSize.h});
+                    dragHelper.style.width = size.w+"px";
+                    dragHelper.style.height = size.h+"px";
+                    dragHelper.style.opacity = this.props.view.constraints.length ? "1" : "0.5";
+                    if (this.props.view.lazySizeUpdate) dragHelper.classList.add("lazySizeUpdate");
+                    else dragHelper.classList.remove("lazySizeUpdate");
+                    return dragHelper;
+                },
 
+                // disabled: !(view.draggable),
+                start: (event: GObject, obj: GObject) => {
+                    // this.select();
+                    SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 }); // todo: should probably be done in a document event
+                    this.doMeasurableEvent(EMeasurableEvents.onDragStart);
+                },
+                drag: (event: GObject, obj: GObject) => {
+                    if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
+                    this.doMeasurableEvent(EMeasurableEvents.whileDragging);
+                },
+                stop: (event: GObject, obj: GObject) => {
+                    this.setSize({x:obj.position.left, y:obj.position.top});
+                    this.doMeasurableEvent(EMeasurableEvents.onDragEnd);
+                }
+            };
+            $measurable.draggable(this.draggableOptions);
+        }
+
+        if (!isResizable) $measurable.resizable("disable")
+        else if (this.resizableOptions) $measurable.resizable("enable")
+        if (!this.resizableOptions) {
+            this.resizableOptions = {
+                start: (event: GObject, obj: GObject) => {
+                    this.select();
+                    if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
+                    SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 }); // todo: does it really need to be on resize event?
+                    this.doMeasurableEvent(EMeasurableEvents.onResizeStart);
+                },
+                resize: (event: GObject, obj: GObject) => {
+                    if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.position.width, h:obj.position.height});
+                    this.doMeasurableEvent(EMeasurableEvents.whileResizing);
+                },
+                stop: (event: GObject, obj: GObject) => {
+                    if (!this.state.classes.includes("resized")) this.setState({classes:[...this.state.classes, "resized"]});
+                    // if (!withSetSize) { node.width = obj.size.width; node.height = obj.size.height; } else {
+                    let absolutemode = true; // this one is less tested and safe, but should work even if html container is sized 0. best if made to work
+                    let newSize: Partial<GraphSize>;
+                    if (absolutemode) {
+                        let nativeevt: MouseEvent = event.originalEvent.originalEvent;
+                        let htmlSize = Size.of(event.target, false);
+                        newSize = this.props.node.graph.translateHtmlSize(htmlSize);
+                        /*n
+                        this is some pixels off, i think because inner coords are post the border of the container element,
+                         and the innermost graph size have coords before his borders, so the translation is off by the amount
+                          of border width of the innermost graph (and package default view does have a border)
+                           so in graph coord translate function should add: outersize.add( x: innergraph.html.getFinalComputedCSS("border-width-left"), y: ...border-width-top
+
+                        let cursorSize = new GraphSize(0, 0, nativeevt.clientX, nativeevt.clientY);//
+                        newSize = htmlSize.duplicate() as any; // .subtract( {w:cursorSize.x, h:cursorSize.y}, true);
+                        let handleClasses: string[] = [...event.originalEvent.target.classList];
+                        let handleKeyLength = 14; // equal to "ui-resizable-".length + 1;
+                        let handleClassName = handleClasses.find( // i check both length and indexOf, because i must match "ui-resizable-se" but not "ui-resizable-handle"
+                            (e) => (e.length === handleKeyLength || e.length === handleKeyLength + 1) && e.indexOf("ui-resizable-")===0);
+
+                        let handleType = handleClassName ? handleClassName.substring(13) : "";
+                        switch (handleType) {
+                            default: case "": case "se":
+                                delete newSize.x;
+                                delete newSize.y;
+                                newSize.w = cursorSize.w - htmlSize.x;
+                                newSize.h = cursorSize.h - htmlSize.y;
+                                break;
+                            case "n": case "s":
+                                delete newSize.x;
+                                delete newSize.y;
+                                delete newSize.w;
+                                newSize.h = cursorSize.h - htmlSize.y;
+                                break;
+                            case "e": case "W":
+                                delete newSize.x;
+                                delete newSize.y;
+                                newSize.w = cursorSize.w - htmlSize.x;
+                                delete newSize.h;
+                                break;
+                            case "nw":
+                                let br = htmlSize.br();
+                                newSize.x = cursorSize.x;
+                                newSize.y = cursorSize.y;
+                                newSize.w = br.x - cursorSize.w;
+                                newSize.h = br.y - cursorSize.h;
+                                break;
+                            case "ne":
+                                delete newSize.x;
+                                newSize.y = cursorSize.y;
+                                delete newSize.w;
+                                delete newSize.h;
+                            case "?":
+                                delete newSize.x;
+                                delete newSize.y;
+                                delete newSize.w;
+                                delete newSize.h;
+                                break;
+                        }*/
+                        // n, e, s, w, ne, se, sw, nw
+                        // almost, but: there is a few pix error. and: if i drag through horizontal or vertical handles it acts as if i used diagonal handle
+                        // console.log("resizing", {newSize, cursorSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
+                        console.log("resizing", {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
+                    }
+                    else newSize = {w:obj.size.width, h:obj.size.height};
+                    // evt coordinates: clientX, layerX, offsetX, pageX, screenX
+                    this.setSize(newSize);
+                    // console.log("resize setsize:", obj, {w:obj.size.width, h:obj.size.height});
+                    this.doMeasurableEvent(EMeasurableEvents.onResizeEnd);
+
+                }
+            }
+            $measurable.resizable(this.resizableOptions);
+        }
+
+        // edit dynamic draggable options post-setup
+        if (this.draggableOptions) {
+            // none so far?
+        }
+        // edit dynamic resizable options post-setup
+        if (this.resizableOptions) {
+            let lazySizeUpdate = view.lazySizeUpdate;
+            let containment = lazySizeUpdate ? false : 'parent';
+            let helper = lazySizeUpdate ? "resizable-helper-bad" : "original";
+            // helper does not accept a func or htmlElem, but only a classname...
+            // and makes his own empty proxy element to resize in his place. inchoherent.
+            if (this.resizableOptions?.containment !== containment){
+                this.resizableOptions.containment = containment;
+                $measurable.draggable( "option", "containment", containment);
+            }
+            if (this.resizableOptions?.helper !== helper){
+                this.resizableOptions.helper = helper;
+                $measurable.draggable( "option", "helper", helper);
+            }
+        }
     }
 
 

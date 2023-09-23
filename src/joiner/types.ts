@@ -105,7 +105,22 @@ export enum EdgeGapMode {
     "center" = "center",
     "average" = "average",
 }
-
+export enum EMeasurableEvents {
+    // data
+    onDataUpdate = "onDataUpdate",
+    // drag
+    onDragStart = "onDragStart",
+    onDragEnd = "onDragEnd",
+    whileDragging = "whileDragging",
+    // resize
+    onResizeStart = "onResizeStart",
+    onResizeEnd = "onResizeEnd",
+    whileResizing = "whileResizing",
+    // rotate
+    onRotationStart = "onRotationStart",
+    onRotationEnd = "onRotationEnd",
+    whileRotating = "whileRotating",
+}
 // export type Subtract<T, K> = {  [L in Exclude<keyof T, K>]: T[L] };
 // Or alternatively, and more concisely, as:
 

@@ -95,7 +95,7 @@ export class DV {
                 <path className={"preview"} strokeWidth={this.strokeWidth} stroke={this.strokeColor}
                 fill={"none"} d={this.edge.d} strokeDasharray="` + dashing + `"></path>
                 <path className={"preview"} strokeWidth={this.strokeWidthHover} stroke={"transparent"}
-                fill={"none"} d={this.edge.d} strokeDasharray="` + dashing + `"></path>
+                fill={"none"} d={this.edge.d}></path>
                 { /* edge separate segments */ }
                 {this.segments.all.flatMap(s => [
                     <path className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={this.strokeWidthHover}

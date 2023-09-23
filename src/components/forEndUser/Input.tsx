@@ -20,7 +20,7 @@ function InputComponent(props: AllProps) {
     // todo: data can be injected with UX, if field is present, can take type from a metainfo like __info_of__
     const data = props.data;
     // const selected = props.selected;
-    const fathers = U.fatherChain(data as LModelElement);
+    // const fathers = U.fatherChain(data as LModelElement);
     let editable = true;
 
     /*  Uncomment this when we have user authentication: if a user is on a ME, it cannot be edited.

@@ -1115,6 +1115,9 @@ export class Pointers{
         // public static from<T extends LPointerTargetable | undefined | null>(data:Pack1<T[]>): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T> : T; //{TEST1:any};
         // public static from<T extends LPointerTargetable | undefined | null>(data:Pack1<T[]>[]): T extends LPointerTargetable ? Pointer<LtoD<T>, 1, 1, T>[] : T; //{TEST111:any};
         // DDD extends (T extends Pointer<infer D> ? D : 'undefined D'),*/
+    // returns:
+    // if ptr is unvalid = undefined;
+    // if [ptr] is unvalid = []
     public static from<TT extends Pack<LPointerTargetable[]> | undefined | null,
         // @ts-ignore
         T extends (TT extends Pack<infer PTYPE> ? PTYPE : undefined)>(data:T): T extends null | undefined ? T : Pointer<LtoD<T>, 1, 1, T>[]; //{TEST0:any};

@@ -25,6 +25,7 @@ type ERROR = "_Type_Error_";
 // ))
 // type WtoL<WX extends WPointerTargetable> ='';
 
+const childrenKeys = ["@", "$"];
 @RuntimeAccessible
 export class LogicContext<
     DX extends GObject = DModelElement,
@@ -269,8 +270,6 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                 if (getterMethod) return getterMethod(new LogicContext(proxyitself as any, targetObj));
 
             }
-            // if custom generic getter exist
-            if (this.lg._defaultGetter) return this.lg._defaultGetter(new LogicContext(proxyitself as any, targetObj), propKey);
 
 
             switch (propKey){
@@ -295,11 +294,14 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             catch (e) { lchildren = []; }
             // let dchildren: DPointerTargetable[] = lchildren.map<DPointerTargetable>(l => l.__raw as any);
             let lc: GObject;
-            if (propKey[0] === "@") { propKey = propKey.substring(1); canThrowErrors = false; }
+            if (childrenKeys.includes(propKey[0])) { propKey = propKey.substring(1); canThrowErrors = false; }
             for (lc of lchildren) {
                 if (lc.name === propKey) return lc;
             }
         }
+
+        // if custom generic getter exist
+        if (this.lg._defaultGetter) return this.lg._defaultGetter(new LogicContext(proxyitself as any, targetObj), propKey);
 
         // if property do not exist, try a concatenation
         let concatenationTentative = null;
@@ -341,6 +343,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                 return this.defaultSetter(targetObj as any as DPointerTargetable, propKey as string, value, proxyitself);
                 // new SetFieldAction(new LogicContext(proxyitself as any, targetObj).data as any, propKey as string, value); return true;
             }
+            // if custom generic getter exist
+            if (this.lg._defaultSetter) return this.lg._defaultSetter(value, new LogicContext(proxyitself as any, targetObj), propKey);
             // se esiste la proprietà ma non esiste il setter, che fare? do errore.
             Log.eDevv("dev error: property exist but setter does not: ", propKey, this);
             return false;

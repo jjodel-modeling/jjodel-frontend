@@ -1,4 +1,4 @@
-import type {LClass, DPointerTargetable} from "../../joiner";
+import type {LClass, DPointerTargetable, LModel} from "../../joiner";
 import React, {Dispatch, LegacyRef, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import toast, {Toaster} from "react-hot-toast";
@@ -8,17 +8,18 @@ import {DState,
     GObject,
     Pointer,
     LEnumerator,
-    Selectors,
-    LModelElement,
     Overlap} from "../../joiner";
 
-// todo: this is too hardcoded for Pointers and class->attributes etc. need to make it more generic
+
 function SelectComponent(props: AllProps) {
     const data = props.data;
-    if(!data) return(<></>);
-    const field = props.field;
+    if (!data) return(<></>);
+    let d: DPointerTargetable = data.__raw || data;
+    let l: LPointerTargetable = LPointerTargetable.fromD(data);
+    let gdata: GObject<LPointerTargetable> = data;
+    const field: (keyof LPointerTargetable & keyof DPointerTargetable) = props.field as any;
     const readOnly = props.readonly; // || U.getDefaultViewsID().includes(data.id);
-    const value = data[field]?.id || data[field] || 'undefined';
+    const value: string | Pointer = d[field] as string;
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
     const tooltip = props.tooltip;
@@ -36,22 +37,22 @@ function SelectComponent(props: AllProps) {
         if(readOnly) return;
         const target = evt.target.value;
         console.log("setting:", {data, field, target});
-        data[field] = target;
+        data[field] = target as any;
     }
 
-    let hasReturn = false; let hasPrimitive = false; let hasClasses = false; let hasEnumerators = false;
-    if(field === 'type') {
-        switch (data.className) {
-            case 'DAttribute': hasPrimitive = hasEnumerators = true; break;
-            case 'DReference': hasClasses = true; break;
-            case 'DOperation': hasPrimitive = hasClasses = hasEnumerators = hasReturn = true; break;
-            case 'DParameter': hasPrimitive = hasClasses = hasEnumerators = true; break;
+    let returns: LClass[] | undefined;
+    let primitives: LClass[] | undefined;
+    let classes: LClass[] | undefined;
+    let enumerators: LEnumerator[] | undefined;
+    if ((field as string) === 'type') {
+        let model: LModel | undefined = (l as GObject).model;
+        if (model) switch (data.className) {
+            case 'DAttribute': primitives = props.primitives; enumerators = model.enums; break;
+            case 'DReference': classes = model.classes; break;
+            case 'DOperation': primitives = props.primitives; classes = model.classes; enumerators = model.enums; returns = props.returns; break;
+            case 'DParameter': primitives = props.primitives; classes = model.classes; enumerators = model.enums;  break;
         }
     }
-    const returns = props.returns;
-    const primitives = props.primitives;
-    const classes: LClass[] = data.model.classes;
-    const enumerators: LEnumerator[] = data.model.enumerators;
 
     const otherprops: GObject = {...props};
     delete otherprops.data;
@@ -72,22 +73,22 @@ function SelectComponent(props: AllProps) {
             value={value}
             onChange={SelectChange}>
 
-            {(hasReturn && returns.length > 0) && <optgroup label={'Defaults'}>
+            {(returns && returns.length > 0) && <optgroup label={'Defaults'}>
                 {returns.map((returnType, i) => {
                     return <option key={i} value={returnType.id}>{returnType.name}</option>
                 })}
             </optgroup>}
-            {(hasPrimitive && primitives) && <optgroup label={'Primitives'}>
+            {(primitives && primitives.length) && <optgroup label={'Primitives'}>
                 {primitives.map((primitive, i) => {
                     return <option key={i} value={primitive.id}>{primitive.name}</option>
                 })}
             </optgroup>}
-            {(hasEnumerators && enumerators.length > 0) && <optgroup label={'Enumerators'}>
+            {(enumerators && enumerators.length > 0) && <optgroup label={'Enumerators'}>
                 {enumerators.map((enumerator, i) => {
                     return <option key={i} value={enumerator.id}>{enumerator.name}</option>
                 })}
             </optgroup>}
-            {(hasClasses && classes.length > 0) && <optgroup label={'Classes'}>
+            {(classes && classes.length > 0) && <optgroup label={'Classes'}>
                 {classes.map((classifier, i) => {
                     return <option key={i} value={classifier.id}>{classifier.name}</option>
                 })}
@@ -115,7 +116,7 @@ export interface SelectOwnProps {
     inputStyle?: GObject;
 }
 interface StateProps {
-    data: LPointerTargetable & GObject;
+    data: LPointerTargetable;
     primitives: LClass[];
     returns: LClass[]; }
 interface DispatchProps { }

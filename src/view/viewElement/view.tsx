@@ -69,12 +69,16 @@ export class DViewElement extends DPointerTargetable {
     viewpoint: Pointer<DViewPoint, 0, 1, LViewElement> = '';
     display!: 'block'|'contents'|'flex'|string;
     constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
+    onDataUpdate!: string;
     onDragStart!: string;
     onDragEnd!: string;
     whileDragging!: string;
     onResizeStart!: string;
     onResizeEnd!: string;
     whileResizing!: string;
+    onRotationStart!: string;
+    onRotationEnd!: string;
+    whileRotating!: string;
     bendingMode!: EdgeBendingMode;
     edgeGapMode!: EdgeGapMode;
     //useSizeFrom!: EuseSizeFrom;
@@ -213,28 +217,44 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         txt: 'complete css injection instead'}
 
     onDragStart!: string;
-    __info_of__onDragStart: Info = {todo: true, isNode: true, type: "Function():void",
-        txt: 'not supported yet'}
+    __info_of__onDragStart: Info = {isNode: true, type: "Function():void",
+        txt: 'Custom event activated when a node begins being dragged.'}
 
     onDragEnd!: string;
-    __info_of__onDragEnd: Info = {todo: true, isNode: true, type: "Function():void",
-        txt: 'not supported yet'}
+    __info_of__onDragEnd: Info = {isNode: true, type: "Function():void",
+        txt: 'Custom event activated when a node finishes being dragged.'}
 
     whileDragging!: string;
-    __info_of__whileDragging: Info = {todo: true, isNode: true, type: "Function():void",
-        txt: 'not supported yet'}
+    __info_of__whileDragging: Info = {isNode: true, type: "Function():void",
+        txt: 'Custom event activated multiple times when mouse is moved while a node is being dragged.'}
 
     onResizeStart!: string;
-    __info_of__onResizeStart: Info = {todo: true, isNode: true, type: "Function():void",
-        txt: 'not supported yet'}
+    __info_of__onResizeStart: Info = {isNode: true, type: "Function():void",
+    txt: 'Custom event activated when a node begins being resized.'}
 
     onResizeEnd!: string;
-    __info_of__onResizeEnd: Info = {todo: true, isNode: true, type: "Function():void",
-        txt: 'not supported yet'}
+    __info_of__onResizeEnd: Info = {isNode: true, type: "Function():void",
+        txt: 'Custom event activated when a node finishes being resized.'}
 
     whileResizing!: string;
-    __info_of__whileResizing: Info = {todo: true, isNode: true, type: "Function():void",
-        txt: 'not supported yet'}
+    __info_of__whileResizing: Info = {isNode: true, type: "Function():void",
+        txt: 'Custom event activated multiple times when mouse is moved while a node is being resized.'}
+
+    onRotationStart!: string;
+    __info_of__onRotationStart: Info = {isNode: true, type: "Function():void",
+    txt: 'Custom event activated when a node begins being rotated.'}
+
+    onRotationEnd!: string;
+    __info_of__onRotationEnd: Info = {isNode: true, type: "Function():void",
+        txt: 'Custom event activated when a node finishes being rotated.'}
+
+    whileRotating!: string;
+    __info_of__whileRotating: Info = {isNode: true, type: "Function():void",
+        txt: 'Custom event activated multiple times when mouse is moved while a node is being rotated.'}
+
+    onDataUpdate!: string;
+    __info_of__onDataUpdate: Info = {isNode: true, type: "Function():void",
+        txt: 'Custom event activated every time a property of his model, node or view is changed while the element is visibly rendered in a graph.\n<br>Caution! this might cause loops.'}
 
     constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
     __info_of__constraints: Info = {todo: true, isNode: true, type: "Function():void",

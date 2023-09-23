@@ -111,9 +111,14 @@ body .ui-icon{ // override jqueryui fixed resizable handles at 16px, making drag
 }*/
 
 //////////// edge paths
-.hoverable>.preview, .hoverable>svg>.preview{
-  pointer-events: all;
+path{
+  pointer-events: stroke;
 }
+/*
+.hoverable>.preview, .hoverable>svg>.preview{
+  pointer-events: stroke;
+}*/
+/*
 svg.hoverable {
 
   path{
@@ -129,8 +134,7 @@ svg.hoverable {
     &>.preview { visibility: hidden; }
     &>.content { visibility: visible; }
   }
-
-}
+}*/
 // .EdgePoint[data-nodetype="EdgePoint"]>
 // [data-nodetype]:has(>[hoverscale]){ overflow: visible !important; }
 [hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{
@@ -140,9 +144,19 @@ svg.hoverable {
   &>[hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{ transform: scale(1); }
   // transform: scale(attr(hoverscale number, 1)); correct but unsupported yet. i'm forced to hardcode a number
 }
-
+[data-nodetype="Edge"] path{
+  // d: attr(d);
+  transition: d 400ms, transform 400ms, transform-origin 400ms;
+  transition: all 400ms;
+}
 [data-nodetype="Edge"]>.hide-ep [data-nodetype="EdgePoint"]{
-  display: none !important;
+  // display: none !important;
+  visibility: hidden;
+  opacity: 0;
+  // important! when you enlarge it with resize without transition,
+  // the moment you release the resize it is immediately hidden and the js event goes crazy with coordinates
+  // transition: all 300ms;
+  transition: opacity 200ms, display 200ms, visibility 200ms;
 }
 
 [data-nodetype="Edge"]:hover,
@@ -150,8 +164,9 @@ svg.hoverable {
 [data-nodetype="Edge"]:focus-within{
 
   &>.hide-ep [data-nodetype="EdgePoint"]{
-    display: block !important;
-
+    // display: block !important;
+    opacity:1;
+    visibility: visible; // this prevents pointer-events and is animatable i think? unlike pointer-events or display
     &>.ui-resizable-handle{ border: none;
     }
   }
