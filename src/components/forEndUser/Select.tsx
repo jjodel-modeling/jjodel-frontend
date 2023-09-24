@@ -19,7 +19,7 @@ function SelectComponent(props: AllProps) {
     const value: string | Pointer = d[field] as string;
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
-    let tooltip: string|undefined = (props.tooltip === true) ? ((data['__info_of__' + field]) ? data['__info_of__' + field].txt: '') : props.tooltip;
+    let tooltip: string|undefined = (props.tooltip === true) ? ((gdata['__info_of__' + field]) ? gdata['__info_of__' + field].txt: '') : props.tooltip;
     tooltip = (tooltip) ? tooltip : '';
     let css = 'my-auto select ';
     css += (jsxLabel) ? 'ms-1' : 'ms-auto';

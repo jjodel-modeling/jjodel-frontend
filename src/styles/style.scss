@@ -78,7 +78,12 @@
 .input[type='checkbox']:checked {
   background-image: url("../static/svg/toggle-on.svg");
 }
-.select { width: 50%; outline: none; font-size: 0.9rem; height: min-content; border-radius: $radius;
+.select {
+  // width: 50%;
+  outline: none;
+  font-size: 0.9rem;
+  height: min-content;
+  border-radius: $radius;
   border: 1px solid $border-color; }
 .select:focus { border: 1px dashed $border-color; }
 .btn { padding: 0 0.1em; line-height: normal; border-radius: $radius; }
