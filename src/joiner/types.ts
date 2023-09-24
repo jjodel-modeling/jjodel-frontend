@@ -41,7 +41,7 @@ type NotAFunction = NoCaller | NoBind | NoApply | NoCall;
 type NotFunction = GObject & NotAFunction | PrimitiveType;
 export type Info = {
     txt: string | React.ReactElement,
-    type?: ShortAttribETypes | string | typeof RuntimeAccessibleClass | GObject<"Enum">,
+    type?: ShortAttribETypes | string; //| GObject<"Enum">,
     label?: JSX.Element | string,
     readType?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
     writeType?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,

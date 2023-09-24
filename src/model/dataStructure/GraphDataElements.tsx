@@ -660,8 +660,8 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     // get_htmlSize(context: Context): Size { }
     translateSize<T extends GraphSize|GraphPoint>(ret: T, innerGraph: LGraph): T { return this.wrongAccessMessage("translateSize()"); }
     translateHtmlSize<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(size: T): G { return this.wrongAccessMessage("translateHtmlSize()"); }
-    __info_of__offset: Info = {type:GraphSize, txt:"size internal to the graph, including internal scroll and panning."};
-    __info_of__graphSize: Info = {type:GraphSize, txt:"Alias of this.offset"};
+    __info_of__offset: Info = {type:GraphSize.cname, txt:"size internal to the graph, including internal scroll and panning."};
+    __info_of__graphSize: Info = {type:GraphSize.cname, txt:"Alias of this.offset"};
     __info_of__translateSize: Info = {type:"(T, Graph)=>T where T is GraphSize | GraphPoint", txt:"Translates a coordinate set from the local coordinates of a SubGraph to this Graph containing it."};
     __info_of__translateHtmlSize: Info = {type:"(Size|Point) => GraphSize|GraphPoint", txt:"Translate page\'s viewport coordinate set to this graph coordinate set."};
     get_translateHtmlSize<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(c: Context): ((size: T) => G) {

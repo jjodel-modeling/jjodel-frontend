@@ -58,9 +58,12 @@ function NodeData(props: Props) {
         <Input data={view} field={"adaptHeight"} label={"Adapt Height"} type={"checkbox"}/>
         <Input data={view} field={"draggable"} label={"Draggable"} type={"checkbox"}/>
         <Input data={view} field={"resizable"} label={"Resizable"} type={"checkbox"}/>
+        <TextArea data={view} field={'onDataUpdate'} label={'onDataUpdate'} />
         <TextArea data={view} field={'onDragStart'} label={'OnDragStart'} />
+        <TextArea data={view} field={'whileDragging'} label={'whileDragging'} />
         <TextArea data={view} field={'onDragEnd'} label={'OnDragEnd'} />
         <TextArea data={view} field={'onResizeStart'} label={'OnResizeStart'} />
+        <TextArea data={view} field={'whileResizing'} label={'whileResizing'} />
         <TextArea data={view} field={'onResizeEnd'} label={'OnResizeEnd'} />
     </>);
 }

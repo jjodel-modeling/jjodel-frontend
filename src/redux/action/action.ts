@@ -176,6 +176,10 @@ export class Action extends RuntimeAccessibleClass {
 
     fire(forceRelaunch: boolean = false): boolean {
         if (this.hasFired && !forceRelaunch) return false;
+        if (this.value && this.value.__isProxy) {
+            Log.ee("Attempted to set a proxy object inside the store.", {action:this, value: this.value});
+            return false;
+        }
         if (hasBegun) {
             pendingActions.push(this);
         } else {

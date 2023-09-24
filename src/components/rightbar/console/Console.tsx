@@ -1,5 +1,5 @@
 import React, {Dispatch, PureComponent, ReactElement} from "react";
-import {connect} from "react-redux";
+import {connect, Provider} from "react-redux";
 import {
     DState,
     DGraphElement,
@@ -12,10 +12,12 @@ import {
     Pointer,
     RuntimeAccessibleClass,
     U,
-    windoww
+    windoww, store
 } from "../../../joiner";
 import * as util from "util";
 import {GraphElementComponent} from "../../../graph/graphElement/graphElement";
+import ReactDOM from "react-dom";
+import Router from "../../../router/Router";
 
 var Convert = require('ansi-to-html');
 var ansiConvert = new Convert();
@@ -131,13 +133,15 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             let shortcuts: GObject<'L singleton'> | undefined = undefined;
             let comments: Dictionary<string, string | {type:string, txt:string}> | undefined = undefined;
             let hidden: Dictionary<string, string> | undefined = undefined;
+            let jsxComments: Dictionary<string, JSX.Element[]> = {};
             try {
-                let hiddenkeys: GObject | undefined = {};
-                if (Array.isArray(output) && output[0]?.__isProxy) {
-                    output = output.map(o => fixproxy(o).output);
+                if (Array.isArray(output)){
                     comments = {"separator": '<span>Similar to <a href={"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join"}>Array.join(separator)</a>' +
                             ', but supports array of JSX nodes and JSX as separator argument.</span>'};
                     shortcuts = {"separator": ""};
+                }
+                if (Array.isArray(output) && output[0]?.__isProxy) {
+                    output = output.map(o => fixproxy(o).output);
                     console.log("console result (array):", {output});
                 }
                 else {
@@ -154,18 +158,31 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                     output = {"React.Component": {props:"...navigate to expand...", state:"", _isMounted:output._isMounted}}
                 }
                 let format = (val: GObject) => U.replaceAll(ansiConvert.toHtml(util.inspect(val, true, 2, true)), "style=\"color:#FFF\"", "style=\"color:#000\"");
-                outstr = "<h4>Result:</h4>" + format(output);
+                outstr = "<h4>Result:</h4>" + format(output)+"<span>";
                 if (shortcuts || comments){
                     // if(!shortcuts) shortcuts = {};
-                    if(!comments) comments = {};
+                    if (!comments) comments = {};
                     if (shortcuts) outstr += "<br><br><h4>Shortcuts</h4>" + format(shortcuts);
                     if (hidden) outstr +="<br><br><h4>Other less useful properties</h4>" + format(hidden);
                     for (let commentKey in comments){
                         let commentVal: any = comments[commentKey];
-                        if (commentVal?.type) commentVal = ":" + commentVal?.type + " ~ " + commentVal?.txt;
+                        let txt = commentVal?.txt;
+                        if (txt && typeof txt !== "string") {
+                            // try to inject jsx
+                            jsxComments[commentKey] = txt;
+                            txt = "<span id='console_output_comment_" + commentKey + "' />";
+                            // fallback read text, that should go deep iteration, but 1 level deep should be enough.
+                            // let arr: any[] = (Array.isArray(txt?.props?.children) ? txt.props.children : (txt.props.children ? [txt.props.children] : []));
+                            // txt = arr.map(e => typeof e === "string" ? e : e?.props?.children + '' || '').join("");
+                        }
+                        if (commentVal?.type) commentVal = ":" + (commentVal?.type?.cname || commentVal.type) + " ~ " + txt;
                         let commentKeyEscaped = U.multiReplaceAll(commentKey, ["$", "-"], ["\\$", "\\-"]); // _ should be safe, .-,?^ not happening?
-                        let regexp = new RegExp("^({?\\s*" +commentKey+":.*)$", "gm");
+                        let regexp = new RegExp("^({?\\s*" +commentKeyEscaped+":.*)$", "gm");
+                        let regexpCloseTags = new RegExp("(\\<span style\\=\"color\\:\\#)", "gm");
+                        outstr = U.replaceAll( outstr, "$", "£");
                         outstr = outstr.replace(regexp, "$1 // " + commentVal);
+                        outstr = outstr.replace(regexpCloseTags,  "</span>$1");
+                        outstr = U.replaceAll(outstr, "£", "$");
                     }
                 }
                 ashtml = true; }
@@ -175,24 +192,31 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 outstr = "[circular object]: " + e.toString();
                 ashtml = false;
             }
-            console.log("console result (string)", {outstr});
+            console.log("console result (string)", {outstr, jsxComments});
             let contextkeys;
             let objraw = this.state.output?.__raw || (typeof this.state.output === "object" ? this.state.output : "[primitiveValue]") || {};
-            if (this.state.expression.trim() === "") contextkeys = ["data", "node", "view", "getSize()", "setSize({x:?, y:?, w:?, h:?})", "component"].join(", ");
+            if (this.state.expression.trim() === "") contextkeys = ["data", "node", "view", "component"].join(", ");
             else if (this.state.expression.trim() === "this") contextkeys = ["Warning: \"this\" will refer to the Console component instead of a GraphElement component."].join(", ");
-            else contextkeys = Array.isArray(objraw) ? ["array[number]", ...Object.keys(Array.prototype)].join("</br>") : Object.getOwnPropertyNames(objraw).join(", ");// || []).join(", ")
+            else if (typeof objraw === "string") { contextkeys = "- length\n- all string functions"}
+            else contextkeys = Array.isArray(objraw) ? ["array[index]", ...Object.keys(Array.prototype)].join(",\n") : Object.getOwnPropertyNames(objraw).join(",\n");// || []).join(", ")
 
+            let injectCommentJSX = () => {
+                try{ for (let key in jsxComments) ReactDOM.render( jsxComments[key], document.getElementById("console_output_comment_"+key)); }
+                catch (e) { console.error("failed to inject console output comment:", e)}
+            }
+            setTimeout(injectCommentJSX, 1)
             this.setNativeConsoleVariables();
+
             return(<div className={'p-2 w-100 h-100'}>
                 <textarea spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} />
                 {/*<label>Query {(this.state.expression)}</label>*/}
                 <label>On {((data as GObject)?.name || "model-less node (" + this.props.node.className + ")") + " - " + this.props.node?.className}</label>
                 <hr className={'mt-1 mb-1'} />
-                { ashtml && <div style={{whiteSpace:"pre"}} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
+                { ashtml && <div className={"console-output-container"} style={{whiteSpace:"pre"}} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
                 { !ashtml && <div style={{whiteSpace:"pre"}}>{ outstr }</div>}
                 <label className={"mt-2"}>Context keys:</label>
                 {
-                    contextkeys
+                    <div style={{whiteSpace:"pre"}}> {contextkeys} </div>
                 }
             </div>)
     }

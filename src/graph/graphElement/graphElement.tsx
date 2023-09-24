@@ -250,15 +250,19 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     hasSetVertexProperties: boolean = false;
     html: React.RefObject<HTMLElement | undefined>;
     lastViewChanges: {t: number, vid: Pointer<DViewElement>, v: LViewElement, key?: string}[];
+    lastOnUpdateChanges: {t: number}[];
+    stopUpdateEvents?: number; // undefined or view.clonedCounter;
+
     // todo: can be improved by import memoize from "memoize-one"; it is high-order function that memorize the result if params are the same without re-executing it (must not have side effects)
     //  i could use memoization to parse the jsx and to execute the user-defined pre-render function
 
-    protected doMeasurableEvent(type: EMeasurableEvents): void {
+
+    protected doMeasurableEvent(type: EMeasurableEvents): boolean {
         let measurableCode: string = null as any;
         let context: GObject = null as any;
         try{
             measurableCode = (this.props.view)[type];
-            if (!measurableCode) return;
+            if (!measurableCode) return false;
             context = this.getContext();
             measurableCode = measurableCode.trim();
             if (measurableCode[0]!=='(' || measurableCode.indexOf("function") !== 0) {
@@ -268,6 +272,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             U.evalInContextAndScope<GObject>(measurableCode, context, context);
         }
         catch (e: any) { Log.ee('Error in "'+type+'" ' + e.message, {e, measurableCode, context}); }
+        // it has executed at least partially.
+        // i just need to know if he had the chance to do side-effects and the answer is yes regardless of exceptions
+        return true;
     }
 
     select(forUser:Pointer<DUser, 0, 1> = null) {
@@ -292,6 +299,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     constructor(props: AllProps, context: any) {
         super(props, context);
         this.lastViewChanges = [];
+        this.lastOnUpdateChanges = []
+        this.stopUpdateEvents = undefined;
         this._isMounted = false;
         this.id = GraphElementComponent.maxid++;
         GraphElementComponent.all[this.id] = this;
@@ -513,12 +522,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     public render(nodeType?:string, styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
         if (!this.props.node) return "loading";
         if (this.props.node.__raw.view !== this.props.view.id) {
-
             let thischange = {t: Date.now(), vid: this.props.node.__raw.view, newvid:this.props.view.id, v: this.props.node.view, newv: this.props.view, key:this.props.key};
             this.lastViewChanges.push(thischange);
             // nan -> false <200 = true
-            if (this.lastViewChanges[this.lastViewChanges.length-20]?.t - thischange.t < 200) { // important! NaN<1  and NaN>1 are both false
-                // if 3 views changed in <= 0.2 sec
+            if (thischange.t - this.lastViewChanges[this.lastViewChanges.length-20]?.t < 200) { // important! NaN<1  and NaN>1 are both false
+                // if N views changed in <= 0.2 sec
                 Log.exDevv("loop in updating View assigned to node. The cause might be missing or invalid keys on GraphElement JSX nodes.", {change_log:this.lastViewChanges, component: this});
             }
 
@@ -528,7 +536,22 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             return "Updating view...";
         }
 
-        this.doMeasurableEvent(EMeasurableEvents.onDataUpdate);
+        if (!this.stopUpdateEvents || this.stopUpdateEvents !== this.props.view.clonedCounter) {
+            this.stopUpdateEvents = undefined;
+            if (this.doMeasurableEvent(EMeasurableEvents.onDataUpdate)) {
+                let thischange = {t: Date.now()};
+                this.lastOnUpdateChanges.push(thischange);
+                if (thischange.t - this.lastOnUpdateChanges[this.lastOnUpdateChanges.length - 20]?.t < 200) {
+                    // if N updates in <= 0.2 sec
+                    this.stopUpdateEvents = this.props.view.clonedCounter;
+                    Log.eDevv("loop in node.render() likely due to MeasurableEvent onDataUpdate. It has been disabled until the view changes.",{
+                        change_log: this.lastOnUpdateChanges,
+                        component: this,
+                        timediff: (thischange.t - this.lastOnUpdateChanges[this.lastOnUpdateChanges.length - 20]?.t)
+                    } as any);
+                }
+            }
+        }
 
         /// set classes
         classes.push(this.props.data?.className || 'DVoid');

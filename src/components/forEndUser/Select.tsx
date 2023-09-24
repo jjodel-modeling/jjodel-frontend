@@ -34,10 +34,9 @@ function SelectComponent(props: AllProps) {
     ));
 
     function SelectChange(evt: React.ChangeEvent<HTMLSelectElement>) {
-        if(readOnly) return;
+        if (readOnly) return;
         const target = evt.target.value;
-        console.log("setting:", {data, field, target});
-        data[field] = target as any;
+        (data as GObject)[field] = target;
     }
 
     let returns: LClass[] | undefined;

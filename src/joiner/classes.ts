@@ -732,6 +732,8 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.preRenderFunc = preRenderFunc;
         thiss.onDragEnd = thiss.onDragStart = thiss.whileDragging =
         thiss.onResizeEnd = thiss.onResizeStart = thiss.whileResizing = '';
+        thiss.onRotationEnd = thiss.onRotationStart = thiss.whileRotating = '';
+        thiss.onDataUpdate = '';
         // thiss.__transient = new DViewTransientProperties();
         thiss.subViews = [];
         thiss.oclApplyCondition = '';
@@ -875,6 +877,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     public static logic: typeof LPointerTargetable;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    clonedCounter?: number;
     _storePath?: string[];
     _subMaps?: Dictionary<string, boolean>;
     id!: Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
@@ -1295,12 +1298,12 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     public static singleton: LPointerTargetable;
     public __raw!: D;
     public pointedBy!: PointedBy[];
+    public clonedCounter?: number;
 
     public __isProxy!: boolean;
     public __serialize!: DocString<"json">;
-    private inspect!:D;
-    private clonedCounter!:number;
-    private __random!:number;
+    private inspect!: D;
+    private __random!: number;
 
     private __info_of__id = {type:"Pointer&lt;this&gt;", txt:"<a href=\"https://github.com/DamianoNaraku/jodel-react/wiki/identifiers\"><span>Unique identifier, and value used to point this object.</span></a>"};
 
