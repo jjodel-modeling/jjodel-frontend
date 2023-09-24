@@ -1,42 +1,27 @@
 import React from 'react';
-import {
-    Dictionary,
-    DViewElement,
-    EdgeBendingMode,
-    GenericInput,
-    GObject,
-    Info,
-    Input,
-    LViewElement,
-    LViewPoint
-} from '../../../../joiner';
+import {GenericInput, GObject, Info, LViewElement} from '../../../../joiner';
 
 interface Props {view: LViewElement, readonly: boolean}
-
 function EdgePointData(props: Props) {
     const view = props.view;
     const readOnly = props.readonly;
     let l: GObject & LViewElement = LViewElement.singleton as any;
-    let prefixLength = "__info_of__".length;
+    let prefixLength = '__info_of__'.length;
     let rows: JSX.Element[] = [];
-    for (let fullkey in l) {
-        if (fullkey[0] !== "_" || fullkey.indexOf("__info_of__") !== 0) continue;
-        let info: Info = l[fullkey];
+    for (let fullKey in l) {
+        if (fullKey[0] !== '_' || fullKey.indexOf('__info_of__') !== 0) continue;
+        let info: Info = l[fullKey];
         // infos[key] = info;
-        let key: string = fullkey.substring(prefixLength);
+        let key: string = fullKey.substring(prefixLength);
         if (info.hidden || info.obsolete || info.todo) continue;
         if (!info.isEdgePoint) continue;
-        rows.push(//<div className={"d-flex mx-3 mt-1  w-100"}>{
-            <GenericInput rootClassName={"mx-3 mt-1 d-flex"} className={"d-flex"} data={view} field={key as any} infoof={info} disabled={readOnly}/>
-            // }</div>
-        );
+        rows.push(<GenericInput rootClassName={'mx-3 mt-1 d-flex'} className={'d-flex'} data={view}
+                                field={key as any} tooltip={true} info={info} disabled={readOnly} />);
     }
 
-    return(<>
-        <section>
-            {rows}
-        </section>
-    </>);
+    return(<section className={'p-3'}>
+        {rows}
+    </section>);
 }
 
 export default EdgePointData;

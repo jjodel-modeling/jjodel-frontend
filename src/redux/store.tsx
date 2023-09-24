@@ -213,7 +213,6 @@ function makeDefaultGraphViews(): DViewElement[] {
 
     let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname]);
     packageView.defaultVSize = new GraphSize(0, 0, 400, 500);
-    packageView.preRenderFunc = "() => { return {pname: this.data.name+\"pre\"}; }"
 
     let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.cname]);
     classView.adaptWidth = true;
@@ -258,15 +257,15 @@ if (x) x.value = node.size.x;
 
     let edgeViews: DViewElement[] = [];
     let size0: GraphPoint = new GraphPoint(0, 0), size1: GraphPoint = new GraphPoint(20, 20), size2: GraphPoint = new GraphPoint(20, 20); // todo: riportalo in 40,20
-    let edgePreRenderFunc: string = `()=>({
+    let edgePreRenderFunc: string = `() => {return{
             segments: this.edge.segments,
-            strokeColor: "gray",
-            strokeWidth: "2px",
-            strokeColorHover: "black",
-            strokeColorLong: "red",
+            strokeColor: 'gray',
+            strokeWidth: '2px',
+            strokeColorHover: 'black',
+            strokeColorLong: 'red',
             strokeLengthLimit: 300,
-            strokeWidthHover: "4px",
-        })`;
+            strokeWidthHover: '4px'
+        }}`;
     function makeEdgeView(name: string, type: EdgeHead, headSize: GraphPoint | undefined, tailSize: GraphPoint | undefined, dashing: boolean): DViewElement{
         let ev = DViewElement.new2("Edge"+name, DV.edgeView(type,
                 headSize ? DV.svgHeadTail("Head", type) : "", tailSize ? DV.svgHeadTail("Tail", type) : "", dashing ? "10.5,9,0,0" : undefined),

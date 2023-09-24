@@ -2,7 +2,7 @@ import {DocString, EdgeHead, ShortAttribETypes as SAType, U} from '../joiner';
 import {GObject, RuntimeAccessible} from '../joiner';
 import React, {ReactElement} from "react";
 // const beautify = require('js-beautify').html; // BEWARE: this adds some newline that might be breaking and introduce syntax errors in our JSX parser
-const beautify = (s: any)=>s;
+const beautify = (s: string) => s;
 let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 
 @RuntimeAccessible
@@ -17,6 +17,9 @@ export class DV {
     public static literalView(): string { return beautify(DefaultView.literal()); }
     public static voidView(): string { return beautify(DefaultView.void()); }
     public static operationView(): string { return beautify(DefaultView.operation()); }
+
+    // damiano: i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
+    // it is still work in progress.
     public static operationViewm1(): string { return beautify(DefaultView.operationm1()); }
     public static objectView(): string { return beautify(DefaultView.object()); }
     public static valueView(): string { return beautify(DefaultView.value()); }
@@ -33,20 +36,20 @@ export class DV {
     )}
     static edgePointViewSVG(): string { return beautify(
         `<ellipse stroke={"black"} fill={"red"} cx={"50"} cy={"50"} rx={"20"} ry={"20"} />`
-        //`<ellipse stroke={"black"} fill={"red"} cx={this.props.node.x} cy={this.props.node.y} rx={this.props.node.w} ry={this.props.node.h} />`
+        //`<ellipse stroke={"black"} fill={"red"} cx={props.node.x} cy={props.node.y} rx={props.node.w} ry={props.node.h} />`
     )}
 
     static svgHeadTail(head: "Head" | "Tail", type: EdgeHead): string {
         let inner: string;
-        let headstr = head==="Head" ? "this.segments.head" : "this.segments.tail";
+        let headstr = head==="Head" ? "segments.head" : "segments.tail";
         let styleTranslate = "{}"; // '{transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px)"}';
         let styleTranslateRotate = '{transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px) rotate(" + (' + headstr + '.rad) + "rad)",' +
             ' "transformOrigin":'+headstr+'.w/2+"px "+ '+headstr+'.h/2+"px"}';
         let styleRotate = 'style={{transform:"rotate(" + ' + headstr + '.rad + "rad), transformOrigin:"noooope  not center"}}'; // edgeHead EdgeReference
-        let attrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={this.strokeColor} strokeWidth={this.strokeWidth}
+        let attrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={strokeColor} strokeWidth={strokeWidth}
  className={"edge` + head + ` ` + type +` preview"}></path>\n`;
         let path: string;
-        let hoverAttrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={this.segments.all[0]&&(this.segments.all[0].length > this.strokeLengthLimit )&& this.strokeColorLong || this.strokeColorHover} strokeWidth={this.strokeWidthHover}
+        let hoverAttrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={segments.all[0]&&(segments.all[0].length > strokeLengthLimit )&& strokeColorLong || strokeColorHover} strokeWidth={strokeWidthHover}
  className={"edge` + head + ` ` + type +` clickable content"}></path>\n`;
         switch(type) {
             default:
@@ -75,7 +78,7 @@ export class DV {
                                          </svg>`;*/
                 //  style={transform: "rotate3d(xcenter, ycenter, zcenter??, 90deg)"}
         }
-        //  transform={"rotate("+`+headstr+`.rad+"rad "+ this.segments.all[0].start.pt.toString(false, " ")}
+        //  transform={"rotate("+`+headstr+`.rad+"rad "+ segments.all[0].start.pt.toString(false, " ")}
         return inner; // no wrap because of .hoverable > .preview  on root & subelements must be consecutive
         // return `<g className="edge`+head + ` ` + type +`" style={` + styleTranslate + `}>\n`+ inner +`</g>`
     }
@@ -92,20 +95,20 @@ export class DV {
                  second is to enlarge the hover area of path.preview to the same as path.content, so i avoid hover loop enter-leave and graphical flashing
                 
                 */ }
-                <path className={"preview"} strokeWidth={this.strokeWidth} stroke={this.strokeColor}
+                <path className={"preview"} strokeWidth={strokeWidth} stroke={strokeColor}
                 fill={"none"} d={this.edge.d} strokeDasharray="` + dashing + `"></path>
-                <path className={"preview"} strokeWidth={this.strokeWidthHover} stroke={"transparent"}
+                <path className={"preview"} strokeWidth={strokeWidthHover} stroke={"transparent"}
                 fill={"none"} d={this.edge.d}></path>
                 { /* edge separate segments */ }
-                {this.segments.all.flatMap(s => [
-                    <path className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={this.strokeWidthHover}
-                    stroke={s.length > this.strokeLengthLimit && this.strokeColorLong || this.strokeColorHover}
+                {segments.all.flatMap(s => [
+                    <path className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={strokeWidthHover}
+                    stroke={s.length > strokeLengthLimit && strokeColorLong || strokeColorHover}
                      fill={"none"} d={s.dpart}></path>,
                     s.label && <foreignObject style={{overflow: "visible", height:"0", width:"0", whiteSpace:"pre", x:(s.start.pt.x + s.end.pt.x)/2+"px", y:(s.start.pt.y + s.end.pt.y)/2+"px"}}>
                     <div
                      style={{width: "fit-content",
                       transform: "translate(-50%, 0%) rotate("+s.radLabels+"rad) translate(0%, -"+(1-0.5*Math.abs(Math.abs(s.radLabels)%Math.PI)/(Math.PI/2))*100+"%)"+
-                     " translate(0%, -5px", color: this.strokeColor}}>{s.label}</div>
+                     " translate(0%, -5px", color: strokeColor}}>{s.label}</div>
                     </foreignObject>
                 ])}
             { /* edge head */ }
@@ -155,88 +158,88 @@ class DefaultView {
 
     public static model(): string {
         return `<div className={'root'}>
-            {!this.data && "Model data missing."}
-            <div className="edges" style={{zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}>{[
-                    true && this.data.suggestedEdges.reference &&
-                    this.data.suggestedEdges.reference.map(
-                        se => (!se.vertexOverlaps)
-                         && <DamEdge start={se.start.father} end={se.end} view={"Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association")} key={se.start.node.id+"~"+se.end.node.id}/>)
-                         ,
-                    true && this.data.suggestedEdges.extend &&
-                    this.data.suggestedEdges.extend.map(
-                        se => (!se.vertexOverlaps)
-                         && <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdgeInheritance"} key={se.start.node.id+"~"+se.end.node.id}/>)]
-                }
-            </div>
-             {this.data && this.data.packages.map((pkg, index) => {
-                return <DefaultNode key={pkg.id} data={pkg.id}></DefaultNode>
-            })}
-            {this.data && this.data.allSubObjects.map((child, index) => {
-                return <DefaultNode key={child.id} data={child.id}></DefaultNode>
-            })}
-        </div>`;
+    {!data && "Model data missing."}
+    <div className="edges" style={{zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}>{[
+            true && data.suggestedEdges.reference &&
+            data.suggestedEdges.reference.map(
+                se => (!se.vertexOverlaps)
+                 && <DamEdge start={se.start.father} end={se.end} view={"Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association")} key={se.start.node.id+"~"+se.end.node.id}/>)
+                 ,
+            true && data.suggestedEdges.extend &&
+            data.suggestedEdges.extend.map(
+                se => (!se.vertexOverlaps)
+                 && <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdgeInheritance"} key={se.start.node.id+"~"+se.end.node.id}/>)]
+        }
+    </div>
+     {data && data.packages.map((pkg, index) => {
+        return <DefaultNode key={pkg.id} data={pkg.id}></DefaultNode>
+    })}
+    {data && data.allSubObjects.map((child, index) => {
+        return <DefaultNode key={child.id} data={child.id}></DefaultNode>
+    })}
+</div>`;
     }
 
     public static void(): string {
         return `<div className={'round bg-white root void model-less p-1'}>
-            <div>voidvertex element test</div>
-            <div>data: {this.props.data ? this.props.data.name : "empty"}</div>
-        </div>`;
+    <div>voidvertex element test</div>
+    <div>data: {props.data ? props.data.name : "empty"}</div>
+</div>`;
     }
     public static package(): string {
         return `<div className={'round bg-white root package'}>
-            { /*<Input jsxLabel={<b className={'my-auto package-name'}>EPackage:</b>} field={'name'} hidden={true} />*/ }
-            { /*console.log("evalcontex:", {thiss: this, pname: this.pname, c: this._context}) && null*/ }
-            {/*<Input jsxLabel={<b>{this.pname}:</b>} field={'name'} hidden={true} />*/}
-            <hr />
-            <div className={'package-children'}>
-            
-                {this.data.children.map((child, index) => {
-                    return <DefaultNode key={child.id} data={child.id}></DefaultNode>
-                })}
-            </div>
-        </div>`;
+    <hr />
+    <div className={'package-children'}>
+        {data.children.map((child, index) => {
+            return <DefaultNode key={child.id} data={child.id}></DefaultNode>
+        })}
+    </div>
+</div>`;
     }
 
     public static class(): string {
         return `<div className={'round bg-white root class'}>
-            <Input jsxLabel={<b className={'my-auto class-name'}>EClass:</b>}
-                   data={this.data.id} field={'name'} hidden={true} autosize={true} />
-            <hr/>
-            {/* i kept them separated because i want them in this order. i could have used data.children once, or put all in same container to mix them. */}
-            <div className={'class-children'}>{ this.data.attributes.map(c => <DefaultNode key={c.id} data={c.id} />) }</div>
-            <div className={'class-children'}>{ this.data.references.map(c => <DefaultNode key={c.id} data={c.id} />) }</div>
-            <div className={'class-children'}>{ this.data.operations.map(c => <DefaultNode key={c.id} data={c.id} />) }</div>
-        </div>`;
+    <Input jsxLabel={<b className={'class-name'}>EClass:</b>} 
+           data={data.id} field={'name'} hidden={true} autosize={true} />
+    <hr/>
+    <div className={'class-children'}>{ data.attributes.map(c => <DefaultNode key={c.id} data={c.id} />) }</div>
+    <div className={'class-children'}>{ data.references.map(c => <DefaultNode key={c.id} data={c.id} />) }</div>
+    <div className={'class-children'}>{ data.operations.map(c => <DefaultNode key={c.id} data={c.id} />) }</div>
+</div>`;
     }
 
     public static enum(): string {
         return `<div className={'round bg-white root enumerator'}>
-            <Input jsxLabel={<b className={'my-auto enumerator-name'}>EEnum:</b>} 
-                   data={this.data.id} field={'name'} hidden={true} autosize={true} />
-            <hr />
-            <div className={'enumerator-children'}>
-                {this.data.children.map((child, index) => {
-                    return <DefaultNode key={child.id} data={child.id}></DefaultNode>
-                })}
-            </div>
-        </div>`;
+    <Input jsxLabel={<b className={'my-auto enumerator-name'}>EEnum:</b>} 
+           data={data.id} field={'name'} hidden={true} autosize={true} />
+    <hr />
+    <div className={'enumerator-children'}>
+        {data.children.map((child, index) => {
+            return <DefaultNode key={child.id} data={child.id}></DefaultNode>
+        })}
+    </div>
+</div>`;
     }
 
     public static feature(): string {
-        return `<div><Select className={'d-flex p-1'} data={this.data} field={'type'} label={this.data.name} /></div>`;
+        return `<div className={'w-100'}>
+    <Select className={'p-1 root feature d-flex'} data={data} field={'type'} label={data.name} />
+</div>`;
     }
 
     public static literal(): string {
-        return `<label className={'d-block text-center root literal'}>{this.data.name}</label>`
+        return `<label className={'d-block text-center root literal'}>{data.name}</label>`
     }
 
     public static operation(): string {
-        return `<Select className={'d-flex p-1'} data={this.data} field={'type'} label={this.data.name+this.data.signature} />`;
+        // data.signature
+        return `<div className={'w-100'}>
+    <Select className={'p-1 root operation d-flex'} data={data} field={'type'} label={data.name + ' () => '} />
+</div>`;
     }
 
-
-
+    // damiano: i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
+    // it is still work in progress.
     public static operationm1(): string {
         return `<div className={'d-flex root operationm1'} style={{paddingRight: "6px"}}>
              {<label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>}
@@ -251,34 +254,34 @@ class DefaultView {
 
     public static object(): string {
         return `<div className={'round bg-white root class'}>
-            <label className={'ms-1'}>
-                <Input jsxLabel={<b className={'my-auto class-name'}>{this.data.instanceof ? this.data.instanceof.name : "Object"}:</b>} 
-                   data={this.data.id} field={'name'} hidden={true} autosize={true}/>
-            </label>
-            <hr />
-            <div className={'object-children'}>
-                {this.data.features.map((child, index) => {
-                    return <DefaultNode key={child.id} data={child.id}></DefaultNode>
-                })}
-            </div>
-        </div>`;
+    <label className={'ms-1'}>
+        <Input jsxLabel={<b className={'my-auto class-name'}>{data.instanceof ? data.instanceof.name : "Object"}:</b>} 
+           data={data.id} field={'name'} hidden={true} autosize={true}/>
+    </label>
+    <hr />
+    <div className={'object-children'}>
+        {data.features.map((child, index) => {
+            return <DefaultNode key={child.id} data={child.id}></DefaultNode>
+        })}
+    </div>
+</div>`;
     }
 
     public static value() {
         return `<div className={'d-flex root value'} style={{paddingRight: "6px"}}>
-             {this.props.data.instanceof && <label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>}
-             {!this.props.data.instanceof && <Input asLabel={true} data={this.data.id} field={'name'} hidden={true} autosize={true} />}
-            <label className={'d-block m-auto'} style={{color:` + valuecolormap_str + `[this.props.data.values.type] || "gray"
-            }}>: {this.props.data.valuestring()}</label>
-        </div>`
+     {props.data.instanceof && <label className={'d-block ms-1'}>{props.data.instanceof.name}</label>}
+     {!props.data.instanceof && <Input asLabel={true} data={data.id} field={'name'} hidden={true} autosize={true} />}
+    <label className={'d-block m-auto'} style={{color:` + valuecolormap_str + `[props.data.values.type] || "gray"
+    }}>: {props.data.valuestring()}</label>
+</div>`
     }
 
     public static defaultPackage() {
         return `<div style={{backgroundColor: 'transparent', position: 'fixed', width: '-webkit-fill-available', height: '-webkit-fill-available'}}>
-            {this.data.children.map((child, index) => {
-            return <DefaultNode key={child.id} data={child.id}></DefaultNode>
-            })}
-        </div>`;
+    {data.children.map((child, index) => {
+    return <DefaultNode key={child.id} data={child.id}></DefaultNode>
+    })}
+</div>`;
     }
 
     public static error(msg: undefined | string | JSX.Element) {

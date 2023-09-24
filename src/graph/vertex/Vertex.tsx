@@ -39,11 +39,13 @@ class ThisStatee extends GraphElementStatee { forceupdate?: number }
 
 var dragHelper = document.createElement("div");
 dragHelper.style.backgroundColor = "transparent";
-dragHelper.style.outline = "4px solid black";
+dragHelper.style.outline = "1px dashed black";
 
 export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
     extends superclassGraphElementComponent<AllProps, ThisState> {
     public static cname: string = "VertexComponent";
+    draggableOptions: GObject | undefined;
+    resizableOptions: GObject | undefined;
 
     /*
     shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
@@ -77,8 +79,6 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     }
 
 
-    draggableOptions: GObject | undefined;
-    resizableOptions: GObject | undefined;
     setVertexProperties(){
         if (!this.props.node || !this.html.current) return;
         if (this.hasSetVertexProperties) return;
@@ -105,8 +105,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     let size = this.getSize();
                     // let actualSize = Size.of(html);
                     // if (size.w !== actualSize.w || size.h !== actualSize.h) this.setSize({w:actualSize.w, h:actualSize.h});
-                    dragHelper.style.width = size.w+"px";
-                    dragHelper.style.height = size.h+"px";
+                    dragHelper.style.width = size.w + "px";
+                    dragHelper.style.height = size.h + "px";
                     dragHelper.style.opacity = this.props.view.constraints.length ? "1" : "0.5";
                     if (this.props.view.lazySizeUpdate) dragHelper.classList.add("lazySizeUpdate");
                     else dragHelper.classList.remove("lazySizeUpdate");

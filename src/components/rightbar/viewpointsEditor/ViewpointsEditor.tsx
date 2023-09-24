@@ -35,11 +35,11 @@ function ViewpointsEditorComponent(props: AllProps) {
             </button>
         </div>
         {viewpoints.map((viewpoint, index) => {
-            return <div key={viewpoint.id} className={'d-flex p-1 mt-1 border round'}
+            return <div key={viewpoint.id} className={'d-flex p-1 mt-1 border round mx-1'}
                         onMouseEnter={(e) => setHoverID(viewpoint.id)}
                         onMouseLeave={(e) => setHoverID('')}
-                        style={{ backgroundColor: (selected.id === viewpoint.id) ? 'white' :
-                                (hoverID === viewpoint.id ? "var(--bs-border-color)" : 'transparent')}}>
+                        style={{backgroundColor: (selected.id === viewpoint.id) ? 'white' :
+                                (hoverID === viewpoint.id ? '#E0E0E0' : 'transparent')}}>
                 <input className={'p-0 input hidden-input'} value={viewpoint.name} type={'text'}
                        onChange={(evt) => {editName(evt, viewpoint)}} disabled={index === 0} />
                 <button className={'btn btn-success ms-auto'} disabled={selected.id === viewpoint.id}

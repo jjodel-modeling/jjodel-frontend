@@ -43,8 +43,13 @@ export class DViewElement extends DPointerTargetable {
 
     // own properties
     name!: string;
-    constants?: string; // evalutate 1 sola volta all'applicazione della vista o alla creazione dell'elemento.
-    preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
+
+    // evaluate 1 sola volta all'applicazione della vista o alla creazione dell'elemento.
+    constants!: string;
+
+    // evaluate tutte le volte che l'elemento viene aggiornato (il model o la view cambia).
+    preRenderFunc!: string;
+
     jsxString!: string; // l'html template
     usageDeclarations?: string;
     forceNodeType?: DocString<'component name (Vertex, Field, GraphVertex, Graph)'>;
@@ -264,13 +269,13 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     bendingMode!: EdgeBendingMode;
     __info_of__bendingMode: Info = {isEdge: true, enum: EdgeBendingMode, type: '"L" | "Q" | "C" | "T" | "S" | "A" | "QT" | "CS"',
         label:"path mode",
-        txt: <><div>How Svg path should use the EdgePoints <a href={"https://css-tricks.com/svg-path-syntax-illustrated-guide/"}>to bend his shape</a></div></>}
+        txt: <><div>How Svg path should use the EdgePoints to bend his shape{/*<a href={"https://css-tricks.com/svg-path-syntax-illustrated-guide/"}>to bend his shape</a>*/}</div></>}
 
     edgeGapMode!: EdgeGapMode;
     __info_of__edgeGapMode: Info = {isEdge: true, enum: EdgeGapMode, type: '"gap" | "average" | "autoFill" | "lineFill" | "arcFill"',
         label:"gap mode",
-        txt: <><div>How the segment should treat the EdgePoint interruptions.\n<br/>"gap" leaves an empty space to not overlap the EdgePoint,
-            \n<br/>"linefill" makes the edge stop at the EdgePoint borders, but then connects the gap with a line...</div></>}
+        txt: <><div>How the segment should treat the EdgePoint interruptions.<br/>"gap" leaves an empty space to not overlap the EdgePoint,
+            <br/>"linefill" makes the edge stop at the EdgePoint borders, but then connects the gap with a line.</div></>}
 
     /*
     bindVertexSizeToView!: boolean;
@@ -279,7 +284,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             <br/>This causes the vertex to have different positions according to the view currently appied to it.</div>}*/
     storeSize!: boolean;
     __info_of__storeSize: Info = {isNode: true, type: ShortAttribETypes.EBoolean, label:"bind sizes to view",
-        txt: "Active: the node position depends from the view currently displayed.\nInactive: it depends from the graph."}
+        txt: "Active: the node position depends from the view currently displayed.Inactive: it depends from the graph."}
 
     lazySizeUpdate!: boolean;
     __info_of__lazySizeUpdate: Info = {isNode: true, type: ShortAttribETypes.EBoolean, txt: <div>If true updates the node position only when the drag action is finished. (best performance)</div>}
@@ -330,6 +335,22 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         txt:<div>Updates the size stored in this view for target element.<br/>@returns: the delta of the change between old value and new value.</div>}
     __info_of__getSize: Info = {isNode:true, hidden:true, type:"Function(Pointer<GraphElement | ModelElement>) => GraphSize",
         txt:<div>Gets the size stored in this view for target element.</div>}
+
+    public get_constants(c: Context): this['constants'] {
+        return c.data.constants;
+    }
+    public set_constants(value: this['constants'], c: Context): boolean {
+        const _value: string = value ? value : '{}';
+        return SetFieldAction.new(c.data.id, 'constants', _value, '', false);
+    }
+
+    public get_preRenderFunc(c: Context): this['preRenderFunc'] {
+        return c.data.preRenderFunc;
+    }
+    public set_preRenderFunc(value: this['preRenderFunc'], c: Context): boolean {
+        const _value = value ? value : '() => {}';
+        return SetFieldAction.new(c.data.id, 'preRenderFunc', _value, '', false);
+    }
 
     public get_edgeHeadSize(c: Context): this["edgeHeadSize"] { return new GraphPoint(c.data.edgeHeadSize.x, c.data.edgeHeadSize.y); }
     public get_edgeTailSize(c: Context): this["edgeTailSize"] { return new GraphPoint(c.data.edgeTailSize.x, c.data.edgeTailSize.y); }

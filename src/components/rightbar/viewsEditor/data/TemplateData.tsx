@@ -8,11 +8,11 @@ function TemplateData(props: Props) {
     const view = props.view;
     const readOnly = props.readonly;
 
-    return(<>
-        <TextArea data={view} field={"constants"} label={"Constants"} />
-        <TextArea data={view} field={"preRenderFunc"} label={"PreRender Function"} />
+    return(<section className={'p-3'}>
+        {/*<TextArea data={view} field={"constants"} label={"Constants"} />*/}
+        {/*<TextArea data={view} field={"preRenderFunc"} label={"PreRender Function"} />*/}
         <JsxEditor viewid={view.id} />
-    </>);
+    </section>);
 }
 
 export default TemplateData;

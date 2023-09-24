@@ -1,13 +1,8 @@
-import React, {Dispatch, ReactElement, ReactNode} from "react";
-import {connect} from "react-redux";
-import {DState,
-    DPointerTargetable,
-    GObject,
-    LPointerTargetable,
-    U,
-    Overlap, Pointer} from "../../joiner";
-import {SelectOwnProps} from "./Select";
-import {useStateIfMounted} from "use-state-if-mounted";
+import React, {Dispatch, ReactElement, ReactNode} from 'react';
+import {connect} from 'react-redux';
+import {DPointerTargetable, DState, GObject, LPointerTargetable, Overlap, Pointer, U} from '../../joiner';
+import {useStateIfMounted} from 'use-state-if-mounted';
+import './style.scss';
 
 
 function TextAreaComponent(props: AllProps) {
@@ -18,9 +13,13 @@ function TextAreaComponent(props: AllProps) {
     const setter = props.setter;
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
+    let tooltip: string|undefined = (props.tooltip === true) ? ((data['__info_of__' + field]) ? data['__info_of__' + field].txt: '') : props.tooltip;
+    tooltip = (tooltip) ? tooltip : '';
     let __value = (!data) ? 'undefined' : ((getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined');
     const [value, setValue] = useStateIfMounted(__value);
     const [isTouched, setIsTouched] = useStateIfMounted(false);
+    const [showTooltip, setShowTooltip] = useStateIfMounted(false);
+
     if (!data) return(<></>);
     let css = 'my-auto input ';
     css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
@@ -58,12 +57,17 @@ function TextAreaComponent(props: AllProps) {
     delete otherprops.selected;
 
     return(<div style={{display: (jsxLabel || label) ? 'flex' : 'block'}} className={'p-1'} {...otherprops}>
-        {(label && !jsxLabel) && <label className={'my-auto'}>
-            {label}
-        </label>}
-        {(jsxLabel && !label) && <label className={'my-auto'}>
-            {jsxLabel}
-        </label>}
+        <label onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)}
+               className={(label || jsxLabel) ? 'd-block' : 'd-none'}>
+            {(label) ? label : (jsxLabel) ? jsxLabel : ''}
+        </label>
+
+        {(tooltip && showTooltip) && <div className={'my-tooltip'}>
+            <b className={'text-center text-capitalize'}>{field}</b>
+            <br />
+            <label>{tooltip}</label>
+        </div>}
+
         <textarea spellCheck={false} readOnly={readOnly} className={props.inputClassName || css} style={props.inputStyle}
                   onChange={change} onBlur={blur} value={value} />
     </div>);
@@ -77,7 +81,7 @@ export interface TextAreaOwnProps {
     setter?: (value: string|boolean) => void;
     jsxLabel?: ReactNode;
     readonly?: boolean;
-    tooltip?: string;
+    tooltip?: boolean|string;
     hidden?: boolean;
     key?: React.Key | null;
     className?: string;
@@ -114,7 +118,7 @@ export const TextArea = (props: TextAreaOwnProps, children: (string | React.Comp
     return <TextAreaConnected {...{...props, children}} />;
 }
 
-TextAreaComponent.cname = "TextAreaComponent";
-TextAreaConnected.cname = "TextAreaConnected";
-TextArea.cname = "TextArea";
+TextAreaComponent.cname = 'TextAreaComponent';
+TextAreaConnected.cname = 'TextAreaConnected';
+TextArea.cname = 'TextArea';
 export default TextArea;
