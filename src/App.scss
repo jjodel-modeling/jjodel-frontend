@@ -37,7 +37,8 @@
 
 .REACT-ROOT.debug{
   [data-nodetype]{
-    &:hover{ overflow: visible; }
+    &.selected-by-me, &:has(.selected-by-me), // for some reason focus does not work?? so this is a fallback but needs to be properly fixed
+    &:hover, &:active, &:focus-within{ overflow: visible; }
     &:hover::after{
       content: attr(data-nodetype);
       position: absolute;
