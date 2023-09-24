@@ -177,7 +177,7 @@ export class DState extends DPointerTargetable{
     iot: null|boolean = null;
     topics: string[] = [];
 
-    isLoading: boolean = false;
+    isLoading: boolean = true;
 
 
     static init(store?: DState): void {

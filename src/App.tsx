@@ -4,26 +4,24 @@ import './styles/view.scss';
 import './styles/style.scss';
 import Dock from "./components/abstract/DockLayout";
 import {DState, statehistory} from "./joiner";
-import TopBar from "./components/topbar/Topbar";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import Navbar from "./components/navbar/Navbar";
 
 function App(props: AllProps) {
     const debug = props.debug;
-    const isLoading = props.isLoading;
 
     return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? " debug" : "")}
                 onClick={e => statehistory.globalcanundostate = true}>
-        {isLoading && <Loader isLoading={isLoading} />}
         <Navbar />
-        {<Dock />}
+        <Dock />
+        <Loader />
     </div>);
 
 }
 
 interface OwnProps {room?: string}
-interface StateProps {debug: boolean, isLoading: boolean}
+interface StateProps {debug: boolean}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -31,7 +29,6 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.debug = state.debug;
-    ret.isLoading = state.isLoading;
     return ret;
 }
 

@@ -1,39 +1,47 @@
-import React, {Dispatch, ReactElement, ReactNode} from "react";
-import {connect} from "react-redux";
+import React, {Dispatch, ReactElement, ReactNode} from 'react';
+import {connect} from 'react-redux';
 import {
+    DEdgePoint,
     DGraph,
     DGraphElement,
     DGraphVertex,
+    DState,
+    DVertex,
     DVoidVertex,
+    GObject,
     GraphElementComponent,
     GraphElementDispatchProps,
     GraphElementOwnProps,
     GraphElementReduxStateProps,
     GraphElementStatee,
-    DState,
+    GraphPoint,
+    GraphSize,
     LClass,
     LModelElement,
     LPointerTargetable,
     LUser,
+    LViewPoint,
     LVoidVertex,
-    RuntimeAccessibleClass, LViewPoint,
-    U, GraphSize, GraphPoint, GObject, Size, SetRootFieldAction, SetFieldAction, DVertex, DVoidEdge, DEdgePoint, DUser, Dictionary, Pointer,
-} from "../../joiner";
-import $ from "jquery";
-import "jqueryui";
-import "jqueryui/jquery-ui.css";
-import {DamEdge} from "../damedges/damedge";
+    RuntimeAccessibleClass,
+    SetRootFieldAction,
+    Size,
+    U,
+} from '../../joiner';
+import $ from 'jquery';
+import 'jqueryui';
+import 'jqueryui/jquery-ui.css';
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee { forceupdate?: number }
 
-var dragHelper = document.createElement("div");
-dragHelper.style.backgroundColor = "transparent";
-dragHelper.style.outline = "1px dashed black";
+const dragHelper = document.createElement('div');
+dragHelper.style.backgroundColor = 'transparent';
+dragHelper.style.outline = '1px dashed black';
+
 
 export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
     extends superclassGraphElementComponent<AllProps, ThisState> {
-    public static cname: string = "VertexComponent";
+    public static cname: string = 'VertexComponent';
 
     /*
     shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
@@ -74,31 +82,31 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
         let html = this.html.current;
 
-        const $measurable: GObject<"JQuery + ui plugin"> = $(html); // todo: install typings
-        // $element = $(html).find(".measurable").addBack();
+        const $measurable: GObject<'JQuery + ui plugin'> = $(html); // todo: install typings
+        // $element = $(html).find('.measurable').addBack();
         $measurable.draggable({
             cursor: 'grabbing',
             containment: 'parent',
             opacity: 0.0,
             disabled: !(this.props.view.draggable),
             distance: 5,
-            helper: () => { // or "clone",
-                // dragHelper.style.display="block";
+            helper: () => { // or 'clone',
+                // dragHelper.style.display='block';
                 let size = this.getSize();
                 // let actualSize = Size.of(html);
                 // if (size.w !== actualSize.w || size.h !== actualSize.h) this.setSize({w:actualSize.w, h:actualSize.h});
-                dragHelper.style.width = size.w + "px";
-                dragHelper.style.height = size.h + "px";
-                dragHelper.style.opacity = this.props.view.constraints.length ? "1" : "0.5";
-                if (this.props.view.lazySizeUpdate) dragHelper.classList.add("lazySizeUpdate");
-                else dragHelper.classList.remove("lazySizeUpdate");
+                dragHelper.style.width = size.w + 'px';
+                dragHelper.style.height = size.h + 'px';
+                dragHelper.style.opacity = this.props.view.constraints.length ? '1' : '0.5';
+                if (this.props.view.lazySizeUpdate) dragHelper.classList.add('lazySizeUpdate');
+                else dragHelper.classList.remove('lazySizeUpdate');
                 return dragHelper;
             },
 
             // disabled: !(view.draggable),
             start: (event: GObject, obj: GObject) => {
                 // this.select();
-                SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 }); // todo: should probably be done in a document event
+                SetRootFieldAction.new('contextMenu', { display: false, x: 0, y: 0 }); // todo: should probably be done in a document event
                 if (this.props.view.onDragStart) {
                     try{ eval(this.props.view.onDragStart); } // todo: eval in context
                     catch (e) { console.log(e) }
@@ -108,7 +116,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
             },
             stop: (event: GObject, obj: GObject) => {
-                console.log("drag stop setsize", {x:obj.position.left, y:obj.position.top});
+                console.log('drag stop setsize', {x:obj.position.left, y:obj.position.top});
                 this.setSize({x:obj.position.left, y:obj.position.top});
                 if (this.props.view.onDragEnd) {
                     try{ eval(this.props.view.onDragEnd); } // todo: eval in context
@@ -121,7 +129,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             start: (event: GObject, obj: GObject) => {
                 this.select();
                 if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
-                SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 });
+                SetRootFieldAction.new('contextMenu', { display: false, x: 0, y: 0 });
                 if (this.props.view.onResizeStart) {
                     try{ eval(this.props.view.onResizeStart); }
                     catch (e) { console.log(e) }
@@ -129,10 +137,10 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             },
             resize: (event: GObject, obj: GObject) => {
                 if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.position.width, h:obj.position.height});
-                // SetRootFieldAction.new("resizing", {})
+                // SetRootFieldAction.new('resizing', {})
             },
             stop: (event: GObject, obj: GObject) => {
-                if (!this.state.classes.includes("resized")) this.setState({classes:[...this.state.classes, "resized"]});
+                if (!this.state.classes.includes('resized')) this.setState({classes:[...this.state.classes, 'resized']});
                 // if (!withSetSize) { node.width = obj.size.width; node.height = obj.size.height; } else {
                 let absolutemode = true; // this one is less tested and safe, but should work even if html container is sized 0. best if made to work
                 let newSize: Partial<GraphSize>;
@@ -144,48 +152,48 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     this is some pixels off, i think because inner coords are post the border of the container element,
                      and the innermost graph size have coords before his borders, so the translation is off by the amount
                       of border width of the innermost graph (and package default view does have a border)
-                       so in graph coord translate function should add: outersize.add( x: innergraph.html.getFinalComputedCSS("border-width-left"), y: ...border-width-top
+                       so in graph coord translate function should add: outersize.add( x: innergraph.html.getFinalComputedCSS('border-width-left'), y: ...border-width-top
 
                     let cursorSize = new GraphSize(0, 0, nativeevt.clientX, nativeevt.clientY);//
                     newSize = htmlSize.duplicate() as any; // .subtract( {w:cursorSize.x, h:cursorSize.y}, true);
                     let handleClasses: string[] = [...event.originalEvent.target.classList];
-                    let handleKeyLength = 14; // equal to "ui-resizable-".length + 1;
-                    let handleClassName = handleClasses.find( // i check both length and indexOf, because i must match "ui-resizable-se" but not "ui-resizable-handle"
-                        (e) => (e.length === handleKeyLength || e.length === handleKeyLength + 1) && e.indexOf("ui-resizable-")===0);
+                    let handleKeyLength = 14; // equal to 'ui-resizable-'.length + 1;
+                    let handleClassName = handleClasses.find( // i check both length and indexOf, because i must match 'ui-resizable-se' but not 'ui-resizable-handle'
+                        (e) => (e.length === handleKeyLength || e.length === handleKeyLength + 1) && e.indexOf('ui-resizable-')===0);
 
-                    let handleType = handleClassName ? handleClassName.substring(13) : "";
+                    let handleType = handleClassName ? handleClassName.substring(13) : '';
                     switch (handleType) {
-                        default: case "": case "se":
+                        default: case '': case 'se':
                             delete newSize.x;
                             delete newSize.y;
                             newSize.w = cursorSize.w - htmlSize.x;
                             newSize.h = cursorSize.h - htmlSize.y;
                             break;
-                        case "n": case "s":
+                        case 'n': case 's':
                             delete newSize.x;
                             delete newSize.y;
                             delete newSize.w;
                             newSize.h = cursorSize.h - htmlSize.y;
                             break;
-                        case "e": case "W":
+                        case 'e': case 'W':
                             delete newSize.x;
                             delete newSize.y;
                             newSize.w = cursorSize.w - htmlSize.x;
                             delete newSize.h;
                             break;
-                        case "nw":
+                        case 'nw':
                             let br = htmlSize.br();
                             newSize.x = cursorSize.x;
                             newSize.y = cursorSize.y;
                             newSize.w = br.x - cursorSize.w;
                             newSize.h = br.y - cursorSize.h;
                             break;
-                        case "ne":
+                        case 'ne':
                             delete newSize.x;
                             newSize.y = cursorSize.y;
                             delete newSize.w;
                             delete newSize.h;
-                        case "?":
+                        case '?':
                             delete newSize.x;
                             delete newSize.y;
                             delete newSize.w;
@@ -194,13 +202,13 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     }*/
                     // n, e, s, w, ne, se, sw, nw
                     // almost, but: there is a few pix error. and: if i drag through horizontal or vertical handles it acts as if i used diagonal handle
-                    // console.log("resizing", {newSize, cursorSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
-                    console.log("resizing", {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
+                    // console.log('resizing', {newSize, cursorSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
+                    console.log('resizing', {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
                 }
                 else newSize = {w:obj.size.width, h:obj.size.height};
                 // evt coordinates: clientX, layerX, offsetX, pageX, screenX
                 this.setSize(newSize);
-                // console.log("resize setsize:", obj, {w:obj.size.width, h:obj.size.height});
+                // console.log('resize setsize:', obj, {w:obj.size.width, h:obj.size.height});
                 if (this.props.view.onResizeEnd) {
                     try{ eval(this.props.view.onResizeEnd); }
                     catch (e) { console.log(e) }
@@ -211,7 +219,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         if (this.props.view.lazySizeUpdate) {
             // this does not accept a func or htmlElem, but only a classname...
             // and makes his own empty proxy element to resize in his place. inchoherent.
-            resizeoptions.helper = "resizable-helper-bad";
+            resizeoptions.helper = 'resizable-helper-bad';
         }
         else {
             resizeoptions.containment = 'parent';
@@ -224,7 +232,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
     getSize(): Readonly<GraphSize> {
         return this.props.node.size;
-        /*console.log("get_size("+(this.props?.data as any).name+")", {
+        /*console.log('get_size('+(this.props?.data as any).name+')', {
             view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
             node:this.props.node?.size,
             default: this.props.view.defaultVSize});*/
@@ -253,7 +261,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         if (size.w !== undefined && size.w < 0) size.w = 0;
         if (size.h !== undefined && size.h < 0) size.h = 0;
         return this.props.node.size = size as any;
-        // console.log("setSize("+(this.props?.data as any).name+") thisss", this);
+        // console.log('setSize('+(this.props?.data as any).name+') thisss', this);
         if (this.props.view.storeSize) {
             let id = (this.props.dataid || this.props.nodeid) as string;
             this.props.view.updateSize(id, size);
@@ -277,33 +285,33 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
         // if(!windoww.cpts) windoww.cpts = {};
         // windoww.cpts[this.props.nodeid]=this;
-        // console.log("updated");
+        // console.log('updated');
         //return this.r || <div>loading...</div>;
 
         // set classes
-        let nodeType = "NODE_TYPE_ERROR";
-        if ( this.props.isEdgePoint) nodeType = "EdgePoint"; else
-        if ( this.props.isGraph &&  this.props.isVertex) nodeType = "GraphVertex"; else
-        if ( this.props.isGraph && !this.props.isVertex) nodeType = "Graph"; else
-        if (!this.props.isGraph &&  this.props.isVertex && (this.props.isVoid || !this.props.data)) nodeType = "VoidVertex"; else
-        if (!this.props.isGraph &&  this.props.isVertex) nodeType = "Vertex"; else
-        if (!this.props.isGraph && !this.props.isVertex) nodeType = "Field";
+        let nodeType = 'NODE_TYPE_ERROR';
+        if ( this.props.isEdgePoint) nodeType = 'EdgePoint'; else
+        if ( this.props.isGraph &&  this.props.isVertex) nodeType = 'GraphVertex'; else
+        if ( this.props.isGraph && !this.props.isVertex) nodeType = 'Graph'; else
+        if (!this.props.isGraph &&  this.props.isVertex && (this.props.isVoid || !this.props.data)) nodeType = 'VoidVertex'; else
+        if (!this.props.isGraph &&  this.props.isVertex) nodeType = 'Vertex'; else
+        if (!this.props.isGraph && !this.props.isVertex) nodeType = 'Field';
 
         const classesOverride = [nodeType, ...cssOverride];
         const styleOverride: React.CSSProperties = {};
         // set classes end
         const size: Readonly<GraphSize> = this.getSize() as any;
         switch (nodeType){
-            case "GraphVertex":
-            case "Vertex":
-            case "VoidVertex":
-            case "EdgePoint":
-                styleOverride.top= size.y+"px";
-                styleOverride.left= size.x+"px";
+            case 'GraphVertex':
+            case 'Vertex':
+            case 'VoidVertex':
+            case 'EdgePoint':
+                styleOverride.top= size.y+'px';
+                styleOverride.left= size.x+'px';
                 let isResized = this.props.node.isResized;
-                if (isResized || !this.props.view.adaptWidth) styleOverride.width = size.w+"px";
+                if (isResized || !this.props.view.adaptWidth) styleOverride.width = size.w+'px';
                 else styleOverride.width = undefined;
-                if (isResized || !this.props.view.adaptHeight) styleOverride.height = size.h+"px";
+                if (isResized || !this.props.view.adaptHeight) styleOverride.height = size.h+'px';
                 else styleOverride.height = undefined; // todo: the goal is to reset jqui inline style, but not override user-defined inline style
                 this.setVertexProperties(); break;
             default: break;
@@ -311,7 +319,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
 
         return super.render(nodeType, styleOverride, classesOverride);
-        // return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+"."+this.state?.forceupdate} />;
+        // return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+'.'+this.state?.forceupdate} />;
     }
 }
 
@@ -412,26 +420,26 @@ export const Field = (props: OwnProps, children: (string | React.Component)[] = 
 (window as any).componentdebug = {Graph, GraphVertex, Field, Vertex, VoidVertex, EdgePoint, VertexConnected, VertexComponent};
 
 
-Graph.cname = "Graph";
-GraphVertex.cname = "GraphVertex";
-Field.cname = "Field";
-Vertex.cname = "Vertex";
-VoidVertex.cname = "VoidVertex";
-EdgePoint.cname = "EdgePoint";
+Graph.cname = 'Graph';
+GraphVertex.cname = 'GraphVertex';
+Field.cname = 'Field';
+Vertex.cname = 'Vertex';
+VoidVertex.cname = 'VoidVertex';
+EdgePoint.cname = 'EdgePoint';
 
-// GraphConnected.cname = "GraphConnected";
-// GraphVertexConnected.cname = "GraphVertexConnected";
-// FieldConnected.cname = "FieldConnected";
-VertexConnected.cname = "VertexConnected";
-// VoidVertexConnected.cname = "VoidVertexConnected";
-// EdgePointConnected.cname = "EdgePointConnected";
+// GraphConnected.cname = 'GraphConnected';
+// GraphVertexConnected.cname = 'GraphVertexConnected';
+// FieldConnected.cname = 'FieldConnected';
+VertexConnected.cname = 'VertexConnected';
+// VoidVertexConnected.cname = 'VoidVertexConnected';
+// EdgePointConnected.cname = 'EdgePointConnected';
 
-// GraphComponent.cname = "GraphComponent";
-// GraphVertexComponent.cname = "GraphVertexComponent";
-// FieldComponent.cname = "FieldComponent";
-VertexComponent.cname = "VertexComponent";
-// VoidVertexComponent.cname = "VoidVertexComponent";
-// EdgePointComponent.cname = "EdgePointComponent";
+// GraphComponent.cname = 'GraphComponent';
+// GraphVertexComponent.cname = 'GraphVertexComponent';
+// FieldComponent.cname = 'FieldComponent';
+VertexComponent.cname = 'VertexComponent';
+// VoidVertexComponent.cname = 'VoidVertexComponent';
+// EdgePointComponent.cname = 'EdgePointComponent';
 
 
 

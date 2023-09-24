@@ -13,7 +13,6 @@
 }
 
 .my-navbar>.first-row, .my-navbar>.second-row {
-  width: 100%;
   display: inline-flex;
   align-items: center;
 }
@@ -26,6 +25,7 @@
 }
 
 .second-row>.my-nav-item {
+  z-index: 999;
   padding: 6px 6px 6px 9px;
   font-size: 14px;
   display: inline-block;
@@ -66,4 +66,12 @@
   border-width: 1px;
   border-color: lightgray;
   padding: 3px;
+}
+
+.blur-handler {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 998;
+  background-color: rgba(0, 0, 0, 0.1);
 }
