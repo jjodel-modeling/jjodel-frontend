@@ -222,8 +222,8 @@ class DefaultView {
     }
 
     public static feature(): string {
-        return `<div className={'w-100'}>
-    <Select className={'p-1 root feature d-flex'} data={data} field={'type'} label={data.name} />
+        return `<div className={'w-100 root feature'}>
+    <Select className={'p-1  d-flex'} data={data} field={'type'} label={data.name} />
 </div>`;
     }
 

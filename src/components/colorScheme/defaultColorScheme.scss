@@ -165,15 +165,15 @@
     text-overflow: ellipsis;
   }
 
-  /*because color will be inherited, but background not (since input and selects cannot inherit and inherit behave like transparent.
-   this is fine on the input itself but the optgroup cannot have transparent and will be always white.
-   now, the problem is if you set a bacgkround-color: inherit / transparent select inside a black element with white text, the optgroup will be white with white text.
-   */
   select {
     text-overflow: clip;
   }
 
   optgroup {
+    /*because color will be inherited, but background not (since input and selects cannot inherit and inherit behave like transparent.
+     this is fine on the input itself but the optgroup cannot have transparent and will be always white.
+     now, the problem is if you set a bacgkround-color: inherit / transparent select inside a black element with white text, the optgroup will be white with white text.
+     */
     color: black;
     background-color: white;
   }
@@ -989,6 +989,8 @@
   */
   .Vertex select {
     text-align-last: end;
+    max-width: 50%;
+    width: auto;
   }
 
   .alertcontainer {
