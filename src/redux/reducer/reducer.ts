@@ -437,7 +437,6 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
 }
 
 export function jodelInit() {
-    SetRootFieldAction.new('isLoading', true);
     RuntimeAccessibleClass.fixStatics();
     let dClasses: string[] = RuntimeAccessibleClass.getAllNames().filter(rc => rc[0] === 'D');
     let lClasses: string[] = RuntimeAccessibleClass.getAllNames().filter(rc => rc[0] === 'L');
@@ -447,5 +446,4 @@ export function jodelInit() {
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
     DState.init();
     SetRootFieldAction.new('isLoading', false);
-
 }

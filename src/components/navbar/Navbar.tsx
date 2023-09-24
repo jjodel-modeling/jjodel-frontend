@@ -12,29 +12,32 @@ function NavbarComponent(props: AllProps) {
     const debug = props.debug;
     const [path, setPath] = useStateIfMounted('');
 
-    return(<nav className={'my-navbar'}>
-        <div className={'logo'}>
-            <img className={'d-block m-auto'} height={50} width={50} src={Univaq} />
-        </div>
-        <div>
-            <div className={'first-row'}>
-                <div className={'project-name'}>
-                    Untitled Project
-                    {debug && <b className={'ms-2 text-danger'}>DEBUG MODE</b>}
+    return(<>
+        {path && <div onClick={e => setPath('')} className={'blur-handler'}></div>}
+        <nav className={'my-navbar'}>
+            <div className={'logo'}>
+                <img className={'d-block m-auto'} height={50} width={50} src={Univaq} />
+            </div>
+            <div>
+                <div className={'first-row'}>
+                    <div className={'project-name'}>
+                        Untitled Project
+                        {debug && <b className={'ms-2 text-danger'}>DEBUG MODE</b>}
+                    </div>
+                </div>
+                <div className={'second-row'}>
+                    <div tabIndex={-1} onClick={e => setPath('file')} className={'my-nav-item'}>
+                        File
+                    </div>
+                    {path === 'file' && <File setPath={setPath} />}
+                    <div tabIndex={-1} onClick={e => setPath('edit')} className={'my-nav-item'}>Edit</div>
+                    {path === 'edit' && <Edit setPath={setPath} />}
+                    <div tabIndex={-1} onClick={e => setPath('share')} className={'my-nav-item'}>Share</div>
+                    {path === 'share' && <Share setPath={setPath} />}
                 </div>
             </div>
-            <div className={'second-row'}>
-                <div tabIndex={-1} onClick={e => setPath('file')} className={'my-nav-item'}>
-                    File
-                </div>
-                {path === 'file' && <File setPath={setPath} />}
-                <div tabIndex={-1} onClick={e => setPath('edit')} className={'my-nav-item'}>Edit</div>
-                {path === 'edit' && <Edit setPath={setPath} />}
-                <div tabIndex={-1} onClick={e => setPath('share')} className={'my-nav-item'}>Share</div>
-                {path === 'share' && <Share setPath={setPath} />}
-            </div>
-        </div>
-    </nav>);
+        </nav>
+    </>);
 
 }
 interface OwnProps {}

@@ -1,12 +1,10 @@
-import React, {Dispatch, ReactElement, ReactNode} from "react";
-import {connect} from "react-redux";
+import React, {Dispatch, ReactElement, ReactNode} from 'react';
+import {connect} from 'react-redux';
 import {
     DEdgePoint,
     DGraph,
     DGraphElement,
     DGraphVertex,
-    DState,
-    DVertex,
     DVoidVertex,
     EMeasurableEvents,
     GObject,
@@ -19,31 +17,30 @@ import {
     GraphSize,
     LClass,
     LModelElement,
-    Log,
     LPointerTargetable,
     LUser,
-    LViewElement,
     LViewPoint,
     LVoidVertex,
     RuntimeAccessibleClass,
     SetRootFieldAction,
     Size,
     U,
-} from "../../joiner";
-import $ from "jquery";
-import "jqueryui";
-import "jqueryui/jquery-ui.css";
+} from '../../joiner';
+import $ from 'jquery';
+import 'jqueryui';
+import 'jqueryui/jquery-ui.css';
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee { forceupdate?: number }
 
-var dragHelper = document.createElement("div");
-dragHelper.style.backgroundColor = "transparent";
-dragHelper.style.outline = "1px dashed black";
+const dragHelper = document.createElement('div');
+dragHelper.style.backgroundColor = 'transparent';
+dragHelper.style.outline = '1px dashed black';
+
 
 export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
     extends superclassGraphElementComponent<AllProps, ThisState> {
-    public static cname: string = "VertexComponent";
+    public static cname: string = 'VertexComponent';
     draggableOptions: GObject | undefined;
     resizableOptions: GObject | undefined;
 
@@ -160,12 +157,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                           of border width of the innermost graph (and package default view does have a border)
                            so in graph coord translate function should add: outersize.add( x: innergraph.html.getFinalComputedCSS("border-width-left"), y: ...border-width-top
 
-                        let cursorSize = new GraphSize(0, 0, nativeevt.clientX, nativeevt.clientY);//
-                        newSize = htmlSize.duplicate() as any; // .subtract( {w:cursorSize.x, h:cursorSize.y}, true);
-                        let handleClasses: string[] = [...event.originalEvent.target.classList];
-                        let handleKeyLength = 14; // equal to "ui-resizable-".length + 1;
-                        let handleClassName = handleClasses.find( // i check both length and indexOf, because i must match "ui-resizable-se" but not "ui-resizable-handle"
-                            (e) => (e.length === handleKeyLength || e.length === handleKeyLength + 1) && e.indexOf("ui-resizable-")===0);
+                    let cursorSize = new GraphSize(0, 0, nativeevt.clientX, nativeevt.clientY);//
+                    newSize = htmlSize.duplicate() as any; // .subtract( {w:cursorSize.x, h:cursorSize.y}, true);
+                    let handleClasses: string[] = [...event.originalEvent.target.classList];
+                    let handleKeyLength = 14; // equal to 'ui-resizable-'.length + 1;
+                    let handleClassName = handleClasses.find( // i check both length and indexOf, because i must match 'ui-resizable-se' but not 'ui-resizable-handle'
+                        (e) => (e.length === handleKeyLength || e.length === handleKeyLength + 1) && e.indexOf('ui-resizable-')===0);
 
                         let handleType = handleClassName ? handleClassName.substring(13) : "";
                         switch (handleType) {
@@ -248,7 +245,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
     getSize(): Readonly<GraphSize> {
         return this.props.node.size;
-        /*console.log("get_size("+(this.props?.data as any).name+")", {
+        /*console.log('get_size('+(this.props?.data as any).name+')', {
             view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
             node:this.props.node?.size,
             default: this.props.view.defaultVSize});*/
@@ -277,7 +274,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         if (size.w !== undefined && size.w < 0) size.w = 0;
         if (size.h !== undefined && size.h < 0) size.h = 0;
         return this.props.node.size = size as any;
-        // console.log("setSize("+(this.props?.data as any).name+") thisss", this);
+        // console.log('setSize('+(this.props?.data as any).name+') thisss', this);
         if (this.props.view.storeSize) {
             let id = (this.props.dataid || this.props.nodeid) as string;
             this.props.view.updateSize(id, size);
@@ -301,33 +298,33 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
         // if(!windoww.cpts) windoww.cpts = {};
         // windoww.cpts[this.props.nodeid]=this;
-        // console.log("updated");
+        // console.log('updated');
         //return this.r || <div>loading...</div>;
 
         // set classes
-        let nodeType = "NODE_TYPE_ERROR";
-        if ( this.props.isEdgePoint) nodeType = "EdgePoint"; else
-        if ( this.props.isGraph &&  this.props.isVertex) nodeType = "GraphVertex"; else
-        if ( this.props.isGraph && !this.props.isVertex) nodeType = "Graph"; else
-        if (!this.props.isGraph &&  this.props.isVertex && (this.props.isVoid || !this.props.data)) nodeType = "VoidVertex"; else
-        if (!this.props.isGraph &&  this.props.isVertex) nodeType = "Vertex"; else
-        if (!this.props.isGraph && !this.props.isVertex) nodeType = "Field";
+        let nodeType = 'NODE_TYPE_ERROR';
+        if ( this.props.isEdgePoint) nodeType = 'EdgePoint'; else
+        if ( this.props.isGraph &&  this.props.isVertex) nodeType = 'GraphVertex'; else
+        if ( this.props.isGraph && !this.props.isVertex) nodeType = 'Graph'; else
+        if (!this.props.isGraph &&  this.props.isVertex && (this.props.isVoid || !this.props.data)) nodeType = 'VoidVertex'; else
+        if (!this.props.isGraph &&  this.props.isVertex) nodeType = 'Vertex'; else
+        if (!this.props.isGraph && !this.props.isVertex) nodeType = 'Field';
 
         const classesOverride = [nodeType, ...cssOverride];
         const styleOverride: React.CSSProperties = {};
         // set classes end
         const size: Readonly<GraphSize> = this.getSize() as any;
         switch (nodeType){
-            case "GraphVertex":
-            case "Vertex":
-            case "VoidVertex":
-            case "EdgePoint":
-                styleOverride.top= size.y+"px";
-                styleOverride.left= size.x+"px";
+            case 'GraphVertex':
+            case 'Vertex':
+            case 'VoidVertex':
+            case 'EdgePoint':
+                styleOverride.top = size.y + 'px';
+                styleOverride.left = size.x + 'px';
                 let isResized = this.props.node.isResized;
-                if (isResized || !this.props.view.adaptWidth) styleOverride.width = size.w+"px";
+                if (isResized || !this.props.view.adaptWidth) styleOverride.width = size.w+'px';
                 else styleOverride.width = undefined;
-                if (isResized || !this.props.view.adaptHeight) styleOverride.height = size.h+"px";
+                if (isResized || !this.props.view.adaptHeight) styleOverride.height = size.h+'px';
                 else styleOverride.height = undefined; // todo: the goal is to reset jqui inline style, but not override user-defined inline style
                 this.setVertexProperties(); break;
             default: break;
@@ -335,7 +332,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
 
         return super.render(nodeType, styleOverride, classesOverride);
-        // return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+"."+this.state?.forceupdate} />;
+        // return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+'.'+this.state?.forceupdate} />;
     }
 }
 
@@ -436,26 +433,26 @@ export const Field = (props: OwnProps, children: (string | React.Component)[] = 
 (window as any).componentdebug = {Graph, GraphVertex, Field, Vertex, VoidVertex, EdgePoint, VertexConnected, VertexComponent};
 
 
-Graph.cname = "Graph";
-GraphVertex.cname = "GraphVertex";
-Field.cname = "Field";
-Vertex.cname = "Vertex";
-VoidVertex.cname = "VoidVertex";
-EdgePoint.cname = "EdgePoint";
+Graph.cname = 'Graph';
+GraphVertex.cname = 'GraphVertex';
+Field.cname = 'Field';
+Vertex.cname = 'Vertex';
+VoidVertex.cname = 'VoidVertex';
+EdgePoint.cname = 'EdgePoint';
 
-// GraphConnected.cname = "GraphConnected";
-// GraphVertexConnected.cname = "GraphVertexConnected";
-// FieldConnected.cname = "FieldConnected";
-VertexConnected.cname = "VertexConnected";
-// VoidVertexConnected.cname = "VoidVertexConnected";
-// EdgePointConnected.cname = "EdgePointConnected";
+// GraphConnected.cname = 'GraphConnected';
+// GraphVertexConnected.cname = 'GraphVertexConnected';
+// FieldConnected.cname = 'FieldConnected';
+VertexConnected.cname = 'VertexConnected';
+// VoidVertexConnected.cname = 'VoidVertexConnected';
+// EdgePointConnected.cname = 'EdgePointConnected';
 
-// GraphComponent.cname = "GraphComponent";
-// GraphVertexComponent.cname = "GraphVertexComponent";
-// FieldComponent.cname = "FieldComponent";
-VertexComponent.cname = "VertexComponent";
-// VoidVertexComponent.cname = "VoidVertexComponent";
-// EdgePointComponent.cname = "EdgePointComponent";
+// GraphComponent.cname = 'GraphComponent';
+// GraphVertexComponent.cname = 'GraphVertexComponent';
+// FieldComponent.cname = 'FieldComponent';
+VertexComponent.cname = 'VertexComponent';
+// VoidVertexComponent.cname = 'VoidVertexComponent';
+// EdgePointComponent.cname = 'EdgePointComponent';
 
 
 
