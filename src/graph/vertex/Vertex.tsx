@@ -5,6 +5,8 @@ import {
     DGraph,
     DGraphElement,
     DGraphVertex,
+    DState,
+    DVertex,
     DVoidVertex,
     EMeasurableEvents,
     GObject,
@@ -18,7 +20,7 @@ import {
     LClass,
     LModelElement,
     LPointerTargetable,
-    LUser,
+    LUser, LViewElement,
     LViewPoint,
     LVoidVertex,
     RuntimeAccessibleClass,
@@ -81,14 +83,14 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         if (this.hasSetVertexProperties) return;
         this.hasSetVertexProperties = true;
         let html = this.html.current;
-        const $measurable: GObject<"JQuery + ui plugin"> = $(html); // todo: install typings
+        const $measurable: GObject<'JQuery + ui plugin'> = $(html); // todo: install typings
 
         let view: LViewElement = this.props.view;
         let isDraggable: boolean = view.draggable;
         let isResizable: boolean = view.resizable;
-        // $element = $(html).find(".measurable").addBack();
-        if (!isDraggable) $measurable.draggable("disable")
-        else if (this.draggableOptions) $measurable.draggable("enable")
+        // $element = $(html).find('.measurable').addBack();
+        if (!isDraggable) $measurable.draggable('disable')
+        else if (this.draggableOptions) $measurable.draggable('enable')
         else {
             // first setup only
             this.draggableOptions = {
@@ -97,23 +99,23 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 opacity: 0.0,
                 disabled: !(isDraggable), // this does not work, i think because once set the first time the whole declaration is not re-applied. would need to undo draggable
                 distance: 5,
-                helper: () => { // or "clone",
-                    // dragHelper.style.display="block";
+                helper: () => { // or 'clone'
+                    // dragHelper.style.display='block';
                     let size = this.getSize();
                     // let actualSize = Size.of(html);
                     // if (size.w !== actualSize.w || size.h !== actualSize.h) this.setSize({w:actualSize.w, h:actualSize.h});
-                    dragHelper.style.width = size.w + "px";
-                    dragHelper.style.height = size.h + "px";
-                    dragHelper.style.opacity = this.props.view.constraints.length ? "1" : "0.5";
-                    if (this.props.view.lazySizeUpdate) dragHelper.classList.add("lazySizeUpdate");
-                    else dragHelper.classList.remove("lazySizeUpdate");
+                    dragHelper.style.width = size.w + 'px';
+                    dragHelper.style.height = size.h + 'px';
+                    dragHelper.style.opacity = this.props.view.constraints.length ? '1' : '0.5';
+                    if (this.props.view.lazySizeUpdate) dragHelper.classList.add('lazySizeUpdate');
+                    else dragHelper.classList.remove('lazySizeUpdate');
                     return dragHelper;
                 },
 
                 // disabled: !(view.draggable),
                 start: (event: GObject, obj: GObject) => {
                     // this.select();
-                    SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 }); // todo: should probably be done in a document event
+                    SetRootFieldAction.new('contextMenu', { display: false, x: 0, y: 0 }); // todo: should probably be done in a document event
                     this.doMeasurableEvent(EMeasurableEvents.onDragStart);
                 },
                 drag: (event: GObject, obj: GObject) => {
@@ -128,14 +130,14 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             $measurable.draggable(this.draggableOptions);
         }
 
-        if (!isResizable) $measurable.resizable("disable")
-        else if (this.resizableOptions) $measurable.resizable("enable")
+        if (!isResizable) $measurable.resizable('disable')
+        else if (this.resizableOptions) $measurable.resizable('enable')
         if (!this.resizableOptions) {
             this.resizableOptions = {
                 start: (event: GObject, obj: GObject) => {
                     this.select();
                     if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
-                    SetRootFieldAction.new("contextMenu", { display: false, x: 0, y: 0 }); // todo: does it really need to be on resize event?
+                    SetRootFieldAction.new('contextMenu', { display: false, x: 0, y: 0 }); // todo: does it really need to be on resize event?
                     this.doMeasurableEvent(EMeasurableEvents.onResizeStart);
                 },
                 resize: (event: GObject, obj: GObject) => {
@@ -143,7 +145,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     this.doMeasurableEvent(EMeasurableEvents.whileResizing);
                 },
                 stop: (event: GObject, obj: GObject) => {
-                    if (!this.state.classes.includes("resized")) this.setState({classes:[...this.state.classes, "resized"]});
+                    if (!this.state.classes.includes('resized')) this.setState({classes:[...this.state.classes, 'resized']});
                     // if (!withSetSize) { node.width = obj.size.width; node.height = obj.size.height; } else {
                     let absolutemode = true; // this one is less tested and safe, but should work even if html container is sized 0. best if made to work
                     let newSize: Partial<GraphSize>;
@@ -155,7 +157,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                         this is some pixels off, i think because inner coords are post the border of the container element,
                          and the innermost graph size have coords before his borders, so the translation is off by the amount
                           of border width of the innermost graph (and package default view does have a border)
-                           so in graph coord translate function should add: outersize.add( x: innergraph.html.getFinalComputedCSS("border-width-left"), y: ...border-width-top
+                           so in graph coord translate function should add: outersize.add( x: innergraph.html.getFinalComputedCSS('border-width-left'), y: ...border-width-top
 
                     let cursorSize = new GraphSize(0, 0, nativeevt.clientX, nativeevt.clientY);//
                     newSize = htmlSize.duplicate() as any; // .subtract( {w:cursorSize.x, h:cursorSize.y}, true);
@@ -164,39 +166,39 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     let handleClassName = handleClasses.find( // i check both length and indexOf, because i must match 'ui-resizable-se' but not 'ui-resizable-handle'
                         (e) => (e.length === handleKeyLength || e.length === handleKeyLength + 1) && e.indexOf('ui-resizable-')===0);
 
-                        let handleType = handleClassName ? handleClassName.substring(13) : "";
+                        let handleType = handleClassName ? handleClassName.substring(13) : '';
                         switch (handleType) {
-                            default: case "": case "se":
+                            default: case '': case 'se':
                                 delete newSize.x;
                                 delete newSize.y;
                                 newSize.w = cursorSize.w - htmlSize.x;
                                 newSize.h = cursorSize.h - htmlSize.y;
                                 break;
-                            case "n": case "s":
+                            case 'n': case 's':
                                 delete newSize.x;
                                 delete newSize.y;
                                 delete newSize.w;
                                 newSize.h = cursorSize.h - htmlSize.y;
                                 break;
-                            case "e": case "W":
+                            case 'e': case 'W':
                                 delete newSize.x;
                                 delete newSize.y;
                                 newSize.w = cursorSize.w - htmlSize.x;
                                 delete newSize.h;
                                 break;
-                            case "nw":
+                            case 'nw':
                                 let br = htmlSize.br();
                                 newSize.x = cursorSize.x;
                                 newSize.y = cursorSize.y;
                                 newSize.w = br.x - cursorSize.w;
                                 newSize.h = br.y - cursorSize.h;
                                 break;
-                            case "ne":
+                            case 'ne':
                                 delete newSize.x;
                                 newSize.y = cursorSize.y;
                                 delete newSize.w;
                                 delete newSize.h;
-                            case "?":
+                            case '?':
                                 delete newSize.x;
                                 delete newSize.y;
                                 delete newSize.w;
@@ -205,13 +207,13 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                         }*/
                         // n, e, s, w, ne, se, sw, nw
                         // almost, but: there is a few pix error. and: if i drag through horizontal or vertical handles it acts as if i used diagonal handle
-                        // console.log("resizing", {newSize, cursorSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
-                        console.log("resizing", {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
+                        // console.log('resizing', {newSize, cursorSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
+                        console.log('resizing', {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
                     }
                     else newSize = {w:obj.size.width, h:obj.size.height};
                     // evt coordinates: clientX, layerX, offsetX, pageX, screenX
                     this.setSize(newSize);
-                    // console.log("resize setsize:", obj, {w:obj.size.width, h:obj.size.height});
+                    // console.log('resize setsize:', obj, {w:obj.size.width, h:obj.size.height});
                     this.doMeasurableEvent(EMeasurableEvents.onResizeEnd);
 
                 }
@@ -227,16 +229,16 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         if (this.resizableOptions) {
             let lazySizeUpdate = view.lazySizeUpdate;
             let containment = lazySizeUpdate ? false : 'parent';
-            let helper = lazySizeUpdate ? "resizable-helper-bad" : "original";
+            let helper = lazySizeUpdate ? 'resizable-helper-bad' : 'original';
             // helper does not accept a func or htmlElem, but only a classname...
             // and makes his own empty proxy element to resize in his place. inchoherent.
             if (this.resizableOptions?.containment !== containment){
                 this.resizableOptions.containment = containment;
-                $measurable.draggable( "option", "containment", containment);
+                $measurable.draggable( 'option', 'containment', containment);
             }
             if (this.resizableOptions?.helper !== helper){
                 this.resizableOptions.helper = helper;
-                $measurable.draggable( "option", "helper", helper);
+                $measurable.draggable( 'option', 'helper', helper);
             }
         }
     }
@@ -453,21 +455,3 @@ VertexConnected.cname = 'VertexConnected';
 VertexComponent.cname = 'VertexComponent';
 // VoidVertexComponent.cname = 'VoidVertexComponent';
 // EdgePointComponent.cname = 'EdgePointComponent';
-
-
-
-/*
-let windoww = window as any;
-
-windoww.VoidVertex = VoidVertex;
-windoww.Vertex = Vertex;
-// windoww.Graph = Graph;
-windoww.GraphVertex = GraphVertex;
-windoww.Field = Field;
-
-windoww.VoidVertexComponent = VoidVertex;
-windoww.VertexComponent = Vertex;
-// windoww.GraphComponent = Graph;
-windoww.GraphVertexComponent = GraphVertex;
-windoww.FieldComponent = Field;*/
-
