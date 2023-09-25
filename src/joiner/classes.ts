@@ -726,10 +726,11 @@ export class Constructors<T extends DPointerTargetable>{
         const thiss: DViewElement = this.thiss as any;
         thiss.name = name;
         thiss.appliableToClasses = appliableToClasses;
+        thiss.appliableTo = 'node';
         thiss.jsxString = jsxString;
         thiss.usageDeclarations = usageDeclarations;
-        thiss.constants = constants || "{}";
-        thiss.preRenderFunc = preRenderFunc || '() => { return {}}';
+        thiss.constants = '{}';
+        thiss.preRenderFunc = '() => {return{}}';
         thiss.onDragEnd = thiss.onDragStart = thiss.whileDragging =
         thiss.onResizeEnd = thiss.onResizeStart = thiss.whileResizing = '';
         thiss.onRotationEnd = thiss.onRotationStart = thiss.whileRotating = '';

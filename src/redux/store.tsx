@@ -247,12 +247,14 @@ if (x) x.value = node.size.x;
 
     let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.cname]);
     voidView.appliableToClasses=["VoidVertex"];
-    voidView.explicitApplicationPriority=2;
+    voidView.explicitApplicationPriority = 2;
     voidView.adaptWidth = true;
     voidView.adaptHeight = true;
 
     let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '', []);
+    edgePointView.appliableTo = 'edgePoint';
     let edgePointViewSVG: DViewElement = DViewElement.new('EdgePointSVG', DV.edgePointViewSVG(), new GraphSize(0, 0, 10, 10), '', '', '', []);
+    edgePointView.appliableTo = 'edgePoint';
     edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
 
     let edgeViews: DViewElement[] = [];
@@ -277,6 +279,7 @@ if (x) x.value = node.size.x;
                 v.edgeTailSize = tailSize || size0;
                 v.preRenderFunc = edgePreRenderFunc;
         }, false);
+        ev.appliableTo = 'edge';
         edgeViews.push(ev);
         return ev;
     }

@@ -73,10 +73,10 @@ function CustomDataComponent(props: AllProps) {
             const c = constant.split(':');
             const name = c[0].replaceAll(' ', ''); const value = c[1];
             return(<div className={'d-flex p-1'} key={index}>
-                <input className={'input w-25'} tabIndex={-1} onBlur={e => blurNameConst(index, e.target.value)}
+                <input key={index + 'name' + name} className={'input w-25'} tabIndex={-1} onBlur={e => blurNameConst(index, e.target.value)}
                        defaultValue={name} readOnly={readOnly} />
                 <b className={'mx-1 my-auto'}>=</b>
-                <input className={'input w-25'} tabIndex={-1} onBlur={e => blurValueConst(index, e.target.value)}
+                <input key={index + 'value' + value} className={'input w-25'} tabIndex={-1} onBlur={e => blurValueConst(index, e.target.value)}
                        defaultValue={value} readOnly={readOnly} />
                 <button className={'btn btn-danger ms-2'} disabled={readOnly} onClick={e => removeConst(index)}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
@@ -94,10 +94,10 @@ function CustomDataComponent(props: AllProps) {
             const v = variable.split(':');
             const name = v[0].replaceAll(' ', ''); const value = v[1];
             return(<div className={'d-flex p-1'} key={index}>
-                <input className={'input w-25'} tabIndex={-1} onBlur={e => blurNameVar(index, e.target.value)}
+                <input key={index + 'name' + name} className={'input w-25'} tabIndex={-1} onBlur={e => blurNameVar(index, e.target.value)}
                        defaultValue={name} readOnly={readOnly}  />
                 <b className={'mx-1 my-auto'}>=</b>
-                <input className={'input w-25'} tabIndex={-1} onBlur={e => blurValueVar(index, e.target.value)}
+                <input key={index + 'value' + value} className={'input w-25'} tabIndex={-1} onBlur={e => blurValueVar(index, e.target.value)}
                        defaultValue={value} readOnly={readOnly} />
                 <button className={'btn btn-danger ms-2'} disabled={readOnly} onClick={e => removeVar(index)}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>

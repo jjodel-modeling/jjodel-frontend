@@ -66,7 +66,7 @@ function SelectComponent(props: AllProps) {
             <label>{tooltip}</label>
         </div>}
 
-        <select {...otherprops}
+        <select {...otherprops} disabled={readOnly}
             className={props.inputClassName || css}
             style={props.inputStyle}
             value={value}

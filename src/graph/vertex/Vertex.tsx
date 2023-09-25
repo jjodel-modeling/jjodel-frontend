@@ -134,6 +134,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         else if (this.resizableOptions) $measurable.resizable('enable')
         if (!this.resizableOptions) {
             this.resizableOptions = {
+                helper: 'selected-by-me',
                 start: (event: GObject, obj: GObject) => {
                     this.select();
                     if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()

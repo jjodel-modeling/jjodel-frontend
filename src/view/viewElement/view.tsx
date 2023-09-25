@@ -60,6 +60,7 @@ export class DViewElement extends DPointerTargetable {
     // __transient: DViewTransientProperties;
     storeTemporaryPositions: boolean = false; // if true updates vertex position every X millisecond while dragging, if false updates it once when the vertex is released.
     appliableToClasses!: string[]; // class names: DModel, DPackage, DAttribute...
+    appliableTo!: 'node'|'edge'|'edgePoint';
     subViews!: Pointer<DViewElement, 0, 'N', LViewElement>;
     oclApplyCondition!: string; // ocl selector
     explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
@@ -176,6 +177,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         txt: <div>Do a low priority match with elements of this type.
             <br/>This is just a shortcut with a lower priority than a OCL match.
             <br/>The same result can be obtained through OCL.</div>}
+
+    appliableTo!: 'node'|'edge'|'edgePoint';
 
     subViews!: LViewElement[];
     __info_of__subViews: Info = {isGlobal: true, hidden: true, type: "DViewElement[]", label:"sub-views",
