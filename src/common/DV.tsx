@@ -50,7 +50,7 @@ export class DV {
  className={"edge` + head + ` ` + type +` preview"}></path>\n`;
         let path: string;
         let hoverAttrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={segments.all[0]&&(segments.all[0].length > strokeLengthLimit )&& strokeColorLong || strokeColorHover} strokeWidth={strokeWidthHover}
- className={"edge` + head + ` ` + type +` clickable content"}></path>\n`;
+ className={"edge` + head + ` ` + type +` clickable content"} tabIndex="-1"></path>\n`;
         switch(type) {
             default:
                 inner = "edge '" + head + "' with type: '" +type + "' not found";
@@ -101,7 +101,7 @@ export class DV {
                 fill={"none"} d={this.edge.d}></path>
                 { /* edge separate segments */ }
                 {segments.all.flatMap(s => [
-                    <path className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={strokeWidthHover}
+                    <path tabIndex="-1" className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={strokeWidthHover}
                     stroke={s.length > strokeLengthLimit && strokeColorLong || strokeColorHover}
                      fill={"none"} d={s.dpart}></path>,
                     s.label && <foreignObject style={{overflow: "visible", height:"0", width:"0", whiteSpace:"pre", x:(s.start.pt.x + s.end.pt.x)/2+"px", y:(s.start.pt.y + s.end.pt.y)/2+"px"}}>
