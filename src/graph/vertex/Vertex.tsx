@@ -19,6 +19,7 @@ import {
     GraphSize,
     LClass,
     LModelElement,
+    Log,
     LPointerTargetable,
     LUser, LViewElement,
     LViewPoint,
@@ -86,9 +87,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     }
 
     setVertexProperties(){
+        console.log("setVertexProperties setting $measurable", {drag:this.draggableOptions, html: this.html.current})
         if (!this.props.node || !this.html.current) return;
-        if (this.hasSetVertexProperties) return;
-        this.hasSetVertexProperties = true;
         let html = this.html.current;
         const $measurable: GObject<'JQuery + ui plugin'> = $(html); // todo: install typings
 
@@ -96,6 +96,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         let isDraggable: boolean = view.draggable;
         let isResizable: boolean = view.resizable;
         // $element = $(html).find('.measurable').addBack();
+        try{
         if (!isDraggable) $measurable.draggable('disable')
         else if (this.draggableOptions) $measurable.draggable('enable')
         else {
@@ -135,8 +136,17 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             };
             $measurable.draggable(this.draggableOptions);
         }
+        } catch(e) {
+            this.draggableOptions = undefined;
+            Log.w("failed to setup / update draggable uptions", e, this, this.props.node, this.props.data);
+            return;
+            // might throw error if element is not visible or in the dom or similar, but i won't care in that case.
+            // but i reset draggableOptions so it can retry later if element enters the DOM instead of thinking it is already finished setup
+        }
 
-        console.log("setting $measurale", $measurable, "opts:",this.draggableOptions, "isDraggale", isDraggable)
+        if (this.props.data?.id === "1695439784846_Pointer1695439744133_4966")
+        console.log("setting $measurable", {$measurable, "opts":this.draggableOptions, isDraggable});
+        try{
         if (!isResizable) $measurable.resizable('disable')
         else if (this.resizableOptions) $measurable.resizable('enable')
         if (!this.resizableOptions) {
@@ -228,26 +238,41 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             }
             $measurable.resizable(this.resizableOptions);
         }
-
-        // edit dynamic draggable options post-setup
-        if (this.draggableOptions) {
-            // none so far?
+        } catch(e){
+            // check draggable catch comment
+            this.resizableOptions = undefined;
+            Log.w("failed to setup / update resizable uptions", e, this, this.props.node, this.props.data);
+            return;
         }
-        // edit dynamic resizable options post-setup
-        if (this.resizableOptions) {
-            let lazySizeUpdate = view.lazySizeUpdate;
-            let containment = lazySizeUpdate ? false : 'parent';
-            let helper = lazySizeUpdate ? 'resizable-helper-bad' : 'original';
-            // helper does not accept a func or htmlElem, but only a classname...
-            // and makes his own empty proxy element to resize in his place. inchoherent.
-            if (this.resizableOptions?.containment !== containment){
-                this.resizableOptions.containment = containment;
-                $measurable.draggable( 'option', 'containment', containment);
+
+        try{
+            // edit dynamic draggable options post-setup
+            if (this.draggableOptions) {
+                // none so far?
             }
-            if (this.resizableOptions?.helper !== helper){
-                this.resizableOptions.helper = helper;
-                $measurable.draggable( 'option', 'helper', helper);
+            // edit dynamic resizable options post-setup
+            if (this.resizableOptions) {
+                let lazySizeUpdate = view.lazySizeUpdate;
+                let containment = lazySizeUpdate ? false : 'parent';
+                let helper = lazySizeUpdate ? 'resizable-helper-bad' : 'original';
+                // helper does not accept a func or htmlElem, but only a classname...
+                // and makes his own empty proxy element to resize in his place. inchoherent.
+                if (this.resizableOptions?.containment !== containment){
+                    this.resizableOptions.containment = containment;
+                    $measurable.draggable( 'option', 'containment', containment);
+                }
+                if (this.resizableOptions?.helper !== helper){
+                    this.resizableOptions.helper = helper;
+                    $measurable.draggable( 'option', 'helper', helper);
+                }
             }
+        } catch(e) {
+            // check draggable catch comment
+            this.draggableOptions = undefined;
+            this.resizableOptions = undefined;
+            this.rotableOptions = undefined;
+            Log.w("failed to update measurable uptions", e, this, this.props.node, this.props.data);
+            return;
         }
     }
 
@@ -324,6 +349,11 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         const styleOverride: React.CSSProperties = {};
         // set classes end
         const size: Readonly<GraphSize> = this.getSize() as any;
+
+        if (this.props.data?.id === "1695439784846_Pointer1695439744133_4966")
+        console.log("PRE setting $measurable", {nodeType})
+
+
         switch (nodeType){
             case 'GraphVertex':
             case 'Vertex':

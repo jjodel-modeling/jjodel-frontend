@@ -23,7 +23,7 @@ import {
     GraphElementReduxStateProps,
     GraphElementStatee,
     InOutParam,
-    JSXT,
+    JSXT, Keystrokes,
     LClass,
     LModelElement,
     Log,
@@ -247,7 +247,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
 
     _isMounted: boolean;
-    hasSetVertexProperties: boolean = false;
     html: React.RefObject<HTMLElement | undefined>;
     lastViewChanges: {t: number, vid: Pointer<DViewElement>, v: LViewElement, key?: string}[];
     lastOnUpdateChanges: {t: number}[];
@@ -280,6 +279,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     select(forUser:Pointer<DUser, 0, 1> = null) {
         const id = this.props.data?.id;
         if (!forUser) forUser = DUser.current;
+        // if (forUser === DUser.current && this.html.current) this.html.current.focus();
         // this.props.node.isSelected[forUser] = true;
 
         //BEGIN();
@@ -306,13 +306,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         GraphElementComponent.all[this.id] = this;
         GraphElementComponent.map[props.nodeid as Pointer<DGraphElement>] = this;
         this.html = React.createRef();
-        // let functionsToBind = [this.onClick, this.onLeave, this.onContextMenu, this.onEnter, this.select];
+        let functionsToBind = [this.onClick, this.onLeave, this.onContextMenu, this.onEnter, this.select, this.onMouseDown, this.onMouseDown];/*
         this.onClick = this.onClick.bind(this);
         this.onLeave = this.onLeave.bind(this);
         this.onContextMenu = this.onContextMenu.bind(this);
         this.onEnter = this.onEnter.bind(this);
-        this.select = this.select.bind(this);
-        // for (let f of functionsToBind) (this as any)[f.name] = f.bind(this);
+        this.select = this.select.bind(this);*/
+        for (let f of functionsToBind) (this as any)[f.name] = f.bind(this);
         // @ts-ignore
         this.state = {classes:[] as string[]};
 
@@ -464,13 +464,17 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return ret;
     }
 
-    onContextMenu(e: React.MouseEvent<HTMLDivElement>) {
+    onContextMenu(e: React.MouseEvent<Element>) {
         e.preventDefault();
         e.stopPropagation();
+        // NOT executed here, but on mousedown because of IOS compatibility
+    }
+
+    doContextMenu(e: React.MouseEvent<Element>){
         const selected = Selectors.getSelected();
         const id = this.props.dataid;
         const alreadySelected = selected === id;
-        if(!alreadySelected) this.select();
+        if (!alreadySelected) { this.select(); if (this.html.current) this.html.current.focus(); }
         SetRootFieldAction.new("contextMenu", {
             display: true,
             x: e.clientX,
@@ -478,7 +482,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         });
     }
 
-    onEnter(e: React.MouseEvent<HTMLDivElement>) { // instead of doing it here, might set this class on render, and trigger it visually operative with :hover selector css
+    onEnter(e: React.MouseEvent<Element>) { // instead of doing it here, might set this class on render, and trigger it visually operative with :hover selector css
         const isEdgePending = this.props.isEdgePending?.source;
         if (!isEdgePending || this.props.data?.className !== "DClass") return;
         const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
@@ -487,15 +491,27 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (canBeExtend) this.setState({classes:[...this.state.classes, "class-can-be-extended"]});
         else this.setState({classes:[...this.state.classes, "class-cannot-be-extended"]});
     }
-    onLeave(e: React.MouseEvent<HTMLDivElement>) {
+    onLeave(e: React.MouseEvent<Element>) {
         if (this.props.data?.className !== "DClass") return;
         this.setState({classes: this.state.classes.filter((classname) => {
             return classname !== "class-can-be-extended" && classname !== "class-cannot-be-extended"
         })});
     }
+
+    static mousedownComponent: GraphElementComponent | undefined;
+    onMouseDown(e: React.MouseEvent): void {
+        e.stopPropagation();
+        GraphElementComponent.mousedownComponent = this;
+        if (e.button === Keystrokes.clickRight) { this.doContextMenu(e); }
+    }
+
+    onMouseUp(e: React.MouseEvent): void {
+        e.stopPropagation();
+        if (GraphElementComponent.mousedownComponent !== this) { return; }
+        this.onClick(e);
+    }
     onClick(e: React.MouseEvent): void {
-        console.log("onClick:", e);
-        (e.target as any).focus();
+        // (e.target as any).focus();
         e.stopPropagation();
         const selected = Selectors.getSelected();
         const id = this.props.dataid;
@@ -613,6 +629,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         className: classes.join(' '),
                         onClick: this.onClick,
                         onContextMenu:this.onContextMenu,
+                        onMouseDown:this.onMouseDown,
+                        onMouseUp:this.onMouseUp,
                         onMouseEnter:this.onEnter,
                         onMouseLeave:this.onLeave,
                         tabIndex: (this.props as any).tabIndex || -1,

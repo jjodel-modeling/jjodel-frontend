@@ -115,7 +115,7 @@ function ContextMenuComponent(props: AllProps) {
     }
 
     return(<>
-        <div className={'context-menu round'} style={{top: position.y - 100, left: position.x - 10}}>
+        <div className={'context-menu round'} style={{top: position.y - 100, left: position.x - 10}} onContextMenu={(e)=>e.preventDefault()}>
             {jsxList.map((jsx, index) => {return <div key={index}>{jsx}</div>})}
         </div>
         {(memorec) && <div className={'context-menu round'} style={{overflow: 'auto', maxHeight: '12em', top: position.y - 100, left: position.x + 130}}>
