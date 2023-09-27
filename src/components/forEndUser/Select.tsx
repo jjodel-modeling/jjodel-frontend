@@ -15,7 +15,7 @@ function SelectComponent(props: AllProps) {
     let gdata: GObject<LPointerTargetable> = data;
     const field: (keyof LPointerTargetable & keyof DPointerTargetable) = props.field as any;
 
-    const readOnly = props.readonly; // || U.getDefaultViewsID().includes(data.id);
+    const readOnly = false; //props.readonly; // || U.getDefaultViewsID().includes(data.id);
     const value: string | Pointer = d[field] as string;
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
@@ -66,7 +66,7 @@ function SelectComponent(props: AllProps) {
             <label>{tooltip}</label>
         </div>}
 
-        <select {...otherprops} disabled={readOnly}
+        <select {...otherprops}
             className={props.inputClassName || css}
             style={props.inputStyle}
             value={value}

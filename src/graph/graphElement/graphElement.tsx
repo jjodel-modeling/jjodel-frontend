@@ -494,12 +494,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         })});
     }
     onClick(e: React.MouseEvent): void {
+        console.log("onClick:", e);
+        (e.target as any).focus();
         e.stopPropagation();
         const selected = Selectors.getSelected();
         const id = this.props.dataid;
         const alreadySelected = selected === id;
         SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
-        if(alreadySelected) return;
+        if (alreadySelected) return;
         const isEdgePending = (this.props.isEdgePending?.source);
         if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
         if (!this.props.data) return;
@@ -519,20 +521,23 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     }
 
+    onViewChange(): void {
+        let thischange = {t: Date.now(), vid: this.props.node.__raw.view, newvid:this.props.view.id, v: this.props.node.view, newv: this.props.view, key:this.props.key};
+        this.lastViewChanges.push(thischange);
+        // nan -> false <200 = true
+        if (thischange.t - this.lastViewChanges[this.lastViewChanges.length-20]?.t < 200) { // important! NaN<1  and NaN>1 are both false
+            // if N views changed in <= 0.2 sec
+            Log.exDevv("loop in updating View assigned to node. The cause might be missing or invalid keys on GraphElement JSX nodes.", {change_log:this.lastViewChanges, component: this});
+        }
+
+        /*console.log("UPDATEVIEW ", {lnode:this.props.node, dnode:this.props.node.__raw, dstore: windoww.s().idlookup[this.props.node.__raw.id], view:this.props.view,
+             data:this.props.data, vid:this.props.view.id, nview:this.props.node.__raw.view});*/
+        this.props.node.view = this.props.view;
+    }
     public render(nodeType?:string, styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
         if (!this.props.node) return "loading";
         if (this.props.node.__raw.view !== this.props.view.id) {
-            let thischange = {t: Date.now(), vid: this.props.node.__raw.view, newvid:this.props.view.id, v: this.props.node.view, newv: this.props.view, key:this.props.key};
-            this.lastViewChanges.push(thischange);
-            // nan -> false <200 = true
-            if (thischange.t - this.lastViewChanges[this.lastViewChanges.length-20]?.t < 200) { // important! NaN<1  and NaN>1 are both false
-                // if N views changed in <= 0.2 sec
-                Log.exDevv("loop in updating View assigned to node. The cause might be missing or invalid keys on GraphElement JSX nodes.", {change_log:this.lastViewChanges, component: this});
-            }
-
-            /*console.log("UPDATEVIEW ", {lnode:this.props.node, dnode:this.props.node.__raw, dstore: windoww.s().idlookup[this.props.node.__raw.id], view:this.props.view,
-                 data:this.props.data, vid:this.props.view.id, nview:this.props.node.__raw.view});*/
-            this.props.node.view = this.props.view;
+            this.onViewChange();
             return "Updating view...";
         }
 
@@ -610,6 +615,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         onContextMenu:this.onContextMenu,
                         onMouseEnter:this.onEnter,
                         onMouseLeave:this.onLeave,
+                        tabIndex: (this.props as any).tabIndex  || -1,
                         children: UX.recursiveMap(rawRElement/*.props.children*/,
                             (rn: ReactNode, index: number, depthIndexes: number[]) => UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes))});
                 fixdoubleroot = false; // need to set the props to new root in that case.

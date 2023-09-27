@@ -45,6 +45,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     public static cname: string = 'VertexComponent';
     draggableOptions: GObject | undefined;
     resizableOptions: GObject | undefined;
+    rotableOptions: GObject | undefined;
 
     /*
     shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
@@ -77,6 +78,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         },1)
     }
 
+    onViewChange(): void {
+        super.onViewChange();
+        this.draggableOptions = undefined;
+        this.resizableOptions = undefined;
+        this.rotableOptions = undefined;
+    }
 
     setVertexProperties(){
         if (!this.props.node || !this.html.current) return;
@@ -130,6 +137,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             $measurable.draggable(this.draggableOptions);
         }
 
+        console.log("setting $measurale", $measurable, "opts:",this.draggableOptions, "isDraggale", isDraggable)
         if (!isResizable) $measurable.resizable('disable')
         else if (this.resizableOptions) $measurable.resizable('enable')
         if (!this.resizableOptions) {
