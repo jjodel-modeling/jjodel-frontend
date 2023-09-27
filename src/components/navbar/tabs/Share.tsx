@@ -9,10 +9,9 @@ function ShareComponent(props: AllProps) {
     const setPath = props.setPath;
     const room = props.room;
     const debug = props.debug;
-    const root = process.env['REACT_APP_URL'] + '/jodel-react/';
+    const root = process.env['REACT_APP_URL'] || '';
 
     const create = async(iot: boolean = false) => {
-        setPath('');
         const code = U.getRandomString(5);
         await Firebase.add('rooms', code, {
             code: code,
@@ -20,7 +19,7 @@ function ShareComponent(props: AllProps) {
             createdBy: DUser.current,
             iot: iot
         });
-        window.open(root + 'room/' + code, '_blank');
+        window.open(root + '/room/' + code, '_blank');
     }
 
     const quit = async() => {

@@ -7,6 +7,7 @@ import {useStateIfMounted} from 'use-state-if-mounted';
 import File from './tabs/File';
 import Edit from './tabs/Edit';
 import Share from './tabs/Share';
+import Examples from "./tabs/Examples";
 
 function NavbarComponent(props: AllProps) {
     const debug = props.debug;
@@ -34,6 +35,8 @@ function NavbarComponent(props: AllProps) {
                     {path === 'edit' && <Edit setPath={setPath} />}
                     <div tabIndex={-1} onClick={e => setPath('share')} className={'my-nav-item'}>Share</div>
                     {path === 'share' && <Share setPath={setPath} />}
+                    <div tabIndex={-1} onClick={e => setPath('examples')} className={'my-nav-item'}>Examples</div>
+                    {path === 'examples' && <Examples setPath={setPath} />}
                 </div>
             </div>
         </nav>

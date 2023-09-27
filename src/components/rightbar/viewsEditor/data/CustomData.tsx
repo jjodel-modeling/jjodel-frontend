@@ -5,8 +5,8 @@ import {connect} from "react-redux";
 function CustomDataComponent(props: AllProps) {
     const view = props.view;
     const readOnly = props.readonly;
-    let constants = (view.constants && view.constants !== '{}') ? view.constants?.slice(1, -1).split(',') : [];
-    let variables = (view.preRenderFunc && view.preRenderFunc !== '() => {return{}}') ? view.preRenderFunc?.slice(14, -2).split(',') : [];
+    let constants = (view.constants && view.constants !== '{}') ? view.constants?.replaceAll(' ', '').slice(1, -1).split(',') : [];
+    let variables = (view.preRenderFunc && view.preRenderFunc !== '() => {return{}}') ? view.preRenderFunc?.replaceAll(' ', '').slice(14, -2).split(',') : [];
 
 
     const addConst = () => {

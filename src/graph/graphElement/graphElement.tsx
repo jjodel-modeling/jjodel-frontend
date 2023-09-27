@@ -497,9 +497,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         e.stopPropagation();
         const selected = Selectors.getSelected();
         const id = this.props.dataid;
-        const alreadySelected = selected === id;
+        // const alreadySelected = selected === id;
         SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
-        if(alreadySelected) return;
+        // if(alreadySelected) return;
         const isEdgePending = (this.props.isEdgePending?.source);
         if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
         if (!this.props.data) return;

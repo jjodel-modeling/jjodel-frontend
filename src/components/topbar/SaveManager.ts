@@ -17,6 +17,8 @@ export class SaveManager {
     static save(): void {
         SaveManager.tmpsave = store.getState();
         localStorage.setItem("tmpsave", JSON.stringify(SaveManager.tmpsave));
+        console.clear();
+        console.log(JSON.stringify(SaveManager.tmpsave))
     }
 
     static load(state?: string): void {

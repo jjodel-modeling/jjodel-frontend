@@ -10,7 +10,7 @@ function RoomManagerComponent(props: AllProps) {
     const debug = props.debug;
     const room = (props.room) ? props.room : '';
     const iot = props.iot;
-    const root = 'http://localhost:3000/jodel-react/'; // damiano: questo va cambiato
+    const root = process.env['REACT_APP_URL '] || '';
     const [loading, setLoading] = useStateIfMounted(false);
 
     const create = async(iot: boolean) => {
@@ -21,7 +21,7 @@ function RoomManagerComponent(props: AllProps) {
             createdBy: DUser.current,
             iot: iot
         });
-        window.open(root + 'room/' + code, '_blank');
+        window.open(root + '/room/' + code, '_blank');
     }
 
     const share = () => {U.alert('info', root + 'room/' + room);}
