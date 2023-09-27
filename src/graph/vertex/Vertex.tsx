@@ -118,7 +118,6 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     else dragHelper.classList.remove('lazySizeUpdate');
                     return dragHelper;
                 },
-
                 // disabled: !(view.draggable),
                 start: (event: GObject, obj: GObject) => {
                     // this.select();

@@ -499,9 +499,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         e.stopPropagation();
         const selected = Selectors.getSelected();
         const id = this.props.dataid;
-        const alreadySelected = selected === id;
+        // const alreadySelected = selected === id;
         SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
-        if (alreadySelected) return;
+        // if(alreadySelected) return;
         const isEdgePending = (this.props.isEdgePending?.source);
         if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
         if (!this.props.data) return;
@@ -615,7 +615,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         onContextMenu:this.onContextMenu,
                         onMouseEnter:this.onEnter,
                         onMouseLeave:this.onLeave,
-                        tabIndex: (this.props as any).tabIndex  || -1,
+                        tabIndex: (this.props as any).tabIndex || -1,
                         children: UX.recursiveMap(rawRElement/*.props.children*/,
                             (rn: ReactNode, index: number, depthIndexes: number[]) => UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes))});
                 fixdoubleroot = false; // need to set the props to new root in that case.

@@ -177,8 +177,8 @@ function Value(props: Props) {
             </button>
         </div>
         { valueslist }
-        <hr className={"my-3"} />
-        <MqttEditor valueId={dValue.id} />
+        {/*<hr className={"my-3"} />
+        <MqttEditor valueId={dValue.id} />*/}
     </div>)
 }
 
