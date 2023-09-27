@@ -263,7 +263,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 }
                 if (this.resizableOptions?.helper !== helper){
                     this.resizableOptions.helper = helper;
-                    $measurable.draggable( 'option', 'helper', helper);
+                    $measurable.resizable( 'option', 'helper', helper);
                 }
             }
         } catch(e) {
