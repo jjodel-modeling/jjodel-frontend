@@ -332,15 +332,18 @@ export class Selectors{
 
     // 2 = explicit exact match (===), 1 = matches a subclass, 0 = implicit match (any *), -1 = not matches
     private static matchesOclCondition(v: DViewElement, data: DModelElement | LModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
-        if (!v.query) return ViewEClassMatch.IMPLICIT_MATCH;
+        if (!v.query) return ViewEClassMatch.MISMATCH;
         const query = v.query;
         const viewpoint = Selectors.getViewpoint();
-        if(v.viewpoint !== viewpoint.id) { return ViewEClassMatch.IMPLICIT_MATCH; }
+        const isDefault = v.viewpoint === 'Pointer_DefaultViewPoint';
+        const isActiveViewpoint = v.viewpoint === viewpoint.id;
+        if(!isActiveViewpoint && !isDefault) return ViewEClassMatch.MISMATCH;
         let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
         try {
             const flag = OCL.filter(false, "src", [data], query, constructors);
-            if(flag.length > 0) return ViewEClassMatch.EXACT_MATCH;
-            else return ViewEClassMatch.MISMATCH;
+            if(flag.length > 0 && isActiveViewpoint) return ViewEClassMatch.EXACT_MATCH;
+            if(flag.length > 0 && !isActiveViewpoint) return ViewEClassMatch.IMPLICIT_MATCH;
+            return ViewEClassMatch.MISMATCH;
         } catch (e) { console.error('invalid ocl query'); }
         return ViewEClassMatch.MISMATCH;
     }

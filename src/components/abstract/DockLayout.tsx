@@ -16,7 +16,7 @@ import {
     Pointer,
     Selectors,
     U,
-    LPackage
+    LPackage, SetRootFieldAction
 } from '../../joiner';
 import StructureEditor from "../rightbar/structureEditor/StructureEditor";
 import TreeEditor from "../rightbar/treeEditor/treeEditor";
@@ -204,6 +204,8 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         const dPackage = lModel.addChild('package');
         const lPackage: LPackage = LPackage.fromD(dPackage);
         lPackage.name = 'default';
+        SetRootFieldAction.new('selected', lPackage.id, '', true);
+        SetRootFieldAction.new('_lastSelected', {modelElement: lPackage.id});
         this.OPEN(dModel);
     }
     addModel(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {
@@ -251,7 +253,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             // this.test,
             // this.iotEditor,
             this.structureEditor,
-            this.styleEditor,
+            // this.styleEditor,
             this.treeEditor,
             this.viewsEditor,
             this.viewpointEditor,

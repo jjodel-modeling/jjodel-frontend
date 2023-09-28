@@ -120,7 +120,7 @@ export class DV {
             {
                 edge.midPoints.map( m => <EdgePoint data={edge.father.model.id} initialSize={m} key={m.id} view={"Pointer_ViewEdgePoint"} /> )
             }{
-                edge.end.model.attributes.map( (m, index, arr) => <EdgePoint data={m.id} initialSize={(parent) => {
+                false && edge.end.model.attributes.map( (m, index, arr) => <EdgePoint data={m.id} initialSize={(parent) => {
                     let segs = parent.segments.segments;
                     let pos = segs[0].start.pt.multiply(1-(index+1)/(arr.length+1), true).add(segs[segs.length-1].end.pt.multiply((index+1)/(arr.length+1), true));
                     // console.trace("initial ep", {segs, pos, ratio:(index+1)/(arr.length+1), s:segs[0].start.pt, e:segs[segs.length-1].end.pt});
@@ -151,7 +151,7 @@ valuecolormap[ShortAttribETypes.EChar] = "green";
 valuecolormap[ShortAttribETypes.void] = "gray";
 
 // &&[]bn
-let valuecolormap_str = JSON.stringify(valuecolormap);
+let valuecolormap_str = JSON.stringify(valuecolormap); // can this be declared inside view.constants ?
 
 
 class DefaultView {
@@ -187,11 +187,20 @@ class DefaultView {
 </div>`;
     }
     public static package(): string {
-        return `<div className={'round bg-white root package'}>
-    <hr />
+        return `<div className={'round root bg-white package'}>
     <div className={'package-children'}>
         {data.children.map((child, index) => {
-            return <DefaultNode key={child.id} data={child.id}></DefaultNode>
+            return <DefaultNode key={child.id} data={child.id} />
+        })}
+    </div>
+</div>`;
+    }
+
+    public static defaultPackage(): string {
+        return `<div className={'root'}>
+    <div className={'package-children'}>
+        {data.children.map((child, index) => {
+            return <DefaultNode key={child.id} data={child.id} />
         })}
     </div>
 </div>`;
@@ -276,16 +285,7 @@ class DefaultView {
 </div>`
     }
 
-    public static defaultPackage(): string {
-        return `<div className={'root'}>
-    <hr />
-    <div className={'package-children'}>
-        {data.children.map((child, index) => {
-            return <DefaultNode key={child.id} data={child.id}></DefaultNode>
-        })}
-    </div>
-</div>`;
-    }
+
 
     public static error(msg: undefined | string | JSX.Element) {
         return <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"min-content"}}>

@@ -40,7 +40,7 @@ function ViewData(props: Props) {
     layout.dockbox.children.push({tabs});
 
     const back = (evt: React.MouseEvent<HTMLButtonElement>) => {
-        SetRootFieldAction.new('stackViews', [], '', false);
+        SetRootFieldAction.new('stackViews', undefined, '-=', false);
     }
 
     return(<div>
