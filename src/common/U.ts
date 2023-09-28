@@ -1258,6 +1258,13 @@ export class SelectorOutput {
     resultSetElem!: JQuery<Element>;
 }
 export enum Keystrokes {
+    clickLeft = 0,
+    clickWheel = 1,
+    clickRight = 2,
+    clickBackMouseButton = 3,
+    clickForwardMouseButton = 4,
+
+    // keyboard
     escape = 'Escape',
     capsLock = 'CapsLock',
     shift = 'Shift',

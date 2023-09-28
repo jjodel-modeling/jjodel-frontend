@@ -19,6 +19,7 @@ import {
     GraphSize,
     LClass,
     LModelElement, LNamedElement,
+    Log,
     LPointerTargetable,
     LUser, LViewElement,
     LViewPoint,
@@ -45,6 +46,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     public static cname: string = 'VertexComponent';
     draggableOptions: GObject | undefined;
     resizableOptions: GObject | undefined;
+    rotableOptions: GObject | undefined;
 
     /*
     shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
@@ -77,11 +79,15 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         },1)
     }
 
+    onViewChange(): void {
+        super.onViewChange();
+        this.draggableOptions = undefined;
+        this.resizableOptions = undefined;
+        this.rotableOptions = undefined;
+    }
 
     setVertexProperties(){
         if (!this.props.node || !this.html.current) return;
-        if (this.hasSetVertexProperties) return;
-        this.hasSetVertexProperties = true;
         let html = this.html.current;
         const $measurable: GObject<'JQuery + ui plugin'> = $(html); // todo: install typings
 
@@ -89,6 +95,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         let isDraggable: boolean = view.draggable;
         let isResizable: boolean = view.resizable;
         // $element = $(html).find('.measurable').addBack();
+        try{
         if (!isDraggable) $measurable.draggable('disable')
         else if (this.draggableOptions) $measurable.draggable('enable')
         else {
@@ -113,7 +120,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 },
                 // disabled: !(view.draggable),
                 start: (event: GObject, obj: GObject) => {
-                    this.select();
+                    // this.select();
                     SetRootFieldAction.new('contextMenu', { display: false, x: 0, y: 0 }); // todo: should probably be done in a document event
                     this.doMeasurableEvent(EMeasurableEvents.onDragStart);
                 },
@@ -128,7 +135,15 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             };
             $measurable.draggable(this.draggableOptions);
         }
+        } catch(e) {
+            this.draggableOptions = undefined;
+            Log.w("failed to setup / update draggable uptions", e, this, this.props.node, this.props.data);
+            return;
+            // might throw error if element is not visible or in the dom or similar, but i won't care in that case.
+            // but i reset draggableOptions so it can retry later if element enters the DOM instead of thinking it is already finished setup
+        }
 
+        try{
         if (!isResizable) $measurable.resizable('disable')
         else if (this.resizableOptions) $measurable.resizable('enable')
         if (!this.resizableOptions) {
@@ -220,26 +235,41 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             }
             $measurable.resizable(this.resizableOptions);
         }
-
-        // edit dynamic draggable options post-setup
-        if (this.draggableOptions) {
-            // none so far?
+        } catch(e){
+            // check draggable catch comment
+            this.resizableOptions = undefined;
+            Log.w("failed to setup / update resizable uptions", e, this, this.props.node, this.props.data);
+            return;
         }
-        // edit dynamic resizable options post-setup
-        if (this.resizableOptions) {
-            let lazySizeUpdate = view.lazySizeUpdate;
-            let containment = lazySizeUpdate ? false : 'parent';
-            let helper = lazySizeUpdate ? 'resizable-helper-bad' : 'original';
-            // helper does not accept a func or htmlElem, but only a classname...
-            // and makes his own empty proxy element to resize in his place. inchoherent.
-            if (this.resizableOptions?.containment !== containment){
-                this.resizableOptions.containment = containment;
-                $measurable.draggable( 'option', 'containment', containment);
+
+        try{
+            // edit dynamic draggable options post-setup
+            if (this.draggableOptions) {
+                // none so far?
             }
-            if (this.resizableOptions?.helper !== helper){
-                this.resizableOptions.helper = helper;
-                $measurable.draggable( 'option', 'helper', helper);
+            // edit dynamic resizable options post-setup
+            if (this.resizableOptions) {
+                let lazySizeUpdate = view.lazySizeUpdate;
+                let containment = lazySizeUpdate ? false : 'parent';
+                let helper = lazySizeUpdate ? 'resizable-helper-bad' : 'original';
+                // helper does not accept a func or htmlElem, but only a classname...
+                // and makes his own empty proxy element to resize in his place. inchoherent.
+                if (this.resizableOptions?.containment !== containment){
+                    this.resizableOptions.containment = containment;
+                    $measurable.draggable( 'option', 'containment', containment);
+                }
+                if (this.resizableOptions?.helper !== helper){
+                    this.resizableOptions.helper = helper;
+                    $measurable.resizable( 'option', 'helper', helper);
+                }
             }
+        } catch(e) {
+            // check draggable catch comment
+            this.draggableOptions = undefined;
+            this.resizableOptions = undefined;
+            this.rotableOptions = undefined;
+            Log.w("failed to update measurable uptions", e, this, this.props.node, this.props.data);
+            return;
         }
     }
 
@@ -317,6 +347,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         const styleOverride: React.CSSProperties = {};
         // set classes end
         const size: Readonly<GraphSize> = this.getSize() as any;
+
         switch (nodeType){
             case 'GraphVertex':
             case 'Vertex':

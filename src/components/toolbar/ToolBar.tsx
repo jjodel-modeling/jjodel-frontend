@@ -46,7 +46,7 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
             data = data?.father || data;
         }
         let item = item_dname.substring(1).toLowerCase();
-        reactNodes.push(<div className={'toolbar-item'} key={item_dname} onClick={() => {
+        reactNodes.push(<div className={'toolbar-item'} style={{cursor:"pointer"}} key={item_dname} onClick={() => {
             switch(item_dname){
                 case DVoidEdge.cname:
                 case DEdge.cname:
@@ -58,7 +58,7 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
                     let wedge: WVoidEdge = ledge as any;
                     // if (!myDictValidator[item_dname]) return;
                     let longestSeg: EdgeSegment = undefined as any; // just because compiler does not know it is always found through the for loop
-                    let longestIndex: number=0;
+                    let longestIndex: number = 0;
                     let segms = ledge.segments.segments;
                     // longestIndex = segms.length - 1;// i just put it at end because this edgepoint
                     for (; longestIndex < segms.length; longestIndex++) if (segms[longestIndex].isLongest) { longestSeg = segms[longestIndex]; break;}
@@ -132,8 +132,8 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     downward["DOperation"] = ["DParameter", "DException"];
 
     // nodes
-    // downward["DEdge"] = ["DEdgePoint"]
-    // downward["DVoidEdge"] = ["DEdgePoint"]
+    downward["DEdge"] = ["DEdgePoint"]
+    downward["DVoidEdge"] = ["DEdgePoint"]
 
     // for (let parentKey in downward) myDictValidator.set(parentKey, addChildren("package"));
     let upward: Dictionary<DocString<"DClassName (model)">, DocString<"hisDParents">[]> = {};
@@ -149,7 +149,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
 
     // exceptions:
     upward["DPackage"] = ["_pDPackage"]; //, "DModel"]; because from a package, i don't want to prompt the user to create a model in toolbar.
-    upward["DEdgeNode"] = []; //, "DEdge", "DVoidEdge"]; because from a edgeNode, i don't want to prompt the user to create a edge in toolbar.
+    upward["DEdgePoint"] = ["DEdgePoint"]; //, "DEdge", "DVoidEdge"]; because from a edgeNode, i don't want to prompt the user to create a edge in toolbar.
     // upward["DClass"] = ["_pDPackage", "DClass", "DEnumerator"];
 
     // if (RuntimeAccessibleClass.extends(props.selected?.node?.className, DVoidEdge)) { }

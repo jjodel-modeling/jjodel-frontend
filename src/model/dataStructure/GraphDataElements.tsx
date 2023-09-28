@@ -1732,7 +1732,7 @@ replaced by startPoint
         let fillSegments: EdgeSegment[] = [];
         this.snapSegmentsToNodeBorders(c, v, ret, fillSegments);
         let longestLabel = c.data.longestLabel;
-        this.setLabels(c, ret, allNodes, longestLabel);
+        this.setLabels(c, ret, allNodes);
         // console.log("getSegments() labeled:", {main:ret, fillSegments});
         let rett: this["segments"] = {all: [...ret, ...fillSegments], segments: ret, fillers: fillSegments} as any;
         for (let i = 0; i < rett.all.length; i++) {
@@ -1744,16 +1744,17 @@ replaced by startPoint
         rett.tail = this.headPos_impl(c, false, v.edgeTailSize, rett.segments[0], zoom);
         return rett;
     }
-    private setLabels(c: Context, segments: EdgeSegment[], allNodes: this["allNodes"], longestLabel: D["longestLabel"]): void {
+    private setLabels(c: Context, segments: EdgeSegment[], allNodes: this["allNodes"]): void {
         // find longest segment
         let longestindex = -1;
         let longest = 0;
         for (let i = 0; i < segments.length; i++) {
             let s = segments[i];
             s.calcLength();
-            if (longestLabel !== undefined && longest < s.length) { longest = s.length; longestindex = i; }
+            if (longest < s.length) { longest = s.length; longestindex = i; }
+            s.isLongest = false;
         }
-        if (longestindex>=0) segments[longestindex].isLongest = true;
+        if (longestindex >= 0) segments[longestindex].isLongest = true;
         // apply labels
         for (let s of segments) s.label = this.get_label_impl(c, s, allNodes, segments);
     }

@@ -7,7 +7,7 @@ import './style.scss';
 
 function TextAreaComponent(props: AllProps) {
     const data = props.data;
-    const readOnly = (props.readonly !== undefined) ? props.readonly : U.getDefaultViewsID().includes(data.id);
+    const readOnly = (props.readonly !== undefined) ? props.readonly : data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
     const field = props.field;
     const getter = props.getter;
     const setter = props.setter;

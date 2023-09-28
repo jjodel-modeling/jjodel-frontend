@@ -11,7 +11,9 @@
   // works only on "block" elements? not even flex?
   text-transform: uppercase;
 }
-
+.toolbar-item:hover{
+  background: #ddd;
+}
 .hoverable{
   position: relative;
 }
