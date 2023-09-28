@@ -325,7 +325,7 @@ export class U {
         return out as  A & B; }
 
     static buildFunctionDocumentation(f: Function): {parameters: {name: string, defaultVal: string | undefined, typedesc: string | null}[], returns: string | undefined, f: Function, fname: string | undefined, isLambda: boolean, signature: string} {
-        Log.e(!JsType.isFunction(f), 'getFunctionSignature() parameter must be a function');
+        Log.e(!JsType.isFunction(f), 'getFunctionSignature() parameter must be a function', f);
         // let parameters: {name: string, defaultVal: string, typedesc: string}[] = []; //{name: '', defaultVal: undefined, typedesc: ''};
         let ret: {parameters: {name: string, defaultVal: string | undefined, typedesc: string | null}[], returns: string | undefined, f: Function, fname: string | undefined, isLambda: boolean, signature: string}
             = {parameters: [], returns: undefined, f: f, fname: undefined, isLambda: null as Temporary, signature: ''};
