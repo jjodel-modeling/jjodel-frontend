@@ -28,8 +28,8 @@ function NodeData(props: Props) {
                     "Graph: Element in a graph will maintain the position when changing view\n"+
                     "Node: Ensuring every visual element uses his personal size (default)"
         }></Select>*/}
-        <Input data={view} field={"width"} label={"Width"} type={"number"}/>
-        <Input data={view} field={"height"} label={"Height"} type={"number"}/>
+        {/*<Input data={view} field={"width"} label={"Width"} type={"number"}/>
+        <Input data={view} field={"height"} label={"Height"} type={"number"}/>*/}
         {/*<Input data={view} field={"scalezoomx"} label={"Zoom X"} type={"number"}/>*/}
         {/*<Input data={view} field={"scalezoomy"} label={"Zoom Y"} type={"number"}/>*/}
         {/*<div className={'d-flex p-1'}>
@@ -42,9 +42,8 @@ function NodeData(props: Props) {
                 })}
             </select>
         </div>*/}
-        {/*from damiano: il primo StoreSize tooltip funziona, il secondo no. perchè? l'html viene popolato correttamente ma risulta opacità 0, puoi cercare di risolverlo tu?*/}
-        <Input data={view} field={"storeSize"} label={"Store Size"} tooltip={
-            <div>"Active: the node position depends from the view currently displayed. Inactive: it depends from the graph."</div>} type={"checkbox"} />
+        {/*<Input data={view} field={"storeSize"} label={"Store Size"} tooltip={
+            <div>"Active: the node position depends from the view currently displayed. Inactive: it depends from the graph."</div>} type={"checkbox"} />*/}
         <Input data={view} field={"lazySizeUpdate"} label={"Lazy Update"} type={"checkbox"} tooltip={true}/>
 
         <Input data={view} field={"adaptWidth"} label={"Adapt Width"} type={"checkbox"}/>

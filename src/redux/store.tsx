@@ -209,52 +209,55 @@ export class DState extends DPointerTargetable{
 function makeDefaultGraphViews(): DViewElement[] {
 
     let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname]);
-    // modelView.draggable = false; modelView.resizable = false; already guaranteed by <Graph />
+    modelView.draggable = false; modelView.resizable = false;
+    modelView.query = 'context DModel inv: true';
 
     let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname]);
     packageView.defaultVSize = new GraphSize(0, 0, 400, 500);
+    packageView.query = `context DPackage inv: not (self.name = 'default')`;
+
+
+    const defaultPackage: DViewElement = DViewElement.new('DefaultPackage', DV.defaultPackage());
+    defaultPackage.defaultVSize = new GraphSize(0, 0);
+    defaultPackage.explicitApplicationPriority = 2;
+    defaultPackage.query = `context DPackage inv: self.name = 'default'`;
+    defaultPackage.draggable = false; defaultPackage.resizable = false;
+
 
     let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.cname]);
-    classView.adaptWidth = true;
-    classView.adaptHeight = true;
+    classView.adaptWidth = true; classView.adaptHeight = true;
+    classView.query = 'context DClass inv: true';
 
     let enumView: DViewElement = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.cname]);
-    enumView.adaptWidth = true;
-    enumView.adaptHeight = true;
+    enumView.adaptWidth = true; enumView.adaptHeight = true;
+    enumView.query = 'context DEnumerator inv: true';
 
     let attributeView: DViewElement = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.cname]);
-    // attributeView.zIndex = 0;
+    attributeView.query = 'context DAttribute inv: true';
+
     let referenceView: DViewElement = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.cname]);
-    // referenceView.zIndex = 10;
+    referenceView.query = 'context DReference inv: true';
 
     let operationView: DViewElement = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.cname]);
+    operationView.query = 'context DOperation inv: true';
 
     let literalView: DViewElement = DViewElement.new('Literal', DV.literalView(), undefined, '', '', '', [DEnumLiteral.cname]);
+    literalView.query = 'context DEnumLiteral inv: true';
 
     let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.cname]);
-    objectView.adaptWidth = true;
-    objectView.adaptHeight = true;
-    objectView.onDragEnd = `
-// easy binding
-data.$z = node.y;
-data.$y = node.y.toFixed(2);
-//  explicit way
-let x = data.$x;
-if (x) x.value = node.size.x;
+    objectView.adaptWidth = true; objectView.adaptHeight = true;
+    objectView.query = 'context DObject inv: true';
 
-`;
-
+    let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname]);
+    valueView.query = 'context DValue inv: true';
 
     let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.cname]);
     voidView.appliableToClasses=["VoidVertex"];
     voidView.explicitApplicationPriority = 2;
-    voidView.adaptWidth = true;
-    voidView.adaptHeight = true;
+    voidView.adaptWidth = true; voidView.adaptHeight = true;
 
     let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '', []);
-    edgePointView.appliableTo = 'edgePoint';
-    let edgePointViewSVG: DViewElement = DViewElement.new('EdgePointSVG', DV.edgePointViewSVG(), new GraphSize(0, 0, 10, 10), '', '', '', []);
-    edgePointView.appliableTo = 'edgePoint';
+    edgePointView.appliableTo = 'edgePoint'; edgePointView.resizable = false;
     edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
 
     let edgeViews: DViewElement[] = [];
@@ -264,7 +267,7 @@ if (x) x.value = node.size.x;
             strokeColor: 'gray',
             strokeWidth: '2px',
             strokeColorHover: 'black',
-            strokeColorLong: 'red',
+            strokeColorLong: 'gray',
             strokeLengthLimit: 300,
             strokeWidthHover: '4px'
         }}`;
@@ -301,12 +304,9 @@ if (x) x.value = node.size.x;
     }*/
     // nb: Error is not a view, just jsx. transform it in a view so users can edit it
 
-    let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname]);
-
-    const defaultPackage: DViewElement = DViewElement.new('DefaultPackage', DV.defaultPackage());
-    defaultPackage.query = `context DPackage inv: self.name = 'defaultPKG'`;
-
-    return [modelView, packageView, classView, enumView, attributeView, referenceView, operationView, literalView, objectView, valueView, defaultPackage, voidView, ...edgeViews, edgePointView, edgePointViewSVG];
+    return [modelView, packageView, defaultPackage,
+        classView, enumView, attributeView, referenceView, operationView,
+        literalView, objectView, valueView, voidView, ...edgeViews, edgePointView];
 }
 
 @RuntimeAccessible

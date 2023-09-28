@@ -4,7 +4,20 @@ import {DockContext, DockLayout, PanelData, TabData} from "rc-dock";
 import {LayoutData} from "rc-dock/lib/DockData";
 import Swal from 'sweetalert2'
 import './style.scss';
-import {DState, BEGIN, DGraph, DModel, DModelElement, END, LModel, LModelElement, Pointer, Selectors, U} from '../../joiner';
+import {
+    DState,
+    BEGIN,
+    DGraph,
+    DModel,
+    DModelElement,
+    END,
+    LModel,
+    LModelElement,
+    Pointer,
+    Selectors,
+    U,
+    LPackage, SetRootFieldAction
+} from '../../joiner';
 import StructureEditor from "../rightbar/structureEditor/StructureEditor";
 import TreeEditor from "../rightbar/treeEditor/treeEditor";
 import ViewsEditor from "../rightbar/viewsEditor/ViewsEditor";
@@ -186,9 +199,14 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         let name = 'metamodel_' + 0;
         let names: (string)[] = Selectors.getAllMetamodels().map(m => m.name);
         name = U.increaseEndingNumber(name, false, false, (newName) => names.indexOf(newName) >= 0)
-        model = model || DModel.new(name, undefined, true);
-        // DGraph.new(model.id);  <-- viene fatto in autamatico ?
-        this.OPEN(model);
+        const dModel = model || DModel.new(name, undefined, true);
+        const lModel: LModel = LModel.fromD(dModel);
+        const dPackage = lModel.addChild('package');
+        const lPackage: LPackage = LPackage.fromD(dPackage);
+        lPackage.name = 'default';
+        SetRootFieldAction.new('selected', lPackage.id, '', true);
+        SetRootFieldAction.new('_lastSelected', {modelElement: lPackage.id});
+        this.OPEN(dModel);
     }
     addModel(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {
         let html = '<style>body.swal2-no-backdrop .swal2-container {background-color: rgb(0 0 0 / 60%) !important}</style>';
@@ -235,7 +253,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
             // this.test,
             // this.iotEditor,
             this.structureEditor,
-            this.styleEditor,
+            // this.styleEditor,
             this.treeEditor,
             this.viewsEditor,
             this.viewpointEditor,

@@ -24,6 +24,18 @@ function ViewsData(props: Props) {
     const select = (evt: React.MouseEvent<Element>, view: LViewElement) => {
         SetRootFieldAction.new('stackViews', view.id, '+=', true);
     }
+    const clone = (e: React.MouseEvent, v: LViewElement) => {
+        e.stopPropagation();
+        const view: DViewElement = DViewElement.new(`${v.name} Copy`, '<div>Empty</div>');
+        for(let key in v.__raw) {
+            if(key !== 'id' && key !== 'name') {
+                // @ts-ignore
+                view[key] = v.__raw[key];
+            }
+        }
+        CreateElementAction.new(view);
+        SetRootFieldAction.new('stackViews', view.id, '+=', true);
+    }
 
     return(<div>
         <div className={'d-flex p-2'}>
@@ -39,9 +51,9 @@ function ViewsData(props: Props) {
                         onMouseLeave={(e) => setHoverID('')}
                         onClick={(evt) => {select(evt, view)}}
                         style={{cursor: 'pointer', background: hoverID === view.id ? '#E0E0E0' : 'transparent'}}>
-                <label className={'my-auto'}>{view?.name}</label>
-                <button className={'btn btn-success ms-auto'} onClick={(evt) => {select(evt, view)}}>
-                    <i className={'p-1 bi bi-info-lg'}></i>
+                <label style={{cursor: 'pointer'}} className={'my-auto'}>{view?.name}</label>
+                <button className={'btn btn-success ms-auto'} onClick={e => clone(e, view)}>
+                    <i className={'p-1 bi bi-clipboard2-fill'}></i>
                 </button>
                 <button className={'btn btn-danger ms-1'} disabled={U.getDefaultViewsID().includes(view.id)}
                         onClick={(evt) => {remove(evt, i, view)}}>

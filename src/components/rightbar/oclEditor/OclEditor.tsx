@@ -6,6 +6,7 @@ import {DState, DViewElement, LViewElement, Pointer, U} from "../../../joiner";
 
 function OclEditorComponent(props: AllProps) {
     const view = props.view;
+    if(!view) return(<></>);
     const readOnly = U.getDefaultViewsID().includes(view.id);
 
     const change = (value: string|undefined) => {

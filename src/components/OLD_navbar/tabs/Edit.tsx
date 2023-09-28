@@ -4,6 +4,7 @@ import {connect} from "react-redux";
 import {DUser, GObject, RedoAction, UndoAction} from "../../../joiner";
 
 function EditComponent(props: AllProps) {
+    const setPath = props.setPath;
     const undo = props.undo;
     const redo = props.redo;
 
@@ -14,16 +15,14 @@ function EditComponent(props: AllProps) {
         RedoAction.new(index + 1);
     }
 
-    return(<li className={'nav-item dropdown'}>
-        <div tabIndex={-1} className={'dropdown-toggle'} data-bs-toggle={'dropdown'}>Edit</div>
-        <ul className={'dropdown-menu'}>
-            <li tabIndex={-1} onClick={e => doUndo(0)} className={'dropdown-item'}>Undo ({undo.length})</li>
-            <li tabIndex={-1} onClick={e => doRedo(0)} className={'dropdown-item'}>Redo ({redo.length})</li>
-        </ul>
-    </li>);
+    return(<div className={'tab'} style={{marginLeft: '3%'}}>
+        <div tabIndex={-1} onClick={e => doUndo(0)} className={'tab-item'}>Undo ({undo.length})</div>
+        <div tabIndex={-1} onClick={e => doRedo(0)} className={'tab-item'}>Redo ({redo.length})</div>
+        <div tabIndex={-1} onClick={e => setPath('')}  className={'text-danger tab-item'}>Close</div>
+    </div>);
 }
 
-interface OwnProps {}
+interface OwnProps {setPath: (path: string) => void}
 interface StateProps {undo: GObject<'delta'>[], redo: GObject<'delta'>[]}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;

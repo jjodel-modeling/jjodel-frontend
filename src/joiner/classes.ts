@@ -692,7 +692,8 @@ export class Constructors<T extends DPointerTargetable>{
         // thiss.labels = undefined;
         let ll: labelfunc = (e: LVoidEdge, s: EdgeSegment, allNodes: LGraphElement[], allSegments: EdgeSegment[]
         ) => /*defining the edge label (e.start.model as any)?.name + " ~ " + (e.end.model as any)?.name */" (" + s.length.toFixed(1) + ")";
-        thiss.longestLabel = ll;
+        // this is the edge's label (thiss.longestLabel = ll)
+        thiss.longestLabel = undefined;
         if (this.persist) {
             startid && SetFieldAction.new(startid, "pointedBy", PointedBy.fromID<DVoidEdge>(thiss.id, "start"), '+=');
             endid && SetFieldAction.new(endid, "pointedBy", PointedBy.fromID<DVoidEdge>(thiss.id, "end"), '+=');

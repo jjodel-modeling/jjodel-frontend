@@ -18,7 +18,7 @@ import {
     GraphPoint,
     GraphSize,
     LClass,
-    LModelElement,
+    LModelElement, LNamedElement,
     Log,
     LPointerTargetable,
     LUser, LViewElement,
@@ -342,7 +342,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         if (!this.props.isGraph &&  this.props.isVertex) nodeType = 'Vertex'; else
         if (!this.props.isGraph && !this.props.isVertex) nodeType = 'Field';
 
-        const classesOverride = [nodeType, ...cssOverride];
+        const named: LNamedElement = LNamedElement.fromPointer(this.props.dataid);
+        const classesOverride = [nodeType, ...cssOverride, named.name];
         const styleOverride: React.CSSProperties = {};
         // set classes end
         const size: Readonly<GraphSize> = this.getSize() as any;

@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useEffect} from "react";
 import type {LViewElement, LViewPoint} from "../../../joiner";
 import {U} from "../../../joiner";
 import {SetRootFieldAction} from "../../../redux/action/action";
@@ -10,24 +10,28 @@ import EdgePointData from "./data/EdgePointData";
 import {DockLayout} from "rc-dock";
 import {LayoutData} from "rc-dock/lib/DockData";
 import CustomData from "./data/CustomData";
+import {useStateIfMounted} from "use-state-if-mounted";
 
-interface Props { view: LViewElement; viewpoints: LViewPoint[]; }
+interface Props { view: LViewElement; viewpoints: LViewPoint[]; debug: boolean; }
 
 function ViewData(props: Props) {
     const view = props.view;
+
     if(!view) {
         SetRootFieldAction.new('stackViews', [], '', false);
         return(<></>);
     }
-    const viewpoints = props.viewpoints;
-    const readOnly = U.getDefaultViewsID().includes(view.id);
 
-    const layout: LayoutData = { dockbox: { mode: 'horizontal', children: [] }};
+    const viewpoints = props.viewpoints;
+    const debug = props.debug;
+    const readOnly = U.getDefaultViewsID().includes(view.id) && !debug;
+
+    const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     const tabs = [
-        { id: '1', title: 'Info', group: '1', closable: false, content: <InfoData view={view} viewpoints={viewpoints} readonly={readOnly} /> },
-        { id: '2', title: 'Node', group: '1', closable: false, content: <NodeData view={view} readonly={readOnly} /> },
-        { id: '3', title: 'Template', group: '1', closable: false, content: <TemplateData view={view} readonly={readOnly} /> },
-        { id: '4', title: 'Custom Data', group: '1', closable: false, content: <CustomData viewID={view.id} readonly={readOnly} /> },
+        {id: '1', title: 'Info', group: '1', closable: false, content: <InfoData view={view} viewpoints={viewpoints} readonly={readOnly} />},
+        {id: '2', title: 'Node', group: '1', closable: false, content: <NodeData view={view} readonly={readOnly} />},
+        {id: '3', title: 'Template', group: '1', closable: false, content: <TemplateData view={view} readonly={readOnly} />},
+        {id: '4', title: 'Custom Data', group: '1', closable: false, content: <CustomData viewID={view.id} readonly={readOnly} />},
     ];
     if(view.appliableTo === 'edge') tabs.push(
         {id: '5', title: 'Edge', group: '1', closable: false, content: <EdgeData view={view} readonly={readOnly} />}
@@ -35,11 +39,10 @@ function ViewData(props: Props) {
     if(view.appliableTo === 'edgePoint') tabs.push(
         {id: '6', title: 'EdgePoint', group: '1', closable: false, content: <EdgePointData view={view} readonly={readOnly} />}
     );
-
     layout.dockbox.children.push({tabs});
 
     const back = (evt: React.MouseEvent<HTMLButtonElement>) => {
-        SetRootFieldAction.new('stackViews', [], '', false);
+        SetRootFieldAction.new('stackViews', undefined, '-=', false);
     }
 
     return(<div>

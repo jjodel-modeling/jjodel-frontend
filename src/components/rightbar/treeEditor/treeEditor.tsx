@@ -1,18 +1,6 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {
-    DState,
-    DPointerTargetable,
-    DViewElement,
-    GObject, Input,
-    LModelElement,
-    LPointerTargetable,
-    LViewElement,
-    Pointer, Select, SetRootFieldAction
-} from "../../../joiner";
-import Editor from "@monaco-editor/react";
-import {useStateIfMounted} from "use-state-if-mounted";
-import Structure from "../structureEditor/Structure";
+import {DState, GObject, LModelElement, SetRootFieldAction} from "../../../joiner";
 
 interface Props {data: LModelElement}
 function Child(props: Props) {
@@ -22,7 +10,8 @@ function Child(props: Props) {
 
     const click = (evt: React.MouseEvent<HTMLButtonElement>) => {
         const selected = { node: undefined, view: undefined, modelElement: data.id };
-        SetRootFieldAction.new('_lastSelected', selected);
+        SetRootFieldAction.new('selected', data.id, '', true);
+        SetRootFieldAction.new('_lastSelected', selected, '', false);
     }
     // I got problems with operation's exception
     return <div className={'mt-1 ms-3'}>

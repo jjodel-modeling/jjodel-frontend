@@ -6,6 +6,7 @@ import {SetRootFieldAction} from '../../../redux/action/action';
 import {DUser, U} from '../../../joiner';
 
 function ShareComponent(props: AllProps) {
+    const setPath = props.setPath;
     const room = props.room;
     const debug = props.debug;
     const root = process.env['REACT_APP_URL'] || '';
@@ -22,26 +23,26 @@ function ShareComponent(props: AllProps) {
     }
 
     const quit = async() => {
+        setPath('');
         window.location.replace(root);
     }
 
     const deleteAllRoms = async() => {
+        setPath('');
         SetRootFieldAction.new('isLoading', true);
         await Firebase.removeAllRooms();
         SetRootFieldAction.new('isLoading', false);
     }
 
-    return(<li className={'nav-item dropdown'}>
-        <div tabIndex={-1} className={'dropdown-toggle'} data-bs-toggle={'dropdown'}>Share</div>
-        <ul className={'dropdown-menu'}>
-            {!room && <li tabIndex={-1} onClick={e => create()} className={'dropdown-item'}>Collaborative</li>}
-            {room && <li tabIndex={-1} onClick={quit} className={'dropdown-item'}>Quit</li>}
-            {debug && <li tabIndex={-1} onClick={deleteAllRoms} className={'dropdown-item'}>Delete all roms</li>}
-        </ul>
-    </li>);
+    return(<div className={'tab'} style={{marginLeft: '6%'}}>
+        {!room && <div tabIndex={-1} onClick={e => create()} className={'tab-item'}>Collaborative</div>}
+        {room && <div tabIndex={-1} onClick={quit} className={'tab-item'}>Quit</div>}
+        {debug && <div tabIndex={-1} onClick={deleteAllRoms} className={'tab-item'}>Delete all roms</div>}
+        <div tabIndex={-1} onClick={e => setPath('')}  className={'text-danger tab-item'}>Close</div>
+    </div>);
 }
 
-interface OwnProps {}
+interface OwnProps {setPath: (path: string) => void}
 interface StateProps {room: string, debug: boolean}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;

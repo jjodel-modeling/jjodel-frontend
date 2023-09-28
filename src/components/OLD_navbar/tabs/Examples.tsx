@@ -5,12 +5,14 @@ import {LoadAction} from '../../../redux/action/action';
 import stateExamples from '../../../examples';
 
 function ExamplesComponent(props: AllProps) {
+    const setPath = props.setPath;
 
     const load = (state: string) => {
         return LoadAction.new(JSON.parse(state));
     }
 
     const setExample = (example: number) => {
+        setPath('');
         switch(example) {
             case 1:
             default:
@@ -19,22 +21,23 @@ function ExamplesComponent(props: AllProps) {
 
     }
 
-    return(<li className={'nav-item dropdown'}>
-        <div tabIndex={-1} className={'dropdown-toggle'} data-bs-toggle={'dropdown'}>Examples</div>
-        <ul className={'dropdown-menu'}>
-            <li tabIndex={-1} onClick={e => setExample(1)}  className={'dropdown-item'}>First</li>
-        </ul>
-    </li>);
+
+    return(<div className={'tab'} style={{marginLeft: '9.5%'}}>
+        <div tabIndex={-1} onClick={e => setExample(1)}  className={'tab-item'}>First</div>
+        <div tabIndex={-1} onClick={e => setPath('')}  className={'text-danger tab-item'}>Close</div>
+    </div>);
 }
 
-interface OwnProps {}
+interface OwnProps {setPath: (path: string) => void}
 interface StateProps {}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    return {};
+    const room = state.room;
+    const debug = state.debug;
+    return {room, debug};
 }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
