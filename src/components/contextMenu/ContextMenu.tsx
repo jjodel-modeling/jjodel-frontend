@@ -11,7 +11,7 @@ import {
     LNamedElement,
     LPackage,
     LUser,
-    LValue, DState,
+    LValue, DState, U,
 } from '../../joiner';
 import MemoRec from '../../memorec/api';
 import {useStateIfMounted} from 'use-state-if-mounted';
@@ -38,7 +38,7 @@ function ContextMenuComponent(props: AllProps) {
         setMemorec(null);
         SetRootFieldAction.new('contextMenu', {display: false, x: 0, y: 0});
     }
-    const addView = () => {
+    const addView = async() => {
         if(me) {
             const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
             const dView: DViewElement = DViewElement.new(me.name + 'View', jsx);
@@ -55,6 +55,8 @@ function ContextMenuComponent(props: AllProps) {
                     break;
             }
             CreateElementAction.new(dView);
+            SetRootFieldAction.new('stackViews', [], '', false);
+            await U.sleep(1);
             SetRootFieldAction.new('stackViews', dView.id, '+=', true);
         }
     }

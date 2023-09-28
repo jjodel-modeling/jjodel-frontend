@@ -13,15 +13,18 @@ function ViewpointsEditorComponent(props: AllProps) {
 
     const editName = (evt: React.ChangeEvent<HTMLInputElement>, viewpoint: LViewPoint) => {
         viewpoint.name = evt.target.value;
+        SetRootFieldAction.new('stackViews', [], '', false);
     }
     const add = (evt: React.MouseEvent<HTMLButtonElement>) => {
         const dViewPoint = DViewPoint.new('ViewPoint', '');
         CreateElementAction.new(dViewPoint);
+        SetRootFieldAction.new('stackViews', [], '', false);
     }
     const remove = (index: number, viewpoint: LViewPoint) => {
         const filteredViews = views.filter(view => view.viewpoint?.id === viewpoint.id);
         for(let view of filteredViews) SetFieldAction.new(view.id, 'viewpoint', null);
         SetRootFieldAction.new('viewpoints', index, '-=', true);
+        SetRootFieldAction.new('stackViews', [], '', false);
     }
     const select = (viewpoint: LViewPoint) => {
         SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
