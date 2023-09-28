@@ -4269,12 +4269,14 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
     // multiple value getters
     protected get_values<T extends boolean>(context: Context, fitSize: boolean = true, namedPointers: boolean = false, ecorePointers: boolean = false,
-                                            shapeless: boolean = false, keepempties: boolean = true, withmetainfo?: T, maxlimit?: number)
+                                            shapeless: boolean = false, keepempties: boolean = true, withmetainfo?: T, maxlimit?: number,
+                                            solveLiterals: "ordinals" | "literal_obj" | "literal_str" | "original" = "literal_obj")
         : (T extends undefined ? this["values"] : T extends false ? this["values"] : ValueDetail[]) & {type?: string}  {
 
         let ret: any[] = [...context.data.values] as [];
         let meta: LAttribute | LReference | undefined = shapeless ? undefined : context.proxyObject.instanceof;
         let dmeta: undefined | DAttribute | DReference = meta?.__raw;
+        console.trace("$gval 0", {v: {...ret}, v0:context.data.values, meta});
 
         // if (meta && meta.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
         let typestr: string = meta ? meta.typeToShortString() : "shapeless";
@@ -4290,6 +4292,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         // console.log("get_values sizefixed", {fitSize, arguments, upperbound:dmeta?.upperBound, lowerbound: dmeta?.lowerBound, len: ret.length, len0: context.data.values.length});
         let numbermax = 0, numbermin = 0, round = true;
         // ret is always an array of raw values before this point, eventually padded with lowerbound or trimmed at upperbound
+        console.log("$gval 1", {v: {...ret}, v0:context.data.values, typestr, meta});
 
         let index = 0;
         if (withmetainfo) { ret = ret.map(r => {return {value:r, rawValue: r, index: index++, hidden: false} as ValueDetail}); }
@@ -4323,14 +4326,37 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 else ret = ret.map(mapperfunc);
                 break;
             default: // it's a reference or enum
-                mapperfunc = (r:any) => r && LPointerTargetable.wrap(r);
+                let lenum: LEnumerator = undefined as any;
+                let type: LClassifier = (meta as LStructuralFeature)?.type;
+                console.log("$gval 2", {v: {...ret}, v0:context.data.values, type, typestr, meta});
+                if (type?.className === DEnumerator.cname) {
+                    lenum = type as LEnumerator;
+                    mapperfunc = (r: any) => {
+                        if (solveLiterals === "original") return r;
+                        numbermin = 0;
+                        numbermax = (solveLiterals === "ordinals") ? Number.POSITIVE_INFINITY : 0;
+                        let lit: LEnumLiteral | undefined
+                        if (typeof r === "string") lit = Pointers.isPointer(r) ? LPointerTargetable.fromPointer(r) : (lenum as any)["@"+r];
+                        else if (typeof r === "number") lit = lenum.ordinals[r];
+                        switch (solveLiterals) {
+                            default:
+                            case "literal_obj": return lit;
+                            // if r was a number and a valid ordinal (found literal through him) return r. if r was a string, don't return r but lenum["@"+r].ordinal
+                            case "ordinals": return (typeof r === "number" ? (lit ? r : undefined) : lit?.ordinal);
+                            case "literal_str": return (typeof r === "string" ? (lit ? r : undefined) : lit?.literal);
+                        }
+                    }
+                } else if (!type.isPrimitive && type?.className === DClass.cname) mapperfunc = (r: any) => r && LPointerTargetable.fromPointer(r);
+                else mapperfunc = (r: any) => r;
                 if (withmetainfo) ret.forEach((struct: ValueDetail) => { struct.value = mapperfunc(struct.value); });
                 else ret = ret.map(mapperfunc);
+                console.log("$gval 3", {v: {...ret}, v0:context.data.values, type, typestr, meta, solveLiterals});
 
                 // now ret is pointed DEnumLiteral or DObject or MetaInfoStructure<>
-                if ((meta as LAttribute)?.type?.className === DEnumerator.cname) {
+                if (type?.className === DEnumerator.cname) {
                     // replace numeric literals, mapped to literal ordinal. can happen with type switches
-                    if (true) {
+                    /*
+                    if (solveLiterals) {
                         mapperfunc = (lit: LEnumLiteral|number) => {
                             numbermax = Number.POSITIVE_INFINITY;
                             numbermin = 0;
@@ -4339,18 +4365,19 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                         }
                         if (withmetainfo) ret.forEach((struct: ValueDetail) => { struct.value = mapperfunc(struct.value); });
                         else ret = ret.map(mapperfunc);
-                    }
+                    }*/
                     let filterfunc = (l: LEnumLiteral) => { if (!l) return keepempties; return l.father?.id === (meta as LAttribute).type.id; };
                     if (withmetainfo) for(let struct of ret as ValueDetail[]) { struct.hidden = !filterfunc(struct.value as LEnumLiteral); } // && 'literal target is not of the correct type requested by metamodel'; }
                     else ret = ret.filter(filterfunc);
                     // todo: questo comportamento implica che quando importo un literal come testo da .ecore, devo assegnargli
                     //  il puntatore al suo literal se trovato, altrimenti resta val[i] di tipo string/shapeless
-
+                    console.log("$gval 4", {v: {...ret}, namedPointers, v0:context.data.values, type, typestr, meta});
                     if (namedPointers) {
                         mapperfunc = (lit?: LEnumLiteral) => lit?.name;
                         if (withmetainfo) ret.forEach((struct: ValueDetail) => { struct.value = mapperfunc(struct.value); });
                         else ret = ret.map(mapperfunc);
                     }
+                    console.log("$gval 5", {v: {...ret}, namedPointers, v0:context.data.values, type, typestr, meta});
                     break;
                 }
                 // is reference with assigned shape (and type) -> filter correct typed targets
@@ -4588,8 +4615,10 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected set_values(val: orArr<D["values"]>, context: Context): boolean {
         const list: D["values"] = ((Array.isArray(val)) ? val : [val]) as D["values"];
         let modified = false;
+        console.log("$sval", {list, modified});
         for (let i = 0; i < list.length; i++) {
-            modified = modified || this.get_setValueAtPosition(context)(i, list[i], {setMirage: false} as any).success;
+            modified = this.get_setValueAtPosition(context)(i, list[i], {setMirage: false} as any).success || modified;
+            console.log("$sval loop "+i, {i, v:list[i], list, modified});
         }
         if (modified) context.data.isMirage && SetFieldAction.new(context.data, 'isMirage', false, '', false);
         return true;

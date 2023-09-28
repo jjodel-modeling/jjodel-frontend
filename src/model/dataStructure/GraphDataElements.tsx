@@ -325,6 +325,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     protected get_innerSize_impl(context: Context, canTriggerSet: boolean = true, outerSize: boolean = false): Readonly<GraphSize> {
         switch(context.data.className){
             default: return Log.exDevv("unexpected classname in get_size switch: " + context.data.className);
+            case DEdge.cname:
             case DVoidEdge.cname:
             case DGraph.cname: return nosize as any;
             // case DField.cname:
