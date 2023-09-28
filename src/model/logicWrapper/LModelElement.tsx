@@ -3049,13 +3049,17 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
         if (val === context.data.value) return true;
         let ordinals = context.proxyObject.father.ordinals;
         if (ordinals[val]) {
-            Log.e("that ordinal place is already taken by " + ordinals[val].name, {sameOrdinalLit:ordinals[val], ordinals, thiss:context.data});
-            return false; }
+            Log.e(true, "that ordinal place is already taken by " + ordinals[val].name, {sameOrdinalLit:ordinals[val], ordinals, thiss:context.data});
+            return true; }
         return SetFieldAction.new(context.data, 'value', val); }
-
+/*
     protected get_literal(context: Context): this["literal"] { return context.data.literal; }
     protected set_literal(val: this["literal"], context: Context): boolean {
-        return SetFieldAction.new(context.data, 'literal', val, '', false); }
+        return SetFieldAction.new(context.data, 'literal', val, '', false); }*/
+    protected get_literal(context: Context): this["literal"] { return context.data.name; }
+    protected set_literal(val: this["literal"], context: Context): boolean {
+        if (val === context.data.name) return true;
+        return SetFieldAction.new(context.data, 'name', val, '', false); }
 
 
 }
@@ -3192,7 +3196,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
 
     protected get_ordinals(context: Context): this["ordinals"]{
         let ret: LEnumLiteral[] = [];
-        let literals: LEnumLiteral[] = context.proxyObject.father.literals;
+        let literals: LEnumLiteral[] = context.proxyObject.literals;
         let dliterals: DEnumLiteral[] = literals.map(d => d.__raw);
         /*
         if it happens like:   second=2, third, fourth=4, fifth=3, sixth.(six would be 4 but 4 already exist)

@@ -100,10 +100,12 @@ export default class Structure {
     }
     public static EnumLiteralEditor(lEnumLiteral: LModelElement): ReactNode {
         if(!lEnumLiteral) return(<></>);
-        //vv4
+        console.log("eliteral editor", {lEnumLiteral});
         return(<>
             {Structure.BaseEditor(lEnumLiteral)}
-            <Input data={lEnumLiteral} field={"value"} label={"Ordinal"} type={"number"} tooltip={"Determines the integer value that is associated with this literal"} />
+            {
+                <Input data={lEnumLiteral} field={"value"} label={"Ordinal"} type={"number"} tooltip={"Determines the integer value that is associated with this literal"} />
+            }
         </>);
     }
 
