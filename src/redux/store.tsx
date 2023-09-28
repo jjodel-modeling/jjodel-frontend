@@ -304,7 +304,8 @@ if (x) x.value = node.size.x;
     let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname]);
 
     const defaultPackage: DViewElement = DViewElement.new('DefaultPackage', DV.defaultPackage());
-    defaultPackage.query = `context DPackage inv: self.name = 'defaultPKG'`;
+    defaultPackage.query = `context DPackage inv: self.name = 'default'`;
+    defaultPackage.draggable = true; defaultPackage.resizable = true;
 
     return [modelView, packageView, classView, enumView, attributeView, referenceView, operationView, literalView, objectView, valueView, defaultPackage, voidView, ...edgeViews, edgePointView, edgePointViewSVG];
 }

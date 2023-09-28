@@ -43,7 +43,8 @@ function InputComponent(props: AllProps) {
 
 
     if (!data) return(<></>);
-    const readOnly = (props.readonly !== undefined) ? props.readonly : U.getDefaultViewsID().includes(data.id);
+    const debug = props.debug;
+    const readOnly = (props.readonly !== undefined) ? props.readonly : U.getDefaultViewsID().includes(data.id) && !debug;
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
@@ -147,6 +148,7 @@ export interface InputOwnProps {
 }
 interface StateProps {
     data: LPointerTargetable & GObject;
+    debug: boolean;
     // selected: Dictionary<Pointer<DUser>, LModelElement | null>;
 }
 interface DispatchProps { }
@@ -157,6 +159,7 @@ function mapStateToProps(state: DState, ownProps: InputOwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
     ret.data = LPointerTargetable.fromPointer(pointer);
+    ret.debug = state.debug;
     /*
     const selected = state.selected;
     ret.selected = {};

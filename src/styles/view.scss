@@ -27,6 +27,12 @@
   background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
 }
 
+.default.DPackage {
+  position: absolute;
+  height: inherit !important;
+  width: inherit !important;
+}
+
 .model-name {
   font-weight: bold;
   color: $model-color;

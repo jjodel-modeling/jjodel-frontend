@@ -276,11 +276,14 @@ class DefaultView {
 </div>`
     }
 
-    public static defaultPackage() {
-        return `<div style={{backgroundColor: 'transparent', position: 'fixed', width: '-webkit-fill-available', height: '-webkit-fill-available'}}>
-    {data.children.map((child, index) => {
-    return <DefaultNode key={child.id} data={child.id}></DefaultNode>
-    })}
+    public static defaultPackage(): string {
+        return `<div className={'root'}>
+    <hr />
+    <div className={'package-children'}>
+        {data.children.map((child, index) => {
+            return <DefaultNode key={child.id} data={child.id}></DefaultNode>
+        })}
+    </div>
 </div>`;
     }
 

@@ -1,46 +1,34 @@
 import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../../joiner';
-import './style.scss';
-import Univaq from '../../static/img/univaq.png';
-import {useStateIfMounted} from 'use-state-if-mounted';
 import File from './tabs/File';
 import Edit from './tabs/Edit';
 import Share from './tabs/Share';
-import Examples from "./tabs/Examples";
+import Examples from './tabs/Examples';
+import Logo from '../../static/img/logo.png';
+import Debug from '../../static/img/debug.png';
+import './style.scss';
 
 function NavbarComponent(props: AllProps) {
     const debug = props.debug;
-    const [path, setPath] = useStateIfMounted('');
 
-    return(<>
-        {path && <div onClick={e => setPath('')} className={'blur-handler'}></div>}
-        <nav className={'my-navbar'}>
-            <div className={'logo'}>
-                <img className={'d-block m-auto'} height={50} width={50} src={Univaq} />
-            </div>
-            <div>
-                <div className={'first-row'}>
-                    <div className={'project-name'}>
-                        Untitled Project
-                        {debug && <b className={'ms-2 text-danger'}>DEBUG MODE</b>}
-                    </div>
-                </div>
-                <div className={'second-row'}>
-                    <div tabIndex={-1} onClick={e => setPath('file')} className={'my-nav-item'}>
-                        File
-                    </div>
-                    {path === 'file' && <File setPath={setPath} />}
-                    <div tabIndex={-1} onClick={e => setPath('edit')} className={'my-nav-item'}>Edit</div>
-                    {path === 'edit' && <Edit setPath={setPath} />}
-                    <div tabIndex={-1} onClick={e => setPath('share')} className={'my-nav-item'}>Share</div>
-                    {path === 'share' && <Share setPath={setPath} />}
-                    <div tabIndex={-1} onClick={e => setPath('examples')} className={'my-nav-item'}>Examples</div>
-                    {path === 'examples' && <Examples setPath={setPath} />}
-                </div>
-            </div>
-        </nav>
-    </>);
+    return(<nav className={'navbar navbar-expand-lg'}>
+        <ul className={'navbar-nav'}>
+            <File />
+            <Edit />
+            <Share />
+            <Examples />
+            {debug && <li className={'d-block ms-1 m-auto'}>
+                <img width={30} height={30} src={Debug} />
+            </li>}
+        </ul>
+        <ul className={'navbar-nav ms-auto'}>
+            <li className={'d-block'}>
+                <img width={80} height={40} src={Logo} />
+            </li>
+        </ul>
+
+    </nav>);
 
 }
 interface OwnProps {}

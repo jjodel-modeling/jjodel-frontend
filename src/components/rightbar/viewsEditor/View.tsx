@@ -11,7 +11,7 @@ import {DockLayout} from "rc-dock";
 import {LayoutData} from "rc-dock/lib/DockData";
 import CustomData from "./data/CustomData";
 
-interface Props { view: LViewElement; viewpoints: LViewPoint[]; }
+interface Props { view: LViewElement; viewpoints: LViewPoint[]; debug: boolean; }
 
 function ViewData(props: Props) {
     const view = props.view;
@@ -20,7 +20,8 @@ function ViewData(props: Props) {
         return(<></>);
     }
     const viewpoints = props.viewpoints;
-    const readOnly = U.getDefaultViewsID().includes(view.id);
+    const debug = props.debug;
+    const readOnly = U.getDefaultViewsID().includes(view.id) && !debug;
 
     const layout: LayoutData = { dockbox: { mode: 'horizontal', children: [] }};
     const tabs = [

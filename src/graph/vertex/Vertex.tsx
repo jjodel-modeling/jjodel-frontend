@@ -18,7 +18,7 @@ import {
     GraphPoint,
     GraphSize,
     LClass,
-    LModelElement,
+    LModelElement, LNamedElement,
     LPointerTargetable,
     LUser, LViewElement,
     LViewPoint,
@@ -113,7 +113,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 },
                 // disabled: !(view.draggable),
                 start: (event: GObject, obj: GObject) => {
-                    // this.select();
+                    this.select();
                     SetRootFieldAction.new('contextMenu', { display: false, x: 0, y: 0 }); // todo: should probably be done in a document event
                     this.doMeasurableEvent(EMeasurableEvents.onDragStart);
                 },
@@ -312,7 +312,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         if (!this.props.isGraph &&  this.props.isVertex) nodeType = 'Vertex'; else
         if (!this.props.isGraph && !this.props.isVertex) nodeType = 'Field';
 
-        const classesOverride = [nodeType, ...cssOverride];
+        const named: LNamedElement = LNamedElement.fromPointer(this.props.dataid);
+        const classesOverride = [nodeType, ...cssOverride, named.name];
         const styleOverride: React.CSSProperties = {};
         // set classes end
         const size: Readonly<GraphSize> = this.getSize() as any;
