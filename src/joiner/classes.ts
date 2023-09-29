@@ -1139,7 +1139,8 @@ export class Pointers{
         return typeof data === "string" ? data : (data as any).id;
     }
 
-    static isPointer(val: any): val is Pointer {
+    static isPointer(val: any, state?: DState): val is Pointer {
+        if (state) return !!state.idlookup[val];
         // todo: must refine this in a safer way
         return typeof val === "string" ? val.includes("Pointer") : false;
     }

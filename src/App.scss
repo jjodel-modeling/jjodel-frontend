@@ -116,6 +116,9 @@ body .ui-icon{ // override jqueryui fixed resizable handles at 16px, making drag
 //////////// edge paths
 path{
   pointer-events: stroke;
+  &:focus{
+    outline: none;
+  }
 }
 /*
 .hoverable>.preview, .hoverable>svg>.preview{

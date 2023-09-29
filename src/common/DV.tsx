@@ -168,13 +168,15 @@ class DefaultView {
             true && data.suggestedEdges.extend &&
             data.suggestedEdges.extend.map(
                 se => (!se.vertexOverlaps)
-                 && <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdgeInheritance"} key={se.start.node.id+"~"+se.end.node.id}/>)]
+                 && <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdgeInheritance"} key={"EXT_"+se.start.node.id+"~"+se.end.node.id}/>)]
         }
     </div>
-     {data && data.packages.map((pkg, index) => {
+     {data && data["$default"] && <DefaultNode key={"default package"} data={data["$default"].id} />}
+     {data && data.packages.map((pkg) => {
+        if (pkg.name === "default") return undefined;
         return <DefaultNode key={pkg.id} data={pkg.id}></DefaultNode>
     })}
-    {data && data.allSubObjects.map((child, index) => {
+    {data && data.allSubObjects.map((child) => {
         return <DefaultNode key={child.id} data={child.id}></DefaultNode>
     })}
 </div>`;

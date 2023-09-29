@@ -265,7 +265,7 @@ export class Selectors{
         W extends undefined | true | false = false, RP extends undefined | true | false = true, RET = W extends false ? (RP extends false ? Pointer<D, 1, 1, L> : D) : L>
         (Classe?: DT, condition?: (e:RET) => boolean, state?: DState, resolvePointers?: RP /**/, wrap?: W /* = true */): RET[] {
         if (!state) state = store.getState();
-        let GClass = (Classe as GObject) || {name:"idlookup"};
+        let GClass = (Classe as GObject) || {name:"idlookup", cname:"idlookup"};
         const className: string = (GClass?.staticClassName || GClass.cname).toLowerCase();
         const allIdByClassName: Pointer<D, 1, 1, L>[]
             = (state as GObject)[className]

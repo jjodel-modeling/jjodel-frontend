@@ -276,7 +276,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
 
     getSize(): Readonly<GraphSize> {
-        return this.props.node.size;
+        return this.props.node.getSize(false, !this.props.node.isResized && this.props.view.adaptWidth);
         /*console.log('get_size('+(this.props?.data as any).name+')', {
             view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
             node:this.props.node?.size,

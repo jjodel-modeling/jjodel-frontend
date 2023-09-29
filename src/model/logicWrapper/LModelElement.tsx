@@ -3330,12 +3330,12 @@ export class EdgeStarter<T1=any, T2=any>{ // <T1 extends LPointerTargetable = LP
         this.startNode = sn;
         this.endNode = en;
         this.otherEnds = otherPossibleEnds || end.nodes;
-        this.startSize = sn.size;
-        this.endSize = en.size;
+        this.startSize = sn.outerSize;
+        this.endSize = en.outerSize;
         this.startVertex = sn.vertex as any;
         this.endVertex = en.vertex as any;
-        this.startVertexSize = this.startVertex === sn ? this.startSize : this.startVertex.size;
-        this.endVertexSize = this.endVertex === en ? this.endSize : this.endVertex.size;
+        this.startVertexSize = this.startVertex === sn ? this.startSize : this.startVertex.outerSize;
+        this.endVertexSize = this.endVertex === en ? this.endSize : this.endVertex.outerSize;
         this.overlaps = this.startSize?.isOverlapping(this.endSize);
         this.vertexOverlaps = this.startVertexSize?.isOverlapping(this.endVertexSize);
     }
@@ -3395,6 +3395,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     allSubAnnotations!: LAnnotation[];
     allSubPackages!: LPackage[];
     allSubObjects!: LObject[];
+    allSubValues!: LValue[];
     suggestedEdges!: {extend: EdgeStarter[], reference:EdgeStarter[], packageDependencies: EdgeStarter[]}; //, model: EdgeStarter[], package:EdgeStarter[], class:EdgeStarter[]};
     __info_of__suggestedEdges: Info = {type: 'Dictionary<"extend" | "reference" | "packageDependencies" | DmodelName, EdgeStarter[]>', txt: "A map to access all possible kind of edges based on model data." +
             "<br/>extend and reference are the most commonly used for horizontal references (outside the containment tree schema)." +
@@ -3453,21 +3454,40 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         let ret: this["suggestedEdges"];
         if (context.data.isMetamodel) ret = this.get_suggestedEdgesM2(context);
         else ret = this.get_suggestedEdgesM1(context);
-        /*
-        ret.extend = ret.extend || [];
-        ret.packageDependencies = ret.packageDependencies || [];
-        ret.reference = ret.reference || [];
+        return ret;
+    }
 
-        console.log("suggested edges, pre filter", {...ret});
-        ret.extend = ret.extend.filter( r => !r.startNode.size.isOverlapping(r.endNode.size));
-        ret.packageDependencies = ret.packageDependencies.filter( r => !r.startNode.size.isOverlapping(r.endNode.size));
-        ret.reference = ret.reference.filter( r => !r.startNode.size.isOverlapping(r.endNode.size));
-
-        console.log("suggested edges, post filter", {...ret});*/
+    private get_suggestedEdgesM1(context: Context, state?: DState): this["suggestedEdges"]{
+        let ret: this["suggestedEdges"] = {extend: [], reference: [], packageDependencies: []};
+        let s: DState = store.getState();
+        let values: LValue[] = this.get_allSubValues(context, s);
+        let map: Dictionary<DocString<"starting dvalue id">, EdgeStarter[]> = {};
+        if (!state) state = store.getState();
+        outer:
+        for (let lval of values) {
+            if (!lval) continue;
+            let dval = lval.__raw;
+            // NB: ELiterals can be pointers in L, but string or ordinal numbers in D, but they won't make edges, so i use .__raw
+            inner:
+            for (let v of (dval.values || [])) {
+                if (!Pointers.isPointer(v, state)) continue inner;
+                let snode = lval.node;
+                if (!snode) continue outer;
+                if (v === dval.id) continue inner; // pointing to itself
+                let ltarget: undefined | LEnumLiteral | LObject = LPointerTargetable.fromPointer(v, state);
+                if (!ltarget) continue;
+                if (ltarget.className !== DObject.cname) continue inner;
+                let enode = ltarget.node;
+                if (!enode) continue inner;
+                if (!map[dval.id]) map[dval.id] = [];
+                map[dval.id].push(new EdgeStarter(lval, ltarget, snode, enode, undefined));
+            }
+        }
+        ret.reference = Object.values(map).flat();
         return ret;
     }
     private get_suggestedEdgesM2(context: Context): this["suggestedEdges"]{
-        let ret: this["suggestedEdges"] = {} as any;
+        let ret: this["suggestedEdges"] = {extend: [], reference: [], packageDependencies: []};
         let s: DState = store.getState();
         let classes: LClass[] = this.get_classes(context, s);
         let references: LReference[] = classes.flatMap(c=>c.references);
@@ -3528,10 +3548,6 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         ret.packageDependencies = pkgdependencies.flatMap( pd => ( Object.values(pd.ends).map((end) => new EdgeStarter(pd.src, end.end, pd.sn, end.en)))); // todo: check
         return ret; }
 
-    private get_suggestedEdgesM1(context: Context): this["suggestedEdges"]{
-        let ret: this["suggestedEdges"] = {todo:true} as any;
-        return ret;// todo
-    }
 
     protected get_models(context: Context): LModel[] {
         return LModel.fromPointer(context.data.models);
@@ -3660,9 +3676,17 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         }
         return LPointerTargetable.from(Object.keys(checked), state);
     }
+
+    protected get_allSubValues(context: Context, state?: DState): this["allSubValues"] {
+        state = state || store.getState();
+        return (Selectors.getAll(DValue, undefined, state, true, true) as LValue[])
+            .filter( (o: LValue) => o.model.id === context.data.id);
+    }
+
     protected get_allSubObjects(context: Context, state?: DState): this["allSubObjects"] {
         state = state || store.getState();
-        return (Selectors.getAll(DObject, undefined, state, true, true) as LObject[]).filter( (o: LObject) => o.model.id === context.data.id);
+        return (Selectors.getAll(DObject, undefined, state, true, true) as LObject[])
+            .filter( (o: LObject) => o.model.id === context.data.id);
         /*
         let tocheck: Pointer<DObject>[] = context.data.objects || [];
         let checked: Dictionary<DObject, true> = {};
@@ -4276,7 +4300,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         let ret: any[] = [...context.data.values] as [];
         let meta: LAttribute | LReference | undefined = shapeless ? undefined : context.proxyObject.instanceof;
         let dmeta: undefined | DAttribute | DReference = meta?.__raw;
-        console.trace("$gval 0", {v: {...ret}, v0:context.data.values, meta});
 
         // if (meta && meta.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
         let typestr: string = meta ? meta.typeToShortString() : "shapeless";
@@ -4292,7 +4315,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         // console.log("get_values sizefixed", {fitSize, arguments, upperbound:dmeta?.upperBound, lowerbound: dmeta?.lowerBound, len: ret.length, len0: context.data.values.length});
         let numbermax = 0, numbermin = 0, round = true;
         // ret is always an array of raw values before this point, eventually padded with lowerbound or trimmed at upperbound
-        console.log("$gval 1", {v: {...ret}, v0:context.data.values, typestr, meta});
 
         let index = 0;
         if (withmetainfo) { ret = ret.map(r => {return {value:r, rawValue: r, index: index++, hidden: false} as ValueDetail}); }
@@ -4328,7 +4350,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             default: // it's a reference or enum
                 let lenum: LEnumerator = undefined as any;
                 let type: LClassifier = (meta as LStructuralFeature)?.type;
-                console.log("$gval 2", {v: {...ret}, v0:context.data.values, type, typestr, meta});
                 if (type?.className === DEnumerator.cname) {
                     lenum = type as LEnumerator;
                     mapperfunc = (r: any) => {
@@ -4350,7 +4371,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 else mapperfunc = (r: any) => r;
                 if (withmetainfo) ret.forEach((struct: ValueDetail) => { struct.value = mapperfunc(struct.value); });
                 else ret = ret.map(mapperfunc);
-                console.log("$gval 3", {v: {...ret}, v0:context.data.values, type, typestr, meta, solveLiterals});
 
                 // now ret is pointed DEnumLiteral or DObject or MetaInfoStructure<>
                 if (type?.className === DEnumerator.cname) {
@@ -4371,13 +4391,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     else ret = ret.filter(filterfunc);
                     // todo: questo comportamento implica che quando importo un literal come testo da .ecore, devo assegnargli
                     //  il puntatore al suo literal se trovato, altrimenti resta val[i] di tipo string/shapeless
-                    console.log("$gval 4", {v: {...ret}, namedPointers, v0:context.data.values, type, typestr, meta});
                     if (namedPointers) {
                         mapperfunc = (lit?: LEnumLiteral) => lit?.name;
                         if (withmetainfo) ret.forEach((struct: ValueDetail) => { struct.value = mapperfunc(struct.value); });
                         else ret = ret.map(mapperfunc);
                     }
-                    console.log("$gval 5", {v: {...ret}, namedPointers, v0:context.data.values, type, typestr, meta});
                     break;
                 }
                 // is reference with assigned shape (and type) -> filter correct typed targets
@@ -4615,10 +4633,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected set_values(val: orArr<D["values"]>, context: Context): boolean {
         const list: D["values"] = ((Array.isArray(val)) ? val : [val]) as D["values"];
         let modified = false;
-        console.log("$sval", {list, modified});
         for (let i = 0; i < list.length; i++) {
             modified = this.get_setValueAtPosition(context)(i, list[i], {setMirage: false} as any).success || modified;
-            console.log("$sval loop "+i, {i, v:list[i], list, modified});
         }
         if (modified) context.data.isMirage && SetFieldAction.new(context.data, 'isMirage', false, '', false);
         return true;

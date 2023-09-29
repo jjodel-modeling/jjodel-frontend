@@ -314,6 +314,11 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __info_of__innerSize: Info = {type:"GraphSize", txt:"the size of the current element relative to the last (most nested) graph level."};
     __info_of__size: Info = {type:"GraphSize", txt: "same as innerSize."};
 
+
+    getSize(outer: boolean = false, canTriggerSet: boolean = true): Readonly<GraphSize> { return this.wrongAccessMessage("getSize()"); }
+    get_getSize(c: Context): ((outer?: boolean, canTriggerSet?: boolean) => Readonly<GraphSize>) {
+        return (outer: boolean = true, canTriggerSet: boolean = true) => this.get_innerSize(c, canTriggerSet, outer); }
+
     get_outerSize(context: Context, canTriggerSet: boolean = true): Readonly<GraphSize> {
         return this.get_innerSize(context, canTriggerSet, true);
     }

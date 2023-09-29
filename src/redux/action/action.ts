@@ -169,7 +169,7 @@ export class Action extends RuntimeAccessibleClass {
         this.field = field;
         this.value = value;
         this.type = (this.constructor as any).type;
-        // this.src = new Error().stack?.split('\n').splice( 4);
+        this.stack = new Error().stack?.split('\n').splice( 4);
         this.subType = subType;
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
     }
