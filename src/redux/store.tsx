@@ -258,7 +258,8 @@ function makeDefaultGraphViews(): DViewElement[] {
 
     let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '', []);
     edgePointView.appliableTo = 'edgePoint'; edgePointView.resizable = false;
-    edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
+    // edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
+    edgePointView.edgePointCoordMode = CoordinateMode.absolute;
 
     let edgeViews: DViewElement[] = [];
     let size0: GraphPoint = new GraphPoint(0, 0), size1: GraphPoint = new GraphPoint(20, 20), size2: GraphPoint = new GraphPoint(20, 20); // todo: riportalo in 40,20

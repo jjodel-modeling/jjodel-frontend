@@ -6,6 +6,7 @@ import EReference from '../../static/icon/modelling/reference.png';
 import EOperation from '../../static/icon/modelling/operation.png';
 import EEnumerator from '../../static/icon/modelling/enumerator.png';
 import ELiteral from '../../static/icon/modelling/literal.png';
+import Utility from '../../static/img/utility.png';
 
 interface Props {name: string, className?: string}
 function ModellingIcon(props: Props) {
@@ -21,8 +22,11 @@ function ModellingIcon(props: Props) {
         case 'enumerator': return(<img width={16} height={16} className={'d-block'} src={EEnumerator} />);
         case 'literal': return(<img width={16} height={16} className={'d-block'} src={ELiteral} />);
         case 'value':
-        default:
+        case 'attribute':
             return(<img width={16} height={16} className={`d-block ${className}`} src={EAttribute} />);
+        default:
+            return(<img width={16} height={16} className={`d-block ${className}`} src={Utility} />);
+
     }
 }
 

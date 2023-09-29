@@ -91,7 +91,6 @@ export class U {
         views.push('Pointer_ViewEdgeAggregation');
         views.push('Pointer_ViewEdgeComposition');
         views.push('Pointer_ViewEdgePoint');
-        views.push('Pointer_ViewEdgePointSVG');
         return views;
     }
 

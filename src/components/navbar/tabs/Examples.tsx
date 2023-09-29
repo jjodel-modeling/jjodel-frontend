@@ -13,8 +13,11 @@ function ExamplesComponent(props: AllProps) {
     const setExample = (example: number) => {
         switch(example) {
             case 1:
-            default:
                 return load(stateExamples.first);
+            case 2:
+                return load(stateExamples.second);
+            default:
+                return;
         }
 
     }
@@ -22,7 +25,8 @@ function ExamplesComponent(props: AllProps) {
     return(<li className={'nav-item dropdown'}>
         <div tabIndex={-1} className={'dropdown-toggle'} data-bs-toggle={'dropdown'}>Examples</div>
         <ul className={'dropdown-menu'}>
-            <li tabIndex={-1} onClick={e => setExample(1)}  className={'dropdown-item'}>First</li>
+            <li tabIndex={-1} onClick={e => setExample(1)}  className={'dropdown-item'}>Simplified Class Diagram</li>
+            <li tabIndex={-1} onClick={e => setExample(2)}  className={'dropdown-item'}>Nodes & Edges</li>
         </ul>
     </li>);
 }
