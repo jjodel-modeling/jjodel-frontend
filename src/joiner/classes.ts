@@ -1175,7 +1175,7 @@ export class PendingPointedByPaths{
     public static cname: string = "PendingPointedByPaths";
     static all: PendingPointedByPaths[] = [];
     // static pendingMoreThanTwice: ParsedAction[] = [];
-    static maxSolveAttempts: number = 20;
+    static maxSolveAttempts: number = 2099999;
     public solveAttempts: number = 1;
     private stackTrace: string[];
 
@@ -1213,7 +1213,7 @@ export class PendingPointedByPaths{
     public saveForLater(): void { PendingPointedByPaths.all.push(this); }
     private canBeResolved(state: DState): boolean {
         this.solveAttempts++;
-        if (this.solveAttempts >= PendingPointedByPaths.maxSolveAttempts) Log.ex("pending PointedBy action is not revolved for too long, some pointer was wrongly set up.", this.stackTrace, this, state);
+        Log.exDev(this.solveAttempts >= PendingPointedByPaths.maxSolveAttempts, "pending PointedBy action is not revolved for too long, some pointer was wrongly set up.", this.stackTrace, this, state);
         return !!state.idlookup[this.to]; }
 
     static getSolveableActions(oldState: DState): ParsedAction[] {

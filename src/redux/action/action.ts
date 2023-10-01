@@ -135,7 +135,7 @@ export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...param
     try { func(...params); } catch(e) { Log.ee('Transaction failed:', e); ABORT(); return false; }
     return END();
 }
-
+(window as any).maxActionFiring = 0;
 @RuntimeAccessible
 export class Action extends RuntimeAccessibleClass {
     public static cname: string = "Action";
@@ -183,6 +183,7 @@ export class Action extends RuntimeAccessibleClass {
         if (hasBegun) {
             pendingActions.push(this);
         } else {
+            // if ((window as any).maxActionFiring++ >= 400) return false;
             this.hasFired++;
             let storee = store || windoww.store;
             console.log('firing action:', {
@@ -427,7 +428,10 @@ export class CreateElementAction extends Action {
     static type = 'CREATE_ELEMENT';
     value!: DPointerTargetable;
     public static newBatch<F extends boolean = true>(me: DPointerTargetable[], notfire?: F): (F extends false ? boolean : CreateElementAction)[]{
-        return me.map( (e) => CreateElementAction.new(e, notfire));
+        BEGIN();
+        let ret = me.map( (e) => CreateElementAction.new(e, notfire));
+        END();
+        return ret;
     }
 
     public static new<F extends boolean = true>(me: DPointerTargetable , notfire?: F): (F extends false ? boolean : CreateElementAction) {
