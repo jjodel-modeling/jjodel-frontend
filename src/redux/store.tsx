@@ -198,7 +198,7 @@ export class DState extends DPointerTargetable{
             if (primitiveType === ShortAttribETypes.void) continue; // or make void too without primitiveType = true, but with returnType = true?
             else {
                 dPrimitiveType = DClass.new(primitiveType, false, false, true, false, '', undefined, false);
-                dPrimitiveType.id = 'Pointer_' + dPrimitiveType.name.toUpperCase();
+                dPrimitiveType.id = 'Pointer_' + primitiveType.toUpperCase();
                 CreateElementAction.new(dPrimitiveType);
             }
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);

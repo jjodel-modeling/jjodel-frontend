@@ -53,7 +53,8 @@ export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicC
 // import independent generic modules (only dependent from types and RuntimeAccessible
 
 export {Uarr,  DDate, ParseNumberOrBooleanOptions, myFileReader,
-    Keystrokes, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, SelectorOutput, U as UU, ShortAttribSuperTypes,
+    Keystrokes, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, SelectorOutput,
+    toShortEType, toLongEType, ShortAttribSuperTypes,
     } from "../common/U";
 export {DV} from '../common/DV';
 export {Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Geom";
@@ -65,8 +66,27 @@ export var U = windoww.U as typeof UType;
 export {DLog} from "../model/classes/D";
 export {LLog} from "../model/classes/L";
 // console.error('iiiiiiiiiiiiiiii 4');
-
-export {EcoreParser, AccessModifier} from "../api/data";
+export {
+    EcoreParser,
+    AccessModifier,
+    IStorage,
+    LocalStorage,
+    XMIModel,
+    ECoreRoot,
+    ECoreAnnotation,
+    ECoreNamed,
+    ECoreDetail,
+    ECorePackage,
+    ECoreSubPackage,
+    ECoreClass,
+    ECoreEnum,
+    ECoreAttribute,
+    ECoreReference,
+    EcoreLiteral,
+    ECoreOperation,
+    ECoreParameter,
+    ECoreObject,
+} from "../api/data";
 // import domain-specific classes
 
 

@@ -1064,6 +1064,12 @@ export class U {
         return +ret;
     }
 
+    // faster than jquery, underscore and many native methods checked https://stackoverflow.com/a/59787784
+    public static isEmptyObject(obj: GObject | undefined): boolean {
+        for(var i in obj) return false;
+        return true;
+    }
+
     private static pairArrayElementsRepeatFunc<T>(val: T, index: number, arr:T[]): T[]{ return [arr[index], arr[index+1]] }
     private static pairArrayElementsReducerFunc<T>(accumulator: T[][], value: T, index: number, array: T[]):T[][] {
         if (index % 2 === 0) accumulator.push(array.slice(index, index + 2));
@@ -1248,6 +1254,12 @@ export const ShortAttribSuperTypes: Dictionary<ShortAttribETypes, ShortAttribETy
     "EFloat"   : [ShortAttribETypes.EDouble],
     "EDouble"  : []
 };
+let ecoreprefix = "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//";
+export function toShortEType(a: AttribETypes): ShortAttribETypes{ return a.substring(ecoreprefix.length) as any; }
+export function toLongEType(a: ShortAttribETypes): AttribETypes{
+    return AttribETypes[a];
+    // return ecoreprefix + a as any;
+}
 
 export class SelectorOutput {
     jqselector!: string;
@@ -1299,7 +1311,7 @@ export enum Keystrokes {
 
 
 export enum AttribETypes {
-    void = '???void',
+    void = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//void', // ??? i invented this.
     EChar = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EChar',
     EString = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString',
     EDate = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDate',
