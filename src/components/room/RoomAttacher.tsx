@@ -41,9 +41,12 @@ function RoomAttacherComponent(props: AllProps) {
         (doc: GObject) => {setError(true)},
         () => {}
     );
+    return(<></>);
+    /*
     return(<div style={{bottom: 10, right: 10}} className={'p-1 bg-white border position-absolute'}>
         {roomSize}
     </div>);
+    */
 }
 interface OwnProps {}
 interface StateProps {room: string}
