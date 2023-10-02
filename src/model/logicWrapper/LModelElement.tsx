@@ -1907,6 +1907,26 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return [...new Set<LClass>(Object.values(alreadyParsed))];
     }
 
+    public isSubClassOf(superClass: LClass, returnIfSameClass: boolean = true): boolean { return this.cannotCall("isSubClassOf"); }
+    public isSuperClassOf(subClass: LClass, returnIfSameClass: boolean = true): boolean { return this.cannotCall("isSuperClassOf"); }
+    protected get_isSubClassOf(c: Context): ((superClass: LClass, returnIfSameClass?: boolean) => boolean) {
+        return (superClass: LClass, returnIfSameClass: boolean = true) => {
+            if (!superClass) return false;
+            if (superClass.id === c.data.id) return returnIfSameClass;
+            for (let subclass of this.get_extendsChain(c)) {
+                if (subclass.id === superClass.id) return true;
+            }
+            return false;
+        }
+    }
+    protected get_isSuperClassOf(c: Context): ((subClass: LClass, returnIfSameClass?: boolean) => boolean) {
+        return (subClass: LClass, returnIfSameClass: boolean = true) => {
+            if (!subClass) return false;
+            if (subClass.id === c.data.id) return returnIfSameClass;
+            return subClass.isSubClassOf(c.proxyObject, returnIfSameClass);
+        }
+    }
+
     protected get_inheritedAttributes(context: Context): this['inheritedAttributes'] {
         return this.get_extendsChain(context).flatMap((superClass) => superClass.ownAttributes);
     }

@@ -1,12 +1,17 @@
 export const a = 0;
 /*
-bug from giordano
-- click destro m1object -> add view, a quel punto non è più spostabile neanche se rimetti la vista di default
+performance:
+    preact can probably be used for dynamical views too, compiled jsx is very similar, just "h()" instead of "React.createElement()"
+        https://www.syncfusion.com/blogs/post/preact-vs-react.aspx
+    NO million      https://www.reddit.com/r/reactjs/comments/1468v2a/comment/jnpjtl8/
+    ? mikado        performance very promising, but syntax very different, closer to angular ngfor, ngif or older style php templating liberaries.
+                    https://github.com/nextapps-de/mikado/
+benchmark   https://krausest.github.io/js-framework-benchmark/current.html
 
-- toolbar edgepoint
 
-edgepoint must not hide when resizing, use .edgePoint:not(:has( .resizing )) ?
-
+ todo:
+ skip render for overlapped nodes & out of visible graph area, edges whose start and end are invisible/missing nodes
+ if edge have only 1 end outside visible area, that node should be rendered as an empty box, present in graph with correct size but no content
 
 
 done

@@ -20,7 +20,7 @@ function InfoData(props: Props) {
         else SetFieldAction.new(view.id, 'viewpoint', '', '', false);
     }
 
-    return(<section className={'p-3'}>
+    return(<a className={'p-3'}>
         <Input data={view} field={'name'} label={'Name'} type={'text'}/>
         <Input data={view} field={'explicitApplicationPriority'} label={'Priority'} type={'number'}/>
         <Select data={view} field={'appliableTo'} label={'Appliable To'} options={<optgroup label={'Appliable Types'}>
@@ -47,6 +47,7 @@ function InfoData(props: Props) {
             </select>
         </div>*/}
         <OclEditor viewid={view.id} />
+        <a href={"https://ocl.stekoe.de/#examples"}>Supported OCL commands</a> by Stephan Köninger
     </section>);
 }
 
