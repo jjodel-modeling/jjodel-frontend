@@ -94,6 +94,8 @@ function InputComponent(props: AllProps) {
     delete otherprops.inputStyle;
     delete otherprops.children;
     delete otherprops.selected;
+    delete otherprops.autosize; // because react complains is bool in dom attribute or unknown attrib name
+    delete otherprops.autoSize;
     let input = <input {...otherprops}
                        key={`${field}.${data.id}`}
                        className={props.inputClassName || css}

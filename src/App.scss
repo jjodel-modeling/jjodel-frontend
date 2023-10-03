@@ -1,6 +1,5 @@
 
 .SaveManager {
-
   position: absolute;
   left: 5%;
   top: 5%;
@@ -24,6 +23,9 @@
 [data-nodetype]{
   position: relative;
   overflow: hidden;
+
+  &.selected-by-me, &:has(.selected-by-me), // for some reason focus does not work?? so this is a fallback but needs to be properly fixed
+  &:hover, &:active, &:focus-within{ overflow: visible; }
 }
 
 .GraphVertex[data-nodetype="GraphVertex"],
@@ -39,8 +41,6 @@
 
 .REACT-ROOT.debug{
   [data-nodetype]{
-    &.selected-by-me, &:has(.selected-by-me), // for some reason focus does not work?? so this is a fallback but needs to be properly fixed
-    &:hover, &:active, &:focus-within{ overflow: visible; }
     &:hover::after{
       content: attr(data-nodetype);
       position: absolute;

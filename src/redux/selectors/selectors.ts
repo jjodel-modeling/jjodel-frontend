@@ -33,7 +33,7 @@ import {
     RuntimeAccessible,
     RuntimeAccessibleClass,
     store,
-    U, windoww, Pointers, DViewPoint, LViewPoint, Dictionary, DUser
+    U, windoww, Pointers, DViewPoint, LViewPoint, Dictionary, DUser, AttribETypes, ShortAttribETypes, toShortEType
 } from "../../joiner";
 import {EdgeOptions} from "../store";
 
@@ -145,6 +145,11 @@ export class Selectors{
         return edges;
     }
 
+    static getPrimitiveType(type: AttribETypes | ShortAttribETypes, state?: DState): DClassifier {
+        let shorttype: string = (toShortEType(type as any) || type).toUpperCase();
+        if (!state) state = store.getState();
+        return state.idlookup["Pointer_"+shorttype] as DClassifier;
+    }
     static getAllPrimitiveTypes(): DClassifier[] {
         let state: DState & GObject = store.getState();
         const ptrs: Pointer<DClassifier, 0, 'N'> = Object.values((state).primitiveTypes);

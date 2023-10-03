@@ -70,7 +70,7 @@ export class SaveManager {
             SaveManager.importEcore(jsonobj || filestring, true, undefined, true); // todo: trova il modo di determinare se è m1 o m2 senza filename
             return; }
 
-        console.log("importEcore: pre file read");
+        console.log("importEcore: pre file read", {fromXML, fromfile});
         let filename;
         U.fileRead((e: Event, files?: FileList | null, fileContents?: string[]) => {
             Log.ex(!fileContents || !files || fileContents.length !== files.length, 'Failed to get file contents:', files, fileContents);
@@ -100,12 +100,13 @@ export class SaveManager {
                 /*if (jsonstring.includes("\n")) throw new Error(jsonstring0.substring(0, 1000)+"\n\n\n\n" + jsonstring.substring(0, 1000));
                 */
                 // jsonstring = JSON.stringify(jsonobj);
+                if (jsonobj.parsererror) { Log.e("failed to parse XML->JSON", {parseError:jsonobj.parseerror, jsonobj});  return; }
                 console.log('importEcore jsonstr input: ', jsonobj);
             }
             else jsonstring = filestring;
             let isMetamodel = filename.indexOf(".ecore") === filename.length - ".ecore".length;
             console.log("ismetamodel", {filename, isMetamodel});
-            let end = SaveManager.importEcore(jsonobj || jsonstring || 'null', isMetamodel,filename, true);
+            let end = SaveManager.importEcore(jsonobj || jsonstring || 'null', isMetamodel, filename, true);
             console.error({end});
         }, extensions, true);
     }
@@ -116,8 +117,8 @@ export class SaveManager {
         catch(e) { Log.exx("possible loop in model:\t\n" + (e as Error).message, {loopobj, e}); }
         return {"error": true, loopobj};
     }
-    public static importEcore(jsonstr: GObject | string | null, isMetamodel: boolean, filename: string | undefined, loadOnModel: boolean = true): DModelElement[] {
-        return EcoreParser.parse(jsonstr, isMetamodel, filename, loadOnModel);
+    public static importEcore(jsonstr: GObject | string | null, isMetamodel: boolean, filename: string | undefined, persist: boolean = true): DModelElement[] {
+        return EcoreParser.parse(jsonstr, isMetamodel, filename, persist);
     }
 
     static exportLayout_click(toFile: boolean) {

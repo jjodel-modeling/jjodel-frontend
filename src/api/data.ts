@@ -60,7 +60,7 @@ import {
     store,
     SetFieldAction,
     Pointers,
-    DPointerTargetable
+    DPointerTargetable, ShortAttribETypes, toLongEType, DState
 
 } from "../joiner";
 
@@ -163,7 +163,7 @@ export class EcoreParser{
 
         console.log("root parse", ecorejson);
 
-        isMetamodel = !!parsedjson[ECoreRoot.ecoreEPackage];
+        // isMetamodel = !!parsedjson[ECoreRoot.ecoreEPackage];
 
         Constructors.pause();
             let parsedElements: DModelElement[] = isMetamodel ? EcoreParser.parseM2Model(parsedjson, filename) : EcoreParser.parseM1Model(parsedjson, undefined, filename);
@@ -223,24 +223,31 @@ export class EcoreParser{
         let idMap: Dictionary<Pointer, DModelElement> = {};
         let nameMap: Dictionary<string, DModelElement> = {};
         let replacePrimitiveMap: Dictionary<string, DClassifier> = {};
-        let d_Estring: DClassifier = Selectors.getAllPrimitiveTypes()[0];
+        let d_Estring: DClassifier = Selectors.getAllPrimitiveTypes()[1];
         replacePrimitiveMap[AttribETypes.EString] = d_Estring;
         // todo: do the same for all other primitives
+        let state: DState = store.getState();
 
         // let longprefixlength = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore'.length;
         const typeprefix = "#//";
-        for (let shortkey in AttribETypes){
-            let longkey: string = (AttribETypes as GObject)[shortkey];
-            // fallback for missing type instead of crash
-            if (!replacePrimitiveMap[longkey]) replacePrimitiveMap[longkey] = d_Estring;
-
-            // allow shortcuts to work too
-            replacePrimitiveMap[typeprefix + shortkey] = replacePrimitiveMap[longkey];
-
+        for (let shortkey in ShortAttribETypes){
+            if (shortkey === "void") continue;
+            let shortetype: ShortAttribETypes = (ShortAttribETypes as GObject)[shortkey];
+            let longetype: AttribETypes = toLongEType(shortetype);
+            let dClassType: DClassifier = Selectors.getPrimitiveType(shortetype, state);
+            Log.exDev(!dClassType, "mising primitive type: " + shortkey, {shortkey, shortetype, longetype, dClassType, state});
+            // the correct one
+            replacePrimitiveMap[typeprefix + shortkey] = dClassType; // like "#//EChar"
+            // fallbacks for missing type instead of crash
+            if (!replacePrimitiveMap[shortkey]) replacePrimitiveMap[shortkey] = dClassType;
+            if (!replacePrimitiveMap[shortetype]) replacePrimitiveMap[shortetype] = dClassType;
+            if (!replacePrimitiveMap[longetype]) replacePrimitiveMap[longetype] = dClassType;
         }
 
 
         for (let ecorename in replacePrimitiveMap) {
+            // duplicates are very likely becuase of fallback alias like "EChar", but they shouldn't override user-defined class EChar if it exist, so don't throw error.
+            if (idMap[replacePrimitiveMap[ecorename].id]) continue;
             idMap[replacePrimitiveMap[ecorename].id] = replacePrimitiveMap[ecorename];
         }
 
@@ -249,8 +256,19 @@ export class EcoreParser{
         let dobj: GObject & DModelElement;
 
         for (dobj of parsedElements) {
-            if (dobj.name) { nameMap[dobj.name] = dobj; nameMap[typeprefix + dobj.name] = dobj;}
             idMap[dobj.id] = dobj;
+            if (!dobj.name || dobj.className === DModel.cname) continue; // Model name can be reused internally
+            let name = (dobj as GObject).__fullname;
+            delete (dobj as GObject).__fullname;
+            if (dobj.className === DOperation.cname || dobj.className === DParameter.cname) {
+                // operation overload, in this case i create N separate operations, but all references will point to the last operation.
+                // empty on purpose, just avoid naming check
+            }
+            // todo: problem, uml.ecore have "isComposite" operation and attribute on sme class "property", so who is referenced by "#//property/isComposite" ??
+            // else Log.exDev(nameMap[typeprefix + name], "found 2 elements with same name", {nameMap, dobj, name, shortname: dobj.name, typeprefix});
+            else Log.w(nameMap[typeprefix + name], "found 2 elements with same name", {nameMap, new:dobj, old:nameMap[typeprefix + name], name, shortname: dobj.name, typeprefix});
+            nameMap[typeprefix + name] = dobj;
+            // nameMap[typeprefix + dobj.name] = dobj; // <eAnnotations source="subsets" references="#//Activity/group"/>
         }
 
         for (let replacekey of replaceRules){
@@ -360,17 +378,35 @@ export class EcoreParser{
         let dObject: DModel = DModel.new( modelname || "imported_metamodel_1", undefined, true, true);
         console.log("made model", json);
         generated.push(dObject); // dObject.father = 'modeltmp' as any;
+        // const annotations: Json[] = this.getAnnotations(json); i set them on root package
+        // for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname);
+        /// *** specific  *** ///
+        // let defPackage: DPackage = DPackage.new(json)
+        EcoreParser.parseRootPackage(dObject, json, generated);
+        return generated;
+    }
+
+    static parseM2Model_old(json: Json, filename: string | undefined): DModelElement[] {
+        let generated: DModelElement[] = [];
+        if (!json) { json = {}; }
+        let modelname = json[ECoreNamed.namee] as string;
+        if (!modelname && filename) {
+            let pos = filename.indexOf(".");
+            modelname = pos === -1 ? filename : filename.substring(0, pos); }
+        let dObject: DModel = DModel.new( modelname || "imported_metamodel_1", undefined, true, true);
+        console.log("made model", json);
+        generated.push(dObject); // dObject.father = 'modeltmp' as any;
         /// *** specific  *** ///
         const children = EcoreParser.getChildren(json);
         const annotations = EcoreParser.getAnnotations(json);
         // dObject.name = json[ECoreNamed.namee] as string || "imported_metamodel_1";
         console.log("made model 2", children, annotations);
         for (let child of annotations) {
-            EcoreParser.parseDAnnotation(dObject, child, generated);
+            EcoreParser.parseDAnnotation(dObject, child, generated, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa');
         }
         console.log("made annotations");
         for (let child of children) {
-            EcoreParser.parseDPackage(dObject, child, generated);
+            EcoreParser.parseRootPackage(dObject, child, generated);
         }
         console.log("made packages");
         return generated;
@@ -548,20 +584,25 @@ export class EcoreParser{
         return generated;
     }
 
-    static parseDAnnotation(parent: DModelElement, json: Json, generated: DModelElement[]): DModelElement[] {
+    static parseDAnnotation(parent: DModelElement, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
+        return []; // todo
         if (!generated) generated = [];
         if (!json) { json = {}; }
         let dObject: DAnnotation = DAnnotation.new();
         generated.push(dObject); dObject.father = parent.id;
+        (dObject as any).name = this.read(json, ECoreNamed.namee, undefined);
         dObject.father = parent.id;
         if (parent) parent.annotations.push(dObject.id);
-
+        const annotations: Json[] = this.getAnnotations(json);
+        for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname);
+        (dObject as GObject).__fullname = undefined; // fullnamePrefix + "/" + (dObject as any).name; // if annotation is not named (and it shouldn't) i don't wanna override container name
         /// *** specific  *** ///
         let key: string;
         for (key in json){
             const value = json[key];
             switch (key) { //todo
-                default: Log.exx('unexpected field in EAnnotation:  ' + key + ' => |' + value + '|'); break;
+                default: Log.exx('unexpected field in EAnnotation:  ' + key + ' => |' + value + '|', {key, value, json}); break;
+                // case ECoreAnnotation.annotations: break; // todo: enable, yes annotations can have annotations
                 case ECoreAnnotation.details: break;
                 case ECoreAnnotation.references: break;
                 case ECoreAnnotation.source: break;
@@ -573,12 +614,11 @@ export class EcoreParser{
         // for (let i = 0; i < details.length; i++) { new EAnnotationDetail(this, details[i]); }
         return generated; }
 
-    static parseDPackage(parent: DModel, json: Json, generated: DModelElement[]): DModelElement[] {
+    static parseRootPackage(parent: DModel, json: Json, generated: DModelElement[]): DModelElement[] {
         if (!generated) generated = [];
         if (!json) { json = {}; }
         const childs = this.getChildren(json);
 
-        console.warn("parseDPackage.children", childs, generated);
         let dObject: DPackage = DPackage.new();
         generated.push(dObject); dObject.father = parent.id;
         if (parent) parent.packages.push(dObject.id);
@@ -586,37 +626,74 @@ export class EcoreParser{
         let version = (json[EcoreParser.prefix+"xmlns:ecore"] || '') as string;
         // model.xmi = json[EcoreParser.prefix+"xmlns:xmi"]; // http://www.omg.org/XMI
         // model.xsi = json[EcoreParser.prefix+"xmlns:xsi"]; // http://www.w3.org/2001/XMLSchema-instance
-
-        console.log(json);
         Log.ex(!EcoreParser.supportedEcoreVersions.includes(version), "unsupported ecore version, must be one of:" + EcoreParser.supportedEcoreVersions + " found instead: "+version);
-
-        dObject.name = this.read(json, ECoreNamed.namee, 'defaultPackage');
+        dObject.name = this.read(json, ECoreNamed.namee, 'default');
+        // root package name is "transparent" and not applied in "#//reference/paths/...", if referenced i guess his name is "#//"
+        (dObject as GObject).__fullname = ''; // fullnamePrefix + "/" + dObject.name;
+        const annotations: Json[] = this.getAnnotations(json);
+        for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname);
         /// *** specific start *** ///
+        const subPackages: Json[] = this.getSubPackages(json);
         dObject.uri = this.read(json, ECorePackage.nsURI, null);
         dObject.prefix = this.read(json, ECorePackage.nsPrefix, null);
+        console.warn("parseRootPackage.children", {childs, annotations, subPackages, dObject, generated});
         // if (!parent.uri) parent.uri = dObject.uri;
         // if (!parent.prefix) parent.prefix = dObject.prefix; // namespace
         for (let child of childs) {
             switch (child[ECoreClass.xsitype]) {
                 default: Log.exx('unexpected xsitype:', child[ECoreClass.xsitype], ' found in jsonfragment:', child, ', in json:', json, ' package:', dObject); break;
-                case 'ecore:EClass': this.parseDClass(dObject, child, generated); break;
-                case 'ecore:EEnum': this.parseDEnum(dObject, child, generated); break;
+                case 'ecore:EClass': this.parseDClass(dObject, child, generated, (dObject as GObject).__fullname); break;
+                case 'ecore:EEnum': this.parseDEnum(dObject, child, generated, (dObject as GObject).__fullname); break;
             }
         }
+        for (let child of subPackages) EcoreParser.parseSubPackage(dObject, child, generated, (dObject as GObject).__fullname);
         /// *** specific end *** ///
         return generated; }
 
-    static parseDClass(parent: DPackage, json: Json, generated: DModelElement[]): DModelElement[] {
+    static parseSubPackage(parent: DPackage, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
+        if (!generated) generated = [];
+        if (!json) { json = {}; }
+        const childs = this.getChildren(json);
+        let dObject: DPackage = DPackage.new();
+        generated.push(dObject); dObject.father = parent.id;
+        if (parent) parent.subpackages.push(dObject.id);
+        dObject.name = this.read(json, ECoreNamed.namee, 'subPackage_1');
+        (dObject as GObject).__fullname = fullnamePrefix + "/" + dObject.name;
+        const annotations: Json[] = this.getAnnotations(json);
+        for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname);
+        /// *** specific start *** ///
+        dObject.uri = this.read(json, ECoreSubPackage.nsURI, null);
+        dObject.prefix = this.read(json, ECoreSubPackage.nsPrefix, null);
+        const subPackages: Json[] = this.getSubPackages(json);
+        console.warn("parseSubPackage.children", {childs, annotations, subPackages, dObject, generated});
+        // if (!dObject.uri) dObject.uri = dObject.name + "." + parent.uri;
+        // if (!dObject.prefix) dObject.prefix = dObject.name + "." + parent.prefix; // namespace
+        for (let child of childs) {
+            switch (child[ECoreClass.xsitype]) {
+                default: Log.exx('unexpected xsitype:', child[ECoreClass.xsitype], ' found in jsonfragment:', child, ', in json:', json, ' package:', dObject); break;
+                case 'ecore:EClass': this.parseDClass(dObject, child, generated, (dObject as GObject).__fullname); break;
+                case 'ecore:EEnum': this.parseDEnum(dObject, child, generated, (dObject as GObject).__fullname); break;
+            }
+        }
+        for (let child of subPackages) EcoreParser.parseSubPackage(dObject, child, generated, (dObject as GObject).__fullname);
+        /// *** specific end *** ///
+        return generated; }
+
+    static parseDClass(parent: DPackage, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
         if (!generated) generated = [];
         if (!json) { json = {}; }
         let dObject: DClass = DClass.new();
         generated.push(dObject); dObject.father = parent.id;
         if (parent) parent.classifiers.push(dObject.id);
         dObject.name = this.read(json, ECoreNamed.namee, 'Class_1');
+        (dObject as GObject).__fullname = fullnamePrefix + "/" + dObject.name;
+        const annotations: Json[] = this.getAnnotations(json);
+        for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname);
         /// *** specific start *** ///
         for (let key in json) {
             switch (key) {
                 default: Log.exx('unexpected field in parseDClass() |' + key + '|', json); break;
+                case ECoreClass.eAnnotations:
                 case ECoreClass.instanceTypeName:
                 case ECoreClass.eSuperTypes:
                 case ECoreClass.xsitype:
@@ -632,23 +709,22 @@ export class EcoreParser{
         dObject.extends = tmps.split(' ');
         const features: Json[] = this.getChildren(json);
         const functions: Json[] = this.getChildren(json, false, true);
-        for (let child of functions) {
-            this.parseDOperation(dObject, json, generated);
-        }
+
+        for (let child of functions) this.parseDOperation(dObject, child, generated, (dObject as GObject).__fullname);
         for (let child of features) {
             const xsiType = this.read(child, ECoreAttribute.xsitype);
             switch (xsiType) {
                 default: Log.exx( 'unexpected xsi:type: ', xsiType, ' in feature:', child); break;
                 case 'ecore:EAttribute':
-                    this.parseDAttribute(dObject, child, generated); break;
+                    this.parseDAttribute(dObject, child, generated, (dObject as GObject).__fullname); break;
                 case 'ecore:EReference':
-                    this.parseDReference(dObject, child, generated); break;
+                    this.parseDReference(dObject, child, generated, (dObject as GObject).__fullname); break;
             }
         }
         /// *** specific end *** ///
         return generated; }
 
-    static parseDEnum(parent: DPackage, json: Json, generated: DModelElement[]): DModelElement[] {
+    static parseDEnum(parent: DPackage, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
         if (!generated) generated = [];
         if (!json) { json = {}; }
         const childs = this.getChildren(json);
@@ -656,11 +732,15 @@ export class EcoreParser{
         generated.push(dObject); dObject.father = parent.id;
         if (parent) parent.classifiers.push(dObject.id);
         dObject.name = this.read(json, ECoreNamed.namee, 'Enum_1');
+        (dObject as GObject).__fullname = fullnamePrefix + "/" + dObject.name;
+        const annotations: Json[] = this.getAnnotations(json);
+        for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname);
         /// *** specific start *** ///
         for (let key in json) {
             const value = json[key];
             switch (key) {
                 default: Log.exx('Enum.parse() unexpected key:', key, 'in json:', json); break;
+                case ECoreEnum.eAnnotations:
                 case ECoreEnum.xsitype: case ECoreNamed.namee: break;
                 case ECoreEnum.eLiterals: break;
                 case ECoreEnum.serializable: dObject.serializable = value === 'true'; break;
@@ -668,7 +748,7 @@ export class EcoreParser{
             }
         }
         for (let child of childs) {
-            this.parseDEnumLiteral(dObject, child, generated);
+            this.parseDEnumLiteral(dObject, child, generated, (dObject as GObject).__fullname);
         }
 
         /// *** specific end *** ///
@@ -676,21 +756,24 @@ export class EcoreParser{
 
 
 
-    static parseDEnumLiteral(parent: DEnumerator, json: Json, generated: DModelElement[]): DModelElement[] {
+    static parseDEnumLiteral(parent: DEnumerator, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
         if (!generated) generated = [];
         if (!json) { json = {}; }
         const childs = this.getChildren(json);
         let dObject: DEnumLiteral = DEnumLiteral.new();
         generated.push(dObject); dObject.father = parent.id;
         if (parent) parent.literals.push(dObject.id);
+        const annotations: Json[] = this.getAnnotations(json);
+        for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname);
         /// *** specific start *** ///
         dObject.value = +this.read(json, EcoreLiteral.value, Number.NEGATIVE_INFINITY);//vv4
         dObject.literal = this.read(json, EcoreLiteral.literal, '');
         dObject.name = this.read(json, ECoreNamed.namee,  dObject.literal || 'literal_1');
+        (dObject as GObject).__fullname = fullnamePrefix + "/" + dObject.name;
         /// *** specific end *** ///
         return generated; }
 
-    static parseDAttribute(parent: DClass, json: Json, generated: DModelElement[]): DModelElement[] {
+    static parseDAttribute(parent: DClass, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
         if (!generated) generated = [];
         if (!json) { json = {}; }
         const childs = this.getChildren(json);
@@ -698,6 +781,9 @@ export class EcoreParser{
         generated.push(dObject); dObject.father = parent.id;
         if (parent) parent.attributes.push(dObject.id);
         dObject.name = this.read(json, ECoreNamed.namee, 'attr_1');
+        (dObject as GObject).__fullname = fullnamePrefix + "/" + dObject.name;
+        const annotations: Json[] = this.getAnnotations(json);
+        for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname);
         /// *** specific start *** ///
         dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 0);
         dObject.upperBound = +this.read(json, ECoreAttribute.upperbound, 1);
@@ -705,7 +791,7 @@ export class EcoreParser{
         /// *** specific end *** ///
         return generated; }
 
-    static parseDReference(parent: DClass, json: Json, generated: DModelElement[]): DModelElement[] {
+    static parseDReference(parent: DClass, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
         if (!generated) generated = [];
         if (!json) { json = {}; }
         const childs = this.getChildren(json);
@@ -713,6 +799,9 @@ export class EcoreParser{
         generated.push(dObject); dObject.father = parent.id;
         if (parent) parent.references.push(dObject.id);
         dObject.name = this.read(json, ECorePackage.namee, 'Ref_1');
+        (dObject as GObject).__fullname = fullnamePrefix + "/" + dObject.name;
+        const annotations: Json[] = this.getAnnotations(json);
+        for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname);
         /// *** specific start *** ///
         dObject.containment = U.fromBoolString(this.read(json, ECoreReference.containment, false), false);
         dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 0);
@@ -725,7 +814,7 @@ export class EcoreParser{
         /// *** specific end *** ///
         return generated; }
 
-    static parseDParameter(parent: DOperation, json: Json, generated: DModelElement[]): DModelElement[] {
+    static parseDParameter(parent: DOperation, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
         if (!generated) generated = [];
         if (!json) { json = {}; }
         const childs = this.getChildren(json);
@@ -733,6 +822,9 @@ export class EcoreParser{
         generated.push(dObject); dObject.father = parent.id;
         if (parent) parent.parameters.push(dObject.id);
         dObject.name = this.read(json, ECoreNamed.namee, 'arg1');
+        (dObject as GObject).__fullname = fullnamePrefix + "/" + dObject.name;
+        const annotations: Json[] = this.getAnnotations(json);
+        for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname);
         /// *** specific start *** ///
         dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 0);
         dObject.upperBound = +this.read(json, ECoreAttribute.upperbound, 1);
@@ -742,7 +834,7 @@ export class EcoreParser{
         /// *** specific end *** ///
         return generated; }
 
-    static parseDOperation(parent: DClass, json: Json, generated: DModelElement[]): DModelElement[] {
+    static parseDOperation(parent: DClass, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
         if (!generated) generated = [];
         if (!json) { json = {}; }
         const childs = this.getChildren(json);
@@ -750,6 +842,10 @@ export class EcoreParser{
         generated.push(dObject); dObject.father = parent.id;
         if (parent) parent.operations.push(dObject.id);
         dObject.name = this.read(json, ECoreNamed.namee, 'operation_1');
+        (dObject as GObject).__fullname = fullnamePrefix + "/" + dObject.name;
+
+        const annotations: Json[] = this.getAnnotations(json);
+        for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname);
         /// *** specific start *** ///
         dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 1);
         dObject.upperBound = +this.read(json, ECoreAttribute.upperbound, 1);
@@ -759,14 +855,14 @@ export class EcoreParser{
         dObject.unique = U.fromBoolString(this.read(json, ECoreOperation.unique, 'false'));
         dObject.visibility = AccessModifier.package;
         for (let child of childs) {
-            this.parseDParameter(dObject, json, generated);
+            this.parseDParameter(dObject, child, generated, (dObject as GObject).__fullname);
         }
         /// *** specific end *** ///
         return generated; }
 
 
     /*
-    static parseTEMPLATE(parent: DSomething, json: Json, generated: DModelElement[]): DModelElement[] {
+    static parseTEMPLATE(parent: DSomething, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
         if (!generated) generated = [];
         if (!json) { json = {}; }
         const childs = this.getChildren(json);
@@ -774,9 +870,12 @@ export class EcoreParser{
         generated.push(dObject); dObject.father = parent.id;
         if (parent) parent.CHILDCOLLECTION.push(dObject.id);
         dObject.name = this.read(json, ECoreNamed.namee, defaultNameTODO);
+        (dObject as GObject).__fullname = fullnamePrefix + "/" + dObject.name;
+        const annotations: Json[] = this.getAnnotations(json);
+        for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname);
         /// *** specific start *** ///
         for (let child of childs) {
-            this.parseDSOMETHING(dObject, json, generated);
+            this.parseDSOMETHING(dObject, child, generated, (dObject as GObject).__fullname);
         }
         /// *** specific end *** ///
         return generated; }*/
@@ -788,14 +887,19 @@ export class EcoreParser{
     /////////////////////////////////// generic
     static XMLinlineMarker: string = '@';
     static classTypePrefix: string = '#//'
+    private static getSubPackages(thiss: Json): Json[] {
+        const ret: any = thiss[ECoreSubPackage.eSubpackages];
+        if (!ret || U.isEmptyObject(ret)) { return []; }
+        if (Array.isArray(ret)) { return ret; } else { return [ret]; } }
+
     private static getAnnotations(thiss: Json): Json[] {
         const ret: any = thiss[ECorePackage.eAnnotations];
-        if (!ret || $.isEmptyObject(ret)) { return []; }
+        if (!ret || U.isEmptyObject(ret)) { return []; }
         if (Array.isArray(ret)) { return ret; } else { return [ret]; } }
 
     private static getDetails(thiss: Json): Json[] {
         const ret: any = thiss[ECoreAnnotation.details];
-        if (!ret || $.isEmptyObject(ret)) { return []; }
+        if (!ret || U.isEmptyObject(ret)) { return []; }
         if (Array.isArray(ret)) { return ret; } else { return [ret]; } }
 
     private static getChildren(thiss: Json, throwError: boolean = false, functions: boolean = false): Json[] {
@@ -811,8 +915,8 @@ export class EcoreParser{
           if (thiss['@name'] !== undefined) { ret = thiss; } // if it's the root with only 1 child arrayless
         }*/
         Log.ex( throwError && !ret, 'getChildren() Failed: ', thiss, ret);
-        // console.log('ret = ', ret, ' === ', {}, ' ? ', ($.isEmptyObject(ret) ? [] : [ret]));
-        if (!ret || $.isEmptyObject(ret)) { return []; }
+        // console.log('ret = ', ret, ' === ', {}, ' ? ', (U.isEmptyObject(ret) ? [] : [ret]));
+        if (!ret || U.isEmptyObject(ret)) { return []; }
         if (Array.isArray(ret)) { return ret; } else { return [ret]; }
     }
 
@@ -869,8 +973,18 @@ export class ECoreDetail {
     static key: string;
     static value: string; }
 
-export class ECorePackage {
+export class ECoreSubPackage { // <eSubpackages
+    static eSubpackages: string;
     static eAnnotations: string;
+    static eClassifiers: string;
+    static nsURI: string;
+    static nsPrefix: string;
+    static namee: string;
+}
+
+export class ECorePackage extends ECoreSubPackage {
+    static eAnnotations: string;
+    static eSubpackages: string;
     static eClassifiers: string;
     static xmlnsxmi: string;
     static xmlnsxsi: string;
@@ -880,7 +994,6 @@ export class ECorePackage {
     static nsPrefix: string;
     static namee: string;
 }
-
 
 export class ECoreClass {
     static eAnnotations: string;
@@ -965,11 +1078,12 @@ export class XMIModel {
 
 ///////////////
 
-ECoreRoot.ecoreEPackage = 'ecore:EPackage';
+ECoreRoot.ecoreEPackage = 'ecore:EPackage'; // this is root tag but not in xml->json, just his attributes/childrens
 ECoreNamed.namee = EcoreParser.XMLinlineMarker + 'name';
 
-ECorePackage.eAnnotations = ECoreClass.eAnnotations = ECoreEnum.eAnnotations = EcoreLiteral.eAnnotations =
-    ECoreReference.eAnnotations = ECoreAttribute.eAnnotations = ECoreOperation.eAnnotations = ECoreParameter.eAnnotations = 'eAnnotations';
+ECorePackage.eAnnotations = ECoreSubPackage.eAnnotations = ECoreClass.eAnnotations =
+    ECoreEnum.eAnnotations = EcoreLiteral.eAnnotations =  ECoreReference.eAnnotations =
+    ECoreAttribute.eAnnotations = ECoreOperation.eAnnotations = ECoreParameter.eAnnotations = 'eAnnotations';
 
 ECoreAnnotation.source = EcoreParser.XMLinlineMarker + 'source';
 ECoreAnnotation.references = EcoreParser.XMLinlineMarker + 'references'; // "#/" for target = package.
@@ -977,6 +1091,7 @@ ECoreAnnotation.details = 'details'; // arr
 ECoreDetail.key = EcoreParser.XMLinlineMarker + 'key'; // can have spaces
 ECoreDetail.value = EcoreParser.XMLinlineMarker + 'value';
 
+ECorePackage.eSubpackages = 'eSubpackages';
 ECorePackage.eClassifiers = 'eClassifiers';
 ECorePackage.xmlnsxmi = EcoreParser.XMLinlineMarker + 'xmlns:xmi'; // typical value: http://www.omg.org/XMI
 ECorePackage.xmlnsxsi = EcoreParser.XMLinlineMarker + 'xmlns:xsi'; // typical value: http://www.w3.org/2001/XMLSchema-instance
@@ -985,6 +1100,13 @@ ECorePackage.xmlnsecore = EcoreParser.XMLinlineMarker + 'xmlns:ecore';
 ECorePackage.nsURI = EcoreParser.XMLinlineMarker + 'nsURI'; // typical value: "http://org/eclipse/example/modelname"
 ECorePackage.nsPrefix = EcoreParser.XMLinlineMarker + 'nsPrefix'; // typical value: org.eclipse.example.modelname
 ECorePackage.namee = EcoreParser.XMLinlineMarker + 'name';
+
+ECoreSubPackage.eSubpackages = 'eSubpackages';
+ECoreSubPackage.eClassifiers = 'eClassifiers';
+ECoreSubPackage.nsURI = EcoreParser.XMLinlineMarker + 'nsURI'; // typical value: "http://org/eclipse/example/modelname"
+ECoreSubPackage.nsPrefix = EcoreParser.XMLinlineMarker + 'nsPrefix'; // typical value: org.eclipse.example.modelname
+ECoreSubPackage.namee = EcoreParser.XMLinlineMarker + 'name';
+
 
 ECoreClass.eStructuralFeatures = 'eStructuralFeatures';
 ECoreClass.eOperations = 'eOperations';

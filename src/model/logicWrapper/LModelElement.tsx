@@ -50,6 +50,7 @@ import {
     EcoreLiteral,
     ECoreOperation,
     ECorePackage,
+    ECoreSubPackage,
     EcoreParser,
     ECoreReference,
     ECoreRoot

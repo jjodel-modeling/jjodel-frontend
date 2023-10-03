@@ -1063,6 +1063,12 @@ export class U {
         return +ret;
     }
 
+    // faster than jquery, underscore and many native methods checked https://stackoverflow.com/a/59787784
+    public static isEmptyObject(obj: GObject | undefined): boolean {
+        for(var i in obj) return false;
+        return true;
+    }
+
     private static pairArrayElementsRepeatFunc<T>(val: T, index: number, arr:T[]): T[]{ return [arr[index], arr[index+1]] }
     private static pairArrayElementsReducerFunc<T>(accumulator: T[][], value: T, index: number, array: T[]):T[][] {
         if (index % 2 === 0) accumulator.push(array.slice(index, index + 2));
@@ -1205,7 +1211,13 @@ export class FocusHistoryEntry {
         this.time = time || new Date();
     }
 }
-
+export enum ShortDefaultEClasses{
+    EObject = "EObject",
+    EAnnotation = "EAnnotation",
+    EClass = "EClass",
+    EPackage = "EPackage",
+    ENamedElement = "ENamedElement",
+}
 export enum ShortAttribETypes {
     void = 'void',
     EChar  = 'EChar',
@@ -1218,6 +1230,7 @@ export enum ShortAttribETypes {
     ELong  = 'ELong',
     EFloat  = 'EFloat',
     EDouble  = 'EDouble',
+    // EDiagnosticChain = "EDiagnosticChain", // present in uml.ecore, without definition. i guess it's a custom installed package which is commonly used
     /*
   ECharObj  = 'ECharObj',
   EStringObj  = 'EStringObj',
@@ -1247,6 +1260,16 @@ export const ShortAttribSuperTypes: Dictionary<ShortAttribETypes, ShortAttribETy
     "EFloat"   : [ShortAttribETypes.EDouble],
     "EDouble"  : []
 };
+let ecoreprefix = "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//";
+let ecoreclasprefix = "ecore:EClass platform:/plugin/org.eclipse.emf.ecore/model/Ecore.ecore#//";
+export function toShortEType(a: AttribETypes): ShortAttribETypes{ return a.substring(ecoreprefix.length) as any; }
+export function toLongEType(a: ShortAttribETypes): AttribETypes {
+    return AttribETypes[a];
+    // return ecoreprefix + a as any;
+}
+
+export function toShortEClass(a: DefaultEClasses): ShortDefaultEClasses{ return a.substring(ecoreclasprefix.length) as any; }
+export function toLongEClass(a: ShortDefaultEClasses): DefaultEClasses { return DefaultEClasses[a]; }
 
 export class SelectorOutput {
     jqselector!: string;
@@ -1296,9 +1319,15 @@ export enum Keystrokes {
     __NotReacting__ = 'fn, print, maybe others', // not even triggering event?
 }
 
-
+export enum DefaultEClasses{
+    EObject = "ecore:EClass platform:/plugin/org.eclipse.emf.ecore/model/Ecore.ecore#//EObject",
+    EAnnotation = "ecore:EClass platform:/plugin/org.eclipse.emf.ecore/model/Ecore.ecore#//EAnnotation",
+    EClass = "ecore:EClass platform:/plugin/org.eclipse.emf.ecore/model/Ecore.ecore#//EClass",
+    EPackage = "ecore:EClass platform:/plugin/org.eclipse.emf.ecore/model/Ecore.ecore#//EPackage",
+    ENamedElement = "ecore:EClass platform:/plugin/org.eclipse.emf.ecore/model/Ecore.ecore#//ENamedElement",
+}
 export enum AttribETypes {
-    void = '???void',
+    void = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//void', // ??? i invented this.
     EChar = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EChar',
     EString = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString',
     EDate = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDate',
@@ -1309,6 +1338,8 @@ export enum AttribETypes {
     EShort = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EShort',
     EInt = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt',
     ELong = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong',
+    // present in uml.ecore, without definition. i guess it's a custom installed package which is commonly used
+    // EDiagnosticChain = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDiagnosticChain',
     /*
   ECharObj = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ECharObject',
   EStringObj = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EStringObject',
