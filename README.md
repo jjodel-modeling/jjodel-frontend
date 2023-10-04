@@ -20,3 +20,6 @@ or
 `npm install`
 
 `npm run build`
+
+# Links
+[MDEGroup jodel repository](https://github.com/MDEGroup/jjodel): This is where stable, production-ready versions are released.
