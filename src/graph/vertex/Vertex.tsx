@@ -40,7 +40,8 @@ class ThisStatee extends GraphElementStatee { forceupdate?: number }
 
 const dragHelper = document.createElement('div');
 dragHelper.style.backgroundColor = 'transparent';
-dragHelper.style.outline = '1px dashed black';
+dragHelper.style.outline = '4px dashed #333';
+dragHelper.style.zIndex = '9999';
 
 
 export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
