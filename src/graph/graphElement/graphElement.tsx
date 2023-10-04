@@ -4,13 +4,13 @@ import {connect} from "react-redux";
 import './graphElement.scss';
 import type {EdgeStateProps, VertexComponent} from "../../joiner";
 import {
-    CreateElementAction,
-    DEdge,
+    CreateElementAction, DClass, Debug,
+    DEdge, DEnumerator,
     DGraph,
     DGraphElement,
-    Dictionary,
-    DModelElement,
-    DocString,
+    Dictionary, DModel,
+    DModelElement, DObject,
+    DocString, DPackage,
     DPointerTargetable,
     DState,
     DUser,
@@ -99,8 +99,9 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 }
 
 let debugcount = 0;
-let debug = true;
 let maxRenderCounter = Number.POSITIVE_INFINITY;
+export const lightModeAllowedElements = [DModel.cname, DPackage.cname, DClass.cname, DEnumerator.cname, DObject.cname];
+
 @RuntimeAccessible
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
     extends PureComponent<AllProps, GraphElementState>{
@@ -109,12 +110,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     public static map: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = {};
     static maxid: number = 0;
     id: number;
-    public static refresh() {
-        for (let key in GraphElementComponent.all) {
-            GraphElementComponent.all[key].forceUpdate();
-        }
-        console.log(GraphElementComponent.all);
-    }
 
     public static defaultShouldComponentUpdate<AllProps extends GObject, State extends GObject, Context extends any>
     (instance: React.Component, nextProps: Readonly<AllProps>, nextState: Readonly<State>, nextContext: Context) {
@@ -222,6 +217,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // console.log('dragx GE mapstate', {dGraphDataClass});
         let ret: GraphElementReduxStateProps = (startingobj || {}) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
         GraphElementComponent.mapLModelStuff(state, ownProps, ret);
+        if (Debug.lightMode && (!ret.data || !(lightModeAllowedElements.includes(ret.data.className)))){
+            return ret;
+        }
         // console.log("map ge", {ownProps, ret, state});
         GraphElementComponent.mapLGraphElementStuff(state, ownProps, ret, dGraphDataClass);
         GraphElementComponent.mapViewStuff(state, ret, ownProps);
@@ -257,6 +255,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
 
     protected doMeasurableEvent(type: EMeasurableEvents): boolean {
+        if (Debug.lightMode) return false;
         let measurableCode: string = null as any;
         let context: GObject = null as any;
         try{
@@ -265,9 +264,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             context = this.getContext();
             measurableCode = measurableCode.trim();
             if (measurableCode[0]!=='(' || measurableCode.indexOf("function") !== 0) {
-                measurableCode = "()=>{" + measurableCode + "}";
+                measurableCode = "()=>{" + measurableCode + "\n}"; // last \n important for line comments //
             }
             measurableCode = "(" + measurableCode + ")()";
+            console.log("dragend execute", {measurableCode});
             U.evalInContextAndScope<GObject>(measurableCode, context, context);
         }
         catch (e: any) { Log.ee('Error in "'+type+'" ' + e.message, {e, measurableCode, context}); }
@@ -551,7 +551,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         this.props.node.view = this.props.view;
     }
     public render(nodeType?:string, styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
-        if (!this.props.node) return "loading";
+        if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
+            return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
+        }
+        if (!this.props.node) return "Loading...";
         if (this.props.node.__raw.view !== this.props.view.id) {
             this.onViewChange();
             return "Updating view...";

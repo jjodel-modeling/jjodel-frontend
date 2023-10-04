@@ -3,7 +3,7 @@ import {isDeepStrictEqual} from "util";
 import {
     BEGIN,
     Constructors,
-    CoordinateMode,
+    CoordinateMode, Debug,
     Dictionary,
     DMap,
     DModelElement,
@@ -328,7 +328,8 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return new GraphSize(r.x, r.y, r.w, r.h);
     }
     protected get_innerSize_impl(context: Context, canTriggerSet: boolean = true, outerSize: boolean = false): Readonly<GraphSize> {
-        switch(context.data.className){
+        canTriggerSet = canTriggerSet && !Debug.lightMode && false;
+        switch (context.data.className){
             default: return Log.exDevv("unexpected classname in get_size switch: " + context.data.className);
             case DEdge.cname:
             case DVoidEdge.cname:

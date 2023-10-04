@@ -1,6 +1,7 @@
 import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {
+    Debug,
     DEdgePoint,
     DGraph,
     DGraphElement,
@@ -32,6 +33,7 @@ import {
 import $ from 'jquery';
 import 'jqueryui';
 import 'jqueryui/jquery-ui.css';
+import { lightModeAllowedElements } from '../graphElement/graphElement';
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee { forceupdate?: number }
@@ -129,6 +131,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     this.doMeasurableEvent(EMeasurableEvents.whileDragging);
                 },
                 stop: (event: GObject, obj: GObject) => {
+                    console.log("dragend");
                     this.setSize({x:obj.position.left, y:obj.position.top});
                     this.doMeasurableEvent(EMeasurableEvents.onDragEnd);
                 }
@@ -321,6 +324,9 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     }
 
     render(): ReactNode {
+        if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
+            return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
+        }
         if (!this.props.node) return 'Loading...';
 
 

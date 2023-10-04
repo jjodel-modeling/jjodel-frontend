@@ -1,6 +1,7 @@
 import {
     Constructors,
     CoordinateMode,
+    Debug,
     DGraphElement,
     Dictionary,
     DModelElement,
@@ -429,6 +430,13 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     }
 
     get_children(context: Context): never[] { return []; }
+
+
+    get_lazySizeUpdate(context: Context): D["lazySizeUpdate"] { return Debug.lightMode || context.data.lazySizeUpdate; }
+    set_lazySizeUpdate(val: D["lazySizeUpdate"], context: Context): boolean {
+        return Debug.lightMode || this.set_generic_entry(context, 'lazySizeUpdate', val);
+    }
+
     get_bendingMode(context: Context): D["bendingMode"] { return context.data.bendingMode; }
     set_bendingMode(val: D["bendingMode"], context: Context): boolean {
         return this.set_generic_entry(context, 'bendingMode', val);

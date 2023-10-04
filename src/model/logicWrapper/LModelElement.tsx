@@ -38,7 +38,8 @@ import {
     TargetableProxyHandler,
     U,
     unArr,
-    WPointerTargetable, DUser, DocString, GraphSize} from "../../joiner";
+    WPointerTargetable, DUser, DocString, GraphSize, Debug
+} from "../../joiner";
 import {Info, Json, ObjectWithoutPointers, orArr, PrimitiveType} from "../../joiner/types";
 
 import {
@@ -3480,6 +3481,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 
     private get_suggestedEdgesM1(context: Context, state?: DState): this["suggestedEdges"]{
         let ret: this["suggestedEdges"] = {extend: [], reference: [], packageDependencies: []};
+        if (Debug.lightMode) { return ret; }
         let s: DState = store.getState();
         let values: LValue[] = this.get_allSubValues(context, s);
         let map: Dictionary<DocString<"starting dvalue id">, EdgeStarter[]> = {};
@@ -3511,7 +3513,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         let ret: this["suggestedEdges"] = {extend: [], reference: [], packageDependencies: []};
         let s: DState = store.getState();
         let classes: LClass[] = this.get_classes(context, s);
-        let references: LReference[] = classes.flatMap(c=>c.references);
+        let references: LReference[] = Debug.lightMode ? [] : classes.flatMap(c=>c.references);
         ret.reference = references.map( (r) => {
             let sn = r.node;
             if (!sn) return undefined;
@@ -3547,7 +3549,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         }
         ret.extend = classes.flatMap(c => SkipExtendNodeHidden(c, c.extends, true)).map( (es) => new EdgeStarter(es.start, es.end, es.sn, es.en));
 
-        let dependencies: {src:LModelElement, ends: LModelElement[]}[] = [...(classes.map(c=>{ return {src:c, ends:c.superclasses}})), ...(references.map(r=> { return {src:r, ends:[r.type]}}))]
+        let dependencies: {src:LModelElement, ends: LModelElement[]}[] =
+            Debug.lightMode ? [] : [...(classes.map(c=>{ return {src:c, ends:c.superclasses}})), ...(references.map(r=> { return {src:r, ends:[r.type]}}))]
         let pkgdependencies: {src: LPackage, sn: LGraphElement, ends: Dictionary<Pointer, {end:LPackage, en:LGraphElement}>}[] = []; // transform form in dictionary to prevent duplicates
         //dependencies.map( d=> { let end = d.end.package; return {src:d.src.package, end, endid:end.id}})
 

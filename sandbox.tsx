@@ -1,6 +1,8 @@
 export const a = 0;
+let data:any, node:any, view:any, component:any;
+// 1696192564751_Pointer1696192260965_1297 id for edge label in statechart
+// edgepoint creation undo crashes
 /*
-performance:
     preact can probably be used for dynamical views too, compiled jsx is very similar, just "h()" instead of "React.createElement()"
         https://www.syncfusion.com/blogs/post/preact-vs-react.aspx
     NO million      https://www.reddit.com/r/reactjs/comments/1468v2a/comment/jnpjtl8/
@@ -12,7 +14,52 @@ benchmark   https://krausest.github.io/js-framework-benchmark/current.html
  todo:
  skip render for overlapped nodes & out of visible graph area, edges whose start and end are invisible/missing nodes
  if edge have only 1 end outside visible area, that node should be rendered as an empty box, present in graph with correct size but no content
+jsx rendering {data.values} array directly crashed
 
+done:
+- light mode:
+    - disabled measurable events
+    - renders only model, package, classifiers
+    - lazy size update
+    - edge suggestions disabled except for inheritance, but manually reference added edges are allowed
+
+
+todo:
+- modalità light: cambia viste per nascondere attrib, operation etc. suggestedEdges in model view is not used at all. activate window.isLoading...
+ or make it so it works like this without making new lightmode views? Graohelement or defaultnode refusing to inject view and calculate jsx of features, suggestededges res is always empty
+
+- import ecore.ecore
+- view.appliableTo (node edge, edgepoint) is not working, and is missing graph, graphvertex.   view.appliableToClasses was working i think but had DModelElement targets
+- on rightclick there was "reset resizing" or something, that was needed.
+- default package super buggato (check in post relase notes)
+- import supports only mono-package inputs (pkg is root non-array, not subpackages either)
+
+todo post release:
+- storeSize
+- up/ down rightclick won't work on m1 features
+- not tested but likely bug: html id duplicate if extend and ref edge with same target (don't reference a class you are extending from the same node. no idea what can happen)
+- default package è super buggato.
+se trascini qualcosa in overflow, tutti gli elementi interni si spostano.
+in futuro ci renderà imossibile / da incubo fare scroll / pan nel grafo.
+
+secondo me dovremmo:
+1) in model view, renderizzare i package e i sottoelementi di model.$default direttamente nella vista del modello, NON renderizzando $default esplicitamente. lo saltiamo.
+2) però adesso abbiamo selezionato come radice il modello invece di un package, quindi nella toolbox a sx dobbiamo istruirlo per fargli creare classi quando è selezionato un modello, e buttargliele in model.$package
+
+feature done:
+- toolbar edgepoint
+- m1 edges
+
+bugfixes:
+- edgepoint must not hide when resizing
+- nodes not draggable after changing view
+- many bugs on literals
+- node size resetting when changing view
+- edges isVertexOverlap properties was not working properly when edge was cross-package.
+
+
+
+OLD
 
 done
 - hide edgepoint if edge is not selected / hovered

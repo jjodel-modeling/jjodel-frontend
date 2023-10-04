@@ -36,6 +36,7 @@ import {
     U, windoww, Pointers, DViewPoint, LViewPoint, Dictionary, DUser, AttribETypes, ShortAttribETypes, toShortEType
 } from "../../joiner";
 import {EdgeOptions} from "../store";
+import {DefaultEClasses, ShortDefaultEClasses, toShortEClass} from "../../common/U";
 
 enum ViewEClassMatch { // this acts as a multiplier for explicit priority
     MISMATCH = 0,
@@ -145,6 +146,12 @@ export class Selectors{
         return edges;
     }
 
+    static getDefaultEcoreClass(type: DefaultEClasses | ShortDefaultEClasses, state?: DState): DClassifier {
+        let shorttype: string = (toShortEClass(type as any) || type).toUpperCase();
+        if (!state) state = store.getState();
+        // todo: make other m3 classes and make this generic like getPrimitiveType
+        return state.idlookup["Pointer_"+ShortDefaultEClasses.EObject.toUpperCase()] as DClassifier;
+    }
     static getPrimitiveType(type: AttribETypes | ShortAttribETypes, state?: DState): DClassifier {
         let shorttype: string = (toShortEType(type as any) || type).toUpperCase();
         if (!state) state = store.getState();
