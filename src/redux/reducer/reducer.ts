@@ -8,25 +8,26 @@ import {
     DocString,
     DPointerTargetable,
     DState,
+    DUser,
+    getPath,
+    GObject,
     Log,
+    LPointerTargetable,
     MyError,
     ParsedAction,
+    PendingPointedByPaths,
+    PointedBy,
     Pointer,
     RuntimeAccessibleClass,
+    Selectors,
     SetFieldAction,
     SetRootFieldAction,
-    LPointerTargetable,
-    store,
-    getPath,
-    Selectors,
-    PointedBy,
-    PendingPointedByPaths,
-    statehistory, DUser, GObject
+    statehistory
 } from "../../joiner";
 import React from "react";
-import {CombineHistoryAction, LoadAction, RedoAction, UndoAction} from "../action/action";
-import {Firebase} from "../../firebase";
+import {LoadAction, RedoAction, UndoAction} from "../action/action";
 import TreeModel from 'tree-model';
+import Collaborative from "../../components/collaborative/Collaborative";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -290,10 +291,22 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     if(!oldState?.room) return ret;
     const ignoredFields  = ['contextMenu', '_lastSelected', 'selected', 'isLoading', 'isCleaning'];
     if(action.token === DUser.token && !ignoredFields.includes(action.field)) {
+        const parsedAction: JSON & GObject = JSON.parse(JSON.stringify(action));
+        if(action.type === 'COMPOSITE_ACTION') for(let subAction of parsedAction.actions) delete subAction['stack'];
+        delete parsedAction['stack'];
+        Collaborative.client.emit('pushAction', parsedAction);
+    }
+
+
+    /*
+    if(!oldState?.room) return ret;
+    const ignoredFields  = ['contextMenu', '_lastSelected', 'selected', 'isLoading', 'isCleaning'];
+    if(action.token === DUser.token && !ignoredFields.includes(action.field)) {
         console.log('FB: Sending Action', action);
         const parsedAction: JSON = JSON.parse(JSON.stringify(action));
         Firebase.addAction(ret.room, parsedAction).then();
     }
+    */
     return ret;
 
 }

@@ -1,6 +1,6 @@
-import {BrowserRouter , Routes, Route} from 'react-router-dom';
-import RoomChecker from '../components/room/RoomChecker';
+import {BrowserRouter, Route, Routes} from 'react-router-dom';
 import App from '../App';
+import CollaborativeAttacher from "../components/collaborative/CollaborativeAttacher";
 
 function Router() {
 
@@ -8,7 +8,7 @@ function Router() {
         <Routes>
             <Route path={''} element={<App />} />
             <Route path={'jjodel'} element={<App />} />
-            <Route path={'room/:id'} element={<RoomChecker />} />
+            <Route path={'rooms/:id'} element={<CollaborativeAttacher />} />
             <Route path={'*'} element={<b>404: Not Found</b>} />
         </Routes>
     </BrowserRouter>);

@@ -147,6 +147,7 @@ export class Action extends RuntimeAccessibleClass {
         vertexSize: 'vertexSize'
     };
     id: Pointer;
+    timestamp: number = Date.now();
     sender: Pointer<DUser>;
     token: Pointer<DUser>;
     hasFired: number = 0;
