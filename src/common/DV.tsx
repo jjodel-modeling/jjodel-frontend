@@ -282,8 +282,9 @@ class DefaultView {
         return `<div className={'d-flex root value'} style={{paddingRight: "6px"}}>
      {props.data.instanceof && <label className={'d-block ms-1'}>{props.data.instanceof.name}</label>}
      {!props.data.instanceof && <Input asLabel={true} data={data.id} field={'name'} hidden={true} autosize={true} />}
-    <label className={'d-block m-auto'} style={{color:` + valuecolormap_str + `[props.data.values.type] || "gray"
-    }}>: {props.data.valuestring()}</label>
+    <label className={'d-block m-auto'} style={{color: colorMap[props.typeString] || "gray"
+    }}>: {props.valuesString}</label>
+    {console.log("inside eval", {thiss:this, props, ts: props.typeString, vs: props.valuesString})}
 </div>`
     }
 

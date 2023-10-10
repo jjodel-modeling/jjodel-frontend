@@ -114,6 +114,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         });
     }
 
+    // todo: performance optimize important
     shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
         const oldProps = this.props;
         // if(oldProps.selected !== newProps.selected) { this.moveOnStructure = true; return true; }

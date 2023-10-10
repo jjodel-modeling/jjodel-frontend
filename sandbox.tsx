@@ -1,6 +1,6 @@
 export const a = 0;
 let data:any, node:any, view:any, component:any;
-// 1696192564751_Pointer1696192260965_1297 id for edge label in statechart
+
 // edgepoint creation undo crashes
 /*
     preact can probably be used for dynamical views too, compiled jsx is very similar, just "h()" instead of "React.createElement()"
@@ -10,6 +10,8 @@ let data:any, node:any, view:any, component:any;
                     https://github.com/nextapps-de/mikado/
 benchmark   https://krausest.github.io/js-framework-benchmark/current.html
 
+PureComponent ad memo() both use Object.is() to shallow compare, but they re-defined it with a polyfill.
+so overriding it will be of no use, they call their own identical function
 
  todo:
  skip render for overlapped nodes & out of visible graph area, edges whose start and end are invisible/missing nodes

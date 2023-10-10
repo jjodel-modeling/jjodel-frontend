@@ -44,24 +44,38 @@ import {
 import {EdgeOwnProps} from "./sharedTypes/sharedTypes";
 
 
-export function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
-    let evalContext: GObject = view.constants ? eval('window.tmp = ' + view.constants) : {};
+export function makeEvalContext(props: AllPropss, view: LViewElement, state: DState, ownProps: GraphElementOwnProps, allProps: AllPropss): GObject {
+    let evalContext: GObject = {};
+
+
     let component = GraphElementComponent.map[props.nodeid as Pointer<DGraphElement>];
     let vcomponent = component as VertexComponent;
     evalContext = {...windoww.defaultContext, ...evalContext, model: props.data, ...props,
         edge: (RuntimeAccessibleClass.extends(props.node?.className, "DVoidEdge") ? props.node : undefined),
         component, getSize:vcomponent?.getSize, setSize: vcomponent?.setSize};
+
+    // todo: move them out of component, make it parse in view.set_constants and save the result in a LView variable along with parsed JSX string "React.createElement(...)"
+    if (view.constants) {
+        try {
+            let context = { ...evalContext, state, ret:evalContext, ownProps, props: allProps};
+            let constants = U.evalInContextAndScope(view.constants, context, context);
+            U.objectMergeInPlace(evalContext, constants);
+        }
+        catch (e) {
+            Log.ee("Invalid view.constants: " + view.constants, {error:e, view, props, constants: view.constants});
+        }
+    }
     return evalContext;
 }
 
-function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, ownProps: Readonly<GraphElementOwnProps>): void {
+function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, ownProps: Readonly<GraphElementOwnProps>, state: DState): void {
     //if (!jsxString) { this.setState({template: this.getDefaultTemplate()}); return; }
     // sintassi: '||' + anything + (opzionale: '|' + anything)*N_Volte + '||' + jsx oppure direttamente: jsx
     const view: LViewElement = stateProps.view; //data._transient.currentView;
     // eslint-disable-next-line no-mixed-operators
     let allProps: AllPropss = {...ownProps, ...stateProps} as AllPropss;
     (allProps as GObject).props = allProps;
-    const evalContext = makeEvalContext(allProps, view);
+    const evalContext = makeEvalContext(allProps, view, state, ownProps, stateProps);
     // const evalContextOld = U.evalInContext(this, constants);
     // this.setState({evalContext});
     //console.error({jsx:view.jsxString, view});
@@ -227,14 +241,29 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // view non deve essere più injected ma calcolata, però devo fare inject della view dell'elemento parent. learn ocl to make view target
         Log.exDev(!ret.view, 'failed to inject view:', {state, ownProps, reduxProps: ret});
         // console.log(!ret.view, 'failed to inject view:', {state, ownProps, reduxProps: ret});
-        if (ret.view.usageDeclarations) U.objectMergeInPlace(ret, U.evalInContextAndScope(ret.view.usageDeclarations));
         // console.log('GE mapstatetoprops:', {state, ownProps, reduxProps: ret});
         // ret.model = state.models.length ? LModelElement.wrap(state.models[0]) as LModel : undefined;
-        setTemplateString(ret, ownProps); // todo: this is heavy, should be moved somewhere where it's executed once unless view changes (pre-render with if?)
+        setTemplateString(ret, ownProps, state); // todo: this is heavy, should be moved somewhere where it's executed once unless view changes (pre-render with if?)
         // @ts-ignore
         ret.forceupdate = state.forceupdate;
         // @ts-ignore
         ret.key = ret.key || ownProps.key;
+
+        console.log("view compute usageDeclarations", {ret, ownProps});
+        if (ret.view.usageDeclarations) {
+            try {
+                let context = { ...ret.evalContext, state, ret, ownProps, props: ret};
+                let usageDeclarations: GObject | (()=>GObject) = U.evalInContextAndScope(ret.view.usageDeclarations, context, context);
+                if (typeof usageDeclarations === "function") usageDeclarations = usageDeclarations();
+                U.objectMergeInPlace(ret, usageDeclarations);
+                U.objectMergeInPlace(context, usageDeclarations);
+                context.props = ret; // hotfix to update context props after usageDeclaration mapping
+                console.log("view compute usageDeclarations SUCCESS 1", {usageDeclarations, viewud: ret.view.usageDeclarations, ret, ownProps, context:ret.evalContext});
+                ret.evalContext.props = ret;
+            } catch (e) {
+                Log.ee("Invalid usage declarations", {e, str: ret.view.usageDeclarations, view:ret.view, data:ret.data, ret});
+            }
+        }
         return ret;
     }
 
@@ -253,6 +282,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     // todo: can be improved by import memoize from "memoize-one"; it is high-order function that memorize the result if params are the same without re-executing it (must not have side effects)
     //  i could use memoization to parse the jsx and to execute the user-defined pre-render function
 
+    public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any): boolean {
+        // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
+        return !U.isShallowEqualWithProxies(this.props, nextProps, 0, 1);
+        // apparently node changes are not working? also check docklayout shouldupdate
+    }
 
     protected doMeasurableEvent(type: EMeasurableEvents): boolean {
         if (Debug.lightMode) return false;
@@ -262,11 +296,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             measurableCode = (this.props.view)[type];
             if (!measurableCode) return false;
             context = this.getContext();
-            measurableCode = measurableCode.trim();
-            if (measurableCode[0]!=='(' || measurableCode.indexOf("function") !== 0) {
-                measurableCode = "()=>{" + measurableCode + "\n}"; // last \n important for line comments //
-            }
-            measurableCode = "(" + measurableCode + ")()";
+            measurableCode = U.wrapUserFunction(measurableCode);
             console.log("dragend execute", {measurableCode});
             U.evalInContextAndScope<GObject>(measurableCode, context, context);
         }
@@ -389,6 +419,54 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return context;
     }
 
+    protected displayError(e: Error, where: string): React.ReactNode {
+        const view: LViewElement = this.props.view; //data._transient.currentView;
+        let errormsg = (where === "preRenderFunc" ? "Pre-Render " : "") +(e.message||"\n").split("\n")[0];
+        if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0) {
+            errormsg += '\n\nReminder: nullish operators ".?" and "??" are not supported.'; }
+        else if (view.jsxString.indexOf('?.') >= 0) { errormsg += '\n\nReminder: ?. operator and empty tags <></> are not supported.'; }
+        else if (e.message.indexOf("Unexpected token '<'")) { errormsg += '\n\nDid you forgot to close a html </tag>?'; }
+        try {
+            let ee = e.stack || "";
+            let stackerrorlast = ee.split("\n")[1];
+
+            let icol = stackerrorlast.lastIndexOf(":");
+            let jsxString = view.jsxString;
+            // let col = stackerrorlast.substring(icol+1);
+            let irow = stackerrorlast.lastIndexOf(":", icol-1);
+            let stackerrorlinenum: GObject = {
+                row: Number.parseInt(stackerrorlast.substring(irow+1, icol)),
+                col: Number.parseInt(stackerrorlast.substring(icol+1)) };
+            let linesPre = 1;
+            let linesPost = 1;
+            let jsxlines = jsxString.split("\n");
+            let culpritlinesPre: string[] = jsxlines.slice(stackerrorlinenum.row-linesPre-1, stackerrorlinenum.row - 1);
+            let culpritline: string = jsxlines[stackerrorlinenum.row - 1]; // stack start counting lines from 1
+            let culpritlinesPost: string[] = jsxlines.slice(stackerrorlinenum.row, stackerrorlinenum.row + linesPost);
+            console.error("errr", {e, jsxlines, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
+
+            let caretCursor = "▓" // ⵊ ꕯ 𝙸 Ꮖ
+            if (culpritline && stackerrorlinenum.col < culpritline.length && stackerrorlast.indexOf("main.chunk.js") === -1) {
+                let rowPre = culpritline.substring(0, stackerrorlinenum.col);
+                let rowPost = culpritline.substring(stackerrorlinenum.col);
+                let jsxcode =
+                    <div style={{fontFamily: "monospaced sans-serif", color:"#444"}}>
+                        { culpritlinesPre.map(l => <div>{l}</div>) }
+                        <div>{rowPre} <b style={{color:"red"}}> {caretCursor} </b> {rowPost}</div>
+                        { culpritlinesPost.map(l => <div>{l}</div>) }
+                    </div>;
+                console.error("errr", {e, ee, jsxlines, jsxcode, rowPre, rowPost, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
+                errormsg += " @line " + stackerrorlinenum.row + ":" + stackerrorlinenum.col;
+                return DV.errorView(<div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template: this.props.template, view: this.props.view});
+            } else {
+                // it means it is likely accessing a minified.js src code, sending generic error without source mapping
+            }
+        } catch(e2) {
+            Log.eDevv("internal error in error view", {e, e2, where} );
+        }
+        return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: this.props.template, view: this.props.view});
+    }
+
     private getTemplate(): ReactNode {
         /*if (!this.state.template) {
             this.setTemplateString('{c1: 118}', '()=>{this.setState({c1: this.state.c1+1})}',
@@ -399,53 +477,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // Log.exDev(debug && maxRenderCounter-- < 0, "loop involving render");
         let context: GObject = this.getContext();
 
-        let displayError = (e: Error, where: string) => {
-            const view: LViewElement = this.props.view; //data._transient.currentView;
-            let errormsg = (where === "preRenderFunc" ? "Pre-Render " : "") +(e.message||"\n").split("\n")[0];
-            if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0) {
-                errormsg += '\n\nReminder: nullish operators ".?" and "??" are not supported.'; }
-            else if (view.jsxString.indexOf('?.') >= 0) { errormsg += '\n\nReminder: ?. operator and empty tags <></> are not supported.'; }
-            else if (e.message.indexOf("Unexpected token '<'")) { errormsg += '\n\nDid you forgot to close a html </tag>?'; }
-            try {
-                let ee = e.stack || "";
-                let stackerrorlast = ee.split("\n")[1];
-
-                let icol = stackerrorlast.lastIndexOf(":");
-                let jsxString = view.jsxString;
-                // let col = stackerrorlast.substring(icol+1);
-                let irow = stackerrorlast.lastIndexOf(":", icol-1);
-                let stackerrorlinenum: GObject = {
-                    row: Number.parseInt(stackerrorlast.substring(irow+1, icol)),
-                    col: Number.parseInt(stackerrorlast.substring(icol+1)) };
-                let linesPre = 1;
-                let linesPost = 1;
-                let jsxlines = jsxString.split("\n");
-                let culpritlinesPre: string[] = jsxlines.slice(stackerrorlinenum.row-linesPre-1, stackerrorlinenum.row - 1);
-                let culpritline: string = jsxlines[stackerrorlinenum.row - 1]; // stack start counting lines from 1
-                let culpritlinesPost: string[] = jsxlines.slice(stackerrorlinenum.row, stackerrorlinenum.row + linesPost);
-                console.error("errr", {e, jsxlines, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
-
-                let caretCursor = "▓" // ⵊ ꕯ 𝙸 Ꮖ
-                if (culpritline && stackerrorlinenum.col < culpritline.length && stackerrorlast.indexOf("main.chunk.js") === -1) {
-                    let rowPre = culpritline.substring(0, stackerrorlinenum.col);
-                    let rowPost = culpritline.substring(stackerrorlinenum.col);
-                    let jsxcode =
-                        <div style={{fontFamily: "monospaced sans-serif", color:"#444"}}>
-                            { culpritlinesPre.map(l => <div>{l}</div>) }
-                            <div>{rowPre} <b style={{color:"red"}}> {caretCursor} </b> {rowPost}</div>
-                            { culpritlinesPost.map(l => <div>{l}</div>) }
-                        </div>;
-                    console.error("errr", {e, ee, jsxlines, jsxcode, rowPre, rowPost, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
-                    errormsg += " @line " + stackerrorlinenum.row + ":" + stackerrorlinenum.col;
-                    return DV.errorView(<div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template: this.props.template, view: this.props.view});
-                } else {
-                    // it means it is likely accessing a minified.js src code, sending generic error without source mapping
-                }
-            } catch(e2) {
-                Log.eDevv("internal error in error view", {e, e2, where} );
-            }
-            return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: this.props.template, view: this.props.view});
-        }
 
         try {
             if (this.props.preRenderFunc) {
@@ -453,14 +484,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 for (let key in obj) { context[key] = obj[key]; }
             }
         }
-        catch(e: any) { return displayError(e, "preRenderFunc");  }
+        catch(e: any) { return this.displayError(e, "preRenderFunc");  }
         let ret;
         try {
             ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + this.props.template + '})()', context);
             // ret = this.props.template();
             // ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], {});
         }
-        catch(e: any) { return displayError(e, "getTemplate"); }
+        catch(e: any) { return this.displayError(e, "getTemplate"); }
         return ret;
     }
 

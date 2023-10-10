@@ -730,8 +730,8 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.appliableTo = 'node';
         thiss.jsxString = jsxString;
         thiss.usageDeclarations = usageDeclarations;
-        thiss.constants = '{}';
-        thiss.preRenderFunc = '() => {return{}}';
+        thiss.constants = ''; // '{}';
+        thiss.preRenderFunc = ''; // '() => {return{}}';
         thiss.onDragEnd = thiss.onDragStart = thiss.whileDragging =
         thiss.onResizeEnd = thiss.onResizeStart = thiss.whileResizing = '';
         thiss.onRotationEnd = thiss.onRotationStart = thiss.whileRotating = '';

@@ -26,7 +26,7 @@ function Value(props: Props) {
     let field = 'text'; let stepSize = 1; let maxLength = 524288;
     let min = -9223372036854775808;
     let max = 9223372036854775807; // for long, todo: aggiusta per tutti gli altri. in switch
-    switch(feature?.type.name) {
+    switch (feature?.type.name) {
         default: field="text"; break;
         case 'EChar': maxLength = 1; break;
         case 'EInt':
@@ -64,7 +64,7 @@ function Value(props: Props) {
     }
 
 
-    let featureType: LClassifier = feature.type;
+    let featureType: LClassifier = feature?.type;
     let isattr = false, isenum = false, isref = false, isshapeless = false;
     switch(feature?.className){
         default: isshapeless = true; break;

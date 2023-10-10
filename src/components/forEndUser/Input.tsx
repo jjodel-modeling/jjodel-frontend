@@ -32,6 +32,7 @@ function InputComponent(props: AllProps) {
     const [isTouched, setIsTouched] = useStateIfMounted(false);
     const [showTooltip, setShowTooltip] = useStateIfMounted(false);
 
+    // why as an effect?
     useEffect(() => {
         // I check if the value that I have in my local state is being edited by other <Input />
         const oldValue = (!data) ? 'undefined' : (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined'

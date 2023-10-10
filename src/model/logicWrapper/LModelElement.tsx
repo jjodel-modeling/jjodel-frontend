@@ -1,17 +1,22 @@
-import type { LVoidVertex } from "../../joiner";
+import type {LVoidVertex} from "../../joiner";
 import {
+    Abstract,
     BEGIN,
     Constructor,
     Constructors,
-    CreateElementAction,
-    DEdge, DeleteElementAction,
+    Debug,
+    DEdge,
+    DeleteElementAction,
     Dictionary,
+    DocString,
     DPointerTargetable,
+    DState,
     DtoL,
     END,
     getWParams,
     GObject,
-    DState,
+    GraphSize,
+    Instantiable,
     Leaf,
     LEdge,
     LGraphElement,
@@ -26,8 +31,6 @@ import {
     Pointer,
     Pointers,
     RuntimeAccessible,
-    Abstract,
-    Instantiable,
     RuntimeAccessibleClass,
     Selectors,
     SetFieldAction,
@@ -37,8 +40,7 @@ import {
     store,
     TargetableProxyHandler,
     U,
-    unArr,
-    WPointerTargetable, DUser, DocString, GraphSize, Debug
+    unArr
 } from "../../joiner";
 import {Info, Json, ObjectWithoutPointers, orArr, PrimitiveType} from "../../joiner/types";
 
@@ -51,7 +53,6 @@ import {
     EcoreLiteral,
     ECoreOperation,
     ECorePackage,
-    ECoreSubPackage,
     EcoreParser,
     ECoreReference,
     ECoreRoot
@@ -4300,6 +4301,15 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected get_isMirage(context: Context): this["isMirage"] { return context.data.isMirage; }
     protected set_isMirage(val: this["isMirage"], context: Context): boolean { SetFieldAction.new(context.data, 'isMirage', val, "", false); return true; }
 
+    typeStr!:string; // derivate attribute, abstract
+    typeString!:string; // derivate attribute, abstract
+    __info_of__typeStr: Info = {type: ShortAttribETypes.EString, txt: <div>Alias of<i>this.typeString</i></div>}
+    __info_of__typeString: Info = {type: ShortAttribETypes.EString, txt: <div>Stringified version of <i>this.type</i></div>}
+    protected get_typeString(c: Context): string { return this.get_typeStr(c); }
+    protected get_typeStr(c: Context): string {
+        let meta = this.get_instanceof(c);
+        return meta ? meta.typeToShortString() : "shapeless"; }
+
     // individual value getters
     // if withMetaInfo, returns a wrapper for the first non-empty value found containing his index and metainfo
     protected get_value<T extends boolean>(context: Context, namedPointers: boolean = false, ecorePointers: boolean = false,
@@ -4326,7 +4336,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         let dmeta: undefined | DAttribute | DReference = meta?.__raw;
 
         // if (meta && meta.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
-        let typestr: string = meta ? meta.typeToShortString() : "shapeless";
+        let typestr: string = this.get_typeString(context);
+        (ret as GObject).type = typestr;
         if (!Array.isArray(ret)) ret = [];
         if (dmeta && fitSize && ret.length < dmeta.lowerBound && dmeta.lowerBound > 0) {
             let times = dmeta.lowerBound - ret.length;
@@ -4494,7 +4505,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             if (withmetainfo) ret.forEach((struct: ValueDetail)=>{ struct.value = numbercasting(struct.value); });
             else ret = ret.map(numbercasting);
         }
-        (ret as GObject).type = typestr;
         // console.error("type value:", {ret, typestr, meta, fitSize});
         return ret as any;
     }
@@ -4510,8 +4520,10 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
     }
     // stringified value getters
+    public valuesString(keepemptyquotes?: boolean): string { return this.cannotCall("valuestring"); }
     public valuestring(keepemptyquotes?: boolean): string { return this.cannotCall("valuestring"); }
     private get_valuestring(context: Context): this["valuestring"] { return (keepemptyquotes?: boolean) => this.valuestring_impl(context, keepemptyquotes); }
+    private get_valuesString(context: Context): this["valuestring"] { return (keepemptyquotes?: boolean) => this.valuestring_impl(context, keepemptyquotes); }
     private valuestring_impl(context: Context, keepemptyquotes?: boolean): string {
         // console.error("valuestring_impl", {context, data:context.data});
         let val = this.get_values(context, true, true, false, false, true);

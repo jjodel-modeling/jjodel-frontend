@@ -59,11 +59,43 @@ export class U {
         return fathers;
     }
 
+    static isShallowEqualWithProxies(obj1: GObject, obj2: GObject, depth: number = 0, maxDepth: number = 1, retIfMaxDepthReached: boolean = false): boolean {
+        for (let key in obj1) {
+            let oldp: any = obj2[key];
+            let newp: any = obj1[key];
+            if (oldp === newp) continue;
+            // from here below: on which cases obj1 !== obj2, but they can still be "equal"? only if function, array, object.
+            let told = typeof oldp;
+            if (told !== typeof newp) return false;
+            switch (told) {
+                default: return false;
+                case "function": return newp.toString() === oldp.toString();
+                case "object":
+                    if (Array.isArray(newp)) {
+                        if (!Array.isArray(oldp)) return false;
+                        if (newp.length !== oldp.length) return false;
+                        //todo array check, move the whole comparison func in U and do
+                        if (depth === maxDepth) return retIfMaxDepthReached;
+                        for (let i = 0; i < newp.length; i++) if(!U.isShallowEqualWithProxies(newp[i], oldp[i], depth + 1, maxDepth, retIfMaxDepthReached)) return false;
+                    }
+                    // for proxies and DObjects
+                    if (newp.clonedCounter !== undefined && newp.clonedCounter !== oldp.clonedCounter) return false;
+                    // for raw objects made from declarationUsages
+                    if (depth === maxDepth) return retIfMaxDepthReached;
+                    if (!U.isShallowEqualWithProxies(newp, oldp, depth + 1, maxDepth, retIfMaxDepthReached)) return true;
+            }
+        }
+        // just check for keys that were in props and are not in nextProps
+        for (let key in obj2) {
+            if (!(key in obj1)) return false;
+        }
+        return true;
+    }
+
     public static deepEqual (x: GObject, y: GObject): boolean {
-        const ok = Object.keys, tx = typeof x, ty = typeof y;
+        const tx = typeof x, ty = typeof y;
         return x && y && tx === 'object' && tx === ty ? (
-            ok(x).length === ok(y).length &&
-            ok(x).every(key => U.deepEqual(x[key], y[key]))
+            Object.keys(x).length === Object.keys(y).length && Object.keys(x).every(key => U.deepEqual(x[key], y[key]))
         ) : (x === y);
     }
 
@@ -299,9 +331,13 @@ export class U {
     // merge properties with first found first kept (first parameters have priority on override). only override null|undefined values, not (false|0|'') values
     static objectMergeInPlace<A extends object, B extends object>(output: A, ...objarr: B[]): void {
         const out: GObject = output;
-        for (let o of objarr) for (let key in o) {
-            // noinspection BadExpressionStatementJS,JSUnfilteredForInLoop
-            out[key] ?? (out[key] = o[key]);
+        if (objarr)
+        for (let o of objarr) {
+            if (o && typeof o === "object")
+            for (let key in o) {
+                // noinspection BadExpressionStatementJS,JSUnfilteredForInLoop
+                out[key] ?? (out[key] = o[key]);
+            }
         }
     }
 
@@ -390,7 +426,7 @@ export class U {
     // if the context (this) is missing it will take the scope as context.
     // warn: cannot set different scope and context, "this" della funzione sovrascrive anche il "this" interno allo scope come chiave dell'oggetto
     // warn: if you modify
-    public static evalInContextAndScope<T = any>(codeStr: string, scope0?: GObject, context0?: GObject): T {
+    public static evalInContextAndScope<T = any>(codeStr: string, scope0: GObject | undefined, context0?: GObject): T {
         // console.log('evalInContextAndScope', {codeStr, scope, context});
         // scope per accedere a variabili direttamente "x + y"
         // context per accedervi tramite this, possono essere impostati come diversi.
@@ -758,11 +794,12 @@ export class U {
 
         var keysA = Object.keys(objA);
         var keysB = Object.keys(objB);
+        if (keysA.length !== keysB.length) return false;
 
         // if (keysA.length !== keysB.length) { return false; }
         // Test for A's keys different from B.
         // var bHasOwnProperty = hasOwnProperty.bind(objB);
-        for (let keya in objA) if (objA[keya] !== objB[keya]) return false;
+        for (let keya in objA) if (!Object.is(objA[keya], objB[keya])) return false;
 
         // for (var i = 0; i < keysA.length; i++) if (!bHasOwnProperty(keysA[i]) || objA[keysA[i]] !== objB[keysA[i]]) { return false; }
         return true;
@@ -1106,6 +1143,18 @@ export class U {
     static uppercaseFirstLetter<T extends (string | GObject<"jsx">)>(str: T): T {
         if (typeof str !== "string") return str;
         return str.charAt(0).toUpperCase() + str.slice(1) as T;
+    }
+
+    // CAREFUL! it's imperfect.
+    // Does not handle strings starting with ( that are not ()=> arrow functions
+    // or codes whose last chars are () but not in (function)() form
+    static wrapUserFunction(str: string): string {
+        str = str.trim();
+        if (str[0]!=='(' || str.indexOf("function") !== 0) {
+            str = "()=>{" + str + "\n}"; // last \n important for line comments //
+        }
+        if (str[str.length - 2] !== "(" || str[str.length - 1] !== ")") str = "(" + str + ")()";
+        return str;
     }
 }
 export class DDate{

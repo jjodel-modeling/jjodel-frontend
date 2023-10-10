@@ -163,7 +163,7 @@ export class Action extends RuntimeAccessibleClass {
     subType?: string; //?
     protected constructor(field: string, value: any, subType?: string){
         super();
-        this.id = 'Pointer_' + Date.now();
+        this.id = 'Action_' + Date.now(); // NB: the prefix must be the same for all actions because it must not affect order
         this.sender = DUser.current;
         this.token = DUser.token;
         this.field = field;

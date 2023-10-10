@@ -1,6 +1,7 @@
 import React, {Dispatch, ReactElement} from 'react';
 import {DState, DViewElement, LViewElement, Pointer} from '../../../../joiner';
 import {connect} from "react-redux";
+import {Function} from "../../../forEndUser/FunctionComponent";
 
 function CustomDataComponent(props: AllProps) {
     const view = props.view;
@@ -104,6 +105,7 @@ function CustomDataComponent(props: AllProps) {
                 </button>
             </div>)
         })}
+        <Function data={view} field={"usageDeclarations"} jsxLabel={true} />
     </section>);
 }
 

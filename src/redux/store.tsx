@@ -262,6 +262,24 @@ function makeDefaultGraphViews(): DViewElement[] {
     let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname]);
     valueView.query = 'context DValue inv: true';
 
+    let valuecolormap: GObject = {};
+    valuecolormap[ShortAttribETypes.EBoolean] = "orange";
+    valuecolormap[ShortAttribETypes.EByte] = "orange";
+    valuecolormap[ShortAttribETypes.EShort] = "orange";
+    valuecolormap[ShortAttribETypes.EInt] = "orange";
+    valuecolormap[ShortAttribETypes.ELong] = "orange";
+    valuecolormap[ShortAttribETypes.EFloat] = "orange";
+    valuecolormap[ShortAttribETypes.EDouble] = "orange";
+    valuecolormap[ShortAttribETypes.EDate] = "green";
+    valuecolormap[ShortAttribETypes.EString] = "green";
+    valuecolormap[ShortAttribETypes.EChar] = "green";
+    valuecolormap[ShortAttribETypes.void] = "gray";
+    valueView.usageDeclarations = "()=>{\n" +
+        "ret.valuesString = data.valuesString();\n" +
+        "ret.typeString = data.typeString;\n" +
+        "}";
+    valueView.constants = "{colorMap:" + JSON.stringify(valuecolormap) + "}";
+
     let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.cname]);
     voidView.appliableToClasses=["VoidVertex"];
     voidView.explicitApplicationPriority = 2;
