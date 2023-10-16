@@ -72,6 +72,7 @@ import {
 import React from "react";
 import {DV} from "../common/DV";
 import LeaderLine from "leader-line-new";
+import {DefaultEClasses, ShortDefaultEClasses} from "../common/U";
 
 console.warn('ts loading store');
 
@@ -130,13 +131,14 @@ export class DState extends DPointerTargetable{
     classifiers: Pointer<DClassifier, 0, 'N', LClassifier> = [];
     enumerators: Pointer<DEnumerator, 0, 'N', LEnumerator> = [];
     packages: Pointer<DPackage, 0, 'N', LPackage> = [];
-    primitiveTypes: Pointer<DClass, 0, "N", LClass> = [];
     attributes: Pointer<DAttribute, 0, "N", LAttribute> = [];
     enumliterals: Pointer<DEnumLiteral, 0, "N", LEnumLiteral> = [];
     references: Pointer<DReference, 0, "N", LReference> = [];
     classs: Pointer<DClass, 0, "N", LClass> = [];
     operations: Pointer<DOperation, 0, "N", LOperation> = [];
     parameters: Pointer<DParameter, 0, "N", LParameter> = [];
+    primitiveTypes: Pointer<DClass, 0, "N", LClass> = [];
+    ecoreClasses: Pointer<DClass, 0, "N", LClass> = [];
     returnTypes: Pointer<DClass, 0, "N", LClass> = [];
     /// DClass section end
 
@@ -203,6 +205,15 @@ export class DState extends DPointerTargetable{
             }
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
         }
+
+        for (let defaultEcoreClass of Object.values(DefaultEClasses)){
+            // todo: creat everyone and not just object, make the whole m3 populated.
+        }
+        let dObject = DClass.new(ShortDefaultEClasses.EObject, false, false, false, false, '', undefined, false);
+        dObject.id = 'Pointer_' + ShortDefaultEClasses.EObject.toUpperCase();
+        CreateElementAction.new(dObject);
+        SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
+
     }
 }
 
@@ -250,6 +261,24 @@ function makeDefaultGraphViews(): DViewElement[] {
 
     let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname]);
     valueView.query = 'context DValue inv: true';
+
+    let valuecolormap: GObject = {};
+    valuecolormap[ShortAttribETypes.EBoolean] = "orange";
+    valuecolormap[ShortAttribETypes.EByte] = "orange";
+    valuecolormap[ShortAttribETypes.EShort] = "orange";
+    valuecolormap[ShortAttribETypes.EInt] = "orange";
+    valuecolormap[ShortAttribETypes.ELong] = "orange";
+    valuecolormap[ShortAttribETypes.EFloat] = "orange";
+    valuecolormap[ShortAttribETypes.EDouble] = "orange";
+    valuecolormap[ShortAttribETypes.EDate] = "green";
+    valuecolormap[ShortAttribETypes.EString] = "green";
+    valuecolormap[ShortAttribETypes.EChar] = "green";
+    valuecolormap[ShortAttribETypes.void] = "gray";
+    valueView.usageDeclarations = "()=>{\n" +
+        "ret.valuesString = data.valuesString();\n" +
+        "ret.typeString = data.typeString;\n" +
+        "}";
+    valueView.constants = "{colorMap:" + JSON.stringify(valuecolormap) + "}";
 
     let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.cname]);
     voidView.appliableToClasses=["VoidVertex"];

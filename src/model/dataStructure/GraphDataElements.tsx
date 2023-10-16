@@ -3,7 +3,7 @@ import {isDeepStrictEqual} from "util";
 import {
     BEGIN,
     Constructors,
-    CoordinateMode,
+    CoordinateMode, Debug,
     Dictionary,
     DMap,
     DModelElement,
@@ -67,9 +67,9 @@ export class DGraphElement extends DPointerTargetable {
     // static logic: typeof LGraphElement;
     // static structure: typeof DGraphElement;
     id!: Pointer<DGraphElement, 1, 1, LGraphElement>;
-    graph!: Pointer<DGraph, 1, 1, LGraph>; // todo: cerca graphID e rimpiazza / adatta
+    graph!: Pointer<DGraph, 1, 1, LGraph>;
     model?: Pointer<DModelElement, 0, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
@@ -96,8 +96,8 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     public static cname: string = "LGraphElement";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    static getNodeId<L extends LGraphElement, D extends DGraphElement>(o:L | D | Pointer<D> | LModelElement | DModelElement | Pointer<DModelElement>): Pointer<D> {
-        // Log.ex(!o, "cannot get node from undefined", {o});
+    static getNodeId<L extends LGraphElement, D extends DGraphElement>(o?:L | D | Pointer<D> | LModelElement | DModelElement | Pointer<DModelElement>): Pointer<D> {
+        if (!o) return undefined as any;
         let node: any = o;
         // from L to D
         // let cname = (node.__raw || node).className;
@@ -113,7 +113,8 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     father!: LGraphElement;
     graph!: LGraph; // todo: can be removed and accessed by navigating .father
     model?: LModelElement;
-    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
+    // protected isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>; //  & ((forUser?: Pointer<DUser>) => boolean);
+
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[]; // shallow, direct subelements
     state!: LMap;
@@ -328,7 +329,8 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return new GraphSize(r.x, r.y, r.w, r.h);
     }
     protected get_innerSize_impl(context: Context, canTriggerSet: boolean = true, outerSize: boolean = false): Readonly<GraphSize> {
-        switch(context.data.className){
+        canTriggerSet = canTriggerSet && !Debug.lightMode && false;
+        switch (context.data.className){
             default: return Log.exDevv("unexpected classname in get_size switch: " + context.data.className);
             case DEdge.cname:
             case DVoidEdge.cname:
@@ -523,9 +525,61 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         if (ptr) SetFieldAction.new(ptr as any, 'subElements+=', context.data.id);
         return true; }
 
-    get_isSelected(context: LogicContext<DGraphElement>): this["isSelected"] { return context.data.isSelected; }
-    set_isSelected(val: this["isSelected"], context: LogicContext<DGraphElement>): boolean {
-        return this.cannotSet("graphElement.isSelected(): todo"); }
+    __info_of__isselected: Info = {type: "Dictionary<Pointer<User>, true>",
+        txt:<div>A map that contains all the users selecting this element as keys, and always true as a value (if present).
+            <br/>Edit it through node.select() and node.deselect()</div>}
+    __info_of_select: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Marks this node as selected by argument user."};
+    __info_of_deselect: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Un-marks this node as selected by argument user."};
+    __info_of_toggleSelect: Info = {type:"function(usr?:Pointer<User>):void", txt:"Calls this.select(usr) if the node is selected by argument user, this.deselect(usr) otherwise. If omitted, argument \"usr\" is the current user id.<br>Returns the result of this.isSelected() after the toggle."};
+    __info_of_isSelected: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Tells if this node is selected by argument user."};
+    select(forUser?: Pointer<DUser>): void { return this.wrongAccessMessage("node.select()"); }
+    deselect(forUser?: Pointer<DUser>): void { return this.wrongAccessMessage("node.deselect()"); }
+    toggleSelected(forUser?: Pointer<DUser>): void { return this.wrongAccessMessage("node.toggleSelected()"); }
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
+    get_select(c: Context): (forUser?: Pointer<DUser>)=>void {
+        return (forUser?: Pointer<DUser>)=> {
+            if (!forUser) forUser = DUser.current;
+            if (c.data.isSelected[forUser]) return; // no-op
+            let map = {...c.data.isSelected};
+            map[forUser] = true;
+            SetFieldAction.new(c.data.id, "isSelected", map, undefined, false);
+            // todo: actually they are pointer to users, but i'm assuming users are not erased at runtime. on deselect too
+        }
+    }
+    get_deselect(c: Context): (forUser?: Pointer<DUser>)=>void {
+        return (forUser?: Pointer<DUser>)=> {
+            if (!forUser) forUser = DUser.current;
+            if (!c.data.isSelected[forUser]) return; // no-op
+            let map = {...c.data.isSelected};
+            delete map[forUser];
+            SetFieldAction.new(c.data.id, "isSelected", map, undefined, false);
+            // todo: actually they are pointer to users, but i'm assuming users are not erased at runtime. on deselect too
+        }
+    }
+    get_toggleSelected(context: Context): ((forUser?: Pointer<DUser>) => boolean) {
+        return (forUser?: Pointer<DUser>): boolean => {
+            if (!forUser) forUser = DUser.current;
+            if (this.get_isSelected(context)(forUser)) {
+                this.get_deselect(context)(forUser);
+                return false;
+            } else {
+                this.get_select(context)(forUser);
+                return true;
+            }
+        }
+    }
+    get_isSelected(context: Context): ((forUser?: Pointer<DUser>) => boolean) {
+        return (forUser?: Pointer<DUser>): boolean => {
+            if (!forUser) forUser = DUser.current;
+            return !!context.data.isSelected[forUser]; }
+    }
+    set_isSelected(val: this["isSelected"], context: Context): boolean {
+        return this.cannotSet("graphElement.isSelected(): use this.select() or this.deselect() instead.");
+    }
+    /*
+    get_isSelected(context: LogicContext<DVoidVertex>): GObject {
+        return DPointerTargetable.mapWrap(context.data.isSelected, context.data, 'idlookup.' + context.data.id + '.isSelected', []);
+    }*/
 
     get_state(context: LogicContext<DGraphElement>): this["state"] {
         let state: GObject = context.data.state;
@@ -538,7 +592,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return state as any;
     }
     set_state(val: this["state"], context: LogicContext<DGraphElement>): boolean {
-        return this.cannotSet("graphElement.isSelected(): todo"); }
+        return this.cannotSet("graphElement.setstate(): todo"); }
 
 
 
@@ -580,7 +634,7 @@ export class DGraph extends DGraphElement {
     id!: Pointer<DGraph, 1, 1, LGraph>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 1, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
@@ -634,7 +688,8 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     id!: Pointer<DGraph, 1, 1, LGraph>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
@@ -724,7 +779,7 @@ export class DVoidVertex extends DGraphElement {
     id!: Pointer<DVoidVertex, 1, 1, LVoidVertex>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
@@ -760,7 +815,8 @@ export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C exte
     id!: Pointer<DVoidVertex, 1, 1, LVoidVertex>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
@@ -802,9 +858,6 @@ export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C exte
             return true;
         }*/
 
-    get_isSelected(context: LogicContext<DVoidVertex>): GObject {
-        return DPointerTargetable.mapWrap(context.data.isSelected, context.data, 'idlookup.' + context.data.id + '.isSelected', []);
-    }
 
 
 
@@ -825,7 +878,7 @@ export class DEdgePoint extends DVoidVertex { // DVoidVertex
     father!: Pointer<DVoidEdge, 1, 1, LVoidEdge>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>; // todo: if null gets model from this.father (edge)?
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     zoom!: GraphPoint;
@@ -862,7 +915,8 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
     id!: Pointer<DEdgePoint, 1, 1, LEdgePoint>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     zoom!: GraphPoint;
@@ -1008,7 +1062,7 @@ export class DVertex extends DGraphElement { // DVoidVertex
     id!: Pointer<DVertex, 1, 1, LVertex>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     zoom!: GraphPoint;
@@ -1043,7 +1097,8 @@ export class LVertex<Context extends LogicContext<any> = any, D = DVertex> exten
     id!: Pointer<DVertex, 1, 1, LVertex>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     zoom!: GraphPoint;
@@ -1075,7 +1130,7 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
     id!: Pointer<DGraphVertex, 1, 1>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 1, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     // from graph
@@ -1128,7 +1183,8 @@ export class LGraphVertex<Context extends LogicContext<any> = any, D extends DGr
     id!: Pointer<DGraphVertex, 1, 1>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     ///////////////////////////////////////// subElements!: LGraphElement[];
     // from graph
@@ -1166,7 +1222,8 @@ export class DVoidEdge extends DGraphElement {
     id!: Pointer<DVoidEdge, 1, 1, LVoidEdge>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
 
@@ -1424,7 +1481,8 @@ export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends 
     id!: Pointer<DVoidEdge, 1, 1, LVoidEdge>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     start!: LGraphElement;
@@ -1434,6 +1492,7 @@ export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends 
     midnodes!: LEdgePoint[];
     edge!: LVoidEdge; // returns self. useful to get edge from edgePoints without triggering error if you are already on edge.
     __info_of__edge: Info = {type:"?LEdge", txt:"returns this if called on an edge, the containing edge if called on an EdgePoint, undefined otherwise."}
+
 
 /*
 replaced by startPoint
@@ -1909,7 +1968,8 @@ export class DEdge extends DVoidEdge { // DVoidEdge
     id!: Pointer<DEdge, 1, 1, LEdge>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
@@ -1933,7 +1993,8 @@ export class LEdge<Context extends LogicContext<DEdge> = any, D extends DEdge = 
     id!: Pointer<DEdge, 1, 1, LEdge>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn!: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
@@ -1958,7 +2019,8 @@ export class DExtEdge extends DEdge { // etends DEdge
     id!: Pointer<DExtEdge, 1, 1, LExtEdge>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
@@ -1986,7 +2048,8 @@ export class LExtEdge extends LEdge{
     id!: Pointer<DExtEdge, 1, 1, LExtEdge>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn!: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
@@ -2006,6 +2069,7 @@ export class DRefEdge extends DEdge { // extends DEdge
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     start!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     end!: Pointer<DGraphElement, 1, 1, LGraphElement>;
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     __isDRefEdge!: true;
     /*
         public static new(model: DGraph["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"]): DRefEdge {

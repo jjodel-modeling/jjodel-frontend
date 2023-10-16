@@ -241,7 +241,7 @@ w.GraphPoint = GraphPoint;
 w.$s = $s;
 */
 export {
-    TextArea, Select, Input, Image, Edge, DamEdge,
+    TextArea, Select, Input, Image, DamEdge,
     GraphsContainerComponent,
     Overlap as OverlapComponent,
     GraphsContainer,
@@ -254,7 +254,7 @@ export {
     VertexComponent,
     DefaultNodeComponent,
     // DockLayoutComponent,
-    ColorScheme, Edges,
+    ColorScheme,
     EdgeComponent,
     DataOutputComponent, LoggerComponent, GenericInput
 } from './components'

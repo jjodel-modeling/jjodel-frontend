@@ -335,9 +335,11 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
 
 function filterundoableactions(delta: Partial<DState>): boolean {
     if (!statehistory.globalcanundostate) return false;
-    if (Object.keys(delta).length === 1 && "dragging" in delta) return false;
-    if (Object.keys(delta).length === 1 && "_lastSelected" in delta) return false;
-    if (Object.keys(delta).length === 1 && "contextMenu" in delta) return false;
+    if (Object.keys(delta).length === 1) {
+        if ("dragging" in delta) return false;
+        if ("_lastSelected" in delta) return false;
+        if ("contextMenu" in delta) return false;
+    }
     return true;
 }
 function undo(state: DState, delta: GObject | undefined, isundo = true): DState {

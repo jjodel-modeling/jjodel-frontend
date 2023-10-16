@@ -8,7 +8,6 @@ export {Input} from "../components/forEndUser/Input";
 export {TextArea} from "../components/forEndUser/TextArea";
 export {Select} from "../components/forEndUser/Select";
 export {Image} from "../components/forEndUser/Image";
-export {Edge} from "../components/forEndUser/Edge";
 
 
 export {DataOutputComponent} from "../components/logger/DataOutput";
@@ -25,7 +24,6 @@ export {DefaultNode, DefaultNodeComponent} from "../graph/defaultNode/DefaultNod
 export {Graph, Vertex, VoidVertex, GraphVertex, Field, EdgePoint, VertexComponent} from "../graph/vertex/Vertex"; // require overlap, graphelement
 export {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphContainer"; // require vertex, graph
 //export {DockLayoutComponent} from "../components/abstract/DockLayoutComponent";
-export {Edges} from "../graph/edge/Edges";
 export {DamEdge, EdgeComponent,} from "../graph/damedges/damedge";
 export {GenericInput} from "../components/forEndUser/GenericInput"
 

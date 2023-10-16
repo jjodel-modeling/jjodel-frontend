@@ -10,7 +10,7 @@ function Child(props: Props) {
 
     const click = (evt: React.MouseEvent<HTMLButtonElement>) => {
         const selected = { node: undefined, view: undefined, modelElement: data.id };
-        SetRootFieldAction.new('selected', data.id, '', true);
+        SetRootFieldAction.new('selected', data.id, '', true); // ? remove?
         SetRootFieldAction.new('_lastSelected', selected, '', false);
     }
     // I got problems with operation's exception

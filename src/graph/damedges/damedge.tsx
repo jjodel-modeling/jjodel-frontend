@@ -84,26 +84,29 @@ class DispatchProps extends GraphElementDispatchProps {
 type AllPropss = Overlap<Overlap<EdgeOwnProps, EdgeStateProps>, DispatchProps>;
 
 function mapStateToProps(state: DState, ownProps: EdgeOwnProps): EdgeStateProps {
-    const ret: EdgeStateProps = new EdgeStateProps();
+    let ret: EdgeStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DEdge, new EdgeStateProps()) as EdgeStateProps;
     // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
     ret.isEdgePending = {
         user: LPointerTargetable.from(state.isEdgePending.user),
         source: LPointerTargetable.from(state.isEdgePending.source)
     };
     ret.viewpoint = LViewPoint.fromPointer(state.viewpoint);
-    let startnodeid = LGraphElement.getNodeId(ownProps.start);
-    let endnodeid = LGraphElement.getNodeId(ownProps.end);
-    ret.start = LPointerTargetable.fromPointer(startnodeid);
-    ret.end = LPointerTargetable.fromPointer(endnodeid);
     // ret.key = ownProps.key || (startnodeid || (ownProps.start as any)?.id || ownProps.start) + "~" + (endnodeid || (ownProps.end as any)?.id || ownProps.end);
     // key is already used as key || nodeid on super.render()
     // console.log("edge", {ret, ownProps});
 
-    const superret: EdgeStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DEdge, ret) as EdgeStateProps;
+    let startnodeid = LGraphElement.getNodeId(ownProps.start);
+    let endnodeid = LGraphElement.getNodeId(ownProps.end);
+
+    if (!startnodeid) {
+        startnodeid = LGraphElement.getNodeId(ret.data);
+    }
+    ret.start = LPointerTargetable.fromPointer(startnodeid)
+    ret.end = LPointerTargetable.fromPointer(endnodeid);
     // U.objectMergeInPlace(superret, ret);
     // U.removeEmptyObjectKeys(superret);
     // console.error(superret, ret); throw Error("aaa");
-    return superret;
+    return ret;
 }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {

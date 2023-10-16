@@ -6,7 +6,7 @@ import {
     LoadAction,
     Log, U,
     LPointerTargetable, prjson2xml, prxml2json,
-    store, RuntimeAccessible, DModelElement, SetRootFieldAction, Selectors
+    store, RuntimeAccessible, DModelElement, SetRootFieldAction, Selectors, Debug
 } from '../../joiner';
 
 @RuntimeAccessible
@@ -81,6 +81,13 @@ export class SaveManager {
             filename = e.target.files?.[0].name;
             console.log("file read", {e, fileContents, files, filename});
             filestring = fileContents[0];
+
+            // if file is over 500kb, lightmode on
+            if (filestring.length >= 500*1024 && !Debug.lightMode) {
+                Debug.setLightMode(true);
+                // $(document).one("click", (e) => { Debug.setLightMode(false); });
+            }
+
             console.log('importEcore filestring input: ', filestring);
             if (fromXML) {
                 let windoww = window as any;

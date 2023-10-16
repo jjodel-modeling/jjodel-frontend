@@ -1,17 +1,22 @@
-import type { LVoidVertex } from "../../joiner";
+import type {LVoidVertex} from "../../joiner";
 import {
+    Abstract,
     BEGIN,
     Constructor,
     Constructors,
-    CreateElementAction,
-    DEdge, DeleteElementAction,
+    Debug,
+    DEdge,
+    DeleteElementAction,
     Dictionary,
+    DocString,
     DPointerTargetable,
+    DState,
     DtoL,
     END,
     getWParams,
     GObject,
-    DState,
+    GraphSize,
+    Instantiable,
     Leaf,
     LEdge,
     LGraphElement,
@@ -26,8 +31,6 @@ import {
     Pointer,
     Pointers,
     RuntimeAccessible,
-    Abstract,
-    Instantiable,
     RuntimeAccessibleClass,
     Selectors,
     SetFieldAction,
@@ -37,8 +40,8 @@ import {
     store,
     TargetableProxyHandler,
     U,
-    unArr,
-    WPointerTargetable, DUser, DocString, GraphSize} from "../../joiner";
+    unArr
+} from "../../joiner";
 import {Info, Json, ObjectWithoutPointers, orArr, PrimitiveType} from "../../joiner/types";
 
 import {
@@ -50,7 +53,6 @@ import {
     EcoreLiteral,
     ECoreOperation,
     ECorePackage,
-    ECoreSubPackage,
     EcoreParser,
     ECoreReference,
     ECoreRoot
@@ -134,7 +136,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     property!: keyof DModelElement;
     containers!: LNamedElement[]; // list of fathers until the model is reached.
-
+    name?:string;
 
 
     [key: `@${string}`]: LModelElement;
@@ -424,43 +426,55 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return true;
     }
 
-    protected get_addChild(context: Context): (type: string, ...params: any[]) => DModelElement { // just for add new, not for add pre-existing.
+    protected get_addChild(c: Context): (type?: string, ...params: any[]) => DModelElement { // just for add new, not for add pre-existing.
         return (type, ...args: any) => {
             let ret: undefined | ((...params: any[]) => DModelElement);
-            switch ((type || '').toLowerCase()) {
+            if (!type || type === "auto") {
+                switch(c.data.className){
+                    case DModel.cname: if ((c.data as DModel).isMetamodel) type = "package"; else type = "object"; break;
+                    case DObject.cname: type = "value"; break;
+                    case DPackage.cname: type = "package"; break;
+                    case DClass.cname: type = "attribute"; break;
+                    case DEnumerator.cname: type = "literal"; break;
+                    case DOperation.cname: type = "parameter"; break;
+                    default: type = "annotation"; break;
+                }
+            }
+            switch (type.toLowerCase()) {
                 default:
-                    Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), context});
+                    Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), c});
                     ret = () => undefined as any;
                     break;
                 case "attribute":
-                    ret = this.get_class(context)?.addAttribute;
+                    ret = this.get_class(c)?.addAttribute;
                     break;
                 case "class":
-                    let current = context.proxyObject;
-                    ret = this.get_package(context)?.addClass;
+                    // let current = c.proxyObject;
+                    ret = this.get_package(c)?.addClass;
                     //ret = (this as any).get_addClass(context as any);
                     break;
                 case "package":
-                    ret = (this.get_package(context) || this.get_model(context))?.addPackage;
+                    ret = (this.get_package(c) || this.get_model(c))?.addPackage;
                     break;
                 case "reference":
-                    ret = this.get_class(context)?.addReference;
+                    ret = this.get_class(c)?.addReference;
                     break;
+                case "enum":
                 case "enumerator":
-                    ret = this.get_package(context)?.addEnumerator;
+                    ret = this.get_package(c)?.addEnumerator;
                     break;
                 case "literal":
-                    ret = this.get_enum(context)?.addLiteral;
+                    ret = this.get_enum(c)?.addLiteral;
                     break;
                 case "operation":
-                    ret = this.get_class(context)?.addOperation;
+                    ret = this.get_class(c)?.addOperation;
                     break;
                 case "parameter":
-                    ret = this.get_operation(context)?.addParameter;
+                    ret = this.get_operation(c)?.addParameter;
                     break;
                 //case "exception": ret = ((exception: Pack1<LClassifier>) => { let rett = this.get_addException(context as any); rett(exception); }) as any; break;
                 case "exception":
-                    ret = (this as any).get_addException(context as any);
+                    ret = (this as any).get_addException(c as any);
                     break;
             }
             return ret ? ret(...args) : null as any;
@@ -1905,6 +1919,26 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             targets = nextTargets;
         }
         return [...new Set<LClass>(Object.values(alreadyParsed))];
+    }
+
+    public isSubClassOf(superClass: LClass, returnIfSameClass: boolean = true): boolean { return this.cannotCall("isSubClassOf"); }
+    public isSuperClassOf(subClass: LClass, returnIfSameClass: boolean = true): boolean { return this.cannotCall("isSuperClassOf"); }
+    protected get_isSubClassOf(c: Context): ((superClass: LClass, returnIfSameClass?: boolean) => boolean) {
+        return (superClass: LClass, returnIfSameClass: boolean = true) => {
+            if (!superClass) return false;
+            if (superClass.id === c.data.id) return returnIfSameClass;
+            for (let subclass of this.get_extendsChain(c)) {
+                if (subclass.id === superClass.id) return true;
+            }
+            return false;
+        }
+    }
+    protected get_isSuperClassOf(c: Context): ((subClass: LClass, returnIfSameClass?: boolean) => boolean) {
+        return (subClass: LClass, returnIfSameClass: boolean = true) => {
+            if (!subClass) return false;
+            if (subClass.id === c.data.id) return returnIfSameClass;
+            return subClass.isSubClassOf(c.proxyObject, returnIfSameClass);
+        }
     }
 
     protected get_inheritedAttributes(context: Context): this['inheritedAttributes'] {
@@ -3460,6 +3494,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 
     private get_suggestedEdgesM1(context: Context, state?: DState): this["suggestedEdges"]{
         let ret: this["suggestedEdges"] = {extend: [], reference: [], packageDependencies: []};
+        if (Debug.lightMode) { return ret; }
         let s: DState = store.getState();
         let values: LValue[] = this.get_allSubValues(context, s);
         let map: Dictionary<DocString<"starting dvalue id">, EdgeStarter[]> = {};
@@ -3491,7 +3526,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         let ret: this["suggestedEdges"] = {extend: [], reference: [], packageDependencies: []};
         let s: DState = store.getState();
         let classes: LClass[] = this.get_classes(context, s);
-        let references: LReference[] = classes.flatMap(c=>c.references);
+        let references: LReference[] = Debug.lightMode ? [] : classes.flatMap(c=>c.references);
         ret.reference = references.map( (r) => {
             let sn = r.node;
             if (!sn) return undefined;
@@ -3527,7 +3562,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         }
         ret.extend = classes.flatMap(c => SkipExtendNodeHidden(c, c.extends, true)).map( (es) => new EdgeStarter(es.start, es.end, es.sn, es.en));
 
-        let dependencies: {src:LModelElement, ends: LModelElement[]}[] = [...(classes.map(c=>{ return {src:c, ends:c.superclasses}})), ...(references.map(r=> { return {src:r, ends:[r.type]}}))]
+        let dependencies: {src:LModelElement, ends: LModelElement[]}[] =
+            Debug.lightMode ? [] : [...(classes.map(c=>{ return {src:c, ends:c.superclasses}})), ...(references.map(r=> { return {src:r, ends:[r.type]}}))]
         let pkgdependencies: {src: LPackage, sn: LGraphElement, ends: Dictionary<Pointer, {end:LPackage, en:LGraphElement}>}[] = []; // transform form in dictionary to prevent duplicates
         //dependencies.map( d=> { let end = d.end.package; return {src:d.src.package, end, endid:end.id}})
 
@@ -4277,6 +4313,15 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected get_isMirage(context: Context): this["isMirage"] { return context.data.isMirage; }
     protected set_isMirage(val: this["isMirage"], context: Context): boolean { SetFieldAction.new(context.data, 'isMirage', val, "", false); return true; }
 
+    typeStr!:string; // derivate attribute, abstract
+    typeString!:string; // derivate attribute, abstract
+    __info_of__typeStr: Info = {type: ShortAttribETypes.EString, txt: <div>Alias of<i>this.typeString</i></div>}
+    __info_of__typeString: Info = {type: ShortAttribETypes.EString, txt: <div>Stringified version of <i>this.type</i></div>}
+    protected get_typeString(c: Context): string { return this.get_typeStr(c); }
+    protected get_typeStr(c: Context): string {
+        let meta = this.get_instanceof(c);
+        return meta ? meta.typeToShortString() : "shapeless"; }
+
     // individual value getters
     // if withMetaInfo, returns a wrapper for the first non-empty value found containing his index and metainfo
     protected get_value<T extends boolean>(context: Context, namedPointers: boolean = false, ecorePointers: boolean = false,
@@ -4303,7 +4348,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         let dmeta: undefined | DAttribute | DReference = meta?.__raw;
 
         // if (meta && meta.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
-        let typestr: string = meta ? meta.typeToShortString() : "shapeless";
+        let typestr: string = this.get_typeString(context);
+        (ret as GObject).type = typestr;
         if (!Array.isArray(ret)) ret = [];
         if (dmeta && fitSize && ret.length < dmeta.lowerBound && dmeta.lowerBound > 0) {
             let times = dmeta.lowerBound - ret.length;
@@ -4471,7 +4517,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             if (withmetainfo) ret.forEach((struct: ValueDetail)=>{ struct.value = numbercasting(struct.value); });
             else ret = ret.map(numbercasting);
         }
-        (ret as GObject).type = typestr;
         // console.error("type value:", {ret, typestr, meta, fitSize});
         return ret as any;
     }
@@ -4487,8 +4532,10 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
     }
     // stringified value getters
+    public valuesString(keepemptyquotes?: boolean): string { return this.cannotCall("valuestring"); }
     public valuestring(keepemptyquotes?: boolean): string { return this.cannotCall("valuestring"); }
     private get_valuestring(context: Context): this["valuestring"] { return (keepemptyquotes?: boolean) => this.valuestring_impl(context, keepemptyquotes); }
+    private get_valuesString(context: Context): this["valuestring"] { return (keepemptyquotes?: boolean) => this.valuestring_impl(context, keepemptyquotes); }
     private valuestring_impl(context: Context, keepemptyquotes?: boolean): string {
         // console.error("valuestring_impl", {context, data:context.data});
         let val = this.get_values(context, true, true, false, false, true);

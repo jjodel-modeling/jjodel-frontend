@@ -1,11 +1,12 @@
 import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {
+    Debug,
     DEdgePoint,
     DGraph,
     DGraphElement,
     DGraphVertex,
-    DState,
+    DState, DUser,
     DVertex,
     DVoidVertex,
     EMeasurableEvents,
@@ -32,13 +33,15 @@ import {
 import $ from 'jquery';
 import 'jqueryui';
 import 'jqueryui/jquery-ui.css';
+import { lightModeAllowedElements } from '../graphElement/graphElement';
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee { forceupdate?: number }
 
 const dragHelper = document.createElement('div');
 dragHelper.style.backgroundColor = 'transparent';
-dragHelper.style.outline = '1px dashed black';
+dragHelper.style.outline = '4px dashed #333';
+dragHelper.style.zIndex = '9999';
 
 
 export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
@@ -129,6 +132,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     this.doMeasurableEvent(EMeasurableEvents.whileDragging);
                 },
                 stop: (event: GObject, obj: GObject) => {
+                    console.log("dragend");
                     this.setSize({x:obj.position.left, y:obj.position.top});
                     this.doMeasurableEvent(EMeasurableEvents.onDragEnd);
                 }
@@ -150,7 +154,6 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             this.resizableOptions = {
                 helper: 'selected-by-me',
                 start: (event: GObject, obj: GObject) => {
-                    this.select();
                     if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
                     SetRootFieldAction.new('contextMenu', { display: false, x: 0, y: 0 }); // todo: does it really need to be on resize event?
                     this.doMeasurableEvent(EMeasurableEvents.onResizeStart);
@@ -321,12 +324,15 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     }
 
     render(): ReactNode {
+        if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
+            return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
+        }
         if (!this.props.node) return 'Loading...';
 
 
         const cssOverride: string[] = [];
-        const selected = this.props.selected;
-        if(selected && selected.id === this.props.dataid) cssOverride.push('selected-by-me');
+        // const selected = this.props.selected;
+        // if (selected && selected.id === this.props.dataid) cssOverride.push('selected-by-me');
 
         // if(!windoww.cpts) windoww.cpts = {};
         // windoww.cpts[this.props.nodeid]=this;
@@ -381,9 +387,8 @@ class OwnProps extends GraphElementOwnProps {
 
 class StateProps extends GraphElementReduxStateProps {
     node!: LVoidVertex;
-    lastSelected!: LModelElement | null;
+    //lastSelected!: LModelElement | null;
     //selected!: Dictionary<Pointer<DUser>, LModelElement|null>;
-    selected!: LModelElement|null;
     isEdgePending!: { user: LUser, source: LClass };
     viewpoint!: LViewPoint
 }
@@ -404,9 +409,9 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     if (DGraphElementClass === DVertex && ownProps.isVoid) DGraphElementClass = DVoidVertex;
     const superret: StateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass) as StateProps;
     //superret.lastSelected = state._lastSelected?.modelElement;
-    superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
+    // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
 
-    superret.selected = (state.selected) ? LModelElement.fromPointer(state.selected) : null;
+    // superret.selected = (state.selected) ? LModelElement.fromPointer(state.selected) : null;
     /*  Uncomment this when we have user authentication.
     superret.selected = {};
     for(let user of Object.keys(selected)) {
@@ -415,7 +420,6 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         else superret.selected[user] = null;
     }
     */
-
 
     superret.isEdgePending = {
         user: LPointerTargetable.from(state.isEdgePending.user),

@@ -1,6 +1,7 @@
 import {
     Constructors,
     CoordinateMode,
+    Debug,
     DGraphElement,
     Dictionary,
     DModelElement,
@@ -137,7 +138,11 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     constants?: string;
     __info_of__constants: Info = {todo:true, isGlobal: true, type: "Function():Object", label:"constants declaration",
-        txt:<div>Data used in the visual representation, meant to be static values evaluated only once when the view is first applied.</div>}
+        txt:<div>Data used in the visual representation, meant to be static values evaluated only once when the view is first applied.<br/>
+        Can contain a raw object or a function. Same rules as this.usageDeclarations<br/>
+        Example 1: <code>{'{color:"red", background: "gray"}'}</code><br/>
+        Example 2: <code>{'function(){\n    let fib = [1,1]; for (let i = 2; i < 100) { fib[i] = fib[i-2]+fib[i-1]; }\n    return fib; }'}</code><br/>
+    </div>}
 
     preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
     __info_of__preRenderFunc: Info = {isGlobal: true, type: "Function():Object", label:"pre-render function",
@@ -148,11 +153,15 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         txt:<div>The main ingredient, a <a href={"https://react.dev/learn/writing-markup-with-jsx"}>JSX template</a> that will be visualized in the graph.</div>}
 
     usageDeclarations?: string;
-    __info_of__usageDeclarations: Info = {todo: true, isGlobal: true, type: "Function():Object", label:"usage declarations",
+    __info_of__usageDeclarations: Info = {todo: false, isGlobal: true, type: "Function():Object", label:"usage declarations",
         txt:<div>Subset of the global or elements's data state that is graphically used.
             <br/>If specified the element will only update when one of those has changed.
-            <br/>Can optimize performance and ensure the node is updated even when navigating remote properties that don\'t belong to this element,
-            <br/> like visualizing the name of an object pointed by a reference.</div>}
+            <br/>Can optimize performance and ensure the node is updated even when navigating remote properties that
+            <br/>    don\'t belong to this element, like visualizing the name of an object pointed by a reference.
+            <br/>Context: it has the usual variables present in a JSX template (data, view, node...)
+            <br/>    plus a special variable "ret" where dependencies are registered.{/*and a "state" variable containing the entire application state.*/}
+            <br/>Usage Example: see the default view for value.
+    </div>}
 
     forceNodeType?: DocString<'component name'>;
     __info_of__forceNodeType: Info = {isGlobal:true, type: "EGraphElements", enum: EGraphElements, label:"force node type",
@@ -429,6 +438,13 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     }
 
     get_children(context: Context): never[] { return []; }
+
+
+    get_lazySizeUpdate(context: Context): D["lazySizeUpdate"] { return Debug.lightMode || context.data.lazySizeUpdate; }
+    set_lazySizeUpdate(val: D["lazySizeUpdate"], context: Context): boolean {
+        return Debug.lightMode || this.set_generic_entry(context, 'lazySizeUpdate', val);
+    }
+
     get_bendingMode(context: Context): D["bendingMode"] { return context.data.bendingMode; }
     set_bendingMode(val: D["bendingMode"], context: Context): boolean {
         return this.set_generic_entry(context, 'bendingMode', val);

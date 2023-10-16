@@ -1,13 +1,7 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import type {Pointer, DModel} from "../../../joiner";
+import type {Pointer} from "../../../joiner";
 import {DState, LGraph, LModel, DGraph, DModelElement, LModelElement} from "../../../joiner";
-import {DefaultNode} from "../../../joiner/components";
-import ToolBar from "../../toolbar/ToolBar";
-import PendingEdge from "../../../graph/edge/PendingEdge";
-import ContextMenu from "../../contextMenu/ContextMenu";
-import EdgesManager from "../../../graph/edges/EdgesManager";
-
 
 function InfoTabComponent(props: AllProps) {
     const metamodels = props.metamodels;

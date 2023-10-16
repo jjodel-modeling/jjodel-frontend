@@ -4,9 +4,9 @@ import type {Pointer, DModel} from "../../../joiner";
 import {DState, LGraph, LModel, DGraph, DModelElement, LModelElement, CreateElementAction} from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
-import PendingEdge from "../../../graph/edge/PendingEdge";
 import ContextMenu from "../../contextMenu/ContextMenu";
 import EdgesManager from "../../../graph/edges/EdgesManager";
+function PendingEdge(props: any){ return <>{/* todo: <DamEdge start={store.getState().pendingEdge.start} end={} />*/}</>}
 
 
 function ModelTabComponent(props: AllProps) {
