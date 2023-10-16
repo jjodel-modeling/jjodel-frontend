@@ -8,11 +8,18 @@ import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import Navbar from "./components/navbar/Navbar";
 
+let userHasInteracted = false;
+function endPendingActions() {
+    if (!userHasInteracted) firstInteraction();
+}
+function firstInteraction(){
+    statehistory.globalcanundostate = true;
+}
 function App(props: AllProps) {
     const debug = props.debug;
 
     return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? " debug" : "")}
-                onClick={e => statehistory.globalcanundostate = true}>
+                onMouseUp={endPendingActions}>
         <Navbar />
         <Dock />
         <Loader />

@@ -689,6 +689,7 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.midPoints = []; // the logic part which instructs to generate the midnodes
         thiss.start = startid;
         thiss.end = endid;
+        // if (!thiss.model && isDModelElementPointer(startid)) thiss.model = startid;
         // thiss.labels = undefined;
         let ll: labelfunc = (e: LVoidEdge, s: EdgeSegment, allNodes: LGraphElement[], allSegments: EdgeSegment[]
         ) => /*defining the edge label (e.start.model as any)?.name + " ~ " + (e.end.model as any)?.name */" (" + s.length.toFixed(1) + ")";
@@ -711,6 +712,7 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.subElements = [];
         thiss.favoriteNode = false;
         thiss.zIndex = htmlindex;
+        thiss.isSelected = {};
         //  if (nodeID) thiss.id = nodeID;
         if (this.persist) {
             model && SetFieldAction.new(model, "pointedBy", PointedBy.fromID<DGraphElement>(thiss.id, "model"), '+=');

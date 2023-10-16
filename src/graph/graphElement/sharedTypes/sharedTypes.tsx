@@ -46,9 +46,9 @@ export class GraphElementReduxStateProps {
     evalContext!: Json;
     template!: string;
     node!: LGraphElement;
-    graph!: LGraph;
+    // graph!: LGraph;
 
-    lastSelected!: LModelElement | null;
+    // lastSelected!: LModelElement | null;
     isEdgePending!: { user: LUser, source: LClass };// vertex only
 }
 
@@ -86,7 +86,7 @@ export class EdgeOwnProps extends GraphElementOwnProps {
 
 export class EdgeStateProps extends GraphElementReduxStateProps {
     node!: LEdge;
-    lastSelected!: LModelElement | null;
+    //lastSelected!: LModelElement | null;
     isEdgePending!: { user: LUser, source: LClass };
     viewpoint!: LViewPoint;
     start!: LGraphElement;

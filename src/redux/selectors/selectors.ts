@@ -49,7 +49,7 @@ enum ViewEClassMatch { // this acts as a multiplier for explicit priority
 export class Selectors{
     public static cname: string = "Selectors";
 
-    static getSelected(): Pointer<DModelElement, 0, 1, LModelElement> {
+    static getSelectedOLD(): Pointer<DModelElement, 0, 1, LModelElement> {
         const state = store.getState();
         return state.selected;
     }
@@ -386,7 +386,7 @@ export class Selectors{
 
 
 
-    private static scoreView(v1: DViewElement, data: LModelElement | undefined, node: DGraphElement | undefined, graph: LGraphElement, sameViewPointViews: Pointer<DViewElement, 1, 1>[] = []): number {
+    private static scoreView(v1: DViewElement, data: LModelElement | undefined, node: LGraphElement | undefined, sameViewPointViews: Pointer<DViewElement, 1, 1>[] = []): number {
         let datascore: number = 1;
         let nodescore: number = 1;
         if (data) {// 1° priority: matching by EClass type
@@ -404,14 +404,14 @@ export class Selectors{
         }
         if (node){
             // 1° priority: matching by DGraphElement type
-            let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, node);
+            let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, node?.__raw);
             nodescore = 1; // todo: ocl by node position or other node info
         }
         return datascore * nodescore * v1.explicitApplicationPriority;
     }
 
 
-    static getAppliedViews(data: LModelElement|undefined, hisnode: DGraphElement | undefined, graph: LGraphElement,
+    static getAppliedViews(data: LModelElement|undefined, hisnode: LGraphElement | undefined,
                            selectedViewId: Pointer<DViewElement, 0, 1, LViewElement>, parentViewId: Pointer<DViewElement, 0, 1, LViewElement>): Scored<DViewElement>[] {
         const state : DState = store.getState();
         const allViews: DViewElement[] = [...Selectors.getAllViewElements()];
@@ -422,7 +422,7 @@ export class Selectors{
         let sortedPriority: Scored<DViewElement>[] = allViews.map(
             // v => new Scored<DViewElement>(Selectors.scoreView(v, data as any as DModelElement, hisnode, graph, sameViewPointSubViews), v)) as Scored<DViewElement>[];
             (v) => {
-                return new Scored<DViewElement>(Selectors.scoreView(v, data, hisnode, graph, sameViewPointSubViews), v);}
+                return new Scored<DViewElement>(Selectors.scoreView(v, data, hisnode, sameViewPointSubViews), v);}
         ) as Scored<DViewElement>[];
         sortedPriority.sort( (e1, e2) => e2.score - e1.score);
         // todo: prioritize views "children" of the view of the graph, so they will display differnet views for the same element in different graphs

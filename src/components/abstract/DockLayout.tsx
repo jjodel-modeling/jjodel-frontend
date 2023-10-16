@@ -205,7 +205,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         const dPackage = lModel.addChild('package');
         const lPackage: LPackage = LPackage.fromD(dPackage);
         lPackage.name = 'default';
-        SetRootFieldAction.new('selected', lPackage.id, '', true);
+        SetRootFieldAction.new('selected', lPackage.id, '', true);//? rewove?
         SetRootFieldAction.new('_lastSelected', {modelElement: lPackage.id});
         this.OPEN(dModel);
     }

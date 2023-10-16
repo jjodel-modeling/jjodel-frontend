@@ -59,35 +59,59 @@ export class U {
         return fathers;
     }
 
-    static isShallowEqualWithProxies(obj1: GObject, obj2: GObject, depth: number = 0, maxDepth: number = 1, retIfMaxDepthReached: boolean = false): boolean {
+    static isShallowEqualWithProxies(obj1: GObject, obj2: GObject, depth: number = 0, maxDepth: number = 1, skipKeys: Dictionary<string, any>={}, out?: {reason?: string}): boolean {
         for (let key in obj1) {
+            if (key in skipKeys) continue;
             let oldp: any = obj2[key];
             let newp: any = obj1[key];
             if (oldp === newp) continue;
             // from here below: on which cases obj1 !== obj2, but they can still be "equal"? only if function, array, object.
             let told = typeof oldp;
-            if (told !== typeof newp) return false;
+            if (told !== typeof newp) {
+                if (out) out.reason = '['+key+']: different types '+ told + '!=' + typeof newp;
+                return false;
+            }
             switch (told) {
                 default: return false;
-                case "function": return newp.toString() === oldp.toString();
+                case "function": if (newp.toString() === oldp.toString()) break; else {
+                    if (out) out.reason = '['+key+']: function body changed';
+                    return false;
+                }
                 case "object":
                     if (Array.isArray(newp)) {
-                        if (!Array.isArray(oldp)) return false;
-                        if (newp.length !== oldp.length) return false;
+                        if (!Array.isArray(oldp)) {
+                            if (out) out.reason = '['+key+']: old is array, but new isn\'t';
+                            return false;
+                        }
+                        if (newp.length !== oldp.length) {
+                            if (out) out.reason = '['+key+']: array different lenghts '+oldp.length +' != '+newp.length;
+                            return false;
+                        }
                         //todo array check, move the whole comparison func in U and do
-                        if (depth === maxDepth) return retIfMaxDepthReached;
-                        for (let i = 0; i < newp.length; i++) if(!U.isShallowEqualWithProxies(newp[i], oldp[i], depth + 1, maxDepth, retIfMaxDepthReached)) return false;
+                        if (depth !== maxDepth) {
+                            for (let i = 0; i < newp.length; i++) if(!U.isShallowEqualWithProxies(newp[i], oldp[i], depth + 1, maxDepth, skipKeys, out)) {
+                                if (out) out.reason = '['+key+']['+i+']'+out.reason;
+                                return false;
+                            }
+                        } // else return retIfMaxDepthReached;
+                        break;
                     }
                     // for proxies and DObjects
-                    if (newp.clonedCounter !== undefined && newp.clonedCounter !== oldp.clonedCounter) return false;
+                    if (newp.clonedCounter !== undefined && newp.clonedCounter !== oldp.clonedCounter) {
+                        if (out) out.reason = '['+key+']: clonedCounter difference ' +oldp.clonedCounter+ ' != '+newp.clonedCounter;
+                        return false;
+                    }
                     // for raw objects made from declarationUsages
-                    if (depth === maxDepth) return retIfMaxDepthReached;
-                    if (!U.isShallowEqualWithProxies(newp, oldp, depth + 1, maxDepth, retIfMaxDepthReached)) return true;
+                    if (depth !== maxDepth && !U.isShallowEqualWithProxies(newp, oldp, depth + 1, maxDepth, skipKeys, out)) {
+                        if (out) out.reason = '['+key+']'+out.reason;
+                        return false;
+                    }
+                    // else retIfMaxDepthReached; split the above if
             }
         }
         // just check for keys that were in props and are not in nextProps
         for (let key in obj2) {
-            if (!(key in obj1)) return false;
+            if (!(key in skipKeys) && !(key in obj1)) return false;
         }
         return true;
     }
@@ -1329,6 +1353,7 @@ export class SelectorOutput {
     resultSetAttr!: Attr[];
     resultSetElem!: JQuery<Element>;
 }
+// compare it with event.key
 export enum Keystrokes {
     clickLeft = 0,
     clickWheel = 1,

@@ -136,7 +136,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     property!: keyof DModelElement;
     containers!: LNamedElement[]; // list of fathers until the model is reached.
-
+    name?:string;
 
 
     [key: `@${string}`]: LModelElement;
@@ -426,43 +426,55 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return true;
     }
 
-    protected get_addChild(context: Context): (type: string, ...params: any[]) => DModelElement { // just for add new, not for add pre-existing.
+    protected get_addChild(c: Context): (type?: string, ...params: any[]) => DModelElement { // just for add new, not for add pre-existing.
         return (type, ...args: any) => {
             let ret: undefined | ((...params: any[]) => DModelElement);
-            switch ((type || '').toLowerCase()) {
+            if (!type || type === "auto") {
+                switch(c.data.className){
+                    case DModel.cname: if ((c.data as DModel).isMetamodel) type = "package"; else type = "object"; break;
+                    case DObject.cname: type = "value"; break;
+                    case DPackage.cname: type = "package"; break;
+                    case DClass.cname: type = "attribute"; break;
+                    case DEnumerator.cname: type = "literal"; break;
+                    case DOperation.cname: type = "parameter"; break;
+                    default: type = "annotation"; break;
+                }
+            }
+            switch (type.toLowerCase()) {
                 default:
-                    Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), context});
+                    Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), c});
                     ret = () => undefined as any;
                     break;
                 case "attribute":
-                    ret = this.get_class(context)?.addAttribute;
+                    ret = this.get_class(c)?.addAttribute;
                     break;
                 case "class":
-                    let current = context.proxyObject;
-                    ret = this.get_package(context)?.addClass;
+                    // let current = c.proxyObject;
+                    ret = this.get_package(c)?.addClass;
                     //ret = (this as any).get_addClass(context as any);
                     break;
                 case "package":
-                    ret = (this.get_package(context) || this.get_model(context))?.addPackage;
+                    ret = (this.get_package(c) || this.get_model(c))?.addPackage;
                     break;
                 case "reference":
-                    ret = this.get_class(context)?.addReference;
+                    ret = this.get_class(c)?.addReference;
                     break;
+                case "enum":
                 case "enumerator":
-                    ret = this.get_package(context)?.addEnumerator;
+                    ret = this.get_package(c)?.addEnumerator;
                     break;
                 case "literal":
-                    ret = this.get_enum(context)?.addLiteral;
+                    ret = this.get_enum(c)?.addLiteral;
                     break;
                 case "operation":
-                    ret = this.get_class(context)?.addOperation;
+                    ret = this.get_class(c)?.addOperation;
                     break;
                 case "parameter":
-                    ret = this.get_operation(context)?.addParameter;
+                    ret = this.get_operation(c)?.addParameter;
                     break;
                 //case "exception": ret = ((exception: Pack1<LClassifier>) => { let rett = this.get_addException(context as any); rett(exception); }) as any; break;
                 case "exception":
-                    ret = (this as any).get_addException(context as any);
+                    ret = (this as any).get_addException(c as any);
                     break;
             }
             return ret ? ret(...args) : null as any;
