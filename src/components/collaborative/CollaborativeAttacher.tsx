@@ -1,7 +1,7 @@
 import React from 'react';
 import Collaborative from './Collaborative';
 import App from '../../App';
-import {Action, SetRootFieldAction} from '../../joiner';
+import {Action, CompositeAction, GObject, SetRootFieldAction} from '../../joiner';
 import {useParams} from 'react-router-dom';
 import {useEffectOnce} from 'usehooks-ts';
 
@@ -25,9 +25,9 @@ function CollaborativeAttacher(props: Props) {
         })
     });
 
-    Collaborative.client.on('pullAction', (action) => {
-        if(action.type === 'COMPOSITE_ACTION') for(let subAction of action.actions) delete subAction['_id'];
-        delete action['_id'];
+    Collaborative.client.on('pullAction', (action: GObject<Action & CompositeAction>) => {
+        if(action.type === 'COMPOSITE_ACTION') for(let subAction of action.actions) delete (subAction as GObject)['_id'];
+        delete action['_id']; // is it really needed to remove id?
         const receivedAction = Action.fromJson(action);
         receivedAction.hasFired = receivedAction.hasFired - 1;
         receivedAction.fire();

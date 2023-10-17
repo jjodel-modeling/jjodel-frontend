@@ -118,6 +118,7 @@ let debugcount = 0;
 let maxRenderCounter = Number.POSITIVE_INFINITY;
 export const lightModeAllowedElements = [DModel.cname, DPackage.cname, DClass.cname, DEnumerator.cname, DObject.cname];
 
+const countRenders = true;
 @RuntimeAccessible
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
     extends PureComponent<AllProps, GraphElementState>{
@@ -276,6 +277,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
 
+    countRenders: number;
     _isMounted: boolean;
     html: React.RefObject<HTMLElement | undefined>;
     lastViewChanges: {t: number, vid: Pointer<DViewElement>, v: LViewElement, key?: string}[];
@@ -341,6 +343,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         this.lastOnUpdateChanges = []
         this.stopUpdateEvents = undefined;
         this._isMounted = false;
+        this.countRenders = 0;
         this.id = GraphElementComponent.maxid++;
         GraphElementComponent.all[this.id] = this;
         GraphElementComponent.map[props.nodeid as Pointer<DGraphElement>] = this;
@@ -357,50 +360,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         this.select = this.select.bind(this);*/
         for (let f of functionsToBind) (this as any)[f.name] = f.bind(this);
         // @ts-ignore
-        this.state = {classes:[] as string[]};
-
-/*
-        console.log('GE constructor props:', this.props);
-        this.setTemplateString(this.props.view, true);
-        /*if (false) this.setTemplateString('{colors:["rEd", "gReen", "blye"], key2:[0,2,5]}',
-            '() => { colors = colors.map(c=>c.toLowerCase())}',
-            '<div><b>GraphElement colors:</b>{colors.map( (c, i) => <li key={c} style={{color: c}}>{c}</li>)}</div>', true);*/
-        // this.onMountBindID();
+        this.state = {classes: [] as string[]};
     }
-/*
-    onMountBindID() {
-        /*if (!this.props.view.storeSize) {
-            // get position from view itself
-            nodeid = 'nodeof_' + this.props.data.id;
-            if (!store.getState().idlookup[nodeid]){
-                new CreateElementAction(this.createDataNode(nodeid));
-            } // view-indipendent fallback, i do not add view.id to node.id
-        } else {* /
-        if (this.getId()) return;
-        let dnode: DGraphElement = this.createDataNode(this.generateId());
-        new CreateElementAction(dnode);
-        // let nodeid: Pointer<DGraphElement, 1, 1, LGraphElement> = dnode.id;
-        // this.setState({nodeid} );
-    }
-
-    getId(): string | undefined {
-        return this.props.nodeid;
-    }
-
-    generateId(): Pointer<DGraphElement, 1, 1, LGraphElement> {
-        // if (this.state.nodeid) return this.state.nodeid;
-        let ret: string = 'nodeof_' + this.props.data.id + (this.props.view.storeSize ? '^' + this.props.view.id : '') + '^1';
-        const idlookup = store.getState().idlookup;
-        ret = U.increaseEndingNumber(ret, false, false, id => !idlookup[id]);
-        return ret;
-    }
-
-    // to override
-
-    createDataNode(id?: string): DGraphElement {
-        return new DGraphElement(id || this.generateId(), this);
-    }
- */
 
     // constants: evalutate solo durante il primo render, può essere una funzione con effetti collaterali sul componente,
     // in tal caso la si esegue e si prende il valore di ritorno.
@@ -715,8 +676,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 // viewStyle.pointerEvents = "all";
                 viewStyle.order = viewStyle.zIndex = this.props.node?.zIndex;
                 viewStyle.display = this.props.view?.display;
+                let injectProps: GObject = {};
+                if (countRenders) {
+                    classes.push(this.countRenders%2 ? "animate-on-update-even" : "animate-on-update-odd");
+                    injectProps["data-countrenders"] = this.countRenders++;
+                }
                 rawRElement = React.cloneElement(rawRElement, // i'm cloning a raw html (like div) being root of the rendered view
                     {
+                        ...injectProps,
                         key: this.props.key, // this key is not safe. because the component has already been made,
                         // this would be the key of the first sub-component, which is always 1 so doesn't need a key (and is not even a component but a html node in 99% of cases)
                         // could remove it safely but i'm keeping it for debug so i can read keys as html attributes.
@@ -773,7 +740,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 rawRElement || rnode,
                 droparea
             );
-        }
+        }/*
+        if (countRenders) return <>{[
+            rawRElement || rnode,
+            <div className={this.countRenders%2 ? "animate-on-update-even" : "animate-on-update-odd"} data-countrenders={this.countRenders++} />
+        ]}</>/*/
         return rawRElement || rnode;
     }
 

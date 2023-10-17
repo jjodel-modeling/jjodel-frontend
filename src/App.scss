@@ -27,6 +27,9 @@
   &.selected-by-me, &:has(.selected-by-me), // for some reason focus does not work?? so this is a fallback but needs to be properly fixed
   &:hover, &:active, &:focus-within{ overflow: visible; }
 }
+[data-nodetype]{
+  overflow: visible !important; // todo: remove, it's just for debug to count renders
+}
 
 .GraphVertex[data-nodetype="GraphVertex"],
 .Vertex[data-nodetype="Vertex"],
@@ -182,4 +185,28 @@ svg.hoverable {
 
 .console-output-container div{
   display: inline-block;
+}
+
+[data-countrenders]{
+  &::before{
+    content: attr(data-countrenders);
+    display: inline-block;
+    position: absolute;
+    z-index: 999;
+    bottom: calc(-35% + 15px);
+    right: -20px;
+    width: min-content;
+    height: min-content;
+  }
+}
+.animate-on-update-even{
+  animation: fade 1s forwards;
+}
+.animate-on-update-odd{
+  animation: fade 1s forwards;
+}
+
+@keyframes fade {
+  0%   { opacity:0; }
+  100% { opacity:1; }
 }

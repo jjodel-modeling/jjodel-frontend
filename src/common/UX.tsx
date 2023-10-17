@@ -34,7 +34,8 @@ export class UX{
         if (!Array.isArray(children)) return innermap(children as ReactNode, 0, [...depthIndices, 0]) as T;
         return React.Children.map(children, (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as T;
     }
-    static injectProp(parentComponent: GraphElementComponent, e: ReactNode, gvidmap_useless: Dictionary<DocString<'VertexID'>, boolean>, parentnodeid: string, index: number, indices: number[]): ReactNode {
+    static injectProp(parentComponent: GraphElementComponent, e: ReactNode, gvidmap_useless: Dictionary<DocString<'VertexID'>, boolean>,
+                      parentnodeid: string, index: number, indices: number[]): ReactNode {
         const re: ReactElement | null = UX.ReactNodeAsElement(e);
         if (!re) return e;
         // @ts-ignore this
