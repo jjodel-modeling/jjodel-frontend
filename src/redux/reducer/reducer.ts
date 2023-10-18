@@ -129,7 +129,7 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 // NB: se elimino un oggetto che contiene array di puntatori, o resetto l'array di puntatori kinda like store.arr= [ptr1, ptr2, ...]; store.arr = [];
                 // i puntati dall'array hanno i loro pointedBY non aggiornati, non voglio fare un deep check di tutto l'oggetto a cercare puntatori per efficienza.
                 // if (newVal === undefined) delete current[key];
-                if (action.type === DeleteElementAction.type) delete current[key];
+                if ((newVal === undefined) || false && action.type === DeleteElementAction.type) delete current[key];
                 else current[key] = newVal;
 
                 // update pointedBy's
