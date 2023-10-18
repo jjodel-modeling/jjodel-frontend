@@ -421,7 +421,8 @@ export class Constructors<T extends DPointerTargetable>{
         this.callbacks = [];
         if (this.thiss.hasOwnProperty("father")) {
             (this.thiss as any).father = father;
-            persist && father && SetFieldAction.new(father, "pointedBy", PointedBy.fromID(t.id, "father" as any), '+=');
+            // id still is not assigned here
+            persist && father && this.callbacks.push(()=>SetFieldAction.new(father, "pointedBy", PointedBy.fromID(t.id, "father" as any), '+='));
         }
         this.fatherType = fatherType as any;
         if (this.persist) BEGIN()
@@ -1258,24 +1259,30 @@ export class PointedBy{
 
 
 
-    public static remove(oldValue: Pointer | undefined, action: ParsedAction, state: DState, casee: "+=" | "-=" | undefined = undefined): DState {
+    public static remove(oldValue: Pointer | undefined, action: ParsedAction, state: DState, casee: "+=" | "-=" | undefined = undefined, oldState?:DState): DState {
         if (!oldValue) return state;
-        let oldtarget: DPointerTargetable = state.idlookup[oldValue];// todo: if += -=
+        let oldtarget: DPointerTargetable = state.idlookup[oldValue];
         if (!oldtarget) return state;
         let index = -1;
         let actionpath: string = action.path.substring(0, action.path.length -(casee?.length || 0))
-        for (let i = 0; i < oldtarget.pointedBy.length; i++) { if (oldtarget.pointedBy[i].source === actionpath) {index = i; break; } }
-        if (index >= 0) {
-            state = {...state} as DState;
-            state.idlookup = {...state.idlookup};
-            state.idlookup[oldValue] =  {...oldtarget, pointedBy: [...oldtarget.pointedBy]} as any;
-            state.idlookup[oldValue].pointedBy.splice(index, 1) // in-place edit
+        for (let i = 0; i < oldtarget.pointedBy.length; i++) { if (oldtarget.pointedBy[i].source === actionpath) { index = i; break; } }
+        if (index < 0) return state;
+
+        if (oldState === state) state = {...state} as DState;
+        if (oldState?.idlookup === state.idlookup) state.idlookup = {...state.idlookup};
+        if (oldState?.idlookup[oldValue] === state.idlookup[oldValue]) {
+            state.idlookup[oldValue] = {...oldtarget} as any;
         }
+        else {
+            // no need
+        }
+        state.idlookup[oldValue].pointedBy.splice(index, 1) // in-place edit
+
         // console.warn('pointedby remove:', {from: oldtarget.pointedBy, to: state.idlookup[oldValue].pointedBy, obj: state.idlookup[oldValue], index, oldValue, actionpath});
         return state;
     }
 
-    public static add(newtargetptr: Pointer | undefined, action: ParsedAction, state: DState, casee: "+=" | "-=" | undefined = undefined): DState {
+    public static add(newtargetptr: Pointer | undefined, action: ParsedAction, state: DState, casee: "+=" | "-=" | undefined = undefined, oldState?:DState): DState {
         if (!newtargetptr) return state;
         // todo: if can't be done because newtarget doesn't exist, build an action from this and set it pending.
         let newtarget: DPointerTargetable = state.idlookup[newtargetptr];
@@ -1283,10 +1290,18 @@ export class PointedBy{
             PendingPointedByPaths.new(action, state).saveForLater(); // {from: action.path, field: action.field, to: target});
             return state;
         }
-        let oldtarget = {...newtarget, pointedBy: [...newtarget.pointedBy]}
+        /* simpler version but does unnecessary shallow copies
         state = {...state} as DState;
         state.idlookup = {...state.idlookup};
-        state.idlookup[newtargetptr] = {...newtarget, pointedBy:  [...newtarget.pointedBy, PointedBy.new(action.path, casee)]} as any;
+        state.idlookup[newtargetptr] = {...newtarget, pointedBy:  [...newtarget.pointedBy, PointedBy.new(action.path, casee)]} as any;*/
+        if (oldState === state) state = {...state} as DState;
+        if (oldState?.idlookup === state.idlookup) state.idlookup = {...state.idlookup};
+        if (oldState?.idlookup[newtargetptr] === state.idlookup[newtargetptr]) {
+            state.idlookup[newtargetptr] = {...newtarget, pointedBy:  [...newtarget.pointedBy, PointedBy.new(action.path, casee)]} as any;
+        }
+        else {
+            state.idlookup[newtargetptr].pointedBy = [...newtarget.pointedBy, PointedBy.new(action.path, casee)];
+        }
         // console.warn('pointedby add:', {from: oldtarget.pointedBy, to: state.idlookup[newtargetptr].pointedBy, obj: state.idlookup[newtargetptr]});
         return state;
     }

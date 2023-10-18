@@ -258,6 +258,9 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             case '__l': return this.l;
             case '__d': return this.d;
             case 'inspect': // node.js util
+            case "r":
+            case "_refresh":
+            case "_reload": return LPointerTargetable.wrap(targetObj.id);
             case '__Raw':
             case '__raw': return targetObj;
             case '__serialize': return JSON.stringify(targetObj);

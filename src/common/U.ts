@@ -829,7 +829,7 @@ export class U {
     }
 
     // returns true only if parameter is already a number by type. UU.isNumber('3') will return false
-    static isNumber(o: any): boolean { return +o === o && !isNaN(o); }
+    static isNumber(o: any): o is number { return typeof o === "number" && !isNaN(o); }
 
     public static getAllPrototypes(constructor: Constructor, chainoutoutrecursive: GObject[] = [], currentRecursion = 0, maxRecursion = 20, cache: boolean = true): GObject[] {
         // console.log('getAllPrototypes:', {name: constructor.name, currentRecursion, constructor, chainoutoutrecursive});

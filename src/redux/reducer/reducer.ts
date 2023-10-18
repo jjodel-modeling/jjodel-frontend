@@ -17,7 +17,7 @@ import {
     ParsedAction,
     PendingPointedByPaths,
     PointedBy,
-    Pointer,
+    Pointer, Pointers,
     RuntimeAccessibleClass,
     Selectors,
     SetFieldAction,
@@ -69,7 +69,7 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 isArrayRemove = true; }
 
             let oldValue: any;
-            let unpointedElement: DPointerTargetable | undefined;
+            // let unpointedElement: DPointerTargetable | undefined;
             // perform final assignment
             if (isArrayAppend) {
                 gotChanged = true;
@@ -77,72 +77,98 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 oldValue = [...current[key]];
                 current[key] = [...current[key]];
                 current[key].push(newVal);
-                unpointedElement = undefined;
+                // unpointedElement = undefined;
                 if (action.isPointer) { newRoot = PointedBy.add(newVal as Pointer, action, newRoot, "+="); }
             } else
-            if (isArrayRemove){
+            if (isArrayRemove) {
                 if (!Array.isArray(current[key])) { current[key] = []; }
                 oldValue = [...current[key]];
-                let index = U.isNumber(newVal) ? +newVal : -1;
-                if (index === -1) index = current[key].length - 1;
-                gotChanged = index >=0 && index < current[key].length;
-                if (gotChanged){
+                let index: number;
+                if (U.isNumber(newVal)) { // delete by index
+                    index = newVal;
+                    if (index < 0) index = oldValue.length + index; // if index is -2, i remove the penultimate element
+                } else
+                if (newVal === undefined) {
+                    index = oldValue.length - 1;
+                }
+                else {
+                    index = oldValue.indexOf(newVal);
+                }
+                // if it's negatively or positively out of boundary, i skip it
+                gotChanged = index >= 0 && index < current[key].length;
+                if (gotChanged) {
                     current[key] = [...current[key]];
                     let removedval = current[key].splice(index, 1); // in-place edit
                     if (action.isPointer) { newRoot = PointedBy.remove(removedval as Pointer, action, newRoot, '-='); }
-
-                    /// a.pointsto = [x, y, z]; a.pointsto = [x, z]       --->    remove a from y.pointedby
                     /*
+                    fixed problem: se ho [dobj1, dobj2]... e li swappo, cambia un indice nel percorso "pointedby" e non me ne accorgo mai e un oggetto risulta "pointedby" da oggetti che non lo puntano o non esistono più a quell'indice
+                    SOLVED! by not including index in pointedBy path, but making it like "parentObject.arrayKey+=" instead of "parentObject.arrayKey.4"
+                    and knowing it's in the array it's enough info.
+
+                    // a.pointsto = [x, y, z]; a.pointsto = [x, z]       --->    remove a from y.pointedby
                     const elementsThatChangedIndex: DPointerTargetable[] = current[key].slice(index);
-                    todo: problema: se ho [dobj1, dobj2]... e li swappo, cambia un indice nel percorso "pointedby" e non me ne accorgo mai e un oggetto risulta "pointedby" da oggetti che non lo puntano o non esistono più a quell'indice
+
                     for (let j = 0; j < elementsThatChangedIndex.length; j++) {
                         let newindex = index + j - 1;
                         let oldFullpathTrimmed = action.pathArray.join('.');
                         se realizzi "pointedby" qui è to do: remove old paths and re-add them with updated index
-                    }*/
-                    //unpointedElement = newRoot.idlookup[oldValue];
-                }
-            }
-            else if (current[key] !== newVal) {
-                // todo: caso in cui setto manualmente classes.1 = pointer; // the latest element is array and not DPointerTargetable, so might need to buffer upper level in the tree? or instead of "current" keep an array of sub-objects encountered navigating the path in state.
-                oldValue = current[key];
-                gotChanged = true;
-                unpointedElement = newRoot.idlookup[oldValue];
-                // NB: se elimino un oggetto che contiene array di puntatori, o resetto l'array di puntatori kinda like store.arr= [ptr1, ptr2, ...]; store.arr = [];
-                // i puntati dall'array hanno i loro pointedBY non aggiornati, non voglio fare un deep check di tutto l'oggetto a cercare puntatori per efficienza.
-                if (newVal === undefined) delete current[key];
-                else current[key] = newVal;
-
-                if (action.isPointer) {
-                    if (Array.isArray(action.value)) {
-                        let oldpointerdestinations: Pointer[] = oldValue;
-                        let difference = U.arrayDifference(oldpointerdestinations, current[key]); // : {added: Pointer[], removed: Pointer[], starting: Pointer[], final: Pointer[]}
-                        for (let rem of difference.removed) { newRoot = PointedBy.remove(rem as Pointer, action, newRoot); }
-                        for (let add of difference.added) { newRoot = PointedBy.add(add as Pointer, action, newRoot); }
-                        // a.pointsto = [a, b, c];  a.pointsto = [a, b, x];    ------>     c.pointedby.remove(a) & x.pointedby.add(a)
-                        // idlookup.somelongid.pointsto = [...b];
                     }
-                    else {
-                        // a.pointsto = b;  a.pointsto = c;    ------>     b.pointedby.remove(a)
-                        newRoot = PointedBy.remove(oldValue as Pointer, action, newRoot);
-                        newRoot = PointedBy.add(current[key] as Pointer, action, newRoot);
-                    }
+                    unpointedElement = newRoot.idlookup[oldValue];
+                    */
                 }
-            } else {
+            } else
+            if (action.type === DeleteElementAction.type ? !(key in current) : current[key] === newVal) {
                 gotChanged = false;
                 // value not changed
-            }
+            } else {
+                // todo: caso in cui setto manualmente classes.1 = pointer;
+                //  the latest element is array and not DPointerTargetable, so might need to buffer upper level in the tree? or instead of "current" keep an array of sub-objects encountered navigating the path in state.
+                oldValue = current[key];
+                gotChanged = true;
+                // unpointedElement = newRoot.idlookup[oldValue];
+                // NB: se elimino un oggetto che contiene array di puntatori, o resetto l'array di puntatori kinda like store.arr= [ptr1, ptr2, ...]; store.arr = [];
+                // i puntati dall'array hanno i loro pointedBY non aggiornati, non voglio fare un deep check di tutto l'oggetto a cercare puntatori per efficienza.
+                // if (newVal === undefined) delete current[key];
+                if ((newVal === undefined) || false && action.type === DeleteElementAction.type) delete current[key];
+                else current[key] = newVal;
 
-            let fullpathTrimmed = action.pathArray.join('.');
-            /*if (unpointedElement) {
-                if (isArrayAppend || isArrayAppend) fullpathTrimmed.substr(0, fullpathTrimmed.length - 2);
-                U.arrayRemoveAll(unpointedElement.pointedBy, fullpathTrimmed); // todo: se faccio una insert in mezzo ad un array devo aggiustare tutti i path di pointedby...
+                // update pointedBy's
+                // NB: even if the current action have isPointer=true, it doesn't mean the old value is a pointer as well for sure. so need to check old values.
+                // also what if old val is pointer, and new one isn't? will it be just removed without updating pointedBy's?
+                // already fixed: might need to evaluate this if block always regardless of action.isPointer,
+                // and do checks every time both on old and new value if they actually are ptrs.
+                if (true || action.isPointer) {
+                    let oldpointerdestinations: unknown[];
+                    let newpointerdestinations: unknown[];
+                    if (Array.isArray(newVal)) {
+                        newpointerdestinations = newVal;
+                        if (Array.isArray(oldValue)) { // case: path.array = array;
+                            oldpointerdestinations = oldValue;
+                        }
+                        else { // case: path.object = array; + case: path.value = array;
+                            oldpointerdestinations = [oldValue];
+                        }
+                    }
+                    else {
+                        // case: path.array = object; + case: path.array = value;
+                        newpointerdestinations = [newVal];
+                        if (Array.isArray(oldValue)) {
+                            oldpointerdestinations = oldValue;
+                        } else {
+                            // case: path.object = object; and all other cases without arrays involved
+                            oldpointerdestinations = [oldValue];
+                        }
+                    }
+                    // after i mapped all cases to path.array = array; i solve it for that case.
+                    let difference = U.arrayDifference(oldpointerdestinations, newpointerdestinations); // : {added: Pointer[], removed: Pointer[], starting: Pointer[], final: Pointer[]}
+                    for (let rem of difference.removed) {if (Pointers.isPointer(rem))
+                        newRoot = PointedBy.remove(rem, action, newRoot, undefined, oldStateDoNotModify); }
+                    for (let add of difference.added) { if (Pointers.isPointer(add))
+                        newRoot = PointedBy.add(add, action, newRoot, undefined, oldStateDoNotModify); }
+                    // a.pointsto = [a, b, c];  a.pointsto = [a, b, x];    ------>     c.pointedby.remove(a) & x.pointedby.add(a)
+                    // idlookup.somelongid.pointsto = [...b];
+                }
             }
-            let newlyPointedElement = newRoot.idlookup[newVal];
-            if (newlyPointedElement) {
-                U.ArrayAdd(newlyPointedElement.pointedBy, fullpathTrimmed);
-            }*/
-            // console.log('deepCopyButOnlyFollowingPath final', {current, i, imax:action.pathArray.length, key, isArrayAppend, gotChanged, alreadyPastDivergencePoint});
             break;
         }
         Log.exDevv('should not reach here: reducer');
