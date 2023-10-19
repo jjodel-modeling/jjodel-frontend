@@ -3,7 +3,7 @@ import type {ShortAttribETypes, Pointer, RuntimeAccessibleClass, EdgeSegment} fr
 import type React from "react";
 import {
     AttribETypes,
-    CoordinateMode,
+    CoordinateMode, DPointerTargetable, DState,
     EdgeHead,
     EGraphElements, EModelElements,
     LEdgePoint,
@@ -174,3 +174,9 @@ export type InitialVertexSizeObj = Partial<{
     w: InitialSizeField, h: InitialSizeField, x: InitialSizeField, y: InitialSizeField}>;
 export type InitialVertexSizeFunc = ((parent: LVoidEdge|LGraphElement, thiss: LVoidVertex|LEdgePoint)=>InitialVertexSizeObj);
 export type InitialVertexSize =  undefined | InitialVertexSizeObj | InitialVertexSizeFunc; // | ((segment: EdgeSegment) => privateTempIVS);
+export type Dependency = {
+    root: keyof DState,
+    obj: Pointer<DPointerTargetable, 0, 1>,
+    field: keyof DPointerTargetable|'',
+    op: ''|'-='
+};

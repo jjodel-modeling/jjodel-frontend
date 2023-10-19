@@ -26,7 +26,7 @@ import {
     RuntimeAccessible,
     Selectors,
     TODO,
-    windoww, RuntimeAccessibleClass
+    windoww, RuntimeAccessibleClass, PointedBy
 } from "../joiner";
 import Swal from "sweetalert2";
 import {AccessModifier} from "../api/data";
@@ -34,16 +34,9 @@ import {AccessModifier} from "../api/data";
 
 console.warn('loading ts U log');
 
-
 @RuntimeAccessible
 export class U {
     static cname: string = "U";
-
-    public static getFromEnvironment(variable: string): string|number|boolean {
-        const value = process.env['REACT_APP_' + variable.toUpperCase()];
-        if(value !== undefined) return value;
-        return 0;
-    }
 
     public static fatherChain(me: LModelElement): Pointer<DModelElement, 0, 'N', LModelElement> {
         if(!me) return [];  // without this line go through delete error
@@ -174,37 +167,6 @@ export class U {
             default: return null;
         }
         return field as keyof DModelElement;
-    }
-
-    public static getReduxFieldToDelete(data: LModelElement): keyof DState|null {
-        let field = '';
-        switch(data.className) {
-            // DPackage
-            case 'DPackage': field = 'packages'; break;
-
-            // DClass
-            case 'DClass': field = 'classs'; break;
-            // DEnumerator
-            case 'DEnumerator': field = 'enumerators'; break;
-            // DAttribute
-            case 'DAttribute': field = 'attributes'; break;
-            // DReference
-            case 'DReference': field = 'references'; break;
-            // DOperation
-            case 'DOperation': field = 'operations'; break;
-            // DParameter
-            case 'DParameter': field = 'parameters'; break;
-            // DEnumLiteral
-            case 'DEnumLiteral': field = 'enumliterals'; break;
-            // DObject
-            case 'DObject': field = 'objects'; break;
-            // DValue
-            case 'DValue': field = 'values'; break;
-
-            // Error
-            default: return null;
-        }
-        return field as keyof DState;
     }
 
     public static initializeValue(typeclassifier: undefined|DClassifier|LClassifier|Pointer<DClassifier, 1, 1, LClassifier>): string {

@@ -1,17 +1,21 @@
-import type { LVoidVertex } from "../../joiner";
+import type {LVoidVertex} from "../../joiner";
 import {
+    Abstract,
     BEGIN,
     Constructor,
     Constructors,
-    CreateElementAction,
-    DEdge, DeleteElementAction,
+    DEdge,
+    DeleteElementAction,
     Dictionary,
+    DocString,
     DPointerTargetable,
+    DState,
     DtoL,
     END,
     getWParams,
     GObject,
-    DState,
+    GraphSize,
+    Instantiable,
     Leaf,
     LEdge,
     LGraphElement,
@@ -26,8 +30,6 @@ import {
     Pointer,
     Pointers,
     RuntimeAccessible,
-    Abstract,
-    Instantiable,
     RuntimeAccessibleClass,
     Selectors,
     SetFieldAction,
@@ -37,8 +39,8 @@ import {
     store,
     TargetableProxyHandler,
     U,
-    unArr,
-    WPointerTargetable, DUser, DocString, GraphSize} from "../../joiner";
+    unArr
+} from "../../joiner";
 import {Info, Json, ObjectWithoutPointers, orArr, PrimitiveType} from "../../joiner/types";
 
 import {
@@ -50,7 +52,6 @@ import {
     EcoreLiteral,
     ECoreOperation,
     ECorePackage,
-    ECoreSubPackage,
     EcoreParser,
     ECoreReference,
     ECoreRoot
@@ -265,41 +266,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         }
         return ret;
     }
-
-    public superDelete(): void {
-    }
-
-    protected get_superDelete(context: Context): () => void {
-        const data = context.proxyObject;
-        const father = data.father.__raw;
-        const fatherFieldName = U.getFatherFieldToDelete(data);
-        const reduxFieldName = U.getReduxFieldToDelete(data);
-        const ret = () => {
-            if (fatherFieldName) {
-                const fatherField: Pointer<DModelElement, 0, 'N', LModelElement> = father[fatherFieldName] as Pointer<DModelElement, 0, 'N', LModelElement>;
-                SetFieldAction.new(father, fatherFieldName, fatherField.indexOf(data.id), '-=', true);
-            }
-            if (reduxFieldName) {
-                const state = Selectors.getState();
-                const reduxField: Pointer<DModelElement, 0, 'N', LModelElement> = state[reduxFieldName];
-                SetRootFieldAction.new(reduxFieldName, reduxField.indexOf(data.id), '-=', true);
-            }
-            if(data.children) { for(let child of data.children) { child.delete(); } }
-            const selected = Selectors.getState()._lastSelected?.modelElement;
-            if(selected && selected === data.id) SetRootFieldAction.new('_lastSelected', {}, '', false);
-            DeleteElementAction.new(data.id);
-        };
-        return ret;
-    }
-
-
-    protected get_delete(context: Context): () => void {
-        const ret = () => {
-            context.proxyObject.superDelete();
-        }
-        return ret;
-    }
-
 
     // @ts-ignore
     private get_until_parent<D extends Constructor, L extends DtoL<InstanceType<D>>>(l: LModelElement, d: DModelElement, father: typeof D): L | null {
@@ -1391,23 +1357,6 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         return true;
     }
 
-    protected get_delete(context: Context): () => void {
-        const l = context.proxyObject;
-        const ret = () => {
-            let canBeDeleted = true;
-            for(let me of l.classes) {
-                if(!canBeDeleted) break;
-                canBeDeleted = me.instances.length === 0;
-            }
-            if(canBeDeleted) {
-                // super.delete(context);
-                l.superDelete();
-            }
-            else { U.alert('error', 'Cannot delete the selected package since there are instances.'); }
-        }
-        return ret;
-    }
-
 }
 // @RuntimeAccessible export class _WPackage extends _WNamedElement { }
 // export type WPackage = DPackage | LPackage | _WPackage;
@@ -1711,32 +1660,6 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
             END()
             return le; }
     }
-
-    /*
-        protected get_delete(context: LogicContext<DParameter>): () => void {
-            let ret = () => {};
-            const dParameter: DParameter = context.data;
-            const dOperation: DOperation = Selectors.getDElement<DOperation>(dParameter.father);
-            if (dOperation.parameters.indexOf(dParameter.id) !== 0) {
-                const dClassifier: DClassifier | undefined = Selectors.getDElement<DClass>(dParameter.type as string); //first parameter is return type so his type is undefined
-                ret = () => {
-                    SetFieldAction.new(dOperation,"parameters", U.removeFromList(dOperation.parameters, dParameter.id), '', true);
-                    if (dClassifier) {
-                        // SetFieldAction.new(dClassifier, "pointedBy", U.removeFromList(dClassifier.pointedBy, dParameter.id));
-                    }
-                    // SetRootFieldAction.new("parameters", U.removeFromList(Selectors.getAllParameters(), dParameter.id), '', true);
-                    new DeleteElementAction(dParameter);
-                }
-            } else {
-                // when deleting return type (null = void)
-                ret = () => {
-                    SetFieldAction.new(dParameter, "type", null as any); // while reworking .delete(): null = void, questo setta void e deve essere tenuto come azione diversa dal default delete
-                };
-            }
-            ret();
-            return ret;
-        }
-        */
 }
 RuntimeAccessibleClass.set_extend(DTypedElement, DParameter);
 RuntimeAccessibleClass.set_extend(LTypedElement, LParameter);
@@ -2336,29 +2259,6 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         };
     }*/
 
-    protected get_delete(context: Context): () => void {
-        const data = context.proxyObject;
-        const ret = () => {
-            const canBeDeleted = data.instances.length === 0;
-            if(canBeDeleted) {
-                const pointedBy = U.filteredPointedBy(data, 'type');
-                for(let me of pointedBy) {
-                    if(me) {
-                        SetFieldAction.new(me.__raw as DReference, 'type', me.father.id, '', true);
-                    }
-                }
-                for(let me of data.extends) {
-                    SetFieldAction.new(me.__raw, 'extendedBy', me.__raw.extendedBy.indexOf(data.id), '-=', true);
-                }
-                for(let me of data.extendedBy) {
-                    SetFieldAction.new(me.__raw, 'extends', me.__raw.extends.indexOf(data.id), '-=', true);
-                }
-                data.superDelete();
-            } else { U.alert('error', 'Cannot delete the selected class since there are instances.'); }
-        }
-        return ret;
-    }
-
 }
 RuntimeAccessibleClass.set_extend(DClassifier, DClass);
 RuntimeAccessibleClass.set_extend(LClassifier, LClass);
@@ -2552,15 +2452,6 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
     protected set_derived(val: this["derived"], context: Context): boolean {
         SetFieldAction.new(context.data, 'derived', val);
         return true;
-    }
-
-    protected get_delete(context: Context): () => void {
-        const data = context.proxyObject;
-        const ret = () => {
-            for(let instance of data.instances) { instance.delete(); }
-            data.superDelete();
-        }
-        return ret;
     }
     /*
         protected get_defaultValueLiteral(context: Context): this["defaultValueLiteral"] { return context.data.defaultValueLiteral; }
@@ -3220,20 +3111,6 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
             if (v) { currentOrdinal = v; continue; }
             while (ret[currentOrdinal]) currentOrdinal++; // adressing 2)
             ret[currentOrdinal] = literals[i];
-        }
-        return ret; }
-
-    protected get_delete(context: Context): () => void {
-        const data = context.proxyObject;
-        const ret = () => {
-            const pointedBy = U.filteredPointedBy(data, 'type');
-            for(let me of pointedBy) {
-                if (me) {
-                    const dString = Selectors.getFirstPrimitiveTypes();
-                    SetFieldAction.new(me.__raw as DAttribute, 'type', dString.id, '', true);
-                }
-            }
-            data.superDelete();
         }
         return ret;
     }
@@ -4112,24 +3989,6 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         // return context.data.features.map((feature) => { return LPointerTargetable.from(feature) });
     }
 
-    protected get_delete(context: Context): () => void {
-        const data = context.proxyObject;
-        const ret = () => {
-            const pointedBy = U.filteredPointedBy(data, 'values');
-            for(let me of pointedBy) {
-                if (me) {
-                    const lValue = me as LValue;
-                    const dFather = lValue.father.__raw as DObject;
-                    SetFieldAction.new(lValue.__raw, 'values', dFather.features.indexOf(data.id as string), '-=', true);
-                }
-            }
-            const me = data.instanceof;
-            SetFieldAction.new(me.__raw, 'instances', me.__raw.instances.indexOf(data.id), '-=', true);
-            data.superDelete();
-        }
-        return ret;
-    }
-
     public ecorePointer(): string { return this.cannotCall("ecorePointer"); }
     protected get_ecorePointer(context: Context): () => string {
         let lastvisited: Pointer<DObject, 1, 1, LObject> = context.data.id;
@@ -4719,16 +4578,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     public rawValues(): void { super.cannotCall('rawValues'); }
     public get_rawValues(context: Context): this["values"]{
         return (this.get_getValues(context))(false, false, false, true, true, false, undefined);
-    }
-    protected get_delete(context: Context): () => void {
-        const data = context.proxyObject;
-        const ret = () => {
-            const me = data.instanceof;
-            me && SetFieldAction.new(me.__raw, 'instances', me.__raw.instances.indexOf(data.id), '-=', true);
-            data.superDelete();
-            // super.get_delete(context);
-        }
-        return ret;
     }
 
     protected get_topic(context: Context): this["topic"] {

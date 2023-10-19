@@ -986,11 +986,12 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
         return ret;
     }
 
-
+    /* 13/10/2023 Giordano comment
     public get_delete(context: Context): () => void {
         // careful: pointedBy might be broken due to comment x984 (search it)
         return super.get_delete(context);
     }
+    */
 }
 RuntimeAccessibleClass.set_extend(DVoidVertex, DEdgePoint);
 RuntimeAccessibleClass.set_extend(LVoidVertex, LEdgePoint);

@@ -1,7 +1,7 @@
 import React from 'react';
 import Collaborative from './Collaborative';
 import App from '../../App';
-import {Action, SetRootFieldAction} from '../../joiner';
+import {Action, SetRootFieldAction, U} from '../../joiner';
 import {useParams} from 'react-router-dom';
 import {useEffectOnce} from 'usehooks-ts';
 
@@ -17,6 +17,7 @@ function CollaborativeAttacher(props: Props) {
                 delete action['_id'];
                 const receivedAction = Action.fromJson(action);
                 receivedAction.hasFired = receivedAction.hasFired - 1;
+                await U.sleep(0);
                 receivedAction.fire();
             }
             Collaborative.client.io.opts.query = {code};

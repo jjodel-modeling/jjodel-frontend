@@ -93,8 +93,17 @@ import type {
 } from "../model/logicWrapper";
 // import type {Pointer} from "./typeconverter";
 import type {
-    CClass, Constructor, Dictionary, DocString, GObject, InitialVertexSize,
-    InitialVertexSizeFunc, InitialVertexSizeObj, orArr, Proxyfied, unArr
+    CClass,
+    Constructor, Dependency,
+    Dictionary,
+    DocString,
+    GObject,
+    InitialVertexSize,
+    InitialVertexSizeFunc,
+    InitialVertexSizeObj,
+    orArr,
+    Proxyfied,
+    unArr
 } from "./types";
 import {EdgeBendingMode, EdgeGapMode, PrimitiveType} from "./types";
 import type {
@@ -106,9 +115,9 @@ import type {
     WViewTransientProperties
 } from "../view/viewElement/view";
 import type {LogicContext} from "./proxy";
-import type {EdgeSegment, DState, EdgeFillSegment} from "./index";
+import type {DState, EdgeSegment} from "./index";
 import {
-    Action, AttribETypes,
+    Action,
     BEGIN,
     CreateElementAction,
     DeleteElementAction,
@@ -119,13 +128,11 @@ import {
     Log,
     ParsedAction,
     SetFieldAction,
-    SetRootFieldAction, ShortAttribETypes,
+    SetRootFieldAction,
     store,
     U,
 } from "./index";
 import TreeModel from "tree-model";
-import {cssNumber} from "jquery";
-import {AccessModifier} from "../api/data";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -136,7 +143,6 @@ console.warn('ts loading classes');
 
 // annotation @RuntimeAccessible
 // import {store} from "../redux/createStore";
-
 
 abstract class AbstractMixedClass {
     // superclass!: Dictionary<DocString<'parent class name', Class>>;
@@ -1242,8 +1248,6 @@ export class PointedBy{
         this.source = source;
     }
     static fromID<D extends DPointerTargetable>(ptr: Pointer<D>, field: keyof D) {
-        // Giordano: add ignore for webpack
-        //@ts-ignore
         return PointedBy.new("idlookup." + ptr + "." + field);
     }
     static new(source: DocString<"full path in store including key. like \'idlookup.id.extends\'">, modifier: "-=" | "+=" | undefined = undefined, action?: ParsedAction): PointedBy {
@@ -1329,15 +1333,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
 
     protected _get_default< DD extends DPointerTargetable, T extends string & keyof (DD) & keyof (L), L extends LModelElement = LModelElement>(data: DD, key: T): L[T]{
         // @ts-ignore
-        return LPointerTargetable.from(data[key]); }
-
-    public delete(): void { throw this.wrongAccessMessage("delete"); }
-    public _delete(context: Context): void { new DeleteElementAction(context.data); }
-    protected get_delete(context: Context): () => void {
-        return () => {
-            alert("Delete in LPOINTER")
-            this._delete(context);
-        }
+        return LPointerTargetable.from(data[key]);
     }
 
     public get__extends(superClassName: string, context: LogicContext<DPointerTargetable>): boolean {
@@ -1455,8 +1451,72 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     }
 
     // static from0(a: any, ...aa: any): any { return null; }
-}
 
+    /* OLD DELETE
+    public delete(): void { throw this.wrongAccessMessage("delete"); }
+    public _delete(context: Context): void { new DeleteElementAction(context.data); }
+    protected get_delete(context: Context): () => void {
+        return () => {
+            alert("Delete in LPOINTER")
+            this._delete(context);
+        }
+    }
+    */
+    public dependencies(): Dependency[] {
+        return [];
+    }
+    protected get_dependencies(context: Context): () => Dependency[] {
+        const data = context.proxyObject;
+        const dependencies: Dependency[] = [];
+        const ret = () => {
+            for(let pointedBy of data.pointedBy) {
+                const raw = pointedBy.source.split('.');
+                let root = raw[0];
+                const obj = raw[1] || '';
+                let field = raw[2] || '';
+
+                // Improve this whit regex (delete chars from end that are not in azAZ)
+                if (root.endsWith('+=') || root.endsWith('[]')) root = root.slice(0, -2);
+                if (field && (field.endsWith('+=') || field.endsWith('[]'))) field = field.slice(0, -2);
+
+                let op: ''|'-=' = (field && field.endsWith('s')) ? '-=' : '';
+                if(!field && root.endsWith('s')) op = '-=';
+
+                const dependency: Dependency = {root: root  as keyof DState, obj, field: field as keyof DPointerTargetable, op};
+                if(!dependencies.includes(dependency)) dependencies.push(dependency);
+            }
+            return dependencies
+        }
+        return ret;
+    }
+
+    public delete(): void {}
+    protected get_delete(context: Context): () => void {
+        const data: LPointerTargetable & GObject = context.proxyObject;
+        const dependencies = data.dependencies();
+        const ret = () => {
+            BEGIN();
+            for (let dependency of dependencies) {
+                const root = dependency.root;
+                const obj = dependency.obj;
+                const field = dependency.field;
+                const op = dependency.op;
+                const val = (op === '-=') ? data.id : '';
+                if((root === 'idlookup') && obj && field) {
+                    console.log(`SetFieldAction.new('${obj}', '${field}', '${val}', '${op}', false); //debug`);
+                    SetFieldAction.new(obj, field, val, op, false);
+                }
+                else {
+                    console.log(`SetRootFieldAction.new('${root}', '${val}', '${op}', false); //debug`);
+                    SetRootFieldAction.new(root, val, op, false);
+                }
+            }
+            DeleteElementAction.new(data.id);
+            END();
+        };
+        return ret;
+    }
+}
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LPointerTargetable);
 /*
 let pttr: Pointer<DClassifier, 0, 1, LClassifier> = null as any;
