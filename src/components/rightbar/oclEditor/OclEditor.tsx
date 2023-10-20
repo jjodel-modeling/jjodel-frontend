@@ -2,18 +2,23 @@ import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import Editor from "@monaco-editor/react";
 import {DState, DViewElement, LViewElement, Pointer, U} from "../../../joiner";
-
+import {useStateIfMounted} from "use-state-if-mounted";
+import {FakeStateProps} from "../../../joiner/types";
 
 function OclEditorComponent(props: AllProps) {
     const view = props.view;
-    if(!view) return(<></>);
     const readOnly = U.getDefaultViewsID().includes(view.id);
+    const [ocl, setOcl] = useStateIfMounted(view.query);
 
     const change = (value: string|undefined) => {
-        if (value !== undefined) view.query = value;
+        if(value !== undefined) setOcl(value);
     }
 
-    return <div style={{height: '5em'}}>
+    const blur = (evt: React.FocusEvent) => {
+        view.query = ocl;
+    }
+
+    return <div style={{height: '5em'}} tabIndex={-1} onBlur={blur}>
         <label className={'ms-1 mb-1'}>OCL Editor</label>
         <Editor className={'mx-1'} onChange={change}
                 options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
@@ -27,7 +32,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as any;
+    const ret: StateProps = {} as FakeStateProps;
     ret.view = LViewElement.fromPointer(ownProps.viewid);
     return ret;
 }

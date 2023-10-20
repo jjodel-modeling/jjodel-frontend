@@ -43,7 +43,7 @@ function DataTree(props: DataTreeProps) {
     return(<div>
         <div className={'d-flex tree'}>
             <button className={'btn'} onClick={setFilter}>
-                {(data.children.length > 0 && hide) ? <i className={'bi bi-chevron-up'} /> : <i className={'bi bi-chevron-down'} />}
+                {(data.children?.length > 0 && hide) ? <i className={'bi bi-chevron-up'} /> : <i className={'bi bi-chevron-down'} />}
             </button>
             <label className={data.className + ' ms-1 text-capitalize my-auto'}>
                 <b>{data.className}</b>:
@@ -52,7 +52,7 @@ function DataTree(props: DataTreeProps) {
                 {(data.name) ? data.name : 'unnamed'}
             </label>
         </div>
-        {!hide && data.children.map((child: LModelElement) => {
+        {!hide && data.children?.map((child: LModelElement) => {
             return(<div className={'ms-2'}>
                 <Tree data={child} depth={depth} />
             </div>);

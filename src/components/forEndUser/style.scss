@@ -4,12 +4,14 @@
   & > .DModel > b {color: $model-color}
   & > .DPackage > b {color: $package-color}
   & > .DClass > b {color: $class-color}
+  & > .DObject > b {color: $class-color}
   & > .DAttribute > b {color: $attribute-color}
   & > .DReference > b {color: $reference-color}
   & > .DEnumerator > b {color: $enum-color}
   & > .DEnumLiteral > b {color: $literal-color}
   & > .DOperation > b {color: $operation-color}
   & > .DParameter > b {color: $parameter-color}
+  & > .DValue > b {color: $feature-color}
   & > label.name:hover {
     text-decoration: underline;
   }

@@ -3,6 +3,7 @@ import {connect} from "react-redux";
 import {useStateIfMounted} from "use-state-if-mounted";
 import {DState, DViewElement, LViewElement, Pointer, U} from "../../../joiner";
 import Editor from "@monaco-editor/react";
+import {FakeStateProps} from "../../../joiner/types";
 
 
 function JsxEditorComponent(props: AllProps) {
@@ -15,7 +16,7 @@ function JsxEditorComponent(props: AllProps) {
     }
 
 
-    const blur = (evt: React.FocusEvent<HTMLDivElement>) => {
+    const blur = (evt: React.FocusEvent) => {
         view.jsxString = jsx;
     }
 
@@ -33,7 +34,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as any;
+    const ret: StateProps = {} as FakeStateProps;
     ret.view = LViewElement.fromPointer(ownProps.viewid);
     return ret;
 }

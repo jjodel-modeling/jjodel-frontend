@@ -12,12 +12,13 @@ import {
     Pointer,
     RuntimeAccessibleClass,
     U,
-    windoww, store
+    windoww, store, DUser
 } from "../../../joiner";
 import * as util from "util";
 import {GraphElementComponent} from "../../../graph/graphElement/graphElement";
 import ReactDOM from "react-dom";
 import Router from "../../../router/Router";
+import {FakeStateProps} from "../../../joiner/types";
 
 var Convert = require('ansi-to-html');
 var ansiConvert = new Convert();
@@ -232,20 +233,18 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
     }
 }
 interface OwnProps {}
-interface StateProps { data: LModelElement|undefined, node: LGraphElement|undefined, view: LViewElement|undefined }
+interface StateProps { data: LModelElement|null, node: LGraphElement|null, view: LViewElement|null }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as any;
-    let ptr;
-    ptr = state._lastSelected?.modelElement;
-    ret.data = (ptr) ? LModelElement.fromPointer(ptr) : undefined;
-    ptr = state._lastSelected?.node;
-    ret.node = (ptr) ? LModelElement.fromPointer(ptr) : undefined;
-    ptr = state._lastSelected?.view;
-    ret.view = (ptr) ? LModelElement.fromPointer(ptr) : undefined;
+    const ret: StateProps = {} as FakeStateProps;
+    const nodeid = state.selected[DUser.current];
+    const node: LGraphElement|null = (nodeid) ? LGraphElement.fromPointer(nodeid) : null;
+    ret.node = node;
+    ret.data = (node?.model) ? node.model : null;
+    ret.view = (node?.view) ? node.view : null;
     return ret;
 }
 

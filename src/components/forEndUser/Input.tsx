@@ -1,7 +1,7 @@
 import React, {Dispatch, ReactElement, ReactNode, useEffect} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
-import {DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer, U} from '../../joiner';
+import {DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer} from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './style.scss';
 
@@ -104,13 +104,15 @@ function InputComponent(props: AllProps) {
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
     return(<label className={'p-1'} {...otherprops}
-                  style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor: tooltip ? 'help' : 'auto', ...((props as any).style || {})}}>
+                  style={{display: (jsxLabel || label) ? 'flex' : 'block', ...((props as any).style || {})}}>
 
-        { label && <label className={'my-auto'}
-                          onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)}>
-            {label}</label>}
-        {jsxLabel && <label
-            onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)}>{jsxLabel}</label> }
+        {label && <label className={'my-auto'} onMouseEnter={e => setShowTooltip(true)}
+                         onMouseLeave={e => setShowTooltip(false)}>{label}
+        </label>}
+
+        {jsxLabel && <label onMouseEnter={e => setShowTooltip(true)}
+                            onMouseLeave={e => setShowTooltip(false)}>{jsxLabel}
+        </label>}
 
         {(tooltip && showTooltip) && <div className={'my-tooltip'}>
             <b className={'text-center text-capitalize'}>{field}</b>
@@ -118,8 +120,9 @@ function InputComponent(props: AllProps) {
             <label>{tooltip}</label>
         </div>}
 
-        {autosize ? <div className={ (autosize ? 'autosize-input-container' : '') + (props.asLabel ? ' labelstyle' : '')}
-                          data-value={value}>{input}</div> : input}
+        {autosize ? <div className={(autosize ? 'autosize-input-container' : '') + (props.asLabel ? ' labelstyle' : '')}
+                         data-value={value}>{input}
+        </div> : input}
     </label>);
 }
 
