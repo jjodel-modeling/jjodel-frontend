@@ -24,7 +24,7 @@ function ViewData(props: Props) {
 
     const viewpoints = props.viewpoints;
     const debug = props.debug;
-    const readOnly = U.getDefaultViewsID().includes(view.id) && !debug;
+    const readOnly = !debug && view.id.indexOf("Pointer_View") !== -1;// U.getDefaultViewsID().includes(view.id);
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     const tabs = [

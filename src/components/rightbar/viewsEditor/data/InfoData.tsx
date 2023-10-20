@@ -21,13 +21,13 @@ function InfoData(props: Props) {
     }
 
     return(<section className={'p-3'}>
-        <Input data={view} field={'name'} label={'Name'} type={'text'}/>
-        <Input data={view} field={'explicitApplicationPriority'} label={'Priority'} type={'number'}/>
-        <Select data={view} field={'appliableTo'} label={'Appliable To'} options={<optgroup label={'Appliable Types'}>
+        <Input data={view} field={'name'} label={'Name'} type={'text'} readonly={readOnly}/>
+        <Input data={view} field={'explicitApplicationPriority'} label={'Priority'} type={'number'} readonly={readOnly}/>
+        <Select data={view} field={'appliableTo'} label={'Appliable To'} readonly={readOnly} options={<optgroup label={'Appliable Types'}>
             <option value={'node'}>Node</option>
             <option value={'edge'}>Edge</option>
             <option value={'edgePoint'}>Edge Point</option>
-        </optgroup>} readonly={readOnly} />
+        </optgroup>} />
         <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Viewpoint</label>
             <select className={'my-auto ms-auto select'} disabled={readOnly}
@@ -46,7 +46,7 @@ function InfoData(props: Props) {
                 {classesOptions}
             </select>
         </div>*/}
-        <OclEditor viewid={view.id} />
+        <OclEditor viewid={view.id} readonly={readOnly} />
         <a href={"https://ocl.stekoe.de/#examples"}>Supported OCL commands</a> by Stephan Köninger
     </section>);
 }

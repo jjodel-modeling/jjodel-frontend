@@ -9,9 +9,9 @@ function TemplateData(props: Props) {
     const readOnly = props.readonly;
 
     return(<section className={'p-3'}>
-        {/*<TextArea data={view} field={"constants"} label={"Constants"} />*/}
-        {/*<TextArea data={view} field={"preRenderFunc"} label={"PreRender Function"} />*/}
-        <JsxEditor viewid={view.id} />
+        {/*<TextArea data={view} field={"constants"} label={"Constants"}  readonly={readOnly} />*/}
+        {/*<TextArea data={view} field={"preRenderFunc"} label={"PreRender Function"}  readonly={readOnly} />*/}
+        <JsxEditor viewid={view.id}  readonly={readOnly} />
     </section>);
 }
 

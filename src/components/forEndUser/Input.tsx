@@ -9,7 +9,6 @@ import './style.scss';
 function InputComponent(props: AllProps) {
     // todo: data can be injected with UX, if field is present, can take type from a metainfo like __info_of__
     const data = props.data;
-    let editable = true;
 
     /*  Uncomment this when we have user authentication: if a user is on a ME, it cannot be edited.
                 damiano: ok, ma se data non è ModelElement crasha perchè non ha "father"
@@ -44,7 +43,7 @@ function InputComponent(props: AllProps) {
 
 
     if (!data) return(<></>);
-    const readOnly = (props.readonly !== undefined) ? props.readonly : data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
+    const readOnly = (props.readonly !== undefined) ? props.readonly : !props.debugMode && data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
@@ -102,7 +101,7 @@ function InputComponent(props: AllProps) {
                        className={props.inputClassName || css}
                        style={props.inputStyle}
                        spellCheck={false}
-                       readOnly={readOnly || (!editable && false)}
+                       readOnly={readOnly}
                        type={type} value={value} onChange={change} onBlur={blur}
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
@@ -149,6 +148,7 @@ export interface InputOwnProps {
     key?: React.Key | null;
 }
 interface StateProps {
+    debugMode: boolean;
     data: LPointerTargetable & GObject;
     // selected: Dictionary<Pointer<DUser>, LModelElement | null>;
 }
@@ -159,6 +159,7 @@ type AllProps = Overlap<InputOwnProps, Overlap<StateProps, DispatchProps>>;
 function mapStateToProps(state: DState, ownProps: InputOwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
+    ret.debugMode = state.debug;
     ret.data = LPointerTargetable.fromPointer(pointer);
     /*
     const selected = state.selected;

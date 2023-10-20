@@ -18,7 +18,7 @@ function NodeData(props: Props) {
     }
 
     return(<section className={'p-3'}>
-        {/*<Select obj={view} field={"useSizeFrom"} options={
+        {/*<Select obj={view} field={"useSizeFrom"} readonly={readOnly} options={
             <optgroup label="Node position depends from what?">
                 <option value={EuseSizeFrom.view}>View</option>
                 <option value={EuseSizeFrom.node}>Graph: Same position in different views</option>
@@ -28,8 +28,8 @@ function NodeData(props: Props) {
                     "Graph: Element in a graph will maintain the position when changing view\n"+
                     "Node: Ensuring every visual element uses his personal size (default)"
         }></Select>*/}
-        {/*<Input data={view} field={"width"} label={"Width"} type={"number"}/>
-        <Input data={view} field={"height"} label={"Height"} type={"number"}/>*/}
+        {/*<Input data={view} field={"width"} label={"Width"} type={"number"} readonly={readOnly} />
+        <Input data={view} field={"height"} label={"Height"} type={"number"} readonly={readOnly} />*/}
         {/*<Input data={view} field={"scalezoomx"} label={"Zoom X"} type={"number"}/>*/}
         {/*<Input data={view} field={"scalezoomy"} label={"Zoom Y"} type={"number"}/>*/}
         {/*<div className={'d-flex p-1'}>
@@ -42,21 +42,21 @@ function NodeData(props: Props) {
                 })}
             </select>
         </div>*/}
-        {/*<Input data={view} field={"storeSize"} label={"Store Size"} tooltip={
+        {/*<Input data={view} field={"storeSize"} label={"Store Size"} readonly={readOnly}  tooltip={
             <div>"Active: the node position depends from the view currently displayed. Inactive: it depends from the graph."</div>} type={"checkbox"} />*/}
-        <Input data={view} field={"lazySizeUpdate"} label={"Lazy Update"} type={"checkbox"} tooltip={true}/>
+        <Input data={view} field={"lazySizeUpdate"} label={"Lazy Update"} type={"checkbox"} tooltip={true} readonly={readOnly} />
 
-        <Input data={view} field={"adaptWidth"} label={"Adapt Width"} type={"checkbox"}/>
-        <Input data={view} field={"adaptHeight"} label={"Adapt Height"} type={"checkbox"}/>
-        <Input data={view} field={"draggable"} label={"Draggable"} type={"checkbox"}/>
-        <Input data={view} field={"resizable"} label={"Resizable"} type={"checkbox"}/>
-        <TextArea data={view} field={'onDataUpdate'} label={'onDataUpdate'} />
-        <TextArea data={view} field={'onDragStart'} label={'OnDragStart'} />
-        <TextArea data={view} field={'whileDragging'} label={'whileDragging'} />
-        <TextArea data={view} field={'onDragEnd'} label={'OnDragEnd'} />
-        <TextArea data={view} field={'onResizeStart'} label={'OnResizeStart'} />
-        <TextArea data={view} field={'whileResizing'} label={'whileResizing'} />
-        <TextArea data={view} field={'onResizeEnd'} label={'OnResizeEnd'} />
+        <Input data={view} field={"adaptWidth"} label={"Adapt Width"} type={"checkbox"} readonly={readOnly} />
+        <Input data={view} field={"adaptHeight"} label={"Adapt Height"} type={"checkbox"} readonly={readOnly} />
+        <Input data={view} field={"draggable"} label={"Draggable"} type={"checkbox"} readonly={readOnly} />
+        <Input data={view} field={"resizable"} label={"Resizable"} type={"checkbox"} readonly={readOnly} />
+        <TextArea data={view} field={'onDataUpdate'} label={'onDataUpdate'} readonly={readOnly} />
+        <TextArea data={view} field={'onDragStart'} label={'OnDragStart'} readonly={readOnly} />
+        <TextArea data={view} field={'whileDragging'} label={'whileDragging'} readonly={readOnly} />
+        <TextArea data={view} field={'onDragEnd'} label={'OnDragEnd'} readonly={readOnly} />
+        <TextArea data={view} field={'onResizeStart'} label={'OnResizeStart'} readonly={readOnly} />
+        <TextArea data={view} field={'whileResizing'} label={'whileResizing'} readonly={readOnly} />
+        <TextArea data={view} field={'onResizeEnd'} label={'OnResizeEnd'} readonly={readOnly} />
     </section>);
 }
 

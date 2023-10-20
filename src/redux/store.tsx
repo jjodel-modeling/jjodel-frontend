@@ -258,6 +258,9 @@ function makeDefaultGraphViews(): DViewElement[] {
     let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.cname]);
     objectView.adaptWidth = true; objectView.adaptHeight = true;
     objectView.query = 'context DObject inv: true';
+    objectView.usageDeclarations = "()=>{\n" +
+        "ret.metaclass = data.instanceof;\n" +
+        "}";
 
     let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname]);
     valueView.query = 'context DValue inv: true';

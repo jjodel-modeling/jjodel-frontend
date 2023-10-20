@@ -105,7 +105,7 @@ function CustomDataComponent(props: AllProps) {
                 </button>
             </div>)
         })}
-        <Function data={view} field={"usageDeclarations"} jsxLabel={true} />
+        <Function data={view} field={"usageDeclarations"} jsxLabel={true} readonly={readOnly} />
     </section>);
 }
 

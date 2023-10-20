@@ -15,7 +15,7 @@ function SelectComponent(props: AllProps) {
     let gdata: GObject<LPointerTargetable> = data;
     const field: (keyof LPointerTargetable & keyof DPointerTargetable) = props.field as any;
 
-    const readOnly = props.readonly || data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
+    const readOnly = props.readonly !== undefined ? props.readonly : !props.debugMode && data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
     const value: string | Pointer = d[field] as string;
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
@@ -114,6 +114,7 @@ export interface SelectOwnProps {
     inputStyle?: GObject;
 }
 interface StateProps {
+    debugMode: boolean,
     data: LPointerTargetable;
     primitives: LClass[];
     returns: LClass[]; }
@@ -126,6 +127,7 @@ function mapStateToProps(state: DState, ownProps: SelectOwnProps): StateProps {
     const ret: StateProps = {} as any;
     if (!ownProps.data) return ret;
     const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
+    ret.debugMode = state.debug;
     ret.data = LPointerTargetable.fromPointer(pointer);
     ret.primitives = LPointerTargetable.fromPointer(state.primitiveTypes);
     ret.returns = LPointerTargetable.fromPointer(state.returnTypes);

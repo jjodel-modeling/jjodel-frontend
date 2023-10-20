@@ -266,7 +266,7 @@ class DefaultView {
     public static object(): string {
         return `<div className={'round bg-white root class'}>
     <label className={'ms-1'}>
-        <Input jsxLabel={<b className={'my-auto class-name'}>{data.instanceof ? data.instanceof.name : "Object"}:</b>} 
+        <Input jsxLabel={<b className={'my-auto class-name'}>{props.metaclass ? props.metaclass.name : "Object"}:</b>} 
            data={data.id} field={'name'} hidden={true} autosize={true}/>
     </label>
     <hr />

@@ -7,7 +7,7 @@ import {DState, DViewElement, LViewElement, Pointer, U} from "../../../joiner";
 function OclEditorComponent(props: AllProps) {
     const view = props.view;
     if(!view) return(<></>);
-    const readOnly = U.getDefaultViewsID().includes(view.id);
+    const readOnly = props.readonly !== undefined ? props.readonly : U.getDefaultViewsID().includes(view.id);
 
     const change = (value: string|undefined) => {
         if (value !== undefined) view.query = value;
@@ -17,10 +17,12 @@ function OclEditorComponent(props: AllProps) {
         <label className={'ms-1 mb-1'}>OCL Editor</label>
         <Editor className={'mx-1'} onChange={change}
                 options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                defaultLanguage={'js'} value={view.query} />
+                defaultLanguage={'js'} value={view.query}/>
     </div>;
 }
-interface OwnProps { viewid: Pointer<DViewElement, 1, 1, LViewElement>; }
+interface OwnProps {
+    readonly?: boolean;
+    viewid: Pointer<DViewElement, 1, 1, LViewElement>; }
 interface StateProps { view: LViewElement }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
