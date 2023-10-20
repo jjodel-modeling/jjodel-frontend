@@ -538,7 +538,7 @@ export class Constructors<T extends DPointerTargetable>{
 
         // update father's collections (pointedby's here are set automatically)
         if (this.persist && instanceoff) {
-            SetFieldAction.new(thiss.id, "instanceof", instanceoff, undefined, true);
+            SetFieldAction.new(thiss.id, "instanceof", instanceoff, "", true);
             SetFieldAction.new(instanceoff as Pointer<DAttribute>, "instances", thiss.id, '+=', true);
         }
         else thiss.instanceof = instanceoff;
@@ -1477,9 +1477,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         }
     }
     */
-    public dependencies(): Dependency[] {
-        return [];
-    }
+    public dependencies(): Dependency[] { return []; }
     protected get_dependencies(context: Context): () => Dependency[] {
         const data = context.proxyObject;
         const dependencies: Dependency[] = [];
@@ -1490,9 +1488,10 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
                 const obj = raw[1] || '';
                 let field = raw[2] || '';
 
-                // Improve this whit regex (delete chars from end that are not in azAZ)
-                if (root.endsWith('+=') || root.endsWith('[]')) root = root.slice(0, -2);
-                if (field && (field.endsWith('+=') || field.endsWith('[]'))) field = field.slice(0, -2);
+                // Delete chars from end that are not in [azAZ].
+                const regex = /[^a-zA-Z]+$/;
+                root = root.replace(regex, '');
+                field = field.replace(regex, '');
 
                 let op: ''|'-=' = (field && field.endsWith('s')) ? '-=' : '';
                 if(!field && root.endsWith('s')) op = '-=';
@@ -1509,6 +1508,12 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     protected get_delete(context: Context): () => void {
         const data: LPointerTargetable & GObject = context.proxyObject;
         const dependencies = data.dependencies();
+
+        for(let child of data.children) {
+            child.delete();
+            child.node?.delete();
+        }
+
         const ret = () => {
             BEGIN();
             for (let dependency of dependencies) {
@@ -1518,14 +1523,14 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
                 const op = dependency.op;
                 const val = (op === '-=') ? data.id : '';
                 if((root === 'idlookup') && obj && field) {
-                    console.log(`SetFieldAction.new('${obj}', '${field}', '${val}', '${op}', false); //debug`);
+                    console.log(`SetFieldAction.new('${obj}', '${field}', '${val}', '${op}'); // delete`);
                     SetFieldAction.new(obj, field, val, op, false);
-                }
-                else {
-                    console.log(`SetRootFieldAction.new('${root}', '${val}', '${op}', false); //debug`);
+                } else {
+                    console.log(`SetRootFieldAction.new('${root}', '${val}', '${op}'); // delete`);
                     SetRootFieldAction.new(root, val, op, false);
                 }
             }
+            // data.node?.delete(); <-- this is NOT working here, IDK why, on contextMenu it works.
             DeleteElementAction.new(data.id);
             END();
         };

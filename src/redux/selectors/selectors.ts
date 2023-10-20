@@ -36,6 +36,7 @@ import {
     U, windoww, Pointers, DViewPoint, LViewPoint, Dictionary, DUser, AttribETypes, ShortAttribETypes, toShortEType
 } from "../../joiner";
 import {EdgeOptions} from "../store";
+import {Selected} from "../../joiner/types";
 
 enum ViewEClassMatch { // this acts as a multiplier for explicit priority
     MISMATCH = 0,
@@ -48,7 +49,7 @@ enum ViewEClassMatch { // this acts as a multiplier for explicit priority
 export class Selectors{
     public static cname: string = "Selectors";
 
-    static getSelected(): Pointer<DModelElement, 0, 1, LModelElement> {
+    static getSelected(): Selected {
         const state = store.getState();
         return state.selected;
     }

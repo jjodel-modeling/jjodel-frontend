@@ -986,7 +986,7 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
         return ret;
     }
 
-    /* 13/10/2023 Giordano comment
+    /* 13/10/2023 Giordano comment (defined in LPointerTargetable
     public get_delete(context: Context): () => void {
         // careful: pointedBy might be broken due to comment x984 (search it)
         return super.get_delete(context);

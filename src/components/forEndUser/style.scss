@@ -10,7 +10,12 @@
   & > .DEnumLiteral > b {color: $literal-color}
   & > .DOperation > b {color: $operation-color}
   & > .DParameter > b {color: $parameter-color}
+  & > label.name:hover {
+    text-decoration: underline;
+  }
 }
+
+
 
 .my-tooltip {
   position: absolute;

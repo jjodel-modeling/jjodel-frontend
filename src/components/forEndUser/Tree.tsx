@@ -1,5 +1,5 @@
 import React, {ReactNode, useEffect} from "react";
-import {GObject, LModelElement, LNamedElement, U} from '../../joiner';
+import {DUser, GObject, LModelElement, LNamedElement, SetRootFieldAction, U} from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './style.scss';
 import {useEffectOnce} from "usehooks-ts";
@@ -34,15 +34,23 @@ function DataTree(props: DataTreeProps) {
     const depth = props.depth;
     const setFilter = props.setFilter;
 
+    const click = (e: React.MouseEvent) => {
+        const nodeid = data.node?.id;
+        if(!nodeid) return;
+        SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);
+    }
+
     return(<div>
         <div className={'d-flex tree'}>
             <button className={'btn'} onClick={setFilter}>
-                {(hide) ? <i className={'bi bi-eye-slash'}></i> : <i className={'bi bi-eye'}></i>}
+                {(data.children.length > 0 && hide) ? <i className={'bi bi-chevron-up'} /> : <i className={'bi bi-chevron-down'} />}
             </button>
             <label className={data.className + ' ms-1 text-capitalize my-auto'}>
                 <b>{data.className}</b>:
             </label>
-            <label className={'ms-1 my-auto'}>{(data.name) ? data.name : 'unnamed'}</label>
+            <label tabIndex={-1} role={'button'} onClick={click} className={'name ms-1 my-auto'}>
+                {(data.name) ? data.name : 'unnamed'}
+            </label>
         </div>
         {!hide && data.children.map((child: LModelElement) => {
             return(<div className={'ms-2'}>
@@ -66,7 +74,7 @@ function HtmlTree(props: HtmlTreeProps) {
             return(<>
                 <div className={'d-flex'}>
                     <button className={'btn'} onClick={setFilter}>
-                        {(hide) ? <i className={'bi bi-eye-slash'}></i> : <i className={'bi bi-eye'}></i>}
+                        {(children.length > 0 && hide) ? <i className={'bi bi-chevron-up'} /> : <i className={'bi bi-chevron-down'} />}
                     </button>
                     <label className={'ms-1 my-auto'}>
                         {element.props['label'] ? element.props['label'] : 'unnamed'}

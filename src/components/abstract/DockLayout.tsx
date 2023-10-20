@@ -16,7 +16,7 @@ import {
     Pointer,
     Selectors,
     U,
-    LPackage, SetRootFieldAction
+    LPackage, SetRootFieldAction, Dictionary, DUser
 } from '../../joiner';
 import StructureEditor from "../rightbar/structureEditor/StructureEditor";
 import TreeEditor from "../rightbar/treeEditor/treeEditor";
@@ -29,6 +29,7 @@ import ModelTab from "./tabs/ModelTab";
 import InfoTab from "./tabs/InfoTab";
 import TestTab from "./tabs/TestTab";
 import IotTab from "./tabs/IotTab";
+import {FakeStateProps} from "../../joiner/types";
 
 export class TabDataMaker {
     static metamodel (model: LModel | DModel): TabData {
@@ -88,7 +89,6 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     private viewpointEditor = { id: '6', title: 'Viewpoints', group: 'group2', closable: false, content: <ViewpointEditor /> };
     private console = { id: '7', title: 'Console', group: 'group2', closable: false, content: <Console /> };
 
-    private selected = this.props.selected;
     private views = this.props.views;
     private moveOnStructure = false;
     private moveOnViews = false;
@@ -116,7 +116,6 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
 
     shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
         const oldProps = this.props;
-        // if(oldProps.selected !== newProps.selected) { this.moveOnStructure = true; return true; }
         if (oldProps.views !== newProps.views) { this.moveOnViews = true; return true; }
 
         const deltaM2 = U.arrayDifference(oldProps.m2, newProps.m2);
@@ -131,7 +130,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         for(let model of addedM1) this.OPEN(model);
         for(let pointer of removedM1) this.CLOSE(pointer);
 
-        return !!(deltaM2.added.length || deltaM1.added.length || this.props.iot);
+        return !!(deltaM2.added.length || deltaM1.added.length);
 
     }
 
@@ -146,20 +145,6 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
                 this.dock.dockMove(this.structureEditor, this.dock.find('1'), 'middle');
                 this.moveOnStructure = false;
                 return;
-            }
-            if(this.props.iot && !this.iotLoaded) {
-                const layout = this.dock.getLayout();
-                const tabs = [
-                    this.iotEditor,
-                    this.structureEditor,
-                    this.treeEditor,
-                    this.viewsEditor,
-                    this.viewpointEditor,
-                    this.console,
-                ];
-                layout.dockbox.children[1] = {tabs};
-                this.dock.setLayout(layout);
-                this.iotLoaded = true;
             }
         }
     }
@@ -197,15 +182,13 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
 
     async addMetamodel(evt: undefined|React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData, model?: DModel) {
         let name = 'metamodel_' + 0;
-        let names: (string)[] = Selectors.getAllMetamodels().map(m => m.name);
+        let names: string[] = Selectors.getAllMetamodels().map(m => m.name);
         name = U.increaseEndingNumber(name, false, false, (newName) => names.indexOf(newName) >= 0)
         const dModel = model || DModel.new(name, undefined, true);
         const lModel: LModel = LModel.fromD(dModel);
         const dPackage = lModel.addChild('package');
         const lPackage: LPackage = LPackage.fromD(dPackage);
         lPackage.name = 'default';
-        SetRootFieldAction.new('selected', lPackage.id, '', true);
-        SetRootFieldAction.new('_lastSelected', {modelElement: lPackage.id});
         this.OPEN(dModel);
     }
     addModel(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {
@@ -268,24 +251,19 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
 
 interface OwnProps { }
 interface StateProps {
-    selected: Pointer<DModelElement, 0, 1, LModelElement>;
     views: number;
     m2: Pointer<DModel, 0, 'N', LModel>;
     m1: Pointer<DModel, 0, 'N', LModel>;
-    iot: null|boolean;
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as any;
-    const selected = state._lastSelected?.modelElement;
-    if(selected) ret.selected = selected;
+    const ret: StateProps = {} as FakeStateProps;
     ret.views = state.viewelements.length;
     ret.m2 = state.m2models;
     ret.m1 = state.m1models;
-    ret.iot = state.iot;
     return ret;
 }
 

@@ -9,7 +9,7 @@ import {
     LGraphElement,
     LModelElement,
     LViewElement,
-    Pointer, U,
+    Pointer, U, DUser,
 } from "../../../joiner";
 import Structure from "./Structure";
 
@@ -23,27 +23,18 @@ class StructureEditorComponent extends PureComponent<AllProps, ThisState> {
     }
 
     render(): ReactNode{
-        const lModelElement: LModelElement | undefined = this.props.selected?.modelElement;
+        const data: LModelElement|null = (this.props.node?.model) ? this.props.node?.model : null;
         return <div className={"px-4"}>
             <div className={"mt-3"}>
-                {Structure.Editor(lModelElement)}
+                {Structure.Editor(data)}
             </div>
-            {/*
-            <hr className={'mt-5'} />
-            <div>Exportable Json</div>
-            <span style={{whiteSpace: "pre"}}>{JSON.stringify(lModelElement?.generateEcoreJson(), null, "\t")}</span>
-            <hr className={'mt-5'} />
-            <div>Internal state</div>
-            <span style={{whiteSpace: "pre"}}>{JSON.stringify(lModelElement, null, '\t')}</span>
-            */}
         </div>;
     }
 }
 
 interface OwnProps {}
 interface StateProps {
-    selectedid?: { node: Pointer<DGraphElement, 1, 1>; view: Pointer<DViewElement, 1, 1>; modelElement: Pointer<DModelElement, 0, 1> };
-    selected?: { node: LGraphElement; view: LViewElement; modelElement?: LModelElement };
+    node: LGraphElement|null
 }
 interface DispatchProps {}
 
@@ -51,11 +42,9 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    ret.selectedid = state._lastSelected;
-    ret.selected = ret.selectedid && {
-        node: DPointerTargetable.wrap(state.idlookup[ret.selectedid.node]) as LGraphElement,
-        view: DPointerTargetable.wrap(state.idlookup[ret.selectedid.view]) as LViewElement,
-        modelElement: ret.selectedid.modelElement ? DPointerTargetable.wrap<DPointerTargetable, LModelElement>(state.idlookup[ret.selectedid.modelElement]) : undefined };
+    const nodeid = state.selected[DUser.current];
+    if(nodeid) ret.node = LGraphElement.fromPointer(nodeid);
+    else ret.node = null;
     return ret;
 }
 

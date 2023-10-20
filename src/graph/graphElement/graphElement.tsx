@@ -276,24 +276,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return true;
     }
 
-    select(forUser:Pointer<DUser, 0, 1> = null) {
-        const id = this.props.data?.id;
-        if (!forUser) forUser = DUser.current;
-        // if (forUser === DUser.current && this.html.current) this.html.current.focus();
-        // this.props.node.isSelected[forUser] = true;
-
-        //BEGIN();
-        const selected = Selectors.getSelected();
-        if (id) {
-            //selected[forUser] = id;
-            SetRootFieldAction.new('selected', id, '', true);
-        }
-        SetRootFieldAction.new('_lastSelected', {
-            node: this.props.nodeid,
-            view: this.props.view.id,
-            modelElement: this.props.data?.id
-        });
-        //END();
+    select() {
+        const nodeid = this.props.nodeid
+        if(!nodeid) return;
+        SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);
     }
 
     constructor(props: AllProps, context: any) {
@@ -471,10 +457,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     doContextMenu(e: React.MouseEvent<Element>){
-        const selected = Selectors.getSelected();
-        const id = this.props.dataid;
-        const alreadySelected = selected === id;
-        if (!alreadySelected) { this.select(); if (this.html.current) this.html.current.focus(); }
+        const selected = Selectors.getSelected()[DUser.current];
+        const nodeid = this.props.nodeid;
+        const alreadySelected = selected === nodeid;
+        if (!alreadySelected) this.select();
         SetRootFieldAction.new("contextMenu", {
             display: true,
             x: e.clientX,
@@ -511,13 +497,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         this.onClick(e);
     }
     onClick(e: React.MouseEvent): void {
-        // (e.target as any).focus();
         e.stopPropagation();
-        const selected = Selectors.getSelected();
-        const id = this.props.dataid;
-        // const alreadySelected = selected === id;
         SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
-        // if(alreadySelected) return;
         const isEdgePending = (this.props.isEdgePending?.source);
         if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
         if (!this.props.data) return;

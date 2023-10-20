@@ -3,7 +3,7 @@ import type {ShortAttribETypes, Pointer, RuntimeAccessibleClass, EdgeSegment} fr
 import type React from "react";
 import {
     AttribETypes,
-    CoordinateMode, DPointerTargetable, DState,
+    CoordinateMode, DGraphElement, DPointerTargetable, DState, DUser,
     EdgeHead,
     EGraphElements, EModelElements,
     LEdgePoint,
@@ -180,3 +180,5 @@ export type Dependency = {
     field: keyof DPointerTargetable|'',
     op: ''|'-='
 };
+export type Selected = Dictionary<Pointer<DUser>, Pointer<DGraphElement, 0, 1>>;
+export type FakeStateProps = any;

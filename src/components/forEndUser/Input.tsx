@@ -41,8 +41,6 @@ function InputComponent(props: AllProps) {
         }
     })
 
-
-    if (!data) return(<></>);
     const readOnly = (props.readonly !== undefined) ? props.readonly : data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
@@ -105,7 +103,6 @@ function InputComponent(props: AllProps) {
                        type={type} value={value} onChange={change} onBlur={blur}
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
-    // style={{cursor: (tooltip) ? 'help' : 'auto'}}
     return(<label className={'p-1'} {...otherprops}
                   style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor: tooltip ? 'help' : 'auto', ...((props as any).style || {})}}>
 

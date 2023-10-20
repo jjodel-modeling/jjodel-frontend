@@ -5,7 +5,7 @@ import {
     DGraph,
     DGraphElement,
     DGraphVertex,
-    DState,
+    DState, DUser,
     DVertex,
     DVoidVertex,
     EMeasurableEvents,
@@ -17,7 +17,7 @@ import {
     GraphElementStatee,
     GraphPoint,
     GraphSize,
-    LClass,
+    LClass, LGraphElement,
     LModelElement, LNamedElement,
     Log,
     LPointerTargetable,
@@ -321,12 +321,10 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     }
 
     render(): ReactNode {
-        if (!this.props.node) return 'Loading...';
-
+        if (!this.props.node) return 'Loading Node...';
 
         const cssOverride: string[] = [];
-        const selected = this.props.selected;
-        if(selected && selected.id === this.props.dataid) cssOverride.push('selected-by-me');
+        if(this.props.selected?.id === this.props.nodeid) cssOverride.push('selected-by-me');
 
         // if(!windoww.cpts) windoww.cpts = {};
         // windoww.cpts[this.props.nodeid]=this;
@@ -346,7 +344,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         const classesOverride = [nodeType, ...cssOverride, (named.name && named.name === 'default') ? 'default' : ''];
         const styleOverride: React.CSSProperties = {};
         // set classes end
-        const size: Readonly<GraphSize> = this.getSize() as any;
+        const size: Readonly<GraphSize> = this.getSize();
 
         switch (nodeType){
             case 'GraphVertex':
@@ -381,9 +379,9 @@ class OwnProps extends GraphElementOwnProps {
 
 class StateProps extends GraphElementReduxStateProps {
     node!: LVoidVertex;
-    lastSelected!: LModelElement | null;
-    //selected!: Dictionary<Pointer<DUser>, LModelElement|null>;
-    selected!: LModelElement|null;
+    // lastSelected!: LModelElement | null;
+    // selected!: Dictionary<Pointer<DUser>, LModelElement|null>;
+    selected!: LGraphElement|null;
     isEdgePending!: { user: LUser, source: LClass };
     viewpoint!: LViewPoint
 }
@@ -403,10 +401,12 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
 
     if (DGraphElementClass === DVertex && ownProps.isVoid) DGraphElementClass = DVoidVertex;
     const superret: StateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass) as StateProps;
-    //superret.lastSelected = state._lastSelected?.modelElement;
-    superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
+    // superret.lastSelected = state._lastSelected?.modelElement;
+    // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
 
-    superret.selected = (state.selected) ? LModelElement.fromPointer(state.selected) : null;
+    // todo: change current to correct user ID when authentication is implemented.
+    const selected = state.selected[DUser.current];
+    superret.selected = (selected) ? LGraphElement.fromPointer(selected) : null;
     /*  Uncomment this when we have user authentication.
     superret.selected = {};
     for(let user of Object.keys(selected)) {

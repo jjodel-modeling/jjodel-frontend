@@ -72,6 +72,7 @@ import {
 import React from "react";
 import {DV} from "../common/DV";
 import LeaderLine from "leader-line-new";
+import {Selected} from "../joiner/types";
 
 console.warn('ts loading store');
 
@@ -172,8 +173,7 @@ export class DState extends DPointerTargetable{
     room: string = '';
     isCleaning: boolean = false;    // check if a room is being cleaned
 
-    //selected: Dictionary<Pointer<DUser>, Pointer<DModelElement, 0, 1, LModelElement>> = {};
-    selected: Pointer<DModelElement, 0, 1, LModelElement> = '';
+    selected: Selected = {};
     iot: null|boolean = null;
     topics: string[] = [];
 

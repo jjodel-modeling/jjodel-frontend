@@ -3,35 +3,36 @@ import {connect} from 'react-redux';
 import './style.scss';
 import {CreateElementAction, SetRootFieldAction} from '../../redux/action/action';
 import {
+    DState,
+    DUser,
     DValue,
     DViewElement,
     GObject,
     LClass,
-    LGraphElement,
-    LNamedElement,
+    LGraphElement, LNamedElement,
     LPackage,
     LUser,
-    LValue, DState, U,
+    LValue,
+    Selectors,
+    U,
 } from '../../joiner';
 import MemoRec from '../../memorec/api';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import ModellingIcon from "../forEndUser/ModellingIcon";
+import {FakeStateProps} from "../../joiner/types";
 
 function ContextMenuComponent(props: AllProps) {
 
     const user = props.user;
     const display = props.display;
     const position = props.position;
-    const me = props.me; //refer to selected
     const node = props.node;
+    const data: LNamedElement = LNamedElement.fromPointer(node?.model?.id);
     const jsxList: ReactNode[] = [];
     const [memorec, setMemorec] = useStateIfMounted<{data:GObject[], type:'class'|'package'}|null>(null);
     const [suggestedName, setSuggestedName] = useStateIfMounted('');
 
-
-    useEffect(() => {
-        if(!display) close();
-    },[display])
+    if(!node || !data) return(<></>);
 
     const close = () => {
         setSuggestedName('');
@@ -39,78 +40,69 @@ function ContextMenuComponent(props: AllProps) {
         SetRootFieldAction.new('contextMenu', {display: false, x: 0, y: 0});
     }
     const addView = async() => {
-        if(me) {
-            const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
-            const dView: DViewElement = DViewElement.new(me.name + 'View', jsx);
-            switch(me.className) {
-                case 'DClass':
-                    dView.query = `context DObject inv: self.instanceof.id = '${me.id}'`;
-                    break;
-                case 'DAttribute':
-                case 'DReference':
-                    dView.query = `context DValue inv: self.instanceof.id = '${me.id}'`;
-                    break;
-                default:
-                    dView.query = `context ${me.className} inv: self.id = '${me.id}'`;
-                    break;
-            }
-            CreateElementAction.new(dView);
-            SetRootFieldAction.new('stackViews', [], '', false);
-            await U.sleep(1);
-            SetRootFieldAction.new('stackViews', dView.id, '+=', true);
+        const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
+        const dView: DViewElement = DViewElement.new(data.name + 'View', jsx);
+        switch(data.className) {
+            case 'DClass':
+                dView.query = `context DObject inv: self.instanceof.id = '${data.id}'`;
+                break;
+            case 'DAttribute':
+            case 'DReference':
+                dView.query = `context DValue inv: self.instanceof.id = '${data.id}'`;
+                break;
+            default:
+                dView.query = `context ${data.className} inv: self.id = '${data.id}'`;
+                break;
         }
-    }
-    const structuralFeature = async () => {
-        if(!me) return;
-        const data = await MemoRec.structuralFeature(me);
-        setMemorec(data);
+        CreateElementAction.new(dView);
+        SetRootFieldAction.new('stackViews', [], '', false);
+        await U.sleep(1);
+        SetRootFieldAction.new('stackViews', dView.id, '+=', true);
     }
 
-    const classifier = async() => {
-        if (!me) return;
-        const data = await MemoRec.classifier(me);
-        setMemorec(data);
-    }
+    const structuralFeature = async () => {setMemorec(await MemoRec.structuralFeature(data))}
+
+    const classifier = async() => {setMemorec(await MemoRec.classifier(data))}
 
     const suggestOnClass = (isAttribute:boolean) => {
-        if(!me) return;
-        const lClass: LClass = LClass.fromPointer(me.id);
+        const lClass: LClass = LClass.fromPointer(data.id);
         if(isAttribute) lClass.addAttribute(suggestedName);
         else lClass.addReference(suggestedName);
-        //add attribute/refence to class
         close();
 
     }
     const suggestOnPackage = () => {
-        if(!me) return;
-        const lPackage: LPackage = LPackage.fromPointer(me.id);
+        const lPackage: LPackage = LPackage.fromPointer(data.id);
         lPackage.addClass(suggestedName);
-        //add class to package
         close();
     }
-    if(display && me && node) {
-        jsxList.push(<div className={'mt-1 col text-center'}><b>{me.className}</b></div>);
+    if(display) {
+        jsxList.push(<div className={'mt-1 col text-center'}><b>{data.className}</b></div>);
         jsxList.push(<hr className={'my-1'} />);
 
         /* Memorec */
-        if(me.className === 'DClass')
+        if(data.className === 'DClass')
             jsxList.push(<div onClick={structuralFeature} className={'col item'}>AI Suggest <i
                 className='bi bi-arrow-right-short'></i></div>);
-        if(me.className === 'DPackage')
+        if(data.className === 'DPackage')
             jsxList.push(<div onClick={classifier} className={'col item'}>
                 AI Suggest
                 <i className={'ms-1 bi bi-arrow-right'}></i>
             </div>);
+        jsxList.push(<div onClick={() => {
+            close();
+            SetRootFieldAction.new(`selected.${DUser.current}`, '', '', false);
+        }} className={'col item'}>Deselect</div>);
         jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={'col item'}>Up</div>);
         jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={'col item'}>Down</div>);
-        jsxList.push(<div onClick={() => {close(); addView();}} className={'col item'}>Add View</div>);
-        jsxList.push(<div onClick={() => {close(); me?.delete();}} className={'col item'}>Delete</div>);
-        switch (me.className) {
-            case 'DValue': if ((me as any as LValue).instanceof) jsxList.pop(); break;
+        jsxList.push(<div onClick={async () => {close(); await addView();}} className={'col item'}>Add View</div>);
+        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>Delete</div>);
+        switch (data.className) {
+            case 'DValue': if ((data as any as LValue).instanceof) jsxList.pop(); break;
             case 'DClass':
                 jsxList.push(<div onClick={() => {
                     close();
-                    SetRootFieldAction.new('isEdgePending', {user: user.id, source: me.id});
+                    SetRootFieldAction.new('isEdgePending', {user: user.id, source: data.id});
                 }} className={'col item'}>Extend</div>);
                 break;
         }
@@ -161,22 +153,20 @@ interface StateProps {
     user: LUser,
     display: boolean,
     position: {x: number, y: number},
-    me?: LNamedElement,
-    node?: LGraphElement,
+    node: LGraphElement|null,
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const user = LUser.from(state.currentUser);
-    const display = state.contextMenu.display;
-    const position = {x: state.contextMenu.x, y: state.contextMenu.y}
-    const mePointer = state._lastSelected?.modelElement;
-    const me: LNamedElement | undefined = mePointer ? LNamedElement.fromPointer(mePointer) : undefined;
-    const nodePointer = state._lastSelected?.node;
-    const node: LGraphElement | undefined = nodePointer ? LGraphElement.fromPointer(nodePointer) : undefined;
-    const ret: StateProps = { user, display, position, me, node };
+    const ret: StateProps = {} as FakeStateProps;
+    ret.user = LUser.from(state.currentUser);
+    ret.display = state.contextMenu.display;
+    ret.position = {x: state.contextMenu.x, y: state.contextMenu.y};
+    const nodeid = state.selected[DUser.current];
+    if(nodeid) ret.node = LGraphElement.fromPointer(nodeid);
+    else ret.node = null;
     return ret;
 }
 
