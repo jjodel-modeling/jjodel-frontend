@@ -52,6 +52,12 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
 
     constructor(props: AllProps, context: any) { super(props, context); }
 
+    shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<NodeState>, nextContext: any): boolean {
+        // i want to avoid double check on this and Vertex or graph.
+        // actually should not use this and avoid double mapstatetoprops execution too
+        return true;
+    }
+
     render(): ReactNode {
         if ((this.props as any).skiparenderforloading) {
             console.log("realoading render: ", {thiss:this, data:this.props.data});

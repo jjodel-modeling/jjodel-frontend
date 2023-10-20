@@ -51,22 +51,6 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     resizableOptions: GObject | undefined;
     rotableOptions: GObject | undefined;
 
-    /*
-    shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
-        const oldProps = this.props;
-        const newData = newProps.data; const oldData = oldProps.data;
-        const newNode = newProps.node; const oldNode = oldProps.node;
-        const newViewpoint = newProps.viewpoint; const oldViewpoint = oldProps.viewpoint;
-        const newEdgePending = newProps.isEdgePending; const oldEdgePending = oldProps.isEdgePending;
-
-        if(newData.__raw !== oldData.__raw) return true;
-        if(newNode?.__raw !== oldNode?.__raw) return true;
-        if(newViewpoint.__raw !== oldViewpoint.__raw) return true;
-        if(newEdgePending !== oldEdgePending) return true;
-        return false;
-    }
-     */
-
     constructor(props: AllProps, context: any) {
         super(props, context);
         this.getSize = this.getSize.bind(this);
@@ -98,9 +82,15 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         let isDraggable: boolean = view.draggable;
         let isResizable: boolean = view.resizable;
         // $element = $(html).find('.measurable').addBack();
-        try{
-        if (!isDraggable) $measurable.draggable('disable')
-        else if (this.draggableOptions) $measurable.draggable('enable')
+        try {
+        if (!isDraggable) {
+            if ($measurable.data("uiDraggable")) $measurable.draggable('disable');
+        }
+        else if (this.draggableOptions) {
+            if ($measurable.data("uiDraggable")) $measurable.draggable('enable');
+            // NB: this check is to see if draggable has been setup. i think if 2 refreshes happens to fast it can
+            // happen that this.draggableOptions i set, but jqui didn't set up the draggable infos and throws warnings.
+        }
         else {
             // first setup only
             this.draggableOptions = {
@@ -148,8 +138,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         }
 
         try{
-        if (!isResizable) $measurable.resizable('disable')
-        else if (this.resizableOptions) $measurable.resizable('enable')
+        if (!isResizable) {
+            if ($measurable.data("uiResizable")) $measurable.resizable('disable');
+        }
+        else if (this.resizableOptions) {
+            if ($measurable.data("uiResizable")) $measurable.resizable('enable');
+        }
         if (!this.resizableOptions) {
             this.resizableOptions = {
                 helper: 'selected-by-me',

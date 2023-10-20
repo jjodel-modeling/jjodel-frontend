@@ -399,7 +399,6 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         for (let k in this.l) {
             if (!(k in ret) && k.lastIndexOf('get_', 4) !== 0 && k.lastIndexOf('set_', 4) !== 0) ret[k] = true;
         }
-        console.log("ownKeys trap targetable", {target, retObj:ret, ret: Reflect.ownKeys(ret), thiss:this});
         return ret;
     }
     ownKeys(target: ME): ArrayLike<string | symbol>{

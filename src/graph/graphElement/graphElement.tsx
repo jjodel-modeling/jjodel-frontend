@@ -1,4 +1,4 @@
-import React, {Dispatch, PureComponent, ReactElement, ReactNode,} from "react";
+import React, {Component, Dispatch, PureComponent, ReactElement, ReactNode,} from "react";
 import {createPortal} from "react-dom";
 import {connect} from "react-redux";
 import './graphElement.scss';
@@ -121,7 +121,7 @@ export const lightModeAllowedElements = [DModel.cname, DPackage.cname, DClass.cn
 const countRenders = true;
 @RuntimeAccessible
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
-    extends PureComponent<AllProps, GraphElementState>{
+    extends Component<AllProps, GraphElementState>{
     public static cname: string = "GraphElementComponent";
     static all: Dictionary<number, GraphElementComponent> = {};
     public static map: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = {};
@@ -143,7 +143,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             ret.view = LPointerTargetable.wrap(ownProps.view) as LViewElement;
         }
         else {
-            const viewScores = Selectors.getAppliedViews(ret.data, ret.node, ownProps.view || null, ownProps.parentViewId || null);
+            const viewScores = Selectors.getAppliedViews(ret.data, ownProps.view || null, ownProps.parentViewId || null);
             ret.views = viewScores.map(e => MyProxyHandler.wrap(e.element));
             ret.view = ret.views[0];
             (ret as any).viewScores = viewScores; // debug only
@@ -252,7 +252,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // @ts-ignore
         ret.key = ret.key || ownProps.key;
 
-        console.log("view compute usageDeclarations", {ret, ownProps});
+        // console.log("view compute usageDeclarations", {ret, ownProps});
         if (ret.view.usageDeclarations) {
             try {
                 let context = { ...ret.evalContext, state, ret, ownProps, props: ret};
@@ -261,13 +261,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 U.objectMergeInPlace(ret, usageDeclarations);
                 U.objectMergeInPlace(context, usageDeclarations);
                 context.props = ret; // hotfix to update context props after usageDeclaration mapping
-                console.log("view compute usageDeclarations SUCCESS 1", {usageDeclarations, viewud: ret.view.usageDeclarations, ret, ownProps, context:ret.evalContext});
+                // console.log("view compute usageDeclarations SUCCESS 1", {usageDeclarations, viewud: ret.view.usageDeclarations, ret, ownProps, context:ret.evalContext});
                 ret.evalContext.props = ret;
             } catch (e) {
                 Log.ee("Invalid usage declarations", {e, str: ret.view.usageDeclarations, view:ret.view, data:ret.data, ret});
             }
         }
-        Log.l((ret.data as any)?.name === "concept 1", "mapstatetoprops concept 1", {newnode: ret.node});
+        // Log.l((ret.data as any)?.name === "concept 1", "mapstatetoprops concept 1", {newnode: ret.node});
         return ret;
     }
 
@@ -286,13 +286,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     // todo: can be improved by import memoize from "memoize-one"; it is high-order function that memorize the result if params are the same without re-executing it (must not have side effects)
     //  i could use memoization to parse the jsx and to execute the user-defined pre-render function
-
+le istanze obj di m1 non vengono agiornate se cambio nome alla classe m2
     public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any): boolean {
         // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
         let out = {reason:undefined};
-        let ret = !U.isShallowEqualWithProxies(this.props, nextProps, 0, 1, {}, out);
-        Log.l((this.props.data as any)?.name === "concept 1", "ShouldComponentUpdate concept 1 " + (ret ? "UPDATED" : "REJECTED"), {ret, reason: out.reason, oldnode:this.props.node, newnode: nextProps.node, oldProps:this.props, nextProps});
-        if ((this.props.data as any)?.name === "concept 1") console.count("count concept 1 " + (ret ? "UPDATED" : "REJECTED"));
+        let ret = !U.isShallowEqualWithProxies(this.props, nextProps, 0, 1, {pointedBy:true}, out);
+        Log.l(ret, "ShouldComponentUpdate " + this.props.data?.name + " UPDATED", {ret, reason: out.reason, oldnode:this.props.node, newnode: nextProps.node, oldProps:this.props, nextProps});
         return ret;
         // apparently node changes are not working? also check docklayout shouldupdate
     }
@@ -582,9 +581,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         if (e.shiftKey || e.ctrlKey) { }
         else {
-            let allNodes: LGraphElement[] = this.props.node.graph.allSubNodes;
+            let allNodes: LGraphElement[] | undefined = this.props.node?.graph.allSubNodes;
             let nid = this.props.node.id;
-            for (let node of allNodes) if (node.id !== nid) node.deselect(DUser.current);
+            if (allNodes) for (let node of allNodes) if (node.id !== nid) node.deselect(DUser.current);
         }
         END();
     }

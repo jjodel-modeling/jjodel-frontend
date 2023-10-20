@@ -239,7 +239,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
     get_innerGraph(context: Context): LGraph {
         let lcurrent: LGraphElement = LPointerTargetable.fromPointer(context.data.father);
-        let dcurrent = lcurrent.__raw;
+        let dcurrent = lcurrent?.__raw;
 
         // if no parent, but it's a graph, return itself.
         if (!dcurrent) {
