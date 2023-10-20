@@ -47,7 +47,7 @@ function InfoData(props: Props) {
             </select>
         </div>*/}
         <OclEditor viewid={view.id} readonly={readOnly} />
-        <a href={"https://ocl.stekoe.de/#examples"}>Supported OCL commands</a> by Stephan Köninger
+        <span>OCL engine by Stephan Köninger, <a href={"https://ocl.stekoe.de/#examples"}>Supported instructions</a></span>
     </section>);
 }
 

@@ -13,12 +13,14 @@ function OclEditorComponent(props: AllProps) {
         if (value !== undefined) view.query = value;
     }
 
-    return <div style={{height: '5em'}}>
-        <label className={'ms-1 mb-1'}>OCL Editor</label>
-        <Editor className={'mx-1'} onChange={change}
-                options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                defaultLanguage={'js'} value={view.query}/>
-    </div>;
+    return <>
+            <label className={'ms-1 mb-1'}>OCL Editor</label>
+            <div style={{minHeight: '5em', height: '6em', resize: 'vertical', overflowY: 'auto'}}>
+                <Editor className={'mx-1'} onChange={change}
+                        options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
+                        defaultLanguage={'js'} value={view.query}/>
+            </div>
+        </>;
 }
 interface OwnProps {
     readonly?: boolean;
