@@ -286,12 +286,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     // todo: can be improved by import memoize from "memoize-one"; it is high-order function that memorize the result if params are the same without re-executing it (must not have side effects)
     //  i could use memoization to parse the jsx and to execute the user-defined pre-render function
-le istanze obj di m1 non vengono agiornate se cambio nome alla classe m2
+// le istanze obj di m1 non vengono agiornate se cambio nome alla classe m2
     public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any): boolean {
         // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
         let out = {reason:undefined};
         let ret = !U.isShallowEqualWithProxies(this.props, nextProps, 0, 1, {pointedBy:true}, out);
-        Log.l(ret, "ShouldComponentUpdate " + this.props.data?.name + " UPDATED", {ret, reason: out.reason, oldnode:this.props.node, newnode: nextProps.node, oldProps:this.props, nextProps});
+        Log.l(ret, "ShouldComponentUpdate " + this.props.data?.name + " UPDATED", {ret, reason: out.reason, oldProps:this.props, nextProps});
+        Log.l(this.props.data?.name === "concept 1_1",
+            "ShouldComponentUpdate " +this.props.data?.name + (ret ? " UPDATED" : " REJECTED"),
+            {ret, reason: out.reason, oldProps:this.props, nextProps}); //  oldnode:this.props.node, newnode: nextProps.node,
         return ret;
         // apparently node changes are not working? also check docklayout shouldupdate
     }
