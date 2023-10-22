@@ -258,7 +258,10 @@ function makeDefaultGraphViews(): DViewElement[] {
     let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.cname]);
     objectView.adaptWidth = true; objectView.adaptHeight = true;
     objectView.query = 'context DObject inv: true';
-    objectView.usageDeclarations = "()=>{\n" +
+    objectView.usageDeclarations = "(ret)=>{\n" +
+        "// ** preparations here ** //\n" +
+        "\n" +
+        "// ** declarations here ** //\n" +
         "ret.metaclass = data.instanceof;\n" +
         "}";
 
@@ -277,7 +280,10 @@ function makeDefaultGraphViews(): DViewElement[] {
     valuecolormap[ShortAttribETypes.EString] = "green";
     valuecolormap[ShortAttribETypes.EChar] = "green";
     valuecolormap[ShortAttribETypes.void] = "gray";
-    valueView.usageDeclarations = "()=>{\n" +
+    valueView.usageDeclarations = "(ret)=>{\n" +
+        "// ** preparations here ** //\n" +
+        "\n" +
+        "// ** declarations here ** //\n" +
         "ret.valuesString = data.valuesString();\n" +
         "ret.typeString = data.typeString;\n" +
         "}";

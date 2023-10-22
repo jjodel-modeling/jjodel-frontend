@@ -1,254 +1,200 @@
-import React, {Dispatch, ReactElement, ReactNode, useEffect} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
 import {connect} from "react-redux";
 import {Dictionary, DocString, DPointerTargetable, GObject, Log, LPointerTargetable, TextArea, DState, LViewElement, Pointer, U} from "../../joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
+import {stringify} from "querystring";
+import "./FunctionComponent.scss";
 
+
+type StrPos = {value: string, line?: number, startindex?: number, endindex?: number};
+type RowData = {index: number; id: StrPos & { prefix: string }; exp: StrPos, isDirty?: boolean};
+type TextAreaState = {v:string, isDirty?: boolean};
+type FunctionComponentState = {advancedMode: boolean, ta: TextAreaState, arr: RowData[]};
+type SetState = (value: FunctionComponentState)=>void;
+
+/*
+ Rationale behind this:
+ To do this properly, one would need a complete js parser to make sure comments, ifs, loops, newlines,
+   expressions inside array indexing for objects... are all correctly parsed.
+
+
+ Instead, to make it faster, i'm forcing the valid "function string" value to hold a much more definite structure
+   for which i can do an extremely simpler inline parser.
+ The getter and setter properties and the interface, are making sure the user cannot write a "function string"
+   not respecting my format, and that it is as much turing-complete as javascript is.
+
+ legenda:
+  - ALL_CAPS identifiers, are not literals and the user can change their names.
+  - Newlines are included in the format, spaces are not.
+  - ... are explaining the format and are not part of it.
+  - // **   ** // Styled comments ARE part of the format.
+  - Excess spaces in the format are not preserved (might be added/removed by getter/setter), but not mandatory and not relevant.
+
+ my structure is:
+ (OBJECT_NAME)=> {\n
+   STATEMENT_A1
+   STATEMENT_A2
+   ...
+   STATEMENT_AN
+   \n// ** declarations here ** //\n
+   OBJECT_NAME.IDENTIFIER_1 = STATEMENT_1;\n
+   OBJECT_NAME.IDENTIFIER_2 = STATEMENT_2;\n
+   ...
+   OBJECT_NAME.IDENTIFIER_N = STATEMENT_N;\n
+ }
+ */
+function setStateOnce(){
+    alert("SetStateOnce");
+    return Math.random();
+}/*
+function FunctionComponent(props: AllProps) {
+    const [state, setState] = useStateIfMounted(setStateOnce);
+    if (state === undefined) {
+        setState(-1);
+        return <>Initializing...</>;
+    } else {
+        return <b style={{color:"green"}} onClick={e=>setState(Math.floor(state)+1)}>SUCCESS! {state}</b>;
+    }
+}*/
+
+function parseFunction(props: AllProps): FunctionComponentState {
+    Log.exDev(props.data, "FunctionComponent: missing data props", {props});
+    let getter = props.getter || ((a: GObject) => a[props.field]); // ((lobj: GObject<LPointerTargetable>, key: string) => U.wrapUserFunction(lobj[key]));
+    let val: string = getter(props.data);
+    if (!val) val = "(ret)=>{\n    // ** declarations here ** //\n\n}";
+    let txtparts = val.split("// ** declarations here ** //");
+    Log.exDev(txtparts.length !== 2, "cannot find declaration section", {val, props});
+    let declarations: string[] = (txtparts[1] || '').split("\n");
+    let stateArrayValues: RowData[] = [];
+    let textAreaState: TextAreaState = {v: txtparts[0]};
+    for (let i = 0; i < declarations.length; i++) {
+        let dec = declarations[i];
+        let splitindex = dec.indexOf("=");
+        if (splitindex === -1) continue; // for ending \n} line
+        let expression = dec.substring(splitindex+1);
+        let identifier = dec.substring(0, splitindex);
+        let idsplitindex = identifier.indexOf(".");
+        let identifierPrefix = identifier.substring(0, idsplitindex);
+        let identifierName = identifier.substring(idsplitindex+1);
+        stateArrayValues.push({
+            index: i,
+            id: {prefix: identifierPrefix, value: identifierName.trim(), line: i, startindex: idsplitindex, endindex: splitindex},
+            exp:{                          value: expression.trim(),     line: i, startindex: splitindex,   endindex: -1}
+        });
+    }
+    return {advancedMode: !!props.advancedMode, ta: textAreaState, arr:stateArrayValues};
+}
 
 function FunctionComponent(props: AllProps) {
-    let getter = props.getter || ((lobj: GObject<LPointerTargetable>, key: string) => U.wrapUserFunction(lobj[key]));
-    let setter = undefined; // props.setter || ((val: string, lobj: GObject<LPointerTargetable>, key: string) => lobj[key] = val);
-    return <TextArea {...props} getter={getter} setter={setter}/>; // i gave up
-    /*
-        const data = props.data;
-        let editable = true;
+    // if (false) return asTextArea(props) // i gave up
+    const [state, setState] = useStateIfMounted(parseFunction(props));
+    // if (!props.data) return <></>;
+    let stateArrayValues: RowData[] = state.arr,
+        textAreaState: TextAreaState = state.ta,
+        advancedMode: boolean = state.advancedMode,
+        readOnly = props.readonly; // (props.readonly !== undefined) ? props.readonly : !props.debugMode && props.data.id.indexOf("Pointer_View") !== -1;
 
-        /*  Uncomment this when we have user authentication: if a user is on a ME, it cannot be edited.
-                    damiano: ok, ma se data non è ModelElement crasha perchè non ha "father"
-                    mettici prima un
-                    if (RuntimeAccessibleClass.extends(data, DModelElement.cname))
+    // event listing start
 
-        const fathers = U.fatherChain(data as LModelElement);
-        for(let father of fathers) {
-            const user = Object.keys(selected).find(key => selected[key]?.id === father);
-            if(user && user !== DUser.current) editable = false;
-            if(!editable) break;
+    function addClick(stateArrayValues: RowData[], setinputArrayValues:(a:RowData[])=>void) {
+        stateArrayValues = [...stateArrayValues,
+            {index: stateArrayValues.length,
+                id:{prefix: stateArrayValues[0]?.id.prefix || "ret", value:""},
+                exp:{value:""}}];
+        setinputArrayValues(stateArrayValues);
+    }
+
+    function deleteClickk(v: FunctionComponentState, set: SetState, i: number) {
+        v = {...v, arr:[...v.arr]};
+        v.arr.splice(i, 1);
+        set(v);
+        onBlur(v, set, i);
+    }
+
+    function expressionChange(e: React.FormEvent<HTMLInputElement>, i: number, stateArrayValues: RowData[], setinputArrayValues:(a:RowData[])=>void) {
+        stateArrayValues = [...stateArrayValues];
+        stateArrayValues[i] = {...stateArrayValues[i], isDirty: true};
+        stateArrayValues[i].exp = {...stateArrayValues[i].exp};
+        stateArrayValues[i].exp.value = e.currentTarget.value;
+        setinputArrayValues(stateArrayValues);
+    }
+
+    function identifierChange(e: React.FormEvent<HTMLInputElement>, i: number, stateArrayValues: RowData[], setinputArrayValues:(a:RowData[])=>void) {
+        stateArrayValues = [...stateArrayValues];
+        stateArrayValues[i] = {...stateArrayValues[i], isDirty: true};
+        stateArrayValues[i].id = {...stateArrayValues[i].id};
+        stateArrayValues[i].id.value = e.currentTarget.value;
+        setinputArrayValues(stateArrayValues);
+    }
+
+    function textAreaChange(e: React.FormEvent<HTMLTextAreaElement>, setTA: React.Dispatch<React.SetStateAction<TextAreaState | undefined>>): void {
+        setTA({v: e.currentTarget.value, isDirty: true});
+        throw new Error('Function not implemented.');
+    }
+
+    function onBlur(stateArrayValues: RowData[], ta: TextAreaState, index?: number, setAV?:(a:RowData[])=>void, setTA?:(e:TextAreaState)=>void) {
+        if (index !== undefined) {
+            if (!stateArrayValues[index].isDirty) return;
+            stateArrayValues = [...stateArrayValues];
+            stateArrayValues[index] = {...stateArrayValues[index]};
+            stateArrayValues[index].isDirty = false;
+            setAV?.(stateArrayValues);
         }
-        * /
-
-        const getter = props.getter;
-        const setter = props.setter;
-        const field = props.field;
-        if (!data) {
-            Log.e("invalid data in input", props);
-            return <input value={"invalid data"} />;
+        else {
+            if (ta.isDirty) return;
+            setTA?.({...ta, isDirty: false});
         }
-        // todo: i give up, this is too long to parse correctly.
-        const getNameOfLastReturnVariables = (funcbody: string) => {
-            // todo: find all return [varname], then exclude null, undefined, numbers, literals, new X(), return funccall(), return [expression+expression]...
-            return ["ret"];
-        }
-        const extractAssigmentList = (v: string): assigmentInstructionParsed[] => {
-            let returns = getNameOfLastReturnVariables(v);
-            // if the user have multiple returned variables, i parse them all and consider the most important one as the one with more assigments, and map the input arrays to that.
-            // other variables are still assigned in mixed TextArea section.
-            let assignements: Dictionary<DocString<"returned variable">, assigmentInstructionParsed[]> = {};
-            for (let varname of returns) {
-                // assignements[varname] = todo: find all strings like  "varname.x=x", "varname.x=x;", "statement1; varname.x=x;", "statement1; varname.x=x",  "statement1; varname.x=x; statement2"...
-                // todo2: need to parse also varname["x"] = a;
-                // NB: need to even count parenthesis, string literals and comments otherwise "ret.x = ()=>{ let a=1; return a;}; will stop matching at  "ret.x = ()=>{ let a=1;"
-            }
-            let longestAssigmentLength = 0;
-            let longestAssigmentIndex = 0;
-            let i = 0;
-            for (let assigmentList of Object.values(assignements)) {
-                if (longestAssigmentLength < assigmentList.length) longestAssigmentIndex = i;
-                i++;
-            }
-            return assignements[longestAssigmentIndex] || [];
-        }
-        type assigmentInstructionParsed = {startIndex: number, endIndex: number, assigmentText: string, fullRowText: string, varname: string, leftside: string, rightside: string};
-        let __value = getter ? getter(data) : data[field];
-        const [value, setValue] = useStateIfMounted(__value);
-        const [isTouched, setIsTouched] = useStateIfMounted(false);
-        const [list, setList] = useStateIfMounted(extractAssigmentList(value));
-        const [showTooltip, setShowTooltip] = useStateIfMounted(false);
-        const getInputRow: (assignmentRow: assigmentInstructionParsed) => ReactElement = (assignmentRow: assigmentInstructionParsed) => {
-            return <><input value={assignmentRow.leftside} /> = <input value={assignmentRow.rightside} /></>;
-            // todo: assigmentRow is the whole statement of the assignement, splt in left and right side
-        }
-        const getInputRows = () => list.map((row: assigmentInstructionParsed) => getInputRow(row));
-
-        // todo: need to attach events on inputRows to rebuild the full string statement and populate the TextArea
-        // option 1: the <Input> values are reported in the textarea
-        // option2: the textara only contains non-assigment instructions and the full output is like inputValues.join() + textAreaValue
-        // todo problem: how to handle for loops with stataments inside? should they be excluded from being parsed in <input> rows?
-        return <>{getInputRows()}<TextArea /></>
+        updateFunctionValue(ta.v, stateArrayValues);
+    }
+    // NB: could be heavily optimized by cutting the original string with indexes and substring,
+    // but it is a function called too rarely and not impactful on overall performances
+    function updateFunctionValue(textAreaContent: string, stateArrayValues: RowData[]){
+        let declarations: string[] = stateArrayValues.map( o => o.id.value && o.exp.value ? o.id.prefix + o.id.value + " = " + o.exp.value : '');
+        (props.data as GObject)[props.field] = textAreaContent + "\n// ** declarations here ** //\n" + declarations.join("\n") + "\n}";
+    }
 
 
+    // JSX building start
+    let inputs: JSX.Element[] = [];
+    console.log("funccomp", {stateArrayValues, textAreaState, props});
 
+    function deleteClick(state: FunctionComponentState, setState: (value: ((v:FunctionComponentState)=>void), index: number) {
 
+    }
 
+    for (let row of stateArrayValues) {
+        inputs.push(<div className={"d-flex" + (advancedMode ? "" : " my-1")}>
+            <span className={"my-auto detailedMode"}>{row.id.prefix}.</span>
+            <input className={"my-auto input"} placeholder={"identifier"} value={row.id.value}  disabled={readOnly}
+                   onInput={(e)=>identifierChange(e, row.index, stateArrayValues, setAV)}
+                   onBlur={(e)=> onBlur(stateArrayValues, textAreaState, row.index, setAV)}
+            />
+            <span className={"my-auto mx-1 simpleMode"}>⇠</span>
+            <span className={"my-auto mx-1 detailedMode"}>=</span>
+            <input className={"my-auto input"} placeholder={"expression"} value={row.exp.value} disabled={readOnly}
+                   onInput={(e)=>expressionChange(e, row.index, stateArrayValues, setAV)}
+                   onBlur={(e)=> onBlur(stateArrayValues, textAreaState, row.index, setAV)}
+            />
+            <span className={"my-auto detailedMode"}>;</span>
+            <button className={"btn btn-danger my-auto ms-2"} disabled={readOnly} onClick={()=>deleteClick(state, setState, row.index)}>
+                <i className={"p-1 bi bi-trash3-fill"} /></button>
+        </div>);
+    }
 
-
-
-
-
-
-
-
-
-
-
-        // I check if the value that I have in my local state is being edited by other <Input />
-        const oldValue = (!data) ? 'undefined' : getter ? getter(data) : data[field];
-        if (value !== oldValue && !isTouched){
-            setValue(oldValue);
-            // setIsTouched(false);
-            return <></> // doesn't matter, it will re-trigger update after the setValue
-        }
-
-        const readOnly = (props.readonly !== undefined) ? props.readonly : data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
-        const label: string|undefined = props.label;
-        const jsxLabel: ReactNode|undefined = props.jsxLabel;
-        let tooltip: string|undefined = (props.tooltip === true) ? (data['__info_of__' + field]?.txt) : props.tooltip;
-        let css = 'input';
-        css += (label && !jsxLabel) ? ' my-auto ms-auto' : '';
-        css += (props.hidden) ? ' hidden-input' : '';
-        css +=  props.autosize ? ' autosize-input' : '';
-
-        const onChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-            const isBoolean = (['checkbox', 'radio'].includes(evt.target.type));
-            if (isBoolean) {
-                if (readOnly) return;
-                const val = setter ? setter(evt.target.checked) : evt.target.checked;
-                if (data[field] !== val) data[field] = val;
-            } else {
-                setValue(evt.target.value);
-                setIsTouched(true);     // I'm editing the element in my local state.
-            }
-        }
-
-        const onBlur = (evt: React.FocusEvent<HTMLInputElement>) => {
-            const isBoolean = (['checkbox', 'radio'].includes(evt.target.type));
-            if (readOnly || isBoolean) return;
-            const val = setter ? setter(evt.target.value) : evt.target.value;
-            if (data[field] !== val) data[field] = val;
-            // I terminate my editing, so I communicate it to other <Input /> that render the same field.
-            setIsTouched(false);
-        }
-
-                    const otherprops: GObject = {...props};
-                    delete otherprops.data;
-                    delete otherprops.field;
-                    delete otherprops.getter;
-                    delete otherprops.setter;
-                    delete otherprops.label;
-                    delete otherprops.jsxLabel;
-                    delete otherprops.tooltip;
-                    delete otherprops.hidden;
-                    delete otherprops.inputStyle;
-                    delete otherprops.children;
-                    delete otherprops.selected;
-                    delete otherprops.autosize; // because react complains is bool in dom attribute or unknown attrib name
-                    const view = props.data.view;
-                    const readOnly = props.readonly;
-                    let constants = (view.constants && view.constants !== '{}') ? view.constants?.replaceAll(' ', '').slice(1, -1).split(',') : [];
-                    let variables = (view.preRenderFunc && view.preRenderFunc !== '() => {return{}}') ? view.preRenderFunc?.replaceAll(' ', '').slice(12, -2).split(',') : [];
-
-
-                    const addVar = () => {
-                        if(constants.length) view.constants = `${view.constants?.slice(0, -1)}, myConst: 'dummy'}`;
-                        else view.constants = `{myConst: 'dummy'}`;
-                    }
-
-                    const removeVar = (index: number) => {
-                        delete constants[index];
-                        view.constants = (`{${constants.filter(c => c).toString()}}`);
-                    }
-
-                    const blurNameConst = (index: number, name: string) => {
-                        if(readOnly) return;
-                        if(!name) name = 'myConst';
-                        const value = constants[index].split(':')[1];
-                        constants[index] = `${name.replaceAll(' ', '')}: ${value}`;
-                        view.constants = (`{${constants.toString()}}`);
-                    }
-
-                    const blurValueConst = (index: number, value: string) => {
-                        if(readOnly) return;
-                        if(!value) value = 'dummy';
-                        const name = constants[index].split(':')[0];
-                        constants[index] = `${name}: ${value}`;
-                        view.constants = (`{${constants.toString()}}`);
-                    }
-
-                    const addVar = () => {
-                        if(variables.length) view.preRenderFunc = `${view.preRenderFunc?.slice(0, -2)}, myVar: 'dummy'}}`;
-                        else view.preRenderFunc = `() => {return{myVar: 'dummy'}}`;
-                    }
-
-                    const removeVar = (index: number) => {
-                        delete variables[index];
-                        view.preRenderFunc = (`() => {return{${variables.filter(c => c).toString()}}}`);
-                    }
-
-                    const blurNameVar = (index: number, name: string) => {
-                        if(readOnly) return;
-                        if(!name) name = 'myVar';
-                        const value = variables[index].split(':')[1];
-                        variables[index] = `${name.replaceAll(' ', '')}: ${value}`;
-                        view.preRenderFunc = (`() => {return{${variables.toString()}}}`);
-                    }
-
-                    const blurValueVar = (index: number, value: string) => {
-                        if(readOnly) return;
-                        if(!value) value = 'dummy';
-                        const name = variables[index].split(':')[0];
-                        variables[index] = `${name}: ${value}`;
-                        view.preRenderFunc = (`() => {return{${variables.toString()}}}`);
-                    }
-
-
-                    return(<section className={'p-3'}>
-                        <div className={'d-flex w-100 mb-2'}>
-                            <label>Constants (<i>Evaluated Once</i>) </label>
-                            <button className={'btn btn-primary ms-auto'} onClick={addConst} disabled={readOnly}>
-                                <i className={'p-1 bi bi-plus'}></i>
-                            </button>
-                        </div>
-                        {constants.map((constant, index) => {
-                            const c = constant.split(':');
-                            const name = c[0].replaceAll(' ', ''); const value = c[1];
-                            return(<div className={'d-flex p-1'} key={index}>
-                                <input key={index + 'name' + name} className={'input w-25'} tabIndex={-1} onBlur={e => blurNameConst(index, e.target.value)}
-                                       defaultValue={name} readOnly={readOnly} />
-                                <b className={'mx-1 my-auto'}>=</b>
-                                <input key={index + 'value' + value} className={'input w-25'} tabIndex={-1} onBlur={e => blurValueConst(index, e.target.value)}
-                                       defaultValue={value} readOnly={readOnly} />
-                                <button className={'btn btn-danger ms-2'} disabled={readOnly} onClick={e => removeConst(index)}>
-                                    <i className={'p-1 bi bi-trash3-fill'}></i>
-                                </button>
-                            </div>)
-                        })}
-
-                        <div className={'d-flex w-100 mt-4 mb-2'}>
-                            <label>Variables (<i>Evaluated Foreach Render</i>)</label>
-                            <button className={'btn btn-primary ms-auto'} onClick={addVar} disabled={readOnly}>
-                                <i className={'p-1 bi bi-plus'}></i>
-                            </button>
-                        </div>
-                        {variables.map((variable, index) => {
-                            const v = variable.split(':');
-                            const name = v[0].replaceAll(' ', ''); const value = v[1];
-                            return(<div className={'d-flex p-1'} key={index}>
-                                <input key={index + 'name' + name} className={'input w-25'} tabIndex={-1} onBlur={e => blurNameVar(index, e.target.value)}
-                                       defaultValue={name} readOnly={readOnly}  />
-                                <b className={'mx-1 my-auto'}>=</b>
-                                <input key={index + 'value' + value} className={'input w-25'} tabIndex={-1} onBlur={e => blurValueVar(index, e.target.value)}
-                                       defaultValue={value} readOnly={readOnly} />
-                                <button className={'btn btn-danger ms-2'} disabled={readOnly} onClick={e => removeVar(index)}>
-                                    <i className={'p-1 bi bi-trash3-fill'}></i>
-                                </button>
-                            </div>)
-                        })}
-                    </section>);
-                    }
-    */
+    return <div className={""} data-mode={advancedMode ? "detailedMode" : "simpleMode"}>
+        <i className={ advancedMode ? "p1 bi bi-eye-slash-fill" : "p1 bi bi-eye-fill"} onClick={()=>setAdvancedMode(!advancedMode)} />
+        <textarea className={"detailedMode input"}
+                  onInput={(e)=>textAreaChange(e, setTA)}
+                  onBlur={(e)=> onBlur(stateArrayValues, textAreaState, undefined, undefined, setTA)}
+        >{textAreaState.v}</textarea>
+        {inputs}
+        <button className={"btn btn-secondary w-100"} onClick={()=>addClick(stateArrayValues, setAV)}>+</button>
+    </div>;
 }
 
 interface OwnProps {
-    advancedMode?: boolean; // toggle textbox or input array, initial value to set state. after initialization only state.advancedMode is used
-    data: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
+    advancedMode?: boolean; // toggle textbox pre-declarations, initial value to set state. after initialization only state.advancedMode is used
+    data: LPointerTargetable;
     field: string;
     getter?: (data: LPointerTargetable) => string;
     setter?: (value: string|boolean) => void;
@@ -267,7 +213,6 @@ interface OwnProps {
 }
 
 interface StateProps {
-    advancedMode?: boolean;
 }
 
 interface DispatchProps { }
@@ -295,3 +240,4 @@ export const Function = (props: OwnProps, children: (string | React.Component)[]
 Function.cname = "FunctionComponent";
 // FunctionConnected.cname = "FunctionComponent";
 FunctionComponent.cname = "FunctionComponent_Disconnected";
+
