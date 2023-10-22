@@ -96,55 +96,61 @@ function FunctionComponent(props: AllProps) {
 
     // event listing start
 
-    function addClick(stateArrayValues: RowData[], setinputArrayValues:(a:RowData[])=>void) {
-        stateArrayValues = [...stateArrayValues,
-            {index: stateArrayValues.length,
-                id:{prefix: stateArrayValues[0]?.id.prefix || "ret", value:""},
-                exp:{value:""}}];
-        setinputArrayValues(stateArrayValues);
+    function addClick(v: FunctionComponentState, set: SetState): void {
+        set({...v, arr: [...v.arr,
+                {index: stateArrayValues.length,
+                    id: {prefix: stateArrayValues[0]?.id.prefix || "ret", value: ""},
+                    exp: {value: ""}}
+            ]});
     }
 
-    function deleteClickk(v: FunctionComponentState, set: SetState, i: number) {
+    function deleteClick(v: FunctionComponentState, set: SetState, i: number): void {
         v = {...v, arr:[...v.arr]};
         v.arr.splice(i, 1);
         set(v);
         onBlur(v, set, i);
     }
 
-    function expressionChange(e: React.FormEvent<HTMLInputElement>, i: number, stateArrayValues: RowData[], setinputArrayValues:(a:RowData[])=>void) {
-        stateArrayValues = [...stateArrayValues];
-        stateArrayValues[i] = {...stateArrayValues[i], isDirty: true};
-        stateArrayValues[i].exp = {...stateArrayValues[i].exp};
-        stateArrayValues[i].exp.value = e.currentTarget.value;
-        setinputArrayValues(stateArrayValues);
+    function expressionChange(e: React.FormEvent<HTMLInputElement>, i: number, v: FunctionComponentState, set: SetState): void {
+        v = {...v, arr:[...v.arr]};
+        v.arr[i] = {
+            ...v.arr[i],
+            isDirty: true,
+            exp: {...v.arr[i].exp, value: e.currentTarget.value}
+        };
+        set(v);
     }
 
-    function identifierChange(e: React.FormEvent<HTMLInputElement>, i: number, stateArrayValues: RowData[], setinputArrayValues:(a:RowData[])=>void) {
-        stateArrayValues = [...stateArrayValues];
-        stateArrayValues[i] = {...stateArrayValues[i], isDirty: true};
-        stateArrayValues[i].id = {...stateArrayValues[i].id};
-        stateArrayValues[i].id.value = e.currentTarget.value;
-        setinputArrayValues(stateArrayValues);
+    function identifierChange(e: React.FormEvent<HTMLInputElement>, i: number, v: FunctionComponentState, set: SetState): void {
+        v = {...v, arr:[...v.arr]};
+        v.arr[i] = {
+            ...v.arr[i],
+            isDirty: true,
+            id: {...v.arr[i].id, value: e.currentTarget.value}
+        };
+        set(v);
     }
 
-    function textAreaChange(e: React.FormEvent<HTMLTextAreaElement>, setTA: React.Dispatch<React.SetStateAction<TextAreaState | undefined>>): void {
-        setTA({v: e.currentTarget.value, isDirty: true});
+    function textAreaChange(e: React.FormEvent<HTMLTextAreaElement>, v: FunctionComponentState, set: SetState): void {
+        set({...v, ta: {v:e.currentTarget.value, isDirty: true} });
         throw new Error('Function not implemented.');
     }
 
-    function onBlur(stateArrayValues: RowData[], ta: TextAreaState, index?: number, setAV?:(a:RowData[])=>void, setTA?:(e:TextAreaState)=>void) {
-        if (index !== undefined) {
-            if (!stateArrayValues[index].isDirty) return;
-            stateArrayValues = [...stateArrayValues];
-            stateArrayValues[index] = {...stateArrayValues[index]};
-            stateArrayValues[index].isDirty = false;
-            setAV?.(stateArrayValues);
+    function onBlur(v: FunctionComponentState, set: SetState, i?: number) {
+        if (i !== undefined) {
+            if (!v.arr[i].isDirty) return;
+            v = {...v, arr:[...v.arr]};
+            v.arr[i] = {
+                ...v.arr[i],
+                isDirty: false,
+            };
+            set(v);
         }
         else {
-            if (ta.isDirty) return;
-            setTA?.({...ta, isDirty: false});
+            if (!v.ta.isDirty) return;
+            set({...v, ta: {v: v.ta.v, isDirty: false} });
         }
-        updateFunctionValue(ta.v, stateArrayValues);
+        updateFunctionValue(v.ta.v, v.arr);
     }
     // NB: could be heavily optimized by cutting the original string with indexes and substring,
     // but it is a function called too rarely and not impactful on overall performances
@@ -158,22 +164,19 @@ function FunctionComponent(props: AllProps) {
     let inputs: JSX.Element[] = [];
     console.log("funccomp", {stateArrayValues, textAreaState, props});
 
-    function deleteClick(state: FunctionComponentState, setState: (value: ((v:FunctionComponentState)=>void), index: number) {
-
-    }
 
     for (let row of stateArrayValues) {
         inputs.push(<div className={"d-flex" + (advancedMode ? "" : " my-1")}>
             <span className={"my-auto detailedMode"}>{row.id.prefix}.</span>
             <input className={"my-auto input"} placeholder={"identifier"} value={row.id.value}  disabled={readOnly}
-                   onInput={(e)=>identifierChange(e, row.index, stateArrayValues, setAV)}
-                   onBlur={(e)=> onBlur(stateArrayValues, textAreaState, row.index, setAV)}
+                   onInput={(e)=>identifierChange(e, row.index, state, setState)}
+                   onBlur={(e)=> onBlur(state, setState, row.index)}
             />
             <span className={"my-auto mx-1 simpleMode"}>⇠</span>
             <span className={"my-auto mx-1 detailedMode"}>=</span>
             <input className={"my-auto input"} placeholder={"expression"} value={row.exp.value} disabled={readOnly}
-                   onInput={(e)=>expressionChange(e, row.index, stateArrayValues, setAV)}
-                   onBlur={(e)=> onBlur(stateArrayValues, textAreaState, row.index, setAV)}
+                   onInput={(e)=>expressionChange(e, row.index, state, setState)}
+                   onBlur={(e)=> onBlur(state, setState, row.index)}
             />
             <span className={"my-auto detailedMode"}>;</span>
             <button className={"btn btn-danger my-auto ms-2"} disabled={readOnly} onClick={()=>deleteClick(state, setState, row.index)}>
@@ -181,14 +184,14 @@ function FunctionComponent(props: AllProps) {
         </div>);
     }
 
-    return <div className={""} data-mode={advancedMode ? "detailedMode" : "simpleMode"}>
-        <i className={ advancedMode ? "p1 bi bi-eye-slash-fill" : "p1 bi bi-eye-fill"} onClick={()=>setAdvancedMode(!advancedMode)} />
+    return <div className={"function-editor-root"} data-mode={advancedMode ? "detailedMode" : "simpleMode"}>
+        <i className={ advancedMode ? "p1 bi bi-eye-slash-fill" : "p1 bi bi-eye-fill"} onClick={()=>setState( {...state, advancedMode:!state.advancedMode})} />
         <textarea className={"detailedMode input"}
-                  onInput={(e)=>textAreaChange(e, setTA)}
-                  onBlur={(e)=> onBlur(stateArrayValues, textAreaState, undefined, undefined, setTA)}
+                  onInput={(e)=>textAreaChange(e, state, setState)}
+                  onBlur={(e)=> onBlur(state, setState, undefined)}
         >{textAreaState.v}</textarea>
         {inputs}
-        <button className={"btn btn-secondary w-100"} onClick={()=>addClick(stateArrayValues, setAV)}>+</button>
+        <button className={"btn btn-secondary w-100"} onClick={()=>addClick(state, setState)}>+</button>
     </div>;
 }
 
