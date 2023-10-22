@@ -5,13 +5,6 @@ import {useStateIfMounted} from "use-state-if-mounted";
 import {stringify} from "querystring";
 import "./FunctionComponent.scss";
 
-
-type StrPos = {value: string, line?: number, startindex?: number, endindex?: number};
-type RowData = {index: number; id: StrPos & { prefix: string }; exp: StrPos, isDirty?: boolean};
-type TextAreaState = {v:string, isDirty?: boolean};
-type FunctionComponentState = {advancedMode: boolean, ta: TextAreaState, arr: RowData[]};
-type SetState = (value: FunctionComponentState)=>void;
-
 /*
  Rationale behind this:
  To do this properly, one would need a complete js parser to make sure comments, ifs, loops, newlines,
@@ -43,19 +36,12 @@ type SetState = (value: FunctionComponentState)=>void;
    OBJECT_NAME.IDENTIFIER_N = STATEMENT_N;\n
  }
  */
-function setStateOnce(){
-    alert("SetStateOnce");
-    return Math.random();
-}/*
-function FunctionComponent(props: AllProps) {
-    const [state, setState] = useStateIfMounted(setStateOnce);
-    if (state === undefined) {
-        setState(-1);
-        return <>Initializing...</>;
-    } else {
-        return <b style={{color:"green"}} onClick={e=>setState(Math.floor(state)+1)}>SUCCESS! {state}</b>;
-    }
-}*/
+
+type StrPos = {value: string, line?: number, startindex?: number, endindex?: number};
+type RowData = {index: number; id: StrPos & { prefix: string }; exp: StrPos, isDirty?: boolean};
+type TextAreaState = {v:string, isDirty?: boolean};
+type FunctionComponentState = {advancedMode: boolean, ta: TextAreaState, arr: RowData[]};
+type SetState = (value: FunctionComponentState)=>void;
 
 function parseFunction(props: AllProps): FunctionComponentState {
     Log.exDev(props.data, "FunctionComponent: missing data props", {props});
@@ -85,6 +71,71 @@ function parseFunction(props: AllProps): FunctionComponentState {
     return {advancedMode: !!props.advancedMode, ta: textAreaState, arr:stateArrayValues};
 }
 
+// event listing start
+function addClick(v: FunctionComponentState, set: SetState): void {
+    set({...v, arr: [...v.arr, {index: v.arr.length,
+            id: {prefix: v.arr[0]?.id.prefix || "ret", value: ""},
+            exp: {value: ""} }]
+    });
+}
+
+function deleteClick(v: FunctionComponentState, set: SetState, i: number, props: AllProps): void {
+    v = {...v, arr:[...v.arr]};
+    v.arr.splice(i, 1);
+    set(v);
+    onBlur(v, set, props, undefined, true);
+}
+
+function expressionChange(e: React.FormEvent<HTMLInputElement>, i: number, v: FunctionComponentState, set: SetState): void {
+    v = {...v, arr:[...v.arr]};
+    v.arr[i] = {
+        ...v.arr[i],
+        isDirty: true,
+        exp: {...v.arr[i].exp, value: e.currentTarget.value}
+    };
+    set(v);
+}
+
+function identifierChange(e: React.FormEvent<HTMLInputElement>, i: number, v: FunctionComponentState, set: SetState): void {
+    v = {...v, arr:[...v.arr]};
+    v.arr[i] = {
+        ...v.arr[i],
+        isDirty: true,
+        id: {...v.arr[i].id, value: e.currentTarget.value}
+    };
+    set(v);
+}
+
+function textAreaChange(e: React.FormEvent<HTMLTextAreaElement>, v: FunctionComponentState, set: SetState): void {
+    set({...v, ta: {v:e.currentTarget.value, isDirty: true} });
+}
+
+function onBlur(v: FunctionComponentState, set: SetState, props: AllProps, i?: number, isDelete?: boolean) {
+    if (isDelete) {
+        // force update without checking dirty (the row is not present anymore)
+    }
+    else if (i !== undefined) {
+        if (!v.arr[i].isDirty) return;
+        v = {...v, arr:[...v.arr]};
+        v.arr[i] = {
+            ...v.arr[i],
+            isDirty: false,
+        };
+        set(v);
+    }
+    else {
+        if (!v.ta.isDirty) return;
+        set({...v, ta: {v: v.ta.v, isDirty: false} });
+    }
+    updateFunctionValue(props, v.ta.v, v.arr);
+}
+
+function updateFunctionValue(props: AllProps, textAreaContent: string, stateArrayValues: RowData[]){
+    let declarations: string[] = stateArrayValues.map( o => o.id.value && o.exp.value ? o.id.prefix + o.id.value + " = " + o.exp.value : '');
+    (props.data as GObject)[props.field] = textAreaContent + "\n// ** declarations here ** //\n" + declarations.join("\n") + "\n}";
+}
+// event listing end
+
 function FunctionComponent(props: AllProps) {
     // if (false) return asTextArea(props) // i gave up
     const [state, setState] = useStateIfMounted(parseFunction(props));
@@ -94,70 +145,9 @@ function FunctionComponent(props: AllProps) {
         advancedMode: boolean = state.advancedMode,
         readOnly = props.readonly; // (props.readonly !== undefined) ? props.readonly : !props.debugMode && props.data.id.indexOf("Pointer_View") !== -1;
 
-    // event listing start
-
-    function addClick(v: FunctionComponentState, set: SetState): void {
-        set({...v, arr: [...v.arr,
-                {index: stateArrayValues.length,
-                    id: {prefix: stateArrayValues[0]?.id.prefix || "ret", value: ""},
-                    exp: {value: ""}}
-            ]});
-    }
-
-    function deleteClick(v: FunctionComponentState, set: SetState, i: number): void {
-        v = {...v, arr:[...v.arr]};
-        v.arr.splice(i, 1);
-        set(v);
-        onBlur(v, set, i);
-    }
-
-    function expressionChange(e: React.FormEvent<HTMLInputElement>, i: number, v: FunctionComponentState, set: SetState): void {
-        v = {...v, arr:[...v.arr]};
-        v.arr[i] = {
-            ...v.arr[i],
-            isDirty: true,
-            exp: {...v.arr[i].exp, value: e.currentTarget.value}
-        };
-        set(v);
-    }
-
-    function identifierChange(e: React.FormEvent<HTMLInputElement>, i: number, v: FunctionComponentState, set: SetState): void {
-        v = {...v, arr:[...v.arr]};
-        v.arr[i] = {
-            ...v.arr[i],
-            isDirty: true,
-            id: {...v.arr[i].id, value: e.currentTarget.value}
-        };
-        set(v);
-    }
-
-    function textAreaChange(e: React.FormEvent<HTMLTextAreaElement>, v: FunctionComponentState, set: SetState): void {
-        set({...v, ta: {v:e.currentTarget.value, isDirty: true} });
-        throw new Error('Function not implemented.');
-    }
-
-    function onBlur(v: FunctionComponentState, set: SetState, i?: number) {
-        if (i !== undefined) {
-            if (!v.arr[i].isDirty) return;
-            v = {...v, arr:[...v.arr]};
-            v.arr[i] = {
-                ...v.arr[i],
-                isDirty: false,
-            };
-            set(v);
-        }
-        else {
-            if (!v.ta.isDirty) return;
-            set({...v, ta: {v: v.ta.v, isDirty: false} });
-        }
-        updateFunctionValue(v.ta.v, v.arr);
-    }
     // NB: could be heavily optimized by cutting the original string with indexes and substring,
     // but it is a function called too rarely and not impactful on overall performances
-    function updateFunctionValue(textAreaContent: string, stateArrayValues: RowData[]){
-        let declarations: string[] = stateArrayValues.map( o => o.id.value && o.exp.value ? o.id.prefix + o.id.value + " = " + o.exp.value : '');
-        (props.data as GObject)[props.field] = textAreaContent + "\n// ** declarations here ** //\n" + declarations.join("\n") + "\n}";
-    }
+
 
 
     // JSX building start
@@ -170,16 +160,16 @@ function FunctionComponent(props: AllProps) {
             <span className={"my-auto detailedMode"}>{row.id.prefix}.</span>
             <input className={"my-auto input"} placeholder={"identifier"} value={row.id.value}  disabled={readOnly}
                    onInput={(e)=>identifierChange(e, row.index, state, setState)}
-                   onBlur={(e)=> onBlur(state, setState, row.index)}
+                   onBlur={(e)=> onBlur(state, setState, props, row.index)}
             />
             <span className={"my-auto mx-1 simpleMode"}>⇠</span>
             <span className={"my-auto mx-1 detailedMode"}>=</span>
             <input className={"my-auto input"} placeholder={"expression"} value={row.exp.value} disabled={readOnly}
                    onInput={(e)=>expressionChange(e, row.index, state, setState)}
-                   onBlur={(e)=> onBlur(state, setState, row.index)}
+                   onBlur={(e)=> onBlur(state, setState, props, row.index)}
             />
             <span className={"my-auto detailedMode"}>;</span>
-            <button className={"btn btn-danger my-auto ms-2"} disabled={readOnly} onClick={()=>deleteClick(state, setState, row.index)}>
+            <button className={"btn btn-danger my-auto ms-2"} disabled={readOnly} onClick={()=>deleteClick(state, setState, row.index, props)}>
                 <i className={"p-1 bi bi-trash3-fill"} /></button>
         </div>);
     }
@@ -188,7 +178,7 @@ function FunctionComponent(props: AllProps) {
         <i className={ advancedMode ? "p1 bi bi-eye-slash-fill" : "p1 bi bi-eye-fill"} onClick={()=>setState( {...state, advancedMode:!state.advancedMode})} />
         <textarea className={"detailedMode input"}
                   onInput={(e)=>textAreaChange(e, state, setState)}
-                  onBlur={(e)=> onBlur(state, setState, undefined)}
+                  onBlur={(e)=> onBlur(state, setState, props)}
         >{textAreaState.v}</textarea>
         {inputs}
         <button className={"btn btn-secondary w-100"} onClick={()=>addClick(state, setState)}>+</button>
