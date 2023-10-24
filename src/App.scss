@@ -40,8 +40,6 @@
   min-height:2px;
 }
 
-.ui-draggable-dragging{ visibility: hidden; }
-
 .REACT-ROOT.debug{
   [data-nodetype]{
     &:hover::after{
@@ -61,12 +59,27 @@
       float: left;
       // margin-top: -23px;
     }
+
+  [data-countrenders]{
+    &::before{
+      content: attr(data-countrenders);
+      display: inline-block;
+      position: absolute;
+      z-index: 999;
+      bottom: calc(-35% + 15px);
+      right: -20px;
+      width: min-content;
+      height: min-content;
+    }
+  }
 }
+/*
+.ui-draggable-dragging{ visibility: hidden; }
 
 .lazySizeUpdate.ui-draggable-dragging,
 .REACT-ROOT.debug,
 .ui-draggable-dragging,
-.REACT_ROOT { visibility: visible; }
+.REACT_ROOT { visibility: visible; } ?? */
 
 body .ui-icon{ // override jqueryui fixed resizable handles at 16px, making drag for small elements impossible.
   max-width: 33%;
@@ -187,18 +200,6 @@ svg.hoverable {
   display: inline-block;
 }
 
-[data-countrenders]{
-  &::before{
-    content: attr(data-countrenders);
-    display: inline-block;
-    position: absolute;
-    z-index: 999;
-    bottom: calc(-35% + 15px);
-    right: -20px;
-    width: min-content;
-    height: min-content;
-  }
-}
 .animate-on-update-even{
   animation: fade 1s forwards;
 }
