@@ -4,7 +4,7 @@ let windoww = window as any;
 @RuntimeAccessible
 export class Debug {
     public static cname: string = "Debug";
-    public static lightMode: boolean = false;
+    public static lightMode: boolean = false; // performance ligher mode for potato pc, huge models or complex simulations / measurables
     private static lightModeInput: HTMLInputElement;
 
     // manually activated: counts how many times each node is rendered in a component.

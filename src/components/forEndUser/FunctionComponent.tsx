@@ -38,13 +38,13 @@ import "./FunctionComponent.scss";
  */
 
 type StrPos = {value: string, line?: number, startindex?: number, endindex?: number};
-type RowData = {index: number; id: StrPos & { prefix: string }; exp: StrPos, isDirty?: boolean};
+type RowData = {index: number; key?: string, id: StrPos & { prefix: string }; exp: StrPos, isDirty?: boolean};
 type TextAreaState = {v:string, isDirty?: boolean};
 type FunctionComponentState = {advancedMode: boolean, ta: TextAreaState, arr: RowData[]};
 type SetState = (value: FunctionComponentState)=>void;
 
 function parseFunction(props: AllProps): FunctionComponentState {
-    Log.exDev(props.data, "FunctionComponent: missing data props", {props});
+    Log.exDev(!props.data, "FunctionComponent: missing data props", {props});
     let getter = props.getter || ((a: GObject) => a[props.field]); // ((lobj: GObject<LPointerTargetable>, key: string) => U.wrapUserFunction(lobj[key]));
     let val: string = getter(props.data);
     if (!val) val = "(ret)=>{\n    // ** declarations here ** //\n\n}";
@@ -53,8 +53,8 @@ function parseFunction(props: AllProps): FunctionComponentState {
     let declarations: string[] = (txtparts[1] || '').split("\n");
     let stateArrayValues: RowData[] = [];
     let textAreaState: TextAreaState = {v: txtparts[0]};
-    for (let i = 0; i < declarations.length; i++) {
-        let dec = declarations[i];
+    let i: number = 0;
+    for (let dec of declarations) {
         let splitindex = dec.indexOf("=");
         if (splitindex === -1) continue; // for ending \n} line
         let expression = dec.substring(splitindex+1);
@@ -63,7 +63,8 @@ function parseFunction(props: AllProps): FunctionComponentState {
         let identifierPrefix = identifier.substring(0, idsplitindex);
         let identifierName = identifier.substring(idsplitindex+1);
         stateArrayValues.push({
-            index: i,
+            index: i++, // don't loop by i, the index ending in state must increase only for non-empty rows filtering them out.
+            key: identifierName,
             id: {prefix: identifierPrefix, value: identifierName.trim(), line: i, startindex: idsplitindex, endindex: splitindex},
             exp:{                          value: expression.trim(),     line: i, startindex: splitindex,   endindex: -1}
         });
@@ -72,8 +73,9 @@ function parseFunction(props: AllProps): FunctionComponentState {
 }
 
 // event listing start
+// it's not on purpose, but this function is a candidate for obscure code context XD
 function addClick(v: FunctionComponentState, set: SetState): void {
-    set({...v, arr: [...v.arr, {index: v.arr.length,
+    set({...v, arr: [...v.arr, {index: (v.arr[v.arr.length-1]?.index ?? -1) +1,
             id: {prefix: v.arr[0]?.id.prefix || "ret", value: ""},
             exp: {value: ""} }]
     });
@@ -97,11 +99,13 @@ function expressionChange(e: React.FormEvent<HTMLInputElement>, i: number, v: Fu
 }
 
 function identifierChange(e: React.FormEvent<HTMLInputElement>, i: number, v: FunctionComponentState, set: SetState): void {
+    let nv = e.currentTarget.value;
     v = {...v, arr:[...v.arr]};
     v.arr[i] = {
         ...v.arr[i],
         isDirty: true,
-        id: {...v.arr[i].id, value: e.currentTarget.value}
+        // empty string is fine, as long value is empty too the entire row is ignored. but identifiers cannot start with a number are not allowed.
+        id: {...v.arr[i].id, value: isNaN(+nv[0]) ? nv : "A" + nv}
     };
     set(v);
 }
@@ -114,8 +118,10 @@ function onBlur(v: FunctionComponentState, set: SetState, props: AllProps, i?: n
     if (isDelete) {
         // force update without checking dirty (the row is not present anymore)
     }
+    // problem: this might be called before the onChange setState() actually edits the state, so it finds isDirty false or even a non-yet existing index
+        // for now i will just hope the user is not typing and blurring extra fast, i don't think a simple solution exists
     else if (i !== undefined) {
-        if (!v.arr[i].isDirty) return;
+        if (!v.arr[i]?.isDirty) return;
         v = {...v, arr:[...v.arr]};
         v.arr[i] = {
             ...v.arr[i],
@@ -131,8 +137,9 @@ function onBlur(v: FunctionComponentState, set: SetState, props: AllProps, i?: n
 }
 
 function updateFunctionValue(props: AllProps, textAreaContent: string, stateArrayValues: RowData[]){
-    let declarations: string[] = stateArrayValues.map( o => o.id.value && o.exp.value ? o.id.prefix + o.id.value + " = " + o.exp.value : '');
-    (props.data as GObject)[props.field] = textAreaContent + "\n// ** declarations here ** //\n" + declarations.join("\n") + "\n}";
+    let declarations: string[] = stateArrayValues.map( o => o.id.value && o.exp.value ? o.id.prefix + "." + o.id.value + " = " + o.exp.value : '');
+    let setter = props.setter || ((v: string) => (props.data as GObject)[props.field] = v);
+    setter(textAreaContent + "\n// ** declarations here ** //\n" + declarations.filter(d=>!!d).join("\n") + "\n}")
 }
 // event listing end
 
@@ -156,32 +163,36 @@ function FunctionComponent(props: AllProps) {
 
 
     for (let row of stateArrayValues) {
-        inputs.push(<div className={"d-flex" + (advancedMode ? "" : " my-1")}>
+        inputs.push(<div className={"d-flex" + (advancedMode ? "" : " my-1")} key={row.index} data-key={row.index}>
             <span className={"my-auto detailedMode"}>{row.id.prefix}.</span>
             <input className={"my-auto input"} placeholder={"identifier"} value={row.id.value}  disabled={readOnly}
+                   tabIndex={row.index*2}
                    onInput={(e)=>identifierChange(e, row.index, state, setState)}
-                   onBlur={(e)=> onBlur(state, setState, props, row.index)}
+                   onBlur={(e)=> !readOnly && onBlur(state, setState, props, row.index)}
             />
-            <span className={"my-auto mx-1 simpleMode"}>⇠</span>
+            <span className={"my-auto mx-1 simpleMode"} style={{fontWeight: "bold"}}>⇠</span>
             <span className={"my-auto mx-1 detailedMode"}>=</span>
             <input className={"my-auto input"} placeholder={"expression"} value={row.exp.value} disabled={readOnly}
+                   tabIndex={row.index*2+1}
                    onInput={(e)=>expressionChange(e, row.index, state, setState)}
-                   onBlur={(e)=> onBlur(state, setState, props, row.index)}
+                   onBlur={(e)=> !readOnly && onBlur(state, setState, props, row.index)}
             />
             <span className={"my-auto detailedMode"}>;</span>
-            <button className={"btn btn-danger my-auto ms-2"} disabled={readOnly} onClick={()=>deleteClick(state, setState, row.index, props)}>
+            <button className={"btn btn-danger my-auto ms-2"} tabIndex={stateArrayValues.length*2 +1 +row.index} disabled={readOnly} onClick={()=>!readOnly && deleteClick(state, setState, row.index, props)}>
                 <i className={"p-1 bi bi-trash3-fill"} /></button>
         </div>);
     }
 
-    return <div className={"function-editor-root"} data-mode={advancedMode ? "detailedMode" : "simpleMode"}>
+    return <div className={"function-editor-root"} data-mode={advancedMode ? "detailedMode" : "simpleMode"} style={{fontSize: "0.9rem"}}>
         <i className={ advancedMode ? "p1 bi bi-eye-slash-fill" : "p1 bi bi-eye-fill"} onClick={()=>setState( {...state, advancedMode:!state.advancedMode})} />
-        <textarea className={"detailedMode input"}
+        <textarea className={"detailedMode input"} disabled={readOnly} rows={Math.min(10, textAreaState.v.split("\n").length)}
                   onInput={(e)=>textAreaChange(e, state, setState)}
-                  onBlur={(e)=> onBlur(state, setState, props)}
+                  onBlur={(e)=> !readOnly && onBlur(state, setState, props)}
         >{textAreaState.v}</textarea>
         {inputs}
-        <button className={"btn btn-secondary w-100"} onClick={()=>addClick(state, setState)}>+</button>
+        <button className={"btn btn-secondary w-100"} tabIndex={stateArrayValues.length*2}
+                disabled={readOnly} onClick={()=> !readOnly && addClick(state, setState)}>+</button>
+        <div style={{whiteSpace:"pre"}}>{(props.data as any)[props.field]}</div>
     </div>;
 }
 
@@ -191,11 +202,12 @@ interface OwnProps {
     field: string;
     getter?: (data: LPointerTargetable) => string;
     setter?: (value: string|boolean) => void;
+    readonly?: boolean;
+    // not used for now
     label?: string;
     jsxLabel?: ReactNode;
     className?: string;
     style?: GObject;
-    readonly?: boolean;
     tooltip?: string | boolean | ReactElement;
     hidden?: boolean;
     autosize?: boolean;

@@ -42,29 +42,39 @@ import {
     UX,
     windoww,
 } from "../../joiner";
-import {EdgeOwnProps} from "./sharedTypes/sharedTypes";
+import {DefaultUsageDeclarations, EdgeOwnProps} from "./sharedTypes/sharedTypes";
 // import {GlobalEventHandler} from "../../common/GlobalEvents";
 
 
-export function makeEvalContext(props: AllPropss, view: LViewElement, state: DState, ownProps: GraphElementOwnProps, allProps: AllPropss): GObject {
-    let evalContext: GObject = {};
-
-
-    let component = GraphElementComponent.map[props.nodeid as Pointer<DGraphElement>];
-    let vcomponent = component as VertexComponent;
-    evalContext = {...windoww.defaultContext, ...evalContext, model: props.data, ...props,
-        edge: (RuntimeAccessibleClass.extends(props.node?.className, "DVoidEdge") ? props.node : undefined),
-        component, getSize:vcomponent?.getSize, setSize: vcomponent?.setSize};
+export function makeEvalContext(view: LViewElement, state: DState, ownProps: GraphElementOwnProps, stateProps: GraphElementReduxStateProps): GObject {
+    let component = GraphElementComponent.map[ownProps.nodeid as Pointer<DGraphElement>];
+    let allProps = {...ownProps, ...stateProps};
+    let evalContext: GObject = {
+        model: stateProps.data,
+        ...ownProps,
+        ...stateProps,
+        edge: (RuntimeAccessibleClass.extends(stateProps.node?.className, "DVoidEdge") ? stateProps.node : undefined),
+        state,
+        ownProps,
+        stateProps,
+        props: allProps,
+        component,
+        constants:(stateProps.view?._parsedConstants || {}),
+        // getSize:vcomponent?.getSize, setSize: vcomponent?.setSize,
+        ...(stateProps.view?._parsedConstants || {}),
+        ...stateProps.usageDeclarations,
+    };
+    evalContext.__proto__ = windoww.defaultContext;
 
     // todo: move them out of component, make it parse in view.set_constants and save the result in a LView variable along with parsed JSX string "React.createElement(...)"
     if (view.constants) {
         try {
-            let context = { ...evalContext, state, ret:evalContext, ownProps, props: allProps};
-            let constants = U.evalInContextAndScope(view.constants, context, context);
+            // priority 0: eval constants
+            let constants = U.evalInContextAndScope(view.constants, evalContext, evalContext);
             U.objectMergeInPlace(evalContext, constants);
         }
         catch (e) {
-            Log.ee("Invalid view.constants: " + view.constants, {error:e, view, props, constants: view.constants});
+            Log.ee("Invalid view.constants: " + view.constants, {error:e, view, allProps, constants: view.constants});
         }
     }
     return evalContext;
@@ -75,9 +85,7 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
     // sintassi: '||' + anything + (opzionale: '|' + anything)*N_Volte + '||' + jsx oppure direttamente: jsx
     const view: LViewElement = stateProps.view; //data._transient.currentView;
     // eslint-disable-next-line no-mixed-operators
-    let allProps: AllPropss = {...ownProps, ...stateProps} as AllPropss;
-    (allProps as GObject).props = allProps;
-    const evalContext = makeEvalContext(allProps, view, state, ownProps, stateProps);
+    const evalContext = makeEvalContext(view, state, ownProps, stateProps);
     // const evalContextOld = U.evalInContext(this, constants);
     // this.setState({evalContext});
     //console.error({jsx:view.jsxString, view});
@@ -96,7 +104,7 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
     }
     /*
     try {
-        jsxparsedfunc = U.evalInContextAndScope<() => ReactNode>('()=>{ return ' + jsxCodeString + '}', evalContext);
+        jsxparsedfunc = U.eval InContextAndScope<() => ReactNode>('()=>{ return ' + jsxCodeString + '}', evalContext);
         // U.evalInContext({...this, ...evalContext}, res); // todo: remove eval and add new Function() ?
     }
     catch (e: any) {
@@ -157,12 +165,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     static mapLModelStuff(state: DState, ownProps: GraphElementOwnProps, ret: GraphElementReduxStateProps): void {
+        ret.data = LPointerTargetable.wrap(ownProps.data);
+        /*
         const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : (ownProps.data as any as DModelElement)?.id) as string;
-        ret.dataid = meid;
         // Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ret, ownProps, state});
         ret.data = MyProxyHandler.wrap(state.idlookup[meid as any]);
         // Log.ex(!ret.data, "can't find model data:", {meid, state, ownpropsdata:ownProps.data, ownProps});
-
+        */
     }
 
     static mapLGraphElementStuff(state: DState,
@@ -174,7 +183,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let nodeid: string = ownProps.nodeid as string;
         let graphid: string = isDGraph ? isDGraph.id : ownProps.graphid as string;
         let parentnodeid: string = ownProps.parentnodeid as string;
-        let dataid: Pointer<DModelElement, 0, 1, LModelElement> = ownProps.data || null;
+        // let data: Pointer<DModelElement, 0, 1, LModelElement> = ownProps.data || null;
         // Log.exDev(!nodeid || !graphid, 'node id injection failed', {ownProps, data: ret.data, name:(ret.data as any)?.name || (ret.data as any)?.className}); /*
         /*if (!nodeid) {
             nodeid = 'nodeof_' + stateProps.data.id + (stateProps.view.storeSize ? '^' + stateProps.view.id : '') + '^1';
@@ -185,7 +194,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let graph: DGraph = idlookup[graphid] as DGraphElement as any; // se non c'è un grafo lo creo
         if (!graph) {
             // Log.exDev(!dataid, 'attempted to make a Graph element without model', {dataid, ownProps, ret, thiss:this});
-            if (dataid) CreateElementAction.new(DGraph.new(0, dataid, parentnodeid, graphid, graphid)); }
+            if (ret.data) CreateElementAction.new(DGraph.new(0, ret.data.id, parentnodeid, graphid, graphid)); }
         /*else {
             graph = MyProxyHandler.wrap(graph);
             Log.exDev(graph.__raw.className !== "DGraph", 'graph class is wrong', {graph: ret.graph, ownProps});
@@ -213,14 +222,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let edgeOwnProps: EdgeOwnProps = ownProps as EdgeOwnProps;
                 let start = edgeProps.start.id; //typeof edgeProps.start === "string" ? edgeProps.start : (edgeProps.start as any).id; // at runtime i found proxy wrapped instead of id, no idea why
                 let end = edgeProps.end.id; // typeof edgeProps.end === "string" ? edgeProps.end : (edgeProps.end as any).id;
-                let longestLabel = edgeOwnProps.label;
-                let labels = edgeOwnProps.labels || [];
-                dge = (DEdge as any).new(ownProps.htmlindex, dataid, parentnodeid, graphid, nodeid, start, end, longestLabel, labels);
+                let longestLabel = undefined; // edgeOwnProps.label;
+                let labels: DEdge["labels"] = []; // edgeOwnProps.labels || [];
+                dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, start, end, longestLabel, labels);
                 ret.node = (ret as any).edge = MyProxyHandler.wrap(dge);
             }
             else {
                 let initialSize = ownProps.initialSize;
-                dge = dGraphElementDataClass.new(ownProps.htmlindex as number, dataid, parentnodeid, graphid, nodeid, initialSize);
+                dge = dGraphElementDataClass.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, initialSize);
                 ret.node =  MyProxyHandler.wrap(dge);
             }
             // let act = CreateElementAction.new(dge, false);
@@ -232,7 +241,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     ////// mapper func
     static mapStateToProps(state: DState, ownProps: GraphElementOwnProps, dGraphDataClass: (typeof DGraphElement | typeof DEdge) = DGraphElement, startingobj?: GObject): GraphElementReduxStateProps {
         // console.log('dragx GE mapstate', {dGraphDataClass});
-        let ret: GraphElementReduxStateProps = (startingobj || {}) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
+        let ret: GraphElementReduxStateProps = (startingobj || {...ownProps}) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
         GraphElementComponent.mapLModelStuff(state, ownProps, ret);
         if (Debug.lightMode && (!ret.data || !(lightModeAllowedElements.includes(ret.data.className)))){
             return ret;
@@ -246,27 +255,38 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // console.log(!ret.view, 'failed to inject view:', {state, ownProps, reduxProps: ret});
         // console.log('GE mapstatetoprops:', {state, ownProps, reduxProps: ret});
         // ret.model = state.models.length ? LModelElement.wrap(state.models[0]) as LModel : undefined;
-        setTemplateString(ret, ownProps, state); // todo: this is heavy, should be moved somewhere where it's executed once unless view changes (pre-render with if?)
-        // @ts-ignore
-        ret.forceupdate = state.forceupdate;
+        ret.usageDeclarations = new DefaultUsageDeclarations(ret, ownProps); //edited in-place through parameter in evalContext
         // @ts-ignore
         ret.key = ret.key || ownProps.key;
+        // @ts-ignore
+        ret.forceupdate = state.forceupdate;
 
-        // console.log("view compute usageDeclarations", {ret, ownProps});
+        // NB: after this function, ret (reduxstate) should not update shallow keys or ownProps, ret, usageDeclarations (because they are spread in ctx root)
+        // any further update will not be present in eval context.props unless merged like U.objectMergeInPlace(ret.evalContext.props, ...); (and same with ctx.stateProps)
+        setTemplateString(ret, ownProps, state); // todo: this is heavy, should be moved somewhere where it's executed once unless view changes (pre-render with if?)
+
+        console.log("view compute usageDeclarations", {ret, ownProps, ud:ret.view.usageDeclarations, context:ret.evalContext});
         if (ret.view.usageDeclarations) {
+            // todo: set the actual parsed func instead of a string,
+            // and allow U.eval InContextAndScope to return a higher order func holding provided scope,
+            // ready to execute the param func inside it U.ectx(func, scope)() // executes func in scope
             try {
-                let context = { ...ret.evalContext, state, ret, ownProps, props: ret};
-                let usageDeclarations: GObject | (()=>GObject) = U.evalInContextAndScope(ret.view.usageDeclarations, context, context);
-                if (typeof usageDeclarations === "function") usageDeclarations = usageDeclarations();
-                U.objectMergeInPlace(ret, usageDeclarations);
-                U.objectMergeInPlace(context, usageDeclarations);
-                context.props = ret; // hotfix to update context props after usageDeclaration mapping
-                // console.log("view compute usageDeclarations SUCCESS 1", {usageDeclarations, viewud: ret.view.usageDeclarations, ret, ownProps, context:ret.evalContext});
-                ret.evalContext.props = ret;
+                // let context = { ...ret.evalContext, state, ret, ownProps, props: ret};
+                // eval usageDeclarations
+                // this is not really evaluated in provided context, as it does not find view, data in scope
+                // and if i open console data becomes the window.data of the one selected in console.
+                let usageDeclarations: ((g:DefaultUsageDeclarations)=>DefaultUsageDeclarations) = U.evalInContextAndScope(ret.view.usageDeclarations, ret.evalContext, ret.evalContext);
+                let tmp = usageDeclarations(ret.usageDeclarations);
+                ret.evalContext.usageDeclarations = ret.usageDeclarations;
+                U.objectMergeInPlace(ret.evalContext, ret.usageDeclarations);
+                // U.objectMergeInPlace(ret, ret.usageDeclarations);
+                // ret.evalContext.props = ret; mo more needed since UD doesn't update props anymore // hotfix to update context props after usageDeclaration mapping
+                console.log("view compute usageDeclarations SUCCESS 1", {usageDeclarations, tmp, viewud: ret.view.usageDeclarations, context:ret.evalContext, ret, ownProps});
             } catch (e) {
-                Log.ee("Invalid usage declarations", {e, str: ret.view.usageDeclarations, view:ret.view, data:ret.data, ret});
+                Log.ee("Invalid usage declarations", {e, str: ret.view.usageDeclarations, view:ret.view, data: ownProps.data, ret});
             }
         }
+
         // Log.l((ret.data as any)?.name === "concept 1", "mapstatetoprops concept 1", {newnode: ret.node});
         return ret;
     }
@@ -290,7 +310,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any): boolean {
         // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
         let out = {reason:undefined};
-        let ret = !U.isShallowEqualWithProxies(this.props, nextProps, 0, 1, {pointedBy:true}, out);
+        let skipDeepKeys = {pointedBy:true};
+        let skipPropKeys = {...skipDeepKeys, usageDeclarations: true, node:true, data:true, initialSize: true};
+        let ret = !U.isShallowEqualWithProxies(this.props, nextProps, 0, 1, skipPropKeys, out);
+        // todo: verify if this update work
+        // if node and data in props must be ignored and not checked for changes. but they are checked if present in usageDeclarations
+        if (!ret) ret = !U.isShallowEqualWithProxies(this.props.usageDeclarations, nextProps.usageDeclarations, 0, 1, skipDeepKeys, out);
         Log.l(ret, "ShouldComponentUpdate " + this.props.data?.name + " UPDATED", {ret, reason: out.reason, oldProps:this.props, nextProps});
         Log.l(this.props.data?.name === "concept 1_1",
             "ShouldComponentUpdate " +this.props.data?.name + (ret ? " UPDATED" : " REJECTED"),
@@ -309,6 +334,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             context = this.getContext();
             measurableCode = U.wrapUserFunction(measurableCode);
             console.log("dragend execute", {measurableCode});
+            // eval measurable
             U.evalInContextAndScope<GObject>(measurableCode, context, context);
         }
         catch (e: any) { Log.ee('Error in "'+type+'" ' + e.message, {e, measurableCode, context}); }
@@ -456,13 +482,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         try {
             if (this.props.preRenderFunc) {
-                let obj = U.evalInContextAndScope<GObject>("("+this.props.preRenderFunc+")()", [], context);
-                for (let key in obj) { context[key] = obj[key]; }
+                // eval prerender
+                let obj = U.evalInContextAndScope<GObject>("("+this.props.preRenderFunc+")()", context);
+                U.objectMergeInPlace(context, obj);
             }
         }
         catch(e: any) { return this.displayError(e, "preRenderFunc");  }
         let ret;
         try {
+            // eval template
             ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + this.props.template + '})()', context);
             // ret = this.props.template();
             // ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], {});
@@ -637,7 +665,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         /// set classes
         if (this.props.node) {
-            let isSelected: Dictionary<Pointer, boolean> = this.props.node.__raw.isSelected;
+            let isSelected: Dictionary<Pointer<DUser>, boolean> = this.props.node.__raw.isSelected;
             if (isSelected[DUser.current]) { // todo: better to just use css attribute selectors [data-userselecting = "userID"]
                 classes.push('selected-by-me');
                 if (Object.keys(isSelected).length > 1) classes.push('selected-by-others');
@@ -714,11 +742,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 if (fixdoubleroot) rawRElement = rawRElement.props.children;
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
             } catch (e) {
-
-                rawRElement = U.evalInContextAndScope<ReactElement>('()=>{ return ' +
+                rawRElement = DV.errorView("error while injecting props to subnodes",
+                        {e, rawRElement, key:this.props.key, newid: this.props.nodeid}) as ReactElement;
+                /*
+                rawRElement = U.eval InContextAndScope<ReactElement>('()=>{ return ' +
                     DV.errorView("error while injecting props to subnodes",
                         {e, rawRElement, key:this.props.key, newid: this.props.nodeid}) + '}',
-                    {});
+                    {});*/
 
                 // rawRElement = DV.errorView("error while injecting props to subnodes", {e, rawRElement, key:this.props.key, newid: this.props.nodeid});
             }

@@ -279,7 +279,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             node:this.props.node?.size,
             default: this.props.view.defaultVSize});*/
 
-        let ret = this.props.view.getSize(this.props.dataid || this.props.nodeid as string)
+        let ret = this.props.view.getSize(this.props.data?.id || this.props.nodeid as string)
             || this.props.node?.size
             || this.props.view.defaultVSize;
         if (this.props.node.isResized) return ret;
@@ -305,7 +305,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         return this.props.node.size = size as any;
         // console.log('setSize('+(this.props?.data as any).name+') thisss', this);
         if (this.props.view.storeSize) {
-            let id = (this.props.dataid || this.props.nodeid) as string;
+            let id = (this.props.data?.id || this.props.nodeid) as string;
             this.props.view.updateSize(id, size);
             return;
         }
@@ -342,8 +342,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         if (!this.props.isGraph &&  this.props.isVertex) nodeType = 'Vertex'; else
         if (!this.props.isGraph && !this.props.isVertex) nodeType = 'Field';
 
-        const named: LNamedElement = LNamedElement.fromPointer(this.props.dataid);
-        const classesOverride = [nodeType, ...cssOverride, (named.name && named.name === 'default') ? 'default' : ''];
+        // const named: LNamedElement = this.props.data as LNamedElement; // LNamedElement.fromPointer(this.props.data.id);
+        const classesOverride = [nodeType, ...cssOverride]; // , (named?.name && named.name === 'default') ? 'default' : ''];
         const styleOverride: React.CSSProperties = {};
         // set classes end
         const size: Readonly<GraphSize> = this.getSize() as any;
@@ -401,7 +401,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     else DGraphElementClass = DGraphElement; // DField;
 
     if (DGraphElementClass === DVertex && ownProps.isVoid) DGraphElementClass = DVoidVertex;
-    const superret: StateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass) as StateProps;
+    const superret: StateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass, {...ownProps}) as StateProps;
     //superret.lastSelected = state._lastSelected?.modelElement;
     // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
 
@@ -440,26 +440,26 @@ export const VertexConnected = connect<StateProps, DispatchProps, OwnProps, DSta
     mapDispatchToProps
 )(VertexComponent as any);
 
-export const Vertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const Vertex = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { //  children: (string | React.Component)[]
     return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true}/>;
 }
-export const VoidVertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const VoidVertex = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} isVoid={true}/>;
 }
-export const EdgePoint = function EdgePoint (props: OwnProps, children: (string | React.Component)[] = []): ReactElement {
+export const EdgePoint = function EdgePoint (props: OwnProps, children: ReactNode | undefined = []): ReactElement {
     return <VertexConnected {...{...props, children}} isGraph={false} isEdgePoint={true}/>;
 }
 // todo: name them all or verify the name is still usable.
 
-export const Graph = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => { // doesn't work?
+export const Graph = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { // doesn't work?
     return <VertexConnected {...{...props, children}} isGraph={true} isVertex={false} />;
 }
 
-export const GraphVertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const GraphVertex = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isGraph={true} isVertex={true} />;
 }
 
-export const Field = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const Field = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isGraph={false} isVertex={false} />;
 }
 (window as any).componentdebug = {Graph, GraphVertex, Field, Vertex, VoidVertex, EdgePoint, VertexConnected, VertexComponent};

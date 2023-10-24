@@ -27,7 +27,7 @@ function MetamodelTabComponent(props: AllProps) {
         <div className={'d-flex h-100'}>
             <ToolBar model={model.id} isMetamodel={model.isMetamodel} />
             <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>
-                {graph && <DefaultNode data={model.id} nodeid={graph.id} graphid={graph.id}/> || <div>Error: missing DGraph prop</div> }
+                {graph && <DefaultNode data={model} nodeid={graph.id} graphid={graph.id}/> || <div>Error: missing DGraph prop</div> }
             </div>
         </div>
     </div>);

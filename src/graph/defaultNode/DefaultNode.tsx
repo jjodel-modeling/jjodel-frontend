@@ -85,7 +85,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
                 case windoww.FieldComponent.cname: componentfunction = Field; break;
                 case windoww.GraphVertexComponent.cname: componentfunction = GraphVertex; break; }
             // console.log("force node type", {requested:view.forceNodeType, G:  windoww.GraphComponent.name, GE: windoww.GraphElementComponent.name, GV: windoww.GraphVertexComponent.name, V: windoww.VertexComponent.name, F:windoww.FieldComponent.name})
-            return componentfunction(serializableProps, this.props.children);}
+            return componentfunction(serializableProps, this.props.children); }
 
         if (modelElement?.className) switch(modelElement.className) {
             case "DModel": componentfunction = Graph; break;

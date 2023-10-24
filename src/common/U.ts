@@ -449,7 +449,7 @@ export class U {
     // if the context (this) is missing it will take the scope as context.
     // warn: cannot set different scope and context, "this" della funzione sovrascrive anche il "this" interno allo scope come chiave dell'oggetto
     // warn: if you modify
-    public static evalInContextAndScope<T = any>(codeStr: string, scope0: GObject | undefined, context0?: GObject): T {
+    public static evalInContextAndScope<T = any>(codeStr: string | ((...a:any)=>any), scope0: GObject | undefined, context0?: GObject): T {
         // console.log('evalInContextAndScope', {codeStr, scope, context});
         // scope per accedere a variabili direttamente "x + y"
         // context per accedervi tramite this, possono essere impostati come diversi.
@@ -491,14 +491,26 @@ export class U {
         }
         if (scope && context) {
             (context as any)._eval = _eval;
+            if (typeof codeStr === "function") {
+                Log.ww("evalInContextAndScope(), evaluating a function inside custom scope must be optimized");
+                codeStr = codeStr.toString();
+            } // else
             _ret = new (Function as any)(prefixDeclarations + "return eval( " + codeStr + " );" + postfixDeclarations).call(context);
             delete (context as any)._eval; } else
         if (!scope && context) {
-            _ret = new (Function as any)( "return eval( this._eval._codeStr );").call(context); } else
+            if (typeof codeStr === "function") {
+                _ret = (function(...a: any){ return (codeStr as Function).call(context, ...a)}) as any;
+                // _ret = (...a: any)=>codeStr.call(context, ...a);
+            } else _ret = new (Function as any)( "return eval( this._eval._codeStr );").call(context); } else
         if (scope && !context) {
             // NB: potrei creare lo scope con "let key = value;" per ogni chiave, ma dovrei fare json stringify e non è una serializzazione perfetta e può dare eccezioni(circolarità)
             // console.log({isStrict: U.isStrict, eval: "eval(" + prefixDeclarations + codeStr + postfixDeclarations + ")"});
+            if (typeof codeStr === "function") {
+                Log.ww("evalInContextAndScope(), evaluating a function inside custom scope must be optimized");
+                codeStr = codeStr.toString();
+            } // else
             _ret = eval(prefixDeclarations + codeStr + postfixDeclarations); }
+
         return _ret; }
 
     //T extends ( ((...args: any[]) => any) | (() => any)

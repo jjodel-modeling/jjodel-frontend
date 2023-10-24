@@ -84,7 +84,7 @@ class DispatchProps extends GraphElementDispatchProps {
 type AllPropss = Overlap<Overlap<EdgeOwnProps, EdgeStateProps>, DispatchProps>;
 
 function mapStateToProps(state: DState, ownProps: EdgeOwnProps): EdgeStateProps {
-    let ret: EdgeStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DEdge, new EdgeStateProps()) as EdgeStateProps;
+    let ret: EdgeStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DEdge, {...new EdgeStateProps(), ...ownProps}) as EdgeStateProps;
     // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
     ret.isEdgePending = {
         user: LPointerTargetable.from(state.isEdgePending.user),

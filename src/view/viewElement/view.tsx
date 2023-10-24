@@ -24,7 +24,7 @@ import {
     RuntimeAccessible,
     RuntimeAccessibleClass,
     SetFieldAction,
-    ShortAttribETypes
+    ShortAttribETypes, windoww
 } from "../../joiner";
 import {EdgeGapMode} from "../../joiner/types";
 
@@ -145,8 +145,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     </div>}
 
     preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
-    __info_of__preRenderFunc: Info = {isGlobal: true, type: "Function():Object", label:"pre-render function",
-        txt:<div>Data used in the visual representation, meant to be dynamic values evaluated every time the visual representation is updated.</div>}
+    __info_of__preRenderFunc: Info = {isGlobal: true, obsolete: true, type: "Function():Object", label:"pre-render function",
+        txt:<div>Data used in the visual representation, meant to be dynamic values evaluated every time the visual representation is updated.<br/>Replaced by usageDeclarations.</div>}
 
     jsxString!: string;
     __info_of__jsxString: Info = {isGlobal: true, type: "text", label:"JSX template",
@@ -347,6 +347,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         txt:<div>Updates the size stored in this view for target element.<br/>@returns: the delta of the change between old value and new value.</div>}
     __info_of__getSize: Info = {isNode:true, hidden:true, type:"Function(Pointer<GraphElement | ModelElement>) => GraphSize",
         txt:<div>Gets the size stored in this view for target element.</div>}
+
+    public _parsedConstants!: GObject; // todo
+    public get__parsedConstants(c: Context): this['_parsedConstants'] { return {}; }
 
     public get_constants(c: Context): this['constants'] {
         return c.data.constants;

@@ -260,9 +260,13 @@ function makeDefaultGraphViews(): DViewElement[] {
     objectView.query = 'context DObject inv: true';
     objectView.usageDeclarations = "(ret)=>{\n" +
         "// ** preparations here ** //\n" +
-        "\n" +
+        "let fib = [1,1];" +
+        "console.log('inside usagedeclarations', {data, node, view});\n" +
+        "for (let i = 2; i < 10; i++) fib[i] = fib[i-2] + fib[i-1];\n" +
         "// ** declarations here ** //\n" +
-        "ret.metaclass = data.instanceof;\n" +
+        "ret.metaclassName = data.instanceof?.name || \"Object\"\n" +
+        "ret.features = data.features\n" +
+        "ret.fib = fib\n" +
         "}";
 
     let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname]);

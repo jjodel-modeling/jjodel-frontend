@@ -52,6 +52,7 @@
   &>input,
   &::after{ // input and fake element must have same sizes
     // todo: maybe they can be css variables injected with jsx, so can change ::after css rendering from jsx
+    color: transparent;
     font-size: 0.9rem !important;
     border-width: 1px !important;
     padding: 0px 2px !important;
@@ -63,7 +64,13 @@
     content: attr(data-value) ' ';
     color: inherit;
     border: 1px solid transparent;
-    // visibility: hidden;
+    white-space: nowrap;
+
+    // below are only necessary for max width
+    display: inline-flex;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 
   }
 }

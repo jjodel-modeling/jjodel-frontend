@@ -394,7 +394,7 @@ export class Selectors{
             // Log.l('score view:', {v1, data, v1MatchingEClassScore});
             if (v1MatchingEClassScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
             // 2° priority: by ocl condition matching
-            let v1OclScore = Selectors.matchesOclCondition(v1, data);
+            let v1OclScore = Selectors.matchesOclCondition(v1, data); // todo: not a fixed priority but acording to the "complexity" of the query
             if (v1OclScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
             // 3° priority by sub-view
             let v1SubViewScore = Selectors.matchesOclCondition(v1, data);
