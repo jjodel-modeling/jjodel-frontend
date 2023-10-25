@@ -28,7 +28,6 @@ import MetamodelTab from "./tabs/MetamodelTab";
 import ModelTab from "./tabs/ModelTab";
 import InfoTab from "./tabs/InfoTab";
 import TestTab from "./tabs/TestTab";
-import IotTab from "./tabs/IotTab";
 import {FakeStateProps} from "../../joiner/types";
 
 export class TabDataMaker {
@@ -41,7 +40,6 @@ export class TabDataMaker {
             <ModelTab modelid={model.id} metamodelid={(model.instanceof as any)?.id || model.instanceof} />
         };
     }
-
 }
 
 
@@ -81,7 +79,6 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     };
 
     private test = { id: '999', title: "Test", group: "2", closable: false, content: <TestTab /> };
-    private iotEditor = { id: '0', title: 'Config', group: 'group2', closable: false, content: <IotTab /> };
     private structureEditor = { id: '1', title: 'Structure', group: 'group2', closable: false, content: <StructureEditor /> };
     private treeEditor = { id: '2', title: 'Tree View', group: 'group2', closable: false, content: <TreeEditor /> };
     private viewsEditor = { id: '3', title: 'Views', group: 'group2', closable: false, content: <ViewsEditor /> };
@@ -233,7 +230,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         };
         layout.dockbox.children.push({tabs: [infoTab]});
         const tabs = [
-            // this.test,
+            this.test,
             // this.iotEditor,
             this.structureEditor,
             // this.styleEditor,

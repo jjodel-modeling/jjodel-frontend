@@ -1,4 +1,5 @@
 import {
+    BEGIN,
     Constructors,
     CoordinateMode,
     CreateElementAction,
@@ -20,7 +21,7 @@ import {
     DOperation,
     DPackage,
     DParameter,
-    DPointerTargetable,
+    DPointerTargetable, DProject,
     DRefEdge,
     DReference,
     DUser,
@@ -30,7 +31,7 @@ import {
     DViewPoint,
     DVoidEdge,
     EdgeBendingMode,
-    EdgeHead,
+    EdgeHead, END,
     GObject,
     GraphPoint,
     GraphSize,
@@ -52,7 +53,7 @@ import {
     LOperation,
     LPackage,
     LParameter,
-    LPointerTargetable,
+    LPointerTargetable, LProject,
     LRefEdge,
     LReference,
     LUser,
@@ -106,50 +107,44 @@ export class DState extends DPointerTargetable{
     }
 
     debug: boolean = true;
-    logs: Pointer<DLog, 0, 'N', LLog> = [];
+    logs: Pointer<DLog, 0, 'N'> = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
-    currentUser!: DUser;
 
-    viewelements: Pointer<DViewElement, 0, 'N', LViewElement> = [];
-    stackViews: Pointer<DViewElement, 0, 'N', LViewElement> = [];
+
+    viewelements: Pointer<DViewElement, 0, 'N'> = [];
+    stackViews: Pointer<DViewElement, 0, 'N'> = [];
 
     // users: Dictionary<DocString<Pointer<DUser>>, UserState> = {};
     // collaborators: UserState[];
-    idlookup: Record<Pointer<DPointerTargetable, 1, 1>, DPointerTargetable> = {};
+    idlookup: Record<Pointer<DPointerTargetable>, DPointerTargetable> = {};
 
     //// DClass section to fill
-    graphs: Pointer<DGraph, 0, 'N', LGraph> = [];
-    voidvertexs: Pointer<DGraphVertex, 0, 'N', LGraphVertex> = [];
-    vertexs: Pointer<DVertex, 0, 'N', LVertex> = [];
-    graphvertexs: Pointer<DGraphVertex, 0, 'N', LGraphVertex> = [];
+    graphs: Pointer<DGraph, 0, 'N'> = [];
+    voidvertexs: Pointer<DGraphVertex, 0, 'N'> = [];
+    vertexs: Pointer<DVertex, 0, 'N'> = [];
+    graphvertexs: Pointer<DGraphVertex, 0, 'N'> = [];
 
-    edgepoints: Pointer<DEdgePoint, 0, 'N', LEdgePoint> = [];
+    edgepoints: Pointer<DEdgePoint, 0, 'N'> = [];
     //my addon
-    extEdges: Pointer<DExtEdge, 0, "N", LExtEdge> = [];
-    refEdges: Pointer<DRefEdge, 0, "N", LRefEdge> = [];
+    extEdges: Pointer<DExtEdge, 0, "N"> = [];
+    refEdges: Pointer<DRefEdge, 0, "N"> = [];
 
-    classifiers: Pointer<DClassifier, 0, 'N', LClassifier> = [];
-    enumerators: Pointer<DEnumerator, 0, 'N', LEnumerator> = [];
-    packages: Pointer<DPackage, 0, 'N', LPackage> = [];
-    primitiveTypes: Pointer<DClass, 0, "N", LClass> = [];
-    attributes: Pointer<DAttribute, 0, "N", LAttribute> = [];
-    enumliterals: Pointer<DEnumLiteral, 0, "N", LEnumLiteral> = [];
-    references: Pointer<DReference, 0, "N", LReference> = [];
-    classs: Pointer<DClass, 0, "N", LClass> = [];
-    operations: Pointer<DOperation, 0, "N", LOperation> = [];
-    parameters: Pointer<DParameter, 0, "N", LParameter> = [];
-    returnTypes: Pointer<DClass, 0, "N", LClass> = [];
+    classifiers: Pointer<DClassifier, 0, 'N'> = [];
+    enumerators: Pointer<DEnumerator, 0, 'N'> = [];
+    packages: Pointer<DPackage, 0, 'N'> = [];
+    primitiveTypes: Pointer<DClass, 0, "N"> = [];
+    attributes: Pointer<DAttribute, 0, "N"> = [];
+    enumliterals: Pointer<DEnumLiteral, 0, "N"> = [];
+    references: Pointer<DReference, 0, "N"> = [];
+    classs: Pointer<DClass, 0, "N"> = [];
+    operations: Pointer<DOperation, 0, "N"> = [];
+    parameters: Pointer<DParameter, 0, "N"> = [];
+    returnTypes: Pointer<DClass, 0, "N"> = [];
     /// DClass section end
 
-    isEdgePending: { user: Pointer<DUser, 1, 1, LUser>, source: Pointer<DClass, 1, 1, LClass> } = {
-        user: '',
-        source: ''
-    };
+    isEdgePending: {user: Pointer<DUser>, source: Pointer<DClass>} = {user: '', source: ''};
 
-    contextMenu: { display: boolean, x: number, y: number } = {display: false, x: 0, y: 0};
-
-    //dragging: {random: number, id: string} = { random: 0, id: "" }; fix
-    edges: EdgeOptions[] = [];  // delete
+    contextMenu: {display: boolean, x: number, y: number} = {display: false, x: 0, y: 0};
 
     deleted: string[] = [];
 
@@ -162,30 +157,33 @@ export class DState extends DPointerTargetable{
         view: Pointer<DViewElement, 1, 1>,
         modelElement: Pointer<DModelElement, 0, 1> // if a node is clicked: a node and a view are present, a modelElement might be. a node can exist without a modelElement counterpart.
     };
-    users!: Pointer<DUser, 1, 'N', LUser>;
 
-    viewpoint: Pointer<DViewPoint, 1, 1, LViewPoint> = '';
-    viewpoints: Pointer<DViewPoint, 0, 'N', LViewPoint> = [];
+    users: Pointer<DUser, 0, 'N', LUser> = [];
+    user!: Pointer<DUser>;
 
-    m2models: Pointer<DModel, 0, 'N', LModel> = [];
-    m1models: Pointer<DModel, 0, 'N', LModel> = [];
+    viewpoint: Pointer<DViewPoint> = '';
+    viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
+
+    m2models: Pointer<DModel, 0, 'N'> = [];
+    m1models: Pointer<DModel, 0, 'N'> = [];
 
     room: string = '';
-    isCleaning: boolean = false;    // check if a room is being cleaned
 
     selected: Selected = {};
-    iot: null|boolean = null;
-    topics: string[] = [];
 
     isLoading: boolean = true;
 
+    projects: Pointer<DProject, 0, 'N'> = [];
+
 
     static init(store?: DState): void {
+        BEGIN()
+        const user = DUser.new();
+        SetRootFieldAction.new('user', user.id, '', true);
         const viewpoint = DViewPoint.new('Default', '');
         viewpoint.id = 'Pointer_DefaultViewPoint';
         CreateElementAction.new(viewpoint);
         SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
-
         const views: DViewElement[] = makeDefaultGraphViews();
         for (let view of views) {
             view.id = 'Pointer_View' + view.name;
@@ -203,6 +201,7 @@ export class DState extends DPointerTargetable{
             }
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
         }
+        END()
     }
 }
 
@@ -347,14 +346,14 @@ export class LState<Context extends LogicContext<DState> = any, C extends Contex
     // return type is wrong, but have to extend the static method of RuntimeAccessibleClass which is completely different and returns a class constructor.
     static get<T2 extends typeof RuntimeAccessibleClass & { logic?: typeof LPointerTargetable | undefined; }>(): T2 & LState { return LState.wrap(store.getState() as any) as any; }
     contextMenu!: {display: boolean, x: number, y: number};
-    currentUser!: LUser;
+    user!: LUser;
     debug!: boolean;
     room!: string;
     _lastSelected?: {modelElement?: LModelElement, node?: LGraphElement, view?: LViewElement};
     idlookup!:Dictionary<Pointer, DPointerTargetable>;
 
     get_contextMenu(c: Context): this["contextMenu"] { return c.data.contextMenu; }
-    get_currentUser(c: Context): this["currentUser"] { return LState.wrap(c.data.currentUser) as LUser; }
+    get_user(c: Context): this["user"] { return LState.wrap(c.data.user) as LUser; }
     get_debug(c: Context): this["debug"] { return c.data.debug; }
     get_room(c: Context): this["room"] { return c.data.room; }
     get_idlookup(c: Context): this["idlookup"] { return c.data.idlookup; }

@@ -315,8 +315,8 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     const ret = _reducer(oldState, action);
     if(ret === oldState) return oldState;
     if(!oldState?.room) return ret;
-    const ignoredFields  = ['contextMenu', '_lastSelected', 'selected', 'isLoading', 'isCleaning'];
-    if(action.token === DUser.token && !ignoredFields.includes(action.field)) {
+    const ignoredFields  = ['contextMenu'];
+    if(action.sender === ret.user && !ignoredFields.includes(action.field)) {
         const parsedAction: JSON & GObject = JSON.parse(JSON.stringify(action));
         if(action.type === 'COMPOSITE_ACTION') for(let subAction of parsedAction.actions) delete subAction['stack'];
         delete parsedAction['stack'];

@@ -3581,11 +3581,6 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return LPointerTargetable.from(Object.keys(checked), state);*/
     }
 
-    protected get_delete(context: Context): () => void {
-        const ret = () => { U.alert('error', 'In this version of the tool models cannot be deleted.'); }
-        return ret;
-    }
-
     public getClassByNameSpace(namespacedclass: string): LClass | undefined { return this.cannotCall("getClassByNameSpace"); }
     protected get_getClassByNameSpace(context: Context): this["getClassByNameSpace"] {
         return (namespacedclass: string): LClass | undefined => {

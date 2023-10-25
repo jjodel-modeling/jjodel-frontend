@@ -1,25 +1,26 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {DState} from "../../../joiner";
-import {FakeStateProps, Selected} from "../../../joiner/types";
+import {DProject, DState, DUser} from "../../../joiner";
+import {FakeStateProps} from "../../../joiner/types";
+import DockManager from "../DockManager";
+import TreeEditor from "../../rightbar/treeEditor/treeEditor";
 
 function TestTabComponent(props: AllProps) {
-
-    const selected = props.selected;
+    const click = () => {
+    }
 
     return(<div className={'p-2 border border-dark'}>
-        {JSON.stringify(selected)}
+        <button onClick={click}>click</button>
     </div>);
 }
 interface OwnProps {}
-interface StateProps {selected: Selected}
+interface StateProps {}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.selected = state.selected;
     return ret;
 }
 

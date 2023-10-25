@@ -1,14 +1,14 @@
 import type {
     DAttribute,
     DClass,
-    DGraph,
     DClassifier,
     DEnumerator,
+    DGraph,
     DGraphElement,
     DRefEdge,
+    DState,
     DVoidVertex,
     GObject,
-    DState,
     LClass,
     LEnumerator,
     LGraphElement,
@@ -21,19 +21,30 @@ import type {
 } from "../../joiner";
 import {
     AbstractConstructor,
+    AttribETypes,
     Constructor,
+    DModel,
+    DModelElement,
+    DObject,
+    DPointerTargetable,
+    DValue,
+    DViewElement,
+    LModel,
     LModelElement,
-    DModel, LModel,
-    DModelElement, DNamedElement, DObject,
-    DPointerTargetable, DValue,
-    DViewElement, LNamedElement, LObject,
+    LObject,
     Log,
-    LPointerTargetable, LValue,
-    MyProxyHandler, OCL,
+    LPointerTargetable,
+    LUser,
+    LValue,
+    LViewPoint,
+    MyProxyHandler,
+    OCL,
     RuntimeAccessible,
     RuntimeAccessibleClass,
+    ShortAttribETypes,
     store,
-    U, windoww, Pointers, DViewPoint, LViewPoint, Dictionary, DUser, AttribETypes, ShortAttribETypes, toShortEType
+    toShortEType,
+    U
 } from "../../joiner";
 import {EdgeOptions} from "../store";
 import {Selected} from "../../joiner/types";
@@ -48,6 +59,11 @@ enum ViewEClassMatch { // this acts as a multiplier for explicit priority
 @RuntimeAccessible
 export class Selectors{
     public static cname: string = "Selectors";
+
+    static getUser(): LUser {
+        const state = store.getState();
+        return LUser.fromPointer(state.user);
+    }
 
     static getSelected(): Selected {
         const state = store.getState();

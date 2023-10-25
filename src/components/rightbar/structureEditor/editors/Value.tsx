@@ -15,7 +15,6 @@ import {
     Selectors,
     SetFieldAction
 } from "../../../../joiner";
-import MqttEditor from "./MqttEditor";
 
 
 interface Props {value: LValue}

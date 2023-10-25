@@ -2,33 +2,39 @@ import React, {Dispatch} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import Dock from "./components/abstract/DockLayout";
-import {DState, statehistory} from "./joiner";
+import {DState, LUser, statehistory} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import Navbar from "./components/navbar/Navbar";
+import {FakeStateProps} from "./joiner/types";
+import Dashboard from "./pages/Dashboard";
+import Editor from "./pages/Editor";
 
 function App(props: AllProps) {
     const debug = props.debug;
+    const isLoading = props.isLoading;
+    const user = props.user;
 
     return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? " debug" : "")}
                 onClick={e => statehistory.globalcanundostate = true}>
+        {isLoading && <Loader />}
         <Navbar />
-        <Dock />
-        <Loader />
+        {user.project ? <Editor /> : <Dashboard />}
     </div>);
 
 }
 
 interface OwnProps {room?: string}
-interface StateProps {debug: boolean}
+interface StateProps {debug: boolean, isLoading: boolean, user: LUser}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as any;
+    const ret: StateProps = {} as FakeStateProps;
     ret.debug = state.debug;
+    ret.isLoading = state.isLoading;
+    ret.user = LUser.fromPointer(state.user);
     return ret;
 }
 

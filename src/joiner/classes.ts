@@ -134,6 +134,7 @@ import {
 } from "./index";
 import TreeModel from "tree-model";
 
+
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
 
@@ -452,11 +453,8 @@ export class Constructors<T extends DPointerTargetable>{
 
     DState(): this {
         let thiss: DState = this.thiss as any;
-        // todo: this must become a pointer to idlookup and fire a CreateNewElementAction
-        thiss.currentUser = DUser.new(undefined, false);
-        thiss.users = [thiss.currentUser.id];
-        thiss.models = [];
-        return this; }
+        return this;
+    }
 
     DModelElement(): this { return this; }
     DClassifier(): this { return this; }
@@ -786,6 +784,13 @@ export class Constructors<T extends DPointerTargetable>{
     }
 
     DViewPoint(): this {
+        return this;
+    }
+
+    DProject(name: string, author: Pointer<DUser, 1, 1, LUser>): this {
+        const thiss: DProject = this.thiss as any;
+        thiss.name = name;
+        thiss.author = author;
         return this;
     }
 
@@ -1606,50 +1611,101 @@ let a: DGraphElement = null as any;
 let bbb = LPointerTargetable.from(a);
 let bb2 = fffff(a);
 
-
-
-
-
-
-
-
-
-
-
 @Leaf
 @RuntimeAccessible
-export class DUser extends DPointerTargetable{
+export class DUser extends DPointerTargetable {
     public static cname: string = "DUser";
-    static current: DocString<Pointer<DUser, 1, 1>> = 'Pointer' + Date.now(); // todo
-    // Session's token that change for every session
-    static token: DocString<Pointer<DUser, 1, 1>> = 'Pointer' + Date.now();
+    static current: DocString<Pointer<DUser>> = 'Pointer' + Date.now(); // todo
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    cursorPositionX: number = 0;
-    cursorPositionY: number = 0;
-    // public static structure: typeof DPointerTargetable;
-    // public static singleton: LPointerTargetable;
-    id!: Pointer<DUser, 1, 1, LUser>;
+    projects: Pointer<DProject, 0, 'N', LProject> = [];
+    project: Pointer<DProject, 0, 1, LProject> = '';
+    id!: Pointer<DUser>;
     __isUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
-    public static new(id?: DUser["id"], triggerActions: boolean = true): DUser {
-        return new Constructors(new DUser('dwc'), undefined, false).DPointerTargetable().DUser(id).end(); }
+    public static new(id?: DUser["id"], persist: boolean = true): DUser {
+        return new Constructors(new DUser('dwc'), undefined, persist).DPointerTargetable().DUser(id).end(); }
 }
 
 @RuntimeAccessible
-export class LUser extends LPointerTargetable { // MixOnlyFuncs(DUser, LPointerTargetable)
-    public static cname: string = "LUser";
+export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = DUser> extends LPointerTargetable {
+    public static cname: string = 'LUser';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    // public static structure: typeof DPointerTargetable;
-    // public static singleton: LPointerTargetable;
     public __raw!: DUser;
+    projects!: LProject[];
+    project!: LProject|null;
     id!: Pointer<DUser, 1, 1, LUser>;
     __isUser!: true;
-    cursorPosition!: IPoint; //todo
+
+    protected get_project(context: Context): this['project'] {
+        const project = context.data.project;
+        if(project) return LProject.fromPointer(project);
+        return null;
+    }
+    protected set_project(val: Pack<LProject>|null, context: Context): boolean {
+        const data = context.data;
+        if(val === null) SetFieldAction.new(data.id, 'project', '', '', false);
+        else SetFieldAction.new(data.id, 'project', Pointers.from(val), '', true);
+        return true;
+    }
+
+    protected get_projects(context: Context): this['projects'] {
+        const projects = context.data.projects;
+        return LProject.fromPointer(projects);
+    }
+    protected set_projects(val: PackArr<LProject>, context: Context): boolean {
+        const data = context.data;
+        SetFieldAction.new(data.id, 'projects', Pointers.from(val), '', true);
+        return true;
+    }
 }
+
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DUser);
 RuntimeAccessibleClass.set_extend(LPointerTargetable, LUser);
 export type WUser = getWParams<LUser, DUser>;
+
+@Leaf
+@RuntimeAccessible
+export class DProject extends DPointerTargetable {
+    public static cname: string = 'DProject';
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+
+    // inherited redefine
+    id!: Pointer<DProject, 1, 1, LProject>;
+
+    // own properties
+    name!: string;
+    author!: Pointer<DUser, 1, 1, LUser>;
+
+    public static new(name: string, author: Pointer<DUser, 1, 1, LUser>, persist: boolean = true): DProject {
+        return new Constructors(new DProject('dwc'), undefined, persist, undefined)
+            .DPointerTargetable().DProject(name, author).end();
+    }
+}
+
+@RuntimeAccessible
+export class LProject<Context extends LogicContext<DProject> = any, D extends DProject = DProject> extends LPointerTargetable {
+    public static cname: string = 'LProject';
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    id!: Pointer<DProject, 1, 1, LProject>;
+    name!: string;
+
+    protected get_name(context: Context): this['name'] {
+        return context.data.name;
+    }
+    protected set_name(val: string, context: Context): boolean {
+        const data = context.data;
+        SetFieldAction.new(data.id, 'name', val, '', false);
+        return true;
+    }
+}
+
+RuntimeAccessibleClass.set_extend(DPointerTargetable, DProject);
+RuntimeAccessibleClass.set_extend(LPointerTargetable, LProject);
+export type WProject = getWParams<LProject, DProject>;
+
 
 @RuntimeAccessible
 export class MyError extends Error {

@@ -13,7 +13,7 @@ import {
     store,
     U,
     unArr,
-    windoww, GObject
+    windoww, GObject, Selectors
 } from "../../joiner";
 
 // transactional-like start of storage modification
@@ -147,9 +147,8 @@ export class Action extends RuntimeAccessibleClass {
         vertexSize: 'vertexSize'
     };
     id: Pointer;
-    timestamp: number = Date.now();
+    timestamp: number;
     sender: Pointer<DUser>;
-    token: Pointer<DUser>;
     hasFired: number = 0;
     // targetID: string | undefined;
     // target: IClass = null as any;
@@ -162,11 +161,12 @@ export class Action extends RuntimeAccessibleClass {
     // private src?: string[];
     private stack?: string[];
     subType?: string; //?
-    protected constructor(field: string, value: any, subType?: string){
+    protected constructor(field: string, value: any, subType?: string) {
+
         super();
         this.id = 'Pointer_' + Date.now();
-        this.sender = DUser.current;
-        this.token = DUser.token;
+        this.timestamp = Date.now();
+        this.sender = DUser.current;    //todo: change to state.user
         this.field = field;
         this.value = value;
         this.type = (this.constructor as any).type;
