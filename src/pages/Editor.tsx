@@ -1,16 +1,14 @@
 import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
-import {DState, LUser} from '../joiner';
+import {DState, DUser, LUser} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
+import Dock from '../components/abstract/Dock';
 
 function EditorComponent(props: AllProps) {
     const user = props.user;
     const project = user.project;
 
-    return (<div>
-        {project?.name}
-        <button onClick={e => user.project = null}>back</button>
-    </div>);
+    return (<Dock />);
 }
 interface OwnProps {}
 interface StateProps {user: LUser}
@@ -20,7 +18,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.user = LUser.fromPointer(state.user);
+    ret.user = LUser.fromPointer(DUser.current);
     return ret;
 }
 

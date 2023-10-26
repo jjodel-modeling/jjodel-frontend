@@ -1,38 +1,18 @@
 import React, {Dispatch, ReactElement} from 'react';
 import {SaveManager} from "../../topbar/SaveManager";
 import {DModel, LModel, LPackage} from "../../../model/logicWrapper";
-import {TabData} from "rc-dock";
-import MetamodelTab from "../../abstract/tabs/MetamodelTab";
-import ModelTab from "../../abstract/tabs/ModelTab";
-import {BEGIN, DGraph, DState, DUser, END, Pointer, Selectors, SetRootFieldAction, U} from "../../../joiner";
+import TabDataMaker from "../../abstract/tabs/TabDataMaker";
+import {DState, DUser, LGraph, LProject, LUser, Selectors, U} from "../../../joiner";
 import DockManager from "../../abstract/DockManager";
 import {connect} from "react-redux";
 import {FakeStateProps} from "../../../joiner/types";
 
-class TabDataMaker {
-    static metamodel (model: DModel|LModel): TabData {
-        return {
-            id: model.id,
-            title: model.name,
-            group: 'models',
-            closable: true,
-            content: <MetamodelTab modelid={model.id} />
-        };
-    }
-    static model(model: DModel|LModel): TabData {
-        return {
-            id: model.id,
-            title: model.name,
-            group: 'models',
-            closable: true,
-            content: <ModelTab modelid={model.id} metamodelid={(model.instanceof as any)?.id || model.instanceof} />
-        };
-    }
-}
-
 function FileComponent(props: AllProps) {
-    const metamodels = props.metamodels;
-    const models = props.models;
+    const user = props.user;
+    const project: LProject = user.project as unknown as LProject;
+    const metamodels = project.metamodels;
+    const models = project.models;
+    const elements = [...metamodels, ...models];
 
     const createM2 = async() => {
         let name = 'metamodel_' + 0;
@@ -40,6 +20,8 @@ function FileComponent(props: AllProps) {
         name = U.increaseEndingNumber(name, false, false, newName => names.indexOf(newName) >= 0)
         const dModel = DModel.new(name, undefined, true);
         const lModel: LModel = LModel.fromD(dModel);
+        project.metamodels = [...project.metamodels, lModel];
+        project.graphs = [...project.graphs, lModel.node as LGraph];
         const dPackage = lModel.addChild('package');
         const lPackage: LPackage = LPackage.fromD(dPackage);
         lPackage.name = 'default';
@@ -50,8 +32,11 @@ function FileComponent(props: AllProps) {
     const createM1 = async(metamodel: LModel) => {
         let name = 'model_' + 0;
         let modelNames: (string)[] = metamodel.models.map(m => m.name);
-        name = U.increaseEndingNumber(name, false, false, newName => modelNames.indexOf(newName) >= 0)
+        name = U.increaseEndingNumber(name, false, false, newName => modelNames.indexOf(newName) >= 0);
         const dModel: DModel = DModel.new(name, metamodel.id, false, true);
+        const lModel: LModel = LModel.fromD(dModel);
+        project.models = [...project.models, lModel];
+        project.graphs = [...project.graphs, lModel.node as LGraph];
         const tab = TabDataMaker.model(dModel);
         await DockManager.open('models', tab);
     }
@@ -92,16 +77,16 @@ function FileComponent(props: AllProps) {
                     </li>}
                 </ul>
             </li>
-            <li tabIndex={-1} className={'dropdown-item'}>Open
+            {elements.length > 0 && <li tabIndex={-1} className={'dropdown-item'}>Open
                 <i className={'ms-1 bi bi-arrow-right'}></i>
                 <ul className={'submenu dropdown-menu'}>
-                    {[...metamodels, ...models].map((me, index) => {
-                        return(<li key={index} tabIndex={-1} onClick={e => open(me)} className={'dropdown-item'}>
-                            {me.name}
+                    {elements.map((m, index) => {
+                        return(<li key={index} tabIndex={-1} onClick={e => open(m)} className={'dropdown-item'}>
+                            {m.name}
                         </li>)
                     })}
                 </ul>
-            </li>
+            </li>}
             <li tabIndex={-1} onClick={save} className={'dropdown-item'}>Save</li>
             <li tabIndex={-1} onClick={load} className={'dropdown-item'}>Load</li>
             <li tabIndex={-1} className={'dropdown-item'}>Export
@@ -120,14 +105,14 @@ function FileComponent(props: AllProps) {
                     <li tabIndex={-1} onClick={importLayout} className={'dropdown-item'}>Layout</li>
                 </ul>
             </li>
+            <li tabIndex={-1} onClick={e => user.project = null} className={'text-danger dropdown-item'}>Close Project</li>
         </ul>
     </li>);
 }
 
 interface OwnProps {}
 interface StateProps {
-    metamodels: LModel[];
-    models: LModel[];
+    user: LUser;
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -135,8 +120,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.metamodels = LModel.fromPointer(Object.values((state).m2models));
-    ret.models = LModel.fromPointer(Object.values((state).m1models));
+    ret.user = LUser.fromPointer(DUser.current);
     return ret;
 }
 

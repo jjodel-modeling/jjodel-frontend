@@ -148,7 +148,7 @@ export class Action extends RuntimeAccessibleClass {
     };
     id: Pointer;
     timestamp: number;
-    sender: Pointer<DUser>;
+    sender: Pointer<DUser, 0, 1>;
     hasFired: number = 0;
     // targetID: string | undefined;
     // target: IClass = null as any;
@@ -166,7 +166,7 @@ export class Action extends RuntimeAccessibleClass {
         super();
         this.id = 'Pointer_' + Date.now();
         this.timestamp = Date.now();
-        this.sender = DUser.current;    //todo: change to state.user
+        this.sender = DUser.current;
         this.field = field;
         this.value = value;
         this.type = (this.constructor as any).type;

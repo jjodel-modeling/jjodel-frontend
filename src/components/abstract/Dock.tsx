@@ -1,7 +1,7 @@
-import React, {Dispatch, ReactElement} from 'react';
+import './style.scss';
+import {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../../joiner';
-import './style.scss';
 import {FakeStateProps} from '../../joiner/types';
 import {DockLayout, LayoutData} from 'rc-dock';
 import TestTab from './tabs/TestTab';
@@ -12,10 +12,9 @@ import StyleEditor from '../rightbar/styleEditor/StyleEditor';
 import ViewpointEditor from '../rightbar/viewpointsEditor/ViewpointsEditor';
 import Console from '../rightbar/console/Console';
 import InfoTab from './tabs/InfoTab';
-import DockManager from "./DockManager";
+import DockManager from './DockManager';
 
 function DockComponent(props: AllProps) {
-
     const groups = {
         'models': {floatable: true, maximizable: true},
         'editors': {floatable: true, maximizable: true}

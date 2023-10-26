@@ -5,23 +5,23 @@ import {
     Constructor,
     Constructors,
     DEdge,
-    DeleteElementAction,
+    DeleteElementAction, DGraph,
     Dictionary,
     DocString,
     DPointerTargetable,
     DState,
-    DtoL,
+    DtoL, DUser, DViewElement,
     END,
     getWParams,
     GObject,
     GraphSize,
     Instantiable,
     Leaf,
-    LEdge,
+    LEdge, LGraph,
     LGraphElement,
     Log,
     LogicContext,
-    LPointerTargetable,
+    LPointerTargetable, LUser, LViewElement,
     Node,
     Pack,
     Pack1,
@@ -4380,12 +4380,12 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         return (ret === undefined || ret === null ? '' : ret) + '';
     }
 
-    public setValueAtPosition(index: number, val: this["values"][0], info?: Partial<SetValueAtPoisitionInfoType>): {success: boolean, reason?: string} {
+    public setValueAtPosition(index: number, val: this["values"][0], info?: Partial<SetValueAtPositionInfoType>): {success: boolean, reason?: string} {
         return this.cannotCall("setValueAtPosition"); }
 
     // only use through setValueAtPosition
-    protected _clearValueAtPosition(context: Context, index: number, info0?: Partial<SetValueAtPoisitionInfoType>, skipSettingUndefined: boolean = false) {
-        let info = (info0 || {}) as any as SetValueAtPoisitionInfoType;
+    protected _clearValueAtPosition(context: Context, index: number, info0?: Partial<SetValueAtPositionInfoType>, skipSettingUndefined: boolean = false) {
+        let info = (info0 || {}) as unknown as SetValueAtPositionInfoType;
         let oldVal = context.data.values[index];
         let oldTarget: LObject | undefined = typeof oldVal === "string" ? LObject.fromPointer(oldVal) : undefined;
         /////////////////////// if oldTarget is LObject, update his pointedBy
@@ -4406,8 +4406,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
         if (!skipSettingUndefined) SetFieldAction.new(context.data, 'values.' + index as any, undefined, '', info.isPtr);
     }
-    protected get_setValueAtPosition(context: Context): ((index: number, val: this["values"][0], info?: Partial<SetValueAtPoisitionInfoType>) => {success: boolean, reason?: string}) {
-        return (index: number, val: this["values"][0] | any, info0?: Partial<SetValueAtPoisitionInfoType>): { success: boolean, reason?: string } => {
+    protected get_setValueAtPosition(context: Context): ((index: number, val: this["values"][0], info?: Partial<SetValueAtPositionInfoType>) => {success: boolean, reason?: string}) {
+        return (index: number, val: this["values"][0] | any, info0?: Partial<SetValueAtPositionInfoType>): { success: boolean, reason?: string } => {
             let isPtr: boolean = undefined as any;
             let lval: LObject | LEnumLiteral = undefined as any;
             if (val === null) val = undefined;
@@ -4417,11 +4417,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 isPtr = !!lval;
                 val = (val as any).id;
             }
-            let info = (info0 || {}) as any as SetValueAtPoisitionInfoType;
+            let info = (info0 || {}) as unknown as SetValueAtPositionInfoType;
             if (isPtr === undefined) isPtr = (info.isPtr === undefined ? Pointers.isPointer(val) : info.isPtr);
 
             // set sideeffect part
-            if ((val !== undefined)) {
+            if (val !== undefined) {
                 if (isPtr) {
                     if (info.type === undefined) info.type = context.proxyObject.type;
                     if (info.instanceof === undefined) info.instanceof = context.proxyObject.instanceof;
@@ -4585,14 +4585,14 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 }
 RuntimeAccessibleClass.set_extend(DNamedElement, DValue);
 RuntimeAccessibleClass.set_extend(LNamedElement, LValue);
+
 export type ValueDetail = {
-    value: LValue["value"];
-    rawValue: DValue["values"][0]; // PrimitiveType | Pointer<DObject> | Pointer<DEnumLiteral>
+    value: LValue['value'];
+    rawValue: DValue['values'][0]; // PrimitiveType | Pointer<DObject> | Pointer<DEnumLiteral>
     index: number;
     hidden: boolean;
 };
-export type SetValueAtPoisitionInfoType = {setMirage: boolean, isPtr: boolean, type: LValue["type"], instanceof: LValue["instanceof"], isContainment: boolean, fatherList: LValue["fatherList"]};
-
+export type SetValueAtPositionInfoType = {setMirage: boolean, isPtr: boolean, type: LValue['type'], instanceof: LValue['instanceof'], isContainment: boolean, fatherList: LValue['fatherList']};
 
 export type WModelElement = getWParams<LModelElement, DModelElement>;
 export type WModel = getWParams<LModel, DModel>;

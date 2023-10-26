@@ -26,7 +26,7 @@ import {
     RuntimeAccessible,
     Selectors,
     TODO,
-    windoww, RuntimeAccessibleClass, PointedBy
+    windoww, RuntimeAccessibleClass, PointedBy, DViewElement
 } from "../joiner";
 import Swal from "sweetalert2";
 import {AccessModifier} from "../api/data";
@@ -64,27 +64,27 @@ export class U {
         return new Promise((resolve) => setTimeout(resolve, s * 1000));
     }
 
-    public static getDefaultViewsID(): string[] {
-        const views: string[] = []
-        views.push('Pointer_ViewModel');
-        views.push('Pointer_ViewPackage');
-        views.push('Pointer_ViewClass');
-        views.push('Pointer_ViewEnum');
-        views.push('Pointer_ViewAttribute');
-        views.push('Pointer_ViewReference');
-        views.push('Pointer_ViewOperation');
-        views.push('Pointer_ViewLiteral');
-        views.push('Pointer_ViewObject');
-        views.push('Pointer_ViewValue');
-        views.push('Pointer_ViewDefaultPackage');
-        views.push('Pointer_ViewVoid');
-        views.push('Pointer_ViewEdgeAssociation');
-        views.push('Pointer_ViewEdgeDependency');
-        views.push('Pointer_ViewEdgeInheritance');
-        views.push('Pointer_ViewEdgeAggregation');
-        views.push('Pointer_ViewEdgeComposition');
-        views.push('Pointer_ViewEdgePoint');
-        return views;
+    public static getDefaultViewsID(): Pointer<DViewElement, 1, 'N'> {
+        return [
+            'Pointer_ViewModel',
+            'Pointer_ViewPackage',
+            'Pointer_ViewClass',
+            'Pointer_ViewEnum',
+            'Pointer_ViewAttribute',
+            'Pointer_ViewReference',
+            'Pointer_ViewOperation',
+            'Pointer_ViewLiteral',
+            'Pointer_ViewObject',
+            'Pointer_ViewValue',
+            'Pointer_ViewDefaultPackage',
+            'Pointer_ViewVoid',
+            'Pointer_ViewEdgeAssociation',
+            'Pointer_ViewEdgeDependency',
+            'Pointer_ViewEdgeInheritance',
+            'Pointer_ViewEdgeAggregation',
+            'Pointer_ViewEdgeComposition',
+            'Pointer_ViewEdgePoint'
+        ];
     }
 
 

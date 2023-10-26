@@ -8,21 +8,17 @@ import {FakeStateProps} from "../../../joiner/types";
 function OclEditorComponent(props: AllProps) {
     const view = props.view;
     const readOnly = U.getDefaultViewsID().includes(view.id);
-    const [ocl, setOcl] = useStateIfMounted(view.query);
+    const [ocl, setOcl] = useStateIfMounted(view.oclCondition);
 
     const change = (value: string|undefined) => {
         if(value !== undefined) setOcl(value);
     }
 
-    const blur = (evt: React.FocusEvent) => {
-        view.query = ocl;
-    }
-
-    return <div style={{height: '5em'}} tabIndex={-1} onBlur={blur}>
+    return <div style={{height: '5em'}} tabIndex={-1} onBlur={e => view.oclCondition = ocl}>
         <label className={'ms-1 mb-1'}>OCL Editor</label>
         <Editor className={'mx-1'} onChange={change}
                 options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                defaultLanguage={'js'} value={view.query} />
+                defaultLanguage={'js'} value={view.oclCondition} />
     </div>;
 }
 interface OwnProps { viewid: Pointer<DViewElement, 1, 1, LViewElement>; }

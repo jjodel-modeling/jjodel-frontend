@@ -62,7 +62,7 @@ export class DViewElement extends DPointerTargetable {
     appliableToClasses!: string[]; // class names: DModel, DPackage, DAttribute...
     appliableTo!: 'node'|'edge'|'edgePoint';
     subViews!: Pointer<DViewElement, 0, 'N', LViewElement>;
-    oclApplyCondition!: string; // ocl selector
+    oclCondition!: string; // ocl selector
     explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
     defaultVSize!: GraphSize;
     adaptHeight!: boolean;// | 'fit-content' | '-webkit-fill-available';
@@ -71,7 +71,6 @@ export class DViewElement extends DPointerTargetable {
     height!: number;
     draggable!: boolean;
     resizable!: boolean;
-    query!: string;
     viewpoint: Pointer<DViewPoint, 0, 1, LViewElement> = '';
     display!: 'block'|'contents'|'flex'|string;
     constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
@@ -102,10 +101,10 @@ export class DViewElement extends DPointerTargetable {
     edgeTailSize!: GraphPoint;
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
-                      preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '',
-                      priority: number = 1 , persist: boolean = false): DViewElement {
+                      preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
+                      priority: number = 1 , persist: boolean = true): DViewElement {
         return new Constructors(new DViewElement('dwc'), undefined, persist, undefined).DPointerTargetable().DViewElement(name, jsxString, defaultVSize, usageDeclarations, constants,
-            preRenderFunc, appliableToClasses, oclApplyCondition, priority).end();
+            preRenderFunc, appliableToClasses, oclCondition, priority).end();
     }
     public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true): DViewElement {
         return new Constructors(new DViewElement('dwc'), undefined, persist, undefined)
@@ -208,12 +207,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     resizable!: boolean;
     __info_of__resizable: Info = {isNode: true, type: ShortAttribETypes.EBoolean, txt: 'if the element can be resized'}
 
-    oclApplyCondition!: string; // ocl selector
-    __info_of__oclApplyCondition: Info = {isGlobal: true, hidden:true, label:"OCL apply condition", type: "text", // TODO: what's the difference with this.query?
-        txt: 'OCL Query selector to determine which nodes or model elements should apply this view'}
-
-    query!: string;
-    __info_of__query: Info = {hidden:true, isGlobal: true, type: "text",
+    oclCondition!: string; // ocl selector
+    __info_of__oclCondition: Info = {isGlobal: true, hidden:true, label:"OCL apply condition", type: "text", // TODO: what's the difference with this.query?
         txt: 'OCL Query selector to determine which nodes or model elements should apply this view'}
 
     // todo: how about allowing a view to be part in multiple vp's? so this reference would be an array or removed, and you navigate only from vp to v.

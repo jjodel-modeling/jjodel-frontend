@@ -2,7 +2,7 @@ import React, {Dispatch} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {DState, LUser, statehistory} from "./joiner";
+import {DState, DUser, LUser, statehistory} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import Navbar from "./components/navbar/Navbar";
@@ -34,7 +34,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     ret.debug = state.debug;
     ret.isLoading = state.isLoading;
-    ret.user = LUser.fromPointer(state.user);
+    ret.user = LUser.fromPointer(DUser.current);
     return ret;
 }
 

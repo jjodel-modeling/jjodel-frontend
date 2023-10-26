@@ -13,7 +13,6 @@ import type {
     LEdge,
     LEdgePoint,
     LExtEdge,
-    LGraph,
     LGraphElement,
     LGraphVertex,
     LRefEdge,
@@ -60,7 +59,6 @@ import type {
     LEnumerator,
     LEnumLiteral,
     LMap,
-    LModel,
     LModelElement,
     LNamedElement,
     LObject,
@@ -91,10 +89,10 @@ import type {
     WTypedElement,
     WValue
 } from "../model/logicWrapper";
-// import type {Pointer} from "./typeconverter";
 import type {
     CClass,
-    Constructor, Dependency,
+    Constructor,
+    Dependency,
     Dictionary,
     DocString,
     GObject,
@@ -109,7 +107,6 @@ import {EdgeBendingMode, EdgeGapMode, PrimitiveType} from "./types";
 import type {
     DViewElement,
     DViewTransientProperties,
-    LViewElement,
     LViewTransientProperties,
     WViewElement,
     WViewTransientProperties
@@ -124,8 +121,10 @@ import {
     END,
     GraphPoint,
     GraphSize,
-    IPoint,
+    LGraph,
+    LModel,
     Log,
+    LViewElement,
     ParsedAction,
     SetFieldAction,
     SetRootFieldAction,
@@ -133,7 +132,6 @@ import {
     U,
 } from "./index";
 import TreeModel from "tree-model";
-
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -561,19 +559,21 @@ export class Constructors<T extends DPointerTargetable>{
         const thiss: DPointerTargetable = this.thiss as any;
         thiss.id = id || Constructors.makeID();
         thiss.className = (thiss.constructor as typeof RuntimeAccessibleClass).cname;
-        // this.className = thiss.className;
         if (this.persist) {
             // no pointedBy
         }
-        return this; }
+        return this;
+    }
 
-    DUser(id?: DUser["id"]): this {
-        const thiss: DPointerTargetable = this.thiss as any;
-        thiss.id = id ||  new Date().getTime() + '_USER_' + (DPointerTargetable.maxID++);
+    DUser(username: string, id?: DUser['id']): this {
+        const _this: DUser = this.thiss as unknown as DUser;
+        _this.id = id ||  new Date().getTime() + '_USER_' + (DPointerTargetable.maxID++);
+        _this.username = username;
         if (this.persist) {
             // no pointedBy
         }
-        return this; }
+        return this;
+    }
 
     DNamedElement(name?: DNamedElement["name"]): this {
         const thiss: DNamedElement = this.thiss as any;
@@ -728,7 +728,7 @@ export class Constructors<T extends DPointerTargetable>{
     }
 
     DViewElement(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
-                 preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1): this {
+                 preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '', priority: number = 1): this {
         const thiss: DViewElement = this.thiss as any;
         thiss.name = name;
         thiss.appliableToClasses = appliableToClasses;
@@ -743,7 +743,7 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.onDataUpdate = '';
         // thiss.__transient = new DViewTransientProperties();
         thiss.subViews = [];
-        thiss.oclApplyCondition = '';
+        thiss.oclCondition = oclCondition;
         thiss.explicitApplicationPriority = priority;
         thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 351, 201);
         thiss.size = {};
@@ -778,7 +778,7 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.edgeTailSize = new GraphPoint(20, 20);
 
         if (this.persist) {
-            // no pointedBy?
+            SetRootFieldAction.new('stackViews', [thiss.id], '', true);
         }
         return this;
     }
@@ -1614,16 +1614,18 @@ let bb2 = fffff(a);
 @Leaf
 @RuntimeAccessible
 export class DUser extends DPointerTargetable {
-    public static cname: string = "DUser";
-    static current: DocString<Pointer<DUser>> = 'Pointer' + Date.now(); // todo
+    public static cname: string = 'DUser';
+    static current: Pointer<DUser> = 'Pointer_AnonymousUser';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    id!: Pointer<DUser>;
+    username!: string;
     projects: Pointer<DProject, 0, 'N', LProject> = [];
     project: Pointer<DProject, 0, 1, LProject> = '';
-    id!: Pointer<DUser>;
     __isUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
-    public static new(id?: DUser["id"], persist: boolean = true): DUser {
-        return new Constructors(new DUser('dwc'), undefined, persist).DPointerTargetable().DUser(id).end(); }
+    public static new(username: string, id?: DUser['id'], persist: boolean = true): DUser {
+        return new Constructors(new DUser('dwc'), undefined, persist).DPointerTargetable().DUser(username, id).end();
+    }
 }
 
 @RuntimeAccessible
@@ -1632,30 +1634,30 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DUser;
+    id!: Pointer<DUser>;
+    username!: string;
     projects!: LProject[];
     project!: LProject|null;
-    id!: Pointer<DUser, 1, 1, LUser>;
     __isUser!: true;
+
+    protected get_projects(context: Context): this['projects'] {
+        return LProject.fromPointer(context.data.projects);
+    }
+    protected set_projects(val: PackArr<this['projects']>, context: Context): boolean {
+        const data = context.data;
+        SetFieldAction.new(data.id, 'projects', Pointers.from(val), '', true);
+        return true;
+    }
 
     protected get_project(context: Context): this['project'] {
         const project = context.data.project;
         if(project) return LProject.fromPointer(project);
         return null;
     }
-    protected set_project(val: Pack<LProject>|null, context: Context): boolean {
+    protected set_project(val: Pack<Exclude<this['project'], null>>|null, context: Context): boolean {
         const data = context.data;
         if(val === null) SetFieldAction.new(data.id, 'project', '', '', false);
         else SetFieldAction.new(data.id, 'project', Pointers.from(val), '', true);
-        return true;
-    }
-
-    protected get_projects(context: Context): this['projects'] {
-        const projects = context.data.projects;
-        return LProject.fromPointer(projects);
-    }
-    protected set_projects(val: PackArr<LProject>, context: Context): boolean {
-        const data = context.data;
-        SetFieldAction.new(data.id, 'projects', Pointers.from(val), '', true);
         return true;
     }
 }
@@ -1671,12 +1673,13 @@ export class DProject extends DPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
-    // inherited redefine
     id!: Pointer<DProject, 1, 1, LProject>;
-
-    // own properties
     name!: string;
-    author!: Pointer<DUser, 1, 1, LUser>;
+    author!: Pointer<DUser>;
+    metamodels: Pointer<DModel, 0, 'N'> = [];
+    models: Pointer<DModel, 0, 'N'> = [];
+    graphs: Pointer<DGraph, 0, 'N'> = [];
+    views: Pointer<DViewElement, 0, 'N'> = U.getDefaultViewsID();
 
     public static new(name: string, author: Pointer<DUser, 1, 1, LUser>, persist: boolean = true): DProject {
         return new Constructors(new DProject('dwc'), undefined, persist, undefined)
@@ -1689,15 +1692,56 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     public static cname: string = 'LProject';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    id!: Pointer<DProject, 1, 1, LProject>;
+
+    id!: Pointer<DProject>;
     name!: string;
+    metamodels!: LModel[];
+    models!: LModel[];
+    graphs!: LGraph[];
+    views!: LViewElement[];
 
     protected get_name(context: Context): this['name'] {
         return context.data.name;
     }
-    protected set_name(val: string, context: Context): boolean {
+    protected set_name(val: this['name'], context: Context): boolean {
         const data = context.data;
         SetFieldAction.new(data.id, 'name', val, '', false);
+        return true;
+    }
+
+    protected get_metamodels(context: Context): this['metamodels'] {
+        return LModel.fromPointer(context.data.metamodels);
+    }
+    protected set_metamodels(val: PackArr<this['metamodels']>, context: Context): boolean {
+        const data = context.data;
+        SetFieldAction.new(data.id, 'metamodels', Pointers.from(val), '', true);
+        return true;
+    }
+
+    protected get_models(context: Context): this['models'] {
+        return LModel.fromPointer(context.data.models);
+    }
+    protected set_models(val: PackArr<this['models']>, context: Context): boolean {
+        const data = context.data;
+        SetFieldAction.new(data.id, 'models', Pointers.from(val), '', true);
+        return true;
+    }
+
+    protected get_graphs(context: Context): this['graphs'] {
+        return LGraph.fromPointer(context.data.graphs);
+    }
+    protected set_graphs(val: PackArr<this['graphs']>, context: Context): boolean {
+        const data = context.data;
+        SetFieldAction.new(data.id, 'graphs', Pointers.from(val), '', true);
+        return true;
+    }
+
+    protected get_views(context: Context): this['views'] {
+        return LViewElement.fromPointer(context.data.views);
+    }
+    protected set_views(val: PackArr<this['views']>, context: Context): boolean {
+        const data = context.data;
+        SetFieldAction.new(data.id, 'views', Pointers.from(val), '', true);
         return true;
     }
 }

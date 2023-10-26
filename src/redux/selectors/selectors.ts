@@ -58,12 +58,7 @@ enum ViewEClassMatch { // this acts as a multiplier for explicit priority
 
 @RuntimeAccessible
 export class Selectors{
-    public static cname: string = "Selectors";
-
-    static getUser(): LUser {
-        const state = store.getState();
-        return LUser.fromPointer(state.user);
-    }
+    public static cname: string = 'Selectors';
 
     static getSelected(): Selected {
         const state = store.getState();
@@ -354,15 +349,15 @@ export class Selectors{
 
     // 2 = explicit exact match (===), 1 = matches a subclass, 0 = implicit match (any *), -1 = not matches
     private static matchesOclCondition(v: DViewElement, data: DModelElement | LModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
-        if (!v.query) return ViewEClassMatch.MISMATCH;
-        const query = v.query;
+        if (!v.oclCondition) return ViewEClassMatch.MISMATCH;
+        const oclCondition = v.oclCondition;
         const viewpoint = Selectors.getViewpoint();
         const isDefault = v.viewpoint === 'Pointer_DefaultViewPoint';
         const isActiveViewpoint = v.viewpoint === viewpoint.id;
         if(!isActiveViewpoint && !isDefault) return ViewEClassMatch.MISMATCH;
         let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
         try {
-            const flag = OCL.filter(false, "src", [data], query, constructors);
+            const flag = OCL.filter(false, "src", [data], oclCondition, constructors);
             if(flag.length > 0 && isActiveViewpoint) return ViewEClassMatch.EXACT_MATCH;
             if(flag.length > 0 && !isActiveViewpoint) return ViewEClassMatch.IMPLICIT_MATCH;
             return ViewEClassMatch.MISMATCH;

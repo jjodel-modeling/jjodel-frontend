@@ -1,16 +1,26 @@
 import React, {MouseEvent, Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
-import {DProject, DState, Input, LProject, LUser} from '../joiner';
+import {DProject, DState, DUser, Input, LProject, LUser, U} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 
 function DashboardComponent(props: AllProps) {
     const user = props.user;
+
     const createProject = (e: MouseEvent) => {
-        const project = DProject.new('test', user.id);
+        let name = 'project_' + 0;
+        let projectNames: string[] = user.projects.map(p => p.name);
+        name = U.increaseEndingNumber(name, false, false, newName => projectNames.indexOf(newName) >= 0);
+        const project = DProject.new(name, user.id);
         user.projects = [...user.projects, LProject.fromD(project)];
     }
 
+    const switchUser = (e: MouseEvent) => {
+        const user = DUser.new('Mimmo');
+        DUser.current = user.id;
+    }
+
     return (<div className={'w-25'}>
+        <button onClick={switchUser}>switch</button>
         <div className={'d-flex p-2'}>
             <b className={'ms-1 my-auto'}>MY PROJECTS</b>
             <button className={'btn btn-primary ms-auto'} onClick={createProject}>
@@ -35,7 +45,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.user = LUser.fromPointer(state.user);
+    ret.user = LUser.fromPointer(DUser.current);
     return ret;
 }
 

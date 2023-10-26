@@ -10,9 +10,9 @@ import {
     GObject,
     LClass,
     LGraphElement, LNamedElement,
-    LPackage,
+    LPackage, LProject,
     LUser,
-    LValue,
+    LValue, LViewElement,
     Selectors,
     U,
 } from '../../joiner';
@@ -22,8 +22,8 @@ import ModellingIcon from "../forEndUser/ModellingIcon";
 import {FakeStateProps} from "../../joiner/types";
 
 function ContextMenuComponent(props: AllProps) {
-
     const user = props.user;
+    const project = user.project as LProject;
     const display = props.display;
     const position = props.position;
     const node = props.node;
@@ -41,23 +41,21 @@ function ContextMenuComponent(props: AllProps) {
     }
     const addView = async() => {
         const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
-        const dView: DViewElement = DViewElement.new(data.name + 'View', jsx);
+        let query = '';
         switch(data.className) {
             case 'DClass':
-                dView.query = `context DObject inv: self.instanceof.id = '${data.id}'`;
+                query = `context DObject inv: self.instanceof.id = '${data.id}'`;
                 break;
             case 'DAttribute':
             case 'DReference':
-                dView.query = `context DValue inv: self.instanceof.id = '${data.id}'`;
+                query = `context DValue inv: self.instanceof.id = '${data.id}'`;
                 break;
             default:
-                dView.query = `context ${data.className} inv: self.id = '${data.id}'`;
+                query = `context ${data.className} inv: self.id = '${data.id}'`;
                 break;
         }
-        CreateElementAction.new(dView);
-        SetRootFieldAction.new('stackViews', [], '', false);
-        await U.sleep(1);
-        SetRootFieldAction.new('stackViews', dView.id, '+=', true);
+        const dView: DViewElement = DViewElement.new(data.name + 'View', jsx, undefined, '', '', '', [], query);
+        project.views = [...project.views, LViewElement.fromD(dView)];
     }
 
     const structuralFeature = async () => {setMemorec(await MemoRec.structuralFeature(data))}
@@ -161,7 +159,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.user = LUser.fromPointer(state.user);
+    ret.user = LUser.fromPointer(DUser.current);
     ret.display = state.contextMenu.display;
     ret.position = {x: state.contextMenu.x, y: state.contextMenu.y};
     const nodeid = state.selected[DUser.current];
