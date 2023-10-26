@@ -230,7 +230,7 @@ export class EcoreParser{
         // let longprefixlength = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore'.length;
         const typeprefix = "#//";
         for (let shortkey in ShortAttribETypes){
-            if (shortkey === "void") continue;
+            if (shortkey === ShortAttribETypes.EVoid) continue;
             let shortetype: ShortAttribETypes = (ShortAttribETypes as GObject)[shortkey];
             let longetype: AttribETypes = toLongEType(shortetype);
             let dClassType: DClassifier = Selectors.getPrimitiveType(shortetype, state);

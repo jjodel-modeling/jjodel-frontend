@@ -13,14 +13,16 @@
 }
 
 .my-tooltip {
-  position: absolute;
+  position: fixed;
+  bottom: 0.75em;
+  left: 50%;
+  // top: 85%;
+  transform: translate(-50%, 0);
   z-index: 999;
   background: white;
   border-radius: 4px;
   border-style: solid;
   border-width: 1px;
   border-color: lightgray;
-  left: 50%; top: 85%;
-  transform: translate(-50%,-50%);
   padding: 10px;
 }

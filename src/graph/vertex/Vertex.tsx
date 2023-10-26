@@ -61,7 +61,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             this.setSize = this.setSize.bind(this);
             // this.get_size = console.error as any;
             // this.r = (<RootVertex props={this.props} render={super.render()} super={this} />);
-            this.forceUpdate();
+            this.forceUpdate(); // todo: remove this?
             this.setState({forceupdate:2});
         },1)
     }

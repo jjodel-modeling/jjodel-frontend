@@ -1,6 +1,7 @@
 import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
 import {connect} from "react-redux";
-import {Dictionary, DocString, DPointerTargetable, GObject, Log, LPointerTargetable, TextArea, DState, LViewElement, Pointer, U} from "../../joiner";
+import type {Dictionary, DocString, GObject, DState, LViewElement, Pointer, Info} from "../../joiner";
+import {Log, LPointerTargetable, U} from "../../joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
 import {stringify} from "querystring";
 import "./FunctionComponent.scss";
@@ -38,10 +39,11 @@ import "./FunctionComponent.scss";
  */
 
 type StrPos = {value: string, line?: number, startindex?: number, endindex?: number};
-type RowData = {index: number; key?: string, id: StrPos & { prefix: string }; exp: StrPos, isDirty?: boolean};
+type RowData = {index: number; key: number, id: StrPos & { prefix: string }; exp: StrPos, isDirty?: boolean};
 type TextAreaState = {v:string, isDirty?: boolean};
-type FunctionComponentState = {advancedMode: boolean, ta: TextAreaState, arr: RowData[]};
+type FunctionComponentState = {advancedMode: boolean, collapsed: boolean, ta: TextAreaState, arr: RowData[]};
 type SetState = (value: FunctionComponentState)=>void;
+const minimalTextareaValue = '(ret)=>{\n';
 
 function parseFunction(props: AllProps): FunctionComponentState {
     Log.exDev(!props.data, "FunctionComponent: missing data props", {props});
@@ -53,37 +55,49 @@ function parseFunction(props: AllProps): FunctionComponentState {
     let declarations: string[] = (txtparts[1] || '').split("\n");
     let stateArrayValues: RowData[] = [];
     let textAreaState: TextAreaState = {v: txtparts[0]};
-    let i: number = 0;
+    let i: number = -1;
     for (let dec of declarations) {
         let splitindex = dec.indexOf("=");
         if (splitindex === -1) continue; // for ending \n} line
+        i++; // don't loop by i, the index ending in state must increase only for non-empty rows filtering them out.
         let expression = dec.substring(splitindex+1);
         let identifier = dec.substring(0, splitindex);
         let idsplitindex = identifier.indexOf(".");
         let identifierPrefix = identifier.substring(0, idsplitindex);
         let identifierName = identifier.substring(idsplitindex+1);
         stateArrayValues.push({
-            index: i++, // don't loop by i, the index ending in state must increase only for non-empty rows filtering them out.
-            key: identifierName,
+            index: i,
+            key: i,
             id: {prefix: identifierPrefix, value: identifierName.trim(), line: i, startindex: idsplitindex, endindex: splitindex},
             exp:{                          value: expression.trim(),     line: i, startindex: splitindex,   endindex: -1}
         });
     }
-    return {advancedMode: !!props.advancedMode, ta: textAreaState, arr:stateArrayValues};
+    return {advancedMode: !!props.advancedMode, collapsed: props.collapsed === !!props.collapsed, ta: textAreaState, arr:stateArrayValues};
 }
 
 // event listing start
 // it's not on purpose, but this function is a candidate for obscure code context XD
 function addClick(v: FunctionComponentState, set: SetState): void {
-    set({...v, arr: [...v.arr, {index: (v.arr[v.arr.length-1]?.index ?? -1) +1,
+    let lasti: number = (v.arr[v.arr.length-1]?.index ?? -1) +1;
+    let lastk: number = (v.arr[v.arr.length-1]?.key ?? -1) +1;
+    set({...v, arr: [...v.arr, {index: lasti, key: lastk,
             id: {prefix: v.arr[0]?.id.prefix || "ret", value: ""},
             exp: {value: ""} }]
     });
 }
 
-function deleteClick(v: FunctionComponentState, set: SetState, i: number, props: AllProps): void {
-    v = {...v, arr:[...v.arr]};
+// function fixIndex(i: number, rows: RowData[]): number{ for (let row of rows) if (row.index === ) }
+function deleteClick(v0: FunctionComponentState, set: SetState, i: number, props: AllProps, row:RowData): void {
+    // do i really need to shallow copy nested objects too? it should not be necessary
+    let v = {...v0} //, arr:[...v0.arr]};
+    /// problem: deleting an element in the middle invalidetes the row.index values
+    /// solution 1: update the row.index values, move the rect key to a different field that is initial = index, but never changes.
+    /// implemented
     v.arr.splice(i, 1);
+    for (; i < v.arr.length; i++) v.arr[i].index = i;
+    /// solution 2: keep original indexes, use a fixIndex function to map the index in html (without holes) to index in row structure (with holes).
+    ///  discareded
+
     set(v);
     onBlur(v, set, props, undefined, true);
 }
@@ -146,24 +160,24 @@ function updateFunctionValue(props: AllProps, textAreaContent: string, stateArra
 function FunctionComponent(props: AllProps) {
     // if (false) return asTextArea(props) // i gave up
     const [state, setState] = useStateIfMounted(parseFunction(props));
+    const [showTooltip, setShowTooltip] = useStateIfMounted(false);
     // if (!props.data) return <></>;
-    let stateArrayValues: RowData[] = state.arr,
-        textAreaState: TextAreaState = state.ta,
-        advancedMode: boolean = state.advancedMode,
+    let advancedMode: boolean = state.advancedMode,
         readOnly = props.readonly; // (props.readonly !== undefined) ? props.readonly : !props.debugMode && props.data.id.indexOf("Pointer_View") !== -1;
 
     // NB: could be heavily optimized by cutting the original string with indexes and substring,
     // but it is a function called too rarely and not impactful on overall performances
 
+    let tooltip: string|undefined | ReactNode = (props.tooltip === true) ? (props.data as GObject)['__info_of__' + props.field]?.txt : props.tooltip;
 
 
     // JSX building start
     let inputs: JSX.Element[] = [];
-    console.log("funccomp", {stateArrayValues, textAreaState, props});
+    // console.log("funccomp", {stateArrayValues, textAreaState, props});
 
 
-    for (let row of stateArrayValues) {
-        inputs.push(<div className={"d-flex" + (advancedMode ? "" : " my-1")} key={row.index} data-key={row.index}>
+    for (let row of state.arr) {
+        inputs.push(<label className={"d-flex" + (advancedMode ? "" : " my-1")} key={row.index} data-key={row.index}>
             <span className={"my-auto detailedMode"}>{row.id.prefix}.</span>
             <input className={"my-auto input"} placeholder={"identifier"} value={row.id.value}  disabled={readOnly}
                    tabIndex={row.index*2}
@@ -178,26 +192,61 @@ function FunctionComponent(props: AllProps) {
                    onBlur={(e)=> !readOnly && onBlur(state, setState, props, row.index)}
             />
             <span className={"my-auto detailedMode"}>;</span>
-            <button className={"btn btn-danger my-auto ms-2"} tabIndex={stateArrayValues.length*2 +1 +row.index} disabled={readOnly} onClick={()=>!readOnly && deleteClick(state, setState, row.index, props)}>
+            <button className={"btn btn-danger my-auto ms-2"} tabIndex={state.arr.length*2 +1 +row.index} disabled={readOnly} onClick={()=>!readOnly && deleteClick(state, setState, row.index, props, row)}>
                 <i className={"p-1 bi bi-trash3-fill"} /></button>
-        </div>);
+        </label>);
     }
 
+    let transitionTime = 300;
     return <div className={"function-editor-root"} data-mode={advancedMode ? "detailedMode" : "simpleMode"} style={{fontSize: "0.9rem"}}>
-        <i className={ advancedMode ? "p1 bi bi-eye-slash-fill" : "p1 bi bi-eye-fill"} onClick={()=>setState( {...state, advancedMode:!state.advancedMode})} />
-        <textarea className={"detailedMode input"} disabled={readOnly} rows={Math.min(10, textAreaState.v.split("\n").length)}
+        <div className={"d-flex w-100"} style={{transition: "all 300ms",  cursor: tooltip ? 'help' : 'auto'}}
+             onMouseEnter={e => tooltip && setShowTooltip(true)} onMouseLeave={e =>  tooltip && setShowTooltip(false)}>
+            {props.jsxLabel}
+            <span className={"m-auto me-1"} style={{cursor: 'auto'}}>
+                {tooltip && <i className={"p1 m-auto me-1 bi bi-info-lg"} style={{cursor: 'help'}} />}
+
+                <span className={"m-auto"} style={{cursor: 'auto', height: "100%", display: "inline-block"}}
+                      onMouseEnter={e => tooltip && setShowTooltip(false)} onMouseLeave={e =>  tooltip && setShowTooltip(true)}
+                >
+                <i className={ "p1 m-auto mx-1 bi " + (advancedMode ? "btn-outline-secondary bi-eye-slash-fill" : "btn-outline-secondary bi-eye-fill")}
+                   onClick={()=>setState( {...state, advancedMode:!state.advancedMode})} style={{cursor: 'pointer'}} />
+                <i className={ "p1 bi m-auto mx-1 bi bi-chevron-down btn-outline-secondary"}
+                   onClick={()=>setState( {...state, collapsed:!state.collapsed})}
+                   style={{cursor: 'pointer', transition:transitionTime/2 + "ms all",
+                       transform: "scaleY("+(state.collapsed ? 1 : -1 )+")  translateY(" + (state.collapsed ? -0 : 0.1) +"em)",
+                   }} />
+                <button className={ "p1 m-auto mx-1 bi btn btn-danger bi-trash3-fill"} disabled={!(props.data.__raw as GObject)[props.field]}
+                        onClick={()=>{ setState( {...state,  ta: {...state.ta, v:minimalTextareaValue}, arr: []}); (props.data as GObject)[props.field] = undefined}}
+                        style={{cursor: 'pointer'}} />
+                </span>
+            </span>
+        </div>
+        {(tooltip && showTooltip) && <div className={'my-tooltip'}>
+            <b className={'text-center text-capitalize'}>{props.field}</b>
+            <br />
+            <label>{tooltip}</label>
+        </div>}
+        {<div data-comment={"collapsable-section"} style={{transition: transitionTime + "ms all",
+            // transformOrigin: "top", transform: "rotateX("+(state.collapsed ? 0 : 90 )+"deg)",
+            transform: "scaleY("+(state.collapsed ? 0 : 1 )+")",
+            overflow:"hidden"}}>
+            <textarea className={"detailedMode input w-100"} disabled={readOnly} rows={Math.min(10, state.ta.v.split("\n").length)}
                   onInput={(e)=>textAreaChange(e, state, setState)}
                   onBlur={(e)=> !readOnly && onBlur(state, setState, props)}
-        >{textAreaState.v}</textarea>
+                  data-txtcontent={state.ta.v}
+                  value={state.ta.v}
+        />
         {inputs}
-        <button className={"btn btn-secondary w-100"} tabIndex={stateArrayValues.length*2}
+        <button className={"btn btn-secondary w-100"} tabIndex={state.arr.length*2}
                 disabled={readOnly} onClick={()=> !readOnly && addClick(state, setState)}>+</button>
-        <div style={{whiteSpace:"pre"}}>{(props.data as any)[props.field]}</div>
+        {false && <div style={{whiteSpace:"pre"}}>{(props.data as any)[props.field]}</div>}
+        </div>}
     </div>;
 }
 
 interface OwnProps {
     advancedMode?: boolean; // toggle textbox pre-declarations, initial value to set state. after initialization only state.advancedMode is used
+    collapsed?: boolean; // start collapsed or visible, default value is false = visible
     data: LPointerTargetable;
     field: string;
     getter?: (data: LPointerTargetable) => string;
@@ -240,7 +289,7 @@ export const FunctionConnected = connect<StateProps, DispatchProps, OwnProps, DS
 )(FunctionComponent);
 */
 // export const Function = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => (<FunctionConnected {...{...props, children}} />);
-export const Function = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => (<FunctionComponent {...{...props, children}} />);
+export const Function = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => (<FunctionComponent {...{...props, children}} tooltip={true} />);
 
 Function.cname = "FunctionComponent";
 // FunctionConnected.cname = "FunctionComponent";

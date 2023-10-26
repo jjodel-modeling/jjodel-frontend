@@ -413,12 +413,14 @@ export class Constructors<T extends DPointerTargetable>{
     private thiss: T;
     private persist: boolean;
     private callbacks: Function[];
+    private nonPersistentCallbacks: Function[];
     fatherType?: typeof RuntimeAccessibleClass;
     constructor(t:T, father?: Pointer, persist: boolean = true, fatherType?: Constructor) {
         persist = persist && canFireActions;
         this.thiss = t;
         this.persist = persist;
         this.callbacks = [];
+        this.nonPersistentCallbacks = [];
         if (this.thiss.hasOwnProperty("father")) {
             (this.thiss as any).father = father;
             // id still is not assigned here
@@ -433,6 +435,9 @@ export class Constructors<T extends DPointerTargetable>{
     // start(thiss: any): this { this.thiss = thiss; return this; }
     end(simpledatacallback?: (d:T) => void): T {
         if (simpledatacallback) simpledatacallback(this.thiss); // callback for setting primitive types, not pointers not context-dependant values (name being potentially invalid / chosen according to parent)
+        if (this.nonPersistentCallbacks.length) {
+            for (let cb of this.nonPersistentCallbacks) cb();
+        }
         if (!this.persist) return this.thiss;
         if (this.callbacks.length) {
             setTimeout(() => {for (let cb of this.callbacks) cb();}, 0);
@@ -733,7 +738,7 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.appliableTo = 'node';
         thiss.jsxString = jsxString;
         thiss.usageDeclarations = usageDeclarations;
-        thiss.constants = ''; // '{}';
+        thiss.constants = undefined; // '{}';
         thiss.preRenderFunc = ''; // '() => {return{}}';
         thiss.onDragEnd = thiss.onDragStart = thiss.whileDragging =
         thiss.onResizeEnd = thiss.onResizeStart = thiss.whileResizing = '';
@@ -770,7 +775,9 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.bendingMode = EdgeBendingMode.Bezier_quadratic;
         thiss.edgeGapMode = EdgeGapMode.center;
         thiss.edgePointCoordMode = CoordinateMode.relativeOffset;
-        /// edge
+        thiss.usageDeclarations = undefined;
+
+        /// edge only
 
         thiss.edgeHeadSize = new GraphPoint(20, 20);
         thiss.edgeTailSize = new GraphPoint(20, 20);
@@ -778,6 +785,12 @@ export class Constructors<T extends DPointerTargetable>{
         if (this.persist) {
             // no pointedBy?
         }
+        this.nonPersistentCallbacks.push(() => {
+            console.log("colormap 2", {v:{...thiss}});
+            if (thiss.constants) {
+                thiss._parsedConstants = (windoww["LViewElement"] as typeof LViewElement).parseConstants(thiss.constants);
+            } else thiss._parsedConstants = undefined;
+        });
         return this;
     }
 

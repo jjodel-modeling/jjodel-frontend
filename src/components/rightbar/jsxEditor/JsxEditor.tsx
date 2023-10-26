@@ -7,7 +7,7 @@ import Editor from "@monaco-editor/react";
 
 function JsxEditorComponent(props: AllProps) {
     const view = props.view;
-    const readOnly = props.readonly !== undefined ? props.readonly : !props.debugMode && U.getDefaultViewsID().includes(view.id);
+    const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && U.getDefaultViewsID().includes(view.id);
     const [jsx, setJsx] = useStateIfMounted(view.jsxString);
 
     const change = (value: string|undefined) => {
@@ -33,7 +33,7 @@ interface OwnProps {
 
 interface StateProps {
     view: LViewElement;
-    debugMode: boolean;
+    debugmode: boolean;
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -41,7 +41,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    ret.debugMode = state.debug;
+    ret.debugmode = state.debug;
     ret.view = LViewElement.fromPointer(ownProps.viewid);
     return ret;
 }

@@ -1,6 +1,11 @@
 export const a = 0;
 let data:any, node:any, view:any, component:any;
 
+/*
+* prevent megacrash if someone does <Vertex data={"not a pointer"} /> or <Vertex data={1, null, undefined...} />
+*
+* */
+
 // edgepoint creation undo crashes
 /*
     preact can probably be used for dynamical views too, compiled jsx is very similar, just "h()" instead of "React.createElement()"

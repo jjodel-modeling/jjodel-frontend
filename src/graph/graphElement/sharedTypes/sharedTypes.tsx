@@ -101,14 +101,14 @@ export class EdgeStateProps extends GraphElementReduxStateProps {
 // @RuntimeAccessible
 export class DefaultUsageDeclarations{
     // all can be deleted in usageDeclaration function except view.
-    view!: GraphElementReduxStateProps["view"];
-    node!: GraphElementReduxStateProps["node"];
+    view?: GraphElementReduxStateProps["view"];
+    node?: GraphElementReduxStateProps["node"];
     data: GraphElementOwnProps["data"];
     [key:string]: any;
     constructor(ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
-        this.data = ret.data;
+        /*this.data = ret.data;
         this.view = ret.view;
-        this.node = ret.node;
+        this.node = ret.node;/*/
     }
 }
 

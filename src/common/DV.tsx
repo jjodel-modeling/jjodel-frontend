@@ -148,7 +148,7 @@ valuecolormap[ShortAttribETypes.EDouble] = "orange";
 valuecolormap[ShortAttribETypes.EDate] = "green";
 valuecolormap[ShortAttribETypes.EString] = "green";
 valuecolormap[ShortAttribETypes.EChar] = "green";
-valuecolormap[ShortAttribETypes.void] = "gray";
+valuecolormap[ShortAttribETypes.EVoid] = "gray";
 
 // &&[]bn
 let valuecolormap_str = JSON.stringify(valuecolormap); // can this be declared inside view.constants ?
@@ -297,11 +297,11 @@ class DefaultView {
 
     public static value() {
         return `<div className={'d-flex root value'} style={{paddingRight: "6px"}}>
-     {props.data.instanceof && <label className={'d-block ms-1'}>{props.data.instanceof.name}</label>}
-     {!props.data.instanceof && <Input asLabel={true} data={data} field={'name'} hidden={true} autosize={true} />}
-    <label className={'d-block m-auto'} style={{color: colorMap[props.typeString] || "gray"
-    }}>: {props.valuesString}</label>
-    {console.log("inside eval", {thiss:this, props, ts: props.typeString, vs: props.valuesString})}
+     {instanceofname && <label className={'d-block ms-1'}>{instanceofname}</label>}
+     {!instanceofname && <Input asLabel={true} data={data} field={'name'} hidden={true} autosize={true} />}
+    <label className={'d-block m-auto'} style={{color: constants[typeString] || "gray"
+    }}>: {valuesString}</label>
+    {console.log("inside eval", {thiss:this, props, ts: typeString, vs: valuesString})}
 </div>`
     }
 

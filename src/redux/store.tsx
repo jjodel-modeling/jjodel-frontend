@@ -197,7 +197,7 @@ export class DState extends DPointerTargetable{
 
         for (let primitiveType of Object.values(ShortAttribETypes)) {
             let dPrimitiveType;
-            if (primitiveType === ShortAttribETypes.void) continue; // or make void too without primitiveType = true, but with returnType = true?
+            if (primitiveType === ShortAttribETypes.EVoid) continue; // or make void too without primitiveType = true, but with returnType = true?
             else {
                 dPrimitiveType = DClass.new(primitiveType, false, false, true, false, '', undefined, false);
                 dPrimitiveType.id = 'Pointer_' + primitiveType.toUpperCase();
@@ -259,18 +259,16 @@ function makeDefaultGraphViews(): DViewElement[] {
     objectView.adaptWidth = true; objectView.adaptHeight = true;
     objectView.query = 'context DObject inv: true';
     objectView.usageDeclarations = "(ret)=>{\n" +
-        "// ** preparations here ** //\n" +
-        "let fib = [1,1];" +
-        "console.log('inside usagedeclarations', {data, node, view});\n" +
-        "for (let i = 2; i < 10; i++) fib[i] = fib[i-2] + fib[i-1];\n" +
+        "// ** preparations and default behaviour here ** //\n" +
+        "ret.data = data\n" +
+        "ret.node = node\n" +
+        "ret.view = view\n" +
+        "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
+        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
         "// ** declarations here ** //\n" +
         "ret.metaclassName = data.instanceof?.name || \"Object\"\n" +
         "ret.features = data.features\n" +
-        "ret.fib = fib\n" +
         "}";
-
-    let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname]);
-    valueView.query = 'context DValue inv: true';
 
     let valuecolormap: GObject = {};
     valuecolormap[ShortAttribETypes.EBoolean] = "orange";
@@ -283,15 +281,47 @@ function makeDefaultGraphViews(): DViewElement[] {
     valuecolormap[ShortAttribETypes.EDate] = "green";
     valuecolormap[ShortAttribETypes.EString] = "green";
     valuecolormap[ShortAttribETypes.EChar] = "green";
-    valuecolormap[ShortAttribETypes.void] = "gray";
-    valueView.usageDeclarations = "(ret)=>{\n" +
-        "// ** preparations here ** //\n" +
-        "\n" +
+    valuecolormap[ShortAttribETypes.EVoid] = "gray";
+    let valueView: DViewElement = DViewElement.new2('Value', DV.valueView(), (v)=>{
+        v.appliableToClasses = [DValue.cname];
+        v.constants = "(ret)=>{ // scope: only native js functions. NOT data, node, view... \n" +
+            "// ** preparation code here ** //.\n" +
+            "// example: the first N elements of fibonacci sequence are constants, but they require to be computed before usage\n"+
+            "let howmany = 10;\n" +
+            "let fib = [1, 1];\n" +
+            "for (let i = 2; i < howmany; i++) fib[i] = fib[i-2] + fib[i-1];\n" +
+            "// ** declarations here ** //\n" +
+            "ret.fib = fib\n"+
+            "ret.colorMap = " + JSON.stringify(valuecolormap) + "\n"+
+        'ret.'+ShortAttribETypes.EBoolean+' = "orange"\n'+
+        'ret.'+ShortAttribETypes.EByte+' = "orange"\n'+
+        'ret.'+ShortAttribETypes.EShort+' = "orange"\n'+
+        'ret.'+ShortAttribETypes.EInt+' = "orange"\n'+
+        'ret.'+ShortAttribETypes.ELong+' = "orange"\n'+
+        'ret.'+ShortAttribETypes.EFloat+' = "orange"\n'+
+        'ret.'+ShortAttribETypes.EDouble+' = "orange"\n'+
+        'ret.'+ShortAttribETypes.EDate+' = "green"\n'+
+        'ret.'+ShortAttribETypes.EString+' = "green"\n'+
+        'ret.'+ShortAttribETypes.EChar+' = "green"\n'+
+        'ret.'+ShortAttribETypes.EVoid+' = "gray"\n'+
+            "}";
+        console.log("colormap 1", {v:{...v}});
+    }, false);
+    valueView.query = 'context DValue inv: true';
+
+    valueView.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
+        "// ** preparations and default behaviour here ** //\n" +
+        "// ret.data = data // object does not need it because it displays only: features (listed individually) and name input being a subcomponent\n" +
+        "ret.node = node\n" +
+        "ret.view = view\n" +
+        "// todo: put only first N values as dependency and show only those.\n" +
+        "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
+        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
         "// ** declarations here ** //\n" +
-        "ret.valuesString = data.valuesString();\n" +
-        "ret.typeString = data.typeString;\n" +
+        "ret.instanceofname = data.instanceof?.name\n" +
+        "ret.valuesString = data.valuesString()\n" +
+        "ret.typeString = data.typeString\n" +
         "}";
-    valueView.constants = "{colorMap:" + JSON.stringify(valuecolormap) + "}";
 
     let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.cname]);
     voidView.appliableToClasses=["VoidVertex"];

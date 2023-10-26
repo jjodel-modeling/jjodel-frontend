@@ -43,12 +43,11 @@ function InputComponent(props: AllProps) {
 
 
     if (!data) return(<></>);
-    const readOnly = (props.readonly !== undefined) ? props.readonly : !props.debugMode && data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
+    const readOnly = (props.readonly !== undefined) ? props.readonly : !props.debugmodee && data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
-    let tooltip: string|undefined = (props.tooltip === true) ? ((data['__info_of__' + field]) ? data['__info_of__' + field].txt: '') : props.tooltip;
-    tooltip = (tooltip) ? tooltip : '';
+    let tooltip: ReactNode|string|undefined = ((props.tooltip === true) ? data['__info_of__' + field]?.txt : props.tooltip) || '';
 
     let css = 'my-auto input ';
     css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
@@ -148,7 +147,7 @@ export interface InputOwnProps {
     key?: React.Key | null;
 }
 interface StateProps {
-    debugMode: boolean;
+    debugmodee: boolean;
     data: LPointerTargetable & GObject;
     // selected: Dictionary<Pointer<DUser>, LModelElement | null>;
 }
@@ -159,7 +158,7 @@ type AllProps = Overlap<InputOwnProps, Overlap<StateProps, DispatchProps>>;
 function mapStateToProps(state: DState, ownProps: InputOwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
-    ret.debugMode = state.debug;
+    ret.debugmodee = state.debug;
     ret.data = LPointerTargetable.fromPointer(pointer);
     /*
     const selected = state.selected;

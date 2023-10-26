@@ -443,13 +443,25 @@ export class U {
         ret.signature += ')' + (ret.returns ? '/*' + ret.returns + '*/' : '');
         return ret; }
 
+
+
+    public static evalInContextAndScopeNew<T = any>(codeStr: string | ((...a:any)=>any), context0: GObject, injectScopeToo: boolean,
+                                                    protectShallowValues?: boolean, doIdentifierValidation?: boolean): T {
+        return U.evalInContextAndScope(codeStr, context0, injectScopeToo ? context0 : undefined, protectShallowValues, doIdentifierValidation);
+    }
+
+    // important! this is a simplified version. the correct one allows unicode chars and is 11kb long of regex expression
+    public static validIdentfierRegexp = /^[a-zA-Z_$][0-9a-zA-Z_$]*$/;
+
     // warn: if return is not explicitly inserted (if that's the case set imlicitReturn = false) with a scope and the code have multiple statemepts it will fail.
     // can modify scope AND context
-    // warn: can access external scope (from the caller)
+    // warn: can access global scope (window)
     // if the context (this) is missing it will take the scope as context.
     // warn: cannot set different scope and context, "this" della funzione sovrascrive anche il "this" interno allo scope come chiave dell'oggetto
-    // warn: if you modify
-    public static evalInContextAndScope<T = any>(codeStr: string | ((...a:any)=>any), scope0: GObject | undefined, context0?: GObject): T {
+    // warn: !context && scope is impossible, so it gets autofixed by assigning context = scope; check Log messages inside function for details.
+    // warn: context && scope is impossible if context !== scope and cannot be hotfixed, that will cause a crash.
+    public static evalInContextAndScope<T = any>(codeStr: string | ((...a:any)=>any), scope0: GObject | undefined, context0?: GObject,
+                                                 protectShallowValues?: boolean, doIdentifierValidation?:boolean): T {
         // console.log('evalInContextAndScope', {codeStr, scope, context});
         // scope per accedere a variabili direttamente "x + y"
         // context per accedervi tramite this, possono essere impostati come diversi.
@@ -463,10 +475,19 @@ export class U {
         let _ret: T = null as any;
         let scope: GObject | undefined;
         let context: GObject | undefined;
-        if (scope0) { scope = {...scope0, __proto__: scope0.__proto__}; scope.__proto__ = scope0.__proto__; } else scope = undefined;
-        if (context0) { context = {...context0, __proto__: context0.__proto__}; context.__proto__ = context0.__proto__; } else context = undefined;
+        if (protectShallowValues) {
+            if (scope0) { scope = {...scope0, __proto__: scope0.__proto__}; scope.__proto__ = scope0.__proto__; } else scope = undefined;
+            if (context0) { context = {...context0, __proto__: context0.__proto__}; context.__proto__ = context0.__proto__; } else context = undefined;
+        } else { scope = scope0; context = context0; }
+
+        Log.w(!!(!context && scope),
+            "evalInContextAndScope() Context is mandatory, as scope && !context case is not working properly \n" +
+            "because scope is simulated by declaring variables pointing to \"this\" objects instead of doing a full deep copy.\n" +
+            "Autofixed by assigning context = scope;");
+        Log.eDev(!!((context && scope) && (context !== scope)),
+            "evalInContextAndScope() Context and scope cannot be different if both present.\n" +
+            "Because scope is simulated by declaring variables pointing to \"this\" objects instead of doing a full deep copy.");
         if (!context) context = scope; // se creo un nuovo contesto pulisco anche lo scope dalle variabili locali di questa funzione.
-        const _eval = {codeStr, context, scope};
 
 
         /*
@@ -478,10 +499,12 @@ export class U {
         if (scope) {
             if (U.isStrict) {
                 for (let key in scope) {
-                    key = key.trim();
-                    if (!key) continue;
+                    if (doIdentifierValidation) {
+                        key = key.trim();
+                        if (!key || !U.validIdentfierRegexp.test(key)) continue;
+                    }
                     // anche se li assegno non cambiano i loro valori nel contesto fuori dall'eval, quindi lancio eccezioni con const.
-                    prefixDeclarations += "const " + key + " = this." + key + "; ";
+                    prefixDeclarations += "const " + key + "=this." + key + ";";
                     postfixDeclarations = "";
                 }
             } else {
@@ -489,26 +512,32 @@ export class U {
                 postfixDeclarations = " }";
             }
         }
+
         if (scope && context) {
-            (context as any)._eval = _eval;
-            if (typeof codeStr === "function") {
-                Log.ww("evalInContextAndScope(), evaluating a function inside custom scope must be optimized");
-                codeStr = codeStr.toString();
-            } // else
-            _ret = new (Function as any)(prefixDeclarations + "return eval( " + codeStr + " );" + postfixDeclarations).call(context);
-            delete (context as any)._eval; } else
+            if (typeof codeStr === "function") { codeStr = codeStr.toString(); } // functions cannot change scope (with statement is deprecated)
+            (context as any)._eval = {__codeStr: codeStr}; // necessary to reach this._eval.codeStr inside the eval()
+            console.log("evalincontextandscope: ", {fullCodeStr: prefixDeclarations + "return eval( this._eval._codeStr );" + postfixDeclarations, codeStr});
+            _ret = new (Function as any)(prefixDeclarations + "; console.log('evalInContextAndScope deeper', {eval:this._eval, thiss:this}); return eval( this._eval.__codeStr );" + postfixDeclarations).call(context);
+            delete (context as any)._eval;
+        } else
         if (!scope && context) {
             if (typeof codeStr === "function") {
                 _ret = (function(...a: any){ return (codeStr as Function).call(context, ...a)}) as any;
                 // _ret = (...a: any)=>codeStr.call(context, ...a);
-            } else _ret = new (Function as any)( "return eval( this._eval._codeStr );").call(context); } else
+            } else {
+                // cannot just eval(codeStr).call(context) because the result might not be a function but only a piece of code or an expression
+                (context as any)._eval = {__codeStr: codeStr}; // necessary to reach this._eval.codeStr inside the eval()
+                _ret = new (Function as any)("return eval( this._eval.__codeStr );").call(context);
+                delete (context as any)._eval;
+                // this below  is not good, as i need to quote the expanded result of codeStr,
+                // but since it might contain quotes as well i would need to escape them too.
+                // _ret = new (Function as any)("return eval( " + codeStr + " );").call(context);
+            }
+        } else
         if (scope && !context) {
             // NB: potrei creare lo scope con "let key = value;" per ogni chiave, ma dovrei fare json stringify e non è una serializzazione perfetta e può dare eccezioni(circolarità)
             // console.log({isStrict: U.isStrict, eval: "eval(" + prefixDeclarations + codeStr + postfixDeclarations + ")"});
-            if (typeof codeStr === "function") {
-                Log.ww("evalInContextAndScope(), evaluating a function inside custom scope must be optimized");
-                codeStr = codeStr.toString();
-            } // else
+            if (typeof codeStr === "function") { codeStr = codeStr.toString(); } // functions cannot change scope (with statement is deprecated)
             _ret = eval(prefixDeclarations + codeStr + postfixDeclarations); }
 
         return _ret; }
@@ -1191,6 +1220,18 @@ export class U {
         if (str[str.length - 2] !== "(" || str[str.length - 1] !== ")") str = "(" + str + ")()";
         return str;
     }
+
+    // adds ellipsis in the middle of a string to truncate it when it's too long.
+    public static stringMiddleCut<T extends boolean | undefined, RET extends string | string[] = T extends true ? string[] : string>
+    (str: string, maxLength: number, ellipsisChar: string = '…', asArray?: T): RET{
+        if (!str as unknown || maxLength < 0 || str.length <= maxLength) return (asArray ? [str] : str) as RET;
+        var midpoint = Math.ceil(str.length / 2);
+        var toremove = str.length - maxLength + ellipsisChar.length; // makes room for the additional ellipsis too
+        var lstrip = Math.ceil(toremove/2); // left strip is the bigger one if odd chars
+        var rstrip = toremove - lstrip;
+        if (asArray) return [str.substring(0, midpoint-lstrip), ellipsisChar, str.substring(midpoint+rstrip)] as RET;
+        else return str.substring(0, midpoint-lstrip) + ellipsisChar + str.substring(midpoint+rstrip) as RET;
+    }
 }
 export class DDate{
     static cname: string = "DDate";
@@ -1304,7 +1345,7 @@ export enum ShortDefaultEClasses{
     ENamedElement = "ENamedElement",
 }
 export enum ShortAttribETypes {
-    void = 'void',
+    EVoid = 'EVoid',
     EChar  = 'EChar',
     EString  = 'EString',
     EDate  = 'EDate',
@@ -1333,7 +1374,7 @@ export enum ShortAttribETypes {
 windoww.ShortAttribETypes = ShortAttribETypes;
 
 export const ShortAttribSuperTypes: Dictionary<ShortAttribETypes, ShortAttribETypes[]> = {
-    "void"     : [],
+    "EVoid"    : [],
     "EChar"    : [ShortAttribETypes.EString],
     "EString"  : [],
     "EDate"    : [],
@@ -1413,7 +1454,7 @@ export enum DefaultEClasses{
     ENamedElement = "ecore:EClass platform:/plugin/org.eclipse.emf.ecore/model/Ecore.ecore#//ENamedElement",
 }
 export enum AttribETypes {
-    void = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//void', // ??? i invented this.
+    EVoid = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EVoid', // ??? i invented this.
     EChar = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EChar',
     EString = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString',
     EDate = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDate',

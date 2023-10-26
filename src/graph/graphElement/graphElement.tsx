@@ -43,7 +43,6 @@ import {
     windoww,
 } from "../../joiner";
 import {DefaultUsageDeclarations, EdgeOwnProps} from "./sharedTypes/sharedTypes";
-// import {GlobalEventHandler} from "../../common/GlobalEvents";
 
 
 export function makeEvalContext(view: LViewElement, state: DState, ownProps: GraphElementOwnProps, stateProps: GraphElementReduxStateProps): GObject {
@@ -62,7 +61,7 @@ export function makeEvalContext(view: LViewElement, state: DState, ownProps: Gra
         constants:(stateProps.view?._parsedConstants || {}),
         // getSize:vcomponent?.getSize, setSize: vcomponent?.setSize,
         ...(stateProps.view?._parsedConstants || {}),
-        ...stateProps.usageDeclarations,
+        // ...stateProps.usageDeclarations, NOT because they are not evaluated yet. i need a basic eval context to evaluate them
     };
     evalContext.__proto__ = windoww.defaultContext;
 
@@ -86,22 +85,60 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
     const view: LViewElement = stateProps.view; //data._transient.currentView;
     // eslint-disable-next-line no-mixed-operators
     const evalContext = makeEvalContext(view, state, ownProps, stateProps);
+    // Log.exDev(!evalContext.data, "missing data", {evalContext, ownProps, stateProps});
+
     // const evalContextOld = U.evalInContext(this, constants);
     // this.setState({evalContext});
     //console.error({jsx:view.jsxString, view});
 
+
+    // compute usageDeclarations
+    if (!stateProps.view.__raw.usageDeclarations) {
+        U.objectMergeInPlace(evalContext, stateProps.usageDeclarations = {data: stateProps.data, view: stateProps.view, node: stateProps.node});
+    } else try {
+        // let context = { ...ret.evalContext, state, ret, ownProps, props: ret};
+        // eval usageDeclarations
+        // this is not really evaluated in provided context, as it does not find view, data in scope
+        // and if i open console data becomes the window.data of the one selected in console.
+
+        // scrapped function mode, doesn't look like possible to execute a function in a different scope after his definition,
+        // unless it becomes a string and is redefined through eval
+        /// let usageDeclarations: ((g:DefaultUsageDeclarations)=>DefaultUsageDeclarations) = U.evalInContextAndScope(ret.view.usageDeclarations, ret.evalContext, ret.evalContext);
+        // usageDeclarations(ret.usageDeclarations);
+        // ret.evalContext.usageDeclarations = ret.usageDeclarations;
+        let tempContext: GObject = {__param: stateProps.usageDeclarations};
+        tempContext.__proto__ = evalContext;
+        Log.exDev(!tempContext.data, "missing data", tempContext, stateProps);
+        U.evalInContextAndScopeNew("("+stateProps.view.usageDeclarations+")(this.__param)", tempContext, true, false);
+        U.objectMergeInPlace(evalContext, stateProps.usageDeclarations);
+        // ret.evalContext.props = ret; mo more needed since UD doesn't update props anymore // hotfix to update context props after usageDeclaration mapping
+        console.log("view compute usageDeclarations SUCCESS 1",
+            {UD_obj_result:stateProps.usageDeclarations, UD_view: stateProps.view.usageDeclarations, context:evalContext, stateProps, ownProps});
+    } catch (e) {
+        Log.ee("Invalid usage declarations", {e, str: stateProps.view.usageDeclarations, view:stateProps.view, data: ownProps.data, stateProps});
+        U.objectMergeInPlace(evalContext, stateProps.usageDeclarations = {data: stateProps.data, view: stateProps.view, node: stateProps.node});
+    }
+
+
+    // parsing the jsx
     // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
     let jsxCodeString: DocString<ReactNode>;
     let jsxparsedfunc: () => React.ReactNode;
-    try { jsxCodeString = JSXT.fromString(view.jsxString, {factory: 'React.createElement'}); }
+    try {
+        jsxCodeString = JSXT.fromString(view.jsxString, {factory: 'React.createElement'});
+    }
     catch (e: any) {
-        Log.eDevv();
-        stateProps.preRenderFunc = view.preRenderFunc;
-        stateProps.evalContext = evalContext;
+        // Log.eDevv();
+        // if it fails, i scrap prerenderFunc and usageDeclarations
+        // (better not actually change the assigned view and proceed because the ErrorView would be assigned to node.view)
+        stateProps.preRenderFunc = "()=>{}"; //  view.preRenderFunc;
         stateProps.template = DV.errorView_string(e.message.split("\n")[0],
             {msg: 'Syntax Error in custom user-defined template. try to remove typescript typings.', evalContext, e, view, jsx:view.jsxString});
+        U.objectMergeInPlace(evalContext, stateProps.usageDeclarations = {data: stateProps.data, view: stateProps.view, node: stateProps.node});
+        stateProps.evalContext = evalContext;
         return;
     }
+
     /*
     try {
         jsxparsedfunc = U.eval InContextAndScope<() => ReactNode>('()=>{ return ' + jsxCodeString + '}', evalContext);
@@ -117,8 +154,8 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
     }*/
 
     stateProps.preRenderFunc = view.preRenderFunc;
-    stateProps.evalContext = evalContext;
     stateProps.template = jsxCodeString;
+    stateProps.evalContext = evalContext;
     // console.log('GE settemplatestring:', {stateProps});
 }
 
@@ -267,24 +304,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         console.log("view compute usageDeclarations", {ret, ownProps, ud:ret.view.usageDeclarations, context:ret.evalContext});
         if (ret.view.usageDeclarations) {
-            // todo: set the actual parsed func instead of a string,
-            // and allow U.eval InContextAndScope to return a higher order func holding provided scope,
-            // ready to execute the param func inside it U.ectx(func, scope)() // executes func in scope
-            try {
-                // let context = { ...ret.evalContext, state, ret, ownProps, props: ret};
-                // eval usageDeclarations
-                // this is not really evaluated in provided context, as it does not find view, data in scope
-                // and if i open console data becomes the window.data of the one selected in console.
-                let usageDeclarations: ((g:DefaultUsageDeclarations)=>DefaultUsageDeclarations) = U.evalInContextAndScope(ret.view.usageDeclarations, ret.evalContext, ret.evalContext);
-                let tmp = usageDeclarations(ret.usageDeclarations);
-                ret.evalContext.usageDeclarations = ret.usageDeclarations;
-                U.objectMergeInPlace(ret.evalContext, ret.usageDeclarations);
-                // U.objectMergeInPlace(ret, ret.usageDeclarations);
-                // ret.evalContext.props = ret; mo more needed since UD doesn't update props anymore // hotfix to update context props after usageDeclaration mapping
-                console.log("view compute usageDeclarations SUCCESS 1", {usageDeclarations, tmp, viewud: ret.view.usageDeclarations, context:ret.evalContext, ret, ownProps});
-            } catch (e) {
-                Log.ee("Invalid usage declarations", {e, str: ret.view.usageDeclarations, view:ret.view, data: ownProps.data, ret});
-            }
+
         }
 
         // Log.l((ret.data as any)?.name === "concept 1", "mapstatetoprops concept 1", {newnode: ret.node});
@@ -311,8 +331,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
         let out = {reason:undefined};
         let skipDeepKeys = {pointedBy:true};
-        let skipPropKeys = {...skipDeepKeys, usageDeclarations: true, node:true, data:true, initialSize: true};
-        let ret = !U.isShallowEqualWithProxies(this.props, nextProps, 0, 1, skipPropKeys, out);
+        // let skipPropKeys = {...skipDeepKeys, usageDeclarations: true, node:true, data:true, initialSize: true};
+        let ret = false; // !U.isShallowEqualWithProxies(this.props, nextProps, 0, 1, skipPropKeys, out);
         // todo: verify if this update work
         // if node and data in props must be ignored and not checked for changes. but they are checked if present in usageDeclarations
         if (!ret) ret = !U.isShallowEqualWithProxies(this.props.usageDeclarations, nextProps.usageDeclarations, 0, 1, skipDeepKeys, out);

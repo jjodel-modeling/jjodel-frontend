@@ -11,7 +11,7 @@ function InfoData(props: Props) {
 
     const objectTypes = ['', 'DModel', 'DPackage', 'DEnumerator', 'DEnumLiteral', 'DClass', 'DAttribute', 'DReference', 'DOperation', 'DParameter', 'DObject', 'DValue', 'DStructuralFeature'];
     const classesOptions = <optgroup label={'Object type'}>
-            {objectTypes.map((o)=><option key={o} value={o}>{o.length ? o.substring(1) : 'anything'}</option>)}
+            {objectTypes.map((o)=><option key={o} value={o}>{o ? o.substring(1) : 'anything'}</option>)}
     </optgroup>;
 
     const changeVP = (evt: React.ChangeEvent<HTMLSelectElement>) => {
@@ -23,11 +23,12 @@ function InfoData(props: Props) {
     return(<section className={'p-3'}>
         <Input data={view} field={'name'} label={'Name'} type={'text'} readonly={readOnly}/>
         <Input data={view} field={'explicitApplicationPriority'} label={'Priority'} type={'number'} readonly={readOnly}/>
-        <Select data={view} field={'appliableTo'} label={'Appliable To'} readonly={readOnly} options={<optgroup label={'Appliable Types'}>
+        <Select data={view} field={'appliableTo'} label={'Appliable to node types'} readonly={readOnly} options={<optgroup label={'Appliable Types'}>
             <option value={'node'}>Node</option>
             <option value={'edge'}>Edge</option>
             <option value={'edgePoint'}>Edge Point</option>
         </optgroup>} />
+        <Select data={view} field={'appliableToClasses'} label={'Appliable to classes'} readonly={readOnly} options={classesOptions} />
         <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Viewpoint</label>
             <select className={'my-auto ms-auto select'} disabled={readOnly}

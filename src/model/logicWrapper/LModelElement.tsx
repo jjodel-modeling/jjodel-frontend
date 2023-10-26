@@ -4507,7 +4507,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 if (withmetainfo) ret.forEach((struct: ValueDetail)=>{ struct.value = mapperfunc(struct.value); });
                 else ret = ret.map(mapperfunc);
                 break;
-            case ShortAttribETypes.void:
+            case ShortAttribETypes.EVoid:
                 if (withmetainfo) ret.forEach((struct: ValueDetail)=>struct.hidden = true);
                 else ret = [];
                 break;

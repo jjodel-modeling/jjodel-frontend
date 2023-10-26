@@ -1,4 +1,5 @@
 import {
+    BEGIN,
     Constructors,
     CoordinateMode,
     Debug,
@@ -11,11 +12,13 @@ import {
     EdgeBendingMode,
     EGraphElements,
     EModelElements,
+    END,
     getWParams,
     GObject,
     GraphPoint,
     GraphSize,
     Info,
+    Log,
     LogicContext,
     LPointerTargetable,
     LViewPoint,
@@ -24,7 +27,7 @@ import {
     RuntimeAccessible,
     RuntimeAccessibleClass,
     SetFieldAction,
-    ShortAttribETypes, windoww
+    ShortAttribETypes, U, windoww
 } from "../../joiner";
 import {EdgeGapMode} from "../../joiner/types";
 
@@ -45,14 +48,16 @@ export class DViewElement extends DPointerTargetable {
     // own properties
     name!: string;
 
-    // evaluate 1 sola volta all'applicazione della vista o alla creazione dell'elemento.
-    constants!: string;
+    // evaluate 1 sola volta all'applicazione della vista o all'editing del campo
+    constants?: string;
+    _parsedConstants?: GObject; // should be protected but LView is not subclass
 
     // evaluate tutte le volte che l'elemento viene aggiornato (il model o la view cambia).
     preRenderFunc!: string;
 
     jsxString!: string; // l'html template
     usageDeclarations?: string;
+
     forceNodeType?: DocString<'component name (Vertex, Field, GraphVertex, Graph)'>;
     scalezoomx: boolean = false; // whether to resize the element normally using width-height or resize it using zoom-scale css
     scalezoomy: boolean = false;
@@ -162,6 +167,20 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             <br/>    plus a special variable "ret" where dependencies are registered.{/*and a "state" variable containing the entire application state.*/}
             <br/>Usage Example: see the default view for value.
     </div>}
+    get_usageDeclarations(c: Context): this["usageDeclarations"]{
+        return c.data.usageDeclarations || "(ret)=>{ // scope contains: data, node, view, constants, state\n" +
+            "// ** preparations and default behaviour here ** //\n" +
+            "console.log('inside ud default func pre', {ret:{...ret}, data, node, view})\n" +
+            "ret.data = data\n" +
+            "ret.node = node\n" +
+            "ret.view = view\n" +
+            "console.log('inside ud default func post', {ret:{...ret}, data, node, view})\n" +
+            "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
+            // if you want your node re-rendered every time, add a dependency to ret.state = state; or ret.update = Math.random();
+            "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+            "// ** declarations here ** //\n" +
+            "}";
+    }
 
     forceNodeType?: DocString<'component name'>;
     __info_of__forceNodeType: Info = {isGlobal:true, type: "EGraphElements", enum: EGraphElements, label:"force node type",
@@ -349,14 +368,35 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         txt:<div>Gets the size stored in this view for target element.</div>}
 
     public _parsedConstants!: GObject; // todo
-    public get__parsedConstants(c: Context): this['_parsedConstants'] { return {}; }
+    public get__parsedConstants(c: Context): this['_parsedConstants'] { return c.data._parsedConstants || {}; }
 
     public get_constants(c: Context): this['constants'] {
         return c.data.constants;
     }
+
+
+    public static parseConstants(funcCode?: string): GObject | undefined {
+        if (!funcCode) return {};
+        let parsedConstants: GObject = {};
+        let context: GObject = {__param: parsedConstants};
+        context.__proto__ = windoww.defaultContext;
+        try{
+            U.evalInContextAndScopeNew( "("+funcCode+")(this.__param)", context, true, false, false);
+        } catch (e: any) {
+            Log.w("Attempted to save an invalid view.constant setup, the change has been discarded. Cause:\n" + e.message.split("\n")[''], e)
+            return undefined;
+        }
+        return parsedConstants;
+    }
+
     public set_constants(value: this['constants'], c: Context): boolean {
-        const _value: string = value ? value : '{}';
-        return SetFieldAction.new(c.data.id, 'constants', _value, '', false);
+        let parsedConstants: GObject | undefined = LViewElement.parseConstants(value);
+        if (!parsedConstants) return false;
+        BEGIN();
+        SetFieldAction.new(c.data.id, 'constants', value, '', false);
+        SetFieldAction.new(c.data.id, '_parsedConstants', parsedConstants, '', false);
+        END()
+        return true;
     }
 
     public get_preRenderFunc(c: Context): this['preRenderFunc'] {

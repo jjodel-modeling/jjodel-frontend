@@ -30,7 +30,8 @@ import {
     Constructors,
     WVoidEdge,
     Log,
-    LEdgePoint
+    LEdgePoint,
+    U
 } from "../../joiner";
 import {InitialVertexSizeObj} from "../../joiner/types";
 import ModellingIcon from "../forEndUser/ModellingIcon";
@@ -177,7 +178,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             {classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
                 return <div key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => { select(model.addObject(lClass.id)) }}>
                     <ModellingIcon name={'object'} />
-                    <span className={'ms-1 text-capitalize'}>{lClass.name}</span>
+                    <span className={'ms-1 text-capitalize'}>{U.stringMiddleCut(lClass.name, 14)}</span>
                 </div>
             })}
             <div key={"RawObject"} className={'toolbar-item'} onClick={e => select(model.addObject())}>

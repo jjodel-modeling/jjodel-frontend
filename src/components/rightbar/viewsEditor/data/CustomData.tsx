@@ -64,34 +64,35 @@ function CustomDataComponent(props: AllProps) {
 
 
     return(<section className={'p-3'}>
-        <div className={'d-flex w-100 mb-2'}>
+        <Function data={view} field={"constants"} jsxLabel={<label>Constants (<i>Evaluated Once</i>)</label>} readonly={readOnly} />
+        {false && <div className={'d-flex w-100 mb-2'}>
             <label>Constants (<i>Evaluated Once</i>) </label>
             <button className={'btn btn-primary ms-auto'} onClick={addConst} disabled={readOnly}>
                 <i className={'p-1 bi bi-plus'}></i>
             </button>
-        </div>
-        {constants.map((constant, index) => {
+        </div>}
+        {false && constants.map((constant, index) => {
             const c = constant.split(':');
             const name = c[0].replaceAll(' ', ''); const value = c[1];
             return(<div className={'d-flex p-1'} key={index}>
-                <input key={index + 'name' + name} className={'input w-25'} tabIndex={-1} onBlur={e => blurNameConst(index, e.target.value)}
-                       defaultValue={name} readOnly={readOnly} />
-                <b className={'mx-1 my-auto'}>=</b>
-                <input key={index + 'value' + value} className={'input w-25'} tabIndex={-1} onBlur={e => blurValueConst(index, e.target.value)}
-                       defaultValue={value} readOnly={readOnly} />
-                <button className={'btn btn-danger ms-2'} disabled={readOnly} onClick={e => removeConst(index)}>
-                    <i className={'p-1 bi bi-trash3-fill'}></i>
-                </button>
+            <input key={index + 'name' + name} className={'input w-25'} tabIndex={-1} onBlur={e => blurNameConst(index, e.target.value)}
+            defaultValue={name} readOnly={readOnly} />
+            <b className={'mx-1 my-auto'}>=</b>
+            <input key={index + 'value' + value} className={'input w-25'} tabIndex={-1} onBlur={e => blurValueConst(index, e.target.value)}
+            defaultValue={value} readOnly={readOnly} />
+            <button className={'btn btn-danger ms-2'} disabled={readOnly} onClick={e => removeConst(index)}>
+            <i className={'p-1 bi bi-trash3-fill'}></i>
+            </button>
             </div>)
         })}
 
-        <div className={'d-flex w-100 mt-4 mb-2'}>
+        {false && <div className={'d-flex w-100 mt-4 mb-2'}>
             <label>Variables (<i>Evaluated Foreach Render</i>)</label>
             <button className={'btn btn-primary ms-auto'} onClick={addVar} disabled={readOnly}>
                 <i className={'p-1 bi bi-plus'}></i>
             </button>
-        </div>
-        {variables.map((variable, index) => {
+        </div>}
+        {false && variables.map((variable, index) => {
             const v = variable.split(':');
             const name = v[0].replaceAll(' ', ''); const value = v[1];
             return(<div className={'d-flex p-1'} key={index}>
@@ -105,7 +106,7 @@ function CustomDataComponent(props: AllProps) {
                 </button>
             </div>)
         })}
-        <Function data={view} field={"usageDeclarations"} jsxLabel={true} readonly={readOnly} />
+        <Function data={view} field={"usageDeclarations"} jsxLabel={<label>Listed dependencies</label>} readonly={readOnly} />
     </section>);
 }
 

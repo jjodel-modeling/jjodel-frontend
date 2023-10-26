@@ -7,7 +7,7 @@ import './style.scss';
 
 function TextAreaComponent(props: AllProps) {
     const data = props.data;
-    const readOnly = (props.readonly !== undefined) ? props.readonly : !props.debugMode && data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
+    const readOnly = (props.readonly !== undefined) ? props.readonly : !props.debugmode && data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
     const field = props.field;
     const getter = props.getter;
     const setter = props.setter;
@@ -91,7 +91,7 @@ export interface TextAreaOwnProps {
 }
 
 interface StateProps {
-    debugMode: boolean;
+    debugmode: boolean;
     data: LPointerTargetable & GObject;
 }
 interface DispatchProps { }
@@ -102,7 +102,7 @@ type AllProps = Overlap<TextAreaOwnProps, Overlap<StateProps, DispatchProps>>;
 function mapStateToProps(state: DState, ownProps: TextAreaOwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
-    ret.debugMode = state.debug;
+    ret.debugmode = state.debug;
     ret.data = LPointerTargetable.fromPointer(pointer);
     return ret;
 }
