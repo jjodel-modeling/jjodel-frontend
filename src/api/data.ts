@@ -1,67 +1,46 @@
-import {
+import type {
     Json,
+    Pointer,
+    GObject,
+    Dictionary,
+    DocString} from "../joiner";
+import {
     Log,
-
-
     DModelElement,
-    LModelElement,
     DModel,
     LModel,
     DValue,
     LValue,
-    DNamedElement,
-    LNamedElement,
     DObject,
     LObject,
     DEnumerator,
-    LEnumerator,
     DEnumLiteral,
-    LEnumLiteral,
     DAttribute,
     LAttribute,
     DReference,
     LReference,
-    DStructuralFeature,
-    LStructuralFeature,
     DClassifier,
-    LClassifier,
-    DDataType,
-    LDataType,
     DClass,
     LClass,
     DParameter,
-    LParameter,
     DOperation,
-    LOperation,
     DPackage,
     LPackage,
     DTypedElement,
     LTypedElement,
     DAnnotation,
-    LAnnotation,
-    EJavaObject,
-    DMap,
-    LMap,
-    DFactory_useless_,
-    LFactory_useless_,
     AttribETypes,
     U,
-    Pointer,
     CreateElementAction,
     Selectors,
-    GObject,
-    Dictionary,
     PointedBy,
     LPointerTargetable,
     windoww,
     SetRootFieldAction,
     Constructors,
-    DocString,
     store,
     SetFieldAction,
-    Pointers,
     DPointerTargetable, ShortAttribETypes, toLongEType, DState, Debug
-
 } from "../joiner";
 import {DefaultEClasses, ShortDefaultEClasses, toLongEClass} from "../common/U";
 
@@ -229,7 +208,7 @@ export class EcoreParser{
 
         // let longprefixlength = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore'.length;
         const typeprefix = "#//";
-        for (let shortkey in ShortAttribETypes){
+        for (let shortkey in ShortAttribETypes) {
             if (shortkey === ShortAttribETypes.EVoid) continue;
             let shortetype: ShortAttribETypes = (ShortAttribETypes as GObject)[shortkey];
             let longetype: AttribETypes = toLongEType(shortetype);

@@ -1,3 +1,4 @@
+import "./console.scss";
 import React, {Dispatch, PureComponent, ReactElement} from "react";
 import {connect, Provider} from "react-redux";
 import {
@@ -12,7 +13,7 @@ import {
     Pointer,
     RuntimeAccessibleClass,
     U,
-    windoww, store
+    windoww, store, Log
 } from "../../../joiner";
 import * as util from "util";
 import {GraphElementComponent} from "../../../graph/graphElement/graphElement";
@@ -158,12 +159,11 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                     output = {"React.Component": {props:"...navigate to expand...", state:"", _isMounted:output._isMounted}}
                 }
                 let format = (val: GObject) => U.replaceAll(ansiConvert.toHtml(util.inspect(val, true, 2, true)), "style=\"color:#FFF\"", "style=\"color:#000\"");
-                outstr = "<h4>Result:</h4>" + format(output)+"<span>";
+                outstr = '<h4>Result:</h4><div class="output-row" tabindex="984">' + format(output)+"<span>";
+                let commentsPopup = "";
                 if (shortcuts || comments){
                     // if(!shortcuts) shortcuts = {};
                     if (!comments) comments = {};
-                    if (shortcuts) outstr += "<br><br><h4>Shortcuts</h4>" + format(shortcuts);
-                    if (hidden) outstr +="<br><br><h4>Other less useful properties</h4>" + format(hidden);
                     for (let commentKey in comments){
                         let commentVal: any = comments[commentKey];
                         let txt = commentVal?.txt;
@@ -175,15 +175,26 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                             // let arr: any[] = (Array.isArray(txt?.props?.children) ? txt.props.children : (txt.props.children ? [txt.props.children] : []));
                             // txt = arr.map(e => typeof e === "string" ? e : e?.props?.children + '' || '').join("");
                         }
-                        if (commentVal?.type) commentVal = ":" + (commentVal?.type?.cname || commentVal.type) + " ~ " + txt;
+                        if (commentVal?.type) commentVal = "\t\t<span style='color: #999'>" + (commentVal?.type?.cname || commentVal.type)+"</span>"; // + " ~ " + txt;
+                        // warning: unicode char but should not make a problem. 𐀹
+                        commentVal += '<div class="output-comment my-tooltip">' + txt + '</div></div><div class="output-row" tabindex="984">'
+
                         let commentKeyEscaped = U.multiReplaceAll(commentKey, ["$", "-"], ["\\$", "\\-"]); // _ should be safe, .-,?^ not happening?
                         let regexp = new RegExp("^({?\\s*" +commentKeyEscaped+":.*)$", "gm");
                         let regexpCloseTags = new RegExp("(\\<span style\\=\"color\\:\\#)", "gm");
                         outstr = U.replaceAll( outstr, "$", "£");
-                        outstr = outstr.replace(regexp, "$1 // " + commentVal);
+                        outstr = outstr.replace(regexp, "$1" + commentVal);
                         outstr = outstr.replace(regexpCloseTags,  "</span>$1");
                         outstr = U.replaceAll(outstr, "£", "$");
                     }
+                    if (shortcuts) outstr += "</div><br><br><h4>Shortcuts</h4><div class=\"output-row\" tabindex=\"984\">" + format(shortcuts);
+                    // if (hidden) outstr +="</div><br><br><h4>Other less useful properties</h4><div class=\"output-row\" tabindex=\"984\">" + format(hidden);
+                    // warning: unicode char but should not make a problem.
+                    // outstr = U.replaceAll( outstr, '𐀹,\n', '],</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
+                    outstr = U.replaceAll( outstr, '<span style="color:#000">,\n',
+                        '</span><span style="color:#000">,</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
+                    outstr = U.replaceAll( outstr, '],\n', '],</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
+                    outstr = U.replaceAll( outstr, '},\n', '},</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
                 }
                 ashtml = true; }
             catch(e: any) {
@@ -201,7 +212,12 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             else contextkeys = Array.isArray(objraw) ? ["array[index]", ...Object.keys(Array.prototype)].join(",\n") : Object.getOwnPropertyNames(objraw).join(",\n");// || []).join(", ")
 
             let injectCommentJSX = () => {
-                try{ for (let key in jsxComments) ReactDOM.render( jsxComments[key], document.getElementById("console_output_comment_"+key)); }
+                try{ for (let key in jsxComments) {
+                    if (hiddenkeys.includes(key)) continue;
+                    let commentNode: HTMLElement | null = document.getElementById("console_output_comment_"+key);
+                    Log.eDev(!commentNode, "failed to find comment placeholder", {key, v:jsxComments[key], jsxComments});
+                    if (commentNode) ReactDOM.render(jsxComments[key], commentNode);
+                } }
                 catch (e) { console.error("failed to inject console output comment:", e)}
             }
             setTimeout(injectCommentJSX, 1)
@@ -212,7 +228,7 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 {/*<label>Query {(this.state.expression)}</label>*/}
                 <label>On {((data as GObject)?.name || "model-less node (" + this.props.node.className + ")") + " - " + this.props.node?.className}</label>
                 <hr className={'mt-1 mb-1'} />
-                { ashtml && <div className={"console-output-container"} style={{whiteSpace:"pre"}} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
+                { ashtml && <div className={"console-output-container"} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
                 { !ashtml && <div style={{whiteSpace:"pre"}}>{ outstr }</div>}
                 <label className={"mt-2"}>Context keys:</label>
                 {

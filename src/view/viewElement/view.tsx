@@ -144,10 +144,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     constants?: string;
     __info_of__constants: Info = {todo:true, isGlobal: true, type: "Function():Object", label:"constants declaration",
         txt:<div>Data used in the visual representation, meant to be static values evaluated only once when the view is first applied.<br/>
-        Can contain a raw object or a function. Same rules as this.usageDeclarations<br/>
-        Example 1: <code>{'{color:"red", background: "gray"}'}</code><br/>
-        Example 2: <code>{'function(){\n    let fib = [1,1]; for (let i = 2; i < 100) { fib[i] = fib[i-2]+fib[i-1]; }\n    return fib; }'}</code><br/>
+        Check default value view for an example.<br/>
     </div>}
+    // Example 1: <code>{'{color:"red", background: "gray"}'}</code><br/>
+    // Example 2: <code>{'function(){\n    let fib = [1,1]; for (let i = 2; i < 100) { fib[i] = fib[i-2]+fib[i-1]; }\n    return fib; }'}</code><br/>
 
     preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
     __info_of__preRenderFunc: Info = {isGlobal: true, obsolete: true, type: "Function():Object", label:"pre-render function",
@@ -159,7 +159,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     usageDeclarations?: string;
     __info_of__usageDeclarations: Info = {todo: false, isGlobal: true, type: "Function():Object", label:"usage declarations",
-        txt:<div>Subset of the global or elements's data state that is graphically used.
+        txt: <div>Subset of the global or elements's data state that is graphically used.
             <br/>If specified the element will only update when one of those has changed.
             <br/>Can optimize performance and ensure the node is updated even when navigating remote properties that
             <br/>    don\'t belong to this element, like visualizing the name of an object pointed by a reference.
