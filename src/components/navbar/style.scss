@@ -4,17 +4,18 @@
 }
 
 .nav-item {
-  padding: 0.25rem 0.75rem;
+  padding: 0 0.75rem;
   border-radius: 3px;
   font-size: 0.9rem;
   cursor: pointer;
   margin: auto;
 }
 .nav-item:hover, .nav-item:focus-within {
-  color: #ED474A;
+  color: black;
 }
 
 .dropdown-item {
+  display: flex;
   font-size: 0.8rem;
   cursor: pointer;
 }
@@ -28,19 +29,20 @@
 .nav-item .submenu {
   display: none;
   position: absolute;
-  left:100%; top:-7px;
+  left: 100%; top: 0;
 }
 .nav-item .submenu-left {
-  right:100%; left:auto;
+  right: 100%; left: auto;
 }
 .dropdown-menu > li:hover {
   background-color: #F1F1F1
 }
-.dropdown-menu > li:hover > .submenu{
+.dropdown-menu > li:hover > .submenu {
   display: block;
 }
 
 .dropdown-menu {
+  padding: 0;
   border-radius: 0;
 }
 

@@ -9,6 +9,7 @@ import Navbar from "./components/navbar/Navbar";
 import {FakeStateProps} from "./joiner/types";
 import Dashboard from "./pages/Dashboard";
 import Editor from "./pages/Editor";
+import Helper from "./components/helper/Helper";
 
 function App(props: AllProps) {
     const debug = props.debug;
@@ -19,6 +20,7 @@ function App(props: AllProps) {
                 onClick={e => statehistory.globalcanundostate = true}>
         {isLoading && <Loader />}
         <Navbar />
+        <Helper />
         {user.project ? <Editor /> : <Dashboard />}
     </div>);
 

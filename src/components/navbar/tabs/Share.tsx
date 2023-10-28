@@ -16,10 +16,9 @@ function ShareComponent(props: AllProps) {
     const quit = async() => {
         window.location.replace(root);
     }
-
-    return(<li className={'nav-item dropdown'}>
-        <div tabIndex={-1} className={'dropdown-toggle'} data-bs-toggle={'dropdown'}>Share</div>
-        <ul className={'dropdown-menu'}>
+    return(<li className={'dropdown-item'}>Share
+        <i className={'ms-auto bi bi-caret-right-fill'} />
+        <ul className={'submenu dropdown-menu'}>
             {!room && <li tabIndex={-1} onClick={create} className={'dropdown-item'}>Collaborative</li>}
             {room && <li tabIndex={-1} onClick={quit} className={'dropdown-item'}>Quit</li>}
         </ul>

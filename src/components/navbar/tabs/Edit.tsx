@@ -15,9 +15,9 @@ function EditComponent(props: AllProps) {
         RedoAction.new(index + 1);
     }
 
-    return(<li className={'nav-item dropdown'}>
-        <div tabIndex={-1} className={'dropdown-toggle'} data-bs-toggle={'dropdown'}>Edit</div>
-        <ul className={'dropdown-menu'}>
+    return(<li className={'dropdown-item'}>Edit
+        <i className={'ms-auto bi bi-caret-right-fill'} />
+        <ul className={'submenu dropdown-menu'}>
             <li tabIndex={-1} onClick={e => doUndo(0)} className={'dropdown-item'}>Undo ({undo.length})</li>
             <li tabIndex={-1} onClick={e => doRedo(0)} className={'dropdown-item'}>Redo ({redo.length})</li>
         </ul>

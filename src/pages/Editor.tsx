@@ -1,14 +1,15 @@
-import React, {Dispatch, ReactElement} from 'react';
+import {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import {DState, DUser, LUser} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 import Dock from '../components/abstract/Dock';
 
+
 function EditorComponent(props: AllProps) {
     const user = props.user;
     const project = user.project;
 
-    return (<Dock />);
+    return(<Dock />);
 }
 interface OwnProps {}
 interface StateProps {user: LUser}

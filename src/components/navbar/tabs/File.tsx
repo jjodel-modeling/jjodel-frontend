@@ -58,15 +58,15 @@ function FileComponent(props: AllProps) {
     const exportLayout = () => {SaveManager.exportLayout_click(false)}
     const importLayout = () => {SaveManager.importLayout_click(false)}
 
-    return(<li className={'nav-item dropdown'}>
-        <div tabIndex={-1} className={'dropdown-toggle'} data-bs-toggle={'dropdown'}>File</div>
-        <ul className={'dropdown-menu'}>
+    return(<li className={'dropdown-item'}>File
+        <i className={'ms-auto bi bi-caret-right-fill'} />
+        <ul className={'submenu dropdown-menu'}>
             <li tabIndex={-1} className={'dropdown-item'}>New
-                <i className={'ms-1 bi bi-arrow-right'}></i>
+                <i className={'ms-auto bi bi-caret-right-fill'} />
                 <ul className={'submenu dropdown-menu'}>
                     <li tabIndex={-1} onClick={createM2} className={'dropdown-item'}>Metamodel</li>
                     {metamodels.length > 0 && <li tabIndex={-1} className={'dropdown-item'}>Model
-                        <i className={'ms-1 bi bi-arrow-right'}></i>
+                        <i className={'ms-auto bi bi-caret-right-fill'} />
                         <ul className={'submenu dropdown-menu'}>
                             {metamodels.map((metamodel, index) => {
                                 return(<li key={index} tabIndex={-1} onClick={e => createM1(metamodel)} className={'dropdown-item'}>
@@ -78,7 +78,7 @@ function FileComponent(props: AllProps) {
                 </ul>
             </li>
             {elements.length > 0 && <li tabIndex={-1} className={'dropdown-item'}>Open
-                <i className={'ms-1 bi bi-arrow-right'}></i>
+                <i className={'ms-auto bi bi-caret-right-fill'} />
                 <ul className={'submenu dropdown-menu'}>
                     {elements.map((m, index) => {
                         return(<li key={index} tabIndex={-1} onClick={e => open(m)} className={'dropdown-item'}>
@@ -90,7 +90,7 @@ function FileComponent(props: AllProps) {
             <li tabIndex={-1} onClick={save} className={'dropdown-item'}>Save</li>
             <li tabIndex={-1} onClick={load} className={'dropdown-item'}>Load</li>
             <li tabIndex={-1} className={'dropdown-item'}>Export
-                <i className={'ms-1 bi bi-arrow-right'}></i>
+                <i className={'ms-auto bi bi-caret-right-fill'} />
                 <ul className={'submenu dropdown-menu'}>
                     <li tabIndex={-1} onClick={exportJson} className={'dropdown-item'}>JSON</li>
                     <li tabIndex={-1} onClick={exportXml} className={'dropdown-item'}>XML</li>
@@ -98,14 +98,13 @@ function FileComponent(props: AllProps) {
                 </ul>
             </li>
             <li tabIndex={-1} className={'dropdown-item'}>Import
-                <i className={'ms-1 bi bi-arrow-right'}></i>
+                <i className={'ms-auto bi bi-caret-right-fill'} />
                 <ul className={'submenu dropdown-menu'}>
                     <li tabIndex={-1} onClick={importJson} className={'dropdown-item'}>JSON</li>
                     <li tabIndex={-1} onClick={importXml} className={'dropdown-item'}>XML</li>
                     <li tabIndex={-1} onClick={importLayout} className={'dropdown-item'}>Layout</li>
                 </ul>
             </li>
-            <li tabIndex={-1} onClick={e => user.project = null} className={'text-danger dropdown-item'}>Close Project</li>
         </ul>
     </li>);
 }
