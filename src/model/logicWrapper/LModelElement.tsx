@@ -440,28 +440,41 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     default: type = "annotation"; break;
                 }
             }
+            let fatherElement;
             switch (type.toLowerCase()) {
                 default:
                     Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), c});
                     ret = () => undefined as any;
                     break;
-                case "attribute":
-                    ret = this.get_class(c)?.addAttribute;
-                    break;
-                case "class":
-                    // let current = c.proxyObject;
-                    ret = this.get_package(c)?.addClass;
-                    //ret = (this as any).get_addClass(context as any);
-                    break;
                 case "package":
                     ret = (this.get_package(c) || this.get_model(c))?.addPackage;
                     break;
-                case "reference":
-                    ret = this.get_class(c)?.addReference;
+                case "class":
+                    // let current = c.proxyObject;
+                    fatherElement = this.get_package(c);
+                    if (!fatherElement) {
+                        let model = this.get_model(c);
+                        fatherElement = model.packages[0];
+                        if (!fatherElement) fatherElement = LPointerTargetable.fromD(model.addPackage());
+                    }
+                    ret = fatherElement.addClass;
+                    //ret = (this as any).get_addClass(context as any);
                     break;
                 case "enum":
                 case "enumerator":
-                    ret = this.get_package(c)?.addEnumerator;
+                    fatherElement = this.get_package(c);
+                    if (!fatherElement) {
+                        let model = this.get_model(c);
+                        fatherElement = model.packages[0];
+                        if (!fatherElement) fatherElement = LPointerTargetable.fromD(model.addPackage());
+                    }
+                    ret = fatherElement.addEnumerator;
+                    break;
+                case "attribute":
+                    ret = this.get_class(c)?.addAttribute;
+                    break;
+                case "reference":
+                    ret = this.get_class(c)?.addReference;
                     break;
                 case "literal":
                     ret = this.get_enum(c)?.addLiteral;
@@ -473,9 +486,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     ret = this.get_operation(c)?.addParameter;
                     break;
                 //case "exception": ret = ((exception: Pack1<LClassifier>) => { let rett = this.get_addException(context as any); rett(exception); }) as any; break;
-                case "exception":
+                /*case "exception": exceptions should not be "added" here, this is for creating objects. exceptions are not created but just linked. they are classes.
                     ret = (this as any).get_addException(c as any);
-                    break;
+                    break; */
             }
             return ret ? ret(...args) : null as any;
         }

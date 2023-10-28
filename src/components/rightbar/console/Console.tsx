@@ -57,8 +57,6 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
                     if (Lsingleton["__info_of__" + key]) comments[key] = Lsingleton["__info_of__" + key];
                 }
                 for (let key in Lsingleton) {
-                    // todo: might define some func private in L like "private info_of_fieldname" where fuction body is comment documentation extracted,
-                    //  or actually directly private info_of_id = <a href="..."><span>Unique identifier, and value used to point this object.</span></a>
                     if ((key in output) || (key.indexOf("__info_of__") === 0)) {
                         delete ret.shortcuts[key];
                         continue;
@@ -67,7 +65,10 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
                     if (comments[key]) continue; // if explicitly commented, i will not attempt to generate documentation.
                     let entryvalue = Lsingleton[key];
                     switch (typeof entryvalue) {
+                        default:
                         case "object":
+                            ret.shortcuts[key] = entryvalue;
+                            break;
                         case "function":
                             ret.shortcuts[key] = U.buildFunctionDocumentation(entryvalue);
                             break;

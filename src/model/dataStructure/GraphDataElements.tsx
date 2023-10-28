@@ -329,7 +329,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return new GraphSize(r.x, r.y, r.w, r.h);
     }
     protected get_innerSize_impl(context: Context, canTriggerSet: boolean = true, outerSize: boolean = false): Readonly<GraphSize> {
-        canTriggerSet = canTriggerSet && !Debug.lightMode && false;
+        canTriggerSet = canTriggerSet && !Debug.lightMode;
         switch (context.data.className){
             default: return Log.exDevv("unexpected classname in get_size switch: " + context.data.className);
             case DEdge.cname:

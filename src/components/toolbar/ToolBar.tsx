@@ -126,11 +126,12 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     const downward: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]> = {}
     const addChildren = (items: string[]) => items ? getItems(lModelElement, downward, [...new Set(items)], node) : [];
 
-    downward["DModel"] = ["DPackage"];
+    // downward["DModel"] = ["DPackage"];
     downward["DPackage"] = ["DPackage", "DClass", "DEnumerator"];
     downward["DClass"] = ["DAttribute", "DReference", "DOperation"];
     downward["DEnumerator"] = ["DLiteral"];
     downward["DOperation"] = ["DParameter", "DException"];
+
 
     // nodes
     downward["DEdge"] = ["DEdgePoint"]
@@ -147,6 +148,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             upward[child].push(...(downward[parentKey]||[]));
         }
     }
+    downward["DModel"] = downward["DPackage"];
 
     // exceptions:
     upward["DPackage"] = ["_pDPackage"]; //, "DModel"]; because from a package, i don't want to prompt the user to create a model in toolbar.
@@ -162,6 +164,8 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             <hr className={'my-2'} />
             <b className={'d-block text-center text-uppercase mb-1'}>Add sublevel</b>
             {lModelElement && addChildren(downward[lModelElement.className])}
+            <hr className={'my-2'} />
+            <b className={'d-block text-center text-uppercase mb-1'}>Add shape</b>
             {node && addChildren(downward[node.className])}
             {/*<div className={"toolbar-item annotation"} onClick={() => select(lModelElement.addChild("annotation"))}>+annotation</div>*/}
             <hr className={'my-2'} />

@@ -160,25 +160,15 @@ class DefaultView {
         return `<div className={'root'}>
     {!data && "Model data missing."}
     <div className="edges" style={{zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}>{[
-            true && data.suggestedEdges.reference &&
-            data.suggestedEdges.reference.map(
-                se => (!se.vertexOverlaps)
-                 && <DamEdge start={se.start.father} end={se.end} view={"Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association")} key={se.start.node.id+"~"+se.end.node.id}/>)
+            refEdges.map( <DamEdge start={se.start.father} end={se.end} view={"Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association")} key={se.start.node.id+"~"+se.end.node.id}/>)
                  ,
-            true && data.suggestedEdges.extend &&
-            data.suggestedEdges.extend.map(
-                se => (!se.vertexOverlaps)
+            extendEdges.map(
                  && <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdgeInheritance"} key={"EXT_"+se.start.node.id+"~"+se.end.node.id}/>)]
         }
     </div>
-     {data && data["$default"] && <DefaultNode key={"default package"} data={data["$default"]} />}
-     {data && data.packages.map((pkg) => {
-        if (pkg.name === "default") return undefined;
-        return <DefaultNode key={pkg.id} data={pkg}></DefaultNode>
-    })}
-    {data && data.allSubObjects.map((child) => {
-        return <DefaultNode key={child.id} data={child}></DefaultNode>
-    })}
+    {otherPackages.map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
+    {firstPackage && firstPackage.children.map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
+    {m1Objects.map(m1object => <DefaultNode key={m1object.id} data={m1object}></DefaultNode>)}
 </div>`;
     }
 

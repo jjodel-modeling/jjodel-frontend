@@ -222,17 +222,34 @@ function makeDefaultGraphViews(): DViewElement[] {
     let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname]);
     modelView.draggable = false; modelView.resizable = false;
     modelView.query = 'context DModel inv: true';
+    modelView.usageDeclarations = "(ret)=>{\n" +
+        "// ** preparations and default behaviour here ** //\n" +
+        "//ret.data = data\n" +
+        "ret.node = node\n" +
+        "ret.view = view\n" +
+        "// custom preparations:\n" +
+        "let packages = data?.packages || [];\n" +
+        "let suggestedEdges = data?.suggestedEdges || {};\n" +
+        "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
+        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+        "// ** declarations here ** //\n" +
+        "ret.firstPackage = packages[0]\n"+
+        "ret.otherPackages = packages.slice(1)\n"+
+        "ret.m1Objects = data?.allSubObjects\n"+
+        "ret.refEdges = (suggestedEdges.reference || []).filter(e => !e.vertexOverlaps)\n"+
+        "ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps)\n"+
+        "}";
 
     let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname]);
     packageView.defaultVSize = new GraphSize(0, 0, 400, 500);
-    packageView.query = `context DPackage inv: not (self.name = 'default')`;
+    packageView.query = `context DPackage inv: true`;
 
-
+/*
     const defaultPackage: DViewElement = DViewElement.new('DefaultPackage', DV.defaultPackage());
     defaultPackage.defaultVSize = new GraphSize(0, 0);
     defaultPackage.explicitApplicationPriority = 2;
     defaultPackage.query = `context DPackage inv: self.name = 'default'`;
-    defaultPackage.draggable = false; defaultPackage.resizable = false;
+    defaultPackage.draggable = false; defaultPackage.resizable = false;*/
 
 
     let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.cname]);
@@ -377,7 +394,7 @@ function makeDefaultGraphViews(): DViewElement[] {
     }*/
     // nb: Error is not a view, just jsx. transform it in a view so users can edit it
 
-    return [modelView, packageView, defaultPackage,
+    return [modelView, packageView, //defaultPackage,
         classView, enumView, attributeView, referenceView, operationView,
         literalView, objectView, valueView, voidView, ...edgeViews, edgePointView];
 }

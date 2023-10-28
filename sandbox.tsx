@@ -2,6 +2,7 @@ export const a = 0;
 let data:any, node:any, view:any, component:any;
 
 /*
+make sure error view display meaningful messages with code line
 * prevent megacrash if someone does <Vertex data={"not a pointer"} /> or <Vertex data={1, null, undefined...} />
 *
 * */
