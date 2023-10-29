@@ -241,7 +241,7 @@ w.GraphPoint = GraphPoint;
 w.$s = $s;
 */
 export {
-    TextArea, Select, Input, Image, DamEdge,
+    TextArea, Select, Input, Image, Edge,
     GraphsContainerComponent,
     Overlap as OverlapComponent,
     GraphsContainer,

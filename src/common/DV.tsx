@@ -160,10 +160,8 @@ class DefaultView {
         return `<div className={'root'}>
     {!data && "Model data missing."}
     <div className="edges" style={{zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}>{[
-            refEdges.map( <DamEdge start={se.start.father} end={se.end} view={"Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association")} key={se.start.node.id+"~"+se.end.node.id}/>)
-                 ,
-            extendEdges.map(
-                 && <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdgeInheritance"} key={"EXT_"+se.start.node.id+"~"+se.end.node.id}/>)]
+            refEdges.map(se=> <Edge start={se.start.father.node} end={se.end.node} view={"Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association")} key={se.start.node.id+"~"+se.end.node.id}/>)
+            , extendEdges.map(se=><Edge start={se.start} end={se.end} view={"Pointer_ViewEdgeInheritance"} key={"EXT_"+se.start.node.id+"~"+se.end.node.id}/>)]
         }
     </div>
     {otherPackages.map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}

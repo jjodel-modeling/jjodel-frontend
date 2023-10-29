@@ -235,7 +235,7 @@ function makeDefaultGraphViews(): DViewElement[] {
         "// ** declarations here ** //\n" +
         "ret.firstPackage = packages[0]\n"+
         "ret.otherPackages = packages.slice(1)\n"+
-        "ret.m1Objects = data?.allSubObjects\n"+
+        "ret.m1Objects = data?.allSubObjects || []\n"+
         "ret.refEdges = (suggestedEdges.reference || []).filter(e => !e.vertexOverlaps)\n"+
         "ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps)\n"+
         "}";
@@ -352,15 +352,35 @@ function makeDefaultGraphViews(): DViewElement[] {
 
     let edgeViews: DViewElement[] = [];
     let size0: GraphPoint = new GraphPoint(0, 0), size1: GraphPoint = new GraphPoint(20, 20), size2: GraphPoint = new GraphPoint(20, 20); // todo: riportalo in 40,20
-    let edgePreRenderFunc: string = `() => {return{
-            segments: this.edge.segments,
-            strokeColor: 'gray',
-            strokeWidth: '2px',
-            strokeColorHover: 'black',
-            strokeColorLong: 'gray',
-            strokeLengthLimit: 300,
-            strokeWidthHover: '4px'
-        }}`;
+    let edgeConstants: string = "(ret)=>{\n" +
+        "// ** preparations and default behaviour here ** //\n" +
+        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+        "// ** declarations here ** //\n" +
+        "   ret.strokeColor = 'gray'\n"+
+        "   ret.strokeWidth = '2px'\n"+
+        "   ret.strokeColorHover = 'black'\n"+
+        "   ret.strokeColorLong = 'gray'\n"+
+        "   ret.strokeLengthLimit = 300\n"+
+        "   ret.strokeWidthHover = '4px'\n"+
+        "}";
+    let edgePrerenderFunc: string = "(ret)=>{\n" +
+        "// ** preparations and default behaviour here ** //\n" +
+        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+        "// ** declarations here ** //\n" +
+        "ret.segments = edge.segments\n"+
+        "}";
+
+    let edgeUsageDeclarations = "(ret)=>{\n" +
+        "// ** preparations and default behaviour here ** //\n" +
+        "// ret.data = data\n" +
+        "// ret.edge = edge\n" +
+        "ret.view = view\n" +
+        "// data, edge, view are dependencies by default. delete them above if you want to remove them.\n" +
+        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+        "// ** declarations here ** //\n" +
+        "ret.start = edge.start\n"+
+        "ret.end = edge.end\n"+
+        "}";
     function makeEdgeView(name: string, type: EdgeHead, headSize: GraphPoint | undefined, tailSize: GraphPoint | undefined, dashing: boolean): DViewElement{
         let ev = DViewElement.new2("Edge"+name, DV.edgeView(type,
                 headSize ? DV.svgHeadTail("Head", type) : "", tailSize ? DV.svgHeadTail("Tail", type) : "", dashing ? "10.5,9,0,0" : undefined),
@@ -370,9 +390,11 @@ function makeDefaultGraphViews(): DViewElement[] {
                 v.appliableToClasses = [DVoidEdge.cname];
                 v.edgeHeadSize = headSize || size0;
                 v.edgeTailSize = tailSize || size0;
-                v.preRenderFunc = edgePreRenderFunc;
+                v.constants = edgeConstants;
+                v.usageDeclarations = edgeUsageDeclarations;
+                v.preRenderFunc = edgePrerenderFunc;
+                v.appliableTo = 'edge'; // todo: remove the entire property?
         }, false);
-        ev.appliableTo = 'edge';
         edgeViews.push(ev);
         return ev;
     }

@@ -48,6 +48,7 @@ import {DefaultUsageDeclarations, EdgeOwnProps} from "./sharedTypes/sharedTypes"
 export function makeEvalContext(view: LViewElement, state: DState, ownProps: GraphElementOwnProps, stateProps: GraphElementReduxStateProps): GObject {
     let component = GraphElementComponent.map[ownProps.nodeid as Pointer<DGraphElement>];
     let allProps = {...ownProps, ...stateProps};
+    let parsedConstants = stateProps.view._parsedConstants;
     let evalContext: GObject = {
         model: stateProps.data,
         ...ownProps,
@@ -58,24 +59,12 @@ export function makeEvalContext(view: LViewElement, state: DState, ownProps: Gra
         stateProps,
         props: allProps,
         component,
-        constants:(stateProps.view?._parsedConstants || {}),
+        constants: parsedConstants,
         // getSize:vcomponent?.getSize, setSize: vcomponent?.setSize,
-        ...(stateProps.view?._parsedConstants || {}),
+        ...parsedConstants,
         // ...stateProps.usageDeclarations, NOT because they are not evaluated yet. i need a basic eval context to evaluate them
     };
     evalContext.__proto__ = windoww.defaultContext;
-
-    // todo: move them out of component, make it parse in view.set_constants and save the result in a LView variable along with parsed JSX string "React.createElement(...)"
-    if (view.constants) {
-        try {
-            // priority 0: eval constants
-            let constants = U.evalInContextAndScope(view.constants, evalContext, evalContext);
-            U.objectMergeInPlace(evalContext, constants);
-        }
-        catch (e) {
-            Log.ee("Invalid view.constants: " + view.constants, {error:e, view, allProps, constants: view.constants});
-        }
-    }
     return evalContext;
 }
 
@@ -108,7 +97,6 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
         // ret.evalContext.usageDeclarations = ret.usageDeclarations;
         let tempContext: GObject = {__param: stateProps.usageDeclarations};
         tempContext.__proto__ = evalContext;
-        Log.exDev(!tempContext.data, "missing data", tempContext, stateProps);
         U.evalInContextAndScopeNew("("+stateProps.view.usageDeclarations+")(this.__param)", tempContext, true, false);
         U.objectMergeInPlace(evalContext, stateProps.usageDeclarations);
         // ret.evalContext.props = ret; mo more needed since UD doesn't update props anymore // hotfix to update context props after usageDeclaration mapping
@@ -125,7 +113,7 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
     let jsxCodeString: DocString<ReactNode>;
     let jsxparsedfunc: () => React.ReactNode;
     try {
-        jsxCodeString = JSXT.fromString(view.jsxString, {factory: 'React.createElement'});
+        jsxCodeString = JSXT.fromString(view.jsxString, {factory: 'React.createElement'}); // todo: questa cosa va spostata nel render, non nel mapstate
     }
     catch (e: any) {
         // Log.eDevv();
@@ -202,7 +190,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     static mapLModelStuff(state: DState, ownProps: GraphElementOwnProps, ret: GraphElementReduxStateProps): void {
-        ret.data = LPointerTargetable.wrap(ownProps.data);
+        // NB: Edge constructor might have set it from props.start, so keep the check before overwriting.
+        if (!ret.data?.__isProxy) ret.data = LPointerTargetable.wrap(ownProps.data);
         /*
         const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : (ownProps.data as any as DModelElement)?.id) as string;
         // Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ret, ownProps, state});
@@ -255,14 +244,19 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             } else*/
             if (dGraphElementDataClass === DEdge) {
                 // set start and end from ownprops;
-                let edgeProps: EdgeStateProps = ret as EdgeStateProps;
                 let edgeOwnProps: EdgeOwnProps = ownProps as EdgeOwnProps;
-                let start = edgeProps.start.id; //typeof edgeProps.start === "string" ? edgeProps.start : (edgeProps.start as any).id; // at runtime i found proxy wrapped instead of id, no idea why
-                let end = edgeProps.end.id; // typeof edgeProps.end === "string" ? edgeProps.end : (edgeProps.end as any).id;
+                let edgeStateProps: EdgeStateProps = ret as EdgeStateProps;
+                let startnodeid = LGraphElement.getNodeId(edgeOwnProps.start);
+                let endnodeid = LGraphElement.getNodeId(edgeOwnProps.end);
+                if (!startnodeid) {
+                    startnodeid = LGraphElement.getNodeId(ret.data);
+                }
+                edgeStateProps.start = LPointerTargetable.fromPointer(startnodeid)
+                edgeStateProps.end = LPointerTargetable.fromPointer(endnodeid);
                 let longestLabel = undefined; // edgeOwnProps.label;
                 let labels: DEdge["labels"] = []; // edgeOwnProps.labels || [];
-                dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, start, end, longestLabel, labels);
-                ret.node = (ret as any).edge = MyProxyHandler.wrap(dge);
+                dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, longestLabel, labels);
+                edgeStateProps.node = edgeStateProps.edge = MyProxyHandler.wrap(dge);
             }
             else {
                 let initialSize = ownProps.initialSize;
@@ -278,7 +272,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     ////// mapper func
     static mapStateToProps(state: DState, ownProps: GraphElementOwnProps, dGraphDataClass: (typeof DGraphElement | typeof DEdge) = DGraphElement, startingobj?: GObject): GraphElementReduxStateProps {
         // console.log('dragx GE mapstate', {dGraphDataClass});
-        let ret: GraphElementReduxStateProps = (startingobj || {...ownProps}) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
+        let ret: GraphElementReduxStateProps = (startingobj || {}) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
         GraphElementComponent.mapLModelStuff(state, ownProps, ret);
         if (Debug.lightMode && (!ret.data || !(lightModeAllowedElements.includes(ret.data.className)))){
             return ret;
@@ -503,7 +497,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         try {
             if (this.props.preRenderFunc) {
                 // eval prerender
-                let obj = U.evalInContextAndScope<GObject>("("+this.props.preRenderFunc+")()", context);
+                let obj: GObject = {};
+                let tempContext: GObject = {__param: obj};
+                tempContext.__proto__ = context;
+                U.evalInContextAndScopeNew("("+this.props.preRenderFunc+")(this.__param)", tempContext, true, false);
                 U.objectMergeInPlace(context, obj);
             }
         }

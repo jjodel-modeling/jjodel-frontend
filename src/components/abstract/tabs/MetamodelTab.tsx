@@ -1,7 +1,7 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import type {DModel, Pointer} from "../../../joiner";
-import {DState, CreateElementAction, DGraph, LGraph, LModel, DamEdge} from "../../../joiner";
+import {DState, CreateElementAction, DGraph, LGraph, LModel, Edge} from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import ContextMenu from "../../contextMenu/ContextMenu";

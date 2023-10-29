@@ -99,7 +99,7 @@ export class UX{
                     case windoww.Components.EdgePoint.cname:
                         idbasename = injectProps.parentnodeid + "^" + (dataid || re.props.startingSize?.id || indices.join(",")) + "EP";
                         break;
-                    case EdgeComponent.cname: case "DamEdge":
+                    case EdgeComponent.cname: case "Edge":
                         let edgeProps:EdgeOwnProps = re.props;
                         let edgestart_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.start as any).id || edgeProps.start;
                         let edgeend_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.end as any).id || edgeProps.end;

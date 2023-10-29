@@ -367,7 +367,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__getSize: Info = {isNode:true, hidden:true, type:"Function(Pointer<GraphElement | ModelElement>) => GraphSize",
         txt:<div>Gets the size stored in this view for target element.</div>}
 
-    public _parsedConstants!: GObject; // todo
+    public _parsedConstants!: GObject;
     public get__parsedConstants(c: Context): this['_parsedConstants'] { return c.data._parsedConstants || {}; }
 
     public get_constants(c: Context): this['constants'] {
@@ -383,15 +383,15 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         try{
             U.evalInContextAndScopeNew( "("+funcCode+")(this.__param)", context, true, false, false);
         } catch (e: any) {
-            Log.w("Attempted to save an invalid view.constant setup, the change has been discarded. Cause:\n" + e.message.split("\n")[''], e)
+            Log.w("Attempted to save an invalid view.constant setup. Cause:\n" + e.message.split("\n")[0], e)
             return undefined;
         }
         return parsedConstants;
     }
 
     public set_constants(value: this['constants'], c: Context): boolean {
-        let parsedConstants: GObject | undefined = LViewElement.parseConstants(value);
-        if (!parsedConstants) return false;
+        if (value === c.data.constants) return true;
+        let parsedConstants: GObject | undefined = LViewElement.parseConstants(value) || {};
         BEGIN();
         SetFieldAction.new(c.data.id, 'constants', value, '', false);
         SetFieldAction.new(c.data.id, '_parsedConstants', parsedConstants, '', false);

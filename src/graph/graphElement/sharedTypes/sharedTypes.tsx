@@ -90,6 +90,7 @@ export class EdgeOwnProps extends GraphElementOwnProps {
 
 export class EdgeStateProps extends GraphElementReduxStateProps {
     node!: LEdge;
+    edge!: LEdge; // just alias for node
     //lastSelected!: LModelElement | null;
     isEdgePending!: { user: LUser, source: LClass };
     viewpoint!: LViewPoint;

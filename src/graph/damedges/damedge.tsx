@@ -21,7 +21,7 @@ import {
     RuntimeAccessibleClass,
     U,
     EdgeOwnProps, EdgeStateProps,
-    LViewPoint
+    LViewPoint, DModelElement
 } from "../../joiner";
 
 let groupingsize: Dictionary<EdgeBendingMode, number> = {} as any;
@@ -84,28 +84,17 @@ class DispatchProps extends GraphElementDispatchProps {
 type AllPropss = Overlap<Overlap<EdgeOwnProps, EdgeStateProps>, DispatchProps>;
 
 function mapStateToProps(state: DState, ownProps: EdgeOwnProps): EdgeStateProps {
-    let ret: EdgeStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DEdge, {...new EdgeStateProps(), ...ownProps}) as EdgeStateProps;
+    let ret: EdgeStateProps = new EdgeStateProps();
+    if (!ownProps.data) {
+        let lstart = LPointerTargetable.from(ownProps.start);
+        if (RuntimeAccessibleClass.extends(lstart.className, DModelElement.cname)) ret.data = lstart as any;
+    }
+    ret = GraphElementComponent.mapStateToProps(state, ownProps, DEdge, ret) as EdgeStateProps;
     // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
     ret.isEdgePending = {
         user: LPointerTargetable.from(state.isEdgePending.user),
         source: LPointerTargetable.from(state.isEdgePending.source)
     };
-    ret.viewpoint = LViewPoint.fromPointer(state.viewpoint);
-    // ret.key = ownProps.key || (startnodeid || (ownProps.start as any)?.id || ownProps.start) + "~" + (endnodeid || (ownProps.end as any)?.id || ownProps.end);
-    // key is already used as key || nodeid on super.render()
-    // console.log("edge", {ret, ownProps});
-
-    let startnodeid = LGraphElement.getNodeId(ownProps.start);
-    let endnodeid = LGraphElement.getNodeId(ownProps.end);
-
-    if (!startnodeid) {
-        startnodeid = LGraphElement.getNodeId(ret.data);
-    }
-    ret.start = LPointerTargetable.fromPointer(startnodeid)
-    ret.end = LPointerTargetable.fromPointer(endnodeid);
-    // U.objectMergeInPlace(superret, ret);
-    // U.removeEmptyObjectKeys(superret);
-    // console.error(superret, ret); throw Error("aaa");
     return ret;
 }
 
@@ -123,10 +112,10 @@ export const EdgeConnected = connect<EdgeStateProps, DispatchProps, EdgeOwnProps
     mapDispatchToProps
 )(EdgeComponent as any);
 
-export const DamEdge = (props: EdgeOwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const Edge = (props: EdgeOwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <EdgeConnected {...{...props, children}} isGraph={false} isVertex={true} />;
 }
 
 EdgeComponent.cname = "EdgeComponent";
 EdgeConnected.cname = "EdgeConnected";
-DamEdge.cname = "DamEdge";
+Edge.cname = "Edge";

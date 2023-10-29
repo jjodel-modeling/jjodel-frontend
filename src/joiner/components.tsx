@@ -24,7 +24,7 @@ export {DefaultNode, DefaultNodeComponent} from "../graph/defaultNode/DefaultNod
 export {Graph, Vertex, VoidVertex, GraphVertex, Field, EdgePoint, VertexComponent} from "../graph/vertex/Vertex"; // require overlap, graphelement
 export {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphContainer"; // require vertex, graph
 //export {DockLayoutComponent} from "../components/abstract/DockLayoutComponent";
-export {DamEdge, EdgeComponent,} from "../graph/damedges/damedge";
+export {Edge, EdgeComponent,} from "../graph/damedges/damedge";
 export {GenericInput} from "../components/forEndUser/GenericInput"
 
 
