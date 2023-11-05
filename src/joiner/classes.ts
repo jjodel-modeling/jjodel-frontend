@@ -1235,7 +1235,7 @@ export class PendingPointedByPaths{
 }
 
 @RuntimeAccessible
-export class PointedBy{
+export class PointedBy {
     public static cname: string = "PointedBy";
     static list: string[] = ["father", "parent", "annotations", "packages", "type", "subpackages", "classifiers", "exceptions", "parameters", "defaultValue", "instances", "operations", "features", "attributes", "references", "extends", "extendedBy", "implements", "implementedBy", "instanceof", "edges", "target", "opposite", "parameters", "exceptions", "literals", "values"];
     source: string; // elemento da cui parte il puntatore
@@ -1680,6 +1680,7 @@ export class DProject extends DPointerTargetable {
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
     views: Pointer<DViewElement, 0, 'N'> = U.getDefaultViewsID();
+    // collaborators dict user: priority
 
     public static new(name: string, author: Pointer<DUser, 1, 1, LUser>, persist: boolean = true): DProject {
         return new Constructors(new DProject('dwc'), undefined, persist, undefined)

@@ -10,6 +10,7 @@ import Router from "./router/Router";
 
 
 function start() {
+    // first do login and then ...
     jodelInit();
     ReactDOM.render(
         <Provider store={store}>
