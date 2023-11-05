@@ -2,7 +2,7 @@ import React, {Dispatch} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {DState, DUser, LUser, statehistory} from "./joiner";
+import {DState, DUser, stateInitializer, LUser, statehistory} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import Navbar from "./components/navbar/Navbar";
@@ -10,20 +10,34 @@ import {FakeStateProps} from "./joiner/types";
 import Dashboard from "./pages/Dashboard";
 import Editor from "./pages/Editor";
 import Helper from "./components/helper/Helper";
+import Auth from "./pages/Auth";
+import {useEffectOnce} from "usehooks-ts";
 
 function App(props: AllProps) {
     const debug = props.debug;
     const isLoading = props.isLoading;
     const user = props.user;
 
-    return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? " debug" : "")}
-                onClick={e => statehistory.globalcanundostate = true}>
-        {isLoading && <Loader />}
-        <Navbar />
-        <Helper />
-        {user.project ? <Editor /> : <Dashboard />}
-    </div>);
+    useEffectOnce(() => {
+        if(!debug) return;
+        DUser.new('anonymous', 'Pointer_AnonymousUser'); DUser.current = 'Pointer_AnonymousUser';
+        stateInitializer();
+    })
 
+    if(DUser.current) {
+        return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? ' debug' : '')}
+                    onClick={e => statehistory.globalcanundostate = true}>
+            {isLoading && <Loader />}
+            <Navbar />
+            <Helper />
+            {user.project ? <Editor /> : <Dashboard />}
+        </div>);
+    } else {
+        return(<section>
+            {isLoading && <Loader />}
+            <Auth />
+        </section>);
+    }
 }
 
 interface OwnProps {room?: string}

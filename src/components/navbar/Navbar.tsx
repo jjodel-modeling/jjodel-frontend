@@ -1,13 +1,13 @@
 import './style.scss';
 import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
-import {DState, DUser, LUser} from '../../joiner';
+import {DState, DUser, LUser, SetRootFieldAction} from '../../joiner';
 import File from './tabs/File';
 import Edit from './tabs/Edit';
 import Share from './tabs/Share';
-import Logo from '../../static/img/logo.png';
 import Debug from '../../static/img/debug.png';
 import {FakeStateProps} from '../../joiner/types';
+import PersistanceApi from "../../api/persistance";
 
 function NavbarComponent(props: AllProps) {
     const debug = props.debug;
@@ -50,8 +50,11 @@ function NavbarComponent(props: AllProps) {
                     <label style={{cursor: 'pointer'}} className={'text-white'}>A</label>
                 </div>
                 <ul className={'dropdown-menu'}>
-                    <li tabIndex={-1} className={'dropdown-item'}>
-                        Test
+                    <li tabIndex={-1} onClick={async(e) => {
+                        SetRootFieldAction.new('isLoading', true);
+                        await PersistanceApi.logout();
+                    }} className={'dropdown-item'}>
+                        Logout
                     </li>
                 </ul>
             </li>

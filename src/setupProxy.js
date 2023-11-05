@@ -9,6 +9,14 @@ module.exports = function (app) {
         })
     );
     app.use(
+        '/persistance/*',
+        createProxyMiddleware({
+            target: process.env['REACT_APP_PERSISTANCE'],
+            changeOrigin: true
+        })
+    );
+    /*
+    app.use(
         '/collaborative/rooms',
         createProxyMiddleware({
             target: process.env['REACT_APP_COLLABORATIVE_REST'],
@@ -30,4 +38,5 @@ module.exports = function (app) {
             changeOrigin: true
         })
     );
+    */
 };

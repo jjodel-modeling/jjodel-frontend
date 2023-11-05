@@ -69,7 +69,6 @@ export type GObject<DocSubType = ''> = DocSubType extends object ? { [key: strin
 export type RawObject = { [key: string]: NotFunction; };
 // Json<T> = oggetto con le chiavi di T senza le funzioni (post deserializzazione)
 export type Json<T extends GObject = RawObject> =
-
         {[key in keyof T]: T[key] extends Function ? never : (T[key] extends symbol ? "symbol" :
             Exclude<T[key], symbol>); }
         ;
@@ -182,3 +181,4 @@ export type Dependency = {
 };
 export type Selected = Dictionary<Pointer<DUser>, Pointer<DGraphElement, 0, 1>>;
 export type FakeStateProps = any;
+export type ApiResponse = {code: number, body: Json|string}

@@ -5,7 +5,7 @@ import {
     EdgeHead,
     EGraphElements,
     EModelElements,
-    jodelInit,
+    stateInitializer,
     ShortAttribETypes,
     windoww,
     AccessModifier,
@@ -130,7 +130,7 @@ windoww.enumerators = {};
 (window as any).enumerators.EdgeBendingMode = EdgeBendingMode;
 
 function afterStoreLoad() {
-    jodelInit();
+    stateInitializer();
 }
 
 // afterStoreLoad();

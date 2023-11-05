@@ -14,13 +14,7 @@ function DashboardComponent(props: AllProps) {
         user.projects = [...user.projects, LProject.fromD(project)];
     }
 
-    const switchUser = (e: MouseEvent) => {
-        const user = DUser.new('Mimmo');
-        DUser.current = user.id;
-    }
-
     return (<div className={'w-25'}>
-        <button onClick={switchUser}>switch</button>
         <div className={'d-flex p-2'}>
             <b className={'ms-1 my-auto'}>MY PROJECTS</b>
             <button className={'btn btn-primary ms-auto'} onClick={createProject}>

@@ -170,13 +170,12 @@ export class DState extends DPointerTargetable{
 
     selected: Selected = {};
 
-    isLoading: boolean = true;
+    isLoading: boolean = false;
 
     projects: Pointer<DProject, 0, 'N'> = [];
 
     static init(store?: DState): void {
         BEGIN()
-        DUser.new('anonymous', 'Pointer_AnonymousUser');
         const viewpoint = DViewPoint.new('Default', '' , undefined, '', '', '', [], '', 1, false);
         viewpoint.id = 'Pointer_DefaultViewPoint';
         CreateElementAction.new(viewpoint);

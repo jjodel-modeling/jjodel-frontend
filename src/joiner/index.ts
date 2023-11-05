@@ -31,7 +31,7 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
     NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually,
     Function, Function2, InOutParam,
     unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap, Info,
-    Constructor, AbstractConstructor
+    Constructor, AbstractConstructor, ApiResponse
 } from "./types";
 export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1 } from "./classes";
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
@@ -145,7 +145,7 @@ export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRoo
 export {DState, LState, ModelStore, ViewPointState, statehistory} from "../redux/store";
 export {Selectors as Selectorss} from "../redux/selectors/selectors";
 export var Selectors = windoww.Selectors as (GObjectt & typeof SelType);
-export {reducer, jodelInit} from "../redux/reducer/reducer";
+export {reducer, stateInitializer} from "../redux/reducer/reducer";
 export {store} from "../redux/createStore";
 export {Debug} from "../debugtools/debug";
 

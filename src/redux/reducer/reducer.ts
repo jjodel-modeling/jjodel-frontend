@@ -363,7 +363,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
         default:
             let ret = doreducer(oldState, action);
             if (ret === oldState) return ret;
-            statehistory[DUser.current].redoable = [];
+            // statehistory[DUser.current].redoable = [];   <-- Moved to stateInitializer()
             let delta =  U.objectDelta(ret, oldState);
             if (!filterundoableactions(delta)) return ret;
             // console.log("setting undoable action:", {ret, oldState0:{...oldState}, oldState, delta});
@@ -475,7 +475,8 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
     }
 }
 
-export function jodelInit() {
+export function stateInitializer() {
+    statehistory[DUser.current] = {redoable: [], undoable: []};
     RuntimeAccessibleClass.fixStatics();
     let dClasses: string[] = RuntimeAccessibleClass.getAllNames().filter(rc => rc[0] === 'D');
     let lClasses: string[] = RuntimeAccessibleClass.getAllNames().filter(rc => rc[0] === 'L');
@@ -484,5 +485,4 @@ export function jodelInit() {
     buildLSingletons(dClassesMap, lClassesMap); setSubclasses(dClassesMap); setSubclasses(lClassesMap);
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
     DState.init();
-    SetRootFieldAction.new('isLoading', false);
 }

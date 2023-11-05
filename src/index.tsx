@@ -4,20 +4,15 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min';
 import './index.css';
-import {Provider} from "react-redux";
-import {jodelInit, store} from "./joiner";
-import Router from "./router/Router";
+import {Provider} from 'react-redux';
+import {store} from './joiner';
+import App from './App';
 
+ReactDOM.render(
+    <Provider store={store}>
+        <App />
+    </Provider>,
+    document.getElementById('root')
+);
 
-function start() {
-    // first do login and then ...
-    jodelInit();
-    ReactDOM.render(
-        <Provider store={store}>
-            <Router />
-        </Provider>,
-        document.getElementById('root')
-    );
-}
-setTimeout(start, 10);
 
