@@ -38,6 +38,10 @@ console.warn('loading ts U log');
 export class U {
     static cname: string = "U";
 
+    static json(dElement: GObject): Json {
+        return JSON.parse(JSON.stringify(dElement.__raw));
+    }
+
     public static fatherChain(me: LModelElement): Pointer<DModelElement, 0, 'N', LModelElement> {
         if(!me) return [];  // without this line go through delete error
         const fathers: Pointer<DModelElement, 0, 'N', LModelElement>= [me.id];

@@ -2,7 +2,7 @@ import React, {Dispatch} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {DState, DUser, stateInitializer, LUser, statehistory} from "./joiner";
+import {DState, DUser, stateInitializer, LUser, statehistory, Json, SetRootFieldAction} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import Navbar from "./components/navbar/Navbar";
@@ -12,6 +12,7 @@ import Editor from "./pages/Editor";
 import Helper from "./components/helper/Helper";
 import Auth from "./pages/Auth";
 import {useEffectOnce} from "usehooks-ts";
+import PersistanceApi from "./api/persistance";
 
 function App(props: AllProps) {
     const debug = props.debug;
@@ -20,8 +21,16 @@ function App(props: AllProps) {
 
     useEffectOnce(() => {
         if(!debug) return;
-        DUser.new('anonymous', 'Pointer_AnonymousUser'); DUser.current = 'Pointer_AnonymousUser';
-        stateInitializer();
+        (async function() {
+            SetRootFieldAction.new('isLoading', true);
+            const response = await PersistanceApi.login('admin@mail.it', 'admin');
+            const user = response.body as Json;
+            const id = user.id as string;
+            const username = user.username as string;
+            DUser.new(username, id); DUser.current = id;
+            stateInitializer();
+            SetRootFieldAction.new('isLoading', false);
+        })();
     })
 
     if(DUser.current) {

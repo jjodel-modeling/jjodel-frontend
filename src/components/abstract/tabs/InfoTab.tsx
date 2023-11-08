@@ -1,6 +1,6 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {DState, DUser, LModel, LProject, LUser} from "../../../joiner";
+import {DState, DUser, LModel, LProject, LUser, Input} from "../../../joiner";
 import {FakeStateProps} from "../../../joiner/types";
 
 
@@ -12,6 +12,7 @@ function InfoTabComponent(props: AllProps) {
 
     return(<div className={'p-3'}>
         <h3 className={'text-primary'}>{project.name}</h3>
+        <Input data={project.id} field={'name'} jsxLabel={<b className={'text-primary me-2'}>Name</b>} hidden={true} />
         <b><label className={'text-primary'}>Metamodels ({metamodels.length}):</label></b>
         <br />
         {metamodels.map((model, index) => {

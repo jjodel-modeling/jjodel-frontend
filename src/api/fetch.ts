@@ -4,10 +4,10 @@ class Fetch {
     static credentials: RequestCredentials = 'include';
     static headers = {'Content-type': 'application/json; charset=UTF-8'};
 
-    static async get(url: string, path: string): Promise<Response|null> {
+    static async get(url: string): Promise<Response|null> {
         try {
-            const response = await fetch(url + path, {method: 'GET', credentials: this.credentials});
-            console.log(`GET: ${url}${path}`, response);
+            const response = await fetch(url, {method: 'GET', credentials: this.credentials});
+            console.log(`GET: ${url}`, response);
             return response;
         } catch(e) {
             alert('Connection Error');
@@ -15,15 +15,15 @@ class Fetch {
         }
     }
 
-    static async post(url: string, path: string, body: Json): Promise<Response|null> {
+    static async post(url: string, body: Json): Promise<Response|null> {
         try {
-            const response = await fetch(url + path, {
+            const response = await fetch(url, {
                 method: 'POST',
                 credentials: this.credentials,
                 headers: this.headers,
                 body: JSON.stringify(body)
             });
-            console.log(`POST: ${url}${path}`, body, response);
+            console.log(`POST: ${url}`, body, response);
             return response;
         } catch(e) {
             alert('Connection Error');
@@ -31,15 +31,15 @@ class Fetch {
         }
     }
 
-    static async patch(url: string, path: string, body: Json): Promise<Response|null> {
+    static async patch(url: string, body: Json): Promise<Response|null> {
         try {
-            const response = await fetch(url + path, {
+            const response = await fetch(url, {
                 method: 'PATCH',
                 credentials: this.credentials,
                 headers: this.headers,
                 body: JSON.stringify(body)
             });
-            console.log(`PATCH: ${url}${path}`, body, response);
+            console.log(`PATCH: ${url}`, body, response);
             return response;
         } catch(e) {
             alert('Connection Error');
@@ -47,10 +47,10 @@ class Fetch {
         }
     }
 
-    static async delete(url: string, path: string): Promise<Response|null> {
+    static async delete(url: string): Promise<Response|null> {
         try {
-            const response = await fetch(url + path, {method: 'DELETE', credentials: this.credentials});
-            console.log(`DELETE: ${url}${path}`, response);
+            const response = await fetch(url, {method: 'DELETE', credentials: this.credentials});
+            console.log(`DELETE: ${url}`, response);
             return response;
         } catch(e) {
             alert('Connection Error');

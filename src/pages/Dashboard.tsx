@@ -1,12 +1,33 @@
 import React, {MouseEvent, Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
-import {DProject, DState, DUser, Input, LProject, LUser, U} from '../joiner';
+import {
+    BEGIN,
+    END,
+    CreateElementAction,
+    DProject,
+    DState,
+    DUser,
+    Input,
+    LProject,
+    LUser,
+    SetRootFieldAction,
+    U,
+    DeleteElementAction
+} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
+import PersistanceApi from "../api/persistance";
+import {useEffectOnce} from "usehooks-ts";
 
 function DashboardComponent(props: AllProps) {
     const user = props.user;
 
-    const createProject = (e: MouseEvent) => {
+    useEffectOnce(() => {
+        (async function() {
+            await PersistanceApi.loadMyProjects();
+        })();
+    })
+
+    const createProject = async(e: MouseEvent) => {
         let name = 'project_' + 0;
         let projectNames: string[] = user.projects.map(p => p.name);
         name = U.increaseEndingNumber(name, false, false, newName => projectNames.indexOf(newName) >= 0);
@@ -22,11 +43,22 @@ function DashboardComponent(props: AllProps) {
             </button>
         </div>
         {user.projects.map((project, index) => {
-            return(<div className={'p-3 border border-dark bg-white m-1'} key={index}>
-                <Input data={project} field={'name'} label={'name'} />
-                <button className={'btn btn-primary mx-auto'} onClick={e => user.project = project}>
-                    <i className={'p-1 bi bi-info'}></i>
+            return(<div className={'d-flex p-3 border bg-white m-1'} key={index}>
+                <button className={'btn btn-primary me-2'} onClick={e => user.project = project}>
+                    <i className={'p-1 bi bi-eye-fill'}></i>
                 </button>
+                <button className={'btn btn-danger me-2'} onClick={async(e) => {
+                    await PersistanceApi.deleteProject(project.id);
+                    // todo: change into project.delete()
+                    BEGIN()
+                    user.projects = user.projects.filter(p => p.id !== project.id);
+                    DeleteElementAction.new(project.id);
+                    SetRootFieldAction.new('projects', project.id, '-=', true);
+                    END()
+                }}>
+                    <i className={'p-1 bi bi-trash-fill'}></i>
+                </button>
+                <b className={'text-primary'}>{project.name}</b>
             </div>)
         })}
     </div>);

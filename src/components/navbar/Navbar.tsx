@@ -59,8 +59,8 @@ function NavbarComponent(props: AllProps) {
                 </ul>
             </li>
             <li className={'nav-item'}>
-                <button style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
-                    Share
+                <button onClick={async(e) => await PersistanceApi.saveProject()} style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
+                    Save
                 </button>
             </li>
             {debug && <li className={'nav-item'}>
