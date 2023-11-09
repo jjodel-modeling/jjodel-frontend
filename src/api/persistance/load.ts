@@ -7,14 +7,18 @@ export class Load {
 
     static async project(project: DProject) {
         const projectUrl = this.url + `projects/${project.id}`;
-        await Load.element(`${projectUrl}/metamodels`);
-        await Load.element(`${projectUrl}/models`);
-        await Load.element(`${projectUrl}/packages`);
-        await Load.element(`${projectUrl}/classes`);
-        await Load.element(`${projectUrl}/enumerators`);
-        await Load.element(`${projectUrl}/attributes`);
-        await Load.element(`${projectUrl}/references`);
-        await Load.element(`${projectUrl}/literals`);
+        await Promise.all([
+            Load.element(`${projectUrl}/metamodels`),
+            Load.element(`${projectUrl}/models`),
+            Load.element(`${projectUrl}/packages`),
+            Load.element(`${projectUrl}/classes`),
+            Load.element(`${projectUrl}/enumerators`),
+            Load.element(`${projectUrl}/attributes`),
+            Load.element(`${projectUrl}/references`),
+            Load.element(`${projectUrl}/literals`),
+            Load.element(`${projectUrl}/objects`),
+            Load.element(`${projectUrl}/values`)
+        ]);
         CreateElementAction.new(project);
     }
 

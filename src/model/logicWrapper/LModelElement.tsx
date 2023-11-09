@@ -3270,6 +3270,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     attributes!: LAttribute[];
     references!: LReference[];
     literals!: LEnumLiteral[];
+    values!: LValue[];
     allSubAnnotations!: LAnnotation[];
     allSubPackages!: LPackage[];
     allSubObjects!: LObject[];
@@ -3596,6 +3597,20 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     protected get_getPackageByUri(context: Context): this["getPackageByUri"] {
         return (uri: string)=>context.proxyObject.allSubPackages.filter((p)=>p.uri === uri)[0]; }
 
+
+    /* See src/api/persistance/save.ts */
+
+    protected get_attributes(context: Context): this['attributes'] {
+        return context.proxyObject.classes.flatMap(c => c.attributes);
+    }
+
+    protected get_literals(context: Context): this['literals'] {
+        return context.proxyObject.enumerators.flatMap(e => e.literals);
+    }
+
+    protected get_values(context: Context): this['values'] {
+        return context.proxyObject.objects.flatMap(o => o.features);
+    }
 }
 RuntimeAccessibleClass.set_extend(DNamedElement, DModel);
 RuntimeAccessibleClass.set_extend(LNamedElement, LModel);
