@@ -1,7 +1,6 @@
 <div className={'round bg-white root class'}>
     <div className={'object-children'}>
-        {(window.conflictChecker = (data)=>{
-
+        {(window.conflictChecker = (data)=>TRANSACTION(()=>{
             if (data.name !== "Server") data = data.model.$Server;
             let arr = data.$changes.values.map(c=> ({id: c.id, a:c.$action.value[0], from:c.$from.value, c: c.$clientCounter.value, s:c.$serverCounter.value}));
             // let arr = [{id:1, a:"a", c:101, s:104, from:"C"}, {id:2, a:"a", c:100, s:105, from:"D"}];
@@ -27,7 +26,7 @@
             window.conflictmap = conflictmap;
             window.conflicts = conflicts;
             return conflictmap;
-        })(data) && (window.sendToServer = (data, child)=>{
+        }))(data) && (window.sendToServer = (data, child)=>TRANSACTION(()=>{
             console.log("sendtoserver 0", {name:data.name, tr:document.getElementById("TD"+child.id)});
             if(data.name=="Server") return;
             let tr0 = document.getElementById("TD"+child.id);
@@ -42,7 +41,7 @@
             tr.setAttribute("style", path+tr.dataset.style);
             let model = data.model;
             $("[data-dataid='1699809153345_Pointer1699808470290_5270'] .edges").append(tr);
-            setTimeout(() => {
+            setTimeout(()=>TRANSACTION(() => {
                 let server = model.$Server;
                 let serverchanges = server.$changes;
                 let v = [...serverchanges.values];
@@ -61,6 +60,7 @@
                 server.$serverCounter.value = servercounter+1;
                 data.$serverCounter.value = servercounter+1;
                 tr.style.display = "none";
+
                 /*
                 oldParent.append(tr);
                 function afterparentchange(delay) {
@@ -73,8 +73,8 @@
                 //afterparentchange();
                 // data.father = model.$Server.id;
                 // tr.parentElement.removeChild(tr);
-                }, animationDuration);
-        })&&
+                }), animationDuration);
+        }))&&
             (window.addAction = (data, aname, avalue, sender) => {
                         let model = data.model;
                         let o = data;//model["$ClientC"];
@@ -122,7 +122,7 @@
                     <tr id={"TD"+child.id} style={{borderBottom: "1px solid black",
                         backgroundColor: conflictmap[child.id] && conflictmap[child.id].color || 'white'
                         }} data-style={
-                        'animation: animationoffset ' + (animationDuration/1000) + 's infinite linear; '+
+                        'animation: animationoffset ' + (animationDuration/1000) + 's 1 linear; '+
                         'animation-play-state: running; '+
                         'background: white;' +
                         'outline: 1px solid black;'
