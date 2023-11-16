@@ -10,7 +10,8 @@ todo: context menu object.clear() erases all values of object, if values are obj
 todo: new DObject("State" (metaclassname), {serverCounter:1, changes:[{from:this.data.name, ... blablabla, content of changes.type:values}]}
 
 
-
+// todo: context.set('counterValue', amount);
+//    and dObject.persist()
 
 make sure error view display meaningful messages with code line
 * prevent megacrash if someone does <Vertex data={"not a pointer"} /> or <Vertex data={1, null, undefined...} />

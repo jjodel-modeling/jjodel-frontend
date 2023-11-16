@@ -128,6 +128,7 @@ export function FINAL_END(): boolean{
     return ca.fire();
 }
 
+
 // make class isinstorage e mettici il path studia annotazioni per annotare gli oggett in modo che vengano rwappati prima di farli ritornare se sono annotati
 // minor todo: type as (...args: infer P) => any) ?
 export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...params: Parameters<F>): boolean | DState {
@@ -142,6 +143,7 @@ export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...param
 (window as any).END = END;
 (window as any).FINAL_END = FINAL_END;
 (window as any).maxActionFiring = 0;
+
 @RuntimeAccessible
 export class Action extends RuntimeAccessibleClass {
     public static cname: string = "Action";
