@@ -253,6 +253,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 }
                 edgeStateProps.start = LPointerTargetable.fromPointer(startnodeid)
                 edgeStateProps.end = LPointerTargetable.fromPointer(endnodeid);
+                Log.e(!startnodeid, "Cannot create an edge without start node", {startnodeid, data:ret.data, propsStart:edgeOwnProps.start});
+                Log.e(!endnodeid, "Cannot create an edge without end node (yet)", {endnodeid, data:ret.data, propsEnd:edgeOwnProps.end});
+                if (!startnodeid || !endnodeid) return;
                 let longestLabel = undefined; // edgeOwnProps.label;
                 let labels: DEdge["labels"] = []; // edgeOwnProps.labels || [];
                 dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, longestLabel, labels);

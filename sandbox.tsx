@@ -1,6 +1,6 @@
 export const a = 0;
 let data:any, node:any, view:any, component:any;
-
+// view selection in jsx by name instead of pointer (or both)
 /*
 need to fix get_children to work without instanceof (LModelElement.tsx:3962:1)
 or delete all DObjects without instanceof in the synchro_model.
