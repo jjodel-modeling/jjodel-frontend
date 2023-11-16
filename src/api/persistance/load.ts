@@ -21,6 +21,11 @@ export class Load {
             Load.element(`${projectUrl}/values`),
             /* VIEWS */
             Load.element(`${projectUrl}/views`),
+            /* NODES */
+            Load.element(`${projectUrl}/graphs`),
+            Load.element(`${projectUrl}/graphVertexes`),
+            Load.element(`${projectUrl}/voidVertexes`),
+            Load.element(`${projectUrl}/vertexes`)
         ]);
         CreateElementAction.new(project);
     }

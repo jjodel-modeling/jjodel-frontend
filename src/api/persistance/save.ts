@@ -28,6 +28,13 @@ export class Save {
         await Fetch.post(this.url + 'projects', U.json(project));
 
         const projectUrl = this.url + `projects/${project.id}`;
+
+        const graphs: LGraph[] = project.graphs;
+        const graphVertexes: LGraphVertex[] = graphs.flatMap(g => g.subElements) as LGraphVertex[];
+        const allVertexes: (LVoidVertex|LVertex)[] = graphVertexes.flatMap(gv => gv.subElements) as (LVoidVertex|LVertex)[];
+        const voidVertexes: LVoidVertex[] = allVertexes.filter(av => av.className === 'DVoidVertex') as LVoidVertex[];
+        const vertexes: LVertex[] = allVertexes.filter(av => av.className === 'DVertex') as LVertex[];
+
         await Promise.all([
             /* DATA */
             Save.elements(`${projectUrl}/metamodels`, project.metamodels),
@@ -43,10 +50,10 @@ export class Save {
             /* VIEWS */
             Save.elements(`${projectUrl}/views`, project.views),
             /* NODES */
-            // Save.elements(`${projectUrl}/graphs`, project.graphs),
-            // Save.elements(`${projectUrl}/graphVertexs`, project.graphs.flatMap(m => m.subElements.filter(s => s.className === 'DGraphVertex'))),
-            // Save.elements(`${projectUrl}/voidVertexs`, project.graphs.flatMap(m => m.subElements.filter(s => s.className === 'DVoidVertex'))),
-            // Save.elements(`${projectUrl}/vertexs`, project.graphs.flatMap(m => m.subElements.filter(s => s.className === 'DVertex'))),
+            Save.elements(`${projectUrl}/graphs`, graphs),
+            Save.elements(`${projectUrl}/graphVertexes`, graphVertexes),
+            Save.elements(`${projectUrl}/voidVertexes`, voidVertexes),
+            Save.elements(`${projectUrl}/vertexes`, vertexes)
         ]);
         // todo: fix metamodels.attributes, metamodels.literals and models.values (for now done without sub-checking)
     }

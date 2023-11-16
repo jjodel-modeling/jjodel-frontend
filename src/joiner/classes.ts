@@ -804,11 +804,13 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.graph = thiss.id;
         thiss.zoom = new GraphPoint(1, 1);
         thiss.graphSize = new GraphSize(0, 0, 0, 0);  // GraphSize.apply(this, [0, 0, 0 ,0]);
-        thiss._subMaps = {zoom: true, graphSize: true}
-        if (this.persist) {
-            // no pointedBy?
-        }
-        return this; }
+        thiss._subMaps = {zoom: true, graphSize: true};
+        if(thiss.className !== 'DGraph') return this;
+        const user: LUser = LUser.fromPointer(DUser.current);
+        if(user.project)
+            SetFieldAction.new(user.project,'graphs', thiss.id, '+=', true);
+        return this;
+    }
 
     DVoidVertex(defaultVSize?: InitialVertexSize): this {
         const thiss: DVoidVertex = this.thiss as any;
