@@ -44,6 +44,7 @@ function ViewsData(props: Props) {
             </button>
         </div>
         {views.map((view, i) => {
+            if(!view) return;
             return <div key={view.id} className={'d-flex p-1 mt-1 border round mx-1'} tabIndex={-1}
                         onMouseEnter={e => setHoverID(view.id)} onMouseLeave={e => setHoverID('')}
                         onClick={e => select(view)}

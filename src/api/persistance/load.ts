@@ -8,6 +8,7 @@ export class Load {
     static async project(project: DProject) {
         const projectUrl = this.url + `projects/${project.id}`;
         await Promise.all([
+            /* DATA */
             Load.element(`${projectUrl}/metamodels`),
             Load.element(`${projectUrl}/models`),
             Load.element(`${projectUrl}/packages`),
@@ -17,7 +18,9 @@ export class Load {
             Load.element(`${projectUrl}/references`),
             Load.element(`${projectUrl}/literals`),
             Load.element(`${projectUrl}/objects`),
-            Load.element(`${projectUrl}/values`)
+            Load.element(`${projectUrl}/values`),
+            /* VIEWS */
+            Load.element(`${projectUrl}/views`),
         ]);
         CreateElementAction.new(project);
     }

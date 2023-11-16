@@ -1680,7 +1680,7 @@ export class DProject extends DPointerTargetable {
     metamodels: Pointer<DModel, 0, 'N'> = [];
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
-    views: Pointer<DViewElement, 0, 'N'> = U.getDefaultViewsID();
+    views: Pointer<DViewElement, 0, 'N'> = [];
     // collaborators dict user: priority
 
     public static new(name: string, author: Pointer<DUser, 1, 1, LUser>, persist: boolean = true): DProject {
@@ -1739,7 +1739,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_views(context: Context): this['views'] {
-        return LViewElement.fromPointer(context.data.views);
+        return LViewElement.fromPointer([...U.getDefaultViewsID(), ...context.data.views]);
     }
     protected set_views(val: PackArr<this['views']>, context: Context): boolean {
         const data = context.data;
