@@ -108,12 +108,17 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
     }
 
 
+    aaaaaaaaaaaaaaaaaaaaaaaa
+    todo: questa cosa va spostata nel render, non nel mapstate
+    // prerender func
+    todo: move prerender func here
+
     // parsing the jsx
     // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
     let jsxCodeString: DocString<ReactNode>;
     let jsxparsedfunc: () => React.ReactNode;
     try {
-        jsxCodeString = JSXT.fromString(view.jsxString, {factory: 'React.createElement'}); // todo: questa cosa va spostata nel render, non nel mapstate
+        jsxCodeString = JSXT.fromString(view.jsxString, {factory: 'React.createElement'});
     }
     catch (e: any) {
         // Log.eDevv();
@@ -126,25 +131,10 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
         stateProps.evalContext = evalContext;
         return;
     }
-
-    /*
-    try {
-        jsxparsedfunc = U.eval InContextAndScope<() => ReactNode>('()=>{ return ' + jsxCodeString + '}', evalContext);
-        // U.evalInContext({...this, ...evalContext}, res); // todo: remove eval and add new Function() ?
-    }
-    catch (e: any) {
-        let errormsg = ''; // 'Syntax Error in custom user-defined template.\n';
-        let otherargs: any = {e, jsxCodeString, evalContext, where:"setTemplateString()", view};
-        if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0)
-        { errormsg += 'Reminder: nullish operators ".?" and "??" are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
-        else if (view.jsxString.indexOf('?.') >= 0) { errormsg += 'Reminder: ?. operator and empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
-        jsxparsedfunc = ()=> DV.errorView(errormsg, otherargs);
-    }*/
-
     stateProps.preRenderFunc = view.preRenderFunc;
     stateProps.template = jsxCodeString;
     stateProps.evalContext = evalContext;
-    // console.log('GE settemplatestring:', {stateProps});
+    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 }
 
 let debugcount = 0;

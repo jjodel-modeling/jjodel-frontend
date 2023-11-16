@@ -3495,6 +3495,81 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             }
             */
             return dObject;
+            <div className={'round bg-white root class'}>
+                <div className={'object-children'}>
+                    <table style={{textAlign: "center"}}>
+                        {actions.map((child, index) => {
+                            return [
+                                <tr style={{borderBottom: "1px solid black", display: "none"}}>
+                                    <td style={{borderLeft: "1px solid transparent"}}>{child.$action.value}</td>
+                                    <td style={{borderLeft: "1px solid black"}}>---</td>
+                                    <td style={{borderLeft: "1px solid black"}}>{child.$clientCounter.value}</td>
+                                </tr>,
+                                <tr style={{borderBottom: "1px solid black"}}>
+                                    <td style={{borderLeft: "1px solid transparent"}}>
+                                        <Input className="" style={{display: "inline-block", width: "70px"}}
+                                               data={child.$action} field="value"/>
+                                    </td>
+                                    <td style={{borderLeft: "1px solid black"}}>---</td>
+                                    <td style={{borderLeft: "1px solid black"}}>
+                                        <Input className="" style={{display: "inline-block", width: "70px"}}
+                                               data={child.$clientCounter} field="value"/>
+                                    </td>
+                                </tr>]
+                        })}
+                        <tr>
+                            <th className="" rowSpan="1"
+                                style={{borderLeft: "1px solid transparent", whiteSpace: "pre"}}>
+                                <button className="btn-primary btn p-1 m-1 bi bi-play" onClick={() => {
+                                }}></button>
+                                <button className="btn-success btn p-1 m-1" onClick={() => {
+                                    let model = data.model;
+                                    let o = model["$Client C"];
+                                    let instance = o.$changes.instanceof // model.instanceof.$default.$Change
+                                    let TRANSACTION = (f) => f();
+                                    TRANSACTION(() => {
+                                        let a = model.addObject(instance, "C" + o.$changes.values.length)
+                                        let childd = [...o.childrens.map(c => c.id)];
+                                        childd.push(a.id);
+                                        o.childrens = childd;
+                                        setTimeout(()=>TRANSACTION(() => {
+                                            let la = LObject.wrap(a);
+                                            la.instanceof = instance.id;
+                                            setTimeout(()=>TRANSACTION(() => {
+                                                let maxcounter = Math.max(...o.$changes.values.map(c => c.$clientCounter.value)) + 1;
+                                                if (maxcounter < +o.$counter.value) maxcounter = o.$counter.value || 0;
+                                                la.$clientCounter.value = maxcounter;
+                                                la.$serverCounter.value = undefined; // +o.$counter.value || 0;
+                                            }, 3000))
+                                        }, 3000))
+                                    })
+
+                                }}>+
+                                </button>
+                            </th>
+                            <td className="" style={{borderLeft: "1px solid black"}}>{data.$counter.value}</td>
+                            <td className="" style={{borderLeft: "1px solid black"}}>{actions[0].name}</td>
+                        </tr>
+                        <tr>
+                            <th className="" rowSpan="1"
+                                style={{borderLeft: "1px solid transparent", whiteSpace: "pre"}}>Actions
+                            </th>
+                            <th className="" style={{borderLeft: "1px solid black"}}>
+                                <div className="m-auto" style={{width: "min-content"}}>Server Counter</div>
+                            </th>
+                            <th className="" style={{borderLeft: "1px solid black"}}>
+                                <div className="m-auto" style={{width: "min-content"}}>Client Counter</div>
+                            </th>
+                        </tr>
+                    </table>
+                </div>
+                <hr/>
+                <label className={'ms-1'}>
+                    <Input jsxLabel={<b
+                        className={'my-auto class-name'}>{data.instanceof ? data.instanceof.name : "Object"}:</b>}
+                           data={data.id} field={'name'} hidden={true} autosize={true}/>
+                </label>
+            </div>
         }
     }
 

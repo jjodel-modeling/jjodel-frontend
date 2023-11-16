@@ -415,6 +415,11 @@ export class Constructors<T extends DPointerTargetable>{
     private callbacks: Function[];
     private nonPersistentCallbacks: Function[];
     fatherType?: typeof RuntimeAccessibleClass;
+    problem: if isPersistent is set to false, but the object is later made persistent with an action, you lose all the callback effects afecting other elements (as setting opposite relations like instances-typeof or losing pointedBy's)
+    solution 1: store in the D-object a function executing the callbacks called by CreateNewElement action, then delete that field before persisting.
+    continued: instead of setting the pointedBy's this way (and increasing clonedcounter for nothing) erase all PointedBy mentionings here, and make all pointer values assigned separately with a SetAction,' +
+    '         if new2 is used that set manually a d-field, set it to undefined in the in the .end() part, then trigger the setaction with correct value.
+    continued: sort actions by path, but always make sure CreateElement are first in the sort regardless of path. make also sure 2 actions with the same path keep the order they are launched/created (oldest first)
     constructor(t:T, father?: Pointer, persist: boolean = true, fatherType?: Constructor) {
         persist = persist && canFireActions;
         this.thiss = t;

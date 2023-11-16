@@ -1,6 +1,34 @@
-export const a = 0;
-let data:any, node:any, view:any, component:any;
+//@ts-nocheck
+export const sandbox = 1;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// todo: context.set('counterValue', amount);
+//    and dObject.persist()
 /*
 make sure error view display meaningful messages with code line
 * prevent megacrash if someone does <Vertex data={"not a pointer"} /> or <Vertex data={1, null, undefined...} />
