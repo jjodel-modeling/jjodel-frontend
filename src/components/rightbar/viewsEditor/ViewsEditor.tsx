@@ -34,7 +34,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.views = LViewElement.fromPointer(state.viewelements);
     ret.stackViews = LViewElement.fromPointer(state.stackViews);
     ret.viewpoints = LViewPoint.fromPointer(state.viewpoints);
-    ret.views = ret.views.filter(view => !(view.viewpoint) || view.viewpoint?.id === state.viewpoint);
+    ret.views = ret.views.filter(view => view && (!(view.viewpoint) || view.viewpoint?.id === state.viewpoint));
     ret.debug = state.debug;
     return ret;
 }

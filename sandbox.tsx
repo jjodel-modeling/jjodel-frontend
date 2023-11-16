@@ -2,6 +2,16 @@ export const a = 0;
 let data:any, node:any, view:any, component:any;
 
 /*
+need to fix get_children to work without instanceof (LModelElement.tsx:3962:1)
+or delete all DObjects without instanceof in the synchro_model.
+todo: context menu object.clear() erases all values of object, if values are object contained they are deleted as well.
+
+
+todo: new DObject("State" (metaclassname), {serverCounter:1, changes:[{from:this.data.name, ... blablabla, content of changes.type:values}]}
+
+
+
+
 make sure error view display meaningful messages with code line
 * prevent megacrash if someone does <Vertex data={"not a pointer"} /> or <Vertex data={1, null, undefined...} />
 *

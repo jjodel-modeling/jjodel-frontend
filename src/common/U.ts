@@ -60,6 +60,14 @@ export class U {
     }
 
     static isShallowEqualWithProxies(obj1: GObject, obj2: GObject, depth: number = 0, maxDepth: number = 1, skipKeys: Dictionary<string, any>={}, out?: {reason?: string}): boolean {
+        if (typeof obj1 !== "object") {
+            if (out) out.reason = 'base object newly introduced';
+            return false;
+        }
+        if (typeof obj2 !== "object") {
+            if (out) out.reason = 'base object got deleted';
+            return false;
+        }
         for (let key in obj1) {
             if (key in skipKeys) continue;
             let oldp: any = obj2[key];

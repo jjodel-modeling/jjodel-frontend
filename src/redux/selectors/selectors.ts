@@ -362,6 +362,7 @@ export class Selectors{
 
 
     private static matchesMetaClassTarget(v: DViewElement, data: DModelElement | DGraphElement): ViewEClassMatch {
+        if (!v) return ViewEClassMatch.MISMATCH;
         if (!v.appliableToClasses || !v.appliableToClasses.length) return ViewEClassMatch.IMPLICIT_MATCH;
         if (!data) return ViewEClassMatch.MISMATCH;
         let ThisClass: typeof DPointerTargetable = RuntimeAccessibleClass.get(data?.className);

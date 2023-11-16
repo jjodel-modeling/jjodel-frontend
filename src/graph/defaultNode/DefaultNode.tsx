@@ -46,8 +46,10 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
             (ret as any).skiparenderforloading = false;
         } catch(e) {
             (ret as any).skiparenderforloading = true; // model id is updated, but he's still trying to load old model which got replaced and is not in state.
-            /* crashes on loading because old model and new model have different timestamps? looks by id of old model with same number and diffferent timestamp
-        Log.ex(!ret.data, "can't find model data:", {meid, state, ownpropsdata:ownProps.data, ownProps});*/ }
+            /* crashes on loading because old model and new model have different timestamps? looks by id of old model with same number and diffferent timestamp*/
+            Log.eDev(!ret.data, "can't find model data:", {state, ret, ownpropsdata:ownProps.data, ownProps});
+            Log.eDevv("cannot map state to props:", {e, state, ret, ownpropsdata:ownProps.data, ownProps});
+        }
         return ret; }
 
     constructor(props: AllProps, context: any) { super(props, context); }

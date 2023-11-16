@@ -379,7 +379,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
 
     protected set_children(a: never, context: Context): boolean {
-        return Log.exx('children is a derived read-only collection', this);
+        return Log.exx('children is a derived read-only collection', context.data);
     }
 
 

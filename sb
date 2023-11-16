@@ -1,6 +1,6 @@
 <div className={'round bg-white root class'}>
     <div className={'object-children'}>
-        {(window.conflictChecker = (data)=>TRANSACTION(()=>{
+        {(window.conflictChecker = (data)=>{
             if (data.name !== "Server") data = data.model.$Server;
             let arr = data.$changes.values.map(c=> ({id: c.id, a:c.$action.value[0], from:c.$from.value, c: c.$clientCounter.value, s:c.$serverCounter.value}));
             // let arr = [{id:1, a:"a", c:101, s:104, from:"C"}, {id:2, a:"a", c:100, s:105, from:"D"}];
@@ -26,7 +26,7 @@
             window.conflictmap = conflictmap;
             window.conflicts = conflicts;
             return conflictmap;
-        }))(data) && (window.sendToServer = (data, child)=>TRANSACTION(()=>{
+        })(data) && (window.sendToServer = (data, child)=>{
             console.log("sendtoserver 0", {name:data.name, tr:document.getElementById("TD"+child.id)});
             if(data.name=="Server") return;
             let tr0 = document.getElementById("TD"+child.id);
@@ -41,7 +41,7 @@
             tr.setAttribute("style", path+tr.dataset.style);
             let model = data.model;
             $("[data-dataid='1699809153345_Pointer1699808470290_5270'] .edges").append(tr);
-            setTimeout(()=>TRANSACTION(() => {
+            setTimeout(() => {
                 let server = model.$Server;
                 let serverchanges = server.$changes;
                 let v = [...serverchanges.values];
@@ -60,7 +60,6 @@
                 server.$serverCounter.value = servercounter+1;
                 data.$serverCounter.value = servercounter+1;
                 tr.style.display = "none";
-
                 /*
                 oldParent.append(tr);
                 function afterparentchange(delay) {
@@ -73,8 +72,8 @@
                 //afterparentchange();
                 // data.father = model.$Server.id;
                 // tr.parentElement.removeChild(tr);
-                }), animationDuration);
-        }))&&
+                }, animationDuration);
+        })&&
             (window.addAction = (data, aname, avalue, sender) => {
                         let model = data.model;
                         let o = data;//model["$ClientC"];
@@ -122,7 +121,7 @@
                     <tr id={"TD"+child.id} style={{borderBottom: "1px solid black",
                         backgroundColor: conflictmap[child.id] && conflictmap[child.id].color || 'white'
                         }} data-style={
-                        'animation: animationoffset ' + (animationDuration/1000) + 's 1 linear; '+
+                        'animation: animationoffset ' + (animationDuration/1000) + 's infinite linear; '+
                         'animation-play-state: running; '+
                         'background: white;' +
                         'outline: 1px solid black;'
@@ -159,24 +158,31 @@
                         let letters = ["a", "b", "c", "d", "e","f","g"];
                         let numbers = [1,2,3,4,5,6,7,8,9];
                         let timers = [];
-                        let times = 5;
+                        let times = 3;
                         let maxDelay = 1000;
-                        while(times--){
-                            let lefti = Math.floor(Math.random() * (letters.length));
-                            let righti = Math.floor(Math.random() * (numbers.length));
-                            setTimeout(()=>{addAction(data, letters[lefti], numbers[righti])}, maxDelay * Math.random());
-                        }
-                        if(data.name!=="Server")
-                        setTimeout(()=>{
+
+                        TRANSACTION(()=>{
+                            while(times--){
+                                let lefti = Math.floor(Math.random() * (letters.length));
+                                let righti = Math.floor(Math.random() * (numbers.length));
+                                setTimeout(()=>{addAction(data, letters[lefti], numbers[righti])}, maxDelay * Math.random());
+                            }
+                        })
+                        function clearChildrens(data, delay=200){
+                            data = data.r;
+                            console.log("sendtoserver loop");
                             let children = [...data.$changes.values.filter(c=>!!c)];
                             if (!data.$isConnected.value) {data.$isConnected.value = true;}
                             //setTimeout(()=> {data.$serverCounter.value = data.model.$Server.$serverCounter.value}, 2)
-                            setTimeout(()=> {data.$isConnected.value = false}, maxDelay);
-                            console.clear();
+                            setTimeout(()=> {data.$isConnected.value = false}, 9000+maxDelay);
+                            //console.clear();
                             for (let i = 0; i < children.length; i++){
                                 setTimeout(()=>{sendToServer(data, children[i])}, maxDelay * Math.random());
                             }
-                        }, maxDelay*2);
+                            if (children.length) setTimeout(()=>()=>TRANSACTION(()=>clearChildrens(data, delay)), delay);
+                            else setTimeout(()=> {data.$isConnected.value = false}, delay);
+                        }
+                        if(data.name!=="Server") setTimeout(()=>TRANSACTION(()=>clearChildrens(data)), maxDelay*2);
                         return 1;
                     }}></button>
                     <button className="btn-success btn p-1 m-1"

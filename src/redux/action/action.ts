@@ -122,6 +122,7 @@ export function END(actionstoPrepend: Action[] = []): boolean {
 }
 export function FINAL_END(): boolean{
     hasBegun = false;
+    // pendingActions.sort( (a, b) => a.timestamp - b.timestamp)
     const ca: CompositeAction = new CompositeAction(pendingActions, false);
     pendingActions = [];
     return ca.fire();
@@ -135,10 +136,16 @@ export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...param
     try { func(...params); } catch(e) { Log.ee('Transaction failed:', e); ABORT(); return false; }
     return END();
 }
+(window as any).TRANSACTION = TRANSACTION;
+(window as any).BEGIN = BEGIN;
+(window as any).ABORT = ABORT;
+(window as any).END = END;
+(window as any).FINAL_END = FINAL_END;
 (window as any).maxActionFiring = 0;
 @RuntimeAccessible
 export class Action extends RuntimeAccessibleClass {
     public static cname: string = "Action";
+    public static maxCounter: number = 1;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     static type = 'ACTION';
@@ -164,7 +171,7 @@ export class Action extends RuntimeAccessibleClass {
     subType?: string; //?
     protected constructor(field: string, value: any, subType?: string){
         super();
-        this.id = 'Action_' + Date.now(); // NB: the prefix must be the same for all actions because it must not affect order
+        this.id = 'Action_' + Date.now() + "_" + Action.maxCounter++; // NB: the prefix must be the same for all actions because it must not affect order
         this.sender = DUser.current;
         this.token = DUser.token;
         this.field = field;
@@ -191,7 +198,8 @@ export class Action extends RuntimeAccessibleClass {
                 field: this.field,
                 val: this.value,
                 // stack:this.src,
-                thiss:this
+                thiss:this,
+                n:(this as any).actions?.length || 1
             });
             storee.dispatch({...this});
         }
@@ -485,6 +493,10 @@ export class CompositeAction extends Action {
         this.actions = actions;
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         if (launch) this.fire();
+    }
+    fire(forceRelanch?: boolean): boolean{
+        if (!this.actions.length) return false;
+        return super.fire(forceRelanch);
     }
 }
 

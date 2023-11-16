@@ -177,7 +177,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         else {
             const viewScores = Selectors.getAppliedViews(ret.data, ownProps.view || null, ownProps.parentViewId || null);
-            ret.views = viewScores.map(e => MyProxyHandler.wrap(e.element));
+            ret.views = viewScores.map(e => LViewElement.fromD(e.element));
             ret.view = ret.views[0];
             (ret as any).viewScores = viewScores; // debug only
         }

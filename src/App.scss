@@ -1,3 +1,21 @@
+@keyframes animationoffset {
+  0% {
+    offset-distance: 0%;
+    opacity: 0%;
+  }
+  1% {
+    offset-distance: 1%;
+    opacity: 100%;
+  }
+  99% {
+    offset-distance: 99%;
+    opacity: 99%;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0%;
+  }
+}
 
 .SaveManager {
   position: absolute;
