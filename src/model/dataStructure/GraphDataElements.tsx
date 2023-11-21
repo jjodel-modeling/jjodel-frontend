@@ -53,8 +53,6 @@ import {Geom} from "../../common/Geom";
 
 console.warn('ts loading graphDataElement');
 
-let lgraph: LGraphElement = null /* this.node */ as any;
-
 
 @Node
 @RuntimeAccessible
@@ -83,11 +81,15 @@ export class DGraphElement extends DPointerTargetable {
     // height: number = 400;
     view!: Pointer<DViewElement, 1, 1, LViewElement>;
     favoriteNode!: boolean;
+    edgesIn!: Pointer<DEdge>[];
+    edgesOut!: Pointer<DEdge>[];
 
 
     public static new(htmlindex: number, model: DGraphElement["model"]|null|undefined, parentNodeID: DGraphElement["father"],
                       graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"]|undefined, a?: any, b?:any, ...c:any): DGraphElement {
-        return new Constructors(new DGraphElement('dwc')).DPointerTargetable(false, nodeID).DGraphElement(model, parentNodeID, graphID, htmlindex).end();
+        return new Constructors(new DGraphElement('dwc'), parentNodeID, true, undefined, nodeID)
+            .DPointerTargetable()
+            .DGraphElement(model, graphID, htmlindex).end();
     }
 
 }
@@ -167,6 +169,22 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __info_of__graphAncestors: Info = {type:"LGraph[]",
         txt:"<span>collection of the stack of Graphs containing the current element where [0] is the most nested graph, and last is root graph.</span>"};
     graphAncestors!: LGraph[];
+
+    edgesIn!: LVoidEdge[];
+    edgesOut!: LVoidEdge[];
+    __info_of__edgesIn: Info = {type:"LEdge[]", txt:<div>Edges incoming into this element. <code>this.edgesOut[i].end</code> always equals to <code>this</code>.</div>}
+    __info_of__edgesOut: Info = {type:"LEdge[]", txt:<div>Edges outgoing from this element. <code>this.edgesIn[i].start</code> always equals to <code>this</code>.</div>}
+    __info_of__edgesStart: Info = {type:"LEdge[]", txt:<div>Alias for this.edgesOut</div>}
+    __info_of__edgesEnd: Info = {type:"LEdge[]", txt:<div>Alias for this.edgesIn</div>}
+    public get_edgesIn(context: Context): this["edgesIn"] { return LPointerTargetable.fromArr(context.data.edgesIn); }
+    public get_edgesOut(context: Context): this["edgesOut"]  { return LPointerTargetable.fromArr(context.data.edgesOut); }
+    public set_edgesIn(val: PackArr<LVoidEdge>, c: Context): boolean { return SetFieldAction.new(c.data.id, "edgesIn", Pointers.fromArr(val), '', true); }
+    public set_edgesOut(val: PackArr<LVoidEdge>, c: Context): boolean { return SetFieldAction.new(c.data.id, "edgesOut", Pointers.fromArr(val), '', true); }
+    public get_edgesStart(context: Context): this["edgesIn"]  { return this.get_edgesIn(context); }
+    public get_edgesEnd(context: Context): this["edgesOut"]  { return this.get_edgesOut(context); }
+    public set_edgesStart(val: PackArr<LVoidEdge>, context: Context): boolean { return this.set_edgesIn(val, context); }
+    public set_edgesEnd(val: PackArr<LVoidEdge>, context: Context): boolean { return this.set_edgesOut(val, context); }
+
 
     protected _defaultCollectionGetter(c: Context, k: keyof Context["data"]): LPointerTargetable[] { return LPointerTargetable.fromPointer((c.data as any)[k]); }
     protected _defaultGetter(c: Context, k: keyof Context["data"]): any {
@@ -641,16 +659,15 @@ export class DGraph extends DGraphElement {
     // personal attributes
     zoom!: GraphPoint;
     graphSize!: GraphSize; // internal size of the graph. can be huge even if the sub-graph is in a small window (scroll)
-    sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
 
     public static new(htmlindex: number, model: DGraph["model"],
                       parentNodeID?: DGraphElement["father"], // immediate parent
                       parentgraphID?: DGraphElement["graph"], // graph containing this subgraph (redudant? could get it from father chain)
                       nodeID?: DGraphElement["id"] // this id
     ): DGraph {
-        return new Constructors(new DGraph('dwc'), parentNodeID, true, DGraphElement)
-            .DPointerTargetable(false, nodeID || Constructors.DGraph_makeID(model))
-            .DGraphElement(model, parentNodeID, parentgraphID, htmlindex).DGraph().end();
+        return new Constructors(new DGraph('dwc'), parentNodeID, true, undefined, nodeID || Constructors.DGraph_makeID(model))
+            .DPointerTargetable()
+            .DGraphElement(model, parentgraphID, htmlindex).DGraph().end();
     }
 
 
@@ -697,11 +714,6 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     zoom!: GraphPoint;
     graphSize!: GraphSize; // alias for offset
     offset!: GraphSize; //  size internal to the graph, while "size" is instead external size of the vertex holding the graph in GraphVertexes
-    // protected sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
-
-
-    // get_sizes(context: Context): D["sizes"] { return context.data.sizes; }
-    //set_sizes(val: D["sizes"], context: Context): boolean { return SetFieldAction.new(context.data.id, "sizes", val); }
 
     get_graphSize(context: LogicContext<DGraph>):  Readonly<GraphSize> { return context.data.graphSize; }
     get_zoom(context: Context): GraphPoint {
@@ -765,6 +777,7 @@ RuntimeAccessibleClass.set_extend(LGraphElement, LGraph);
 // export const defaultVSize: GraphSize = new GraphSize(0, 0, 300, 160); // useless, now it's in view.DefaultVSize
 // export const defaultEPSize: GraphSize = new GraphSize(0, 0, 15, 15); // useless, now it's in view.DefaultVSize
 
+
 @RuntimeAccessible
 export class DVoidVertex extends DGraphElement {
     public static cname: string = "DVoidVertex";
@@ -794,9 +807,10 @@ export class DVoidVertex extends DGraphElement {
 
     public static new(htmlindex: number, model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"],
                       size?: InitialVertexSize): DVoidVertex {
-        return new Constructors(new DVoidVertex('dwc'))
-            .DPointerTargetable(false, nodeID)
-            .DGraphElement(model, parentNodeID, graphID, htmlindex).DVoidVertex(size).end();
+        return new Constructors(new DVoidVertex('dwc'), parentNodeID, true, undefined, nodeID)
+            .DPointerTargetable()
+            .DGraphElement(model, graphID, htmlindex)
+            .DVoidVertex(size).end();
     }
 
 }
@@ -862,6 +876,7 @@ export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C exte
 
 
 }
+
 RuntimeAccessibleClass.set_extend(DGraphElement, DVoidVertex);
 RuntimeAccessibleClass.set_extend(LGraphElement, LVoidVertex);
 @RuntimeAccessible
@@ -892,9 +907,8 @@ export class DEdgePoint extends DVoidVertex { // DVoidVertex
 
     public static new(htmlindex: number, model: DEdgePoint["model"] | undefined, parentNodeID: DEdgePoint["father"], graphID?: DEdgePoint["graph"], nodeID?: DGraphElement["id"],
                       size?: InitialVertexSize): DEdgePoint {
-        return new Constructors(new DEdgePoint('dwc'), parentNodeID, true)
-            .DPointerTargetable(false, nodeID)
-            .DGraphElement(undefined, parentNodeID, graphID, htmlindex)
+        return new Constructors(new DEdgePoint('dwc'), parentNodeID, true, undefined, nodeID)
+            .DGraphElement(undefined, graphID, htmlindex)
             .DVoidVertex(size).DEdgePoint().end();
     }
 
@@ -1048,6 +1062,7 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
 }
 RuntimeAccessibleClass.set_extend(DVoidVertex, DEdgePoint);
 RuntimeAccessibleClass.set_extend(LVoidVertex, LEdgePoint);
+
 @RuntimeAccessible
 export class DVertex extends DGraphElement { // DVoidVertex
     public static cname: string = "DVertex";
@@ -1077,8 +1092,9 @@ export class DVertex extends DGraphElement { // DVoidVertex
 
     public static new(htmlindex: number, model: DGraphElement["model"], parentNodeID: DGraphElement["father"],
                       graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size?: GraphSize): DVertex {
-        return new Constructors(new DVertex('dwc')).DPointerTargetable(false, nodeID)
-            .DGraphElement(model, parentNodeID, graphID, htmlindex)
+        return new Constructors(new DVertex('dwc'), parentNodeID, true, undefined, nodeID)
+            .DPointerTargetable()
+            .DGraphElement(model, graphID, htmlindex)
             .DVoidVertex(size).DVertex().end();
     }
 }
@@ -1114,6 +1130,7 @@ export class LVertex<Context extends LogicContext<any> = any, D = DVertex> exten
 
 RuntimeAccessibleClass.set_extend(DGraphElement, DVertex);
 RuntimeAccessibleClass.set_extend(LGraphElement, LVertex);
+
 @Leaf
 @RuntimeAccessible
 export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVertex)
@@ -1145,7 +1162,6 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
     isResized!: boolean;
     // size!: GraphSize; // virtual
     // from graph
-    sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
 
     // personal attributes
     __isDVertex!: true;
@@ -1154,7 +1170,8 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
 
     public static new(htmlindex: number, model: DGraph["model"], parentNodeID: DGraphElement["father"],
                       graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size?: GraphSize): DGraphVertex {
-        return new Constructors(new DGraphVertex('dwc')).DPointerTargetable(false, nodeID).DGraphElement(model, parentNodeID, graphID, htmlindex)
+        return new Constructors(new DGraphVertex('dwc'), parentNodeID, true, undefined, nodeID)
+            .DPointerTargetable().DGraphElement(model, graphID, htmlindex)
             .DVoidVertex(size).DVertex().DGraph().end();
     }
 
@@ -1198,7 +1215,6 @@ export class LGraphVertex<Context extends LogicContext<any> = any, D extends DGr
     h!: number;
     isResized!: boolean;
     size!: GraphSize; // virtual
-    protected sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
 
 
     // personal attributes
@@ -1211,6 +1227,8 @@ RuntimeAccessibleClass.set_extend(DGraph, DGraphVertex);
 RuntimeAccessibleClass.set_extend(DVertex, DGraphVertex);
 RuntimeAccessibleClass.set_extend(LGraph, LGraphVertex);
 RuntimeAccessibleClass.set_extend(LVertex, LGraphVertex);
+
+
 @RuntimeAccessible
 export class DVoidEdge extends DGraphElement {
     public static cname: string = "DVoidEdge";
@@ -1241,8 +1259,9 @@ export class DVoidEdge extends DGraphElement {
     public static new(htmlindex: number, model: DGraph["model"]|null|undefined, parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"],
                       nodeID: DGraphElement["id"]|undefined, start: DGraphElement["id"], end: DGraphElement["id"],
                       longestLabel: DEdge["longestLabel"], labels: DEdge["labels"]): DEdge {
-        return new Constructors(new DEdge('dwc')).DPointerTargetable(false, nodeID)
-            .DGraphElement(model, parentNodeID, graphID, htmlindex)
+        return new Constructors(new DEdge('dwc'), parentNodeID, true, undefined, nodeID)
+            .DPointerTargetable()
+            .DGraphElement(model, graphID, htmlindex)
             .DVoidEdge(start, end, longestLabel, labels).end();
     }
 }

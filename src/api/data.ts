@@ -143,17 +143,16 @@ export class EcoreParser{
         console.log("root parse", {ecorejson, parsedjson});
         // isMetamodel = !!parsedjson[ECoreRoot.ecoreEPackage];
 
-        Constructors.pause();
+        Constructors.paused = true;
         let parsedElements: DModelElement[] = isMetamodel ? EcoreParser.parseM2Model(parsedjson, filename) : EcoreParser.parseM1Model(parsedjson, undefined, filename);
         console.warn("parse.result D", parsedElements);
         this.LinkAllNamesToIDs(parsedElements);
         this.fixNamingConflicts(parsedElements);
-        Constructors.resume();
-        if (persist) {
-            CreateElementAction.newBatch(parsedElements);
-        }
+        Constructors.paused = false;
+        // if (persist) CreateElementAction.newBatch(parsedElements);
         // update m1 object pointers (need them to be persistent to navigate .fathers and get ecore pointer strings using LObject)
-        setTimeout(() => { this.fixObjectPointers(parsedElements); }, 1);
+        this.fixObjectPointers(parsedElements); // updates dvalue.values from ecore reference to pointers.
+        Constructors.persist(parsedElements);
 
         windoww.tmpparse = () => LPointerTargetable.wrapAll(parsedElements);
 
@@ -179,8 +178,8 @@ export class EcoreParser{
                 return m1pointermap[e as any].id;
             });
             if (!modified) continue;
-            let lv: LValue = LPointerTargetable.from(v);
-            lv.values = newvalues;
+            //let lv: LValue = LPointerTargetable.from(v);
+            v.values = newvalues;
         }
 
     }
@@ -304,10 +303,8 @@ export class EcoreParser{
             }
         }
 
-        let idlookup: Dictionary<string, DModelElement> = store.getState().idlookup as any;
-
         // fix from ordinals to Pointer<DEnumLiteral>
-        function DfromPtr<T extends DPointerTargetable>(id: Pointer<T>|null|undefined): T{ return !id ? undefined as any : (idMap[id] || idlookup[id]); }
+        function DfromPtr<T extends DPointerTargetable>(id: Pointer<T>|null|undefined): T{ return !id ? undefined as any : (DPointerTargetable.fromPointer(id, state)); }
         function getLiteral(id: Pointer<DEnumerator>, ordinal: number): DEnumLiteral { return LPointerTargetable.fromD(DfromPtr(id))?.ordinals[ordinal]?.__raw; }
         for (let elem of parsedElements) {
             if (elem.className !== DValue.cname) continue;
@@ -343,7 +340,7 @@ export class EcoreParser{
                 if (target) {
                     target.pointedBy.push(PointedBy.new("idlookup." + dobj.id + "." + ptrkey));
                 } else {
-                    target = idlookup[value];
+                    target = DfromPtr(value);
                     console.log("fixalltypes", {ptrkey, valtmp, dobj, value, values, target, idMap});
                     if (!target) throw new Error("target undefined");
                     SetFieldAction.new(target, "pointedBy", PointedBy.new("idlookup." + dobj.id + "." + ptrkey),'+=', false);
@@ -681,10 +678,13 @@ export class EcoreParser{
     static parseDClass(parent: DPackage, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
         if (!generated) generated = [];
         if (!json) { json = {}; }
-        let dObject: DClass = DClass.new();
-        generated.push(dObject); dObject.father = parent.id;
-        if (parent) parent.classifiers.push(dObject.id);
-        dObject.name = this.read(json, ECoreNamed.namee, 'Class_1');
+        let dObject: DClass = DClass.new(
+            this.read(json, ECoreNamed.namee, 'Concept 1'),
+            undefined as any, undefined as any, undefined as any, undefined as any, undefined, parent.id,
+        );
+        generated.push(dObject);// dObject.father = parent.id;
+        //if (parent) parent.classifiers.push(dObject.id);
+        //dObject.name = this.read(json, ECoreNamed.namee, 'Class_1');
         (dObject as GObject).__fullname = fullnamePrefix + dObject.name;
         const annotations: Json[] = this.getAnnotations(json);
         for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname + "/");
@@ -776,17 +776,22 @@ export class EcoreParser{
         if (!generated) generated = [];
         if (!json) { json = {}; }
         const childs = this.getChildren(json);
-        let dObject: DAttribute = DAttribute.new();
-        generated.push(dObject); dObject.father = parent.id;
-        if (parent) parent.attributes.push(dObject.id);
-        dObject.name = this.read(json, ECoreNamed.namee, 'attr_1');
+        // done: old approach does not set pointedBy, i should set father and all pointers in .new() parameters
+        let dObject: DAttribute = DAttribute.new(
+            this.read(json, ECoreNamed.namee, 'attr_1'),
+            this.read(json, ECoreAttribute.eType, AttribETypes.EString),
+            parent.id,
+        );
+        generated.push(dObject);// dObject.father = parent.id;
+        // if (parent) parent.attributes.push(dObject.id);
+        //dObject.name = this.read(json, ECoreNamed.namee, 'attr_1');
         (dObject as GObject).__fullname = fullnamePrefix + dObject.name;
         const annotations: Json[] = this.getAnnotations(json);
         for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname + "/");
         /// *** specific start *** ///
         dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 0);
         dObject.upperBound = +this.read(json, ECoreAttribute.upperbound, 1);
-        dObject.type = this.read(json, ECoreAttribute.eType, AttribETypes.EString);
+        //dObject.type = this.read(json, ECoreAttribute.eType, AttribETypes.EString);
         /// *** specific end *** ///
         return generated; }
 

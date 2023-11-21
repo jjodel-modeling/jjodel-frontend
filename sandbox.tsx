@@ -1,5 +1,16 @@
 export const a = 0;
 let data:any, node:any, view:any, component:any;
+
+
+// todo: avoid creating pointedby when src and target are the same.
+//  - DONE: Constructors.setPtr, setExternalPtr
+//  - missing: in reducer
+
+// search for this comment: "abababababab"
+
+
+
+// optimize actions, verify toolbox create must make only 1 compositeaction for dmodelelement and 1 for dgraphelement. thenverify transaction nested nad beign end nested
 // view selection in jsx by name instead of pointer (or both)
 /*
 need to fix get_children to work without instanceof (LModelElement.tsx:3962:1)

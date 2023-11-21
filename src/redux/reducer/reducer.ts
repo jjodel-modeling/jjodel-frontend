@@ -196,7 +196,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
             case LoadAction.type: return action.value;
             case CreateElementAction.type:
                 const elem: DPointerTargetable = action.value;
-
+                delete DPointerTargetable.pendingCreation[elem.id];
                 if (oldState.idlookup[elem.id]) {
                 console.error("rejected CreateElementAction, roolback occurring:", {action, elem:{...elem},
                     preexistingValue: {...oldState.idlookup[elem.id]}, isEqual: elem === oldState.idlookup[elem.id] });
@@ -313,10 +313,11 @@ let storeLoaded: boolean = false;
 
 export function reducer(oldState: DState = initialState, action: Action): DState {
     const ret = _reducer(oldState, action);
-    if(ret === oldState) return oldState;
-    if(!oldState?.room) return ret;
+    if (ret === oldState) return oldState;
+    ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
+    if (!oldState?.room) return ret;
     const ignoredFields  = ['contextMenu', '_lastSelected', 'selected', 'isLoading', 'isCleaning'];
-    if(action.token === DUser.token && !ignoredFields.includes(action.field)) {
+    if (action.token === DUser.token && !ignoredFields.includes(action.field)) {
         const parsedAction: JSON & GObject = JSON.parse(JSON.stringify(action));
         if(action.type === 'COMPOSITE_ACTION') for(let subAction of parsedAction.actions) delete subAction['stack'];
         delete parsedAction['stack'];
@@ -340,7 +341,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
 export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action): DState{
     let times: number;
     let state: DState;
-    switch(action.type) {
+    switch (action.type) {
         case UndoAction.type:
             times = action.value;
             state = oldState;

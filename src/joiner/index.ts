@@ -39,6 +39,10 @@ export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute,
     ValueDetail, SetValueAtPoisitionInfoType
 } from "../model/logicWrapper/LModelElement";
 export type {WEdge, WEdgePoint, WExtEdge, WGraph, WRefEdge, WGraphElement, WVoidEdge, WGraphVertex, WVertex, WVoidVertex, EdgeSegment, EdgeFillSegment} from "../model/dataStructure/GraphDataElements";
+export type {PackagePointers, EdgePointers, AnnotationPointers, AttributePointers, EnumPointers, ClassPointers,
+    LiteralPointers, OperationPointers, ObjectPointers, GraphPointers, ParameterPointers, ReferencePointers, VertexPointers,
+    ModelPointers,
+} from "../model/logicWrapper/PointerDefinitions";
 
 export {windoww, EdgeBendingMode, EdgeGapMode, EMeasurableEvents} from './types';
 export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps, EdgeStateProps, EdgeOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
@@ -46,6 +50,7 @@ export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,
     Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs,
     LUser, DUser, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements} from "./classes";
+
 
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';

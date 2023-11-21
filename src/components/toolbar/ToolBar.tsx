@@ -31,7 +31,7 @@ import {
     WVoidEdge,
     Log,
     LEdgePoint,
-    U
+    U, LPointerTargetable
 } from "../../joiner";
 import {InitialVertexSizeObj} from "../../joiner/types";
 import ModellingIcon from "../forEndUser/ModellingIcon";
@@ -221,11 +221,11 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.selectedid = state._lastSelected;
     ret.selected = ret.selectedid && {
-        node: DPointerTargetable.wrap(state.idlookup[ret.selectedid.node]) as LGraphElement,
-        view: DPointerTargetable.wrap(state.idlookup[ret.selectedid.view]) as LViewElement,
-        modelElement: ret.selectedid.modelElement ? DPointerTargetable.wrap<DPointerTargetable, LModelElement>(state.idlookup[ret.selectedid.modelElement]) : undefined
+        node: LPointerTargetable.from(ret.selectedid.node, state) as LGraphElement,
+        view: LPointerTargetable.from(ret.selectedid.view, state) as LViewElement,
+        modelElement: ret.selectedid.modelElement ? LPointerTargetable.from(ret.selectedid.modelElement, state) : undefined
     };
-    if(ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
+    if (ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
     return ret;
 }
 
