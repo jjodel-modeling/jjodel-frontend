@@ -1,4 +1,4 @@
-import {U} from '../../joiner';
+import {LGraphElement, U} from '../../joiner';
 import Fetch from '../fetch';
 import type {
     LProject,
@@ -13,6 +13,8 @@ import type {
     LValue,
     LViewElement,
     LGraph,
+    LEdge,
+    LEdgePoint,
     LGraphVertex,
     LVoidVertex,
     LVertex,
@@ -20,7 +22,7 @@ import type {
 } from '../../joiner';
 
 
-type T = LModel|LPackage|LClass|LEnumerator|LAttribute|LReference|LEnumLiteral|LObject|LValue|LViewElement|LGraph|LGraphVertex|LVoidVertex|LVertex;
+type T = LModel|LPackage|LClass|LEnumerator|LAttribute|LReference|LEnumLiteral|LObject|LValue|LViewElement|LGraph|LGraphVertex|LVoidVertex|LVertex|LGraphElement|LEdge|LEdgePoint;
 export class Save {
     private static url = '/persistance/';
 
@@ -30,11 +32,15 @@ export class Save {
         const projectUrl = this.url + `projects/${project.id}`;
 
         const graphs: LGraph[] = project.graphs;
-        const graphVertexes: LGraphVertex[] = graphs.flatMap(g => g.subElements) as LGraphVertex[];
+        const edges: LEdge[] = graphs.flatMap(g => g.subElements.filter(e => e.className === 'DEdge')) as LEdge[];
+        const edgePoints: LEdgePoint[] = edges.flatMap(e => e.subElements) as LEdgePoint[];
+        const graphVertexes: LGraphVertex[] = graphs.flatMap(g => g.subElements.filter(gv => gv.className === 'DGraphVertex')) as LGraphVertex[];
         const allVertexes: (LVoidVertex|LVertex)[] = graphVertexes.flatMap(gv => gv.subElements) as (LVoidVertex|LVertex)[];
         const voidVertexes: LVoidVertex[] = allVertexes.filter(av => av.className === 'DVoidVertex') as LVoidVertex[];
         const vertexes: LVertex[] = allVertexes.filter(av => av.className === 'DVertex') as LVertex[];
+        const graphElements: LGraphElement[] = allVertexes.flatMap(v => v.subElements.filter(ge => ge.className === 'DGraphElement') as LGraphElement[])
 
+        // todo: fix metamodels.attributes, metamodels.literals and models.values (for now done without sub-checking)
         await Promise.all([
             /* DATA */
             Save.elements(`${projectUrl}/metamodels`, project.metamodels),
@@ -53,9 +59,11 @@ export class Save {
             Save.elements(`${projectUrl}/graphs`, graphs),
             Save.elements(`${projectUrl}/graphVertexes`, graphVertexes),
             Save.elements(`${projectUrl}/voidVertexes`, voidVertexes),
-            Save.elements(`${projectUrl}/vertexes`, vertexes)
+            Save.elements(`${projectUrl}/vertexes`, vertexes),
+            Save.elements(`${projectUrl}/graphElements`, graphElements),
+            Save.elements(`${projectUrl}/edges`, edges),
+            Save.elements(`${projectUrl}/edgePoints`, edgePoints)
         ]);
-        // todo: fix metamodels.attributes, metamodels.literals and models.values (for now done without sub-checking)
     }
 
     private static async elements(url: string, elements: T[]): Promise<void> {
@@ -63,8 +71,10 @@ export class Save {
         await Fetch.delete(url);
         const defaultViews = U.getDefaultViewsID() as Pointer[];
         for(let element of elements) {
-            if(!defaultViews.includes(element?.id))
+            if(!defaultViews.includes(element?.id)) {
+                console.log('Saving To Server', element);
                 await Fetch.post(url, U.json(element));
+            }
         }
     }
 

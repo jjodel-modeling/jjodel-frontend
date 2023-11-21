@@ -482,7 +482,9 @@ export class Constructors<T extends DPointerTargetable>{
         }
         this.persist && this.callbacks.push(()=>{
             for(let pointer in alreadyParsed) {
-                for (let instance of alreadyParsed[pointer].instances) {
+                const instances = alreadyParsed[pointer].instances;
+                if(!instances) continue;
+                for (let instance of instances) {
                     _DValue.new(thiss.name, thiss.id, undefined, instance);
                 }
             }

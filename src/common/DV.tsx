@@ -119,22 +119,24 @@ export class DV {
             { /* interactively added edgepoints */ }
             {
                 edge.midPoints.map( m => <EdgePoint data={edge.father.model.id} initialSize={m} key={m.id} view={"Pointer_ViewEdgePoint"} /> )
-            }{
-                false && edge.end.model.attributes.map( (m, index, arr) => <EdgePoint data={m.id} initialSize={(parent) => {
-                    let segs = parent.segments.segments;
-                    let pos = segs[0].start.pt.multiply(1-(index+1)/(arr.length+1), true).add(segs[segs.length-1].end.pt.multiply((index+1)/(arr.length+1), true));
-                    // console.trace("initial ep", {segs, pos, ratio:(index+1)/(arr.length+1), s:segs[0].start.pt, e:segs[segs.length-1].end.pt});
-                    return {...pos, w:55, h:55}}} key={m.id} view={"Pointer_ViewEdgePoint"} /> )
-                    
-            }{
-                false && <EdgePoint key={"midnode1"} view={"Pointer_ViewEdgePoint"} />
-            }{
-                false && <EdgePoint key={"midnode2"} view={"Pointer_ViewEdgePoint"} />
-            }{
-                false && props.children && "this would cause loop no idea why, needs to be fixed to allow passing EdgeNodes here" || []
             }
         </div>`
     )}
+    /*
+    {
+        false && edge.end.model.attributes.map( (m, index, arr) => <EdgePoint data={m.id} initialSize={(parent) => {
+            let segs = parent.segments.segments;
+            let pos = segs[0].start.pt.multiply(1-(index+1)/(arr.length+1), true).add(segs[segs.length-1].end.pt.multiply((index+1)/(arr.length+1), true));
+            // console.trace("initial ep", {segs, pos, ratio:(index+1)/(arr.length+1), s:segs[0].start.pt, e:segs[segs.length-1].end.pt});
+            return {...pos, w:55, h:55}}} key={m.id} view={"Pointer_ViewEdgePoint"} /> )
+    }{
+        false && <EdgePoint key={"midnode1"} view={"Pointer_ViewEdgePoint"} />
+    }{
+        false && <EdgePoint key={"midnode2"} view={"Pointer_ViewEdgePoint"} />
+    }{
+        false && props.children && "this would cause loop no idea why, needs to be fixed to allow passing EdgeNodes here" || []
+    }
+    */
 }
 
 let valuecolormap: GObject = {};

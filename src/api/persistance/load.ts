@@ -25,7 +25,10 @@ export class Load {
             Load.element(`${projectUrl}/graphs`),
             Load.element(`${projectUrl}/graphVertexes`),
             Load.element(`${projectUrl}/voidVertexes`),
-            Load.element(`${projectUrl}/vertexes`)
+            Load.element(`${projectUrl}/vertexes`),
+            Load.element(`${projectUrl}/graphElements`),
+            Load.element(`${projectUrl}/edges`),
+            Load.element(`${projectUrl}/edgePoints`)
         ]);
         CreateElementAction.new(project);
     }
@@ -34,7 +37,10 @@ export class Load {
         const response = await PersistanceApi.responseHandler(await Fetch.get(url));
         const elements = response.body;
         if(response.code !== 200 || !Array.isArray(elements)) return;
-        for(let element of elements) CreateElementAction.new(element);
+        for(let element of elements) {
+            console.log('Loading From Server', element);
+            CreateElementAction.new(element);
+        }
     }
 
 }
