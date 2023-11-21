@@ -106,35 +106,7 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
         Log.ee("Invalid usage declarations", {e, str: stateProps.view.usageDeclarations, view:stateProps.view, data: ownProps.data, stateProps});
         U.objectMergeInPlace(evalContext, stateProps.usageDeclarations = {data: stateProps.data, view: stateProps.view, node: stateProps.node});
     }
-
-
-    // abababababab
-    // todo: questa cosa va spostata nel render, non nel mapstate
-    // prerender func
-    // todo: move prerender func here
-
-    // parsing the jsx
-    // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
-    let jsxCodeString: DocString<ReactNode>;
-    let jsxparsedfunc: () => React.ReactNode;
-    try {
-        jsxCodeString = JSXT.fromString(view.jsxString, {factory: 'React.createElement'});
-    }
-    catch (e: any) {
-        // Log.eDevv();
-        // if it fails, i scrap prerenderFunc and usageDeclarations
-        // (better not actually change the assigned view and proceed because the ErrorView would be assigned to node.view)
-        stateProps.preRenderFunc = "()=>{}"; //  view.preRenderFunc;
-        stateProps.template = DV.errorView_string(e.message.split("\n")[0],
-            {msg: 'Syntax Error in custom user-defined template. try to remove typescript typings.', evalContext, e, view, jsx:view.jsxString});
-        U.objectMergeInPlace(evalContext, stateProps.usageDeclarations = {data: stateProps.data, view: stateProps.view, node: stateProps.node});
-        stateProps.evalContext = evalContext;
-        return;
-    }
-    stateProps.preRenderFunc = view.preRenderFunc;
-    stateProps.template = jsxCodeString;
     stateProps.evalContext = evalContext;
-    // abababababab
 }
 
 let debugcount = 0;
@@ -415,6 +387,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     protected getContext(): GObject{
         let context: GObject = {component:this, __proto__:this.props.evalContext};
         context._context = context;
+        this.context = context;
         return context;
     }
 
@@ -456,14 +429,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     </div>;
                 console.error("errr", {e, ee, jsxlines, jsxcode, rowPre, rowPost, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
                 errormsg += " @line " + stackerrorlinenum.row + ":" + stackerrorlinenum.col;
-                return DV.errorView(<div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template: this.props.template, view: this.props.view});
+                return DV.errorView(<div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template: this.props.view.jsxString, view: this.props.view});
             } else {
                 // it means it is likely accessing a minified.js src code, sending generic error without source mapping
             }
         } catch(e2) {
             Log.eDevv("internal error in error view", {e, e2, where} );
         }
-        return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: this.props.template, view: this.props.view});
+        return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: this.props.view.jsxString, view: this.props.view});
     }
 
     private getTemplate(): ReactNode {
@@ -475,27 +448,31 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         // Log.exDev(debug && maxRenderCounter-- < 0, "loop involving render");
         let context: GObject = this.getContext();
-
+        // abababababab
+        // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
 
         try {
-            if (this.props.preRenderFunc) {
+            let preRenderFuncStr: string | undefined = this.props.view.preRenderFunc;
+            if (preRenderFuncStr) {
                 // eval prerender
                 let obj: GObject = {};
                 let tempContext: GObject = {__param: obj};
                 tempContext.__proto__ = context;
-                U.evalInContextAndScopeNew("("+this.props.preRenderFunc+")(this.__param)", tempContext, true, false);
+                U.evalInContextAndScopeNew("("+preRenderFuncStr+")(this.__param)", tempContext, true, false);
                 U.objectMergeInPlace(context, obj);
             }
         }
         catch(e: any) { return this.displayError(e, "preRenderFunc");  }
+
         let ret;
-        try {
-            // eval template
-            ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + this.props.template + '})()', context);
-            // ret = this.props.template();
-            // ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], {});
-        }
-        catch(e: any) { return this.displayError(e, "getTemplate"); }
+        // eval template
+        let jsxCodeString: DocString<ReactNode>;
+
+        try { jsxCodeString = JSXT.fromString(this.props.view.jsxString, {factory: 'React.createElement'}); }
+        catch (e: any) { return this.displayError(e, "JSX Syntax Error"); }
+
+        try { ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + jsxCodeString + '})()', context); }
+        catch (e: any) { return this.displayError(e, "JSX Semantic Error"); }
         return ret;
     }
 
