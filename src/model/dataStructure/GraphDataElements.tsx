@@ -319,12 +319,13 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return GraphElementComponent.map[context.data.id]; }
     // get_view(context: Context): this["view"] { return this.get_component(context).props.view; }
     get_view(context: Context): this["view"] {
-        let c = this.get_component(context);
-        if (c) return c.props.view;
-        return LPointerTargetable.fromPointer(context.data.view); }
+        return (this.get_component(context)?.props.view as this["view"]);
+        // return LPointerTargetable.fromPointer(context.data.view);
+    }
     set_view(val: Pack1<this["view"]>, context: Context){
-        let ptr: DGraphElement["view"] = Pointers.from(val as this["view"]);
-        return SetFieldAction.new(context.data.id, "view", ptr, '', true);
+        Log.eDevv("node.view is readonly, change it through props or the model");
+        // let ptr: DGraphElement["view"] = Pointers.from(val as this["view"]);
+        // return SetFieldAction.new(context.data.id, "view", ptr, '', true);
     }
 
     outerSize!: LGraphElement["size"];
@@ -393,19 +394,26 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             return ret;
         }*/
         if (!canTriggerSet) {
+            if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
             return ret;
         }
         let html: RefObject<HTMLElement | undefined> | undefined = component?.html;
         let actualSize: Partial<Size> & {w:number, h:number} = html?.current ? Size.of(html.current) : {w:0, h:0};
         let updateSize: boolean = false;
+        let isOldElement = (context.data.clonedCounter as number) > 3;
+        // if w = 0 i don't auto-set it as in first render it has w:0 because is not reredered and not resized.
+        // if (canTriggerSet) this.set_size({w:actualSize.w}, context);
         if (view.adaptWidth && ret.w !== actualSize.w) {
-            ret.w = actualSize.w;
-            if (canTriggerSet) updateSize = true;
-            // if (canTriggerSet) this.set_size({w:actualSize.w}, context);
+            if (canTriggerSet && (isOldElement || actualSize.w !== 0)) {
+                ret.w = actualSize.w;
+                updateSize = true;
+            }
         }
         if (view.adaptHeight && ret.h !== actualSize.h) {
-            ret.h = actualSize.h;
-            if (canTriggerSet && !updateSize) updateSize = true;
+            if (canTriggerSet && (isOldElement || actualSize.h !== 0)) {
+                ret.h = actualSize.h;
+                updateSize = true;
+            }
         }
         // console.log("getSize() from node merged with actualSize", {ret: {...ret}});
 
@@ -691,6 +699,8 @@ export class DGraph extends DGraphElement {
 
 }
 var nosize = {x:0, y:0, w:0, h:0, nosize:true};
+var defaultEdgePointSize = {x:0, y:0, w:5, h:5};
+var defaultVertexSize = {x:0, y:0, w:140.6818084716797, h:32.52840805053711};
 @RuntimeAccessible
 export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph = any> extends LGraphElement {
     public static cname: string = "LGraph";
@@ -810,7 +820,7 @@ export class DVoidVertex extends DGraphElement {
         return new Constructors(new DVoidVertex('dwc'), parentNodeID, true, undefined, nodeID)
             .DPointerTargetable()
             .DGraphElement(model, graphID, htmlindex)
-            .DVoidVertex(size).end();
+            .DVoidVertex(size || defaultVertexSize).end();
     }
 
 }
@@ -909,7 +919,7 @@ export class DEdgePoint extends DVoidVertex { // DVoidVertex
                       size?: InitialVertexSize): DEdgePoint {
         return new Constructors(new DEdgePoint('dwc'), parentNodeID, true, undefined, nodeID)
             .DGraphElement(undefined, graphID, htmlindex)
-            .DVoidVertex(size).DEdgePoint().end();
+            .DVoidVertex(size || defaultEdgePointSize).DEdgePoint().end();
     }
 
 }
@@ -1095,7 +1105,7 @@ export class DVertex extends DGraphElement { // DVoidVertex
         return new Constructors(new DVertex('dwc'), parentNodeID, true, undefined, nodeID)
             .DPointerTargetable()
             .DGraphElement(model, graphID, htmlindex)
-            .DVoidVertex(size).DVertex().end();
+            .DVoidVertex(size || defaultVertexSize).DVertex().end();
     }
 }
 
@@ -1172,7 +1182,7 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
                       graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size?: GraphSize): DGraphVertex {
         return new Constructors(new DGraphVertex('dwc'), parentNodeID, true, undefined, nodeID)
             .DPointerTargetable().DGraphElement(model, graphID, htmlindex)
-            .DVoidVertex(size).DVertex().DGraph().end();
+            .DVoidVertex(size || defaultVertexSize).DVertex().DGraph().end();
     }
 
 

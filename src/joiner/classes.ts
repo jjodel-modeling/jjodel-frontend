@@ -525,7 +525,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this; }
     DStructuralFeature(): this {
         if (this.thiss.className === 'DOperation') return this;
-        if (!this.persist) return this;
+        // if (!this.persist) return this;
         let thiss: DAttribute|DReference = this.thiss as any;
         const _DClass: typeof DClass = windoww.DClass;
         const _DValue: typeof DValue = windoww.DValue;
@@ -608,7 +608,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.details = details || [];
         this.setExternalPtr(thiss.father, "annotations", "+=");
 
-        if (this.persist && details) for (let det of details)
+        if (details) for (let det of details)
             thiss._persistCallbacks.push(SetFieldAction.create(det, "pointedBy", PointedBy.fromID(thiss.id, "details"), '+='));
 
         return this; }
@@ -635,16 +635,12 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         const thiss: DPackage = this.thiss as any;
         thiss.uri = uri || '';// || 'org.jodel-react.username';
         thiss.prefix = prefix || '';
-        if (this.persist) {
-            // no pointedBy
-            // update father's collections (pointedby's here are set automatically)
-            if (thiss.father) {
-                if (this.fatherType!.cname === "DModel") {
-                    this.setExternalPtr(thiss.father, "packages", "+=");
-                }
-                else {
-                    this.setExternalPtr(thiss.father, "subpackages", "+=");
-                }
+        if (thiss.father) {
+            if (this.fatherType!.cname === "DModel") {
+                this.setExternalPtr(thiss.father, "packages", "+=");
+            }
+            else {
+                this.setExternalPtr(thiss.father, "subpackages", "+=");
             }
         }
         return this; }
@@ -795,9 +791,6 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.edgeHeadSize = new GraphPoint(20, 20);
         thiss.edgeTailSize = new GraphPoint(20, 20);
 
-        if (this.persist) {
-            // no pointedBy?
-        }
         this.nonPersistentCallbacks.push(() => {
             console.log("colormap 2", {v:{...thiss}});
             if (thiss.constants) {
@@ -822,9 +815,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.zoom = new GraphPoint(1, 1);
         thiss.graphSize = new GraphSize(0, 0, 0, 0);  // GraphSize.apply(this, [0, 0, 0 ,0]);
         thiss._subMaps = {zoom: true, graphSize: true}
-        if (this.persist) {
-            // no pointedBy?
-        }
+        thiss.x = 0;
+        thiss.y = 0;
+        thiss.w = 0;
+        thiss.h = 0;
         return this; }
 
     DVoidVertex(defaultVSize?: InitialVertexSize): this {
@@ -836,63 +830,58 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         let defaultVSizeObj: InitialVertexSizeObj | undefined;
         let defaultVSizeFunc: InitialVertexSizeFunc;
         thiss.isResized = false;
-        let func: undefined | (() => void);
-        if (defaultVSize) {
-            func = ()=>TRANSACTION(() => {
-            // this executes after the Constructor.end() so it's necessary to start a new transaction
-            // fromPointer because i need to pick the one from the store that might be updated
-            //    with a view or other data instead of the D version i have here
-            let lvertex: LVoidVertex = LPointerTargetable.fromD(thiss);
-            if (typeof defaultVSize !== "function") {
-                defaultVSizeObj = defaultVSize;
-                //defaultVSizeFunc = () => defaultVSizeObj;
-            }
-            else {
-                defaultVSizeFunc = defaultVSize;
-                try { defaultVSizeObj = defaultVSizeFunc(lvertex.father, lvertex); }
-                catch (e) { Log.e("Error in user DefaultVSize function:", {e, defaultVSizeFunc, txt:defaultVSizeFunc.toString()}); }
-            }
-            if (defaultVSizeObj) {
-                if (!this.persist) lvertex = thiss as any;
-                if (defaultVSizeObj.x !== undefined) lvertex.x = defaultVSizeObj.x;
-                if (defaultVSizeObj.y !== undefined) lvertex.y = defaultVSizeObj.y;
-                if (defaultVSizeObj.w !== undefined) lvertex.w = defaultVSizeObj.w;
-                if (defaultVSizeObj.h !== undefined) lvertex.h = defaultVSizeObj.h;
+        /*
+        if (typeof defaultVSize !== "function") {
+            defaultVSizeObj = defaultVSize;
+            // NB: they are going to be overwritten in callback func, but if the value is correct ahead i skip that
+            if (defaultVSizeObj.x !== undefined) thiss.x = defaultVSizeObj.x;
+            if (defaultVSizeObj.y !== undefined) thiss.y = defaultVSizeObj.y;
+            if (defaultVSizeObj.w !== undefined) thiss.w = defaultVSizeObj.w;
+            if (defaultVSizeObj.h !== undefined) thiss.h = defaultVSizeObj.h;
+        }
+        else {
+            thiss.x = 0;
+            thiss.y = 0;
+            thiss.w = 0;
+            thiss.h = 0;
+        }*/
 
-                if ((defaultVSizeObj as any).index >= 0 && this.persist && thiss.className === "DEdgePoint") {
-                    let updateEPindex = () => {
-                        let lep = lvertex as LEdgePoint;
-                        let le: LVoidEdge = lep.father;
-                        let de: DVoidEdge = le.__raw;
-                        let subelements = [...de.subElements];
-                        let presubelements = [...subelements]; // a
-                        U.arrayRemoveAll(subelements, thiss.id);
-                        subelements.splice(defaultVSizeObj?.index as number, 0, thiss.id);
-                        // console.log("setting subelements", {presubelements, subelements, de, le, thiss});
-                        le.subElements = subelements as any;
-                        // todo: this might break "pointedBy" x984
-                    }
-                    // updateEPindex();
-                    // it's already wrapped in a callback
-                    // but needs a second one because after node is created, id is auto-appended to this collection
-                    // and i need to rewrite that append by inserting my own customized index position
-                    console.log("setting subelements 0", {updateEPindex});
-                    setTimeout(updateEPindex, 0);
-                    // NB: do not use this.callbacks.push because the body of this func is executed after Constructors.end() so end() can never find and execute it.
+
+        let lvertex: LVoidVertex = LPointerTargetable.fromD(thiss);
+        if (typeof defaultVSize !== "function") { defaultVSizeObj = defaultVSize; }
+        else {
+            defaultVSizeFunc = defaultVSize;
+            try { defaultVSizeObj = defaultVSizeFunc(lvertex.father, lvertex); }
+            catch (e) { Log.e("Error in user DefaultVSize function:", {e, defaultVSizeFunc, txt:defaultVSizeFunc.toString()}); }
+        }
+        if (defaultVSizeObj) {
+            if (defaultVSizeObj.x !== undefined) thiss.x = defaultVSizeObj.x;
+            if (defaultVSizeObj.y !== undefined) thiss.y = defaultVSizeObj.y;
+            if (defaultVSizeObj.w !== undefined) thiss.w = defaultVSizeObj.w;
+            if (defaultVSizeObj.h !== undefined) thiss.h = defaultVSizeObj.h;
+
+            if ((defaultVSizeObj as any).index >= 0 && thiss.className === "DEdgePoint") {
+                let updateEPindex = () => {
+                    let lep = lvertex as LEdgePoint;
+                    let le: LVoidEdge = lep.father;
+                    let de: DVoidEdge = le.__raw;
+                    let subelements = [...de.subElements];
+                    U.arrayRemoveAll(subelements, thiss.id);
+                    subelements.splice(defaultVSizeObj?.index as number, 0, thiss.id);
+                    // console.log("setting subelements", {oldsubelements, subelements, de, le, thiss});
+                    le.subElements = subelements as any;
+                    // todo: this might break "pointedBy" x984
                 }
+                // updateEPindex();
+                // it's already wrapped in a callback
+                // but needs a second one because after node is created, id is auto-appended to this collection
+                // and i need to rewrite that append by inserting my own customized index position
+                console.log("setting subelements 0", {updateEPindex});
+                setTimeout(updateEPindex, 0);
+                // NB: do not use this.callbacks.push because the body of this func is executed after Constructors.end() so end() can never find and execute it.
             }
-            });
         }
 
-        // func = ... the if (defaultVSizeObj) above
-        if (func) {
-            // if (!persist) func(); else
-            thiss._persistCallbacks.push(func); // t odo? make sure the parent node exists too, not just this node.
-        }
-
-        if (this.persist) {
-            // no pointedBy?
-        }
         return this; }
 
 
@@ -902,7 +891,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 @RuntimeAccessible
 export class DPointerTargetable extends RuntimeAccessibleClass {
     public static cname: string = "DPointerTargetable";
-    static defaultComponent: (ownProps: GObject, children?: (string | React.Component)[]) => React.ReactElement;
+    static defaultComponent: (ownProps: GObject, children?: (string | React.Component)[]) => React.ReactElement; //
     public static maxID: number = 0;
     public static logic: typeof LPointerTargetable;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];

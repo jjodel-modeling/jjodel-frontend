@@ -84,52 +84,42 @@ function END2(){
 
 }*/
 
-export function BEGIN_OLD() {
-    pendingActions = [];
-    hasBegun = true;
+class TransactionStatus{
+    pendingActions: Action[] = [];
+    hasBegun: boolean = false;
+    hasAborted: boolean = false;
+    transactionDepthLevel: number = 0;
 }
-export function ABORT_OLD() {
-    hasBegun = false;
-    pendingActions = [];
-}
-export function END_OLD(actionstoPrepend: Action[] = []): boolean | DState {
-    hasBegun = false;
-    // for (let action of pendingActions) { }
-    const ca: CompositeAction = new CompositeAction( actionstoPrepend?.length ? [...actionstoPrepend, ...pendingActions] : pendingActions, false);
-    pendingActions = [];
-    return ca.fire();
-}
-
-let pendingActions: Action[] = [];
-let hasBegun = false;
-let hasAborted = false;
-let deepnessLevel = 0;
+let t = new TransactionStatus();
+windoww.transactionStatus = t;
 
 export function BEGIN() {
-    hasBegun = true; // redundant but actions are reading this, minimize changes
-    deepnessLevel++;
+    t.hasBegun = true; // redundant but actions are reading this, minimize changes
+    t.transactionDepthLevel++;
 }
 export function ABORT() {
-    hasAborted = true; // at any depth level since i have only a flat TRANSACTION array
+    t.hasAborted = true; // at any depth level since i have only a flat TRANSACTION array
     END();
 }
 export function END(actionstoPrepend: Action[] = []): boolean {
-    deepnessLevel--;
-    if (actionstoPrepend.length) pendingActions = [...actionstoPrepend, ...pendingActions];
+    t.transactionDepthLevel--;
+    if (actionstoPrepend.length) t.pendingActions = [...actionstoPrepend, ...t.pendingActions];
 
-    if (deepnessLevel < 0) { console.error("mismatching END()"); deepnessLevel = 0; }
-    if (deepnessLevel === 0) return FINAL_END();
+    if (t.transactionDepthLevel < 0) { console.error("mismatching END()"); t.transactionDepthLevel = 0; }
+    if (t.transactionDepthLevel === 0) return FINAL_END();
     return false;
 }
 export function FINAL_END(): boolean{
-    hasBegun = false;
+    console.warn("FINAL_END");
+    t.hasBegun = false;
     // pendingActions.sort( (a, b) => a.timestamp - b.timestamp)
-    if (hasAborted) {
-        pendingActions = [];
+    if (t.hasAborted) {
+        t.pendingActions = [];
+        t.hasAborted = false;
         return false;
     }
-    const ca: CompositeAction = new CompositeAction(pendingActions, false);
-    pendingActions = [];
+    const ca: CompositeAction = new CompositeAction(t.pendingActions, false);
+    t.pendingActions = [];
     return ca.fire();
 }
 
@@ -165,6 +155,8 @@ export class Action extends RuntimeAccessibleClass {
         vertexSubElements: 'vertexSubElements',
         vertexSize: 'vertexSize'
     };
+    public field: string;
+    public value: any;
     id: Pointer;
     timestamp: number = Date.now();
     sender: Pointer<DUser>;
@@ -176,11 +168,9 @@ export class Action extends RuntimeAccessibleClass {
     // field: string = ''; // es: ID_58
     // value: any; // es: lowerbound, name, namespace, values (for attrib-ref)...
     type: string;
-    public field: string;
-    public value: any;
     // private src?: string[];
-    private stack?: string[];
     subType?: string; //?
+    private stack?: string[];
     protected constructor(field: string, value: any, subType?: string){
         super();
         this.id = 'Action_' + Date.now() + "_" + Action.maxCounter++; // NB: the prefix must be the same for all actions because it must not affect order
@@ -200,11 +190,11 @@ export class Action extends RuntimeAccessibleClass {
             Log.ee("Attempted to set a proxy object inside the store.", {action:this, value: this.value});
             return false;
         }
-        if (hasBegun) {
-            pendingActions.push(this);
+        this.hasFired++;
+        if (t.hasBegun) {
+            t.pendingActions.push(this);
         } else {
             // if ((window as any).maxActionFiring++ >= 400) return false;
-            this.hasFired++;
             let storee = store || windoww.store;
             console.log('firing action:', {
                 field: this.field,

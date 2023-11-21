@@ -65,13 +65,13 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             this.setState({forceupdate:2});
         },1)
     }
-
-    onViewChange(): void {
-        super.onViewChange();
+/*
+    onViewChangeOld(): void {
+        super.onViewChangeOld();
         this.draggableOptions = undefined;
         this.resizableOptions = undefined;
         this.rotableOptions = undefined;
-    }
+    }*/
 
     setVertexProperties(){
         if (!this.props.node || !this.html.current) return;

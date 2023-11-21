@@ -268,12 +268,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // console.log("map ge", {ownProps, ret, state});
         GraphElementComponent.mapLGraphElementStuff(state, ownProps, ret, dGraphDataClass);
         GraphElementComponent.mapViewStuff(state, ret, ownProps);
-        // ret.view = LViewElement.wrap(vid, state);
-        // view non deve essere più injected ma calcolata, però devo fare inject della view dell'elemento parent. learn ocl to make view target
-        Log.exDev(!ret.view, 'failed to inject view:', {state, ownProps, reduxProps: ret});
-        // console.log(!ret.view, 'failed to inject view:', {state, ownProps, reduxProps: ret});
-        // console.log('GE mapstatetoprops:', {state, ownProps, reduxProps: ret});
-        // ret.model = state.models.length ? LModelElement.wrap(state.models[0]) as LModel : undefined;
+        Log.exDev(!ret.view, 'failed to assign view:', {state, ownProps, reduxProps: ret});
         ret.usageDeclarations = new DefaultUsageDeclarations(ret, ownProps); //edited in-place through parameter in evalContext
         // @ts-ignore
         ret.key = ret.key || ownProps.key;
@@ -627,8 +622,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     onClick(e: React.MouseEvent): void {
 
     }
-
-    onViewChange(): void {
+    /*
+    onViewChangeOld(): void {
         let thischange = {t: Date.now(), vid: this.props.node.__raw.view, newvid:this.props.view.id, v: this.props.node.view, newv: this.props.view, key:this.props.key};
         this.lastViewChanges.push(thischange);
         // nan -> false <200 = true
@@ -636,20 +631,18 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             // if N views changed in <= 0.2 sec
             Log.exDevv("loop in updating View assigned to node. The cause might be missing or invalid keys on GraphElement JSX nodes.", {change_log:this.lastViewChanges, component: this});
         }
-
-        /*console.log("UPDATEVIEW ", {lnode:this.props.node, dnode:this.props.node.__raw, dstore: windoww.s().idlookup[this.props.node.__raw.id], view:this.props.view,
-             data:this.props.data, vid:this.props.view.id, nview:this.props.node.__raw.view});*/
         this.props.node.view = this.props.view;
-    }
+    }*/
+
     public render(nodeType?:string, styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
         if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
             return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
         }
         if (!this.props.node) return "Loading...";
-        if (this.props.node.__raw.view !== this.props.view.id) {
+        /*if (this.props.node.__raw.view !== this.props.view.id) {
             this.onViewChange();
             return "Updating view...";
-        }
+        }*/
 
         if (!this.stopUpdateEvents || this.stopUpdateEvents !== this.props.view.clonedCounter) {
             this.stopUpdateEvents = undefined;
