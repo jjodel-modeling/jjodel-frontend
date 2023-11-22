@@ -2,8 +2,14 @@ import React, {Component, Dispatch, PureComponent, ReactElement, ReactNode,} fro
 import {createPortal} from "react-dom";
 import {connect} from "react-redux";
 import './graphElement.scss';
-import {EdgeStateProps, LGraphElement, store, VertexComponent} from "../../joiner";
 import {
+    Pointers,
+    Selectors as Selectors_
+} from "../../joiner";
+import type {EdgeOwnProps} from "./sharedTypes/sharedTypes";
+import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
+
+import {EdgeStateProps, LGraphElement, store, VertexComponent,
     BEGIN,
     CreateElementAction, DClass, Debug,
     DEdge, DEnumerator,
@@ -35,15 +41,14 @@ import {
     Pointer,
     RuntimeAccessible,
     RuntimeAccessibleClass,
-    Selectors,
     SetFieldAction,
     SetRootFieldAction,
     U,
     UX,
     windoww,
 } from "../../joiner";
-import {DefaultUsageDeclarations, EdgeOwnProps} from "./sharedTypes/sharedTypes";
 
+const Selectors: typeof Selectors_ = windoww.Selectors;
 
 export function makeEvalContext(view: LViewElement, state: DState, ownProps: GraphElementOwnProps, stateProps: GraphElementReduxStateProps): GObject {
     let component = GraphElementComponent.map[ownProps.nodeid as Pointer<DGraphElement>];
@@ -132,13 +137,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     static mapViewStuff(state: DState, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
-        let dnode: DGraphElement | undefined = ownProps?.nodeid && DPointerTargetable.from(ownProps.nodeid, state) as any;
+        // let dnode: DGraphElement | undefined = ownProps?.nodeid && DPointerTargetable.from(ownProps.nodeid, state) as any;
         if (ownProps.view) {
             ret.views = [];
-            ret.view = LPointerTargetable.wrap(ownProps.view) as LViewElement;
+            ret.view = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(Pointers.from(ownProps.view), state) as DViewElement);
+            Log.w(!ret.view, "Requested view "+ownProps.view+" not found. Another view got assigned.", {requested: ownProps.view, props: ownProps, state: ret});
         }
-        else {
-            const viewScores = Selectors.getAppliedViews(ret.data, ownProps.view || null, ownProps.parentViewId || null);
+        if (!ret.view) {
+            const viewScores = Selectors.getAppliedViews(ret.data,
+                (ownProps.view as LViewElement)?.id || (ownProps.view as string) || null,
+                ownProps.parentViewId || null);
             ret.views = viewScores.map(e => LViewElement.fromD(e.element));
             ret.view = ret.views[0];
             (ret as any).viewScores = viewScores; // debug only

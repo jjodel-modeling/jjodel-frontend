@@ -148,8 +148,8 @@ export {DViewPoint, LViewPoint} from "../view/viewPoint/viewpoint";
 
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
 export {DState, LState, ModelStore, ViewPointState, statehistory} from "../redux/store";
-export {Selectors as Selectorss} from "../redux/selectors/selectors";
-export var Selectors = windoww.Selectors as (GObjectt & typeof SelType);
+export {Selectors} from "../redux/selectors/selectors";
+// export var Selectors = windoww.Selectors as (GObjectt & typeof SelType);
 export {reducer, jodelInit} from "../redux/reducer/reducer";
 export {store} from "../redux/createStore";
 export {Debug} from "../debugtools/debug";

@@ -1863,19 +1863,19 @@ export class DClass extends DPointerTargetable { // extends DClassifier
 
     public static new(name?: DNamedElement["name"], isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: DClass["isPrimitive"] = false, partial?: DClass["partial"],
                       partialDefaultName?: DClass["partialdefaultname"], father?: Pointer, persist: boolean = true): DClass {
-        if (!name) name = this.defaultname("concept ", father);
+        if (!name) name = this.defaultname("Concept ", father);
         return new Constructors(new DClass('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DClassifier().DClass(isInterface, isAbstract, isPrimitive, partial, partialDefaultName).end();
     }
 
     static new2(setter: Partial<ObjectWithoutPointers<DClass>>, father: DClass["father"], name?: DClass["name"]): DClass {
-        if (!name) name = this.defaultname((name || "concept "), father);
+        if (!name) name = this.defaultname((name || "Concept "), father);
         return new Constructors(new DClass('dwc'), father, true, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DClassifier().DClass().end((d) => { Object.assign(d, setter); });
     }
 
     static new3(a: Partial<ClassPointers>, callback: undefined | ((d: DClass, c: Constructors) => void), persist: boolean = true): DClass {
-        if (!a.name) a.name = this.defaultname("concept ", a.father);
+        if (!a.name) a.name = this.defaultname("Concept ", a.father);
         return new Constructors(new DClass('dwc'), a.father, persist, undefined, a.id).DPointerTargetable().DModelElement()
             .DNamedElement(a.name).DClassifier().DClass().end(callback);
     }
