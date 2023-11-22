@@ -20,7 +20,13 @@ function App(props: AllProps) {
     const user = props.user;
 
     useEffectOnce(() => {
-        if(!debug) return;
+        if (DUser.offlineMode) {
+            let du = DUser.new('adminOffline');
+            DUser.current = du.id;
+            stateInitializer();
+            return;
+        }
+        if (!debug) return;
         (async function() {
             SetRootFieldAction.new('isLoading', true);
             const response = await PersistanceApi.login('admin@mail.it', 'admin');

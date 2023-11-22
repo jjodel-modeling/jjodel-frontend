@@ -1619,6 +1619,7 @@ let bb2 = fffff(a);
 @RuntimeAccessible
 export class DUser extends DPointerTargetable {
     public static cname: string = 'DUser';
+    public static offlineMode: boolean = true;
     // static current: Pointer<DUser> = 'Pointer_AnonymousUser';
     static current: Pointer<DUser> = '';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];

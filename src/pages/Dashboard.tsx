@@ -23,6 +23,7 @@ function DashboardComponent(props: AllProps) {
 
     useEffectOnce(() => {
         (async function() {
+            if (DUser.offlineMode) return;
             await PersistanceApi.loadMyProjects();
         })();
     })
