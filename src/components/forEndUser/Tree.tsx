@@ -52,7 +52,7 @@ function DataTree(props: DataTreeProps) {
                 {(data.name) ? data.name : 'unnamed'}
             </label>
         </div>
-        {!hide && data.children?.map((child: LModelElement) => {
+        {!hide && Array.isArray(data.children) && data.children?.map((child: LModelElement) => {
             return(<div className={'ms-2'}>
                 <Tree data={child} depth={depth} />
             </div>);

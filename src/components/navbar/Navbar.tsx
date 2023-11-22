@@ -5,7 +5,8 @@ import {DState, DUser, LUser, SetRootFieldAction} from '../../joiner';
 import File from './tabs/File';
 import Edit from './tabs/Edit';
 import Share from './tabs/Share';
-import Debug from '../../static/img/debug.png';
+import Debug from './tabs/Debug';
+import DebugImage from '../../static/img/debug.png';
 import {FakeStateProps} from '../../joiner/types';
 import PersistanceApi from "../../api/persistance";
 
@@ -20,9 +21,13 @@ function NavbarComponent(props: AllProps) {
                 <li className={'nav-item dropdown'}>
                     <i tabIndex={-1} className={'fs-3 dropdown-toggle bi bi-list'} data-bs-toggle={'dropdown'} />
                     <ul className={'dropdown-menu'}>
-                        <li tabIndex={-1} className={'dropdown-item'}>
+                        {/*<li tabIndex={-1} className={'dropdown-item'}>
                             Test
-                        </li>
+                        </li>*/}
+                        {debug && <>
+                            <hr />
+                            <Debug />
+                        </>}
                         <hr />
                         <File />
                         <Edit />
@@ -58,13 +63,13 @@ function NavbarComponent(props: AllProps) {
                     </li>
                 </ul>
             </li>
-            <li className={'nav-item'}>
+            {user.project && <li className={'nav-item'}>
                 <button onClick={async(e) => await PersistanceApi.saveProject()} style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
                     Save
                 </button>
-            </li>
+            </li>}
             {debug && <li className={'nav-item'}>
-                <img alt={'debug'} width={25} height={25} src={Debug} />
+                <img alt={'debug'} width={25} height={25} src={DebugImage} />
             </li>}
         </ul>
     </nav>);

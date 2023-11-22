@@ -270,9 +270,9 @@ export class U {
         }
     }
 
-    public static log(log: any) {
+    public static log(obj: unknown, label: string = '###') {
         console.clear();
-        console.log("###", log);
+        console.log(label, obj);
     }
 
     static removeEmptyObjectKeys(obj: GObject): void{

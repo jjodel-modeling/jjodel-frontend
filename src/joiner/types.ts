@@ -5,9 +5,9 @@ import {
     AttribETypes,
     CoordinateMode, DGraphElement, DPointerTargetable, DState, DUser,
     EdgeHead,
-    EGraphElements, EModelElements,
-    LEdgePoint,
-    LGraphElement,
+    EGraphElements, EModelElements, LAttribute, LClass, LEdge,
+    LEdgePoint, LEnumerator, LEnumLiteral, LGraph,
+    LGraphElement, LGraphVertex, LModel, LObject, LOperation, LPackage, LParameter, LReference, LValue, LVertex,
     LVoidEdge,
     LVoidVertex
 } from "../joiner";
@@ -182,3 +182,5 @@ export type Dependency = {
 export type Selected = Dictionary<Pointer<DUser>, Pointer<DGraphElement, 0, 1>>;
 export type FakeStateProps = any;
 export type ApiResponse = {code: number, body: Json|string}
+export type DataTypes = LModel|LPackage|LClass|LEnumerator|LAttribute|LReference|LOperation|LParameter|LEnumLiteral|LObject|LValue
+export type NodeTypes = LGraph|LGraphVertex|LVoidVertex|LVertex|LGraphElement|LEdge|LEdgePoint;

@@ -16,6 +16,8 @@ export class Load {
             Load.element(`${projectUrl}/enumerators`),
             Load.element(`${projectUrl}/attributes`),
             Load.element(`${projectUrl}/references`),
+            Load.element(`${projectUrl}/operations`),
+            Load.element(`${projectUrl}/parameters`),
             Load.element(`${projectUrl}/literals`),
             Load.element(`${projectUrl}/objects`),
             Load.element(`${projectUrl}/values`),
@@ -38,7 +40,7 @@ export class Load {
         const elements = response.body;
         if(response.code !== 200 || !Array.isArray(elements)) return;
         for(let element of elements) {
-            console.log('Loading From Server', element);
+            console.log(`Loading From Server (${element.className})`, element);
             CreateElementAction.new(element);
         }
     }

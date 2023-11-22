@@ -103,7 +103,7 @@ import type {
     Proxyfied,
     unArr
 } from "./types";
-import {EdgeBendingMode, EdgeGapMode, PrimitiveType} from "./types";
+import {EdgeBendingMode, EdgeGapMode, PrimitiveType, NodeTypes} from "./types";
 import type {
     DViewElement,
     DViewTransientProperties,
@@ -1706,6 +1706,27 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     graphs!: LGraph[];
     views!: LViewElement[];
 
+    /* DATA */
+    packages!: LPackage[];
+    classes!: LClass[];
+    attributes!: LAttribute[];
+    references!: LReference[];
+    operations!: LOperation[];
+    parameters!: LParameter[];
+    enumerators!: LEnumerator[];
+    literals!: LEnumLiteral[];
+    objects!: LObject[];
+    values!: LValue[];
+
+    /* NODES */
+    allNodes!: NodeTypes[];
+    graphVertexes!: LGraphVertex[];
+    voidVertexes!: LVoidVertex[];
+    vertexes!: LVertex[];
+    fields!: LGraphElement[];
+    edges!: LEdge[];
+    edgePoints!: LEdgePoint[];
+
     protected get_name(context: Context): this['name'] {
         return context.data.name;
     }
@@ -1750,6 +1771,93 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         SetFieldAction.new(data.id, 'views', Pointers.from(val), '', true);
         return true;
     }
+
+    /* DATA Getter */
+    protected get_packages(context: Context): this['packages'] {
+        const data = context.proxyObject as LProject;
+        return data.metamodels.flatMap(m => m.allSubPackages);
+    }
+    protected get_classes(context: Context): this['classes'] {
+        const data = context.proxyObject as LProject;
+        return data.packages.flatMap(p => p.classes);
+    }
+    protected get_attributes(context: Context): this['attributes'] {
+        const data = context.proxyObject as LProject;
+        return data.classes.flatMap(c => c.attributes);
+    }
+    protected get_references(context: Context): this['references'] {
+        const data = context.proxyObject as LProject;
+        return data.classes.flatMap(c => c.references);
+    }
+    protected get_operations(context: Context): this['operations'] {
+        const data = context.proxyObject as LProject;
+        return data.classes.flatMap(c => c.operations);
+    }
+    protected get_parameters(context: Context): this['parameters'] {
+        const data = context.proxyObject as LProject;
+        return data.operations.flatMap(o => o.parameters);
+    }
+    protected get_enumerators(context: Context): this['enumerators'] {
+        const data = context.proxyObject as LProject;
+        return data.packages.flatMap(p => p.enumerators);
+    }
+    protected get_literals(context: Context): this['literals'] {
+        const data = context.proxyObject as LProject;
+        return data.enumerators.flatMap(e => e.literals);
+    }
+    protected get_objects(context: Context): this['objects'] {
+        const data = context.proxyObject as LProject;
+        return data.models.flatMap(m => m.allSubObjects);
+    }
+    protected get_values(context: Context): this['values'] {
+        const data = context.proxyObject as LProject;
+        return data.models.flatMap(m => m.allSubValues);
+    }
+
+    /* NODES Getter */
+    protected get_allNodes(context: Context): this['allNodes'] {
+        const data = context.proxyObject as LProject;
+        const nodes: NodeTypes[] = [];
+        // nodes.push(...(data.metamodels.flatMap(m => m.node).filter(n => n !== undefined) as NodeTypes[]));
+        nodes.push(...(data.packages.flatMap(m => m.node).filter(n => n !== undefined) as NodeTypes[]));
+        nodes.push(...(data.classes.flatMap(m => m.node).filter(n => n !== undefined) as NodeTypes[]));
+        nodes.push(...(data.attributes.flatMap(m => m.node).filter(n => n !== undefined) as NodeTypes[]));
+        nodes.push(...(data.references.flatMap(m => m.node).filter(n => n !== undefined) as NodeTypes[]));
+        nodes.push(...(data.operations.flatMap(m => m.node).filter(n => n !== undefined) as NodeTypes[]));
+        nodes.push(...(data.parameters.flatMap(m => m.node).filter(n => n !== undefined) as NodeTypes[]));
+        nodes.push(...(data.enumerators.flatMap(m => m.node).filter(n => n !== undefined) as NodeTypes[]));
+        nodes.push(...(data.literals.flatMap(m => m.node).filter(n => n !== undefined) as NodeTypes[]));
+        // nodes.push(...(data.models.flatMap(m => m.node).filter(n => n !== undefined) as NodeTypes[]));
+        nodes.push(...(data.objects.flatMap(m => m.node).filter(n => n !== undefined) as NodeTypes[]));
+        nodes.push(...(data.values.flatMap(m => m.node).filter(n => n !== undefined) as NodeTypes[]));
+        return nodes;
+    }
+    protected get_graphVertexes(context: Context): this['graphVertexes'] {
+        const data = context.proxyObject as LProject;
+        return data.allNodes.filter(n => n.className === 'DGraphVertex') as LGraphVertex[];
+    }
+    protected get_voidVertexes(context: Context): this['voidVertexes'] {
+        const data = context.proxyObject as LProject;
+        return data.allNodes.filter(n => n.className === 'DVoidVertex') as LVoidVertex[];
+    }
+    protected get_vertexes(context: Context): this['vertexes'] {
+        const data = context.proxyObject as LProject;
+        return data.allNodes.filter(n => n.className === 'DVertex') as LVertex[];
+    }
+    protected get_fields(context: Context): this['fields'] {
+        const data = context.proxyObject as LProject;
+        return data.allNodes.filter(n => n.className === 'DGraphElement') as LGraphElement[];
+    }
+    protected get_edges(context: Context): this['edges'] {
+        const data = context.proxyObject as LProject;
+        return data.graphs.flatMap(g => g.subElements.filter(e => e.className === 'DEdge')) as LEdge[];
+    }
+    protected get_edgePoints(context: Context): this['edgePoints'] {
+        const data = context.proxyObject as LProject;
+        return data.edges.flatMap(e => e.subElements) as LEdgePoint[];
+    }
+
+
 }
 
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DProject);
