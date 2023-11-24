@@ -127,7 +127,7 @@ import {
     LViewElement,
     ParsedAction,
     SetFieldAction,
-    SetRootFieldAction,
+    SetRootFieldAction, ShortAttribETypes,
     store,
     U,
 } from "./index";
@@ -207,9 +207,14 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
 
     static wrapAll<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
         RET extends CAN_THROW extends true ? L[] : L[] = CAN_THROW extends true ? L[] : L[] >
-    (data: D[] | Pointer<DPointerTargetable, 0, 'N'>, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW, state?: DState): CAN_THROW extends true ? L[] : L[] {
+    (data: D[] | Pointer<DPointerTargetable, 0, 'N'>, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW, state?: DState, filter:boolean=true): CAN_THROW extends true ? L[] : L[] {
         if (!Array.isArray(data)) return [];
-        return data.map( d => DPointerTargetable.wrap(d, baseObjInLookup, path, canThrow, state)) as L[];
+        if (!data.length) return [];
+        if (!state) state = windoww.store.getState() as DState;
+        if (!filter) return data.map( d => DPointerTargetable.wrap(d, baseObjInLookup, path, canThrow, state)) as L[];
+        let ret = [];
+        for (let o of data) { if (o) ret.push( DPointerTargetable.wrap(o, baseObjInLookup, path, canThrow, state))}
+        return ret;
     }
 
     static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
@@ -217,8 +222,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     (data: D | Pointer | undefined | null, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW, state?: DState): CAN_THROW extends true ? L : L | undefined{
         if (!data || (data as any).__isProxy) return data as any;
         if (typeof data === 'string') {
-            if (!state) state = windoww.store.getState() as DState;
-            data = state.idlookup[data] as unknown as D;
+            data = DPointerTargetable.from(data, state) as D;
             if (!data) {
                 if (canThrow) return windoww.Log.exx('Cannot wrap:', {data, baseObjInLookup, path});
                 else return undefined as RET;
@@ -413,39 +417,101 @@ export enum EdgeHead {
 
 let canFireActions: boolean = true;
 @RuntimeAccessible
-export class Constructors<T extends DPointerTargetable>{
+export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     public static cname: string = "Constructors";
+    public static paused: boolean = false;
     private thiss: T;
     private persist: boolean;
-    private callbacks: Function[];
+    // private callbacks: Function[];
+    private nonPersistentCallbacks: Function[];
     fatherType?: typeof RuntimeAccessibleClass;
-    constructor(t:T, father?: Pointer, persist: boolean = true, fatherType?: Constructor) {
+    private state?: DState; // set only if requested by setWithSideEffect
+    /*
+    problem: if isPersistent is set to false, but the object is later made persistent with an action, you lose all the callback effects afecting other elements (as setting opposite relations like instances-typeof or losing pointedBy's)
+    solution 1: store in the D-object a function executing the callbacks called by CreateNewElement action, then delete that field before persisting.
+    continued: instead of setting the pointedBy's this way (and increasing clonedcounter for nothing) erase all PointedBy mentionings here, and make all pointer values assigned separately with a SetAction,' +
+    '         if new2 is used that set manually a d-field, set it to undefined in the in the .end() part, then trigger the setaction with correct value.
+    continued: sort actions by path, but always make sure CreateElement are first in the sort regardless of path. make also sure 2 actions with the same path keep the order they are launched/created (oldest first)
+    */
+    constructor(t:T, father?: Pointer, persist: boolean = true, fatherType?: Constructor, id?: string, isUser:boolean = false) {
         persist = persist && canFireActions;
         this.thiss = t;
+        this.setID(id, isUser);
+        DPointerTargetable.pendingCreation[t.id] = t;
         this.persist = persist;
-        this.callbacks = [];
+        t._persistCallbacks = [];
+        t._derivedSubElements = [];
+        this.nonPersistentCallbacks = [];
         if (this.thiss.hasOwnProperty("father")) {
-            (this.thiss as any).father = father;
-            // id still is not assigned here
-            persist && father && this.callbacks.push(()=>SetFieldAction.new(father, "pointedBy", PointedBy.fromID(t.id, "father" as any), '+='));
+            this.fatherType = fatherType as any;
+            this.setPtr("father", father);
         }
-        this.fatherType = fatherType as any;
-        if (this.persist) BEGIN()
     }
 
-    static pause(): void { canFireActions = false; }
-    static resume(): void { canFireActions = true; }
-    // start(thiss: any): this { this.thiss = thiss; return this; }
-    end(simpledatacallback?: (d:T) => void): T {
-        if (simpledatacallback) simpledatacallback(this.thiss); // callback for setting primitive types, not pointers not context-dependant values (name being potentially invalid / chosen according to parent)
-        if (!this.persist) return this.thiss;
-        if (this.callbacks.length) {
-            setTimeout(() => {for (let cb of this.callbacks) cb();}, 0);
+    static makeID(isUser:boolean=false): Pointer { return "Pointer" + new Date().getTime() + "_" + (isUser ? DUser.current : 'USER') + "_" + (DPointerTargetable.maxID++) }
+    private setID(id?: string, isUser:boolean = false){
+        this.thiss.id = id || Constructors.makeID(isUser);
+    }
+
+    // cannot use Lobjects as they will set PointedBy in persistent state, also might access an incomplete version of the object crashing
+    private setPtr(property: string, value: any, checkPointerValidity?: DState) {
+        (this.thiss as GObject)[property] = value;
+
+        if (Array.isArray(value)) for (let v of value) {
+            if (checkPointerValidity && !Pointers.isPointer((v)?.id || v, checkPointerValidity)) continue;
+            this.thiss._persistCallbacks.push(SetFieldAction.create(v, "pointedBy", PointedBy.fromID(this.thiss.id, property as any), '+='));
         }
-        Log.ex(windoww.ddebug, "stop");
-        DPointerTargetable.pendingCreation[this.thiss.id] = this.thiss; // todo: removable?
-        END([CreateElementAction.new(this.thiss, true)])
-        /// todo: warning: there is a begin and end at constructor and end() methods, do not use BEGIN+END/TRANSACTION inside
+        else value && this.thiss._persistCallbacks.push(SetFieldAction.create(value, "pointedBy", PointedBy.fromID(this.thiss.id, property as any), '+='));
+        // todo: in delete if the element was not persistent, just do nothing.
+    }
+
+    private setExternalPtr<D extends DPointerTargetable>(target: D | Pointer<any>, property: string, accessModifier: "[]" | "+=" | "" = "") {
+        if (!target) return;
+        this.thiss._persistCallbacks.push(SetFieldAction.create(target, property, this.thiss.id, accessModifier, true));
+        // PointedBy is set by reducer directly in this case.
+        // this.thiss._persistCallbacks.push(SetFieldAction.create(this.thiss.id, "pointedBy", PointedBy.fromID(target, property as any), '+='));
+    }
+
+    private setWithSideEffect<D extends DPointerTargetable>(property: string, val: any): void {
+        if (!this.state) this.state = store.getState();
+        this.thiss._persistCallbacks.push( () => {
+            (LPointerTargetable.from(this.thiss, this.state) as GObject<"L">)[property] = val;
+        });
+    }
+
+    //static pause(): void { canFireActions = false; }
+    //static resume(): void { canFireActions = true; }
+    static persist(d: DPointerTargetable): void;
+    static persist(d: DPointerTargetable[]): void;
+    static persist(d: orArr<DPointerTargetable>): void {
+        if (Constructors.paused) return;
+        TRANSACTION(()=> {
+            if (!Array.isArray(d)) d = [d];
+            // first create "this"
+            for (let e of d) CreateElementAction.new(e, false);
+            // then create subelements (object -> values) and fire their actions.
+            for (let e of d) {
+                for (let c of e._derivedSubElements) Constructors.persist([c]);
+                delete (e as Partial<DPointerTargetable>)._derivedSubElements;
+            }
+            // finally fire the actions for "this"
+            for (let e of d) {
+                for (let c of e._persistCallbacks) (c as Action).fire ? (c as Action).fire() : (c as () => void)();
+                delete (e as Partial<DPointerTargetable>)._persistCallbacks;
+            }
+        })
+        // DPointerTargetable.pendingCreation[this.thiss.id] = this.thiss; // todo: removable?
+    }
+    // start(thiss: any): this { this.thiss = thiss; return this; }
+    end(simpledatacallback?: (d:T, c: this) => void): T {
+        if (simpledatacallback) simpledatacallback(this.thiss, this); // callback for setting primitive types, not pointers not context-dependant values (name being potentially invalid / chosen according to parent)
+        if (this.nonPersistentCallbacks.length) {
+            for (let cb of this.nonPersistentCallbacks) cb();
+        }
+        if (!this.persist) return this.thiss;
+        Constructors.persist(this.thiss);
+        /// todo: warning: there is a transaction at .persist method, do not use BEGIN+END/TRANSACTION inside
+
         return this.thiss; }
 
 
@@ -459,154 +525,133 @@ export class Constructors<T extends DPointerTargetable>{
     DParameter(defaultValue?: any): this {
         let thiss: DParameter = this.thiss as any;
         thiss.defaultValue = defaultValue;
-        this.persist && thiss.father && SetFieldAction.new(thiss.father, "parameters", thiss.id, '+=', true);
+        this.setExternalPtr(thiss.father, "parameters", "+=");
         return this; }
     DStructuralFeature(): this {
         if (this.thiss.className === 'DOperation') return this;
-        if (!this.persist) return this;
+        // if (!this.persist) return this;
         let thiss: DAttribute|DReference = this.thiss as any;
         const _DClass: typeof DClass = windoww.DClass;
         const _DValue: typeof DValue = windoww.DValue;
 
 
-        let targets: DClass[] = [_DClass.fromPointer(thiss.father)];
+        let targets: DClass[] = [(_DClass as typeof DPointerTargetable).from(thiss.father, this.state)];
         let alreadyParsed: Dictionary<Pointer, DClass> = {};
-        while(targets.length) {
+        /*
+        todo: build a Tree<DClass> of all superclasses tree nested by level.
+            only then instantiate DValues by depth level, if same level from right to left (last extend on right takes priority) and erase this stuff below.*/
+        // let superClassesByLevel: Dictionary<Pointer, DClass> = ;
+        while(targets.length) { // gather superclasses in map "alreadyParsed"
             let nextTargets = [];
             for (let target of targets) {
+                if (!target) { Log.w("Invalid father pointer in DStructuralFeature", {feature: thiss, father:target, superclasses: alreadyParsed}); continue; }
                 if (alreadyParsed[target.id]) continue;
                 alreadyParsed[target.id] = target;
-                for(let ext of target.extendedBy) nextTargets.push(_DClass.fromPointer(ext));
+                for(let ext of target.extendedBy) nextTargets.push((_DClass as typeof DPointerTargetable).from(ext));
             }
             targets = nextTargets;
         }
-        this.persist && this.callbacks.push(()=>{
-            for(let pointer in alreadyParsed) {
-                const instances = alreadyParsed[pointer].instances;
-                if(!instances) continue;
-                for (let instance of instances) {
-                    _DValue.new(thiss.name, thiss.id, undefined, instance);
-                }
+        //(thiss as DPointerTargetable)._persistCallbacks.push(()=>{
+        // When a feature is added in m2, i loop instanced m1 objects to add that feature as a DValue.
+        for (let pointer in alreadyParsed) {
+            for (let instanceObjPtr of alreadyParsed[pointer].instances) {
+                // this._derivedSubElements.push(_DValue.new(thiss.name, thiss.id, undefined, instanceObjPtr));
+                thiss._derivedSubElements.push(_DValue.new3({name: undefined, instanceof: thiss.id, father: instanceObjPtr}, undefined, false));
             }
-        });
+            //}
+        }
 
 
         return this;
     }
     DReference(): this {
         let thiss: DReference = this.thiss as any;
-        // update father's collections (pointedby's here are set automatically)
-        this.persist && thiss.father && SetFieldAction.new(thiss.father, "references", thiss.id, '+=', true);
-        return this;
-    }
+        this.setExternalPtr(thiss.father, "references", "+=");
+        return this; }
+
     DAttribute(): this {
         let thiss: DAttribute = this.thiss as any;
-        // update father's collections (pointedby's here are set automatically)
-        this.persist && thiss.father && SetFieldAction.new(thiss.father, "attributes", thiss.id, '+=', true);
+        this.setExternalPtr(thiss.father, "attributes", "+=");
         return this; }
+
     DDataType(): this { return this; }
+
     DObject(instanceoff?: DObject["instanceof"]): this {
         let thiss: DObject = this.thiss as any;
-
-        if (this.persist && thiss.father) {
+        if (thiss.father) {
             if (this.fatherType!.cname === "DModel") {
-                this.persist && thiss.father && SetFieldAction.new(thiss.father as Pointer<DModel>, "objects", thiss.id, '+=', true);
+                this.setExternalPtr(thiss.father, "objects", "+=");
             }
             else {
                 // object containing object is not in any direct child collection. access through values
-                // this.persist && thiss.father && SetFieldAction.new(thiss.father as Pointer<DObject>, "subpackages", thiss.id, '+=', true);
+                this.setExternalPtr(thiss.father, "values", "+=");
             }
         }
-
-        if (this.persist && instanceoff) this.callbacks.push( () => {
-            (LPointerTargetable.wrap(thiss) as LObject).instanceof = instanceoff as any;
-        })
-        else thiss.instanceof = instanceoff || null;
-        //old ver: this.persist && instanceoff && SetFieldAction.new(thiss.id, "instanceof", instanceoff, undefined, true);
-        // update father's collections (pointedby's here are set automatically)
-        // this.persist && instanceoff && SetFieldAction.new(instanceoff, "instances", thiss.id, '+=', true);
-
+        instanceoff && this.setWithSideEffect( "instanceof", instanceoff);
         return this; }
 
     DValue(instanceoff?: DValue["instanceof"], val?: DValue["values"], isMirage?: DValue["isMirage"]): this {
         let thiss: DValue = this.thiss as any; thiss.edges = [];
-        thiss.values = val || [];
+        // thiss.values = val || [];
         thiss.instanceof = instanceoff;
         thiss.isMirage = isMirage || false;
+        thiss.values = [];
+        this.setPtr("values", val||[], this.state);
 
         // update father's collections (pointedby's here are set automatically)
-        if (this.persist && instanceoff) {
-            SetFieldAction.new(thiss.id, "instanceof", instanceoff, "", true);
-            SetFieldAction.new(instanceoff as Pointer<DAttribute>, "instances", thiss.id, '+=', true);
+        if (instanceoff) {
+            this.setPtr("instanceof", instanceoff);
+            this.setExternalPtr(instanceoff, "instances", "+=");
         }
-        else thiss.instanceof = instanceoff;
-        this.persist && thiss.father && SetFieldAction.new(thiss.father, "features", thiss.id, '+=', true);
+        this.setExternalPtr(thiss.father, "features", "+=");
         return this; }
 
     DAnnotation(source?: DAnnotation["source"], details?: DAnnotation["details"]): this {
         const thiss: DAnnotation = this.thiss as any;
         thiss.source = source || '';
         thiss.details = details || [];
-        if (this.persist && details) {
-            //BEGIN() Constructors is always already inside a transaction
-            for (let det of details) SetFieldAction.new(det, "pointedBy", PointedBy.fromID(thiss.id, "details"), '+=');
-            // update father's collections (pointedby's here are set automatically)
-            this.persist && thiss.father && SetFieldAction.new(thiss.father, "annotations", thiss.id, '+=', true);
-            //END()
-        }
+        this.setExternalPtr(thiss.father, "annotations", "+=");
+
+        if (details) for (let det of details)
+            thiss._persistCallbacks.push(SetFieldAction.create(det, "pointedBy", PointedBy.fromID(thiss.id, "details"), '+='));
+
         return this; }
 
-    static makeID(): Pointer{ return new Date().getTime() + "_" + DUser.current + "_" + (DPointerTargetable.maxID++) }
-    DPointerTargetable(isUser: boolean = false, id?: string): this {
+    DPointerTargetable(): this {
         const thiss: DPointerTargetable = this.thiss as any;
-        thiss.id = id || Constructors.makeID();
         thiss.className = (thiss.constructor as typeof RuntimeAccessibleClass).cname;
-        if (this.persist) {
-            // no pointedBy
-        }
-        return this;
-    }
+        // this.className = thiss.className;
+        return this; }
 
-    DUser(username: string, id?: DUser['id']): this {
+    DUser(id?: DUser["id"]): this {
         const _this: DUser = this.thiss as unknown as DUser;
         _this.id = id ||  new Date().getTime() + '_USER_' + (DPointerTargetable.maxID++);
         _this.username = username;
         if (this.persist) {
             // no pointedBy
         }
-        return this;
-    }
+        return this; }
 
     DNamedElement(name?: DNamedElement["name"]): this {
         const thiss: DNamedElement = this.thiss as any;
         thiss.name = (name !== undefined) ? name || '' : thiss.constructor.name.substring(1) + " 1";
-        if (this.persist) {
-            // no pointedBy
-        }
         return this; }
 
     DTypedElement(type?: DTypedElement["type"]): this {
         const thiss: DTypedElement = this.thiss as any;
-        thiss.type = type as Pointer<DClassifier, 1, 1, LClassifier>;
-        if (this.persist) {
-            type && SetFieldAction.new(type, "pointedBy", PointedBy.fromID(thiss.id, "type"), '+=');
-        }
+        this.setPtr("type", type);
         return this; }
 
     DPackage(uri?: DPackage["uri"], prefix?: DPackage["prefix"]): this {
         const thiss: DPackage = this.thiss as any;
         thiss.uri = uri || '';// || 'org.jodel-react.username';
         thiss.prefix = prefix || '';
-        if (this.persist) {
-            // no pointedBy
-            // update father's collections (pointedby's here are set automatically)
-            if (this.persist && thiss.father) {
-                if (this.fatherType!.cname === "DModel") {
-                    this.persist && thiss.father && SetFieldAction.new(thiss.father as Pointer<DModel>, "packages", thiss.id, '+=', true);
-                }
-                else {
-                    this.persist && thiss.father && SetFieldAction.new(thiss.father as Pointer<DPackage>, "subpackages", thiss.id, '+=', true);
-                }
+        if (thiss.father) {
+            if (this.fatherType!.cname === "DModel") {
+                this.setExternalPtr(thiss.father, "packages", "+=");
+            }
+            else {
+                this.setExternalPtr(thiss.father, "subpackages", "+=");
             }
         }
         return this; }
@@ -614,14 +659,12 @@ export class Constructors<T extends DPointerTargetable>{
     DModel(instanceoff?: DModel["instanceof"], isMetamodel?: DModel["isMetamodel"]): this {
         const thiss: DModel = this.thiss as any;
         thiss.packages = []; // packages;
-        thiss.instanceof = instanceoff || null;
         thiss.isMetamodel = isMetamodel || false;
-        if (this.persist) {
-            if (instanceoff) SetFieldAction.new(instanceoff, "pointedBy", PointedBy.fromID(thiss.id, "instanceof"), '+=');
-            // instanceoff && SetFieldAction.new(instanceoff, 'models', thiss.id, '+=', true);
-            SetRootFieldAction.new(isMetamodel ? "m2models" : "m1models", thiss.id, "+=", true);
-        }
-
+        this.setPtr("instanceof", instanceoff || null);
+        instanceoff && this.setExternalPtr(instanceoff, "instances", "+=");
+        // todo: check all D.new calls to make sure there are not actions in callbacks in new2() versions that will go outside the Transaction of persist(),, better move ptrs as .new() parameters
+        // or make it so new2 splits pointer and non-pointer declarations (or just allow non-ptrs and ptrs must be DSomething.new() explicit parameters)
+        thiss._persistCallbacks.push(SetRootFieldAction.create(isMetamodel ? "m2models" : "m1models", thiss.id, "+=", true));
         return this;
     }
 
@@ -629,15 +672,8 @@ export class Constructors<T extends DPointerTargetable>{
         const thiss: DOperation = this.thiss as any;
         // thiss.parameters = parameters;
         thiss.implementation = implementation || 'return "default placeholder function called";'
-        thiss.exceptions = exceptions;
-        if (this.persist) {
-            //BEGIN()
-            // if (parameters) for (let par of parameters) SetFieldAction.new(par, "pointedBy", PointedBy.fromID(thiss.id, "parameters"), '+=');
-            if (exceptions) for (let exc of exceptions) SetFieldAction.new(exc, "pointedBy", PointedBy.fromID(thiss.id, "exceptions"), '+=');
-            // update father's collections (pointedby's here are set automatically)
-            this.persist && thiss.father && SetFieldAction.new(thiss.father, "operations", thiss.id, '+=', true);
-            //END()
-        }
+        this.setPtr("exceptions", exceptions);
+        this.setExternalPtr(thiss.father, "operations", "+=");
         return this; }
 
     DClass(isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: LClassifier["isPrimitive"] = false,
@@ -648,37 +684,25 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.isPrimitive = isPrimitive;
         thiss.partial = partial;
         thiss.partialdefaultname = partialdefaultname;
+        this.setExternalPtr(thiss.father, "classifiers", "+=");
         // thiss.isClass = !isPrimitive;
         // thiss.isEnum = false;
-
-        if (this.persist) {
-            // no pointedBy
-            // update father's collections (pointedby's here are set automatically)
-            this.persist && thiss.father && SetFieldAction.new(thiss.father, "classifiers", thiss.id, '+=', true);
-        }
         return this; }
 
     DEnumLiteral(value?: DEnumLiteral["value"]): this { // vv4
         const thiss: DEnumLiteral = this.thiss as any;
         thiss.value = value as any; // undef is ok, handled in getter as automatic ordinal index
         thiss.literal = thiss.name;
-        if (this.persist) {
-            // no pointedBy?
-            // update father's collections (pointedby's here are set automatically)
-            this.persist && thiss.father && SetFieldAction.new(thiss.father, "literals", thiss.id, '+=', true);
-        }
+        this.setExternalPtr(thiss.father, "literals", "+=");
         return this; }
 
-    DEnumerator(/*set it from DLiteral.new() instead literals: DEnumerator["literals"] = []*/): this {
+    DEnumerator(literals: DEnumerator["literals"] = []): this {
         const thiss: DEnumerator = this.thiss as any;
+        this.setExternalPtr(thiss.father, "classifiers", "+=");
+        this.setPtr("literals", literals);
         // thiss.literals = literals;
         // thiss.isClass = false;
         // thiss.isEnum = true;
-        if (this.persist) {
-            // if (literals) for (let lit of literals) SetFieldAction.new(lit, "pointedBy", PointedBy.fromID(thiss.id, "literals"), '+=');
-            // update father's collections (pointedby's here are set automatically)
-            this.persist && thiss.father && SetFieldAction.new(thiss.father, "classifiers", thiss.id, '+=', true);
-        }
         return this; }
     DEdgePoint(): this { return this; }
     DEdge(): this {
@@ -694,38 +718,35 @@ export class Constructors<T extends DPointerTargetable>{
         Log.ex(!startid || !endid, "cannot create an edge without start or ending nodes", {start, end, startid, endid});
         thiss.midnodes = [];
         thiss.midPoints = []; // the logic part which instructs to generate the midnodes
-        thiss.start = startid;
-        thiss.end = endid;
+        // if (!thiss.model && isDModelElementPointer(startid)) thiss.model = startid;
         // thiss.labels = undefined;
         let ll: labelfunc = (e: LVoidEdge, s: EdgeSegment, allNodes: LGraphElement[], allSegments: EdgeSegment[]
         ) => /*defining the edge label (e.start.model as any)?.name + " ~ " + (e.end.model as any)?.name */" (" + s.length.toFixed(1) + ")";
         // this is the edge's label (thiss.longestLabel = ll)
         thiss.longestLabel = undefined;
-        if (this.persist) {
-            startid && SetFieldAction.new(startid, "pointedBy", PointedBy.fromID<DVoidEdge>(thiss.id, "start"), '+=');
-            endid && SetFieldAction.new(endid, "pointedBy", PointedBy.fromID<DVoidEdge>(thiss.id, "end"), '+=');
-        }
+        this.setPtr("start", startid);
+        this.setPtr("end", endid);
+        this.setExternalPtr(startid, "edgesOut", "+=");
+        this.setExternalPtr(endid, "edgesIn", "+=");
         return this; }
+
     DExtEdge(): this { return this; }
     DRefEdge(): this { return this; }
 
-    DGraphElement(model: DGraphElement["model"]|null|undefined, parentNodeID: DGraphElement["father"]|undefined, parentgraphID: DGraphElement["graph"]|undefined,
+    DGraphElement(model: DGraphElement["model"]|null|undefined, parentgraphID: DGraphElement["graph"]|undefined,
                   htmlindex: number): this {
         const thiss: DGraphElement = this.thiss as any;
-        if (parentNodeID) thiss.father = parentNodeID;
-        if (parentgraphID) thiss.graph = parentgraphID;
-        thiss.model = model||undefined;
         thiss.subElements = [];
         thiss.favoriteNode = false;
         thiss.zIndex = htmlindex;
-        //  if (nodeID) thiss.id = nodeID;
-        if (this.persist) {
-            model && SetFieldAction.new(model, "pointedBy", PointedBy.fromID<DGraphElement>(thiss.id, "model"), '+=');
-            parentgraphID && SetFieldAction.new(parentgraphID, "pointedBy", PointedBy.fromID<DGraphElement>(thiss.id, "graph"), '+=');
-            parentNodeID && SetFieldAction.new(thiss.father, "pointedBy", PointedBy.fromID<DGraphElement>(thiss.id, "father"), '+=');
-            // update collections (pointedby's here are set automatically)
-            parentNodeID && SetFieldAction.new(thiss.father, "subElements", thiss.id, '+=', true);
-        }
+        thiss.isSelected = {};
+        thiss.edgesIn = [];
+        thiss.edgesOut = [];
+
+        this.setPtr("model", model);
+        this.setPtr("graph", parentgraphID);
+        this.setExternalPtr(thiss.father, "subElements", "+=");
+
         return this;
     }
 
@@ -737,8 +758,8 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.appliableTo = 'node';
         thiss.jsxString = jsxString;
         thiss.usageDeclarations = usageDeclarations;
-        thiss.constants = '{}';
-        thiss.preRenderFunc = '() => {return{}}';
+        thiss.constants = undefined; // '{}';
+        thiss.preRenderFunc = ''; // '() => {return{}}';
         thiss.onDragEnd = thiss.onDragStart = thiss.whileDragging =
         thiss.onResizeEnd = thiss.onResizeStart = thiss.whileResizing = '';
         thiss.onRotationEnd = thiss.onRotationStart = thiss.whileRotating = '';
@@ -774,14 +795,23 @@ export class Constructors<T extends DPointerTargetable>{
         thiss.bendingMode = EdgeBendingMode.Bezier_quadratic;
         thiss.edgeGapMode = EdgeGapMode.center;
         thiss.edgePointCoordMode = CoordinateMode.relativeOffset;
-        /// edge
+        thiss.usageDeclarations = undefined;
+
+        /// edge only
 
         thiss.edgeHeadSize = new GraphPoint(20, 20);
         thiss.edgeTailSize = new GraphPoint(20, 20);
 
-        if (this.persist) {
+
+        thiss._persistentCallbacks.push(
             SetRootFieldAction.new('stackViews', [thiss.id], '', true);
-        }
+        );
+        this.nonPersistentCallbacks.push(() => {
+            console.log("colormap 2", {v:{...thiss}});
+            if (thiss.constants) {
+                thiss._parsedConstants = (windoww["LViewElement"] as typeof LViewElement).parseConstants(thiss.constants);
+            } else thiss._parsedConstants = undefined;
+        });
         return this;
     }
 
@@ -803,16 +833,18 @@ export class Constructors<T extends DPointerTargetable>{
     }
     DGraph(): this {
         const thiss: DGraph = this.thiss as any;
-        thiss.graph = thiss.id;
+        thiss.graph = thiss.id; // no setPtr because i want to avoid circular pointedby reference
         thiss.zoom = new GraphPoint(1, 1);
         thiss.graphSize = new GraphSize(0, 0, 0, 0);  // GraphSize.apply(this, [0, 0, 0 ,0]);
-        thiss._subMaps = {zoom: true, graphSize: true};
-        if(thiss.className !== 'DGraph') return this;
+        thiss._subMaps = {zoom: true, graphSize: true}
+
         const user: LUser = LUser.fromPointer(DUser.current);
-        if(user.project)
-            SetFieldAction.new(user.project,'graphs', thiss.id, '+=', true);
-        return this;
-    }
+        if (user.project && thiss.className !== 'DGraph') thiss._persistentCallbacks(SetFieldAction.new(user.project,'graphs', thiss.id, '+=', true));
+        thiss.x = 0;
+        thiss.y = 0;
+        thiss.w = 0;
+        thiss.h = 0;
+        return this; }
 
     DVoidVertex(defaultVSize?: InitialVertexSize): this {
         const thiss: DVoidVertex = this.thiss as any;
@@ -823,64 +855,58 @@ export class Constructors<T extends DPointerTargetable>{
         let defaultVSizeObj: InitialVertexSizeObj | undefined;
         let defaultVSizeFunc: InitialVertexSizeFunc;
         thiss.isResized = false;
-        let func: undefined | (() => void);
-        if (defaultVSize) {
-            func = () => {
-            BEGIN() // this executes after the Constructor.end() so it's necessary to start a new transaction
-            // fromPointer because i need to pick the one from the store that might be updated
-            //    with a view or other data instead of the D version i have here
-            let lvertex: LVoidVertex = LPointerTargetable.fromD(thiss);
-            if (typeof defaultVSize !== "function") {
-                defaultVSizeObj = defaultVSize;
-                //defaultVSizeFunc = () => defaultVSizeObj;
-            }
-            else {
-                defaultVSizeFunc = defaultVSize;
-                try { defaultVSizeObj = defaultVSizeFunc(lvertex.father, lvertex); }
-                catch (e) { Log.e("Error in user DefaultVSize function:", {e, defaultVSizeFunc, txt:defaultVSizeFunc.toString()}); }
-            }
-            if (defaultVSizeObj) {
-                if (!this.persist) lvertex = thiss as any;
-                if (defaultVSizeObj.x !== undefined) lvertex.x = defaultVSizeObj.x;
-                if (defaultVSizeObj.y !== undefined) lvertex.y = defaultVSizeObj.y;
-                if (defaultVSizeObj.w !== undefined) lvertex.w = defaultVSizeObj.w;
-                if (defaultVSizeObj.h !== undefined) lvertex.h = defaultVSizeObj.h;
+        /*
+        if (typeof defaultVSize !== "function") {
+            defaultVSizeObj = defaultVSize;
+            // NB: they are going to be overwritten in callback func, but if the value is correct ahead i skip that
+            if (defaultVSizeObj.x !== undefined) thiss.x = defaultVSizeObj.x;
+            if (defaultVSizeObj.y !== undefined) thiss.y = defaultVSizeObj.y;
+            if (defaultVSizeObj.w !== undefined) thiss.w = defaultVSizeObj.w;
+            if (defaultVSizeObj.h !== undefined) thiss.h = defaultVSizeObj.h;
+        }
+        else {
+            thiss.x = 0;
+            thiss.y = 0;
+            thiss.w = 0;
+            thiss.h = 0;
+        }*/
 
-                if ((defaultVSizeObj as any).index >= 0 && this.persist && thiss.className === "DEdgePoint") {
-                    let updateEPindex = () => {
-                        let lep = lvertex as LEdgePoint;
-                        let le: LVoidEdge = lep.father;
-                        let de: DVoidEdge = le.__raw;
-                        let subelements = [...de.subElements];
-                        let presubelements = [...subelements]; // a
-                        U.arrayRemoveAll(subelements, thiss.id);
-                        subelements.splice(defaultVSizeObj?.index as number, 0, thiss.id);
-                        // console.log("setting subelements", {presubelements, subelements, de, le, thiss});
-                        le.subElements = subelements as any;
-                        // todo: this might break "pointedBy" x984
-                    }
-                    // updateEPindex();
-                    // it's already wrapped in a callback
-                    // but needs a second one because after node is created, id is auto-appended to this collection
-                    // and i need to rewrite that append by inserting my own customized index position
-                    console.log("setting subelements 0", {updateEPindex});
-                    setTimeout(updateEPindex, 0);
-                    // NB: do not use this.callbacks.push because the body of this func is executed after Constructors.end() so end() can never find and execute it.
+
+        let lvertex: LVoidVertex = LPointerTargetable.fromD(thiss);
+        if (typeof defaultVSize !== "function") { defaultVSizeObj = defaultVSize; }
+        else {
+            defaultVSizeFunc = defaultVSize;
+            try { defaultVSizeObj = defaultVSizeFunc(lvertex.father, lvertex); }
+            catch (e) { Log.e("Error in user DefaultVSize function:", {e, defaultVSizeFunc, txt:defaultVSizeFunc.toString()}); }
+        }
+        if (defaultVSizeObj) {
+            if (defaultVSizeObj.x !== undefined) thiss.x = defaultVSizeObj.x;
+            if (defaultVSizeObj.y !== undefined) thiss.y = defaultVSizeObj.y;
+            if (defaultVSizeObj.w !== undefined) thiss.w = defaultVSizeObj.w;
+            if (defaultVSizeObj.h !== undefined) thiss.h = defaultVSizeObj.h;
+
+            if ((defaultVSizeObj as any).index >= 0 && thiss.className === "DEdgePoint") {
+                let updateEPindex = () => {
+                    let lep = lvertex as LEdgePoint;
+                    let le: LVoidEdge = lep.father;
+                    let de: DVoidEdge = le.__raw;
+                    let subelements = [...de.subElements];
+                    U.arrayRemoveAll(subelements, thiss.id);
+                    subelements.splice(defaultVSizeObj?.index as number, 0, thiss.id);
+                    // console.log("setting subelements", {oldsubelements, subelements, de, le, thiss});
+                    le.subElements = subelements as any;
+                    // todo: this might break "pointedBy" x984
                 }
+                // updateEPindex();
+                // it's already wrapped in a callback
+                // but needs a second one because after node is created, id is auto-appended to this collection
+                // and i need to rewrite that append by inserting my own customized index position
+                console.log("setting subelements 0", {updateEPindex});
+                setTimeout(updateEPindex, 0);
+                // NB: do not use this.callbacks.push because the body of this func is executed after Constructors.end() so end() can never find and execute it.
             }
-            END() }
         }
 
-        // func = ... the if (defaultVSizeObj) above
-        if (func) {
-            if (this.persist) this.callbacks.push(func as Function); // because i want to be sure the parent node exists too, not just this node.
-            // if (this.persist) this.callbacks.push(() => setTimeout(func as Function, 1)); // because i want to be sure the parent node exists too, not just this node.
-            else func();
-        }
-
-        if (this.persist) {
-            // no pointedBy?
-        }
         return this; }
 
 
@@ -890,7 +916,7 @@ export class Constructors<T extends DPointerTargetable>{
 @RuntimeAccessible
 export class DPointerTargetable extends RuntimeAccessibleClass {
     public static cname: string = "DPointerTargetable";
-    static defaultComponent: (ownProps: GObject, children?: (string | React.Component)[]) => React.ReactElement;
+    static defaultComponent: (ownProps: GObject, children?: (string | React.Component)[]) => React.ReactElement; //
     public static maxID: number = 0;
     public static logic: typeof LPointerTargetable;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -904,7 +930,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     // ma gli oggetti puntati da A tramite sotto-oggetti o attributi (subviews...) non vengono aggiornati in "pointedby"
     pointedBy: PointedBy[] = [];
     public className!: string;
-    static pendingCreation: Dictionary<Pointer, DPointerTargetable> = {};
+    static pendingCreation: Record<Pointer<DPointerTargetable, 1, 1>, DPointerTargetable> = {};
 
 
     static defaultname<L extends LModelElement = LModelElement>(startingPrefix: string | ((meta:L)=>string), father?: Pointer | DPointerTargetable | ((a:string)=>boolean), metaptr?: Pointer | null): string {
@@ -966,10 +992,13 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         if (Array.isArray(ptr)) {
             return ptr.map( (p: Pointer) => DPointerTargetable.fromPointer(p, s)) as any;
         }
-        if (typeof ptr !== "string") { ptr = (ptr as any)?.id; }
+        // if (typeof ptr !== "string") { ptr = (ptr as any)?.id; }
         if (typeof ptr !== "string") { throw new Error("wrong parameter in DPointerTargetable.fromPointers()"); }
-        return s.idlookup[ptr as string] as any;
+        if (s && s.idlookup[ptr as string]) return s.idlookup[ptr as string] as any;
+        return (DPointerTargetable.pendingCreation[ptr as string] || s.idlookup[ptr as string]) as any;
+        // return ((s || store.getState()).idlookup[ptr as string] || DPointerTargetable.pendingCreation[ptr as string]) as any;
     }
+
     static from<// LOW extends number, UPP extends number | 'N',
         PTR extends Pointer | Pointer[], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
         DDD extends (PTR extends Pointer<infer D> ? D : 'undefined D'),
@@ -987,18 +1016,22 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
             (UPP extends 1 ? (LOW extends 0 ? DDD | null : DDD) : // 0...1 && 1...1
                 (LOW extends 1 ? DDD : undefined)  //1...1
                 ),
-
-
         // DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : ('ERROR'))))))))))))))))),
         DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LRefEdge ? DRefEdge : (LX extends LExtEdge ? DExtEdge : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LEdge ? DEdge : (LX extends LEdgePoint ? DEdgePoint : (LX extends LGraphVertex ? DGraphVertex : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LVertex ? DVertex : (LX extends LVoidEdge ? DVoidEdge : (LX extends LVoidVertex ? DVoidVertex : (LX extends LGraph ? DGraph : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : (LX extends LGraphElement ? DGraphElement : (LX extends LMap ? DMap : (LX extends LModelElement ? DModelElement : (LX extends LUser ? DUser : (LX extends LPointerTargetable ? DPointerTargetable : (ERROR))))))))))))))))))))))))))))))),
         RET = DX extends 'ERROR' ? RETPTR : (RETPTR extends DX ? RETPTR : DX),
         INFERRED = {ret: RET, RETPTR:RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR | LX, s?: DState)
         : RET {
-        s = s || store.getState();
-        return s.idlookup[ptr as string] as any;
+        if (!ptr) return ptr as any;
+        if ((ptr as LX).__isProxy) return (ptr as LX).__raw as any;
+        if (s && s.idlookup[ptr as string]) return s.idlookup[ptr as string] as any;
+        return (DPointerTargetable.pendingCreation[ptr as string] || store.getState().idlookup[ptr as string]) as any;
     }
-    static from0(a: any, ...aa: any): any { return null; }
+    //static from0(a: any, ...aa: any): any { return null; }
     static writeable<LX extends LPointerTargetable, WX = LtoW<LX>>(l: LX): WX { return l as any; }
+
+    _persistCallbacks!: ((() => void) | Action)[]; // deleted when it becomes persistent
+    _derivedSubElements!: DModelElement[]; // deleted when it becomes persistent
+    // persist(): void { Constructors.persist(this); }// deleted when it becomes persistent
 }
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, DPointerTargetable);
@@ -1027,7 +1060,7 @@ export class Pointers{
         if (!pointerval) return null;
         return pointerval.id as P; }
 
-    fromArr<D extends DPointerTargetable, L extends LPointerTargetable, P extends Pointer> (val: (P | D | L | null | undefined)[] |  (P | D | L | null | undefined)): P[] {
+    static fromArr<D extends DPointerTargetable, L extends LPointerTargetable, P extends Pointer> (val: (P | D | L | null | undefined)[] |  (P | D | L | null | undefined)): P[] {
         if (!val) val = [];
         if (!Array.isArray(val)) { val = [val]; }
         if (!val.length) { return []; }
@@ -1156,8 +1189,7 @@ export class Pointers{
     }
 
     static isPointer(val: any, state?: DState): val is Pointer {
-        if (state) return !!state.idlookup[val];
-        // todo: must refine this in a safer way
+        if (state) return DPointerTargetable.from(val, state);
         return typeof val === "string" ? val.includes("Pointer") : false;
     }
 }
@@ -1257,10 +1289,11 @@ export class PointedBy {
     private constructor(source: string) {
         this.source = source;
     }
-    static fromID<D extends DPointerTargetable>(ptr: Pointer<D>, field: keyof D) {
+    // don't use modifiers here,
+    static fromID<D extends DPointerTargetable>(ptr: Pointer<D>, field: keyof D, NoAccessModifiersHere?: never & ("-=" | "+=")) {
         return PointedBy.new("idlookup." + ptr + "." + field);
     }
-    static new(source: DocString<"full path in store including key. like \'idlookup.id.extends\'">, modifier: "-=" | "+=" | undefined = undefined, action?: ParsedAction): PointedBy {
+    static new(source: DocString<"full path in store including key. like \'idlookup.id.extends+=\'">, modifier: "-=" | "+=" | undefined = undefined, action?: ParsedAction): PointedBy {
         // let source: DocString<"full path in store including key"> = action.path;
         // if (source.includes("true")) { console.error(this, action); throw new Error("mixed a bool"); }
         if (modifier) source = source.substring(0, source.length - (modifier?.length || 0));
@@ -1293,6 +1326,7 @@ export class PointedBy {
         return state;
     }
 
+    // important! must be called only in reducer
     public static add(newtargetptr: Pointer | undefined, action: ParsedAction, state: DState, casee: "+=" | "-=" | undefined = undefined, oldState?:DState): DState {
         if (!newtargetptr) return state;
         // todo: if can't be done because newtarget doesn't exist, build an action from this and set it pending.
@@ -1440,9 +1474,9 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         // DX = LX extends LEnumerator ? DEnumerator : (LX extends LAttribute ? DAttribute : (LX extends LReference ? DReference : (LX extends LDataType ? DDataType : (LX extends LClass ? DClass : (LX extends LStructuralFeature ? DStructuralFeature : (LX extends LParameter ? DParameter : (LX extends LOperation ? DOperation : (LX extends LModel ? DModel : (LX extends LValue ? DValue : (LX extends LObject ? DObject : (LX extends LEnumLiteral ? DEnumLiteral : (LX extends LPackage ? DPackage : (LX extends LClassifier ? DClassifier : (LX extends LTypedElement ? DTypedElement : (LX extends LNamedElement ? DNamedElement : (LX extends LAnnotation ? DAnnotation : ('ERROR'))))))))))))))))),
         LX = DX extends DEnumerator ? LEnumerator : (DX extends DAttribute ? LAttribute : (DX extends DReference ? LReference : (DX extends DRefEdge ? LRefEdge : (DX extends DExtEdge ? LExtEdge : (DX extends DDataType ? LDataType : (DX extends DClass ? LClass : (DX extends DStructuralFeature ? LStructuralFeature : (DX extends DParameter ? LParameter : (DX extends DOperation ? LOperation : (DX extends DEdge ? LEdge : (DX extends DEdgePoint ? LEdgePoint : (DX extends DGraphVertex ? LGraphVertex : (DX extends DModel ? LModel : (DX extends DValue ? LValue : (DX extends DObject ? LObject : (DX extends DEnumLiteral ? LEnumLiteral : (DX extends DPackage ? LPackage : (DX extends DClassifier ? LClassifier : (DX extends DTypedElement ? LTypedElement : (DX extends DVertex ? LVertex : (DX extends DVoidEdge ? LVoidEdge : (DX extends DVoidVertex ? LVoidVertex : (DX extends DGraph ? LGraph : (DX extends DNamedElement ? LNamedElement : (DX extends DAnnotation ? LAnnotation : (DX extends DGraphElement ? LGraphElement : (DX extends DMap ? LMap : (DX extends DModelElement ? LModelElement : (DX extends DUser ? LUser : (DX extends DPointerTargetable ? LPointerTargetable : (ERROR))))))))))))))))))))))))))))))),
         RET = LX extends 'ERROR' ? RETPTR : (RETPTR extends LX ? RETPTR : LX),
-        INFERRED = {ret: RET, RETPTR: RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR[] | DX[])
+        INFERRED = {ret: RET, RETPTR: RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR[] | DX[], state?: DState)
         : RET[] {
-        return LPointerTargetable.from(ptr as any); }
+        return LPointerTargetable.from(ptr as any, state); }
 
     static from<// LOW extends number, UPP extends number | 'N',
         PTR extends Pointer<DPointerTargetable, 0|1, 1|'N', LPointerTargetable> | Pointer[], // <DPointerTargetable, 1, 'N', LPointerTargetable>,
@@ -1629,6 +1663,8 @@ export class DUser extends DPointerTargetable {
     projects: Pointer<DProject, 0, 'N', LProject> = [];
     project: Pointer<DProject, 0, 1, LProject> = '';
     __isUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
+    /*public static new(id?: DUser["id"], triggerActions: boolean = true): DUser {
+        return new Constructors(new DUser('dwc'), undefined, false, undefined, id, true).DPointerTargetable().DUser().end(); }*/
     public static new(username: string, id?: DUser['id'], persist: boolean = true): DUser {
         return new Constructors(new DUser('dwc'), undefined, persist).DPointerTargetable().DUser(username, id).end();
     }

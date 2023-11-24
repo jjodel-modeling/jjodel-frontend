@@ -10,6 +10,9 @@ import DebugImage from '../../static/img/debug.png';
 import {FakeStateProps} from '../../joiner/types';
 import PersistanceApi from "../../api/persistance";
 
+let clickTimestamps: number[] = [];
+const clicksRequired = 2;
+const timeframe = 2000;
 function NavbarComponent(props: AllProps) {
     const debug = props.debug;
     const user = props.user;
@@ -32,6 +35,10 @@ function NavbarComponent(props: AllProps) {
                         <File />
                         <Edit />
                         <Share />
+                        {debug && <Examples />}
+                        {debug && <li className={'d-block ms-1 m-auto'}>
+                            <img width={30} height={30} src={Debug} alt={"debug mode on"} />
+                        </li>}
                         <hr />
                         <li tabIndex={-1} onClick={e => user.project = null} className={'text-danger dropdown-item'}>
                             Close Project
@@ -63,6 +70,16 @@ function NavbarComponent(props: AllProps) {
                     </li>
                 </ul>
             </li>
+
+            <ul className={'navbar-nav ms-auto'}>
+                <li className={'d-block'}>
+                    <img width={80} height={40} src={Logo} alt={"jjodel logo"} onClick={(e) => {
+                        let now = Date.now();
+                        if (now - clickTimestamps[clickTimestamps.length - clicksRequired] < timeframe) { SetRootFieldAction.new('debug', !debug); clickTimestamps = []; }
+                        clickTimestamps.push(now);
+                    }}/>
+                </li>
+            </ul>
             {user.project && <li className={'nav-item'}>
                 <button onClick={async(e) => await PersistanceApi.saveProject()} style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
                     Save

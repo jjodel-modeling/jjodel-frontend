@@ -1,16 +1,23 @@
-import type {LVoidVertex} from "../../joiner";
+import type {
+    LVoidVertex,
+    PackagePointers, EdgePointers, AnnotationPointers, AttributePointers, EnumPointers,
+    LiteralPointers, OperationPointers, ObjectPointers, GraphPointers, ParameterPointers, ReferencePointers, VertexPointers,
+    ModelPointers,
+} from "../../joiner";
 import {
     Abstract,
     BEGIN,
+    ClassPointers,
     Constructor,
     Constructors,
+    Debug,
     DEdge,
-    DeleteElementAction, DGraph,
+    DeleteElementAction,
     Dictionary,
     DocString,
     DPointerTargetable,
     DState,
-    DtoL, DUser, DViewElement,
+    DtoL,
     END,
     getWParams,
     GObject,
@@ -38,10 +45,11 @@ import {
     ShortAttribSuperTypes,
     store,
     TargetableProxyHandler,
-    U,
-    unArr
+    TRANSACTION,
+    U
 } from "../../joiner";
-import {Info, Json, ObjectWithoutPointers, orArr, PrimitiveType} from "../../joiner/types";
+import type {Info, Json, ObjectWithoutPointers, orArr, PrimitiveType,
+    unArr} from "../../joiner/types";
 
 import {
     AccessModifier,
@@ -56,6 +64,7 @@ import {
     ECoreReference,
     ECoreRoot
 } from "../../api/data";
+import {ValuePointers} from "./PointerDefinitions";
 
 
 @Node
@@ -79,6 +88,9 @@ export class DModelElement extends DPointerTargetable {
         return null as any;
         //return new Constructors(new DModelElement('dwc')).DPointerTargetable().DModelElement().end();
     }
+    public static new3(...a:any): DModelElement {
+        Log.exx("DModelElement is abstract, cannot instantiate");
+        return null as any; }
 }
 
 @Leaf
@@ -135,7 +147,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     property!: keyof DModelElement;
     containers!: LNamedElement[]; // list of fathers until the model is reached.
-
+    name?:string;
 
 
     [key: `@${string}`]: LModelElement;
@@ -343,7 +355,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
 
     protected set_children(a: never, context: Context): boolean {
-        return Log.exx('children is a derived read-only collection', this);
+        return Log.exx('children is a derived read-only collection', context.data);
     }
 
 
@@ -390,44 +402,69 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return true;
     }
 
-    protected get_addChild(context: Context): (type: string, ...params: any[]) => DModelElement { // just for add new, not for add pre-existing.
+    protected get_addChild(c: Context): (type?: string, ...params: any[]) => DModelElement { // just for add new, not for add pre-existing.
         return (type, ...args: any) => {
             let ret: undefined | ((...params: any[]) => DModelElement);
-            switch ((type || '').toLowerCase()) {
+            if (!type || type === "auto") {
+                switch(c.data.className){
+                    case DModel.cname: if ((c.data as DModel).isMetamodel) type = "package"; else type = "object"; break;
+                    case DObject.cname: type = "value"; break;
+                    case DPackage.cname: type = "package"; break;
+                    case DClass.cname: type = "attribute"; break;
+                    case DEnumerator.cname: type = "literal"; break;
+                    case DOperation.cname: type = "parameter"; break;
+                    default: type = "annotation"; break;
+                }
+            }
+            let fatherElement;
+            switch (type.toLowerCase()) {
                 default:
-                    Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), context});
+                    Log.ee('cannot find children type requested to add:', {type: (type || '').toLowerCase(), c});
                     ret = () => undefined as any;
                     break;
-                case "attribute":
-                    ret = this.get_class(context)?.addAttribute;
+                case "package":
+                    ret = (this.get_package(c) || this.get_model(c))?.addPackage;
                     break;
                 case "class":
-                    let current = context.proxyObject;
-                    ret = this.get_package(context)?.addClass;
+                    // let current = c.proxyObject;
+                    fatherElement = this.get_package(c);
+                    if (!fatherElement) {
+                        let model = this.get_model(c);
+                        fatherElement = model.packages[0];
+                        if (!fatherElement) fatherElement = LPointerTargetable.fromD(model.addPackage());
+                    }
+                    ret = fatherElement.addClass;
                     //ret = (this as any).get_addClass(context as any);
                     break;
-                case "package":
-                    ret = (this.get_package(context) || this.get_model(context))?.addPackage;
+                case "enum":
+                case "enumerator":
+                    fatherElement = this.get_package(c);
+                    if (!fatherElement) {
+                        let model = this.get_model(c);
+                        fatherElement = model.packages[0];
+                        if (!fatherElement) fatherElement = LPointerTargetable.fromD(model.addPackage());
+                    }
+                    ret = fatherElement.addEnumerator;
+                    break;
+                case "attribute":
+                    ret = this.get_class(c)?.addAttribute;
                     break;
                 case "reference":
-                    ret = this.get_class(context)?.addReference;
-                    break;
-                case "enumerator":
-                    ret = this.get_package(context)?.addEnumerator;
+                    ret = this.get_class(c)?.addReference;
                     break;
                 case "literal":
-                    ret = this.get_enum(context)?.addLiteral;
+                    ret = this.get_enum(c)?.addLiteral;
                     break;
                 case "operation":
-                    ret = this.get_class(context)?.addOperation;
+                    ret = this.get_class(c)?.addOperation;
                     break;
                 case "parameter":
-                    ret = this.get_operation(context)?.addParameter;
+                    ret = this.get_operation(c)?.addParameter;
                     break;
                 //case "exception": ret = ((exception: Pack1<LClassifier>) => { let rett = this.get_addException(context as any); rett(exception); }) as any; break;
-                case "exception":
-                    ret = (this as any).get_addException(context as any);
-                    break;
+                /*case "exception": exceptions should not be "added" here, this is for creating objects. exceptions are not created but just linked. they are classes.
+                    ret = (this as any).get_addException(c as any);
+                    break; */
             }
             return ret ? ret(...args) : null as any;
         }
@@ -549,6 +586,7 @@ per la get esiste solo _get_x, non "get_x"
 // export type WModelElement = DModelElement | LModelElement | _WModelElement;
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DModelElement);
 RuntimeAccessibleClass.set_extend(DPointerTargetable, LModelElement);
+
 @Leaf
 @RuntimeAccessible
 export class DAnnotation extends DModelElement { // extends Mixin(DAnnotation0, DModelElement)
@@ -1100,6 +1138,8 @@ export class LClassifier<Context extends LogicContext<DClassifier> = any> extend
 // export type WClassifier = DClassifier | LClassifier | _WClassifier;
 RuntimeAccessibleClass.set_extend(DNamedElement, DClassifier);
 RuntimeAccessibleClass.set_extend(LNamedElement, LClassifier);
+
+@Leaf
 @RuntimeAccessible
 export class DPackage extends DPointerTargetable { // extends DNamedElement
     public static cname: string = "DPackage";
@@ -1139,14 +1179,18 @@ export class DPackage extends DPointerTargetable { // extends DNamedElement
         if (!name) name = this.defaultname("pkg_", father);
         return new Constructors(new DPackage('dwc'), father, true, fatherType).DPointerTargetable().DModelElement()
             .DNamedElement(name).DPackage().end(setter);
-    }*/
-    static new2(setter: Partial<ObjectWithoutPointers<DPackage>>, father: DPackage["father"], fatherType: Constructor, name?: string): DPackage {
+    }
+    static new2(setter: Partial<ObjectWithoutPointers<DPackage>>, fatherType: Constructor, persist: boolean = true): DPackage {
         if (!name) name = this.defaultname("pkg_", father);
         return new Constructors(new DPackage('dwc'), father, true, fatherType).DPointerTargetable().DModelElement()
             .DNamedElement(name).DPackage().end((d)=> { Object.assign(d, setter); });
+    }*/
+    static new3(a: Partial<PackagePointers>, callback: undefined | ((d: DPackage, c: Constructors) => void), fatherType: Constructor, persist: boolean = true): DPackage {
+        if (!a.name) a.name = this.defaultname("pkg_", a.father);
+        return new Constructors(new DPackage('dwc'), a.father, persist, fatherType, a.id).DPointerTargetable().DModelElement()
+            .DNamedElement(a.name).DPackage().end(callback);
     }
 }
-
 
 @Leaf
 @RuntimeAccessible
@@ -1362,6 +1406,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
 // export type WPackage = DPackage | LPackage | _WPackage;
 RuntimeAccessibleClass.set_extend(DNamedElement, DPackage);
 RuntimeAccessibleClass.set_extend(LNamedElement, LPackage);
+
 @Leaf
 @RuntimeAccessible
 export class DOperation extends DPointerTargetable { // extends DTypedElement
@@ -1400,11 +1445,19 @@ export class DOperation extends DPointerTargetable { // extends DTypedElement
     }
 
     static new2(setter: Partial<ObjectWithoutPointers<DOperation>>, father: DOperation["father"], type?: DOperation["type"], name?: string): DOperation {
-        if (!name) name = this.defaultname((name || "fx_"), father);
+        if (!name) name = this.defaultname("fx_", father);
         if (!type) type = father;
-        return new Constructors(new DOperation('dwc'), father, true).DPointerTargetable().DModelElement().DTypedElement(type)
+        return new Constructors(new DOperation('dwc'), father, true).DPointerTargetable().DModelElement()
             .DNamedElement(name).DTypedElement(type).DOperation().end((d)=> { Object.assign(d, setter); });
     }
+
+    static new3(a: Partial<OperationPointers>, callback: undefined | ((d: DOperation, c: Constructors) => void), persist: boolean = true): DOperation {
+        if (!a.name) a.name = this.defaultname("fx_", a.father);
+        if (!a.type) a.type = a.father;
+        return new Constructors(new DOperation('dwc'), a.father, persist, undefined, a.id).DPointerTargetable().DModelElement()
+            .DNamedElement(a.name).DTypedElement(a.type).DOperation().end(callback);
+    }
+
 
 }
 
@@ -1560,6 +1613,7 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
 }
 RuntimeAccessibleClass.set_extend(DTypedElement, DOperation);
 RuntimeAccessibleClass.set_extend(LTypedElement, LOperation);
+
 @Leaf
 @RuntimeAccessible
 export class DParameter extends DPointerTargetable { // extends DTypedElement
@@ -1598,6 +1652,12 @@ export class DParameter extends DPointerTargetable { // extends DTypedElement
         if (!name) name = this.defaultname((name || "arg"), father);
         return new Constructors(new DParameter('dwc'), father, true).DPointerTargetable().DModelElement()
             .DNamedElement(name).DTypedElement(type).end((d) => { Object.assign(d, setter); });
+    }
+
+    static new3(a: Partial<ParameterPointers>, callback: undefined | ((d: DParameter, c: Constructors) => void), persist: boolean = true): DParameter {
+        if (!a.name) a.name = this.defaultname("arg", a.father);
+        return new Constructors(new DParameter('dwc'), a.father, persist, undefined, a.id).DPointerTargetable().DModelElement()
+            .DNamedElement(a.name).DTypedElement(a.type).DOperation().end(callback);
     }
 }
 
@@ -1663,6 +1723,22 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
 }
 RuntimeAccessibleClass.set_extend(DTypedElement, DParameter);
 RuntimeAccessibleClass.set_extend(LTypedElement, LParameter);
+export class ClassReferences{
+    id?: Pack1<LClass>
+    parent?: this["father"][];
+    father?: Pack1<LPackage>;
+    instances?: Pointer<DObject, 0, 'N', LObject> = [];
+    operations?: Pointer<DOperation, 0, 'N', LOperation> = [];
+    features?: Pointer<DStructuralFeature, 0, 'N', LStructuralFeature> = [];
+    references?: Pointer<DReference, 0, 'N', LReference> = [];
+    attributes?: Pointer<DAttribute, 0, 'N', LAttribute> = [];
+    referencedBy?: Pointer<DReference, 0, 'N', LReference> = [];
+    extends?: Pointer<DClass, 0, 'N', LClass> = [];
+    extendedBy?: Pointer<DClass, 0, 'N', LClass> = [];
+    implements?: Pointer<DClass, 0, 'N', LClass> = [];
+    implementedBy?: Pointer<DClass, 0, 'N', LClass> = [];
+}
+
 @RuntimeAccessible
 export class DClass extends DPointerTargetable { // extends DClassifier
     public static cname: string = "DClass";
@@ -1711,15 +1787,21 @@ export class DClass extends DPointerTargetable { // extends DClassifier
 
     public static new(name?: DNamedElement["name"], isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: DClass["isPrimitive"] = false, partial?: DClass["partial"],
                       partialDefaultName?: DClass["partialdefaultname"], father?: Pointer, persist: boolean = true): DClass {
-        if (!name) name = this.defaultname("concept ", father);
+        if (!name) name = this.defaultname("Concept ", father);
         return new Constructors(new DClass('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DClassifier().DClass(isInterface, isAbstract, isPrimitive, partial, partialDefaultName).end();
     }
 
     static new2(setter: Partial<ObjectWithoutPointers<DClass>>, father: DClass["father"], name?: DClass["name"]): DClass {
-        if (!name) name = this.defaultname((name || "concept "), father);
+        if (!name) name = this.defaultname((name || "Concept "), father);
         return new Constructors(new DClass('dwc'), father, true, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DClassifier().DClass().end((d) => { Object.assign(d, setter); });
+    }
+
+    static new3(a: Partial<ClassPointers>, callback: undefined | ((d: DClass, c: Constructors) => void), persist: boolean = true): DClass {
+        if (!a.name) a.name = this.defaultname("Concept ", a.father);
+        return new Constructors(new DClass('dwc'), a.father, persist, undefined, a.id).DPointerTargetable().DModelElement()
+            .DNamedElement(a.name).DClassifier().DClass().end(callback);
     }
 
 }
@@ -1830,6 +1912,26 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return [...new Set<LClass>(Object.values(alreadyParsed))];
     }
 
+    public isSubClassOf(superClass: LClass, returnIfSameClass: boolean = true): boolean { return this.cannotCall("isSubClassOf"); }
+    public isSuperClassOf(subClass: LClass, returnIfSameClass: boolean = true): boolean { return this.cannotCall("isSuperClassOf"); }
+    protected get_isSubClassOf(c: Context): ((superClass: LClass, returnIfSameClass?: boolean) => boolean) {
+        return (superClass: LClass, returnIfSameClass: boolean = true) => {
+            if (!superClass) return false;
+            if (superClass.id === c.data.id) return returnIfSameClass;
+            for (let subclass of this.get_extendsChain(c)) {
+                if (subclass.id === superClass.id) return true;
+            }
+            return false;
+        }
+    }
+    protected get_isSuperClassOf(c: Context): ((subClass: LClass, returnIfSameClass?: boolean) => boolean) {
+        return (subClass: LClass, returnIfSameClass: boolean = true) => {
+            if (!subClass) return false;
+            if (subClass.id === c.data.id) return returnIfSameClass;
+            return subClass.isSubClassOf(c.proxyObject, returnIfSameClass);
+        }
+    }
+
     protected get_inheritedAttributes(context: Context): this['inheritedAttributes'] {
         return this.get_extendsChain(context).flatMap((superClass) => superClass.ownAttributes);
     }
@@ -1884,18 +1986,20 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => this) {
         return (deep: boolean = false) => {
-            BEGIN()
-            let de: D = context.proxyObject.father.addClass(context.data.name, context.data.interface, context.data.abstract, context.data.isPrimitive) as D;
-            // de.hideExcessFeatures = context.data.hideExcessFeatures;
-            let le: this = LPointerTargetable.fromD(de);
-            let we: WClass = le as any;
-            we.defaultValue = context.data.defaultValue;
-            we.extends = context.data.extends;
-            we.attributes = deep ? context.proxyObject.attributes.map(lchild => lchild.duplicate(deep).id) : context.data.attributes;
-            we.references = deep ? context.proxyObject.references.map(lchild => lchild.duplicate(deep).id) : context.data.references;
-            we.operations = deep ? context.proxyObject.operations.map(lchild => lchild.duplicate(deep).id) : context.data.operations;
-            END()
-            return le; }
+            let ret: this = undefined as any;
+            TRANSACTION( () => {
+                let de: D = context.proxyObject.father.addClass(context.data.name, context.data.interface, context.data.abstract, context.data.isPrimitive) as D;
+                // de.hideExcessFeatures = context.data.hideExcessFeatures;
+                let le: this = LPointerTargetable.fromD(de);
+                let we: WClass = le as any;
+                we.defaultValue = context.data.defaultValue;
+                we.extends = context.data.extends;
+                we.attributes = deep ? context.proxyObject.attributes.map(lchild => lchild.duplicate(deep).id) : context.data.attributes;
+                we.references = deep ? context.proxyObject.references.map(lchild => lchild.duplicate(deep).id) : context.data.references;
+                we.operations = deep ? context.proxyObject.operations.map(lchild => lchild.duplicate(deep).id) : context.data.operations;
+                ret = le; // set ret = le only if the transaction is complete.
+            });
+            return ret; }
     }
 
     protected get_children_idlist(context: Context): Pointer<DAnnotation | DStructuralFeature | DOperation, 1, 'N'> {
@@ -2461,6 +2565,9 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
 }
 RuntimeAccessibleClass.set_extend(DTypedElement, DStructuralFeature);
 RuntimeAccessibleClass.set_extend(LTypedElement, LStructuralFeature);
+
+@Instantiable // DValue
+@Leaf
 @RuntimeAccessible
 export class DReference extends DPointerTargetable { // DStructuralFeature
     public static cname: string = "DReference";
@@ -2513,6 +2620,14 @@ export class DReference extends DPointerTargetable { // DStructuralFeature
         return new Constructors(new DReference('dwc'), father, true, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DTypedElement(type).DStructuralFeature().DReference()
             .end((d) => { Object.assign(d, setter); });
+    }
+
+    static new3(a: Partial<ReferencePointers>, callback: undefined | ((d: DReference, c: Constructors) => void), persist: boolean = true): DReference {
+        if (!a.name) a.name = this.defaultname("ref_", a.father);
+        return new Constructors(new DReference('dwc'), a.father, persist, undefined, a.id).DPointerTargetable().DModelElement()
+            .DPointerTargetable().DModelElement().DNamedElement(a.name)
+            .DTypedElement(a.type).DStructuralFeature().DReference()
+            .end(callback);
     }
 
 }
@@ -2683,6 +2798,7 @@ function obsolete_attribute(...comments: string[]) {
     return undefined as any; // function(c:Constructor, key:string,): any {}
 }
 
+@Leaf
 @RuntimeAccessible
 export class DAttribute extends DPointerTargetable { // DStructuralFeature
     public static cname: string = "DAttribute";
@@ -2732,10 +2848,18 @@ export class DAttribute extends DPointerTargetable { // DStructuralFeature
     static new2(setter: Partial<ObjectWithoutPointers<DReference>>, father: DAttribute["father"], type?: DAttribute["type"], name?: DAttribute["name"]): DAttribute {
         if (!name) name = this.defaultname((name || "ref_"), father);
         return new Constructors(new DAttribute('dwc'), father, true, undefined).DPointerTargetable().DModelElement()
-            .DNamedElement(name).DTypedElement(type).DStructuralFeature().DReference()
+            .DNamedElement(name).DTypedElement(type).DStructuralFeature().DAttribute()
             .end((d) => { Object.assign(d, setter); });
     }
+    static new3(a: Partial<AttributePointers>, callback: undefined | ((d: DAttribute, c: Constructors) => void), persist: boolean = true): DAttribute {
+        if (!a.name) a.name = this.defaultname("attr_", a.father);
+        return new Constructors(new DAttribute('dwc'), a.father, persist, undefined, a.id)
+            .DPointerTargetable().DModelElement().DNamedElement(a.name)
+            .DTypedElement(a.type).DStructuralFeature().DAttribute()
+            .end(callback);
+    }
 }
+
 
 @Leaf
 @Instantiable // (LValue)
@@ -2837,6 +2961,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
 }
 RuntimeAccessibleClass.set_extend(DStructuralFeature, DAttribute);
 RuntimeAccessibleClass.set_extend(LStructuralFeature, LAttribute);
+
 @Leaf
 @RuntimeAccessible
 export class DEnumLiteral extends DPointerTargetable { // DNamedElement
@@ -2868,6 +2993,13 @@ export class DEnumLiteral extends DPointerTargetable { // DNamedElement
         return new Constructors(new DEnumLiteral('dwc'), father, true, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DEnumLiteral()
             .end((d) => { Object.assign(d, setter); });
+    }
+    static new3(a: Partial<LiteralPointers>, callback: undefined | ((d: DEnumLiteral, c: Constructors) => void), persist: boolean = true): DEnumLiteral {
+        if (!a.name) a.name = this.defaultname("literal_", a.father);
+        return new Constructors(new DEnumLiteral('dwc'), a.father, persist, undefined, a.id)
+            .DPointerTargetable().DModelElement().DNamedElement(a.name)
+            .DEnumLiteral()
+            .end(callback);
     }
 }
 
@@ -2956,6 +3088,7 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
 }
 RuntimeAccessibleClass.set_extend(DNamedElement, DEnumLiteral);
 RuntimeAccessibleClass.set_extend(LNamedElement, LEnumLiteral);
+
 @Leaf
 @RuntimeAccessible
 export class DEnumerator extends DPointerTargetable { // DDataType
@@ -2991,6 +3124,14 @@ export class DEnumerator extends DPointerTargetable { // DDataType
         if (!name) name = this.defaultname("enum ", father);
         return new Constructors(new DEnumerator('dwc'), father, true, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DEnumerator().end((d) => { Object.assign(d, setter); });
+    }
+
+    static new3(a: Partial<EnumPointers>, callback: undefined | ((d: DEnumerator, c: Constructors) => void), persist: boolean = true): DEnumerator {
+        if (!a.name) a.name = this.defaultname("enum ", a.father);
+        return new Constructors(new DEnumerator('dwc'), a.father, persist, undefined, a.id)
+            .DPointerTargetable().DModelElement().DNamedElement(a.name)
+            .DEnumerator()
+            .end(callback);
     }
 }
 
@@ -3183,6 +3324,16 @@ export class DModel extends DNamedElement { // DNamedElement
         return new Constructors(new DModel('dwc'), undefined, true, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DModel(instanceoff).end((d) => { Object.assign(d, setter); });
     }
+
+    static new3(a: Partial<ModelPointers>, callback: undefined | ((d: DModel, c: Constructors) => void), persist: boolean = true): DModel {
+        let dmodels: DModel[] = Selectors.getAll(DModel, undefined, undefined, true, false);
+        let dmodelnames: string[] = dmodels.map((d: DModel) => d.name);
+        if (!a.name) a.name = this.defaultname("model_", ((name: string) => dmodelnames.includes(name)));
+        return new Constructors(new DModel('dwc'), a.father, persist, undefined, a.id)
+            .DPointerTargetable().DModelElement().DNamedElement(a.name)
+            .DModel(a.instanceof, !a.instanceof)
+            .end(callback);
+    }
 }
 
 @RuntimeAccessible
@@ -3337,6 +3488,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 
     private get_suggestedEdgesM1(context: Context, state?: DState): this["suggestedEdges"]{
         let ret: this["suggestedEdges"] = {extend: [], reference: [], packageDependencies: []};
+        if (Debug.lightMode) { return ret; }
         let s: DState = store.getState();
         let values: LValue[] = this.get_allSubValues(context, s);
         let map: Dictionary<DocString<"starting dvalue id">, EdgeStarter[]> = {};
@@ -3368,7 +3520,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         let ret: this["suggestedEdges"] = {extend: [], reference: [], packageDependencies: []};
         let s: DState = store.getState();
         let classes: LClass[] = this.get_classes(context, s);
-        let references: LReference[] = classes.flatMap(c=>c.references);
+        let references: LReference[] = Debug.lightMode ? [] : classes.flatMap(c=>c.references);
         ret.reference = references.map( (r) => {
             let sn = r.node;
             if (!sn) return undefined;
@@ -3404,7 +3556,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         }
         ret.extend = classes.flatMap(c => SkipExtendNodeHidden(c, c.extends, true)).map( (es) => new EdgeStarter(es.start, es.end, es.sn, es.en));
 
-        let dependencies: {src:LModelElement, ends: LModelElement[]}[] = [...(classes.map(c=>{ return {src:c, ends:c.superclasses}})), ...(references.map(r=> { return {src:r, ends:[r.type]}}))]
+        let dependencies: {src:LModelElement, ends: LModelElement[]}[] =
+            Debug.lightMode ? [] : [...(classes.map(c=>{ return {src:c, ends:c.superclasses}})), ...(references.map(r=> { return {src:r, ends:[r.type]}}))]
         let pkgdependencies: {src: LPackage, sn: LGraphElement, ends: Dictionary<Pointer, {end:LPackage, en:LGraphElement}>}[] = []; // transform form in dictionary to prevent duplicates
         //dependencies.map( d=> { let end = d.end.package; return {src:d.src.package, end, endid:end.id}})
 
@@ -3702,6 +3855,9 @@ export class LMap<Context extends LogicContext<DMap> = any, C extends Context = 
 }
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DMap as any);
 RuntimeAccessibleClass.set_extend(LPointerTargetable, LMap);
+
+
+@Leaf
 @RuntimeAccessible
 export class DObject extends DPointerTargetable { // extends DNamedElement, m1 class instance
     public static cname: string = "DObject";
@@ -3727,6 +3883,13 @@ export class DObject extends DPointerTargetable { // extends DNamedElement, m1 c
         let ret = new Constructors(new DObject('dwc'), father, persist, fatherType).DPointerTargetable().DModelElement()
             .DNamedElement(name).DObject(instanceoff).end();
         return ret;
+    }
+
+    public static new3(a:Partial<ObjectPointers>, then:(d:DObject, c: Constructors)=>void, fatherType?: typeof DModel | typeof DValue, persist: boolean = true): DObject{
+        if (!a.name) a.name = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), a.father, a.instanceof);
+        return new Constructors(new DObject('dwc'), a.father, persist, fatherType, a.id)
+            .DPointerTargetable().DModelElement()
+            .DNamedElement(a.name).DObject(a.instanceof).end(then);
     }
 
 
@@ -4012,6 +4175,8 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 }
 RuntimeAccessibleClass.set_extend(DNamedElement, DObject);
 RuntimeAccessibleClass.set_extend(LNamedElement, LObject);
+
+@Leaf
 @RuntimeAccessible
 export class DValue extends DModelElement { // extends DModelElement, m1 value (attribute | reference)
     public static cname: string = "DValue";
@@ -4042,9 +4207,19 @@ export class DValue extends DModelElement { // extends DModelElement, m1 value (
     public static new(name?: DNamedElement["name"], instanceoff?: DValue["instanceof"], val?: DValue["values"],
                       father?: DValue["father"] | DObject, persist: boolean = true, isMirage: boolean = false): DValue {
         if (!name) name = this.defaultname("property_", father);
-        return new Constructors(new DValue('dwc'), (typeof father === "string" ? father : (father as DObject)?.id), persist, undefined).DPointerTargetable().DModelElement()
+        return new Constructors(new DValue('dwc'), (typeof father === "string" ? father : (father as DObject)?.id), persist, undefined)
+            .DPointerTargetable().DModelElement()
             .DNamedElement(name)
             .DValue(instanceoff, val, isMirage).end();
+    }
+
+    public static new3(a:Partial<ValuePointers>, then?:((d:DValue, c: Constructors)=>void), persist: boolean = true): DValue{
+        if (!a.name) a.name = this.defaultname("property_", a.father);
+        return new Constructors(new DValue('dwc'), a.father, persist, undefined, a.id)
+            .DPointerTargetable().DModelElement()
+            .DNamedElement(a.name)
+            .DValue(a.instanceof, a.values)
+            .end(then);
     }
 }
 @RuntimeAccessible
@@ -4145,6 +4320,15 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected get_isMirage(context: Context): this["isMirage"] { return context.data.isMirage; }
     protected set_isMirage(val: this["isMirage"], context: Context): boolean { SetFieldAction.new(context.data, 'isMirage', val, "", false); return true; }
 
+    typeStr!:string; // derivate attribute, abstract
+    typeString!:string; // derivate attribute, abstract
+    __info_of__typeStr: Info = {type: ShortAttribETypes.EString, txt: <div>Alias of<i>this.typeString</i></div>}
+    __info_of__typeString: Info = {type: ShortAttribETypes.EString, txt: <div>Stringified version of <i>this.type</i></div>}
+    protected get_typeString(c: Context): string { return this.get_typeStr(c); }
+    protected get_typeStr(c: Context): string {
+        let meta = this.get_instanceof(c);
+        return meta ? meta.typeToShortString() : "shapeless"; }
+
     // individual value getters
     // if withMetaInfo, returns a wrapper for the first non-empty value found containing his index and metainfo
     protected get_value<T extends boolean>(context: Context, namedPointers: boolean = false, ecorePointers: boolean = false,
@@ -4171,7 +4355,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         let dmeta: undefined | DAttribute | DReference = meta?.__raw;
 
         // if (meta && meta.className === DReference.name) ret = LPointerTargetable.fromArr(ret as DObject[]);
-        let typestr: string = meta ? meta.typeToShortString() : "shapeless";
+        let typestr: string = this.get_typeString(context);
+        (ret as GObject).type = typestr;
         if (!Array.isArray(ret)) ret = [];
         if (dmeta && fitSize && ret.length < dmeta.lowerBound && dmeta.lowerBound > 0) {
             let times = dmeta.lowerBound - ret.length;
@@ -4329,7 +4514,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 if (withmetainfo) ret.forEach((struct: ValueDetail)=>{ struct.value = mapperfunc(struct.value); });
                 else ret = ret.map(mapperfunc);
                 break;
-            case ShortAttribETypes.void:
+            case ShortAttribETypes.EVoid:
                 if (withmetainfo) ret.forEach((struct: ValueDetail)=>struct.hidden = true);
                 else ret = [];
                 break;
@@ -4339,7 +4524,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             if (withmetainfo) ret.forEach((struct: ValueDetail)=>{ struct.value = numbercasting(struct.value); });
             else ret = ret.map(numbercasting);
         }
-        (ret as GObject).type = typestr;
         // console.error("type value:", {ret, typestr, meta, fitSize});
         return ret as any;
     }
@@ -4355,8 +4539,10 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
     }
     // stringified value getters
+    public valuesString(keepemptyquotes?: boolean): string { return this.cannotCall("valuestring"); }
     public valuestring(keepemptyquotes?: boolean): string { return this.cannotCall("valuestring"); }
     private get_valuestring(context: Context): this["valuestring"] { return (keepemptyquotes?: boolean) => this.valuestring_impl(context, keepemptyquotes); }
+    private get_valuesString(context: Context): this["valuestring"] { return (keepemptyquotes?: boolean) => this.valuestring_impl(context, keepemptyquotes); }
     private valuestring_impl(context: Context, keepemptyquotes?: boolean): string {
         // console.error("valuestring_impl", {context, data:context.data});
         let val = this.get_values(context, true, true, false, false, true);

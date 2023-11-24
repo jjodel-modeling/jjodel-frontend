@@ -7,21 +7,29 @@ import {FakeStateProps} from "../../../joiner/types";
 
 function OclEditorComponent(props: AllProps) {
     const view = props.view;
-    const readOnly = U.getDefaultViewsID().includes(view.id);
+
+    if(!view) return(<></>);
+    const readOnly = props.readonly !== undefined ? props.readonly : U.getDefaultViewsID().includes(view.id);
     const [ocl, setOcl] = useStateIfMounted(view.oclCondition);
 
     const change = (value: string|undefined) => {
         if(value !== undefined) setOcl(value);
+        // ma questo non setta solo lo stato locale? prima era:
+        // if (value !== undefined) view.query = value;
     }
 
-    return <div style={{height: '5em'}} tabIndex={-1} onBlur={e => view.oclCondition = ocl}>
+    return <>
         <label className={'ms-1 mb-1'}>OCL Editor</label>
-        <Editor className={'mx-1'} onChange={change}
-                options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                defaultLanguage={'js'} value={view.oclCondition} />
-    </div>;
+        <div style={{minHeight: '5em', height: '6em', resize: 'vertical', overflowY: 'auto'}} tabIndex={-1} onBlur={e => view.oclCondition = ocl}>
+            <Editor className={'mx-1'} onChange={change}
+                    options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
+                    defaultLanguage={'js'} value={view.oclCondition} />
+        </div>
+    </>;
 }
-interface OwnProps { viewid: Pointer<DViewElement, 1, 1, LViewElement>; }
+interface OwnProps {
+    readonly?: boolean;
+    viewid: Pointer<DViewElement, 1, 1, LViewElement>; }
 interface StateProps { view: LViewElement }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;

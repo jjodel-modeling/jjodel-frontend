@@ -30,7 +30,8 @@ import {
     Constructors,
     WVoidEdge,
     Log,
-    LEdgePoint, DUser
+    LEdgePoint, DUser,
+    U, LPointerTargetable
 } from "../../joiner";
 import {InitialVertexSizeObj} from "../../joiner/types";
 import ModellingIcon from "../forEndUser/ModellingIcon";
@@ -126,11 +127,12 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     const downward: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]> = {}
     const addChildren = (items: string[]) => items ? getItems(data, downward, [...new Set(items)], node) : [];
 
-    downward["DModel"] = ["DPackage"];
+    // downward["DModel"] = ["DPackage"];
     downward["DPackage"] = ["DPackage", "DClass", "DEnumerator"];
     downward["DClass"] = ["DAttribute", "DReference", "DOperation"];
     downward["DEnumerator"] = ["DLiteral"];
     downward["DOperation"] = ["DParameter", "DException"];
+
 
     // nodes
     downward["DEdge"] = ["DEdgePoint"]
@@ -147,6 +149,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             upward[child].push(...(downward[parentKey]||[]));
         }
     }
+    downward["DModel"] = downward["DPackage"];
 
     // exceptions:
     upward["DPackage"] = ["_pDPackage"]; //, "DModel"]; because from a package, i don't want to prompt the user to create a model in toolbar.
@@ -162,6 +165,8 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             <hr className={'my-2'} />
             <b className={'d-block text-center text-uppercase mb-1'}>Add sublevel</b>
             {data && addChildren(downward[data.className])}
+            <hr className={'my-2'} />
+            <b className={'d-block text-center text-uppercase mb-1'}>Add shape</b>
             {node && addChildren(downward[node.className])}
             {/*<div className={"toolbar-item annotation"} onClick={() => select(lModelElement.addChild("annotation"))}>+annotation</div>*/}
             <hr className={'my-2'} />
@@ -178,7 +183,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             {classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
                 return <div key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => { select(model.addObject(lClass.id)) }}>
                     <ModellingIcon name={'object'} />
-                    <span className={'ms-1 text-capitalize'}>{lClass.name}</span>
+                    <span className={'ms-1 text-capitalize'}>{U.stringMiddleCut(lClass.name, 14)}</span>
                 </div>
             })}
             <div key={"RawObject"} className={'toolbar-item'} onClick={e => select(model.addObject())}>
@@ -211,13 +216,26 @@ interface StateProps {
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
-
+/*
+* 23/11 versione giordano
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     const nodeid = state.selected[DUser.current];
     if(nodeid) ret.node = LGraphElement.fromPointer(nodeid);
     else ret.node = null;
     if(ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
+    return ret;
+}
+* */
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+    const ret: StateProps = {} as any;
+    ret.selectedid = state._lastSelected;
+    ret.selected = ret.selectedid && {
+        node: LPointerTargetable.from(ret.selectedid.node, state) as LGraphElement,
+        view: LPointerTargetable.from(ret.selectedid.view, state) as LViewElement,
+        modelElement: ret.selectedid.modelElement ? LPointerTargetable.from(ret.selectedid.modelElement, state) : undefined
+    };
+    if (ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
     return ret;
 }
 

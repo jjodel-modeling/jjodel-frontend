@@ -14,6 +14,14 @@ import Auth from "./pages/Auth";
 import {useEffectOnce} from "usehooks-ts";
 import PersistanceApi from "./api/persistance";
 
+let userHasInteracted = false;
+function endPendingActions() {
+    if (!userHasInteracted) firstInteraction();
+}
+function firstInteraction(){
+    statehistory.globalcanundostate = true;
+}
+
 function App(props: AllProps) {
     const debug = props.debug;
     const isLoading = props.isLoading;

@@ -1,7 +1,8 @@
+import type {Pointer} from "../../../joiner";
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {DState, DUser, LModel, LProject, LUser, Input} from "../../../joiner";
-import {FakeStateProps} from "../../../joiner/types";
+import type {FakeStateProps} from "../../../joiner/types";
 
 
 function InfoTabComponent(props: AllProps) {

@@ -4,7 +4,7 @@ import {
     GObject, DState,
     Log, U, RedoAction,
     statehistory,
-    UndoAction, store,
+    UndoAction, store, DPointerTargetable,
 } from '../../joiner';
 import {connect} from "react-redux";
 
@@ -58,9 +58,9 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         this.redoenter();
     }
     printablePointer(pathsegment: string, state: DState){
-        let obj = state.idlookup[pathsegment] as GObject;
+        let obj = DPointerTargetable.from(pathsegment, state) as GObject;
         if (!obj) return pathsegment;
-        if (obj.name) return "@"+obj.name;
+        if (obj.name) return "$"+obj.name;
         if (obj.className) return "#"+obj.className;
         return pathsegment;
     }

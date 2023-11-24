@@ -1,3 +1,21 @@
+@keyframes animationoffset {
+  0% {
+    offset-distance: 0%;
+    opacity: 0%;
+  }
+  1% {
+    offset-distance: 1%;
+    opacity: 100%;
+  }
+  99% {
+    offset-distance: 99%;
+    opacity: 99%;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0%;
+  }
+}
 
 .SaveManager {
   position: absolute;
@@ -5,6 +23,22 @@
   top: 5%;
   border: 1px solid black;
   display: inline-block;
+}
+.monospace{
+  font-family: Consolas, "Courier New", monospace;
+}
+.toolbar-item>span{
+  white-space: nowrap;
+  font-family: Consolas, "Courier New", monospace;
+}
+label{
+  cursor: inherit;
+}
+.bi-chevron-down::before{
+content: "\f282";
+transform: inherit;
+transition: inherit;
+font-weight: 900 !important;
 }
 .capitalize-first-letter:first-letter {
   // works only on "block" elements? not even flex?
@@ -27,6 +61,9 @@
   &.selected-by-me, &:has(.selected-by-me), // for some reason focus does not work?? so this is a fallback but needs to be properly fixed
   &:hover, &:active, &:focus-within{ overflow: visible; }
 }
+[data-nodetype]{
+  overflow: visible !important; // todo: remove, it's just for debug to count renders
+}
 
 .GraphVertex[data-nodetype="GraphVertex"],
 .Vertex[data-nodetype="Vertex"],
@@ -36,8 +73,6 @@
   min-width:2px;
   min-height:2px;
 }
-
-.ui-draggable-dragging{ visibility: hidden; }
 
 .REACT-ROOT.debug{
   [data-nodetype]{
@@ -58,12 +93,27 @@
       float: left;
       // margin-top: -23px;
     }
+
+  [data-countrenders]{
+    &::before{
+      content: attr(data-countrenders);
+      display: inline-block;
+      position: absolute;
+      z-index: 999;
+      bottom: calc(-35% + 15px);
+      right: -20px;
+      width: min-content;
+      height: min-content;
+    }
+  }
 }
+/*
+.ui-draggable-dragging{ visibility: hidden; }
 
 .lazySizeUpdate.ui-draggable-dragging,
 .REACT-ROOT.debug,
 .ui-draggable-dragging,
-.REACT_ROOT { visibility: visible; }
+.REACT_ROOT { visibility: visible; } ?? */
 
 body .ui-icon{ // override jqueryui fixed resizable handles at 16px, making drag for small elements impossible.
   max-width: 33%;
@@ -180,6 +230,15 @@ svg.hoverable {
 
 //.EdgePoint{ transform: translate(-50%, -50%); }
 
-.console-output-container div{
-  display: inline-block;
+
+.animate-on-update-even{
+  animation: fade 1s forwards;
+}
+.animate-on-update-odd{
+  animation: fade 1s forwards;
+}
+
+@keyframes fade {
+  0%   { opacity:0; }
+  100% { opacity:1; }
 }

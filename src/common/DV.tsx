@@ -150,7 +150,7 @@ valuecolormap[ShortAttribETypes.EDouble] = "orange";
 valuecolormap[ShortAttribETypes.EDate] = "green";
 valuecolormap[ShortAttribETypes.EString] = "green";
 valuecolormap[ShortAttribETypes.EChar] = "green";
-valuecolormap[ShortAttribETypes.void] = "gray";
+valuecolormap[ShortAttribETypes.EVoid] = "gray";
 
 // &&[]bn
 let valuecolormap_str = JSON.stringify(valuecolormap); // can this be declared inside view.constants ?
@@ -162,25 +162,13 @@ class DefaultView {
         return `<div className={'root'}>
     {!data && "Model data missing."}
     <div className="edges" style={{zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}>{[
-            true && data.suggestedEdges.reference &&
-            data.suggestedEdges.reference.map(
-                se => (!se.vertexOverlaps)
-                 && <DamEdge start={se.start.father} end={se.end} view={"Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association")} key={se.start.node.id+"~"+se.end.node.id}/>)
-                 ,
-            true && data.suggestedEdges.extend &&
-            data.suggestedEdges.extend.map(
-                se => (!se.vertexOverlaps)
-                 && <DamEdge start={se.start} end={se.end} view={"Pointer_ViewEdgeInheritance"} key={"EXT_"+se.start.node.id+"~"+se.end.node.id}/>)]
+            refEdges.map(se=> <Edge start={se.start.father.node} end={se.end.node} view={"Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association")} key={se.start.node.id+"~"+se.end.node.id}/>)
+            , extendEdges.map(se=><Edge start={se.start} end={se.end} view={"Pointer_ViewEdgeInheritance"} key={"EXT_"+se.start.node.id+"~"+se.end.node.id}/>)]
         }
     </div>
-     {data && data["$default"] && <DefaultNode key={"default package"} data={data["$default"].id} />}
-     {data && data.packages.map((pkg) => {
-        if (pkg.name === "default") return undefined;
-        return <DefaultNode key={pkg.id} data={pkg.id}></DefaultNode>
-    })}
-    {data && data.allSubObjects.map((child) => {
-        return <DefaultNode key={child.id} data={child.id}></DefaultNode>
-    })}
+    {otherPackages.map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
+    {firstPackage && firstPackage.children.map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
+    {m1Objects.map(m1object => <DefaultNode key={m1object.id} data={m1object}></DefaultNode>)}
 </div>`;
     }
 
@@ -194,7 +182,7 @@ class DefaultView {
         return `<div className={'round root bg-white package'}>
     <div className={'package-children'}>
         {data.children.map((child, index) => {
-            return <DefaultNode key={child.id} data={child.id} />
+            return <DefaultNode key={child.id} data={child} />
         })}
     </div>
 </div>`;
@@ -204,7 +192,7 @@ class DefaultView {
         return `<div className={'root'}>
     <div className={'package-children'}>
         {data.children.map((child, index) => {
-            return <DefaultNode key={child.id} data={child.id} />
+            return <DefaultNode key={child.id} data={child} />
         })}
     </div>
 </div>`;
@@ -213,22 +201,22 @@ class DefaultView {
     public static class(): string {
         return `<div className={'round bg-white root class'}>
     <Input jsxLabel={<b className={'class-name'}>EClass:</b>} 
-           data={data.id} field={'name'} hidden={true} autosize={true} />
+           data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
-    <div className={'class-children'}>{ data.attributes.map(c => <DefaultNode key={c.id} data={c.id} />) }</div>
-    <div className={'class-children'}>{ data.references.map(c => <DefaultNode key={c.id} data={c.id} />) }</div>
-    <div className={'class-children'}>{ data.operations.map(c => <DefaultNode key={c.id} data={c.id} />) }</div>
+    <div className={'class-children'}>{ data.attributes.map(c => <DefaultNode key={c.id} data={c} />) }</div>
+    <div className={'class-children'}>{ data.references.map(c => <DefaultNode key={c.id} data={c} />) }</div>
+    <div className={'class-children'}>{ data.operations.map(c => <DefaultNode key={c.id} data={c} />) }</div>
 </div>`;
     }
 
     public static enum(): string {
         return `<div className={'round bg-white root enumerator'}>
     <Input jsxLabel={<b className={'my-auto enumerator-name'}>EEnum:</b>} 
-           data={data.id} field={'name'} hidden={true} autosize={true} />
+           data={data} field={'name'} hidden={true} autosize={true} />
     <hr />
     <div className={'enumerator-children'}>
         {data.children.map((child, index) => {
-            return <DefaultNode key={child.id} data={child.id}></DefaultNode>
+            return <DefaultNode key={child.id} data={child}></DefaultNode>
         })}
     </div>
 </div>`;
@@ -265,27 +253,45 @@ class DefaultView {
         </div>`
     }
 
-    public static object(): string {
-        return `<div className={'round bg-white root class'}>
+    public static objectOld(): string {
+        return ''+
+`<div className={'round bg-white root class'}>
     <label className={'ms-1'}>
         <Input jsxLabel={<b className={'my-auto class-name'}>{data.instanceof ? data.instanceof.name : "Object"}:</b>} 
-           data={data.id} field={'name'} hidden={true} autosize={true}/>
+           data={data} field={'name'} hidden={true} autosize={true}/>
     </label>
     <hr />
     <div className={'object-children'}>
-        {data.features.map((child, index) => {
-            return <DefaultNode key={child.id} data={child.id}></DefaultNode>
+        {data.features.map((child) => {
+            return <DefaultNode key={child.id} data={child}></DefaultNode>
         })}
     </div>
 </div>`;
-    }
+}
+
+    public static object(): string { // object efficient mode
+        return ''+
+`<div className={'round bg-white root class'}>
+    <label className={'ms-1'}>
+        <Input jsxLabel={<b className={'my-auto class-name'}>{metaclassName}:</b>} 
+           data={data} field={'name'} hidden={true} autosize={true}/>
+    </label>
+    <hr />
+    <div className={'object-children'}>
+        {features.map((child) => {
+            return <DefaultNode key={child.id} data={child}></DefaultNode>
+        })}
+    </div>
+</div>`;
+}
 
     public static value() {
         return `<div className={'d-flex root value'} style={{paddingRight: "6px"}}>
-     {props.data.instanceof && <label className={'d-block ms-1'}>{props.data.instanceof.name}</label>}
-     {!props.data.instanceof && <Input asLabel={true} data={data.id} field={'name'} hidden={true} autosize={true} />}
-    <label className={'d-block m-auto'} style={{color:` + valuecolormap_str + `[props.data.values.type] || "gray"
-    }}>: {props.data.valuestring()}</label>
+     {instanceofname && <label className={'d-block ms-1'}>{instanceofname}</label>}
+     {!instanceofname && <Input asLabel={true} data={data} field={'name'} hidden={true} autosize={true} />}
+    <label className={'d-block m-auto'} style={{color: constants[typeString] || "gray"
+    }}>: {valuesString}</label>
+    {console.log("inside eval", {thiss:this, props, ts: typeString, vs: valuesString})}
 </div>`
     }
 

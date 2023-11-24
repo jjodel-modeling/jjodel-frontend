@@ -34,7 +34,8 @@ export class UX{
         if (!Array.isArray(children)) return innermap(children as ReactNode, 0, [...depthIndices, 0]) as T;
         return React.Children.map(children, (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as T;
     }
-    static injectProp(parentComponent: GraphElementComponent, e: ReactNode, gvidmap_useless: Dictionary<DocString<'VertexID'>, boolean>, parentnodeid: string, index: number, indices: number[]): ReactNode {
+    static injectProp(parentComponent: GraphElementComponent, e: ReactNode, gvidmap_useless: Dictionary<DocString<'VertexID'>, boolean>,
+                      parentnodeid: string, index: number, indices: number[]): ReactNode {
         const re: ReactElement | null = UX.ReactNodeAsElement(e);
         if (!re) return e;
         // @ts-ignore this
@@ -98,7 +99,7 @@ export class UX{
                     case windoww.Components.EdgePoint.cname:
                         idbasename = injectProps.parentnodeid + "^" + (dataid || re.props.startingSize?.id || indices.join(",")) + "EP";
                         break;
-                    case EdgeComponent.cname: case "DamEdge":
+                    case EdgeComponent.cname: case "Edge":
                         let edgeProps:EdgeOwnProps = re.props;
                         let edgestart_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.start as any).id || edgeProps.start;
                         let edgeend_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.end as any).id || edgeProps.end;

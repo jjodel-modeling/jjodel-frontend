@@ -111,6 +111,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         });
     }
 
+    // todo: performance optimize important
     shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
         const oldProps = this.props;
         if (oldProps.views !== newProps.views) { this.moveOnViews = true; return true; }
@@ -180,12 +181,14 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     async addMetamodel(evt: undefined|React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData, model?: DModel) {
         let name = 'metamodel_' + 0;
         let names: string[] = Selectors.getAllMetamodels().map(m => m.name);
-        name = U.increaseEndingNumber(name, false, false, (newName) => names.indexOf(newName) >= 0)
-        const dModel = model || DModel.new(name, undefined, true);
-        const lModel: LModel = LModel.fromD(dModel);
-        const dPackage = lModel.addChild('package');
-        const lPackage: LPackage = LPackage.fromD(dPackage);
-        lPackage.name = 'default';
+        name = U.increaseEndingNumber(name, false, false, (newName) => names.indexOf(newName) >= 0);
+        TRANSACTION( () => {
+            const dModel = model || DModel.new(name, undefined, true);
+            const lModel: LModel = LModel.fromD(dModel);
+            const dPackage = lModel.addChild('package');
+            const lPackage: LPackage = LPackage.fromD(dPackage);
+            lPackage.name = 'default';
+        })
         this.OPEN(dModel);
     }
     addModel(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {
@@ -214,11 +217,9 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
                 let name = 'model_' + 0;
                 let modelNames: (string)[] = metamodel.models.map(m => m.name);
                 name = U.increaseEndingNumber(name, false, false, (newName) => modelNames.indexOf(newName) >= 0)
-                BEGIN()
-                const model: DModel = DModel.new(name, mmid, false, true);
-                DGraph.new(0, model.id);
-                END()
-                this.OPEN(model);
+                let model: DModel | undefined = undefined;
+                TRANSACTION(()=>model = DModel.new(name, mmid, false, true));
+                model && this.OPEN(model);
             }
         });
     }

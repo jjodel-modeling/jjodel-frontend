@@ -26,8 +26,8 @@ function CollaborativeAttacher(props: Props) {
         })
     });
 
-    Collaborative.client.on('pullAction', (action) => {
-        if(action.type === 'COMPOSITE_ACTION') for(let subAction of action.actions) delete subAction['_id'];
+    Collaborative.client.on('pullAction', (action: GObject<Action & CompositeAction>) => {
+        if(action.type === 'COMPOSITE_ACTION') for(let subAction of action.actions) delete (subAction as GObject)['_id'];
         delete action['_id'];
         const receivedAction = Action.fromJson(action);
         receivedAction.hasFired = receivedAction.hasFired - 1;

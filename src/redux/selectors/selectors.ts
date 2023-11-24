@@ -1,14 +1,14 @@
 import type {
     DAttribute,
     DClass,
+    DGraph,
     DClassifier,
     DEnumerator,
-    DGraph,
     DGraphElement,
     DRefEdge,
-    DState,
     DVoidVertex,
     GObject,
+    DState,
     LClass,
     LEnumerator,
     LGraphElement,
@@ -18,36 +18,30 @@ import type {
     LViewElement,
     LVoidVertex,
     Pointer,
+    AbstractConstructor,
+    Constructor,
+    LModelElement, LModel,
+    DObject, DValue, LObject, LValue,
+    LViewPoint,
+    AttribETypes, ShortAttribETypes,
+    Dictionary,
 } from "../../joiner";
 import {
-    AbstractConstructor,
-    AttribETypes,
-    Constructor,
+    DViewElement,
+    DPointerTargetable,
     DModel,
     DModelElement,
-    DObject,
-    DPointerTargetable,
-    DValue,
-    DViewElement,
-    LModel,
-    LModelElement,
-    LObject,
+    OCL,
     Log,
     LPointerTargetable,
-    LUser,
-    LValue,
-    LViewPoint,
-    MyProxyHandler,
-    OCL,
     RuntimeAccessible,
     RuntimeAccessibleClass,
-    ShortAttribETypes,
     store,
-    toShortEType,
-    U
+    U,
+    toShortEType
 } from "../../joiner";
 import {EdgeOptions} from "../store";
-import {Selected} from "../../joiner/types";
+import {DefaultEClasses, ShortDefaultEClasses, toShortEClass} from "../../common/U";
 
 enum ViewEClassMatch { // this acts as a multiplier for explicit priority
     MISMATCH = 0,
@@ -60,7 +54,8 @@ enum ViewEClassMatch { // this acts as a multiplier for explicit priority
 export class Selectors{
     public static cname: string = 'Selectors';
 
-    static getSelected(): Selected {
+    // 11/23, i disabled this function but giordano updated it.
+    static getSelectedOLD(): Selected {
         const state = store.getState();
         return state.selected;
     }
@@ -75,7 +70,7 @@ export class Selectors{
         let state: DState & GObject = store.getState();
         const selected = state._lastSelected?.modelElement;
         if(selected) {
-            const me = LModelElement.fromPointer(selected)
+            const me = LPointerTargetable.fromPointer(selected)
             metamodel = (me) ? me.model : null;
         } else metamodel = null;
         return metamodel;
@@ -106,11 +101,11 @@ export class Selectors{
 
     public static getViewpoints() : LViewPoint[] {
         const state: DState & GObject = store.getState();
-        return LViewPoint.fromPointer(state.viewpoints);
+        return LPointerTargetable.fromPointer(state.viewpoints);
     }
-    public static getViewpoint() : LViewPoint  {
+    public static getViewpoint() : LViewPoint {
         const state: DState & GObject = store.getState();
-        return LViewPoint.fromPointer(state.viewpoint);
+        return LPointerTargetable.fromPointer(state.viewpoint);
     }
 
     public static getObjects(): LObject[] {
@@ -119,7 +114,7 @@ export class Selectors{
         const dObjects: DObject[] = ptrs.map<DObject>( (ptr) => state.idlookup[ptr] as DObject);
         const lObjects: LObject[] = [];
         for(let dObject of dObjects) {
-            lObjects.push(LObject.fromPointer(dObject.id));
+            lObjects.push(LPointerTargetable.fromPointer(dObject.id));
         }
         return lObjects;
     }
@@ -130,7 +125,7 @@ export class Selectors{
         const lValues: LValue[] = [];
         for(let dValue of dValues) {
             if(dValue?.id) {
-                lValues.push(LValue.fromPointer(dValue.id));
+                lValues.push(LPointerTargetable.fromPointer(dValue.id));
             }
         }
         return lValues;
@@ -157,6 +152,12 @@ export class Selectors{
         return edges;
     }
 
+    static getDefaultEcoreClass(type: DefaultEClasses | ShortDefaultEClasses, state?: DState): DClassifier {
+        let shorttype: string = (toShortEClass(type as any) || type).toUpperCase();
+        if (!state) state = store.getState();
+        // todo: make other m3 classes and make this generic like getPrimitiveType
+        return state.idlookup["Pointer_"+ShortDefaultEClasses.EObject.toUpperCase()] as DClassifier;
+    }
     static getPrimitiveType(type: AttribETypes | ShortAttribETypes, state?: DState): DClassifier {
         let shorttype: string = (toShortEType(type as any) || type).toUpperCase();
         if (!state) state = store.getState();
@@ -249,13 +250,13 @@ export class Selectors{
     static getAllMetamodels(): LModel[] {
         const state: DState = store.getState();
         const dModels = Object.values((state).m2models);
-        return LModel.fromPointer(dModels);
+        return LPointerTargetable.fromPointer(dModels);
     }
 
     static getAllModels(): LModel[] {
         const state: DState = store.getState();
         const dModels = Object.values((state).m1models);
-        return LModel.fromPointer(dModels);
+        return LPointerTargetable.fromPointer(dModels);
     }
 
     //Giordano: end
@@ -367,6 +368,7 @@ export class Selectors{
 
 
     private static matchesMetaClassTarget(v: DViewElement, data: DModelElement | DGraphElement): ViewEClassMatch {
+        if (!v) return ViewEClassMatch.MISMATCH;
         if (!v.appliableToClasses || !v.appliableToClasses.length) return ViewEClassMatch.IMPLICIT_MATCH;
         if (!data) return ViewEClassMatch.MISMATCH;
         let ThisClass: typeof DPointerTargetable = RuntimeAccessibleClass.get(data?.className);
@@ -391,7 +393,7 @@ export class Selectors{
 
 
 
-    private static scoreView(v1: DViewElement, data: LModelElement | undefined, node: DGraphElement | undefined, graph: LGraphElement, sameViewPointViews: Pointer<DViewElement, 1, 1>[] = []): number {
+    private static scoreView(v1: DViewElement, data: LModelElement | undefined, sameViewPointViews: Pointer<DViewElement, 1, 1>[] = []): number {
         let datascore: number = 1;
         let nodescore: number = 1;
         if (data) {// 1° priority: matching by EClass type
@@ -399,24 +401,53 @@ export class Selectors{
             // Log.l('score view:', {v1, data, v1MatchingEClassScore});
             if (v1MatchingEClassScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
             // 2° priority: by ocl condition matching
-            let v1OclScore = Selectors.matchesOclCondition(v1, data);
+            let v1OclScore = Selectors.matchesOclCondition(v1, data); // todo: not a fixed priority but acording to the "complexity" of the query
             if (v1OclScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
             // 3° priority by sub-view
             let v1SubViewScore = Selectors.matchesOclCondition(v1, data);
             if (v1SubViewScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
             // second priority: matching by viewpoint / subViews
             datascore = (v1MatchingEClassScore * v1OclScore * v1SubViewScore);
-        }
+        }/*
+        don't use node, check comment at getAppliedViews()
         if (node){
             // 1° priority: matching by DGraphElement type
-            let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, node);
+            let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, node?.__raw);
             nodescore = 1; // todo: ocl by node position or other node info
-        }
+        }*/
         return datascore * nodescore * v1.explicitApplicationPriority;
     }
 
+    static getViewByIDOrNameD(name: string, state?: DState): undefined | DViewElement {
+        if (!state) state = store.getState();
+        if (state.idlookup[name]?.className === DViewElement.cname) return state.idlookup[name] as DViewElement;
+        let id = Selectors.getViewIdFromName(name, state);
+        if (id && state.idlookup[id]?.className === DViewElement.cname) return state.idlookup[id] as DViewElement;
+        return undefined;
+    }
 
-    static getAppliedViews(data: LModelElement|undefined, hisnode: DGraphElement | undefined, graph: LGraphElement,
+
+    // input: "subview.subview2.targetview"
+    // output: returns pointer to targetview
+    // path is not required to start with a root, it's also possible to start navigating from a subview (notviewpoint/model view)
+    // in case multiple matches are given due to incomplete path not starting from a viewpoint, the oldest matching view is returned.
+    static getViewIdFromName(namepath: string, state?: DState): undefined | Pointer<DViewElement> {
+        if (!state) state = store.getState();
+        let names: string[] = namepath.split(".");
+        let eligibleContainers: Pointer<DViewElement>[] = state.viewelements;
+        for (let i = 0; i < names.length; i++) {
+            let name = names[i];
+            eligibleContainers = eligibleContainers.filter(v => ((state as DState).idlookup[v] as DViewElement).name === name);
+            if (i === names.length-1 || eligibleContainers.length === 0) return eligibleContainers[0];
+            eligibleContainers = eligibleContainers.flatMap(v => ((state as DState).idlookup[v] as DViewElement).subViews);
+        }
+        return undefined;
+    }
+
+                             // NB: node must not be used to determine view.
+    // because node properties depend on the view, and it might cause a loop of swapping back and forth assigned view.
+    // view determines layout, not the other way around.
+    static getAppliedViews(data: LModelElement|undefined,
                            selectedViewId: Pointer<DViewElement, 0, 1, LViewElement>, parentViewId: Pointer<DViewElement, 0, 1, LViewElement>): Scored<DViewElement>[] {
         const state : DState = store.getState();
         const allViews: DViewElement[] = [...Selectors.getAllViewElements()];
@@ -427,7 +458,7 @@ export class Selectors{
         let sortedPriority: Scored<DViewElement>[] = allViews.map(
             // v => new Scored<DViewElement>(Selectors.scoreView(v, data as any as DModelElement, hisnode, graph, sameViewPointSubViews), v)) as Scored<DViewElement>[];
             (v) => {
-                return new Scored<DViewElement>(Selectors.scoreView(v, data, hisnode, graph, sameViewPointSubViews), v);}
+                return new Scored<DViewElement>(Selectors.scoreView(v, data, sameViewPointSubViews), v);}
         ) as Scored<DViewElement>[];
         sortedPriority.sort( (e1, e2) => e2.score - e1.score);
         // todo: prioritize views "children" of the view of the graph, so they will display differnet views for the same element in different graphs
@@ -462,7 +493,7 @@ export class Selectors{
         const g: DGraph = state.idlookup[forGraph] as DGraph;
         if (asPointers) return g.subElements;
         const subelements: DGraphElement[] = g.subElements.map( geid => state.idlookup[geid]) as DGraphElement[];
-        if (wrap) return subelements.map<LGraphElement>( (ge) => MyProxyHandler.wrap(ge));
+        if (wrap) return subelements.map<LGraphElement>( (ge) => LPointerTargetable.from(ge));
         return subelements; }
 
 
@@ -473,56 +504,57 @@ export class Selectors{
 
 
     public static getAllPackageClasses(id: string): LClass[] {
-        const data = MyProxyHandler.wrap(id) as GObject;
+        const data = LPointerTargetable.from(id) as GObject;
         let lPackage : LPackage | undefined;
         const classes: LClass[] = [];
         if (data.className === "DReference") {
-            const lClass: LClass = MyProxyHandler.wrap(data.father);
-            lPackage = MyProxyHandler.wrap(lClass.father);
+            const lClass: LClass = LPointerTargetable.from(data.father);
+            lPackage = LPointerTargetable.from(lClass.father);
         }
         if (data.className === "DParameter") {
-            const lOperation: LOperation = MyProxyHandler.wrap(data.father);
-            const lClass: LClass = MyProxyHandler.wrap(lOperation.father);
-            lPackage = MyProxyHandler.wrap(lClass.father);
+            const lOperation: LOperation = LPointerTargetable.from(data.father);
+            const lClass: LClass = LPointerTargetable.from(lOperation.father);
+            lPackage = LPointerTargetable.wrap(lClass.father);
         }
         if (data.className === "DOperation") {
-            const lClass: LClass = MyProxyHandler.wrap(data.father);
-            lPackage = MyProxyHandler.wrap(lClass.father);
+            const lClass: LClass = LPointerTargetable.from(data.father);
+            lPackage = LPointerTargetable.wrap(lClass.father);
         }
         if (lPackage) {
             for(let classifier of lPackage.classifiers) {
-                const lClassifier: LClass | LEnumerator = MyProxyHandler.wrap(classifier);
+                const lClassifier: LClass | LEnumerator = LPointerTargetable.from(classifier);
                 if(lClassifier.className === "DClass") classes.push(lClassifier as LClass);
             }
         }
         return classes;
     }
     public static getAllPackageEnumerators(id: string): LEnumerator[] {
-        const data = MyProxyHandler.wrap(id) as GObject;
+        const data = LPointerTargetable.from(id) as GObject;
         let lPackage : LPackage | undefined;
         const enumerators: LEnumerator[] = [];
         if(data.className === "DAttribute") {
-            const lClass: LClass = MyProxyHandler.wrap(data.father);
-            lPackage = MyProxyHandler.wrap(lClass.father);
+            const lClass: LClass = LPointerTargetable.from(data.father);
+            lPackage = LPointerTargetable.from(lClass.father);
         }
         if(data.className === "DParameter") {
-            const lOperation: LOperation = MyProxyHandler.wrap(data.father);
-            const lClass: LClass = MyProxyHandler.wrap(lOperation.father);
-            lPackage = MyProxyHandler.wrap(lClass.father);
+            const lOperation: LOperation = LPointerTargetable.from(data.father);
+            const lClass: LClass = LPointerTargetable.from(lOperation.father);
+            lPackage = LPointerTargetable.from(lClass.father);
         }
         if(data.className === "DOperation") {
-            const lClass: LClass = MyProxyHandler.wrap(data.father);
-            lPackage = MyProxyHandler.wrap(lClass.father);
+            const lClass: LClass = LPointerTargetable.from(data.father);
+            lPackage = LPointerTargetable.from(lClass.father);
         }
         if(lPackage) {
             for(let classifier of lPackage.classifiers) {
-                const lClassifier: LClass | LEnumerator = MyProxyHandler.wrap(classifier);
+                const lClassifier: LClass | LEnumerator = LPointerTargetable.from(classifier);
                 if(lClassifier.className === "DEnumerator") enumerators.push(lClassifier as LEnumerator);
             }
         }
         return enumerators;
     }
 }
+(window as any).Selectors = Selectors;
 
 class Scored<T extends GObject> {
     constructor(public score: number, public element: T) {}

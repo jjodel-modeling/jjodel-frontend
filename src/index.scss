@@ -1,0 +1,35 @@
+* {
+    user-select: none;
+    &:active::-webkit-scrollbar, &:hover::-webkit-scrollbar{
+        width: 0.4rem;
+        /* i was trying to make interactive area bigger while keeping it visually smaller, but those are not working
+        border-left: 0.2rem;
+        border-right: 0.2rem;
+        padding-left: 0.2rem;
+        padding-right: 0.2rem;
+        /*
+        border-radius: 2px;
+        background-clip: padding-box;
+        border: 2px solid transparent;*/
+    }
+}
+img { -webkit-user-drag: none; }
+body {
+    font-family: Lato, 'Helvetica Neue', Arial,Helvetica, sans-serif !important;
+    font-size: small !important;
+}
+
+::-webkit-scrollbar {
+    width: 0.2rem;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb{
+    background: #888;
+    &:active, &:hover{
+        background: #555;
+    }
+}

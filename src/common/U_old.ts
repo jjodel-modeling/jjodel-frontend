@@ -1637,7 +1637,7 @@
 // */
 //
 // export enum ShortAttribETypes {
-//     void = 'void',
+//     void = 'EVoid',
 //     EChar  = 'EChar',
 //     EString  = 'EString',
 //     EDate  = 'EDate',
