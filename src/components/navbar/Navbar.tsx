@@ -7,6 +7,7 @@ import Edit from './tabs/Edit';
 import Share from './tabs/Share';
 import Debug from './tabs/Debug';
 import DebugImage from '../../static/img/debug.png';
+import LogoImage from '../../static/img/logo.png';
 import {FakeStateProps} from '../../joiner/types';
 import PersistanceApi from "../../api/persistance";
 
@@ -35,9 +36,9 @@ function NavbarComponent(props: AllProps) {
                         <File />
                         <Edit />
                         <Share />
-                        {debug && <Examples />}
+                        {debug && undefined /* <Examples />*/}
                         {debug && <li className={'d-block ms-1 m-auto'}>
-                            <img width={30} height={30} src={Debug} alt={"debug mode on"} />
+                            <img width={30} height={30} src={DebugImage} alt={"debug mode on"} />
                         </li>}
                         <hr />
                         <li tabIndex={-1} onClick={e => user.project = null} className={'text-danger dropdown-item'}>
@@ -73,7 +74,7 @@ function NavbarComponent(props: AllProps) {
 
             <ul className={'navbar-nav ms-auto'}>
                 <li className={'d-block'}>
-                    <img width={80} height={40} src={Logo} alt={"jjodel logo"} onClick={(e) => {
+                    <img width={80} height={40} src={LogoImage} alt={"jjodel logo"} onClick={(e) => {
                         let now = Date.now();
                         if (now - clickTimestamps[clickTimestamps.length - clicksRequired] < timeframe) { SetRootFieldAction.new('debug', !debug); clickTimestamps = []; }
                         clickTimestamps.push(now);

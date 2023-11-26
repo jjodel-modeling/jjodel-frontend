@@ -108,7 +108,7 @@ export class DState extends DPointerTargetable{
     }
 
     debug: boolean = true;
-    logs: Pointer<DLog> = [];
+    logs: Pointer<DLog>[] = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
 
 
@@ -178,7 +178,8 @@ export class DState extends DPointerTargetable{
 
     static init(store?: DState): void {
         BEGIN()
-        const viewpoint = DViewPoint.new('Default', '' , undefined, '', '', '', [], '', 1, false); aaa it was only until "Default", ''
+        const viewpoint = DViewPoint.new('Default', '' , undefined, '', '', '', [], '', 1, false);
+        aaa it was only until "Default", ''
         viewpoint.id = 'Pointer_DefaultViewPoint';
         CreateElementAction.new(viewpoint);
         SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
@@ -215,7 +216,8 @@ export class DState extends DPointerTargetable{
 
 function makeDefaultGraphViews(): DViewElement[] {
 
-    let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname], '', 1, false); aaa it was only until [DModel.cname]
+    let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname], '', 1, false);
+    aaa it was only until [DModel.cname]
     modelView.draggable = false; modelView.resizable = false;
     modelView.oclCondition = 'context DModel inv: true';
     modelView.usageDeclarations = "(ret)=>{\n" +
@@ -236,7 +238,8 @@ function makeDefaultGraphViews(): DViewElement[] {
         "ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps)\n"+
         "}";
 
-    let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname], '', 1, false);aaa it was only until [DPackage]
+    let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname], '', 1, false);
+    aaa it was only until [DPackage]
     packageView.defaultVSize = new GraphSize(0, 0, 400, 500);
     packageView.oclCondition = `context DPackage inv: true`;
 

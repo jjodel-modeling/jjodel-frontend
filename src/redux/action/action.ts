@@ -175,7 +175,6 @@ export class Action extends RuntimeAccessibleClass {
         this.id = 'Action_' + Date.now() + "_" + Action.maxCounter++; // NB: the prefix must be the same for all actions because it must not affect order
         this.timestamp = Date.now();
         this.sender = DUser.current;
-        this.token = DUser.token;
         this.field = field;
         this.value = value;
         this.type = (this.constructor as any).type;

@@ -216,8 +216,8 @@ interface StateProps {
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
-/*
-* 23/11 versione giordano
+
+//* 23/11 versione giordano
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     const nodeid = state.selected[DUser.current];
@@ -226,7 +226,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     if(ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
     return ret;
 }
-* */
+/*
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.selectedid = state._lastSelected;
@@ -237,7 +237,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     };
     if (ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
     return ret;
-}
+}*/
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     const ret: DispatchProps = {} as any;

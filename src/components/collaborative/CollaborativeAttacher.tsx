@@ -1,7 +1,7 @@
 import React from 'react';
 import Collaborative from './Collaborative';
 import App from '../../App';
-import {Action, SetRootFieldAction, U} from '../../joiner';
+import {Action, CompositeAction, GObject, SetRootFieldAction, U} from '../../joiner';
 import {useParams} from 'react-router-dom';
 import {useEffectOnce} from 'usehooks-ts';
 

@@ -13,7 +13,7 @@ import {
     Pointer,
     RuntimeAccessibleClass,
     U,
-    windoww, store
+    windoww, store, Log, DUser
 } from "../../../joiner";
 import * as util from "util";
 import {GraphElementComponent} from "../../../graph/graphElement/graphElement";

@@ -42,6 +42,7 @@ import {
 } from "../../joiner";
 import {EdgeOptions} from "../store";
 import {DefaultEClasses, ShortDefaultEClasses, toShortEClass} from "../../common/U";
+import { Selected } from "../../joiner/types";
 
 enum ViewEClassMatch { // this acts as a multiplier for explicit priority
     MISMATCH = 0,

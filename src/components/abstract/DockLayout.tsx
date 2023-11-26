@@ -16,7 +16,7 @@ import {
     Pointer,
     Selectors,
     U,
-    LPackage, SetRootFieldAction, Dictionary, DUser
+    LPackage, SetRootFieldAction, Dictionary, DUser, TRANSACTION
 } from '../../joiner';
 import StructureEditor from "../rightbar/structureEditor/StructureEditor";
 import TreeEditor from "../rightbar/treeEditor/treeEditor";
@@ -182,14 +182,15 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         let name = 'metamodel_' + 0;
         let names: string[] = Selectors.getAllMetamodels().map(m => m.name);
         name = U.increaseEndingNumber(name, false, false, (newName) => names.indexOf(newName) >= 0);
+        let dModel: DModel = undefined as any;
         TRANSACTION( () => {
-            const dModel = model || DModel.new(name, undefined, true);
+            dModel = model || DModel.new(name, undefined, true);
             const lModel: LModel = LModel.fromD(dModel);
             const dPackage = lModel.addChild('package');
             const lPackage: LPackage = LPackage.fromD(dPackage);
             lPackage.name = 'default';
         })
-        this.OPEN(dModel);
+        dModel && this.OPEN(dModel);
     }
     addModel(evt: React.MouseEvent<HTMLButtonElement>, context: DockContext, panelData: PanelData) {
         let html = '<style>body.swal2-no-backdrop .swal2-container {background-color: rgb(0 0 0 / 60%) !important}</style>';
