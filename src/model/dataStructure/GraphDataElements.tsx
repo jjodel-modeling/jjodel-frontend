@@ -3,7 +3,7 @@ import {isDeepStrictEqual} from "util";
 import {
     BEGIN,
     Constructors,
-    CoordinateMode,
+    CoordinateMode, Debug,
     Dictionary,
     DMap,
     DModelElement,
@@ -41,7 +41,7 @@ import {
     ShortAttribETypes,
     Size,
     store,
-    TargetableProxyHandler,
+    TargetableProxyHandler, TRANSACTION,
     U, Uarr,
     windoww
 } from "../../joiner";
@@ -53,8 +53,7 @@ import {Geom} from "../../common/Geom";
 
 console.warn('ts loading graphDataElement');
 
-let lgraph: LGraphElement = null /* this.node */ as any;
-
+export const packageDefaultSize = new GraphSize(0, 0, 400, 500);
 
 @Node
 @RuntimeAccessible
@@ -67,27 +66,31 @@ export class DGraphElement extends DPointerTargetable {
     // static logic: typeof LGraphElement;
     // static structure: typeof DGraphElement;
     id!: Pointer<DGraphElement, 1, 1, LGraphElement>;
-    graph!: Pointer<DGraph, 1, 1, LGraph>; // todo: cerca graphID e rimpiazza / adatta
+    graph!: Pointer<DGraph, 1, 1, LGraph>;
     model?: Pointer<DModelElement, 0, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
     father!: Pointer<DGraphElement, 1, 1, LGraphElement>;
-    x: number = 0;
-    y: number = 0;
-    zIndex:number = 100;
-    w: number=300;
-    h: number=500;
+    x!: number;
+    y!: number;
+    zIndex: number = 100;
+    w!: number;
+    h!: number;
     // width: number = 300;
     // height: number = 400;
     view!: Pointer<DViewElement, 1, 1, LViewElement>;
     favoriteNode!: boolean;
+    edgesIn!: Pointer<DEdge>[];
+    edgesOut!: Pointer<DEdge>[];
 
 
     public static new(htmlindex: number, model: DGraphElement["model"]|null|undefined, parentNodeID: DGraphElement["father"],
                       graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"]|undefined, a?: any, b?:any, ...c:any): DGraphElement {
-        return new Constructors(new DGraphElement('dwc')).DPointerTargetable(false, nodeID).DGraphElement(model, parentNodeID, graphID, htmlindex).end();
+        return new Constructors(new DGraphElement('dwc'), parentNodeID, true, undefined, nodeID)
+            .DPointerTargetable()
+            .DGraphElement(model, graphID, htmlindex).end();
     }
 
 }
@@ -96,8 +99,8 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     public static cname: string = "LGraphElement";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    static getNodeId<L extends LGraphElement, D extends DGraphElement>(o:L | D | Pointer<D> | LModelElement | DModelElement | Pointer<DModelElement>): Pointer<D> {
-        // Log.ex(!o, "cannot get node from undefined", {o});
+    static getNodeId<L extends LGraphElement, D extends DGraphElement>(o?:L | D | Pointer<D> | LModelElement | DModelElement | Pointer<DModelElement>): Pointer<D> {
+        if (!o) return undefined as any;
         let node: any = o;
         // from L to D
         // let cname = (node.__raw || node).className;
@@ -113,7 +116,8 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     father!: LGraphElement;
     graph!: LGraph; // todo: can be removed and accessed by navigating .father
     model?: LModelElement;
-    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
+    // protected isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>; //  & ((forUser?: Pointer<DUser>) => boolean);
+
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[]; // shallow, direct subelements
     state!: LMap;
@@ -166,6 +170,22 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __info_of__graphAncestors: Info = {type:"LGraph[]",
         txt:"<span>collection of the stack of Graphs containing the current element where [0] is the most nested graph, and last is root graph.</span>"};
     graphAncestors!: LGraph[];
+
+    edgesIn!: LVoidEdge[];
+    edgesOut!: LVoidEdge[];
+    __info_of__edgesIn: Info = {type:"LEdge[]", txt:<div>Edges incoming into this element. <code>this.edgesOut[i].end</code> always equals to <code>this</code>.</div>}
+    __info_of__edgesOut: Info = {type:"LEdge[]", txt:<div>Edges outgoing from this element. <code>this.edgesIn[i].start</code> always equals to <code>this</code>.</div>}
+    __info_of__edgesStart: Info = {type:"LEdge[]", txt:<div>Alias for this.edgesOut</div>}
+    __info_of__edgesEnd: Info = {type:"LEdge[]", txt:<div>Alias for this.edgesIn</div>}
+    public get_edgesIn(context: Context): this["edgesIn"] { return LPointerTargetable.fromArr(context.data.edgesIn); }
+    public get_edgesOut(context: Context): this["edgesOut"]  { return LPointerTargetable.fromArr(context.data.edgesOut); }
+    public set_edgesIn(val: PackArr<LVoidEdge>, c: Context): boolean { return SetFieldAction.new(c.data.id, "edgesIn", Pointers.fromArr(val), '', true); }
+    public set_edgesOut(val: PackArr<LVoidEdge>, c: Context): boolean { return SetFieldAction.new(c.data.id, "edgesOut", Pointers.fromArr(val), '', true); }
+    public get_edgesStart(context: Context): this["edgesIn"]  { return this.get_edgesIn(context); }
+    public get_edgesEnd(context: Context): this["edgesOut"]  { return this.get_edgesOut(context); }
+    public set_edgesStart(val: PackArr<LVoidEdge>, context: Context): boolean { return this.set_edgesIn(val, context); }
+    public set_edgesEnd(val: PackArr<LVoidEdge>, context: Context): boolean { return this.set_edgesOut(val, context); }
+
 
     protected _defaultCollectionGetter(c: Context, k: keyof Context["data"]): LPointerTargetable[] { return LPointerTargetable.fromPointer((c.data as any)[k]); }
     protected _defaultGetter(c: Context, k: keyof Context["data"]): any {
@@ -238,7 +258,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
     get_innerGraph(context: Context): LGraph {
         let lcurrent: LGraphElement = LPointerTargetable.fromPointer(context.data.father);
-        let dcurrent = lcurrent.__raw;
+        let dcurrent = lcurrent?.__raw;
 
         // if no parent, but it's a graph, return itself.
         if (!dcurrent) {
@@ -300,12 +320,13 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return GraphElementComponent.map[context.data.id]; }
     // get_view(context: Context): this["view"] { return this.get_component(context).props.view; }
     get_view(context: Context): this["view"] {
-        let c = this.get_component(context);
-        if (c) return c.props.view;
-        return LPointerTargetable.fromPointer(context.data.view); }
+        return (this.get_component(context)?.props.view as this["view"]);
+        // return LPointerTargetable.fromPointer(context.data.view);
+    }
     set_view(val: Pack1<this["view"]>, context: Context){
-        let ptr: DGraphElement["view"] = Pointers.from(val as this["view"]);
-        return SetFieldAction.new(context.data.id, "view", ptr, '', true);
+        Log.eDevv("node.view is readonly, change it through props or the model");
+        // let ptr: DGraphElement["view"] = Pointers.from(val as this["view"]);
+        // return SetFieldAction.new(context.data.id, "view", ptr, '', true);
     }
 
     outerSize!: LGraphElement["size"];
@@ -328,7 +349,8 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return new GraphSize(r.x, r.y, r.w, r.h);
     }
     protected get_innerSize_impl(context: Context, canTriggerSet: boolean = true, outerSize: boolean = false): Readonly<GraphSize> {
-        switch(context.data.className){
+        canTriggerSet = canTriggerSet && !Debug.lightMode;
+        switch (context.data.className){
             default: return Log.exDevv("unexpected classname in get_size switch: " + context.data.className);
             case DEdge.cname:
             case DVoidEdge.cname:
@@ -373,19 +395,26 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             return ret;
         }*/
         if (!canTriggerSet) {
+            if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
             return ret;
         }
         let html: RefObject<HTMLElement | undefined> | undefined = component?.html;
         let actualSize: Partial<Size> & {w:number, h:number} = html?.current ? Size.of(html.current) : {w:0, h:0};
         let updateSize: boolean = false;
+        let isOldElement = (context.data.clonedCounter as number) > 3;
+        // if w = 0 i don't auto-set it as in first render it has w:0 because is not reredered and not resized.
+        // if (canTriggerSet) this.set_size({w:actualSize.w}, context);
         if (view.adaptWidth && ret.w !== actualSize.w) {
-            ret.w = actualSize.w;
-            if (canTriggerSet) updateSize = true;
-            // if (canTriggerSet) this.set_size({w:actualSize.w}, context);
+            if (canTriggerSet && (isOldElement || actualSize.w !== 0)) {
+                ret.w = actualSize.w;
+                updateSize = true;
+            }
         }
         if (view.adaptHeight && ret.h !== actualSize.h) {
-            ret.h = actualSize.h;
-            if (canTriggerSet && !updateSize) updateSize = true;
+            if (canTriggerSet && (isOldElement || actualSize.h !== 0)) {
+                ret.h = actualSize.h;
+                updateSize = true;
+            }
         }
         // console.log("getSize() from node merged with actualSize", {ret: {...ret}});
 
@@ -523,9 +552,61 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         if (ptr) SetFieldAction.new(ptr as any, 'subElements+=', context.data.id);
         return true; }
 
-    get_isSelected(context: LogicContext<DGraphElement>): this["isSelected"] { return context.data.isSelected; }
-    set_isSelected(val: this["isSelected"], context: LogicContext<DGraphElement>): boolean {
-        return this.cannotSet("graphElement.isSelected(): todo"); }
+    __info_of__isselected: Info = {type: "Dictionary<Pointer<User>, true>",
+        txt:<div>A map that contains all the users selecting this element as keys, and always true as a value (if present).
+            <br/>Edit it through node.select() and node.deselect()</div>}
+    __info_of_select: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Marks this node as selected by argument user."};
+    __info_of_deselect: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Un-marks this node as selected by argument user."};
+    __info_of_toggleSelect: Info = {type:"function(usr?:Pointer<User>):void", txt:"Calls this.select(usr) if the node is selected by argument user, this.deselect(usr) otherwise. If omitted, argument \"usr\" is the current user id.<br>Returns the result of this.isSelected() after the toggle."};
+    __info_of_isSelected: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Tells if this node is selected by argument user."};
+    select(forUser?: Pointer<DUser>): void { return this.wrongAccessMessage("node.select()"); }
+    deselect(forUser?: Pointer<DUser>): void { return this.wrongAccessMessage("node.deselect()"); }
+    toggleSelected(forUser?: Pointer<DUser>): void { return this.wrongAccessMessage("node.toggleSelected()"); }
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
+    get_select(c: Context): (forUser?: Pointer<DUser>)=>void {
+        return (forUser?: Pointer<DUser>)=> {
+            if (!forUser) forUser = DUser.current;
+            if (c.data.isSelected[forUser]) return; // no-op
+            let map = {...c.data.isSelected};
+            map[forUser] = true;
+            SetFieldAction.new(c.data.id, "isSelected", map, undefined, false);
+            // todo: actually they are pointer to users, but i'm assuming users are not erased at runtime. on deselect too
+        }
+    }
+    get_deselect(c: Context): (forUser?: Pointer<DUser>)=>void {
+        return (forUser?: Pointer<DUser>)=> {
+            if (!forUser) forUser = DUser.current;
+            if (!c.data.isSelected[forUser]) return; // no-op
+            let map = {...c.data.isSelected};
+            delete map[forUser];
+            SetFieldAction.new(c.data.id, "isSelected", map, undefined, false);
+            // todo: actually they are pointer to users, but i'm assuming users are not erased at runtime. on deselect too
+        }
+    }
+    get_toggleSelected(context: Context): ((forUser?: Pointer<DUser>) => boolean) {
+        return (forUser?: Pointer<DUser>): boolean => {
+            if (!forUser) forUser = DUser.current;
+            if (this.get_isSelected(context)(forUser)) {
+                this.get_deselect(context)(forUser);
+                return false;
+            } else {
+                this.get_select(context)(forUser);
+                return true;
+            }
+        }
+    }
+    get_isSelected(context: Context): ((forUser?: Pointer<DUser>) => boolean) {
+        return (forUser?: Pointer<DUser>): boolean => {
+            if (!forUser) forUser = DUser.current;
+            return !!context.data.isSelected[forUser]; }
+    }
+    set_isSelected(val: this["isSelected"], context: Context): boolean {
+        return this.cannotSet("graphElement.isSelected(): use this.select() or this.deselect() instead.");
+    }
+    /*
+    get_isSelected(context: LogicContext<DVoidVertex>): GObject {
+        return DPointerTargetable.mapWrap(context.data.isSelected, context.data, 'idlookup.' + context.data.id + '.isSelected', []);
+    }*/
 
     get_state(context: LogicContext<DGraphElement>): this["state"] {
         let state: GObject = context.data.state;
@@ -538,7 +619,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return state as any;
     }
     set_state(val: this["state"], context: LogicContext<DGraphElement>): boolean {
-        return this.cannotSet("graphElement.isSelected(): todo"); }
+        return this.cannotSet("graphElement.setstate(): todo"); }
 
 
 
@@ -580,23 +661,22 @@ export class DGraph extends DGraphElement {
     id!: Pointer<DGraph, 1, 1, LGraph>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 1, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
     // personal attributes
     zoom!: GraphPoint;
-    graphSize!: GraphSize; // internal size of the graph. can be huge even if the sub-graph is in a small window (scroll)
-    sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
+    offset!: GraphPoint; // in-graph scrolling offset
 
     public static new(htmlindex: number, model: DGraph["model"],
                       parentNodeID?: DGraphElement["father"], // immediate parent
                       parentgraphID?: DGraphElement["graph"], // graph containing this subgraph (redudant? could get it from father chain)
                       nodeID?: DGraphElement["id"] // this id
     ): DGraph {
-        return new Constructors(new DGraph('dwc'), parentNodeID, true, DGraphElement)
-            .DPointerTargetable(false, nodeID || Constructors.DGraph_makeID(model))
-            .DGraphElement(model, parentNodeID, parentgraphID, htmlindex).DGraph().end();
+        return new Constructors(new DGraph('dwc'), parentNodeID, true, undefined, nodeID || Constructors.DGraph_makeID(model))
+            .DPointerTargetable()
+            .DGraphElement(model, parentgraphID, htmlindex).DGraph().end();
     }
 
 
@@ -620,6 +700,8 @@ export class DGraph extends DGraphElement {
 
 }
 var nosize = {x:0, y:0, w:0, h:0, nosize:true};
+var defaultEdgePointSize = {x:0, y:0, w:5, h:5};
+var defaultVertexSize = {x:0, y:0, w:140.6818084716797, h:32.52840805053711};
 @RuntimeAccessible
 export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph = any> extends LGraphElement {
     public static cname: string = "LGraph";
@@ -634,21 +716,28 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     id!: Pointer<DGraph, 1, 1, LGraph>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
     // personal attributes
     zoom!: GraphPoint;
-    graphSize!: GraphSize; // alias for offset
-    offset!: GraphSize; //  size internal to the graph, while "size" is instead external size of the vertex holding the graph in GraphVertexes
-    // protected sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
+    graphSize!: GraphSize; // derived attribute: bounding rect containing all subnodes
+    offset!: GraphPoint; //  size internal to the graph, while "size" is instead external size of the vertex holding the graph in GraphVertexes
 
-
-    // get_sizes(context: Context): D["sizes"] { return context.data.sizes; }
-    //set_sizes(val: D["sizes"], context: Context): boolean { return SetFieldAction.new(context.data.id, "sizes", val); }
-
-    get_graphSize(context: LogicContext<DGraph>):  Readonly<GraphSize> { return context.data.graphSize; }
+    // get_graphSize(context: LogicContext<DGraph>):  Readonly<GraphSize> { return todo: get bounding rect containing all subnodes.; }
+    get_offset(context: LogicContext<DGraph>):  Readonly<GraphSize> {
+        return new GraphSize(context.data.offset.x, context.data.offset.y);
+    }
+    set_offset(val: Partial<GraphPoint>, context: Context): boolean {
+        if (!val) val = {x:0, y:0};
+        if (context.data.offset.x === val.x && context.data.offset.y === val.y) return true;
+        if (val.x === undefined && context.data.offset.x !== val.x) val.x = context.data.offset.x;
+        if (val.y === undefined && context.data.offset.y !== val.y) val.y = context.data.offset.y;
+        SetFieldAction.new(context.data, "offset", val as GraphPoint);
+        return true;
+    }
     get_zoom(context: Context): GraphPoint {
         const zoom: GraphPoint = context.data.zoom;
         // (zoom as any).debug = {rawgraph: context.data.__raw, zoomx: context.data.zoom.x, zoomy: context.data.zoom.y}
@@ -666,15 +755,16 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     // get_htmlSize(context: Context): Size { }
     translateSize<T extends GraphSize|GraphPoint>(ret: T, innerGraph: LGraph): T { return this.wrongAccessMessage("translateSize()"); }
     translateHtmlSize<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(size: T): G { return this.wrongAccessMessage("translateHtmlSize()"); }
-    __info_of__offset: Info = {type:GraphSize.cname, txt:"size internal to the graph, including internal scroll and panning."};
-    __info_of__graphSize: Info = {type:GraphSize.cname, txt:"Alias of this.offset"};
+
+    __info_of__offset: Info = {type:GraphSize.cname, txt:"In-graph scrolling position."};
+    __info_of__graphSize: Info = {type:GraphSize.cname, txt:"size internal to the graph, including internal scroll and panning."};
     __info_of__translateSize: Info = {type:"(T, Graph)=>T where T is GraphSize | GraphPoint", txt:"Translates a coordinate set from the local coordinates of a SubGraph to this Graph containing it."};
     __info_of__translateHtmlSize: Info = {type:"(Size|Point) => GraphSize|GraphPoint", txt:"Translate page\'s viewport coordinate set to this graph coordinate set."};
     get_translateHtmlSize<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(c: Context): ((size: T) => G) {
         return (size: T): G => {
             let graphHtmlSize = this.get_htmlSize(c);
             let a = size.subtract(graphHtmlSize.tl(), true);
-            let b = a.add({x:c.data.graphSize.x, y:c.data.graphSize.y}, false);
+            let b = a.add({x:c.data.offset.x, y:c.data.offset.y}, false);
             return b.multiply(c.data.zoom, false) as any as G;
         }
     }
@@ -710,6 +800,7 @@ RuntimeAccessibleClass.set_extend(LGraphElement, LGraph);
 // export const defaultVSize: GraphSize = new GraphSize(0, 0, 300, 160); // useless, now it's in view.DefaultVSize
 // export const defaultEPSize: GraphSize = new GraphSize(0, 0, 15, 15); // useless, now it's in view.DefaultVSize
 
+
 @RuntimeAccessible
 export class DVoidVertex extends DGraphElement {
     public static cname: string = "DVoidVertex";
@@ -724,7 +815,7 @@ export class DVoidVertex extends DGraphElement {
     id!: Pointer<DVoidVertex, 1, 1, LVoidVertex>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
@@ -739,9 +830,10 @@ export class DVoidVertex extends DGraphElement {
 
     public static new(htmlindex: number, model: DGraphElement["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"],
                       size?: InitialVertexSize): DVoidVertex {
-        return new Constructors(new DVoidVertex('dwc'))
-            .DPointerTargetable(false, nodeID)
-            .DGraphElement(model, parentNodeID, graphID, htmlindex).DVoidVertex(size).end();
+        return new Constructors(new DVoidVertex('dwc'), parentNodeID, true, undefined, nodeID)
+            .DPointerTargetable()
+            .DGraphElement(model, graphID, htmlindex)
+            .DVoidVertex(size || defaultVertexSize).end();
     }
 
 }
@@ -760,7 +852,8 @@ export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C exte
     id!: Pointer<DVoidVertex, 1, 1, LVoidVertex>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
@@ -779,36 +872,11 @@ export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C exte
     set_isResized(val: DVoidVertex["isResized"], context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] {
         return SetFieldAction.new(context.data.id, "isResized", val);
     }
-    /*
-        // todo: devo settare che il primo parametro delle funzioni che iniziano con set_ non può essere un logicContext
-        set_size(val: GraphSize, context: LogicContext<DVoidVertex>): boolean {
-            // todo: graphvertex should use this, but  calls graphelement.set_size instead
-            // SetFieldAction.new(context.data, 'size', val, Action.SubType.vertexSize);
-            if (!val) { return true; } //  val = defaultVSize; }
-            //console.trace('setsize:', {context, val});
-            if (context.data.x !== val.x) SetFieldAction.new(context.data, 'x', val.x);
-            if (context.data.y !== val.y) SetFieldAction.new(context.data, 'y', val.y);
-            if (context.data.w !== val.w) SetFieldAction.new(context.data, 'w', val.w);
-            if (context.data.h !== val.h) SetFieldAction.new(context.data, 'h', val.h);
-            val = new GraphSize(val.x, val.y, val.w, val.h);
-            // (context.proxy as unknown as LGraphElement).graph.graphSize
-            // update graph boundary too
-            const graph: LGraph = this.get_graph(context); // (context.proxyObject as this).get_graph(context);
-            const gsize = graph.graphSize;
-            //console.log('setsize2, graph:', {context, val, gsize, graph});
-            val.boundary(gsize);
-            if (val.equals(gsize)) return true;
-            graph.graphSize = val;
-            return true;
-        }*/
-
-    get_isSelected(context: LogicContext<DVoidVertex>): GObject {
-        return DPointerTargetable.mapWrap(context.data.isSelected, context.data, 'idlookup.' + context.data.id + '.isSelected', []);
-    }
 
 
 
 }
+
 RuntimeAccessibleClass.set_extend(DGraphElement, DVoidVertex);
 RuntimeAccessibleClass.set_extend(LGraphElement, LVoidVertex);
 @RuntimeAccessible
@@ -825,7 +893,7 @@ export class DEdgePoint extends DVoidVertex { // DVoidVertex
     father!: Pointer<DVoidEdge, 1, 1, LVoidEdge>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>; // todo: if null gets model from this.father (edge)?
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     zoom!: GraphPoint;
@@ -839,10 +907,9 @@ export class DEdgePoint extends DVoidVertex { // DVoidVertex
 
     public static new(htmlindex: number, model: DEdgePoint["model"] | undefined, parentNodeID: DEdgePoint["father"], graphID?: DEdgePoint["graph"], nodeID?: DGraphElement["id"],
                       size?: InitialVertexSize): DEdgePoint {
-        return new Constructors(new DEdgePoint('dwc'), parentNodeID, true)
-            .DPointerTargetable(false, nodeID)
-            .DGraphElement(undefined, parentNodeID, graphID, htmlindex)
-            .DVoidVertex(size).DEdgePoint().end();
+        return new Constructors(new DEdgePoint('dwc'), parentNodeID, true, undefined, nodeID)
+            .DGraphElement(undefined, graphID, htmlindex)
+            .DVoidVertex(size || defaultEdgePointSize).DEdgePoint().end();
     }
 
 }
@@ -862,7 +929,8 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
     id!: Pointer<DEdgePoint, 1, 1, LEdgePoint>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     zoom!: GraphPoint;
@@ -986,14 +1054,16 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
         return ret;
     }
 
-
+    /* 13/10/2023 Giordano comment (defined in LPointerTargetable
     public get_delete(context: Context): () => void {
         // careful: pointedBy might be broken due to comment x984 (search it)
         return super.get_delete(context);
     }
+    */
 }
 RuntimeAccessibleClass.set_extend(DVoidVertex, DEdgePoint);
 RuntimeAccessibleClass.set_extend(LVoidVertex, LEdgePoint);
+
 @RuntimeAccessible
 export class DVertex extends DGraphElement { // DVoidVertex
     public static cname: string = "DVertex";
@@ -1008,7 +1078,7 @@ export class DVertex extends DGraphElement { // DVoidVertex
     id!: Pointer<DVertex, 1, 1, LVertex>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     zoom!: GraphPoint;
@@ -1023,9 +1093,10 @@ export class DVertex extends DGraphElement { // DVoidVertex
 
     public static new(htmlindex: number, model: DGraphElement["model"], parentNodeID: DGraphElement["father"],
                       graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size?: GraphSize): DVertex {
-        return new Constructors(new DVertex('dwc')).DPointerTargetable(false, nodeID)
-            .DGraphElement(model, parentNodeID, graphID, htmlindex)
-            .DVoidVertex(size).DVertex().end();
+        return new Constructors(new DVertex('dwc'), parentNodeID, true, undefined, nodeID)
+            .DPointerTargetable()
+            .DGraphElement(model, graphID, htmlindex)
+            .DVoidVertex(size || defaultVertexSize).DVertex().end();
     }
 }
 
@@ -1043,7 +1114,8 @@ export class LVertex<Context extends LogicContext<any> = any, D = DVertex> exten
     id!: Pointer<DVertex, 1, 1, LVertex>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     zoom!: GraphPoint;
@@ -1059,6 +1131,7 @@ export class LVertex<Context extends LogicContext<any> = any, D = DVertex> exten
 
 RuntimeAccessibleClass.set_extend(DGraphElement, DVertex);
 RuntimeAccessibleClass.set_extend(LGraphElement, LVertex);
+
 @Leaf
 @RuntimeAccessible
 export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVertex)
@@ -1075,12 +1148,12 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
     id!: Pointer<DGraphVertex, 1, 1>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 1, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     // from graph
     zoom!: GraphPoint;
-    graphSize!: GraphSize; // internal size of the graph. can be huge even if the sub-graph is in a small window (scroll)
+    offset!: GraphPoint; // in-graph scrolling position
 
     // from VoidVertex
     x!: number;
@@ -1090,7 +1163,6 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
     isResized!: boolean;
     // size!: GraphSize; // virtual
     // from graph
-    sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
 
     // personal attributes
     __isDVertex!: true;
@@ -1099,8 +1171,9 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
 
     public static new(htmlindex: number, model: DGraph["model"], parentNodeID: DGraphElement["father"],
                       graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"], size?: GraphSize): DGraphVertex {
-        return new Constructors(new DGraphVertex('dwc')).DPointerTargetable(false, nodeID).DGraphElement(model, parentNodeID, graphID, htmlindex)
-            .DVoidVertex(size).DVertex().DGraph().end();
+        return new Constructors(new DGraphVertex('dwc'), parentNodeID, true, undefined, nodeID)
+            .DPointerTargetable().DGraphElement(model, graphID, htmlindex)
+            .DVoidVertex(size || defaultVertexSize).DVertex().DGraph().end();
     }
 
 
@@ -1128,11 +1201,13 @@ export class LGraphVertex<Context extends LogicContext<any> = any, D extends DGr
     id!: Pointer<DGraphVertex, 1, 1>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     ///////////////////////////////////////// subElements!: LGraphElement[];
     // from graph
     zoom!: GraphPoint;
+    offset!: GraphPoint; // in-graph scrolling position
     graphSize!: GraphSize; // internal size of the graph. can be huge even if the sub-graph is in a small window (scroll)
 
     // from VoidVertex
@@ -1142,7 +1217,6 @@ export class LGraphVertex<Context extends LogicContext<any> = any, D extends DGr
     h!: number;
     isResized!: boolean;
     size!: GraphSize; // virtual
-    protected sizes!: Dictionary<Pointer<DModelElement>, GraphSize>;
 
 
     // personal attributes
@@ -1155,6 +1229,8 @@ RuntimeAccessibleClass.set_extend(DGraph, DGraphVertex);
 RuntimeAccessibleClass.set_extend(DVertex, DGraphVertex);
 RuntimeAccessibleClass.set_extend(LGraph, LGraphVertex);
 RuntimeAccessibleClass.set_extend(LVertex, LGraphVertex);
+
+
 @RuntimeAccessible
 export class DVoidEdge extends DGraphElement {
     public static cname: string = "DVoidEdge";
@@ -1166,7 +1242,8 @@ export class DVoidEdge extends DGraphElement {
     id!: Pointer<DVoidEdge, 1, 1, LVoidEdge>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
 
@@ -1184,8 +1261,9 @@ export class DVoidEdge extends DGraphElement {
     public static new(htmlindex: number, model: DGraph["model"]|null|undefined, parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"],
                       nodeID: DGraphElement["id"]|undefined, start: DGraphElement["id"], end: DGraphElement["id"],
                       longestLabel: DEdge["longestLabel"], labels: DEdge["labels"]): DEdge {
-        return new Constructors(new DEdge('dwc')).DPointerTargetable(false, nodeID)
-            .DGraphElement(model, parentNodeID, graphID, htmlindex)
+        return new Constructors(new DEdge('dwc'), parentNodeID, true, undefined, nodeID)
+            .DPointerTargetable()
+            .DGraphElement(model, graphID, htmlindex)
             .DVoidEdge(start, end, longestLabel, labels).end();
     }
 }
@@ -1424,7 +1502,8 @@ export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends 
     id!: Pointer<DVoidEdge, 1, 1, LVoidEdge>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
     start!: LGraphElement;
@@ -1434,6 +1513,7 @@ export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends 
     midnodes!: LEdgePoint[];
     edge!: LVoidEdge; // returns self. useful to get edge from edgePoints without triggering error if you are already on edge.
     __info_of__edge: Info = {type:"?LEdge", txt:"returns this if called on an edge, the containing edge if called on an EdgePoint, undefined otherwise."}
+
 
 /*
 replaced by startPoint
@@ -1909,7 +1989,8 @@ export class DEdge extends DVoidEdge { // DVoidEdge
     id!: Pointer<DEdge, 1, 1, LEdge>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
@@ -1933,7 +2014,8 @@ export class LEdge<Context extends LogicContext<DEdge> = any, D extends DEdge = 
     id!: Pointer<DEdge, 1, 1, LEdge>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn!: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
@@ -1958,7 +2040,8 @@ export class DExtEdge extends DEdge { // etends DEdge
     id!: Pointer<DExtEdge, 1, 1, LExtEdge>;
     graph!: Pointer<DGraph, 1, 1, LGraph>;
     model!: Pointer<DModelElement, 0, 1, LModelElement>;
-    isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
@@ -1986,7 +2069,8 @@ export class LExtEdge extends LEdge{
     id!: Pointer<DExtEdge, 1, 1, LExtEdge>;
     graph!: LGraph;
     model?: LModelElement;
-    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
+    // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
+    isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn!: LGraphElement;
     subElements!: LGraphElement[];
     state!: LMap;
@@ -2006,6 +2090,7 @@ export class DRefEdge extends DEdge { // extends DEdge
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     start!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     end!: Pointer<DGraphElement, 1, 1, LGraphElement>;
+    isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     __isDRefEdge!: true;
     /*
         public static new(model: DGraph["model"], parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"], nodeID?: DGraphElement["id"]): DRefEdge {

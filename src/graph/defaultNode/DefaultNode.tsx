@@ -46,11 +46,19 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
             (ret as any).skiparenderforloading = false;
         } catch(e) {
             (ret as any).skiparenderforloading = true; // model id is updated, but he's still trying to load old model which got replaced and is not in state.
-            /* crashes on loading because old model and new model have different timestamps? looks by id of old model with same number and diffferent timestamp
-        Log.ex(!ret.data, "can't find model data:", {meid, state, ownpropsdata:ownProps.data, ownProps});*/ }
+            /* crashes on loading because old model and new model have different timestamps? looks by id of old model with same number and diffferent timestamp*/
+            Log.eDev(!ret.data, "can't find model data:", {state, ret, ownpropsdata:ownProps.data, ownProps});
+            Log.eDevv("cannot map state to props:", {e, state, ret, ownpropsdata:ownProps.data, ownProps});
+        }
         return ret; }
 
     constructor(props: AllProps, context: any) { super(props, context); }
+
+    shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<NodeState>, nextContext: any): boolean {
+        // i want to avoid double check on this and Vertex or graph.
+        // actually should not use this and avoid double mapstatetoprops execution too
+        return true;
+    }
 
     render(): ReactNode {
         if ((this.props as any).skiparenderforloading) {
@@ -79,7 +87,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
                 case windoww.FieldComponent.cname: componentfunction = Field; break;
                 case windoww.GraphVertexComponent.cname: componentfunction = GraphVertex; break; }
             // console.log("force node type", {requested:view.forceNodeType, G:  windoww.GraphComponent.name, GE: windoww.GraphElementComponent.name, GV: windoww.GraphVertexComponent.name, V: windoww.VertexComponent.name, F:windoww.FieldComponent.name})
-            return componentfunction(serializableProps, this.props.children);}
+            return componentfunction(serializableProps, this.props.children); }
 
         if (modelElement?.className) switch(modelElement.className) {
             case "DModel": componentfunction = Graph; break;

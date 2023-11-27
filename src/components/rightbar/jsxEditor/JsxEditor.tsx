@@ -1,13 +1,14 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {useStateIfMounted} from "use-state-if-mounted";
+import type {FakeStateProps} from "../../../joiner/types";
 import {DState, DViewElement, LViewElement, Pointer, U} from "../../../joiner";
 import Editor from "@monaco-editor/react";
 
 
 function JsxEditorComponent(props: AllProps) {
     const view = props.view;
-    const readOnly = U.getDefaultViewsID().includes(view.id);
+    const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && U.getDefaultViewsID().includes(view.id);
     const [jsx, setJsx] = useStateIfMounted(view.jsxString);
 
     const change = (value: string|undefined) => {
@@ -15,7 +16,7 @@ function JsxEditorComponent(props: AllProps) {
     }
 
 
-    const blur = (evt: React.FocusEvent<HTMLDivElement>) => {
+    const blur = (evt: React.FocusEvent) => {
         view.jsxString = jsx;
     }
 
@@ -26,14 +27,22 @@ function JsxEditorComponent(props: AllProps) {
                 defaultLanguage={'html'}  value={view.jsxString} />
     </div>;
 }
-interface OwnProps { viewid: Pointer<DViewElement, 1, 1, LViewElement>; }
-interface StateProps { view: LViewElement }
+interface OwnProps {
+    viewid: Pointer<DViewElement, 1, 1, LViewElement>;
+    readonly?: boolean;
+}
+
+interface StateProps {
+    view: LViewElement;
+    debugmode: boolean;
+}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as any;
+    const ret: StateProps = {} as FakeStateProps;
+    ret.debugmode = state.debug;
     ret.view = LViewElement.fromPointer(ownProps.viewid);
     return ret;
 }

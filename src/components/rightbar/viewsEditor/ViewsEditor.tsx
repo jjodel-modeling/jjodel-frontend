@@ -1,13 +1,13 @@
 import React, {Dispatch, ReactElement} from "react";
 import {DState} from "../../../redux/store";
 import {connect} from "react-redux";
-import {LViewElement, LViewPoint} from "../../../joiner";
+import {DUser, LProject, LUser, LViewElement, LViewPoint} from "../../../joiner";
 import ViewsData from "./Views";
 import ViewData from "./View";
+import {FakeStateProps} from "../../../joiner/types";
 
 function ViewsEditorComponent(props: AllProps) {
-
-    const views = props.views;
+    const project = props.project;
     const stackViews = props.stackViews;
     const viewpoints = props.viewpoints;
     const debug = props.debug;
@@ -15,12 +15,12 @@ function ViewsEditorComponent(props: AllProps) {
     return(<div>
         {(stackViews.length > 0) ?
             <ViewData view={stackViews[stackViews.length - 1]} viewpoints={viewpoints} debug={debug} /> :
-            <ViewsData views={views} />}
+            <ViewsData project={project} />}
     </div>);
 }
 interface OwnProps { }
 interface StateProps {
-    views: LViewElement[];
+    project: LProject;
     stackViews: LViewElement[];
     viewpoints: LViewPoint[];
     debug: boolean;
@@ -28,13 +28,13 @@ interface StateProps {
 interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
-
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as any;
-    ret.views = LViewElement.fromPointer(state.viewelements);
+    const ret: StateProps = {} as FakeStateProps;
+    const user = LUser.fromPointer(DUser.current);
+    ret.project = user.project as LProject;
     ret.stackViews = LViewElement.fromPointer(state.stackViews);
     ret.viewpoints = LViewPoint.fromPointer(state.viewpoints);
-    ret.views = ret.views.filter(view => !(view.viewpoint) || view.viewpoint?.id === state.viewpoint);
+    // ret.views = ret.views.filter(view => view && (!(view.viewpoint) || view.viewpoint?.id === state.viewpoint));
     ret.debug = state.debug;
     return ret;
 }

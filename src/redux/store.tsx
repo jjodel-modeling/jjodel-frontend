@@ -1,4 +1,5 @@
 import {
+    BEGIN,
     Constructors,
     CoordinateMode,
     CreateElementAction,
@@ -20,7 +21,7 @@ import {
     DOperation,
     DPackage,
     DParameter,
-    DPointerTargetable,
+    DPointerTargetable, DProject,
     DRefEdge,
     DReference,
     DUser,
@@ -30,7 +31,7 @@ import {
     DViewPoint,
     DVoidEdge,
     EdgeBendingMode,
-    EdgeHead,
+    EdgeHead, END,
     GObject,
     GraphPoint,
     GraphSize,
@@ -52,7 +53,7 @@ import {
     LOperation,
     LPackage,
     LParameter,
-    LPointerTargetable,
+    LPointerTargetable, LProject,
     LRefEdge,
     LReference,
     LUser,
@@ -60,6 +61,7 @@ import {
     LVertex,
     LViewElement,
     LViewPoint,
+    packageDefaultSize,
     Pointer,
     Pointers,
     RuntimeAccessible,
@@ -72,6 +74,8 @@ import {
 import React from "react";
 import {DV} from "../common/DV";
 import LeaderLine from "leader-line-new";
+import {Selected} from "../joiner/types";
+import {DefaultEClasses, ShortDefaultEClasses} from "../common/U";
 
 console.warn('ts loading store');
 
@@ -104,51 +108,46 @@ export class DState extends DPointerTargetable{
         return new Constructors(new DState('dwc'), undefined, false, undefined).DPointerTargetable().DState().end();
     }
 
-    debug: boolean = false;
-    logs: Pointer<DLog, 0, 'N', LLog> = [];
+    debug: boolean = true;
+    logs: Pointer<DLog>[] = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
-    currentUser!: DUser;
 
-    viewelements: Pointer<DViewElement, 0, 'N', LViewElement> = [];
-    stackViews: Pointer<DViewElement, 0, 'N', LViewElement> = [];
+
+    viewelements: Pointer<DViewElement, 0, 'N'> = [];
+    stackViews: Pointer<DViewElement, 0, 'N'> = [];
 
     // users: Dictionary<DocString<Pointer<DUser>>, UserState> = {};
     // collaborators: UserState[];
-    idlookup: Record<Pointer<DPointerTargetable, 1, 1>, DPointerTargetable> = {};
+    idlookup: Record<Pointer<DPointerTargetable>, DPointerTargetable> = {};
 
     //// DClass section to fill
-    graphs: Pointer<DGraph, 0, 'N', LGraph> = [];
-    voidvertexs: Pointer<DGraphVertex, 0, 'N', LGraphVertex> = [];
-    vertexs: Pointer<DVertex, 0, 'N', LVertex> = [];
-    graphvertexs: Pointer<DGraphVertex, 0, 'N', LGraphVertex> = [];
+    graphs: Pointer<DGraph, 0, 'N'> = [];
+    voidvertexs: Pointer<DGraphVertex, 0, 'N'> = [];
+    vertexs: Pointer<DVertex, 0, 'N'> = [];
+    graphvertexs: Pointer<DGraphVertex, 0, 'N'> = [];
 
-    edgepoints: Pointer<DEdgePoint, 0, 'N', LEdgePoint> = [];
+    edgepoints: Pointer<DEdgePoint, 0, 'N'> = [];
     //my addon
-    extEdges: Pointer<DExtEdge, 0, "N", LExtEdge> = [];
-    refEdges: Pointer<DRefEdge, 0, "N", LRefEdge> = [];
+    extEdges: Pointer<DExtEdge, 0, "N"> = [];
+    refEdges: Pointer<DRefEdge, 0, "N"> = [];
 
-    classifiers: Pointer<DClassifier, 0, 'N', LClassifier> = [];
-    enumerators: Pointer<DEnumerator, 0, 'N', LEnumerator> = [];
-    packages: Pointer<DPackage, 0, 'N', LPackage> = [];
-    primitiveTypes: Pointer<DClass, 0, "N", LClass> = [];
-    attributes: Pointer<DAttribute, 0, "N", LAttribute> = [];
-    enumliterals: Pointer<DEnumLiteral, 0, "N", LEnumLiteral> = [];
-    references: Pointer<DReference, 0, "N", LReference> = [];
-    classs: Pointer<DClass, 0, "N", LClass> = [];
-    operations: Pointer<DOperation, 0, "N", LOperation> = [];
-    parameters: Pointer<DParameter, 0, "N", LParameter> = [];
-    returnTypes: Pointer<DClass, 0, "N", LClass> = [];
+    classifiers: Pointer<DClassifier, 0, 'N'> = [];
+    enumerators: Pointer<DEnumerator, 0, 'N'> = [];
+    packages: Pointer<DPackage, 0, 'N'> = [];
+    primitiveTypes: Pointer<DClass, 0, "N"> = [];
+    attributes: Pointer<DAttribute, 0, "N"> = [];
+    enumliterals: Pointer<DEnumLiteral, 0, "N"> = [];
+    references: Pointer<DReference, 0, "N"> = [];
+    classs: Pointer<DClass, 0, "N"> = [];
+    operations: Pointer<DOperation, 0, "N"> = [];
+    parameters: Pointer<DParameter, 0, "N"> = [];
+    ecoreClasses: Pointer<DClass, 0, "N"> = [];
+    returnTypes: Pointer<DClass, 0, "N"> = [];
     /// DClass section end
 
-    isEdgePending: { user: Pointer<DUser, 1, 1, LUser>, source: Pointer<DClass, 1, 1, LClass> } = {
-        user: '',
-        source: ''
-    };
+    isEdgePending: {user: Pointer<DUser>, source: Pointer<DClass>} = {user: '', source: ''};
 
-    contextMenu: { display: boolean, x: number, y: number } = {display: false, x: 0, y: 0};
-
-    //dragging: {random: number, id: string} = { random: 0, id: "" }; fix
-    edges: EdgeOptions[] = [];  // delete
+    contextMenu: {display: boolean, x: number, y: number} = {display: false, x: 0, y: 0};
 
     deleted: string[] = [];
 
@@ -161,31 +160,29 @@ export class DState extends DPointerTargetable{
         view: Pointer<DViewElement, 1, 1>,
         modelElement: Pointer<DModelElement, 0, 1> // if a node is clicked: a node and a view are present, a modelElement might be. a node can exist without a modelElement counterpart.
     };
-    users!: Pointer<DUser, 1, 'N', LUser>;
 
-    viewpoint: Pointer<DViewPoint, 1, 1, LViewPoint> = '';
-    viewpoints: Pointer<DViewPoint, 0, 'N', LViewPoint> = [];
+    users: Pointer<DUser, 0, 'N', LUser> = [];
 
-    m2models: Pointer<DModel, 0, 'N', LModel> = [];
-    m1models: Pointer<DModel, 0, 'N', LModel> = [];
+    viewpoint: Pointer<DViewPoint> = '';
+    viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
+
+    m2models: Pointer<DModel, 0, 'N'> = [];
+    m1models: Pointer<DModel, 0, 'N'> = [];
 
     room: string = '';
-    isCleaning: boolean = false;    // check if a room is being cleaned
 
-    //selected: Dictionary<Pointer<DUser>, Pointer<DModelElement, 0, 1, LModelElement>> = {};
-    selected: Pointer<DModelElement, 0, 1, LModelElement> = '';
-    iot: null|boolean = null;
-    topics: string[] = [];
+    selected: Selected = {};
 
-    isLoading: boolean = true;
+    isLoading: boolean = false;
 
+    projects: Pointer<DProject, 0, 'N'> = [];
 
     static init(store?: DState): void {
+        BEGIN()
         const viewpoint = DViewPoint.new('Default', '');
         viewpoint.id = 'Pointer_DefaultViewPoint';
         CreateElementAction.new(viewpoint);
         SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
-
         const views: DViewElement[] = makeDefaultGraphViews();
         for (let view of views) {
             view.id = 'Pointer_View' + view.name;
@@ -195,7 +192,7 @@ export class DState extends DPointerTargetable{
 
         for (let primitiveType of Object.values(ShortAttribETypes)) {
             let dPrimitiveType;
-            if (primitiveType === ShortAttribETypes.void) continue; // or make void too without primitiveType = true, but with returnType = true?
+            if (primitiveType === ShortAttribETypes.EVoid) continue; // or make void too without primitiveType = true, but with returnType = true?
             else {
                 dPrimitiveType = DClass.new(primitiveType, false, false, true, false, '', undefined, false);
                 dPrimitiveType.id = 'Pointer_' + primitiveType.toUpperCase();
@@ -203,75 +200,160 @@ export class DState extends DPointerTargetable{
             }
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
         }
+
+        /// creating m3 "Object" metaclass
+        let dObject = DClass.new(ShortDefaultEClasses.EObject, false, false, false, false, '', undefined, false);
+        for (let defaultEcoreClass of Object.values(DefaultEClasses)){
+            // todo: creat everyone and not just object, make the whole m3 populated.
+        }
+        dObject.id = 'Pointer_' + ShortDefaultEClasses.EObject.toUpperCase();
+        CreateElementAction.new(dObject);
+        SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
+        END();
+
     }
 }
-
 function makeDefaultGraphViews(): DViewElement[] {
 
-    let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname]);
+    let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname], '', 1, false);
     modelView.draggable = false; modelView.resizable = false;
-    modelView.query = 'context DModel inv: true';
+    modelView.oclCondition = 'context DModel inv: true';
+    modelView.usageDeclarations = "(ret)=>{\n" +
+        "// ** preparations and default behaviour here ** //\n" +
+        "//ret.data = data\n" +
+        "ret.node = node\n" +
+        "ret.view = view\n" +
+        "// custom preparations:\n" +
+        "let packages = data?.packages || [];\n" +
+        "let suggestedEdges = data?.suggestedEdges || {};\n" +
+        "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
+        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+        "// ** declarations here ** //\n" +
+        "ret.firstPackage = packages[0]\n"+
+        "ret.otherPackages = packages.slice(1)\n"+
+        "ret.m1Objects = data?.allSubObjects || []\n"+
+        "ret.refEdges = (suggestedEdges.reference || []).filter(e => !e.vertexOverlaps)\n"+
+        "ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps)\n"+
+        "}";
 
-    let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname]);
-    packageView.defaultVSize = new GraphSize(0, 0, 400, 500);
-    packageView.query = `context DPackage inv: not (self.name = 'default')`;
+    let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname], '', 1, false);
+    packageView.defaultVSize = packageDefaultSize;
+    packageView.oclCondition = `context DPackage inv: true`;
 
-
-    const defaultPackage: DViewElement = DViewElement.new('DefaultPackage', DV.defaultPackage());
+/*
+    const defaultPackage: DViewElement = DViewElement.new('DefaultPackage', DV.defaultPackage(), undefined, '', '', '', [], '', 1, false);
     defaultPackage.defaultVSize = new GraphSize(0, 0);
     defaultPackage.explicitApplicationPriority = 2;
-    defaultPackage.query = `context DPackage inv: self.name = 'default'`;
-    defaultPackage.draggable = false; defaultPackage.resizable = false;
+    defaultPackage.oclCondition = `context DPackage inv: self.name = 'default'`;
+    defaultPackage.draggable = false; defaultPackage.resizable = false;*/
 
 
-    let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.cname]);
+    let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.cname], '', 1, false);
     classView.adaptWidth = true; classView.adaptHeight = true;
-    classView.query = 'context DClass inv: true';
+    classView.oclCondition = 'context DClass inv: true';
 
-    let enumView: DViewElement = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.cname]);
+    let enumView: DViewElement = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.cname], '', 1, false);
     enumView.adaptWidth = true; enumView.adaptHeight = true;
-    enumView.query = 'context DEnumerator inv: true';
+    enumView.oclCondition = 'context DEnumerator inv: true';
 
-    let attributeView: DViewElement = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.cname]);
-    attributeView.query = 'context DAttribute inv: true';
+    let attributeView: DViewElement = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.cname], '', 1, false);
+    attributeView.oclCondition = 'context DAttribute inv: true';
 
-    let referenceView: DViewElement = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.cname]);
-    referenceView.query = 'context DReference inv: true';
+    let referenceView: DViewElement = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.cname], '', 1, false);
+    referenceView.oclCondition = 'context DReference inv: true';
 
-    let operationView: DViewElement = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.cname]);
-    operationView.query = 'context DOperation inv: true';
+    let operationView: DViewElement = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.cname], '', 1, false);
+    operationView.oclCondition = 'context DOperation inv: true';
 
-    let literalView: DViewElement = DViewElement.new('Literal', DV.literalView(), undefined, '', '', '', [DEnumLiteral.cname]);
-    literalView.query = 'context DEnumLiteral inv: true';
+    let literalView: DViewElement = DViewElement.new('Literal', DV.literalView(), undefined, '', '', '', [DEnumLiteral.cname], '', 1, false);
+    literalView.oclCondition = 'context DEnumLiteral inv: true';
 
-    let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.cname]);
+    let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.cname], '', 1, false);
     objectView.adaptWidth = true; objectView.adaptHeight = true;
-    objectView.query = 'context DObject inv: true';
+    objectView.oclCondition = 'context DObject inv: true';
+    objectView.usageDeclarations = "(ret)=>{\n" +
+        "// ** preparations and default behaviour here ** //\n" +
+        "ret.data = data\n" +
+        "ret.node = node\n" +
+        "ret.view = view\n" +
+        "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
+        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+        "// ** declarations here ** //\n" +
+        "ret.metaclassName = data.instanceof?.name || \"Object\"\n" +
+        "ret.features = data.features\n" +
+        "}";
 
-    let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname]);
-    valueView.query = 'context DValue inv: true';
+    let valuecolormap: GObject = {};
+    valuecolormap[ShortAttribETypes.EBoolean] = "orange";
+    valuecolormap[ShortAttribETypes.EByte] = "orange";
+    valuecolormap[ShortAttribETypes.EShort] = "orange";
+    valuecolormap[ShortAttribETypes.EInt] = "orange";
+    valuecolormap[ShortAttribETypes.ELong] = "orange";
+    valuecolormap[ShortAttribETypes.EFloat] = "orange";
+    valuecolormap[ShortAttribETypes.EDouble] = "orange";
+    valuecolormap[ShortAttribETypes.EDate] = "green";
+    valuecolormap[ShortAttribETypes.EString] = "green";
+    valuecolormap[ShortAttribETypes.EChar] = "green";
+    valuecolormap[ShortAttribETypes.EVoid] = "gray";
+    let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname], '', 1, false);
+    valueView.oclCondition = 'context DValue inv: true';
 
-    let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.cname]);
+    valueView.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
+        "// ** preparations and default behaviour here ** //\n" +
+        "// ret.data = data // object does not need it because it displays only: features (listed individually) and name input being a subcomponent\n" +
+        "ret.node = node\n" +
+        "ret.view = view\n" +
+        "// todo: put only first N values as dependency and show only those.\n" +
+        "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
+        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+        "// ** declarations here ** //\n" +
+        "ret.instanceofname = data.instanceof?.name\n" +
+        "ret.valuesString = data.valuesString()\n" +
+        "ret.typeString = data.typeString\n" +
+        "}";
+
+    let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.cname], '', 1, false);
     voidView.appliableToClasses=["VoidVertex"];
     voidView.explicitApplicationPriority = 2;
     voidView.adaptWidth = true; voidView.adaptHeight = true;
 
-    let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '', []);
+    let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '', [], '', 1, false);
     edgePointView.appliableTo = 'edgePoint'; edgePointView.resizable = false;
     // edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
     edgePointView.edgePointCoordMode = CoordinateMode.absolute;
 
     let edgeViews: DViewElement[] = [];
     let size0: GraphPoint = new GraphPoint(0, 0), size1: GraphPoint = new GraphPoint(20, 20), size2: GraphPoint = new GraphPoint(20, 20); // todo: riportalo in 40,20
-    let edgePreRenderFunc: string = `() => {return{
-            segments: this.edge.segments,
-            strokeColor: 'gray',
-            strokeWidth: '2px',
-            strokeColorHover: 'black',
-            strokeColorLong: 'gray',
-            strokeLengthLimit: 300,
-            strokeWidthHover: '4px'
-        }}`;
+    let edgeConstants: string = "(ret)=>{\n" +
+        "// ** preparations and default behaviour here ** //\n" +
+        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+        "// ** declarations here ** //\n" +
+        "   ret.strokeColor = 'gray'\n"+
+        "   ret.strokeWidth = '2px'\n"+
+        "   ret.strokeColorHover = 'black'\n"+
+        "   ret.strokeColorLong = 'gray'\n"+
+        "   ret.strokeLengthLimit = 300\n"+
+        "   ret.strokeWidthHover = '4px'\n"+
+        "}";
+    let edgePrerenderFunc: string = "(ret)=>{\n" +
+        "// ** preparations and default behaviour here ** //\n" +
+        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+        "// ** declarations here ** //\n" +
+        "ret.segments = edge.segments\n"+
+        "}";
+
+    let edgeUsageDeclarations = "(ret)=>{\n" +
+        "// ** preparations and default behaviour here ** //\n" +
+        "// ret.data = data\n" +
+        "ret.edgeview = edge.view.id\n" +
+        "ret.view = view\n" +
+        "// data, edge, view are dependencies by default. delete them above if you want to remove them.\n" +
+        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+        "// ** declarations here ** //\n" +
+        "ret.start = edge.start\n"+
+        "ret.end = edge.end\n"+
+        "}";
+
     function makeEdgeView(name: string, type: EdgeHead, headSize: GraphPoint | undefined, tailSize: GraphPoint | undefined, dashing: boolean): DViewElement{
         let ev = DViewElement.new2("Edge"+name, DV.edgeView(type,
                 headSize ? DV.svgHeadTail("Head", type) : "", tailSize ? DV.svgHeadTail("Tail", type) : "", dashing ? "10.5,9,0,0" : undefined),
@@ -281,9 +363,11 @@ function makeDefaultGraphViews(): DViewElement[] {
                 v.appliableToClasses = [DVoidEdge.cname];
                 v.edgeHeadSize = headSize || size0;
                 v.edgeTailSize = tailSize || size0;
-                v.preRenderFunc = edgePreRenderFunc;
+                v.constants = edgeConstants;
+                v.usageDeclarations = edgeUsageDeclarations;
+                v.preRenderFunc = edgePrerenderFunc;
+                v.appliableTo = 'edge'; // todo: remove the entire property?
         }, false);
-        ev.appliableTo = 'edge';
         edgeViews.push(ev);
         return ev;
     }
@@ -305,7 +389,7 @@ function makeDefaultGraphViews(): DViewElement[] {
     }*/
     // nb: Error is not a view, just jsx. transform it in a view so users can edit it
 
-    return [modelView, packageView, defaultPackage,
+    return [modelView, packageView, //defaultPackage,
         classView, enumView, attributeView, referenceView, operationView,
         literalView, objectView, valueView, voidView, ...edgeViews, edgePointView];
 }
@@ -347,14 +431,14 @@ export class LState<Context extends LogicContext<DState> = any, C extends Contex
     // return type is wrong, but have to extend the static method of RuntimeAccessibleClass which is completely different and returns a class constructor.
     static get<T2 extends typeof RuntimeAccessibleClass & { logic?: typeof LPointerTargetable | undefined; }>(): T2 & LState { return LState.wrap(store.getState() as any) as any; }
     contextMenu!: {display: boolean, x: number, y: number};
-    currentUser!: LUser;
+    user!: LUser;
     debug!: boolean;
     room!: string;
     _lastSelected?: {modelElement?: LModelElement, node?: LGraphElement, view?: LViewElement};
     idlookup!:Dictionary<Pointer, DPointerTargetable>;
 
     get_contextMenu(c: Context): this["contextMenu"] { return c.data.contextMenu; }
-    get_currentUser(c: Context): this["currentUser"] { return LState.wrap(c.data.currentUser) as LUser; }
+    // get_user(c: Context): this["user"] { return LState.wrap(c.data.user) as LUser; }
     get_debug(c: Context): this["debug"] { return c.data.debug; }
     get_room(c: Context): this["room"] { return c.data.room; }
     get_idlookup(c: Context): this["idlookup"] { return c.data.idlookup; }

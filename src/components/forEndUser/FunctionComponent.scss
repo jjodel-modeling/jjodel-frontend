@@ -1,0 +1,10 @@
+[data-mode="detailedMode"]{
+  .simpleMode{ display: none; }
+  input.input{
+    background: transparent;
+    border: none;
+  }
+}
+[data-mode="simpleMode"]{
+  .detailedMode{ display: none; }
+}

@@ -1,7 +1,7 @@
 import React, {Dispatch, ReactElement, ReactNode, useEffect} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
-import {DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer, U} from '../../joiner';
+import {DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer} from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './style.scss';
 
@@ -9,7 +9,6 @@ import './style.scss';
 function InputComponent(props: AllProps) {
     // todo: data can be injected with UX, if field is present, can take type from a metainfo like __info_of__
     const data = props.data;
-    let editable = true;
 
     /*  Uncomment this when we have user authentication: if a user is on a ME, it cannot be edited.
                 damiano: ok, ma se data non è ModelElement crasha perchè non ha "father"
@@ -32,23 +31,20 @@ function InputComponent(props: AllProps) {
     const [isTouched, setIsTouched] = useStateIfMounted(false);
     const [showTooltip, setShowTooltip] = useStateIfMounted(false);
 
-    useEffect(() => {
-        // I check if the value that I have in my local state is being edited by other <Input />
-        const oldValue = (!data) ? 'undefined' : (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined'
-        if(value !== oldValue && !isTouched){
-            setValue(oldValue);
-            setIsTouched(false);
-        }
-    })
+    // I check if the value that I have in my local state is being edited by other <Input />
+    const oldValue = (!data) ? 'undefined' : (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined'
+    if (value !== oldValue && !isTouched){
+        setValue(oldValue);
+        setIsTouched(false);
+    }
 
 
     if (!data) return(<></>);
-    const readOnly = (props.readonly !== undefined) ? props.readonly : data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
+    const readOnly = (props.readonly !== undefined) ? props.readonly : !props.debugmodee && data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
-    let tooltip: string|undefined = (props.tooltip === true) ? ((data['__info_of__' + field]) ? data['__info_of__' + field].txt: '') : props.tooltip;
-    tooltip = (tooltip) ? tooltip : '';
+    let tooltip: ReactNode|string|undefined = ((props.tooltip === true) ? data['__info_of__' + field]?.txt : props.tooltip) || '';
 
     let css = 'my-auto input ';
     css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
@@ -93,27 +89,26 @@ function InputComponent(props: AllProps) {
     delete otherprops.hidden;
     delete otherprops.inputStyle;
     delete otherprops.children;
-    delete otherprops.selected;
     delete otherprops.autosize; // because react complains is bool in dom attribute or unknown attrib name
-    delete otherprops.autoSize;
     let input = <input {...otherprops}
                        key={`${field}.${data.id}`}
                        className={props.inputClassName || css}
                        style={props.inputStyle}
                        spellCheck={false}
-                       readOnly={readOnly || (!editable && false)}
+                       readOnly={readOnly}
                        type={type} value={value} onChange={change} onBlur={blur}
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
-    // style={{cursor: (tooltip) ? 'help' : 'auto'}}
     return(<label className={'p-1'} {...otherprops}
                   style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor: tooltip ? 'help' : 'auto', ...((props as any).style || {})}}>
 
-        { label && <label className={'my-auto'}
-                          onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)}>
-            {label}</label>}
-        {jsxLabel && <label
-            onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)}>{jsxLabel}</label> }
+        {label && <label className={'my-auto'} onMouseEnter={e => setShowTooltip(true)}
+                         onMouseLeave={e => setShowTooltip(false)}>{label}
+        </label>}
+
+        {jsxLabel && <label onMouseEnter={e => setShowTooltip(true)}
+                            onMouseLeave={e => setShowTooltip(false)}>{jsxLabel}
+        </label>}
 
         {(tooltip && showTooltip) && <div className={'my-tooltip'}>
             <b className={'text-center text-capitalize'}>{field}</b>
@@ -121,8 +116,9 @@ function InputComponent(props: AllProps) {
             <label>{tooltip}</label>
         </div>}
 
-        {autosize ? <div className={ (autosize ? 'autosize-input-container' : '') + (props.asLabel ? ' labelstyle' : '')}
-                          data-value={value}>{input}</div> : input}
+        {autosize ? <div className={(autosize ? 'autosize-input-container' : '') + (props.asLabel ? ' labelstyle' : '')}
+                         data-value={value}>{input}
+        </div> : input}
     </label>);
 }
 
@@ -148,6 +144,7 @@ export interface InputOwnProps {
     key?: React.Key | null;
 }
 interface StateProps {
+    debugmodee: boolean;
     data: LPointerTargetable & GObject;
     // selected: Dictionary<Pointer<DUser>, LModelElement | null>;
 }
@@ -158,6 +155,7 @@ type AllProps = Overlap<InputOwnProps, Overlap<StateProps, DispatchProps>>;
 function mapStateToProps(state: DState, ownProps: InputOwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
+    ret.debugmodee = state.debug;
     ret.data = LPointerTargetable.fromPointer(pointer);
     /*
     const selected = state.selected;

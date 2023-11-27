@@ -2,6 +2,7 @@ import React, {Dispatch, ReactElement} from 'react';
 import {DState, statehistory} from "../../../redux/store";
 import {connect} from "react-redux";
 import {DUser, GObject, RedoAction, UndoAction} from "../../../joiner";
+import {FakeStateProps} from "../../../joiner/types";
 
 function EditComponent(props: AllProps) {
     const undo = props.undo;
@@ -14,9 +15,9 @@ function EditComponent(props: AllProps) {
         RedoAction.new(index + 1);
     }
 
-    return(<li className={'nav-item dropdown'}>
-        <div tabIndex={-1} className={'dropdown-toggle'} data-bs-toggle={'dropdown'}>Edit</div>
-        <ul className={'dropdown-menu'}>
+    return(<li className={'dropdown-item'}>Edit
+        <i className={'ms-auto bi bi-caret-right-fill'} />
+        <ul className={'submenu dropdown-menu'}>
             <li tabIndex={-1} onClick={e => doUndo(0)} className={'dropdown-item'}>Undo ({undo.length})</li>
             <li tabIndex={-1} onClick={e => doRedo(0)} className={'dropdown-item'}>Redo ({redo.length})</li>
         </ul>
@@ -30,7 +31,9 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as any;
+    const ret: StateProps = {} as FakeStateProps;
+    // ret.undo = statehistory[DUser.current]?.undoable || [];
+    // ret.redo = statehistory[DUser.current]?.redoable || [];
     ret.undo = statehistory[DUser.current].undoable;
     ret.redo = statehistory[DUser.current].redoable;
     return ret;

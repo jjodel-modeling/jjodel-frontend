@@ -1,5 +1,5 @@
 import React from "react";
-import type {Dictionary, DocString, LReference, Pointer, ValueDetail} from "../../../../joiner";
+import type {Dictionary, DocString, LClassifier, LReference, Pointer, ValueDetail} from "../../../../joiner";
 import {
     DAttribute,
     DClass,
@@ -11,11 +11,10 @@ import {
     LObject,
     LPointerTargetable,
     LStructuralFeature,
-    LValue,
+    LValue, RuntimeAccessibleClass,
     Selectors,
     SetFieldAction
 } from "../../../../joiner";
-import MqttEditor from "./MqttEditor";
 
 
 interface Props {value: LValue}
@@ -26,7 +25,7 @@ function Value(props: Props) {
     let field = 'text'; let stepSize = 1; let maxLength = 524288;
     let min = -9223372036854775808;
     let max = 9223372036854775807; // for long, todo: aggiusta per tutti gli altri. in switch
-    switch(feature?.type.name) {
+    switch (feature?.type.name) {
         default: field="text"; break;
         case 'EChar': maxLength = 1; break;
         case 'EInt':
@@ -64,12 +63,13 @@ function Value(props: Props) {
     }
 
 
+    let featureType: LClassifier = feature?.type;
     let isattr = false, isenum = false, isref = false, isshapeless = false;
     switch(feature?.className){
         default: isshapeless = true; break;
         case DAttribute.cname:
-            if (feature.type.className === DClass.cname) isattr = true; else
-            if (feature.type.className === DEnumerator.cname) isenum = true;
+            if (featureType.className === DClass.cname) isattr = true; else
+            if (featureType.className === DEnumerator.cname) isenum = true;
             break;
         case DReference.cname: isref = true; break;
     }
@@ -82,7 +82,7 @@ function Value(props: Props) {
         let isContainment: boolean = lValue.containment;
         // todo: move this utility in LClass.instances
         let containerObjectsID: Pointer[] = lValue.fatherList.map( lm => lm.id);
-        let validObjects = Selectors.getObjects().filter((obj) => obj.instanceof?.id === feature.type?.id);
+        let validObjects = Selectors.getObjects().filter((obj) => (featureType as LClass).isSuperClassOf(obj.instanceof, true));
         validObjects =  validObjects.filter( obj => !containerObjectsID.includes(obj.id)); // avoiding containment loops damiano todo: put this filter in set_value too
         let freeObjects = [];
         let boundObjects = [];
@@ -92,9 +92,9 @@ function Value(props: Props) {
             if (o.isRoot) freeObjects.push(o); else boundObjects.push(o);
         }
         let map = (object: LObject) => <option key={object.id} value={object.id}>{object.name/*.feature('name')*/}</option>;
-        select_options = <><optgroup label={"Free Objects"}>{freeObjects.map(map)}</optgroup><optgroup label={"Bound Objects"}>{boundObjects.map(map)}</optgroup></>; }
+        select_options = <><optgroup label={"Free     Objects"}>{freeObjects.map(map)}</optgroup><optgroup label={"Bound Objects"}>{boundObjects.map(map)}</optgroup></>; }
     else if (isenum) {
-        select_options = <optgroup label={"Literals of " + feature.type.name}>{(feature.type as LEnumerator).literals.map((literal, i) => <option key={literal.id} value={literal.id}>{literal.name}</option>)}</optgroup>;
+        select_options = <optgroup label={"Literals of " + featureType.name}>{(featureType as LEnumerator).literals.map((literal, i) => <option key={literal.id} value={literal.id}>{literal.name}</option>)}</optgroup>;
     }
     else if (isshapeless) {
         // damiano todo: rewrite entirely this section to separate bound and free objects, copying from if(isref)

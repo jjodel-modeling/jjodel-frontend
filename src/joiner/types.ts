@@ -3,11 +3,11 @@ import type {ShortAttribETypes, Pointer, RuntimeAccessibleClass, EdgeSegment} fr
 import type React from "react";
 import {
     AttribETypes,
-    CoordinateMode,
+    CoordinateMode, DGraphElement, DPointerTargetable, DState, DUser,
     EdgeHead,
-    EGraphElements, EModelElements,
-    LEdgePoint,
-    LGraphElement,
+    EGraphElements, EModelElements, LAttribute, LClass, LEdge,
+    LEdgePoint, LEnumerator, LEnumLiteral, LGraph,
+    LGraphElement, LGraphVertex, LModel, LObject, LOperation, LPackage, LParameter, LReference, LValue, LVertex,
     LVoidEdge,
     LVoidVertex
 } from "../joiner";
@@ -69,7 +69,6 @@ export type GObject<DocSubType = ''> = DocSubType extends object ? { [key: strin
 export type RawObject = { [key: string]: NotFunction; };
 // Json<T> = oggetto con le chiavi di T senza le funzioni (post deserializzazione)
 export type Json<T extends GObject = RawObject> =
-
         {[key in keyof T]: T[key] extends Function ? never : (T[key] extends symbol ? "symbol" :
             Exclude<T[key], symbol>); }
         ;
@@ -174,3 +173,14 @@ export type InitialVertexSizeObj = Partial<{
     w: InitialSizeField, h: InitialSizeField, x: InitialSizeField, y: InitialSizeField}>;
 export type InitialVertexSizeFunc = ((parent: LVoidEdge|LGraphElement, thiss: LVoidVertex|LEdgePoint)=>InitialVertexSizeObj);
 export type InitialVertexSize =  undefined | InitialVertexSizeObj | InitialVertexSizeFunc; // | ((segment: EdgeSegment) => privateTempIVS);
+export type Dependency = {
+    root: keyof DState,
+    obj: Pointer<DPointerTargetable, 0, 1>,
+    field: keyof DPointerTargetable|'',
+    op: ''|'-='
+};
+export type Selected = Dictionary<Pointer<DUser>, Pointer<DGraphElement, 0, 1>>;
+export type FakeStateProps = any;
+export type ApiResponse = {code: number, body: Json|string}
+export type DataTypes = LModel|LPackage|LClass|LEnumerator|LAttribute|LReference|LOperation|LParameter|LEnumLiteral|LObject|LValue
+export type NodeTypes = LGraph|LGraphVertex|LVoidVertex|LVertex|LGraphElement|LEdge|LEdgePoint;

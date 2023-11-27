@@ -1,4 +1,4 @@
-import React, {CSSProperties, ReactNode} from "react";
+import React, {CSSProperties, PureComponent, ReactNode} from "react";
 import type {
     DEdge,
     DGraph,
@@ -12,8 +12,8 @@ import type {
     LViewElement,
     Pointer, PrimitiveType
 } from "../../../joiner";
-import {LClass, LEdge, LUser, LViewPoint} from "../../../joiner";
-import {InitialVertexSize} from "../../../joiner/types";
+import {LClass, LEdge, LUser, LViewPoint, RuntimeAccessible} from "../../../joiner";
+import {GObject, InitialVertexSize, orArr} from "../../../joiner/types";
 
 export class GraphElementStatee {/*
     constructor(preRenderFunc: string | undefined, evalContext: GObject, templatefunc: () => React.ReactNode) {
@@ -38,38 +38,43 @@ export class GraphElementReduxStateProps {
     view!: LViewElement;
     views!: LViewElement[]; // all applicable views
     // graphID!: string;
-    data?: LModelElement;
-    dataid?: Pointer<DModelElement, 1, 1, LModelElement>;
+    // dataid?: Pointer<DModelElement, 1, 1, LModelElement>;
     // model?: LModel;
     // [userMappedFromRedux: string]: any; // roba che l'utente ha dichiarato di voler prendere dallo stato e redux gli carica nelle props
-    preRenderFunc?: string;
+    //preRenderFunc?: string;
     evalContext!: Json;
-    template!: string;
+    //template!: string;
     node!: LGraphElement;
-    graph!: LGraph;
+    data?: LModelElement;
+    usageDeclarations!: DefaultUsageDeclarations;
+    // graph!: LGraph;
 
-    lastSelected!: LModelElement | null;
+    // lastSelected!: LModelElement | null;
     isEdgePending!: { user: LUser, source: LClass };// vertex only
 }
 
 export class GraphElementDispatchProps {
 }
 
-export class GraphElementOwnProps {
-    data?: Pointer<DModelElement, 0, 1, LModelElement>;
-    view?:Pointer<DViewElement, 1, 1, LViewElement>; // | LViewElement
-    // generic props for every component that this component will need to extend joining user-specified values and component-specific built-in values
-    children?: any;
+// generic props for every component that this component will need to extend joining user-specified values and component-specific built-in values
+export class BasicReactOwnProps {
+    children?: ReactNode; // orArr<JSX.Element | PrimitiveType>;
     style?: CSSProperties;
-    'class'?: string | string[];
-    'className'?: string | string[];
+    class?: string | string[]; // my add as a fault-tolerant fix for users not used to jsx
+    className?: string | string[];
     key?: string;
+}
+
+export class GraphElementOwnProps extends BasicReactOwnProps {
+    data?: Pointer<DModelElement, 0, 1, LModelElement> | LModelElement;
+    view?: Pointer<DViewElement, 1, 1, LViewElement> | LViewElement
+    initialSize?: InitialVertexSize;
+
     parentnodeid?: Pointer<DGraphElement, 1, 1, LGraphElement>; // Injected
     nodeid?: Pointer<DGraphElement, 1, 1, LGraphElement>; // Injected
     graphid?: Pointer<DGraph, 1, 1, LGraph>; // injected
     parentViewId?: Pointer<DViewElement, 1, 1, LViewElement>; // injected
     htmlindex?: number; // injected
-    initialSize?: InitialVertexSize;
 }
 
 export class EdgeOwnProps extends GraphElementOwnProps {
@@ -79,17 +84,37 @@ export class EdgeOwnProps extends GraphElementOwnProps {
     isVertex?: boolean = true;
     start!: LGraphElement["id"];
     end!: LGraphElement["id"];
-    label?: DEdge["longestLabel"];
-    labels?: DEdge["labels"];
-    key?: string;
+    // label?: DEdge["longestLabel"]; they were initial values to be stored in node, initialized in jsx. but i moved them to view
+    // labels?: DEdge["labels"];
 }
 
 export class EdgeStateProps extends GraphElementReduxStateProps {
     node!: LEdge;
-    lastSelected!: LModelElement | null;
+    edge!: LEdge; // just alias for node
+    //lastSelected!: LModelElement | null;
     isEdgePending!: { user: LUser, source: LClass };
     viewpoint!: LViewPoint;
     start!: LGraphElement;
     end!: LGraphElement;
     // key: string;
+}
+
+// @RuntimeAccessible
+export class DefaultUsageDeclarations{
+    // all can be deleted in usageDeclaration function except view.
+    view?: GraphElementReduxStateProps["view"];
+    node?: GraphElementReduxStateProps["node"];
+    data: GraphElementOwnProps["data"];
+    [key:string]: any;
+    constructor(ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
+        /*this.data = ret.data;
+        this.view = ret.view;
+        this.node = ret.node;/*/
+    }
+}
+
+// @RuntimeAccessible
+export class EdgeDefaultUsageDeclarations extends DefaultUsageDeclarations{
+    start!: EdgeOwnProps["start"];
+    end!: EdgeOwnProps["end"];
 }

@@ -2,32 +2,39 @@ import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import Editor from "@monaco-editor/react";
 import {DState, DViewElement, LViewElement, Pointer, U} from "../../../joiner";
-
+import {useStateIfMounted} from "use-state-if-mounted";
+import {FakeStateProps} from "../../../joiner/types";
 
 function OclEditorComponent(props: AllProps) {
     const view = props.view;
+    const [ocl, setOcl] = useStateIfMounted(view.oclCondition);
     if(!view) return(<></>);
-    const readOnly = U.getDefaultViewsID().includes(view.id);
-
+    const readOnly = props.readonly !== undefined ? props.readonly : U.getDefaultViewsID().includes(view.id);
     const change = (value: string|undefined) => {
-        if (value !== undefined) view.query = value;
+        if(value !== undefined) setOcl(value);
+        // ma questo non setta solo lo stato locale? prima era:
+        // if (value !== undefined) view.query = value;
     }
 
-    return <div style={{height: '5em'}}>
+    return <>
         <label className={'ms-1 mb-1'}>OCL Editor</label>
-        <Editor className={'mx-1'} onChange={change}
-                options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                defaultLanguage={'js'} value={view.query} />
-    </div>;
+        <div style={{minHeight: '5em', height: '6em', resize: 'vertical', overflowY: 'auto'}} tabIndex={-1} onBlur={e => view.oclCondition = ocl}>
+            <Editor className={'mx-1'} onChange={change}
+                    options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
+                    defaultLanguage={'js'} value={view.oclCondition} />
+        </div>
+    </>;
 }
-interface OwnProps { viewid: Pointer<DViewElement, 1, 1, LViewElement>; }
+interface OwnProps {
+    readonly?: boolean;
+    viewid: Pointer<DViewElement, 1, 1, LViewElement>; }
 interface StateProps { view: LViewElement }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as any;
+    const ret: StateProps = {} as FakeStateProps;
     ret.view = LViewElement.fromPointer(ownProps.viewid);
     return ret;
 }

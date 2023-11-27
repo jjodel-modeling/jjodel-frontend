@@ -1,4 +1,4 @@
-import type {U as UType} from '../../joiner';
+import type {U as UType, GraphDragManager, MouseUpEvent} from '../../joiner';
 import {
     Action,
     CompositeAction,
@@ -8,25 +8,26 @@ import {
     DocString,
     DPointerTargetable,
     DState,
+    DUser,
+    getPath,
+    GObject,
     Log,
+    LPointerTargetable,
     MyError,
     ParsedAction,
-    Pointer,
+    PendingPointedByPaths,
+    PointedBy,
+    Pointer, Pointers,
     RuntimeAccessibleClass,
+    Selectors,
     SetFieldAction,
     SetRootFieldAction,
-    LPointerTargetable,
-    store,
-    getPath,
-    Selectors,
-    PointedBy,
-    PendingPointedByPaths,
-    statehistory, DUser, GObject
+    statehistory
 } from "../../joiner";
 import React from "react";
-import {CombineHistoryAction, LoadAction, RedoAction, UndoAction} from "../action/action";
-import {Firebase} from "../../firebase";
+import {LoadAction, RedoAction, UndoAction} from "../action/action";
 import TreeModel from 'tree-model';
+import Collaborative from "../../components/collaborative/Collaborative";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -68,7 +69,7 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 isArrayRemove = true; }
 
             let oldValue: any;
-            let unpointedElement: DPointerTargetable | undefined;
+            // let unpointedElement: DPointerTargetable | undefined;
             // perform final assignment
             if (isArrayAppend) {
                 gotChanged = true;
@@ -76,72 +77,98 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 oldValue = [...current[key]];
                 current[key] = [...current[key]];
                 current[key].push(newVal);
-                unpointedElement = undefined;
+                // unpointedElement = undefined;
                 if (action.isPointer) { newRoot = PointedBy.add(newVal as Pointer, action, newRoot, "+="); }
             } else
-            if (isArrayRemove){
+            if (isArrayRemove) {
                 if (!Array.isArray(current[key])) { current[key] = []; }
                 oldValue = [...current[key]];
-                let index = U.isNumber(newVal) ? +newVal : -1;
-                if (index === -1) index = current[key].length - 1;
-                gotChanged = index >=0 && index < current[key].length;
-                if (gotChanged){
+                let index: number;
+                if (U.isNumber(newVal)) { // delete by index
+                    index = newVal;
+                    if (index < 0) index = oldValue.length + index; // if index is -2, i remove the penultimate element
+                } else
+                if (newVal === undefined) {
+                    index = oldValue.length - 1;
+                }
+                else {
+                    index = oldValue.indexOf(newVal);
+                }
+                // if it's negatively or positively out of boundary, i skip it
+                gotChanged = index >= 0 && index < current[key].length;
+                if (gotChanged) {
                     current[key] = [...current[key]];
                     let removedval = current[key].splice(index, 1); // in-place edit
                     if (action.isPointer) { newRoot = PointedBy.remove(removedval as Pointer, action, newRoot, '-='); }
-
-                    /// a.pointsto = [x, y, z]; a.pointsto = [x, z]       --->    remove a from y.pointedby
                     /*
+                    fixed problem: se ho [dobj1, dobj2]... e li swappo, cambia un indice nel percorso "pointedby" e non me ne accorgo mai e un oggetto risulta "pointedby" da oggetti che non lo puntano o non esistono più a quell'indice
+                    SOLVED! by not including index in pointedBy path, but making it like "parentObject.arrayKey+=" instead of "parentObject.arrayKey.4"
+                    and knowing it's in the array it's enough info.
+
+                    // a.pointsto = [x, y, z]; a.pointsto = [x, z]       --->    remove a from y.pointedby
                     const elementsThatChangedIndex: DPointerTargetable[] = current[key].slice(index);
-                    todo: problema: se ho [dobj1, dobj2]... e li swappo, cambia un indice nel percorso "pointedby" e non me ne accorgo mai e un oggetto risulta "pointedby" da oggetti che non lo puntano o non esistono più a quell'indice
+
                     for (let j = 0; j < elementsThatChangedIndex.length; j++) {
                         let newindex = index + j - 1;
                         let oldFullpathTrimmed = action.pathArray.join('.');
                         se realizzi "pointedby" qui è to do: remove old paths and re-add them with updated index
-                    }*/
-                    //unpointedElement = newRoot.idlookup[oldValue];
-                }
-            }
-            else if (current[key] !== newVal) {
-                // todo: caso in cui setto manualmente classes.1 = pointer; // the latest element is array and not DPointerTargetable, so might need to buffer upper level in the tree? or instead of "current" keep an array of sub-objects encountered navigating the path in state.
-                oldValue = current[key];
-                gotChanged = true;
-                unpointedElement = newRoot.idlookup[oldValue];
-                // NB: se elimino un oggetto che contiene array di puntatori, o resetto l'array di puntatori kinda like store.arr= [ptr1, ptr2, ...]; store.arr = [];
-                // i puntati dall'array hanno i loro pointedBY non aggiornati, non voglio fare un deep check di tutto l'oggetto a cercare puntatori per efficienza.
-                if (newVal === undefined) delete current[key];
-                else current[key] = newVal;
-
-                if (action.isPointer) {
-                    if (Array.isArray(action.value)) {
-                        let oldpointerdestinations: Pointer[] = oldValue;
-                        let difference = U.arrayDifference(oldpointerdestinations, current[key]); // : {added: Pointer[], removed: Pointer[], starting: Pointer[], final: Pointer[]}
-                        for (let rem of difference.removed) { newRoot = PointedBy.remove(rem as Pointer, action, newRoot); }
-                        for (let add of difference.added) { newRoot = PointedBy.add(add as Pointer, action, newRoot); }
-                        // a.pointsto = [a, b, c];  a.pointsto = [a, b, x];    ------>     c.pointedby.remove(a) & x.pointedby.add(a)
-                        // idlookup.somelongid.pointsto = [...b];
                     }
-                    else {
-                        // a.pointsto = b;  a.pointsto = c;    ------>     b.pointedby.remove(a)
-                        newRoot = PointedBy.remove(oldValue as Pointer, action, newRoot);
-                        newRoot = PointedBy.add(current[key] as Pointer, action, newRoot);
-                    }
+                    unpointedElement = newRoot.idlookup[oldValue];
+                    */
                 }
-            } else {
+            } else
+            if (action.type === DeleteElementAction.type ? !(key in current) : current[key] === newVal) {
                 gotChanged = false;
                 // value not changed
-            }
+            } else {
+                // todo: caso in cui setto manualmente classes.1 = pointer;
+                //  the latest element is array and not DPointerTargetable, so might need to buffer upper level in the tree? or instead of "current" keep an array of sub-objects encountered navigating the path in state.
+                oldValue = current[key];
+                gotChanged = true;
+                // unpointedElement = newRoot.idlookup[oldValue];
+                // NB: se elimino un oggetto che contiene array di puntatori, o resetto l'array di puntatori kinda like store.arr= [ptr1, ptr2, ...]; store.arr = [];
+                // i puntati dall'array hanno i loro pointedBY non aggiornati, non voglio fare un deep check di tutto l'oggetto a cercare puntatori per efficienza.
+                // if (newVal === undefined) delete current[key];
+                if ((newVal === undefined) || false && action.type === DeleteElementAction.type) delete current[key];
+                else current[key] = newVal;
 
-            let fullpathTrimmed = action.pathArray.join('.');
-            /*if (unpointedElement) {
-                if (isArrayAppend || isArrayAppend) fullpathTrimmed.substr(0, fullpathTrimmed.length - 2);
-                U.arrayRemoveAll(unpointedElement.pointedBy, fullpathTrimmed); // todo: se faccio una insert in mezzo ad un array devo aggiustare tutti i path di pointedby...
+                // update pointedBy's
+                // NB: even if the current action have isPointer=true, it doesn't mean the old value is a pointer as well for sure. so need to check old values.
+                // also what if old val is pointer, and new one isn't? will it be just removed without updating pointedBy's?
+                // already fixed: might need to evaluate this if block always regardless of action.isPointer,
+                // and do checks every time both on old and new value if they actually are ptrs.
+                if (true || action.isPointer) {
+                    let oldpointerdestinations: unknown[];
+                    let newpointerdestinations: unknown[];
+                    if (Array.isArray(newVal)) {
+                        newpointerdestinations = newVal;
+                        if (Array.isArray(oldValue)) { // case: path.array = array;
+                            oldpointerdestinations = oldValue;
+                        }
+                        else { // case: path.object = array; + case: path.value = array;
+                            oldpointerdestinations = [oldValue];
+                        }
+                    }
+                    else {
+                        // case: path.array = object; + case: path.array = value;
+                        newpointerdestinations = [newVal];
+                        if (Array.isArray(oldValue)) {
+                            oldpointerdestinations = oldValue;
+                        } else {
+                            // case: path.object = object; and all other cases without arrays involved
+                            oldpointerdestinations = [oldValue];
+                        }
+                    }
+                    // after i mapped all cases to path.array = array; i solve it for that case.
+                    let difference = U.arrayDifference(oldpointerdestinations, newpointerdestinations); // : {added: Pointer[], removed: Pointer[], starting: Pointer[], final: Pointer[]}
+                    for (let rem of difference.removed) {if (Pointers.isPointer(rem))
+                        newRoot = PointedBy.remove(rem, action, newRoot, undefined, oldStateDoNotModify); }
+                    for (let add of difference.added) { if (Pointers.isPointer(add))
+                        newRoot = PointedBy.add(add, action, newRoot, undefined, oldStateDoNotModify); }
+                    // a.pointsto = [a, b, c];  a.pointsto = [a, b, x];    ------>     c.pointedby.remove(a) & x.pointedby.add(a)
+                    // idlookup.somelongid.pointsto = [...b];
+                }
             }
-            let newlyPointedElement = newRoot.idlookup[newVal];
-            if (newlyPointedElement) {
-                U.ArrayAdd(newlyPointedElement.pointedBy, fullpathTrimmed);
-            }*/
-            // console.log('deepCopyButOnlyFollowingPath final', {current, i, imax:action.pathArray.length, key, isArrayAppend, gotChanged, alreadyPastDivergencePoint});
             break;
         }
         Log.exDevv('should not reach here: reducer');
@@ -169,7 +196,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
             case LoadAction.type: return action.value;
             case CreateElementAction.type:
                 const elem: DPointerTargetable = action.value;
-
+                delete DPointerTargetable.pendingCreation[elem.id];
                 if (oldState.idlookup[elem.id]) {
                 console.error("rejected CreateElementAction, roolback occurring:", {action, elem:{...elem},
                     preexistingValue: {...oldState.idlookup[elem.id]}, isEqual: elem === oldState.idlookup[elem.id] });
@@ -286,7 +313,19 @@ let storeLoaded: boolean = false;
 
 export function reducer(oldState: DState = initialState, action: Action): DState {
     const ret = _reducer(oldState, action);
-    if(ret === oldState) return oldState;
+    if (ret === oldState) return oldState;
+    ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
+    if (!oldState?.room) return ret;
+    const ignoredFields  = ['contextMenu', '_lastSelected', 'isLoading', 'isCleaning'];
+    if(action.sender === DUser.current && !ignoredFields.includes(action.field)) {
+        const parsedAction: JSON & GObject = JSON.parse(JSON.stringify(action));
+        if(action.type === 'COMPOSITE_ACTION') for(let subAction of parsedAction.actions) delete subAction['stack'];
+        delete parsedAction['stack'];
+        Collaborative.client.emit('pushAction', parsedAction);
+    }
+
+
+    /*
     if(!oldState?.room) return ret;
     const ignoredFields  = ['contextMenu', '_lastSelected', 'selected', 'isLoading', 'isCleaning'];
     if(action.token === DUser.token && !ignoredFields.includes(action.field)) {
@@ -294,6 +333,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         const parsedAction: JSON = JSON.parse(JSON.stringify(action));
         Firebase.addAction(ret.room, parsedAction).then();
     }
+    */
     return ret;
 
 }
@@ -301,7 +341,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
 export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action): DState{
     let times: number;
     let state: DState;
-    switch(action.type) {
+    switch (action.type) {
         case UndoAction.type:
             times = action.value;
             state = oldState;
@@ -324,7 +364,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
         default:
             let ret = doreducer(oldState, action);
             if (ret === oldState) return ret;
-            statehistory[DUser.current].redoable = [];
+            // statehistory[DUser.current].redoable = [];   <-- Moved to stateInitializer()
             let delta =  U.objectDelta(ret, oldState);
             if (!filterundoableactions(delta)) return ret;
             // console.log("setting undoable action:", {ret, oldState0:{...oldState}, oldState, delta});
@@ -335,9 +375,11 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
 
 function filterundoableactions(delta: Partial<DState>): boolean {
     if (!statehistory.globalcanundostate) return false;
-    if (Object.keys(delta).length === 1 && "dragging" in delta) return false;
-    if (Object.keys(delta).length === 1 && "_lastSelected" in delta) return false;
-    if (Object.keys(delta).length === 1 && "contextMenu" in delta) return false;
+    if (Object.keys(delta).length === 1) {
+        if ("dragging" in delta) return false;
+        if ("_lastSelected" in delta) return false;
+        if ("contextMenu" in delta) return false;
+    }
     return true;
 }
 function undo(state: DState, delta: GObject | undefined, isundo = true): DState {
@@ -436,7 +478,8 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
     }
 }
 
-export function jodelInit() {
+export function stateInitializer() {
+    statehistory[DUser.current] = {redoable: [], undoable: []};
     RuntimeAccessibleClass.fixStatics();
     let dClasses: string[] = RuntimeAccessibleClass.getAllNames().filter(rc => rc[0] === 'D');
     let lClasses: string[] = RuntimeAccessibleClass.getAllNames().filter(rc => rc[0] === 'L');
@@ -444,6 +487,13 @@ export function jodelInit() {
     let lClassesMap: Dictionary<string, typeof LPointerTargetable> = lClasses.reduce((acc: GObject, curr)=> (acc[curr] = RuntimeAccessibleClass.get(curr), acc),{});
     buildLSingletons(dClassesMap, lClassesMap); setSubclasses(dClassesMap); setSubclasses(lClassesMap);
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
+    // global document events
+
+    // do not use typings or class constructors here or it will change import order
+    setTimeout( //a
+        // ()=> $(document).on("mouseup", (e: MouseUpEvent) => RuntimeAccessibleClass.get<any>("GraphDragManager").stopPanning(e)), //a
+        ()=> $(document).on("mouseup", (e: MouseUpEvent) => (window as any).GraphDragManager.stopPanning(e)), //a
+        1 //a
+    ); /// because when this function is executed, RuntimeClasses are not yet parsed.
     DState.init();
-    SetRootFieldAction.new('isLoading', false);
 }

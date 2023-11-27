@@ -72,6 +72,7 @@ export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, W
     }
 }
 RuntimeAccessibleClass.set_extend(LogicContext, MapLogicContext);
+
 @RuntimeAccessible
 export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibleClass implements ProxyHandler<T>{
     public static cname: string = "MyProxyHandler";
@@ -87,7 +88,23 @@ export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibl
     set(target: T, p: string | number | symbol, value: any, proxyitself: Proxyfied<T>): boolean { throw new Error('proxy set must be overridden'); }
     deleteProperty(target: T, p: string | symbol): boolean { throw new Error('proxy delete must be overridden'); }
 
-    ownKeys(target: T): ArrayLike<string | symbol>{ return Object.getOwnPropertyNames(target); }
+    ownKeys(target: T): ArrayLike<string | symbol>{
+        // return Object.getOwnPropertyNames(target);
+        console.log("ownkeys trap 1", {thiss:this, target})
+        console.log("ownkeys trap 2", {thiss:this, target, ret:Reflect.ownKeys(target)});
+        return Reflect.ownKeys(target);
+    }
+    /// proxy methods not used
+    /* setPrototypeOf(target: T, v: object | null): boolean { ?? }
+    apply(target: T, thisArg: any, argArray: any[]): any { }
+    defineProperty(target: T, p: string | symbol, attributes: PropertyDescriptor): boolean { }
+    construct(target: T, argArray: any[], newTarget: Function): object { }
+    getOwnPropertyDescriptor(target: T, p: string | symbol): PropertyDescriptor | undefined { }
+    has(target: T, p: string | symbol): boolean { return p in target; }
+    getPrototypeOf(target: T): object | null { }
+    isExtensible(target: T): boolean { }
+    preventExtensions(target: T): boolean { }*/
+
     static wrap<D extends RuntimeAccessibleClass, L extends LPointerTargetable = LPointerTargetable, CAN_THROW extends boolean = false,
         RET extends CAN_THROW extends true ? L : L | undefined  = CAN_THROW extends true ? L : L>
     (data: D | Pointer | undefined | null, baseObjInLookup?: DPointerTargetable, path: string = '', canThrow: CAN_THROW = false as CAN_THROW): RET{
@@ -179,8 +196,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         super();
         this.d = d;
         if (!l) {
-            l = RuntimeAccessibleClass.get(d.className)?.logic?.singleton as LE;
-            Log.exDev(!l, 'Trying to wrap class without singleton or logic mapped', { object: d })
+            l = RuntimeAccessibleClass.get(d?.className)?.logic?.singleton as LE;
+            Log.exDev(!l, 'Trying to wrap class without singleton or logic mapped: ' + d?.className, { object: d, className: d.className })
         }
         this.baseObjInLookup = baseObjInLookup || d as any;
         this.additionalPath = additionalPath;
@@ -237,8 +254,13 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             case "number": return null;
         }
 
-        switch(propKey){
+        switch (propKey) {
+            case '__l': return this.l;
+            case '__d': return this.d;
             case 'inspect': // node.js util
+            case "r":
+            case "_refresh":
+            case "_reload": return LPointerTargetable.wrap(targetObj.id);
             case '__Raw':
             case '__raw': return targetObj;
             case '__serialize': return JSON.stringify(targetObj);
@@ -372,9 +394,21 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         delete target[key];
         return true; }
 
-    ownKeys(target: ME): ArrayLike<string | symbol>{
-        return U.arrayMergeInPlace(Object.keys(target), Object.keys(this.l).filter(k => k.indexOf('set_') !== 0 || k.indexOf('get_') !== 0));
+    private mergedObject(target: ME): GObject{
+        let ret: GObject = {...target}; // U.arrayMergeInPlace(Object.keys(target), Object.keys(this.l).filter(k => k.indexOf('set_') !== 0 && k.indexOf('get_') !== 0));
+        for (let k in this.l) {
+            if (!(k in ret) && k.lastIndexOf('get_', 4) !== 0 && k.lastIndexOf('set_', 4) !== 0) ret[k] = true;
+        }
+        return ret;
     }
+    ownKeys(target: ME): ArrayLike<string | symbol>{
+        const ret: GObject = this.mergedObject(target);
+        // ret = Reflect.ownKeys(ret);
+        return Reflect.ownKeys(ret);
+    }
+
+    // has(target: ME, p: string | symbol): boolean { return p in this.mergedObject(target); }
+    has(target: ME, p: string | symbol): boolean { return (p in target) || (p in this.l); }
 
     /*
     apply(target: DModelElement, thisArg: any, argArray: any[]): any {

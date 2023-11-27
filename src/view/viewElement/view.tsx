@@ -1,6 +1,8 @@
 import {
+    BEGIN,
     Constructors,
     CoordinateMode,
+    Debug,
     DGraphElement,
     Dictionary,
     DModelElement,
@@ -10,11 +12,13 @@ import {
     EdgeBendingMode,
     EGraphElements,
     EModelElements,
+    END,
     getWParams,
     GObject,
     GraphPoint,
     GraphSize,
     Info,
+    Log,
     LogicContext,
     LPointerTargetable,
     LViewPoint,
@@ -23,7 +27,7 @@ import {
     RuntimeAccessible,
     RuntimeAccessibleClass,
     SetFieldAction,
-    ShortAttribETypes
+    ShortAttribETypes, U, windoww
 } from "../../joiner";
 import {EdgeGapMode} from "../../joiner/types";
 
@@ -44,14 +48,16 @@ export class DViewElement extends DPointerTargetable {
     // own properties
     name!: string;
 
-    // evaluate 1 sola volta all'applicazione della vista o alla creazione dell'elemento.
-    constants!: string;
+    // evaluate 1 sola volta all'applicazione della vista o all'editing del campo
+    constants?: string;
+    _parsedConstants?: GObject; // should be protected but LView is not subclass
 
     // evaluate tutte le volte che l'elemento viene aggiornato (il model o la view cambia).
     preRenderFunc!: string;
 
     jsxString!: string; // l'html template
     usageDeclarations?: string;
+
     forceNodeType?: DocString<'component name (Vertex, Field, GraphVertex, Graph)'>;
     scalezoomx: boolean = false; // whether to resize the element normally using width-height or resize it using zoom-scale css
     scalezoomy: boolean = false;
@@ -62,7 +68,7 @@ export class DViewElement extends DPointerTargetable {
     appliableToClasses!: string[]; // class names: DModel, DPackage, DAttribute...
     appliableTo!: 'node'|'edge'|'edgePoint';
     subViews!: Pointer<DViewElement, 0, 'N', LViewElement>;
-    oclApplyCondition!: string; // ocl selector
+    oclCondition!: string; // ocl selector
     explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
     defaultVSize!: GraphSize;
     adaptHeight!: boolean;// | 'fit-content' | '-webkit-fill-available';
@@ -71,7 +77,6 @@ export class DViewElement extends DPointerTargetable {
     height!: number;
     draggable!: boolean;
     resizable!: boolean;
-    query!: string;
     viewpoint: Pointer<DViewPoint, 0, 1, LViewElement> = '';
     display!: 'block'|'contents'|'flex'|string;
     constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
@@ -102,10 +107,10 @@ export class DViewElement extends DPointerTargetable {
     edgeTailSize!: GraphPoint;
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
-                      preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '',
-                      priority: number = 1 , persist: boolean = false): DViewElement {
+                      preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
+                      priority: number = 1 , persist: boolean = true): DViewElement {
         return new Constructors(new DViewElement('dwc'), undefined, persist, undefined).DPointerTargetable().DViewElement(name, jsxString, defaultVSize, usageDeclarations, constants,
-            preRenderFunc, appliableToClasses, oclApplyCondition, priority).end();
+            preRenderFunc, appliableToClasses, oclCondition, priority).end();
     }
     public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true): DViewElement {
         return new Constructors(new DViewElement('dwc'), undefined, persist, undefined)
@@ -137,22 +142,44 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     constants?: string;
     __info_of__constants: Info = {todo:true, isGlobal: true, type: "Function():Object", label:"constants declaration",
-        txt:<div>Data used in the visual representation, meant to be static values evaluated only once when the view is first applied.</div>}
+        txt:<div>Data used in the visual representation, meant to be static values evaluated only once when the view is first applied.<br/>
+        Check default value view for an example.<br/>
+    </div>}
+    // Example 1: <code>{'{color:"red", background: "gray"}'}</code><br/>
+    // Example 2: <code>{'function(){\n    let fib = [1,1]; for (let i = 2; i < 100) { fib[i] = fib[i-2]+fib[i-1]; }\n    return fib; }'}</code><br/>
 
     preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
-    __info_of__preRenderFunc: Info = {isGlobal: true, type: "Function():Object", label:"pre-render function",
-        txt:<div>Data used in the visual representation, meant to be dynamic values evaluated every time the visual representation is updated.</div>}
+    __info_of__preRenderFunc: Info = {isGlobal: true, obsolete: true, type: "Function():Object", label:"pre-render function",
+        txt:<div>Data used in the visual representation, meant to be dynamic values evaluated every time the visual representation is updated.<br/>Replaced by usageDeclarations.</div>}
 
     jsxString!: string;
     __info_of__jsxString: Info = {isGlobal: true, type: "text", label:"JSX template",
         txt:<div>The main ingredient, a <a href={"https://react.dev/learn/writing-markup-with-jsx"}>JSX template</a> that will be visualized in the graph.</div>}
 
     usageDeclarations?: string;
-    __info_of__usageDeclarations: Info = {todo: true, isGlobal: true, type: "Function():Object", label:"usage declarations",
-        txt:<div>Subset of the global or elements's data state that is graphically used.
+    __info_of__usageDeclarations: Info = {todo: false, isGlobal: true, type: "Function():Object", label:"usage declarations",
+        txt: <div>Subset of the global or elements's data state that is graphically used.
             <br/>If specified the element will only update when one of those has changed.
-            <br/>Can optimize performance and ensure the node is updated even when navigating remote properties that don\'t belong to this element,
-            <br/> like visualizing the name of an object pointed by a reference.</div>}
+            <br/>Can optimize performance and ensure the node is updated even when navigating remote properties that
+            <br/>    don\'t belong to this element, like visualizing the name of an object pointed by a reference.
+            <br/>Context: it has the usual variables present in a JSX template (data, view, node...)
+            <br/>    plus a special variable "ret" where dependencies are registered.{/*and a "state" variable containing the entire application state.*/}
+            <br/>Usage Example: see the default view for value.
+    </div>}
+    get_usageDeclarations(c: Context): this["usageDeclarations"]{
+        return c.data.usageDeclarations || "(ret)=>{ // scope contains: data, node, view, constants, state\n" +
+            "// ** preparations and default behaviour here ** //\n" +
+            "console.log('inside ud default func pre', {ret:{...ret}, data, node, view})\n" +
+            "ret.data = data\n" +
+            "ret.node = node\n" +
+            "ret.view = view\n" +
+            "console.log('inside ud default func post', {ret:{...ret}, data, node, view})\n" +
+            "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
+            // if you want your node re-rendered every time, add a dependency to ret.state = state; or ret.update = Math.random();
+            "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+            "// ** declarations here ** //\n" +
+            "}";
+    }
 
     forceNodeType?: DocString<'component name'>;
     __info_of__forceNodeType: Info = {isGlobal:true, type: "EGraphElements", enum: EGraphElements, label:"force node type",
@@ -208,12 +235,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     resizable!: boolean;
     __info_of__resizable: Info = {isNode: true, type: ShortAttribETypes.EBoolean, txt: 'if the element can be resized'}
 
-    oclApplyCondition!: string; // ocl selector
-    __info_of__oclApplyCondition: Info = {isGlobal: true, hidden:true, label:"OCL apply condition", type: "text", // TODO: what's the difference with this.query?
-        txt: 'OCL Query selector to determine which nodes or model elements should apply this view'}
-
-    query!: string;
-    __info_of__query: Info = {hidden:true, isGlobal: true, type: "text",
+    oclCondition!: string; // ocl selector
+    __info_of__oclCondition: Info = {isGlobal: true, hidden:true, label:"OCL apply condition", type: "text", // TODO: what's the difference with this.query?
         txt: 'OCL Query selector to determine which nodes or model elements should apply this view'}
 
     // todo: how about allowing a view to be part in multiple vp's? so this reference would be an array or removed, and you navigate only from vp to v.
@@ -339,12 +362,36 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__getSize: Info = {isNode:true, hidden:true, type:"Function(Pointer<GraphElement | ModelElement>) => GraphSize",
         txt:<div>Gets the size stored in this view for target element.</div>}
 
+    public _parsedConstants!: GObject;
+    public get__parsedConstants(c: Context): this['_parsedConstants'] { return c.data._parsedConstants || {}; }
+
     public get_constants(c: Context): this['constants'] {
         return c.data.constants;
     }
+
+
+    public static parseConstants(funcCode?: string): GObject | undefined {
+        if (!funcCode) return {};
+        let parsedConstants: GObject = {};
+        let context: GObject = {__param: parsedConstants};
+        context.__proto__ = windoww.defaultContext;
+        try{
+            U.evalInContextAndScopeNew( "("+funcCode+")(this.__param)", context, true, false, false);
+        } catch (e: any) {
+            Log.w("Attempted to save an invalid view.constant setup. Cause:\n" + e.message.split("\n")[0], e)
+            return undefined;
+        }
+        return parsedConstants;
+    }
+
     public set_constants(value: this['constants'], c: Context): boolean {
-        const _value: string = value ? value : '{}';
-        return SetFieldAction.new(c.data.id, 'constants', _value, '', false);
+        if (value === c.data.constants) return true;
+        let parsedConstants: GObject | undefined = LViewElement.parseConstants(value) || {};
+        BEGIN();
+        SetFieldAction.new(c.data.id, 'constants', value, '', false);
+        SetFieldAction.new(c.data.id, '_parsedConstants', parsedConstants, '', false);
+        END()
+        return true;
     }
 
     public get_preRenderFunc(c: Context): this['preRenderFunc'] {
@@ -429,6 +476,13 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     }
 
     get_children(context: Context): never[] { return []; }
+
+
+    get_lazySizeUpdate(context: Context): D["lazySizeUpdate"] { return Debug.lightMode || context.data.lazySizeUpdate; }
+    set_lazySizeUpdate(val: D["lazySizeUpdate"], context: Context): boolean {
+        return Debug.lightMode || this.set_generic_entry(context, 'lazySizeUpdate', val);
+    }
+
     get_bendingMode(context: Context): D["bendingMode"] { return context.data.bendingMode; }
     set_bendingMode(val: D["bendingMode"], context: Context): boolean {
         return this.set_generic_entry(context, 'bendingMode', val);

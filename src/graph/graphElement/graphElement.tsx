@@ -1,22 +1,32 @@
-import React, {Dispatch, PureComponent, ReactElement, ReactNode,} from "react";
+import React, {Component, Dispatch, PureComponent, ReactElement, ReactNode,} from "react";
 import {createPortal} from "react-dom";
 import {connect} from "react-redux";
 import './graphElement.scss';
-import type {EdgeStateProps, VertexComponent} from "../../joiner";
 import {
-    CreateElementAction,
-    DEdge,
+    GraphDragManager,
+    GraphSize,
+    LGraph, MouseUpEvent, Point,
+    Pointers,
+    Selectors as Selectors_, Size, TRANSACTION, WGraph
+} from "../../joiner";
+import type {EdgeOwnProps} from "./sharedTypes/sharedTypes";
+import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
+
+import {EdgeStateProps, LGraphElement, store, VertexComponent,
+    BEGIN,
+    CreateElementAction, DClass, Debug,
+    DEdge, DEnumerator,
     DGraph,
     DGraphElement,
-    Dictionary,
-    DModelElement,
-    DocString,
+    Dictionary, DModel,
+    DModelElement, DObject,
+    DocString, DPackage,
     DPointerTargetable,
     DState,
     DUser,
     DV,
     DViewElement,
-    EMeasurableEvents,
+    EMeasurableEvents, END,
     GObject,
     GraphElementDispatchProps,
     GraphElementOwnProps,
@@ -34,87 +44,92 @@ import {
     Pointer,
     RuntimeAccessible,
     RuntimeAccessibleClass,
-    Selectors,
     SetFieldAction,
     SetRootFieldAction,
     U,
     UX,
     windoww,
 } from "../../joiner";
-import {EdgeOwnProps} from "./sharedTypes/sharedTypes";
 
+const Selectors: typeof Selectors_ = windoww.Selectors;
 
-export function makeEvalContext(props: AllPropss, view: LViewElement): GObject {
-    let evalContext: GObject = view.constants ? eval('window.tmp = ' + view.constants) : {};
-    let component = GraphElementComponent.map[props.nodeid as Pointer<DGraphElement>];
-    let vcomponent = component as VertexComponent;
-    evalContext = {...windoww.defaultContext, ...evalContext, model: props.data, ...props,
-        edge: (RuntimeAccessibleClass.extends(props.node?.className, "DVoidEdge") ? props.node : undefined),
-        component, getSize:vcomponent?.getSize, setSize: vcomponent?.setSize};
+export function makeEvalContext(view: LViewElement, state: DState, ownProps: GraphElementOwnProps, stateProps: GraphElementReduxStateProps): GObject {
+    let component = GraphElementComponent.map[ownProps.nodeid as Pointer<DGraphElement>];
+    let allProps = {...ownProps, ...stateProps};
+    let parsedConstants = stateProps.view._parsedConstants;
+    let evalContext: GObject = {
+        model: stateProps.data,
+        ...ownProps,
+        ...stateProps,
+        edge: (RuntimeAccessibleClass.extends(stateProps.node?.className, "DVoidEdge") ? stateProps.node : undefined),
+        state,
+        ownProps,
+        stateProps,
+        props: allProps,
+        component,
+        constants: parsedConstants,
+        // getSize:vcomponent?.getSize, setSize: vcomponent?.setSize,
+        ...parsedConstants,
+        // ...stateProps.usageDeclarations, NOT because they are not evaluated yet. i need a basic eval context to evaluate them
+    };
+    evalContext.__proto__ = windoww.defaultContext;
     return evalContext;
 }
 
-function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, ownProps: Readonly<GraphElementOwnProps>): void {
+function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, ownProps: Readonly<GraphElementOwnProps>, state: DState): void {
     //if (!jsxString) { this.setState({template: this.getDefaultTemplate()}); return; }
     // sintassi: '||' + anything + (opzionale: '|' + anything)*N_Volte + '||' + jsx oppure direttamente: jsx
     const view: LViewElement = stateProps.view; //data._transient.currentView;
     // eslint-disable-next-line no-mixed-operators
-    let allProps: AllPropss = {...ownProps, ...stateProps} as AllPropss;
-    (allProps as GObject).props = allProps;
-    const evalContext = makeEvalContext(allProps, view);
+    const evalContext = makeEvalContext(view, state, ownProps, stateProps);
+    // Log.exDev(!evalContext.data, "missing data", {evalContext, ownProps, stateProps});
+
     // const evalContextOld = U.evalInContext(this, constants);
     // this.setState({evalContext});
     //console.error({jsx:view.jsxString, view});
 
-    // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
-    let jsxCodeString: DocString<ReactNode>;
-    let jsxparsedfunc: () => React.ReactNode;
-    try { jsxCodeString = JSXT.fromString(view.jsxString, {factory: 'React.createElement'}); }
-    catch (e: any) {
-        Log.eDevv();
-        stateProps.preRenderFunc = view.preRenderFunc;
-        stateProps.evalContext = evalContext;
-        stateProps.template = DV.errorView_string(e.message.split("\n")[0],
-            {msg: 'Syntax Error in custom user-defined template. try to remove typescript typings.', evalContext, e, view, jsx:view.jsxString});
-        return;
-    }
-    /*
-    try {
-        jsxparsedfunc = U.evalInContextAndScope<() => ReactNode>('()=>{ return ' + jsxCodeString + '}', evalContext);
-        // U.evalInContext({...this, ...evalContext}, res); // todo: remove eval and add new Function() ?
-    }
-    catch (e: any) {
-        let errormsg = ''; // 'Syntax Error in custom user-defined template.\n';
-        let otherargs: any = {e, jsxCodeString, evalContext, where:"setTemplateString()", view};
-        if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0)
-        { errormsg += 'Reminder: nullish operators ".?" and "??" are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
-        else if (view.jsxString.indexOf('?.') >= 0) { errormsg += 'Reminder: ?. operator and empty tags <></> are not supported.\n\n' +e.toString() + '\n\n' + view.jsxString; }
-        jsxparsedfunc = ()=> DV.errorView(errormsg, otherargs);
-    }*/
 
-    stateProps.preRenderFunc = view.preRenderFunc;
+    // compute usageDeclarations
+    if (!stateProps.view.__raw.usageDeclarations) {
+        U.objectMergeInPlace(evalContext, stateProps.usageDeclarations = {data: stateProps.data, view: stateProps.view, node: stateProps.node});
+    } else try {
+        // let context = { ...ret.evalContext, state, ret, ownProps, props: ret};
+        // eval usageDeclarations
+        // this is not really evaluated in provided context, as it does not find view, data in scope
+        // and if i open console data becomes the window.data of the one selected in console.
+
+        // scrapped function mode, doesn't look like possible to execute a function in a different scope after his definition,
+        // unless it becomes a string and is redefined through eval
+        /// let usageDeclarations: ((g:DefaultUsageDeclarations)=>DefaultUsageDeclarations) = U.evalInContextAndScope(ret.view.usageDeclarations, ret.evalContext, ret.evalContext);
+        // usageDeclarations(ret.usageDeclarations);
+        // ret.evalContext.usageDeclarations = ret.usageDeclarations;
+        let tempContext: GObject = {__param: stateProps.usageDeclarations};
+        tempContext.__proto__ = evalContext;
+        U.evalInContextAndScopeNew("("+stateProps.view.usageDeclarations+")(this.__param)", tempContext, true, false);
+        U.objectMergeInPlace(evalContext, stateProps.usageDeclarations);
+        // ret.evalContext.props = ret; mo more needed since UD doesn't update props anymore // hotfix to update context props after usageDeclaration mapping
+        console.log("view compute usageDeclarations SUCCESS 1",
+            {UD_obj_result:stateProps.usageDeclarations, UD_view: stateProps.view.usageDeclarations, context:evalContext, stateProps, ownProps});
+    } catch (e) {
+        Log.ee("Invalid usage declarations", {e, str: stateProps.view.usageDeclarations, view:stateProps.view, data: ownProps.data, stateProps});
+        U.objectMergeInPlace(evalContext, stateProps.usageDeclarations = {data: stateProps.data, view: stateProps.view, node: stateProps.node});
+    }
     stateProps.evalContext = evalContext;
-    stateProps.template = jsxCodeString;
-    // console.log('GE settemplatestring:', {stateProps});
 }
 
 let debugcount = 0;
-let debug = true;
 let maxRenderCounter = Number.POSITIVE_INFINITY;
+export const lightModeAllowedElements = [DModel.cname, DPackage.cname, DClass.cname, DEnumerator.cname, DObject.cname];
+
+const countRenders = true;
 @RuntimeAccessible
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
-    extends PureComponent<AllProps, GraphElementState>{
+    extends Component<AllProps, GraphElementState>{
     public static cname: string = "GraphElementComponent";
     static all: Dictionary<number, GraphElementComponent> = {};
     public static map: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = {};
     static maxid: number = 0;
     id: number;
-    public static refresh() {
-        for (let key in GraphElementComponent.all) {
-            GraphElementComponent.all[key].forceUpdate();
-        }
-        console.log(GraphElementComponent.all);
-    }
 
     public static defaultShouldComponentUpdate<AllProps extends GObject, State extends GObject, Context extends any>
     (instance: React.Component, nextProps: Readonly<AllProps>, nextState: Readonly<State>, nextContext: Context) {
@@ -125,32 +140,37 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     static mapViewStuff(state: DState, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
-        let dnode: DGraphElement | undefined = ownProps?.nodeid && state.idlookup[ownProps.nodeid] as any;
+        // let dnode: DGraphElement | undefined = ownProps?.nodeid && DPointerTargetable.from(ownProps.nodeid, state) as any;
         if (ownProps.view) {
             ret.views = [];
-            ret.view = LPointerTargetable.wrap(ownProps.view) as LViewElement;
+            ret.view = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(Pointers.from(ownProps.view), state) as DViewElement);
+            Log.w(!ret.view, "Requested view "+ownProps.view+" not found. Another view got assigned.", {requested: ownProps.view, props: ownProps, state: ret});
         }
-        else {
-            const viewScores = Selectors.getAppliedViews(ret.data, dnode, ret.graph, ownProps.view || null, ownProps.parentViewId || null);
-            ret.views = viewScores.map(e => MyProxyHandler.wrap(e.element));
+        if (!ret.view) {
+            const viewScores = Selectors.getAppliedViews(ret.data,
+                (ownProps.view as LViewElement)?.id || (ownProps.view as string) || null,
+                ownProps.parentViewId || null);
+            ret.views = viewScores.map(e => LViewElement.fromD(e.element));
             ret.view = ret.views[0];
             (ret as any).viewScores = viewScores; // debug only
         }
 
         /*        if (ownProps.view) {
-                    ret.view = DPointerTargetable.wrap(state.idlookup[ownProps.view]);
+                    ret.view = DPointerTargetable.from(ownProps.view, state);
                 } else {
                     ret.view = ret.views[0];
                 }*/
     }
 
     static mapLModelStuff(state: DState, ownProps: GraphElementOwnProps, ret: GraphElementReduxStateProps): void {
+        // NB: Edge constructor might have set it from props.start, so keep the check before overwriting.
+        if (!ret.data?.__isProxy) ret.data = LPointerTargetable.wrap(ownProps.data);
+        /*
         const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : (ownProps.data as any as DModelElement)?.id) as string;
-        ret.dataid = meid;
         // Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ret, ownProps, state});
-        ret.data = MyProxyHandler.wrap(state.idlookup[meid as any]);
+        ret.data = MyProxyHandler.wrap(meid, state);
         // Log.ex(!ret.data, "can't find model data:", {meid, state, ownpropsdata:ownProps.data, ownProps});
-
+        */
     }
 
     static mapLGraphElementStuff(state: DState,
@@ -158,30 +178,26 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                                  ret: GraphElementReduxStateProps,
                                  dGraphElementDataClass: typeof DGraphElement = DGraphElement,
                                  isDGraph?: DGraph): void {
-        const idlookup = state.idlookup;
         let nodeid: string = ownProps.nodeid as string;
         let graphid: string = isDGraph ? isDGraph.id : ownProps.graphid as string;
         let parentnodeid: string = ownProps.parentnodeid as string;
-        let dataid: Pointer<DModelElement, 0, 1, LModelElement> = ownProps.data || null;
+        // let data: Pointer<DModelElement, 0, 1, LModelElement> = ownProps.data || null;
         // Log.exDev(!nodeid || !graphid, 'node id injection failed', {ownProps, data: ret.data, name:(ret.data as any)?.name || (ret.data as any)?.className}); /*
         /*if (!nodeid) {
             nodeid = 'nodeof_' + stateProps.data.id + (stateProps.view.storeSize ? '^' + stateProps.view.id : '') + '^1';
-            stateProps.nodeid = U.increaseEndingNumber(nodeid, false, false, id => !idlookup[id]);
+            stateProps.nodeid = U.increaseEndingNumber(nodeid, false, false, id => !DPointerTargetable.from(id, state));
             todo: quando il componente si aggiorna questo viene perso, come posso rendere permanente un settaggio di reduxstate in mapstatetoprops? o devo metterlo nello stato normale?
         }*/
 
-        ret.graph = idlookup[graphid] as DGraphElement as any; // se non c'è un grafo lo creo
-        if (!ret.graph) {
+        let graph: DGraph = DPointerTargetable.from(graphid, state) as DGraphElement as any; // se non c'è un grafo lo creo
+        if (!graph) {
             // Log.exDev(!dataid, 'attempted to make a Graph element without model', {dataid, ownProps, ret, thiss:this});
-            if (dataid) CreateElementAction.new(DGraph.new(0, dataid, parentnodeid, graphid, graphid)); }
-        else {
-            ret.graph = MyProxyHandler.wrap(ret.graph);
-            Log.exDev(ret.graph.__raw.className !== "DGraph", 'graph class is wrong', {graph: ret.graph, ownProps});
-        }
-
-
-        let dnode: DGraphElement = idlookup[nodeid] as DGraphElement;
-
+            if (ret.data) CreateElementAction.new(DGraph.new(0, ret.data.id, parentnodeid, graphid, graphid)); }
+        /*else {
+            graph = MyProxyHandler.wrap(graph);
+            Log.exDev(graph.__raw.className !== "DGraph", 'graph class is wrong', {graph: ret.graph, ownProps});
+        }*/
+        let dnode: DGraphElement = DPointerTargetable.from(nodeid, state) as DGraphElement;
 
         // console.log('dragx GE mapstate addGEStuff', {dGraphElementDataClass, created: new dGraphElementDataClass(false, nodeid, graphid)});
         if (!dnode && !DPointerTargetable.pendingCreation[nodeid]) {/*
@@ -197,21 +213,28 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             } else*/
             if (dGraphElementDataClass === DEdge) {
                 // set start and end from ownprops;
-                let edgeProps: EdgeStateProps = ret as EdgeStateProps;
                 let edgeOwnProps: EdgeOwnProps = ownProps as EdgeOwnProps;
-                let start = edgeProps.start.id; //typeof edgeProps.start === "string" ? edgeProps.start : (edgeProps.start as any).id; // at runtime i found proxy wrapped instead of id, no idea why
-                let end = edgeProps.end.id; // typeof edgeProps.end === "string" ? edgeProps.end : (edgeProps.end as any).id;
-                let longestLabel = edgeOwnProps.label;
-                let labels = edgeOwnProps.labels || [];
-                dge = (DEdge as any).new(ownProps.htmlindex, dataid, parentnodeid, graphid, nodeid, start, end, longestLabel, labels);
-                ret.node = (ret as any).edge = MyProxyHandler.wrap(dge);
+                let edgeStateProps: EdgeStateProps = ret as EdgeStateProps;
+                let startnodeid = LGraphElement.getNodeId(edgeOwnProps.start);
+                let endnodeid = LGraphElement.getNodeId(edgeOwnProps.end);
+                if (!startnodeid) {
+                    startnodeid = LGraphElement.getNodeId(ret.data);
+                }
+                edgeStateProps.start = LPointerTargetable.fromPointer(startnodeid)
+                edgeStateProps.end = LPointerTargetable.fromPointer(endnodeid);
+                Log.e(!startnodeid, "Cannot create an edge without start node", {startnodeid, data:ret.data, propsStart:edgeOwnProps.start});
+                Log.e(!endnodeid, "Cannot create an edge without end node (yet)", {endnodeid, data:ret.data, propsEnd:edgeOwnProps.end});
+                if (!startnodeid || !endnodeid) return;
+                let longestLabel = undefined; // edgeOwnProps.label;
+                let labels: DEdge["labels"] = []; // edgeOwnProps.labels || [];
+                dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, longestLabel, labels);
+                edgeStateProps.node = edgeStateProps.edge = MyProxyHandler.wrap(dge);
             }
             else {
                 let initialSize = ownProps.initialSize;
-                dge = dGraphElementDataClass.new(ownProps.htmlindex as number, dataid, parentnodeid, graphid, nodeid, initialSize);
+                dge = dGraphElementDataClass.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, initialSize);
                 ret.node =  MyProxyHandler.wrap(dge);
             }
-            // let act = CreateElementAction.new(dge, false);
             // console.log("map ge2", {nodeid: nodeid+'', dge: {...dge}, dgeid: dge.id});
         }
         else { ret.node = MyProxyHandler.wrap(dnode); }
@@ -222,21 +245,29 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // console.log('dragx GE mapstate', {dGraphDataClass});
         let ret: GraphElementReduxStateProps = (startingobj || {}) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
         GraphElementComponent.mapLModelStuff(state, ownProps, ret);
+        if (Debug.lightMode && (!ret.data || !(lightModeAllowedElements.includes(ret.data.className)))){
+            return ret;
+        }
         // console.log("map ge", {ownProps, ret, state});
         GraphElementComponent.mapLGraphElementStuff(state, ownProps, ret, dGraphDataClass);
         GraphElementComponent.mapViewStuff(state, ret, ownProps);
-        // ret.view = LViewElement.wrap(state.idlookup[vid]);
-        // view non deve essere più injected ma calcolata, però devo fare inject della view dell'elemento parent. learn ocl to make view target
-        Log.exDev(!ret.view, 'failed to inject view:', {state, ownProps, reduxProps: ret});
-        // console.log(!ret.view, 'failed to inject view:', {state, ownProps, reduxProps: ret});
-        if (ret.view.usageDeclarations) U.objectMergeInPlace(ret, U.evalInContextAndScope(ret.view.usageDeclarations));
-        // console.log('GE mapstatetoprops:', {state, ownProps, reduxProps: ret});
-        // ret.model = state.models.length ? LModelElement.wrap(state.models[0]) as LModel : undefined;
-        setTemplateString(ret, ownProps); // todo: this is heavy, should be moved somewhere where it's executed once unless view changes (pre-render with if?)
-        // @ts-ignore
-        ret.forceupdate = state.forceupdate;
+        Log.exDev(!ret.view, 'failed to assign view:', {state, ownProps, reduxProps: ret});
+        ret.usageDeclarations = new DefaultUsageDeclarations(ret, ownProps); //edited in-place through parameter in evalContext
         // @ts-ignore
         ret.key = ret.key || ownProps.key;
+        // @ts-ignore
+        ret.forceupdate = state.forceupdate;
+
+        // NB: after this function, ret (reduxstate) should not update shallow keys or ownProps, ret, usageDeclarations (because they are spread in ctx root)
+        // any further update will not be present in eval context.props unless merged like U.objectMergeInPlace(ret.evalContext.props, ...); (and same with ctx.stateProps)
+        setTemplateString(ret, ownProps, state); // todo: this is heavy, should be moved somewhere where it's executed once unless view changes (pre-render with if?)
+
+        console.log("view compute usageDeclarations", {ret, ownProps, ud:ret.view.usageDeclarations, context:ret.evalContext});
+        if (ret.view.usageDeclarations) {
+
+        }
+
+        // Log.l((ret.data as any)?.name === "concept 1", "mapstatetoprops concept 1", {newnode: ret.node});
         return ret;
     }
 
@@ -246,6 +277,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
 
+    countRenders: number;
     _isMounted: boolean;
     html: React.RefObject<HTMLElement | undefined>;
     lastViewChanges: {t: number, vid: Pointer<DViewElement>, v: LViewElement, key?: string}[];
@@ -254,20 +286,35 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     // todo: can be improved by import memoize from "memoize-one"; it is high-order function that memorize the result if params are the same without re-executing it (must not have side effects)
     //  i could use memoization to parse the jsx and to execute the user-defined pre-render function
-
+// le istanze obj di m1 non vengono agiornate se cambio nome alla classe m2
+    public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any): boolean {
+        // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
+        let out = {reason:undefined};
+        let skipDeepKeys = {pointedBy:true};
+        // let skipPropKeys = {...skipDeepKeys, usageDeclarations: true, node:true, data:true, initialSize: true};
+        let ret = false; // !U.isShallowEqualWithProxies(this.props, nextProps, 0, 1, skipPropKeys, out);
+        // todo: verify if this update work
+        // if node and data in props must be ignored and not checked for changes. but they are checked if present in usageDeclarations
+        if (!ret) ret = !U.isShallowEqualWithProxies(this.props.usageDeclarations, nextProps.usageDeclarations, 0, 1, skipDeepKeys, out);
+        Log.l(ret, "ShouldComponentUpdate " + this.props.data?.name + " UPDATED", {ret, reason: out.reason, oldProps:this.props, nextProps});
+        Log.l(this.props.data?.name === "concept 1_1",
+            "ShouldComponentUpdate " +this.props.data?.name + (ret ? " UPDATED" : " REJECTED"),
+            {ret, reason: out.reason, oldProps:this.props, nextProps}); //  oldnode:this.props.node, newnode: nextProps.node,
+        return ret;
+        // apparently node changes are not working? also check docklayout shouldupdate
+    }
 
     protected doMeasurableEvent(type: EMeasurableEvents): boolean {
+        if (Debug.lightMode) return false;
         let measurableCode: string = null as any;
         let context: GObject = null as any;
         try{
             measurableCode = (this.props.view)[type];
             if (!measurableCode) return false;
             context = this.getContext();
-            measurableCode = measurableCode.trim();
-            if (measurableCode[0]!=='(' || measurableCode.indexOf("function") !== 0) {
-                measurableCode = "()=>{" + measurableCode + "}";
-            }
-            measurableCode = "(" + measurableCode + ")()";
+            measurableCode = U.wrapUserFunction(measurableCode);
+            console.log("dragend execute", {measurableCode});
+            // eval measurable
             U.evalInContextAndScope<GObject>(measurableCode, context, context);
         }
         catch (e: any) { Log.ee('Error in "'+type+'" ' + e.message, {e, measurableCode, context}); }
@@ -276,24 +323,37 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return true;
     }
 
-    select(forUser:Pointer<DUser, 0, 1> = null) {
-        const id = this.props.data?.id;
-        if (!forUser) forUser = DUser.current;
-        // if (forUser === DUser.current && this.html.current) this.html.current.focus();
-        // this.props.node.isSelected[forUser] = true;
+//    commenti con 11/23
+/* can i delete this commented func? 11/23
+    select() {
+        const nodeid = this.props.nodeid
+        if(!nodeid) return;
+        SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);
+    }*/
+    deselectold(forUser?: Pointer<DUser>) {
+        const nodeid = this.props.nodeid
+        if(!nodeid) return;
+        SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);
+    }
 
-        //BEGIN();
-        const selected = Selectors.getSelected();
-        if (id) {
-            //selected[forUser] = id;
-            SetRootFieldAction.new('selected', id, '', true);
-        }
+    select(forUser?: Pointer<DUser>): void {
+        // if (forUser === DUser.current && this.html.current) this.html.current.focus();
+        BEGIN();
+        this.props.node?.select(forUser);
         SetRootFieldAction.new('_lastSelected', {
             node: this.props.nodeid,
             view: this.props.view.id,
             modelElement: this.props.data?.id
-        });
-        //END();
+        });/*
+        // ? why this?
+        const id = this.props.data?.id;
+        if (id) {
+            //selected[forUser] = id;
+            SetRootFieldAction.new('selected', id, '', true);
+        }*/
+
+        // SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);
+        END();
     }
 
     constructor(props: AllProps, context: any) {
@@ -302,11 +362,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         this.lastOnUpdateChanges = []
         this.stopUpdateEvents = undefined;
         this._isMounted = false;
+        this.countRenders = 0;
         this.id = GraphElementComponent.maxid++;
         GraphElementComponent.all[this.id] = this;
         GraphElementComponent.map[props.nodeid as Pointer<DGraphElement>] = this;
         this.html = React.createRef();
-        let functionsToBind = [this.onClick, this.onLeave, this.onContextMenu, this.onEnter, this.select, this.onMouseDown, this.onMouseDown];/*
+        let functionsToBind = [this.onClick,
+            this.onLeave, this.onEnter,
+            this.doContextMenu, this.onContextMenu,
+            /*this.select, 11/23*/
+            this.onMouseDown, this.onMouseUp, this.onKeyDown];/*
         this.onClick = this.onClick.bind(this);
         this.onLeave = this.onLeave.bind(this);
         this.onContextMenu = this.onContextMenu.bind(this);
@@ -314,50 +379,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         this.select = this.select.bind(this);*/
         for (let f of functionsToBind) (this as any)[f.name] = f.bind(this);
         // @ts-ignore
-        this.state = {classes:[] as string[]};
-
-/*
-        console.log('GE constructor props:', this.props);
-        this.setTemplateString(this.props.view, true);
-        /*if (false) this.setTemplateString('{colors:["rEd", "gReen", "blye"], key2:[0,2,5]}',
-            '() => { colors = colors.map(c=>c.toLowerCase())}',
-            '<div><b>GraphElement colors:</b>{colors.map( (c, i) => <li key={c} style={{color: c}}>{c}</li>)}</div>', true);*/
-        // this.onMountBindID();
+        this.state = {classes: [] as string[]};
     }
-/*
-    onMountBindID() {
-        /*if (!this.props.view.storeSize) {
-            // get position from view itself
-            nodeid = 'nodeof_' + this.props.data.id;
-            if (!store.getState().idlookup[nodeid]){
-                new CreateElementAction(this.createDataNode(nodeid));
-            } // view-indipendent fallback, i do not add view.id to node.id
-        } else {* /
-        if (this.getId()) return;
-        let dnode: DGraphElement = this.createDataNode(this.generateId());
-        new CreateElementAction(dnode);
-        // let nodeid: Pointer<DGraphElement, 1, 1, LGraphElement> = dnode.id;
-        // this.setState({nodeid} );
-    }
-
-    getId(): string | undefined {
-        return this.props.nodeid;
-    }
-
-    generateId(): Pointer<DGraphElement, 1, 1, LGraphElement> {
-        // if (this.state.nodeid) return this.state.nodeid;
-        let ret: string = 'nodeof_' + this.props.data.id + (this.props.view.storeSize ? '^' + this.props.view.id : '') + '^1';
-        const idlookup = store.getState().idlookup;
-        ret = U.increaseEndingNumber(ret, false, false, id => !idlookup[id]);
-        return ret;
-    }
-
-    // to override
-
-    createDataNode(id?: string): DGraphElement {
-        return new DGraphElement(id || this.generateId(), this);
-    }
- */
 
     // constants: evalutate solo durante il primo render, può essere una funzione con effetti collaterali sul componente,
     // in tal caso la si esegue e si prende il valore di ritorno.
@@ -386,7 +409,56 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     protected getContext(): GObject{
         let context: GObject = {component:this, __proto__:this.props.evalContext};
         context._context = context;
+        this.context = context;
         return context;
+    }
+
+    protected displayError(e: Error, where: string): React.ReactNode {
+        const view: LViewElement = this.props.view; //data._transient.currentView;
+        let errormsg = (where === "preRenderFunc" ? "Pre-Render " : "") +(e.message||"\n").split("\n")[0];
+        if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0) {
+            errormsg += '\n\nReminder: nullish operators ".?" and "??" are not supported.'; }
+        else if (view.jsxString.indexOf('?.') >= 0) { errormsg += '\n\nReminder: ?. operator and empty tags <></> are not supported.'; }
+        else if (e.message.indexOf("Unexpected token '<'")) { errormsg += '\n\nDid you forgot to close a html </tag>?'; }
+        try {
+            let ee = e.stack || "";
+            let stackerrorlast = ee.split("\n")[1];
+
+            let icol = stackerrorlast.lastIndexOf(":");
+            let jsxString = view.jsxString;
+            // let col = stackerrorlast.substring(icol+1);
+            let irow = stackerrorlast.lastIndexOf(":", icol-1);
+            let stackerrorlinenum: GObject = {
+                row: Number.parseInt(stackerrorlast.substring(irow+1, icol)),
+                col: Number.parseInt(stackerrorlast.substring(icol+1)) };
+            let linesPre = 1;
+            let linesPost = 1;
+            let jsxlines = jsxString.split("\n");
+            let culpritlinesPre: string[] = jsxlines.slice(stackerrorlinenum.row-linesPre-1, stackerrorlinenum.row - 1);
+            let culpritline: string = jsxlines[stackerrorlinenum.row - 1]; // stack start counting lines from 1
+            let culpritlinesPost: string[] = jsxlines.slice(stackerrorlinenum.row, stackerrorlinenum.row + linesPost);
+            console.error("errr", {e, jsxlines, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
+
+            let caretCursor = "▓" // ⵊ ꕯ 𝙸 Ꮖ
+            if (culpritline && stackerrorlinenum.col < culpritline.length && stackerrorlast.indexOf("main.chunk.js") === -1) {
+                let rowPre = culpritline.substring(0, stackerrorlinenum.col);
+                let rowPost = culpritline.substring(stackerrorlinenum.col);
+                let jsxcode =
+                    <div style={{fontFamily: "monospaced sans-serif", color:"#444"}}>
+                        { culpritlinesPre.map(l => <div>{l}</div>) }
+                        <div>{rowPre} <b style={{color:"red"}}> {caretCursor} </b> {rowPost}</div>
+                        { culpritlinesPost.map(l => <div>{l}</div>) }
+                    </div>;
+                console.error("errr", {e, ee, jsxlines, jsxcode, rowPre, rowPost, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
+                errormsg += " @line " + stackerrorlinenum.row + ":" + stackerrorlinenum.col;
+                return DV.errorView(<div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template: this.props.view.jsxString, view: this.props.view});
+            } else {
+                // it means it is likely accessing a minified.js src code, sending generic error without source mapping
+            }
+        } catch(e2) {
+            Log.eDevv("internal error in error view", {e, e2, where} );
+        }
+        return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: this.props.view.jsxString, view: this.props.view});
     }
 
     private getTemplate(): ReactNode {
@@ -398,69 +470,31 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         // Log.exDev(debug && maxRenderCounter-- < 0, "loop involving render");
         let context: GObject = this.getContext();
-
-        let displayError = (e: Error, where: string) => {
-            const view: LViewElement = this.props.view; //data._transient.currentView;
-            let errormsg = (where === "preRenderFunc" ? "Pre-Render " : "") +(e.message||"\n").split("\n")[0];
-            if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0) {
-                errormsg += '\n\nReminder: nullish operators ".?" and "??" are not supported.'; }
-            else if (view.jsxString.indexOf('?.') >= 0) { errormsg += '\n\nReminder: ?. operator and empty tags <></> are not supported.'; }
-            else if (e.message.indexOf("Unexpected token '<'")) { errormsg += '\n\nDid you forgot to close a html </tag>?'; }
-            try {
-                let ee = e.stack || "";
-                let stackerrorlast = ee.split("\n")[1];
-
-                let icol = stackerrorlast.lastIndexOf(":");
-                let jsxString = view.jsxString;
-                // let col = stackerrorlast.substring(icol+1);
-                let irow = stackerrorlast.lastIndexOf(":", icol-1);
-                let stackerrorlinenum: GObject = {
-                    row: Number.parseInt(stackerrorlast.substring(irow+1, icol)),
-                    col: Number.parseInt(stackerrorlast.substring(icol+1)) };
-                let linesPre = 1;
-                let linesPost = 1;
-                let jsxlines = jsxString.split("\n");
-                let culpritlinesPre: string[] = jsxlines.slice(stackerrorlinenum.row-linesPre-1, stackerrorlinenum.row - 1);
-                let culpritline: string = jsxlines[stackerrorlinenum.row - 1]; // stack start counting lines from 1
-                let culpritlinesPost: string[] = jsxlines.slice(stackerrorlinenum.row, stackerrorlinenum.row + linesPost);
-                console.error("errr", {e, jsxlines, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
-
-                let caretCursor = "▓" // ⵊ ꕯ 𝙸 Ꮖ
-                if (culpritline && stackerrorlinenum.col < culpritline.length && stackerrorlast.indexOf("main.chunk.js") === -1) {
-                    let rowPre = culpritline.substring(0, stackerrorlinenum.col);
-                    let rowPost = culpritline.substring(stackerrorlinenum.col);
-                    let jsxcode =
-                        <div style={{fontFamily: "monospaced sans-serif", color:"#444"}}>
-                            { culpritlinesPre.map(l => <div>{l}</div>) }
-                            <div>{rowPre} <b style={{color:"red"}}> {caretCursor} </b> {rowPost}</div>
-                            { culpritlinesPost.map(l => <div>{l}</div>) }
-                        </div>;
-                    console.error("errr", {e, ee, jsxlines, jsxcode, rowPre, rowPost, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
-                    errormsg += " @line " + stackerrorlinenum.row + ":" + stackerrorlinenum.col;
-                    return DV.errorView(<div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template: this.props.template, view: this.props.view});
-                } else {
-                    // it means it is likely accessing a minified.js src code, sending generic error without source mapping
-                }
-            } catch(e2) {
-                Log.eDevv("internal error in error view", {e, e2, where} );
-            }
-            return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: this.props.template, view: this.props.view});
-        }
+        // abababababab
+        // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
 
         try {
-            if (this.props.preRenderFunc) {
-                let obj = U.evalInContextAndScope<GObject>("("+this.props.preRenderFunc+")()", [], context);
-                for (let key in obj) { context[key] = obj[key]; }
+            let preRenderFuncStr: string | undefined = this.props.view.preRenderFunc;
+            if (preRenderFuncStr) {
+                // eval prerender
+                let obj: GObject = {};
+                let tempContext: GObject = {__param: obj};
+                tempContext.__proto__ = context;
+                U.evalInContextAndScopeNew("("+preRenderFuncStr+")(this.__param)", tempContext, true, false);
+                U.objectMergeInPlace(context, obj);
             }
         }
-        catch(e: any) { return displayError(e, "preRenderFunc");  }
+        catch(e: any) { return this.displayError(e, "preRenderFunc");  }
+
         let ret;
-        try {
-            ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + this.props.template + '})()', context);
-            // ret = this.props.template();
-            // ret = U.execInContextAndScope<() => ReactNode>(this.props.template, [], {});
-        }
-        catch(e: any) { return displayError(e, "getTemplate"); }
+        // eval template
+        let jsxCodeString: DocString<ReactNode>;
+
+        try { jsxCodeString = JSXT.fromString(this.props.view.jsxString, {factory: 'React.createElement'}); }
+        catch (e: any) { return this.displayError(e, "JSX Syntax Error"); }
+
+        try { ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + jsxCodeString + '})()', context); }
+        catch (e: any) { return this.displayError(e, "JSX Semantic Error"); }
         return ret;
     }
 
@@ -469,17 +503,33 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         e.stopPropagation();
         // NOT executed here, but on mousedown because of IOS compatibility
     }
+/*11/23
 
     doContextMenu(e: React.MouseEvent<Element>){
-        const selected = Selectors.getSelected();
-        const id = this.props.dataid;
-        const alreadySelected = selected === id;
-        if (!alreadySelected) { this.select(); if (this.html.current) this.html.current.focus(); }
+        const selected = Selectors.getSelected()[DUser.current];
+        const nodeid = this.props.nodeid;
+        const alreadySelected = selected === nodeid;
+        if (!alreadySelected) this.select();
         SetRootFieldAction.new("contextMenu", {
             display: true,
             x: e.clientX,
             y: e.clientY
         });
+    }
+* */
+    doContextMenu(e: React.MouseEvent<Element>) {
+        BEGIN()
+        this.props.node.select();
+        if (this.html.current) this.html.current.focus();
+        let state: DState = store.getState();
+        if (state.contextMenu?.display !== true && state.contextMenu?.x !== e.clientX) {
+            SetRootFieldAction.new("contextMenu", {
+                display: true,
+                x: e.clientX,
+                y: e.clientY
+            });
+        }
+        END();
     }
 
     onEnter(e: React.MouseEvent<Element>) { // instead of doing it here, might set this class on render, and trigger it visually operative with :hover selector css
@@ -502,42 +552,107 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     onMouseDown(e: React.MouseEvent): void {
         e.stopPropagation();
         GraphElementComponent.mousedownComponent = this;
-        if (e.button === Keystrokes.clickRight) { this.doContextMenu(e); }
+        TRANSACTION(()=>{
+            if (e.button === Keystrokes.clickRight) { this.doContextMenu(e); }
+            if ((this.props as any).isGraph) GraphDragManager.startPanning(e, this.props.node as LGraph);
+        })
     }
+
 
     onMouseUp(e: React.MouseEvent): void {
         e.stopPropagation();
         if (GraphElementComponent.mousedownComponent !== this) { return; }
-        this.onClick(e);
+        TRANSACTION(()=>{
+            this.doOnClick(e);
+            // if ((this.props as any).isGraph) GraphDragManager.stopPanning(e);
+        })
     }
-    onClick(e: React.MouseEvent): void {
-        // (e.target as any).focus();
+    onKeyDown(e: React.KeyboardEvent){
+        if (e.key === Keystrokes.escape) {
+            this.props.node.deselect();
+            if (this.props.isEdgePending) {
+                // this.stopPendingEdge(); todo
+                return;
+            }
+        }
+        if (e.ctrlKey || e.altKey) {
+            // todo: make them a switch
+            if (e.key === "d") this.props.data?.duplicate(); else
+            if (e.key === "r") this.props.data?.delete();
+        }
+        if (e.altKey) {
+            // if (e.key === Keystrokes.escape) this.props.node.toggleMinimize();
+            if (e.key === "a") this.props.data?.addChild("auto"); else // add class if on package, literal if on enum...
+            if (e.key === "r") this.props.data?.addChild("reference"); else
+            if (e.key === "o") this.props.data?.addChild("operation") || this.props.data?.addChild("object"); else
+            if (e.key === "l") this.props.data?.addChild("literal"); else
+            if (e.key === "p") this.props.data?.addChild("package") || this.props.data?.addChild("parameter"); else
+            if (e.key === "c") this.props.data?.addChild("class"); else
+            if (e.key === "e") this.props.data?.addChild("enumerator"); else
+            if (e.key === "q") this.props.data?.addChild("annotation"); else
+            ;
+        }
+    }
+/* 11/23
+*
+    private doOnClick(e: React.MouseEvent): void {
         e.stopPropagation();
-        const selected = Selectors.getSelected();
-        const id = this.props.dataid;
-        // const alreadySelected = selected === id;
         SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
-        // if(alreadySelected) return;
         const isEdgePending = (this.props.isEdgePending?.source);
         if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
         if (!this.props.data) return;
         if (this.props.data.className !== "DClass") return;
-        // const user = this.props.isEdgePending.user;
-        const source = isEdgePending;
-        const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
-        const canBeExtend = this.props.data && isEdgePending.canExtend(this.props.data as LClass, extendError);
-        if (canBeExtend && this.props.data) {
-            const lClass: LClass = LPointerTargetable.from(this.props.data.id);
-            // SetFieldAction.new(lClass.id, "extendedBy", source.id, "", true); // todo: this should throw a error for wrong type.
-            // todo: use source.addExtends(lClass); or something (source is LClass)
-            SetFieldAction.new(lClass.id, "extendedBy", source.id, "+=", true);
-            SetFieldAction.new(source.id, "extends", lClass.id, "+=", true);
-        }
-        SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
+        // const user = this.props.isEdgePending.user;*/
 
+    private doOnClick(e: React.MouseEvent): void {
+        // (e.target as any).focus();
+        e.stopPropagation();
+        let state: DState = store.getState();
+        if (state.contextMenu?.display) SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); // todo: need to move it on document or <App>
+        const edgePendingSource = this.props.isEdgePending?.source;
+        console.log('mousedown select() check PRE:', {name: this.props.data?.name, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
+
+        if (edgePendingSource) {
+            if (this.props.data?.className !== "DClass") return;
+            // const user = this.props.isEdgePending.user;
+            const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
+            const canBeExtend = this.props.data && edgePendingSource.canExtend(this.props.data as LClass, extendError);
+            if (canBeExtend && this.props.data) {
+                const lClass: LClass = LPointerTargetable.from(this.props.data.id);
+                // SetFieldAction.new(lClass.id, "extendedBy", source.id, "", true); // todo: this should throw a error for wrong type.
+                // todo: use source.addExtends(lClass); or something (source is LClass)
+                SetFieldAction.new(lClass.id, "extendedBy", edgePendingSource.id, "+=", true);
+                SetFieldAction.new(edgePendingSource.id, "extends", lClass.id, "+=", true);
+            }
+            SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
+            return;
+        }
+        console.log('mousedown select() check:', {isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
+        BEGIN();
+        windoww.node = this.props.node;
+        this.props.node.toggleSelected(DUser.current);
+        if (state._lastSelected?.node !== this.props.nodeid) {
+            SetRootFieldAction.new('_lastSelected', {
+                node: this.props.nodeid,
+                view: this.props.view.id,
+                modelElement: this.props.data?.id
+            });
+        }
+
+        if (e.shiftKey || e.ctrlKey) { }
+        else {
+            let allNodes: LGraphElement[] | undefined = this.props.node?.graph.allSubNodes;
+            let nid = this.props.node.id;
+            if (allNodes) for (let node of allNodes) if (node.id !== nid) node.deselect(DUser.current);
+        }
+        END();
     }
 
-    onViewChange(): void {
+    onClick(e: React.MouseEvent): void {
+
+    }
+    /*
+    onViewChangeOld(): void {
         let thischange = {t: Date.now(), vid: this.props.node.__raw.view, newvid:this.props.view.id, v: this.props.node.view, newv: this.props.view, key:this.props.key};
         this.lastViewChanges.push(thischange);
         // nan -> false <200 = true
@@ -545,17 +660,18 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             // if N views changed in <= 0.2 sec
             Log.exDevv("loop in updating View assigned to node. The cause might be missing or invalid keys on GraphElement JSX nodes.", {change_log:this.lastViewChanges, component: this});
         }
-
-        /*console.log("UPDATEVIEW ", {lnode:this.props.node, dnode:this.props.node.__raw, dstore: windoww.s().idlookup[this.props.node.__raw.id], view:this.props.view,
-             data:this.props.data, vid:this.props.view.id, nview:this.props.node.__raw.view});*/
         this.props.node.view = this.props.view;
-    }
+    }*/
+
     public render(nodeType?:string, styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
-        if (!this.props.node) return "loading";
-        if (this.props.node.__raw.view !== this.props.view.id) {
+        if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
+            return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
+        }
+        if (!this.props.node) return "Loading...";
+        /*if (this.props.node.__raw.view !== this.props.view.id) {
             this.onViewChange();
             return "Updating view...";
-        }
+        }*/
 
         if (!this.stopUpdateEvents || this.stopUpdateEvents !== this.props.view.clonedCounter) {
             this.stopUpdateEvents = undefined;
@@ -575,6 +691,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
 
         /// set classes
+        if (this.props.node) {
+            let isSelected: Dictionary<Pointer<DUser>, boolean> = this.props.node.__raw.isSelected;
+            if (isSelected[DUser.current]) { // todo: better to just use css attribute selectors [data-userselecting = "userID"]
+                classes.push('selected-by-me');
+                if (Object.keys(isSelected).length > 1) classes.push('selected-by-others');
+            } else if (Object.keys(isSelected).length) classes.push('selected-by-others');
+        }
         classes.push(this.props.data?.className || 'DVoid');
         U.arrayMergeInPlace(classes, this.state.classes);
         if (Array.isArray(this.props.className)) { U.arrayMergeInPlace(classes, this.props.className); }
@@ -610,8 +733,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 // viewStyle.pointerEvents = "all";
                 viewStyle.order = viewStyle.zIndex = this.props.node?.zIndex;
                 viewStyle.display = this.props.view?.display;
+                let injectProps: GObject = {};
+                if (countRenders) {
+                    classes.push(this.countRenders%2 ? "animate-on-update-even" : "animate-on-update-odd");
+                    injectProps["data-countrenders"] = this.countRenders++;
+                }
                 rawRElement = React.cloneElement(rawRElement, // i'm cloning a raw html (like div) being root of the rendered view
                     {
+                        ...injectProps,
                         key: this.props.key, // this key is not safe. because the component has already been made,
                         // this would be the key of the first sub-component, which is always 1 so doesn't need a key (and is not even a component but a html node in 99% of cases)
                         // could remove it safely but i'm keeping it for debug so i can read keys as html attributes.
@@ -622,7 +751,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         "data-dataid": me?.id,
                         "data-viewid": this.props.view.id,
                         "data-modelname": me?.className || "model-less",
-                        "data-userselecting": JSON.stringify(this.props.node?.__raw.isSelected || {}),
+                        "data-userselecting": JSON.stringify(this.props.node?.isSelected || {}),
                         "data-nodetype": nodeType,
                         // "data-order": this.props.node?.zIndex,
                         style: {...viewStyle, order:this.props.node.z, ...styleoverride},
@@ -635,16 +764,23 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         onMouseLeave:this.onLeave,
                         tabIndex: (this.props as any).tabIndex || -1,
                         children: UX.recursiveMap(rawRElement/*.props.children*/,
-                            (rn: ReactNode, index: number, depthIndexes: number[]) => UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes))});
+                            (rn: ReactNode, index: number, depthIndexes: number[]) => {
+                                let injectOffset: undefined | LGraph = ((this.props as any).isGraph && !depthIndexes[0] && !index) && (this.props.node as LGraph);
+                                injectOffset&&console.log("inject offset props0:", {injectOffset});
+                                console.log("inject offset props00:", {injectOffset, ig:(this.props as any).isGraph, props:this.props, depthIndexes, index});
+                                return UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes, injectOffset)
+                            })});
                 fixdoubleroot = false; // need to set the props to new root in that case.
                 if (fixdoubleroot) rawRElement = rawRElement.props.children;
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
             } catch (e) {
-
-                rawRElement = U.evalInContextAndScope<ReactElement>('()=>{ return ' +
+                rawRElement = DV.errorView("error while injecting props to subnodes",
+                        {e, rawRElement, key:this.props.key, newid: this.props.nodeid}) as ReactElement;
+                /*
+                rawRElement = U.eval InContextAndScope<ReactElement>('()=>{ return ' +
                     DV.errorView("error while injecting props to subnodes",
                         {e, rawRElement, key:this.props.key, newid: this.props.nodeid}) + '}',
-                    {});
+                    {});*/
 
                 // rawRElement = DV.errorView("error while injecting props to subnodes", {e, rawRElement, key:this.props.key, newid: this.props.nodeid});
             }
@@ -668,7 +804,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 rawRElement || rnode,
                 droparea
             );
-        }
+        }/*
+        if (countRenders) return <>{[
+            rawRElement || rnode,
+            <div className={this.countRenders%2 ? "animate-on-update-even" : "animate-on-update-odd"} data-countrenders={this.countRenders++} />
+        ]}</>/*/
         return rawRElement || rnode;
     }
 

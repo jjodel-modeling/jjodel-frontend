@@ -1,5 +1,5 @@
 {
-  "name": "jodel-react",
+  "name": "jjodel",
   "version": "0.1.0",
   "private": false,
   "commentnodeversion": "16.13.0?",
@@ -49,6 +49,7 @@
     "react-xarrows": "^2.0.2",
     "sass": "^1.49.9",
     "smart-webcomponents-react": "^9.3.53",
+    "socket.io-client": "^4.7.2",
     "sweetalert2": "^11.7.3",
     "sweetalert2-react-content": "^4.1.1",
     "tree-model": "^1.0.7",

@@ -1,29 +1,26 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import {DState, DUser, GObject, LModelElement, Selectors, U} from "../../../joiner";
-import {useStateIfMounted} from "use-state-if-mounted";
+import {DProject, DState, DUser} from "../../../joiner";
+import {FakeStateProps} from "../../../joiner/types";
+import DockManager from "../DockManager";
+import TreeEditor from "../../rightbar/treeEditor/treeEditor";
 
 function TestTabComponent(props: AllProps) {
-
-    const selected = props.selected;
-
     const click = () => {
     }
 
-    return(<div>
+    return(<div className={'p-2 border border-dark'}>
         <button onClick={click}>click</button>
-        {selected?.id}
     </div>);
 }
 interface OwnProps {}
-interface StateProps {selected: LModelElement|null}
+interface StateProps {}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as any;
-    ret.selected = null;
+    const ret: StateProps = {} as FakeStateProps;
     return ret;
 }
 

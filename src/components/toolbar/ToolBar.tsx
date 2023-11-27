@@ -30,7 +30,8 @@ import {
     Constructors,
     WVoidEdge,
     Log,
-    LEdgePoint
+    LEdgePoint, DUser,
+    U, LPointerTargetable
 } from "../../joiner";
 import {InitialVertexSizeObj} from "../../joiner/types";
 import ModellingIcon from "../forEndUser/ModellingIcon";
@@ -117,19 +118,21 @@ function selectNode(d: DGraphElement|{id: string}): any {
     return d; }
 
 function ToolBarComponent(props: AllProps, state: ThisState) {
-    const lModelElement: LModelElement = props.selected?.modelElement ? props.selected?.modelElement : MyProxyHandler.wrap(props.model);
-    const node: LGraphElement | undefined = props.selected?.node;
+    const node = props.node;
+    if(!node) return(<div className={'toolbar'}></div>);
+    const data: LModelElement|LModel = (node.model) ? node.model : LModel.fromPointer(props.model);
+
     const isMetamodel: boolean = props.isMetamodel;
     const metamodel: LModel|undefined = props.metamodel;
-    // const myDictValidator: Map<string, ReactNode[]> = new Map();
     const downward: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]> = {}
-    const addChildren = (items: string[]) => items ? getItems(lModelElement, downward, [...new Set(items)], node) : [];
+    const addChildren = (items: string[]) => items ? getItems(data, downward, [...new Set(items)], node) : [];
 
-    downward["DModel"] = ["DPackage"];
+    // downward["DModel"] = ["DPackage"];
     downward["DPackage"] = ["DPackage", "DClass", "DEnumerator"];
     downward["DClass"] = ["DAttribute", "DReference", "DOperation"];
     downward["DEnumerator"] = ["DLiteral"];
     downward["DOperation"] = ["DParameter", "DException"];
+
 
     // nodes
     downward["DEdge"] = ["DEdgePoint"]
@@ -146,6 +149,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             upward[child].push(...(downward[parentKey]||[]));
         }
     }
+    downward["DModel"] = downward["DPackage"];
 
     // exceptions:
     upward["DPackage"] = ["_pDPackage"]; //, "DModel"]; because from a package, i don't want to prompt the user to create a model in toolbar.
@@ -156,11 +160,13 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     if (isMetamodel) {
         return(<div className={"toolbar mt-2"}>
             <b className={'d-block text-center text-uppercase mb-1'}>Add sibling</b>
-            {lModelElement && addChildren(upward[lModelElement.className])}
+            {data && addChildren(upward[data.className])}
             {node && addChildren(upward[node.className])}
             <hr className={'my-2'} />
             <b className={'d-block text-center text-uppercase mb-1'}>Add sublevel</b>
-            {lModelElement && addChildren(downward[lModelElement.className])}
+            {data && addChildren(downward[data.className])}
+            <hr className={'my-2'} />
+            <b className={'d-block text-center text-uppercase mb-1'}>Add shape</b>
             {node && addChildren(downward[node.className])}
             {/*<div className={"toolbar-item annotation"} onClick={() => select(lModelElement.addChild("annotation"))}>+annotation</div>*/}
             <hr className={'my-2'} />
@@ -169,15 +175,15 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     else {
         const classes = metamodel?.classes;
         const model: LModel = LModel.fromPointer(props.model);
-        const lobj: LObject | undefined = lModelElement.className === "DObject" ? lModelElement as LObject : undefined;
-        const lfeat: LValue | undefined = lModelElement.className === "DValue" ? lModelElement as LValue : undefined;
+        const lobj: LObject | undefined = data.className === "DObject" ? data as LObject : undefined;
+        const lfeat: LValue | undefined = data.className === "DValue" ? data as LValue : undefined;
 
         return(<div className={"toolbar mt-2"}>
             <b className={'d-block text-center text-uppercase mb-1'}>Add root level</b>
             {classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
                 return <div key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => { select(model.addObject(lClass.id)) }}>
                     <ModellingIcon name={'object'} />
-                    <span className={'ms-1 text-capitalize'}>{lClass.name}</span>
+                    <span className={'ms-1 text-capitalize'}>{U.stringMiddleCut(lClass.name, 14)}</span>
                 </div>
             })}
             <div key={"RawObject"} className={'toolbar-item'} onClick={e => select(model.addObject())}>
@@ -205,24 +211,33 @@ interface OwnProps {
 }
 
 interface StateProps {
-    selectedid?: { node: Pointer<DGraphElement, 1, 1>; view: Pointer<DViewElement, 1, 1>; modelElement: Pointer<DModelElement, 0, 1> };
-    selected?: { node: LGraphElement; view: LViewElement; modelElement?: LModelElement };
+    node: LGraphElement|null;
     metamodel?: LModel;
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
+//* 23/11 versione giordano
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+    const ret: StateProps = {} as any;
+    const nodeid = state._lastSelected?.node;
+    if(nodeid) ret.node = LGraphElement.fromPointer(nodeid);
+    else ret.node = null;
+    if(ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
+    return ret;
+}
+/*
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.selectedid = state._lastSelected;
     ret.selected = ret.selectedid && {
-        node: DPointerTargetable.wrap(state.idlookup[ret.selectedid.node]) as LGraphElement,
-        view: DPointerTargetable.wrap(state.idlookup[ret.selectedid.view]) as LViewElement,
-        modelElement: ret.selectedid.modelElement ? DPointerTargetable.wrap<DPointerTargetable, LModelElement>(state.idlookup[ret.selectedid.modelElement]) : undefined
+        node: LPointerTargetable.from(ret.selectedid.node, state) as LGraphElement,
+        view: LPointerTargetable.from(ret.selectedid.view, state) as LViewElement,
+        modelElement: ret.selectedid.modelElement ? LPointerTargetable.from(ret.selectedid.modelElement, state) : undefined
     };
-    if(ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
+    if (ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }
     return ret;
-}
+}*/
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     const ret: DispatchProps = {} as any;

@@ -31,21 +31,28 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
     NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually,
     Function, Function2, InOutParam,
     unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap, Info,
-    Constructor, AbstractConstructor
+    Constructor, AbstractConstructor, ApiResponse
 } from "./types";
-export type {Pointer, PtrString, getWParams, WUser, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1 } from "./classes";
+export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1 } from "./classes";
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
     WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
-    ValueDetail, SetValueAtPoisitionInfoType
+    ValueDetail, SetValueAtPositionInfoType
 } from "../model/logicWrapper/LModelElement";
 export type {WEdge, WEdgePoint, WExtEdge, WGraph, WRefEdge, WGraphElement, WVoidEdge, WGraphVertex, WVertex, WVoidVertex, EdgeSegment, EdgeFillSegment} from "../model/dataStructure/GraphDataElements";
+export type {PackagePointers, EdgePointers, AnnotationPointers, AttributePointers, EnumPointers, ClassPointers,
+    LiteralPointers, OperationPointers, ObjectPointers, GraphPointers, ParameterPointers, ReferencePointers, VertexPointers,
+    ModelPointers,
+} from "../model/logicWrapper/PointerDefinitions";
 
 export {windoww, EdgeBendingMode, EdgeGapMode, EMeasurableEvents} from './types';
-export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps, EdgeStateProps, EdgeOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
+export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
+    EdgeStateProps, EdgeOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
+export {GraphDragManager} from "../graph/graphElement/GraphDragHandler";
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,
     Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs,
-    LUser, DUser, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements} from "./classes";
+    LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements} from "./classes";
+
 
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
@@ -65,7 +72,7 @@ export {UX} from "../common/UX";
 export var U = windoww.U as typeof UType;
 export {DLog} from "../model/classes/D";
 export {LLog} from "../model/classes/L";
-// console.error('iiiiiiiiiiiiiiii 4');
+
 export {
     EcoreParser,
     AccessModifier,
@@ -129,7 +136,9 @@ export {
     LStructuralFeature, LDataType, LTypedElement, LNamedElement, // DMap, LMap,
     LValue,
 } from "../model/logicWrapper/LModelElement";*/
-export {DExtEdge, DRefEdge, DVoidEdge, LGraphVertex, LRefEdge, LEdgePoint, DVoidVertex, DGraphVertex, DEdgePoint, DVertex, DEdge, LVertex, LGraph, DGraph, LVoidVertex, LVoidEdge, LEdge, LGraphElement, LExtEdge, DGraphElement} from "../model/dataStructure/GraphDataElements";
+export {
+    DExtEdge, DRefEdge, DVoidEdge, LGraphVertex, LRefEdge, LEdgePoint, DVoidVertex, DGraphVertex, DEdgePoint, DVertex,
+    DEdge, LVertex, LGraph, DGraph, LVoidVertex, LVoidEdge, LEdge, LGraphElement, LExtEdge, DGraphElement, packageDefaultSize} from "../model/dataStructure/GraphDataElements";
 
 
 
@@ -143,9 +152,9 @@ export {DViewPoint, LViewPoint} from "../view/viewPoint/viewpoint";
 
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
 export {DState, LState, ModelStore, ViewPointState, statehistory} from "../redux/store";
-export {Selectors as Selectorss} from "../redux/selectors/selectors";
-export var Selectors = windoww.Selectors as (GObjectt & typeof SelType);
-export {reducer, jodelInit} from "../redux/reducer/reducer";
+export {Selectors} from "../redux/selectors/selectors";
+// export var Selectors = windoww.Selectors as (GObjectt & typeof SelType);
+export {reducer, stateInitializer} from "../redux/reducer/reducer";
 export {store} from "../redux/createStore";
 export {Debug} from "../debugtools/debug";
 
@@ -224,7 +233,6 @@ export type FocusInEvent = JQuery.FocusInEvent;
 export type FocusOutEvent = JQuery.FocusOutEvent;
 export type FocusEventBase = JQuery.FocusEventBase;
 
-// todo: continua
 
 
 // window (NB: most of them should be replaced by RuntimeAccessibleClass)
@@ -241,7 +249,7 @@ w.GraphPoint = GraphPoint;
 w.$s = $s;
 */
 export {
-    TextArea, Select, Input, Image, Edge, DamEdge,
+    TextArea, Select, Input, Image, Edge,
     GraphsContainerComponent,
     Overlap as OverlapComponent,
     GraphsContainer,
@@ -254,11 +262,10 @@ export {
     VertexComponent,
     DefaultNodeComponent,
     // DockLayoutComponent,
-    ColorScheme, Edges,
+    ColorScheme,
     EdgeComponent,
     DataOutputComponent, LoggerComponent, GenericInput
 } from './components'
-
 //export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file
 export {fakeExport} from './ExecuteOnRead';
 // console.info('joiner loaded');

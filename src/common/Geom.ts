@@ -1,5 +1,6 @@
 import type { GObject, Temporary, TODO} from "../joiner";
 import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleClass} from "../joiner";
+import React from "react";
 
 @RuntimeAccessible
 export abstract class IPoint extends RuntimeAccessibleClass {
@@ -199,7 +200,8 @@ export class Point extends IPoint{
     static cname: string = "Point";
     private dontmixwithGPoint: any;
     /// https://stackoverflow.com/questions/6073505/what-is-the-difference-between-screenx-y-clientx-y-and-pagex-y
-    public static fromEvent(e: JQuery.ClickEvent | JQuery.MouseMoveEvent | JQuery.MouseUpEvent | JQuery.MouseDownEvent | JQuery.MouseEnterEvent | JQuery.MouseLeaveEvent | JQuery.MouseEventBase)
+    public static fromEvent(e: JQuery.ClickEvent | JQuery.MouseMoveEvent | JQuery.MouseUpEvent | JQuery.MouseDownEvent
+        | JQuery.MouseEnterEvent | JQuery.MouseLeaveEvent | JQuery.MouseEventBase | React.MouseEvent)
         : Point {
         const p: Point = new Point(e.pageX, e.pageY);
         return p; }

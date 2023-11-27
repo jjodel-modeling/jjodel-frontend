@@ -1,13 +1,11 @@
-import React, {Dispatch, ReactElement} from 'react';
+import {MouseEvent} from 'react';
 import './style.scss';
 import {Oval} from 'react-loader-spinner';
-import {DState} from "../../redux/store";
-import {connect} from "react-redux";
 
-function LoaderComponent(props: AllProps) {
-    if(!props.isLoading) return(<></>);
+interface Props {}
+function Loader(props: Props) {
 
-    const prevent = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    const prevent = (e: MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
     }
@@ -18,30 +16,5 @@ function LoaderComponent(props: AllProps) {
     </div>);
 }
 
-interface OwnProps {}
-interface StateProps {isLoading: boolean}
-interface DispatchProps {}
-type AllProps = OwnProps & StateProps & DispatchProps;
-
-
-function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const isLoading = state.isLoading;
-    return {isLoading};
-}
-
-function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
-    const ret: DispatchProps = {};
-    return ret;
-}
-
-
-export const LoaderConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
-    mapStateToProps,
-    mapDispatchToProps
-)(LoaderComponent);
-
-export const Loader = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
-    return <LoaderConnected {...{...props, children}} />;
-}
 export default Loader;
 

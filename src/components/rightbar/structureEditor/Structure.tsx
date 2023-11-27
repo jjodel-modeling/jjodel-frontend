@@ -194,10 +194,9 @@ export default class Structure {
             <Value value={lValue} />
         </div>);
     }
-    public static Editor(lModelElement: LModelElement|undefined) : ReactNode {
+    public static Editor(lModelElement: LModelElement|null) : ReactNode {
         if(lModelElement){
             switch (lModelElement.className){
-                default: break;
                 case "DModel": return Structure.ModelEditor(lModelElement);
                 case "DPackage": return Structure.PackageEditor(lModelElement);
                 case "DClass": return Structure.ClassEditor(lModelElement);
@@ -208,6 +207,7 @@ export default class Structure {
                 case "DOperation": return Structure.OperationEditor(lModelElement);
                 case "DObject" : return Structure.ObjectEditor(lModelElement);
                 case "DValue" : return Structure.ValueEditor(lModelElement);
+                default: break;
             }
         }
         return <div></div>;

@@ -1,11 +1,12 @@
 import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {
+    Debug,
     DEdgePoint,
     DGraph,
     DGraphElement,
     DGraphVertex,
-    DState,
+    DState, DUser,
     DVertex,
     DVoidVertex,
     EMeasurableEvents,
@@ -17,28 +18,32 @@ import {
     GraphElementStatee,
     GraphPoint,
     GraphSize,
-    LClass,
+    LClass, LGraph, LGraphElement,
     LModelElement, LNamedElement,
     Log,
     LPointerTargetable,
     LUser, LViewElement,
     LViewPoint,
-    LVoidVertex,
+    LVoidVertex, Pointer,
     RuntimeAccessibleClass,
     SetRootFieldAction,
     Size,
+    TRANSACTION,
     U,
 } from '../../joiner';
 import $ from 'jquery';
 import 'jqueryui';
 import 'jqueryui/jquery-ui.css';
+import { lightModeAllowedElements } from '../graphElement/graphElement';
+import ContextMenu from "../../components/contextMenu/ContextMenu";
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee { forceupdate?: number }
 
 const dragHelper = document.createElement('div');
 dragHelper.style.backgroundColor = 'transparent';
-dragHelper.style.outline = '1px dashed black';
+dragHelper.style.outline = '1px dashed black'; // '4px dashed #333';
+dragHelper.style.zIndex = '9999';
 
 
 export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
@@ -48,27 +53,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     resizableOptions: GObject | undefined;
     rotableOptions: GObject | undefined;
 
-    /*
-    shouldComponentUpdate(newProps: Readonly<AllProps>, newState: Readonly<ThisState>, newContext: any): boolean {
-        const oldProps = this.props;
-        const newData = newProps.data; const oldData = oldProps.data;
-        const newNode = newProps.node; const oldNode = oldProps.node;
-        const newViewpoint = newProps.viewpoint; const oldViewpoint = oldProps.viewpoint;
-        const newEdgePending = newProps.isEdgePending; const oldEdgePending = oldProps.isEdgePending;
-
-        if(newData.__raw !== oldData.__raw) return true;
-        if(newNode?.__raw !== oldNode?.__raw) return true;
-        if(newViewpoint.__raw !== oldViewpoint.__raw) return true;
-        if(newEdgePending !== oldEdgePending) return true;
-        return false;
-    }
-     */
-
     constructor(props: AllProps, context: any) {
         super(props, context);
         this.getSize = this.getSize.bind(this);
         this.setSize = this.setSize.bind(this);
         // this.state={forceupdate:1};
+        /*// remove this?
         setTimeout(()=>{
             this.getSize = this.getSize.bind(this);
             this.setSize = this.setSize.bind(this);
@@ -76,15 +66,15 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             // this.r = (<RootVertex props={this.props} render={super.render()} super={this} />);
             this.forceUpdate();
             this.setState({forceupdate:2});
-        },1)
+        },1)*/
     }
-
-    onViewChange(): void {
-        super.onViewChange();
+/*
+    onViewChangeOld(): void {
+        super.onViewChangeOld();
         this.draggableOptions = undefined;
         this.resizableOptions = undefined;
         this.rotableOptions = undefined;
-    }
+    }*/
 
     setVertexProperties(){
         if (!this.props.node || !this.html.current) return;
@@ -95,9 +85,15 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         let isDraggable: boolean = view.draggable;
         let isResizable: boolean = view.resizable;
         // $element = $(html).find('.measurable').addBack();
-        try{
-        if (!isDraggable) $measurable.draggable('disable')
-        else if (this.draggableOptions) $measurable.draggable('enable')
+        try {
+        if (!isDraggable) {
+            if ($measurable.data("uiDraggable")) $measurable.draggable('disable');
+        }
+        else if (this.draggableOptions) {
+            if ($measurable.data("uiDraggable")) $measurable.draggable('enable');
+            // NB: this check is to see if draggable has been setup. i think if 2 refreshes happens to fast it can
+            // happen that this.draggableOptions i set, but jqui didn't set up the draggable infos and throws warnings.
+        }
         else {
             // first setup only
             this.draggableOptions = {
@@ -120,17 +116,20 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 },
                 // disabled: !(view.draggable),
                 start: (event: GObject, obj: GObject) => {
-                    // this.select();
-                    SetRootFieldAction.new('contextMenu', { display: false, x: 0, y: 0 }); // todo: should probably be done in a document event
                     this.doMeasurableEvent(EMeasurableEvents.onDragStart);
                 },
                 drag: (event: GObject, obj: GObject) => {
-                    if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
-                    this.doMeasurableEvent(EMeasurableEvents.whileDragging);
+                    TRANSACTION(()=>{
+                        if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
+                        this.doMeasurableEvent(EMeasurableEvents.whileDragging);
+                    })
                 },
                 stop: (event: GObject, obj: GObject) => {
-                    this.setSize({x:obj.position.left, y:obj.position.top});
-                    this.doMeasurableEvent(EMeasurableEvents.onDragEnd);
+                    console.log("dragend");
+                    TRANSACTION(()=>{
+                        this.setSize({x:obj.position.left, y:obj.position.top});
+                        this.doMeasurableEvent(EMeasurableEvents.onDragEnd);
+                    })
                 }
             };
             $measurable.draggable(this.draggableOptions);
@@ -144,20 +143,26 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         }
 
         try{
-        if (!isResizable) $measurable.resizable('disable')
-        else if (this.resizableOptions) $measurable.resizable('enable')
+        if (!isResizable) {
+            if ($measurable.data("uiResizable")) $measurable.resizable('disable');
+        }
+        else if (this.resizableOptions) {
+            if ($measurable.data("uiResizable")) $measurable.resizable('enable');
+        }
         if (!this.resizableOptions) {
             this.resizableOptions = {
                 helper: 'selected-by-me',
                 start: (event: GObject, obj: GObject) => {
-                    this.select();
-                    if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
-                    SetRootFieldAction.new('contextMenu', { display: false, x: 0, y: 0 }); // todo: does it really need to be on resize event?
-                    this.doMeasurableEvent(EMeasurableEvents.onResizeStart);
+                    TRANSACTION(()=>{
+                        if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
+                        this.doMeasurableEvent(EMeasurableEvents.onResizeStart);
+                    })
                 },
                 resize: (event: GObject, obj: GObject) => {
-                    if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.position.width, h:obj.position.height});
-                    this.doMeasurableEvent(EMeasurableEvents.whileResizing);
+                    TRANSACTION(()=>{
+                        if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.position.width, h:obj.position.height});
+                        this.doMeasurableEvent(EMeasurableEvents.whileResizing);
+                    })
                 },
                 stop: (event: GObject, obj: GObject) => {
                     if (!this.state.classes.includes('resized')) this.setState({classes:[...this.state.classes, 'resized']});
@@ -227,9 +232,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     }
                     else newSize = {w:obj.size.width, h:obj.size.height};
                     // evt coordinates: clientX, layerX, offsetX, pageX, screenX
-                    this.setSize(newSize);
-                    // console.log('resize setsize:', obj, {w:obj.size.width, h:obj.size.height});
-                    this.doMeasurableEvent(EMeasurableEvents.onResizeEnd);
+                    TRANSACTION(()=>{
+
+                        this.setSize(newSize);
+                        // console.log('resize setsize:', obj, {w:obj.size.width, h:obj.size.height});
+                        this.doMeasurableEvent(EMeasurableEvents.onResizeEnd);
+                    })
 
                 }
             }
@@ -281,8 +289,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
             node:this.props.node?.size,
             default: this.props.view.defaultVSize});*/
-
-        let ret = this.props.view.getSize(this.props.dataid || this.props.nodeid as string)
+        let ret = this.props.view.getSize(this.props.data?.id || this.props.nodeid as string)
             || this.props.node?.size
             || this.props.view.defaultVSize;
         if (this.props.node.isResized) return ret;
@@ -308,7 +315,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         return this.props.node.size = size as any;
         // console.log('setSize('+(this.props?.data as any).name+') thisss', this);
         if (this.props.view.storeSize) {
-            let id = (this.props.dataid || this.props.nodeid) as string;
+            let id = (this.props.data?.id || this.props.nodeid) as string;
             this.props.view.updateSize(id, size);
             return;
         }
@@ -321,12 +328,14 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     }
 
     render(): ReactNode {
-        if (!this.props.node) return 'Loading...';
-
+        if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
+            return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
+        }
+        if (!this.props.node) return 'Loading Node...';
 
         const cssOverride: string[] = [];
-        const selected = this.props.selected;
-        if(selected && selected.id === this.props.dataid) cssOverride.push('selected-by-me');
+        // const selected = this.props.selected;
+        // if (selected && selected.id === this.props.nodeid) cssOverride.push('selected-by-me');
 
         // if(!windoww.cpts) windoww.cpts = {};
         // windoww.cpts[this.props.nodeid]=this;
@@ -342,11 +351,11 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         if (!this.props.isGraph &&  this.props.isVertex) nodeType = 'Vertex'; else
         if (!this.props.isGraph && !this.props.isVertex) nodeType = 'Field';
 
-        const named: LNamedElement = LNamedElement.fromPointer(this.props.dataid);
-        const classesOverride = [nodeType, ...cssOverride, (named.name && named.name === 'default') ? 'default' : ''];
+        // const named: LNamedElement = this.props.data as LNamedElement; // LNamedElement.fromPointer(this.props.dataid);
+        const classesOverride = [nodeType, ...cssOverride]; // , (named?.name === 'default') ? 'default' : ''];
         const styleOverride: React.CSSProperties = {};
         // set classes end
-        const size: Readonly<GraphSize> = this.getSize() as any;
+        const size: Readonly<GraphSize> = this.getSize();
 
         switch (nodeType){
             case 'GraphVertex':
@@ -368,7 +377,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         return super.render(nodeType, styleOverride, classesOverride);
         // return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+'.'+this.state?.forceupdate} />;
     }
+
+    select(forUser?: Pointer<DUser>): void{
+        super.select(forUser);
+    }
 }
+
 
 class OwnProps extends GraphElementOwnProps {
     // onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
@@ -381,9 +395,9 @@ class OwnProps extends GraphElementOwnProps {
 
 class StateProps extends GraphElementReduxStateProps {
     node!: LVoidVertex;
-    lastSelected!: LModelElement | null;
-    //selected!: Dictionary<Pointer<DUser>, LModelElement|null>;
-    selected!: LModelElement|null;
+    // lastSelected!: LModelElement | null;
+    // selected!: Dictionary<Pointer<DUser>, LModelElement|null>;
+    //selected!: LGraphElement|null;
     isEdgePending!: { user: LUser, source: LClass };
     viewpoint!: LViewPoint
 }
@@ -402,11 +416,13 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     else DGraphElementClass = DGraphElement; // DField;
 
     if (DGraphElementClass === DVertex && ownProps.isVoid) DGraphElementClass = DVoidVertex;
-    const superret: StateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass) as StateProps;
-    //superret.lastSelected = state._lastSelected?.modelElement;
-    superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
+    const superret: StateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass, {...ownProps}) as StateProps;
+    // superret.lastSelected = state._lastSelected?.modelElement;
+    // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
 
-    superret.selected = (state.selected) ? LModelElement.fromPointer(state.selected) : null;
+    // change current to correct user ID when authentication is implemented.
+    // const selected = state.selected[DUser.current];
+    // uperret.selected = (selected) ? LGraphElement.fromPointer(selected) : null;
     /*  Uncomment this when we have user authentication.
     superret.selected = {};
     for(let user of Object.keys(selected)) {
@@ -415,7 +431,6 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         else superret.selected[user] = null;
     }
     */
-
 
     superret.isEdgePending = {
         user: LPointerTargetable.from(state.isEdgePending.user),
@@ -442,26 +457,26 @@ export const VertexConnected = connect<StateProps, DispatchProps, OwnProps, DSta
     mapDispatchToProps
 )(VertexComponent as any);
 
-export const Vertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const Vertex = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { //  children: (string | React.Component)[]
     return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true}/>;
 }
-export const VoidVertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const VoidVertex = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} isVoid={true}/>;
 }
-export const EdgePoint = function EdgePoint (props: OwnProps, children: (string | React.Component)[] = []): ReactElement {
+export const EdgePoint = function EdgePoint (props: OwnProps, children: ReactNode | undefined = []): ReactElement {
     return <VertexConnected {...{...props, children}} isGraph={false} isEdgePoint={true}/>;
 }
 // todo: name them all or verify the name is still usable.
 
-export const Graph = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => { // doesn't work?
+export const Graph = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { // doesn't work?
     return <VertexConnected {...{...props, children}} isGraph={true} isVertex={false} />;
 }
 
-export const GraphVertex = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const GraphVertex = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isGraph={true} isVertex={true} />;
 }
 
-export const Field = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+export const Field = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isGraph={false} isVertex={false} />;
 }
 (window as any).componentdebug = {Graph, GraphVertex, Field, Vertex, VoidVertex, EdgePoint, VertexConnected, VertexComponent};

@@ -1,13 +1,13 @@
 import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
-import {DPointerTargetable, DState, GObject, LPointerTargetable, Overlap, Pointer, U} from '../../joiner';
+import {DocString, DPointerTargetable, DState, GObject, LPointerTargetable, Overlap, Pointer, U} from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './style.scss';
 
 
 function TextAreaComponent(props: AllProps) {
     const data = props.data;
-    const readOnly = (props.readonly !== undefined) ? props.readonly : data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
+    const readOnly = (props.readonly !== undefined) ? props.readonly : !props.debugmode && data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
     const field = props.field;
     const getter = props.getter;
     const setter = props.setter;
@@ -15,7 +15,7 @@ function TextAreaComponent(props: AllProps) {
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
     let tooltip: string|undefined = (props.tooltip === true) ? ((data['__info_of__' + field]) ? data['__info_of__' + field].txt: '') : props.tooltip;
     tooltip = (tooltip) ? tooltip : '';
-    let __value = (!data) ? 'undefined' : ((getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined');
+    let __value = (!data) ? 'undefined' : ((getter) ? getter(data, field) : (data[field] !== undefined) ? data[field] : 'undefined');
     const [value, setValue] = useStateIfMounted(__value);
     const [isTouched, setIsTouched] = useStateIfMounted(false);
     const [showTooltip, setShowTooltip] = useStateIfMounted(false);
@@ -34,9 +34,9 @@ function TextAreaComponent(props: AllProps) {
     const blur = (evt: React.FocusEvent<HTMLTextAreaElement>) => {
         if (readOnly) return;
         const target = evt.target.value;
-        const oldValue = (!data) ? 'undefined' : (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined'
+        const oldValue = data && (getter ? getter(data, field) : data[field]);
         if (target !== oldValue) {
-            if (setter) setter(target);
+            if (setter) setter(target, data, field);
             else data[field] = target;
         }
         // I terminate my editing, so I communicate it to other <Input /> that render the same field.
@@ -54,7 +54,6 @@ function TextAreaComponent(props: AllProps) {
     delete otherprops.hidden;
     delete otherprops.inputStyle;
     delete otherprops.children;
-    delete otherprops.selected;
 
     return(<div style={{display: (jsxLabel || label) ? 'flex' : 'block'}} className={'p-1'} {...otherprops}>
         <label onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)}
@@ -77,11 +76,11 @@ export interface TextAreaOwnProps {
     data: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
     label?: string;
-    getter?: (data: LPointerTargetable) => string;
-    setter?: (value: string|boolean) => void;
+    getter?: <T extends LPointerTargetable>(data: T, field: DocString<"keyof T">) => string;
+    setter?: <T extends LPointerTargetable>(value: string|boolean, data: T, field: DocString<"keyof T">) => void;
     jsxLabel?: ReactNode;
     readonly?: boolean;
-    tooltip?: boolean|string;
+    tooltip?: string | boolean | ReactElement;
     hidden?: boolean;
     key?: React.Key | null;
     className?: string;
@@ -90,7 +89,10 @@ export interface TextAreaOwnProps {
     inputStyle?: GObject;
 }
 
-interface StateProps { data: LPointerTargetable & GObject; }
+interface StateProps {
+    debugmode: boolean;
+    data: LPointerTargetable & GObject;
+}
 interface DispatchProps { }
 
 type AllProps = Overlap<TextAreaOwnProps, Overlap<StateProps, DispatchProps>>;
@@ -99,6 +101,7 @@ type AllProps = Overlap<TextAreaOwnProps, Overlap<StateProps, DispatchProps>>;
 function mapStateToProps(state: DState, ownProps: TextAreaOwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
+    ret.debugmode = state.debug;
     ret.data = LPointerTargetable.fromPointer(pointer);
     return ret;
 }
