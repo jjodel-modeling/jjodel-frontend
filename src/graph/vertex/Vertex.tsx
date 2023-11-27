@@ -18,22 +18,24 @@ import {
     GraphElementStatee,
     GraphPoint,
     GraphSize,
-    LClass, LGraphElement,
+    LClass, LGraph, LGraphElement,
     LModelElement, LNamedElement,
     Log,
     LPointerTargetable,
     LUser, LViewElement,
     LViewPoint,
-    LVoidVertex,
+    LVoidVertex, Pointer,
     RuntimeAccessibleClass,
     SetRootFieldAction,
     Size,
+    TRANSACTION,
     U,
 } from '../../joiner';
 import $ from 'jquery';
 import 'jqueryui';
 import 'jqueryui/jquery-ui.css';
 import { lightModeAllowedElements } from '../graphElement/graphElement';
+import ContextMenu from "../../components/contextMenu/ContextMenu";
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee { forceupdate?: number }
@@ -114,18 +116,20 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 },
                 // disabled: !(view.draggable),
                 start: (event: GObject, obj: GObject) => {
-                    // this.select();
-                    SetRootFieldAction.new('contextMenu', { display: false, x: 0, y: 0 }); // todo: should probably be done in a document event
                     this.doMeasurableEvent(EMeasurableEvents.onDragStart);
                 },
                 drag: (event: GObject, obj: GObject) => {
-                    if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
-                    this.doMeasurableEvent(EMeasurableEvents.whileDragging);
+                    TRANSACTION(()=>{
+                        if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
+                        this.doMeasurableEvent(EMeasurableEvents.whileDragging);
+                    })
                 },
                 stop: (event: GObject, obj: GObject) => {
                     console.log("dragend");
-                    this.setSize({x:obj.position.left, y:obj.position.top});
-                    this.doMeasurableEvent(EMeasurableEvents.onDragEnd);
+                    TRANSACTION(()=>{
+                        this.setSize({x:obj.position.left, y:obj.position.top});
+                        this.doMeasurableEvent(EMeasurableEvents.onDragEnd);
+                    })
                 }
             };
             $measurable.draggable(this.draggableOptions);
@@ -149,13 +153,16 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             this.resizableOptions = {
                 helper: 'selected-by-me',
                 start: (event: GObject, obj: GObject) => {
-                    if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
-                    SetRootFieldAction.new('contextMenu', { display: false, x: 0, y: 0 }); // todo: does it really need to be on resize event?
-                    this.doMeasurableEvent(EMeasurableEvents.onResizeStart);
+                    TRANSACTION(()=>{
+                        if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
+                        this.doMeasurableEvent(EMeasurableEvents.onResizeStart);
+                    })
                 },
                 resize: (event: GObject, obj: GObject) => {
-                    if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.position.width, h:obj.position.height});
-                    this.doMeasurableEvent(EMeasurableEvents.whileResizing);
+                    TRANSACTION(()=>{
+                        if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.position.width, h:obj.position.height});
+                        this.doMeasurableEvent(EMeasurableEvents.whileResizing);
+                    })
                 },
                 stop: (event: GObject, obj: GObject) => {
                     if (!this.state.classes.includes('resized')) this.setState({classes:[...this.state.classes, 'resized']});
@@ -225,9 +232,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     }
                     else newSize = {w:obj.size.width, h:obj.size.height};
                     // evt coordinates: clientX, layerX, offsetX, pageX, screenX
-                    this.setSize(newSize);
-                    // console.log('resize setsize:', obj, {w:obj.size.width, h:obj.size.height});
-                    this.doMeasurableEvent(EMeasurableEvents.onResizeEnd);
+                    TRANSACTION(()=>{
+
+                        this.setSize(newSize);
+                        // console.log('resize setsize:', obj, {w:obj.size.width, h:obj.size.height});
+                        this.doMeasurableEvent(EMeasurableEvents.onResizeEnd);
+                    })
 
                 }
             }
@@ -279,7 +289,6 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
             node:this.props.node?.size,
             default: this.props.view.defaultVSize});*/
-
         let ret = this.props.view.getSize(this.props.data?.id || this.props.nodeid as string)
             || this.props.node?.size
             || this.props.view.defaultVSize;
@@ -368,7 +377,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         return super.render(nodeType, styleOverride, classesOverride);
         // return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+'.'+this.state?.forceupdate} />;
     }
+
+    select(forUser?: Pointer<DUser>): void{
+        super.select(forUser);
+    }
 }
+
 
 class OwnProps extends GraphElementOwnProps {
     // onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;

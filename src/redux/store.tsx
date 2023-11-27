@@ -61,6 +61,7 @@ import {
     LVertex,
     LViewElement,
     LViewPoint,
+    packageDefaultSize,
     Pointer,
     Pointers,
     RuntimeAccessible,
@@ -212,7 +213,6 @@ export class DState extends DPointerTargetable{
 
     }
 }
-
 function makeDefaultGraphViews(): DViewElement[] {
 
     let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname], '', 1, false);
@@ -237,7 +237,7 @@ function makeDefaultGraphViews(): DViewElement[] {
         "}";
 
     let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname], '', 1, false);
-    packageView.defaultVSize = new GraphSize(0, 0, 400, 500);
+    packageView.defaultVSize = packageDefaultSize;
     packageView.oclCondition = `context DPackage inv: true`;
 
 /*

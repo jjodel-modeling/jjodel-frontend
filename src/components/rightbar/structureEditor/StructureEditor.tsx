@@ -42,7 +42,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    const nodeid = state.selected[DUser.current];
+    const nodeid = state._lastSelected?.node;
     if(nodeid) ret.node = LGraphElement.fromPointer(nodeid);
     else ret.node = null;
     return ret;

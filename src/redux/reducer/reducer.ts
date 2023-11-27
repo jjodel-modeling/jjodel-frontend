@@ -1,4 +1,4 @@
-import type {U as UType} from '../../joiner';
+import type {U as UType, GraphDragManager, MouseUpEvent} from '../../joiner';
 import {
     Action,
     CompositeAction,
@@ -316,7 +316,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     if (ret === oldState) return oldState;
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
     if (!oldState?.room) return ret;
-    const ignoredFields  = ['contextMenu', '_lastSelected', 'selected', 'isLoading', 'isCleaning'];
+    const ignoredFields  = ['contextMenu', '_lastSelected', 'isLoading', 'isCleaning'];
     if(action.sender === DUser.current && !ignoredFields.includes(action.field)) {
         const parsedAction: JSON & GObject = JSON.parse(JSON.stringify(action));
         if(action.type === 'COMPOSITE_ACTION') for(let subAction of parsedAction.actions) delete subAction['stack'];
@@ -487,5 +487,13 @@ export function stateInitializer() {
     let lClassesMap: Dictionary<string, typeof LPointerTargetable> = lClasses.reduce((acc: GObject, curr)=> (acc[curr] = RuntimeAccessibleClass.get(curr), acc),{});
     buildLSingletons(dClassesMap, lClassesMap); setSubclasses(dClassesMap); setSubclasses(lClassesMap);
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
+    // global document events
+
+    // do not use typings or class constructors here or it will change import order
+    setTimeout( //a
+        // ()=> $(document).on("mouseup", (e: MouseUpEvent) => RuntimeAccessibleClass.get<any>("GraphDragManager").stopPanning(e)), //a
+        ()=> $(document).on("mouseup", (e: MouseUpEvent) => (window as any).GraphDragManager.stopPanning(e)), //a
+        1 //a
+    ); /// because when this function is executed, RuntimeClasses are not yet parsed.
     DState.init();
 }

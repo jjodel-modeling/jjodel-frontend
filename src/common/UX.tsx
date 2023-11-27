@@ -2,7 +2,7 @@ import ReactJson from 'react-json-view' // npm i react-json-view
 import React, {ReactElement, ReactNode} from "react";
 import withReactContent from "sweetalert2-react-content";
 import Swal from "sweetalert2";
-import type { GraphElementOwnProps, GObject, Dictionary, DocString, Pointer } from "../joiner";
+import type { GraphElementOwnProps, GObject, Dictionary, DocString, Pointer, LGraph } from "../joiner";
 import type { InputOwnProps } from '../components/forEndUser/Input';
 import type { SelectOwnProps } from '../components/forEndUser/Select';
 import type { TextAreaOwnProps } from '../components/forEndUser/TextArea';
@@ -35,12 +35,27 @@ export class UX{
         return React.Children.map(children, (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as T;
     }
     static injectProp(parentComponent: GraphElementComponent, e: ReactNode, gvidmap_useless: Dictionary<DocString<'VertexID'>, boolean>,
-                      parentnodeid: string, index: number, indices: number[]): ReactNode {
-        const re: ReactElement | null = UX.ReactNodeAsElement(e);
+                      parentnodeid: string, index: number, indices: number[], injectOffset?: LGraph): ReactNode {
+        let re: ReactElement | null = UX.ReactNodeAsElement(e);
+
+        injectOffset&&console.log("inject offset props 1:", {e, re, injectOffset});
         if (!re) return e;
         // @ts-ignore this
         // const parentComponent = this;
-        let type = (re.type as any).WrappedComponent?.name || re.type;
+        const type = (re.type as any).WrappedComponent?.name || re.type;
+        if (injectOffset) {
+            const style = {...(re.props?.style || {})};
+            let offset = injectOffset.offset;
+            let scale = injectOffset.zoom;
+            style.position = "absolute";
+            style.left = offset.x;
+            style.top = offset.y;
+            style.transform = "scale(" + scale.x + "," + scale.y + ")";
+            const injectProps = {style};
+            let oldre = re;
+            console.log("inject offset props 2:", {oldre, re, injectProps});
+            re = React.cloneElement(re, injectProps);
+        }
         // const windoww = window as any;
         // console.log('ux.injectingProp pre ', {type: (re.type as any).WrappedComponent?.name || re.type}, {mycomponents: windoww.mycomponents, re, props:re.props});
         // add "view" (view id) prop as default to sub-elements of any depth to inherit the view of the parent unless the user forced another view to apply

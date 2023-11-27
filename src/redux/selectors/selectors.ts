@@ -55,11 +55,6 @@ enum ViewEClassMatch { // this acts as a multiplier for explicit priority
 export class Selectors{
     public static cname: string = 'Selectors';
 
-    // 11/23, i disabled this function but giordano updated it.
-    static getSelectedOLD(): Selected {
-        const state = store.getState();
-        return state.selected;
-    }
 
     static getRoom(): string {
         const state = store.getState();

@@ -129,7 +129,7 @@ import {
     SetFieldAction,
     SetRootFieldAction, ShortAttribETypes,
     store,
-    U,
+    U, packageDefaultSize
 } from "./index";
 import TreeModel from "tree-model";
 
@@ -836,11 +836,11 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         const thiss: DGraph = this.thiss as any;
         thiss.graph = thiss.id; // no setPtr because i want to avoid circular pointedby reference
         thiss.zoom = new GraphPoint(1, 1);
-        thiss.graphSize = new GraphSize(0, 0, 0, 0);  // GraphSize.apply(this, [0, 0, 0 ,0]);
+        thiss.offset = new GraphPoint(0, 0);  // GraphSize.apply(this, [0, 0, 0 ,0]);
         thiss._subMaps = {zoom: true, graphSize: true}
 
         const user: LUser = LUser.fromPointer(DUser.current);
-        if (thiss.className !== 'DGraph') { // to exclude GraphVertex
+        if (thiss.className === 'DGraph') { // to exclude GraphVertex
             user.project && this.setExternalPtr(user.project.id, 'graphs', "+=");
             thiss.x = 0;
             thiss.y = 0;
@@ -851,8 +851,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             // todo: set to default graphvertex size, so it can skip a rerender
             thiss.x = 0;
             thiss.y = 0;
-            thiss.w = 0;
-            thiss.h = 0;
+            thiss.w = packageDefaultSize.w;
+            thiss.h = packageDefaultSize.h;
         }
         return this; }
 

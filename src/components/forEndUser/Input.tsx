@@ -31,15 +31,12 @@ function InputComponent(props: AllProps) {
     const [isTouched, setIsTouched] = useStateIfMounted(false);
     const [showTooltip, setShowTooltip] = useStateIfMounted(false);
 
-    // why as an effect? 11/23
-    useEffect(() => {
-        // I check if the value that I have in my local state is being edited by other <Input />
-        const oldValue = (!data) ? 'undefined' : (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined'
-        if(value !== oldValue && !isTouched){
-            setValue(oldValue);
-            setIsTouched(false);
-        }
-    })
+    // I check if the value that I have in my local state is being edited by other <Input />
+    const oldValue = (!data) ? 'undefined' : (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined'
+    if (value !== oldValue && !isTouched){
+        setValue(oldValue);
+        setIsTouched(false);
+    }
 
 
     if (!data) return(<></>);
@@ -92,9 +89,7 @@ function InputComponent(props: AllProps) {
     delete otherprops.hidden;
     delete otherprops.inputStyle;
     delete otherprops.children;
-    delete otherprops.selected;
     delete otherprops.autosize; // because react complains is bool in dom attribute or unknown attrib name
-    delete otherprops.autoSize;
     let input = <input {...otherprops}
                        key={`${field}.${data.id}`}
                        className={props.inputClassName || css}

@@ -3,8 +3,11 @@ import {createPortal} from "react-dom";
 import {connect} from "react-redux";
 import './graphElement.scss';
 import {
+    GraphDragManager,
+    GraphSize,
+    LGraph, MouseUpEvent, Point,
     Pointers,
-    Selectors as Selectors_
+    Selectors as Selectors_, Size, TRANSACTION, WGraph
 } from "../../joiner";
 import type {EdgeOwnProps} from "./sharedTypes/sharedTypes";
 import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
@@ -333,7 +336,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);
     }
 
-    selectold(forUser?: Pointer<DUser>) {
+    select(forUser?: Pointer<DUser>): void {
         // if (forUser === DUser.current && this.html.current) this.html.current.focus();
         BEGIN();
         this.props.node?.select(forUser);
@@ -549,13 +552,20 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     onMouseDown(e: React.MouseEvent): void {
         e.stopPropagation();
         GraphElementComponent.mousedownComponent = this;
-        if (e.button === Keystrokes.clickRight) { this.doContextMenu(e); }
+        TRANSACTION(()=>{
+            if (e.button === Keystrokes.clickRight) { this.doContextMenu(e); }
+            if ((this.props as any).isGraph) GraphDragManager.startPanning(e, this.props.node as LGraph);
+        })
     }
+
 
     onMouseUp(e: React.MouseEvent): void {
         e.stopPropagation();
         if (GraphElementComponent.mousedownComponent !== this) { return; }
-        this.doOnClick(e);
+        TRANSACTION(()=>{
+            this.doOnClick(e);
+            // if ((this.props as any).isGraph) GraphDragManager.stopPanning(e);
+        })
     }
     onKeyDown(e: React.KeyboardEvent){
         if (e.key === Keystrokes.escape) {
@@ -754,7 +764,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         onMouseLeave:this.onLeave,
                         tabIndex: (this.props as any).tabIndex || -1,
                         children: UX.recursiveMap(rawRElement/*.props.children*/,
-                            (rn: ReactNode, index: number, depthIndexes: number[]) => UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes))});
+                            (rn: ReactNode, index: number, depthIndexes: number[]) => {
+                                let injectOffset: undefined | LGraph = ((this.props as any).isGraph && !depthIndexes[0] && !index) && (this.props.node as LGraph);
+                                injectOffset&&console.log("inject offset props0:", {injectOffset});
+                                console.log("inject offset props00:", {injectOffset, ig:(this.props as any).isGraph, props:this.props, depthIndexes, index});
+                                return UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes, injectOffset)
+                            })});
                 fixdoubleroot = false; // need to set the props to new root in that case.
                 if (fixdoubleroot) rawRElement = rawRElement.props.children;
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});

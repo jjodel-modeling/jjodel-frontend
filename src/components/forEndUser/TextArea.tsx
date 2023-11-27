@@ -54,7 +54,6 @@ function TextAreaComponent(props: AllProps) {
     delete otherprops.hidden;
     delete otherprops.inputStyle;
     delete otherprops.children;
-    delete otherprops.selected;
 
     return(<div style={{display: (jsxLabel || label) ? 'flex' : 'block'}} className={'p-1'} {...otherprops}>
         <label onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)}

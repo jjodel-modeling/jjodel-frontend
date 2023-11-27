@@ -220,7 +220,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 //* 23/11 versione giordano
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    const nodeid = state.selected[DUser.current];
+    const nodeid = state._lastSelected?.node;
     if(nodeid) ret.node = LGraphElement.fromPointer(nodeid);
     else ret.node = null;
     if(ownProps.metamodelId) { ret.metamodel = LModel.fromPointer(ownProps.metamodelId); }

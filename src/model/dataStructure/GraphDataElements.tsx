@@ -41,7 +41,7 @@ import {
     ShortAttribETypes,
     Size,
     store,
-    TargetableProxyHandler,
+    TargetableProxyHandler, TRANSACTION,
     U, Uarr,
     windoww
 } from "../../joiner";
@@ -53,6 +53,7 @@ import {Geom} from "../../common/Geom";
 
 console.warn('ts loading graphDataElement');
 
+export const packageDefaultSize = new GraphSize(0, 0, 400, 500);
 
 @Node
 @RuntimeAccessible
@@ -72,11 +73,11 @@ export class DGraphElement extends DPointerTargetable {
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     state: DMap = {} as any;
     father!: Pointer<DGraphElement, 1, 1, LGraphElement>;
-    x: number = 0;
-    y: number = 0;
-    zIndex:number = 100;
-    w: number=300;
-    h: number=500;
+    x!: number;
+    y!: number;
+    zIndex: number = 100;
+    w!: number;
+    h!: number;
     // width: number = 300;
     // height: number = 400;
     view!: Pointer<DViewElement, 1, 1, LViewElement>;
@@ -666,7 +667,7 @@ export class DGraph extends DGraphElement {
     state: DMap = {} as any;
     // personal attributes
     zoom!: GraphPoint;
-    graphSize!: GraphSize; // internal size of the graph. can be huge even if the sub-graph is in a small window (scroll)
+    offset!: GraphPoint; // in-graph scrolling offset
 
     public static new(htmlindex: number, model: DGraph["model"],
                       parentNodeID?: DGraphElement["father"], // immediate parent
@@ -722,10 +723,21 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     state!: LMap;
     // personal attributes
     zoom!: GraphPoint;
-    graphSize!: GraphSize; // alias for offset
-    offset!: GraphSize; //  size internal to the graph, while "size" is instead external size of the vertex holding the graph in GraphVertexes
+    graphSize!: GraphSize; // derived attribute: bounding rect containing all subnodes
+    offset!: GraphPoint; //  size internal to the graph, while "size" is instead external size of the vertex holding the graph in GraphVertexes
 
-    get_graphSize(context: LogicContext<DGraph>):  Readonly<GraphSize> { return context.data.graphSize; }
+    // get_graphSize(context: LogicContext<DGraph>):  Readonly<GraphSize> { return todo: get bounding rect containing all subnodes.; }
+    get_offset(context: LogicContext<DGraph>):  Readonly<GraphSize> {
+        return new GraphSize(context.data.offset.x, context.data.offset.y);
+    }
+    set_offset(val: Partial<GraphPoint>, context: Context): boolean {
+        if (!val) val = {x:0, y:0};
+        if (context.data.offset.x === val.x && context.data.offset.y === val.y) return true;
+        if (val.x === undefined && context.data.offset.x !== val.x) val.x = context.data.offset.x;
+        if (val.y === undefined && context.data.offset.y !== val.y) val.y = context.data.offset.y;
+        SetFieldAction.new(context.data, "offset", val as GraphPoint);
+        return true;
+    }
     get_zoom(context: Context): GraphPoint {
         const zoom: GraphPoint = context.data.zoom;
         // (zoom as any).debug = {rawgraph: context.data.__raw, zoomx: context.data.zoom.x, zoomy: context.data.zoom.y}
@@ -743,15 +755,16 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     // get_htmlSize(context: Context): Size { }
     translateSize<T extends GraphSize|GraphPoint>(ret: T, innerGraph: LGraph): T { return this.wrongAccessMessage("translateSize()"); }
     translateHtmlSize<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(size: T): G { return this.wrongAccessMessage("translateHtmlSize()"); }
-    __info_of__offset: Info = {type:GraphSize.cname, txt:"size internal to the graph, including internal scroll and panning."};
-    __info_of__graphSize: Info = {type:GraphSize.cname, txt:"Alias of this.offset"};
+
+    __info_of__offset: Info = {type:GraphSize.cname, txt:"In-graph scrolling position."};
+    __info_of__graphSize: Info = {type:GraphSize.cname, txt:"size internal to the graph, including internal scroll and panning."};
     __info_of__translateSize: Info = {type:"(T, Graph)=>T where T is GraphSize | GraphPoint", txt:"Translates a coordinate set from the local coordinates of a SubGraph to this Graph containing it."};
     __info_of__translateHtmlSize: Info = {type:"(Size|Point) => GraphSize|GraphPoint", txt:"Translate page\'s viewport coordinate set to this graph coordinate set."};
     get_translateHtmlSize<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(c: Context): ((size: T) => G) {
         return (size: T): G => {
             let graphHtmlSize = this.get_htmlSize(c);
             let a = size.subtract(graphHtmlSize.tl(), true);
-            let b = a.add({x:c.data.graphSize.x, y:c.data.graphSize.y}, false);
+            let b = a.add({x:c.data.offset.x, y:c.data.offset.y}, false);
             return b.multiply(c.data.zoom, false) as any as G;
         }
     }
@@ -859,29 +872,6 @@ export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C exte
     set_isResized(val: DVoidVertex["isResized"], context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] {
         return SetFieldAction.new(context.data.id, "isResized", val);
     }
-    /*
-        // todo: devo settare che il primo parametro delle funzioni che iniziano con set_ non può essere un logicContext
-        set_size(val: GraphSize, context: LogicContext<DVoidVertex>): boolean {
-            // todo: graphvertex should use this, but  calls graphelement.set_size instead
-            // SetFieldAction.new(context.data, 'size', val, Action.SubType.vertexSize);
-            if (!val) { return true; } //  val = defaultVSize; }
-            //console.trace('setsize:', {context, val});
-            if (context.data.x !== val.x) SetFieldAction.new(context.data, 'x', val.x);
-            if (context.data.y !== val.y) SetFieldAction.new(context.data, 'y', val.y);
-            if (context.data.w !== val.w) SetFieldAction.new(context.data, 'w', val.w);
-            if (context.data.h !== val.h) SetFieldAction.new(context.data, 'h', val.h);
-            val = new GraphSize(val.x, val.y, val.w, val.h);
-            // (context.proxy as unknown as LGraphElement).graph.graphSize
-            // update graph boundary too
-            const graph: LGraph = this.get_graph(context); // (context.proxyObject as this).get_graph(context);
-            const gsize = graph.graphSize;
-            //console.log('setsize2, graph:', {context, val, gsize, graph});
-            val.boundary(gsize);
-            if (val.equals(gsize)) return true;
-            graph.graphSize = val;
-            return true;
-        }*/
-
 
 
 
@@ -1163,7 +1153,7 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
     // from graph
     zoom!: GraphPoint;
-    graphSize!: GraphSize; // internal size of the graph. can be huge even if the sub-graph is in a small window (scroll)
+    offset!: GraphPoint; // in-graph scrolling position
 
     // from VoidVertex
     x!: number;
@@ -1217,6 +1207,7 @@ export class LGraphVertex<Context extends LogicContext<any> = any, D extends DGr
     ///////////////////////////////////////// subElements!: LGraphElement[];
     // from graph
     zoom!: GraphPoint;
+    offset!: GraphPoint; // in-graph scrolling position
     graphSize!: GraphSize; // internal size of the graph. can be huge even if the sub-graph is in a small window (scroll)
 
     // from VoidVertex

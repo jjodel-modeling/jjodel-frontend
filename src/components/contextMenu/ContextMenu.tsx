@@ -19,7 +19,7 @@ import {
 import MemoRec from '../../memorec/api';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import ModellingIcon from "../forEndUser/ModellingIcon";
-import {FakeStateProps} from "../../joiner/types";
+import {FakeStateProps, windoww} from "../../joiner/types";
 
 function ContextMenuComponent(props: AllProps) {
     const user = props.user;
@@ -35,6 +35,8 @@ function ContextMenuComponent(props: AllProps) {
     if(!node || !data) return(<></>);
 
     const close = () => {
+        if (!windoww.ContextMenuVisible) return;
+        windoww.ContextMenuVisible = false;
         setSuggestedName('');
         setMemorec(null);
         SetRootFieldAction.new('contextMenu', {display: false, x: 0, y: 0});
@@ -162,7 +164,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.user = LUser.fromPointer(DUser.current);
     ret.display = state.contextMenu.display;
     ret.position = {x: state.contextMenu.x, y: state.contextMenu.y};
-    const nodeid = state.selected[DUser.current];
+    const nodeid = state._lastSelected?.node;
     if(nodeid) ret.node = LGraphElement.fromPointer(nodeid);
     else ret.node = null;
     return ret;
