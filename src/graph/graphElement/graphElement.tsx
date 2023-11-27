@@ -327,7 +327,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if(!nodeid) return;
         SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);
     }*/
-    deselectold(forUser?: Pointer<DUser>) { read above 11/23
+    deselectold(forUser?: Pointer<DUser>) {
         const nodeid = this.props.nodeid
         if(!nodeid) return;
         SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);

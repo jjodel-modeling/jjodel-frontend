@@ -37,9 +37,6 @@ function NavbarComponent(props: AllProps) {
                         <Edit />
                         <Share />
                         {debug && undefined /* <Examples />*/}
-                        {debug && <li className={'d-block ms-1 m-auto'}>
-                            <img width={30} height={30} src={DebugImage} alt={"debug mode on"} />
-                        </li>}
                         <hr />
                         <li tabIndex={-1} onClick={e => user.project = null} className={'text-danger dropdown-item'}>
                             Close Project
@@ -57,9 +54,17 @@ function NavbarComponent(props: AllProps) {
             }
         </ul>
         <ul className={'navbar-nav ms-auto'}>
+            {debug && <li className={'nav-item'}>
+                <img alt={'debug'} width={25} height={25} src={DebugImage} />
+            </li>}
             <li className={'nav-item dropdown'}>
                 <div tabIndex={-1} style={{cursor: 'pointer', width: '2rem', height: '2rem'}} data-bs-toggle={'dropdown'}
-                     className={'dropdown-toggle bg-primary circle border d-flex justify-content-center align-items-center'}>
+                     className={'dropdown-toggle bg-primary circle border d-flex justify-content-center align-items-center'}
+                     onClick={(e)=>{
+                         let now = Date.now();
+                         if (now - clickTimestamps[clickTimestamps.length - clicksRequired] < timeframe) { SetRootFieldAction.new('debug', !debug); clickTimestamps = []; }
+                         clickTimestamps.push(now);
+                     }}>
                     <label style={{cursor: 'pointer'}} className={'text-white'}>A</label>
                 </div>
                 <ul className={'dropdown-menu'}>
@@ -73,21 +78,11 @@ function NavbarComponent(props: AllProps) {
             </li>
 
             <ul className={'navbar-nav ms-auto'}>
-                <li className={'d-block'}>
-                    <img width={80} height={40} src={LogoImage} alt={"jjodel logo"} onClick={(e) => {
-                        let now = Date.now();
-                        if (now - clickTimestamps[clickTimestamps.length - clicksRequired] < timeframe) { SetRootFieldAction.new('debug', !debug); clickTimestamps = []; }
-                        clickTimestamps.push(now);
-                    }}/>
-                </li>
             </ul>
             {user.project && <li className={'nav-item'}>
                 <button onClick={async(e) => await PersistanceApi.saveProject()} style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
                     Save
                 </button>
-            </li>}
-            {debug && <li className={'nav-item'}>
-                <img alt={'debug'} width={25} height={25} src={DebugImage} />
             </li>}
         </ul>
     </nav>);

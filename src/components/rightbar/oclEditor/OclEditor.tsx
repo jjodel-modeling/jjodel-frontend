@@ -7,11 +7,9 @@ import {FakeStateProps} from "../../../joiner/types";
 
 function OclEditorComponent(props: AllProps) {
     const view = props.view;
-
+    const [ocl, setOcl] = useStateIfMounted(view.oclCondition);
     if(!view) return(<></>);
     const readOnly = props.readonly !== undefined ? props.readonly : U.getDefaultViewsID().includes(view.id);
-    const [ocl, setOcl] = useStateIfMounted(view.oclCondition);
-
     const change = (value: string|undefined) => {
         if(value !== undefined) setOcl(value);
         // ma questo non setta solo lo stato locale? prima era:

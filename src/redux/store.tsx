@@ -178,8 +178,7 @@ export class DState extends DPointerTargetable{
 
     static init(store?: DState): void {
         BEGIN()
-        const viewpoint = DViewPoint.new('Default', '' , undefined, '', '', '', [], '', 1, false);
-        aaa it was only until "Default", ''
+        const viewpoint = DViewPoint.new('Default', '');
         viewpoint.id = 'Pointer_DefaultViewPoint';
         CreateElementAction.new(viewpoint);
         SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
@@ -217,7 +216,6 @@ export class DState extends DPointerTargetable{
 function makeDefaultGraphViews(): DViewElement[] {
 
     let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname], '', 1, false);
-    aaa it was only until [DModel.cname]
     modelView.draggable = false; modelView.resizable = false;
     modelView.oclCondition = 'context DModel inv: true';
     modelView.usageDeclarations = "(ret)=>{\n" +
@@ -239,7 +237,6 @@ function makeDefaultGraphViews(): DViewElement[] {
         "}";
 
     let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname], '', 1, false);
-    aaa it was only until [DPackage]
     packageView.defaultVSize = new GraphSize(0, 0, 400, 500);
     packageView.oclCondition = `context DPackage inv: true`;
 
@@ -251,27 +248,27 @@ function makeDefaultGraphViews(): DViewElement[] {
     defaultPackage.draggable = false; defaultPackage.resizable = false;*/
 
 
-    let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.cname], '', 1, false);aaa it was only until [DModel.cname]
+    let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.cname], '', 1, false);
     classView.adaptWidth = true; classView.adaptHeight = true;
     classView.oclCondition = 'context DClass inv: true';
 
-    let enumView: DViewElement = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.cname], '', 1, false);aaa it was only until [DModel.cname]
+    let enumView: DViewElement = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.cname], '', 1, false);
     enumView.adaptWidth = true; enumView.adaptHeight = true;
     enumView.oclCondition = 'context DEnumerator inv: true';
 
-    let attributeView: DViewElement = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.cname], '', 1, false);aaa it was only until [DModel.cname]
+    let attributeView: DViewElement = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.cname], '', 1, false);
     attributeView.oclCondition = 'context DAttribute inv: true';
 
-    let referenceView: DViewElement = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.cname], '', 1, false);aaa it was only until [DModel.cname]
+    let referenceView: DViewElement = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.cname], '', 1, false);
     referenceView.oclCondition = 'context DReference inv: true';
 
-    let operationView: DViewElement = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.cname], '', 1, false);aaa it was only until [DModel.cname]
+    let operationView: DViewElement = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.cname], '', 1, false);
     operationView.oclCondition = 'context DOperation inv: true';
 
-    let literalView: DViewElement = DViewElement.new('Literal', DV.literalView(), undefined, '', '', '', [DEnumLiteral.cname], '', 1, false);aaa it was only until [DModel.cname]
+    let literalView: DViewElement = DViewElement.new('Literal', DV.literalView(), undefined, '', '', '', [DEnumLiteral.cname], '', 1, false);
     literalView.oclCondition = 'context DEnumLiteral inv: true';
 
-    let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.cname], '', 1, false);aaa it was only until [DModel.cname]
+    let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.cname], '', 1, false);
     objectView.adaptWidth = true; objectView.adaptHeight = true;
     objectView.oclCondition = 'context DObject inv: true';
     objectView.usageDeclarations = "(ret)=>{\n" +
@@ -298,7 +295,7 @@ function makeDefaultGraphViews(): DViewElement[] {
     valuecolormap[ShortAttribETypes.EString] = "green";
     valuecolormap[ShortAttribETypes.EChar] = "green";
     valuecolormap[ShortAttribETypes.EVoid] = "gray";
-    let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname], '', 1, false);aaa it was only until [DModel.cname]
+    let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname], '', 1, false);
     valueView.oclCondition = 'context DValue inv: true';
 
     valueView.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
@@ -320,7 +317,7 @@ function makeDefaultGraphViews(): DViewElement[] {
     voidView.explicitApplicationPriority = 2;
     voidView.adaptWidth = true; voidView.adaptHeight = true;
 
-    let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '', [], '', 1, false); aaaa
+    let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '', [], '', 1, false);
     edgePointView.appliableTo = 'edgePoint'; edgePointView.resizable = false;
     // edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
     edgePointView.edgePointCoordMode = CoordinateMode.absolute;
