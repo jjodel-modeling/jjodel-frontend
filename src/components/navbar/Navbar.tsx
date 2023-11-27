@@ -35,7 +35,7 @@ function NavbarComponent(props: AllProps) {
                         <hr />
                         <File />
                         <Edit />
-                        <Share />
+                        {/*<Share />*/}
                         {debug && undefined /* <Examples />*/}
                         <hr />
                         <li tabIndex={-1} onClick={e => user.project = null} className={'text-danger dropdown-item'}>

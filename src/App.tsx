@@ -13,6 +13,7 @@ import Helper from "./components/helper/Helper";
 import Auth from "./pages/Auth";
 import {useEffectOnce} from "usehooks-ts";
 import PersistanceApi from "./api/persistance";
+import CollaborativeAttacher from './components/collaborative/CollaborativeAttacher';
 
 let userHasInteracted = false;
 function endPendingActions() {
@@ -26,6 +27,7 @@ function App(props: AllProps) {
     const debug = props.debug;
     const isLoading = props.isLoading;
     const user = props.user;
+    const project = user.project;
 
     useEffectOnce(() => {
         if (DUser.offlineMode) {
@@ -53,7 +55,7 @@ function App(props: AllProps) {
             {isLoading && <Loader />}
             <Navbar />
             <Helper />
-            {user.project ? <Editor /> : <Dashboard />}
+            {(project) ? (project.type === 'collaborative') ? <CollaborativeAttacher project={project} /> : <Editor /> : <Dashboard />}
         </div>);
     } else {
         return(<section>

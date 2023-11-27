@@ -176,6 +176,7 @@ export class DState extends DPointerTargetable{
     isLoading: boolean = false;
 
     projects: Pointer<DProject, 0, 'N'> = [];
+    collaborative: boolean = false;
 
     static init(store?: DState): void {
         BEGIN()

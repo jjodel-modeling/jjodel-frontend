@@ -315,12 +315,10 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     const ret = _reducer(oldState, action);
     if (ret === oldState) return oldState;
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
-    if (!oldState?.room) return ret;
+    if (!oldState?.collaborative) return ret;
     const ignoredFields  = ['contextMenu', '_lastSelected', 'isLoading', 'isCleaning'];
     if(action.sender === DUser.current && !ignoredFields.includes(action.field)) {
         const parsedAction: JSON & GObject = JSON.parse(JSON.stringify(action));
-        if(action.type === 'COMPOSITE_ACTION') for(let subAction of parsedAction.actions) delete subAction['stack'];
-        delete parsedAction['stack'];
         Collaborative.client.emit('pushAction', parsedAction);
     }
 

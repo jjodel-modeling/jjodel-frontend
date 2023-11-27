@@ -13,7 +13,7 @@ import {
     store,
     U,
     unArr,
-    windoww, GObject, Pointers
+    windoww, GObject, Pointers, LUser
 } from "../../joiner";
 
 // transactional-like start of storage modification
@@ -155,8 +155,8 @@ export class Action extends RuntimeAccessibleClass {
         vertexSubElements: 'vertexSubElements',
         vertexSize: 'vertexSize'
     };
-    public field: string;
-    public value: any;
+    field: string;
+    value: any;
     id: Pointer;
     timestamp: number;
     sender: Pointer<DUser, 0, 1>;
@@ -170,7 +170,7 @@ export class Action extends RuntimeAccessibleClass {
     // private src?: string[];
     subType?: string; //?
     private stack?: string[];
-    protected constructor(field: string, value: any, subType?: string){
+    protected constructor(field: string, value: any, subType?: string) {
         super();
         this.id = 'Action_' + Date.now() + "_" + Action.maxCounter++; // NB: the prefix must be the same for all actions because it must not affect order
         this.timestamp = Date.now();

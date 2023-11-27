@@ -1,19 +1,17 @@
-import React, {MouseEvent, Dispatch, ReactElement} from 'react';
+import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import {
     BEGIN,
-    END,
-    CreateElementAction,
+    DeleteElementAction,
     DProject,
-    DState,
     DUser,
-    Input,
+    END,
     LProject,
     LUser,
     SetRootFieldAction,
-    U,
-    DeleteElementAction
+    U
 } from '../joiner';
+import type{DState, GObject} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 import PersistanceApi from "../api/persistance";
 import {useEffectOnce} from "usehooks-ts";
@@ -28,20 +26,35 @@ function DashboardComponent(props: AllProps) {
         })();
     })
 
-    const createProject = async(e: MouseEvent) => {
+    const createProject = async(type: DProject['type'], id?: DProject['id']) => {
         let name = 'project_' + 0;
         let projectNames: string[] = user.projects.map(p => p.name);
         name = U.increaseEndingNumber(name, false, false, newName => projectNames.indexOf(newName) >= 0);
-        const project = DProject.new(name, user.id);
+        const project = DProject.new(type, name, user.id, id);
         user.projects = [...user.projects, LProject.fromD(project)];
     }
 
-    return (<div className={'w-25'}>
+    return (<div className={'container'}>
         <div className={'d-flex p-2'}>
             <b className={'ms-1 my-auto'}>MY PROJECTS</b>
-            <button className={'btn btn-primary ms-auto'} onClick={createProject}>
-                <i className={'p-1 bi bi-plus'}></i>
-            </button>
+            <div className={'d-flex ms-auto'}>
+                <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('public')}>
+                    + Public
+                </button>
+                <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('private')}>
+                    + Private
+                </button>
+                <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('collaborative')}>
+                    + Collaborative
+                </button>
+                <div className={'d-flex ms-5'}>
+                    <input id={'project-id'} />
+                    <button className={'btn btn-primary p-1 ms-1'} onClick={e => createProject('collaborative', ($('#project-id')[0] as GObject).value)}>
+                        + Collaborative
+                    </button>
+                </div>
+            </div>
+
         </div>
         {user.projects.map((project, index) => {
             return(<div className={'d-flex p-3 border bg-white m-1'} key={index}>
@@ -59,7 +72,14 @@ function DashboardComponent(props: AllProps) {
                 }}>
                     <i className={'p-1 bi bi-trash-fill'}></i>
                 </button>
-                <b className={'text-primary'}>{project.name}</b>
+                <div className={'d-flex'}>
+                    <label className={'my-auto'}>
+                        <b className={'text-primary me-1'}>{project.name}</b>
+                        ({project.type})
+                    </label>
+                    <input className={'p-1 ms-2'} readOnly={true} defaultValue={project.id} type={'text'} />
+                </div>
+
             </div>)
         })}
     </div>);

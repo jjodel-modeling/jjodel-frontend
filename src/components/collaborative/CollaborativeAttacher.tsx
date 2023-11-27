@@ -1,40 +1,36 @@
-import React from 'react';
 import Collaborative from './Collaborative';
-import App from '../../App';
-import {Action, CompositeAction, GObject, SetRootFieldAction, U} from '../../joiner';
-import {useParams} from 'react-router-dom';
+import {Action, SetRootFieldAction, U} from '../../joiner';
+import type {CompositeAction, GObject, LProject} from '../../joiner';
 import {useEffectOnce} from 'usehooks-ts';
+import Editor from '../../pages/Editor';
 
-interface Props{}
+interface Props {project: LProject}
 function CollaborativeAttacher(props: Props) {
-    const {id} = useParams();
-    const code = id ? id : '';
+    const project = props.project;
 
     useEffectOnce(() => {
-        Collaborative.init(code).then(async(actions) => {
+        Collaborative.client.io.opts.query = {'project': project.id};
+        Collaborative.client.connect();
+        SetRootFieldAction.new('collaborative', true);
+        /*
+        Collaborative.init(project.id).then(async(actions) => {
             for(let action of actions) {
-                if(action.type === 'COMPOSITE_ACTION') for(let subAction of action.actions) delete subAction['_id'];
-                delete action['_id'];
                 const receivedAction = Action.fromJson(action);
                 receivedAction.hasFired = receivedAction.hasFired - 1;
-                await U.sleep(0);
+                // await U.sleep(1);
                 receivedAction.fire();
             }
-            Collaborative.client.io.opts.query = {code};
-            Collaborative.client.connect();
-            SetRootFieldAction.new('room', code, '', false);
         })
+        */
     });
 
     Collaborative.client.on('pullAction', (action: GObject<Action & CompositeAction>) => {
-        if(action.type === 'COMPOSITE_ACTION') for(let subAction of action.actions) delete (subAction as GObject)['_id'];
-        delete action['_id'];
         const receivedAction = Action.fromJson(action);
         receivedAction.hasFired = receivedAction.hasFired - 1;
         receivedAction.fire();
     });
 
-    return(<App />);
+    return(<Editor />);
 }
 
 export default CollaborativeAttacher;

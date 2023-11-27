@@ -15,6 +15,14 @@ module.exports = function (app) {
             changeOrigin: true
         })
     );
+    app.use(
+        '/collaborative',
+        createProxyMiddleware({
+            target: process.env['REACT_APP_COLLABORATIVE'],
+            ws: true,
+            changeOrigin: true
+        })
+    );
     /*
     app.use(
         '/collaborative/rooms',
@@ -27,14 +35,6 @@ module.exports = function (app) {
         '/collaborative/rooms/*',
         createProxyMiddleware({
             target: process.env['REACT_APP_COLLABORATIVE_REST'],
-            changeOrigin: true
-        })
-    );
-    app.use(
-        '/collaborative',
-        createProxyMiddleware({
-            target: process.env['REACT_APP_COLLABORATIVE_SOCKET'],
-            ws: true,
             changeOrigin: true
         })
     );

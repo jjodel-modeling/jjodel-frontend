@@ -4,6 +4,8 @@ import CollaborativeAttacher from "../components/collaborative/CollaborativeAtta
 
 function Router() {
 
+    return(<div>Nope</div>);
+    /*
     return(<BrowserRouter>
         <Routes>
             <Route path={''} element={<App />} />
@@ -15,9 +17,9 @@ function Router() {
             </Route>
             <Route path={'rooms/:id'} element={<CollaborativeAttacher />} />
             <Route path={'*'} element={<App />} />
-            {/*<Route path={'*'} element={<b>404: Not Found</b>} />*/}
         </Routes>
     </BrowserRouter>);
+    */
 }
 
 export default Router;

@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement} from 'react';
+import {Dispatch, ReactElement} from 'react';
 import {DState} from '../../../redux/store';
 import {connect} from 'react-redux';
 import Collaborative from "../../collaborative/Collaborative";
@@ -9,8 +9,8 @@ function ShareComponent(props: AllProps) {
     const root = process.env['REACT_APP_URL'] || '';
 
     const create = async() => {
-        const code = await Collaborative.createRoom();
-        window.location.replace(`${root}/rooms/${code}`);
+        // const code = await Collaborative.createRoom();
+        // window.location.replace(`${root}/rooms/${code}`);
     }
 
     const quit = async() => {

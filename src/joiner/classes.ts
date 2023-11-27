@@ -820,8 +820,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this;
     }
 
-    DProject(name: string, author: Pointer<DUser, 1, 1, LUser>): this {
+    DProject(type: DProject['type'], name: string, author: Pointer<DUser, 1, 1, LUser>, id?: DProject['id']): this {
         const thiss: DProject = this.thiss as any;
+        if(id) thiss.id = id;
+        thiss.type = type;
         thiss.name = name;
         thiss.author = author;
         return this;
@@ -1663,7 +1665,7 @@ let bb2 = fffff(a);
 @RuntimeAccessible
 export class DUser extends DPointerTargetable {
     public static cname: string = 'DUser';
-    public static offlineMode: boolean = false;
+    public static offlineMode: boolean = true;
     // static current: Pointer<DUser> = 'Pointer_AnonymousUser';
     static current: Pointer<DUser> = '';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -1726,6 +1728,7 @@ export class DProject extends DPointerTargetable {
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
     id!: Pointer<DProject, 1, 1, LProject>;
+    type: 'public'|'private'|'collaborative' = 'collaborative';
     name!: string;
     author!: Pointer<DUser>;
     metamodels: Pointer<DModel, 0, 'N'> = [];
@@ -1734,9 +1737,9 @@ export class DProject extends DPointerTargetable {
     views: Pointer<DViewElement, 0, 'N'> = [];
     // collaborators dict user: priority
 
-    public static new(name: string, author: Pointer<DUser, 1, 1, LUser>, persist: boolean = true): DProject {
-        return new Constructors(new DProject('dwc'), undefined, persist, undefined)
-            .DPointerTargetable().DProject(name, author).end();
+    public static new(type: DProject['type'], name: string, author: Pointer<DUser, 1, 1, LUser>, id?: DProject['id']): DProject {
+        return new Constructors(new DProject('dwc'), undefined, true, undefined)
+            .DPointerTargetable().DProject(type, name, author, id).end();
     }
 }
 
@@ -1747,6 +1750,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
     id!: Pointer<DProject>;
+    type!: 'public'|'private'|'collaborative';
     name!: string;
     metamodels!: LModel[];
     models!: LModel[];
