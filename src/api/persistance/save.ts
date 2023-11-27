@@ -63,7 +63,7 @@ export class Save {
         const defaultViews = U.getDefaultViewsID() as Pointer[];
         await Fetch.delete(url);
         for(let element of elements) {
-            if(defaultViews.includes(element.id)) continue;
+            if(!element || defaultViews.includes(element.id)) continue;
             console.log(`Saving To Server (${element.className})`, element);
             await Fetch.post(url, U.json(element));
         }
