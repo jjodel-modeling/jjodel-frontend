@@ -1,33 +1,38 @@
-import React, {Dispatch, ReactElement} from 'react';
-import {connect} from 'react-redux';
-import type {DState} from '../../../joiner';
-import {DUser, DViewPoint, LProject, LUser, LViewPoint, U, SetFieldAction} from '../../../joiner';
-import {useStateIfMounted} from 'use-state-if-mounted';
-import {FakeStateProps} from '../../../joiner/types';
+import React, {Dispatch, ReactElement} from "react";
+import {connect} from "react-redux";
+import {
+    CreateElementAction,
+    DState,
+    DViewPoint,
+    LViewElement,
+    LViewPoint,
+    SetFieldAction,
+    SetRootFieldAction
+} from "../../../joiner";
+import {useStateIfMounted} from "use-state-if-mounted";
 
 
 function ViewpointsEditorComponent(props: AllProps) {
-    const project = props.project;
+    const views = props.views;
     const viewpoints = props.viewpoints;
-    const active = props.active;
+    const selected = props.selected;
 
     const [hoverID, setHoverID] = useStateIfMounted('');
 
-    const editName = (evt: React.ChangeEvent<HTMLInputElement>, vp: LViewPoint) => {
-        vp.name = evt.target.value;
+    const editName = (evt: React.ChangeEvent<HTMLInputElement>, viewpoint: LViewPoint) => {
+        viewpoint.name = evt.target.value;
     }
     const add = (evt: React.MouseEvent<HTMLButtonElement>) => {
-        let name = 'viewpoint_' + 0;
-        let viewpointNames: string[] = viewpoints.map(vp => vp.name);
-        name = U.increaseEndingNumber(name, false, false, newName => viewpointNames.indexOf(newName) >= 0);
-        DViewPoint.new(name, '');
+        DViewPoint.new('ViewPoint', '');
     }
-    const remove = (removed: LViewPoint) => {
-        SetFieldAction.new(project.id, 'viewpoints', removed.id as any, '-=', false);
-        removed.delete()
+    const remove = (index: number, viewpoint: LViewPoint) => {
+        const filteredViews = views.filter(view => view.viewpoint?.id === viewpoint.id);
+        for(let view of filteredViews) SetFieldAction.new(view.id, 'viewpoint', null);
+        SetRootFieldAction.new('viewpoints', index, '-=', true);
+        SetRootFieldAction.new('stackViews', [], '', false);
     }
-    const select = (vp: LViewPoint) => {
-        project.activeViewpoint = vp;
+    const select = (viewpoint: LViewPoint) => {
+        SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
     }
 
     return(<div>
@@ -38,20 +43,19 @@ function ViewpointsEditorComponent(props: AllProps) {
             </button>
         </div>
         {viewpoints.map((viewpoint, index) => {
-            if(!viewpoint) return(<></>);
-            return <div key={index} className={'d-flex p-1 mt-1 border round mx-1'}
+            return <div key={viewpoint.id} className={'d-flex p-1 mt-1 border round mx-1'}
                         onMouseEnter={(e) => setHoverID(viewpoint.id)}
                         onMouseLeave={(e) => setHoverID('')}
-                        style={{backgroundColor: (active.id === viewpoint.id) ? 'white' :
+                        style={{backgroundColor: (selected.id === viewpoint.id) ? 'white' :
                                 (hoverID === viewpoint.id ? '#E0E0E0' : 'transparent')}}>
                 <input className={'p-0 input hidden-input'} value={viewpoint.name} type={'text'}
                        onChange={(evt) => {editName(evt, viewpoint)}} disabled={index === 0} />
-                <button className={'btn btn-success ms-auto'} disabled={active.id === viewpoint.id}
+                <button className={'btn btn-success ms-auto'} disabled={selected.id === viewpoint.id}
                         onClick={(evt) => {select(viewpoint)}}>
                     <i className={'p-1 bi bi-check2'}></i>
                 </button>
-                <button className={'btn btn-danger ms-1'} disabled={index === 0 || active.id === viewpoint.id}
-                        onClick={(evt) => {remove(viewpoint)}}>
+                <button className={'btn btn-danger ms-1'} disabled={index === 0 || selected.id === viewpoint.id}
+                        onClick={(evt) => {remove(index, viewpoint)}}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
                 </button>
             </div>
@@ -60,21 +64,19 @@ function ViewpointsEditorComponent(props: AllProps) {
 }
 interface OwnProps { }
 interface StateProps {
-    project: LProject
-    viewpoints: LViewPoint[]
-    active: LViewPoint
+    viewpoints: LViewPoint[],
+    selected: LViewPoint,
+    views: LViewElement[]
 }
 interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const ret: StateProps = {} as FakeStateProps;
-    const user: LUser = LUser.fromPointer(DUser.current);
-    const project = U.wrapper<LProject>(user.project);
-    ret.project = project;
-    ret.viewpoints = project.viewpoints;
-    ret.active = project.activeViewpoint;
+    const ret: StateProps = {} as any;
+    ret.viewpoints = LViewPoint.fromPointer(state.viewpoints);
+    ret.selected = LViewPoint.fromPointer(state.viewpoint);
+    ret.views = LViewElement.fromPointer(state.viewelements.slice(10))
     return ret;
 }
 

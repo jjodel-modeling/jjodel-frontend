@@ -27,7 +27,7 @@ function App(props: AllProps) {
     const debug = props.debug;
     const isLoading = props.isLoading;
     const user = props.user;
-    const project = user.project;
+    const project = user?.project;
 
     useEffectOnce(() => {
         if (DUser.offlineMode) {
@@ -55,7 +55,7 @@ function App(props: AllProps) {
             {isLoading && <Loader />}
             <Navbar />
             <Helper />
-            {(project) ? (project.type === 'collaborative') ? <CollaborativeAttacher project={project} /> : <Editor /> : <Dashboard />}
+            {(project) ? (project.type === 'collaborative' && !DUser.offlineMode) ? <CollaborativeAttacher project={project} /> : <Editor /> : <Dashboard />}
         </div>);
     } else {
         return(<section>

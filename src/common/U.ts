@@ -38,6 +38,10 @@ console.warn('loading ts U log');
 export class U {
     static cname: string = "U";
 
+    static wrapper<T>(obj: unknown): T {
+        return obj as unknown as T;
+    }
+
     static json(dElement: GObject): Json {
         return JSON.parse(JSON.stringify(dElement.__raw));
     }

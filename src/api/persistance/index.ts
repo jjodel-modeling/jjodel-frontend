@@ -1,8 +1,19 @@
 import Fetch from '../fetch';
 import {Load} from './load';
 import {Save} from './save';
-import {ApiResponse, BEGIN, DProject, DUser, END, LProject, LUser, Pointer, SetRootFieldAction} from '../../joiner';
-import {Delete} from "./delete";
+import {
+    ApiResponse,
+    BEGIN,
+    CreateElementAction,
+    DProject,
+    DUser,
+    END,
+    LProject,
+    LUser,
+    Pointer,
+    SetRootFieldAction, U
+} from '../../joiner';
+import {Delete} from './delete';
 
 class PersistanceApi {
     private static url = '/persistance/';
@@ -25,10 +36,11 @@ class PersistanceApi {
         await Fetch.get(this.url + 'auth/logout');
         window.location.reload();
     }
-    static async saveProject(): Promise<void> {
+    static async saveProject(p?: LProject): Promise<void> {
         SetRootFieldAction.new('isLoading', true);
         const user = LUser.fromPointer(DUser.current);
-        const project = user.project; if(!project) return;
+        const project = p || user.project;
+        if(!project) return;
         await Save.project(project);
         SetRootFieldAction.new('isLoading', false);
     }
@@ -48,6 +60,18 @@ class PersistanceApi {
         BEGIN(); for(let project of projects) await Load.project(project); END();
         user.projects = LProject.fromPointer(projects.map(project => project.id)) as LProject[];
         SetRootFieldAction.new('isLoading', false);
+    }
+    static async getProjectById(id: string): Promise<LProject|null> {
+        SetRootFieldAction.new('isLoading', true);
+        const request = await Fetch.get(`/persistance/projects/${id}`)
+        const response = await PersistanceApi.responseHandler(request);
+        if(response.code !== 200) return null;
+        const project = U.wrapper<DProject>(response.body);
+        console.log('Getting Project From Server', project);
+        BEGIN(); await Load.project(project); END();
+        CreateElementAction.new(project);
+        SetRootFieldAction.new('isLoading', false);
+        return DProject.fromPointer(project.id);
     }
 }
 

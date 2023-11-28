@@ -15,8 +15,7 @@ function ViewsData(props: Props) {
 
     const add = (e: MouseEvent) => {
         const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
-        const dView = DViewElement.new('View', jsx);
-        project.views = [...project.views, LViewElement.fromD(dView)];
+        DViewElement.new('View', jsx);
     }
 
     const select = (view: LViewElement) => {

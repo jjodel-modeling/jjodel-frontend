@@ -39,6 +39,7 @@ export class Save {
             Save.data(`${projectUrl}/values`, p.values),
             /* VIEWS */
             Save.views(`${projectUrl}/views`, p.views),
+            Save.views(`${projectUrl}/viewpoints`, p.viewpoints),
             /* NODES */
             Save.nodes(`${projectUrl}/graphs`, p.graphs),
             Save.nodes(`${projectUrl}/graphVertexes`, p.graphVertexes),
@@ -60,10 +61,11 @@ export class Save {
     }
 
     private static async views(url: string, elements: LViewElement[]): Promise<void> {
-        const defaultViews = U.getDefaultViewsID() as Pointer[];
+        const defaults = U.getDefaultViewsID() as Pointer[];
+        defaults.push('Pointer_DefaultViewPoint');
         await Fetch.delete(url);
         for(let element of elements) {
-            if(!element || defaultViews.includes(element.id)) continue;
+            if(!element || defaults.includes(element.id)) continue;
             console.log(`Saving To Server (${element.className})`, element);
             await Fetch.post(url, U.json(element));
         }

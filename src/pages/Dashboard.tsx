@@ -27,11 +27,25 @@ function DashboardComponent(props: AllProps) {
     })
 
     const createProject = async(type: DProject['type'], id?: DProject['id']) => {
+        if (id) {
+            SetRootFieldAction.new('isLoading', true);
+            const project = await PersistanceApi.getProjectById(id);
+            if(!project) {
+                alert('This project does NOT exist!');
+                return;
+            }
+            SetRootFieldAction.new('isLoading', false);
+            user.projects = [...user.projects, project];
+            return;
+        }
         let name = 'project_' + 0;
         let projectNames: string[] = user.projects.map(p => p.name);
         name = U.increaseEndingNumber(name, false, false, newName => projectNames.indexOf(newName) >= 0);
         const project = DProject.new(type, name, user.id, id);
         user.projects = [...user.projects, LProject.fromD(project)];
+        SetRootFieldAction.new('isLoading', true);
+        if(!DUser.offlineMode) await PersistanceApi.saveProject(LProject.fromD(project));
+        SetRootFieldAction.new('isLoading', false);
     }
 
     return (<div className={'container'}>
@@ -41,7 +55,7 @@ function DashboardComponent(props: AllProps) {
                 <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('public')}>
                     + Public
                 </button>
-                <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('private')}>
+                <button disabled={true} className={'btn btn-success p-1 mx-1'} onClick={e => createProject('private')}>
                     + Private
                 </button>
                 <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('collaborative')}>
@@ -72,12 +86,13 @@ function DashboardComponent(props: AllProps) {
                 }}>
                     <i className={'p-1 bi bi-trash-fill'}></i>
                 </button>
-                <div className={'d-flex'}>
+                <div className={'d-flex w-100'}>
                     <label className={'my-auto'}>
                         <b className={'text-primary me-1'}>{project.name}</b>
                         ({project.type})
                     </label>
-                    <input className={'p-1 ms-2'} readOnly={true} defaultValue={project.id} type={'text'} />
+                    {(project.type === 'collaborative') &&
+                        <input style={{width: '18em'}} className={'p-1 ms-auto'} readOnly={true} defaultValue={project.id} type={'text'} />}
                 </div>
 
             </div>)

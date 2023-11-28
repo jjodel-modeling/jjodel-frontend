@@ -38,7 +38,7 @@ import {
     RuntimeAccessibleClass,
     store,
     U,
-    toShortEType
+    toShortEType, DUser, LUser, LProject
 } from "../../joiner";
 import {EdgeOptions} from "../store";
 import {DefaultEClasses, ShortDefaultEClasses, toShortEClass} from "../../common/U";
@@ -348,13 +348,15 @@ export class Selectors{
     private static matchesOclCondition(v: DViewElement, data: DModelElement | LModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
         if (!v.oclCondition) return ViewEClassMatch.MISMATCH;
         const oclCondition = v.oclCondition;
-        const viewpoint = Selectors.getViewpoint();
+        const user = LUser.fromPointer(DUser.current);
+        const project = U.wrapper<LProject>(user.project);
+        const viewpoint = project.activeViewpoint;
         const isDefault = v.viewpoint === 'Pointer_DefaultViewPoint';
         const isActiveViewpoint = v.viewpoint === viewpoint.id;
         if(!isActiveViewpoint && !isDefault) return ViewEClassMatch.MISMATCH;
         let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
         try {
-            const flag = OCL.filter(false, "src", [data], oclCondition, constructors);
+            const flag = OCL.filter(false, 'src', [data], oclCondition, constructors);
             if(flag.length > 0 && isActiveViewpoint) return ViewEClassMatch.EXACT_MATCH;
             if(flag.length > 0 && !isActiveViewpoint) return ViewEClassMatch.IMPLICIT_MATCH;
             return ViewEClassMatch.MISMATCH;

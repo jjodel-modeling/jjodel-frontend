@@ -5,7 +5,7 @@ import {Pointer, DProject, DModel, CreateElementAction, SetRootFieldAction} from
 export class Load {
     private static url = '/persistance/';
 
-    static async project(project: DProject) {
+    static async project(project: DProject): Promise<void> {
         const projectUrl = this.url + `projects/${project.id}`;
         await Promise.all([
             /* DATA */
@@ -23,6 +23,7 @@ export class Load {
             Load.element(`${projectUrl}/values`),
             /* VIEWS */
             Load.element(`${projectUrl}/views`),
+            Load.element(`${projectUrl}/viewpoints`),
             /* NODES */
             Load.element(`${projectUrl}/graphs`),
             Load.element(`${projectUrl}/graphVertexes`),

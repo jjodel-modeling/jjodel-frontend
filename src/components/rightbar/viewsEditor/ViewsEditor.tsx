@@ -33,7 +33,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const user = LUser.fromPointer(DUser.current);
     ret.project = user.project as LProject;
     ret.stackViews = LViewElement.fromPointer(state.stackViews);
-    ret.viewpoints = LViewPoint.fromPointer(state.viewpoints);
+    ret.viewpoints = ret.project.viewpoints;
     // ret.views = ret.views.filter(view => view && (!(view.viewpoint) || view.viewpoint?.id === state.viewpoint));
     ret.debug = state.debug;
     return ret;

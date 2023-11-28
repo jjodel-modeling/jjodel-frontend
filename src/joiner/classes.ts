@@ -112,7 +112,7 @@ import type {
     WViewTransientProperties
 } from "../view/viewElement/view";
 import type {LogicContext} from "./proxy";
-import {DLog, DState, EdgeSegment, LLog, TRANSACTION} from "./index";
+import {DLog, DState, DViewPoint, EdgeSegment, LLog, LViewPoint, TRANSACTION} from "./index";
 import {
     Action,
     BEGIN,
@@ -806,17 +806,24 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.edgeTailSize = new GraphPoint(20, 20);
 
 
-        thiss._persistCallbacks.push(SetRootFieldAction.create('stackViews', [thiss.id], '', true));
         this.nonPersistentCallbacks.push(() => {
             console.log("colormap 2", {v:{...thiss}});
             if (thiss.constants) {
                 thiss._parsedConstants = (windoww["LViewElement"] as typeof LViewElement).parseConstants(thiss.constants);
             } else thiss._parsedConstants = undefined;
         });
+        if(thiss.className !== 'DViewElement') return this;
+        thiss._persistCallbacks.push(SetRootFieldAction.create('stackViews', [thiss.id], '', true));
+        const user = LUser.fromPointer(DUser.current);
+        const project = user?.project;
+        project && this.setExternalPtr(project.id, 'views', '+=');
         return this;
     }
 
     DViewPoint(): this {
+        const user = LUser.fromPointer(DUser.current);
+        const project = user?.project;
+        project && this.setExternalPtr(project.id, 'viewpoints', '+=');
         return this;
     }
 
@@ -1665,7 +1672,7 @@ let bb2 = fffff(a);
 @RuntimeAccessible
 export class DUser extends DPointerTargetable {
     public static cname: string = 'DUser';
-    public static offlineMode: boolean = true;
+    public static offlineMode: boolean = false;
     // static current: Pointer<DUser> = 'Pointer_AnonymousUser';
     static current: Pointer<DUser> = '';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -1735,6 +1742,8 @@ export class DProject extends DPointerTargetable {
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
     views: Pointer<DViewElement, 0, 'N'> = [];
+    viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
+    activeViewpoint: Pointer<DViewPoint, 1, 1> = 'Pointer_DefaultViewPoint';
     // collaborators dict user: priority
 
     public static new(type: DProject['type'], name: string, author: Pointer<DUser, 1, 1, LUser>, id?: DProject['id']): DProject {
@@ -1756,6 +1765,8 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     models!: LModel[];
     graphs!: LGraph[];
     views!: LViewElement[];
+    viewpoints!: LViewPoint[];
+    activeViewpoint!: LViewPoint;
 
     /* DATA */
     packages!: LPackage[];
@@ -1820,6 +1831,24 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected set_views(val: PackArr<this['views']>, context: Context): boolean {
         const data = context.data;
         SetFieldAction.new(data.id, 'views', Pointers.from(val), '', true);
+        return true;
+    }
+
+    protected get_viewpoints(context: Context): this['viewpoints'] {
+        return LViewPoint.fromPointer(['Pointer_DefaultViewPoint', ...context.data.viewpoints]);
+    }
+    protected set_viewpoints(val: PackArr<this['viewpoints']>, context: Context): boolean {
+        const data = context.data;
+        SetFieldAction.new(data.id, 'viewpoints', Pointers.from(val), '', true);
+        return true;
+    }
+
+    protected get_activeViewpoint(context: Context): this['activeViewpoint'] {
+        return LViewPoint.fromPointer(context.data.activeViewpoint);
+    }
+    protected set_activeViewpoint(val: Pack<this['activeViewpoint']>, context: Context): boolean {
+        const data = context.data;
+        SetFieldAction.new(data.id, 'activeViewpoint', Pointers.from(val), '', true);
         return true;
     }
 
