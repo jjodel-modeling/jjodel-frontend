@@ -337,10 +337,11 @@ export function Instantiable<T extends any>(constructor: T & GObject, instanceCo
 export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
     // console.log('DecoratorTest', {constructor, arguments});
     let predebug = {...RuntimeAccessibleClass.classes};
+    if (!constructor.cname) (constructor as GObject).cname = constructor.name;
     // @ts-ignore
     RuntimeAccessibleClass.classes[constructor.cname] = constructor as any as typeof RuntimeAccessibleClass;
     // console.log("setting runtime accessible", {key: constructor.cname, constructor, pre: predebug, post: {...RuntimeAccessibleClass.classes}});
-    if (!window[constructor.cname]) (window[constructor.cname] as any) = constructor;
+    if (!windoww[constructor.cname]) (windoww[constructor.cname] as any) = constructor;
     constructor.prototype.className = constructor.cname;
     //constructor.prototype.$$typeof = constructor.cname;
     //constructor.prototype.typeName = constructor.cname;
@@ -1663,7 +1664,7 @@ let bb2 = fffff(a);
 @RuntimeAccessible
 export class DUser extends DPointerTargetable {
     public static cname: string = 'DUser';
-    public static offlineMode: boolean = false;
+    public static offlineMode: boolean = !!localStorage.getItem("offlineMode");
     // static current: Pointer<DUser> = 'Pointer_AnonymousUser';
     static current: Pointer<DUser> = '';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];

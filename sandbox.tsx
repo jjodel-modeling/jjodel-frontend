@@ -6,7 +6,8 @@ let data:any, node:any, view:any, component:any;
 //  - DONE: Constructors.setPtr, setExternalPtr
 //  - missing: in reducer
 
-
+// todo: inject offset in a subnode with .container or some other special class, and put it everywhere in DV
+// because currently in package, it is child[0].child[0], but in model it's just child[0]
 
 
 

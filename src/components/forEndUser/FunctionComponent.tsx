@@ -200,7 +200,7 @@ function FunctionComponent(props: AllProps) {
     let transitionTime = 300;
     return <div className={"function-editor-root"} data-mode={advancedMode ? "detailedMode" : "simpleMode"} style={{fontSize: "0.9rem"}}>
         <div className={"d-flex w-100"} style={{transition: "all 300ms",  cursor: tooltip ? 'help' : 'auto'}}
-             onMouseEnter={e => tooltip && setShowTooltip(true)} onMouseLeave={e =>  tooltip && setShowTooltip(true)}>
+             onMouseEnter={e => tooltip && setShowTooltip(true)} onMouseLeave={e =>  tooltip && setShowTooltip(false)}>
             {props.jsxLabel}
             <span className={"m-auto me-1"} style={{cursor: 'auto'}}>
                 {tooltip && <i className={"p1 m-auto me-1 bi bi-info-lg"} style={{cursor: 'help'}} />}

@@ -491,8 +491,9 @@ export function stateInitializer() {
 
     // do not use typings or class constructors here or it will change import order
     setTimeout( //a
-        // ()=> $(document).on("mouseup", (e: MouseUpEvent) => RuntimeAccessibleClass.get<any>("GraphDragManager").stopPanning(e)), //a
-        ()=> $(document).on("mouseup", (e: MouseUpEvent) => (window as any).GraphDragManager.stopPanning(e)), //a
+        ()=> $(document).on("mouseup",
+            (e: MouseUpEvent) => RuntimeAccessibleClass.get<typeof GraphDragManager>("GraphDragManager").stopPanning(e)), //a
+        // ()=> $(document).on("mouseup", (e: MouseUpEvent) => (window as any).GraphDragManager.stopPanning(e)), //a
         1 //a
     ); /// because when this function is executed, RuntimeClasses are not yet parsed.
     DState.init();
