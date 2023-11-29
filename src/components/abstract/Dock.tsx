@@ -10,6 +10,7 @@ import TreeEditor from '../rightbar/treeEditor/treeEditor';
 import ViewsEditor from '../rightbar/viewsEditor/ViewsEditor';
 import StyleEditor from '../rightbar/styleEditor/StyleEditor';
 import ViewpointEditor from '../rightbar/viewpointsEditor/ViewpointsEditor';
+import CollaboratorsEditor from '../rightbar/collaboratorsEditor/CollaboratorsEditor';
 import Console from '../rightbar/console/Console';
 import InfoTab from './tabs/InfoTab';
 import DockManager from './DockManager';
@@ -30,7 +31,8 @@ function DockComponent(props: AllProps) {
     const views = {id: '3', title: 'Views', group: 'editors', closable: false, content: <ViewsEditor />};
     const style = {id: '4', title: 'Node', group: 'editors', closable: false, content: <StyleEditor />};
     const viewpoints = {id: '6', title: 'Viewpoints', group: 'editors', closable: false, content: <ViewpointEditor />};
-    const console = {id: '7', title: 'Console', group: 'editors', closable: false, content: <Console />};
+    const collaborators = {id: '7', title: 'Collaborators', group: 'editors', closable: false, content: <CollaboratorsEditor />};
+    const console = {id: '8', title: 'Console', group: 'editors', closable: false, content: <Console />};
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     layout.dockbox.children.push({tabs: [info]});
@@ -40,6 +42,7 @@ function DockComponent(props: AllProps) {
         tree,
         views,
         viewpoints,
+        collaborators,
         console
     ]});
 

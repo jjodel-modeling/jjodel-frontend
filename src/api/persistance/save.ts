@@ -55,6 +55,7 @@ export class Save {
     private static async data(url: string, elements: DataTypes[]): Promise<void> {
         await Fetch.delete(url);
         for(let element of elements) {
+            if(!element) continue;
             console.log(`Saving To Server (${element.className})`, element);
             await Fetch.post(url, U.json(element));
         }
@@ -74,6 +75,7 @@ export class Save {
     private static async nodes(url: string, elements: NodeTypes[]): Promise<void> {
         await Fetch.delete(url);
         for(let element of elements) {
+            if(!element) continue;
             console.log(`Saving To Server (${element.className})`, element);
             await Fetch.post(url, U.json(element));
         }

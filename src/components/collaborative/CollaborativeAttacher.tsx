@@ -26,6 +26,7 @@ function CollaborativeAttacher(props: Props) {
 
     Collaborative.client.on('pullAction', (action: GObject<Action & CompositeAction>) => {
         const receivedAction = Action.fromJson(action);
+        console.log('Received Action from server.', action);
         receivedAction.hasFired = receivedAction.hasFired - 1;
         receivedAction.fire();
     });

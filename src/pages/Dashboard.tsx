@@ -26,23 +26,11 @@ function DashboardComponent(props: AllProps) {
         })();
     })
 
-    const createProject = async(type: DProject['type'], id?: DProject['id']) => {
-        if (id) {
-            SetRootFieldAction.new('isLoading', true);
-            const project = await PersistanceApi.getProjectById(id);
-            if(!project) {
-                alert('This project does NOT exist!');
-                return;
-            }
-            SetRootFieldAction.new('isLoading', false);
-            user.projects = [...user.projects, project];
-            return;
-        }
+    const createProject = async(type: DProject['type']) => {
         let name = 'project_' + 0;
         let projectNames: string[] = user.projects.map(p => p.name);
         name = U.increaseEndingNumber(name, false, false, newName => projectNames.indexOf(newName) >= 0);
-        const project = DProject.new(type, name, user.id, id);
-        user.projects = [...user.projects, LProject.fromD(project)];
+        const project = DProject.new(type, name);
         SetRootFieldAction.new('isLoading', true);
         if(!DUser.offlineMode) await PersistanceApi.saveProject(LProject.fromD(project));
         SetRootFieldAction.new('isLoading', false);
@@ -61,12 +49,6 @@ function DashboardComponent(props: AllProps) {
                 <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('collaborative')}>
                     + Collaborative
                 </button>
-                <div className={'d-flex ms-5'}>
-                    <input id={'project-id'} />
-                    <button className={'btn btn-primary p-1 ms-1'} onClick={e => createProject('collaborative', ($('#project-id')[0] as GObject).value)}>
-                        + Collaborative
-                    </button>
-                </div>
             </div>
 
         </div>
@@ -75,7 +57,7 @@ function DashboardComponent(props: AllProps) {
                 <button className={'btn btn-primary me-2'} onClick={e => user.project = project}>
                     <i className={'p-1 bi bi-eye-fill'}></i>
                 </button>
-                <button className={'btn btn-danger me-2'} onClick={async(e) => {
+                <button disabled={project.author.id !== DUser.current} className={'btn btn-danger me-2'} onClick={async(e) => {
                     await PersistanceApi.deleteProject(project.id);
                     // todo: change into project.delete()
                     BEGIN()
@@ -91,11 +73,8 @@ function DashboardComponent(props: AllProps) {
                         <b className={'text-primary me-1'}>{project.name}</b>
                         ({project.type})
                     </label>
-                    {(project.type === 'collaborative') &&
-                        <input style={{width: '18em'}} className={'p-1 ms-auto'} readOnly={true} defaultValue={project.id} type={'text'} />}
                 </div>
-
-            </div>)
+            </div>);
         })}
     </div>);
 }

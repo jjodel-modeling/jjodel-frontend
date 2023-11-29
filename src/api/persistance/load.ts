@@ -1,6 +1,6 @@
 import PersistanceApi from './index';
 import Fetch from '../fetch';
-import {Pointer, DProject, DModel, CreateElementAction, SetRootFieldAction} from '../../joiner';
+import {CreateElementAction, DProject, DUser} from '../../joiner';
 
 export class Load {
     private static url = '/persistance/';
@@ -8,6 +8,8 @@ export class Load {
     static async project(project: DProject): Promise<void> {
         const projectUrl = this.url + `projects/${project.id}`;
         await Promise.all([
+            /* COLLABORATORS */
+            Load.element(`${projectUrl}/users`),
             /* DATA */
             Load.element(`${projectUrl}/metamodels`),
             Load.element(`${projectUrl}/models`),
@@ -41,6 +43,7 @@ export class Load {
         const elements = response.body;
         if(response.code !== 200 || !Array.isArray(elements)) return;
         for(let element of elements) {
+            if(element.id === DUser.current) continue;
             console.log(`Loading From Server (${element.className})`, element);
             CreateElementAction.new(element);
         }

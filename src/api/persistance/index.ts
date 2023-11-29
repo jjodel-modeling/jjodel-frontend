@@ -73,6 +73,16 @@ class PersistanceApi {
         SetRootFieldAction.new('isLoading', false);
         return DProject.fromPointer(project.id);
     }
+    static async getUserByEmail(email: string): Promise<LUser|null> {
+        SetRootFieldAction.new('isLoading', true);
+        const request = await Fetch.get(`/persistance/users?email=${email}`);
+        const response = await PersistanceApi.responseHandler(request);
+        if(response.code !== 200) return null;
+        const user = U.wrapper<DUser>(response.body);
+        SetRootFieldAction.new('isLoading', false);
+        CreateElementAction.new(user);
+        return DUser.fromPointer(user.id);
+    }
 }
 
 export default PersistanceApi;

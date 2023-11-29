@@ -827,12 +827,11 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this;
     }
 
-    DProject(type: DProject['type'], name: string, author: Pointer<DUser, 1, 1, LUser>, id?: DProject['id']): this {
-        const thiss: DProject = this.thiss as any;
-        if(id) thiss.id = id;
-        thiss.type = type;
-        thiss.name = name;
-        thiss.author = author;
+    DProject(type: DProject['type'], name: string): this {
+        const _this: DProject = U.wrapper<DProject>(this.thiss);
+        _this.type = type;
+        _this.name = name;
+        this.setExternalPtr(DUser.current, 'projects', '+=');
         return this;
     }
 
@@ -1737,7 +1736,8 @@ export class DProject extends DPointerTargetable {
     id!: Pointer<DProject, 1, 1, LProject>;
     type: 'public'|'private'|'collaborative' = 'collaborative';
     name!: string;
-    author!: Pointer<DUser>;
+    author: Pointer<DUser> = DUser.current;
+    collaborators: Pointer<DUser, 0, 'N'> = [];
     metamodels: Pointer<DModel, 0, 'N'> = [];
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
@@ -1746,9 +1746,9 @@ export class DProject extends DPointerTargetable {
     activeViewpoint: Pointer<DViewPoint, 1, 1> = 'Pointer_DefaultViewPoint';
     // collaborators dict user: priority
 
-    public static new(type: DProject['type'], name: string, author: Pointer<DUser, 1, 1, LUser>, id?: DProject['id']): DProject {
+    public static new(type: DProject['type'], name: string): DProject {
         return new Constructors(new DProject('dwc'), undefined, true, undefined)
-            .DPointerTargetable().DProject(type, name, author, id).end();
+            .DPointerTargetable().DProject(type, name).end();
     }
 }
 
@@ -1760,6 +1760,8 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
 
     id!: Pointer<DProject>;
     type!: 'public'|'private'|'collaborative';
+    author!: LUser;
+    collaborators!: LUser[];
     name!: string;
     metamodels!: LModel[];
     models!: LModel[];
@@ -1795,6 +1797,24 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected set_name(val: this['name'], context: Context): boolean {
         const data = context.data;
         SetFieldAction.new(data.id, 'name', val, '', false);
+        return true;
+    }
+
+    protected get_author(context: Context): this['author'] {
+        return LUser.fromPointer(context.data.author);
+    }
+    protected set_author(val: Pack<this['author']>, context: Context): boolean {
+        const data = context.data;
+        SetFieldAction.new(data.id, 'author', Pointers.from(val), '', true);
+        return true;
+    }
+
+    protected get_collaborators(context: Context): this['collaborators'] {
+        return LUser.fromPointer(context.data.collaborators);
+    }
+    protected set_collaborators(val: PackArr<this['collaborators']>, context: Context): boolean {
+        const data = context.data;
+        SetFieldAction.new(data.id, 'collaborators', Pointers.from(val), '', true);
         return true;
     }
 

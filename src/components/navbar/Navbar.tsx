@@ -4,12 +4,11 @@ import {connect} from 'react-redux';
 import {DState, DUser, LUser, SetRootFieldAction} from '../../joiner';
 import File from './tabs/File';
 import Edit from './tabs/Edit';
-import Share from './tabs/Share';
 import Debug from './tabs/Debug';
 import DebugImage from '../../static/img/debug.png';
-import LogoImage from '../../static/img/logo.png';
 import {FakeStateProps} from '../../joiner/types';
 import PersistanceApi from "../../api/persistance";
+import Collaborative from "../collaborative/Collaborative";
 
 let clickTimestamps: number[] = [];
 const clicksRequired = 2;
@@ -18,6 +17,11 @@ function NavbarComponent(props: AllProps) {
     const debug = props.debug;
     const user = props.user;
     const project = user.project;
+
+    const closeProject = () => {
+        user.project = null;
+        Collaborative.client.disconnect();
+    }
 
     return(<nav className={'navbar navbar-expand-lg'}>
         <ul className={'navbar-nav'}>
@@ -38,7 +42,7 @@ function NavbarComponent(props: AllProps) {
                         {/*<Share />*/}
                         {debug && undefined /* <Examples />*/}
                         <hr />
-                        <li tabIndex={-1} onClick={e => user.project = null} className={'text-danger dropdown-item'}>
+                        <li tabIndex={-1} onClick={closeProject} className={'text-danger dropdown-item'}>
                             Close Project
                         </li>
                     </ul>
