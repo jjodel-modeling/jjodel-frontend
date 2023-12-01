@@ -23,20 +23,4 @@ module.exports = function (app) {
             changeOrigin: true
         })
     );
-    /*
-    app.use(
-        '/collaborative/rooms',
-        createProxyMiddleware({
-            target: process.env['REACT_APP_COLLABORATIVE_REST'],
-            changeOrigin: true
-        })
-    );
-    app.use(
-        '/collaborative/rooms/*',
-        createProxyMiddleware({
-            target: process.env['REACT_APP_COLLABORATIVE_REST'],
-            changeOrigin: true
-        })
-    );
-    */
 };

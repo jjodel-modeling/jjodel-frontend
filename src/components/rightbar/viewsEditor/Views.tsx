@@ -1,25 +1,27 @@
-import {MouseEvent} from 'react';
+import React, {Dispatch, MouseEvent, ReactElement} from 'react';
 import {CreateElementAction, SetRootFieldAction} from '../../../redux/action/action';
 import type {LProject} from '../../../joiner';
-import {DViewElement, LViewElement, U} from '../../../joiner';
+import {DState, DUser, DViewElement, LUser, LViewElement, U} from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
+import {FakeStateProps} from "../../../joiner/types";
+import {connect} from "react-redux";
 
-interface Props {
-    project: LProject;
-}
-function ViewsData(props: Props) {
+function ViewsDataComponent(props: AllProps) {
     const project = props.project;
-    const views = project.views;
+    const views = project.views.filter(v => v && (!v.viewpoint || v.viewpoint.id === project.activeViewpoint.id));
 
     const [hoverID, setHoverID] = useStateIfMounted('');
 
     const add = (e: MouseEvent) => {
         const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
-        DViewElement.new('View', jsx);
+        let name = 'view_' + 0;
+        let names: string[] = project.views.map(v => v && v.name);
+        name = U.increaseEndingNumber(name, false, false, newName => names.indexOf(newName) >= 0);
+        DViewElement.new(name, jsx);
     }
 
     const select = (view: LViewElement) => {
-        SetRootFieldAction.new('stackViews', view.id, '+=', true);
+        project.pushToStackViews(view);
     }
 
     const clone = (e: MouseEvent, v: LViewElement) => {
@@ -32,7 +34,7 @@ function ViewsData(props: Props) {
             }
         }
         CreateElementAction.new(view);
-        SetRootFieldAction.new('stackViews', view.id, '+=', true);
+        project.pushToStackViews(view);
     }
 
     return(<div>
@@ -61,4 +63,32 @@ function ViewsData(props: Props) {
     </div>);
 }
 
+interface OwnProps { }
+interface StateProps {
+    project: LProject;
+}
+interface DispatchProps { }
+type AllProps = OwnProps & StateProps & DispatchProps;
+
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+    const ret: StateProps = {} as FakeStateProps;
+    const user = LUser.fromPointer(DUser.current);
+    ret.project = user.project as LProject;
+    return ret;
+}
+
+function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
+    const ret: DispatchProps = {};
+    return ret;
+}
+
+
+export const ViewsDataConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
+    mapStateToProps,
+    mapDispatchToProps
+)(ViewsDataComponent);
+
+export const ViewsData = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ViewsDataConnected {...{...props, children}} />;
+}
 export default ViewsData;

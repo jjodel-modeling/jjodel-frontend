@@ -16,7 +16,7 @@ function ViewpointsEditorComponent(props: AllProps) {
     const editName = (evt: React.ChangeEvent<HTMLInputElement>, vp: LViewPoint) => {
         vp.name = evt.target.value;
     }
-    const add = (evt: React.MouseEvent<HTMLButtonElement>) => {
+    const add = () => {
         let name = 'viewpoint_' + 0;
         let viewpointNames: string[] = viewpoints.map(vp => vp.name);
         name = U.increaseEndingNumber(name, false, false, newName => viewpointNames.indexOf(newName) >= 0);
@@ -51,7 +51,7 @@ function ViewpointsEditorComponent(props: AllProps) {
                     <i className={'p-1 bi bi-check2'}></i>
                 </button>
                 <button className={'btn btn-danger ms-1'} disabled={index === 0 || active.id === viewpoint.id}
-                        onClick={(evt) => {remove(viewpoint)}}>
+                        onClick={() => remove(viewpoint)}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
                 </button>
             </div>
@@ -60,9 +60,9 @@ function ViewpointsEditorComponent(props: AllProps) {
 }
 interface OwnProps { }
 interface StateProps {
-    project: LProject
-    viewpoints: LViewPoint[]
-    active: LViewPoint
+    project: LProject;
+    viewpoints: LViewPoint[];
+    active: LViewPoint;
 }
 interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;

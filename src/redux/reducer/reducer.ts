@@ -315,9 +315,9 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     const ret = _reducer(oldState, action);
     if (ret === oldState) return oldState;
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
-    if (!oldState?.collaborative) return ret;
-    const ignoredFields  = ['contextMenu', '_lastSelected', 'isLoading', 'isCleaning'];
-    if(action.sender === DUser.current && !ignoredFields.includes(action.field)) {
+    if (!oldState?.collaborativeSession) return ret;
+    const ignoredFields: (keyof DState)[]  = ['contextMenu', '_lastSelected', 'isLoading', 'collaborativeSession'];
+    if(action.sender === DUser.current && !ignoredFields.includes(action.field as keyof DState)) {
         const parsedAction: JSON & GObject = JSON.parse(JSON.stringify(action));
         Collaborative.client.emit('pushAction', parsedAction);
     }

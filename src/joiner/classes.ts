@@ -103,7 +103,7 @@ import type {
     Proxyfied,
     unArr
 } from "./types";
-import {EdgeBendingMode, EdgeGapMode, PrimitiveType, NodeTypes} from "./types";
+import {EdgeBendingMode, EdgeGapMode, PrimitiveType, NodeTypes, Json} from "./types";
 import type {
     DViewElement,
     DViewTransientProperties,
@@ -813,17 +813,17 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             } else thiss._parsedConstants = undefined;
         });
         if(thiss.className !== 'DViewElement') return this;
-        thiss._persistCallbacks.push(SetRootFieldAction.create('stackViews', [thiss.id], '', true));
         const user = LUser.fromPointer(DUser.current);
-        const project = user?.project;
-        project && this.setExternalPtr(project.id, 'views', '+=');
+        const project = user?.project; if(!project) return this;
+        this.setExternalPtr(project.id, 'views', '+=');
+        this.setExternalPtr(project.id, 'stackViews', '+=');
         return this;
     }
 
     DViewPoint(): this {
         const user = LUser.fromPointer(DUser.current);
-        const project = user?.project;
-        project && this.setExternalPtr(project.id, 'viewpoints', '+=');
+        const project = user?.project; if(!project) return this;
+        this.setExternalPtr(project.id, 'viewpoints', '+=');
         return this;
     }
 
@@ -1738,10 +1738,12 @@ export class DProject extends DPointerTargetable {
     name!: string;
     author: Pointer<DUser> = DUser.current;
     collaborators: Pointer<DUser, 0, 'N'> = [];
+    onlineUsers : number = 0;
     metamodels: Pointer<DModel, 0, 'N'> = [];
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
     views: Pointer<DViewElement, 0, 'N'> = [];
+    stackViews: Pointer<DViewPoint, 0, 'N'> = [];
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
     activeViewpoint: Pointer<DViewPoint, 1, 1> = 'Pointer_DefaultViewPoint';
     // collaborators dict user: priority
@@ -1762,11 +1764,13 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     type!: 'public'|'private'|'collaborative';
     author!: LUser;
     collaborators!: LUser[];
+    onlineUsers!: number;
     name!: string;
     metamodels!: LModel[];
     models!: LModel[];
     graphs!: LGraph[];
     views!: LViewElement[];
+    stackViews!: LViewElement[];
     viewpoints!: LViewPoint[];
     activeViewpoint!: LViewPoint;
 
@@ -1790,6 +1794,9 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     fields!: LGraphElement[];
     edges!: LEdge[];
     edgePoints!: LEdgePoint[];
+
+    /* Functions */
+
 
     protected get_name(context: Context): this['name'] {
         return context.data.name;
@@ -1815,6 +1822,15 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected set_collaborators(val: PackArr<this['collaborators']>, context: Context): boolean {
         const data = context.data;
         SetFieldAction.new(data.id, 'collaborators', Pointers.from(val), '', true);
+        return true;
+    }
+
+    protected get_onlineUsers(context: Context): this['onlineUsers'] {
+        return context.data.onlineUsers;
+    }
+    protected set_onlineUsers(val: this['onlineUsers'], context: Context): boolean {
+        const data = context.data;
+        SetFieldAction.new(data.id, 'onlineUsers', val, '', false);
         return true;
     }
 
@@ -1851,6 +1867,15 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected set_views(val: PackArr<this['views']>, context: Context): boolean {
         const data = context.data;
         SetFieldAction.new(data.id, 'views', Pointers.from(val), '', true);
+        return true;
+    }
+
+    protected get_stackViews(context: Context): this['stackViews'] {
+        return LViewElement.fromPointer(context.data.stackViews || []);
+    }
+    protected set_stackViews(val: PackArr<this['stackViews']>, context: Context): boolean {
+        const data = context.data;
+        SetFieldAction.new(data.id, 'stackViews', Pointers.from(val), '', true);
         return true;
     }
 
@@ -1957,7 +1982,28 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         return data.edges.flatMap(e => e.subElements) as LEdgePoint[];
     }
 
+    /* CUSTOM Functions */
+    public pushToStackViews(view: Pack<LViewElement>): void {
+        throw new Error('cannot be called directly, should trigger getter. this is only for correct signature');
+    }
+    private get_pushToStackViews(context: Context): (view: Pack<LViewElement>) => void {
+        return (view) => {
+            const data = context.data;
+            SetFieldAction.new(data.id, 'stackViews', Pointers.from(view), '+=', true);
+        }
+    }
 
+    public popFromStackViews(): void {
+        throw new Error('cannot be called directly, should trigger getter. this is only for correct signature');
+    }
+    private get_popFromStackViews(context: Context): () => void {
+        return () => {
+            const data = context.data;
+            const view = data.stackViews?.at(-1);
+            if(!view) return;
+            SetFieldAction.new(data.id, 'stackViews', view as any, '-=', true);
+        }
+    }
 }
 
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DProject);

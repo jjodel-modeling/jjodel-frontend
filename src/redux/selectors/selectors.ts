@@ -55,12 +55,6 @@ enum ViewEClassMatch { // this acts as a multiplier for explicit priority
 export class Selectors{
     public static cname: string = 'Selectors';
 
-
-    static getRoom(): string {
-        const state = store.getState();
-        return state.room;
-    }
-
     static getActiveModel(): null|LModel {
         let metamodel: null|LModel;
         let state: DState & GObject = store.getState();

@@ -1,6 +1,5 @@
-import {MouseEvent} from 'react';
-import type {LViewElement, LViewPoint} from '../../../joiner';
-import {U} from '../../../joiner';
+import React, {Dispatch, MouseEvent, ReactElement} from 'react';
+import type {LViewElement} from '../../../joiner';
 import {SetRootFieldAction} from '../../../redux/action/action';
 import InfoData from './data/InfoData';
 import NodeData from './data/NodeData';
@@ -11,18 +10,19 @@ import {DockLayout} from 'rc-dock';
 import {LayoutData} from 'rc-dock/lib/DockData';
 import CustomData from './data/CustomData';
 import SubViewsData from './data/SubViewsData';
+import {DState, DUser, LProject, LUser, LViewPoint} from "../../../joiner";
+import {FakeStateProps} from "../../../joiner/types";
+import {connect} from "react-redux";
 
-interface Props {
-    view: LViewElement;
-    viewpoints: LViewPoint[];
-    debug: boolean;
-}
-function ViewData(props: Props) {
+function ViewDataComponent(props: AllProps) {
+    const project = props.project;
     const view = props.view;
+    /*
     if(!view) {
-        SetRootFieldAction.new('stackViews', undefined, '-=', false);
+        project.stackViews = [];
         return(<></>);
     }
+    */
     const viewpoints = props.viewpoints;
     const debug = props.debug;
     const readOnly = !debug && view.id.indexOf("Pointer_View") !== -1;// U.getDefaultViewsID().includes(view.id);
@@ -43,8 +43,8 @@ function ViewData(props: Props) {
     );
     layout.dockbox.children.push({tabs});
 
-    const back = (e: MouseEvent) => {
-        SetRootFieldAction.new('stackViews', undefined, '-=', true);
+    const back = () => {
+        project.popFromStackViews();
     }
 
     return(<div>
@@ -57,5 +57,38 @@ function ViewData(props: Props) {
         <DockLayout defaultLayout={layout} style={{position: 'absolute', left: 10, top: 40, right: 10, bottom: 10}} />
     </div>);
 }
+interface OwnProps {
+    view: LViewElement;
+}
+interface StateProps {
+    project: LProject;
+    viewpoints: LViewPoint[];
+    debug: boolean;
+}
+interface DispatchProps { }
+type AllProps = OwnProps & StateProps & DispatchProps;
 
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+    const ret: StateProps = {} as FakeStateProps;
+    const user = LUser.fromPointer(DUser.current);
+    ret.project = user.project as LProject;
+    ret.viewpoints = ret.project.viewpoints;
+    ret.debug = state.debug;
+    return ret;
+}
+
+function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
+    const ret: DispatchProps = {};
+    return ret;
+}
+
+
+export const ViewDataConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
+    mapStateToProps,
+    mapDispatchToProps
+)(ViewDataComponent);
+
+export const ViewData = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ViewDataConnected {...{...props, children}} />;
+}
 export default ViewData;

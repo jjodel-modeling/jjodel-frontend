@@ -20,20 +20,20 @@ function SubViewsDataComponent(props: AllProps) {
 
     const readOnly = props.readonly;
     const [hoverID, setHoverID] = useStateIfMounted('');
-    const [possibleSubViews, setPossibleSubViews] = useStateIfMounted(project.views.filter(v => v.id !== view.id && !view.subViews.map(v => v.id).includes(v.id)));
+    const [possibleSubViews, setPossibleSubViews] = useStateIfMounted(project.views.filter(v => v && v.id !== view.id && !view.subViews.map(v => v.id).includes(v.id)));
     const [subViewID, setSubViewID] = useStateIfMounted((possibleSubViews[0]) ? possibleSubViews[0].id : '');
 
     const add = (e: MouseEvent) => {
         if(!subViewID) return;
         // view.subViews = [...view.subViews, LViewElement.fromPointer(subViewID)];
         SetFieldAction.new(view.id, 'subViews', subViewID, '+=', true);
-        const _possibleSubViews = project.views.filter(v => v.id !== subViewID && v.id !== view.id && !view.subViews.map(v => v.id).includes(v.id));
+        const _possibleSubViews = project.views.filter(v => v && v.id !== subViewID && v.id !== view.id && !view.subViews.map(v => v.id).includes(v.id));
         setPossibleSubViews(_possibleSubViews);
         setSubViewID((_possibleSubViews[0]) ? _possibleSubViews[0].id : '');
     }
 
     const select = (view: LViewElement) => {
-        // SetRootFieldAction.new('stackViews', view.id, '+=', true);
+        project.pushToStackViews(view);
     }
 
     const remove = (e: MouseEvent, subView: LViewElement) => {

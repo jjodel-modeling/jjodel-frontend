@@ -1,7 +1,7 @@
 import './style.scss';
 import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
-import {DState, DUser, LUser, SetRootFieldAction} from '../../joiner';
+import {DState, DUser, LUser, SetRootFieldAction, U} from '../../joiner';
 import File from './tabs/File';
 import Edit from './tabs/Edit';
 import Debug from './tabs/Debug';
@@ -18,9 +18,13 @@ function NavbarComponent(props: AllProps) {
     const user = props.user;
     const project = user.project;
 
-    const closeProject = () => {
+    const closeProject = async() => {
+        if(project?.type === 'collaborative') {
+            SetRootFieldAction.new('collaborativeSession', false);
+            Collaborative.client.disconnect();
+            if(project.onlineUsers === 0) await PersistanceApi.saveProject();
+        }
         user.project = null;
-        Collaborative.client.disconnect();
     }
 
     return(<nav className={'navbar navbar-expand-lg'}>
@@ -69,7 +73,7 @@ function NavbarComponent(props: AllProps) {
                          if (now - clickTimestamps[clickTimestamps.length - clicksRequired] < timeframe) { SetRootFieldAction.new('debug', !debug); clickTimestamps = []; }
                          clickTimestamps.push(now);
                      }}>
-                    <label style={{cursor: 'pointer'}} className={'text-white'}>A</label>
+                    <label style={{cursor: 'pointer'}} className={'text-white'}>{user.username[0].toUpperCase()}</label>
                 </div>
                 <ul className={'dropdown-menu'}>
                     <li tabIndex={-1} onClick={async(e) => {
@@ -84,7 +88,7 @@ function NavbarComponent(props: AllProps) {
             <ul className={'navbar-nav ms-auto'}>
             </ul>
             {user.project && <li className={'nav-item'}>
-                <button onClick={async(e) => await PersistanceApi.saveProject()} style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
+                <button disabled={project?.type === 'collaborative'} onClick={async(e) => await PersistanceApi.saveProject()} style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
                     Save
                 </button>
             </li>}

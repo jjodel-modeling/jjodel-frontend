@@ -53,12 +53,13 @@ class PersistanceApi {
     static async loadMyProjects(): Promise<void> {
         SetRootFieldAction.new('isLoading', true);
         const user = LUser.fromPointer(DUser.current);
+        user.project = null; user.projects.map(p => p.delete()); user.projects = [];
         const _response = await Fetch.get(this.url + `users/${DUser.current}/projects`);
         const response = await this.responseHandler(_response);
         if(response.code !== 200) return;
-        const projects = response.body as unknown as DProject[];
+        const projects = U.wrapper<DProject[]>(response.body);
         BEGIN(); for(let project of projects) await Load.project(project); END();
-        user.projects = LProject.fromPointer(projects.map(project => project.id)) as LProject[];
+        user.projects = LProject.fromArr(projects);
         SetRootFieldAction.new('isLoading', false);
     }
     static async getProjectById(id: string): Promise<LProject|null> {

@@ -1,10 +1,9 @@
 import {Dispatch, ReactElement} from 'react';
 import {DState} from '../../../redux/store';
 import {connect} from 'react-redux';
-import Collaborative from "../../collaborative/Collaborative";
+import {FakeStateProps} from "../../../joiner/types";
 
 function ShareComponent(props: AllProps) {
-    const room = props.room;
     const debug = props.debug;
     const root = process.env['REACT_APP_URL'] || '';
 
@@ -14,27 +13,27 @@ function ShareComponent(props: AllProps) {
     }
 
     const quit = async() => {
-        window.location.replace(root);
+        // window.location.replace(root);
     }
     return(<li className={'dropdown-item'}>Share
         <i className={'ms-auto bi bi-caret-right-fill'} />
         <ul className={'submenu dropdown-menu'}>
-            {!room && <li tabIndex={-1} onClick={create} className={'dropdown-item'}>Collaborative</li>}
-            {room && <li tabIndex={-1} onClick={quit} className={'dropdown-item'}>Quit</li>}
+            {false && <li tabIndex={-1} onClick={create} className={'dropdown-item'}>Collaborative</li>}
+            {false && <li tabIndex={-1} onClick={quit} className={'dropdown-item'}>Quit</li>}
         </ul>
     </li>);
 }
 
 interface OwnProps {}
-interface StateProps {room: string, debug: boolean}
+interface StateProps {debug: boolean}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-    const room = state.room;
-    const debug = state.debug;
-    return {room, debug};
+    const ret = {} as FakeStateProps;
+    ret.debug = state.debug;
+    return ret;
 }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {

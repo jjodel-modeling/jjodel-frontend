@@ -24,7 +24,7 @@ function DashboardComponent(props: AllProps) {
             if (DUser.offlineMode) return;
             await PersistanceApi.loadMyProjects();
         })();
-    })
+    });
 
     const createProject = async(type: DProject['type']) => {
         let name = 'project_' + 0;
@@ -39,6 +39,9 @@ function DashboardComponent(props: AllProps) {
     return (<div className={'container'}>
         <div className={'d-flex p-2'}>
             <b className={'ms-1 my-auto'}>MY PROJECTS</b>
+            <button onClick={async() => await PersistanceApi.loadMyProjects()} className={'ms-2 p-1 btn btn-primary circle'}>
+                <i className={'bi bi-arrow-clockwise'}></i>
+            </button>
             <div className={'d-flex ms-auto'}>
                 <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('public')}>
                     + Public

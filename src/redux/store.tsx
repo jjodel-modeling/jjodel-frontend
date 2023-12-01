@@ -149,7 +149,7 @@ export class DState extends DPointerTargetable{
 
     contextMenu: {display: boolean, x: number, y: number} = {display: false, x: 0, y: 0};
 
-    deleted: string[] = [];
+    // deleted: string[] = [];
 
     objects: Pointer<DObject, 0, 'N', LObject> = [];
     values: Pointer<DValue, 0, 'N', LValue> = [];
@@ -169,14 +169,14 @@ export class DState extends DPointerTargetable{
     m2models: Pointer<DModel, 0, 'N'> = [];
     m1models: Pointer<DModel, 0, 'N'> = [];
 
-    room: string = '';
+    // room: string = '';
 
-    selected: Selected = {};
+    // selected: Selected = {};
 
     isLoading: boolean = false;
 
     projects: Pointer<DProject, 0, 'N'> = [];
-    collaborative: boolean = false;
+    collaborativeSession: boolean = false;
 
     static init(store?: DState): void {
         BEGIN()
@@ -441,7 +441,6 @@ export class LState<Context extends LogicContext<DState> = any, C extends Contex
     get_contextMenu(c: Context): this["contextMenu"] { return c.data.contextMenu; }
     // get_user(c: Context): this["user"] { return LState.wrap(c.data.user) as LUser; }
     get_debug(c: Context): this["debug"] { return c.data.debug; }
-    get_room(c: Context): this["room"] { return c.data.room; }
     get_idlookup(c: Context): this["idlookup"] { return c.data.idlookup; }
     get__lastSelected(c: Context): this["_lastSelected"] {
         let ls = c.data._lastSelected;

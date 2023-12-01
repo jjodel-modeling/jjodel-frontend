@@ -1,19 +1,23 @@
-import type {Pointer} from "../../../joiner";
-import React, {Dispatch, ReactElement} from "react";
-import {connect} from "react-redux";
-import {DState, DUser, LModel, LProject, LUser, Input} from "../../../joiner";
-import type {FakeStateProps} from "../../../joiner/types";
+import type {DState, LProject} from '../../../joiner';
+import {U, Input, DUser, LUser} from '../../../joiner';
+import {Dispatch, ReactElement} from 'react';
+import {connect} from 'react-redux';
+import type {FakeStateProps} from '../../../joiner/types';
 
 
 function InfoTabComponent(props: AllProps) {
     const user = props.user;
-    const project: LProject = user.project as unknown as LProject;
+    const project = props.project;
     const metamodels = project.metamodels;
     const models = project.models;
+
 
     return(<div className={'p-3'}>
         <h3 className={'text-primary'}>{project.name}</h3>
         <Input data={project.id} field={'name'} jsxLabel={<b className={'text-primary me-2'}>Name</b>} hidden={true} />
+        {(project.type === 'collaborative') && <>
+            <b><label className={'text-primary'}>Online Users:</label> {project.onlineUsers}</b> <br />
+        </>}
         <b><label className={'text-primary'}>Metamodels ({metamodels.length}):</label></b>
         <br />
         {metamodels.map((model, index) => {
@@ -26,7 +30,7 @@ function InfoTabComponent(props: AllProps) {
         {models.map((model, index) => {
             return(<>
                 <label className={'ms-3'} key={index}>
-                    -{model.name} <b className={'text-success'}>{model.instanceof ? "conforms to" : "is shapeless"}</b> {model.instanceof?.name}
+                    -{model.name} <b className={'text-success'}>{model.instanceof ? 'conforms to' : 'is shapeless'}</b> {model.instanceof?.name}
                 </label>
                 <br />
             </>);
@@ -34,7 +38,7 @@ function InfoTabComponent(props: AllProps) {
     </div>);
 }
 interface OwnProps {}
-interface StateProps {user: LUser}
+interface StateProps {user: LUser, project: LProject}
 interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -42,6 +46,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     ret.user = LUser.fromPointer(DUser.current);
+    ret.project = ret.user.project as LProject;
     return ret;
 }
 
