@@ -692,7 +692,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         /// set classes
         if (this.props.node) {
-            let isSelected: Dictionary<Pointer<DUser>, boolean> = this.props.node.__raw.isSelected;
+            let isSelected: Dictionary<Pointer<DUser>, boolean> = this.props.node.__raw.isSelected || {};
             if (isSelected[DUser.current]) { // todo: better to just use css attribute selectors [data-userselecting = "userID"]
                 classes.push('selected-by-me');
                 if (Object.keys(isSelected).length > 1) classes.push('selected-by-others');

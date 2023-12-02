@@ -71,6 +71,8 @@
     "postbuild": "npm run serve",
     "dev": "docker-compose -f docker-compose.dev.yml up",
     "________________________________other_build_modes___________________________": "",
+    "build_2": "ts-node esbuild.config.ts",
+    "serve_2": "node dist/main.bundle.js",
     "___________________________________misc_utilities___________________________": "",
     "pushmde": "git push mdegroup",
     "nv": "nvm install 16.13.0",
@@ -108,6 +110,7 @@
     "@types/react-beautiful-dnd": "^13.1.1",
     "dotenv-webpack": "^8.0.1",
     "gh-pages": "^4.0.0",
-    "react-app-rewired": "^2.2.1"
+    "react-app-rewired": "^2.2.1",
+    "ts-node": "^10.9.1"
   }
 }

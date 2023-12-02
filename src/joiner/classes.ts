@@ -821,9 +821,13 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     }
 
     DViewPoint(): this {
+        const _this: DViewPoint = U.wrapper<DViewPoint>(this.thiss);
         const user = LUser.fromPointer(DUser.current);
         const project = user?.project; if(!project) return this;
         this.setExternalPtr(project.id, 'viewpoints', '+=');
+        _this._persistCallbacks.push(
+            SetFieldAction.create(project.id, 'stackViews', [], '', false)
+        );
         return this;
     }
 
@@ -1671,7 +1675,7 @@ let bb2 = fffff(a);
 @RuntimeAccessible
 export class DUser extends DPointerTargetable {
     public static cname: string = 'DUser';
-    public static offlineMode: boolean = false;
+    public static offlineMode: boolean = true;
     // static current: Pointer<DUser> = 'Pointer_AnonymousUser';
     static current: Pointer<DUser> = '';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];

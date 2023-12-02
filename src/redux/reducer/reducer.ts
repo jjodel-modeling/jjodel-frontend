@@ -317,21 +317,19 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
     if (!oldState?.collaborativeSession) return ret;
     const ignoredFields: (keyof DState)[]  = ['contextMenu', '_lastSelected', 'isLoading', 'collaborativeSession'];
+    /* Checking if CompositeAction has some actions that MUST be ignored */
+    let compositeAction: CompositeAction|null = null;
+    if(action.type === CompositeAction.type) {
+        compositeAction = action as CompositeAction;
+        const subActions = U.wrapper<Action[]>(compositeAction.actions || []);
+        compositeAction.actions = subActions.filter(a => !ignoredFields.includes(a.field as keyof DState));
+    }
+    if(compositeAction && !compositeAction.actions.length) return ret;
+    action = (compositeAction) ? compositeAction : action;
     if(action.sender === DUser.current && !ignoredFields.includes(action.field as keyof DState)) {
         const parsedAction: JSON & GObject = JSON.parse(JSON.stringify(action));
         Collaborative.client.emit('pushAction', parsedAction);
     }
-
-
-    /*
-    if(!oldState?.room) return ret;
-    const ignoredFields  = ['contextMenu', '_lastSelected', 'selected', 'isLoading', 'isCleaning'];
-    if(action.token === DUser.token && !ignoredFields.includes(action.field)) {
-        console.log('FB: Sending Action', action);
-        const parsedAction: JSON = JSON.parse(JSON.stringify(action));
-        Firebase.addAction(ret.room, parsedAction).then();
-    }
-    */
     return ret;
 
 }
@@ -366,7 +364,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             let delta =  U.objectDelta(ret, oldState);
             if (!filterundoableactions(delta)) return ret;
             // console.log("setting undoable action:", {ret, oldState0:{...oldState}, oldState, delta});
-            if (oldState !== null) statehistory[DUser.current].undoable.push(delta);
+            if (oldState !== null) statehistory[DUser.current]?.undoable.push(delta);
             return ret;
     }
 }

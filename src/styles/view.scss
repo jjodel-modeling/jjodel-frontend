@@ -146,10 +146,7 @@
 }
 
 .selected-by-others {
-  outline: 1px dashed red;
-  & > * {
-    cursor: not-allowed;
-  }
+  outline: 1px dashed indigo;
 }
 
 

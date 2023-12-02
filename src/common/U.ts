@@ -38,7 +38,7 @@ console.warn('loading ts U log');
 export class U {
     static cname: string = "U";
 
-    static wrapper<T>(obj: unknown): T {
+    static wrapper<T>(obj: any): T {
         return obj as unknown as T;
     }
 

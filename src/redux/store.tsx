@@ -108,7 +108,7 @@ export class DState extends DPointerTargetable{
         return new Constructors(new DState('dwc'), undefined, false, undefined).DPointerTargetable().DState().end();
     }
 
-    debug: boolean = false;
+    debug: boolean = true;
     logs: Pointer<DLog>[] = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
 
