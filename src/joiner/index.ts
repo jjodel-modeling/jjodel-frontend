@@ -64,6 +64,7 @@ export {Uarr,  DDate, ParseNumberOrBooleanOptions, myFileReader,
     toShortEType, toLongEType, ShortAttribSuperTypes,
     } from "../common/U";
 export {DV} from '../common/DV';
+export {Defaults} from '../common/Defaults';
 export {Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Geom";
 export { CSSRuleSorted, CSSParser, TagNames } from "../common/Uhtml";
 // export {Log as Logg, Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Log";

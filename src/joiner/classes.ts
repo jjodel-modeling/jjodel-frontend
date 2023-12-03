@@ -129,9 +129,10 @@ import {
     SetFieldAction,
     SetRootFieldAction, ShortAttribETypes,
     store,
-    U, packageDefaultSize
+    U, Defaults, packageDefaultSize
 } from "./index";
 import TreeModel from "tree-model";
+import PersistanceApi from "../api/persistance";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -1749,7 +1750,7 @@ export class DProject extends DPointerTargetable {
     views: Pointer<DViewElement, 0, 'N'> = [];
     stackViews: Pointer<DViewPoint, 0, 'N'> = [];
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
-    activeViewpoint: Pointer<DViewPoint, 1, 1> = 'Pointer_DefaultViewPoint';
+    activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
     // collaborators dict user: priority
 
     public static new(type: DProject['type'], name: string): DProject {
@@ -1799,8 +1800,10 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     edges!: LEdge[];
     edgePoints!: LEdgePoint[];
 
-    /* Functions */
+    /* UTILS */
+    children!: LPointerTargetable[];
 
+    /* Functions */
 
     protected get_name(context: Context): this['name'] {
         return context.data.name;
@@ -1866,7 +1869,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_views(context: Context): this['views'] {
-        return LViewElement.fromPointer([...U.getDefaultViewsID(), ...context.data.views]);
+        return LViewElement.fromPointer([...Defaults.views, ...context.data.views]);
     }
     protected set_views(val: PackArr<this['views']>, context: Context): boolean {
         const data = context.data;
@@ -1884,7 +1887,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_viewpoints(context: Context): this['viewpoints'] {
-        return LViewPoint.fromPointer(['Pointer_DefaultViewPoint', ...context.data.viewpoints]);
+        return LViewPoint.fromPointer([...Defaults.viewpoints, ...context.data.viewpoints]);
     }
     protected set_viewpoints(val: PackArr<this['viewpoints']>, context: Context): boolean {
         const data = context.data;
@@ -1987,10 +1990,34 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     /* CUSTOM Functions */
+    protected get_children(context: Context): this['children'] {
+        const data = context.proxyObject as LProject;
+        return [
+            /* Data */
+            ...data.metamodels,
+            ...data.packages,
+            ...data.classes,
+            ...data.attributes,
+            ...data.references,
+            ...data.operations,
+            ...data.parameters,
+            ...data.enumerators,
+            ...data.literals,
+            ...data.models,
+            ...data.objects,
+            ...data.values,
+            /* Views & Viewpoints */
+            ...data.views.filter(v => v && !Defaults.views.includes(v.id)),
+            ...data.viewpoints.filter(vp => vp && !Defaults.viewpoints.includes(vp.id)),
+            /* Nodes */
+            ...data.allNodes
+        ];
+    }
+
     public pushToStackViews(view: Pack<LViewElement>): void {
         throw new Error('cannot be called directly, should trigger getter. this is only for correct signature');
     }
-    private get_pushToStackViews(context: Context): (view: Pack<LViewElement>) => void {
+    protected get_pushToStackViews(context: Context): (view: Pack<LViewElement>) => void {
         return (view) => {
             const data = context.data;
             SetFieldAction.new(data.id, 'stackViews', Pointers.from(view), '+=', true);
@@ -2000,12 +2027,29 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     public popFromStackViews(): void {
         throw new Error('cannot be called directly, should trigger getter. this is only for correct signature');
     }
-    private get_popFromStackViews(context: Context): () => void {
+    protected get_popFromStackViews(context: Context): () => void {
         return () => {
             const data = context.data;
             const view = data.stackViews?.at(-1);
             if(!view) return;
             SetFieldAction.new(data.id, 'stackViews', view as any, '-=', true);
+        }
+    }
+
+    public async delete(): Promise<void> {
+        throw new Error('cannot be called directly, should trigger getter. this is only for correct signature');
+    }
+    protected get_delete(context: Context): () => Promise<void> {
+        const data = context.proxyObject as LProject;
+        return async() => {
+            TRANSACTION(()=> {
+                data.children.map(c => c && c.delete());
+                SetFieldAction.new(DUser.current, 'projects', data.id as any, '-=', true);
+                DeleteElementAction.new(data.id);
+                SetRootFieldAction.new('projects', data.id, '-=', true);
+            });
+            if(DUser.offlineMode) return;
+            await PersistanceApi.deleteProject(data.id);
         }
     }
 }

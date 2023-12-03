@@ -53,8 +53,10 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                 current[key].clonedCounter = 1 + (current[key].clonedCounter || 0);
             }
             current = current[key];
-            continue; }
-
+            continue;
+        }
+        // Giordano: added this on 03/12/2023 to prevent "Cannot read properties of undefined".
+        if(!current) continue;
         // perform final assignment
         if (i >= action.pathArray.length - 1) {
             let isArrayAppend = false;

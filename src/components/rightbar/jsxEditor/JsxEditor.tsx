@@ -2,13 +2,13 @@ import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import {useStateIfMounted} from "use-state-if-mounted";
 import type {FakeStateProps} from "../../../joiner/types";
-import {DState, DViewElement, LViewElement, Pointer, U} from "../../../joiner";
+import {DState, DViewElement, LViewElement, Pointer, Defaults} from "../../../joiner";
 import Editor from "@monaco-editor/react";
 
 
 function JsxEditorComponent(props: AllProps) {
     const view = props.view;
-    const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && U.getDefaultViewsID().includes(view.id);
+    const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && Defaults.check(view.id);
     const [jsx, setJsx] = useStateIfMounted(view.jsxString);
 
     const change = (value: string|undefined) => {

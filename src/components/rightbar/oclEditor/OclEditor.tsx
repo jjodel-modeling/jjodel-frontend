@@ -1,19 +1,17 @@
-import React, {Dispatch, ReactElement} from "react";
-import {connect} from "react-redux";
-import Editor from "@monaco-editor/react";
-import {DState, DViewElement, LViewElement, Pointer, U} from "../../../joiner";
-import {useStateIfMounted} from "use-state-if-mounted";
-import {FakeStateProps} from "../../../joiner/types";
+import React, {Dispatch, ReactElement} from 'react';
+import {connect} from 'react-redux';
+import Editor from '@monaco-editor/react';
+import {DState, DViewElement, LViewElement, Pointer, Defaults} from '../../../joiner';
+import {useStateIfMounted} from 'use-state-if-mounted';
+import {FakeStateProps} from '../../../joiner/types';
 
 function OclEditorComponent(props: AllProps) {
     const view = props.view;
     const [ocl, setOcl] = useStateIfMounted(view.oclCondition);
     if(!view) return(<></>);
-    const readOnly = props.readonly !== undefined ? props.readonly : U.getDefaultViewsID().includes(view.id);
+    const readOnly = props.readonly !== undefined ? props.readonly : Defaults.check(view.id);
     const change = (value: string|undefined) => {
         if(value !== undefined) setOcl(value);
-        // ma questo non setta solo lo stato locale? prima era:
-        // if (value !== undefined) view.query = value;
     }
 
     return <>
@@ -54,7 +52,7 @@ export const OclEditor = (props: OwnProps, children: (string | React.Component)[
     return <OclEditorConnected {...{...props, children}} />;
 }
 
-OclEditorComponent.cname = "OclEditorComponent";
-OclEditorConnected.cname = "OclEditorConnected";
-OclEditor.cname = "OclEditor";
+OclEditorComponent.cname = 'OclEditorComponent';
+OclEditorConnected.cname = 'OclEditorConnected';
+OclEditor.cname = 'OclEditor';
 export default OclEditor;

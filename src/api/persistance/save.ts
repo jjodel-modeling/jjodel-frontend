@@ -1,8 +1,7 @@
-import type {LProject, LViewElement, Pointer} from '../../joiner';
-import {U} from '../../joiner';
+import type {LProject, LViewElement} from '../../joiner';
+import {U, Defaults} from '../../joiner';
 import Fetch from '../fetch';
 import type {DataTypes, NodeTypes} from '../../joiner/types';
-
 
 export class Save {
     private static url = '/persistance/';
@@ -11,18 +10,6 @@ export class Save {
         await Fetch.post(this.url + 'projects', U.json(p));
 
         const projectUrl = this.url + `projects/${p.id}`;
-
-        /* OLD Nodes
-        const graphs: LGraph[] = p.graphs;
-        const edges: LEdge[] = graphs.flatMap(g => g.subElements.filter(e => e.className === 'DEdge')) as LEdge[];
-        const edgePoints: LEdgePoint[] = edges.flatMap(e => e.subElements) as LEdgePoint[];
-        const graphVertexes: LGraphVertex[] = graphs.flatMap(g => g.subElements.filter(gv => gv.className === 'DGraphVertex')) as LGraphVertex[];
-        const allVertexes: (LVoidVertex|LVertex)[] = graphVertexes.flatMap(gv => gv.subElements) as (LVoidVertex|LVertex)[];
-        const voidVertexes: LVoidVertex[] = allVertexes.filter(av => av.className === 'DVoidVertex') as LVoidVertex[];
-        const vertexes: LVertex[] = allVertexes.filter(av => av.className === 'DVertex') as LVertex[];
-        const graphElements: LGraphElement[] = allVertexes.flatMap(v => v.subElements.filter(ge => ge.className === 'DGraphElement') as LGraphElement[])
-        */
-
         await Promise.all([
             /* DATA */
             Save.data(`${projectUrl}/metamodels`, p.metamodels),
@@ -62,8 +49,7 @@ export class Save {
     }
 
     private static async views(url: string, elements: LViewElement[]): Promise<void> {
-        const defaults = U.getDefaultViewsID() as Pointer[];
-        defaults.push('Pointer_DefaultViewPoint');
+        const defaults = [...Defaults.views, ...Defaults.viewpoints];
         await Fetch.delete(url);
         for(let element of elements) {
             if(!element || defaults.includes(element.id)) continue;

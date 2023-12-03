@@ -1,7 +1,6 @@
-import React, {Dispatch, MouseEvent, ReactElement} from 'react';
-import {CreateElementAction, SetRootFieldAction} from '../../../redux/action/action';
+import {Dispatch, MouseEvent, ReactElement} from 'react';
 import type {LProject} from '../../../joiner';
-import {DState, DUser, DViewElement, LUser, LViewElement, U} from '../../../joiner';
+import {CreateElementAction, Defaults, DState, DUser, DViewElement, LUser, LViewElement, U} from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from "../../../joiner/types";
 import {connect} from "react-redux";
@@ -54,7 +53,7 @@ function ViewsDataComponent(props: AllProps) {
                 <button className={'btn btn-success ms-auto'} onClick={e => clone(e, view)}>
                     <i className={'p-1 bi bi-clipboard2-fill'}></i>
                 </button>
-                <button className={'btn btn-danger ms-1'} disabled={U.getDefaultViewsID().includes(view.id)}
+                <button className={'btn btn-danger ms-1'} disabled={Defaults.check(view.id)}
                         onClick={e => view.delete()}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
                 </button>

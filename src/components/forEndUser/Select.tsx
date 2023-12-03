@@ -1,4 +1,4 @@
-import {DPointerTargetable, LClass, LModel, U} from '../../joiner';
+import {DPointerTargetable, LClass, LModel, Defaults} from '../../joiner';
 import {DState, GObject, LEnumerator, LPointerTargetable, Overlap, Pointer} from '../../joiner';
 import React, {Dispatch, LegacyRef, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
@@ -15,7 +15,7 @@ function SelectComponent(props: AllProps) {
     let gdata: GObject<LPointerTargetable> = data;
     const field: (keyof LPointerTargetable & keyof DPointerTargetable) = props.field as any;
 
-    const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
+    const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && Defaults.check(data.id);
     const value: string | Pointer = d[field] as string;
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;

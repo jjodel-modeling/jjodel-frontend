@@ -1,7 +1,7 @@
-import React, {Dispatch, ReactElement, ReactNode, useEffect} from 'react';
+import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
-import {DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer} from '../../joiner';
+import {Defaults, DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer} from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './style.scss';
 
@@ -40,7 +40,7 @@ function InputComponent(props: AllProps) {
 
 
     if (!data) return(<></>);
-    const readOnly = (props.readonly !== undefined) ? props.readonly : !props.debugmodee && data.id.indexOf("Pointer_View") !== -1 // more efficient than U.getDefaultViewsID().includes(data.id);
+    const readOnly = (props.readonly !== undefined) ? props.readonly : !props.debugmodee && Defaults.check(data.id);
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;

@@ -21,7 +21,8 @@ import {
     DOperation,
     DPackage,
     DParameter,
-    DPointerTargetable, DProject,
+    DPointerTargetable,
+    DProject,
     DRefEdge,
     DReference,
     DUser,
@@ -31,36 +32,19 @@ import {
     DViewPoint,
     DVoidEdge,
     EdgeBendingMode,
-    EdgeHead, END,
+    EdgeHead,
+    END,
     GObject,
     GraphPoint,
     GraphSize,
-    LAttribute,
-    LClass,
-    LClassifier,
-    LEdgePoint,
-    LEnumerator,
-    LEnumLiteral,
-    LExtEdge,
-    LGraph,
     LGraphElement,
-    LGraphVertex,
-    LLog,
-    LModel,
     LModelElement,
     LObject,
     LogicContext,
-    LOperation,
-    LPackage,
-    LParameter,
-    LPointerTargetable, LProject,
-    LRefEdge,
-    LReference,
+    LPointerTargetable,
     LUser,
     LValue,
-    LVertex,
     LViewElement,
-    LViewPoint,
     packageDefaultSize,
     Pointer,
     Pointers,
@@ -68,13 +52,11 @@ import {
     RuntimeAccessibleClass,
     SetRootFieldAction,
     ShortAttribETypes,
+    Defaults,
     store,
 } from '../joiner';
-
-import React from "react";
 import {DV} from "../common/DV";
 import LeaderLine from "leader-line-new";
-import {Selected} from "../joiner/types";
 import {DefaultEClasses, ShortDefaultEClasses} from "../common/U";
 
 console.warn('ts loading store');
@@ -180,14 +162,13 @@ export class DState extends DPointerTargetable{
 
     static init(store?: DState): void {
         BEGIN()
-        const viewpoint = DViewPoint.new('Default', '');
-        viewpoint.id = 'Pointer_DefaultViewPoint';
+        const viewpoint = DViewPoint.new('Default', '', undefined, '', '', '', [], '', 0, false);
+        viewpoint.id = Defaults.viewpoints[0];
         CreateElementAction.new(viewpoint);
-        SetRootFieldAction.new('viewpoint', viewpoint.id, '', true);
         const views: DViewElement[] = makeDefaultGraphViews();
         for (let view of views) {
             view.id = 'Pointer_View' + view.name;
-            view.viewpoint = 'Pointer_DefaultViewPoint';
+            view.viewpoint = Defaults.viewpoints[0];
             CreateElementAction.new(view);
         }
 
@@ -211,7 +192,6 @@ export class DState extends DPointerTargetable{
         CreateElementAction.new(dObject);
         SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
         END();
-
     }
 }
 function makeDefaultGraphViews(): DViewElement[] {

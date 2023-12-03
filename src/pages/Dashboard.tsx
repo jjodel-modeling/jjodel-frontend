@@ -39,7 +39,8 @@ function DashboardComponent(props: AllProps) {
     return (<div className={'container'}>
         <div className={'d-flex p-2'}>
             <b className={'ms-1 my-auto'}>MY PROJECTS</b>
-            <button onClick={async() => await PersistanceApi.loadMyProjects()} className={'ms-2 p-1 btn btn-primary circle'}>
+            <button disabled={DUser.offlineMode} onClick={async() => await PersistanceApi.loadMyProjects()}
+                    className={'ms-2 p-1 btn btn-primary circle'}>
                 <i className={'bi bi-arrow-clockwise'}></i>
             </button>
             <div className={'d-flex ms-auto'}>
@@ -61,13 +62,7 @@ function DashboardComponent(props: AllProps) {
                     <i className={'p-1 bi bi-eye-fill'}></i>
                 </button>
                 <button disabled={project.author.id !== DUser.current} className={'btn btn-danger me-2'} onClick={async(e) => {
-                    await PersistanceApi.deleteProject(project.id);
-                    // todo: change into project.delete()
-                    BEGIN()
-                    user.projects = user.projects.filter(p => p.id !== project.id);
-                    DeleteElementAction.new(project.id);
-                    SetRootFieldAction.new('projects', project.id, '-=', true);
-                    END()
+                    await project.delete();
                 }}>
                     <i className={'p-1 bi bi-trash-fill'}></i>
                 </button>

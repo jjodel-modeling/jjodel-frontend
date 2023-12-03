@@ -1,48 +1,55 @@
 import type {
+    AbstractConstructor,
+    AttribETypes,
+    Constructor,
     DAttribute,
     DClass,
-    DGraph,
     DClassifier,
     DEnumerator,
+    DGraph,
     DGraphElement,
+    DObject,
     DRefEdge,
+    DState,
+    DValue,
     DVoidVertex,
     GObject,
-    DState,
     LClass,
     LEnumerator,
     LGraphElement,
+    LModel,
+    LModelElement,
+    LObject,
     LOperation,
     LPackage,
     LRefEdge,
+    LValue,
     LViewElement,
+    LViewPoint,
     LVoidVertex,
     Pointer,
-    AbstractConstructor,
-    Constructor,
-    LModelElement, LModel,
-    DObject, DValue, LObject, LValue,
-    LViewPoint,
-    AttribETypes, ShortAttribETypes,
-    Dictionary,
+    ShortAttribETypes
 } from "../../joiner";
 import {
-    DViewElement,
-    DPointerTargetable,
+    Defaults,
     DModel,
     DModelElement,
-    OCL,
+    DPointerTargetable,
+    DUser,
+    DViewElement,
     Log,
     LPointerTargetable,
+    LProject,
+    LUser,
+    OCL,
     RuntimeAccessible,
     RuntimeAccessibleClass,
     store,
-    U,
-    toShortEType, DUser, LUser, LProject
+    toShortEType,
+    U
 } from "../../joiner";
 import {EdgeOptions} from "../store";
 import {DefaultEClasses, ShortDefaultEClasses, toShortEClass} from "../../common/U";
-import { Selected } from "../../joiner/types";
 
 enum ViewEClassMatch { // this acts as a multiplier for explicit priority
     MISMATCH = 0,
@@ -345,7 +352,7 @@ export class Selectors{
         const user = LUser.fromPointer(DUser.current);
         const project = U.wrapper<LProject>(user.project);
         const viewpoint = project.activeViewpoint;
-        const isDefault = v.viewpoint === 'Pointer_DefaultViewPoint';
+        const isDefault = !!(v.viewpoint && Defaults.check(v.viewpoint));
         const isActiveViewpoint = v.viewpoint === viewpoint.id;
         if(!isActiveViewpoint && !isDefault) return ViewEClassMatch.MISMATCH;
         let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];

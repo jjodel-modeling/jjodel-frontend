@@ -1,6 +1,6 @@
-import React, {Dispatch, MouseEvent, ReactElement} from 'react';
+import React, {Dispatch, ReactElement} from 'react';
 import type {LViewElement} from '../../../joiner';
-import {SetRootFieldAction} from '../../../redux/action/action';
+import {DState, DUser, LProject, LUser, LViewPoint, Defaults} from "../../../joiner";
 import InfoData from './data/InfoData';
 import NodeData from './data/NodeData';
 import TemplateData from './data/TemplateData';
@@ -10,22 +10,15 @@ import {DockLayout} from 'rc-dock';
 import {LayoutData} from 'rc-dock/lib/DockData';
 import CustomData from './data/CustomData';
 import SubViewsData from './data/SubViewsData';
-import {DState, DUser, LProject, LUser, LViewPoint} from "../../../joiner";
 import {FakeStateProps} from "../../../joiner/types";
 import {connect} from "react-redux";
 
 function ViewDataComponent(props: AllProps) {
     const project = props.project;
     const view = props.view;
-    /*
-    if(!view) {
-        project.stackViews = [];
-        return(<></>);
-    }
-    */
     const viewpoints = props.viewpoints;
     const debug = props.debug;
-    const readOnly = !debug && view.id.indexOf("Pointer_View") !== -1;// U.getDefaultViewsID().includes(view.id);
+    const readOnly = !debug && Defaults.check(view.id);
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     const tabs = [

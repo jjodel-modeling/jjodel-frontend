@@ -136,30 +136,6 @@ export class U {
         return new Promise((resolve) => setTimeout(resolve, s * 1000));
     }
 
-    public static getDefaultViewsID(): Pointer<DViewElement, 1, 'N'> {
-        return [
-            'Pointer_ViewModel',
-            'Pointer_ViewPackage',
-            'Pointer_ViewClass',
-            'Pointer_ViewEnum',
-            'Pointer_ViewAttribute',
-            'Pointer_ViewReference',
-            'Pointer_ViewOperation',
-            'Pointer_ViewLiteral',
-            'Pointer_ViewObject',
-            'Pointer_ViewValue',
-            'Pointer_ViewDefaultPackage',
-            'Pointer_ViewVoid',
-            'Pointer_ViewEdgeAssociation',
-            'Pointer_ViewEdgeDependency',
-            'Pointer_ViewEdgeInheritance',
-            'Pointer_ViewEdgeAggregation',
-            'Pointer_ViewEdgeComposition',
-            'Pointer_ViewEdgePoint'
-        ];
-    }
-
-
     public static getRandomString(length: number): string {
         const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let randomString = '';
