@@ -462,15 +462,20 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         (this.thiss as GObject)[property] = value;
 
         if (Array.isArray(value)) for (let v of value) {
-            if (checkPointerValidity && !Pointers.isPointer((v)?.id || v, checkPointerValidity)) continue;
+            if (typeof v === "object") v = v.id;
+            if (!v || checkPointerValidity && !Pointers.isPointer(v, checkPointerValidity)) continue;
             this.thiss._persistCallbacks.push(SetFieldAction.create(v, "pointedBy", PointedBy.fromID(this.thiss.id, property as any), '+='));
         }
-        else value && this.thiss._persistCallbacks.push(SetFieldAction.create(value, "pointedBy", PointedBy.fromID(this.thiss.id, property as any), '+='));
+        else {
+            if (typeof value === "object") value = value.id;
+            value && this.thiss._persistCallbacks.push(SetFieldAction.create(value, "pointedBy", PointedBy.fromID(this.thiss.id, property as any), '+='));
+        }
         // todo: in delete if the element was not persistent, just do nothing.
     }
 
     private setExternalPtr<D extends DPointerTargetable>(target: D | Pointer<any>, property: string, accessModifier: "[]" | "+=" | "" = "") {
-        if (!target) return;
+        if (typeof target === "object") target = target.id;
+        if (!target && accessModifier as string !== "-=") return;
         this.thiss._persistCallbacks.push(SetFieldAction.create(target, property, this.thiss.id, accessModifier, true));
         // PointedBy is set by reducer directly in this case.
         // this.thiss._persistCallbacks.push(SetFieldAction.create(this.thiss.id, "pointedBy", PointedBy.fromID(target, property as any), '+='));
@@ -478,6 +483,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
     private setWithSideEffect<D extends DPointerTargetable>(property: string, val: any): void {
         if (!this.state) this.state = store.getState();
+        if (typeof val === "object") val = val.id;
         this.thiss._persistCallbacks.push( () => {
             (LPointerTargetable.from(this.thiss, this.state) as GObject<"L">)[property] = val;
         });

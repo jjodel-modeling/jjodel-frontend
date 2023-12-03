@@ -1,5 +1,10 @@
 export const a = 0;
 let data:any, node:any, view:any, component:any;
+/*
+make sure error view display meaningful messages with code line
+* prevent megacrash if someone does <Vertex data={"not a pointer"} /> or <Vertex data={1, null, undefined...} />
+*/
+// on rename model, update view using .$name, but only when ocl condition includes the pointer of the meta class. (directly or through instanceof, so when it's a non-generic view)
 
 
 // todo: avoid creating pointedby when src and target are the same.
@@ -25,8 +30,7 @@ todo: new DObject("State" (metaclassname), {serverCounter:1, changes:[{from:this
 // todo: context.set('counterValue', amount);
 //    and dObject.persist()
 
-make sure error view display meaningful messages with code line
-* prevent megacrash if someone does <Vertex data={"not a pointer"} /> or <Vertex data={1, null, undefined...} />
+
 *
 * */
 

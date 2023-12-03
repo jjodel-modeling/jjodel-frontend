@@ -110,7 +110,8 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
     }
     return reactNodes;
 }
-function select(d: DModelElement): DModelElement {
+function select(dl: DModelElement | LModelElement): DModelElement {
+    let d: DModelElement = (dl as LModelElement)?.__raw || dl as DModelElement;
     if (d && d.id) setTimeout(()=>$(".Graph [data-dataid='"+d?.id+"']").trigger("click"), 10);
     return d; }
 function selectNode(d: DGraphElement|{id: string}): any {
@@ -181,7 +182,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         return(<div className={"toolbar mt-2"}>
             <b className={'d-block text-center text-uppercase mb-1'}>Add root level</b>
             {classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
-                return <div key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => { select(model.addObject(lClass.id)) }}>
+                return <div key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => { select(model.addObject({}, lClass)) }}>
                     <ModellingIcon name={'object'} />
                     <span className={'ms-1 text-capitalize'}>{U.stringMiddleCut(lClass.name, 14)}</span>
                 </div>

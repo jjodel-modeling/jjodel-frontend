@@ -1,4 +1,4 @@
-import {DStructuralFeature, LClass, LValue, RuntimeAccessible} from "../../joiner";
+import {DStructuralFeature, LClass, LModel, LValue, RuntimeAccessible} from "../../joiner";
 import type {
     Pointer, PrimitiveType, DModelElement, DGraphElement,
     DModel, DPackage, DClass, DEnumerator, DEnumLiteral, DOperation, DAttribute, DReference,
@@ -122,14 +122,15 @@ export class EnumPointers extends CommonStuff{
     literals!: Pointer<DEnumLiteral>[];
 }
 
+// L and D objects are fine instead of pointers too, but it makes trickier to do typings.
 @RuntimeAccessible
 export class ObjectPointers extends CommonStuff{
     id!: Pointer<DObject>;
     parent?: this["father"][];
-    father?: Pointer<DValue>;
+    father?: Pointer<DValue> | Pointer<DModel>; // | LValue | LModel
     annotations!: Pointer<DAnnotation>[];
-    instanceof!: Pointer<DClass>;
-    features!: Pointer<DValue>;
+    instanceof!: Pointer<DClass>; // | LClass
+    features!: Pointer<DValue>[]; // | LValue[]
 
 }
 
