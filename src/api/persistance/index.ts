@@ -53,7 +53,7 @@ class PersistanceApi {
     static async loadMyProjects(): Promise<void> {
         SetRootFieldAction.new('isLoading', true);
         const user = LUser.fromPointer(DUser.current);
-        user.project = null; user.projects.map(p => p.delete()); user.projects = [];
+        user.project = null; user.projects.map(p => p && p.delete());
         const _response = await Fetch.get(this.url + `users/${DUser.current}/projects`);
         const response = await this.responseHandler(_response);
         if(response.code !== 200) return;

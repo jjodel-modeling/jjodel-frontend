@@ -1676,7 +1676,7 @@ let bb2 = fffff(a);
 @RuntimeAccessible
 export class DUser extends DPointerTargetable {
     public static cname: string = 'DUser';
-    public static offlineMode: boolean = true;
+    public static offlineMode: boolean = false;
     // static current: Pointer<DUser> = 'Pointer_AnonymousUser';
     static current: Pointer<DUser> = '';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -2036,20 +2036,18 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         }
     }
 
-    public async delete(): Promise<void> {
+    public delete(): void {
         throw new Error('cannot be called directly, should trigger getter. this is only for correct signature');
     }
-    protected get_delete(context: Context): () => Promise<void> {
+    protected get_delete(context: Context): () => void {
         const data = context.proxyObject as LProject;
-        return async() => {
+        return () => {
             TRANSACTION(()=> {
                 data.children.map(c => c && c.delete());
                 SetFieldAction.new(DUser.current, 'projects', data.id as any, '-=', true);
                 DeleteElementAction.new(data.id);
                 SetRootFieldAction.new('projects', data.id, '-=', true);
             });
-            if(DUser.offlineMode) return;
-            await PersistanceApi.deleteProject(data.id);
         }
     }
 }

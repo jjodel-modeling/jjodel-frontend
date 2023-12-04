@@ -1,9 +1,4 @@
-FROM node:16-alpine AS development
-ENV NODE_ENV development
+FROM nginx:alpine
 
-WORKDIR /app
-COPY . .
-
-EXPOSE 3000
-
-CMD [ "npm", "start" ]
+COPY build /usr/share/nginx/html/jjodel
+COPY default.conf /etc/nginx/conf.d/default.conf

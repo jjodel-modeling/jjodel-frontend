@@ -42,7 +42,9 @@ function Auth(props: Props) {
     return(<section className={'container p-3'}>
         <div className={'d-flex m-1'}>
             <h5 className={'me-3'}>{(isRegister) ? 'Register' : 'Login'}</h5>
-            <button className={'py-1 px-2 btn btn-primary'} onClick={e => setIsRegister(!isRegister)}>Switch</button>
+            <button className={'py-1 px-2 btn btn-primary'} onClick={e => setIsRegister(!isRegister)}>
+                {(isRegister) ? 'Go To Login' : 'Go To Register'}
+            </button>
         </div>
         <hr className={'my-2'} />
         {(error) && <section className={'m-1'}>

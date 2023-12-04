@@ -57,12 +57,15 @@ function DashboardComponent(props: AllProps) {
 
         </div>
         {user.projects.map((project, index) => {
+            if(!project) return(<></>);
             return(<div className={'d-flex p-3 border bg-white m-1'} key={index}>
                 <button className={'btn btn-primary me-2'} onClick={e => user.project = project}>
                     <i className={'p-1 bi bi-eye-fill'}></i>
                 </button>
                 <button disabled={project.author.id !== DUser.current} className={'btn btn-danger me-2'} onClick={async(e) => {
-                    await project.delete();
+                    project.delete();
+                    if(DUser.offlineMode) return;
+                    await PersistanceApi.deleteProject(project.id);
                 }}>
                     <i className={'p-1 bi bi-trash-fill'}></i>
                 </button>
