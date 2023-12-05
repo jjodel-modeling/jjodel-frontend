@@ -727,7 +727,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         let ll: labelfunc = (e: LVoidEdge, s: EdgeSegment, allNodes: LGraphElement[], allSegments: EdgeSegment[]
         ) => /*defining the edge label (e.start.model as any)?.name + " ~ " + (e.end.model as any)?.name */" (" + s.length.toFixed(1) + ")";
         // this is the edge's label (thiss.longestLabel = ll)
-        thiss.longestLabel = undefined;
+        thiss.longestLabel = longestLabel;
         this.setPtr("start", startid);
         this.setPtr("end", endid);
         this.setExternalPtr(startid, "edgesOut", "+=");
@@ -1676,7 +1676,7 @@ let bb2 = fffff(a);
 @RuntimeAccessible
 export class DUser extends DPointerTargetable {
     public static cname: string = 'DUser';
-    public static offlineMode: boolean = false;
+    public static offlineMode: boolean = true;
     // static current: Pointer<DUser> = 'Pointer_AnonymousUser';
     static current: Pointer<DUser> = '';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];

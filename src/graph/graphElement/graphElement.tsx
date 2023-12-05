@@ -225,7 +225,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 Log.e(!startnodeid, "Cannot create an edge without start node", {startnodeid, data:ret.data, propsStart:edgeOwnProps.start});
                 Log.e(!endnodeid, "Cannot create an edge without end node (yet)", {endnodeid, data:ret.data, propsEnd:edgeOwnProps.end});
                 if (!startnodeid || !endnodeid) return;
-                let longestLabel = undefined; // edgeOwnProps.label;
+                let longestLabel = edgeOwnProps.label;
                 let labels: DEdge["labels"] = []; // edgeOwnProps.labels || [];
                 dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, longestLabel, labels);
                 edgeStateProps.node = edgeStateProps.edge = MyProxyHandler.wrap(dge);
@@ -672,7 +672,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             this.onViewChange();
             return "Updating view...";
         }*/
-
         if (!this.stopUpdateEvents || this.stopUpdateEvents !== this.props.view.clonedCounter) {
             this.stopUpdateEvents = undefined;
             if (this.doMeasurableEvent(EMeasurableEvents.onDataUpdate)) {

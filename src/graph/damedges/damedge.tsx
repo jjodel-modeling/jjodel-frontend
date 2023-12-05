@@ -21,7 +21,7 @@ import {
     RuntimeAccessibleClass,
     U,
     EdgeOwnProps, EdgeStateProps,
-    LViewPoint, DModelElement
+    LViewPoint, DModelElement, SetFieldAction
 } from "../../joiner";
 
 let groupingsize: Dictionary<EdgeBendingMode, number> = {} as any;

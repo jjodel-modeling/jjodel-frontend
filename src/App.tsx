@@ -14,6 +14,7 @@ import Auth from "./pages/Auth";
 import {useEffectOnce} from "usehooks-ts";
 import PersistanceApi from "./api/persistance";
 import CollaborativeAttacher from './components/collaborative/CollaborativeAttacher';
+import {StateMachine} from './examples/StateMachine';
 
 let userHasInteracted = false;
 function endPendingActions() {
@@ -34,6 +35,8 @@ function App(props: AllProps) {
             let du = DUser.new('adminOffline');
             DUser.current = du.id;
             stateInitializer();
+            SetRootFieldAction.new('isLoading', true);
+            StateMachine.load().then(() => SetRootFieldAction.new('isLoading', false));
             return;
         }
         if (!debug) return;
