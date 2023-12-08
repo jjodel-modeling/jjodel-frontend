@@ -25,8 +25,8 @@ export class StateMachine_M2 {
         const dPackage = lModel.addChild('package');
         const lPackage: LPackage = LPackage.fromD(dPackage);
         lPackage.name = 'default';
-        const tab = TabDataMaker.metamodel(dModel);
-        await DockManager.open('models', tab);
+        // const tab = TabDataMaker.metamodel(dModel);
+        // await DockManager.open('models', tab);
         return [lModel, lPackage];
     }
     private static async createStateMachine(pkg: LPackage, state: LClass, transition: LClass): Promise<LClass> {
@@ -38,8 +38,6 @@ export class StateMachine_M2 {
         states.upperBound = -1;
         const transitions = lClass.addReference('transitions', transition.id);
         transitions.upperBound = -1;
-        const node = lClass.node; if(!node) return lClass;
-        node.width = 300; node.height = 300;
         return lClass;
     }
     private static async createState(pkg: LPackage, command: LClass): Promise<LClass> {
@@ -49,8 +47,6 @@ export class StateMachine_M2 {
         name.lowerBound = 1;
         const actions = lClass.addReference('actions', command.id);
         actions.upperBound = -1;
-        const node = lClass.node; if(!node) return lClass;
-        node.width = 300; node.height = 300;
         return lClass;
     }
     private static async createTransition(pkg: LPackage, state: LClass, event: LClass): Promise<LClass> {
@@ -59,8 +55,6 @@ export class StateMachine_M2 {
         const source = lClass.addReference('source', state.id);
         const target = lClass.addReference('target', state.id);
         const trigger = lClass.addReference('trigger', event.id);
-        const node = lClass.node; if(!node) return lClass;
-        node.width = 300; node.height = 300;
         return lClass;
     }
     private static async createAbstractEvent(pkg: LPackage): Promise<LClass> {
@@ -71,24 +65,18 @@ export class StateMachine_M2 {
         name.lowerBound = 1;
         const code = lClass.addAttribute('code', 'Pointer_ESTRING');
         name.lowerBound = 1;
-        const node = lClass.node; if(!node) return lClass;
-        node.width = 300; node.height = 300;
         return lClass;
     }
     private static async createCommand(pkg: LPackage, abstractEvent: LClass): Promise<LClass> {
         const dClass = pkg.addClass('Command');
         const lClass: LClass = LClass.fromD(dClass);
         lClass.extends = [abstractEvent];
-        const node = lClass.node; if(!node) return lClass;
-        node.width = 300; node.height = 300;
         return lClass;
     }
     private static async createEvent(pkg: LPackage, abstractEvent: LClass): Promise<LClass> {
         const dClass = pkg.addClass('Event');
         const lClass: LClass = LClass.fromD(dClass);
         lClass.extends = [abstractEvent];
-        const node = lClass.node; if(!node) return lClass;
-        node.width = 300; node.height = 300;
         return lClass;
     }
 }

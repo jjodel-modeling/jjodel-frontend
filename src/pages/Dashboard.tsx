@@ -15,6 +15,7 @@ import type{DState, GObject} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 import PersistanceApi from "../api/persistance";
 import {useEffectOnce} from "usehooks-ts";
+import {StateMachine} from "../examples/StateMachine";
 
 function DashboardComponent(props: AllProps) {
     const user = props.user;
@@ -36,6 +37,12 @@ function DashboardComponent(props: AllProps) {
         SetRootFieldAction.new('isLoading', false);
     }
 
+    const loadStateMachine = async() => {
+        SetRootFieldAction.new('isLoading', true);
+        await StateMachine.load();
+        SetRootFieldAction.new('isLoading', false);
+    }
+
     return (<div className={'container'}>
         <div className={'d-flex p-2'}>
             <b className={'ms-1 my-auto'}>MY PROJECTS</b>
@@ -52,6 +59,9 @@ function DashboardComponent(props: AllProps) {
                 </button>
                 <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('collaborative')}>
                     + Collaborative
+                </button>
+                <button className={'btn btn-primary p-1 mx-1'} onClick={e => loadStateMachine()}>
+                    + State Machine
                 </button>
             </div>
 

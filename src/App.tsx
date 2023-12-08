@@ -35,8 +35,6 @@ function App(props: AllProps) {
             let du = DUser.new('adminOffline');
             DUser.current = du.id;
             stateInitializer();
-            SetRootFieldAction.new('isLoading', true);
-            StateMachine.load().then(() => SetRootFieldAction.new('isLoading', false));
             return;
         }
         if (!debug) return;

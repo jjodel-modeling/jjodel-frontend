@@ -88,7 +88,7 @@ function NavbarComponent(props: AllProps) {
             <ul className={'navbar-nav ms-auto'}>
             </ul>
             {user.project && <li className={'nav-item'}>
-                <button disabled={project?.type === 'collaborative'} onClick={async(e) => await PersistanceApi.saveProject()} style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
+                <button disabled={DUser.offlineMode || project?.type === 'collaborative'} onClick={async(e) => await PersistanceApi.saveProject()} style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
                     Save
                 </button>
             </li>}

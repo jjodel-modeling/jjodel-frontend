@@ -1,5 +1,5 @@
-import React, {ReactNode, useEffect} from "react";
-import {DUser, GObject, LModelElement, LNamedElement, SetRootFieldAction, U} from '../../joiner';
+import React, {ReactNode} from "react";
+import {GObject, LModelElement, LNamedElement, SetRootFieldAction, U} from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './style.scss';
 import {useEffectOnce} from "usehooks-ts";
@@ -31,13 +31,17 @@ interface DataTreeProps {data: LModelElement, hide: boolean, depth: string[], se
 function DataTree(props: DataTreeProps) {
     const hide = props.hide;
     const data: LNamedElement = LNamedElement.fromPointer(props.data.id);
+    if(!data) return(<div>Error Data is <b>undefined</b></div>);
     const depth = props.depth;
     const setFilter = props.setFilter;
 
-    const click = (e: React.MouseEvent) => {
-        const nodeid = data.node?.id;
-        if(!nodeid) return;
-        SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);
+    const click = () => {
+        SetRootFieldAction.new('_lastSelected', {
+            node: data.node?.id,
+            view: data.node?.view.id,
+            modelElement: data.id
+        }, '', false);
+
     }
 
     return(<div>
