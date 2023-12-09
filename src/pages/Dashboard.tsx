@@ -37,9 +37,14 @@ function DashboardComponent(props: AllProps) {
         SetRootFieldAction.new('isLoading', false);
     }
 
-    const loadStateMachine = async() => {
+    const loadStateMachine1 = async() => {
         SetRootFieldAction.new('isLoading', true);
-        await StateMachine.load();
+        await StateMachine.load1();
+        SetRootFieldAction.new('isLoading', false);
+    }
+    const loadStateMachine2 = async() => {
+        SetRootFieldAction.new('isLoading', true);
+        await StateMachine.load2();
         SetRootFieldAction.new('isLoading', false);
     }
 
@@ -60,8 +65,11 @@ function DashboardComponent(props: AllProps) {
                 <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('collaborative')}>
                     + Collaborative
                 </button>
-                <button className={'btn btn-primary p-1 mx-1'} onClick={e => loadStateMachine()}>
-                    + State Machine
+                <button className={'btn btn-primary p-1 mx-1'} onClick={e => loadStateMachine1()}>
+                    + State Machine v1
+                </button>
+                <button className={'btn btn-primary p-1 mx-1'} onClick={e => loadStateMachine2()}>
+                    + State Machine v2
                 </button>
             </div>
 

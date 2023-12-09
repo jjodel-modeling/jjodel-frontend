@@ -9,11 +9,8 @@
   &>.ui-resizable-handle{ border: none; }
 }
 
-
-.root {
-  height: 100%;
-  width: 100%;
-}
+.root {height: 100%;width: 100%;}
+.DModel > .root {overflow: scroll}
 
 .Graph.DModel { //damiano: was just .model and breaking things
   position: absolute;

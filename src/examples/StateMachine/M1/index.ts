@@ -1,7 +1,7 @@
 import {DModel, LClass, LGraph, LModel, LObject, LProject, U} from "../../../joiner";
 
 export class StateMachine_M1 {
-    static async load(project: LProject, m2: LModel, stateMachine: LClass, state: LClass, transition: LClass, command: LClass, event: LClass) {
+    static async load1(project: LProject, m2: LModel, stateMachine: LClass, state: LClass, transition: LClass, command: LClass, event: LClass) {
         const m1 = await this.create(project, m2);
         /* Command */
         const command1 = await this.createCommand(m1, command, 'unlockDoor ud', '');
@@ -13,6 +13,8 @@ export class StateMachine_M1 {
         const event2 = await this.createEvent(m1, event, 'doorClosed dc', '');
         const event3 = await this.createEvent(m1, event, 'lightOn Io', '');
         const event4 = await this.createEvent(m1, event, 'drawerOpened do', '');
+        /* Events */
+        const events = m1.addObject(undefined, 'Events');
         /* State */
         const idle = await this.createState(m1, state, 'idle', [command1, command2]);
         const active = await this.createState(m1, state, 'active', []);
@@ -29,6 +31,23 @@ export class StateMachine_M1 {
 
         return m1;
     }
+    static async load2(project: LProject, m2: LModel, stateMachine: LClass, state: LClass, transition: LClass, command: LClass, event: LClass) {
+        const m1 = await this.create(project, m2);
+        /* 168 Properties (84 commands & 84 events), 40 states and 48 transitions */
+        const commandsLength = 84; const eventsLength = 84; const statesLength = 40; const transitionsLength = 48;
+        const commands: LObject[] = []; const events: LObject[] = []; const states: LObject[] = []; const transitions: LObject[] = [];
+        for(let i = 0; i < commandsLength; i++)
+            commands.push(await this.createCommand(m1, command, 'C' + i, 'C' + i));
+        for(let i = 0; i < eventsLength; i++)
+            events.push(await this.createEvent(m1, event, 'E' + i, 'E' + i));
+        const object = m1.addObject(undefined, 'Events');
+        for(let i = 0; i < statesLength; i++)
+            states.push(await this.createState(m1, state, 'S' + i, [commands[i]]))
+        for(let i = 0; i < transitionsLength; i++)
+            transitions.push(await this.createTransition(m1, transition, states[i % statesLength], states[(i + 1) % statesLength], events[i]));
+        return m1
+    }
+
     private static async create(project: LProject, m2: LModel): Promise<LModel> {
         const dModel: DModel = DModel.new('M1', m2.id, false, true);
         const lModel: LModel = LModel.fromD(dModel);

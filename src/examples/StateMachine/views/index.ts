@@ -3,12 +3,11 @@ import {DViewElement, DViewPoint, DObject, LModel} from '../../../joiner';
 import {Dependencies} from './dependencies';
 
 export class StateMachine_Views {
-    static load(project: LProject, m1: LModel, state: LClass, command: LClass, event: LClass): void {
-        const events = m1.addObject(undefined, 'Events');
-        this.create(project, state, command, event, events);
+    static load(project: LProject, state: LClass, command: LClass, event: LClass, transition: LClass): void {
+        this.create(project, state, command, event, transition);
     }
 
-    private static create(project: LProject, state: LClass, command: LClass, event: LClass, events: DObject): void {
+    private static create(project: LProject, state: LClass, command: LClass, event: LClass, transition: LClass): void {
         /* Viewpoint */
         const viewpoint = DViewPoint.new('StateMachine', '');
         /* Model */
@@ -28,11 +27,17 @@ export class StateMachine_Views {
         const eventsView = DViewElement.new('Events', this.events);
         eventsView.viewpoint = viewpoint.id; eventsView.oclCondition = `context DObject inv: not self.instanceof`;
         eventsView.adaptWidth = true; eventsView.adaptHeight = true;
+        eventsView.usageDeclarations = Dependencies.events(event);
         /* Event */
         const eventView = DViewElement.new('Event', this.event);
         eventView.viewpoint = viewpoint.id; eventView.oclCondition = `context DObject inv: self.instanceof.id = '${event.id}'`;
         eventView.draggable = false; eventView.resizable = false;
         eventView.usageDeclarations = Dependencies.event;
+        /* Transition */
+        const transitionView = DViewElement.new('Transition', this.transition);
+        transitionView.viewpoint = viewpoint.id; transitionView.oclCondition = `context DObject inv: self.instanceof.id = '${transition.id}'`;
+        transitionView.adaptWidth = true; transitionView.adaptHeight = true;
+        transitionView.usageDeclarations = Dependencies.transition;
     }
 
     private static model = `<div className={'root'}>
@@ -105,5 +110,11 @@ export class StateMachine_Views {
     </div>`;
     private static event = `<div className={'w-100 root text-center'}>
         <label className={'p-1'}>{data.name}: <b>{data.$name.value}</b></label>
+    </div>`;
+
+    private static transition = `<div className={'root bg-white'}>
+        <label style={{color: data.$source.value ? 'green' : 'red'}} className={'p-1'}>Source</label>
+        <label style={{color: data.$target.value ? 'green' : 'red'}} className={'p-1'}>Target</label>
+        <label style={{color: data.$trigger.value ? 'green' : 'red'}} className={'p-1'}>Trigger</label>
     </div>`;
 }

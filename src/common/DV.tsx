@@ -100,7 +100,7 @@ export class DV {
                 <path className={"preview"} strokeWidth={strokeWidthHover} stroke={"transparent"}
                 fill={"none"} d={this.edge.d}></path>
                 { /* edge separate segments */ }
-                {segments.all.flatMap(s => [
+                {segments && segments.all && segments.all.flatMap(s => [
                     <path tabIndex="-1" className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={strokeWidthHover}
                     stroke={s.length > strokeLengthLimit && strokeColorLong || strokeColorHover}
                      fill={"none"} d={s.dpart}></path>,
