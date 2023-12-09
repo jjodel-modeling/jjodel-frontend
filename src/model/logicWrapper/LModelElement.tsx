@@ -3589,16 +3589,48 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     // M1
     public get_instancesOf(c:Context): (this["instancesOf"]){
         if (c.data.isMetamodel) { return (...a:any) => { Log.w("cannot call instancesOf() on a metamodel"); return []; } }
+        return (instancetypes0: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false): LObject[] => {
+            if (!LModel.otherObjectsTemp) this._populateOtherObjects();
+            if (!Array.isArray(instancetypes0)) instancetypes0 = [instancetypes0];
+            let state: DState = store.getState();
+            let instancetypes: Pointer<DClass> = LModel.namesORDObjectsToID(instancetypes0, this.get_classes(c, s)); // from names, DClass and ptrs, make them only ptrs. all classes of this model are valid name targets.
+            let dinstancetypes: DClass[] = DClass.fromPointer(instancetypes, state);
+            if (includeSubclasses) {
+                let arr: LClass[] = dinstancetypes.map(d => LPointerTargetable.fromD(d));
+                for (let c of arr) dinstancetypes.push(c.allSubClasses);
+                dinstancetypes = [...new Set(dinstancetypes)];
+            }
+            let ret: LObject[] = []
+            for (let c of dinstancetypes) {
+                let arr: LObject[] = LModel.otherObjectsTemp[c.name]
+                if (!arr || !arr.length) continue;
+                ret.push(...arr);
+                LModel.otherObectsAccessedKeys.push(c.name);
+            }
+            return ret;
+        }
+    }
+
+    public get_instancesOf(c:Context): (this["instancesOf"]){
+        if (c.data.isMetamodel) { return (...a:any)=> { Log.w("cannot call instancesOf() on a metamodel"); return []; } }
 
         return (instancetypes0: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false): LObject[] => {
-            if (LModel.otherObjectsTemp) {; }
-            else {
-                this._populateOtherObjects()
-                this.otherObjectsSetup();
-                typingmap = LModel.otherObjectsTemp;
+
+            // if (!instancetypes) return []; it's ok, i made it return shapeless objects instead
+            let ret: LObject[] = [];
+            let namemap: Dictionary<string, Pointer<DClass>> = {};
+            namemap = dinstancetypes.reduce( (acc, current) => { namemap[current.name] = current.id; return namemap; }, namemap);
+            let allDObjects = this.get_allSubObjects(c).map(o => o.__raw);
+            // make it more general, first make a dictionary holding all selected types as keys, including "_other"
+            // then a SEPARATE (split this) function to return only the selected keys, merging the subarrays in the global naming instance map.
+            let typingmap: Dictionary<string, LObject[]>
+            for (let i = 0; i < allDObjects.length; i++) {
+                let o = allDObjects[i];
+                let l = allLObjects[i];
+                not good,  map should be accessed by name and not by ptr. should do something like typingmap[getName(o.instanceof)] but getting it from above collections without the store
+                if (typingmap[o.instanceof]) typingmap[o.instanceof] = [l];
+                typingsmap[o.instanceof].push(l);
             }
-        let ret = [];
-        for () {}
         }
     }
     addObject(json: GObject, instanceoff: LClass | Pointer<DClass> | DocString<"ClassName"> | undefined | null = undefined): ReturnType<LValue["addObject"]>{ return this.cannotCall("LValue.addObject"); }
