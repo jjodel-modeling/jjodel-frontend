@@ -3552,10 +3552,10 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         }
     }
     // not meant to be called directly.
-    private _populateOtherObjects(c:Context): void {
+    private _populateOtherObjects(c:Context, classes?: LClass[]): void {
         // from names, DClass and ptrs, make them only ptrs. all classes of this model are valid name targets.
         // nb: cannot optimize getting only instantiated classes from this.get_allSubObjects because if a class have 0 instances should have an empty array instead of undefined (risk jsx crash)
-        let dinstancetypes: DClass[] = this.get_classes(c, state).map(c => c.__raw);
+        let dinstancetypes: DClass[] = (classes || this.get_classes(c, state)).map(c => c.__raw);
         let namemap: Dictionary<DocString<"className">, DClass> = {};
         namemap = dinstancetypes.reduce( (acc, current) => { namemap[current.name] = current; return namemap; }, namemap);
         let idtoname: Dictionary<Pointer, string> = {};
@@ -3590,10 +3590,11 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     public get_instancesOf(c:Context): (this["instancesOf"]){
         if (c.data.isMetamodel) { return (...a:any) => { Log.w("cannot call instancesOf() on a metamodel"); return []; } }
         return (instancetypes0: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false): LObject[] => {
-            if (!LModel.otherObjectsTemp) this._populateOtherObjects();
+            let classes = this.get_classes(c, s);
+            if (!LModel.otherObjectsTemp) this._populateOtherObjects(c, classes);
             if (!Array.isArray(instancetypes0)) instancetypes0 = [instancetypes0];
             let state: DState = store.getState();
-            let instancetypes: Pointer<DClass> = LModel.namesORDObjectsToID(instancetypes0, this.get_classes(c, s)); // from names, DClass and ptrs, make them only ptrs. all classes of this model are valid name targets.
+            let instancetypes: Pointer<DClass> = LModel.namesORDObjectsToID(instancetypes0, classes); // from names, DClass and ptrs, make them only ptrs. all classes of this model are valid name targets.
             let dinstancetypes: DClass[] = DClass.fromPointer(instancetypes, state);
             if (includeSubclasses) {
                 let arr: LClass[] = dinstancetypes.map(d => LPointerTargetable.fromD(d));
@@ -3611,28 +3612,6 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         }
     }
 
-    public get_instancesOf(c:Context): (this["instancesOf"]){
-        if (c.data.isMetamodel) { return (...a:any)=> { Log.w("cannot call instancesOf() on a metamodel"); return []; } }
-
-        return (instancetypes0: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false): LObject[] => {
-
-            // if (!instancetypes) return []; it's ok, i made it return shapeless objects instead
-            let ret: LObject[] = [];
-            let namemap: Dictionary<string, Pointer<DClass>> = {};
-            namemap = dinstancetypes.reduce( (acc, current) => { namemap[current.name] = current.id; return namemap; }, namemap);
-            let allDObjects = this.get_allSubObjects(c).map(o => o.__raw);
-            // make it more general, first make a dictionary holding all selected types as keys, including "_other"
-            // then a SEPARATE (split this) function to return only the selected keys, merging the subarrays in the global naming instance map.
-            let typingmap: Dictionary<string, LObject[]>
-            for (let i = 0; i < allDObjects.length; i++) {
-                let o = allDObjects[i];
-                let l = allLObjects[i];
-                not good,  map should be accessed by name and not by ptr. should do something like typingmap[getName(o.instanceof)] but getting it from above collections without the store
-                if (typingmap[o.instanceof]) typingmap[o.instanceof] = [l];
-                typingsmap[o.instanceof].push(l);
-            }
-        }
-    }
     addObject(json: GObject, instanceoff: LClass | Pointer<DClass> | DocString<"ClassName"> | undefined | null = undefined): ReturnType<LValue["addObject"]>{ return this.cannotCall("LValue.addObject"); }
     __info_of__addObject: Info = {type: "(json: object, instanceof?: LClass) => LObject",
         txt: "Appends an object instancing \"instanceof\" to the model.\n<br>Setting his own properties, and DValues according to the content of the parameter object."}
