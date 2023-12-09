@@ -415,21 +415,23 @@ export class SetFieldAction extends SetRootFieldAction {
 
 
     me: Pointer | DPointerTargetable;
-    field: string;
+    me_field: string;
     // field can end with "+=", "[]", or "-1" if it's array
     protected constructor(me: DPointerTargetable | Pointer, field: string, val: any, fire: boolean = true, isPointer: boolean = false) {
         Log.exDev(!me, 'BaseObject missing in SetFieldAction', {me, field, val});
         super('idlookup.' + ((me as DPointerTargetable).id || me) + ( field ? '.' + field : ''), val, false, isPointer);
         this.me = me;
-        this.field = field;
+        this.me_field = field;
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         if (fire) this.fire();
     }
 
     fire(forceRelaunch: boolean = false): boolean {
         // if action would not change the value, i don't fire it at all
-        let d: GObject<any> = DPointerTargetable.from(this.me as any);
-        if (d && typeof d === "object" && d[this.field] === this.value) return false;
+        // by id because if item was updated, this.me as DElement might be an old version, different from the one in store.
+        let d: GObject<any> = DPointerTargetable.from((this.me as DPointerTargetable)?.id || this.me as any);
+        // console.warn("me fire", {thiss:this, d, typeofd:typeof d, field:this.me_field, dfield:d[this.me_field], val:this.value});
+        if (d && typeof d === "object" && d[this.me_field] === this.value) return false;
         return super.fire(forceRelaunch, false);
     }
 }

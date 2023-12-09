@@ -5,8 +5,9 @@ export const a = 0;
 let data:any, node:any, view:any, component:any;
 
 /*
-* verify if firing twice the same SetRootFieldAction("a", 1) does change state twice, or if reducer returns old state and fix it in case.
-* or fix it in Action.fire() but it's more heavy as it need to do part of the reducer checks twice.
+* verified! firing twice the same SetRootFieldAction("a", 1) does not change state twice, reducer returns old state.
+* same for setFieldAction
+* oth not tested on array or oject values. and with access modifier -= with non-existing index
 * */
 
 /*

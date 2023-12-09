@@ -3555,6 +3555,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     private _populateOtherObjects(c:Context, classes?: LClass[]): void {
         // from names, DClass and ptrs, make them only ptrs. all classes of this model are valid name targets.
         // nb: cannot optimize getting only instantiated classes from this.get_allSubObjects because if a class have 0 instances should have an empty array instead of undefined (risk jsx crash)
+        let state: DState = store.getState();
         let dinstancetypes: DClass[] = (classes || this.get_classes(c, state)).map(c => c.__raw);
         let namemap: Dictionary<DocString<"className">, DClass> = {};
         namemap = dinstancetypes.reduce( (acc, current) => { namemap[current.name] = current; return namemap; }, namemap);
@@ -3566,17 +3567,17 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         // part 1: i add empty arrays for all instances, but not include shapeless objects.
         for (let name in namemap) { LModel.otherObjectsTemp[name] = []; } //LPointerTargetable.fromPointer(namemap[name].instances); }
         // part 2: for shapeless objs too
-        Model.otherObjectsTemp[undefined] = [];
+        LModel.otherObjectsTemp[undefined as any] = [];
         let allObjects: LObject[] = this.get_allSubObjects(c, state);
         // part 3: now i populate the Model.otherObjectsTemp dictionary arrays
         for (let o of allObjects) {
             // if (o.__instanceof) continue;
-            let name: string | undefined = idtoname[o.__instanceof];
-            if (!Model.otherObjectsTemp[name]) {
-                Model.otherObjectsTemp[name] = [o];
+            let name: string | undefined = idtoname[o.__raw.instanceof];
+            if (!LModel.otherObjectsTemp[name]) {
+                LModel.otherObjectsTemp[name] = [o];
                 Log.eDev("model._populateOtherObjects() this case should never happen", {name, o, allObjects, namemap, idtoname});
             }
-            else Model.otherObjectsTemp[name].push(o);
+            else LModel.otherObjectsTemp[name].push(o);
         }
     }
 
@@ -3590,15 +3591,16 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     public get_instancesOf(c:Context): (this["instancesOf"]){
         if (c.data.isMetamodel) { return (...a:any) => { Log.w("cannot call instancesOf() on a metamodel"); return []; } }
         return (instancetypes0: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false): LObject[] => {
-            let classes = this.get_classes(c, s);
+            let state: DState = store.getState();
+            let classes = this.get_classes(c, state);
             if (!LModel.otherObjectsTemp) this._populateOtherObjects(c, classes);
             if (!Array.isArray(instancetypes0)) instancetypes0 = [instancetypes0];
-            let state: DState = store.getState();
-            let instancetypes: Pointer<DClass> = LModel.namesORDObjectsToID(instancetypes0, classes); // from names, DClass and ptrs, make them only ptrs. all classes of this model are valid name targets.
+            // from names, DClass and ptrs, make them only ptrs. all classes of this model are valid name targets.
+            let instancetypes: Pointer<DClass>[] = LModel.namesORDObjectsToID(instancetypes0, classes) as any;
             let dinstancetypes: DClass[] = DClass.fromPointer(instancetypes, state);
             if (includeSubclasses) {
                 let arr: LClass[] = dinstancetypes.map(d => LPointerTargetable.fromD(d));
-                for (let c of arr) dinstancetypes.push(c.allSubClasses);
+                for (let c of arr) dinstancetypes.push(...(c.allSubClasses.map(l => l.__raw) || []));
                 dinstancetypes = [...new Set(dinstancetypes)];
             }
             let ret: LObject[] = []
@@ -3632,15 +3634,14 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 
     public get_suggestedEdges(context: Context): this["suggestedEdges"]{
         let ret: this["suggestedEdges"];
-        if (context.data.isMetamodel) ret = this.get_suggestedEdgesM2(context);
-        else ret = this.get_suggestedEdgesM1(context);
+        if (context.data.isMetamodel) ret = this.impl_get_suggestedEdgesM2(context);
+        else ret = this.impl_get_suggestedEdgesM1(context);
         return ret;
     }
 
-    private get_suggestedEdgesM1(context: Context, state?: DState): this["suggestedEdges"]{
+    private impl_get_suggestedEdgesM1(context: Context, state?: DState): this["suggestedEdges"]{
         let ret: this["suggestedEdges"] = {extend: [], reference: [], packageDependencies: []};
-        if (c.data.isMetamodel) { return (...a:any)=> { Log.w("cannot call suggestedEdgesM1() on a metamodel"); return ret; } }
-
+        if (context.data.isMetamodel) { Log.w("cannot call suggestedEdgesM1() on a metamodel"); return ret; }
         if (Debug.lightMode) { return ret; }
         let s: DState = store.getState();
         let values: LValue[] = this.get_allSubValues(context, s);
@@ -3669,9 +3670,9 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         ret.reference = Object.values(map).flat();
         return ret;
     }
-    private get_suggestedEdgesM2(context: Context): this["suggestedEdges"]{
+    private impl_get_suggestedEdgesM2(context: Context): this["suggestedEdges"]{
         let ret: this["suggestedEdges"] = {extend: [], reference: [], packageDependencies: []};
-        if (!c.data.isMetamodel) { return (...a:any)=> { Log.w("cannot call suggestedEdgesM2() on a model"); return []; } }
+        if (!context.data.isMetamodel) { Log.w("cannot call suggestedEdgesM2() on a model"); return ret; }
         let s: DState = store.getState();
         let classes: LClass[] = this.get_classes(context, s);
         let references: LReference[] = Debug.lightMode ? [] : classes.flatMap(c=>c.references);
@@ -3788,7 +3789,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return context.data.isMetamodel;
     }
     protected set_isMetamodel(val: this['isMetamodel'], context: Context): boolean {
-        if (context.data.isMetaModel !== val) SetFieldAction.new(context.data, 'isMetamodel', val, '', false);
+        if (context.data.isMetamodel !== val) SetFieldAction.new(context.data, 'isMetamodel', val, '', false);
         return true;
     }
 
@@ -3799,7 +3800,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     }
 
     protected get_packages(context: Context): this["packages"] {
-        if (!context.data.isMetamodel) { return context.data.instanceof ? this.get_instanceof(context).packages : []; }
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).packages : []; }
         return context.data.packages.map((pointer) => {
             return LPointerTargetable.from(pointer)
         });
@@ -3830,7 +3831,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     }
     protected get_classes(context: Context, s?: DState): this["classes"] {
         //if (!s) s = store.getState();+
-        if (!context.data.isMetamodel) { return context.data.instanceof ? this.get_instanceof(context).classes : []; }
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).classes : [] as any; }
         const ret: LClass[] & Dictionary<DocString<"$name">, LClass> = [] as any;
         const pkgs: LPackage[] = this.get_packages(context);  // it's ok not having deep packages
         for (let p of pkgs) {
@@ -3840,18 +3841,18 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return ret;
     }
     protected get_references(context: Context, s?: DState): this["references"] {
-        if (!context.data.isMetamodel) { return context.data.instanceof ? this.get_instanceof(context).references : []; }
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).references : []; }
         s = s||store.getState();
         return this.get_classes(context, s).flatMap(p => p.references || []);
     }
 
     protected get_enums(context: Context): this["enums"] {
-        if (!context.data.isMetamodel) { return context.data.instanceof ? this.get_instanceof(context).enumerators : []; }
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).enumerators : [] as any; }
         return this.get_enumerators(context);
     }
 
     protected get_enumerators(context: Context, s?: DState): this["enums"] {
-        if (!context.data.isMetamodel) { return context.data.instanceof ? this.get_instanceof(context).enumerators : []; }
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).enumerators : [] as any; }
         // if (!s) s = store.getState();
         const ret: LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator> = [] as any;
         const pkgs: LPackage[] = this.get_packages(context);  // it's ok not having deep packages
@@ -3863,7 +3864,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     }
 
     protected get_allSubPackages(context: Context, state?: DState): this["allSubPackages"] {
-        if (!context.data.isMetamodel) { return context.data.instanceof ? this.get_instanceof(context).allSubPackages : []; }
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).allSubPackages : []; }
         state = state || store.getState();
         let tocheck: Pointer<DPackage>[] = context.data.packages || [];
         let checked: Dictionary<Pointer, true> = {};
@@ -3908,7 +3909,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 
     public getClassByNameSpace(namespacedclass: string): LClass | undefined { return this.cannotCall("getClassByNameSpace"); }
     protected get_getClassByNameSpace(context: Context): this["getClassByNameSpace"] {
-        if (!context.data.isMetamodel) { return context.data.instanceof ? this.get_instanceof(context).getClassNameByNameSpace : undefined as any; }
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).getClassByNameSpace : undefined as any; }
         return (namespacedclass: string): LClass | undefined => {
             let pos = namespacedclass.lastIndexOf(":");
             let pkguri = namespacedclass.substring(0, pos);
@@ -3926,12 +3927,12 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     /* See src/api/persistance/save.ts */
 
     protected get_attributes(context: Context): this['attributes'] {
-        if (!context.data.isMetamodel) { return context.data.instanceof ? this.get_instanceof(context).attributes : []; }
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).attributes : []; }
         return context.proxyObject.classes.flatMap(c => c.attributes);
     }
 
     protected get_literals(context: Context): this['literals'] {
-        if (!context.data.isMetamodel) { return context.data.instanceof ? this.get_instanceof(context).literals : []; }
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).literals : []; }
         return context.proxyObject.enumerators.flatMap(e => e.literals);
     }
 
