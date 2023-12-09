@@ -187,7 +187,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
                     <span className={'ms-1 text-capitalize'}>{U.stringMiddleCut(lClass.name, 14)}</span>
                 </div>
             })}
-            <div key={"RawObject"} className={'toolbar-item'} onClick={e => select(model.addObject())}>
+            <div key={"RawObject"} className={'toolbar-item'} onClick={e => select(model.addObject({}, null))}>
                 <ModellingIcon name={'object'} />
                 <span className={'ms-1 text-capitalize'}>Object</span>
             </div>

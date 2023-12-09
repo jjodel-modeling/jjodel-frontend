@@ -297,6 +297,25 @@ export class SetRootFieldAction extends Action {
         >(tocheck:never, fullpath: T, val: VAL, accessModifier: AM | undefined = undefined, isPointer?: ISPOINTER): SetRootFieldAction {
         return new SetRootFieldAction(fullpath + (accessModifier || ''), val, false, isPointer);
     }
+    fire(forceRelaunch: boolean = false, doChecks: boolean = true): boolean {
+        /* no need, the reducer should return old state in this case. verify it!
+        if (doChecks) {
+            // if action would not change the value, i don't fire it at all
+            let s: GObject<DState> = store.getState();
+            let field = (this.field||'');
+            let accessOperator: string = field.substring(field.length-2);
+            let fieldpath: string[] = field.split(".");
+            switch(accessOperator){
+                default:
+                case "-=":
+                case "+=":
+            }
+            // path can end with -=, +=, [] etc, but it's fine if i check it as if it was part of the name like object["fieldname+="]
+            // because in all those cases
+            if (s[this.field] === this.value) return false;
+        }*/
+        return super.fire(forceRelaunch);
+    }
 }
 
 @RuntimeAccessible
@@ -395,12 +414,23 @@ export class SetFieldAction extends SetRootFieldAction {
     //static new:(typeof AAAAA.create) = function(...a:Parameters<(typeof AAAAAA)["create"]>): AAAAAA { return AAAAAA.create(...a).fire() ? a : undefined as any; }
 
 
+    me: Pointer | DPointerTargetable;
+    field: string;
     // field can end with "+=", "[]", or "-1" if it's array
     protected constructor(me: DPointerTargetable | Pointer, field: string, val: any, fire: boolean = true, isPointer: boolean = false) {
         Log.exDev(!me, 'BaseObject missing in SetFieldAction', {me, field, val});
         super('idlookup.' + ((me as DPointerTargetable).id || me) + ( field ? '.' + field : ''), val, false, isPointer);
+        this.me = me;
+        this.field = field;
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         if (fire) this.fire();
+    }
+
+    fire(forceRelaunch: boolean = false): boolean {
+        // if action would not change the value, i don't fire it at all
+        let d: GObject<any> = DPointerTargetable.from(this.me as any);
+        if (d && typeof d === "object" && d[this.field] === this.value) return false;
+        return super.fire(forceRelaunch, false);
     }
 }
 

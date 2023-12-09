@@ -1,5 +1,14 @@
+// @ts-noinspect
+// @ts-ignore
 export const a = 0;
+
 let data:any, node:any, view:any, component:any;
+
+/*
+* verify if firing twice the same SetRootFieldAction("a", 1) does change state twice, or if reducer returns old state and fix it in case.
+* or fix it in Action.fire() but it's more heavy as it need to do part of the reducer checks twice.
+* */
+
 /*
 make sure error view display meaningful messages with code line
 * prevent megacrash if someone does <Vertex data={"not a pointer"} /> or <Vertex data={1, null, undefined...} />
