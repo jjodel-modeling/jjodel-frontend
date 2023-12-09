@@ -29,7 +29,7 @@ function App(props: AllProps) {
 
     useEffectOnce(() => {
         if (DUser.offlineMode) {
-            let du = DUser.new('adminOffline');
+            let du = DUser.new('adminOffline', "Pointer_adminOffline");
             DUser.current = du.id;
             stateInitializer();
             return;
