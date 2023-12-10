@@ -1841,11 +1841,14 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_views(context: Context): this['views'] {
-        return LViewElement.fromPointer([...U.getDefaultViewsID(), ...context.data.views]);
+        return LViewElement.fromPointer([...context.data.views, ...U.getDefaultViewsID()]);
     }
     protected set_views(val: PackArr<this['views']>, context: Context): boolean {
         const data = context.data;
-        SetFieldAction.new(data.id, 'views', Pointers.from(val), '', true);
+        let ptrs = Pointers.from(val);
+        let defaultViewsMap: Dictionary<Pointer, boolean> = U.objectFromArrayValues(U.getDefaultViewsID());
+        ptrs = ptrs.filter(ptr => !defaultViewsMap[ptr]);
+        SetFieldAction.new(data.id, 'views', ptrs, '', true);
         return true;
     }
 

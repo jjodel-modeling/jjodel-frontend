@@ -874,7 +874,7 @@ export class U {
 
     static objectFromArrayValues(arr: (string | number)[]): Dictionary<string | number, boolean> {
         let ret: Dictionary = {};
-        // todo: improve efficiency
+        // ret = arr.reduce((acc, val) => { acc[val] = true; }, {});
         for (let val of arr) { ret[val] = true; }
         return ret;
     }
