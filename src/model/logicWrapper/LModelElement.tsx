@@ -3938,6 +3938,10 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     isRoot!: boolean;
     readonly partial!: boolean;
 
+    protected get_name(context: Context): this['name'] {
+        return (context.proxyObject as GObject)['$name']?.value || context.data.name || context.proxyObject.instanceof.name;
+    }
+
     protected get_truechildren(context: Context): this["children"] {
         let childs: LValue[] = super.get_children(context);
         if (!context.data.instanceof) return childs;
@@ -3977,7 +3981,6 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         while (l && l.className !== DModel.cname) l = l.father;
         return l as LModel; }
     // protected set_name(val: string, context: Context): boolean { return this.cannotSet("name"); }
-    protected get_name(context: Context): LClass["name"] { return context.data.name || context.proxyObject.instanceof.name; }
     protected set_namespace(val: string, context: Context): boolean { return this.cannotSet("namespace"); }
     // protected get_namespace(context: Context): LClass["namespace"] { return context.proxyObject.instanceof.namespace; }
     protected set_fullname(val: string, context: Context): boolean { return this.cannotSet("fullname"); }
