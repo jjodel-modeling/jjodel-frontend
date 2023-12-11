@@ -1769,7 +1769,6 @@ export class DProject extends DPointerTargetable {
             .DPointerTargetable().DProject(name, author).end();
     }
 }
-
 @RuntimeAccessible
 export class LProject<Context extends LogicContext<DProject> = any, D extends DProject = DProject> extends LPointerTargetable {
     public static cname: string = 'LProject';

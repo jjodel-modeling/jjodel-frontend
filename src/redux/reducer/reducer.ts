@@ -33,7 +33,7 @@ let windoww = window as any;
 let U: typeof UType = windoww.U;
 
 
-function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: ParsedAction, prevAction: ParsedAction, newVal: any): DState {
+function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: ParsedAction, prevAction: ParsedAction, newVal: any): DState | false{
     let newRoot: DState = {...oldStateDoNotModify} as DState;
     let current: any = newRoot;
     if (!action.path?.length) throw new MyError("path length must be at least 1", {action});
@@ -71,6 +71,13 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
             let oldValue: any;
             // let unpointedElement: DPointerTargetable | undefined;
             // perform final assignment
+            if (action.type === CreateElementAction.type && current[key]) {
+                oldValue = current[key];
+                gotChanged = false;
+                Log.ee("rejected CreateElementAction, rollback occurring:", {action,
+                    preexistingValue: current[key], isShallowEqual: current[key] === action.value });
+                return false; // warning: use return only when you want to abort and skip subsequent CompositeAction sub-actions like now.
+            }
             if (isArrayAppend) {
                 gotChanged = true;
                 if (!Array.isArray(current[key])) { current[key] = []; }
@@ -117,10 +124,11 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                     */
                 }
             } else
+                // value not changed
             if (action.type === DeleteElementAction.type ? !(key in current) : current[key] === newVal) {
                 gotChanged = false;
-                // value not changed
             } else {
+                // value changed
                 // todo: caso in cui setto manualmente classes.1 = pointer;
                 //  the latest element is array and not DPointerTargetable, so might need to buffer upper level in the tree? or instead of "current" keep an array of sub-objects encountered navigating the path in state.
                 oldValue = current[key];
@@ -190,27 +198,29 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
 
     // estraggo le azioni derivate
     let derivedActions: ParsedAction[] = [];
+    let newState = oldState;
     for (let action of actions) {
         switch (action.type){
             default: break;
-            case LoadAction.type: return action.value;
+            case LoadAction.type: newState = action.value; break;
             case CreateElementAction.type:
                 const elem: DPointerTargetable = action.value;
                 delete DPointerTargetable.pendingCreation[elem.id];
+                /*
                 if (oldState.idlookup[elem.id]) {
-                console.error("rejected CreateElementAction, roolback occurring:", {action, elem:{...elem},
-                    preexistingValue: {...oldState.idlookup[elem.id]}, isEqual: elem === oldState.idlookup[elem.id] });
-                    return oldState;
-                    /*
+                    Log.ee("rejected CreateElementAction, rollback occurring:", {action, elem:{...elem},
+                        preexistingValue: {...oldState.idlookup[elem.id]}, isEqual: elem === oldState.idlookup[elem.id] });
+                    return oldState; // warning: use return only when you want to abort and skip subsequent CompositeAction sub-actions like now.
+
                     action.value = "An element with that id already existed.";
                     action.path = action.field = "CreateActionRejected";
                     action.className = SetRootFieldAction.name;
                     action.type = SetRootFieldAction.type;
                     action.pathArray = [action.path]; //a
                     action.isPointer = false;
-                    // just to log it in undo-redo action list and have a feedback*/
-                    break;
-                }
+                    // just to log it in undo-redo action list and have a feedback
+                    return oldState;}*/
+
                 elem.className = elem.className || (elem.constructor as typeof RuntimeAccessibleClass).cname || elem.constructor.name;
                 let statefoldername = elem.className.substring(1).toLowerCase() + 's';
                 derivedActions.push(
@@ -243,7 +253,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
     actions = actions.sort( (a1, a2) => U.stringCompare(a1.path, a2.path));
 
     // destrutturo solo i nodi intermedi e solo la prima volta che li incontro (richiede le azioni ordinate in base al path)
-    let newState = oldState;
+
     for (let i = 0; i < actions.length; i++) {
         const prevAction: ParsedAction = actions[i-1];
         const action: ParsedAction = actions[i];
@@ -267,7 +277,9 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
             case SetRootFieldAction.type:
             case DeleteElementAction.type:
             case SetFieldAction.type:
-                newState = deepCopyButOnlyFollowingPath(newState, action, prevAction, action.value);
+                let tmp: false | DState = deepCopyButOnlyFollowingPath(newState, action, prevAction, action.value);
+                if (!tmp) return oldState; // rollback due to invalid action in transaction
+                newState = tmp;
                 break;
         }
 

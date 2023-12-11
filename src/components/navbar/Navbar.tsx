@@ -11,6 +11,7 @@ import LogoImage from '../../static/img/logo.png';
 import {FakeStateProps} from '../../joiner/types';
 import PersistanceApi from "../../api/persistance";
 import {SaveManager} from "../topbar/SaveManager";
+import Examples from "./tabs/Examples";
 
 let clickTimestamps: number[] = [];
 const clicksRequired = 2;
@@ -50,6 +51,7 @@ function NavbarComponent(props: AllProps) {
                         <li tabIndex={-1} className={'dropdown-item'} onClick={(e) => SaveManager.load()}>
                             Load
                         </li>
+                        <Examples />
                     </ul>
                 </li>
             }

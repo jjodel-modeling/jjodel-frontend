@@ -237,10 +237,10 @@ export class Action extends RuntimeAccessibleClass {
 export class LoadAction extends Action {
     public static cname: string = "LoadAction";
     static type = 'LOAD';
-    static new(state: DState): boolean {  return state && new LoadAction(state).fire(); }
-    static create(state: DState): LoadAction {  return state && new LoadAction(state); }
+    static new(state: DState | GObject): boolean { return state && new LoadAction(state).fire(); }
+    static create(state: DState | GObject): LoadAction { return state && new LoadAction(state); }
 
-    constructor(state: DState, fire: boolean = true) {
+    constructor(state: DState | GObject, fire: boolean = true) {
         super('', state, '');
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         if (fire) this.fire();

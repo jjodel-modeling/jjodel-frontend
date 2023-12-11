@@ -3534,18 +3534,22 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     private static otherObectsAccessedKeys: DocString<"className">[] = [];
     // public otherObjectsSetup(){ LModel.otherObjectsTemp = undefined; LModel.otherObectsAccessedKeys = []; }
     otherObjects!: LObject[];
-    __info_of__otherObjects: Info = {type:"LObject[]", txt:<div>Read this.instancesOf documentation first.
+    otherInstances!: LObject[];
+    __info_of__otherObjects: Info = {type:"LObject[]", txt:<div>Alias for this.otherInstances.</div>};
+    __info_of__otherInstances: Info = {type:"LObject[]", txt:<div>Read this.instancesOf documentation first.
             <br/>Retrieves all the objects not obtained between previous calls of this.instancesOf and the last call of this method.
             <br/>Meaning calling it twice without any instancesOf in between, it will return all objects.</div>};
 
-    public get_otherObjects(c: Context): ()=>LObject[]{
+    public get_otherObjects(c: Context): ()=>LObject[]{ return this.get_otherInstances(c); }
+    public get_otherInstances(c: Context): ()=>LObject[]{
         return ()=>{
             let ret: LObject[];
             if (!LModel.otherObjectsTemp) { ret = this.get_allSubObjects(c); }
             else {
                 let dict = {...LModel.otherObjectsTemp};
-                for (let key in LModel.otherObectsAccessedKeys) delete dict[key];
+                for (let key of LModel.otherObectsAccessedKeys) delete dict[key];
                 delete (LModel as any).otherObjectsTemp;
+                delete (LModel as any).otherObectsAccessedKeys;
                 ret = Object.values(dict).flat();
             }
             return ret;
@@ -3564,6 +3568,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         // make it more general, first make a dictionary holding all selected types as keys, including "_other"
         // then a SEPARATE (split this) function to return only the selected keys, merging the subarrays in the global naming instance map.
         LModel.otherObjectsTemp = {};
+        LModel.otherObectsAccessedKeys = [];
         // part 1: i add empty arrays for all instances, but not include shapeless objects.
         for (let name in namemap) { LModel.otherObjectsTemp[name] = []; } //LPointerTargetable.fromPointer(namemap[name].instances); }
         // part 2: for shapeless objs too
