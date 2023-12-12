@@ -1,4 +1,4 @@
-import {DModel, LClass, LGraph, LModel, LObject, LProject, U} from "../../../joiner";
+import {DModel, LClass, LGraph, LModel, LObject, LProject, SetFieldAction, U} from "../../../joiner";
 
 export class StateMachine_M1 {
     static async load1(project: LProject, m2: LModel, stateMachine: LClass, state: LClass, transition: LClass, command: LClass, event: LClass) {
@@ -49,10 +49,12 @@ export class StateMachine_M1 {
     }
 
     private static async create(project: LProject, m2: LModel): Promise<LModel> {
-        const dModel: DModel = DModel.new('M1', m2.id, false, true);
+        const dModel: DModel = DModel.new(undefined, m2.id, false, true);
         const lModel: LModel = LModel.fromD(dModel);
-        project.models = [...project.models, lModel];
-        project.graphs = [...project.graphs, lModel.node as LGraph];
+        SetFieldAction.new(project.id, 'models', lModel.id, '+=', true);
+        SetFieldAction.new(project.id, 'graphs', lModel.node?.id, '+=', true);
+        // project.models = [...project.models, lModel];
+        // project.graphs = [...project.graphs, lModel.node as LGraph];
         // const tab = TabDataMaker.model(dModel);
         // await DockManager.open('models', tab);
         return lModel;

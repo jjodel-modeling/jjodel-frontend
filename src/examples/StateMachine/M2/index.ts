@@ -1,4 +1,4 @@
-import {DModel, LClass, LGraph, LModel, LPackage, LProject} from "../../../joiner";
+import {DModel, LClass, LGraph, LModel, LPackage, LProject, SetFieldAction} from "../../../joiner";
 import TabDataMaker from "../../../components/abstract/tabs/TabDataMaker";
 import DockManager from "../../../components/abstract/DockManager";
 
@@ -18,10 +18,12 @@ export class StateMachine_M2 {
         ];
     }
     private static async create(project: LProject): Promise<[LModel, LPackage]> {
-        const dModel = DModel.new('M2', undefined, true);
+        const dModel = DModel.new(undefined, undefined, true);
         const lModel: LModel = LModel.fromD(dModel);
-        project.metamodels = [...project.metamodels, lModel];
-        project.graphs = [...project.graphs, lModel.node as LGraph];
+        SetFieldAction.new(project.id, 'metamodels', lModel.id, '+=', true);
+        SetFieldAction.new(project.id, 'graphs', lModel.node?.id, '+=', true);
+        // project.metamodels = [...project.metamodels, lModel];
+        // project.graphs = [...project.graphs, lModel.node as LGraph];
         const dPackage = lModel.addChild('package');
         const lPackage: LPackage = LPackage.fromD(dPackage);
         lPackage.name = 'default';
