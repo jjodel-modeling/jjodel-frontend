@@ -32,7 +32,7 @@ function loadOldState(obj: GObject, name: string = "oldSave"): void {
         project.models = obj.models;
         project.views = obj.viewelements;
         }), 1);
-
+    // NB: might also be needed to add "context DModel inv: true" or DClass... to all default views got back from old state.
 }
 // for new saves
 function loadState(obj: GObject, name: string = "oldSave"): void { LoadAction.new(obj); }
@@ -61,8 +61,8 @@ function ExamplesComponent(props: AllProps) {
                 <li tabIndex={-1} onClick={e => setExample(1)} className={'dropdown-item'}>Simplified Class Diagram</li>
                 <li tabIndex={-1} onClick={e => setExample(2)} className={'dropdown-item'}>Nodes & Edges</li>
                 <li tabIndex={-1} onClick={e => loadOldState(statechartplus, "Statechart+")} className={'dropdown-item'}>Student statechart++</li>
-                <li tabIndex={-1} onClick={e => loadOldState(viewAsEdge, "View as edge")} className={'dropdown-item'}>View Object as Edge</li>
-                <li tabIndex={-1} onClick={e => loadOldState(conflictsimulation, "Conflict simulation")} className={'dropdown-item'}>Conflict simulation</li>
+                <li tabIndex={-1} onClick={e => loadState(viewAsEdge, "View as edge")} className={'dropdown-item'}>View Object as Edge</li>
+                <li tabIndex={-1} onClick={e => loadState(conflictsimulation, "Conflict simulation")} className={'dropdown-item'}>Conflict simulation</li>
                 {false && <li tabIndex={-1} onClick={e => loadOldState(sequence, "Sequence diagram")} className={'dropdown-item'}>Sequence</li>}
             </ul>
         </li>)

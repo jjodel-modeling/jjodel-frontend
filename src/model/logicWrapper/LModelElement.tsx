@@ -2241,12 +2241,21 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             {reason: '', allTargetSuperClasses: []}) => this._canExtend(context, superclass, output);
     }
 
-    public isExtending(superclass: LClassifier, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
-        return this.cannotCall("isExtending");
-    }
+    public isExtending(superclass: Pack1<LClass>, directly: boolean = false): boolean { return this.cannotCall("isExtending"); }
+    public isSubclassOf(superclass: Pack1<LClass>, directly: boolean = false): boolean { return this.cannotCall("isSubclassOf"); }
+    __info_of__isSubclassOf: Info = {type: "(superclass: Pointer | LClass, directly: boolean = false) => boolean", txt: "Alias for isExtending"};
+    __info_of__isExtending: Info = {type: "(superclass: Pointer | LClass, directly: boolean = false) => boolean",
+        txt:<div>Tells if "this" is a subclass of the "superclass" parameter.
+            <br/>- If "directly" is set to true, it will only include direct subclassing as in "class A extends C" not considering chains.
+            <br/>    If "directly" is set to true: "class A extends B" & "Class B extends C". In that case A.isExtending(C, true) will return false.</div>};
 
-    private get_isExtending(context: Context): this["isExtending"] {
-        return null as any; // todo
+    private get_isSubclassOf(c: Context, plusThis: boolean = true): this["isExtending"] { return this.get_isExtending(c, plusThis); }
+    private get_isExtending(c: Context, plusThis: boolean = true): this["isExtending"] {
+        return (superclass: Pack1<LClass>, directly: boolean = false): boolean => {
+            let ptr = Pointers.from(superclass);
+            if (directly) return c.data.extends.includes(ptr);
+            return this.get_superclasses(c, plusThis).map(classe=>classe.id).includes(ptr);
+        }
     }
 
     private get_superclasses(context: Context, plusThis: boolean = false): LClass[] {
@@ -4502,6 +4511,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
     // @eligibleClasses: search only between those targets.
     // @favoritematch: if this class is a valid match, it is given topmost priority regardless of tightness of excess features over the schema.
+    // if a class name actually starts with $ character, it needs to be placed twice to get a match, as in class.$$name
     public static getInstantiableClasses(thiss: LValue, c: LogicContext<DValue> | LogicContext<DModel>, schema?: GObject, loose: boolean = false, eligibleClasses?: LClass[], favoriteMatch?: LClass): LClass[] {
         // find eligible classes
         let isDValue: boolean =  c.data.className === "DValue";
@@ -4528,11 +4538,22 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             else scoreMap[raw.id] = {class:c, instantiable, isPartial: raw.partial} as any;
         }
         if (schema) {
+            // const fix$ = (vals: string[]) => vals.map(v=> v[0] === "$" ? v.substring(1) : v);
+            const fix$ = (obj: GObject) => {
+                let ret: GObject = {};
+                for (let k in obj) {
+                    let k1:string = k[0] === "$" ? k.substring(1) : k;
+                    ret[k1] = obj[k];
+                }
+                return ret;
+            }
+            schema = fix$(schema);
             let keys: string[] = Object.keys(schema);
             for (let ptr in scoreMap) {
                 let score = scoreMap[ptr];
                 score.namesMap = U.objectFromArrayValues(score.class.childNames);
                 let diff = U.objdiff(score.namesMap, schema);
+                console.log( "objDiff", {schema, names:score.namesMap, data:score.class});
                 score.id = ptr;
                 score.excessFeatures = diff.removed;
                 score.missingFeatures = diff.added;
@@ -4629,7 +4650,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                         // check if metaclass is found
                         if (!lmetaclass || lmetaclass.className !== "DClass") return Log.ee("provided schema type does not belong to a Class, cannot intantiate.", {lmetaclass, schema:metaclass, this:c.data});
                         // check if metaclass is valid (instantiable in the callee collection: .values or .objects)
-                        if (isDValue && !lmetaclass.isExtending(this.get_type(c as Context))) return Log.ee("provided schema type does not extend this.type, cannot intantiate.", {lmetaclass, schema:metaclass, this:c.data});
+                        console.log("isExtending", {lmetaclass, type: this.get_type(c as any)})
+                        if (isDValue && !lmetaclass.isExtending(this.get_type(c as Context) as LClass)) return Log.ee("provided schema type does not extend this.type, cannot intantiate.", {lmetaclass, schema:metaclass, this:c.data});
                     }
                     // find instance schema: 2) by dvalue.type
                     else if (isDValue && !isShapeless) {
@@ -4664,6 +4686,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 }
                 // both dmodel.objects nad dvalue.values are updated by the Constructors by passing father parameter.
                 // phase 3: create object according to schema (or shapeless) and update parent container collection.
+                console.log("Object.new3", {constructorPointers});
                 let dobj = DObject.new3(constructorPointers, () => { }, DValue, true);
                 if (isReference && !isContainment){
                     // if is ref containment, object.father is set to value, which also appends the object to this.values

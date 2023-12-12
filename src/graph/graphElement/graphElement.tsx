@@ -142,16 +142,18 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     static mapViewStuff(state: DState, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
         // let dnode: DGraphElement | undefined = ownProps?.nodeid && DPointerTargetable.from(ownProps.nodeid, state) as any;
         if (ownProps.view) {
-            ret.views = [];
             ret.view = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(Pointers.from(ownProps.view), state) as DViewElement);
+            ret.views = [ret.view];
             Log.w(!ret.view, "Requested view "+ownProps.view+" not found. Another view got assigned.", {requested: ownProps.view, props: ownProps, state: ret});
         }
         if (!ret.view) {
             const viewScores = Selectors.getAppliedViews(ret.data,
                 (ownProps.view as LViewElement)?.id || (ownProps.view as string) || null,
                 ownProps.parentViewId || null);
-            ret.views = viewScores.map(e => LViewElement.fromD(e.element));
+            ret.views = viewScores.map<LViewElement>(e => LViewElement.fromD(e.element)).filter(v => !!v);
+            // console.log("debug",  {...this.props, data: this.props.data?.id, view: this.props.view?.id, v0: this.props.views, views: this.props.views?.map( v => v?.id )})
             ret.view = ret.views[0];
+            Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret});
             (ret as any).viewScores = viewScores; // debug only
         }
 

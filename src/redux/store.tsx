@@ -375,7 +375,6 @@ function makeDefaultGraphViews(): DViewElement[] {
     makeEdgeView("Association", EdgeHead.reference,             size1,   undefined,  false);
     makeEdgeView("Dependency",  EdgeHead.reference,             size1,   undefined,  true);
     makeEdgeView("Inheritance", EdgeHead.extend,                size1,   undefined,  false);
-    makeEdgeView("Dependency",  EdgeHead.extend,                size1,   undefined,  true);
     makeEdgeView("Aggregation", EdgeHead.aggregation,   undefined,      size2,      false);
     makeEdgeView("Composition", EdgeHead.composition,   undefined,      size2,      false);
 

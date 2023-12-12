@@ -202,7 +202,6 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
     for (let action of actions) {
         switch (action.type){
             default: break;
-            case LoadAction.type: newState = action.value; break;
             case CreateElementAction.type:
                 const elem: DPointerTargetable = action.value;
                 delete DPointerTargetable.pendingCreation[elem.id];
@@ -273,6 +272,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
             default:
                 if (action.type.indexOf('@@redux/') === 0) break;
                 return Log.exDevv('unexpected action type:', action.type);
+            case LoadAction.type: newState = action.value; break;
             case CreateElementAction.type:
             case SetRootFieldAction.type:
             case DeleteElementAction.type:
