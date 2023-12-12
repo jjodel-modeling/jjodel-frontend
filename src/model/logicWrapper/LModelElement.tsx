@@ -3542,17 +3542,19 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     private static otherObjectsTemp: Dictionary<DocString<"className">, LObject[]> = undefined as any;
     private static otherObectsAccessedKeys: DocString<"className">[] = [];
     // public otherObjectsSetup(){ LModel.otherObjectsTemp = undefined; LModel.otherObectsAccessedKeys = []; }
-    otherObjects!: LObject[];
-    otherInstances!: LObject[];
-    __info_of__otherObjects: Info = {type:"LObject[]", txt:<div>Alias for this.otherInstances.</div>};
-    __info_of__otherInstances: Info = {type:"LObject[]", txt:<div>Read this.instancesOf documentation first.
+    otherObjects!: (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses: boolean = false)=>LObject[];
+    otherInstances!: (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses: boolean = false)=>LObject[];
+    __info_of__otherObjects: Info = {type:"(...excludeInstances: (string|LClass|Pointer)[], excludeSubclasses: boolean = false)=>LObject[]", txt:<div>Alias for this.otherInstances.</div>};
+    __info_of__otherInstances: Info = {type:"(...excludeInstances: (string|LClass|Pointer)[], excludeSubclasses: boolean = false)=>LObject[]", txt:<div>Read this.instancesOf documentation first.
             <br/>Retrieves all the objects not obtained between previous calls of this.instancesOf and the last call of this method.
             <br/>Meaning calling it twice without any instancesOf in between, it will return all objects.</div>};
 
-    public get_otherObjects(c: Context): ()=>LObject[]{ return this.get_otherInstances(c); }
-    public get_otherInstances(c: Context): ()=>LObject[]{
-        return ()=>{
+    public get_otherObjects(c: Context): (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses: boolean = false)=>LObject[]{
+        return this.get_otherInstances(c); }
+    public get_otherInstances(c: Context): (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses: boolean = false)=>LObject[]{
+        return (excludeInstances: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false)=>{
             let ret: LObject[];
+            this.get_instancesOf(c)(excludeInstances, excludeInstances) // and drop the result
             if (!LModel.otherObjectsTemp) { ret = this.get_allSubObjects(c); }
             else {
                 let dict = {...LModel.otherObjectsTemp};
