@@ -3539,22 +3539,57 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return ret;
     }
 
+    _defaultGetter(c: Context, key: string): any {
+        if (!c.data.isMetamodel) return this._defaultGetterM1(c, key);
+        return this._defaultGetterM2(c, key);
+    }
+    _defaultGetterM2(c: Context, key: string): any{
+        return Log.e("Could not find property " + key + " on MetaModel", {c, key, m2});
+    }
+    _defaultGetterM1(c: Context, key: string): any{
+        // if m1.$m2classname"s" then --> this.instancesOf("m2classname")
+        // if m1.$m2classname then ---> m2.$m2classname (lower priority, if there are 2 metaclasses differing only by final s,
+        // the one with 1 more final "s" if shadowed by the instances of the one with 1 less final "s",
+        // in that case you can access the shadowed one through m1.instanceof.$classnames
+        // priorities: 1) m1 name natch --> m1object. 2) m2 exact name match --> m2item, 3) m2 name+"s" match --> instances
+        // to access m2 classes within a package, need to navigate it like model.$packagename.Ssubcpackagename.$classname,
+        // path + "s" won't work in that case, and need to use this.getInstancesOf instead
+        if (key[0] === "$"){
+            let m2: LModel | undefined = this.get_model(c).instanceof;
+            if (!m2) return Log.e("Could not find property " + key + " on M1 Model", {c, key, m2});
+            let m2item: LClass | LPackage;
+            // check for a perfect m2 name match and return it
+            m2item = (m2 as GObject)[key];
+            if (m2item) return m2item; //this.instancesOf(key);
+            if (!m2) return Log.e("Could not find property " + key + " on M1 Model", {c, key, m2});
+            // if not a perfect name match, i try name+s match for instances
+            if (key[key.length - 1] === "s") {
+                let key1 = key.substring(key.length - 1);
+                m2item = (m2 as GObject)[key1];
+                if (m2item) {
+                    if (m2item.className === "DClass") return this.get_instancesOf(c)(m2item as LClass);
+                    else return Log.e("Could not get instances of " + key1 + ".", {c, key, m2});
+                }
+            }
+            if (!m2) return Log.e("Could not find any subelement with name " + key + " on M1 or M2 Models", {c, key, m1: c.data, m2});
+        }
+    }
     private static otherObjectsTemp: Dictionary<DocString<"className">, LObject[]> = undefined as any;
     private static otherObectsAccessedKeys: DocString<"className">[] = [];
     // public otherObjectsSetup(){ LModel.otherObjectsTemp = undefined; LModel.otherObectsAccessedKeys = []; }
-    otherObjects!: (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses: boolean = false)=>LObject[];
-    otherInstances!: (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses: boolean = false)=>LObject[];
+    otherObjects!: (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[];
+    otherInstances!: (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[];
     __info_of__otherObjects: Info = {type:"(...excludeInstances: (string|LClass|Pointer)[], excludeSubclasses: boolean = false)=>LObject[]", txt:<div>Alias for this.otherInstances.</div>};
     __info_of__otherInstances: Info = {type:"(...excludeInstances: (string|LClass|Pointer)[], excludeSubclasses: boolean = false)=>LObject[]", txt:<div>Read this.instancesOf documentation first.
             <br/>Retrieves all the objects not obtained between previous calls of this.instancesOf and the last call of this method.
             <br/>Meaning calling it twice without any instancesOf in between, it will return all objects.</div>};
 
-    public get_otherObjects(c: Context): (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses: boolean = false)=>LObject[]{
+    public get_otherObjects(c: Context): (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[]{
         return this.get_otherInstances(c); }
-    public get_otherInstances(c: Context): (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses: boolean = false)=>LObject[]{
+    public get_otherInstances(c: Context): (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[]{
         return (excludeInstances: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false)=>{
             let ret: LObject[];
-            this.get_instancesOf(c)(excludeInstances, excludeInstances) // and drop the result
+            this.get_instancesOf(c)(excludeInstances, includeSubclasses) // and drop the result
             if (!LModel.otherObjectsTemp) { ret = this.get_allSubObjects(c); }
             else {
                 let dict = {...LModel.otherObjectsTemp};
