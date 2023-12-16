@@ -1,5 +1,5 @@
 import {Dispatch, MouseEvent, ReactElement} from 'react';
-import type {LProject} from '../../../joiner';
+import type {LProject, Dictionary, Pointer} from '../../../joiner';
 import {CreateElementAction, Defaults, DState, DUser, DViewElement, LUser, LViewElement, U} from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from "../../../joiner/types";
@@ -16,7 +16,8 @@ function ViewsDataComponent(props: AllProps) {
         let name = 'view_' + 0;
         let names: string[] = project.views.map(v => v && v.name);
         name = U.increaseEndingNumber(name, false, false, newName => names.indexOf(newName) >= 0);
-        DViewElement.new(name, jsx);
+        DViewElement.new(name, jsx); how does it ad to projecT? earleir was:  //project.views = [...project.views, dView as any]; // setter does fine with a D-class too, no need to wrap it, it consumes cpu
+
     }
 
     const select = (view: LViewElement) => {
@@ -25,15 +26,15 @@ function ViewsDataComponent(props: AllProps) {
 
     const clone = (e: MouseEvent, v: LViewElement) => {
         e.preventDefault(); e.stopPropagation();
-        const view: DViewElement = DViewElement.new(`${v.name} Copy`, '');
-        for(let key in v.__raw) {
-            if(key !== 'id' && key !== 'name') {
-                // @ts-ignore
-                view[key] = v.__raw[key];
-            }
-        }
-        CreateElementAction.new(view);
-        project.pushToStackViews(view);
+        TRANSACTION(()=>{
+            let clone = v.duplicate();
+            let defaultViews: Dictionary<Pointer, boolean> = U.objectFromArrayValues(U.getDefaultViewsID());
+            let oldViews: Pointer<DViewElement>[] = Pointers.from(project.views).filter( vid => !defaultViews[vid]);
+            let i: number = oldViews.indexOf(v.id);
+            if (i === -1) oldViews.push(clone.id);
+            else oldViews.splice(i+1, 0, clone.id); // insert in-place right after the cloned view
+            project.views = oldViews as any;
+        })
     }
 
     return(<div>

@@ -237,10 +237,10 @@ export class Action extends RuntimeAccessibleClass {
 export class LoadAction extends Action {
     public static cname: string = "LoadAction";
     static type = 'LOAD';
-    static new(state: DState): boolean {  return state && new LoadAction(state).fire(); }
-    static create(state: DState): LoadAction {  return state && new LoadAction(state); }
+    static new(state: DState | GObject): boolean { return state && new LoadAction(state).fire(); }
+    static create(state: DState | GObject): LoadAction { return state && new LoadAction(state); }
 
-    constructor(state: DState, fire: boolean = true) {
+    constructor(state: DState | GObject, fire: boolean = true) {
         super('', state, '');
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         if (fire) this.fire();
@@ -297,7 +297,33 @@ export class SetRootFieldAction extends Action {
         >(tocheck:never, fullpath: T, val: VAL, accessModifier: AM | undefined = undefined, isPointer?: ISPOINTER): SetRootFieldAction {
         return new SetRootFieldAction(fullpath + (accessModifier || ''), val, false, isPointer);
     }
-}
+    fire(forceRelaunch: boolean = false, doChecks: boolean = true): boolean {
+        /* no need, the reducer should return old state in this case. verify it!
+        if (doChecks) {
+            // if action would not change the value, i don't fire it at all
+            let s: GObject<DState> = store.getState();
+            let field = (this.field||'');
+            let accessOperator: string = field.substring(field.length-2);
+            let fieldpath: string[] = field.split(".");
+            switch(accessOperator){
+                default:
+                case "-=":
+                case "+=":
+            }
+            // path can end with -=, +=, [] etc, but it's fine if i check it as if it was part of the name like object["fieldname+="]
+            // because in all those cases
+            if (s[this.field] === this.value) return false;
+        }*/
+        return super.fire(forceRelaunch);
+    }
+
+
+// non so come, ma fare in modo che [], +=, -=, siano disponibili solo se la chiave è il nome di un attributo di tipo array
+type arrayFieldNameTypes<D> = keyof D | `${string & keyof D}[]` | `${string & keyof D}+=` | `${string & keyof D}-=` | `${string & keyof D}.${number}` | `${string & keyof D}[${number}]`;
+type AccessModifier = '' | '[]' | '+=' | '-=' | `.${number}` | `[${number}]` | undefined;
+
+
+type StrictExclude<T, U> = T extends U ? U extends T ? never : T : T;
 
 @RuntimeAccessible
 export class SetFieldAction extends SetRootFieldAction {
@@ -391,16 +417,27 @@ export class SetFieldAction extends SetRootFieldAction {
         return new SetFieldAction(me, field, val, false, isPointer as boolean).fire();
     }
 
-    // static new:(typeof SetFieldAction.create) = function(...a:Parameters<(typeof SetFieldAction)["create"]>): SetFieldAction { return SetFieldAction.create(...a).fire() ? a : undefined as any; }
-    //static new:(typeof AAAAA.create) = function(...a:Parameters<(typeof AAAAAA)["create"]>): AAAAAA { return AAAAAA.create(...a).fire() ? a : undefined as any; }
 
 
+    me: Pointer | DPointerTargetable;
+    me_field: string;
     // field can end with "+=", "[]", or "-1" if it's array
     protected constructor(me: DPointerTargetable | Pointer, field: string, val: any, fire: boolean = true, isPointer: boolean = false) {
         Log.exDev(!me, 'BaseObject missing in SetFieldAction', {me, field, val});
         super('idlookup.' + ((me as DPointerTargetable).id || me) + ( field ? '.' + field : ''), val, false, isPointer);
+        this.me = me;
+        this.me_field = field;
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         if (fire) this.fire();
+    }
+
+    fire(forceRelaunch: boolean = false): boolean {
+        // if action would not change the value, i don't fire it at all
+        // by id because if item was updated, this.me as DElement might be an old version, different from the one in store.
+        let d: GObject<any> = DPointerTargetable.from((this.me as DPointerTargetable)?.id || this.me as any);
+        // console.warn("me fire", {thiss:this, d, typeofd:typeof d, field:this.me_field, dfield:d[this.me_field], val:this.value});
+        if (d && typeof d === "object" && d[this.me_field] === this.value) return false;
+        return super.fire(forceRelaunch, false);
     }
 }
 

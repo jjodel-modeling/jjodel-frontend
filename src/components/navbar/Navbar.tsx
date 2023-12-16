@@ -9,6 +9,8 @@ import DebugImage from '../../static/img/debug.png';
 import {FakeStateProps} from '../../joiner/types';
 import PersistanceApi from "../../api/persistance";
 import Collaborative from "../collaborative/Collaborative";
+import {SaveManager} from "../topbar/SaveManager";
+import Examples from "./tabs/Examples";
 
 let clickTimestamps: number[] = [];
 const clicksRequired = 2;
@@ -54,9 +56,10 @@ function NavbarComponent(props: AllProps) {
                 <li className={'nav-item dropdown'}>
                     <i tabIndex={-1} className={'fs-3 dropdown-toggle bi bi-list'} data-bs-toggle={'dropdown'} />
                     <ul className={'dropdown-menu'}>
-                        <li tabIndex={-1} className={'dropdown-item'}>
-                            Test
+                        <li tabIndex={-1} className={'dropdown-item'}onClick={(e) => SaveManager.load()}>
+                            Load
                         </li>
+                        <Examples />
                     </ul>
                 </li>
             }

@@ -38,10 +38,11 @@ console.warn('loading ts U log');
 export class U {
     static cname: string = "U";
 
+    // damiano: eseguire una funzione costa in performance, anche se è brutto fare questi cast
     static wrapper<T>(obj: any): T {
         return obj as unknown as T;
     }
-
+    // damiano: mi sa che c'era un metodo l.__serialize or something
     static json(dElement: GObject): Json {
         return JSON.parse(JSON.stringify(dElement.__raw));
     }
@@ -854,7 +855,7 @@ export class U {
 
     static objectFromArrayValues(arr: (string | number)[]): Dictionary<string | number, boolean> {
         let ret: Dictionary = {};
-        // todo: improve efficiency
+        // ret = arr.reduce((acc, val) => { acc[val] = true; }, {});
         for (let val of arr) { ret[val] = true; }
         return ret;
     }
@@ -909,26 +910,22 @@ export class U {
         return ret as Partial<T>;
     }
 
-    // difference react-style. lazy check by === equality field by field
-    public static objdiff<T extends GObject>(old:T, neww: T): {removed: Partial<T>, added: Partial<T>, changed: Partial<T>} {
+    // difference react-style. lazy check by === equality field by field. parameters are readonly
+    public static objdiff<T extends GObject>(old:T, neww: T): {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>} {
         // let ret: GObject = {removed:{}, added:{}, changed:{}};
-        let ret: {removed: Partial<T>, added: Partial<T>, changed: Partial<T>}  = {removed:{}, added:{}, changed:{}};
+        let ret: {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>}  = {removed:{}, added:{}, changed:{}, unchanged: {}};
         if (!neww && !old) { return ret; }
         if (!neww) { ret.removed = old; return ret; }
         if (!old) { ret.added = neww; return ret; }
-        let oldkeys: string[] = Object.keys(old);
-        let newkeys: string[] = Object.keys(neww);
+        // let oldkeys: string[] = Object.keys(old); let newkeys: string[] = Object.keys(neww);
 
         let key: any;
         for (key in old) {
             // if (neww[key] === undefined){
-            if (!(key in neww)){ // if neww have a key with undefined value, it counts (and should) as having that property key defined
-                (ret.removed as GObject)[key] = old[key]; continue;
-                // if (old[key] === undefined) { continue; }
-                // continue;
-            }
-            if (neww[key] === old[key]) continue;
-            (ret.changed as GObject)[key] = old[key];
+            // if neww have a key with undefined value, it counts (and should) as having that property key defined
+            if (!(key in neww)){ (ret.removed as GObject)[key] = old[key]; }
+            else if (neww[key] === old[key]) { (ret.unchanged as GObject)[key] = old[key] }
+            else (ret.changed as GObject)[key] = old[key];
         }
         for (let key in neww) {
             if (!(key in old)){ (ret.added as GObject)[key] = neww[key]; }

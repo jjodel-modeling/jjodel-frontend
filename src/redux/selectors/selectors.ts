@@ -28,28 +28,31 @@ import type {
     LViewPoint,
     LVoidVertex,
     Pointer,
-    ShortAttribETypes
+    AbstractConstructor,
+    Constructor,
+    LModelElement, LModel,
+    DObject, DValue, LObject, LValue,
+    LViewPoint,
+    AttribETypes, ShortAttribETypes,
+    Dictionary,
 } from "../../joiner";
 import {
-    Defaults,
+    DViewElement,
+    DPointerTargetable,
     DModel,
     DModelElement,
-    DPointerTargetable,
-    DUser,
-    DViewElement,
+    OCL,
     Log,
     LPointerTargetable,
-    LProject,
-    LUser,
-    OCL,
     RuntimeAccessible,
     RuntimeAccessibleClass,
     store,
-    toShortEType,
-    U
+    U,
+    toShortEType
 } from "../../joiner";
 import {EdgeOptions} from "../store";
 import {DefaultEClasses, ShortDefaultEClasses, toShortEClass} from "../../common/U";
+import { Selected } from "../../joiner/types";
 
 enum ViewEClassMatch { // this acts as a multiplier for explicit priority
     MISMATCH = 0,
@@ -352,7 +355,7 @@ export class Selectors{
         const user = LUser.fromPointer(DUser.current);
         const project = U.wrapper<LProject>(user.project);
         const viewpoint = project.activeViewpoint;
-        const isDefault = !!(v.viewpoint && Defaults.check(v.viewpoint));
+        const isDefault = !!(v.viewpoint && Defaults.check(v.viewpoint)); was === Pointer_DefaultViewPoint
         const isActiveViewpoint = v.viewpoint === viewpoint.id;
         if(!isActiveViewpoint && !isDefault) return ViewEClassMatch.MISMATCH;
         let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];

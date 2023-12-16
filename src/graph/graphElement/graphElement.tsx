@@ -2,14 +2,14 @@ import React, {Component, Dispatch, PureComponent, ReactElement, ReactNode,} fro
 import {createPortal} from "react-dom";
 import {connect} from "react-redux";
 import './graphElement.scss';
+import type {EdgeOwnProps} from "./sharedTypes/sharedTypes";
 import {
-    GraphDragManager,
     GraphSize,
     LGraph, MouseUpEvent, Point,
     Pointers,
-    Selectors as Selectors_, Size, TRANSACTION, WGraph
+    Selectors as Selectors_, Size, TRANSACTION, WGraph,
+    GraphDragManager, GraphPoint,
 } from "../../joiner";
-import type {EdgeOwnProps} from "./sharedTypes/sharedTypes";
 import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
 
 import {EdgeStateProps, LGraphElement, store, VertexComponent,
@@ -142,16 +142,18 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     static mapViewStuff(state: DState, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
         // let dnode: DGraphElement | undefined = ownProps?.nodeid && DPointerTargetable.from(ownProps.nodeid, state) as any;
         if (ownProps.view) {
-            ret.views = [];
             ret.view = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(Pointers.from(ownProps.view), state) as DViewElement);
+            if (ret.view) ret.views = [ret.view];
             Log.w(!ret.view, "Requested view "+ownProps.view+" not found. Another view got assigned.", {requested: ownProps.view, props: ownProps, state: ret});
         }
         if (!ret.view) {
             const viewScores = Selectors.getAppliedViews(ret.data,
                 (ownProps.view as LViewElement)?.id || (ownProps.view as string) || null,
                 ownProps.parentViewId || null);
-            ret.views = viewScores.map(e => LViewElement.fromD(e.element));
+            ret.views = viewScores.map<LViewElement>(e => LViewElement.fromD(e.element)).filter(v => !!v);
+            // console.log("debug",  {...this.props, data: this.props.data?.id, view: this.props.view?.id, v0: this.props.views, views: this.props.views?.map( v => v?.id )})
             ret.view = ret.views[0];
+            Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret});
             (ret as any).viewScores = viewScores; // debug only
         }
 
@@ -226,7 +228,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 Log.e(!endnodeid, "Cannot create an edge without end node (yet)", {endnodeid, data:ret.data, propsEnd:edgeOwnProps.end});
                 if (!startnodeid || !endnodeid) return;
                 let longestLabel = edgeOwnProps.label;
-                let labels: DEdge["labels"] = []; // edgeOwnProps.labels || [];
+                let labels: DEdge["labels"] = edgeOwnProps.labels || [];
                 dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, longestLabel, labels);
                 edgeStateProps.node = edgeStateProps.edge = MyProxyHandler.wrap(dge);
             }
@@ -323,18 +325,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return true;
     }
 
-//    commenti con 11/23
-/* can i delete this commented func? 11/23
-    select() {
-        const nodeid = this.props.nodeid
-        if(!nodeid) return;
-        SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);
-    }*/
-    deselectold(forUser?: Pointer<DUser>) {
-        const nodeid = this.props.nodeid
-        if(!nodeid) return;
-        SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);
-    }
+
 
     select(forUser?: Pointer<DUser>): void {
         // if (forUser === DUser.current && this.html.current) this.html.current.focus();
@@ -370,8 +361,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let functionsToBind = [this.onClick,
             this.onLeave, this.onEnter,
             this.doContextMenu, this.onContextMenu,
-            /*this.select, 11/23*/
-            this.onMouseDown, this.onMouseUp, this.onKeyDown];/*
+            this.onMouseDown, this.onMouseUp, this.onKeyDown, this.onScroll];/*
         this.onClick = this.onClick.bind(this);
         this.onLeave = this.onLeave.bind(this);
         this.onContextMenu = this.onContextMenu.bind(this);
@@ -505,18 +495,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 /*11/23
 
-    doContextMenu(e: React.MouseEvent<Element>){
-        const selected = Selectors.getSelected()[DUser.current];
-        const nodeid = this.props.nodeid;
-        const alreadySelected = selected === nodeid;
-        if (!alreadySelected) this.select();
-        SetRootFieldAction.new("contextMenu", {
-            display: true,
-            x: e.clientX,
-            y: e.clientY
-        });
-    }
-* */
     doContextMenu(e: React.MouseEvent<Element>) {
         BEGIN()
         this.props.node.select();
@@ -554,17 +532,36 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         GraphElementComponent.mousedownComponent = this;
         TRANSACTION(()=>{
             if (e.button === Keystrokes.clickRight) { this.doContextMenu(e); }
-            if ((this.props as any).isGraph) GraphDragManager.startPanning(e, this.props.node as LGraph);
+            let p: GObject = this.props;
+            if (p.isGraph && !p.isVertex || p.isGraph && p.isVertex && e.ctrlKey) GraphDragManager.startPanning(e, this.props.node as LGraph);
         })
     }
 
 
+
+    onScroll(e: React.MouseEvent): void {
+        console.log("onScroll");
+        let scroll: Point = new Point(e.currentTarget.scrollLeft, e.currentTarget.scrollTop);
+        let scrollOrigin: Point = new Point(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+        let g: LGraph = this.props.node.graph;
+        let oldZoom: GraphPoint = g.zoom;
+        let newZoom: GraphPoint = new GraphPoint(oldZoom.x+0.1, oldZoom.y+0.1);
+        let oldOffset: GraphPoint = g.offset;
+        let gscrollOrigin: GraphPoint = oldOffset.add(scrollOrigin.multiply(oldZoom, true), true);
+        let newscrollOrigin: GraphPoint = oldOffset.add(scrollOrigin.multiply(newZoom, true), true);
+        let newOffset: GraphPoint = oldOffset.add( gscrollOrigin.subtract(newscrollOrigin, true), true);
+        TRANSACTION(()=>{
+            g.offset = newOffset;
+            g.zoom = newZoom;
+        })
+        e.stopPropagation();
+    }
     onMouseUp(e: React.MouseEvent): void {
         e.stopPropagation();
-        if (GraphElementComponent.mousedownComponent !== this) { return; }
         TRANSACTION(()=>{
+            GraphDragManager.stopPanning(e);
+            if (GraphElementComponent.mousedownComponent !== this) { return; }
             this.doOnClick(e);
-            // if ((this.props as any).isGraph) GraphDragManager.stopPanning(e);
         })
     }
     onKeyDown(e: React.KeyboardEvent){
@@ -593,16 +590,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             ;
         }
     }
-/* 11/23
-*
-    private doOnClick(e: React.MouseEvent): void {
-        e.stopPropagation();
-        SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
-        const isEdgePending = (this.props.isEdgePending?.source);
-        if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
-        if (!this.props.data) return;
-        if (this.props.data.className !== "DClass") return;
-        // const user = this.props.isEdgePending.user;*/
 
     private doOnClick(e: React.MouseEvent): void {
         // (e.target as any).focus();
@@ -672,6 +659,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             this.onViewChange();
             return "Updating view...";
         }*/
+
         if (!this.stopUpdateEvents || this.stopUpdateEvents !== this.props.view.clonedCounter) {
             this.stopUpdateEvents = undefined;
             if (this.doMeasurableEvent(EMeasurableEvents.onDataUpdate)) {
@@ -691,7 +679,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         /// set classes
         if (this.props.node) {
-            let isSelected: Dictionary<Pointer<DUser>, boolean> = this.props.node.__raw.isSelected || {};
+            let isSelected: Dictionary<Pointer<DUser>, boolean> = this.props.node.__raw.isSelected;
             if (isSelected[DUser.current]) { // todo: better to just use css attribute selectors [data-userselecting = "userID"]
                 classes.push('selected-by-me');
                 if (Object.keys(isSelected).length > 1) classes.push('selected-by-others');
@@ -759,6 +747,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         onContextMenu:this.onContextMenu,
                         onMouseDown:this.onMouseDown,
                         onMouseUp:this.onMouseUp,
+                        onMouseWheel: this.onScroll,
                         onMouseEnter:this.onEnter,
                         onMouseLeave:this.onLeave,
                         tabIndex: (this.props as any).tabIndex || -1,

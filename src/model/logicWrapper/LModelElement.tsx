@@ -1,8 +1,19 @@
 import type {
     LVoidVertex,
-    PackagePointers, EdgePointers, AnnotationPointers, AttributePointers, EnumPointers,
-    LiteralPointers, OperationPointers, ObjectPointers, GraphPointers, ParameterPointers, ReferencePointers, VertexPointers,
+    PackagePointers,
+    EdgePointers,
+    AnnotationPointers,
+    AttributePointers,
+    EnumPointers,
+    LiteralPointers,
+    OperationPointers,
+    ObjectPointers,
+    GraphPointers,
+    ParameterPointers,
+    ReferencePointers,
+    VertexPointers,
     ModelPointers,
+    LtoD,
 } from "../../joiner";
 import {
     Abstract,
@@ -65,6 +76,7 @@ import {
     ECoreRoot
 } from "../../api/data";
 import {ValuePointers} from "./PointerDefinitions";
+import {ShortDefaultEClasses} from "../../common/U";
 
 
 @Node
@@ -100,10 +112,6 @@ export class DAnnotationDetail extends DPointerTargetable {
     // todo
 }
 
-/*
-type Pack1<D extends DPointerTargetable, L extends LPointerTargetable = DtoL<D>, P extends Pointer<D, 0, 1, L> = Pointer<D, 0, 1, L>, R = {D:D, L:L, P:P} > = P|D|L
-type PackArr<D extends DPointerTargetable, L extends LPointerTargetable = DtoL<D>, P extends Pointer<D, 0, 1, L> = Pointer<D, 0, 1, L> , ARR = Pack1<D>> = (ARR)[];
-type Pack<D extends DPointerTargetable, L extends LPointerTargetable = DtoL<D>, P extends Pointer<D, 0, 1, L> = Pointer<D, 0, 1, L> , ARR = Pack1<D>> = ARR | (ARR)[];*/
 
 
 @Abstract
@@ -191,6 +199,10 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 return true;
         }
     }
+
+    childNames!: string[];
+    __info_of__childNames: Info = {type: "(json: object, instanceof?: LClass) => LObject", txt: "Array containing the names of all children subelements."};
+    get_childNames(c: Context): string[] { return this.get_children(c).map( (c: GObject<LModelElement>) => c.name).filter(c=>!!c) as string[]; }
 
     public generateEcoreJson(loopDetectionloopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
         throw new Error("cannot be called directly, should trigger getter. this is only for correct signature");
@@ -402,9 +414,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return true;
     }
 
-    protected get_addChild(c: Context): (type?: string, ...params: any[]) => DModelElement { // just for add new, not for add pre-existing.
+    protected get_addChild(c: Context): (type?: string, ...params: any[]) => LModelElement { // just for add new, not for add pre-existing.
         return (type, ...args: any) => {
-            let ret: undefined | ((...params: any[]) => DModelElement);
+            let ret: undefined | ((...params: any[]) => LModelElement);
             if (!type || type === "auto") {
                 switch(c.data.className){
                     case DModel.cname: if ((c.data as DModel).isMetamodel) type = "package"; else type = "object"; break;
@@ -431,7 +443,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     if (!fatherElement) {
                         let model = this.get_model(c);
                         fatherElement = model.packages[0];
-                        if (!fatherElement) fatherElement = LPointerTargetable.fromD(model.addPackage());
+                        if (!fatherElement) fatherElement = model.addPackage();
                     }
                     ret = fatherElement.addClass;
                     //ret = (this as any).get_addClass(context as any);
@@ -442,7 +454,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     if (!fatherElement) {
                         let model = this.get_model(c);
                         fatherElement = model.packages[0];
-                        if (!fatherElement) fatherElement = LPointerTargetable.fromD(model.addPackage());
+                        if (!fatherElement) fatherElement = model.addPackage();
                     }
                     ret = fatherElement.addEnumerator;
                     break;
@@ -461,6 +473,14 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 case "parameter":
                     ret = this.get_operation(c)?.addParameter;
                     break;
+                case "object":
+                    if (c.data.className === "DValue") {
+                        ret = (this as any as LValue).get_addObject(c as any as LogicContext<DValue>);
+                    }
+                    else {
+                        ret = this.get_model(c).addObject;
+                    }
+
                 //case "exception": ret = ((exception: Pack1<LClassifier>) => { let rett = this.get_addException(context as any); rett(exception); }) as any; break;
                 /*case "exception": exceptions should not be "added" here, this is for creating objects. exceptions are not created but just linked. they are classes.
                     ret = (this as any).get_addException(c as any);
@@ -469,40 +489,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             return ret ? ret(...args) : null as any;
         }
     }
-
-    /*
-        protected get_addPackage(context: Context): (() => void) {
-            let ret = () => {};
-            switch (context.data?.className) {
-                default: break;
-                case "DModel": ret = () => LModelElement.addPackage(context.data as DModel); break;
-                case "DPackage": ret = () => LModelElement.addSubPackage(context.data as DPackage); break;
-            }
-            ret();
-            return ret;
-        }
-
-        private static addPackage(dModel: DModel): void {
-            const lModel: LModel = LModelElement.from(dModel);
-            let name = 'package_' + 0;
-            let childrenNames: (string)[] = lModel.packages.map( p => p.name);
-            name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0)
-            const dPackage = DPackage.new(name);
-            CreateElementAction.new(dPackage);
-            let wModel = WPointerTargetable.fromD(dModel);
-            wModel.packages = [...dModel.packages, dPackage];
-        }
-
-        private static addSubPackage_obsolete(dPackage: never): void {
-            const lPackage: LPackage = LPackage.from(dPackage);
-            let name = 'subpackage_' + 0;
-            let childrenNames: (string)[] = lPackage.children.map( p => (p as LPackage).name);
-            name = U.increaseEndingNumber(name, false, false, (newName) => childrenNames.indexOf(newName) >= 0)
-            const dSubPackage = DPackage.new(name);
-            CreateElementAction.new(dSubPackage);
-            let wPackage = WPointerTargetable.fromD(dPackage);
-            wPackage.subpackages = [...dPackage.subpackages, dSubPackage];
-        }*/
 
     protected get_addException(context: Context): () => void {
         let ret = () => {
@@ -1215,8 +1201,8 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     uri!: string;
     prefix: string = '';
     // derived
-    classes!: LClass[];
-    enums!: LEnumerator[];
+    classes!: LClass[] & Dictionary<DocString<"$name">, LClass>;
+    enums!: LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>;
     enumerators!: LEnumerator[];
 
     // utilities to go down in the tree (plural names)
@@ -1254,11 +1240,11 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => this) {
+    protected get_duplicate(context: Context): ((deep?: boolean) => LPackage) {
         return (deep: boolean = false) => {
             BEGIN()
-            let de: D = context.proxyObject.father.addPackage(context.data.name, context.data.uri, context.data.prefix) as D;
-            let le: this = LPointerTargetable.fromD(de);
+            let le: LPackage = context.proxyObject.father.addPackage(context.data.name, context.data.uri, context.data.prefix);
+            let de: D = le.__raw as D;
             let we: WPackage = le as any;
             we.subpackages = deep ? context.proxyObject.subpackages.map( lchild => lchild.duplicate(deep).id) : context.data.subpackages;
             we.classifiers = deep ? context.proxyObject.classifiers.map( lchild => lchild.duplicate(deep).id) : context.data.classifiers;
@@ -1268,48 +1254,72 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         }
     }
 
-    public addPackage(name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]): DPackage { return this.cannotCall("addPackage"); }
+    public addPackage(name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]): LPackage { return this.cannotCall("addPackage"); }
     protected get_addPackage(context: Context): this["addPackage"] {
         console.log("Package.get_addPackage()", {context, thiss:this});
         return (name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]) => {
-            console.log("Package.addPackage()", {name, uri, prefix, context, thiss:this});
-
-            const me = DPackage.new(name, uri, prefix, context.data.id, true, DPackage);
-            return me;
+            return LPointerTargetable.fromD(DPackage.new(name, uri, prefix, context.data.id, true, DPackage));
         }
     }
 
     public addClass(name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
-                    isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]): DClass {
+                    isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]): LClass {
         return this.cannotCall("addClass"); }
     protected get_addClass(context: Context): this["addClass"] {
         return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                 isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]
-        ) => DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, context.data.id, true); }
+        ) => LPointerTargetable.fromD(DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, context.data.id, true));
+    }
 
-    public addEnum(...p:Parameters<this["addEnumerator"]>): DEnumerator { return this.addEnumerator(...p); }
+    public addEnum(...p:Parameters<this["addEnumerator"]>): LEnumerator { return this.addEnumerator(...p); }
     protected get_addEnum(context: Context): this["addEnumerator"] { return this.get_addEnumerator(context); }
-    public addEnumerator(name?: DEnumerator["name"]): DEnumerator { return this.cannotCall("addEnumerator"); }
+    public addEnumerator(name?: DEnumerator["name"]): LEnumerator { return this.cannotCall("addEnumerator"); }
     protected get_addEnumerator(context: Context): this["addEnumerator"] {
-        return (name?: DEnumerator["name"]) => DEnumerator.new(name, context.data.id, true); }
+        return (name?: DEnumerator["name"]) => LPointerTargetable.fromD(DEnumerator.new(name, context.data.id, true)); }
 
-    protected get_classes(context: Context): LClass[] {
-        let classifiers = DPointerTargetable.fromPointer(context.data.classifiers as Pointer<DClassifier, 1, 1, LClassifier>[]);
-        let enumerators = classifiers.filter(dc => dc?.className === DClass.cname ) as DClass[];
-        return LPointerTargetable.from(enumerators.map(e=> e.id)); }
-    protected get_enums(context: Context): LEnumerator[] { return this.get_enumerators(context); }
-    protected get_enumerators(context: Context): LEnumerator[] {
-        let classifiers = DPointerTargetable.fromPointer(context.data.classifiers as Pointer<DClassifier, 1, 1, LClassifier>[]);
-        let enumerators = classifiers.filter(dc => dc?.className === DEnumerator.cname ) as DEnumerator[];
-        return LPointerTargetable.from(enumerators.map(e=> e.id)); }
+    protected get_classes(context: Context, state?: DState, setNameKeys: boolean = true): LClass[] & Dictionary<DocString<"$name">, LClass> {
+        if (!context.data.classifiers.length) return [] as any;
+        if (!state) state = store.getState();
+        let classifiers = DPointerTargetable.fromPointer(context.data.classifiers as Pointer<DClassifier, 1, 1, LClassifier>[], state);
+        let dclasses = classifiers.filter(dc => dc?.className === DClass.cname) as DClass[];
+        let lclasses: LClass[] & Dictionary<DocString<"$name">, LClass> = LPointerTargetable.fromD(dclasses) as any;
+        if (setNameKeys) for (let i = 0; i < dclasses.length; i++) lclasses["$"+dclasses[i].name] = lclasses[i];
+        return lclasses;
+    }
+    protected get_enums(context: Context): (LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>) { return this.get_enumerators(context); }
+    protected get_enumerators(context: Context, state?: DState, setNameKeys: boolean = true): (LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>) {
+        if (!context.data.classifiers.length) return [] as any;
+        if (!state) state = store.getState();
+        let classifiers = DPointerTargetable.fromPointer(context.data.classifiers as Pointer<DClassifier, 1, 1, LClassifier>[], state);
+        let denums = classifiers.filter(dc => dc?.className === DEnumerator.cname) as DEnumerator[];
+        let lenums: LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator> = LPointerTargetable.fromD(denums) as any;
+        if (setNameKeys) for (let i = 0; i < denums.length; i++) (lenums as GObject)["$"+denums[i].name] = lenums[i];
+        return lenums;
+    }
+    //private get_allClasses(context: Context): LClass[] & Dictionary<DocString<"$name">, LClass> { return this.get_allSubClasses(c); }
+    private get_allSubClasses(context: Context): LClass[] & Dictionary<DocString<"$name">, LClass> {
+        // if (!context.data.isMetamodel) return (context.data.instanceof?.allSubClasses(context) || [] as any);
+        const s: DState = store.getState();
+        let arr = this.get_allSubPackages(context, s);
+        let ret: (LClass[] & Dictionary<DocString<"$name">, LClass>) = [] as any;
+        // this.get_allSubPackages(context, s).flatMap(p => (p.classes || [])); this was losing the naming $keys!
+        for (let a of arr) {
+            let classarr: LClass[] & Dictionary<DocString<"$name">, LClass> = (a.classes || []) as any;
+            for (let key of Object.getOwnPropertyNames(classarr)) { if (key !== "length") ret[key] = classarr[key]; }
+        }
+        return ret; }
 
-    private get_allSubClasses(context: Context): LClass[] {
+    private get_allSubEnums(context: Context): (LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>) { return this.get_allSubEnumerators(context); }
+    private get_allSubEnumerators(context: Context): (LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>) {
         const s: DState = store.getState();
-        return this.get_allSubPackages(context, s).flatMap(p => p.classes || []); }
-    private get_allSubEnums(context: Context): LEnumerator[] { return this.get_allSubEnumerators(context); }
-    private get_allSubEnumerators(context: Context): LEnumerator[] {
-        const s: DState = store.getState();
-        return this.get_allSubPackages(context, s).flatMap(p => (p.enums || []));
+        let arr = this.get_allSubPackages(context, s);
+        let ret: (LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>) = [] as any;
+        // this.get_allSubPackages(context, s).flatMap(p => (p.enums || [])); this was losing the naming $keys!
+        for (let a of arr) {
+            let enumarr: (LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>) = (a.enumerators || []) as any;
+            for (let key of Object.getOwnPropertyNames(enumarr)) { if (key !== "length") ret[key] = enumarr[key]; }
+        }
+        return ret;
     }
 
     private get_allSubPackages(context: Context, state?: DState): LPackage[] {
@@ -1510,10 +1520,11 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => this) {
+    protected get_duplicate(context: Context): ((deep?: boolean) => LOperation) {
         return (deep: boolean = false) => {
             BEGIN()
-            let de: D = context.proxyObject.father.addOperation(context.data.name, context.data.type) as D;
+            let le: LOperation = context.proxyObject.father.addOperation(context.data.name, context.data.type);
+            let de: D = le.__raw as D;
             de.many = context.data.many;
             de.lowerBound = context.data.lowerBound;
             de.upperBound = context.data.upperBound;
@@ -1522,7 +1533,6 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
             de.unique = context.data.unique;
             de.visibility = context.data.visibility;
             de.exceptions = context.data.exceptions;
-            let le: this = LPointerTargetable.fromD(de);
             let we: WOperation = le as any;
             we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
             we.parameters = deep ? context.proxyObject.parameters.map(lchild => lchild.duplicate(deep).id) : context.data.parameters;
@@ -1531,9 +1541,9 @@ export class LOperation<Context extends LogicContext<DOperation> = any, C extend
             return le; }
     }
 
-    public addParameter(name?: DParameter["name"], type?: DParameter["type"]): DParameter { return this.cannotCall("addParameter"); }
+    public addParameter(name?: DParameter["name"], type?: DParameter["type"]): LParameter { return this.cannotCall("addParameter"); }
     protected get_addParameter(context: Context): this["addParameter"] {
-        return (name?: DParameter["name"], type?: DParameter["type"]) => DParameter.new(name, type, context.data.id, true); }
+        return (name?: DParameter["name"], type?: DParameter["type"]) => LPointerTargetable.fromD(DParameter.new(name, type, context.data.id, true)); }
 
     public execute(thiss: LObject, ...params: any): any { return this.cannotCall("execute"); }
     protected get_execute(context: Context): ((thiss: LObject, ...params: any[])=>any) {
@@ -1704,17 +1714,17 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => this) {
+    protected get_duplicate(context: Context): ((deep?: boolean) => LParameter) {
         return (deep: boolean = false) => {
             BEGIN()
-            let de: D = context.proxyObject.father.addParameter(context.data.name, context.data.type) as D;
+            let le: LParameter = context.proxyObject.father.addParameter(context.data.name, context.data.type);
+            let de: D = le.__raw as D;
             de.many = context.data.many;
             de.lowerBound = context.data.lowerBound;
             de.upperBound = context.data.upperBound;
             de.ordered = context.data.ordered;
             de.required = context.data.required;
             de.unique = context.data.unique;
-            let le: this = LPointerTargetable.fromD(de);
             let we: WParameter = le as any;
             we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
             END()
@@ -1786,9 +1796,9 @@ export class DClass extends DPointerTargetable { // extends DClassifier
     // hideExcessFeatures: boolean = true; // isn't it like partial?? // old comment: se attivo questo e creo una DClass di sistema senza nessuna feature e di nome Object, ho creato lo schema di un oggetto schema-less a cui tutti sono conformi
 
     public static new(name?: DNamedElement["name"], isInterface: DClass["interface"] = false, isAbstract: DClass["abstract"] = false, isPrimitive: DClass["isPrimitive"] = false, partial?: DClass["partial"],
-                      partialDefaultName?: DClass["partialdefaultname"], father?: Pointer, persist: boolean = true): DClass {
+                      partialDefaultName?: DClass["partialdefaultname"], father?: Pointer, persist: boolean = true, id?: string): DClass {
         if (!name) name = this.defaultname("Concept ", father);
-        return new Constructors(new DClass('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
+        return new Constructors(new DClass('dwc'), father, persist, undefined, id).DPointerTargetable().DModelElement()
             .DNamedElement(name).DClassifier().DClass(isInterface, isAbstract, isPrimitive, partial, partialDefaultName).end();
     }
 
@@ -1873,7 +1883,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
     allAttributes!: LAttribute[];
     allReferences!: LReference[];
-    allOperations!: LOperation[];
+    allOperations!: LOperation[]; // includes inherited and shadowed features
     allChildren!: (LStructuralFeature|LOperation)[];
 
 
@@ -1883,6 +1893,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     parameters!: LParameter[] | null;
     // [`@${string}`]: LModelElement; todo: try to put it
 
+    get_childNames(c: Context): string[] { return this.get_allChildren(c).map( c => c.name).filter(c=>!!c) as string[]; }
     protected get_ownAttributes(context: Context): this['ownAttributes'] {
         return LAttribute.fromPointer(context.data.attributes);
     }
@@ -1984,13 +1995,13 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => this) {
+    protected get_duplicate(context: Context): ((deep?: boolean) => LClass) {
         return (deep: boolean = false) => {
-            let ret: this = undefined as any;
+            let ret: LClass = undefined as any;
             TRANSACTION( () => {
-                let de: D = context.proxyObject.father.addClass(context.data.name, context.data.interface, context.data.abstract, context.data.isPrimitive) as D;
+                let le: LClass = context.proxyObject.father.addClass(context.data.name, context.data.interface, context.data.abstract, context.data.isPrimitive);
+                let de: D = le.__raw as D;
                 // de.hideExcessFeatures = context.data.hideExcessFeatures;
-                let le: this = LPointerTargetable.fromD(de);
                 let we: WClass = le as any;
                 we.defaultValue = context.data.defaultValue;
                 we.extends = context.data.extends;
@@ -2013,19 +2024,20 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     protected set_partialdefaultname(val: D["partialdefaultname"], context: Context): boolean { return SetFieldAction.new(context.data.id, "partialdefaultname", val, undefined, false); }
     protected get_partialdefaultname(context: Context): D["partialdefaultname"] { return context.data.partialdefaultname; }
 
-    public addAttribute(name?: DAttribute["name"], type?: DAttribute["type"]): DAttribute { return this.cannotCall("addAttribute"); }
+    public addAttribute(name?: DAttribute["name"], type?: DAttribute["type"]): LAttribute { return this.cannotCall("addAttribute"); }
     protected get_addAttribute(context: Context): this["addAttribute"] {
-        return (name?: DAttribute["name"], type?: DAttribute["type"]) => DAttribute.new(name, type, context.data.id, true);
+        return (name?: DAttribute["name"], type?: DAttribute["type"]) => LPointerTargetable.fromD(DAttribute.new(name, type, context.data.id, true));
     }
 
-    public addReference(name?: DReference["name"], type?: DReference["type"]): DReference { return this.cannotCall("addReference"); }
+    public addReference(name?: DReference["name"], type?: DReference["type"]): LReference { return this.cannotCall("addReference"); }
     protected get_addReference(context: Context): this["addReference"] {
-        return (name?: DReference["name"], type?: DReference["type"]) => DReference.new(name, type, context.data.id, true);
+        return (name?: DReference["name"], type?: DReference["type"]) => LPointerTargetable.fromD(DReference.new(name, type, context.data.id, true));
     }
 
-    public addOperation(name?: DOperation["name"], type?: DOperation["type"]): DOperation { return this.cannotCall("addOperation"); }
+    public addOperation(name?: DOperation["name"], type?: DOperation["type"]): LOperation { return this.cannotCall("addOperation"); }
     protected get_addOperation(context: Context): this["addOperation"] {
-        return (name?: DOperation["name"], type?: DOperation["type"]) => DOperation.new(name, type, [], context.data.id, true); }
+        return (name?: DOperation["name"], type?: DOperation["type"]) => LPointerTargetable.fromD(DOperation.new(name, type, [], context.data.id, true));
+    }
 
 
     protected get_abstract(context: Context): this["abstract"] { return context.data.abstract; }
@@ -2229,12 +2241,21 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             {reason: '', allTargetSuperClasses: []}) => this._canExtend(context, superclass, output);
     }
 
-    public isExtending(superclass: LClassifier, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
-        return this.cannotCall("isExtending");
-    }
+    public isExtending(superclass: Pack1<LClass>, directly: boolean = false): boolean { return this.cannotCall("isExtending"); }
+    public isSubclassOf(superclass: Pack1<LClass>, directly: boolean = false): boolean { return this.cannotCall("isSubclassOf"); }
+    __info_of__isSubclassOf: Info = {type: "(superclass: Pointer | LClass, directly: boolean = false) => boolean", txt: "Alias for isExtending"};
+    __info_of__isExtending: Info = {type: "(superclass: Pointer | LClass, directly: boolean = false) => boolean",
+        txt:<div>Tells if "this" is a subclass of the "superclass" parameter.
+            <br/>- If "directly" is set to true, it will only include direct subclassing as in "class A extends C" not considering chains.
+            <br/>    If "directly" is set to true: "class A extends B" & "Class B extends C". In that case A.isExtending(C, true) will return false.</div>};
 
-    private get_isExtending(context: Context): this["isExtending"] {
-        return null as any; // todo
+    private get_isSubclassOf(c: Context, plusThis: boolean = true): this["isExtending"] { return this.get_isExtending(c, plusThis); }
+    private get_isExtending(c: Context, plusThis: boolean = true): this["isExtending"] {
+        return (superclass: Pack1<LClass>, directly: boolean = false): boolean => {
+            let ptr = Pointers.from(superclass);
+            if (directly) return c.data.extends.includes(ptr);
+            return this.get_superclasses(c, plusThis).map(classe=>classe.id).includes(ptr);
+        }
     }
 
     private get_superclasses(context: Context, plusThis: boolean = false): LClass[] {
@@ -2254,13 +2275,32 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return ret;
     }
 
-    private get_allSubClasses(context: Context, plusThis: boolean = false): LClass[] {
+    private get_allSubClasses(context: Context, plusThis: boolean = false, state?: DState): LClass[] {
         const thiss: LClass = context.proxyObject;
-        const set: Set<LClass> = plusThis ? new Set<LClass>([thiss]) : new Set();
-        for (let i = 0; i < thiss.extendedBy.length; i++) {
-            // todo: would this access get_extendedBy 2*N times?? verify and optimize
-            U.SetMerge(true, set, thiss.extendedBy[i].allSubClasses); }
-        return [...set]; }
+        let extendedBy = thiss.extendedBy;
+        let ebyIDS = extendedBy.map(e => e.id);
+        /* old version, remade longer but more efficient
+        const set: Set<LClass> = plusThis ? new Set<LClass>([thiss.id, ...ebyIDS]) : new Set(ebyIDS);
+        for (let i = 0; i < extendedBy.length; i++) { U.SetMerge(true, set, extendedBy[i].allSubClasses.map(e=>e.id)); }*/
+        let parsedSubclasses: Dictionary<Pointer, DClass> = {}
+        parsedSubclasses[context.data.id] = context.data;
+        let stack: DClass[] = [context.data];
+        if (!state && !context.data.extendedBy?.length) state = store.getState();
+        while (stack.length) {
+            let newstack: DClass[] = [];
+            for (let d of stack) {
+                for (let sid of d.extendedBy) {
+                    if (!sid || parsedSubclasses[sid]) continue;
+                    let d: DClass = DClass.from(sid, state);
+                    if (!d) continue;
+                    parsedSubclasses[sid] = d;
+                    newstack.push(d);
+                }
+            }
+            stack = newstack;
+        }
+        if (!plusThis) delete parsedSubclasses[context.data.id];
+        return Object.values(parsedSubclasses).map(d=>LPointerTargetable.fromD(d)); }
 
 
     private _canExtend(context: Context, superclass: LClass, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
@@ -2604,7 +2644,7 @@ export class DReference extends DPointerTargetable { // DStructuralFeature
     containment: boolean = false;
     container: boolean = false; // ?
     resolveProxies: boolean = true; // ?
-    opposite!: Pointer<DReference, 0, 1, LReference>;
+    opposite?: Pointer<DReference>;
     target: Pointer<DClass, 0, 'N', LClass> = [];
     edges: Pointer<DEdge, 0, 'N', LEdge> = [];
 
@@ -2692,10 +2732,12 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => this) {
+    protected get_duplicate(context: Context): ((deep?: boolean) => LReference) {
         return (deep: boolean = false) => {
             BEGIN()
-            let de: D = context.proxyObject.father.addReference(context.data.name, context.data.type) as D;
+            let le: LReference = context.proxyObject.father.addReference(context.data.name, context.data.type);
+            let de: D = le.__raw as D;
+
             de.many = context.data.many;
             de.lowerBound = context.data.lowerBound;
             de.upperBound = context.data.upperBound;
@@ -2710,7 +2752,6 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
             de.transient = context.data.transient;
             de.unsettable = context.data.unsettable;
             de.volatile = context.data.unsettable;
-            let le: this = LPointerTargetable.fromD(de);
             let we: WReference = le as any;
             we.opposite = context.data.opposite || undefined;
             we.defaultValue = context.data.defaultValue;
@@ -2724,7 +2765,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     protected set_type(val: Pack1<this["type"]>, context: Context): boolean { return super.set_type(val, context); }
 
     public addClass(name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
-                    isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]): DClass {
+                    isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]): LClass {
         return this.cannotCall("LReference.addClass"); }
     protected get_addClass(context: Context): this["addClass"] {
         return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
@@ -2734,7 +2775,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
             // SetFieldAction.new(context.data.id, "type", dclass.id);
             this.set_type(dclass.id as any, context);
             END();
-            return dclass;
+            return LPointerTargetable.fromD(dclass);
         } }
 
 
@@ -2756,7 +2797,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         return true;
     }
 
-    protected get_opposite(context: Context): this["opposite"] { return LPointerTargetable.from(context.data.opposite); }
+    protected get_opposite(context: Context): this["opposite"] { return context.data.opposite && LPointerTargetable.from(context.data.opposite); }
     protected set_opposite(val: Pack<LReference | undefined>, context: Context): boolean {
         SetFieldAction.new(context.data, 'opposite', Pointers.from(val) as any as LAnnotation["id"], "", true);
         return true;
@@ -2914,10 +2955,11 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => this) {
+    protected get_duplicate(context: Context): ((deep?: boolean) => LAttribute) {
         return (deep: boolean = false) => {
             BEGIN()
-            let de: D = context.proxyObject.father.addAttribute(context.data.name, context.data.type) as D;
+            let le: LAttribute = context.proxyObject.father.addAttribute(context.data.name, context.data.type);
+            let de: D = le.__raw as D;
             de.many = context.data.many;
             de.lowerBound = context.data.lowerBound;
             de.upperBound = context.data.upperBound;
@@ -2932,7 +2974,6 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
             de.unsettable = context.data.unsettable;
             de.volatile = context.data.volatile;
             de.isID = context.data.isID
-            let le: this = LPointerTargetable.fromD(de);
             let we: WAttribute = le as any;
             we.type = context.data.type;
             we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
@@ -2940,11 +2981,11 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
             return le; }
     }
 
-    public addEnum(...p:Parameters<this["addEnumerator"]>): DEnumerator { return this.addEnumerator(...p); }
+    public addEnum(...p:Parameters<this["addEnumerator"]>): LEnumerator { return this.addEnumerator(...p); }
     protected get_addEnum(context: Context): this["addEnumerator"] { return this.get_addEnumerator(context); }
-    public addEnumerator(name?: DEnumerator["name"], father?: DEnumerator["father"]): DEnumerator { return this.cannotCall("Attribute.addEnumerator"); }
+    public addEnumerator(name?: DEnumerator["name"], father?: DEnumerator["father"]): LEnumerator { return this.cannotCall("Attribute.addEnumerator"); }
     protected get_addEnumerator(context: Context): this["addEnumerator"] {
-        return (name?: DEnumerator["name"], father?: DEnumerator["father"]) => DEnumerator.new(name, context.proxyObject.package?.id, true); }
+        return (name?: DEnumerator["name"], father?: DEnumerator["father"]) => LPointerTargetable.fromD(DEnumerator.new(name, context.proxyObject.package?.id, true)); }
 
     protected get_ID(context: Context): this["isID"] { return context.data.isID; }
     protected set_ID(val: this["isID"], context: Context): boolean {
@@ -3046,13 +3087,13 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => this) {
+    protected get_duplicate(context: Context): ((deep?: boolean) => LEnumLiteral) {
         return (deep: boolean = false) => {
             BEGIN()
-            let de: D = context.proxyObject.father.addLiteral(context.data.name, context.data.value) as D;
+            let le: LEnumLiteral = context.proxyObject.father.addLiteral(context.data.name, context.data.value);
+            let de: D = le.__raw as D;
             de.literal = context.data.literal;
             de.value = context.data.value;
-            let le: this = LPointerTargetable.fromD(de);
             let we: WEnumLiteral = le as any;
             we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
             END()
@@ -3075,10 +3116,10 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
             Log.e(true, "that ordinal place is already taken by " + ordinals[val].name, {sameOrdinalLit:ordinals[val], ordinals, thiss:context.data});
             return true; }
         return SetFieldAction.new(context.data, 'value', val); }
-/*
-    protected get_literal(context: Context): this["literal"] { return context.data.literal; }
-    protected set_literal(val: this["literal"], context: Context): boolean {
-        return SetFieldAction.new(context.data, 'literal', val, '', false); }*/
+    /*
+        protected get_literal(context: Context): this["literal"] { return context.data.literal; }
+        protected set_literal(val: this["literal"], context: Context): boolean {
+            return SetFieldAction.new(context.data, 'literal', val, '', false); }*/
     protected get_literal(context: Context): this["literal"] { return context.data.name; }
     protected set_literal(val: this["literal"], context: Context): boolean {
         if (val === context.data.name) return true;
@@ -3180,13 +3221,13 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => this) {
+    protected get_duplicate(context: Context): ((deep?: boolean) => LEnumerator) {
         return (deep: boolean = false) => {
             BEGIN()
-            let de: D = context.proxyObject.father.addEnumerator(context.data.name) as D;
+            let le: LEnumerator = context.proxyObject.father.addEnumerator(context.data.name);
+            let de: D = le.__raw as D;
             de.defaultValue = context.data.defaultValue;
             de.serializable = context.data.serializable;
-            let le: this = LPointerTargetable.fromD(de);
             let we: WEnumerator = le as any;
             we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
             we.literals = deep ? context.proxyObject.literals.map(lchild => lchild.duplicate(deep).id) : context.data.literals;
@@ -3198,9 +3239,9 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
     protected get_children_idlist(context: Context): Pointer<DAnnotation | DEnumLiteral, 1, 'N'> {
         return [...super.get_children_idlist(context) as Pointer<DAnnotation | DEnumLiteral, 1, 'N'>, ...context.data.literals]; }
 
-    public addLiteral(name?: DEnumLiteral["name"], value?: DEnumLiteral["value"]): DEnumLiteral { return this.cannotCall("addLiteral"); }
+    public addLiteral(name?: DEnumLiteral["name"], value?: DEnumLiteral["value"]): LEnumLiteral { return this.cannotCall("addLiteral"); }
     protected get_addLiteral(context: Context): this["addLiteral"] {
-        return (name?: DEnumLiteral["name"], value?: DEnumLiteral["value"]) => DEnumLiteral.new(name, value, context.data.id, true); }
+        return (name?: DEnumLiteral["name"], value?: DEnumLiteral["value"]) => LPointerTargetable.fromD(DEnumLiteral.new(name, value, context.data.id, true)); }
 
     protected get_literals(context: Context): this["literals"] {
         return context.data.literals.map((pointer) => {
@@ -3308,7 +3349,7 @@ export class DModel extends DNamedElement { // DNamedElement
     isMetamodel: boolean = true;
     objects: Pointer<DObject, 0, 'N', LObject> = [];
     models: Pointer<DModel, 0, 'N', LModel> = [];
-    instanceof!: Pointer<DModel, 0, 1, LModel>;
+    instanceof?: Pointer<DModel>;
 
     public static new(name?: DNamedElement["name"], instanceoff?: DModel["instanceof"], isMetamodel?: DModel["isMetamodel"], persist: boolean = true): DModel {
         let dmodels: DModel[] = Selectors.getAll(DModel, undefined, undefined, true, false);
@@ -3411,9 +3452,9 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     roots!: LObject[];
 
     // utilities to go down in the tree (plural names)
-    enums!: LEnumerator[]; // alias for enumerators
-    enumerators!: LEnumerator[];
-    classes!: LClass[];
+    enums!: LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>; // alias for enumerators
+    enumerators!: LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>;
+    classes!: LClass[] & Dictionary<DocString<"$name">, LClass>;
     operations!: LOperation[];
     parameters!: LParameter[];
     exceptions!: LClassifier[];
@@ -3452,72 +3493,237 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 
         return json; }
 
-    public addPackage(name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]): DPackage { return this.cannotCall("addPackage"); }
-    public get_addPackage(context: Context): ((name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => DPackage) {
+    public addPackage(name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]): LPackage { return this.cannotCall("addPackage"); }
+    public get_addPackage(context: Context): ((name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => LPackage) {
         console.log("Model.addPackage()", {context, thiss: this});
         return (name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => {
-            console.log("Model.addPackage()", {name, uri, prefix, context, thiss: this}); //
-            const me = DPackage.new(name, uri, prefix, context.data.id, true, DModel);
-            return me;
+            return LPointerTargetable.fromD(DPackage.new(name, uri, prefix, context.data.id, true, DModel));
         }
     }
 
-    public addObject(instanceoff?:DObject["instanceof"], name?: DObject["name"]): DObject { return this.cannotCall("addObject"); }
-    protected get_addObject(context: Context): this["addObject"] {
-        return (instanceoff?:DObject["instanceof"], name?: DObject["name"]) => {
-            const dObject = DObject.new(instanceoff, context.data.id, DModel, undefined, true);
-            /*
-            if(!instanceoff) return dObject;
-            let father: LClass|undefined = LClass.fromPointer(instanceoff)?.extends?.[0];
-            while(father) {
-                for(let lFeature of [...father.attributes, ...father.references])
-                    DValue.new(lFeature.name, lFeature.id, undefined, dObject.id);
-                father = (father.extends.length > 0) ? father.extends[0] : undefined;
-            }
-            */
-            return dObject;
+    public static namesORDObjectsToID<T extends DPointerTargetable = DPointerTargetable>(a: T): Pointer<T>[];
+    public static namesORDObjectsToID<T extends DPointerTargetable = DPointerTargetable>(a: T[]): Pointer<T>[];
+    public static namesORDObjectsToID<L extends LPointerTargetable = LPointerTargetable>(a: L): Pointer<LtoD<L>>[];
+    public static namesORDObjectsToID<L extends LPointerTargetable = LPointerTargetable>(a: L[]): Pointer<LtoD<L>>[];
+    public static namesORDObjectsToID<T extends DPointerTargetable = DPointerTargetable>(a: Pointer<T>): Pointer<T>[];
+    public static namesORDObjectsToID<T extends DPointerTargetable = DPointerTargetable>(a: Pointer<T>[]): Pointer<T>[];
+    public static namesORDObjectsToID(a: string, namedCandidates: LModelElement[]): Pointer[];
+    public static namesORDObjectsToID(a: string[], namedCandidates: LModelElement[]): Pointer[];
+    public static namesORDObjectsToID(a: string | LClass | DClass | Pointer, namedCandidates: LModelElement[]): Pointer[];
+    public static namesORDObjectsToID(a: (string | LClass | DClass | Pointer)[], namedCandidates: LModelElement[]): Pointer[];
+    public static namesORDObjectsToID<T extends DPointerTargetable = DPointerTargetable>(a: orArr<(string | T | Pointer<T>)>): Pointer<T>[];
+    // return the first array parameter converted in an array of pointers. The second parameter is the scope where names are allowed to match. if empty all class.names will fail mapping to id's.
+    // second parameter is mandatory when the array contain names, to prevent looking into class names of different models.
+    public static namesORDObjectsToID<T extends DPointerTargetable = DPointerTargetable>(targets: orArr<(string | T | Pointer<T>)>, namedCandidates?: LModelElement[]): Pointer<T>[] {
+        // let targets = any[] = (!Array.isArray(targets0)) ? targets0 : [targets0];
+        if (!targets) return [];
+        let ret: Pointer<T>[] = [];
+        let state: DState = store.getState();
+        if (targets && !Array.isArray(targets)) targets = [targets];
+        let dnamedcandidates: DNamedElement[] = namedCandidates ? DPointerTargetable.fromArr(namedCandidates as any) as DNamedElement[] : [];
+        let dAllowedNamesMap: Dictionary<DocString<"name">, Pointer<T>> = (dnamedcandidates as any[]).reduce( (acc, val) => { acc[val.name] = val.id; return acc; }, {});
+        //let dtargets: DNamedElement[] = targets ? DPointerTargetable.fromArr(targets) as DNamedElement[] : [];
+        let tmp: Pointer<T> | undefined;
+        for (let target of targets) {
+            // try as name
+            tmp = dAllowedNamesMap[target as string];
+            if (tmp) { ret.push(tmp); continue; }
+            // try as $name
+            tmp = dAllowedNamesMap["$" + target as string];
+            if (tmp) { ret.push(tmp); continue; }
+            // try as id
+            let d: DNamedElement = DPointerTargetable.from(target as Pointer, state);
+            if (d && dAllowedNamesMap[d.name]) { ret.push(target as Pointer<T>); continue; }
+            Log.w("namesORDObjectsToID() could not resolve name:", {name: target, namedCandidates, targets});
         }
+        return ret;
+    }
+
+    _defaultGetter(c: Context, key: string): any {
+        if (!c.data.isMetamodel) return this._defaultGetterM1(c, key);
+        return this._defaultGetterM2(c, key);
+    }
+    _defaultGetterM2(c: Context, key: string): any{
+        return Log.e("Could not find property " + key + " on MetaModel", {c, key, m2});
+    }
+    _defaultGetterM1(c: Context, key: string): any{
+        // if m1.$m2classname"s" then --> this.instancesOf("m2classname")
+        // if m1.$m2classname then ---> m2.$m2classname (lower priority, if there are 2 metaclasses differing only by final s,
+        // the one with 1 more final "s" if shadowed by the instances of the one with 1 less final "s",
+        // in that case you can access the shadowed one through m1.instanceof.$classnames
+        // priorities: 1) m1 name natch --> m1object. 2) m2 exact name match --> m2item, 3) m2 name+"s" match --> instances
+        // to access m2 classes within a package, need to navigate it like model.$packagename.Ssubcpackagename.$classname,
+        // path + "s" won't work in that case, and need to use this.getInstancesOf instead
+        if (key[0] === "$"){
+            let m2: LModel | undefined = this.get_model(c).instanceof;
+            if (!m2) return Log.e("Could not find property " + key + " on M1 Model", {c, key, m2});
+            let m2item: LClass | LPackage;
+            // check for a perfect m2 name match and return it
+            m2item = (m2 as GObject)[key];
+            if (m2item) return m2item; //this.instancesOf(key);
+            if (!m2) return Log.e("Could not find property " + key + " on M1 Model", {c, key, m2});
+            // if not a perfect name match, i try name+s match for instances
+            if (key[key.length - 1] === "s") {
+                let key1 = key.substring(key.length - 1);
+                m2item = (m2 as GObject)[key1];
+                if (m2item) {
+                    if (m2item.className === "DClass") return this.get_instancesOf(c)(m2item as LClass);
+                    else return Log.e("Could not get instances of " + key1 + ".", {c, key, m2});
+                }
+            }
+            if (!m2) return Log.e("Could not find any subelement with name " + key + " on M1 or M2 Models", {c, key, m1: c.data, m2});
+        }
+    }
+    private static otherObjectsTemp: Dictionary<DocString<"className">, LObject[]> = undefined as any;
+    private static otherObectsAccessedKeys: DocString<"className">[] = [];
+    // public otherObjectsSetup(){ LModel.otherObjectsTemp = undefined; LModel.otherObectsAccessedKeys = []; }
+    otherObjects!: (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[];
+    otherInstances!: (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[];
+    __info_of__otherObjects: Info = {type:"(...excludeInstances: (string|LClass|Pointer)[], excludeSubclasses: boolean = false)=>LObject[]", txt:<div>Alias for this.otherInstances.</div>};
+    __info_of__otherInstances: Info = {type:"(...excludeInstances: (string|LClass|Pointer)[], excludeSubclasses: boolean = false)=>LObject[]", txt:<div>Read this.instancesOf documentation first.
+            <br/>Retrieves all the objects not obtained between previous calls of this.instancesOf and the last call of this method.
+            <br/>Meaning calling it twice without any instancesOf in between, it will return all objects.</div>};
+
+    public get_otherObjects(c: Context): (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[]{
+        return this.get_otherInstances(c); }
+    public get_otherInstances(c: Context): (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[]{
+        return (excludeInstances: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false)=>{
+            let ret: LObject[];
+            this.get_instancesOf(c)(excludeInstances, includeSubclasses) // and drop the result
+            if (!LModel.otherObjectsTemp) { ret = this.get_allSubObjects(c); }
+            else {
+                let dict = {...LModel.otherObjectsTemp};
+                for (let key of LModel.otherObectsAccessedKeys) delete dict[key];
+                delete (LModel as any).otherObjectsTemp;
+                delete (LModel as any).otherObectsAccessedKeys;
+                ret = Object.values(dict).flat();
+            }
+            return ret;
+        }
+    }
+    // not meant to be called directly.
+    private _populateOtherObjects(c:Context, classes?: LClass[]): void {
+        // from names, DClass and ptrs, make them only ptrs. all classes of this model are valid name targets.
+        // nb: cannot optimize getting only instantiated classes from this.get_allSubObjects because if a class have 0 instances should have an empty array instead of undefined (risk jsx crash)
+        let state: DState = store.getState();
+        let dinstancetypes: DClass[] = (classes || this.get_classes(c, state)).map(c => c.__raw);
+        let namemap: Dictionary<DocString<"className">, DClass> = {};
+        namemap = dinstancetypes.reduce( (acc, current) => { namemap[current.name] = current; return namemap; }, namemap);
+        let idtoname: Dictionary<Pointer, string> = {};
+        for (let n in namemap) {idtoname[namemap[n].id] = n; }
+        // make it more general, first make a dictionary holding all selected types as keys, including "_other"
+        // then a SEPARATE (split this) function to return only the selected keys, merging the subarrays in the global naming instance map.
+        LModel.otherObjectsTemp = {};
+        LModel.otherObectsAccessedKeys = [];
+        // part 1: i add empty arrays for all instances, but not include shapeless objects.
+        for (let name in namemap) { LModel.otherObjectsTemp[name] = []; } //LPointerTargetable.fromPointer(namemap[name].instances); }
+        // part 2: for shapeless objs too
+        LModel.otherObjectsTemp[undefined as any] = [];
+        let allObjects: LObject[] = this.get_allSubObjects(c, state);
+        // part 3: now i populate the Model.otherObjectsTemp dictionary arrays
+        for (let o of allObjects) {
+            // if (o.__instanceof) continue;
+            let name: string | undefined = idtoname[o.__raw.instanceof];
+            if (!LModel.otherObjectsTemp[name]) {
+                LModel.otherObjectsTemp[name] = [o];
+                Log.eDev("model._populateOtherObjects() this case should never happen", {name, o, allObjects, namemap, idtoname});
+            }
+            else LModel.otherObjectsTemp[name].push(o);
+        }
+    }
+
+    public instancesOf(instancetypes0: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false): LObject[]{ return this.cannotCall("instancesOf"); }
+    public __type_of__instancesOf: Info = {type: "(instancetypes: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false) => LObject[]",
+        txt:<div>Retrieves all objects instancing a target class.
+            <br/>The first parameter is the targeted class, which can be his name, pointer or object.
+            <br/>The second parameter tells if instances of his subclasses needs to be retreieved as well.</div>
+    }
+    // M1
+    public get_instancesOf(c:Context): (this["instancesOf"]){
+        if (c.data.isMetamodel) { return (...a:any) => { Log.w("cannot call instancesOf() on a metamodel"); return []; } }
+        return (instancetypes0: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false): LObject[] => {
+            let state: DState = store.getState();
+            let classes = this.get_classes(c, state);
+            if (!LModel.otherObjectsTemp) this._populateOtherObjects(c, classes);
+            if (!Array.isArray(instancetypes0)) instancetypes0 = [instancetypes0];
+            // from names, DClass and ptrs, make them only ptrs. all classes of this model are valid name targets.
+            let instancetypes: Pointer<DClass>[] = LModel.namesORDObjectsToID(instancetypes0, classes) as any;
+            let dinstancetypes: DClass[] = DClass.fromPointer(instancetypes, state);
+            if (includeSubclasses) {
+                let arr: LClass[] = dinstancetypes.map(d => LPointerTargetable.fromD(d));
+                for (let c of arr) dinstancetypes.push(...(c.allSubClasses.map(l => l.__raw) || []));
+                dinstancetypes = [...new Set(dinstancetypes)];
+            }
+            let ret: LObject[] = []
+            for (let c of dinstancetypes) {
+                let arr: LObject[] = LModel.otherObjectsTemp[c.name]
+                if (!arr || !arr.length) continue;
+                ret.push(...arr);
+                LModel.otherObectsAccessedKeys.push(c.name);
+            }
+            return ret;
+        }
+    }
+
+    addObject(json: GObject, instanceoff: LClass | Pointer<DClass> | DocString<"ClassName"> | undefined | null = undefined): ReturnType<LValue["addObject"]>{ return this.cannotCall("LValue.addObject"); }
+    __info_of__addObject: Info = {type: "(json: object, instanceof?: LClass) => LObject",
+        txt: "Appends an object instancing \"instanceof\" to the model.\n<br>Setting his own properties, and DValues according to the content of the parameter object."}
+    get_addObject(c: Context): ReturnType<LValue["get_addObject"]> { return (LValue.singleton as LValue).get_addObject.call(this, c); }
+
+    instantiableClasses(o?: GObject, loose: boolean = false):LClass[] { return this.cannotCall("instantiableClasses"); }
+    __info_of__instantiableClasses: Info = {type: "(o?: object, loose?: boolean) => LClass[]",
+        txt: "List of all classes which can be used to instantiate an object." +
+            "\n<br>Abstract and Interface classes are excluded." +
+            "\n<br>If the parameter \"o\" is specified, it will filter only the instances conforming to the object schema." +
+            "\n<br>Results are sorted from tightest fit to loosest fit." +
+            "\n<br>loose parameter set to true makes return instead a list of matching scores of all subclasses.", hidden: true}
+    // M1
+    get_instantiableClasses(c: Context): LValue["instantiableClasses"] {
+        if (c.data.isMetamodel) { return (...a:any)=> { Log.w("cannot call instantiableClasses() on a metamodel"); return []; } }
+        return (LValue.singleton as LValue).get_instantiableClasses.call(this, c)
     }
 
     public get_suggestedEdges(context: Context): this["suggestedEdges"]{
         let ret: this["suggestedEdges"];
-        if (context.data.isMetamodel) ret = this.get_suggestedEdgesM2(context);
-        else ret = this.get_suggestedEdgesM1(context);
+        if (context.data.isMetamodel) ret = this.impl_get_suggestedEdgesM2(context);
+        else ret = this.impl_get_suggestedEdgesM1(context);
         return ret;
     }
 
-    private get_suggestedEdgesM1(context: Context, state?: DState): this["suggestedEdges"]{
+    private impl_get_suggestedEdgesM1(context: Context, state?: DState): this["suggestedEdges"]{
         let ret: this["suggestedEdges"] = {extend: [], reference: [], packageDependencies: []};
+        if (context.data.isMetamodel) { Log.w("cannot call suggestedEdgesM1() on a metamodel"); return ret; }
         if (Debug.lightMode) { return ret; }
         let s: DState = store.getState();
         let values: LValue[] = this.get_allSubValues(context, s);
         let map: Dictionary<DocString<"starting dvalue id">, EdgeStarter[]> = {};
         if (!state) state = store.getState();
         outer:
-        for (let lval of values) {
-            if (!lval) continue;
-            let dval = lval.__raw;
-            // NB: ELiterals can be pointers in L, but string or ordinal numbers in D, but they won't make edges, so i use .__raw
-            inner:
-            for (let v of (dval.values || [])) {
-                if (!Pointers.isPointer(v, state)) continue inner;
-                let snode = lval.node;
-                if (!snode) continue outer;
-                if (v === dval.id) continue inner; // pointing to itself
-                let ltarget: undefined | LEnumLiteral | LObject = LPointerTargetable.fromPointer(v, state);
-                if (!ltarget) continue;
-                if (ltarget.className !== DObject.cname) continue inner;
-                let enode = ltarget.node;
-                if (!enode) continue inner;
-                if (!map[dval.id]) map[dval.id] = [];
-                map[dval.id].push(new EdgeStarter(lval, ltarget, snode, enode, undefined));
+            for (let lval of values) {
+                if (!lval) continue;
+                let dval = lval.__raw;
+                // NB: ELiterals can be pointers in L, but string or ordinal numbers in D, but they won't make edges, so i use .__raw
+                inner:
+                    for (let v of (dval.values || [])) {
+                        if (!Pointers.isPointer(v, state)) continue inner;
+                        let snode = lval.node;
+                        if (!snode) continue outer;
+                        if (v === dval.id) continue inner; // pointing to itself
+                        let ltarget: undefined | LEnumLiteral | LObject = LPointerTargetable.fromPointer(v, state);
+                        if (!ltarget) continue;
+                        if (ltarget.className !== DObject.cname) continue inner;
+                        let enode = ltarget.node;
+                        if (!enode) continue inner;
+                        if (!map[dval.id]) map[dval.id] = [];
+                        map[dval.id].push(new EdgeStarter(lval, ltarget, snode, enode, undefined));
+                    }
             }
-        }
         ret.reference = Object.values(map).flat();
         return ret;
     }
-    private get_suggestedEdgesM2(context: Context): this["suggestedEdges"]{
+    private impl_get_suggestedEdgesM2(context: Context): this["suggestedEdges"]{
         let ret: this["suggestedEdges"] = {extend: [], reference: [], packageDependencies: []};
+        if (!context.data.isMetamodel) { Log.w("cannot call suggestedEdgesM2() on a model"); return ret; }
         let s: DState = store.getState();
         let classes: LClass[] = this.get_classes(context, s);
         let references: LReference[] = Debug.lightMode ? [] : classes.flatMap(c=>c.references);
@@ -3580,7 +3786,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return ret; }
 
 
-    protected get_models(context: Context): LModel[] {
+    protected get_models(context: Context): LModel[] { // todo: should this not be data.instances instead?
         return LModel.fromPointer(context.data.models);
     }
     protected set_models(val: PackArr<this['models']>, context: Context): boolean {
@@ -3634,7 +3840,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return context.data.isMetamodel;
     }
     protected set_isMetamodel(val: this['isMetamodel'], context: Context): boolean {
-        SetFieldAction.new(context.data, 'isMetamodel', val, '', false);
+        if (context.data.isMetamodel !== val) SetFieldAction.new(context.data, 'isMetamodel', val, '', false);
         return true;
     }
 
@@ -3645,6 +3851,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     }
 
     protected get_packages(context: Context): this["packages"] {
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).packages : []; }
         return context.data.packages.map((pointer) => {
             return LPointerTargetable.from(pointer)
         });
@@ -3674,24 +3881,41 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return this.get_objects(context).filter( o => o.isRoot);
     }
     protected get_classes(context: Context, s?: DState): this["classes"] {
-        s = s||store.getState();
-        return this.get_allSubPackages(context, s).flatMap(p => p.classes || []);
+        //if (!s) s = store.getState();+
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).classes : [] as any; }
+        const ret: LClass[] & Dictionary<DocString<"$name">, LClass> = [] as any;
+        const pkgs: LPackage[] = this.get_packages(context);  // it's ok not having deep packages
+        for (let p of pkgs) {
+            const classes: LClass[] & Dictionary<DocString<"$name">> = p.allSubClasses || [];
+            for (let key of Object.getOwnPropertyNames(classes)) { if (key !== "length") ret[key] = classes[key]; }
+        }
+        return ret;
     }
     protected get_references(context: Context, s?: DState): this["references"] {
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).references : []; }
         s = s||store.getState();
         return this.get_classes(context, s).flatMap(p => p.references || []);
     }
 
     protected get_enums(context: Context): this["enums"] {
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).enumerators : [] as any; }
         return this.get_enumerators(context);
     }
 
     protected get_enumerators(context: Context, s?: DState): this["enums"] {
-        s = s||store.getState();
-        return this.get_allSubPackages(context, s).flatMap(p => (p.enums || []));
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).enumerators : [] as any; }
+        // if (!s) s = store.getState();
+        const ret: LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator> = [] as any;
+        const pkgs: LPackage[] = this.get_packages(context);  // it's ok not having deep packages
+        for (let p of pkgs) {
+            const enums: LEnumerator[] & Dictionary<DocString<"$name">> = p.allSubEnums || [];
+            for (let key of Object.getOwnPropertyNames(enums)) { if (key !== "length") ret[key] = enums[key]; }
+        }
+        return ret;
     }
 
     protected get_allSubPackages(context: Context, state?: DState): this["allSubPackages"] {
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).allSubPackages : []; }
         state = state || store.getState();
         let tocheck: Pointer<DPackage>[] = context.data.packages || [];
         let checked: Dictionary<Pointer, true> = {};
@@ -3736,6 +3960,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 
     public getClassByNameSpace(namespacedclass: string): LClass | undefined { return this.cannotCall("getClassByNameSpace"); }
     protected get_getClassByNameSpace(context: Context): this["getClassByNameSpace"] {
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).getClassByNameSpace : undefined as any; }
         return (namespacedclass: string): LClass | undefined => {
             let pos = namespacedclass.lastIndexOf(":");
             let pkguri = namespacedclass.substring(0, pos);
@@ -3748,6 +3973,23 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     public getPackageByUri(uri: string): LPackage | undefined { return this.cannotCall("getPackageByUri"); }
     protected get_getPackageByUri(context: Context): this["getPackageByUri"] {
         return (uri: string)=>context.proxyObject.allSubPackages.filter((p)=>p.uri === uri)[0]; }
+
+
+    /* See src/api/persistance/save.ts */
+
+    protected get_attributes(context: Context): this['attributes'] {
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).attributes : []; }
+        return context.proxyObject.classes.flatMap(c => c.attributes);
+    }
+
+    protected get_literals(context: Context): this['literals'] {
+        if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).literals : []; }
+        return context.proxyObject.enumerators.flatMap(e => e.literals);
+    }
+
+    protected get_values(context: Context): this['values'] {
+        return context.proxyObject.objects.flatMap(o => o.features);
+    }
 
 
     /* See src/api/persistance/save.ts */
@@ -3873,8 +4115,8 @@ export class DObject extends DPointerTargetable { // extends DNamedElement, m1 c
     name!: string;
 
     // personal
-    instanceof!: Pointer<DClass, 0, 1, LClass>;
-    features: Pointer<DValue, 0, 'N', LValue> = [];
+    instanceof!: Pointer<DClass>; // actually nullable now, but takes too much type refactoring. be careful to check if it's present
+    features: Pointer<DValue>[] = [];
 
 
     public static new(instanceoff?: DObject["instanceof"], father?: DObject["father"], fatherType?: typeof DModel | typeof DValue, name?: DNamedElement["name"], persist: boolean = true): DObject {
@@ -3885,11 +4127,11 @@ export class DObject extends DPointerTargetable { // extends DNamedElement, m1 c
         return ret;
     }
 
-    public static new3(a:Partial<ObjectPointers>, then:(d:DObject, c: Constructors)=>void, fatherType?: typeof DModel | typeof DValue, persist: boolean = true): DObject{
-        if (!a.name) a.name = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), a.father, a.instanceof);
-        return new Constructors(new DObject('dwc'), a.father, persist, fatherType, a.id)
+    public static new3(ptrs:Partial<ObjectPointers>, then:(d:DObject, c: Constructors)=>void, fatherType?: typeof DModel | typeof DValue, persist: boolean = true): DObject{
+        if (!ptrs.name) ptrs.name = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), ptrs.father, ptrs.instanceof);
+        return new Constructors(new DObject('dwc'), ptrs.father, persist, fatherType, ptrs.id)
             .DPointerTargetable().DModelElement()
-            .DNamedElement(a.name).DObject(a.instanceof).end(then);
+            .DNamedElement(ptrs.name).DObject(ptrs.instanceof).end(then);
     }
 
 
@@ -3906,7 +4148,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     // inherit redefine
     annotations!: never[];
     children!: LValue[];
-    allchildren!: LValue[]; // including hidden values
+    allChildren!: LValue[]; // including hidden values
     truechildren!: LValue[]; // real shape without "mirage" values
     parent!: (LModel | LValue)[];
     father!: LModel | LValue;
@@ -3948,7 +4190,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         return childs.filter( (c) => !c.isMirage);
     }
 
-    protected get_allchildren(context: Context): this["children"] { return super.get_children(context); }
+    protected get_allChildren(context: Context): this["children"] { return super.get_children(context); }
 
     protected get_children(context: Context, sort: boolean = true): this["children"] {
         let childs: LValue[] = super.get_children(context);
@@ -4073,7 +4315,6 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         }
     }
 
-    public addValue(name?: DValue["name"], instanceoff?: DValue["instanceof"], value?: DValue["values"], isMirage?: boolean): DValue { return this.cannotCall("addValue"); }
 
     protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
         loopDetectionObj[context.data.id] = context.data;
@@ -4091,14 +4332,15 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
         let features = context.proxyObject.features || [];
         console.log("features", {features});
-        for (let f of features){
-            json[f.name] = f.generateEcoreJson(loopDetectionObj);
-        }
-
-
+        for (let f of features) (!json[f.name]) && (json[f.name] = f.generateEcoreJson(loopDetectionObj));
         return json; }
+
+    public addValue(name?: DValue["name"], instanceoff?: DValue["instanceof"], value?: DValue["values"], isMirage?: boolean): LValue { return this.cannotCall("addValue"); }
     protected get_addValue(context: Context): this["addValue"] {
-        return (name?: DValue["name"], instanceoff?: DValue["instanceof"], value?: DValue["values"], isMirage?: boolean) => DValue.new(name, instanceoff, value, context.data.id, true, isMirage); }
+        return (name?: DValue["name"], instanceoff?: DValue["instanceof"], value?: DValue["values"], isMirage?: boolean) => {
+            return LPointerTargetable.fromD(DValue.new(name, instanceoff, value, context.data.id, true, isMirage));
+        }
+    }
 
     protected get_namespace(context: Context): string {
         return context.data.instanceof ? context.proxyObject.instanceof.father.prefix : "schemaless"; }
@@ -4116,7 +4358,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
     protected get_instanceof(context: Context): this["instanceof"] {
         const pointer = context.data.instanceof;
-        return LPointerTargetable.from(pointer)
+        return pointer && LPointerTargetable.from(pointer)
     }
     protected set_instanceof(val: Pack1<this["instanceof"]>, context: Context): boolean {
         const metaptr: D["instanceof"] = Pointers.from(val);
@@ -4140,15 +4382,15 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         if (!lmeta) return;
         let attrs = lmeta.allAttributes;
         let refs = lmeta.allReferences;
-        let values = context.proxyObject.allchildren;
+        let values = context.proxyObject.allChildren;
         let idmap: Dictionary<string, LAttribute | LReference> = {};
         for (let a of attrs) { idmap[a.id] = a; }
         for (let a of refs) { idmap[a.id] = a; }
-        console.log({values, data: context.data, l:context.proxyObject});
+        console.log({idmap, values, data: context.data, l:context.proxyObject});
         // damiano: todo quando viene cancellato una feature il puntatore in features e values rimane. use pointedby's
-        // then remove "v &&" "filter in if
+        // then remove attributes and references that are already instantiated in the object
         for (let v of values) { if(v && v.__raw.instanceof) delete idmap[v.__raw.instanceof]; }
-        console.log("forceconformity", {attrs, refs, values: values.map(v=> v && v.__raw.instanceof), idmap});
+        console.log("forceconformity", {attrs, refs, valuesPre: values.map(v => v && v.__raw.instanceof), toadd:idmap});
         for (let id in idmap) {
             // let l = idmap[id];
             context.proxyObject.addValue(undefined, id, [],true);
@@ -4278,6 +4520,284 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     values!: PrimitiveType[] | LObject[] | LEnumLiteral[];
     instanceof!: LAttribute | LReference | undefined;
     conformsTo!:( LAttribute | LReference)[]; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
+
+
+
+    add(...val: any[]): void { return this.cannotCall("LValue.add"); }
+    __info_of__add: Info = {type: "(...val: any|any[]) => void", txt: "Adds a value in the current value collection"}
+    get_add(c: Context): (...val: any[] | this["values"])=>void{
+        return (...val: any[] | this["values"]) => { this.set_values([...c.data.values, ...val.map(v => v?.id || v)], c); }
+    }
+    remove(...val: any[]): void{ return this.cannotCall("LValue.remove"); }
+    __info_of__remove: Info = {type: "(...val: any) => void", txt: "Deletes a value in the current value collection, or none if the element is not found."}
+    get_remove(c: Context): (...val: this["values"])=>void {
+        return (...val: any[] | this["values"]) => {
+            val = val.map(v => v?.id || v);
+            let indices = [];
+            let values = c.data.values;
+            for (let i = 0; i < values.length; i++) {
+                if (val.includes(values[i])) indices.push(i);
+            }
+            this.get_removeByIndex(c)(...indices); }
+    }
+    removeByIndex(...val: number[]): void{ return this.cannotCall("LValue.removeByIndex"); }
+    __info_of__removeByIndex: Info = {type: "(...indices: number) => removed[]", txt: "Deletes a value in the current value collection, or none if the element is not found."}
+    get_removeByIndex(c: Context): (...indices: number[])=>void{ return (...indices: number[]) => {
+        // reducer is ill-typed, so must force typings
+        const indexMap: GObject = indices.reduce<GObject|number>(((accumulator: GObject, currentValue: number) => { accumulator[currentValue] = true; return accumulator;}) as any, {} as GObject) as any;
+        this.set_values(c.data.values.filter((v,index) => !indexMap[index]), c);
+        // this.set_values(c.data.values.filter((v,index) => indices.includes(index)));
+    }
+    }
+
+    instantiableClasses(o?: GObject, loose: boolean = false):LClass[] { return this.cannotCall("instantiableClasses"); }
+    __info_of__instantiableClasses: Info = {type: "(o?: object, loose?: boolean) => LClass[]",
+        txt: "List of all subclasses of the specified type, which can be used as reference values." +
+            "\n<br>Abstract and Interface classes are excluded." +
+            "\n<br>If the parameter \"o\" is specified, it will filter only the instances conforming to the object schema." +
+            "\n<br>Results are sorted from tightest fit to loosest fit." +
+            "\n<br>loose parameter set to true makes return instead a list of matching scores of all subclasses.", hidden: true}
+
+    // warning: this can be called through model, c.data might be either a value or a model.
+    get_instantiableClasses(c: Context): this["instantiableClasses"] {
+        return (o?: GObject, loose: boolean = false) => LValue.getInstantiableClasses(this, c, o, loose); }
+
+
+    // @eligibleClasses: search only between those targets.
+    // @favoritematch: if this class is a valid match, it is given topmost priority regardless of tightness of excess features over the schema.
+    // if a class name actually starts with $ character, it needs to be placed twice to get a match, as in class.$$name
+    public static getInstantiableClasses(thiss: LValue, c: LogicContext<DValue> | LogicContext<DModel>, schema?: GObject, loose: boolean = false, eligibleClasses?: LClass[], favoriteMatch?: LClass): LClass[] {
+        // find eligible classes
+        let isDValue: boolean =  c.data.className === "DValue";
+        let isDModel: boolean =  c.data.className === "DModel";
+        let isShapeless = !c.data.instanceof;
+        let type: LClass | undefined = isShapeless || !isDValue ? undefined : thiss.get_type(c) as LClass;
+        let isReference = !!type && type.className === "DClass";
+        if (isDValue && !isReference && !isShapeless) return []; // case DValue<Attribute>
+        if (!eligibleClasses) {
+            if (isReference && !isShapeless) { eligibleClasses = [type as LClass, ...(type as LClass).allSubClasses]; }
+            else { eligibleClasses = thiss.get_model(c).instanceof?.classes || []; }
+        }
+        let scoreMap: Dictionary<Pointer, {
+            id: Pointer, score: number,
+            excessFeatures: Dictionary<string>, matchingFeatures: Dictionary<string>, missingFeatures: Dictionary<string>,
+            excessFeaturesCount: number, matchingFeaturesCount: number, missingFeaturesCount: number,
+            isPartial: boolean,
+            class:LClass, instantiable: boolean, namesMap: Dictionary<DocString<"feature name">>}> = {};
+        for (let c of eligibleClasses) {
+            let raw = c.__raw as DClass;
+            let instantiable = !(raw.abstract || raw.interface);
+            // if (!loose && instantiable) return false;
+            if (scoreMap[raw.id]) continue;
+            else scoreMap[raw.id] = {class:c, instantiable, isPartial: raw.partial} as any;
+        }
+        if (schema) {
+            // const fix$ = (vals: string[]) => vals.map(v=> v[0] === "$" ? v.substring(1) : v);
+            const fix$ = (obj: GObject) => {
+                let ret: GObject = {};
+                for (let k in obj) {
+                    let k1:string = k[0] === "$" ? k.substring(1) : k;
+                    ret[k1] = obj[k];
+                }
+                return ret;
+            }
+            schema = fix$(schema);
+            let keys: string[] = Object.keys(schema);
+            for (let ptr in scoreMap) {
+                let score = scoreMap[ptr];
+                score.namesMap = U.objectFromArrayValues(score.class.childNames);
+                let diff = U.objdiff(score.namesMap, schema);
+                console.log( "objDiff", {schema, names:score.namesMap, data:score.class});
+                score.id = ptr;
+                score.excessFeatures = diff.removed;
+                score.missingFeatures = diff.added;
+                score.matchingFeatures = {...diff.changed, ...diff.unchanged}
+                score.excessFeaturesCount = Object.keys(score.excessFeatures).length;
+                score.missingFeaturesCount = Object.keys(score.missingFeatures).length;
+                score.matchingFeaturesCount = Object.keys(score.matchingFeatures).length;
+                score.score = Math.round(((score.instantiable ? 0 : -1) + (keys.length ? score.matchingFeaturesCount / keys.length : 1))*100)/100;
+            }
+        }
+        let sorted = Object.values(scoreMap);
+        if (!loose) sorted = sorted.filter((s) => s.instantiable && (!s.missingFeaturesCount || s.isPartial));
+        let favoriteMatchID: undefined | Pointer = favoriteMatch?.id;
+        sorted = sorted.sort((a, b): number => {
+            // return negative if a is less than b, positive if a is greater than b, and zero if they are equal.
+            // but since default order is ascending and i want descending, o reverse it.
+            if (a.instantiable && !b.instantiable) return -1;
+            if (!a.instantiable && b.instantiable) return +1;
+            if (a.missingFeaturesCount === 0 && b.missingFeaturesCount === 0) { // >100% match case (might have excess, take tighter)
+                // nly if they are both valid full matches, explicit preference takes precedence. then tightness.
+                if (a.id === favoriteMatchID) return -1;
+                if (b.id === favoriteMatchID) return +1;
+                if (a.matchingFeaturesCount !== b.matchingFeaturesCount) return -a.matchingFeaturesCount + b.matchingFeaturesCount;
+                if (a.excessFeaturesCount !== b.excessFeaturesCount) return +a.excessFeaturesCount - b.excessFeaturesCount;
+            }
+            // <99% match, but might be valid for partial classes.
+            if (a.isPartial && !b.isPartial) return -1;
+            if (!a.isPartial && b.isPartial) return +1;
+            if (a.isPartial && b.isPartial) {
+                // only if they are both valid partial matches, explicit preference takes precedence. then tightness.
+                if (a.id === favoriteMatchID) return -1;
+                if (b.id === favoriteMatchID) return +1;
+            }
+            // if both partials or none is partial
+            // if (a.missingFeaturesCount !== b.missingFeaturesCount) return -a.missingFeaturesCount + b.missingFeaturesCount; should be same as matchingFeaturesCount
+            if (a.matchingFeaturesCount !== b.matchingFeaturesCount) return -a.matchingFeaturesCount + b.matchingFeaturesCount;
+            if (a.excessFeaturesCount !== b.excessFeaturesCount) return +a.excessFeaturesCount - b.excessFeaturesCount;
+            return 0;
+        });
+        if (loose) return sorted as any;
+        return sorted.map(score => score.class);
+    }
+
+    addObject(json?: GObject, metaclass: LClass | Pointer<DClass> | DocString<"ClassName"> | undefined | null = undefined): LObject{ return this.cannotCall("LValue.addObject"); }
+    __info_of__addObject: Info = {type: "(json: object, instanceof?: LClass | string | null) => LObject",
+        txt: "Appends an object instancing \"instanceof\" to the values.\n<br>Setting his own properties, and DValues according to the content of the parameter object.\n<br>" +
+            "If instanceof is:<ul><li><b>a class or a class name</b>, it will instance that class, or a valid non-abstract subclass." +
+            "\n<br/><b>null</b>, it will instantiate a shapeless object." +
+            "\n<br/><b>undefined or missing</b>, it will first try to find a valid type in m2 or fail.</ul"}
+
+    // warning: this can be called through model, c.data might be either a value or a model.
+    /*
+    @param metaclass: null means "shapeless", undefined means automatic or failure, never shapeless.
+    type assignment priority:
+    1) by explicit type argument
+    1.1) treating it as a pointer
+    1.2) treating it as a $class_name
+    1.3) treating it as a DClass
+*/
+    get_addObject(c: LogicContext<DValue> | LogicContext<DModel>): (json: GObject)=>LObject{
+        return (json: GObject = {}, metaclass: LClass | Pointer<DClass> | DocString<"ClassName"> | undefined | null = undefined): LObject => {
+            let lobj: LObject = undefined as any;
+            TRANSACTION(() => {
+                let father: Pointer<DValue> | Pointer<DModel> = '';
+                let isDValue = c.data.className === "DValue";
+                let isDModel = c.data.className === "DModel";
+                let instanceoff: undefined | LAttribute | LReference = isDValue ? this.get_instanceof(c as Context) : undefined;
+                let dinstanceoff: undefined | DAttribute | DReference = instanceoff && instanceoff.__raw;
+                // let ShapelessObjectID =
+                let isShapeless: boolean = !dinstanceoff; // || dinstanceoff && ((dinstanceoff?.id | dinstanceoff) === ShapelessObjectID);
+                let isReference: boolean = !!(dinstanceoff && dinstanceoff.className === "DReference");
+                if (isDValue && !isReference && !isShapeless) return Log.ee("cannot call addObject() on a DValue implementing an attribute", {dinstanceoff, thiss:c.data});
+                let isContainment: boolean = isDValue && this.get_containment(c as Context) || isDModel;
+                // if (metaclass === undefined) metaclass = "object"; // in this case, i first check if a class "object" exist, then make a shapeless object if not.
+                let state: DState = store.getState();
+
+                father = isContainment ? c.data.id : this.get_model(c).id;
+                let constructorPointers: Partial<ObjectPointers> = {...json, father};
+
+                // if undefined = explicitely told to make it shapeless. if null, it's automatic selectyion by value.type or m2-model classes.
+                if (metaclass !== null) {
+                    let lmetaclass: LClass | undefined;
+                    // find instance schema: 1) by explicit type argument
+                    if (metaclass) {
+                        // find instance schema: 1.1) by pointer AND 1.3) by Dclass
+                        lmetaclass = LPointerTargetable.from(metaclass, state);
+                        // find instance schema: 1.2) by $class_name
+                        if ((!lmetaclass || lmetaclass.className !== "DClass") && typeof metaclass === "string") {
+                            let m2classes = c.proxyObject.model?.instanceof?.classes;
+                            if (m2classes) lmetaclass = LPointerTargetable.from(m2classes["$" + metaclass] || m2classes[metaclass], state);
+                            // if (!lmetaclass && typeof metaclass === "string" && metaclass.toLowerCase() === "object") lmetaclass = undefined;
+                        }
+(window as any).debugg = LValue.getInstantiableClasses(this, c, json, true, lmetaclass ? [lmetaclass, ...lmetaclass.allSubClasses] : []);
+                        // check if metaclass is found
+                        if (!lmetaclass || lmetaclass.className !== "DClass") return Log.ee("provided schema type does not belong to a Class, cannot intantiate.", {lmetaclass, schema:metaclass, this:c.data});
+                        // check if metaclass is valid (instantiable in the callee collection: .values or .objects)
+                        console.log("isExtending", {lmetaclass, type: this.get_type(c as any)})
+                        if (isDValue && !lmetaclass.isExtending(this.get_type(c as Context) as LClass)) return Log.ee("provided schema type does not extend this.type, cannot intantiate.", {lmetaclass, schema:metaclass, this:c.data});
+                    }
+                    // find instance schema: 2) by dvalue.type
+                    else if (isDValue && !isShapeless) {
+                        lmetaclass = this.get_type(c as Context) as LClass;
+                    }
+                    // phase 2: using lmetaclass (if found), i set constructorPointers.instanceof
+                    // if requested type is found. but might be abstract, so i filter the best subclass match
+                    if (lmetaclass) {
+                        constructorPointers.instanceof = LValue.getInstantiableClasses(this, c, json, false, [lmetaclass, ...lmetaclass.allSubClasses], lmetaclass)[0] as any // actually a L-class, but "ObjectPointers" can accept them too.
+                        if (!constructorPointers.instanceof) { // the whole if is just printing error.
+                            let matches = LValue.getInstantiableClasses(this, c, json, true, [lmetaclass, ...lmetaclass.allSubClasses]);
+                            return Log.ee("addObject(schema) could not find a valid subtype of " + metaclass +
+                                " conforming ot that schema to instantiate an object.\n" + (matches.length ? "closest match was: " + matches[0].name : ""), {json, matches, this: c.data});
+                        }
+                    }
+                    // if not found, i look among all m2classes
+                    else if (!isDValue || isShapeless) {
+                        // if shapelessvalue.addObject() --> infer schema from json keys and ref sub-types best match
+                        // if model.addObject() --> find best match within all classes
+                        (window as any).debugg = this.get_model(c).instantiableClasses(json, true);
+                        constructorPointers.instanceof = this.get_model(c).instantiableClasses(json, false)[0] as any // actually a L-class, but "ObjectPointers" can accept them too.
+                        if (!constructorPointers.instanceof) { // the whole if is just printing error.
+                            let matches = isDValue ? this.get_instantiableClasses(c as Context)(json, true) : this.get_model(c).instantiableClasses(json, true);
+                            let type: LClassifier = isDValue ? this.get_type(c as Context) : undefined as any;
+                            return Log.ee("LValue.addObject(schema) could not find a valid " + (c.data.className === "DValue" ? "subtype of " + type.name : "type") +
+                                " conforming ot that schema to instantiate an object.\n" + (matches.length ? "closest match was: " + (matches[0] as any)?.class.name : ""), {json, type, matches, thiss: c.data});
+                        }
+                    }
+                    if (!constructorPointers.instanceof && isDValue && !isShapeless) {
+                        return Log.ee("could not find an instantiable subtype for given schema and type " + instanceoff?.type?.name, {schema: json, type: instanceoff?.type})
+                    }
+                }
+                // both dmodel.objects nad dvalue.values are updated by the Constructors by passing father parameter.
+                // phase 3: create object according to schema (or shapeless) and update parent container collection.
+                console.log("Object.new3", {constructorPointers});
+                let dobj = DObject.new3(constructorPointers, () => { }, DValue, true);
+                if (isReference && !isContainment){
+                    // if is ref containment, object.father is set to value, which also appends the object to this.values
+                    // if it's model, object.father = model, and it goes in model.objects and not in values.
+                    // if it's non-containment value, it goes in model but also appended to this.values
+                    // ? if schemaless acts like a containment ref so still fine ?
+                    this.set_values([...(c as Context).data.values, dobj.id], c as Context)
+                }
+                // phase 4: set sub-DDalues.values according to json data provided, or create them if they were missing in partial class match.
+                lobj = LPointerTargetable.fromD(dobj);
+                let dobjkeys = Object.keys(dobj);
+
+                // update lmetaclass from candidate root, to selected instance (sub-type)
+                let lmetaclass: LClass | undefined = constructorPointers.instanceof && LPointerTargetable.wrap(constructorPointers.instanceof);
+                let isPartial: boolean = !!lmetaclass?.partial;
+                let childnames: Dictionary<string> = lmetaclass ? U.objectFromArrayValues(lmetaclass.childNames) : {};
+                // because at current time Constructor.setPtr actions are not executed yet. so dobject.features is empty, even through LPoint.from(valueid) canaccess the "pending" local dvalue not in store.
+                setTimeout(()=>TRANSACTION(()=>{
+                    for (let key in json) {
+                        if (key[0] === "$") { // if $ is prepended, priority is first and only child values check
+                            if (key in childnames) { // if child dvalue with that name including char $ exist, like in "$" + "$name"
+                                (lobj as GObject<LObject>)["$" + key].values = json[key];
+                                continue;
+                            }
+                            let key1 = key.substring(1);
+                            if (key1 in childnames) { // if child dvalue with that name excluding char $ exist, like in "$" + "name" (as normal)
+                                (lobj as GObject<LObject>)["$" + key1].values = json[key];
+                                continue;
+                            }
+                            // if child dvalue with that name do not exist
+                            if (isShapeless || isPartial) { lobj.addValue(key, undefined, json[key], false); continue; }
+                            // this should never happen, if there is a mismatch in finding the correct type conforming to the schema, the function should have already stopped and returned before.
+                            Log.eDev('addObject(schema) error: cannot find value collection named "' + key + ' " as defined in the schema parameter.',
+                                {lmetaclass, this:c.data, instanceof: constructorPointers.instanceof});
+                            continue;
+                        }
+                        // if $ is NOT prepended, priority is inverted: first DObject properties, then child values
+                        if (key in dobjkeys) { (lobj as GObject<LObject>)[key] = json[key]; continue; }
+                        else {
+                            // redoing the whole childmatch attempt for shaped and shapeless, when first char is not $, as a fallback.
+                            if (key in childnames) { // if child dvalue with that name excluding char $ exist, like in "$" + "name" (as normal)
+                                console.log("get_addObject() adding values", {lobj, key, json, childnames, d:constructorPointers.instanceof});
+                                (lobj as GObject<LObject>)["$" + key].values = json[key];
+                                continue;
+                            }
+                            else if (isShapeless || isPartial) { lobj.addValue(key, undefined, json[key], false); continue; }
+                            Log.eDev('addObject(schema) error: cannot find value collection named "' + key + ' " as defined in the schema parameter.',
+                                {lmetaclass, this:c.data, instanceof: constructorPointers.instanceof, dobjkeys});
+                            continue;
+                        }
+                    }
+                }), 100);
+            });
+            return lobj;
+        }
+    }
+
 
     protected get_edges(context: Context): this["edges"] { return LPointerTargetable.fromPointer(context.data.edges) || []; }
     protected get_fromlfeature<C, T extends keyof (NonNullable<C>)>(meta: C, key: T): NonNullable<C>[T] { return meta ? (meta as any)[key] : undefined; }
@@ -4818,47 +5338,3 @@ export type WAnnotation = getWParams<LAnnotation, DAnnotation>;
 // export type WJavaObject = getWParams<LJavaObject, DJavaObject>;
 export type WMap = getWParams<LMap, DMap>;
 export type WFactory_useless_ = getWParams<LFactory_useless_, DFactory_useless_>;
-
-
-/*
-let alld: GObject = {
-    DModelElement,
-    DModel,
-    DValue,
-    DNamedElement,
-    DObject,
-    DEnumerator,
-    DEnumLiteral,
-    DAttribute,
-    DReference,
-    DStructuralFeature,
-    DClassifier,
-    DDataType,
-    DClass,
-    DParameter,
-    DOperation,
-    DPackage,
-    DTypedElement,
-    DAnnotation,
-    DFactory_useless_, DMap};
-let alll: GObject = {
-    LModelElement,
-    LModel,
-    LValue,
-    LNamedElement,
-    LObject,
-    LEnumerator,
-    LEnumLiteral,
-    LAttribute,
-    LReference,
-    LStructuralFeature,
-    LClassifier,
-    LDataType,
-    LClass,
-    LParameter,
-    LOperation,
-    LPackage,
-    LTypedElement,
-    LAnnotation,
-    LFactory_useless_, LMap};
-*/

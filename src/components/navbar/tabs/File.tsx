@@ -6,6 +6,7 @@ import {DState, DUser, LGraph, LProject, LUser, Selectors, U} from "../../../joi
 import DockManager from "../../abstract/DockManager";
 import {connect} from "react-redux";
 import {FakeStateProps} from "../../../joiner/types";
+import Examples from './Examples';
 
 function FileComponent(props: AllProps) {
     const user = props.user;
@@ -89,6 +90,7 @@ function FileComponent(props: AllProps) {
             </li>}
             <li tabIndex={-1} onClick={save} className={'dropdown-item'}>Save</li>
             <li tabIndex={-1} onClick={load} className={'dropdown-item'}>Load</li>
+            <Examples />
             <li tabIndex={-1} className={'dropdown-item'}>Export
                 <i className={'ms-auto bi bi-caret-right-fill'} />
                 <ul className={'submenu dropdown-menu'}>

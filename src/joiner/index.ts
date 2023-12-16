@@ -47,12 +47,10 @@ export type {PackagePointers, EdgePointers, AnnotationPointers, AttributePointer
 export {windoww, EdgeBendingMode, EdgeGapMode, EMeasurableEvents} from './types';
 export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
     EdgeStateProps, EdgeOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
-export {GraphDragManager} from "../graph/graphElement/GraphDragHandler";
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,
     Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs,
     LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements} from "./classes";
-
 
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
@@ -152,7 +150,9 @@ export {DViewPoint, LViewPoint} from "../view/viewPoint/viewpoint";
 // console.error('iiiiiiiiiiiiiiii 12', windoww.DViewElement);
 
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
+
 export {DState, LState, ModelStore, ViewPointState, statehistory} from "../redux/store";
+export {GraphDragManager} from "../graph/graphElement/GraphDragHandler";
 export {Selectors} from "../redux/selectors/selectors";
 // export var Selectors = windoww.Selectors as (GObjectt & typeof SelType);
 export {reducer, stateInitializer} from "../redux/reducer/reducer";

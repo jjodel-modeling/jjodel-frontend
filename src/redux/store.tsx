@@ -41,10 +41,16 @@ import {
     LModelElement,
     LObject,
     LogicContext,
-    LPointerTargetable,
+    LOperation,
+    LPackage,
+    LParameter,
+    LPointerTargetable, LProject,
+    LRefEdge,
+    LReference,
     LUser,
     LValue,
     LViewElement,
+    LViewPoint,
     packageDefaultSize,
     Pointer,
     Pointers,
@@ -57,6 +63,7 @@ import {
 } from '../joiner';
 import {DV} from "../common/DV";
 import LeaderLine from "leader-line-new";
+import {Selected} from "../joiner/types";
 import {DefaultEClasses, ShortDefaultEClasses} from "../common/U";
 
 console.warn('ts loading store');
@@ -90,7 +97,7 @@ export class DState extends DPointerTargetable{
         return new Constructors(new DState('dwc'), undefined, false, undefined).DPointerTargetable().DState().end();
     }
 
-    env: Dictionary = process.env;
+    env: Dictionary = process.env;  this might make problems on load
     debug: boolean = false;
     logs: Pointer<DLog>[] = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
@@ -130,9 +137,7 @@ export class DState extends DPointerTargetable{
 
     isEdgePending: {user: Pointer<DUser>, source: Pointer<DClass>} = {user: '', source: ''};
 
-    contextMenu: {display: boolean, x: number, y: number} = {display: false, x: 0, y: 0};
-
-    // deleted: string[] = [];
+    contextMenu: { display: boolean, x: number, y: number } = {display: false, x: 0, y: 0};
 
     objects: Pointer<DObject, 0, 'N', LObject> = [];
     values: Pointer<DValue, 0, 'N', LValue> = [];
@@ -152,10 +157,6 @@ export class DState extends DPointerTargetable{
     m2models: Pointer<DModel, 0, 'N'> = [];
     m1models: Pointer<DModel, 0, 'N'> = [];
 
-    // room: string = '';
-
-    // selected: Selected = {};
-
     isLoading: boolean = false;
 
     projects: Pointer<DProject, 0, 'N'> = [];
@@ -163,7 +164,7 @@ export class DState extends DPointerTargetable{
 
     static init(store?: DState): void {
         BEGIN()
-        const viewpoint = DViewPoint.new('Default', '', undefined, '', '', '', [], '', 0, false);
+        const viewpoint = DViewPoint.new('Default', '', undefined, '', '', '', [], '', 0, false); not good, side effect actions are fired with old id
         viewpoint.id = Defaults.viewpoints[0];
         CreateElementAction.new(viewpoint);
         const views: DViewElement[] = makeDefaultGraphViews();
@@ -185,7 +186,8 @@ export class DState extends DPointerTargetable{
         }
 
         /// creating m3 "Object" metaclass
-        let dObject = DClass.new(ShortDefaultEClasses.EObject, false, false, false, false, '', undefined, false);
+        let dObject = DClass.new(ShortDefaultEClasses.EObject, false, false, false, false,
+            '', undefined, false, 'Pointer_' + ShortDefaultEClasses.EObject.toUpperCase());
         for (let defaultEcoreClass of Object.values(DefaultEClasses)){
             // todo: creat everyone and not just object, make the whole m3 populated.
         }
@@ -193,6 +195,11 @@ export class DState extends DPointerTargetable{
         CreateElementAction.new(dObject);
         SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
         END();
+        }
+        CreateElementAction.new(dObject);
+        SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
+        END();
+
     }
 }
 function makeDefaultGraphViews(): DViewElement[] {
@@ -357,7 +364,6 @@ function makeDefaultGraphViews(): DViewElement[] {
     makeEdgeView("Association", EdgeHead.reference,             size1,   undefined,  false);
     makeEdgeView("Dependency",  EdgeHead.reference,             size1,   undefined,  true);
     makeEdgeView("Inheritance", EdgeHead.extend,                size1,   undefined,  false);
-    makeEdgeView("Dependency",  EdgeHead.extend,                size1,   undefined,  true);
     makeEdgeView("Aggregation", EdgeHead.aggregation,   undefined,      size2,      false);
     makeEdgeView("Composition", EdgeHead.composition,   undefined,      size2,      false);
 

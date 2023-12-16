@@ -723,8 +723,8 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     state!: LMap;
     // personal attributes
     zoom!: GraphPoint;
-    graphSize!: GraphSize; // derived attribute: bounding rect containing all subnodes
-    offset!: GraphPoint; //  size internal to the graph, while "size" is instead external size of the vertex holding the graph in GraphVertexes
+    graphSize!: GraphSize; // derived attribute: bounding rect containing all subnodes, while "size" is instead external size of the vertex holding the graph in GraphVertexes
+    offset!: GraphPoint; // Scrolling position inside the graph
 
     // get_graphSize(context: LogicContext<DGraph>):  Readonly<GraphSize> { return todo: get bounding rect containing all subnodes.; }
     get_offset(context: LogicContext<DGraph>):  Readonly<GraphSize> {
@@ -756,8 +756,9 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     translateSize<T extends GraphSize|GraphPoint>(ret: T, innerGraph: LGraph): T { return this.wrongAccessMessage("translateSize()"); }
     translateHtmlSize<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(size: T): G { return this.wrongAccessMessage("translateHtmlSize()"); }
 
-    __info_of__offset: Info = {type:GraphSize.cname, txt:"In-graph scrolling position."};
-    __info_of__graphSize: Info = {type:GraphSize.cname, txt:"size internal to the graph, including internal scroll and panning."};
+    __info_of__zoom: Info = {type:GraphPoint.cname, label:"zoom", txt:"Scales the graph and all subelements by a factor."};
+    __info_of__offset: Info = {type:GraphPoint.cname, label:"offset", txt:"In-graph scrolling position."};
+    __info_of__graphSize: Info = {type:GraphSize.cname, label:"graphSize", txt:"size internal to the graph, including internal scroll and panning."};
     __info_of__translateSize: Info = {type:"(T, Graph)=>T where T is GraphSize | GraphPoint", txt:"Translates a coordinate set from the local coordinates of a SubGraph to this Graph containing it."};
     __info_of__translateHtmlSize: Info = {type:"(Size|Point) => GraphSize|GraphPoint", txt:"Translate page\'s viewport coordinate set to this graph coordinate set."};
     get_translateHtmlSize<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(c: Context): ((size: T) => G) {
@@ -1540,22 +1541,25 @@ replaced by startPoint
 */
 
 
-//    label!: PrimitiveType; should never be read change their documentation in write only. their values is "read" in this.segments
-//    longestLabel!: PrimitiveType;
-//    labels!: PrimitiveType[];
-    allNodes!: [LGraphElement, ...Array<LEdgePoint>, LGraphElement]
+    label!: PrimitiveType;  // should never be read change their documentation in write only. their values is "read" in this.segments
+    longestLabel!: PrimitiveType;
+    labels!: PrimitiveType[];
+    allNodes!: [LGraphElement, ...Array<LEdgePoint>, LGraphElement];
+    __info_of__longestLabel: Info = {label:"longest label", type:"text", readType: "PrimitiveType",
+        writeType:"PrimitiveType | (e:this, curr: LGraphElement, next: LGraphElement, curr_index: number, allNodes: LGraphElement[]) => PrimitiveType)",
+        txt: <span>Label assigned to the longest path segment.</span>}
+    __info_of__label: Info = {type: "", txt: <span>Alias for longestLabel</span>};
+    __info_of__labels: Info = {label:"multple labels", type: "text",
+        writeType: "type of label or Array<type of label>",
+        txt: <span>Instructions to label to multiple or all path segments in an edge</span>};
+    __info_of__allNodes: Info = {type: "[LGraphElement, ...Array<LEdgePoint>, LGraphElement]", txt: <span>first element is this.start. then all this.midnodes. this.end as last element</span>};
 
 
-    /*    ___info_of__longestLabel: Info = {readType: "PrimitiveType", writeType:"PrimitiveType | " +
-                "(e:this, curr: LGraphElement, next: LGraphElement, curr_index: number, allNodes: LGraphElement[]) => PrimitiveType)", txt: <span>Label assigned to the longest path segment.</span>}
-        ___info_of__label: Info = {type: "", txt: <span>Alias for longestLabel</span>};
-        ___info_of__labels: Info = {type: "type of label or Array<type of label>", txt: <span>Instructions to label to multiple or all path segments in an edge</span>};
-    */
-    ___info_of__allNodes: Info = {type: "[LGraphElement, ...Array<LEdgePoint>, LGraphElement]", txt: <span>first element is this.start. then all this.midnodes. this.end as last element</span>};
-
-
-    // get_label(c: Context): this["label"] { return this.get_longestLabel(c); }
-    // get_longestLabel(c: Context): this["label"] { return this.get_label_impl(c.data, c.proxyObject); }
+    get_label(c: Context): this["longestLabel"] { return this.get_longestLabel(c); }
+    get_longestLabel(c: Context): this["longestLabel"] { return c.data.longestLabel as any; }
+    set_longestLabel(val: this["longestLabel"], c: Context): boolean { return SetFieldAction.new(c.data, "longestLabel", val); }
+    get_labels(c: Context): this["labels"] { return c.data.labels as any; }
+    set_labels(val: this["labels"], c: Context): boolean { return SetFieldAction.new(c.data, "labels", val); }
     public headPos_impl(c: Context, isHead: boolean, headSize0?: GraphPoint, segment0?: EdgeSegment, zoom0?: GraphPoint): GraphSize & {rad: number} {
         let segment: EdgeSegment = segment0 || this.get_segments(c).segments[0];
         // let v: LViewElement = this.get_view(c);

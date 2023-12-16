@@ -1,7 +1,9 @@
+import type {EdgeGapMode} from "../../joiner";
 import {
     BEGIN,
     Constructors,
     CoordinateMode,
+    CreateElementAction,
     Debug,
     DGraphElement,
     Dictionary,
@@ -27,9 +29,12 @@ import {
     RuntimeAccessible,
     RuntimeAccessibleClass,
     SetFieldAction,
-    ShortAttribETypes, U, windoww
+    SetRootFieldAction,
+    ShortAttribETypes,
+    TRANSACTION,
+    U,
+    windoww
 } from "../../joiner";
-import {EdgeGapMode} from "../../joiner/types";
 
 @RuntimeAccessible
 export class DViewElement extends DPointerTargetable {
@@ -502,6 +507,26 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             return DPointerTargetable.wrap<DViewTransientProperties, LViewTransientProperties>(context.data.__transient, context.data,
                 // @ts-ignore for $ at end of getpath
                 'idlookup.' + context.data.id + '.' + (getPath as LViewElement).__transient.$); }*/
+
+    public duplicate(deep: boolean = true): this {
+        return this.wrongAccessMessage( (this.constructor as typeof RuntimeAccessibleClass).cname + "duplicate()"); }
+    protected get_duplicate(c: Context): ((deep?: boolean) => LViewElement) {
+        return (deep: boolean = false) => {
+            let lview: LViewElement = undefined as any;
+            TRANSACTION( () => {
+                const dview: DViewElement = DViewElement.new(`${c.data.name} Copy`, '');
+                lview = LPointerTargetable.fromD(dview);
+                for (let key in c.data) {
+                    if (key !== 'id' && key !== 'name' && key !== "pointedBy") {
+                        // @ts-ignore
+                        lview[key] = c.data[key];
+                    }
+                }
+                SetRootFieldAction.new('stackViews', dview.id, '+=', true);
+            })
+            return lview;
+        }
+    }
 }
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DViewElement);
 RuntimeAccessibleClass.set_extend(LPointerTargetable, LViewElement);

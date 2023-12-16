@@ -40,7 +40,7 @@ function InputComponent(props: AllProps) {
 
 
     if (!data) return(<></>);
-    const readOnly = (props.readonly !== undefined) ? props.readonly : !props.debugmodee && Defaults.check(data.id);
+    const readOnly = (props.readonly !== undefined) ? props.readonly : !props.debugmodee && Defaults.check(data.id); what's this? it was " data.id.indexOf("Pointer_View") !== -1" // more efficient than U.getDefaultViewsID().includes(data.id);
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;

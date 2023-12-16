@@ -37,10 +37,10 @@ class PersistanceApi {
         window.location.reload();
     }
     static async saveProject(p?: LProject): Promise<void> {
-        SetRootFieldAction.new('isLoading', true);
         const user = LUser.fromPointer(DUser.current);
         const project = p || user.project;
-        if(!project) return;
+        if (!project) return;
+        SetRootFieldAction.new('isLoading', true);
         await Save.project(project);
         SetRootFieldAction.new('isLoading', false);
     }

@@ -35,10 +35,11 @@ function DataTree(props: DataTreeProps) {
     const depth = props.depth;
     const setFilter = props.setFilter;
 
-    const click = () => {
+    const click = () => { {
+        let node = data.node;
         SetRootFieldAction.new('_lastSelected', {
-            node: data.node?.id,
-            view: data.node?.view.id,
+            node: node?.id,
+            view: node?.view.id,
             modelElement: data.id
         }, '', false);
 

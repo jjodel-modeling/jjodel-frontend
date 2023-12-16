@@ -15,7 +15,7 @@ function SelectComponent(props: AllProps) {
     let gdata: GObject<LPointerTargetable> = data;
     const field: (keyof LPointerTargetable & keyof DPointerTargetable) = props.field as any;
 
-    const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && Defaults.check(data.id);
+    const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && Defaults.check(data.id); waws check is default view pointer, but looks too much hardcoded for selectcoomponent
     const value: string | Pointer = d[field] as string;
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;

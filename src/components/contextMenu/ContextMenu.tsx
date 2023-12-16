@@ -35,8 +35,8 @@ function ContextMenuComponent(props: AllProps) {
     if(!node || !data) return(<></>);
 
     const close = () => {
-        // if (!windoww.ContextMenuVisible) return;
-        // windoww.ContextMenuVisible = false;
+        if (!windoww.ContextMenuVisible) return;
+        windoww.ContextMenuVisible = false;
         setSuggestedName('');
         setMemorec(null);
         SetRootFieldAction.new('contextMenu', {display: false, x: 0, y: 0});
@@ -57,7 +57,6 @@ function ContextMenuComponent(props: AllProps) {
                 query = `context ${data.className} inv: self.id = '${data.id}'`;
                 break;
         }
-        DViewElement.new(data.name + '_view', jsx, undefined, '', '', '', [], query);
     }
 
     const structuralFeature = async () => {setMemorec(await MemoRec.structuralFeature(data))}

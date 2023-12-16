@@ -1,8 +1,22 @@
-import {Dispatch, PureComponent, ReactElement, ReactNode} from 'react';
-import {connect} from 'react-redux';
-import {DObject, DState, LGraphElement, LModelElement, LObject, LViewElement, U} from '../../../joiner';
-import Structure from './Structure';
+import React, {Dispatch, PureComponent, ReactElement, ReactNode} from "react";
+import {connect} from "react-redux";
+import {
+    DGraphElement,
+    DModelElement,
+    DPointerTargetable,
+    DViewElement,
+    DState,
+    DObject,
+    LObject,
+    LGraphElement,
+    LModelElement,
+    LViewElement,
+    Pointer, U, DUser,
+} from "../../../joiner";
+import Structure from "./Structure";
 import {FakeStateProps} from '../../../joiner/types';
+
+
 
 interface ThisState {}
 class StructureEditorComponent extends PureComponent<AllProps, ThisState> {

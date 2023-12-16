@@ -16,6 +16,11 @@ import {connect} from "react-redux";
 function ViewDataComponent(props: AllProps) {
     const project = props.project;
     const view = props.view;
+/*
+    if(!view) {
+        SetRootFieldAction.new('stackViews', undefined, '-=', false);
+        return(<></>);
+    }*/
     const viewpoints = props.viewpoints;
     const debug = props.debug;
     const readOnly = !debug && Defaults.check(view.id);

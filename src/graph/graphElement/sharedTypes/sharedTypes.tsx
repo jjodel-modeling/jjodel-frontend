@@ -84,9 +84,8 @@ export class EdgeOwnProps extends GraphElementOwnProps {
     isVertex?: boolean = true;
     start!: LGraphElement["id"];
     end!: LGraphElement["id"];
-    label?: string;
-    // label?: DEdge["longestLabel"]; they were initial values to be stored in node, initialized in jsx. but i moved them to view
-    // labels?: DEdge["labels"];
+    label?: DEdge["longestLabel"];
+    labels?: DEdge["labels"];
 }
 
 export class EdgeStateProps extends GraphElementReduxStateProps {

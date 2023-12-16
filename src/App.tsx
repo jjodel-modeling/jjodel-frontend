@@ -32,7 +32,7 @@ function App(props: AllProps) {
 
     useEffectOnce(() => {
         if (DUser.offlineMode) {
-            let du = DUser.new('adminOffline');
+            let du = DUser.new(('adminOffline', "Pointer_adminOffline");
             DUser.current = du.id;
             stateInitializer();
             return;
@@ -50,7 +50,7 @@ function App(props: AllProps) {
         })();
     })
 
-    if(DUser.current) {
+    if (user) {
         return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? ' debug' : '')}
                     onClick={e => statehistory.globalcanundostate = true}>
             {isLoading && <Loader />}
