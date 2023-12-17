@@ -1,11 +1,11 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
-import type {Pointer, DModel} from "../../../joiner";
-import {DState, LGraph, LModel, DGraph, DModelElement, LModelElement, CreateElementAction} from "../../../joiner";
+import type {DModel, Pointer} from "../../../joiner";
+import {CreateElementAction, DGraph, DModelElement, DState, LGraph, LModel, LModelElement} from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import ContextMenu from "../../contextMenu/ContextMenu";
-import EdgesManager from "../../../graph/edges/EdgesManager";
+
 function PendingEdge(props: any){ return <>{/* todo: <DamEdge start={store.getState().pendingEdge.start} end={} />*/}</>}
 
 

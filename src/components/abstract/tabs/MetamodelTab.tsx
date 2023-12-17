@@ -1,17 +1,29 @@
 import React, {Dispatch, ReactElement} from "react";
 import {connect} from "react-redux";
 import type {DModel, Pointer} from "../../../joiner";
-import {DState, CreateElementAction, DGraph, LGraph, LModel, Edge} from "../../../joiner";
+import {
+    DState,
+    CreateElementAction,
+    DGraph,
+    LGraph,
+    LModel,
+    Edge,
+    DUser,
+    DClass,
+    SetRootFieldAction
+} from "../../../joiner";
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import ContextMenu from "../../contextMenu/ContextMenu";
-import EdgesManager from "../../../graph/edges/EdgesManager";
 
-function PendingEdge(props: any){ return <>{/* todo: <DamEdge start={store.getState().pendingEdge.start} end={} />*/}</>}
+function PendingEdge(props: any){ return <>{
+    /* todo: <DamEdge start={store.getState().pendingEdge.start} end={} />*/}</>
+}
 
 function MetamodelTabComponent(props: AllProps) {
     const model = props.model;
     const graph = props.graph;
+    const isEdgePending = props.isEdgePending;
 
     if (!model) return(<>closed tab</>);
     if (!graph) {
@@ -23,7 +35,15 @@ function MetamodelTabComponent(props: AllProps) {
 
     return(<div className={'w-100 h-100'}>
         <ContextMenu />
-        <PendingEdge />
+        {/*<PendingEdge />*/}
+        {/* Temporary Edge Pending Manager */}
+        {isEdgePending.source && <div style={{position: 'absolute', top: 15, right: 15, zIndex: 999}}
+             className={'w-fit bg-white rounded border p-2'}>
+            <label className={'d-block text-center'}>Pending Edge...</label>
+            <label tabIndex={-1} onClick={e => SetRootFieldAction.new('isEdgePending', {user: '', source: ''})}
+               className={'cursor-pointer text-decoration-none d-block text-danger text-center'}>close</label>
+        </div>}
+
         <div className={'d-flex h-100'}>
             <ToolBar model={model.id} isMetamodel={model.isMetamodel} />
             <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>
@@ -34,7 +54,11 @@ function MetamodelTabComponent(props: AllProps) {
 
 }
 interface OwnProps { modelid: Pointer<DModel, 1, 1, LModel> }
-interface StateProps { model: LModel, graph: LGraph }
+interface StateProps {
+    model: LModel,
+    graph: LGraph,
+    isEdgePending: {user: Pointer<DUser>, source: Pointer<DClass>}
+}
 interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -45,6 +69,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const graphs: DGraph[] = DGraph.fromPointer(state.graphs);
     const pointers = graphs.filter((graph) => { return graph.model === ret.model?.id });
     if(pointers.length > 0) ret.graph = LGraph.fromPointer(pointers[0].id);
+    ret.isEdgePending = state.isEdgePending
     return ret;
 }
 

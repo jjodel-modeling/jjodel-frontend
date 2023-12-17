@@ -7,6 +7,7 @@ import {
     DClass,
     DClassifier,
     DEdgePoint,
+    Defaults,
     DEnumerator,
     DEnumLiteral,
     DExtEdge,
@@ -52,25 +53,15 @@ import {
     RuntimeAccessibleClass,
     SetRootFieldAction,
     ShortAttribETypes,
-    Defaults,
     store,
 } from '../joiner';
 import {DV} from "../common/DV";
-import LeaderLine from "leader-line-new";
 import {DefaultEClasses, ShortDefaultEClasses} from "../common/U";
 
 console.warn('ts loading store');
 
 // @RuntimeAccessible
 // NB: le voci che iniziano con '_' sono personali e non condivise
-
-
-export interface EdgeOptions{
-    id: number,
-    options: LeaderLine.Options,
-    source: string,
-    target: string
-}
 
 // export const statehistory_obsoleteidea: {past: IStore[], current: IStore, future: IStore[]} = { past:[], current: null, future:[] } as any;
 export const statehistory: {

@@ -1,25 +1,26 @@
-import React, {Dispatch, ReactElement, ReactNode, useEffect} from 'react';
+import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
-import {CreateElementAction, SetRootFieldAction} from '../../redux/action/action';
+import {SetRootFieldAction} from '../../redux/action/action';
 import {
+    DClass,
     DState,
     DUser,
     DValue,
     DViewElement,
     GObject,
     LClass,
-    LGraphElement, LNamedElement,
-    LPackage, LProject,
+    LGraphElement,
+    LNamedElement,
+    LPackage,
+    LProject,
     LUser,
-    LValue, LViewElement,
-    Selectors,
-    U,
+    LValue,
 } from '../../joiner';
 import MemoRec from '../../memorec/api';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import ModellingIcon from "../forEndUser/ModellingIcon";
-import {FakeStateProps, windoww} from "../../joiner/types";
+import {FakeStateProps} from "../../joiner/types";
 
 function ContextMenuComponent(props: AllProps) {
     const user = props.user;

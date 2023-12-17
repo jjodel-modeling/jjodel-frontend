@@ -1,4 +1,4 @@
-import type {U as UType, GraphDragManager, MouseUpEvent} from '../../joiner';
+import type {MouseUpEvent, U as UType} from '../../joiner';
 import {
     Action,
     CompositeAction,
@@ -17,7 +17,8 @@ import {
     ParsedAction,
     PendingPointedByPaths,
     PointedBy,
-    Pointer, Pointers,
+    Pointer,
+    Pointers,
     RuntimeAccessibleClass,
     Selectors,
     SetFieldAction,
@@ -211,7 +212,6 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
                     action.pathArray = [action.path]; //a
                     action.isPointer = false;
                     // just to log it in undo-redo action list and have a feedback*/
-                    break;
                 }
                 elem.className = elem.className || (elem.constructor as typeof RuntimeAccessibleClass).cname || elem.constructor.name;
                 let statefoldername = elem.className.substring(1).toLowerCase() + 's';

@@ -18,7 +18,7 @@ export class StateMachine_M2 {
         ];
     }
     private static async create(project: LProject): Promise<[LModel, LPackage]> {
-        const dModel = DModel.new(undefined, undefined, true);
+        const dModel = DModel.new('metamodel_1', undefined, true);
         const lModel: LModel = LModel.fromD(dModel);
         SetFieldAction.new(project.id, 'metamodels', lModel.id, '+=', true);
         SetFieldAction.new(project.id, 'graphs', lModel.node?.id, '+=', true);

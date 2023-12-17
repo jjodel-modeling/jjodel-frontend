@@ -21,3 +21,9 @@ $object-color: indigo;
 $value-color: $feature-color;
 $annotation-color: black;
 $vertex-color: brown;
+
+.w-fit {width: fit-content}
+.h-fit {height: fit-content}
+.w-min {width: min-content}
+.h-min {height: min-content}
+.cursor-pointer {cursor: pointer}

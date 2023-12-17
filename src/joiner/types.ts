@@ -1,17 +1,32 @@
 // export type Class = { new(...args: any[]): any; };
-import type {ShortAttribETypes, Pointer, RuntimeAccessibleClass, EdgeSegment} from "../joiner";
-import type React from "react";
+import type {Pointer, RuntimeAccessibleClass, ShortAttribETypes} from "../joiner";
 import {
-    AttribETypes,
-    CoordinateMode, DGraphElement, DPointerTargetable, DState, DUser,
-    EdgeHead,
-    EGraphElements, EModelElements, LAttribute, LClass, LEdge,
-    LEdgePoint, LEnumerator, LEnumLiteral, LGraph,
-    LGraphElement, LGraphVertex, LModel, LObject, LOperation, LPackage, LParameter, LReference, LValue, LVertex,
+    DGraphElement,
+    DPointerTargetable,
+    DState,
+    DUser,
+    LAttribute,
+    LClass,
+    LEdge,
+    LEdgePoint,
+    LEnumerator,
+    LEnumLiteral,
+    LGraph,
+    LGraphElement,
+    LGraphVertex,
+    LModel,
+    LObject,
+    LOperation,
+    LPackage,
+    LParameter,
+    LReference,
+    LValue,
+    LVertex,
     LVoidEdge,
     LVoidVertex
 } from "../joiner";
-import {AccessModifier} from "../api/data";
+import type React from "react";
+import {ReactNode} from 'react';
 
 export declare type Class<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (abstract new (...args: any[]) => InstanceType) & StaticType;
 export declare type CClass<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (new (...args: any[]) => InstanceType) & StaticType;
@@ -184,3 +199,4 @@ export type FakeStateProps = any;
 export type ApiResponse = {code: number, body: Json|string}
 export type DataTypes = LModel|LPackage|LClass|LEnumerator|LAttribute|LReference|LOperation|LParameter|LEnumLiteral|LObject|LValue
 export type NodeTypes = LGraph|LGraphVertex|LVoidVertex|LVertex|LGraphElement|LEdge|LEdgePoint;
+export interface DefaultProps {key?: string|number, children?: ReactNode}

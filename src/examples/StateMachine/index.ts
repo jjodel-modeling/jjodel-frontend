@@ -19,7 +19,7 @@ export class StateMachine {
             const abstractEvent = elements[5];
             const command = elements[6];
             const event = elements[7];
-            const M1 = await StateMachine_M1.load1(lProject, M2, stateMachine, state, transition, command, event);
+            // const M1 = await StateMachine_M1.load1(lProject, M2, stateMachine, state, transition, command, event);
             StateMachine_Views.load(lProject, state, command, event, transition);
             lProject.stackViews = [];
         });

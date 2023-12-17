@@ -39,23 +39,21 @@ function Auth(props: Props) {
         } else setError(response.body as string);
     }
 
-    return(<section className={'container p-3'}>
-        <div className={'d-flex m-1'}>
-            <h5 className={'me-3'}>{(isRegister) ? 'Register' : 'Login'}</h5>
-            <button className={'py-1 px-2 btn btn-primary'} onClick={e => setIsRegister(!isRegister)}>
-                {(isRegister) ? 'Go To Login' : 'Go To Register'}
-            </button>
-        </div>
-        <hr className={'my-2'} />
-        {(error) && <section className={'m-1'}>
-            <b className={'text-danger'}>{error}</b>
-            <hr className={'my-2'} />
-        </section>}
-        <form onSubmit={onSubmit}>
-            {(isRegister) && <input className={'m-1 d-block input'} placeholder={'Username'} name={'username'} type={'username'} required={true} />}
-            <input className={'m-1 d-block input'} placeholder={'Email'} name={'email'} type={'email'} required={true} />
-            <input className={'m-1 d-block input'} placeholder={'Password'} name={'password'} type={'password'} required={true} />
-            <button className={'m-1 py-1 px-2 btn btn-success'} type={'submit'}>Submit</button>
+    return(<section className={'w-100 h-100'}>
+        <form className={'d-block bg-white rounded border mx-auto w-fit px-5 py-4 mt-5'} onSubmit={onSubmit}>
+            <label className={'fs-1 d-block text-center text-primary'}>
+                {isRegister ? 'REGISTER' : 'LOGIN'}
+            </label>
+            <hr />
+            {error && <section><label className={'text-danger mt-2 w-min text-center'}>{error}</label></section>}
+            <input className={'input w-fit d-block mx-auto mt-3'} id={'email'} placeholder={'Email'} type={'email'}  required={true} />
+            {isRegister && <input className={'input w-fit d-block mx-auto mt-2'} id={'username'} placeholder={'Username'} type={'text'} required={true} />}
+            <input className={'input w-fit d-block mx-auto  mt-2'} id={'password'} placeholder={'Password'} type={'password'} required={true} />
+            <button className={'d-block btn btn-primary p-1 mx-auto mt-3'} type={'submit'}>Submit</button>
+            <label className={'mt-3 d-block text-center'}>
+                {isRegister ? 'Already have an account?' : 'Doesn\'t have an account?'}
+                <b tabIndex={-1} onClick={e => setIsRegister(!isRegister)} className={'ms-1 text-primary text-decoration-none cursor-pointer'}>click here</b>
+            </label>
         </form>
     </section>);
 }

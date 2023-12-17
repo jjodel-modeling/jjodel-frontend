@@ -1,7 +1,7 @@
 import './style.scss';
 import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
-import {DState, DUser, LUser, SetRootFieldAction, U} from '../../joiner';
+import {DState, DUser, LUser, SetRootFieldAction} from '../../joiner';
 import File from './tabs/File';
 import Edit from './tabs/Edit';
 import Debug from './tabs/Debug';
@@ -75,7 +75,7 @@ function NavbarComponent(props: AllProps) {
                      }}>
                     <label style={{cursor: 'pointer'}} className={'text-white'}>{user.username[0].toUpperCase()}</label>
                 </div>
-                <ul className={'dropdown-menu'}>
+                <ul className={'dropdown-menu mt-2'} style={{left: '-3vw'}}>
                     <li tabIndex={-1} onClick={async(e) => {
                         SetRootFieldAction.new('isLoading', true);
                         await PersistanceApi.logout();
