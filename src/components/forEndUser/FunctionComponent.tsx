@@ -292,6 +292,6 @@ export const FunctionConnected = connect<StateProps, DispatchProps, OwnProps, DS
 export const Function = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => (<FunctionComponent {...{...props, children}} tooltip={true} />);
 
 Function.cname = "FunctionComponent";
-// FunctionConnected.cname = "FunctionComponent";
+// FunctionConnected.cname = "FunctionComponent_Connected";
 FunctionComponent.cname = "FunctionComponent_Disconnected";
 

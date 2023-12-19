@@ -1,4 +1,4 @@
-import type {U as UType, GraphDragManager, MouseUpEvent} from '../../joiner';
+import type {U as UType, GraphDragManager, MouseUpEvent, orArr} from '../../joiner';
 import {
     Action,
     CompositeAction,
@@ -26,8 +26,9 @@ import {
 } from "../../joiner";
 import React from "react";
 import {LoadAction, RedoAction, UndoAction} from "../action/action";
-import TreeModel from 'tree-model';
+// import TreeModel from 'tree-model';
 import Collaborative from "../../components/collaborative/Collaborative";
+import {SimpleTree} from "../../common/SimpleTree";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -336,7 +337,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     let compositeAction: CompositeAction|null = null;
     if(action.type === CompositeAction.type) {
         compositeAction = action as CompositeAction;
-        const subActions = U.wrapper<Action[]>(compositeAction.actions || []); ?
+        const subActions = compositeAction.actions || [];
         compositeAction.actions = subActions.filter(a => !ignoredFields.includes(a.field as keyof DState));
     }
     if(compositeAction && !compositeAction.actions.length) return ret;
@@ -448,8 +449,11 @@ function doreducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState
     }*/
     return ret;
 }
-function setSubclasses(dict:Dictionary<string, typeof RuntimeAccessibleClass>){
-
+function setSubclasses(roots: orArr<typeof RuntimeAccessibleClass>){
+    RuntimeAccessibleClass.extendMatrix =
+        new SimpleTree<(typeof RuntimeAccessibleClass)>(roots, "subclasses")
+            .getiIsSubElementMatrix("cname");
+    /*
     let tree = new TreeModel({
         childrenPropertyName: "subclasses"
     });
@@ -457,10 +461,9 @@ function setSubclasses(dict:Dictionary<string, typeof RuntimeAccessibleClass>){
         let constructor = dict[key];
         if(!constructor.hasOwnProperty("subclasses")) constructor.subclasses = [];
     }
-    RuntimeAccessibleClass.extendTree = (tree as any).safe_parse(RuntimeAccessibleClass);
-
+    RuntimeAccessibleClass.extendTree = (tree as any).safe_parse(RuntimeAccessibleClass);*/
 }
-windoww.TreeModel = TreeModel;
+// windoww.TreeModel = TreeModel;
 function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, alll: Dictionary<string, typeof LPointerTargetable>) {
     for (let dname in alld) {
         switch (dname) {
@@ -473,6 +476,7 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
         let tagless = dname.substring(1);
         let d = alld[dname];
         let l = alll['L'+tagless];
+        if (!d||!l) console.error("missing d constructor", {d, l});
         d.logic = l;
         if (!l) console.error('lllllllll', l, d);
         // @ts-ignore
@@ -492,20 +496,34 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
 export function stateInitializer() {
     statehistory[DUser.current] = {redoable: [], undoable: []};
     RuntimeAccessibleClass.fixStatics();
+    let dClassesMap: Dictionary<string, typeof DPointerTargetable> = {};
+    let lClassesMap: Dictionary<string, typeof LPointerTargetable> = {};
+    for (let name in RuntimeAccessibleClass.classes) {
+        switch(name[0]) {
+            default: break;
+            case "D": dClassesMap[name] = RuntimeAccessibleClass.classes[name] as typeof DPointerTargetable; break;
+            case "L": lClassesMap[name] = RuntimeAccessibleClass.classes[name] as typeof LPointerTargetable; break;
+        }
+    }
+    /*
     let dClasses: string[] = RuntimeAccessibleClass.getAllNames().filter(rc => rc[0] === 'D');
     let lClasses: string[] = RuntimeAccessibleClass.getAllNames().filter(rc => rc[0] === 'L');
-    let dClassesMap: Dictionary<string, typeof DPointerTargetable> = dClasses.reduce((acc: GObject, curr) => (acc[curr] = RuntimeAccessibleClass.get(curr), acc),{});
-    let lClassesMap: Dictionary<string, typeof LPointerTargetable> = lClasses.reduce((acc: GObject, curr)=> (acc[curr] = RuntimeAccessibleClass.get(curr), acc),{});
-    buildLSingletons(dClassesMap, lClassesMap); setSubclasses(dClassesMap); setSubclasses(lClassesMap);
+    let dClassesMap: Dictionary<string, typeof DPointerTargetable> =
+        dClasses.reduce((acc: GObject, curr) => {acc[curr] = RuntimeAccessibleClass.get(curr); return acc}, {});
+    let lClassesMap: Dictionary<string, typeof LPointerTargetable> =
+        lClasses.reduce((acc: GObject, curr) => {acc[curr] = RuntimeAccessibleClass.get(curr); return acc}, {}); */
+
+    buildLSingletons(dClassesMap, lClassesMap);
+    setSubclasses(RuntimeAccessibleClass.get("DPointerTargetable"));// setSubclasses(lClassesMap);
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
     // global document events
 
     // do not use typings or class constructors here or it will change import order
-    setTimeout( //a
+    setTimeout(
         ()=> $(document).on("mouseup",
-            (e: MouseUpEvent) => RuntimeAccessibleClass.get<typeof GraphDragManager>("GraphDragManager").stopPanning(e)), //a
+            (e: MouseUpEvent) => RuntimeAccessibleClass.get<typeof GraphDragManager>("GraphDragManager").stopPanning(e)),
         // ()=> $(document).on("mouseup", (e: MouseUpEvent) => (window as any).GraphDragManager.stopPanning(e)), //a
-        1 //a
-    ); /// because when this function is executed, RuntimeClasses are not yet parsed.
+        1
+    );
     DState.init();
 }

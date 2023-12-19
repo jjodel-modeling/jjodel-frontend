@@ -12,9 +12,8 @@ import {
 } from "../joiner";
 
 // U-functions that require jsx
-@RuntimeAccessible
+@RuntimeAccessible('UX')
 export class UX{
-    static cname: string = "UX";
 
     static recursiveMap<T extends ReactNode | ReactNode[] | null | undefined>(children: T, fn: (rn: T, i: number, depthIndices: number[])=>T, depthIndices: number[] = []): T {
         // NB: depthIndices is correct but if there is an expression children evaluated to false like {false && <jsx>},

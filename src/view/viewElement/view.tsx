@@ -1,12 +1,17 @@
-import type {EdgeGapMode} from "../../joiner";
+import type {
+    GObject,
+    Info,
+    LogicContext,
+    Pointer,
+    Dictionary
+} from "../../joiner";
 import {
     BEGIN,
     Constructors,
     CoordinateMode,
     CreateElementAction,
-    Debug,
+    Debug, Defaults,
     DGraphElement,
-    Dictionary,
     DModelElement,
     DocString,
     DPointerTargetable,
@@ -16,16 +21,12 @@ import {
     EModelElements,
     END,
     getWParams,
-    GObject,
     GraphPoint,
     GraphSize,
-    Info,
     Log,
-    LogicContext,
     LPointerTargetable,
     LViewPoint,
     MyProxyHandler,
-    Pointer,
     RuntimeAccessible,
     RuntimeAccessibleClass,
     SetFieldAction,
@@ -33,12 +34,12 @@ import {
     ShortAttribETypes,
     TRANSACTION,
     U,
-    windoww
+    windoww,
+    EdgeGapMode
 } from "../../joiner";
 
-@RuntimeAccessible
+@RuntimeAccessible('DViewElement')
 export class DViewElement extends DPointerTargetable {
-    public static cname: string = "DViewElement";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LViewElement;
@@ -113,20 +114,22 @@ export class DViewElement extends DPointerTargetable {
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
-                      priority: number = 1 , persist: boolean = true): DViewElement {
-        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined).DPointerTargetable().DViewElement(name, jsxString, defaultVSize, usageDeclarations, constants,
+                      priority: number = 1 , persist: boolean = true, isDefaultView: boolean = false, vp?: Pointer<DViewPoint>): DViewElement {
+        let id = isDefaultView ? 'Pointer_View' + name : undefined;
+        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id).DPointerTargetable().DViewElement(name, jsxString, vp, defaultVSize, usageDeclarations, constants,
             preRenderFunc, appliableToClasses, oclCondition, priority).end();
+
     }
-    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true): DViewElement {
-        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined)
-            .DPointerTargetable().DViewElement(name, jsxString).end(callback);
+    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true, id?: string, vp?: Pointer<DViewPoint>): DViewElement {
+        // let id = isDefaultView ? 'Pointer_View' + name : undefined;
+        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id)
+            .DPointerTargetable().DViewElement(name, jsxString, vp).end(callback);
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('LViewElement')
 export class LViewElement<Context extends LogicContext<DViewElement, LViewElement> = any, D extends DViewElement = any>
     extends LPointerTargetable { // MixOnlyFuncs(DViewElement, LPointerTargetable)
-    public static cname: string = "LViewElement";
 
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -532,9 +535,8 @@ RuntimeAccessibleClass.set_extend(DPointerTargetable, DViewElement);
 RuntimeAccessibleClass.set_extend(LPointerTargetable, LViewElement);
 export type WViewElement = getWParams<LViewElement, DPointerTargetable>;
 
-@RuntimeAccessible
+@RuntimeAccessible('DViewTransientProperties')
 export class DViewTransientProperties extends RuntimeAccessibleClass{
-    public static cname: string = "DViewTransientProperties";
     static logic: typeof LPointerTargetable;
     _isDViewTransientProperties!: true;
     // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
@@ -542,9 +544,8 @@ export class DViewTransientProperties extends RuntimeAccessibleClass{
 }
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, DViewTransientProperties);
-@RuntimeAccessible
+@RuntimeAccessible('LViewTransientProperties')
 export class LViewTransientProperties extends LPointerTargetable{
-    public static cname: string = "LViewTransientProperties";
     static structure: typeof DPointerTargetable;
     static singleton: LViewTransientProperties;
     _isLViewTransientProperties!: true;

@@ -56,9 +56,8 @@ console.warn('ts loading graphDataElement');
 export const packageDefaultSize = new GraphSize(0, 0, 400, 500);
 
 @Node
-@RuntimeAccessible
+@RuntimeAccessible('DGraphElement')
 export class DGraphElement extends DPointerTargetable {
-    public static cname: string = "DGraphElement";
     // static _super = DPointerTargetable;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -94,9 +93,8 @@ export class DGraphElement extends DPointerTargetable {
     }
 
 }
-@RuntimeAccessible
+@RuntimeAccessible('LGraphElement')
 export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C extends Context = Context> extends LPointerTargetable {
-    public static cname: string = "LGraphElement";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     static getNodeId<L extends LGraphElement, D extends DGraphElement>(o?:L | D | Pointer<D> | LModelElement | DModelElement | Pointer<DModelElement>): Pointer<D> {
@@ -646,9 +644,8 @@ RuntimeAccessibleClass.set_extend(DPointerTargetable, DGraphElement);
 RuntimeAccessibleClass.set_extend(LPointerTargetable, LGraphElement)
 
 
-@RuntimeAccessible
+@RuntimeAccessible('DGraph')
 export class DGraph extends DGraphElement {
-    public static cname: string = "DGraph";
     // static _super = DGraphElement;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -702,9 +699,8 @@ export class DGraph extends DGraphElement {
 var nosize = {x:0, y:0, w:0, h:0, nosize:true};
 var defaultEdgePointSize = {x:0, y:0, w:5, h:5};
 var defaultVertexSize = {x:0, y:0, w:140.6818084716797, h:32.52840805053711};
-@RuntimeAccessible
+@RuntimeAccessible('LGraph')
 export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph = any> extends LGraphElement {
-    public static cname: string = "LGraph";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LGraph;
@@ -802,9 +798,8 @@ RuntimeAccessibleClass.set_extend(LGraphElement, LGraph);
 // export const defaultEPSize: GraphSize = new GraphSize(0, 0, 15, 15); // useless, now it's in view.DefaultVSize
 
 
-@RuntimeAccessible
+@RuntimeAccessible('DVoidVertex')
 export class DVoidVertex extends DGraphElement {
-    public static cname: string = "DVoidVertex";
     // static _super = DGraphElement;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -839,9 +834,8 @@ export class DVoidVertex extends DGraphElement {
 
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('LVoidVertex')
 export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C extends Context = Context> extends LGraphElement {// <D extends DVoidVertex = any>
-    public static cname: string = "LVoidVertex";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LVoidVertex;
@@ -880,9 +874,8 @@ export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C exte
 
 RuntimeAccessibleClass.set_extend(DGraphElement, DVoidVertex);
 RuntimeAccessibleClass.set_extend(LGraphElement, LVoidVertex);
-@RuntimeAccessible
+@RuntimeAccessible('DEdgePoint')
 export class DEdgePoint extends DVoidVertex { // DVoidVertex
-    public static cname: string = "DEdgePoint";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LEdgePoint;
@@ -915,9 +908,8 @@ export class DEdgePoint extends DVoidVertex { // DVoidVertex
 
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('LEdgePoint')
 export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extends Context = Context> extends LVoidVertex {
-    public static cname: string = "LEdgePoint";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LEdgePoint;
@@ -1065,9 +1057,8 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
 RuntimeAccessibleClass.set_extend(DVoidVertex, DEdgePoint);
 RuntimeAccessibleClass.set_extend(LVoidVertex, LEdgePoint);
 
-@RuntimeAccessible
+@RuntimeAccessible('DVertex')
 export class DVertex extends DGraphElement { // DVoidVertex
-    public static cname: string = "DVertex";
     // static _super = DVoidVertex;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -1101,9 +1092,8 @@ export class DVertex extends DGraphElement { // DVoidVertex
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('LVertex')
 export class LVertex<Context extends LogicContext<any> = any, D = DVertex> extends LVoidVertex {
-    public static cname: string = "LVertex";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LVertex;
@@ -1134,9 +1124,8 @@ RuntimeAccessibleClass.set_extend(DGraphElement, DVertex);
 RuntimeAccessibleClass.set_extend(LGraphElement, LVertex);
 
 @Leaf
-@RuntimeAccessible
+@RuntimeAccessible('DGraphVertex')
 export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVertex)
-    public static cname: string = "DGraphVertex";
     // static _super1 = DGraph;
     // static _super2 = DVertex;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -1188,9 +1177,8 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
 }
 class LG extends LGraph{}
 class LV extends LVertex{}
-@RuntimeAccessible
+@RuntimeAccessible('LGraphVertex')
 export class LGraphVertex<Context extends LogicContext<any> = any, D extends DGraphVertex = any> extends MixOnlyFuncs(LG, LV) { // MixOnlyFuncs(LGraph, LVertex)
-    public static cname: string = "LGraphVertex";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LGraphVertex;
@@ -1232,9 +1220,8 @@ RuntimeAccessibleClass.set_extend(LGraph, LGraphVertex);
 RuntimeAccessibleClass.set_extend(LVertex, LGraphVertex);
 
 
-@RuntimeAccessible
+@RuntimeAccessible('DVoidEdge')
 export class DVoidEdge extends DGraphElement {
-    public static cname: string = "DVoidEdge";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LVoidEdge;
@@ -1287,9 +1274,8 @@ constructor(id: string, w: number=5, h: number=5) {
     this.h = h;
 }
 }*/
-@RuntimeAccessible
+@RuntimeAccessible('EdgeSegment')
 export class EdgeSegment{
-    public static cname: string = "EdgeSegment";
     index: number;
     prev: EdgeSegment | undefined;
     start: segmentmaker;
@@ -1491,9 +1477,8 @@ export class EdgeFillSegment extends EdgeSegment{
 
 
 type segmentmaker = {size: GraphSize, view: LViewElement, ge: LGraphElement, pt: GraphPoint, uncutPt: GraphPoint};
-@RuntimeAccessible
+@RuntimeAccessible('LVoidEdge')
 export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends DEdge = DEdge> extends LGraphElement {
-    public static cname: string = "LVoidEdge";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LVoidEdge;
@@ -1982,9 +1967,8 @@ replaced by startPoint
 }
 RuntimeAccessibleClass.set_extend(DGraphElement, DVoidEdge);
 RuntimeAccessibleClass.set_extend(LGraphElement, LVoidEdge);
-@RuntimeAccessible
+@RuntimeAccessible('DEdge')
 export class DEdge extends DVoidEdge { // DVoidEdge
-    public static cname: string = "DEdge";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LGraphElement;
@@ -2006,9 +1990,8 @@ export class DEdge extends DVoidEdge { // DVoidEdge
 
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('LEdge')
 export class LEdge<Context extends LogicContext<DEdge> = any, D extends DEdge = DEdge> extends LVoidEdge {
-    public static cname: string = "LEdge";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LGraphElement;
@@ -2033,9 +2016,8 @@ export class LEdge<Context extends LogicContext<DEdge> = any, D extends DEdge = 
 RuntimeAccessibleClass.set_extend(DVoidEdge, DEdge);
 RuntimeAccessibleClass.set_extend(LVoidEdge, LEdge);
 @Leaf
-@RuntimeAccessible
+@RuntimeAccessible('DExtEdge')
 export class DExtEdge extends DEdge { // etends DEdge
-    public static cname: string = "DExtEdge";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LGraphElement;
@@ -2061,9 +2043,8 @@ export class DExtEdge extends DEdge { // etends DEdge
         }*/
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('LExtEdge')
 export class LExtEdge extends LEdge{
-    public static cname: string = "LExtEdge";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LGraphElement;
@@ -2087,9 +2068,8 @@ export class LExtEdge extends LEdge{
 RuntimeAccessibleClass.set_extend(DEdge, DExtEdge);
 RuntimeAccessibleClass.set_extend(LEdge, LExtEdge);
 @Leaf
-@RuntimeAccessible
+@RuntimeAccessible('DRefEdge')
 export class DRefEdge extends DEdge { // extends DEdge
-    public static cname: string = "DRefEdge";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     start!: Pointer<DGraphElement, 1, 1, LGraphElement>;
@@ -2103,9 +2083,8 @@ export class DRefEdge extends DEdge { // extends DEdge
         }*/
 
 }
-@RuntimeAccessible
+@RuntimeAccessible('LRefEdge')
 export class LRefEdge extends LEdge {
-    public static cname: string = "LRefEdge";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // __raw!: DRefEdge;

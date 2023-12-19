@@ -32,10 +32,9 @@ class DefaultNodeStatee extends GraphElementStatee { }
 
 
 // Giordano: add ignore for webpack
-@RuntimeAccessible
+@RuntimeAccessible('DefaultNodeComponent')
 //@ts-ignore
 export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeState = DefaultNodeStatee> extends superclass<AllProps, NodeState>{
-    public static cname: string = "DefaultNodeComponent";
 
     static mapStateToProps(state: DState, ownProps: GraphElementOwnProps): GraphElementReduxStateProps {
         let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo

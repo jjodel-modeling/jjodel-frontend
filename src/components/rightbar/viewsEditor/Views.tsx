@@ -1,5 +1,5 @@
 import {Dispatch, MouseEvent, ReactElement} from 'react';
-import type {LProject, Dictionary, Pointer} from '../../../joiner';
+import {LProject, Dictionary, Pointer, TRANSACTION, Pointers} from '../../../joiner';
 import {CreateElementAction, Defaults, DState, DUser, DViewElement, LUser, LViewElement, U} from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from "../../../joiner/types";
@@ -16,7 +16,8 @@ function ViewsDataComponent(props: AllProps) {
         let name = 'view_' + 0;
         let names: string[] = project.views.map(v => v && v.name);
         name = U.increaseEndingNumber(name, false, false, newName => names.indexOf(newName) >= 0);
-        DViewElement.new(name, jsx); how does it ad to projecT? earleir was:  //project.views = [...project.views, dView as any]; // setter does fine with a D-class too, no need to wrap it, it consumes cpu
+        DViewElement.new(name, jsx);
+        // damiano: how does it ad to projecT? earleir was:  //project.views = [...project.views, dView as any];
 
     }
 
@@ -28,7 +29,7 @@ function ViewsDataComponent(props: AllProps) {
         e.preventDefault(); e.stopPropagation();
         TRANSACTION(()=>{
             let clone = v.duplicate();
-            let defaultViews: Dictionary<Pointer, boolean> = U.objectFromArrayValues(U.getDefaultViewsID());
+            let defaultViews: Dictionary<Pointer, boolean> = Defaults.defaultViewsMap;
             let oldViews: Pointer<DViewElement>[] = Pointers.from(project.views).filter( vid => !defaultViews[vid]);
             let i: number = oldViews.indexOf(v.id);
             if (i === -1) oldViews.push(clone.id);

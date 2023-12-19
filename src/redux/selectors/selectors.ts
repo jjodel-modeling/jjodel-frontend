@@ -1,4 +1,4 @@
-import type {
+import {
     AbstractConstructor,
     AttribETypes,
     Constructor,
@@ -28,13 +28,11 @@ import type {
     LViewPoint,
     LVoidVertex,
     Pointer,
-    AbstractConstructor,
-    Constructor,
-    LModelElement, LModel,
-    DObject, DValue, LObject, LValue,
-    LViewPoint,
-    AttribETypes, ShortAttribETypes,
+    ShortAttribETypes,
     Dictionary,
+    LUser,
+    DUser,
+    Defaults, LProject,
 } from "../../joiner";
 import {
     DViewElement,
@@ -61,9 +59,8 @@ enum ViewEClassMatch { // this acts as a multiplier for explicit priority
     EXACT_MATCH = 3,
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('Selectors')
 export class Selectors{
-    public static cname: string = 'Selectors';
 
     static getActiveModel(): null|LModel {
         let metamodel: null|LModel;
@@ -352,10 +349,10 @@ export class Selectors{
     private static matchesOclCondition(v: DViewElement, data: DModelElement | LModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
         if (!v.oclCondition) return ViewEClassMatch.MISMATCH;
         const oclCondition = v.oclCondition;
-        const user = LUser.fromPointer(DUser.current);
-        const project = U.wrapper<LProject>(user.project);
+        const user: LUser = LUser.fromPointer(DUser.current);
+        const project: LProject = user.project as LProject;
         const viewpoint = project.activeViewpoint;
-        const isDefault = !!(v.viewpoint && Defaults.check(v.viewpoint)); was === Pointer_DefaultViewPoint
+        const isDefault = !!(v.viewpoint && Defaults.check(v.viewpoint));
         const isActiveViewpoint = v.viewpoint === viewpoint.id;
         if(!isActiveViewpoint && !isDefault) return ViewEClassMatch.MISMATCH;
         let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];

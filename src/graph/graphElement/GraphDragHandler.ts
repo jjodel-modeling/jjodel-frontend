@@ -10,9 +10,8 @@ import React from "react";
 let windoww: any = window as any;
 let Point: any = windoww.Point;
 
-@RuntimeAccessible
+@RuntimeAccessible('GraphDragManager')
 export class GraphDragManager extends RuntimeAccessibleClass{
-    static cname: "GraphDragManager";
     static initialClickPos?: PointType;
     static draggingGraph?: LGraph;
 

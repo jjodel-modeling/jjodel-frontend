@@ -9,9 +9,8 @@ import {
     store, RuntimeAccessible, DModelElement, SetRootFieldAction, Selectors, Debug
 } from '../../joiner';
 
-@RuntimeAccessible
+@RuntimeAccessible('SaveManager')
 export class SaveManager {
-    public static cname: string = "SaveManager";
     private static tmpsave: DState;
 
     static save(): void {

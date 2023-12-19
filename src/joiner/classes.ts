@@ -156,7 +156,8 @@ abstract class AbstractMixedClass {
 export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    static extendTree: TreeModel.Node<typeof RuntimeAccessibleClass>// Tree<string, typeof RuntimeAccessibleClass>;
+    //static extendTree: TreeModel.Node<typeof RuntimeAccessibleClass>// Tree<string, typeof RuntimeAccessibleClass>;
+    static extendMatrix: Dictionary<string, Dictionary<string, boolean>>;
     // static name: never; // it breaks with minification, don't use it
     static cname: string;
 
@@ -271,8 +272,30 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         // thiss.className = this.name;
     }
 
-    public static get<T extends typeof RuntimeAccessibleClass = typeof RuntimeAccessibleClass>(dclassname: string, annotated = false)
-        : T & {logic?: typeof LPointerTargetable} { return (annotated ? RuntimeAccessibleClass.annotatedClasses : this.classes)[dclassname] as any; }
+    public static get<T extends typeof RuntimeAccessibleClass = typeof RuntimeAccessibleClass>(dclassname: string, mode?: string )
+        : T & {logic?: typeof LPointerTargetable} {
+
+        // believe it or not there are actually 3 different versions generated, with different static method contexts, it's a mess.
+        return this.classes[dclassname] as any;
+        /*
+        switch(mode) {
+            case "annotated version":
+                /* it is like this in console
+                () {
+                    var _obj$initBase;
+                    for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+                ...* /
+                return RuntimeAccessibleClass.annotatedClasses[dclassname] as any;
+            case "local definition version":
+            default: // same as window.classname
+            case "module export version":
+                /* it was like this in console, it is not anymore after reworking cname
+                // don't know how to get it now, but default version should be always the correct one,
+                    class DClassifier extends _joiner__WEBPACK_IMPORTED_MODULE_0__["DPointerTargetable"]
+                which is even wrong as i asked for DPointerTargetable and not DClassifier. * /
+            return null as any;
+        }*/
+    }
 
     public static extends(className?: string | typeof RuntimeAccessibleClass, superClassName?: string| typeof RuntimeAccessibleClass, returnIfEqual: boolean = true): boolean {
         if (!className || !superClassName) return false;
@@ -286,10 +309,9 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         // for (let aaa in RuntimeAccessibleClass.extendTree.find(superClassName)) { }
 
         return (thisclass instanceof superclass)
-            ||
-            !!(RuntimeAccessibleClass.extendTree.first((node) => node.model === superclass)
-                ?.first((node) => node.model === thisclass))
-            ;// || true; // todo:noes not work with constructors
+            || RuntimeAccessibleClass.extendMatrix[superclass.cname]?.[thisclass.cname]
+            // !!(RuntimeAccessibleClass.extendTree.first((node) => node.model === superclass)?.first((node) => node.model === thisclass))
+            // || true;
     }
 
     getAllPrototypeSuperClasses(): GObject[] {
@@ -335,10 +357,15 @@ export function Leaf<T extends any>( constructor: T & GObject): T { return const
 export function Node<T extends any>( constructor: T & GObject): T { return constructor; }
 export function Abstract<T extends any>( constructor: T & GObject): T { return constructor; }
 export function Instantiable<T extends any>(constructor: T & GObject, instanceConstructor?: Constructor): T { return constructor; } // for m2 cklasses that have m1 instances
-export function RuntimeAccessible<T extends any>(constructor: T & GObject): T {
+// export function RuntimeAccessible<T extends any>(cname: string): ((constructor: T & GObject) => T) {
+export function RuntimeAccessible(cname: string) {
+    return (ctor: any) => RuntimeAccessible_inner(ctor, cname);
+}
+
+function RuntimeAccessible_inner<T extends any>(constructor: T & GObject, cname: string): T {
     // console.log('DecoratorTest', {constructor, arguments});
-    let predebug = {...RuntimeAccessibleClass.classes};
-    if (!constructor.cname) (constructor as GObject).cname = constructor.name;
+    (constructor as GObject).cname = cname;
+    if (!constructor.hasOwnProperty("subclasses")) (constructor as GObject).subclasses = [];
     // @ts-ignore
     RuntimeAccessibleClass.classes[constructor.cname] = constructor as any as typeof RuntimeAccessibleClass;
     // console.log("setting runtime accessible", {key: constructor.cname, constructor, pre: predebug, post: {...RuntimeAccessibleClass.classes}});
@@ -421,9 +448,8 @@ export enum EdgeHead {
 
 
 let canFireActions: boolean = true;
-@RuntimeAccessible
+@RuntimeAccessible('Constructors')
 export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
-    public static cname: string = "Constructors";
     public static paused: boolean = false;
     private thiss: T;
     private persist: boolean;
@@ -638,9 +664,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // this.className = thiss.className;
         return this; }
 
-    DUser(username: string, id?: DUser["id"]): this {
-        const _this: DUser = this.thiss as unknown as DUser;
-        _this.id = id ||  new Date().getTime() + '_USER_' + (DPointerTargetable.maxID++);
+    DUser(username: string): this {
+        const _this: DUser = this.thiss as unknown as DUser;;
         _this.username = username;
         if (this.persist) {
             // no pointedBy
@@ -765,7 +790,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this;
     }
 
-    DViewElement(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
+    DViewElement(name: string, jsxString: string, vp?: Pointer<DViewPoint>, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                  preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '', priority: number = 1): this {
         const thiss: DViewElement = this.thiss as any;
         thiss.name = name;
@@ -788,7 +813,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.storeSize = false;
         thiss.lazySizeUpdate = true;
         thiss.constraints = [];
-        //thiss.useSizeFrom = EuseSizeFrom.node;
+        this.setPtr("viewpoint", vp);
+
+        // thiss.useSizeFrom = EuseSizeFrom.node;
         // thiss.adaptHeight = false;
         // thiss.adaptWidth = false;
 
@@ -848,13 +875,6 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.type = type;
         _this.name = name;
         this.setExternalPtr(DUser.current, 'projects', '+=');
-        return this;
-    }
-
-    DProject(name: string, author: Pointer<DUser, 1, 1, LUser>): this {
-        const thiss: DProject = this.thiss as any;
-        thiss.name = name;
-        thiss.author = author;
         return this;
     }
 
@@ -954,9 +974,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 }
 // export const Constructors = new _Constructors();
 
-@RuntimeAccessible
+@RuntimeAccessible("DPointerTargetable")
 export class DPointerTargetable extends RuntimeAccessibleClass {
-    public static cname: string = "DPointerTargetable";
     static defaultComponent: (ownProps: GObject, children?: (string | React.Component)[]) => React.ReactElement; //
     public static maxID: number = 0;
     public static logic: typeof LPointerTargetable;
@@ -1105,9 +1124,8 @@ type Pack<D extends DPointerTargetable, L extends LPointerTargetable = DtoL<D>, 
 
 
 
-@RuntimeAccessible
+@RuntimeAccessible('Pointers')
 export class Pointers{
-    public static cname: string = "Pointers";
     static filterValid<P extends (Pointer | Pointer[]) = any, RET = P extends Pointer[] ? P : P | null>
     (p: P): P | null {
         const pointerval: DPointerTargetable | DPointerTargetable[] = DPointerTargetable.from(p);
@@ -1273,9 +1291,8 @@ let aa: DClass = n;
 let ptrr = Pointers.from(aa.parent);
 aa.parent = ptrr;*/
 
-@RuntimeAccessible
+@RuntimeAccessible('PendingPointedByPaths')
 export class PendingPointedByPaths{
-    public static cname: string = "PendingPointedByPaths";
     static all: PendingPointedByPaths[] = [];
     // static pendingMoreThanTwice: ParsedAction[] = [];
     static maxSolveAttempts: number = 2099999;
@@ -1325,9 +1342,8 @@ export class PendingPointedByPaths{
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('PointedBy')
 export class PointedBy {
-    public static cname: string = "PointedBy";
     static list: string[] = ["father", "parent", "annotations", "packages", "type", "subpackages", "classifiers", "exceptions", "parameters", "defaultValue", "instances", "operations", "features", "attributes", "references", "extends", "extendedBy", "implements", "implementedBy", "instanceof", "edges", "target", "opposite", "parameters", "exceptions", "literals", "values"];
     source: string; // elemento da cui parte il puntatore
     // field: keyof DPointerTargetable;
@@ -1409,9 +1425,8 @@ export class PointedBy {
 
 type AnyPointer = Pointer<DPointerTargetable, number, number|'N', LPointerTargetable>;
 
-@RuntimeAccessible
+@RuntimeAccessible('LPointerTargetable')
 export class LPointerTargetable<Context extends LogicContext<DPointerTargetable> = any, D extends DPointerTargetable = DPointerTargetable> extends DPointerTargetable {
-    public static cname: string = "LPointerTargetable";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public static structure: typeof DPointerTargetable;
@@ -1692,7 +1707,7 @@ let Ldarr = dfrom(darr);*/
 
 
 
-@RuntimeAccessible
+@RuntimeAccessible('WPointerTargetable')
 export class WPointerTargetable extends DPointerTargetable{
     id!: never;
     _storePath!: never;
@@ -1710,9 +1725,8 @@ let bbb = LPointerTargetable.from(a);
 let bb2 = fffff(a);
 
 @Leaf
-@RuntimeAccessible
+@RuntimeAccessible('DUser')
 export class DUser extends DPointerTargetable {
-    public static cname: string = 'DUser';
     public static offlineMode: boolean = !!localStorage.getItem("offlineMode");
     // static current: Pointer<DUser> = 'Pointer_AnonymousUser';
     static current: Pointer<DUser> = '';
@@ -1726,13 +1740,12 @@ export class DUser extends DPointerTargetable {
     /*public static new(id?: DUser["id"], triggerActions: boolean = true): DUser {
         return new Constructors(new DUser('dwc'), undefined, false, undefined, id, true).DPointerTargetable().DUser().end(); }*/
     public static new(username: string, id?: DUser['id'], persist: boolean = true): DUser {
-        return new Constructors(new DUser('dwc'), undefined, persist).DPointerTargetable().DUser(username, id).end();
+        return new Constructors(new DUser('dwc'), undefined, persist, undefined, id).DPointerTargetable().DUser(username).end();
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('LUser')
 export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = DUser> extends LPointerTargetable {
-    public static cname: string = 'LUser';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DUser;
@@ -1769,9 +1782,8 @@ RuntimeAccessibleClass.set_extend(LPointerTargetable, LUser);
 export type WUser = getWParams<LUser, DUser>;
 
 @Leaf
-@RuntimeAccessible
+@RuntimeAccessible('DProject')
 export class DProject extends DPointerTargetable {
-    public static cname: string = 'DProject';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
@@ -1796,9 +1808,8 @@ export class DProject extends DPointerTargetable {
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('LProject')
 export class LProject<Context extends LogicContext<DProject> = any, D extends DProject = DProject> extends LPointerTargetable {
-    public static cname: string = 'LProject';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
@@ -1911,7 +1922,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected set_views(val: PackArr<this['views']>, context: Context): boolean {
         const data = context.data;
         let ptrs = Pointers.from(val);
-        let defaultViewsMap: Dictionary<Pointer, boolean> = U.objectFromArrayValues(Defaults.views));
+        let defaultViewsMap: Dictionary<Pointer, boolean> = U.objectFromArrayValues(Defaults.views);
         ptrs = ptrs.filter(ptr => !defaultViewsMap[ptr]);
         SetFieldAction.new(data.id, 'views', ptrs, '', true);
         return true;
@@ -2097,9 +2108,8 @@ RuntimeAccessibleClass.set_extend(LPointerTargetable, LProject);
 export type WProject = getWParams<LProject, DProject>;
 
 
-@RuntimeAccessible
+@RuntimeAccessible('MyError')
 export class MyError extends Error {
-    static cname: string = "MyError";
     constructor(message?: string, ...otherMsg: any[]) {
         // 'Error' breaks prototype chain here
         super(message);
@@ -2111,7 +2121,7 @@ export class MyError extends Error {
 
         if (Object.setPrototypeOf) { Object.setPrototypeOf(this, actualProto); }
         else { (this as any).__proto__ = actualProto; }
-        (this as any).className = (this.constructor as typeof MyError).cname;
+        (this as any).className = (this.constructor as typeof RuntimeAccessibleClass).cname;
     }
 }
 

@@ -144,7 +144,7 @@ type arrayFieldNameTypes<D> = keyof D | `${string & keyof D}[]` | `${string & ke
 type AccessModifier = '' | '[]' | '+=' | '-=' | `.${number}` | `[${number}]` | undefined;
 type StrictExclude<T, U> = T extends U ? U extends T ? never : T : T;
 
-@RuntimeAccessible
+@RuntimeAccessible('Action')
 export class Action extends RuntimeAccessibleClass {
     public static cname: string = "Action";
     public static maxCounter: number = 1;
@@ -233,7 +233,7 @@ export class Action extends RuntimeAccessibleClass {
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('LoadAction')
 export class LoadAction extends Action {
     public static cname: string = "LoadAction";
     static type = 'LOAD';
@@ -247,7 +247,7 @@ export class LoadAction extends Action {
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('SetRootFieldAction')
 export class SetRootFieldAction extends Action {
     public static cname: string = "SetRootFieldAction";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -316,18 +316,10 @@ export class SetRootFieldAction extends Action {
         }*/
         return super.fire(forceRelaunch);
     }
+}
 
-
-// non so come, ma fare in modo che [], +=, -=, siano disponibili solo se la chiave è il nome di un attributo di tipo array
-type arrayFieldNameTypes<D> = keyof D | `${string & keyof D}[]` | `${string & keyof D}+=` | `${string & keyof D}-=` | `${string & keyof D}.${number}` | `${string & keyof D}[${number}]`;
-type AccessModifier = '' | '[]' | '+=' | '-=' | `.${number}` | `[${number}]` | undefined;
-
-
-type StrictExclude<T, U> = T extends U ? U extends T ? never : T : T;
-
-@RuntimeAccessible
+@RuntimeAccessible('SetFieldAction')
 export class SetFieldAction extends SetRootFieldAction {
-    public static cname: string = "SetFieldAction";
     static type = 'SET_ME_FIELD';
 
     static create<
@@ -455,7 +447,7 @@ SetFieldAction.new(dclass, 'name[4]', '') // ok, anche se non dovrebbe accettare
 SetFieldAction.new(dclass, 'name.5', '') // ok, equivale a dicitura array
 */
 
-@RuntimeAccessible
+@RuntimeAccessible('RedoAction')
 export class RedoAction extends Action {
     public static cname: string = "RedoAction";
     static type = 'RedoAction';
@@ -470,7 +462,7 @@ export class RedoAction extends Action {
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('UndoAction')
 export class UndoAction extends Action {
     public static cname: string = "UndoAction";
     static type = 'UndoAction';
@@ -486,7 +478,7 @@ export class UndoAction extends Action {
 }
 
 // todo: delete or find original idea back
-@RuntimeAccessible
+@RuntimeAccessible('CombineHistoryAction')
 export class CombineHistoryAction extends Action {
     public static cname: string = "CombineHistoryAction";
     static type = 'CombineHistoryAcCombineHistoryActiontion';
@@ -501,7 +493,7 @@ export class CombineHistoryAction extends Action {
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('CreateElementAction')
 export class CreateElementAction extends Action {
     public static cname: string = "CreateElementAction";
     static type = 'CREATE_ELEMENT';
@@ -529,9 +521,8 @@ export class CreateElementAction extends Action {
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('DeleteElementAction')
 export class DeleteElementAction extends SetFieldAction {
-    public static cname: string = "DeleteElementAction";
     static type = 'DELETE_ELEMENT';
     public static create(me: Pack1<LPointerTargetable>): DeleteElementAction { return new DeleteElementAction(me as any); }
     public static new(me: Pack1<LPointerTargetable>): boolean { return new DeleteElementAction(me as any).fire(); }
@@ -553,9 +544,8 @@ export class IDLinkAction extends Action{
     nope, uso un proxy
 }*/
 
-@RuntimeAccessible
+@RuntimeAccessible('CompositeAction')
 export class CompositeAction extends Action {
-    public static cname: string = "CompositeAction";
     static type: string = 'COMPOSITE_ACTION';
     actions: Action[] = [];
 
@@ -572,9 +562,9 @@ export class CompositeAction extends Action {
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('ParsedAction')
 export class ParsedAction extends SetRootFieldAction {
-    public static cname: string = "ParsedAction"; // NB: actually this is never created but "converted" from other actions by adding fields
+    // NB: actually this is never created but "converted" from other actions by adding fields
     path!: string; // path to a property in the store "something.like.this"
     pathArray!: string[]; // path splitted "like.1.this"
     executionCount!: number;

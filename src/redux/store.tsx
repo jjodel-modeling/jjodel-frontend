@@ -88,16 +88,15 @@ export const statehistory: {
 statehistory[DUser.current] = {undoable:[], redoable:[]}; // todo: make it able to combine last 2 changes with a keystroke. reapeat N times to combine N actions. let it "redo" multiple times, it's like recording a macro.
 
 (window as any).statehistory = statehistory;
-@RuntimeAccessible
+@RuntimeAccessible('DState')
 export class DState extends DPointerTargetable{
-    public static cname: string = "DState";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     static new(): DState {
         return new Constructors(new DState('dwc'), undefined, false, undefined).DPointerTargetable().DState().end();
     }
 
-    env: Dictionary = process.env;  this might make problems on load
+    env: Dictionary = process.env;  //damiano: this might make problems on load
     debug: boolean = false;
     logs: Pointer<DLog>[] = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
@@ -164,15 +163,10 @@ export class DState extends DPointerTargetable{
 
     static init(store?: DState): void {
         BEGIN()
-        const viewpoint = DViewPoint.new('Default', '', undefined, '', '', '', [], '', 0, false); not good, side effect actions are fired with old id
-        viewpoint.id = Defaults.viewpoints[0];
-        CreateElementAction.new(viewpoint);
-        const views: DViewElement[] = makeDefaultGraphViews();
-        for (let view of views) {
-            view.id = 'Pointer_View' + view.name;
-            view.viewpoint = Defaults.viewpoints[0];
-            CreateElementAction.new(view);
-        }
+        // const viewpoint = DViewPoint.new('Default', '', undefined, '', '', '', [], '', 0, false);
+        const viewpoint = DViewPoint.new2('Default', '', ()=>{}, true, Defaults.viewpoints[0]);
+        const views: DViewElement[] = makeDefaultGraphViews(Defaults.viewpoints[0]);
+        for (let view of views) { CreateElementAction.new(view); }
 
         for (let primitiveType of Object.values(ShortAttribETypes)) {
             let dPrimitiveType;
@@ -195,16 +189,13 @@ export class DState extends DPointerTargetable{
         CreateElementAction.new(dObject);
         SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
         END();
-        }
-        CreateElementAction.new(dObject);
-        SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
-        END();
-
     }
 }
-function makeDefaultGraphViews(): DViewElement[] {
 
-    let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname], '', 1, false);
+
+function makeDefaultGraphViews(vp: Pointer<DViewPoint>): DViewElement[] {
+    let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '',
+        '', '', [DModel.cname], '', 1, false, true, vp);
     modelView.draggable = false; modelView.resizable = false;
     modelView.oclCondition = 'context DModel inv: true';
     modelView.usageDeclarations = "(ret)=>{\n" +
@@ -225,7 +216,7 @@ function makeDefaultGraphViews(): DViewElement[] {
         "ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps)\n"+
         "}";
 
-    let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname], '', 1, false);
+    let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname], '', 1, false, true, vp);
     packageView.defaultVSize = packageDefaultSize;
     packageView.oclCondition = `context DPackage inv: true`;
 
@@ -236,28 +227,27 @@ function makeDefaultGraphViews(): DViewElement[] {
     defaultPackage.oclCondition = `context DPackage inv: self.name = 'default'`;
     defaultPackage.draggable = false; defaultPackage.resizable = false;*/
 
-
-    let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.cname], '', 1, false);
+    let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.cname], '', 1, false, true, vp);
     classView.adaptWidth = true; classView.adaptHeight = true;
     classView.oclCondition = 'context DClass inv: true';
 
-    let enumView: DViewElement = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.cname], '', 1, false);
+    let enumView: DViewElement = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.cname], '', 1, false, true, vp);
     enumView.adaptWidth = true; enumView.adaptHeight = true;
     enumView.oclCondition = 'context DEnumerator inv: true';
 
-    let attributeView: DViewElement = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.cname], '', 1, false);
+    let attributeView: DViewElement = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.cname], '', 1, false, true, vp);
     attributeView.oclCondition = 'context DAttribute inv: true';
 
-    let referenceView: DViewElement = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.cname], '', 1, false);
+    let referenceView: DViewElement = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.cname], '', 1, false, true, vp);
     referenceView.oclCondition = 'context DReference inv: true';
 
-    let operationView: DViewElement = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.cname], '', 1, false);
+    let operationView: DViewElement = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.cname], '', 1, false, true, vp);
     operationView.oclCondition = 'context DOperation inv: true';
 
-    let literalView: DViewElement = DViewElement.new('Literal', DV.literalView(), undefined, '', '', '', [DEnumLiteral.cname], '', 1, false);
+    let literalView: DViewElement = DViewElement.new('Literal', DV.literalView(), undefined, '', '', '', [DEnumLiteral.cname], '', 1, false, true, vp);
     literalView.oclCondition = 'context DEnumLiteral inv: true';
 
-    let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.cname], '', 1, false);
+    let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.cname], '', 1, false, true, vp);
     objectView.adaptWidth = true; objectView.adaptHeight = true;
     objectView.oclCondition = 'context DObject inv: true';
     objectView.usageDeclarations = "(ret)=>{\n" +
@@ -284,7 +274,7 @@ function makeDefaultGraphViews(): DViewElement[] {
     valuecolormap[ShortAttribETypes.EString] = "green";
     valuecolormap[ShortAttribETypes.EChar] = "green";
     valuecolormap[ShortAttribETypes.EVoid] = "gray";
-    let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname], '', 1, false);
+    let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname], '', 1, false, true, vp);
     valueView.oclCondition = 'context DValue inv: true';
 
     valueView.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
@@ -301,12 +291,12 @@ function makeDefaultGraphViews(): DViewElement[] {
         "ret.typeString = data.typeString\n" +
         "}";
 
-    let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.cname], '', 1, false);
+    let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.cname], '', 1, false, true, vp);
     voidView.appliableToClasses=["VoidVertex"];
     voidView.explicitApplicationPriority = 2;
     voidView.adaptWidth = true; voidView.adaptHeight = true;
 
-    let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '', [], '', 1, false);
+    let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '', [], '', 1, false, true, vp);
     edgePointView.appliableTo = 'edgePoint'; edgePointView.resizable = false;
     // edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
     edgePointView.edgePointCoordMode = CoordinateMode.absolute;
@@ -344,8 +334,8 @@ function makeDefaultGraphViews(): DViewElement[] {
         "}";
 
     function makeEdgeView(name: string, type: EdgeHead, headSize: GraphPoint | undefined, tailSize: GraphPoint | undefined, dashing: boolean): DViewElement{
-        let ev = DViewElement.new2("Edge"+name, DV.edgeView(type,
-                headSize ? DV.svgHeadTail("Head", type) : "", tailSize ? DV.svgHeadTail("Tail", type) : "", dashing ? "10.5,9,0,0" : undefined),
+        let ev = DViewElement.new2("Edge"+name,
+            DV.edgeView(type, headSize ? DV.svgHeadTail("Head", type) : "", tailSize ? DV.svgHeadTail("Tail", type) : "", dashing ? "10.5,9,0,0" : undefined),
             (v: DViewElement) => {
                 v.explicitApplicationPriority = 2;
                 v.bendingMode = EdgeBendingMode.Line;
@@ -356,7 +346,7 @@ function makeDefaultGraphViews(): DViewElement[] {
                 v.usageDeclarations = edgeUsageDeclarations;
                 v.preRenderFunc = edgePrerenderFunc;
                 v.appliableTo = 'edge'; // todo: remove the entire property?
-        }, false);
+        }, false, vp, 'Pointer_ViewEdge' + name);
         edgeViews.push(ev);
         return ev;
     }
@@ -382,18 +372,15 @@ function makeDefaultGraphViews(): DViewElement[] {
         literalView, objectView, valueView, voidView, ...edgeViews, edgePointView];
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('ViewPointState')
 export class ViewPointState extends DPointerTargetable{
-    public static cname: string = "ViewPointState";
     name: string = '';
 }
 
-// todo: ogni entità ha: dati (store), logica con operazioni, dati di presentazione, ...?
-
-@RuntimeAccessible
+// to delete?
+@RuntimeAccessible('ModelStore')
 export class ModelStore {
-    public static cname: string = "ModelStore";
-    private _meta!: ModelStore | string; // todo: credo sia un Pointer? roba vecchia. oldcomment: // string memorizzata nello store, logicamente si comporta come una reference perchè usi la stringa per recuperare un modelstore (il tipo modelstore è di documentazione)
+    private _meta!: ModelStore | string;
     instances!: (ModelStore | string)[];
 
     // getter e setter senza proxy
@@ -408,9 +395,8 @@ export class ModelStore {
 
 
 
-@RuntimeAccessible
+@RuntimeAccessible('LState')
 export class LState<Context extends LogicContext<DState> = any, C extends Context = Context, D extends DState = DState> extends LPointerTargetable {
-    public static cname: string = "LState";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DPointerTargetable & DState;

@@ -14,7 +14,7 @@ export class StateMachine_M1 {
         const event3 = await this.createEvent(m1, event, 'lightOn Io', '');
         const event4 = await this.createEvent(m1, event, 'drawerOpened do', '');
         /* Events */
-        const events = m1.addObject(undefined, 'Events');
+        const events = m1.addObject({}, 'Events');
         /* State */
         const idle = await this.createState(m1, state, 'idle', [command1, command2]);
         const active = await this.createState(m1, state, 'active', []);
@@ -40,7 +40,7 @@ export class StateMachine_M1 {
             commands.push(await this.createCommand(m1, command, 'C' + i, 'C' + i));
         for(let i = 0; i < eventsLength; i++)
             events.push(await this.createEvent(m1, event, 'E' + i, 'E' + i));
-        const object = m1.addObject(undefined, 'Events');
+        const object = m1.addObject({}, 'Events');
         for(let i = 0; i < statesLength; i++)
             states.push(await this.createState(m1, state, 'S' + i, [commands[i]]))
         for(let i = 0; i < transitionsLength; i++)
@@ -61,28 +61,28 @@ export class StateMachine_M1 {
     }
     private static async createState(m1: LModel, state: LClass, name: string, actions: LObject[]): Promise<LObject> {
         const dObject = m1.addObject(state.id);
-        const lObject = LObject.fromD(dObject);
+        const lObject: LObject = LObject.fromD(dObject);
         lObject.features[0].value = name;
         lObject.features[1].values = actions;
         return lObject;
     }
     private static async createCommand(m1: LModel, command: LClass, name: string, code: string): Promise<LObject> {
         const dObject = m1.addObject(command.id);
-        const lObject = LObject.fromD(dObject);
+        const lObject: LObject = LObject.fromD(dObject);
         lObject.features[0].value = name;
         lObject.features[1].value = code;
         return lObject;
     }
     private static async createEvent(m1: LModel, event: LClass, name: string, code: string): Promise<LObject> {
         const dObject = m1.addObject(event.id);
-        const lObject = LObject.fromD(dObject);
+        const lObject: LObject = LObject.fromD(dObject);
         lObject.features[0].value = name;
         lObject.features[1].value = code;
         return lObject;
     }
     private static async createTransition(m1: LModel, transition: LClass, source: LObject, target: LObject, event: LObject): Promise<LObject> {
         const dObject = m1.addObject(transition.id);
-        const lObject = LObject.fromD(dObject);
+        const lObject: LObject = LObject.fromD(dObject);
         U.log(lObject)
         lObject.features[0].values = [source];
         lObject.features[1].values = [target];

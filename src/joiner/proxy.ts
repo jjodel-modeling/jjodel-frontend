@@ -26,15 +26,13 @@ type ERROR = "_Type_Error_";
 // type WtoL<WX extends WPointerTargetable> ='';
 
 const childrenKeys = ["@", "$"];
-@RuntimeAccessible
+@RuntimeAccessible('LogicContext')
 export class LogicContext<
     DX extends GObject = DModelElement,
     LX = DtoL<DX>,
     // PF extends MyProxyHandler<DX> = MyProxyHandler<DX>,
     WX = DtoW<DX>
     > extends RuntimeAccessibleClass{
-    public static cname: string = "LogicContext";
-    // public proxyfyFunction: PF;
     public proxyObject: LX;
     public data: DX;// & GObject;
     public write: WX;
@@ -55,9 +53,8 @@ export class LogicContext<
 }
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LogicContext);
-@RuntimeAccessible
+@RuntimeAccessible('MapLogicContext')
 export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, WPointerTargetable> {
-    public static cname: string = "MapLogicContext";
     data: GObject;
     path: string;
     subMaps: string[];
@@ -73,9 +70,8 @@ export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, W
 }
 RuntimeAccessibleClass.set_extend(LogicContext, MapLogicContext);
 
-@RuntimeAccessible
+@RuntimeAccessible('MyProxyHandler')
 export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibleClass implements ProxyHandler<T>{
-    public static cname: string = "MyProxyHandler";
     s: string = 'set_';
     g: string = 'get_';
     /*get(target: T, p: string | number | symbol, proxyitself: Proxyfied<T>): boolean {
@@ -132,14 +128,14 @@ console.log(obj2 + ""); // "true"    — hint is "default"        array, object,
 // so pointers cannot include "," char and toString() must return a pointer to keep lclass.extends += somepointer as a valid expression;
 // -= will call getPrimitive("number") which will result in array -> NaN, so NaN = NaN - pointer and cannot be done.
 
-@RuntimeAccessible
+@RuntimeAccessible('GetPathHandler')
 class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
-    strbuilder: string = '';
-    array: (string | number | symbol)[] = [];
-    calls: (GObject<'parameters of get calls'>)[] = [];
     public static __asCalls: boolean = false;
     public static __asArray: boolean = false;
     public static __nested: boolean = true;
+    private strbuilder: string = '';
+    private array: (string | number | symbol)[] = [];
+    private calls: (GObject<'parameters of get calls'>)[] = [];
 
     public constructor() { super(); }
 
@@ -181,9 +177,8 @@ class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
     }
 }
 RuntimeAccessibleClass.set_extend(MyProxyHandler, GetPathHandler);
-@RuntimeAccessible
+@RuntimeAccessible('TargetableProxyHandler')
 export class TargetableProxyHandler<ME extends GObject = DModelElement, LE extends LPointerTargetable = LModelElement> extends MyProxyHandler<ME> {
-    public static cname: string = "TargetableProxyHandler";
 // permette di fare cose tipo: user.name_surname che ritorna la concatenazione di nome e cognome anche se il campo name_surname non esiste.
     lg: LE & GObject; // to disable type check easily and access 'set_' + varname dynamically
     l: LE;
@@ -416,9 +411,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     }*/
 }
 RuntimeAccessibleClass.set_extend(MyProxyHandler, TargetableProxyHandler);
-@RuntimeAccessible
+@RuntimeAccessible('MapProxyHandler')
 export class MapProxyHandler extends TargetableProxyHandler<Dictionary, LPointerTargetable> {
-    public static cname: string = "MapProxyHandler";
     // todo: sposta alcune funzioni da TargetableProxy a MyProxy e fai estendere direttamente MyProxy a questa classe
     public subMapKeys: Dictionary<string, any | Dictionary<DocString<'nested map keys'>>>;
 

@@ -122,10 +122,10 @@ let maxRenderCounter = Number.POSITIVE_INFINITY;
 export const lightModeAllowedElements = [DModel.cname, DPackage.cname, DClass.cname, DEnumerator.cname, DObject.cname];
 
 const countRenders = true;
-@RuntimeAccessible
+@RuntimeAccessible('GraphElementComponent')
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
     extends Component<AllProps, GraphElementState>{
-    public static cname: string = "GraphElementComponent";
+    public static cname: string;
     static all: Dictionary<number, GraphElementComponent> = {};
     public static map: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = {};
     static maxid: number = 0;
@@ -493,7 +493,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         e.stopPropagation();
         // NOT executed here, but on mousedown because of IOS compatibility
     }
-/*11/23
 
     doContextMenu(e: React.MouseEvent<Element>) {
         BEGIN()

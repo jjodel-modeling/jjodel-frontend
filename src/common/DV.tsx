@@ -5,9 +5,8 @@ import React, {ReactElement} from "react";
 const beautify = (s: string) => s;
 let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 
-@RuntimeAccessible
+@RuntimeAccessible('DV')
 export class DV {
-    static cname: string = "DV";
     public static modelView(): string { return beautify(DefaultView.model()); } // damiano: che fa beautify? magari potremmo settarlo in LView.set_jsx invece che solo qui, così viene formattato anche l'input utente?
     public static packageView(): string { return beautify(DefaultView.package()); }
     public static classView(): string { return beautify(DefaultView.class()); }

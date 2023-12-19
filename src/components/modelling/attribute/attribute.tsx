@@ -4,7 +4,7 @@ import logo from "../../logo.svg";
 import {RuntimeAccessible} from "../../../joiner";
 
 
-@RuntimeAccessible
+@RuntimeAccessible('Attribute')
 export class Attribute extends Component<any, any> {
     public static cname: string = "Attribute";
     render() {

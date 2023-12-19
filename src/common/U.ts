@@ -34,9 +34,8 @@ import {AccessModifier} from "../api/data";
 
 console.warn('loading ts U log');
 
-@RuntimeAccessible
+@RuntimeAccessible('U')
 export class U {
-    static cname: string = "U";
 
     // damiano: eseguire una funzione costa in performance, anche se è brutto fare questi cast
     static wrapper<T>(obj: any): T {
@@ -854,10 +853,11 @@ export class U {
         return typeof v === 'object'; }
 
     static objectFromArrayValues(arr: (string | number)[]): Dictionary<string | number, boolean> {
-        let ret: Dictionary = {};
-        // ret = arr.reduce((acc, val) => { acc[val] = true; }, {});
+        // @ts-ignore
+        return arr.reduce((acc, val) => { acc[val] = true; return acc; }, {});
+        /*let ret: Dictionary = {};
         for (let val of arr) { ret[val] = true; }
-        return ret;
+        return ret;*/
     }
 
     static toBoolString(bool: boolean, ifNotBoolean: boolean = false): string { return bool === true ? 'true' : (bool === false ? 'false' : '' + ifNotBoolean); }
@@ -1254,9 +1254,8 @@ export class myFileReader {
     }
 
 }
-@RuntimeAccessible
+@RuntimeAccessible('Uarr')
 export class Uarr{
-    static cname: string = "UArr";
     public static arrayIntersection<T>(arr1: T[], arr2: T[]): T[]{
         if (!arr1 || ! arr2) return null as any;
         return arr1.filter( e => arr2.indexOf(e) >= 0);
@@ -1452,9 +1451,8 @@ export class ParseNumberOrBooleanOptions{
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('Log')
 export class Log{
-    static cname: string = "Log";
     constructor() { }
     // public static history: Dictionary<string, Dictionary<string, any[]>> = {}; // history['pe']['key'] = ...parameters
     public static lastError: any[];

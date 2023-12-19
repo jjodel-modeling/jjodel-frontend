@@ -20,9 +20,9 @@ function loadOldState(obj: GObject, name: string = "oldSave"): void {
         DUser.current = duser.id;
         // user = LPointerTargetable.fromPointer(DUser.current);
         user = LPointerTargetable.fromD(duser);
-        dproject = DProject.new(name, duser.id);
+        dproject = DProject.new('private', name);
         project = LPointerTargetable.fromD(dproject);
-        user.projects = [...user.projects, project];
+        // user.projects = [...user.projects, project];
         user.project = project;
     })
     setTimeout(()=> TRANSACTION(()=>{

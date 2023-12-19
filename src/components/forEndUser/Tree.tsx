@@ -28,21 +28,20 @@ function Tree(props: TreeProps) {
 }
 
 interface DataTreeProps {data: LModelElement, hide: boolean, depth: string[], setFilter: () => void}
-function DataTree(props: DataTreeProps) {
+function DataTree(props: DataTreeProps): JSX.Element {
     const hide = props.hide;
     const data: LNamedElement = LNamedElement.fromPointer(props.data.id);
     if(!data) return(<div>Error Data is <b>undefined</b></div>);
     const depth = props.depth;
     const setFilter = props.setFilter;
 
-    const click = () => { {
+    const click = () => {
         let node = data.node;
         SetRootFieldAction.new('_lastSelected', {
             node: node?.id,
             view: node?.view.id,
             modelElement: data.id
         }, '', false);
-
     }
 
     return(<div>
