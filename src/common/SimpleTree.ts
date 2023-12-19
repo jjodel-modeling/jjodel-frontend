@@ -34,14 +34,13 @@ export class SimpleTree<T extends GObject> {
                 nextLevel.push(...subtree.subelements);
             }
             //@ts-ignore
-            console.log("fifo -> next level", fifo.map(f=>f?.node?.cname), nextLevel.map(f=>f?.node?.cname));
+            // console.log("fifo -> next level", fifo.map(f=>f?.node?.cname), nextLevel.map(f=>f?.node?.cname));
             fifo = nextLevel;
         }
     }
 
     getiIsSubElementMatrix(namekey: keyof T): Dictionary<string, Dictionary<string, boolean>>{
         let ret: Dictionary<string, Dictionary<string, boolean>> = {}// matrix name x name telling if A extends B
-        return this as any;//
         for (let o of this) { // O(N^2), but optimal for this task, as the matrix size is O(N^2) as well
             let name = o.node[namekey];
             if (!name) Log.ee("missing key property  in tree node: ", {tree: this, node:o.node, namekey});
