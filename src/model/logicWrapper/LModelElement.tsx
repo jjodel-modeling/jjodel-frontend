@@ -23,7 +23,6 @@ import {
     Constructors,
     Debug,
     DEdge,
-    DeleteElementAction,
     Dictionary,
     DocString,
     DPointerTargetable,
@@ -35,11 +34,11 @@ import {
     GraphSize,
     Instantiable,
     Leaf,
-    LEdge, LGraph,
+    LEdge,
     LGraphElement,
     Log,
     LogicContext,
-    LPointerTargetable, LUser, LViewElement,
+    LPointerTargetable,
     Node,
     Pack,
     Pack1,
@@ -51,7 +50,6 @@ import {
     RuntimeAccessibleClass,
     Selectors,
     SetFieldAction,
-    SetRootFieldAction,
     ShortAttribETypes,
     ShortAttribSuperTypes,
     store,
@@ -59,8 +57,7 @@ import {
     TRANSACTION,
     U
 } from "../../joiner";
-import type {Info, Json, ObjectWithoutPointers, orArr, PrimitiveType,
-    unArr} from "../../joiner/types";
+import type {Info, Json, ObjectWithoutPointers, orArr, PrimitiveType, unArr} from "../../joiner/types";
 
 import {
     AccessModifier,

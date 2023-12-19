@@ -48,7 +48,7 @@ export class StateMachine_Views {
                 .filter(o => o.instanceof.name === 'Transition')
                 .map((t, i) => {
                     return(t.$source.value && t.$target.value && t.$trigger.value && 
-                        <Edge key={i} label={t.$trigger.value.$name.value} 
+                        <Edge key={i} label={() => t.$trigger.value.$name.value} 
                             data={t.id}
                             view={'Pointer_ViewEdgeAssociation'} 
                             start={t.$source.value.node} 
@@ -109,7 +109,7 @@ export class StateMachine_Views {
         }
     </div>`;
     private static event = `<div className={'w-100 root text-center'}>
-        <label className={'p-1'}>{data.name}: <b>{data.$name.value}</b></label>
+        <label className={'p-1'}>{data.name}</label>
     </div>`;
 
     private static transition = `<div className={'root bg-white'}>

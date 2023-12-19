@@ -1,17 +1,7 @@
 import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
-import {
-    BEGIN,
-    DeleteElementAction,
-    DProject,
-    DUser,
-    END,
-    LProject,
-    LUser,
-    SetRootFieldAction,
-    U
-} from '../joiner';
-import type{DState, GObject} from '../joiner';
+import type {DState} from '../joiner';
+import {DProject, DUser, LProject, LUser, SetRootFieldAction, U} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 import PersistanceApi from "../api/persistance";
 import {useEffectOnce} from "usehooks-ts";
@@ -48,7 +38,7 @@ function DashboardComponent(props: AllProps) {
         SetRootFieldAction.new('isLoading', false);
     }
 
-    return (<div className={'container'}>
+    return (<div className={''}>
         <div className={'d-flex p-2'}>
             <b className={'ms-1 my-auto'}>MY PROJECTS</b>
             <button disabled={DUser.offlineMode} onClick={async() => await PersistanceApi.loadMyProjects()}
@@ -66,11 +56,11 @@ function DashboardComponent(props: AllProps) {
                     + Collaborative
                 </button>
                 <button className={'btn btn-primary p-1 mx-1'} onClick={e => loadStateMachine1()}>
-                    + State Machine v1
+                    + State Machine
                 </button>
-                <button className={'btn btn-primary p-1 mx-1'} onClick={e => loadStateMachine2()}>
+                {/*<button className={'btn btn-primary p-1 mx-1'} onClick={e => loadStateMachine2()}>
                     + State Machine v2
-                </button>
+                </button>*/}
             </div>
 
         </div>

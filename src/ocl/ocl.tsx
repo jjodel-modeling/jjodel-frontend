@@ -1,5 +1,5 @@
 import {OclEngine} from "@stekoe/ocl.js"
-import {Constructor, GObject, RuntimeAccessible, RuntimeAccessibleClass} from "../joiner";
+import {Constructor, GObject, RuntimeAccessibleClass} from "../joiner";
 import {OclResult} from "@stekoe/ocl.js/dist/components/OclResult";
 
 let windoww = window as any;

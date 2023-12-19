@@ -17,7 +17,8 @@ import {
     ParsedAction,
     PendingPointedByPaths,
     PointedBy,
-    Pointer, Pointers,
+    Pointer,
+    Pointers,
     RuntimeAccessibleClass,
     Selectors,
     SetFieldAction,
@@ -26,7 +27,6 @@ import {
 } from "../../joiner";
 import React from "react";
 import {LoadAction, RedoAction, UndoAction} from "../action/action";
-// import TreeModel from 'tree-model';
 import Collaborative from "../../components/collaborative/Collaborative";
 import {SimpleTree} from "../../common/SimpleTree";
 

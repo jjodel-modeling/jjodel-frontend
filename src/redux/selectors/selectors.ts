@@ -48,7 +48,6 @@ import {
     U,
     toShortEType
 } from "../../joiner";
-import {EdgeOptions} from "../store";
 import {DefaultEClasses, ShortDefaultEClasses, toShortEClass} from "../../common/U";
 import { Selected } from "../../joiner/types";
 
@@ -136,17 +135,6 @@ export class Selectors{
     public static getState(): any {
         const state: DState & GObject = store.getState();
         return state;
-    }
-
-    static removeEdge(id: number): EdgeOptions[] {
-        const state: DState & GObject = store.getState();
-        const edges: EdgeOptions[] = [];
-        for(let edge of state.edges) {
-            if(edge.id !== id) {
-                edges.push(edge);
-            }
-        }
-        return edges;
     }
 
     static getDefaultEcoreClass(type: DefaultEClasses | ShortDefaultEClasses, state?: DState): DClassifier {

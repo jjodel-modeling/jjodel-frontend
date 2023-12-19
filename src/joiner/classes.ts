@@ -103,7 +103,7 @@ import type {
     Proxyfied,
     unArr
 } from "./types";
-import {EdgeBendingMode, EdgeGapMode, PrimitiveType, NodeTypes, Json} from "./types";
+import {EdgeBendingMode, EdgeGapMode, NodeTypes, PrimitiveType} from "./types";
 import type {
     DViewElement,
     DViewTransientProperties,
@@ -112,27 +112,34 @@ import type {
     WViewTransientProperties
 } from "../view/viewElement/view";
 import type {LogicContext} from "./proxy";
-import {DLog, DState, DViewPoint, EdgeSegment, LLog, LViewPoint, TRANSACTION} from "./index";
 import {
     Action,
     BEGIN,
     CreateElementAction,
+    Defaults,
     DeleteElementAction,
+    DLog,
+    DState,
+    DViewPoint,
+    EdgeSegment,
     END,
     GraphPoint,
     GraphSize,
     LGraph,
+    LLog,
     LModel,
     Log,
     LViewElement,
+    LViewPoint,
+    packageDefaultSize,
     ParsedAction,
     SetFieldAction,
-    SetRootFieldAction, ShortAttribETypes,
+    SetRootFieldAction,
     store,
-    U, Defaults, packageDefaultSize
+    TRANSACTION,
+    U
 } from "./index";
 import TreeModel from "tree-model";
-import PersistanceApi from "../api/persistance";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -2500,4 +2507,3 @@ export enum EModelElements{
     "(m1) Object" = "DObject",
     "(m1) Value" = "DValue",
 }
-

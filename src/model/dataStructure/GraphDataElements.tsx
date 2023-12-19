@@ -3,7 +3,8 @@ import {isDeepStrictEqual} from "util";
 import {
     BEGIN,
     Constructors,
-    CoordinateMode, Debug,
+    CoordinateMode,
+    Debug,
     Dictionary,
     DMap,
     DModelElement,
@@ -19,7 +20,7 @@ import {
     GraphElementComponent,
     GraphPoint,
     GraphSize,
-    Info, IPoint,
+    Info,
     Leaf,
     LMap,
     LModelElement,
@@ -41,12 +42,13 @@ import {
     ShortAttribETypes,
     Size,
     store,
-    TargetableProxyHandler, TRANSACTION,
-    U, Uarr,
+    TargetableProxyHandler,
+    U,
+    Uarr,
     windoww
 } from "../../joiner";
 import type {RefObject} from "react";
-import {EdgeGapMode, InitialVertexSize, InitialVertexSizeObj} from "../../joiner/types";
+import {EdgeGapMode, InitialVertexSize} from "../../joiner/types";
 import {labelfunc} from "../../joiner/classes";
 import {Geom} from "../../common/Geom";
 

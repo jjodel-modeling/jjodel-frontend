@@ -1,5 +1,5 @@
-/// <reference types="react-scripts" />
-declare module "jsx-runtime" {
+/// <reference types='react-scripts' />
+declare module 'jsx-runtime' {
     export default {} as any;
 }
 

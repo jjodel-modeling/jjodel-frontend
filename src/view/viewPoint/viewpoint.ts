@@ -1,8 +1,10 @@
 import {
-    Constructor,
     Constructors,
-    DPointerTargetable, DViewElement, GraphSize,
-    LPointerTargetable, LViewElement,
+    DPointerTargetable,
+    DViewElement,
+    GraphSize,
+    LPointerTargetable,
+    LViewElement,
     Pointer,
     RuntimeAccessible,
     RuntimeAccessibleClass

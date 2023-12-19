@@ -59,15 +59,19 @@ function App(props: AllProps) {
             {(project) ? (project.type === 'collaborative' && !DUser.offlineMode) ? <CollaborativeAttacher project={project} /> : <Editor /> : <Dashboard />}
         </div>);
     } else {
-        return(<section>
+        return(<>
             {isLoading && <Loader />}
             <Auth />
-        </section>);
+        </>);
     }
 }
 
 interface OwnProps {room?: string}
-interface StateProps {debug: boolean, isLoading: boolean, user: LUser}
+interface StateProps {
+    debug: boolean,
+    isLoading: boolean,
+    user: LUser
+}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
