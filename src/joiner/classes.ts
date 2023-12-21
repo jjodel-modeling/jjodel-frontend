@@ -134,7 +134,7 @@ import {
     packageDefaultSize,
     ParsedAction,
     SetFieldAction,
-    SetRootFieldAction,
+    SetRootFieldAction, statehistory,
     store,
     TRANSACTION,
     U
@@ -674,6 +674,11 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     DUser(username: string): this {
         const _this: DUser = this.thiss as unknown as DUser;;
         _this.username = username;
+        statehistory[_this.id] = {undoable:[], redoable:[]};
+        // todo: make it able to combine last 2 changes with a keystroke.
+        //  reapeat N times to combine N actions.
+        //  let it "redo" multiple times, it's like recording a macro.
+
         if (this.persist) {
             // no pointedBy
         }

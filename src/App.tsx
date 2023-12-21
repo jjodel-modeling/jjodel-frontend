@@ -2,7 +2,16 @@ import React, {Dispatch} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {DState, DUser, stateInitializer, LUser, statehistory, Json, SetRootFieldAction} from "./joiner";
+import {
+    DState,
+    DUser,
+    stateInitializer,
+    LUser,
+    statehistory,
+    Json,
+    SetRootFieldAction,
+    LPointerTargetable
+} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import Navbar from "./components/navbar/Navbar";
@@ -24,32 +33,36 @@ function firstInteraction(){
     statehistory.globalcanundostate = true;
 }
 
-function App(props: AllProps) {
+function App(props: AllProps): JSX.Element {
     const debug = props.debug;
     const isLoading = props.isLoading;
-    const user = props.user;
-    const project = user?.project;
+    let user: LUser = props.user;
 
+    console.error("render");
+    if (DUser.offlineMode && !DUser.current) {
+        console.error("state initializer");
+        stateInitializer();
+        let du = DUser.new('adminOffline', "Pointer_adminOffline");
+        DUser.current = du.id;
+        user = LPointerTargetable.from(du);
+    }
     useEffectOnce(() => {
-        if (DUser.offlineMode) {
-            let du = DUser.new('adminOffline', "Pointer_adminOffline");
-            DUser.current = du.id;
-            stateInitializer();
-            return;
-        }
-        if (!debug) return;
+        if (!debug || DUser.offlineMode) return;
         (async function() {
             SetRootFieldAction.new('isLoading', true);
             const response = await PersistanceApi.login('admin@mail.it', 'admin');
             const user = response.body as Json;
             const id = user.id as string;
             const username = user.username as string;
-            DUser.new(username, id); DUser.current = id;
+            DUser.new(username, id);
+            DUser.current = id;
             stateInitializer();
             SetRootFieldAction.new('isLoading', false);
         })();
     })
 
+    console.error("render 2", {user});
+    const project = user?.project;
     if (user) {
         return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? ' debug' : '')}
                     onClick={e => statehistory.globalcanundostate = true}>

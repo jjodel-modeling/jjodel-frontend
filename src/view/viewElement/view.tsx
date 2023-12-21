@@ -120,7 +120,7 @@ export class DViewElement extends DPointerTargetable {
             preRenderFunc, appliableToClasses, oclCondition, priority).end();
 
     }
-    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true, id?: string, vp?: Pointer<DViewPoint>): DViewElement {
+    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true, vp?: Pointer<DViewPoint>, id?: string): DViewElement {
         // let id = isDefaultView ? 'Pointer_View' + name : undefined;
         return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id)
             .DPointerTargetable().DViewElement(name, jsxString, vp).end(callback);

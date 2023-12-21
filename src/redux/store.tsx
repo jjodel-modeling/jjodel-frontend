@@ -76,9 +76,8 @@ export const statehistory: {
 } & {
     globalcanundostate: boolean // set to true at first user click }
 } = { globalcanundostate: false} as any;
-statehistory[DUser.current] = {undoable:[], redoable:[]}; // todo: make it able to combine last 2 changes with a keystroke. reapeat N times to combine N actions. let it "redo" multiple times, it's like recording a macro.
-
 (window as any).statehistory = statehistory;
+
 @RuntimeAccessible('DState')
 export class DState extends DPointerTargetable{
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
