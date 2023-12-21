@@ -38,7 +38,6 @@ function App(props: AllProps): JSX.Element {
     const isLoading = props.isLoading;
     let user: LUser = props.user;
 
-    console.error("render");
     if (DUser.offlineMode && !DUser.current) {
         console.error("state initializer");
         stateInitializer();
@@ -61,7 +60,6 @@ function App(props: AllProps): JSX.Element {
         })();
     })
 
-    console.error("render 2", {user});
     const project = user?.project;
     if (user) {
         return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? ' debug' : '')}
