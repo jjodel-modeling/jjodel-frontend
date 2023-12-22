@@ -34,8 +34,10 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     // ret.undo = statehistory[DUser.current]?.undoable || [];
     // ret.redo = statehistory[DUser.current]?.redoable || [];
-    ret.undo = statehistory[DUser.current].undoable;
-    ret.redo = statehistory[DUser.current].redoable;
+    // ret.undo = statehistory[DUser.current].undoable;
+    // ret.redo = statehistory[DUser.current].redoable;
+    ret.undo = [];
+    ret.redo = [];
     return ret;
 }
 

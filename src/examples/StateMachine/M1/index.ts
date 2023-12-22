@@ -1,89 +1,88 @@
-import {DModel, LClass, LGraph, LModel, LObject, LProject, SetFieldAction, U} from "../../../joiner";
+import {DModel, DVertex, LClass, LGraphElement, LModel, LObject, LProject, SetFieldAction} from '../../../joiner';
 
 export class StateMachine_M1 {
-    static async load1(project: LProject, m2: LModel, stateMachine: LClass, state: LClass, transition: LClass, command: LClass, event: LClass) {
-        const m1 = await this.create(project, m2);
+    static load1(project: LProject, m2: LModel, state: LClass, transition: LClass, command: LClass, event: LClass): [LModel, LObject] {
+        const m1 = this.create(project, m2);
         /* Command */
-        const command1 = await this.createCommand(m1, command, 'unlockDoor ud', '');
-        const command2 = await this.createCommand(m1, command, 'lockPanel lp', '');
-        const command3 = await this.createCommand(m1, command, 'unlockPanel up', '');
-        const command4 = await this.createCommand(m1, command, 'lockDoor ld', '');
+        const command1 = this.createCommand(m1, command, 'unlockDoor ud', '');
+        const command2 = this.createCommand(m1, command, 'lockPanel lp', '');
+        const command3 = this.createCommand(m1, command, 'unlockPanel up', '');
+        const command4 = this.createCommand(m1, command, 'lockDoor ld', '');
         /* Event */
-        const event1 = await this.createEvent(m1, event, 'panelClosed pc', '');
-        const event2 = await this.createEvent(m1, event, 'doorClosed dc', '');
-        const event3 = await this.createEvent(m1, event, 'lightOn Io', '');
-        const event4 = await this.createEvent(m1, event, 'drawerOpened do', '');
+        const event1 = this.createEvent(m1, event, 'panelClosed pc', '');
+        const event2 = this.createEvent(m1, event, 'doorClosed dc', '');
+        const event3 = this.createEvent(m1, event, 'lightOn Io', '');
+        const event4 = this.createEvent(m1, event, 'drawerOpened do', '');
         /* Events */
         const events = m1.addObject(undefined, 'Events');
         /* State */
-        const idle = await this.createState(m1, state, 'idle', [command1, command2]);
-        const active = await this.createState(m1, state, 'active', []);
-        const waitingForDrawer = await this.createState(m1, state, 'waitingForDrawer', []);
-        const waitingForLight = await this.createState(m1, state, 'waitingForLight', []);
-        const unlockPanel = await this.createState(m1, state, 'unlockPanel', [command3, command4]);
+        const idle = this.createState(m1, state, 'idle', [command1, command2]);
+        const active = this.createState(m1, state, 'active', []);
+        const waitingForDrawer = this.createState(m1, state, 'waitingForDrawer', []);
+        const waitingForLight = this.createState(m1, state, 'waitingForLight', []);
+        const unlockPanel = this.createState(m1, state, 'unlockPanel', [command3, command4]);
         /* Transition */
-        const transition1 = await this.createTransition(m1, transition, unlockPanel, idle, event1);
-        const transition2 = await this.createTransition(m1, transition, idle, active, event2);
-        const transition3 = await this.createTransition(m1, transition, active, waitingForDrawer, event3);
-        const transition4 = await this.createTransition(m1, transition, active, waitingForLight, event4);
-        const transition5 = await this.createTransition(m1, transition, waitingForDrawer, unlockPanel, event4);
-        const transition6 = await this.createTransition(m1, transition, waitingForLight, unlockPanel, event3);
+        const transition1 = this.createTransition(m1, transition, unlockPanel, idle, event1);
+        const transition2 = this.createTransition(m1, transition, idle, active, event2);
+        const transition3 = this.createTransition(m1, transition, active, waitingForDrawer, event3);
+        const transition4 = this.createTransition(m1, transition, active, waitingForLight, event4);
+        const transition5 = this.createTransition(m1, transition, waitingForDrawer, unlockPanel, event4);
+        const transition6 = this.createTransition(m1, transition, waitingForLight, unlockPanel, event3);
 
-        return m1;
+        return [m1, idle];
     }
-    static async load2(project: LProject, m2: LModel, stateMachine: LClass, state: LClass, transition: LClass, command: LClass, event: LClass) {
-        const m1 = await this.create(project, m2);
+    static load2(project: LProject, m2: LModel, state: LClass, transition: LClass, command: LClass, event: LClass) {
+        const m1 = this.create(project, m2);
         /* 168 Properties (84 commands & 84 events), 40 states and 48 transitions */
         const commandsLength = 84; const eventsLength = 84; const statesLength = 40; const transitionsLength = 48;
         const commands: LObject[] = []; const events: LObject[] = []; const states: LObject[] = []; const transitions: LObject[] = [];
         for(let i = 0; i < commandsLength; i++)
-            commands.push(await this.createCommand(m1, command, 'C' + i, 'C' + i));
+            commands.push(this.createCommand(m1, command, 'C' + i, 'C' + i));
         for(let i = 0; i < eventsLength; i++)
-            events.push(await this.createEvent(m1, event, 'E' + i, 'E' + i));
+            events.push(this.createEvent(m1, event, 'E' + i, 'E' + i));
         const object = m1.addObject(undefined, 'Events');
         for(let i = 0; i < statesLength; i++)
-            states.push(await this.createState(m1, state, 'S' + i, [commands[i]]))
+            states.push(this.createState(m1, state, 'S' + i, [commands[i]]))
         for(let i = 0; i < transitionsLength; i++)
-            transitions.push(await this.createTransition(m1, transition, states[i % statesLength], states[(i + 1) % statesLength], events[i]));
+            transitions.push(this.createTransition(m1, transition, states[i % statesLength], states[(i + 1) % statesLength], events[i]));
         return m1
     }
 
-    private static async create(project: LProject, m2: LModel): Promise<LModel> {
+    private static create(project: LProject, m2: LModel): LModel {
         const dModel: DModel = DModel.new(undefined, m2.id, false, true);
         const lModel: LModel = LModel.fromD(dModel);
         SetFieldAction.new(project.id, 'models', lModel.id, '+=', true);
         SetFieldAction.new(project.id, 'graphs', lModel.node?.id, '+=', true);
-        // project.models = [...project.models, lModel];
-        // project.graphs = [...project.graphs, lModel.node as LGraph];
-        // const tab = TabDataMaker.model(dModel);
-        // await DockManager.open('models', tab);
         return lModel;
     }
-    private static async createState(m1: LModel, state: LClass, name: string, actions: LObject[]): Promise<LObject> {
+    private static createState(m1: LModel, state: LClass, name: string, actions: LObject[]): LObject {
         const dObject = m1.addObject(state.id);
         const lObject = LObject.fromD(dObject);
         lObject.features[0].value = name;
         lObject.features[1].values = actions;
         return lObject;
     }
-    private static async createCommand(m1: LModel, command: LClass, name: string, code: string): Promise<LObject> {
+    private static createCommand(m1: LModel, command: LClass, name: string, code: string): LObject {
         const dObject = m1.addObject(command.id);
         const lObject = LObject.fromD(dObject);
+        // const feature0 = DValue.new(undefined, command.extends[0].attributes[0].id, [name]);
+        // const feature1 = DValue.new(undefined, command.extends[0].attributes[1].id, [code]);
+        // SetFieldAction.new(dObject.id, 'features', feature0.id, '+=', true);
+        // SetFieldAction.new(dObject.id, 'features', feature1.id, '+=', true);
         lObject.features[0].value = name;
         lObject.features[1].value = code;
         return lObject;
     }
-    private static async createEvent(m1: LModel, event: LClass, name: string, code: string): Promise<LObject> {
+    public static createEvent(m1: LModel, event: LClass, name: string, code: string): LObject {
         const dObject = m1.addObject(event.id);
         const lObject = LObject.fromD(dObject);
         lObject.features[0].value = name;
         lObject.features[1].value = code;
         return lObject;
     }
-    private static async createTransition(m1: LModel, transition: LClass, source: LObject, target: LObject, event: LObject): Promise<LObject> {
+    public static createTransition(m1: LModel, transition: LClass, source: LObject, target: LObject, event: LObject): LObject {
         const dObject = m1.addObject(transition.id);
         const lObject = LObject.fromD(dObject);
-        U.log(lObject)
         lObject.features[0].values = [source];
         lObject.features[1].values = [target];
         lObject.features[2].values = [event];

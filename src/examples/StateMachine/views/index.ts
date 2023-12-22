@@ -1,13 +1,13 @@
 import type {LClass, LProject} from '../../../joiner';
-import {DViewElement, DViewPoint, DObject, LModel} from '../../../joiner';
+import {DViewElement, DViewPoint, DObject, LModel, LObject, LViewPoint} from '../../../joiner';
 import {Dependencies} from './dependencies';
 
 export class StateMachine_Views {
-    static load(project: LProject, state: LClass, command: LClass, event: LClass, transition: LClass): void {
-        this.create(project, state, command, event, transition);
+    static load(project: LProject, m1: LModel,  state: LClass, command: LClass, event: LClass, transition: LClass): LViewPoint {
+        return this.create(project, m1, state, command, event, transition);
     }
 
-    private static create(project: LProject, state: LClass, command: LClass, event: LClass, transition: LClass): void {
+    private static create(project: LProject, m1: LModel, state: LClass, command: LClass, event: LClass, transition: LClass): LViewPoint {
         /* Viewpoint */
         const viewpoint = DViewPoint.new('StateMachine', '');
         /* Model */
@@ -25,7 +25,7 @@ export class StateMachine_Views {
         commandView.usageDeclarations = Dependencies.command;
         /* Events */
         const eventsView = DViewElement.new('Events', this.events);
-        eventsView.viewpoint = viewpoint.id; eventsView.oclCondition = `context DObject inv: not self.instanceof`;
+        eventsView.viewpoint = viewpoint.id; eventsView.oclCondition = `context DObject inv: self.name = 'obj_1'`;
         eventsView.adaptWidth = true; eventsView.adaptHeight = true;
         eventsView.usageDeclarations = Dependencies.events(event);
         /* Event */
@@ -38,6 +38,13 @@ export class StateMachine_Views {
         transitionView.viewpoint = viewpoint.id; transitionView.oclCondition = `context DObject inv: self.instanceof.id = '${transition.id}'`;
         transitionView.adaptWidth = true; transitionView.adaptHeight = true;
         transitionView.usageDeclarations = Dependencies.transition;
+
+        /* Model to Text */
+        const textViewpoint = DViewPoint.new('Text', '');
+        const textView = DViewElement.new('Model', this.text(event, command, state));
+        textView.viewpoint = textViewpoint.id; textView.oclCondition = `context DModel inv: self.id = '${m1.id}'`;
+
+        return LViewPoint.fromD(viewpoint);
     }
 
     private static model = `<div className={'root'}>
@@ -56,6 +63,17 @@ export class StateMachine_Views {
                         />)
                 })
             }
+            {data.objects
+                .filter(o => o.instanceof)
+                .filter(o => o.instanceof.name === 'Reset')
+                .map((r, i) => {
+                    if(!r.node || !r.$transition.value) return(<div></div>)
+                    return(<Edge key={i}
+                        view={'Pointer_ViewEdgeAssociation'} 
+                        start={r.node} 
+                        end={r.$transition.value.node} 
+                    />)
+            })}
         </div>
         {data.objects
             .filter(o => o.instanceof) 
@@ -69,6 +87,18 @@ export class StateMachine_Views {
             .filter(o => !o.instanceof)
             .map(o => <DefaultNode key={o.id} data={o} />)
         }
+        <button style={{position: 'absolute', right: 10, top: 10}} className={'p-1 btn btn-danger'} onClick={e => {
+            const objects = data.objects.filter(o => o.instanceof && (o.instanceof.name === 'State' || o.instanceof.name === 'Situation'));
+            if(objects.length < 5) return;
+            objects.sort((a, b) => a.name.localeCompare(b.name))
+            objects[0].node.x = 670; objects[0].node.y = 60; // active
+            objects[1].node.x = 670; objects[1].node.y = 400; // idle
+            objects[2].node.x = 250; objects[2].node.y = 400; // unlockPanel 
+            objects[3].node.x = 350; objects[3].node.y = 220; // waitingForDrawer
+            objects[4].node.x = 50; objects[4].node.y = 220; // waitingForLight
+        }}>
+            Arrange
+        </button>
     </div>`;
 
     private static state(command: LClass): string {
@@ -116,5 +146,29 @@ export class StateMachine_Views {
         <label style={{color: data.$source.value ? 'green' : 'red'}} className={'p-1'}>Source</label>
         <label style={{color: data.$target.value ? 'green' : 'red'}} className={'p-1'}>Target</label>
         <label style={{color: data.$trigger.value ? 'green' : 'red'}} className={'p-1'}>Trigger</label>
+    </div>`;
+
+    private static text = (event: LClass, command: LClass, state: LClass) => `<div className={'root bg-white p-2'}>
+        <h5 className={'p-1'}>Model to Text</h5>
+        <hr className={'mt-4'} />
+        {data.objects.filter(o => o.instanceof && o.instanceof.id === '${event.id}').map(event => {
+            return(<div>event: {event.$name.value}, "{event.$code.value}"</div>);
+        })}
+        <hr className={'my-2'} />
+        {data.objects.filter(o => o.instanceof && o.instanceof.id === '${command.id}').map(command => {
+            return(<div>command: {command.$name.value}, "{command.$code.value}"</div>);
+        })}
+        <hr className={'my-2'} />
+        {data.objects.filter(o => o.instanceof && o.instanceof.id === '${state.id}').map(event => {
+            return(<div>
+                state: {event.$name.value} DO <br />
+                <div className={'ms-4 d-flex'}>
+                    actions: {event.$actions.values.map(action => {
+                        return(<div className={'ms-2'}>{action.$name.value},</div>)
+                    })}
+                </div>
+                END
+            </div>);
+        })}
     </div>`;
 }

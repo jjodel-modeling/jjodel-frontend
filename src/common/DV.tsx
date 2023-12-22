@@ -166,9 +166,9 @@ class DefaultView {
             , extendEdges.map(se=><Edge start={se.start} end={se.end} view={"Pointer_ViewEdgeInheritance"} key={"EXT_"+se.start.node.id+"~"+se.end.node.id}/>)]
         }
     </div>
-    {otherPackages.map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
-    {firstPackage && firstPackage.children.map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
-    {m1Objects.map(m1object => <DefaultNode key={m1object.id} data={m1object}></DefaultNode>)}
+    {otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
+    {firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
+    {m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object}></DefaultNode>)}
 </div>`;
     }
 

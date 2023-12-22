@@ -1,7 +1,7 @@
 import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import type {DState} from '../joiner';
-import {DProject, DUser, LProject, LUser, SetRootFieldAction, U} from '../joiner';
+import {DProject, DUser, LProject, LUser, SetFieldAction, SetRootFieldAction, U} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 import PersistanceApi from "../api/persistance";
 import {useEffectOnce} from "usehooks-ts";
@@ -10,9 +10,11 @@ import {StateMachine} from "../examples/StateMachine";
 function DashboardComponent(props: AllProps) {
     const user = props.user;
 
+
     useEffectOnce(() => {
         (async function() {
             if (DUser.offlineMode) return;
+            if(user.projects.length > 0) return;
             await PersistanceApi.loadMyProjects();
         })();
     });
@@ -27,26 +29,15 @@ function DashboardComponent(props: AllProps) {
         SetRootFieldAction.new('isLoading', false);
     }
 
-    const loadStateMachine1 = async() => {
-        SetRootFieldAction.new('isLoading', true);
-        await StateMachine.load1();
-        SetRootFieldAction.new('isLoading', false);
-    }
-    const loadStateMachine2 = async() => {
-        SetRootFieldAction.new('isLoading', true);
-        await StateMachine.load2();
-        SetRootFieldAction.new('isLoading', false);
-    }
-
-    return (<div className={''}>
+    return (<div style={{overflow: 'scroll'}}>
         <div className={'d-flex p-2'}>
             <b className={'ms-1 my-auto'}>MY PROJECTS</b>
-            <button disabled={DUser.offlineMode} onClick={async() => await PersistanceApi.loadMyProjects()}
+            <button disabled={true || DUser.offlineMode} onClick={async() => await PersistanceApi.loadMyProjects()}
                     className={'ms-2 p-1 btn btn-primary circle'}>
                 <i className={'bi bi-arrow-clockwise'}></i>
             </button>
             <div className={'d-flex ms-auto'}>
-                <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('public')}>
+                {/*<button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('public')}>
                     + Public
                 </button>
                 <button disabled={true} className={'btn btn-success p-1 mx-1'} onClick={e => createProject('private')}>
@@ -54,13 +45,37 @@ function DashboardComponent(props: AllProps) {
                 </button>
                 <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('collaborative')}>
                     + Collaborative
-                </button>
-                <button className={'btn btn-primary p-1 mx-1'} onClick={e => loadStateMachine1()}>
-                    + State Machine
-                </button>
-                {/*<button className={'btn btn-primary p-1 mx-1'} onClick={e => loadStateMachine2()}>
-                    + State Machine v2
                 </button>*/}
+                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load0('State Machine s0')}>
+                    + S0
+                </button>
+                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load1('State Machine s1')}>
+                    + S1
+                </button>
+                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load2('State Machine s2')}>
+                    + S2
+                </button>
+                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load3('State Machine s3')}>
+                    + S3
+                </button>
+                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load4('State Machine s4')}>
+                    + S4
+                </button>
+                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load7('State Machine s7')}>
+                    + S7
+                </button>
+                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load9('State Machine s9')}>
+                    + S9
+                </button>
+                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load10('State Machine s10')}>
+                    + S10
+                </button>
+                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load11('State Machine s11')}>
+                    + S11
+                </button>
+                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load12('State Machine s12')}>
+                    + S12
+                </button>
             </div>
 
         </div>

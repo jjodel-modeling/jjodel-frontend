@@ -35,6 +35,8 @@ function App(props: AllProps) {
             let du = DUser.new('adminOffline');
             DUser.current = du.id;
             stateInitializer();
+            // StateMachine.load1('State Machine v0');
+            // StateMachine.load0('State Machine v1');
             return;
         }
         if (!debug) return;

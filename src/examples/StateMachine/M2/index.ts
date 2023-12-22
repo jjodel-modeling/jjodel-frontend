@@ -1,23 +1,21 @@
-import {DModel, LClass, LGraph, LModel, LPackage, LProject, SetFieldAction} from "../../../joiner";
-import TabDataMaker from "../../../components/abstract/tabs/TabDataMaker";
-import DockManager from "../../../components/abstract/DockManager";
+import {DModel, LClass, LModel, LPackage, LProject, SetFieldAction} from '../../../joiner';
 
 export class StateMachine_M2 {
-    static async load(project: LProject): Promise<[LModel, LPackage, LClass, LClass, LClass, LClass,LClass, LClass]> {
-        const elements = await this.create(project);
+    static load(project: LProject): [LModel, LPackage, LClass, LClass, LClass,LClass, LClass] {
+        const elements = this.create(project);
         const m2 = elements[0];
         const pkg = elements[1];
-        const abstractEvent = await this.createAbstractEvent(pkg);
-        const command = await this.createCommand(pkg, abstractEvent);
-        const event = await this.createEvent(pkg, abstractEvent);
-        const state = await this.createState(pkg, command);
-        const transition = await this.createTransition(pkg, state, event);
-        const stateMachine = await this.createStateMachine(pkg, state, transition);
+        const abstractEvent = this.createAbstractEvent(pkg);
+        const command = this.createCommand(pkg, abstractEvent);
+        const event = this.createEvent(pkg, abstractEvent);
+        const state = this.createState(pkg, command);
+        const transition = this.createTransition(pkg, state, event);
+        // const stateMachine = this.createStateMachine(pkg, state, transition);
         return [
-            m2, pkg, stateMachine, state, transition, abstractEvent, command, event
+            m2, pkg, state, transition, abstractEvent, command, event
         ];
     }
-    private static async create(project: LProject): Promise<[LModel, LPackage]> {
+    private static create(project: LProject): [LModel, LPackage] {
         const dModel = DModel.new('metamodel_1', undefined, true);
         const lModel: LModel = LModel.fromD(dModel);
         SetFieldAction.new(project.id, 'metamodels', lModel.id, '+=', true);
@@ -31,7 +29,7 @@ export class StateMachine_M2 {
         // await DockManager.open('models', tab);
         return [lModel, lPackage];
     }
-    private static async createStateMachine(pkg: LPackage, state: LClass, transition: LClass): Promise<LClass> {
+    private static createStateMachine(pkg: LPackage, state: LClass, transition: LClass): LClass {
         const dClass = pkg.addClass('StateMachine');
         const lClass: LClass = LClass.fromD(dClass);
         const name = lClass.addAttribute('name', 'Pointer_ESTRING');
@@ -42,7 +40,7 @@ export class StateMachine_M2 {
         transitions.upperBound = -1;
         return lClass;
     }
-    private static async createState(pkg: LPackage, command: LClass): Promise<LClass> {
+    private static createState(pkg: LPackage, command: LClass): LClass {
         const dClass = pkg.addClass('State');
         const lClass: LClass = LClass.fromD(dClass);
         const name = lClass.addAttribute('name', 'Pointer_ESTRING');
@@ -51,7 +49,7 @@ export class StateMachine_M2 {
         actions.upperBound = -1;
         return lClass;
     }
-    private static async createTransition(pkg: LPackage, state: LClass, event: LClass): Promise<LClass> {
+    private static createTransition(pkg: LPackage, state: LClass, event: LClass): LClass {
         const dClass = pkg.addClass('Transition');
         const lClass: LClass = LClass.fromD(dClass);
         const source = lClass.addReference('source', state.id);
@@ -59,7 +57,7 @@ export class StateMachine_M2 {
         const trigger = lClass.addReference('trigger', event.id);
         return lClass;
     }
-    private static async createAbstractEvent(pkg: LPackage): Promise<LClass> {
+    private static createAbstractEvent(pkg: LPackage): LClass {
         const dClass = pkg.addClass('AbstractEvent');
         const lClass: LClass = LClass.fromD(dClass);
         lClass.abstract = true;
@@ -69,13 +67,13 @@ export class StateMachine_M2 {
         name.lowerBound = 1;
         return lClass;
     }
-    private static async createCommand(pkg: LPackage, abstractEvent: LClass): Promise<LClass> {
+    private static createCommand(pkg: LPackage, abstractEvent: LClass): LClass {
         const dClass = pkg.addClass('Command');
         const lClass: LClass = LClass.fromD(dClass);
         lClass.extends = [abstractEvent];
         return lClass;
     }
-    private static async createEvent(pkg: LPackage, abstractEvent: LClass): Promise<LClass> {
+    private static createEvent(pkg: LPackage, abstractEvent: LClass): LClass {
         const dClass = pkg.addClass('Event');
         const lClass: LClass = LClass.fromD(dClass);
         lClass.extends = [abstractEvent];
