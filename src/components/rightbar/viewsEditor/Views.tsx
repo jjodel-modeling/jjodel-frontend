@@ -7,6 +7,7 @@ import {connect} from "react-redux";
 
 function ViewsDataComponent(props: AllProps) {
     const project = props.project;
+    console.log("pv:", project.views, project.activeViewpoint.id)
     const views = project.views.filter(v => v && (!v.viewpoint || v.viewpoint.id === project.activeViewpoint.id));
 
     const [hoverID, setHoverID] = useStateIfMounted('');

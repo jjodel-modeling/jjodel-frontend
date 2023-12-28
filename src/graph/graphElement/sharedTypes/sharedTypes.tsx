@@ -75,6 +75,7 @@ export class GraphElementOwnProps extends BasicReactOwnProps {
     graphid?: Pointer<DGraph, 1, 1, LGraph>; // injected
     parentViewId?: Pointer<DViewElement, 1, 1, LViewElement>; // injected
     htmlindex?: number; // injected
+    childStyle?: CSSProperties; // injected, indicates some properties are styled from <Polygon or such, and must be transferred to the first child of root
 }
 
 export class EdgeOwnProps extends GraphElementOwnProps {

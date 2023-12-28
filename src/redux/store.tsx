@@ -1,11 +1,12 @@
 import {
-    BEGIN,
+    Asterisk,
+    BEGIN, Circle,
     Constructors,
     CoordinateMode,
-    CreateElementAction,
+    CreateElementAction, Cross,
     DAttribute,
     DClass,
-    DClassifier,
+    DClassifier, Decagon, DecoratedStar,
     DEdgePoint,
     Defaults,
     DEnumerator,
@@ -31,16 +32,16 @@ import {
     DVertex,
     DViewElement,
     DViewPoint,
-    DVoidEdge,
+    DVoidEdge, Edge,
     EdgeBendingMode,
-    EdgeHead,
-    END,
-    GObject,
+    EdgeHead, EdgePoint, Ellipse,
+    END, Enneagon, Field,
+    GObject, Graph, GraphElement,
     GraphPoint,
-    GraphSize,
+    GraphSize, GraphVertex, Heptagon, Hexagon,
     LGraphElement,
     LModelElement,
-    LObject,
+    LObject, Log,
     LogicContext,
     LOperation,
     LPackage,
@@ -51,19 +52,20 @@ import {
     LUser,
     LValue,
     LViewElement,
-    LViewPoint,
-    packageDefaultSize,
+    LViewPoint, Nonagon, Octagon,
+    packageDefaultSize, Pentagon,
     Pointer,
-    Pointers,
+    Pointers, Polygon, Rectangle,
     RuntimeAccessible,
-    RuntimeAccessibleClass,
+    RuntimeAccessibleClass, Septagon,
     SetRootFieldAction,
-    ShortAttribETypes,
-    store,
+    ShortAttribETypes, SimpleStar, Square, Star,
+    store, Trapezoid, Triangle, U, Vertex, VoidVertex,
 } from '../joiner';
 import {DV} from "../common/DV";
 //import {Selected} from "../joiner/types";
 import {DefaultEClasses, ShortDefaultEClasses} from "../common/U";
+import { GraphElements } from '../joiner/components';
 
 console.warn('ts loading store');
 
@@ -153,6 +155,7 @@ export class DState extends DPointerTargetable{
 
     static init(store?: DState): void {
         BEGIN()
+
         // const viewpoint = DViewPoint.new('Default', '', undefined, '', '', '', [], '', 0, false);
         const viewpoint = DViewPoint.new2('Default', '', ()=>{}, true, Defaults.viewpoints[0]);
         const views: DViewElement[] = makeDefaultGraphViews(Defaults.viewpoints[0]);
@@ -178,6 +181,46 @@ export class DState extends DPointerTargetable{
         dObject.id = 'Pointer_' + ShortDefaultEClasses.EObject.toUpperCase();
         CreateElementAction.new(dObject);
         SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
+
+        let Graphs: any = {
+            Graph: Graph, GraphVertex: GraphVertex,
+        }
+        let Edges: any = {
+            Edge: Edge,
+            EdgePoint: EdgePoint,
+        }
+        let Fields: any = {
+            Field: Field,
+            // GraphElement: GraphElement,
+        }
+        let Vertexes: any = {
+            Vertex: Vertex,
+            // VoidVertex: VoidVertex,
+            Circle: Circle,
+            Polygon: Polygon,
+            Cross: Cross,
+            Asterisk: Asterisk,
+            //Star: Star,
+            SimpleStar: SimpleStar, DecoratedStar: DecoratedStar,
+            Triangle: Triangle, Square: Square, Pentagon: Pentagon,
+            Hexagon: Hexagon, Heptagon: Heptagon, Octagon: Octagon,
+            Enneagon: Enneagon, Decagon: Decagon,
+            // Nonagon: Nonagon, Septagon: Septagon,
+            // Diamond: Diamond, Rhombus: Rhombus,
+            Ellipse: Ellipse,
+            Rectangle: Rectangle,
+            Trapezoid: Trapezoid
+        }
+        U.objectMergeInPlace(GraphElements, Graphs, Edges, Vertexes, Fields, {Graphs, Edges, Vertexes, Fields});
+        let tmp = Object.values(GraphElements);
+        for (let k in tmp) {
+            let v: any = tmp[k];
+            Log.exDev(!v, 'wrong import order', {k, v, GraphElements, tmp});
+            if (!v.cname) continue; // it is a subdictionary
+            GraphElements[(v.cname as string)] = GraphElements[k] = v;
+        }
+        setTimeout(()=>{
+            }, 1);
         END();
     }
 }

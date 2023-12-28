@@ -31,7 +31,10 @@ function loadOldState(obj: GObject, name: string = "oldSave"): void {
         project.graphs = obj.graphs;
         project.models = obj.models;
         project.views = obj.viewelements;
-        }), 1);
+        project.viewpoints = obj.viewpoints;
+        // project.activeViewpoint = obj.viewpoints[0];
+        project.activeViewpoint = 'Pointer_DefaultViewPoint' as any;
+    }), 1);
     // NB: might also be needed to add "context DModel inv: true" or DClass... to all default views got back from old state.
 }
 // for new saves

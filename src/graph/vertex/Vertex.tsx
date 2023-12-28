@@ -384,13 +384,19 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 }
 
 
-class OwnProps extends GraphElementOwnProps {
+export class OwnProps extends GraphElementOwnProps {
     // onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
     // onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
     isEdgePoint?: boolean = false;
     isGraph?: boolean = false;
     isVertex?: boolean = true;
     isVoid?: boolean = false;
+    decorated?: boolean; // for <decoratedStar /> (defaults true)
+    sides?: number // for <Polygon />, <Star /> and <Cross />
+    innerRadius?: number // for <Star /> and <Cross />
+    ratio?: number // for <Trapezoid />
+    rotate?: number // initial vertex rotation
+
 }
 
 class StateProps extends GraphElementReduxStateProps {

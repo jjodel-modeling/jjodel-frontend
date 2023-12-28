@@ -1,6 +1,7 @@
-import React from 'react';
+import React, {Component} from 'react';
 import {Input, LViewElement, LViewPoint, Select, SetFieldAction} from '../../../../joiner';
 import {OclEditor} from '../../oclEditor/OclEditor';
+import {GraphElements} from "../../../../joiner/components";
 
 interface Props {view: LViewElement, viewpoints: LViewPoint[], readonly: boolean}
 
@@ -23,11 +24,29 @@ function InfoData(props: Props) {
     return(<section className={'p-3'}>
         <Input data={view} field={'name'} label={'Name'} type={'text'} readonly={readOnly}/>
         <Input data={view} field={'explicitApplicationPriority'} label={'Priority'} type={'number'} readonly={readOnly}/>
+        {/*
         <Select data={view} field={'appliableTo'} label={'Appliable to node types'} readonly={readOnly} options={<optgroup label={'Appliable Types'}>
             <option value={'node'}>Node</option>
             <option value={'edge'}>Edge</option>
             <option value={'edgePoint'}>Edge Point</option>
         </optgroup>} />
+        */}
+        <Select data={view} field={'forceNodeType'} label={'Preferred appearance'} readonly={readOnly} options={
+            <>
+                <optgroup label={'Graph'}>{
+                    Object.keys(GraphElements.Graphs).map((key: string) => <option value={key}>{GraphElements[key].cname}</option>)
+                }</optgroup>
+                <optgroup label={'Edge'}>{
+                    Object.keys(GraphElements.Edges).map((key: string) => <option value={key}>{GraphElements[key].cname}</option>)
+                }</optgroup>
+                <optgroup label={'Vertex'}>{
+                    Object.keys(GraphElements.Vertexes).map((key: string) => <option value={key}>{GraphElements[key].cname}</option>)
+                }</optgroup>
+                <optgroup label={'Field'}>{
+                    Object.keys(GraphElements.Fields).map((key: string) => <option value={key}>{GraphElements[key].cname}</option>)
+                }</optgroup>
+            </>
+        } />
         <Select data={view} field={'appliableToClasses'} label={'Appliable to classes'} readonly={readOnly} options={classesOptions} />
         <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Viewpoint</label>

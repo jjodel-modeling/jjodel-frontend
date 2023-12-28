@@ -8,7 +8,7 @@ import {
     LGraph, MouseUpEvent, Point,
     Pointers,
     Selectors as Selectors_, Size, TRANSACTION, WGraph,
-    GraphDragManager, GraphPoint,
+    GraphDragManager, GraphPoint, Selectors
 } from "../../joiner";
 import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
 
@@ -51,7 +51,7 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
     windoww,
 } from "../../joiner";
 
-const Selectors: typeof Selectors_ = windoww.Selectors;
+// const Selectors: typeof Selectors_ = windoww.Selectors;
 
 export function makeEvalContext(view: LViewElement, state: DState, ownProps: GraphElementOwnProps, stateProps: GraphElementReduxStateProps): GObject {
     let component = GraphElementComponent.map[ownProps.nodeid as Pointer<DGraphElement>];
@@ -702,13 +702,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let fiximport = !!this.props.node;
         if (addprops && rawRElement && fiximport) {
             if (windoww.debugcount && debugcount++>windoww.debugcount) throw new Error("debug triggered stop");
-            // console.log("pre-injecting", {thiss:this, data:this.props.data, props:this.props});
             let fixdoubleroot = true;
-            const onDragTestInject = () => {}; // might inject event handlers like this with cloneelement
             // add view props to GraphElement children (any level down)
             const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap();
             try {
-                let viewStyle: GObject = {};
+                let viewStyle: GObject = {...(this.props.style || {})};
                 /*
                     if (view.adaptWidth) viewStyle.width = view.adaptWidth; // '-webkit-fill-available';
                     else viewStyle.height = (rootProps.view.height) && rootProps.view.height + 'px';
@@ -717,19 +715,23 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     viewStyle = {};
                 */
                 // viewStyle.pointerEvents = "all";
-                viewStyle.order = viewStyle.zIndex = this.props.node?.zIndex;
+                viewStyle.order = viewStyle.zIndex = this.props.node?.zIndex; // alias? this.props.node.z
                 viewStyle.display = this.props.view?.display;
                 let injectProps: GObject = {};
                 if (countRenders) {
                     classes.push(this.countRenders%2 ? "animate-on-update-even" : "animate-on-update-odd");
                     injectProps["data-countrenders"] = this.countRenders++;
                 }
+                /// let excludeProps = ['data', 'node', 'view', 'children', ]
+                let p: GObject = this.props;
+                for (let k in p) {
+                    if (typeof p[k] === 'object' || typeof p[k] === 'function') continue;
+                    injectProps[k] = p[k];
+                }
+                // for (let k in this.props.childStyle) { delete viewStyle[k]; }
                 rawRElement = React.cloneElement(rawRElement, // i'm cloning a raw html (like div) being root of the rendered view
                     {
                         ...injectProps,
-                        key: this.props.key, // this key is not safe. because the component has already been made,
-                        // this would be the key of the first sub-component, which is always 1 so doesn't need a key (and is not even a component but a html node in 99% of cases)
-                        // could remove it safely but i'm keeping it for debug so i can read keys as html attributes.
                         ref: this.html,
                         // damiano: ref html viene settato correttamente a tutti tranne ad attribute, ref, operation (è perchè iniziano con <Select/> as root?)
                         id: this.props.nodeid,
@@ -740,7 +742,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         "data-userselecting": JSON.stringify(this.props.node?.isSelected || {}),
                         "data-nodetype": nodeType,
                         // "data-order": this.props.node?.zIndex,
-                        style: {...viewStyle, order:this.props.node.z, ...styleoverride},
+                        style: {...viewStyle, ...styleoverride},
                         className: classes.join(' '),
                         onClick: this.onClick,
                         onContextMenu:this.onContextMenu,

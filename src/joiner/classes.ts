@@ -799,6 +799,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         this.setPtr("graph", parentgraphID);
         this.setExternalPtr(thiss.father, "subElements", "+=");
 
+        Log.eDev(thiss.father&&DPointerTargetable.fromPointer(thiss.father).subElements.indexOf(thiss.id)!==-1, "subelemnts+= addition have duplicates",
+            {adding:thiss, d:thiss.father&&DPointerTargetable.fromPointer(thiss.father).subElements.indexOf(thiss.id)});
+
         return this;
     }
 
@@ -1064,8 +1067,11 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         if (Array.isArray(ptr)) {
             return ptr.map( (p: Pointer) => DPointerTargetable.fromPointer(p, s)) as any;
         }
-        // if (typeof ptr !== "string") { ptr = (ptr as any)?.id; }
-        if (typeof ptr !== "string") { throw new Error("wrong parameter in DPointerTargetable.fromPointers()"); }
+        if (!ptr) { return ptr as any; }
+        if (typeof ptr !== "string") {
+            console.error("wrong parameter in DPointerTargetable.fromPointers()", ptr);
+            throw new Error("wrong parameter in DPointerTargetable.fromPointers()");
+        }
         if (s && s.idlookup[ptr as string]) return s.idlookup[ptr as string] as any;
         return (DPointerTargetable.pendingCreation[ptr as string] || s.idlookup[ptr as string]) as any;
         // return ((s || store.getState()).idlookup[ptr as string] || DPointerTargetable.pendingCreation[ptr as string]) as any;
@@ -1961,7 +1967,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected get_activeViewpoint(context: Context): this['activeViewpoint'] {
         return LViewPoint.fromPointer(context.data.activeViewpoint);
     }
-    protected set_activeViewpoint(val: Pack<this['activeViewpoint']>, context: Context): boolean {
+    protected set_activeViewpoint(val: Pack1<this['activeViewpoint']>, context: Context): boolean {
         const data = context.data;
         SetFieldAction.new(data.id, 'activeViewpoint', Pointers.from(val), '', true);
         return true;

@@ -42,6 +42,7 @@ export class UX{
         // @ts-ignore this
         // const parentComponent = this;
         const type = (re.type as any).WrappedComponent?.name || re.type;
+        let injectProps: GraphElementOwnProps = {} as any;
         if (injectOffset) {
             const style = {...(re.props?.style || {})};
             let offset = injectOffset.offset;
@@ -49,8 +50,8 @@ export class UX{
             style.position = "absolute";
             style.left = offset.x;
             style.top = offset.y;
-            style.transform = "scale(" + scale.x + "," + scale.y + ")";
-            const injectProps = {style};
+            style.transform = "scale(" + scale.x + "," + scale.y + ")"
+            injectProps = {style};
             let oldre = re;
             console.log("inject offset props 2:", {oldre, re, injectProps});
             re = React.cloneElement(re, injectProps);
@@ -61,7 +62,14 @@ export class UX{
         switch (type) {
             default:
                 // console.count('ux.injectingProp case default: ' + type);
-                return re;
+                if (indices.length <= 2 && (parentComponent?.props?.childStyle)) {
+                    // if first non-component child of a GraphElement with a clipPath shape, i assign clip path to it.
+                    console.log('injecting to first child (A):', {re, indices, il: indices.length, pc: parentComponent, injectProps, cs:parentComponent.props.childStyle});
+                    let istyle: GObject = injectProps.style = {...(injectProps.style || {})};
+                    injectProps.style = injectProps.style ? {...injectProps.style} : {};
+                    U.objectMergeInPlace(injectProps.style, parentComponent.props.childStyle);
+                } else return re;
+                break;
             /*
             case windoww.Components.Input.name:
             case windoww.Components.Textarea.name:
@@ -93,7 +101,6 @@ export class UX{
             // case windoww.Components.Vertex.name:
             case EdgeComponent.cname:
             case windoww.Components.VertexComponent.cname:
-                const injectProps: GraphElementOwnProps = {} as any;
                 injectProps.parentViewId = parentComponent.props.view.id || (parentComponent.props.view as any); // re.props.view ||  thiss.props.view
                 injectProps.parentnodeid = parentComponent.props.node?.id;
                 injectProps.graphid = parentComponent.props.graphid;
@@ -123,13 +130,19 @@ export class UX{
                 // console.log("setting nodeid", {injectProps, props:re.props, re});
                 // Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: re.props});
                 Log.exDev(!injectProps.graphid, 'vertex is missing mandatory props (graphid).', {graphid: injectProps.graphid, dataid, props: re.props});
+                if (false && indices.length === 2) {
+                    // if first component child, of a component? like (DefaultNode -> Vertex)?
+                    console.log('injecting to first child (B):', {re, pc: parentComponent, injectProps})
+                    if (parentComponent?.props.style?.clipPath) injectProps.style = {...(injectProps.style || {}), clipPath: parentComponent?.props.style?.clipPath||''}
+                }
                 injectProps.nodeid = idbasename; // U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
                 injectProps.htmlindex = indices[indices.length - 1]; // re.props.node ? re.props.node.htmlindex : indices[indices.length - 1];
                 injectProps.key = re.props.key || injectProps.nodeid;
                 // console.log("cloning jsx:", re, injectProps);
                 Log.ex((injectProps.nodeid === injectProps.graphid||injectProps.nodeid === injectProps.parentnodeid) && type != "GraphComponent", "User manually assigned a invalid node id. please remove or change prop \"nodeid\"", {type: (re.type as any).WrappedComponent?.cname || re.type}, {mycomponents: windoww.mycomponents, re, props:re.props});
-                return React.cloneElement(re, injectProps);
-        }}
+        }
+        return React.cloneElement(re, injectProps);
+    }
 
     static ReactNodeAsElement(e: React.ReactNode): React.ReactElement | null { return e && (e as ReactElement).type ? e as ReactElement : null; }
 

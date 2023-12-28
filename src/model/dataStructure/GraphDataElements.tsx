@@ -489,9 +489,12 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             if (ptr) SetFieldAction.new(ptr as any, 'subElements+=', context.data.id);
             return true; }*/
 
-    get_subElements(context: Context): this["subElements"] { return LPointerTargetable.fromArr(context.data.subElements); }
+    get_subElements(context: Context): this["subElements"] {
+        return LPointerTargetable.fromArr([...new Set(context.data.subElements)]);
+    }
     set_subElements(val: PackArr<this["subElements"]>, context: LogicContext<DGraphElement>): boolean {
         console.log("isDeepStrictEqual", {isDeepStrictEqual});
+        Log.eDev([...new Set(val)].length !== val.length, "subelemnts setter have duplicates", {val, context});
         // if (isDeepStrictEqual(context.data.subElements, val)) return true;
         let pointers: Pointer<DGraphElement, 0, 'N', LGraphElement> = Pointers.from(val) || [];
         if (Uarr.equals(pointers, context.data.subElements, false)) return true;
@@ -529,14 +532,20 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         state = state || store.getState();
         let tocheck: Pointer<DGraphElement>[] = context.data.subElements || [];
         let checked: Dictionary<Pointer, true> = {};
-        checked[context.data.id] = true;
+        let dblcheck: Dictionary<Pointer, Pointer> = {}; // <child, parent>  // debug only
+        for (let e of tocheck) dblcheck[e] = context.data.id; // debug only
+        checked[context.data.id] = true;//nb6[]{}&
         while (tocheck.length) {
             let newtocheck: Pointer<DGraphElement>[] = [];
             for (let ptr of tocheck) {
-                if (checked[ptr]) throw new Error("loop in GraphElements containing themselves");
+                Log.eDev(checked[ptr], "loop in GraphElements containing themselves", {dblcheck, context, ptr, checked, fistContainer:dblcheck[ptr]});
+                console.log("get_allsubnodes", {ptr, fistContainer:dblcheck[ptr], dblcheck, context, checked});
+                if (checked[ptr]) continue;
                 checked[ptr] = true;
                 let subnode: DGraphElement = DPointerTargetable.from(ptr, state);
-                U.arrayMergeInPlace(newtocheck, subnode?.subElements);
+                let se = subnode?.subElements;
+                for (let e of se) dblcheck[e] = ptr; // debug only
+                U.arrayMergeInPlace(newtocheck, se);
             }
             tocheck = newtocheck;
         }

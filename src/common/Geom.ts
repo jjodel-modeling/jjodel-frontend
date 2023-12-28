@@ -1,6 +1,7 @@
 import type { GObject, Temporary, TODO} from "../joiner";
 import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleClass} from "../joiner";
 import React from "react";
+import {radian} from "../joiner/types";
 
 @RuntimeAccessible('IPoint')
 export abstract class IPoint extends RuntimeAccessibleClass {
@@ -175,6 +176,14 @@ export abstract class IPoint extends RuntimeAccessibleClass {
 
     public absolute(): number { return Math.sqrt(this.x * this.x + this.y * this.y); }
     public set(x: number, y: number) { this.x = x; this.y = y; }
+
+    // move the point by a vector with direction and distance (module)
+    move(rad: radian /*in radians!*/, distance: number, clone:boolean = true): this{
+        let pt = clone ? this.duplicate() : this;
+        pt.x += distance * Math.cos(rad);
+        pt.y += distance * Math.sin(rad);
+        return pt;
+    }
 }
 
 @RuntimeAccessible('GraphPoint')
@@ -669,8 +678,10 @@ export class Geom extends RuntimeAccessibleClass {
         if (n === Number.POSITIVE_INFINITY) { return 270; }
         return Geom.RadToDegree((window as any).Math.atan(n)); }
 
-    static RadToDegree(radians: number): number { return radians * (180 / Math.PI); }
-    static DegreeToRad(degree: number): number { return degree * (Math.PI / 180); }
+    static RadToDegree(radians: number): number { return Geom.radToDeg(radians); }
+    static DegreeToRad(degree: number): number { return Geom.degToRad(degree); }
+    static radToDeg(radians: number): number { return radians * (180 / Math.PI); }
+    static degToRad(degree: number): number { return degree * (Math.PI / 180); }
 
 
 

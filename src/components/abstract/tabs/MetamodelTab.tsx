@@ -27,7 +27,7 @@ function MetamodelTabComponent(props: AllProps) {
 
     if (!model) return(<>closed tab</>);
     if (!graph) {
-        CreateElementAction.new(DGraph.new(0, model.id));
+        DGraph.new(0, model.id);
         return(<div style={{width: "100%", height: "100%", display: "flex"}}>
             <span style={{margin: "auto"}}>Building the Graph...</span>
         </div>);

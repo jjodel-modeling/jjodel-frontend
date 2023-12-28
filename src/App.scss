@@ -54,15 +54,16 @@ font-weight: 900 !important;
 .hoverable:hover>.content, .hoverable:hover>svg>.content{ display: block; position: absolute; z-index:1;}
 .hoverable>.content, .hoverable>svg>.content{ display: none; }
 
-[data-nodetype]{
-  position: relative;
+[data-nodetype], [data-nodetype]>*, {
   overflow: hidden;
-
   &.selected-by-me, &:has(.selected-by-me), // for some reason focus does not work?? so this is a fallback but needs to be properly fixed
   &:hover, &:active, &:focus-within{ overflow: visible; }
 }
 [data-nodetype]{
-  overflow: visible !important; // todo: remove, it's just for debug to count renders
+  position: relative;
+}
+[data-nodetype]{
+  // overflow: visible !important; // todo: remove, it's just for debug to count renders
 }
 
 .GraphVertex[data-nodetype="GraphVertex"],
