@@ -33,39 +33,33 @@ function InfoData(props: Props) {
         */}
         <Select data={view} field={'forceNodeType'} label={'Preferred appearance'} readonly={readOnly} options={
             <>
-                <optgroup label={'Graph'}>{
-                    Object.keys(GraphElements.Graphs).map((key: string) => <option value={key}>{GraphElements[key].cname}</option>)
+                <option value={'unset'} key={-1}>Automatic by model type (package, object, feature...)</option>
+                <optgroup label={'Graph'} key={0}>{
+                    Object.keys(GraphElements.Graphs).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
                 }</optgroup>
-                <optgroup label={'Edge'}>{
-                    Object.keys(GraphElements.Edges).map((key: string) => <option value={key}>{GraphElements[key].cname}</option>)
+                <optgroup label={'Edge'} key={1}>{
+                    Object.keys(GraphElements.Edges).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
                 }</optgroup>
-                <optgroup label={'Vertex'}>{
-                    Object.keys(GraphElements.Vertexes).map((key: string) => <option value={key}>{GraphElements[key].cname}</option>)
+                <optgroup label={'Vertex'} key={2}>{
+                    Object.keys(GraphElements.Vertexes).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
                 }</optgroup>
-                <optgroup label={'Field'}>{
-                    Object.keys(GraphElements.Fields).map((key: string) => <option value={key}>{GraphElements[key].cname}</option>)
+                <optgroup label={'Field'} key={3}>{
+                    Object.keys(GraphElements.Fields).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
                 }</optgroup>
             </>
-        } />
+        } setter={(data, key, val) => { view.forceNodeType = val === 'unset' ? undefined : val; }}
+          getter={(data, key) => { return data[key] || 'unset_'; }} />
         <Select data={view} field={'appliableToClasses'} label={'Appliable to classes'} readonly={readOnly} options={classesOptions} />
         <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Viewpoint</label>
             <select className={'my-auto ms-auto select'} disabled={readOnly}
                     defaultValue={view.viewpoint ? view.viewpoint.id : 'null'} onChange={changeVP}>
-                <option value={'null'}>-----</option>
+                <option value={'null'} key={-1}>-----</option>
                 {viewpoints.map((viewpoint, index) => {
                     return(<option key={index} value={viewpoint.id}>{viewpoint.name}</option>);
                 })}
             </select>
         </div>
-        {/* damiano: qui Select component avrebbe fatto comodo al posto del select nativo, ma è troppo poco generica*/}
-        {/*<div className='p-1' style={{display: 'flex'}}><label className='my-auto'>Appliable to</label>
-            <select data-obj={view.id} data-field={'appliableToClasses'} data-label={'Appliable to'} data-options={ classesOptions }
-                    value={view.appliableToClasses[0] || ''} onChange={(e) => { view.appliableToClasses = e.target.value as any; }}
-                    className={'my-auto ms-auto select'} disabled={readOnly}>
-                {classesOptions}
-            </select>
-        </div>*/}
         <OclEditor viewid={view.id} readonly={readOnly} />
         <span>OCL engine by Stephan Köninger, <a href={"https://ocl.stekoe.de/#examples"}>Supported instructions</a></span>
     </section>);

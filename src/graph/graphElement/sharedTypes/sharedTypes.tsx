@@ -81,8 +81,8 @@ export class GraphElementOwnProps extends BasicReactOwnProps {
 export class EdgeOwnProps extends GraphElementOwnProps {
     onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
     onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    isGraph?: boolean = false;
-    isVertex?: boolean = true;
+    isgraph?: boolean = false;
+    isvertex?: boolean = true;
     start!: LGraphElement["id"];
     end!: LGraphElement["id"];
     label?: DEdge["longestLabel"];

@@ -30,6 +30,8 @@ function makeStar(sides: number, radius: number = 0.5, starRadius: number=0.25, 
     let startRad;
     let nextPtRad;
     if (niceBugVersion && sides % 2 == 0) {
+        // nb: not fully correct, the correct "bug" version on even would be having an inner polygon identical to outer poly (not rotated)
+        // with points[0] = topmost point of the ex-circle for both odd polys. and then matching outer[i] with inner[i-1] points to make a line
         startRad = Geom.degToRad(180/sides+90);
         //nextPtRad = -startRad*2;
         nextPtRad = -startRad*2*(sides-1);
@@ -86,7 +88,7 @@ function makeSvg(pts: Point[]): string{
 
 // geom shortcuts
 function addStyle(props0: OwnProps, children:any, childStyle: React.CSSProperties, style: React.CSSProperties = {}){
-    let props: GObject = {...props0, children, isGraph:false, isVertex:true, isVoid:true};
+    let props: GObject = {...props0, children, isgraph:false, isvertex:true, isvoid:true};
     // props.style = !props0.style ? {} : {...props0.style};
     props.childStyle = props.childStyle ? {...props.childStyle} : {};
     props.style = props.style ? {...props.style} : {};
@@ -98,7 +100,7 @@ function addStyle(props0: OwnProps, children:any, childStyle: React.CSSPropertie
         filter: 'drop-shadow(0px var(--border-width) 0px var(--border-color)) drop-shadow(var(--border-width) 0px 0px var(--border-color))' +
             ' drop-shadow(calc( -1 * var(--border-width)) 0px 0px var(--border-color)) drop-shadow(0px calc( -1 * var(--border-width)) 0px var(--border-color))',
     });
-    props.dataStyle = JSON.stringify(props.style);
+    props.datastyle = JSON.stringify(props.style);
     props.dataChildStyle = JSON.stringify(props.childStyle);
     return props;}
 
@@ -148,7 +150,7 @@ Cross.cname = 'N-Cross';
 export const Trapezoid = (props0: OwnProps, children: ReactNode | undefined = []): ReactElement => { // cut lines, N endings (includes asterisk)
     let props: OwnProps & {ratio: number} = props0 as any;
     if (!props0.ratio) props = {...props, ratio: 0.2 };
-    return <VertexConnected {...addStyle(props, children, {clipPath: 'polygon(' + props.ratio * 100 + ' 0%, ' + (1-props.ratio) * 100 + '% 0%, 100% 100%, 0% 100%)'})} />;}
+    return <VertexConnected {...addStyle(props, children, {clipPath: 'polygon(' + props.ratio * 100 + '% 0%, ' + (1-props.ratio) * 100 + '% 0%, 100% 100%, 0% 100%)'})} />;}
 Trapezoid.cname = 'Trapezoid';
 
 
@@ -166,7 +168,7 @@ step 2) when parsing jsx to build nodes, edges, check if props like edge.start o
 in that case, update such value
 */
 export const Square = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { // rectangle
-    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} isVoid={true} />; }
+    return <VertexConnected {...{...props, children}} isgraph={false} isvertex={true} isvoid={true} />; }
 Square.cname = 'Rectangle/Square';
 /*
 export const Rhombus = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { // rectangle

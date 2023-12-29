@@ -39,7 +39,6 @@ function App(props: AllProps): JSX.Element {
     let user: LUser = props.user;
 
     if (DUser.offlineMode && !DUser.current) {
-        console.error("state initializer");
         stateInitializer();
         let du = DUser.new('adminOffline', "Pointer_adminOffline");
         DUser.current = du.id;

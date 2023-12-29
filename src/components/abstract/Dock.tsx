@@ -22,7 +22,7 @@ function DockComponent(props: AllProps) {
     };
 
     /* Models */
-    const info = {id: '0', title: 'Info', group: 'models', closable: false, content: <InfoTab />};
+    const info = {id: '0', title: 'Summary', group: 'models', closable: false, content: <InfoTab />};
 
     /* Editors */
     const test = {id: '999', title: 'Test', group: 'editors', closable: false, content: <TestTab />};

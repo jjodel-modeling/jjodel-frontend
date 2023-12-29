@@ -532,7 +532,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         TRANSACTION(()=>{
             if (e.button === Keystrokes.clickRight) { this.doContextMenu(e); }
             let p: GObject = this.props;
-            if (p.isGraph && !p.isVertex || p.isGraph && p.isVertex && e.ctrlKey) GraphDragManager.startPanning(e, this.props.node as LGraph);
+            if (p.isGraph && !p.isvertex || p.isGraph && p.isvertex && e.ctrlKey) GraphDragManager.startPanning(e, this.props.node as LGraph);
         })
     }
 

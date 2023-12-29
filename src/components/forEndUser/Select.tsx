@@ -15,19 +15,22 @@ function SelectComponent(props: AllProps) {
     let gdata: GObject<LPointerTargetable> = data;
     const field: (keyof LPointerTargetable & keyof DPointerTargetable) = props.field as any;
     const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && Defaults.check(data.id);
-    const value: string | Pointer = d[field] as string;
+    const value: string | Pointer = props.getter ? props.getter(d, field) : d[field] as string;
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
     let tooltip: string|undefined = (props.tooltip === true) ? ((gdata['__info_of__' + field]) ? gdata['__info_of__' + field].txt: '') : props.tooltip;
-    tooltip = (tooltip) ? tooltip : '';
+    tooltip = tooltip || '';
     let css = 'my-auto select ';
     css += (jsxLabel) ? 'ms-1' : 'ms-auto';
     css += (props.hidden) ? ' hidden-input' : '';
 
     function SelectChange(evt: React.ChangeEvent<HTMLSelectElement>) {
         if (readOnly) return;
-        const target = evt.target.value;
-        (data as GObject)[field] = target;
+        const newValue = evt.target.value;
+        const oldValue = props.getter ? props.getter(d, field) : d[field] as string;
+        if (newValue === oldValue) return;
+        if (props.setter) props.setter(data, field, newValue);
+        else (data as GObject)[field] = newValue;
     }
 
     let returns: LClass[] | undefined;
@@ -111,6 +114,10 @@ export interface SelectOwnProps {
     readonly?: boolean;
     inputClassName?: string;
     inputStyle?: GObject;
+    // DANGER: use the data provided in parameters instead of using js closure, as the proxy accessed from using closure won't be updated in rerenders.
+    getter?: <T extends DPointerTargetable = any>(data: any | T | Pointer<T>, field: (string | number | symbol) | keyof T) => string;
+    // setter?: <T extends DPointerTargetable = any>(data: any | T | Pointer<T>, field: (string | number | symbol) | keyof T, selectedValue: string) => void;
+    setter?: <T extends DPointerTargetable = any>(data: T | Pointer<T>, field: keyof T, selectedValue: string) => void;
 }
 interface StateProps {
     debugmode: boolean,

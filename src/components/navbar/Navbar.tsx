@@ -73,7 +73,10 @@ function NavbarComponent(props: AllProps) {
                      className={'dropdown-toggle bg-primary circle border d-flex justify-content-center align-items-center'}
                      onClick={(e)=>{
                          let now = Date.now();
-                         if (now - clickTimestamps[clickTimestamps.length - clicksRequired] < timeframe) { SetRootFieldAction.new('debug', !debug); clickTimestamps = []; }
+                         if (now - clickTimestamps[clickTimestamps.length - clicksRequired] < timeframe) {
+                             SetRootFieldAction.new('debug', !debug);
+                             localStorage.setItem('debug', !debug ? '1' : '');
+                             clickTimestamps = []; }
                          clickTimestamps.push(now);
                      }}>
                     <label style={{cursor: 'pointer'}} className={'text-white'}>{user.username[0].toUpperCase()}</label>

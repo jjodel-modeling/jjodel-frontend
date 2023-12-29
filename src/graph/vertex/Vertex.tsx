@@ -344,12 +344,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
         // set classes
         let nodeType = 'NODE_TYPE_ERROR';
-        if ( this.props.isEdgePoint) nodeType = 'EdgePoint'; else
-        if ( this.props.isGraph &&  this.props.isVertex) nodeType = 'GraphVertex'; else
-        if ( this.props.isGraph && !this.props.isVertex) nodeType = 'Graph'; else
-        if (!this.props.isGraph &&  this.props.isVertex && (this.props.isVoid || !this.props.data)) nodeType = 'VoidVertex'; else
-        if (!this.props.isGraph &&  this.props.isVertex) nodeType = 'Vertex'; else
-        if (!this.props.isGraph && !this.props.isVertex) nodeType = 'Field';
+        if ( this.props.isedgepoint) nodeType = 'EdgePoint'; else
+        if ( this.props.isgraph &&  this.props.isvertex) nodeType = 'GraphVertex'; else
+        if ( this.props.isgraph && !this.props.isvertex) nodeType = 'Graph'; else
+        if (!this.props.isgraph &&  this.props.isvertex && (this.props.isvoid || !this.props.data)) nodeType = 'VoidVertex'; else
+        if (!this.props.isgraph &&  this.props.isvertex) nodeType = 'Vertex'; else
+        if (!this.props.isgraph && !this.props.isvertex) nodeType = 'Field';
 
         // const named: LNamedElement = this.props.data as LNamedElement; // LNamedElement.fromPointer(this.props.dataid);
         const classesOverride = [nodeType, ...cssOverride]; // , (named?.name === 'default') ? 'default' : ''];
@@ -387,10 +387,10 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 export class OwnProps extends GraphElementOwnProps {
     // onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
     // onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    isEdgePoint?: boolean = false;
-    isGraph?: boolean = false;
-    isVertex?: boolean = true;
-    isVoid?: boolean = false;
+    isedgepoint?: boolean = false;
+    isgraph?: boolean = false;
+    isvertex?: boolean = true;
+    isvoid?: boolean = false;
     decorated?: boolean; // for <decoratedStar /> (defaults true)
     sides?: number // for <Polygon />, <Star /> and <Cross />
     innerRadius?: number // for <Star /> and <Cross />
@@ -415,13 +415,13 @@ export type AllPropss = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     let DGraphElementClass: typeof DGraphElement;
-    if (ownProps.isEdgePoint) DGraphElementClass = DEdgePoint; else
-    if (ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraphVertex; else
-    if (ownProps.isVertex && !ownProps.isGraph) DGraphElementClass = DVertex; else
-    if (!ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraph;
+    if (ownProps.isedgepoint) DGraphElementClass = DEdgePoint; else
+    if (ownProps.isvertex && ownProps.isgraph) DGraphElementClass = DGraphVertex; else
+    if (ownProps.isvertex && !ownProps.isgraph) DGraphElementClass = DVertex; else
+    if (!ownProps.isvertex && ownProps.isgraph) DGraphElementClass = DGraph;
     else DGraphElementClass = DGraphElement; // DField;
 
-    if (DGraphElementClass === DVertex && ownProps.isVoid) DGraphElementClass = DVoidVertex;
+    if (DGraphElementClass === DVertex && ownProps.isvoid) DGraphElementClass = DVoidVertex;
     const superret: StateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass, {...ownProps}) as StateProps;
     // superret.lastSelected = state._lastSelected?.modelElement;
     // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
@@ -464,26 +464,26 @@ export const VertexConnected = connect<StateProps, DispatchProps, OwnProps, DSta
 )(VertexComponent as any);
 
 export const Vertex = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { //  children: (string | React.Component)[]
-    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true}/>;
+    return <VertexConnected {...{...props, children}} isgraph={false} isvertex={true}/>;
 }
 export const VoidVertex = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} isVoid={true}/>;
+    return <VertexConnected {...{...props, children}} isgraph={false} isvertex={true} isvoid={true}/>;
 }
 export const EdgePoint = function EdgePoint (props: OwnProps, children: ReactNode | undefined = []): ReactElement {
-    return <VertexConnected {...{...props, children}} isGraph={false} isEdgePoint={true}/>;
+    return <VertexConnected {...{...props, children}} isgraph={false} isedgepoint={true}/>;
 }
 // todo: name them all or verify the name is still usable.
 
 export const Graph = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { // doesn't work?
-    return <VertexConnected {...{...props, children}} isGraph={true} isVertex={false} />;
+    return <VertexConnected {...{...props, children}} isgraph={true} isvertex={false} />;
 }
 
 export const GraphVertex = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}} isGraph={true} isVertex={true} />;
+    return <VertexConnected {...{...props, children}} isgraph={true} isvertex={true} />;
 }
 
 export const Field = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={false} />;
+    return <VertexConnected {...{...props, children}} isgraph={false} isvertex={false} />;
 }
 (window as any).componentdebug = {Graph, GraphVertex, Field, Vertex, VoidVertex, EdgePoint, VertexConnected, VertexComponent};
 
