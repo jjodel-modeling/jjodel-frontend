@@ -13,7 +13,6 @@ function InfoTabComponent(props: AllProps) {
     const models = project.models;
 
 
-    make buttons for open and background on hover on model list
     return(<div className={'p-3'}>
         <h3 className={'text-primary'}>{project.name}</h3>
         <Input data={project.id} field={'name'} jsxLabel={<b className={'text-primary my-auto me-2'}>Name</b>} hidden={true} />
