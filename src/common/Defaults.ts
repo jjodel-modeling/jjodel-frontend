@@ -1,5 +1,5 @@
-import {Pointer, DViewElement, DViewPoint, Dictionary, U} from '../joiner';
-
+import {Pointer, DViewElement, DViewPoint, Dictionary, U, RuntimeAccessible} from '../joiner';
+@RuntimeAccessible('Defaults')
 export class Defaults {
     static cname: string = 'Defaults';
     static views: Pointer<DViewElement>[] = [
@@ -13,7 +13,7 @@ export class Defaults {
         'Pointer_ViewLiteral',
         'Pointer_ViewObject',
         'Pointer_ViewValue',
-        'Pointer_ViewDefaultPackage',
+        // 'Pointer_ViewDefaultPackage',
         'Pointer_ViewVoid',
         'Pointer_ViewEdgeAssociation',
         'Pointer_ViewEdgeDependency',

@@ -1,17 +1,35 @@
 import type {DState, LProject} from '../../../joiner';
-import {U, Input, DUser, LUser} from '../../../joiner';
+import {U, Input, DUser, LUser, LModel} from '../../../joiner';
 import {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
-import type {FakeStateProps} from '../../../joiner/types';
+import type {Dictionary, FakeStateProps} from '../../../joiner/types';
 import DockManager from "../DockManager";
 
+function m2Row(model: LModel) { return mRow(model, false) }
+function m1Row(model: LModel) { return mRow(model, true) }
+// too small to justify a separate file
+function mRow(model: LModel, showInstanceOf: boolean = false) {
+    return (
+        <label className={'ms-3 d-block'} key={model.id} onClick={()=>DockManager.open2(model)} style={{cursor: 'pointer'}}>
+            - {model.name}{
+            showInstanceOf && <><b className={'text-success'}> {model.instanceof ? 'conforms to' : 'is shapeless'}</b> {model.instanceof?.name}</>
+            }
+            <button className={'btn-outline-secondary btn bi bi-arrow-right-short'} style={{border:'none'}} onClick={()=>DockManager.open2(model)} />
+        </label>)
+}
 
 function InfoTabComponent(props: AllProps) {
-    const user = props.user;
     const project = props.project;
     const metamodels = project.metamodels;
-    const models = project.models;
-
+    let models = project.models;
+    let modelmap: Dictionary<string, LModel[]> = {}
+    for (let m of models) {
+        let m2 = m.instanceof;
+        let m2name = m2?.name as string;
+        if (!modelmap[m2name]) modelmap[m2name] = [];
+        modelmap[m2name].push(m);
+    }
+    models = Object.values(modelmap).flat();  // this way they are sorted by metamodel
 
     return(<div className={'p-3'}>
         <h3 className={'text-primary'}>{project.name}</h3>
@@ -21,34 +39,25 @@ function InfoTabComponent(props: AllProps) {
         }
         <b><label className={'text-primary'}>Metamodels ({metamodels.length}):</label></b>
         <section>
-        {metamodels.map((model, index) => {
-            return(<>
-                <label className={'ms-3 d-block'} key={index} onClick={()=>DockManager.open2(model)}>-{model.name}</label>
-            </>);
-        })}
+            {metamodels.map(m2Row)}
         </section>
         <b><label className={'text-primary'}>Models ({models.length}):</label></b>
         <section>
-            {models.map((model, index) => {
-                return(<>
-                    <label className={'ms-3 d-block'} key={index} onClick={()=>DockManager.open2(model)}>
-                        -{model.name} <b className={'text-success'}>{model.instanceof ? 'conforms to' : 'is shapeless'}</b> {model.instanceof?.name}
-                    </label>
-                </>);
-            })}
+            {models.map(m1Row)}
         </section>
     </div>);
 }
+
 interface OwnProps {}
-interface StateProps {user: LUser, project: LProject}
+interface StateProps {project: LProject}
 interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.user = LUser.fromPointer(DUser.current);
-    ret.project = ret.user.project as LProject;
+    const luser = LUser.fromPointer(DUser.current, state);
+    ret.project = luser.project as LProject;
     return ret;
 }
 

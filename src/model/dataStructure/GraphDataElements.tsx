@@ -539,7 +539,6 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             let newtocheck: Pointer<DGraphElement>[] = [];
             for (let ptr of tocheck) {
                 Log.eDev(checked[ptr], "loop in GraphElements containing themselves", {dblcheck, context, ptr, checked, fistContainer:dblcheck[ptr]});
-                console.log("get_allsubnodes", {ptr, fistContainer:dblcheck[ptr], dblcheck, context, checked});
                 if (checked[ptr]) continue;
                 checked[ptr] = true;
                 let subnode: DGraphElement = DPointerTargetable.from(ptr, state);

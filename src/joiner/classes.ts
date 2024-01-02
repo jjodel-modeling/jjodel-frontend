@@ -1815,8 +1815,8 @@ export class DProject extends DPointerTargetable {
     metamodels: Pointer<DModel, 0, 'N'> = [];
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
-    views: Pointer<DViewElement, 0, 'N'> = [];
-    stackViews: Pointer<DViewPoint, 0, 'N'> = [];
+    // views: Pointer<DViewElement, 0, 'N'> = []; // can be retrieved from viewpoints.subviews
+    // stackViews: Pointer<DViewPoint, 0, 'N'> = []; // ??
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
     activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
     // collaborators dict user: priority
@@ -1841,7 +1841,6 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     metamodels!: LModel[];
     models!: LModel[];
     graphs!: LGraph[];
-    views!: LViewElement[];
     stackViews!: LViewElement[];
     viewpoints!: LViewPoint[];
     activeViewpoint!: LViewPoint;
@@ -1869,6 +1868,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
 
     /* UTILS */
     children!: LPointerTargetable[];
+    views!: LViewElement[]; // derived from viewpoints.subView
 
     /* Functions */
 
@@ -1935,18 +1935,27 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         return true;
     }
 
-    protected get_views(context: Context): this['views'] {
-        return LViewElement.fromPointer([...context.data.views, ...Defaults.views]);
+    protected get_views(c: Context): this['views'] {
+        // return LViewElement.fromPointer([...c.data.views, ...Defaults.views]);
+        let duplicateRemover: Dictionary<string, LViewElement> = {};
+        let varr = this.get_viewpoints(c).flatMap(vp => vp.subViews);
+        for (let v of varr) {
+            duplicateRemover[v.id] = v;
+        }
+        return Object.values(duplicateRemover);
     }
+
     protected set_views(val: PackArr<this['views']>, context: Context): boolean {
+        return Log.exx("cannot set project.views, set them as subviews of a project viewpoint.");
+        /*
         const data = context.data;
         let ptrs = Pointers.from(val);
         let defaultViewsMap: Dictionary<Pointer, boolean> = U.objectFromArrayValues(Defaults.views);
         ptrs = ptrs.filter(ptr => !defaultViewsMap[ptr]);
         SetFieldAction.new(data.id, 'views', ptrs, '', true);
-        return true;
+        return true;*/
     }
-
+/*
     protected get_stackViews(context: Context): this['stackViews'] {
         return LViewElement.fromPointer(context.data.stackViews || []);
     }
@@ -1954,7 +1963,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         const data = context.data;
         SetFieldAction.new(data.id, 'stackViews', Pointers.from(val), '', true);
         return true;
-    }
+    }*/
 
     protected get_viewpoints(context: Context): this['viewpoints'] {
         return LViewPoint.fromPointer([...Defaults.viewpoints, ...context.data.viewpoints]);
@@ -1966,7 +1975,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_activeViewpoint(context: Context): this['activeViewpoint'] {
-        return LViewPoint.fromPointer(context.data.activeViewpoint);
+        return LViewPoint.fromPointer(context.data.activeViewpoint || Defaults.viewpoints[0]);
     }
     protected set_activeViewpoint(val: Pack1<this['activeViewpoint']>, context: Context): boolean {
         const data = context.data;
