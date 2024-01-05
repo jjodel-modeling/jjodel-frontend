@@ -145,7 +145,10 @@ function loadOldState(obj: GObject, name: string = "oldSave"): void {
         console.log("loadOldState", {g: obj.graphs, m: obj.models, v: obj.viewelements, project, dproject, user});
         project.graphs = obj.graphs;
         project.models = obj.models;
-        project.views = obj.viewelements;
+        let lastvp = obj.viewpoints[obj.viewpoints.length -1];
+        lastvp.subViews = obj.viewelements;
+        for (let v of obj.viewElements) v.viewpoint = lastvp;
+        // project.views = obj.viewelements;
         project.viewpoints = obj.viewpoints;
         // project.activeViewpoint = obj.viewpoints[0];
         project.activeViewpoint = 'Pointer_DefaultViewPoint' as any;

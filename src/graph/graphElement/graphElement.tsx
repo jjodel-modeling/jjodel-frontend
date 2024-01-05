@@ -86,7 +86,6 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 
     // const evalContextOld = U.evalInContext(this, constants);
     // this.setState({evalContext});
-    //console.error({jsx:view.jsxString, view});
 
 
     // compute usageDeclarations
@@ -439,7 +438,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         <div>{rowPre} <b style={{color:"red"}}> {caretCursor} </b> {rowPost}</div>
                         { culpritlinesPost.map(l => <div>{l}</div>) }
                     </div>;
-                console.error("errr", {e, ee, jsxlines, jsxcode, rowPre, rowPost, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
                 errormsg += " @line " + stackerrorlinenum.row + ":" + stackerrorlinenum.col;
                 return DV.errorView(<div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template: this.props.view.jsxString, view: this.props.view});
             } else {

@@ -337,15 +337,17 @@ export class Selectors{
     private static matchesOclCondition(v: DViewElement, data: DModelElement | LModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
         if (!v.oclCondition) return ViewEClassMatch.MISMATCH;
         const oclCondition = v.oclCondition;
-        const user: LUser = LUser.fromPointer(DUser.current);
+        const user: LUser = LUser.fromPointer(DUser.current); // todo: just avoid presenting invalid views to this function instead of wrapping and filtering inside.
         const project: LProject = user.project as LProject;
         const viewpoint = project.activeViewpoint;
-        const isDefault = !!(v.viewpoint && Defaults.check(v.viewpoint));
+        const isDefault = Defaults.check(v.id);
         const isActiveViewpoint = v.viewpoint === viewpoint.id;
+        console.log('allviews matcher ocl@@', {isDefault, data, dn:(data as any).name, oclCondition});
         if(!isActiveViewpoint && !isDefault) return ViewEClassMatch.MISMATCH;
         let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
         try {
             const flag = OCL.filter(false, 'src', [data], oclCondition, constructors);
+            console.log('allviews matcher ocl##', {flag, data, dn:(data as any).name, oclCondition});
             if(flag.length > 0 && isActiveViewpoint) return ViewEClassMatch.EXACT_MATCH;
             if(flag.length > 0 && !isActiveViewpoint) return ViewEClassMatch.IMPLICIT_MATCH;
             return ViewEClassMatch.MISMATCH;
@@ -385,14 +387,16 @@ export class Selectors{
         let nodescore: number = 1;
         if (data) {// 1° priority: matching by EClass type
             let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, data?.__raw);
+            console.log('allviews matcher meta', {v1MatchingEClassScore, d:data?.name, n:v1.name, v1});
             // Log.l('score view:', {v1, data, v1MatchingEClassScore});
             if (v1MatchingEClassScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
             // 2° priority: by ocl condition matching
             let v1OclScore = Selectors.matchesOclCondition(v1, data); // todo: not a fixed priority but acording to the "complexity" of the query
+            console.log('allviews matcher ocl_', {v1OclScore, d:data?.name, n:v1.name, v1});
             if (v1OclScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
             // 3° priority by sub-view
-            let v1SubViewScore = Selectors.matchesOclCondition(v1, data);
-            if (v1SubViewScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
+            let v1SubViewScore: ViewEClassMatch = ViewEClassMatch.EXACT_MATCH as ViewEClassMatch; // todo
+            // if (v1SubViewScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH; probably better permanently off, subviews should be a priority and not a requirement
             // second priority: matching by viewpoint / subViews
             datascore = (v1MatchingEClassScore * v1OclScore * v1SubViewScore);
         }/*

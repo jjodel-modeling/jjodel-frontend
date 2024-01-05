@@ -158,29 +158,25 @@ export class DState extends DPointerTargetable{
 
         // const viewpoint = DViewPoint.new('Default', '', undefined, '', '', '', [], '', 0, false);
         const viewpoint = DViewPoint.new2('Default', '', ()=>{}, true, Defaults.viewpoints[0]);
-        const views: DViewElement[] = makeDefaultGraphViews(Defaults.viewpoints[0]);
+        Log.exDev(viewpoint.id !== Defaults.viewpoints[0], "wrong vp id initialization", {viewpoint, def:Defaults.viewpoints});
+        const views: DViewElement[] = makeDefaultGraphViews(viewpoint.id);
+        console.log('vvviewsss', views);
         for (let view of views) { CreateElementAction.new(view); }
 
         for (let primitiveType of Object.values(ShortAttribETypes)) {
             let dPrimitiveType;
             if (primitiveType === ShortAttribETypes.EVoid) continue; // or make void too without primitiveType = true, but with returnType = true?
-            else {
-                dPrimitiveType = DClass.new(primitiveType, false, false, true, false, '', undefined, false);
-                dPrimitiveType.id = 'Pointer_' + primitiveType.toUpperCase();
-                CreateElementAction.new(dPrimitiveType);
-            }
+            dPrimitiveType = DClass.new(primitiveType, false, false, true, false, '', undefined, true, 'Pointer_' + primitiveType.toUpperCase());
             SetRootFieldAction.new('primitiveTypes', dPrimitiveType.id, '+=', true);
         }
 
         /// creating m3 "Object" metaclass
         let dObject = DClass.new(ShortDefaultEClasses.EObject, false, false, false, false,
-            '', undefined, false, 'Pointer_' + ShortDefaultEClasses.EObject.toUpperCase());
+            '', undefined, true, 'Pointer_' + ShortDefaultEClasses.EObject.toUpperCase());
+        SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
         for (let defaultEcoreClass of Object.values(DefaultEClasses)){
             // todo: creat everyone and not just object, make the whole m3 populated.
         }
-        dObject.id = 'Pointer_' + ShortDefaultEClasses.EObject.toUpperCase();
-        CreateElementAction.new(dObject);
-        SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
 
         let Graphs: any = {
             Graph: Graph, GraphVertex: GraphVertex,
@@ -465,7 +461,6 @@ export class LState<Context extends LogicContext<DState> = any, C extends Contex
     }
 }
 
-// console.error("dpt" +DPointerTargetable, DPointerTargetable);
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DState);
 RuntimeAccessibleClass.set_extend(LPointerTargetable, LState);
 

@@ -14,7 +14,6 @@ import {FakeStateProps} from "../../../joiner/types";
 import {connect} from "react-redux";
 
 function ViewDataComponent(props: AllProps) {
-    const project = props.project;
     const view = props.view;
 /*
     if(!view) {
@@ -31,7 +30,7 @@ function ViewDataComponent(props: AllProps) {
         {id: '2', title: 'Node', group: '1', closable: false, content: <NodeData view={view} readonly={readOnly} />},
         {id: '3', title: 'Template', group: '1', closable: false, content: <TemplateData view={view} readonly={readOnly} />},
         {id: '4', title: 'Custom Data', group: '1', closable: false, content: <CustomData viewID={view.id} readonly={readOnly} />},
-        {id: '5', title: 'Sub Views', group: '1', closable: false, content: <SubViewsData viewID={view.id} readonly={readOnly} />}
+        {id: '5', title: 'Sub Views', group: '1', closable: false, content: <SubViewsData viewID={view.id} readonly={readOnly} setSelectedView={props.setSelectedView} />}
     ];
     if(view.appliableTo === 'edge') tabs.push(
         {id: '5', title: 'Edge', group: '1', closable: false, content: <EdgeData view={view} readonly={readOnly} />}
@@ -41,14 +40,10 @@ function ViewDataComponent(props: AllProps) {
     );
     layout.dockbox.children.push({tabs});
 
-    const back = () => {
-        project.popFromStackViews();
-    }
-
     return(<div>
         <div className={'d-flex p-2'}>
             <b className={'ms-1 my-auto'}>{view.name}</b>
-            <button className={'btn btn-danger ms-auto'} onClick={back}>
+            <button className={'btn btn-danger ms-auto'} onClick={ () => props.setSelectedView(undefined)}>
                 <i className={'p-1 bi bi-arrow-left'}></i>
             </button>
         </div>
@@ -57,6 +52,7 @@ function ViewDataComponent(props: AllProps) {
 }
 interface OwnProps {
     view: LViewElement;
+    setSelectedView: React.Dispatch<React.SetStateAction<LViewElement | undefined>>;// (val: LViewElement | undefined) => {}
 }
 interface StateProps {
     project: LProject;

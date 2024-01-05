@@ -35,7 +35,7 @@ import {
     TRANSACTION,
     U,
     windoww,
-    EdgeGapMode
+    EdgeGapMode, Pointers
 } from "../../joiner";
 
 @RuntimeAccessible('DViewElement')
@@ -248,7 +248,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         txt: 'OCL Query selector to determine which nodes or model elements should apply this view'}
 
     // todo: how about allowing a view to be part in multiple vp's? so this reference would be an array or removed, and you navigate only from vp to v.
-    viewpoint!: LViewPoint | undefined;
+    viewpoint!: LViewPoint;
     __info_of__viewpoint: Info = {hidden: true, type: LViewPoint.cname, txt: <div>The collection of views containing this one, useful to activate multiple views at once.</div>}
 
     display!: 'block'|'contents';
@@ -424,7 +424,24 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return SetFieldAction.new(c.data.id, "edgeTailSize", v as GraphPoint, '', false); }
 
     public get_viewpoint(context: Context): this["viewpoint"] {
-        return (context.data.viewpoint || undefined) && (LViewPoint.fromPointer(context.data.viewpoint as Pointer<DViewPoint>));
+        return (LViewPoint.fromPointer(context.data.viewpoint as Pointer<DViewPoint>));
+    }
+    public set_subViews(v: Pointer<DViewPoint>[], context: Context): boolean { return this.cannotSet('subViews, call set_viewpoint on the sub-elements instead.'); }
+    public set_viewpoint(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement, atIndex: number = -1): boolean {
+        let ret = false;
+        let vpid: Pointer<DViewPoint> = Pointers.from(v);
+        let id = (manualDview ? manualDview : context.data).id;
+        TRANSACTION(()=>{
+            ret = SetFieldAction.new(id, "viewpoint", vpid, '', true);
+            if (atIndex === -1) {
+                SetFieldAction.new(vpid, "subViews", id, '+=', true);
+            } else {
+                let oldSubViews = [...DPointerTargetable.fromPointer(vpid).subViews];
+                oldSubViews.splice(atIndex, 0, id);
+                SetFieldAction.new(vpid, "subViews", oldSubViews, '', true);
+            }
+        })
+        return ret;
     }
 
 
@@ -517,15 +534,28 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return (deep: boolean = false) => {
             let lview: LViewElement = undefined as any;
             TRANSACTION( () => {
-                const dview: DViewElement = DViewElement.new(`${c.data.name} Copy`, '');
-                lview = LPointerTargetable.fromD(dview);
+                let vpid: Pointer<DViewPoint> = c.data.viewpoint as Pointer<DViewPoint>;
+                const dclone: DViewElement = DViewElement.new2(`${c.data.name} Copy`, '', undefined, true, 'skip');
+                lview = LPointerTargetable.fromD(dclone);
                 for (let key in c.data) {
-                    if (key !== 'id' && key !== 'name' && key !== "pointedBy") {
+                    if (key !== 'id' && key !== 'name' && key !== "pointedBy" && key !== 'viewpoint' && key !== 'subViews') {
                         // @ts-ignore
                         lview[key] = c.data[key];
                     }
                 }
-                SetRootFieldAction.new('stackViews', dview.id, '+=', true);
+
+                // insert in viewpoint.subview
+                //let defaultViews: Dictionary<Pointer, boolean> = Defaults.defaultViewsMap;
+                let vp: LViewPoint = c.proxyObject.viewpoint;
+                let oldViews: Pointer<DViewElement>[] = Pointers.from(vp.__raw.subViews);
+                // if (Defaults.viewpoints.indexOf(vpid)) oldViews = oldViews.filter( vid => !defaultViews[vid]);
+                let i: number = oldViews.indexOf(c.data.id);
+                this.set_viewpoint(vpid, undefined as any, dclone, i === -1 ? -1 : i+1); // insert in-place right after the cloned view
+                /*
+                if (i === -1) oldViews.push(dclone.id);
+                else oldViews.splice(i+1, 0, dclone.id); // insert in-place right after the cloned view
+                vp.subViews = oldViews as any;*/
+                // SetRootFieldAction.new('stackViews', dview.id, '+=', true);
             })
             return lview;
         }

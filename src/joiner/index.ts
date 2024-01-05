@@ -11,7 +11,6 @@ var windoww = (window as any);
 windoww.windoww = windoww;
 
 
-// console.error('iiiiiiiiiiiiiiii 0');
 
 windoww.$ = $$;
 export const $: JQueryStatic = $$;
@@ -53,7 +52,6 @@ export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
 
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
-// console.error('iiiiiiiiiiiiiiii 3');
 // import independent generic modules (only dependent from types and RuntimeAccessible
 
 export {Uarr,  DDate, ParseNumberOrBooleanOptions, myFileReader,
@@ -119,7 +117,6 @@ export {
     DFactory_useless_, LFactory_useless_, DMap, LMap
 } from "../model/logicWrapper/LModelElement";
 
-// console.error('joiner here 3');
 /*
 export {
     LModelElement,
@@ -142,11 +139,9 @@ export {
 
 // export {GraphDragHandler} from "../graph/vertex/GraphDragHandler";
 
-// console.error('iiiiiiiiiiiiiiii 11', windoww.DViewElement);
 export type {WViewElement, WViewTransientProperties} from "../view/viewElement/view";
 export {DViewTransientProperties, LViewTransientProperties, LViewElement, DViewElement} from "../view/viewElement/view";
 export {DViewPoint, LViewPoint} from "../view/viewPoint/viewpoint";
-// console.error('iiiiiiiiiiiiiiii 12', windoww.DViewElement);
 
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
 

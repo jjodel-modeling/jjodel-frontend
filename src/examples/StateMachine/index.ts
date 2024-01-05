@@ -21,7 +21,6 @@ export class StateMachine {
             const event = elements[7];
             // const M1 = await StateMachine_M1.load1(lProject, M2, stateMachine, state, transition, command, event);
             StateMachine_Views.load(lProject, state, command, event, transition);
-            lProject.stackViews = [];
         });
     }
 
@@ -44,7 +43,6 @@ export class StateMachine {
             for(let i = 0; i < 72; i++)
                 await StateMachine_M1.load2(lProject, m2, stateMachine, state, transition, command, event);
             StateMachine_Views.load(lProject, state, command, event, transition);
-            lProject.stackViews = [];
         });
     }
 

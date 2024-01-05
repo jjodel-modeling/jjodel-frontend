@@ -28,7 +28,7 @@ export class DViewPoint extends DViewElement {
     }
     public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true, id?: string): DViewElement {
         return new Constructors(
-            new DViewElement('dwc'), undefined, persist, undefined, id)
+            new DViewPoint('dwc'), undefined, persist, undefined, id)
             .DPointerTargetable().DViewElement(name, jsxString).DViewPoint().end(callback);
     }
 }

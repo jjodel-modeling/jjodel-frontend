@@ -511,7 +511,11 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     private setExternalPtr<D extends DPointerTargetable>(target: D | Pointer<any>, property: string, accessModifier: "[]" | "+=" | "" = "") {
         if (!target) return;
         if (typeof target === "object") target = target.id;
-        this.thiss._persistCallbacks.push(SetFieldAction.create(target, property, this.thiss.id, accessModifier, true));
+        windoww.deugg = windoww.deugg || [];
+        let t;
+        this.thiss._persistCallbacks.push(t = SetFieldAction.create(target, property, this.thiss.id, accessModifier, true));
+        windoww.deugg.push(t);
+
         // PointedBy is set by reducer directly in this case.
         // this.thiss._persistCallbacks.push(SetFieldAction.create(this.thiss.id, "pointedBy", PointedBy.fromID(target, property as any), '+='));
     }
@@ -527,26 +531,25 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
     //static pause(): void { canFireActions = false; }
     //static resume(): void { canFireActions = true; }
-    static persist(d: DPointerTargetable): void;
+    static persist(d: DPointerTargetable, fromCreateAction?: boolean): void;
     static persist(d: DPointerTargetable[]): void;
-    static persist(d: orArr<DPointerTargetable>): void {
+    static persist(d: orArr<DPointerTargetable>, fromCreateAction?: boolean): void {
         if (Constructors.paused) return;
         TRANSACTION(()=> {
             if (!Array.isArray(d)) d = [d];
             // first create "this"
-            for (let e of d) CreateElementAction.new(e, false);
-            // then create subelements (object -> values) and fire their actions.
             for (let e of d) {
-                for (let c of e._derivedSubElements) Constructors.persist([c]);
+                let subElements = e._derivedSubElements;
+                let callbacks = e._persistCallbacks;
                 delete (e as Partial<DPointerTargetable>)._derivedSubElements;
-            }
-            // finally fire the actions for "this"
-            for (let e of d) {
-                for (let c of e._persistCallbacks) (c as Action).fire ? (c as Action).fire() : (c as () => void)();
                 delete (e as Partial<DPointerTargetable>)._persistCallbacks;
+                // then create subelements (object -> values) and fire their actions.
+                if (!fromCreateAction) CreateElementAction.new(e, false);
+                for (let c of subElements) Constructors.persist([c]);
+                // finally fire the actions for "this"
+                for (let c of callbacks) (c as Action).fire ? (c as Action).fire() : (c as () => void)();
             }
         })
-        // DPointerTargetable.pendingCreation[this.thiss.id] = this.thiss; // todo: removable?
     }
     // start(thiss: any): this { this.thiss = thiss; return this; }
     end(simpledatacallback?: (d:T, c: this) => void): T {
@@ -829,7 +832,6 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.storeSize = false;
         thiss.lazySizeUpdate = true;
         thiss.constraints = [];
-        this.setPtr("viewpoint", vp);
 
         // thiss.useSizeFrom = EuseSizeFrom.node;
         // thiss.adaptHeight = false;
@@ -861,28 +863,32 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.edgeTailSize = new GraphPoint(20, 20);
 
         this.nonPersistentCallbacks.push(() => {
-            console.log("colormap 2", {v:{...thiss}});
             if (thiss.constants) {
                 thiss._parsedConstants = (windoww["LViewElement"] as typeof LViewElement).parseConstants(thiss.constants);
             } else thiss._parsedConstants = undefined;
         });
 
-    if(thiss.className !== 'DViewElement') return this;
-    const user = LUser.fromPointer(DUser.current);
-    const project = user?.project; if(!project) return this;
-    this.setExternalPtr(project.id, 'views', '+=');
-    this.setExternalPtr(project.id, 'stackViews', '+=');
+        if (thiss.className !== 'DViewElement') return this;
+        const user = LUser.fromPointer(DUser.current);
+        // const project = user?.project; if(!project) return this;
+        if (!vp) vp = user?.project?.activeViewpoint.id || Defaults.viewpoints[0];
+        if (vp !== 'skip') {
+            this.setExternalPtr(vp, 'subViews', '+=');
+            this.setPtr("viewpoint", vp);
+        }
+
+        // this.setExternalPtr(project.id, 'views', '+=');
+        // this.setExternalPtr(project.id, 'stackViews', '+=');
         return this;
     }
 
     DViewPoint(): this {
         const _this: DViewPoint = U.wrapper<DViewPoint>(this.thiss);
         const user = LUser.fromPointer(DUser.current);
-        const project = user?.project; if(!project) return this;
+        const project = user?.project;
+        if (!project) return this;
         this.setExternalPtr(project.id, 'viewpoints', '+=');
-        _this._persistCallbacks.push(
-            SetFieldAction.create(project.id, 'stackViews', [], '', false)
-        );
+        // _this._persistCallbacks.push( SetFieldAction.create(project.id, 'stackViews', [], '', false) );
         return this;
     }
 
@@ -1629,7 +1635,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
                 const regex = /[^a-zA-Z]+$/;
                 root = root.replace(regex, '');
                 field = field.replace(regex, '');
-
+                // damiano: this is likely to cause a bug for sure somewhere when a key ends with "s" but is not an array. keep in mind when naming variables.
                 let op: ''|'-=' = (field && field.endsWith('s')) ? '-=' : '';
                 if(!field && root.endsWith('s')) op = '-=';
 
@@ -1832,7 +1838,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
-    id!: Pointer<DProject>;
+    readonly id!: Pointer<DProject>;
     type!: 'public'|'private'|'collaborative';
     author!: LUser;
     collaborators!: LUser[];
@@ -1841,34 +1847,34 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     metamodels!: LModel[];
     models!: LModel[];
     graphs!: LGraph[];
-    stackViews!: LViewElement[];
+    // stackViews!: LViewElement[];
     viewpoints!: LViewPoint[];
     activeViewpoint!: LViewPoint;
 
     /* DATA */
-    packages!: LPackage[];
-    classes!: LClass[];
-    attributes!: LAttribute[];
-    references!: LReference[];
-    operations!: LOperation[];
-    parameters!: LParameter[];
-    enumerators!: LEnumerator[];
-    literals!: LEnumLiteral[];
-    objects!: LObject[];
-    values!: LValue[];
+    readonly packages!: LPackage[];
+    readonly classes!: LClass[];
+    readonly attributes!: LAttribute[];
+    readonly references!: LReference[];
+    readonly operations!: LOperation[];
+    readonly parameters!: LParameter[];
+    readonly enumerators!: LEnumerator[];
+    readonly literals!: LEnumLiteral[];
+    readonly objects!: LObject[];
+    readonly values!: LValue[];
 
     /* NODES */
-    allNodes!: NodeTypes[];
-    graphVertexes!: LGraphVertex[];
-    voidVertexes!: LVoidVertex[];
-    vertexes!: LVertex[];
-    fields!: LGraphElement[];
-    edges!: LEdge[];
-    edgePoints!: LEdgePoint[];
+    readonly allNodes!: NodeTypes[];
+    readonly graphVertexes!: LGraphVertex[];
+    readonly voidVertexes!: LVoidVertex[];
+    readonly vertexes!: LVertex[];
+    readonly fields!: LGraphElement[];
+    readonly edges!: LEdge[];
+    readonly edgePoints!: LEdgePoint[];
 
     /* UTILS */
-    children!: LPointerTargetable[];
-    views!: LViewElement[]; // derived from viewpoints.subView
+    readonly children!: LPointerTargetable[];
+    readonly views!: LViewElement[]; // derived from viewpoints.subView
 
     /* Functions */
 
@@ -2093,28 +2099,29 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         ];
     }
 
-    public pushToStackViews(view: Pack<LViewElement>): void {
-        throw new Error('cannot be called directly, should trigger getter. this is only for correct signature');
-    }
-    protected get_pushToStackViews(context: Context): (view: Pack<LViewElement>) => void {
-        return (view) => {
-            const data = context.data;
-            SetFieldAction.new(data.id, 'stackViews', Pointers.from(view), '+=', true);
+    /*
+        public pushToStackViews(view: Pack<LViewElement>): void {
+            throw new Error('cannot be called directly, should trigger getter. this is only for correct signature');
         }
-    }
-
-    public popFromStackViews(): void {
-        throw new Error('cannot be called directly, should trigger getter. this is only for correct signature');
-    }
-    protected get_popFromStackViews(context: Context): () => void {
-        return () => {
-            const data = context.data;
-            const view = data.stackViews?.at(-1);
-            if(!view) return;
-            SetFieldAction.new(data.id, 'stackViews', view as any, '-=', true);
+        protected get_pushToStackViews(context: Context): (view: Pack<LViewElement>) => void {
+            return (view) => {
+                const data = context.data;
+                SetFieldAction.new(data.id, 'stackViews', Pointers.from(view), ', true);
+            }
         }
-    }
-
+    /*
+        public popFromStackViews(): void {
+            throw new Error('cannot be called directly, should trigger getter. this is only for correct signature');
+        }
+        protected get_popFromStackViews(context: Context): () => void {
+            return () => {
+                const data = context.data;
+                const view = data.stackViews?.at(-1);
+                if(!view) return;
+                SetFieldAction.new(data.id, 'stackViews', view as any, '-=', true);
+            }
+        }
+    */
     public delete(): void {
         throw new Error('cannot be called directly, should trigger getter. this is only for correct signature');
     }

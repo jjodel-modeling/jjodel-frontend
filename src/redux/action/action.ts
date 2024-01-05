@@ -1,4 +1,5 @@
 import {
+    Constructors,
     Dictionary,
     DocString,
     DPointerTargetable,
@@ -521,6 +522,14 @@ export class CreateElementAction extends Action {
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         this.value = me;
         if (fire) this.fire();
+    }
+    public fire(forceRelaunch: boolean = false): boolean {
+        let ret = false;
+        TRANSACTION( () => {
+            ret = super.fire(forceRelaunch);
+            if (this.value._derivedSubElements || this.value._persistCallbacks) { Constructors.persist(this.value, true); }
+        });
+        return ret;
     }
 }
 

@@ -1,5 +1,5 @@
-import {Dispatch, MouseEvent, ReactElement} from 'react';
-import {LProject, Dictionary, Pointer, TRANSACTION, Pointers} from '../../../joiner';
+import React, {Dispatch, MouseEvent, ReactElement} from 'react';
+import {LProject, Dictionary, Pointer, TRANSACTION, Pointers, LViewPoint} from '../../../joiner';
 import {CreateElementAction, Defaults, DState, DUser, DViewElement, LUser, LViewElement, U} from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from "../../../joiner/types";
@@ -9,9 +9,8 @@ function ViewsDataComponent(props: AllProps) {
     const project = props.project;
     console.log("pv:", project.views, project.activeViewpoint.id)
     // const views = project.views.filter(v => v && (!v.viewpoint || v.viewpoint.id === project.activeViewpoint.id));
-    const views = project.viewpoints.filter(v => v && (!v.viewpoint || v.viewpoint.id === project.activeViewpoint.id));
-
-    const [hoverID, setHoverID] = useStateIfMounted('');
+    let vp: LViewPoint = project.activeViewpoint; //
+    const views = vp.subViews;
 
     const add = (e: MouseEvent) => {
         const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
@@ -19,25 +18,12 @@ function ViewsDataComponent(props: AllProps) {
         let names: string[] = project.views.map(v => v && v.name);
         name = U.increaseEndingNumber(name, false, false, newName => names.indexOf(newName) >= 0);
         DViewElement.new(name, jsx);
-        // damiano: how does it ad to projecT? earleir was:  //project.views = [...project.views, dView as any];
-
     }
 
-    const select = (view: LViewElement) => {
-        project.pushToStackViews(view);
-    }
 
     const clone = (e: MouseEvent, v: LViewElement) => {
         e.preventDefault(); e.stopPropagation();
-        TRANSACTION(()=>{
-            let clone = v.duplicate();
-            let defaultViews: Dictionary<Pointer, boolean> = Defaults.defaultViewsMap;
-            let oldViews: Pointer<DViewElement>[] = Pointers.from(project.views).filter( vid => !defaultViews[vid]);
-            let i: number = oldViews.indexOf(v.id);
-            if (i === -1) oldViews.push(clone.id);
-            else oldViews.splice(i+1, 0, clone.id); // insert in-place right after the cloned view
-            project.views = oldViews as any;
-        })
+        TRANSACTION(()=>{ v.duplicate(); })
     }
 
     return(<div>
@@ -49,16 +35,14 @@ function ViewsDataComponent(props: AllProps) {
         </div>
         {views.map((view, i) => {
             if(!view) return;
-            return <div key={view.id} className={'d-flex p-1 mt-1 border round mx-1'} tabIndex={-1}
-                        onMouseEnter={e => setHoverID(view.id)} onMouseLeave={e => setHoverID('')}
-                        onClick={e => select(view)}
-                        style={{cursor: 'pointer', background: hoverID === view.id ? '#E0E0E0' : 'transparent'}}>
+            return <div key={view.id} className={'view-list-elem d-flex p-1 mt-1 border round mx-1'} tabIndex={-1}
+                        onClick={e => props.setSelectedView(view)}>
                 <label style={{cursor: 'pointer'}} className={'my-auto'}>{view.name}</label>
-                <button className={'btn btn-success ms-auto'} onClick={e => clone(e, view)}>
+                <button className={'btn btn-success ms-auto'} onClick={e => { clone(e, view); e.stopPropagation(); }}>
                     <i className={'p-1 bi bi-clipboard2-fill'}></i>
                 </button>
                 <button className={'btn btn-danger ms-1'} disabled={Defaults.check(view.id)}
-                        onClick={e => view.delete()}>
+                        onClick={e => { view.delete(); e.stopPropagation(); }}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
                 </button>
             </div>
@@ -66,7 +50,9 @@ function ViewsDataComponent(props: AllProps) {
     </div>);
 }
 
-interface OwnProps { }
+interface OwnProps {
+    setSelectedView: React.Dispatch<React.SetStateAction<LViewElement | undefined>>;// (val: LViewElement | undefined) => {}
+}
 interface StateProps {
     project: LProject;
 }

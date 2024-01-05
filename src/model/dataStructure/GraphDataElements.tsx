@@ -700,7 +700,6 @@ export class DGraph extends DGraphElement {
             return matchedidmap[id]; };
         out.$matched = $(allnodesarr.filter(filternode));
         out.$notMatched = $(allnodesarr.filter((n) => !filternode(n)));
-        console.error("getnodes", {dmp, out, matchedidmap, matchedids, allnodesarr});
         return out.$matched;
         // throw new Error("Method not implemented.");
     }

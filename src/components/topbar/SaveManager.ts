@@ -113,7 +113,6 @@ export class SaveManager {
             let isMetamodel = filename.indexOf(".ecore") === filename.length - ".ecore".length;
             console.log("ismetamodel", {filename, isMetamodel});
             let end = SaveManager.importEcore(jsonobj || jsonstring || 'null', isMetamodel, filename, true);
-            console.error({end});
         }, extensions, true);
     }
 

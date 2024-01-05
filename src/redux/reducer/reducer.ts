@@ -127,8 +127,8 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                     */
                 }
             } else
+            if ((action.type === DeleteElementAction.type && !(key in current)) || current[key] === newVal) {
                 // value not changed
-            if (action.type === DeleteElementAction.type ? !(key in current) : current[key] === newVal) {
                 gotChanged = false;
             } else {
                 // value changed
@@ -478,7 +478,7 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
         let l = alll['L'+tagless];
         if (!d||!l) console.error("missing d constructor", {d, l});
         d.logic = l;
-        if (!l) console.error('lllllllll', l, d);
+        if (!l) console.error('init() could not find L-class during mapping', l, d);
         // @ts-ignore
         d.singleton = new l('dwc');
         d.structure = d;

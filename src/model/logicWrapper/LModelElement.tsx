@@ -4985,7 +4985,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             if (withmetainfo) ret.forEach((struct: ValueDetail)=>{ struct.value = numbercasting(struct.value); });
             else ret = ret.map(numbercasting);
         }
-        // console.error("type value:", {ret, typestr, meta, fitSize});
         return ret as any;
     }
 
@@ -5005,7 +5004,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     private get_valuestring(context: Context): this["valuestring"] { return (keepemptyquotes?: boolean) => this.valuestring_impl(context, keepemptyquotes); }
     private get_valuesString(context: Context): this["valuestring"] { return (keepemptyquotes?: boolean) => this.valuestring_impl(context, keepemptyquotes); }
     private valuestring_impl(context: Context, keepemptyquotes?: boolean): string {
-        // console.error("valuestring_impl", {context, data:context.data});
         let val = this.get_values(context, true, true, false, false, true);
         // console.log("valuestring_impl", {val});
         let ret: any;
@@ -5037,7 +5035,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 }
                 else ret = val.join(', ');
         }
-        // console.error("valuestring_impl()", {ret, context, data:context.data});
         return (ret === undefined || ret === null ? '' : ret) + '';
     }
 
