@@ -141,7 +141,7 @@ function Value(props: Props) {
     else select_options = null;
 
     // let rawvalues: any[] = lValue.__raw.value || [];
-    console.log("filtered values", {filteredvalues});
+    // console.log("filtered values", {filteredvalues});
     let isPtr = isattr ? false : (isenum || isref ? true : undefined/*for shapeless*/);
     const valueslist = (filteredvalues).map( (val, index) =>
             val.hidden ? null :

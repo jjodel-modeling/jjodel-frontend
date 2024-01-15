@@ -63,7 +63,7 @@ function mergeState(oldState: GObject, injectToModel: boolean = true, deleteNode
             customVP = {...vp} as DViewPoint;
             break;
         }
-        if (!customVP) customVP = {...viewpoints[0]} as DViewPoint;
+        if (!customVP) customVP = {...viewpoints[viewpoints.length -1]} as DViewPoint;
         Log.ex(!customVP, "loading this save, requires to make a offline project with at least 1 custom viewpoint");
         if (!customVP.subViews) customVP.subViews = [];
         // viewpoints[0].subViews = [...new Set( [...viewpoints[0].subViews, ...currState.viewelements])];
@@ -99,6 +99,8 @@ function mergeState(oldState: GObject, injectToModel: boolean = true, deleteNode
             if (!vvv.usageDeclarations) vvv.usageDeclarations = ''; // '()=>{return {}}';
             if (!vvv.preRenderFunc) vvv.preRenderFunc = ''; // '()=>{return {}}';
             if (!vvv.constants) vvv.constants = ''; // '()=>{return {}}';
+            // @ts-ignore
+            if (vvv.query) vvv.oclCondition = vvv.query;
         }
         customVP.subViews = [...new Set(customVP.subViews)];
         for (let pkg of pkgs) {

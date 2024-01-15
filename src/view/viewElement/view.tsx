@@ -83,7 +83,7 @@ export class DViewElement extends DPointerTargetable {
     height!: number;
     draggable!: boolean;
     resizable!: boolean;
-    viewpoint: Pointer<DViewPoint, 0, 1, LViewElement> = '';
+    viewpoint!: Pointer<DViewPoint>;
     display!: 'block'|'contents'|'flex'|string;
     constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
     onDataUpdate!: string;
@@ -177,11 +177,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     get_usageDeclarations(c: Context): this["usageDeclarations"]{
         return c.data.usageDeclarations || "(ret)=>{ // scope contains: data, node, view, constants, state\n" +
             "// ** preparations and default behaviour here ** //\n" +
-            "console.log('inside ud default func pre', {ret:{...ret}, data, node, view})\n" +
             "ret.data = data\n" +
             "ret.node = node\n" +
             "ret.view = view\n" +
-            "console.log('inside ud default func post', {ret:{...ret}, data, node, view})\n" +
             "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
             // if you want your node re-rendered every time, add a dependency to ret.state = state; or ret.update = Math.random();
             "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
@@ -430,9 +428,14 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     public set_viewpoint(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement, atIndex: number = -1): boolean {
         let ret = false;
         let vpid: Pointer<DViewPoint> = Pointers.from(v);
-        let id = (manualDview ? manualDview : context.data).id;
+        let id = (manualDview || context.data).id;
+        let oldvpid: Pointer<DViewPoint> = (manualDview || context.data).viewpoint;
+        if (vpid === oldvpid) return true;
+
         TRANSACTION(()=>{
             ret = SetFieldAction.new(id, "viewpoint", vpid, '', true);
+            oldvpid && SetFieldAction.new(oldvpid, "subViews", id as any, '-=', true);
+
             if (atIndex === -1) {
                 SetFieldAction.new(vpid, "subViews", id, '+=', true);
             } else {

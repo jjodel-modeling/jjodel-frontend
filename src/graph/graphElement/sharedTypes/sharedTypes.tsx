@@ -47,6 +47,7 @@ export class GraphElementReduxStateProps {
     node!: LGraphElement;
     data?: LModelElement;
     usageDeclarations!: DefaultUsageDeclarations;
+    invalidUsageDeclarations?: Error;
     // graph!: LGraph;
 
     // lastSelected!: LModelElement | null;

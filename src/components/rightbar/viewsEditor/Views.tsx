@@ -4,6 +4,7 @@ import {CreateElementAction, Defaults, DState, DUser, DViewElement, LUser, LView
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from "../../../joiner/types";
 import {connect} from "react-redux";
+import "./Vews.scss"
 
 function ViewsDataComponent(props: AllProps) {
     const project = props.project;

@@ -107,11 +107,12 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
         U.evalInContextAndScopeNew("("+stateProps.view.usageDeclarations+")(this.__param)", tempContext, true, false);
         U.objectMergeInPlace(evalContext, stateProps.usageDeclarations);
         // ret.evalContext.props = ret; mo more needed since UD doesn't update props anymore // hotfix to update context props after usageDeclaration mapping
-        console.log("view compute usageDeclarations SUCCESS 1",
-            {UD_obj_result:stateProps.usageDeclarations, UD_view: stateProps.view.usageDeclarations, context:evalContext, stateProps, ownProps});
-    } catch (e) {
+        // console.log("view compute usageDeclarations SUCCESS 1",
+        //     {UD_obj_result:stateProps.usageDeclarations, UD_view: stateProps.view.usageDeclarations, context:evalContext, stateProps, ownProps});
+    } catch (e: any) {
+        stateProps.invalidUsageDeclarations = e;
         Log.ee("Invalid usage declarations", {e, str: stateProps.view.usageDeclarations, view:stateProps.view, data: ownProps.data, stateProps});
-        U.objectMergeInPlace(evalContext, stateProps.usageDeclarations = {data: stateProps.data, view: stateProps.view, node: stateProps.node});
+        U.objectMergeInPlace(evalContext, stateProps.usageDeclarations = {data: stateProps.data, view: stateProps.view, node: stateProps.node, invalidUsageDeclarations:true});
     }
     stateProps.evalContext = evalContext;
 }
@@ -263,7 +264,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // any further update will not be present in eval context.props unless merged like U.objectMergeInPlace(ret.evalContext.props, ...); (and same with ctx.stateProps)
         setTemplateString(ret, ownProps, state); // todo: this is heavy, should be moved somewhere where it's executed once unless view changes (pre-render with if?)
 
-        console.log("view compute usageDeclarations", {ret, ownProps, ud:ret.view.usageDeclarations, context:ret.evalContext});
+        // console.log("view compute usageDeclarations", {ret, ownProps, ud:ret.view.usageDeclarations, context:ret.evalContext});
         if (ret.view.usageDeclarations) {
 
         }
@@ -314,7 +315,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (!measurableCode) return false;
             context = this.getContext();
             measurableCode = U.wrapUserFunction(measurableCode);
-            console.log("dragend execute", {measurableCode});
+            console.log("measurable execute", {type, measurableCode});
             // eval measurable
             U.evalInContextAndScope<GObject>(measurableCode, context, context);
         }
@@ -408,7 +409,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0) {
             errormsg += '\n\nReminder: nullish operators ".?" and "??" are not supported.'; }
         else if (view.jsxString.indexOf('?.') >= 0) { errormsg += '\n\nReminder: ?. operator and empty tags <></> are not supported.'; }
-        else if (e.message.indexOf("Unexpected token '<'")) { errormsg += '\n\nDid you forgot to close a html </tag>?'; }
+        else if (e.message.indexOf("Unexpected token '<'") !== -1) { errormsg += '\n\nDid you forgot to close a html </tag>?'; }
         try {
             let ee = e.stack || "";
             let stackerrorlast = ee.split("\n")[1];
@@ -439,14 +440,18 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         { culpritlinesPost.map(l => <div>{l}</div>) }
                     </div>;
                 errormsg += " @line " + stackerrorlinenum.row + ":" + stackerrorlinenum.col;
-                return DV.errorView(<div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template: this.props.view.jsxString, view: this.props.view});
+                return DV.errorView(
+                    <div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template: this.props.view.jsxString, view: this.props.view},
+                    where, this.props.data?.__raw, this.props.node?.__raw, view.__raw
+                    );
             } else {
                 // it means it is likely accessing a minified.js src code, sending generic error without source mapping
             }
         } catch(e2) {
             Log.eDevv("internal error in error view", {e, e2, where} );
         }
-        return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: this.props.view.jsxString, view: this.props.view});
+        return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: this.props.view.jsxString, view: this.props.view},
+            where, this.props.data?.__raw, this.props.node?.__raw, view.__raw);
     }
 
     private getTemplate(): ReactNode {
@@ -457,12 +462,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // console.log('getTemplate:', {props: this.props, template: this.props.template, ctx: this.props.evalContext});
 
         // Log.exDev(debug && maxRenderCounter-- < 0, "loop involving render");
+        if (this.props.invalidUsageDeclarations) {
+            return this.displayError(this.props.invalidUsageDeclarations, "Usage Declaration");
+        }
         let context: GObject = this.getContext();
         // abababababab
         // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
 
         try {
-            let preRenderFuncStr: string | undefined = this.props.view.preRenderFunc;
+                let preRenderFuncStr: string | undefined = this.props.view.preRenderFunc;
             if (preRenderFuncStr) {
                 // eval prerender
                 let obj: GObject = {};
@@ -472,17 +480,17 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 U.objectMergeInPlace(context, obj);
             }
         }
-        catch(e: any) { return this.displayError(e, "preRenderFunc");  }
+        catch(e: any) { return this.displayError(e, "Pre-Render");  }
 
         let ret;
         // eval template
         let jsxCodeString: DocString<ReactNode>;
 
         try { jsxCodeString = JSXT.fromString(this.props.view.jsxString, {factory: 'React.createElement'}); }
-        catch (e: any) { return this.displayError(e, "JSX Syntax Error"); }
+        catch (e: any) { return this.displayError(e, "JSX Syntax"); }
 
         try { ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + jsxCodeString + '})()', context); }
-        catch (e: any) { return this.displayError(e, "JSX Semantic Error"); }
+        catch (e: any) { return this.displayError(e, "JSX Semantic"); }
         return ret;
     }
 
@@ -754,15 +762,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                             (rn: ReactNode, index: number, depthIndexes: number[]) => {
                                 let injectOffset: undefined | LGraph = ((this.props as any).isGraph && !depthIndexes[0] && !index) && (this.props.node as LGraph);
                                 injectOffset&&console.log("inject offset props0:", {injectOffset});
-                                console.log("inject offset props00:", {injectOffset, ig:(this.props as any).isGraph, props:this.props, depthIndexes, index});
+                                //console.log("inject offset props00:", {injectOffset, ig:(this.props as any).isGraph, props:this.props, depthIndexes, index});
                                 return UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes, injectOffset)
                             })});
                 fixdoubleroot = false; // need to set the props to new root in that case.
                 if (fixdoubleroot) rawRElement = rawRElement.props.children;
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
-            } catch (e) {
-                rawRElement = DV.errorView("error while injecting props to subnodes",
-                        {e, rawRElement, key:this.props.key, newid: this.props.nodeid}) as ReactElement;
+            } catch (e: any) {
+                rawRElement = DV.errorView("error while injecting props to subnodes\n:" + (e.message || '').split('\n')[0],
+                        {e, rawRElement, key:this.props.key, newid: this.props.nodeid},
+                    'Subelement props', this.props.data?.__raw, this.props.node?.__raw, this.props.view.__raw) as ReactElement;
                 /*
                 rawRElement = U.eval InContextAndScope<ReactElement>('()=>{ return ' +
                     DV.errorView("error while injecting props to subnodes",

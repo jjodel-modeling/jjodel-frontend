@@ -125,7 +125,6 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     })
                 },
                 stop: (event: GObject, obj: GObject) => {
-                    console.log("dragend");
                     TRANSACTION(()=>{
                         this.setSize({x:obj.position.left, y:obj.position.top});
                         this.doMeasurableEvent(EMeasurableEvents.onDragEnd);

@@ -8,7 +8,8 @@ import {
     LModelElement, LPointerTargetable, OCL, Pointer,
     RuntimeAccessibleClass,
     Selectors,
-    windoww
+    windoww,
+    Log
 } from "../../joiner";
 import {connect} from "react-redux";
 

@@ -233,14 +233,14 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>): DViewElement[] {
         "ret.node = node\n" +
         "ret.view = view\n" +
         "// custom preparations:\n" +
-        "let packages = data?.packages || [];\n" +
+        "let packages = data && data.isMetamodel ? data.packages : [];\n" +
         "let suggestedEdges = data?.suggestedEdges || {};\n" +
         "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
         "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
         "// ** declarations here ** //\n" +
         "ret.firstPackage = packages[0]\n"+
         "ret.otherPackages = packages.slice(1)\n"+
-        "ret.m1Objects = data?.allSubObjects || []\n"+
+        "ret.m1Objects = data && !data.isMetamodel ? data.allSubObjects : []\n"+
         "ret.refEdges = (suggestedEdges.reference || []).filter(e => !e.vertexOverlaps)\n"+
         "ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps)\n"+
         "}";

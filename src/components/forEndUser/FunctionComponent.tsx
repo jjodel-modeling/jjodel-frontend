@@ -49,9 +49,13 @@ function parseFunction(props: AllProps): FunctionComponentState {
     Log.exDev(!props.data, "FunctionComponent: missing data props", {props});
     let getter = props.getter || ((a: GObject) => a[props.field]); // ((lobj: GObject<LPointerTargetable>, key: string) => U.wrapUserFunction(lobj[key]));
     let val: string = getter(props.data);
-    if (!val) val = "(ret)=>{\n    // ** declarations here ** //\n\n}";
+    if (!val || val.length <= 2) val = "(ret)=>{\n    // ** declarations here ** //\n\n}"; // fallback for empty string and {}
+    else val = val.trim();
     let txtparts = val.split("// ** declarations here ** //");
-    Log.exDev(txtparts.length !== 2, "cannot find declaration section", {val, props});
+    if (txtparts.length !== 2) {
+        Log.eDevv("cannot find declaration section", {val, props});
+        txtparts = [val.substring(0, val.length-1), val.substring(val.length-1)];
+    }
     let declarations: string[] = (txtparts[1] || '').split("\n");
     let stateArrayValues: RowData[] = [];
     let textAreaState: TextAreaState = {v: txtparts[0]};

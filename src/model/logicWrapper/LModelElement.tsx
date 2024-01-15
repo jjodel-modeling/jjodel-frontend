@@ -3508,6 +3508,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return Log.e("Could not find property " + key + " on MetaModel", {c, key});
     }
     _defaultGetterM1(c: Context, key: string): any{
+        // if m1.$m1RootObjectName then --> return that root object
+        // if m1.$m1ObjectName then --> return that sub object nested somewhere in the model.
         // if m1.$m2classname"s" then --> this.instancesOf("m2classname")
         // if m1.$m2classname then ---> m2.$m2classname (lower priority, if there are 2 metaclasses differing only by final s,
         // the one with 1 more final "s" if shadowed by the instances of the one with 1 less final "s",
@@ -3516,7 +3518,22 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         // to access m2 classes within a package, need to navigate it like model.$packagename.Ssubcpackagename.$classname,
         // path + "s" won't work in that case, and need to use this.getInstancesOf instead
         if (key[0] === "$"){
-            let m2: LModel | undefined = this.get_model(c).instanceof;
+            // look for m1 matches
+            let deepmatch: LObject | undefined;
+            let k = key.substring(1);
+            const directSubObjects: Dictionary<Pointer, boolean> = U.objectFromArrayValues(c.data.objects);
+            for (let subobject of this.get_allSubObjects(c)){
+                let n = subobject.name;
+                if (n !== k) continue;
+                // A0) perfect match with direct child object
+                if (directSubObjects[subobject.id]) return subobject;
+                else if (!deepmatch) deepmatch = subobject;
+            }
+            // A1) match with deep sub-object
+            if (deepmatch) return deepmatch;
+
+            // look for m2 matches
+            let m2: LModel | undefined = this.get_instanceof(c);
             if (!m2) return Log.e("Could not find property " + key + " on M1 Model", {c, key, m2});
             let m2item: LClass | LPackage;
             // check for a perfect m2 name match and return it
@@ -4840,7 +4857,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 else if (v === "true") v = 1;
                 else if (v.constructor?.name=== "Date") v = v.getTime();
                 else if (typeof v === "string") {
-                    console.log("number casting:", v,  U.getFirstNumber(v+'', true), {numbermax, numbermin});
+                    // console.log("number casting:", v,  U.getFirstNumber(v+'', true), {numbermax, numbermin});
                     v = U.getFirstNumber(v+'', !round);
                 } else return NaN;
             }

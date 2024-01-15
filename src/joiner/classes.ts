@@ -511,10 +511,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     private setExternalPtr<D extends DPointerTargetable>(target: D | Pointer<any>, property: string, accessModifier: "[]" | "+=" | "" = "") {
         if (!target) return;
         if (typeof target === "object") target = target.id;
-        windoww.deugg = windoww.deugg || [];
         let t;
         this.thiss._persistCallbacks.push(t = SetFieldAction.create(target, property, this.thiss.id, accessModifier, true));
-        windoww.deugg.push(t);
 
         // PointedBy is set by reducer directly in this case.
         // this.thiss._persistCallbacks.push(SetFieldAction.create(this.thiss.id, "pointedBy", PointedBy.fromID(target, property as any), '+='));
@@ -892,8 +890,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this;
     }
 
-    DProject(type: DProject['type'], name: string): this {
+    DProject(type: DProject['type'], name: string, m2: DModel[], m1: DModel[]): this {
         const _this: DProject = U.wrapper<DProject>(this.thiss);
+        _this.metamodels = Pointers.fromArr(m2) as Pointer<DModel>[];
+        _this.models = Pointers.fromArr(m1) as Pointer<DModel>[];
         _this.type = type;
         _this.name = name;
         this.setExternalPtr(DUser.current, 'projects', '+=');
@@ -1827,10 +1827,9 @@ export class DProject extends DPointerTargetable {
     activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
     // collaborators dict user: priority
 
-    public static new(type: DProject['type'], name: string): DProject {
+    public static new(type: DProject['type'], name: string, m2?: DModel[], m1?: DModel[]): DProject {
         return new Constructors(new DProject('dwc'), undefined, true, undefined)
-            .DPointerTargetable().DProject(type, name).end();
-    }
+            .DPointerTargetable().DProject(type, name, m2 || [], m1 || []).end(); }
 }
 
 @RuntimeAccessible('LProject')

@@ -470,8 +470,8 @@ export class U {
         if (scope && context) {
             if (typeof codeStr === "function") { codeStr = codeStr.toString(); } // functions cannot change scope (with statement is deprecated)
             (context as any)._eval = {__codeStr: codeStr}; // necessary to reach this._eval.codeStr inside the eval()
-            console.log("evalincontextandscope: ", {fullCodeStr: prefixDeclarations + "return eval( this._eval._codeStr );" + postfixDeclarations, codeStr});
-            _ret = new (Function as any)(prefixDeclarations + "; console.log('evalInContextAndScope deeper', {eval:this._eval, thiss:this}); return eval( this._eval.__codeStr );" + postfixDeclarations).call(context);
+            // console.log("evalincontextandscope: ", {fullCodeStr: prefixDeclarations + "return eval( this._eval._codeStr );" + postfixDeclarations, codeStr});
+            _ret = new (Function as any)(prefixDeclarations + "; return eval( this._eval.__codeStr );" + postfixDeclarations).call(context);
             delete (context as any)._eval;
         } else
         if (!scope && context) {
@@ -1104,7 +1104,6 @@ export class U {
         let ret: any;
         if (allowDecimalDot || allowDecimalComma) ret = floatregex.exec(s);
         else ret = intregex.exec(s);
-        console.log({ret, floatregex, intregex, s});
         ret = ret && ret[0]; // first match
         if (ret === null) return valueifmismatch;
 

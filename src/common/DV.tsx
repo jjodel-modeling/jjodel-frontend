@@ -1,4 +1,4 @@
-import {DocString, EdgeHead, ShortAttribETypes as SAType, U} from '../joiner';
+import {DGraphElement, DModelElement, DocString, DViewElement, EdgeHead, ShortAttribETypes as SAType, U} from '../joiner';
 import {GObject, RuntimeAccessible} from '../joiner';
 import React, {ReactElement} from "react";
 // const beautify = require('js-beautify').html; // BEWARE: this adds some newline that might be breaking and introduce syntax errors in our JSX parser
@@ -26,9 +26,10 @@ export class DV {
     public static errorView_string(publicmsg: string | JSX.Element, debughiddenmsg?:any): string {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error: ", "") : publicmsg;
         console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg}); return DefaultView.error_string(visibleMessage); }
-    public static errorView(publicmsg: string | JSX.Element, debughiddenmsg?:any): React.ReactNode {
-        let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error: ", "") : publicmsg;
-        console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg}); return DefaultView.error(visibleMessage); }
+    public static errorView(publicmsg: string | JSX.Element, debughiddenmsg:any, errortype: string, data: DModelElement | undefined, node: DGraphElement | undefined, v: DViewElement): React.ReactNode {
+        let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
+        console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
+        return DefaultView.error(visibleMessage, errortype, data, node, v); }
 
     static edgePointView(): string { return beautify(
         `<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"white", width:"100%", height:"100%"}} />`
@@ -296,13 +297,16 @@ class DefaultView {
 
 
 
-    public static error(msg: undefined | string | JSX.Element) {
+    public static error(msg: undefined | string | JSX.Element, errortype: string | "SYNTAX" | "RUNTIME", data: DModelElement | undefined, node: DGraphElement | undefined, v: DViewElement) {
+        let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
+        if (dname && dname.length >= 8) dname = dname.substring(0, 7) + '…';
+        let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         return <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"min-content"}}>
-            <div className={'text-center text-danger'} style={{background:"#fff7"}}>
-                <b>SYNTAX ERROR</b>
+            <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
+                <b>{errortype} ERROR on {(dname ? dname  : '') + (false ? ' / ' + nodename : '')})</b>
                 <hr/>
                 <label className={'text-center mx-1 d-block'}>
-                    The JSX you provide is NOT valid!
+                    While applying view "{v.name}"
                 </label>
                 {msg && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>{msg}</label>}
             </div>

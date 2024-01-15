@@ -111,7 +111,8 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
 
         if (componentfunction) return componentfunction(serializableProps, this.props.children);
         // errore: questoon passa gli id correttamente al sottoelemento vertex o field
-        return DV.errorView("Error: DefaultNode is missing both view and model, please state node type explicitly: Graph, GraphVertex, Vertex or Field");
+        return DV.errorView("DefaultNode is missing both view and model, please state node type explicitly: Graph, GraphVertex, Vertex or Field",
+            '', 'DefaultNode', modelElement?.__raw, this.props.node?.__raw, view?.__raw);
     }
 
 }

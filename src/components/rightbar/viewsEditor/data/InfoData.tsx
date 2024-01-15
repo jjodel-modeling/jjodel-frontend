@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {Input, LViewElement, LViewPoint, Select, SetFieldAction} from '../../../../joiner';
+import {DViewPoint, Input, LViewElement, LViewPoint, Select, SetFieldAction} from '../../../../joiner';
 import {OclEditor} from '../../oclEditor/OclEditor';
 import {GraphElements} from "../../../../joiner/components";
 
@@ -16,9 +16,7 @@ function InfoData(props: Props) {
     </optgroup>;
 
     const changeVP = (evt: React.ChangeEvent<HTMLSelectElement>) => {
-        const value = evt.target.value;
-        if(value !== 'null') SetFieldAction.new(view.id, 'viewpoint', value, '', true);
-        else SetFieldAction.new(view.id, 'viewpoint', '', '', false);
+        (view as any as DViewPoint).viewpoint = evt.target.value;
     }
 
     return(<section className={'p-3'}>

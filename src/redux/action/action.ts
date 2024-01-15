@@ -126,11 +126,18 @@ export function FINAL_END(): boolean{
     t.pendingActions = [];
     return ca.fire();
 }
+type NotPromise<T> = T extends Promise<any> ? never : T;
 
-
+type NoAsyncFn<
+    T extends (...args: any)=>any,
+    ReturnsPromise extends (...args: any)=>any = ReturnType<T> extends Promise<any> ? never:T
+    >=ReturnsPromise;
 // make class isinstorage e mettici il path studia annotazioni per annotare gli oggett in modo che vengano rwappati prima di farli ritornare se sono annotati
 // minor todo: type as (...args: infer P) => any) ?
-export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...params: Parameters<F>): boolean | DState {
+// NB: cannot be async, it changes execution order and break many codes where return value is determined in a transaction.
+// also because BEGIN() becomes stuck and actions cannot fire until the server replies or times out.
+export function TRANSACTION<F extends (...args: any)=>any>(func: NoAsyncFn<F>, ...params: Parameters<F>): boolean | DState {
+//export function TRANSACTION<F extends NoAsyncFn)>(func: F, ...params: Parameters<F>): boolean | DState {
     BEGIN();
     // minor todo: potrei fare l'override di Error() per fare in modo che gli errori vengano presi anche se non uso TRANSACTION o try-catch ?
     try { func(...params); } catch(e) { Log.ee('Transaction failed:', e); ABORT(); return false; }

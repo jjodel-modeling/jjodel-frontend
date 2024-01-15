@@ -342,12 +342,12 @@ export class Selectors{
         const viewpoint = project.activeViewpoint;
         const isDefault = Defaults.check(v.id);
         const isActiveViewpoint = v.viewpoint === viewpoint.id;
-        console.log('allviews matcher ocl@@', {isDefault, data, dn:(data as any).name, oclCondition});
+        // console.log('allviews matcher ocl@@', {isDefault, data, dn:(data as any).name, oclCondition});
         if(!isActiveViewpoint && !isDefault) return ViewEClassMatch.MISMATCH;
         let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
         try {
             const flag = OCL.filter(false, 'src', [data], oclCondition, constructors);
-            console.log('allviews matcher ocl##', {flag, data, dn:(data as any).name, oclCondition});
+            //console.log('allviews matcher ocl##', {flag, data, dn:(data as any).name, oclCondition});
             if(flag.length > 0 && isActiveViewpoint) return ViewEClassMatch.EXACT_MATCH;
             if(flag.length > 0 && !isActiveViewpoint) return ViewEClassMatch.IMPLICIT_MATCH;
             return ViewEClassMatch.MISMATCH;
@@ -387,12 +387,12 @@ export class Selectors{
         let nodescore: number = 1;
         if (data) {// 1° priority: matching by EClass type
             let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, data?.__raw);
-            console.log('allviews matcher meta', {v1MatchingEClassScore, d:data?.name, n:v1.name, v1});
+            //console.log('allviews matcher meta', {v1MatchingEClassScore, d:data?.name, n:v1.name, v1});
             // Log.l('score view:', {v1, data, v1MatchingEClassScore});
             if (v1MatchingEClassScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
             // 2° priority: by ocl condition matching
             let v1OclScore = Selectors.matchesOclCondition(v1, data); // todo: not a fixed priority but acording to the "complexity" of the query
-            console.log('allviews matcher ocl_', {v1OclScore, d:data?.name, n:v1.name, v1});
+            //console.log('allviews matcher ocl_', {v1OclScore, d:data?.name, n:v1.name, v1});
             if (v1OclScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
             // 3° priority by sub-view
             let v1SubViewScore: ViewEClassMatch = ViewEClassMatch.EXACT_MATCH as ViewEClassMatch; // todo

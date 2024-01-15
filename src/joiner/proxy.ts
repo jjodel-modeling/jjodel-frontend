@@ -203,24 +203,22 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
     // damiano todo: this does not work
     private concatenableHandler(targetObj: ME, propKey: number | string | symbol, proxyitself: Proxyfied<ME>): NotAConcatenation | any[] | string {
-        console.log("concatenableHandler 1", {targetObj, propKey, proxyitself});
+        //console.log("concatenableHandler 1", {targetObj, propKey, proxyitself});
         if (propKey in targetObj)  return null as NotAConcatenation;
         const propKeyStr: null | string = U.asString(propKey, null);
         let _index: number = propKeyStr ? propKeyStr.indexOf('_') : -1;
-        console.log("concatenableHandler 2", {targetObj, propKey, propKeyStr, proxyitself, _index});
+        //console.log("concatenableHandler 2", {targetObj, propKey, propKeyStr, proxyitself, _index});
         if (_index < 0) return null as NotAConcatenation;
 
         let isConcatenable = true;
         let ret: any[] = (propKey as string).split('_').map( (subKey: string) => {
-            console.log("concatenableHandler 3.0", {targetObj, subKey, propKeyStr, proxyitself});
+            //console.log("concatenableHandler 3.0", {targetObj, subKey, propKeyStr, proxyitself});
             // se trovo multipli ___ li tratto come spazi aggiuntivi invece che come proprietà '' che ritornano undefined, così posso fare name___surname --> "damiano   di vincenzo"
             let val: any = subKey === '' ? ' ' : this.get(targetObj, subKey, proxyitself);
-            console.log("concatenableHandler 3.1", {targetObj, subKey, val, propKeyStr, proxyitself, isConcatenable});
             isConcatenable = isConcatenable && JsType.isPrimitive(val);
-            console.log("concatenableHandler 3.2", {targetObj, subKey, val, propKeyStr, proxyitself, isConcatenable});
             return val;
         });
-        console.log("concatenableHandler 4", {targetObj, propKey, propKeyStr, proxyitself, ret, isConcatenable});
+        //console.log("concatenableHandler 4", {targetObj, propKey, propKeyStr, proxyitself, ret, isConcatenable});
         return isConcatenable ? ret.join(' ') : ret; }
 
     public get(targetObj: ME, propKey: string | symbol, proxyitself: Proxyfied<ME>): any {
