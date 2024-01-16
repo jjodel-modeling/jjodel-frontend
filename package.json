@@ -4,8 +4,10 @@
   "private": false,
   "commentnodeversion": "16.13.0?",
   "homepage": ".",
-  "homepage-local-deploy": "https://damianonaraku.github.io/",
-  "homepage-gitpages-deploy": "https://damianonaraku.github.io/jodel-react/build/",
+  "homepage-local-deploy_old": "https://damianonaraku.github.io/",
+  "homepage-gitpages-deploy_old": "https://damianonaraku.github.io/jodel-react/build/",
+  "homepage-local-deploy": "https://mdegroup.github.io/",
+  "homepage-gitpages-deploy": "https://mdegroup.github.io/jjodel/",
   "dependencies": {
     "@monaco-editor/react": "^4.3.1",
     "@popperjs/core": "^2.11.6",

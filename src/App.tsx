@@ -33,11 +33,13 @@ function firstInteraction(){
     statehistory.globalcanundostate = true;
 }
 
+// todo: memoization which also checks for DUser.current and DUser.offlineMode changes other than prop changes
 function App(props: AllProps): JSX.Element {
     const debug = props.debug;
     const isLoading = props.isLoading;
     let user: LUser = props.user;
 
+    console.log("app render", {u:DUser.current, o:DUser.offlineMode})
     if (DUser.offlineMode && !DUser.current) {
         stateInitializer();
         let du = DUser.new('adminOffline', "Pointer_adminOffline");
@@ -78,6 +80,7 @@ function App(props: AllProps): JSX.Element {
 
 interface OwnProps {room?: string}
 interface StateProps {
+    offlineMode: boolean,
     debug: boolean,
     isLoading: boolean,
     user: LUser
@@ -91,6 +94,10 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.debug = state.debug;
     ret.isLoading = state.isLoading;
     ret.user = LUser.fromPointer(DUser.current);
+    // needed here as props, because apparently functional components are memoized by default.
+    ret.offlineMode = DUser.offlineMode;
+    console.log("app re mapstate", {u:DUser.current, o:DUser.offlineMode});
+
     return ret;
 }
 
