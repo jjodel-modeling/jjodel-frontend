@@ -7,6 +7,7 @@ import { statechartplus } from '../../../examples/statechartplus';
 import { viewAsEdge } from '../../../examples/viewAsEdge';
 import { sequence } from '../../../examples/sequence';
 import { conflictsimulation } from '../../../examples/conflictsimulation';
+import { shapes } from '../../../examples/shapes';
 import {
     Defaults, Dictionary,
     DModel, DObject,
@@ -183,9 +184,10 @@ function ExamplesComponent(props: AllProps) {
             <ul className={'submenu dropdown-menu'}>
                 <li tabIndex={-1} onClick={e => setExample(1)} className={'dropdown-item'}>Simplified Class Diagram</li>
                 <li tabIndex={-1} onClick={e => setExample(2)} className={'dropdown-item'}>Nodes & Edges</li>
-                <li tabIndex={-1} onClick={e => loadState(mergeState(statechartplus), "Statechart+")} className={'dropdown-item'}>Student statechart++</li>
+                <li tabIndex={-1} onClick={e => loadState(statechartplus, "Statechart+")} className={'dropdown-item'}>Student statechart++</li>
                 <li tabIndex={-1} onClick={e => loadState(viewAsEdge, "View as edge")} className={'dropdown-item'}>View Object as Edge</li>
                 <li tabIndex={-1} onClick={e => loadState(conflictsimulation, "Conflict simulation")} className={'dropdown-item'}>Conflict simulation</li>
+                <li tabIndex={-1} onClick={e => loadState(shapes, "Shapes")} className={'dropdown-item'}>Shapes</li>
                 {false && <li tabIndex={-1} onClick={e => loadOldState(sequence, "Sequence diagram")} className={'dropdown-item'}>Sequence</li>}
             </ul>
         </li>)

@@ -128,7 +128,7 @@ export class DState extends DPointerTargetable{
 
     isEdgePending: {user: Pointer<DUser>, source: Pointer<DClass>} = {user: '', source: ''};
 
-    contextMenu: { display: boolean, x: number, y: number } = {display: false, x: 0, y: 0};
+    contextMenu: { display: boolean, x: number, y: number, nodeid: Pointer} = {display: false, x: 0, y: 0, nodeid:''};
 
     objects: Pointer<DObject, 0, 'N', LObject> = [];
     values: Pointer<DValue, 0, 'N', LValue> = [];

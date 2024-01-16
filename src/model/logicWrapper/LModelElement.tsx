@@ -3501,11 +3501,27 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     }
 
     _defaultGetter(c: Context, key: string): any {
+        console.log("$getter 000", {key, ism1:!c.data.isMetamodel, ism:c.data.isMetamodel, data:c.data});
         if (!c.data.isMetamodel) return this._defaultGetterM1(c, key);
         return this._defaultGetterM2(c, key);
     }
     _defaultGetterM2(c: Context, key: string): any{
-        return Log.e("Could not find property " + key + " on MetaModel", {c, key});
+        Log.ee("Could not find property " + key + " on MetaModel", {c, key});
+        let s = store.getState();
+        if (key[0] === "$"){
+            // look for m1 matches
+            let k = key.substring(1).toLowerCase();
+            console.log("$getter m2 0", {k, key});
+
+            for (let subelement of this.get_allSubPackages(c, s)){
+                let n = subelement.__raw.name;
+                if (n && n.toLowerCase() === k) return subelement;
+            }
+            for (let subelement of this.get_classes(c, s)){
+                let n = subelement.__raw.name;
+                if (n && n.toLowerCase() === k) return subelement;
+            }
+        }
     }
     _defaultGetterM1(c: Context, key: string): any{
         // if m1.$m1RootObjectName then --> return that root object
@@ -3520,36 +3536,43 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         if (key[0] === "$"){
             // look for m1 matches
             let deepmatch: LObject | undefined;
-            let k = key.substring(1);
+            let k = key.substring(1).toLowerCase();
+            console.log("$getter 0", {k, key, deepmatch});
+
             const directSubObjects: Dictionary<Pointer, boolean> = U.objectFromArrayValues(c.data.objects);
             for (let subobject of this.get_allSubObjects(c)){
                 let n = subobject.name;
-                if (n !== k) continue;
+                if (!n || n.toLowerCase() !== k) continue;
                 // A0) perfect match with direct child object
-                if (directSubObjects[subobject.id]) return subobject;
+                if (directSubObjects[subobject.id]) return subobject; // actually cannot do direct match, because proxy get function will solve it directly before calling _defaultGetter
                 else if (!deepmatch) deepmatch = subobject;
             }
+            console.log("$getter 1", {k, key, deepmatch});
             // A1) match with deep sub-object
             if (deepmatch) return deepmatch;
 
             // look for m2 matches
             let m2: LModel | undefined = this.get_instanceof(c);
-            if (!m2) return Log.e("Could not find property " + key + " on M1 Model", {c, key, m2});
+            console.log("$getter 2", {k, key, m2});
+            if (!m2) return Log.ee("Could not find m1 match for data.$name. And the metamodel is missing, so cannot get instances by type.", {c, key, m2});
             let m2item: LClass | LPackage;
             // check for a perfect m2 name match and return it
             m2item = (m2 as GObject)[key];
+            console.log("$getter 3", {k, key, m2, m2item});
             if (m2item) return m2item; //this.instancesOf(key);
-            if (!m2) return Log.e("Could not find property " + key + " on M1 Model", {c, key, m2});
+            if (!m2) Log.ee("Could not find property " + key + " on M1 Model", {c, key, m2});
             // if not a perfect name match, i try name+s match for instances
             if (key[key.length - 1] === "s") {
-                let key1 = key.substring(key.length - 1);
+                let key1 = key.substring(0, key.length - 1);
                 m2item = (m2 as GObject)[key1];
+                console.log("$getter 4", {k, key, key1, m2, m2item});
                 if (m2item) {
                     if (m2item.className === "DClass") return this.get_instancesOf(c)(m2item as LClass);
-                    else return Log.e("Could not get instances of " + key1 + ".", {c, key, m2});
+                    else return Log.ee("Could not get instances of " + key1 + ".", {c, key, m2});
                 }
             }
-            if (!m2) return Log.e("Could not find any subelement with name " + key + " on M1 or M2 Models", {c, key, m1: c.data, m2});
+            console.log("$getter 5", {k, key, m2, m2item});
+            if (!m2) return Log.ee("Could not find any subelement with name " + key + " on M1 or M2 Models", {c, key, m1: c.data, m2});
         }
     }
     private static otherObjectsTemp: Dictionary<DocString<"className">, LObject[]> = undefined as any;
@@ -4659,7 +4682,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                         // check if metaclass is found
                         if (!lmetaclass || lmetaclass.className !== "DClass") return Log.ee("provided schema type does not belong to a Class, cannot intantiate.", {lmetaclass, schema:metaclass, this:c.data});
                         // check if metaclass is valid (instantiable in the callee collection: .values or .objects)
-                        console.log("isExtending", {lmetaclass, type: this.get_type(c as any)})
+                        // console.log("isExtending", {lmetaclass, type: isDValue && this.get_type?.(c as any)});
                         if (isDValue && !lmetaclass.isExtending(this.get_type(c as Context) as LClass)) return Log.ee("provided schema type does not extend this.type, cannot intantiate.", {lmetaclass, schema:metaclass, this:c.data});
                     }
                     // find instance schema: 2) by dvalue.type

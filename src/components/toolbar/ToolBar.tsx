@@ -219,7 +219,10 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         return(<div className={"toolbar mt-2"}>
             <b className={'d-block text-center text-uppercase mb-1'}>Add root level</b>
             {classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
-                return <div key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => { select(model.addObject({}, lClass)) }}>
+                return <div key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => {
+                    // @ts-ignore
+                    console.log('model.addObject({}, lClass)) }', {lClass, n:lClass?.name});
+                    select(model.addObject({}, lClass)) }}>
                     <ModellingIcon name={'object'} />
                     <span className={'ms-1 text-capitalize'}>{U.stringMiddleCut(lClass.name, 14)}</span>
                 </div>

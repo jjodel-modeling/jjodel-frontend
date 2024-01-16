@@ -165,8 +165,8 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.user = LUser.fromPointer(DUser.current);
     ret.display = state.contextMenu.display;
     ret.position = {x: state.contextMenu.x, y: state.contextMenu.y};
-    const nodeid = state._lastSelected?.node;
-    if(nodeid) ret.node = LGraphElement.fromPointer(nodeid);
+    const nodeid = state.contextMenu.nodeid; //state._lastSelected?.node;
+    if (nodeid) ret.node = LGraphElement.fromPointer(nodeid);
     else ret.node = null;
     return ret;
 }

@@ -505,11 +505,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         this.props.node.select();
         if (this.html.current) this.html.current.focus();
         let state: DState = store.getState();
-        if (state.contextMenu?.display !== true && state.contextMenu?.x !== e.clientX) {
+        if (state.contextMenu?.x !== e.clientX) {
             SetRootFieldAction.new("contextMenu", {
                 display: true,
                 x: e.clientX,
-                y: e.clientY
+                y: e.clientY,
+                nodeid: this.props.node?.id
             });
         }
         END();
@@ -600,7 +601,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // (e.target as any).focus();
         e.stopPropagation();
         let state: DState = store.getState();
-        if (state.contextMenu?.display) SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); // todo: need to move it on document or <App>
+        if (e.button !== Keystrokes.clickRight && state.contextMenu?.display) SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); // todo: need to move it on document or <App>
         const edgePendingSource = this.props.isEdgePending?.source;
         console.log('mousedown select() check PRE:', {name: this.props.data?.name, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
 
