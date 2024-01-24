@@ -113,7 +113,7 @@ export const EdgeConnected = connect<EdgeStateProps, DispatchProps, EdgeOwnProps
 )(EdgeComponent as any);
 
 export const Edge = (props: EdgeOwnProps, children: (string | React.Component)[] = []): ReactElement => {
-    return <EdgeConnected {...{...props, children}} isGraph={false} isVertex={true} />;
+    return <EdgeConnected {...{...props, children}} isgraph={false} isvertex={true} />;
 }
 
 EdgeComponent.cname = "EdgeComponent";

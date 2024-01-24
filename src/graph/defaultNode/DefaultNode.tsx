@@ -19,8 +19,13 @@ import {
     LViewElement,
     RuntimeAccessibleClass, SetRootFieldAction,
     windoww,
-    Field, Graph, GraphVertex, Vertex, VoidVertex, RuntimeAccessible
+    Field, Graph, GraphVertex, Vertex, VoidVertex, RuntimeAccessible,
+    Polygon, Circle, Cross, Decagon,
+    Asterisk, Ellipse, Enneagon, Hexagon, Nonagon,
+    Octagon, Heptagon, Pentagon, Rectangle, Septagon,
+    Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle
 } from "../../joiner";
+import { GraphElements } from "../../joiner/components";
 // import {Field, Graph, GraphVertex} from "../vertex/Vertex";
 
 const superclass: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
@@ -32,10 +37,9 @@ class DefaultNodeStatee extends GraphElementStatee { }
 
 
 // Giordano: add ignore for webpack
-@RuntimeAccessible
+@RuntimeAccessible('DefaultNodeComponent')
 //@ts-ignore
 export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeState = DefaultNodeStatee> extends superclass<AllProps, NodeState>{
-    public static cname: string = "DefaultNodeComponent";
 
     static mapStateToProps(state: DState, ownProps: GraphElementOwnProps): GraphElementReduxStateProps {
         let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
@@ -78,14 +82,8 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
         // console.log('dnode render', {props: {...this.props}, serializableProps});
         let componentfunction: typeof Graph = null as any;
         if (view.forceNodeType) {
-            switch (view.forceNodeType) {
-                default: Log.exDevv('unrecognized View.forceNodeType:' + view.forceNodeType, {view, modelElement});
-                return <div>dev error</div>
-                case "Graph": case "GraphComponent": componentfunction = Graph; break;
-                // case windoww.GraphElementComponent.cname:
-                case windoww.VertexComponent.cname: componentfunction = Vertex; break;
-                case windoww.FieldComponent.cname: componentfunction = Field; break;
-                case windoww.GraphVertexComponent.cname: componentfunction = GraphVertex; break; }
+            componentfunction = GraphElements[view.forceNodeType] as any;
+            Log.exDev(!componentfunction, 'unrecognized View.forceNodeType:' + view.forceNodeType, {view, modelElement, nt: view.forceNodeType, GraphElements, });
             // console.log("force node type", {requested:view.forceNodeType, G:  windoww.GraphComponent.name, GE: windoww.GraphElementComponent.name, GV: windoww.GraphVertexComponent.name, V: windoww.VertexComponent.name, F:windoww.FieldComponent.name})
             return componentfunction(serializableProps, this.props.children); }
 
@@ -113,7 +111,8 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
 
         if (componentfunction) return componentfunction(serializableProps, this.props.children);
         // errore: questoon passa gli id correttamente al sottoelemento vertex o field
-        return DV.errorView("Error: DefaultNode is missing both view and model, please state node type explicitly: Graph, GraphVertex, Vertex or Field");
+        return DV.errorView("DefaultNode is missing both view and model, please state node type explicitly: Graph, GraphVertex, Vertex or Field",
+            '', 'DefaultNode', modelElement?.__raw, this.props.node?.__raw, view?.__raw);
     }
 
 }

@@ -1,10 +1,10 @@
 import type { GObject, Temporary, TODO} from "../joiner";
 import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleClass} from "../joiner";
 import React from "react";
+import {radian} from "../joiner/types";
 
-@RuntimeAccessible
+@RuntimeAccessible('IPoint')
 export abstract class IPoint extends RuntimeAccessibleClass {
-    static cname: string = "IPoint";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public x!: number;
@@ -176,11 +176,18 @@ export abstract class IPoint extends RuntimeAccessibleClass {
 
     public absolute(): number { return Math.sqrt(this.x * this.x + this.y * this.y); }
     public set(x: number, y: number) { this.x = x; this.y = y; }
+
+    // move the point by a vector with direction and distance (module)
+    move(rad: radian /*in radians!*/, distance: number, clone:boolean = true): this{
+        let pt = clone ? this.duplicate() : this;
+        pt.x += distance * Math.cos(rad);
+        pt.y += distance * Math.sin(rad);
+        return pt;
+    }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('GraphPoint')
 export class GraphPoint extends IPoint{
-    static cname: string = "GraphPoint";
     private dontmixwithPoint: any;
     public static fromEvent(e: JQuery.ClickEvent | JQuery.MouseMoveEvent | JQuery.MouseUpEvent | JQuery.MouseDownEvent | JQuery.MouseEnterEvent | JQuery.MouseLeaveEvent | JQuery.MouseEventBase)
         : GraphPoint | null {
@@ -195,9 +202,8 @@ export class GraphPoint extends IPoint{
 }
 
 
-@RuntimeAccessible
+@RuntimeAccessible('Point')
 export class Point extends IPoint{
-    static cname: string = "Point";
     private dontmixwithGPoint: any;
     /// https://stackoverflow.com/questions/6073505/what-is-the-difference-between-screenx-y-clientx-y-and-pagex-y
     public static fromEvent(e: JQuery.ClickEvent | JQuery.MouseMoveEvent | JQuery.MouseUpEvent | JQuery.MouseDownEvent
@@ -212,9 +218,9 @@ export class Point extends IPoint{
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, IPoint);
 RuntimeAccessibleClass.set_extend(IPoint, GraphPoint);
 RuntimeAccessibleClass.set_extend(IPoint, Point);
-@RuntimeAccessible
+
+@RuntimeAccessible('ISize')
 export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibleClass {
-    static cname: string = "ISize";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public x!: number;
@@ -383,9 +389,8 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('Size')
 export class Size extends ISize<Point> {
-    static cname: string = "Size";
     static subclasses: any[] = [];
     private static sizeofvar: HTMLElement;
     private static $sizeofvar: JQuery<HTMLElement>;
@@ -454,9 +459,8 @@ export class Size extends ISize<Point> {
     protected new(...args:any): this { return new Size(...args) as this; }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('GraphSize')
 export class GraphSize extends ISize<GraphPoint> {
-    static cname: string = "GraphSize";
     private dontMixWithSize: any;
 
     public static fromPoints(firstPt: GraphPoint, secondPt: GraphPoint): GraphSize {
@@ -655,9 +659,8 @@ export class GraphSize extends ISize<GraphPoint> {
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, ISize);
 RuntimeAccessibleClass.set_extend(ISize, Size);
 RuntimeAccessibleClass.set_extend(ISize, GraphSize);
-@RuntimeAccessible
+@RuntimeAccessible('Geom')
 export class Geom extends RuntimeAccessibleClass {
-    static cname: string = "Geom";
 
     static isPositiveZero(m: number): boolean {
         if (!!Object.is) { return Object.is(m, +0); }
@@ -675,8 +678,10 @@ export class Geom extends RuntimeAccessibleClass {
         if (n === Number.POSITIVE_INFINITY) { return 270; }
         return Geom.RadToDegree((window as any).Math.atan(n)); }
 
-    static RadToDegree(radians: number): number { return radians * (180 / Math.PI); }
-    static DegreeToRad(degree: number): number { return degree * (Math.PI / 180); }
+    static RadToDegree(radians: number): number { return Geom.radToDeg(radians); }
+    static DegreeToRad(degree: number): number { return Geom.degToRad(degree); }
+    static radToDeg(radians: number): number { return radians * (180 / Math.PI); }
+    static degToRad(degree: number): number { return degree * (Math.PI / 180); }
 
 
 

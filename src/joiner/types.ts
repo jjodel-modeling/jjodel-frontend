@@ -28,6 +28,17 @@ import {
 import type React from "react";
 import {ReactNode} from 'react';
 
+export type double = number;
+export type float = number;
+export type int = number;
+export type byte = number;
+export type uint = number;
+export type ubyte = number;
+export type ratio = number; // [0, 1]
+export type percent = number; // [0, 1]
+export type degree = number;
+export type radian = number;
+
 export declare type Class<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (abstract new (...args: any[]) => InstanceType) & StaticType;
 export declare type CClass<CtorArgs extends any[] = any[], InstanceType = {}, StaticType = {}, IsAbstract = false> = (new (...args: any[]) => InstanceType) & StaticType;
 interface Caller { caller: any; }

@@ -8,7 +8,8 @@ import {
     LModelElement, LPointerTargetable, OCL, Pointer,
     RuntimeAccessibleClass,
     Selectors,
-    windoww
+    windoww,
+    Log
 } from "../../joiner";
 import {connect} from "react-redux";
 
@@ -63,7 +64,7 @@ class BidirectionalOCLEditor extends PureComponent<AllProps, ThisState>{
         let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
         let valids: DPointerTargetable[] = [];
         try { valids = OCL.filter(true, "src", lmp, oclText, constructors) as DPointerTargetable[]; }
-        catch (e) { console.error('invalid ocl query:', {e, oclText, dmp, lmp});}
+        catch (e) { Log.ee('invalid ocl query:', {e, oclText, dmp, lmp});}
         let out: { $matched: JQuery<HTMLElement>, $notMatched: JQuery<HTMLElement>} = {} as any;
         console.log('filtered MP', {dmp, lmp, valids, validfilled:valids.filter(b=>!!b)});
         let $htmlmatch: JQuery<HTMLElement> = DGraph.getNodes(valids.filter(b=>!!b) as DModelElement[], out);

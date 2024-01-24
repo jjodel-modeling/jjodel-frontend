@@ -1,10 +1,17 @@
+import type {
+    GObject,
+    Info,
+    LogicContext,
+    Pointer,
+    Dictionary
+} from "../../joiner";
 import {
     BEGIN,
     Constructors,
     CoordinateMode,
-    Debug,
+    CreateElementAction,
+    Debug, Defaults,
     DGraphElement,
-    Dictionary,
     DModelElement,
     DocString,
     DPointerTargetable,
@@ -14,26 +21,25 @@ import {
     EModelElements,
     END,
     getWParams,
-    GObject,
     GraphPoint,
     GraphSize,
-    Info,
     Log,
-    LogicContext,
     LPointerTargetable,
     LViewPoint,
     MyProxyHandler,
-    Pointer,
     RuntimeAccessible,
     RuntimeAccessibleClass,
     SetFieldAction,
-    ShortAttribETypes, U, windoww
+    SetRootFieldAction,
+    ShortAttribETypes,
+    TRANSACTION,
+    U,
+    windoww,
+    EdgeGapMode, Pointers
 } from "../../joiner";
-import {EdgeGapMode} from "../../joiner/types";
 
-@RuntimeAccessible
+@RuntimeAccessible('DViewElement')
 export class DViewElement extends DPointerTargetable {
-    public static cname: string = "DViewElement";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LViewElement;
@@ -77,7 +83,7 @@ export class DViewElement extends DPointerTargetable {
     height!: number;
     draggable!: boolean;
     resizable!: boolean;
-    viewpoint: Pointer<DViewPoint, 0, 1, LViewElement> = '';
+    viewpoint!: Pointer<DViewPoint>;
     display!: 'block'|'contents'|'flex'|string;
     constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
     onDataUpdate!: string;
@@ -108,20 +114,22 @@ export class DViewElement extends DPointerTargetable {
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
-                      priority: number = 1 , persist: boolean = true): DViewElement {
-        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined).DPointerTargetable().DViewElement(name, jsxString, defaultVSize, usageDeclarations, constants,
+                      priority: number = 1 , persist: boolean = true, isDefaultView: boolean = false, vp?: Pointer<DViewPoint>): DViewElement {
+        let id = isDefaultView ? 'Pointer_View' + name : undefined;
+        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id).DPointerTargetable().DViewElement(name, jsxString, vp, defaultVSize, usageDeclarations, constants,
             preRenderFunc, appliableToClasses, oclCondition, priority).end();
+
     }
-    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true): DViewElement {
-        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined)
-            .DPointerTargetable().DViewElement(name, jsxString).end(callback);
+    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true, vp?: Pointer<DViewPoint>, id?: string): DViewElement {
+        // let id = isDefaultView ? 'Pointer_View' + name : undefined;
+        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id)
+            .DPointerTargetable().DViewElement(name, jsxString, vp).end(callback);
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('LViewElement')
 export class LViewElement<Context extends LogicContext<DViewElement, LViewElement> = any, D extends DViewElement = any>
     extends LPointerTargetable { // MixOnlyFuncs(DViewElement, LPointerTargetable)
-    public static cname: string = "LViewElement";
 
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -169,11 +177,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     get_usageDeclarations(c: Context): this["usageDeclarations"]{
         return c.data.usageDeclarations || "(ret)=>{ // scope contains: data, node, view, constants, state\n" +
             "// ** preparations and default behaviour here ** //\n" +
-            "console.log('inside ud default func pre', {ret:{...ret}, data, node, view})\n" +
             "ret.data = data\n" +
             "ret.node = node\n" +
             "ret.view = view\n" +
-            "console.log('inside ud default func post', {ret:{...ret}, data, node, view})\n" +
             "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
             // if you want your node re-rendered every time, add a dependency to ret.state = state; or ret.update = Math.random();
             "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
@@ -240,7 +246,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         txt: 'OCL Query selector to determine which nodes or model elements should apply this view'}
 
     // todo: how about allowing a view to be part in multiple vp's? so this reference would be an array or removed, and you navigate only from vp to v.
-    viewpoint!: LViewPoint | undefined;
+    viewpoint!: LViewPoint;
     __info_of__viewpoint: Info = {hidden: true, type: LViewPoint.cname, txt: <div>The collection of views containing this one, useful to activate multiple views at once.</div>}
 
     display!: 'block'|'contents';
@@ -416,7 +422,29 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return SetFieldAction.new(c.data.id, "edgeTailSize", v as GraphPoint, '', false); }
 
     public get_viewpoint(context: Context): this["viewpoint"] {
-        return (context.data.viewpoint || undefined) && (LViewPoint.fromPointer(context.data.viewpoint as Pointer<DViewPoint>));
+        return (LViewPoint.fromPointer(context.data.viewpoint as Pointer<DViewPoint>));
+    }
+    public set_subViews(v: Pointer<DViewPoint>[], context: Context): boolean { return this.cannotSet('subViews, call set_viewpoint on the sub-elements instead.'); }
+    public set_viewpoint(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement, atIndex: number = -1): boolean {
+        let ret = false;
+        let vpid: Pointer<DViewPoint> = Pointers.from(v);
+        let id = (manualDview || context.data).id;
+        let oldvpid: Pointer<DViewPoint> = (manualDview || context.data).viewpoint;
+        if (vpid === oldvpid) return true;
+
+        TRANSACTION(()=>{
+            ret = SetFieldAction.new(id, "viewpoint", vpid, '', true);
+            oldvpid && SetFieldAction.new(oldvpid, "subViews", id as any, '-=', true);
+
+            if (atIndex === -1) {
+                SetFieldAction.new(vpid, "subViews", id, '+=', true);
+            } else {
+                let oldSubViews = [...DPointerTargetable.fromPointer(vpid).subViews];
+                oldSubViews.splice(atIndex, 0, id);
+                SetFieldAction.new(vpid, "subViews", oldSubViews, '', true);
+            }
+        })
+        return ret;
     }
 
 
@@ -502,14 +530,46 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             return DPointerTargetable.wrap<DViewTransientProperties, LViewTransientProperties>(context.data.__transient, context.data,
                 // @ts-ignore for $ at end of getpath
                 'idlookup.' + context.data.id + '.' + (getPath as LViewElement).__transient.$); }*/
+
+    public duplicate(deep: boolean = true): this {
+        return this.wrongAccessMessage( (this.constructor as typeof RuntimeAccessibleClass).cname + "duplicate()"); }
+    protected get_duplicate(c: Context): ((deep?: boolean) => LViewElement) {
+        return (deep: boolean = false) => {
+            let lview: LViewElement = undefined as any;
+            TRANSACTION( () => {
+                let vpid: Pointer<DViewPoint> = c.data.viewpoint as Pointer<DViewPoint>;
+                const dclone: DViewElement = DViewElement.new2(`${c.data.name} Copy`, '', undefined, true, 'skip');
+                lview = LPointerTargetable.fromD(dclone);
+                for (let key in c.data) {
+                    if (key !== 'id' && key !== 'name' && key !== "pointedBy" && key !== 'viewpoint' && key !== 'subViews') {
+                        // @ts-ignore
+                        lview[key] = c.data[key];
+                    }
+                }
+
+                // insert in viewpoint.subview
+                //let defaultViews: Dictionary<Pointer, boolean> = Defaults.defaultViewsMap;
+                let vp: LViewPoint = c.proxyObject.viewpoint;
+                let oldViews: Pointer<DViewElement>[] = Pointers.from(vp.__raw.subViews);
+                // if (Defaults.viewpoints.indexOf(vpid)) oldViews = oldViews.filter( vid => !defaultViews[vid]);
+                let i: number = oldViews.indexOf(c.data.id);
+                this.set_viewpoint(vpid, undefined as any, dclone, i === -1 ? -1 : i+1); // insert in-place right after the cloned view
+                /*
+                if (i === -1) oldViews.push(dclone.id);
+                else oldViews.splice(i+1, 0, dclone.id); // insert in-place right after the cloned view
+                vp.subViews = oldViews as any;*/
+                // SetRootFieldAction.new('stackViews', dview.id, '+=', true);
+            })
+            return lview;
+        }
+    }
 }
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DViewElement);
 RuntimeAccessibleClass.set_extend(LPointerTargetable, LViewElement);
 export type WViewElement = getWParams<LViewElement, DPointerTargetable>;
 
-@RuntimeAccessible
+@RuntimeAccessible('DViewTransientProperties')
 export class DViewTransientProperties extends RuntimeAccessibleClass{
-    public static cname: string = "DViewTransientProperties";
     static logic: typeof LPointerTargetable;
     _isDViewTransientProperties!: true;
     // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
@@ -517,9 +577,8 @@ export class DViewTransientProperties extends RuntimeAccessibleClass{
 }
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, DViewTransientProperties);
-@RuntimeAccessible
+@RuntimeAccessible('LViewTransientProperties')
 export class LViewTransientProperties extends LPointerTargetable{
-    public static cname: string = "LViewTransientProperties";
     static structure: typeof DPointerTargetable;
     static singleton: LViewTransientProperties;
     _isLViewTransientProperties!: true;

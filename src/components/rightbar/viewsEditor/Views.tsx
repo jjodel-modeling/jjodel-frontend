@@ -1,15 +1,17 @@
-import {Dispatch, MouseEvent, ReactElement} from 'react';
-import type {LProject} from '../../../joiner';
+import React, {Dispatch, MouseEvent, ReactElement} from 'react';
+import {LProject, Dictionary, Pointer, TRANSACTION, Pointers, LViewPoint} from '../../../joiner';
 import {CreateElementAction, Defaults, DState, DUser, DViewElement, LUser, LViewElement, U} from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from "../../../joiner/types";
 import {connect} from "react-redux";
+import "./Vews.scss"
 
 function ViewsDataComponent(props: AllProps) {
     const project = props.project;
-    const views = project.views.filter(v => v && (!v.viewpoint || v.viewpoint.id === project.activeViewpoint.id));
-
-    const [hoverID, setHoverID] = useStateIfMounted('');
+    console.log("pv:", project.views, project.activeViewpoint.id)
+    // const views = project.views.filter(v => v && (!v.viewpoint || v.viewpoint.id === project.activeViewpoint.id));
+    let vp: LViewPoint = project.activeViewpoint; //
+    const views = vp.subViews;
 
     const add = (e: MouseEvent) => {
         const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
@@ -19,21 +21,10 @@ function ViewsDataComponent(props: AllProps) {
         DViewElement.new(name, jsx);
     }
 
-    const select = (view: LViewElement) => {
-        project.pushToStackViews(view);
-    }
 
     const clone = (e: MouseEvent, v: LViewElement) => {
         e.preventDefault(); e.stopPropagation();
-        const view: DViewElement = DViewElement.new(`${v.name} Copy`, '');
-        for(let key in v.__raw) {
-            if(key !== 'id' && key !== 'name') {
-                // @ts-ignore
-                view[key] = v.__raw[key];
-            }
-        }
-        CreateElementAction.new(view);
-        project.pushToStackViews(view);
+        TRANSACTION(()=>{ v.duplicate(); })
     }
 
     return(<div>
@@ -45,16 +36,14 @@ function ViewsDataComponent(props: AllProps) {
         </div>
         {views.map((view, i) => {
             if(!view) return;
-            return <div key={view.id} className={'d-flex p-1 mt-1 border round mx-1'} tabIndex={-1}
-                        onMouseEnter={e => setHoverID(view.id)} onMouseLeave={e => setHoverID('')}
-                        onClick={e => select(view)}
-                        style={{cursor: 'pointer', background: hoverID === view.id ? '#E0E0E0' : 'transparent'}}>
+            return <div key={view.id} className={'view-list-elem d-flex p-1 mt-1 border round mx-1'} tabIndex={-1}
+                        onClick={e => props.setSelectedView(view)}>
                 <label style={{cursor: 'pointer'}} className={'my-auto'}>{view.name}</label>
-                <button className={'btn btn-success ms-auto'} onClick={e => clone(e, view)}>
+                <button className={'btn btn-success ms-auto'} onClick={e => { clone(e, view); e.stopPropagation(); }}>
                     <i className={'p-1 bi bi-clipboard2-fill'}></i>
                 </button>
                 <button className={'btn btn-danger ms-1'} disabled={Defaults.check(view.id)}
-                        onClick={e => view.delete()}>
+                        onClick={e => { view.delete(); e.stopPropagation(); }}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
                 </button>
             </div>
@@ -62,7 +51,9 @@ function ViewsDataComponent(props: AllProps) {
     </div>);
 }
 
-interface OwnProps { }
+interface OwnProps {
+    setSelectedView: React.Dispatch<React.SetStateAction<LViewElement | undefined>>;// (val: LViewElement | undefined) => {}
+}
 interface StateProps {
     project: LProject;
 }

@@ -51,8 +51,10 @@ function Auth(props: Props) {
             <input className={'input w-fit d-block mx-auto  mt-2'} id={'password'} placeholder={'Password'} type={'password'} required={true} />
             <button className={'d-block btn btn-primary p-1 mx-auto mt-3'} type={'submit'}>Submit</button>
             <label className={'mt-3 d-block text-center'}>
-                {isRegister ? 'Already have an account?' : 'Doesn\'t have an account?'}
-                <b tabIndex={-1} onClick={e => setIsRegister(!isRegister)} className={'ms-1 text-primary text-decoration-none cursor-pointer'}>click here</b>
+                {isRegister ? 'Already have an account?' : 'Don\'t have an account?'}
+                <b tabIndex={-1} onClick={e => setIsRegister(!isRegister)} className={'ms-1 text-primary text-decoration-none cursor-pointer'}>Register</b>
+                <br/>Or start in
+                <b tabIndex={-1} className={'ms-1 text-primary text-decoration-none cursor-pointer'} onClick={e => { DUser.offlineMode = true; SetRootFieldAction.new("forceRerender", Date.now()); }}>Offline mode</b>
             </label>
         </form>
     </section>);

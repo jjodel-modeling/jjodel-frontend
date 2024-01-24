@@ -11,9 +11,8 @@ import {
 } from "../../joiner";
 
 
-@RuntimeAccessible
+@RuntimeAccessible('DViewPoint')
 export class DViewPoint extends DViewElement {
-    public static cname: string = "DViewPoint";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
@@ -24,19 +23,18 @@ export class DViewPoint extends DViewElement {
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclApplyCondition: string = '', priority: number = 1 , persist: boolean = true): DViewElement {
         return new Constructors(new DViewPoint('dwc'), undefined, persist, undefined).DPointerTargetable()
-            .DViewElement(name, jsxString, defaultVSize, usageDeclarations, constants,
+            .DViewElement(name, jsxString, undefined, defaultVSize, usageDeclarations, constants,
                 preRenderFunc, appliableToClasses, oclApplyCondition, priority).DViewPoint().end();
     }
-    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true): DViewElement {
+    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true, id?: string): DViewElement {
         return new Constructors(
-            new DViewElement('dwc'), undefined, persist, undefined
-        ).DPointerTargetable().DViewElement(name, jsxString).DViewPoint().end(callback);
+            new DViewPoint('dwc'), undefined, persist, undefined, id)
+            .DPointerTargetable().DViewElement(name, jsxString).DViewPoint().end(callback);
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('LViewPoint')
 export class LViewPoint extends LViewElement {
-    public static cname: string = "LViewPoint";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     //public __raw!: DViewPoint;

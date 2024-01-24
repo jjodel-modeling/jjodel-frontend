@@ -8,7 +8,7 @@ import TestTab from './tabs/TestTab';
 import StructureEditor from '../rightbar/structureEditor/StructureEditor';
 import TreeEditor from '../rightbar/treeEditor/treeEditor';
 import ViewsEditor from '../rightbar/viewsEditor/ViewsEditor';
-import StyleEditor from '../rightbar/styleEditor/StyleEditor';
+import NodeEditor from '../rightbar/styleEditor/StyleEditor';
 import ViewpointEditor from '../rightbar/viewpointsEditor/ViewpointsEditor';
 import CollaboratorsEditor from '../rightbar/collaboratorsEditor/CollaboratorsEditor';
 import Console from '../rightbar/console/Console';
@@ -22,14 +22,14 @@ function DockComponent(props: AllProps) {
     };
 
     /* Models */
-    const info = {id: '0', title: 'Info', group: 'models', closable: false, content: <InfoTab />};
+    const info = {id: '0', title: 'Summary', group: 'models', closable: false, content: <InfoTab />};
 
     /* Editors */
     const test = {id: '999', title: 'Test', group: 'editors', closable: false, content: <TestTab />};
     const structure = {id: '1', title: 'Structure', group: 'editors', closable: false, content: <StructureEditor />};
     const tree = {id: '2', title: 'Tree View', group: 'editors', closable: false, content: <TreeEditor />};
     const views = {id: '3', title: 'Views', group: 'editors', closable: false, content: <ViewsEditor />};
-    const style = {id: '4', title: 'Node', group: 'editors', closable: false, content: <StyleEditor />};
+    const node = {id: '4', title: 'Node', group: 'editors', closable: false, content: <NodeEditor />};
     const viewpoints = {id: '6', title: 'Viewpoints', group: 'editors', closable: false, content: <ViewpointEditor />};
     const collaborators = {id: '7', title: 'Collaborators', group: 'editors', closable: false, content: <CollaboratorsEditor />};
     const console = {id: '8', title: 'Console', group: 'editors', closable: false, content: <Console />};
@@ -37,9 +37,9 @@ function DockComponent(props: AllProps) {
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     layout.dockbox.children.push({tabs: [info]});
     layout.dockbox.children.push({tabs: [
-        // test,
         structure,
         tree,
+        node,
         views,
         viewpoints,
         collaborators,

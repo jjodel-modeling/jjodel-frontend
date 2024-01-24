@@ -107,6 +107,7 @@ function CustomDataComponent(props: AllProps) {
             </div>)
         })}
         <Function data={view} field={"usageDeclarations"} jsxLabel={<label>Listed dependencies</label>} readonly={readOnly} />
+        <Function data={view} field={"preRenderFunc"} jsxLabel={<label>Preparations before JSX</label>} readonly={readOnly} />
     </section>);
 }
 

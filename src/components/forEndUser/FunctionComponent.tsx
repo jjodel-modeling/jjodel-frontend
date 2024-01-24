@@ -49,9 +49,13 @@ function parseFunction(props: AllProps): FunctionComponentState {
     Log.exDev(!props.data, "FunctionComponent: missing data props", {props});
     let getter = props.getter || ((a: GObject) => a[props.field]); // ((lobj: GObject<LPointerTargetable>, key: string) => U.wrapUserFunction(lobj[key]));
     let val: string = getter(props.data);
-    if (!val) val = "(ret)=>{\n    // ** declarations here ** //\n\n}";
+    if (!val || val.length <= 2) val = "(ret)=>{\n    // ** declarations here ** //\n\n}"; // fallback for empty string and {}
+    else val = val.trim();
     let txtparts = val.split("// ** declarations here ** //");
-    Log.exDev(txtparts.length !== 2, "cannot find declaration section", {val, props});
+    if (txtparts.length !== 2) {
+        Log.eDevv("cannot find declaration section", {val, props});
+        txtparts = [val.substring(0, val.length-1), val.substring(val.length-1)];
+    }
     let declarations: string[] = (txtparts[1] || '').split("\n");
     let stateArrayValues: RowData[] = [];
     let textAreaState: TextAreaState = {v: txtparts[0]};
@@ -200,7 +204,7 @@ function FunctionComponent(props: AllProps) {
     let transitionTime = 300;
     return <div className={"function-editor-root"} data-mode={advancedMode ? "detailedMode" : "simpleMode"} style={{fontSize: "0.9rem"}}>
         <div className={"d-flex w-100"} style={{transition: "all 300ms",  cursor: tooltip ? 'help' : 'auto'}}
-             onMouseEnter={e => tooltip && setShowTooltip(true)} onMouseLeave={e =>  tooltip && setShowTooltip(true)}>
+             onMouseEnter={e => tooltip && setShowTooltip(true)} onMouseLeave={e =>  tooltip && setShowTooltip(false)}>
             {props.jsxLabel}
             <span className={"m-auto me-1"} style={{cursor: 'auto'}}>
                 {tooltip && <i className={"p1 m-auto me-1 bi bi-info-lg"} style={{cursor: 'help'}} />}
@@ -292,6 +296,6 @@ export const FunctionConnected = connect<StateProps, DispatchProps, OwnProps, DS
 export const Function = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => (<FunctionComponent {...{...props, children}} tooltip={true} />);
 
 Function.cname = "FunctionComponent";
-// FunctionConnected.cname = "FunctionComponent";
+// FunctionConnected.cname = "FunctionComponent_Connected";
 FunctionComponent.cname = "FunctionComponent_Disconnected";
 

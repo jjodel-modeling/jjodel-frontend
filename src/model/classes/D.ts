@@ -1,6 +1,6 @@
 import {DPointerTargetable, LPointerTargetable, RuntimeAccessible, RuntimeAccessibleClass} from "../../joiner";
 
-@RuntimeAccessible
+@RuntimeAccessible('DLog')
 export class DLog extends DPointerTargetable {
     public static cname: string = "DLog";
     static logic: typeof LPointerTargetable;

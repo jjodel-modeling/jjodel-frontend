@@ -26,13 +26,12 @@ function InputComponent(props: AllProps) {
     const getter = props.getter;
     const setter = props.setter;
     const field = props.field;
-    let __value = (!data) ? 'undefined' : ((getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined');
-    const [value, setValue] = useStateIfMounted(__value);
+    const oldValue = (!data) ? undefined : (getter) ? getter(data) : data[field]; // !== undefined); ? data[field] : 'undefined'
+    const [value, setValue] = useStateIfMounted(oldValue);
     const [isTouched, setIsTouched] = useStateIfMounted(false);
     const [showTooltip, setShowTooltip] = useStateIfMounted(false);
 
     // I check if the value that I have in my local state is being edited by other <Input />
-    const oldValue = (!data) ? 'undefined' : (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined'
     if (value !== oldValue && !isTouched){
         setValue(oldValue);
         setIsTouched(false);
@@ -40,7 +39,7 @@ function InputComponent(props: AllProps) {
 
 
     if (!data) return(<></>);
-    const readOnly = (props.readonly !== undefined) ? props.readonly : !props.debugmodee && Defaults.check(data.id);
+    const readOnly = (props.readonly !== undefined) ? props.readonly : props.debugmodee !== 'true' && Defaults.check(data.id);
     const type = (props.type) ? props.type : 'text';
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
@@ -68,11 +67,11 @@ function InputComponent(props: AllProps) {
     const blur = (evt: React.FocusEvent<HTMLInputElement>) => {
         const isBoolean = (['checkbox', 'radio'].includes(evt.target.type));
         if (readOnly || isBoolean) return;
-        const target = evt.target.value;
-        const oldValue = (!data) ? 'undefined' : (getter) ? getter(data) : (data[field] !== undefined) ? data[field] : 'undefined'
-        if (target !== oldValue) {
-            if (setter) setter(target);
-            else data[field] = target;
+        const newValue = evt.target.value;
+        const oldValue = (!data) ? undefined : (getter) ? getter(data) : data[field]; // !== undefined) ? data[field] : 'undefined'
+        if (newValue !== oldValue) {
+            if (setter) setter(newValue);
+            else data[field] = newValue;
         }
         // I terminate my editing, so I communicate it to other <Input /> that render the same field.
         setIsTouched(false);
@@ -144,7 +143,7 @@ export interface InputOwnProps {
     key?: React.Key | null;
 }
 interface StateProps {
-    debugmodee: boolean;
+    debugmodee: string;
     data: LPointerTargetable & GObject;
     // selected: Dictionary<Pointer<DUser>, LModelElement | null>;
 }
@@ -155,7 +154,7 @@ type AllProps = Overlap<InputOwnProps, Overlap<StateProps, DispatchProps>>;
 function mapStateToProps(state: DState, ownProps: InputOwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
-    ret.debugmodee = state.debug;
+    ret.debugmodee = state.debug ? 'true' : 'false';
     ret.data = LPointerTargetable.fromPointer(pointer);
     /*
     const selected = state.selected;

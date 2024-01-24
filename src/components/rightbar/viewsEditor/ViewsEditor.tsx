@@ -5,14 +5,16 @@ import {DUser, LProject, LUser, LViewElement, LViewPoint} from "../../../joiner"
 import ViewsData from "./Views";
 import ViewData from "./View";
 import {FakeStateProps} from "../../../joiner/types";
+import {useStateIfMounted} from "use-state-if-mounted";
 
 function ViewsEditorComponent(props: AllProps) {
     const stackViews = props.stackViews;
+    const [selectedView, setView] = useStateIfMounted(undefined as (LViewElement | undefined));
 
     return(<div>
-        {(stackViews.length > 0) ?
-            <ViewData view={stackViews[stackViews.length - 1]} /> :
-            <ViewsData />}
+        {selectedView ?
+            <ViewData view={selectedView} setSelectedView={setView} /> :
+            <ViewsData setSelectedView={setView} />}
     </div>);
 }
 interface OwnProps { }
@@ -24,9 +26,6 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    const user = LUser.fromPointer(DUser.current);
-    const project = user.project as LProject;
-    ret.stackViews = project.stackViews;
     return ret;
 }
 

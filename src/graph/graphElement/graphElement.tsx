@@ -2,14 +2,14 @@ import React, {Component, Dispatch, PureComponent, ReactElement, ReactNode,} fro
 import {createPortal} from "react-dom";
 import {connect} from "react-redux";
 import './graphElement.scss';
+import type {EdgeOwnProps} from "./sharedTypes/sharedTypes";
 import {
-    GraphDragManager,
     GraphSize,
     LGraph, MouseUpEvent, Point,
     Pointers,
-    Selectors as Selectors_, Size, TRANSACTION, WGraph
+    Selectors as Selectors_, Size, TRANSACTION, WGraph,
+    GraphDragManager, GraphPoint, Selectors
 } from "../../joiner";
-import type {EdgeOwnProps} from "./sharedTypes/sharedTypes";
 import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
 
 import {EdgeStateProps, LGraphElement, store, VertexComponent,
@@ -51,7 +51,7 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
     windoww,
 } from "../../joiner";
 
-const Selectors: typeof Selectors_ = windoww.Selectors;
+// const Selectors: typeof Selectors_ = windoww.Selectors;
 
 export function makeEvalContext(view: LViewElement, state: DState, ownProps: GraphElementOwnProps, stateProps: GraphElementReduxStateProps): GObject {
     let component = GraphElementComponent.map[ownProps.nodeid as Pointer<DGraphElement>];
@@ -86,7 +86,6 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 
     // const evalContextOld = U.evalInContext(this, constants);
     // this.setState({evalContext});
-    //console.error({jsx:view.jsxString, view});
 
 
     // compute usageDeclarations
@@ -108,11 +107,12 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
         U.evalInContextAndScopeNew("("+stateProps.view.usageDeclarations+")(this.__param)", tempContext, true, false);
         U.objectMergeInPlace(evalContext, stateProps.usageDeclarations);
         // ret.evalContext.props = ret; mo more needed since UD doesn't update props anymore // hotfix to update context props after usageDeclaration mapping
-        console.log("view compute usageDeclarations SUCCESS 1",
-            {UD_obj_result:stateProps.usageDeclarations, UD_view: stateProps.view.usageDeclarations, context:evalContext, stateProps, ownProps});
-    } catch (e) {
+        // console.log("view compute usageDeclarations SUCCESS 1",
+        //     {UD_obj_result:stateProps.usageDeclarations, UD_view: stateProps.view.usageDeclarations, context:evalContext, stateProps, ownProps});
+    } catch (e: any) {
+        stateProps.invalidUsageDeclarations = e;
         Log.ee("Invalid usage declarations", {e, str: stateProps.view.usageDeclarations, view:stateProps.view, data: ownProps.data, stateProps});
-        U.objectMergeInPlace(evalContext, stateProps.usageDeclarations = {data: stateProps.data, view: stateProps.view, node: stateProps.node});
+        U.objectMergeInPlace(evalContext, stateProps.usageDeclarations = {data: stateProps.data, view: stateProps.view, node: stateProps.node, invalidUsageDeclarations:true});
     }
     stateProps.evalContext = evalContext;
 }
@@ -122,10 +122,10 @@ let maxRenderCounter = Number.POSITIVE_INFINITY;
 export const lightModeAllowedElements = [DModel.cname, DPackage.cname, DClass.cname, DEnumerator.cname, DObject.cname];
 
 const countRenders = true;
-@RuntimeAccessible
+@RuntimeAccessible('GraphElementComponent')
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
     extends Component<AllProps, GraphElementState>{
-    public static cname: string = "GraphElementComponent";
+    public static cname: string;
     static all: Dictionary<number, GraphElementComponent> = {};
     public static map: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = {};
     static maxid: number = 0;
@@ -142,16 +142,18 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     static mapViewStuff(state: DState, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
         // let dnode: DGraphElement | undefined = ownProps?.nodeid && DPointerTargetable.from(ownProps.nodeid, state) as any;
         if (ownProps.view) {
-            ret.views = [];
             ret.view = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(Pointers.from(ownProps.view), state) as DViewElement);
+            if (ret.view) ret.views = [ret.view];
             Log.w(!ret.view, "Requested view "+ownProps.view+" not found. Another view got assigned.", {requested: ownProps.view, props: ownProps, state: ret});
         }
         if (!ret.view) {
             const viewScores = Selectors.getAppliedViews(ret.data,
                 (ownProps.view as LViewElement)?.id || (ownProps.view as string) || null,
                 ownProps.parentViewId || null);
-            ret.views = viewScores.map(e => LViewElement.fromD(e.element));
+            ret.views = viewScores.map<LViewElement>(e => LViewElement.fromD(e.element)).filter(v => !!v);
+            // console.log("debug",  {...this.props, data: this.props.data?.id, view: this.props.view?.id, v0: this.props.views, views: this.props.views?.map( v => v?.id )})
             ret.view = ret.views[0];
+            Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret});
             (ret as any).viewScores = viewScores; // debug only
         }
 
@@ -226,7 +228,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 Log.e(!endnodeid, "Cannot create an edge without end node (yet)", {endnodeid, data:ret.data, propsEnd:edgeOwnProps.end});
                 if (!startnodeid || !endnodeid) return;
                 let longestLabel = edgeOwnProps.label;
-                let labels: DEdge["labels"] = []; // edgeOwnProps.labels || [];
+                let labels: DEdge["labels"] = edgeOwnProps.labels || [];
                 dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, longestLabel, labels);
                 edgeStateProps.node = edgeStateProps.edge = MyProxyHandler.wrap(dge);
             }
@@ -262,7 +264,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // any further update will not be present in eval context.props unless merged like U.objectMergeInPlace(ret.evalContext.props, ...); (and same with ctx.stateProps)
         setTemplateString(ret, ownProps, state); // todo: this is heavy, should be moved somewhere where it's executed once unless view changes (pre-render with if?)
 
-        console.log("view compute usageDeclarations", {ret, ownProps, ud:ret.view.usageDeclarations, context:ret.evalContext});
+        // console.log("view compute usageDeclarations", {ret, ownProps, ud:ret.view.usageDeclarations, context:ret.evalContext});
         if (ret.view.usageDeclarations) {
 
         }
@@ -313,7 +315,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (!measurableCode) return false;
             context = this.getContext();
             measurableCode = U.wrapUserFunction(measurableCode);
-            console.log("dragend execute", {measurableCode});
+            console.log("measurable execute", {type, measurableCode});
             // eval measurable
             U.evalInContextAndScope<GObject>(measurableCode, context, context);
         }
@@ -323,18 +325,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return true;
     }
 
-//    commenti con 11/23
-/* can i delete this commented func? 11/23
-    select() {
-        const nodeid = this.props.nodeid
-        if(!nodeid) return;
-        SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);
-    }*/
-    deselectold(forUser?: Pointer<DUser>) {
-        const nodeid = this.props.nodeid
-        if(!nodeid) return;
-        SetRootFieldAction.new(`selected.${DUser.current}`, nodeid, '', true);
-    }
+
 
     select(forUser?: Pointer<DUser>): void {
         // if (forUser === DUser.current && this.html.current) this.html.current.focus();
@@ -370,8 +361,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let functionsToBind = [this.onClick,
             this.onLeave, this.onEnter,
             this.doContextMenu, this.onContextMenu,
-            /*this.select, 11/23*/
-            this.onMouseDown, this.onMouseUp, this.onKeyDown];/*
+            this.onMouseDown, this.onMouseUp, this.onKeyDown, this.onScroll];/*
         this.onClick = this.onClick.bind(this);
         this.onLeave = this.onLeave.bind(this);
         this.onContextMenu = this.onContextMenu.bind(this);
@@ -419,7 +409,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0) {
             errormsg += '\n\nReminder: nullish operators ".?" and "??" are not supported.'; }
         else if (view.jsxString.indexOf('?.') >= 0) { errormsg += '\n\nReminder: ?. operator and empty tags <></> are not supported.'; }
-        else if (e.message.indexOf("Unexpected token '<'")) { errormsg += '\n\nDid you forgot to close a html </tag>?'; }
+        else if (e.message.indexOf("Unexpected token '<'") !== -1) { errormsg += '\n\nDid you forgot to close a html </tag>?'; }
         try {
             let ee = e.stack || "";
             let stackerrorlast = ee.split("\n")[1];
@@ -449,16 +439,19 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         <div>{rowPre} <b style={{color:"red"}}> {caretCursor} </b> {rowPost}</div>
                         { culpritlinesPost.map(l => <div>{l}</div>) }
                     </div>;
-                console.error("errr", {e, ee, jsxlines, jsxcode, rowPre, rowPost, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
                 errormsg += " @line " + stackerrorlinenum.row + ":" + stackerrorlinenum.col;
-                return DV.errorView(<div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template: this.props.view.jsxString, view: this.props.view});
+                return DV.errorView(
+                    <div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template: this.props.view.jsxString, view: this.props.view},
+                    where, this.props.data?.__raw, this.props.node?.__raw, view.__raw
+                    );
             } else {
                 // it means it is likely accessing a minified.js src code, sending generic error without source mapping
             }
         } catch(e2) {
             Log.eDevv("internal error in error view", {e, e2, where} );
         }
-        return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: this.props.view.jsxString, view: this.props.view});
+        return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: this.props.view.jsxString, view: this.props.view},
+            where, this.props.data?.__raw, this.props.node?.__raw, view.__raw);
     }
 
     private getTemplate(): ReactNode {
@@ -469,12 +462,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // console.log('getTemplate:', {props: this.props, template: this.props.template, ctx: this.props.evalContext});
 
         // Log.exDev(debug && maxRenderCounter-- < 0, "loop involving render");
+        if (this.props.invalidUsageDeclarations) {
+            return this.displayError(this.props.invalidUsageDeclarations, "Usage Declaration");
+        }
         let context: GObject = this.getContext();
         // abababababab
         // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
 
         try {
-            let preRenderFuncStr: string | undefined = this.props.view.preRenderFunc;
+                let preRenderFuncStr: string | undefined = this.props.view.preRenderFunc;
             if (preRenderFuncStr) {
                 // eval prerender
                 let obj: GObject = {};
@@ -484,17 +480,17 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 U.objectMergeInPlace(context, obj);
             }
         }
-        catch(e: any) { return this.displayError(e, "preRenderFunc");  }
+        catch(e: any) { return this.displayError(e, "Pre-Render");  }
 
         let ret;
         // eval template
         let jsxCodeString: DocString<ReactNode>;
 
         try { jsxCodeString = JSXT.fromString(this.props.view.jsxString, {factory: 'React.createElement'}); }
-        catch (e: any) { return this.displayError(e, "JSX Syntax Error"); }
+        catch (e: any) { return this.displayError(e, "JSX Syntax"); }
 
         try { ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + jsxCodeString + '})()', context); }
-        catch (e: any) { return this.displayError(e, "JSX Semantic Error"); }
+        catch (e: any) { return this.displayError(e, "JSX Semantic"); }
         return ret;
     }
 
@@ -503,30 +499,18 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         e.stopPropagation();
         // NOT executed here, but on mousedown because of IOS compatibility
     }
-/*11/23
 
-    doContextMenu(e: React.MouseEvent<Element>){
-        const selected = Selectors.getSelected()[DUser.current];
-        const nodeid = this.props.nodeid;
-        const alreadySelected = selected === nodeid;
-        if (!alreadySelected) this.select();
-        SetRootFieldAction.new("contextMenu", {
-            display: true,
-            x: e.clientX,
-            y: e.clientY
-        });
-    }
-* */
     doContextMenu(e: React.MouseEvent<Element>) {
         BEGIN()
         this.props.node.select();
         if (this.html.current) this.html.current.focus();
         let state: DState = store.getState();
-        if (state.contextMenu?.display !== true && state.contextMenu?.x !== e.clientX) {
+        if (state.contextMenu?.x !== e.clientX) {
             SetRootFieldAction.new("contextMenu", {
                 display: true,
                 x: e.clientX,
-                y: e.clientY
+                y: e.clientY,
+                nodeid: this.props.node?.id
             });
         }
         END();
@@ -554,17 +538,36 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         GraphElementComponent.mousedownComponent = this;
         TRANSACTION(()=>{
             if (e.button === Keystrokes.clickRight) { this.doContextMenu(e); }
-            if ((this.props as any).isGraph) GraphDragManager.startPanning(e, this.props.node as LGraph);
+            let p: GObject = this.props;
+            if (p.isGraph && !p.isvertex || p.isGraph && p.isvertex && e.ctrlKey) GraphDragManager.startPanning(e, this.props.node as LGraph);
         })
     }
 
 
+
+    onScroll(e: React.MouseEvent): void {
+        console.log("onScroll");
+        let scroll: Point = new Point(e.currentTarget.scrollLeft, e.currentTarget.scrollTop);
+        let scrollOrigin: Point = new Point(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+        let g: LGraph = this.props.node.graph;
+        let oldZoom: GraphPoint = g.zoom;
+        let newZoom: GraphPoint = new GraphPoint(oldZoom.x+0.1, oldZoom.y+0.1);
+        let oldOffset: GraphPoint = g.offset;
+        let gscrollOrigin: GraphPoint = oldOffset.add(scrollOrigin.multiply(oldZoom, true), true);
+        let newscrollOrigin: GraphPoint = oldOffset.add(scrollOrigin.multiply(newZoom, true), true);
+        let newOffset: GraphPoint = oldOffset.add( gscrollOrigin.subtract(newscrollOrigin, true), true);
+        TRANSACTION(()=>{
+            g.offset = newOffset;
+            g.zoom = newZoom;
+        })
+        e.stopPropagation();
+    }
     onMouseUp(e: React.MouseEvent): void {
         e.stopPropagation();
-        if (GraphElementComponent.mousedownComponent !== this) { return; }
         TRANSACTION(()=>{
+            GraphDragManager.stopPanning(e);
+            if (GraphElementComponent.mousedownComponent !== this) { return; }
             this.doOnClick(e);
-            // if ((this.props as any).isGraph) GraphDragManager.stopPanning(e);
         })
     }
     onKeyDown(e: React.KeyboardEvent){
@@ -593,22 +596,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             ;
         }
     }
-/* 11/23
-*
-    private doOnClick(e: React.MouseEvent): void {
-        e.stopPropagation();
-        SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0});
-        const isEdgePending = (this.props.isEdgePending?.source);
-        if (!isEdgePending) { this.select(); e.stopPropagation(); return; }
-        if (!this.props.data) return;
-        if (this.props.data.className !== "DClass") return;
-        // const user = this.props.isEdgePending.user;*/
 
     private doOnClick(e: React.MouseEvent): void {
         // (e.target as any).focus();
         e.stopPropagation();
         let state: DState = store.getState();
-        if (state.contextMenu?.display) SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); // todo: need to move it on document or <App>
+        if (e.button !== Keystrokes.clickRight && state.contextMenu?.display) SetRootFieldAction.new("contextMenu", {display: false, x: 0, y: 0}); // todo: need to move it on document or <App>
         const edgePendingSource = this.props.isEdgePending?.source;
         console.log('mousedown select() check PRE:', {name: this.props.data?.name, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
 
@@ -672,6 +665,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             this.onViewChange();
             return "Updating view...";
         }*/
+
         if (!this.stopUpdateEvents || this.stopUpdateEvents !== this.props.view.clonedCounter) {
             this.stopUpdateEvents = undefined;
             if (this.doMeasurableEvent(EMeasurableEvents.onDataUpdate)) {
@@ -691,7 +685,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         /// set classes
         if (this.props.node) {
-            let isSelected: Dictionary<Pointer<DUser>, boolean> = this.props.node.__raw.isSelected || {};
+            let isSelected: Dictionary<Pointer<DUser>, boolean> = this.props.node.__raw.isSelected;
             if (isSelected[DUser.current]) { // todo: better to just use css attribute selectors [data-userselecting = "userID"]
                 classes.push('selected-by-me');
                 if (Object.keys(isSelected).length > 1) classes.push('selected-by-others');
@@ -715,13 +709,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let fiximport = !!this.props.node;
         if (addprops && rawRElement && fiximport) {
             if (windoww.debugcount && debugcount++>windoww.debugcount) throw new Error("debug triggered stop");
-            // console.log("pre-injecting", {thiss:this, data:this.props.data, props:this.props});
             let fixdoubleroot = true;
-            const onDragTestInject = () => {}; // might inject event handlers like this with cloneelement
             // add view props to GraphElement children (any level down)
             const subElements: Dictionary<DocString<'nodeid'>, boolean> = {}; // this.props.getGVidMap();
             try {
-                let viewStyle: GObject = {};
+                let viewStyle: GObject = {...(this.props.style || {})};
                 /*
                     if (view.adaptWidth) viewStyle.width = view.adaptWidth; // '-webkit-fill-available';
                     else viewStyle.height = (rootProps.view.height) && rootProps.view.height + 'px';
@@ -730,19 +722,23 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     viewStyle = {};
                 */
                 // viewStyle.pointerEvents = "all";
-                viewStyle.order = viewStyle.zIndex = this.props.node?.zIndex;
+                viewStyle.order = viewStyle.zIndex = this.props.node?.zIndex; // alias? this.props.node.z
                 viewStyle.display = this.props.view?.display;
                 let injectProps: GObject = {};
                 if (countRenders) {
                     classes.push(this.countRenders%2 ? "animate-on-update-even" : "animate-on-update-odd");
                     injectProps["data-countrenders"] = this.countRenders++;
                 }
+                /// let excludeProps = ['data', 'node', 'view', 'children', ]
+                let p: GObject = this.props;
+                for (let k in p) {
+                    if (typeof p[k] === 'object' || typeof p[k] === 'function') continue;
+                    injectProps[k] = p[k];
+                }
+                // for (let k in this.props.childStyle) { delete viewStyle[k]; }
                 rawRElement = React.cloneElement(rawRElement, // i'm cloning a raw html (like div) being root of the rendered view
                     {
                         ...injectProps,
-                        key: this.props.key, // this key is not safe. because the component has already been made,
-                        // this would be the key of the first sub-component, which is always 1 so doesn't need a key (and is not even a component but a html node in 99% of cases)
-                        // could remove it safely but i'm keeping it for debug so i can read keys as html attributes.
                         ref: this.html,
                         // damiano: ref html viene settato correttamente a tutti tranne ad attribute, ref, operation (è perchè iniziano con <Select/> as root?)
                         id: this.props.nodeid,
@@ -753,12 +749,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         "data-userselecting": JSON.stringify(this.props.node?.isSelected || {}),
                         "data-nodetype": nodeType,
                         // "data-order": this.props.node?.zIndex,
-                        style: {...viewStyle, order:this.props.node.z, ...styleoverride},
+                        style: {...viewStyle, ...styleoverride},
                         className: classes.join(' '),
                         onClick: this.onClick,
                         onContextMenu:this.onContextMenu,
                         onMouseDown:this.onMouseDown,
                         onMouseUp:this.onMouseUp,
+                        onMouseWheel: this.onScroll,
                         onMouseEnter:this.onEnter,
                         onMouseLeave:this.onLeave,
                         tabIndex: (this.props as any).tabIndex || -1,
@@ -766,15 +763,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                             (rn: ReactNode, index: number, depthIndexes: number[]) => {
                                 let injectOffset: undefined | LGraph = ((this.props as any).isGraph && !depthIndexes[0] && !index) && (this.props.node as LGraph);
                                 injectOffset&&console.log("inject offset props0:", {injectOffset});
-                                console.log("inject offset props00:", {injectOffset, ig:(this.props as any).isGraph, props:this.props, depthIndexes, index});
+                                //console.log("inject offset props00:", {injectOffset, ig:(this.props as any).isGraph, props:this.props, depthIndexes, index});
                                 return UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes, injectOffset)
                             })});
                 fixdoubleroot = false; // need to set the props to new root in that case.
                 if (fixdoubleroot) rawRElement = rawRElement.props.children;
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
-            } catch (e) {
-                rawRElement = DV.errorView("error while injecting props to subnodes",
-                        {e, rawRElement, key:this.props.key, newid: this.props.nodeid}) as ReactElement;
+            } catch (e: any) {
+                rawRElement = DV.errorView("error while injecting props to subnodes\n:" + (e.message || '').split('\n')[0],
+                        {e, rawRElement, key:this.props.key, newid: this.props.nodeid},
+                    'Subelement props', this.props.data?.__raw, this.props.node?.__raw, this.props.view.__raw) as ReactElement;
                 /*
                 rawRElement = U.eval InContextAndScope<ReactElement>('()=>{ return ' +
                     DV.errorView("error while injecting props to subnodes",

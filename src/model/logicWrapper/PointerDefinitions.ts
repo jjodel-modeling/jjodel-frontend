@@ -1,4 +1,4 @@
-import {DStructuralFeature, LClass, LValue, RuntimeAccessible} from "../../joiner";
+import {DStructuralFeature, LClass, LValue, LModel,  RuntimeAccessible} from "../../joiner";
 import type {
     Pointer, PrimitiveType, DModelElement, DGraphElement,
     DModel, DPackage, DClass, DEnumerator, DEnumLiteral, DOperation, DAttribute, DReference,
@@ -10,7 +10,7 @@ class CommonStuff{
     name!: string;
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('ModelPointers')
 export class ModelPointers extends CommonStuff{
     id!: Pointer<DAnnotation>;
     parent?: this["father"][];
@@ -23,7 +23,7 @@ export class ModelPointers extends CommonStuff{
     instanceof!: Pointer<DModel>;
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('AnnotationPointers')
 export class AnnotationPointers extends CommonStuff{
     id!: Pointer<DAnnotation>;
     parent?: this["father"][];
@@ -31,7 +31,7 @@ export class AnnotationPointers extends CommonStuff{
     annotations?: Pointer<DAnnotation>[];
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('PackagePointers')
 export class PackagePointers extends CommonStuff{
     id!: Pointer<DPackage>;
     parent?: this["father"][];
@@ -39,7 +39,7 @@ export class PackagePointers extends CommonStuff{
     annotations?: Pointer<DAnnotation>[];
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('OperationPointers')
 export class OperationPointers extends CommonStuff{
     id!: Pointer<DOperation>;
     parent?: this["father"][];
@@ -50,7 +50,7 @@ export class OperationPointers extends CommonStuff{
     parameters!: Pointer<DParameter>;
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('ParameterPointers')
 export class ParameterPointers extends CommonStuff{
     id!: Pointer<DParameter>;
     parent?: this["father"][];
@@ -60,7 +60,7 @@ export class ParameterPointers extends CommonStuff{
 }
 
 
-@RuntimeAccessible
+@RuntimeAccessible('ReferencePointers')
 export class ReferencePointers extends CommonStuff{
     id!: Pointer<DReference>;
     parent!: this["father"][];
@@ -74,7 +74,7 @@ export class ReferencePointers extends CommonStuff{
     edges!: Pointer<DEdge>[];
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('AttributePointers')
 export class AttributePointers extends CommonStuff{
     id!: Pointer<DAttribute>;
     parent!: this["father"][];
@@ -85,7 +85,7 @@ export class AttributePointers extends CommonStuff{
     defaultValue!: PrimitiveType[];
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('LiteralPointers')
 export class LiteralPointers extends CommonStuff{
     id!: Pointer<DEnumLiteral>;
     parent!: this["father"][];
@@ -93,7 +93,7 @@ export class LiteralPointers extends CommonStuff{
     annotations!: Pointer<DAnnotation>[];
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('ClassPointers')
 export class ClassPointers extends CommonStuff{
     id!: Pointer<DClass>;
     parent!: this["father"][];
@@ -113,7 +113,7 @@ export class ClassPointers extends CommonStuff{
     implementedBy?: Pointer<DClass>[];
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('EnumPointers')
 export class EnumPointers extends CommonStuff{
     id!: Pointer<DEnumerator>;
     parent!: this["father"][];
@@ -122,18 +122,19 @@ export class EnumPointers extends CommonStuff{
     literals!: Pointer<DEnumLiteral>[];
 }
 
-@RuntimeAccessible
+// L and D objects are fine instead of pointers too, but it makes trickier to do typings.
+@RuntimeAccessible('ObjectPointers')
 export class ObjectPointers extends CommonStuff{
     id!: Pointer<DObject>;
     parent?: this["father"][];
-    father?: Pointer<DValue>;
+    father?: Pointer<DValue> | Pointer<DModel>; // | LValue | LModel
     annotations!: Pointer<DAnnotation>[];
-    instanceof!: Pointer<DClass>;
-    features!: Pointer<DValue>;
+    instanceof!: Pointer<DClass>; // | LClass
+    features!: Pointer<DValue>[]; // | LValue[]
 
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('ValuePointers')
 export class ValuePointers extends CommonStuff{
     id!: Pointer<DValue>;
     parent?: this["father"][];
@@ -151,7 +152,7 @@ export class ValuePointers extends CommonStuff{
 
 //// graph stuff
 
-@RuntimeAccessible
+@RuntimeAccessible('GraphPointers')
 export class GraphPointers extends CommonStuff{
     id!: Pointer<DGraph>;
     father!: Pointer<DGraphElement>;
@@ -160,7 +161,7 @@ export class GraphPointers extends CommonStuff{
     subElements!: Pointer<DGraphElement>[];
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('VertexPointers')
 export class VertexPointers extends CommonStuff{
     id!: Pointer<DVertex>;
     father!: Pointer<DGraphElement>;
@@ -169,7 +170,7 @@ export class VertexPointers extends CommonStuff{
     subElements!: Pointer<DGraphElement>[];
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('EdgePointers')
 export class EdgePointers extends CommonStuff{
     id!: Pointer<DEdge>;
     father!: Pointer<DGraphElement>;

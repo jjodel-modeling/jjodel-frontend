@@ -37,7 +37,66 @@ import {InitialVertexSizeObj} from "../../joiner/types";
 import ModellingIcon from "../forEndUser/ModellingIcon";
 
 interface ThisState {}
+function toolbarClick(item_dname: string, data: LModelElement|undefined, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]>, node?:LGraphElement) {
+    switch(item_dname){
+        case DVoidEdge.cname:
+        case DEdge.cname:
+            // no add edges through toolbar for now
+            break;
+        case DEdgePoint.cname:
+            let ledge: LVoidEdge = (node as LEdgePoint | LVoidEdge).edge;
+            let dedge: DVoidEdge = ledge.__raw;
+            let wedge: WVoidEdge = ledge as any;
+            // if (!myDictValidator[item_dname]) return;
+            let longestSeg: EdgeSegment = undefined as any; // just because compiler does not know it is always found through the for loop
+            let longestIndex: number = 0;
+            let segms = ledge.segments.segments;
+            // longestIndex = segms.length - 1;// i just put it at end because this edgepoint
+            for (; longestIndex < segms.length; longestIndex++) if (segms[longestIndex].isLongest) { longestSeg = segms[longestIndex]; break;}
+            // let index = edge.segments.all.findIndex((s: EdgeSegment) => s.isLongest);
+            let newmp: InitialVertexSizeObj = {...(longestSeg.start.pt.add(longestSeg.end.pt, true).divide(2)), w: 15, h: 15, index:longestIndex};
+            // @ts-ignore
+            newmp.x -= newmp.w/2; newmp.y -= newmp.h/2;
 
+            newmp.id = Constructors.makeID();
+            let subelements = [...dedge.subElements];
+            let prevNodeid = longestSeg.start.ge.id;
+            let prevnodeindex = subelements.indexOf(prevNodeid);
+            if (prevnodeindex === -1) {
+                if (prevNodeid === dedge.start) prevnodeindex = 0; // first and last are not subelements
+                else if (prevNodeid === dedge.end) prevnodeindex = subelements.length;
+                else Log.exDevv("edgepoint insert position not found", {subelements, prevNodeid, longestSeg, dedge, ledge});
+            } else prevnodeindex += 1;
+            let goodway = true; // not working// todo: keep his true branch and remove this when finished debug. false crashed for missing father on subelements, guess i need more delay??
+            if (goodway) newmp.index = prevnodeindex;
+            // delete (newmp as any).id;
+            let mp = [...dedge.midPoints];
+            mp.splice(longestIndex, 0, newmp);
+            wedge.midPoints = mp;
+            //
+            let olddebug = [...subelements];
+            subelements.splice(prevnodeindex, 0, newmp.id as string);
+            console.log("injecting ep", {prevnodeindex, newmp, prevNodeid, longestSeg, old: olddebug, new: subelements, ledge, dedge});
+            // this might break pointers too
+            let fixorder = () => { wedge.subElements = subelements; }
+            if (!goodway) setTimeout( fixorder, 1); // need to wait edgepoint creation
+            // selectNode(newmp);
+            break;
+        default:
+            if (!data || !myDictValidator) return;
+            let item = item_dname.substring(1).toLowerCase();
+            let d = data.addChild(item);
+            try {
+                let d2 = (d as any)();
+                if (myDictValidator[item_dname]) select(d2);
+            } catch(e) {
+                if (myDictValidator[item_dname]) select(d);
+            }
+            break;
+    }
+}
+let n_agonSides = 10; //this shuld be in react.setState(), but the function handling it is outside a component, so i don't wanna rewrite it.
+// it should be fine, except for the input value being shared on different sidebar components, which might even be better.
 function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]>, items: string[], node?:LGraphElement): ReactNode[] {
     const reactNodes: ReactNode[] = [];
     // todo: does myDictValidator have any reason to exist? if something is invalid it should not make it on toolbar jsx generated list
@@ -47,70 +106,49 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
             data = data?.father || data;
         }
         let item = item_dname.substring(1).toLowerCase();
-        reactNodes.push(<div className={'toolbar-item'} style={{cursor:"pointer"}} key={item_dname} onClick={() => {
-            switch(item_dname){
-                case DVoidEdge.cname:
-                case DEdge.cname:
-                    // no add edges through toolbar for now
-                    break;
-                case DEdgePoint.cname:
-                    let ledge: LVoidEdge = (node as LEdgePoint | LVoidEdge).edge;
-                    let dedge: DVoidEdge = ledge.__raw;
-                    let wedge: WVoidEdge = ledge as any;
-                    // if (!myDictValidator[item_dname]) return;
-                    let longestSeg: EdgeSegment = undefined as any; // just because compiler does not know it is always found through the for loop
-                    let longestIndex: number = 0;
-                    let segms = ledge.segments.segments;
-                    // longestIndex = segms.length - 1;// i just put it at end because this edgepoint
-                    for (; longestIndex < segms.length; longestIndex++) if (segms[longestIndex].isLongest) { longestSeg = segms[longestIndex]; break;}
-                    // let index = edge.segments.all.findIndex((s: EdgeSegment) => s.isLongest);
-                    let newmp: InitialVertexSizeObj = {...(longestSeg.start.pt.add(longestSeg.end.pt, true).divide(2)), w: 15, h: 15, index:longestIndex};
-                    // @ts-ignore
-                    newmp.x -= newmp.w/2; newmp.y -= newmp.h/2;
-
-                    newmp.id = Constructors.makeID();
-                    let subelements = [...dedge.subElements];
-                    let prevNodeid = longestSeg.start.ge.id;
-                    let prevnodeindex = subelements.indexOf(prevNodeid);
-                    if (prevnodeindex === -1) {
-                        if (prevNodeid === dedge.start) prevnodeindex = 0; // first and last are not subelements
-                        else if (prevNodeid === dedge.end) prevnodeindex = subelements.length;
-                        else Log.exDevv("edgepoint insert position not found", {subelements, prevNodeid, longestSeg, dedge, ledge});
-                    } else prevnodeindex += 1;
-                    let goodway = true; // not working// todo: keep his true branch and remove this when finished debug. false crashed for missing father on subelements, guess i need more delay??
-                    if (goodway) newmp.index = prevnodeindex;
-                    // delete (newmp as any).id;
-                    let mp = [...dedge.midPoints];
-                    mp.splice(longestIndex, 0, newmp);
-                    wedge.midPoints = mp;
-                    //
-                    let olddebug = [...subelements];
-                    subelements.splice(prevnodeindex, 0, newmp.id as string);
-                    console.log("injecting ep", {prevnodeindex, newmp, prevNodeid, longestSeg, old: olddebug, new: subelements, ledge, dedge});
-                    // this might break pointers too
-                    let fixorder = () => { wedge.subElements = subelements; }
-                    if (!goodway) setTimeout( fixorder, 1); // need to wait edgepoint creation
-                    // selectNode(newmp);
-                    break;
-                default:
-                    if (!data || !myDictValidator) return;
-                    let d = data.addChild(item);
-                    try {
-                        let d2 = (d as any)();
-                        if (myDictValidator[item_dname]) select(d2);
-                    } catch(e) {
-                        if (myDictValidator[item_dname]) select(d);
-                    }
-                    break;
-            }
-        }}>
+        reactNodes.push(<div className={'toolbar-item'} style={{cursor:"pointer"}} key={item_dname} onClick={()=>toolbarClick(item_dname, data, myDictValidator, node)}>
             <ModellingIcon name={item} />
             <span className={'ms-1 text-capitalize'}>{item}</span>
+            {/*
+            <i className="bi bi-arrow-right-short hoverable">
+                <ul className={"content"}>
+                    <li className={"hoverable"}>
+                        <span className={'ms-1 text-capitalize'}>Polygon</span>
+                        <i className="bi bi-arrow-right-short hoverable">
+                            <ul className={"content"}>
+                                <span className={'ms-1 text-capitalize'}>Triangle</span>
+                                <span className={'ms-1 text-capitalize'}>Pentagon</span>
+                                <span className={'ms-1 text-capitalize'}>Hexagon</span>
+                                <span className={'ms-1 text-capitalize'}>Octagon</span>
+                                <span className={'ms-1 text-capitalize'}>
+                                    <input className={"autosize-input"} type={"number"} min={3} step={1}
+                                           value={n_agonSides} onClick{(evt) => { evt.stopPropagation()}}
+                                        onChange={(evt) => {
+                                            n_agonSides = +evt.target.value || 10;
+                                            if (n_agonSides<3) n_agonSides = 10;
+                                        }}
+                                    />-agon</span>
+                            </ul>
+                        </i>
+                    </li>
+                </ul>
+            </i>
+            <i className="bi bi-arrow-right-short hoverable">
+                <ul className={"content"}>
+                    <li className={"hoverable"}>
+                        <span className={'ms-1 text-capitalize'}>Polygon</span>
+                    </li>
+                </ul>
+            </i>
+                */
+            }
+
         </div>);
     }
     return reactNodes;
 }
-function select(d: DModelElement): DModelElement {
+function select(dl: DModelElement | LModelElement): DModelElement {
+    let d: DModelElement = (dl as LModelElement)?.__raw || dl as DModelElement;
     if (d && d.id) setTimeout(()=>$(".Graph [data-dataid='"+d?.id+"']").trigger("click"), 10);
     return d; }
 function selectNode(d: DGraphElement|{id: string}): any {
@@ -119,7 +157,7 @@ function selectNode(d: DGraphElement|{id: string}): any {
 
 function ToolBarComponent(props: AllProps, state: ThisState) {
     const node = props.node;
-    if(!node) return(<div className={'toolbar'}></div>);
+    if (!node) return(<div className={'toolbar'}></div>);
     const data: LModelElement|LModel = (node.model) ? node.model : LModel.fromPointer(props.model);
 
     const isMetamodel: boolean = props.isMetamodel;
@@ -181,12 +219,15 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         return(<div className={"toolbar mt-2"}>
             <b className={'d-block text-center text-uppercase mb-1'}>Add root level</b>
             {classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
-                return <div key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => { select(model.addObject(lClass.id)) }}>
+                return <div key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => {
+                    // @ts-ignore
+                    console.log('model.addObject({}, lClass)) }', {lClass, n:lClass?.name});
+                    select(model.addObject({}, lClass)) }}>
                     <ModellingIcon name={'object'} />
                     <span className={'ms-1 text-capitalize'}>{U.stringMiddleCut(lClass.name, 14)}</span>
                 </div>
             })}
-            <div key={"RawObject"} className={'toolbar-item'} onClick={e => select(model.addObject())}>
+            <div key={"RawObject"} className={'toolbar-item'} onClick={e => select(model.addObject({}, null))}>
                 <ModellingIcon name={'object'} />
                 <span className={'ms-1 text-capitalize'}>Object</span>
             </div>

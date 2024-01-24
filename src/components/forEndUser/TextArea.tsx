@@ -68,7 +68,7 @@ function TextAreaComponent(props: AllProps) {
         </div>}
 
         <textarea spellCheck={false} readOnly={readOnly} className={props.inputClassName || css} style={props.inputStyle}
-                  onChange={change} onBlur={blur} value={value} />
+                  onChange={change} onBlur={blur} value={value} placeholder={props.placeholder}/>
     </div>);
 }
 
@@ -87,6 +87,7 @@ export interface TextAreaOwnProps {
     inputClassName?: string;
     style?: GObject;
     inputStyle?: GObject;
+    placeholder?: string;
 }
 
 interface StateProps {

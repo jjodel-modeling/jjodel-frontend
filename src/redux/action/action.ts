@@ -1,4 +1,5 @@
 import {
+    Constructors,
     Dictionary,
     DocString,
     DPointerTargetable,
@@ -125,11 +126,18 @@ export function FINAL_END(): boolean{
     t.pendingActions = [];
     return ca.fire();
 }
+type NotPromise<T> = T extends Promise<any> ? never : T;
 
-
+type NoAsyncFn<
+    T extends (...args: any)=>any,
+    ReturnsPromise extends (...args: any)=>any = ReturnType<T> extends Promise<any> ? never:T
+    >=ReturnsPromise;
 // make class isinstorage e mettici il path studia annotazioni per annotare gli oggett in modo che vengano rwappati prima di farli ritornare se sono annotati
 // minor todo: type as (...args: infer P) => any) ?
-export function TRANSACTION<F extends ((...args: any) => any)>(func: F, ...params: Parameters<F>): boolean | DState {
+// NB: cannot be async, it changes execution order and break many codes where return value is determined in a transaction.
+// also because BEGIN() becomes stuck and actions cannot fire until the server replies or times out.
+export function TRANSACTION<F extends (...args: any)=>any>(func: NoAsyncFn<F>, ...params: Parameters<F>): boolean | DState {
+//export function TRANSACTION<F extends NoAsyncFn)>(func: F, ...params: Parameters<F>): boolean | DState {
     BEGIN();
     // minor todo: potrei fare l'override di Error() per fare in modo che gli errori vengano presi anche se non uso TRANSACTION o try-catch ?
     try { func(...params); } catch(e) { Log.ee('Transaction failed:', e); ABORT(); return false; }
@@ -147,7 +155,7 @@ type arrayFieldNameTypes<D> = keyof D | `${string & keyof D}[]` | `${string & ke
 type AccessModifier = '' | '[]' | '+=' | '-=' | `.${number}` | `[${number}]` | undefined;
 type StrictExclude<T, U> = T extends U ? U extends T ? never : T : T;
 
-@RuntimeAccessible
+@RuntimeAccessible('Action')
 export class Action extends RuntimeAccessibleClass {
     public static cname: string = "Action";
     public static maxCounter: number = 1;
@@ -236,21 +244,21 @@ export class Action extends RuntimeAccessibleClass {
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('LoadAction')
 export class LoadAction extends Action {
     public static cname: string = "LoadAction";
     static type = 'LOAD';
-    static new(state: DState): boolean {  return state && new LoadAction(state).fire(); }
-    static create(state: DState): LoadAction {  return state && new LoadAction(state); }
+    static new(state: DState | GObject): boolean { return state && new LoadAction(state).fire(); }
+    static create(state: DState | GObject): LoadAction { return state && new LoadAction(state); }
 
-    constructor(state: DState, fire: boolean = true) {
+    constructor(state: DState | GObject, fire: boolean = true) {
         super('', state, '');
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         if (fire) this.fire();
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('SetRootFieldAction')
 export class SetRootFieldAction extends Action {
     public static cname: string = "SetRootFieldAction";
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -300,11 +308,29 @@ export class SetRootFieldAction extends Action {
         >(tocheck:never, fullpath: T, val: VAL, accessModifier: AM | undefined = undefined, isPointer?: ISPOINTER): SetRootFieldAction {
         return new SetRootFieldAction(fullpath + (accessModifier || ''), val, false, isPointer);
     }
+    fire(forceRelaunch: boolean = false, doChecks: boolean = true): boolean {
+        /* no need, the reducer should return old state in this case. verify it!
+        if (doChecks) {
+            // if action would not change the value, i don't fire it at all
+            let s: GObject<DState> = store.getState();
+            let field = (this.field||'');
+            let accessOperator: string = field.substring(field.length-2);
+            let fieldpath: string[] = field.split(".");
+            switch(accessOperator){
+                default:
+                case "-=":
+                case "+=":
+            }
+            // path can end with -=, +=, [] etc, but it's fine if i check it as if it was part of the name like object["fieldname+="]
+            // because in all those cases
+            if (s[this.field] === this.value) return false;
+        }*/
+        return super.fire(forceRelaunch);
+    }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('SetFieldAction')
 export class SetFieldAction extends SetRootFieldAction {
-    public static cname: string = "SetFieldAction";
     static type = 'SET_ME_FIELD';
 
     static create<
@@ -394,16 +420,27 @@ export class SetFieldAction extends SetRootFieldAction {
         return new SetFieldAction(me, field, val, false, isPointer as boolean).fire();
     }
 
-    // static new:(typeof SetFieldAction.create) = function(...a:Parameters<(typeof SetFieldAction)["create"]>): SetFieldAction { return SetFieldAction.create(...a).fire() ? a : undefined as any; }
-    //static new:(typeof AAAAA.create) = function(...a:Parameters<(typeof AAAAAA)["create"]>): AAAAAA { return AAAAAA.create(...a).fire() ? a : undefined as any; }
 
 
+    me: Pointer | DPointerTargetable;
+    me_field: string;
     // field can end with "+=", "[]", or "-1" if it's array
     protected constructor(me: DPointerTargetable | Pointer, field: string, val: any, fire: boolean = true, isPointer: boolean = false) {
         Log.exDev(!me, 'BaseObject missing in SetFieldAction', {me, field, val});
         super('idlookup.' + ((me as DPointerTargetable).id || me) + ( field ? '.' + field : ''), val, false, isPointer);
+        this.me = me;
+        this.me_field = field;
         this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
         if (fire) this.fire();
+    }
+
+    fire(forceRelaunch: boolean = false): boolean {
+        // if action would not change the value, i don't fire it at all
+        // by id because if item was updated, this.me as DElement might be an old version, different from the one in store.
+        let d: GObject<any> = DPointerTargetable.from((this.me as DPointerTargetable)?.id || this.me as any);
+        // console.warn("me fire", {thiss:this, d, typeofd:typeof d, field:this.me_field, dfield:d[this.me_field], val:this.value});
+        if (d && typeof d === "object" && d[this.me_field] === this.value) return false;
+        return super.fire(forceRelaunch, false);
     }
 }
 
@@ -421,7 +458,7 @@ SetFieldAction.new(dclass, 'name[4]', '') // ok, anche se non dovrebbe accettare
 SetFieldAction.new(dclass, 'name.5', '') // ok, equivale a dicitura array
 */
 
-@RuntimeAccessible
+@RuntimeAccessible('RedoAction')
 export class RedoAction extends Action {
     public static cname: string = "RedoAction";
     static type = 'RedoAction';
@@ -436,7 +473,7 @@ export class RedoAction extends Action {
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('UndoAction')
 export class UndoAction extends Action {
     public static cname: string = "UndoAction";
     static type = 'UndoAction';
@@ -452,7 +489,7 @@ export class UndoAction extends Action {
 }
 
 // todo: delete or find original idea back
-@RuntimeAccessible
+@RuntimeAccessible('CombineHistoryAction')
 export class CombineHistoryAction extends Action {
     public static cname: string = "CombineHistoryAction";
     static type = 'CombineHistoryAcCombineHistoryActiontion';
@@ -467,7 +504,7 @@ export class CombineHistoryAction extends Action {
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('CreateElementAction')
 export class CreateElementAction extends Action {
     public static cname: string = "CreateElementAction";
     static type = 'CREATE_ELEMENT';
@@ -493,11 +530,18 @@ export class CreateElementAction extends Action {
         this.value = me;
         if (fire) this.fire();
     }
+    public fire(forceRelaunch: boolean = false): boolean {
+        let ret = false;
+        TRANSACTION( () => {
+            ret = super.fire(forceRelaunch);
+            if (this.value._derivedSubElements || this.value._persistCallbacks) { Constructors.persist(this.value, true); }
+        });
+        return ret;
+    }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('DeleteElementAction')
 export class DeleteElementAction extends SetFieldAction {
-    public static cname: string = "DeleteElementAction";
     static type = 'DELETE_ELEMENT';
     public static create(me: Pack1<LPointerTargetable>): DeleteElementAction { return new DeleteElementAction(me as any); }
     public static new(me: Pack1<LPointerTargetable>): boolean { return new DeleteElementAction(me as any).fire(); }
@@ -519,9 +563,8 @@ export class IDLinkAction extends Action{
     nope, uso un proxy
 }*/
 
-@RuntimeAccessible
+@RuntimeAccessible('CompositeAction')
 export class CompositeAction extends Action {
-    public static cname: string = "CompositeAction";
     static type: string = 'COMPOSITE_ACTION';
     actions: Action[] = [];
 
@@ -538,9 +581,9 @@ export class CompositeAction extends Action {
     }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('ParsedAction')
 export class ParsedAction extends SetRootFieldAction {
-    public static cname: string = "ParsedAction"; // NB: actually this is never created but "converted" from other actions by adding fields
+    // NB: actually this is never created but "converted" from other actions by adding fields
     path!: string; // path to a property in the store "something.like.this"
     pathArray!: string[]; // path splitted "like.1.this"
     executionCount!: number;

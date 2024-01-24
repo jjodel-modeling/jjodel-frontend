@@ -11,7 +11,6 @@ var windoww = (window as any);
 windoww.windoww = windoww;
 
 
-// console.error('iiiiiiiiiiiiiiii 0');
 
 windoww.$ = $$;
 export const $: JQueryStatic = $$;
@@ -46,16 +45,13 @@ export type {PackagePointers, EdgePointers, AnnotationPointers, AttributePointer
 export {windoww, EdgeBendingMode, EdgeGapMode, EMeasurableEvents} from './types';
 export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
     EdgeStateProps, EdgeOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
-export {GraphDragManager} from "../graph/graphElement/GraphDragHandler";
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,
     Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs,
     LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements} from "./classes";
 
-
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
-// console.error('iiiiiiiiiiiiiiii 3');
 // import independent generic modules (only dependent from types and RuntimeAccessible
 
 export {Uarr,  DDate, ParseNumberOrBooleanOptions, myFileReader,
@@ -121,7 +117,6 @@ export {
     DFactory_useless_, LFactory_useless_, DMap, LMap
 } from "../model/logicWrapper/LModelElement";
 
-// console.error('joiner here 3');
 /*
 export {
     LModelElement,
@@ -144,14 +139,14 @@ export {
 
 // export {GraphDragHandler} from "../graph/vertex/GraphDragHandler";
 
-// console.error('iiiiiiiiiiiiiiii 11', windoww.DViewElement);
 export type {WViewElement, WViewTransientProperties} from "../view/viewElement/view";
 export {DViewTransientProperties, LViewTransientProperties, LViewElement, DViewElement} from "../view/viewElement/view";
 export {DViewPoint, LViewPoint} from "../view/viewPoint/viewpoint";
-// console.error('iiiiiiiiiiiiiiii 12', windoww.DViewElement);
 
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction, TRANSACTION, BEGIN, ABORT, END} from "../redux/action/action";
+
 export {DState, LState, ModelStore, ViewPointState, statehistory} from "../redux/store";
+export {GraphDragManager} from "../graph/graphElement/GraphDragHandler";
 export {Selectors} from "../redux/selectors/selectors";
 // export var Selectors = windoww.Selectors as (GObjectt & typeof SelType);
 export {reducer, stateInitializer} from "../redux/reducer/reducer";
@@ -264,7 +259,11 @@ export {
     // DockLayoutComponent,
     ColorScheme,
     EdgeComponent,
-    DataOutputComponent, LoggerComponent, GenericInput
+    DataOutputComponent, LoggerComponent, GenericInput,
+    Polygon, Circle, Cross, Decagon,
+    Asterisk, Ellipse, Enneagon, Hexagon, Nonagon,
+    Octagon, Heptagon, Pentagon, Rectangle, Septagon,
+    Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle
 } from './components'
 //export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file
 export {fakeExport} from './ExecuteOnRead';

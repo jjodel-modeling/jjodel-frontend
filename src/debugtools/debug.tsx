@@ -2,9 +2,8 @@ import type {DClass, DModel, GObject, LClass, LModel} from "../joiner";
 import {LPointerTargetable, RuntimeAccessible, SetRootFieldAction} from "../joiner";
 let windoww = window as any;
 
-@RuntimeAccessible
+@RuntimeAccessible('Debug')
 export class Debug {
-    public static cname: string = "Debug";
     public static lightMode: boolean = false; // performance ligher mode for potato pc, huge models or complex simulations / measurables
     private static lightModeInput: HTMLInputElement;
 

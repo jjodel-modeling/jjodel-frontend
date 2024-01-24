@@ -227,7 +227,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
 
     render(): ReactNode {
         const layout: LayoutData = { dockbox: { mode: 'horizontal', children: [] }};
-        const infoTab = { id: 'info', title: 'Info', group: 'group1', closable: false, content:
+        const infoTab = { id: 'info', title: 'Summary', group: 'group1', closable: false, content:
             <InfoTab />
         };
         layout.dockbox.children.push({tabs: [infoTab]});

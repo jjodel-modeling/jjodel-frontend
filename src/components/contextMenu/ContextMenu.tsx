@@ -16,6 +16,7 @@ import {
     LProject,
     LUser,
     LValue,
+    windoww,
 } from '../../joiner';
 import MemoRec from '../../memorec/api';
 import {useStateIfMounted} from 'use-state-if-mounted';
@@ -36,8 +37,8 @@ function ContextMenuComponent(props: AllProps) {
     if(!node || !data) return(<></>);
 
     const close = () => {
-        // if (!windoww.ContextMenuVisible) return;
-        // windoww.ContextMenuVisible = false;
+        if (!windoww.ContextMenuVisible) return;
+        windoww.ContextMenuVisible = false;
         setSuggestedName('');
         setMemorec(null);
         SetRootFieldAction.new('contextMenu', {display: false, x: 0, y: 0});
@@ -58,7 +59,6 @@ function ContextMenuComponent(props: AllProps) {
                 query = `context ${data.className} inv: self.id = '${data.id}'`;
                 break;
         }
-        DViewElement.new(data.name + '_view', jsx, undefined, '', '', '', [], query);
     }
 
     const structuralFeature = async () => {setMemorec(await MemoRec.structuralFeature(data))}
@@ -165,8 +165,8 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.user = LUser.fromPointer(DUser.current);
     ret.display = state.contextMenu.display;
     ret.position = {x: state.contextMenu.x, y: state.contextMenu.y};
-    const nodeid = state._lastSelected?.node;
-    if(nodeid) ret.node = LGraphElement.fromPointer(nodeid);
+    const nodeid = state.contextMenu.nodeid; //state._lastSelected?.node;
+    if (nodeid) ret.node = LGraphElement.fromPointer(nodeid);
     else ret.node = null;
     return ret;
 }

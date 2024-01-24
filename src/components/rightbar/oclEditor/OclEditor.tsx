@@ -12,6 +12,9 @@ function OclEditorComponent(props: AllProps) {
     const readOnly = props.readonly !== undefined ? props.readonly : Defaults.check(view.id);
     const change = (value: string|undefined) => {
         if(value !== undefined) setOcl(value);
+        //DAMIANO:
+        // ma questo non setta solo lo stato locale? prima era:
+        // if (value !== undefined) view.query = value;
     }
 
     return <>

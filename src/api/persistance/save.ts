@@ -1,4 +1,4 @@
-import type {LProject, LViewElement} from '../../joiner';
+import type {LProject, LViewElement, Pointer} from '../../joiner';
 import {U, Defaults} from '../../joiner';
 import Fetch from '../fetch';
 import type {DataTypes, NodeTypes} from '../../joiner/types';

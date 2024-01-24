@@ -26,15 +26,13 @@ type ERROR = "_Type_Error_";
 // type WtoL<WX extends WPointerTargetable> ='';
 
 const childrenKeys = ["@", "$"];
-@RuntimeAccessible
+@RuntimeAccessible('LogicContext')
 export class LogicContext<
     DX extends GObject = DModelElement,
     LX = DtoL<DX>,
     // PF extends MyProxyHandler<DX> = MyProxyHandler<DX>,
     WX = DtoW<DX>
     > extends RuntimeAccessibleClass{
-    public static cname: string = "LogicContext";
-    // public proxyfyFunction: PF;
     public proxyObject: LX;
     public data: DX;// & GObject;
     public write: WX;
@@ -55,9 +53,8 @@ export class LogicContext<
 }
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LogicContext);
-@RuntimeAccessible
+@RuntimeAccessible('MapLogicContext')
 export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, WPointerTargetable> {
-    public static cname: string = "MapLogicContext";
     data: GObject;
     path: string;
     subMaps: string[];
@@ -73,9 +70,8 @@ export class MapLogicContext extends LogicContext<GObject, LPointerTargetable, W
 }
 RuntimeAccessibleClass.set_extend(LogicContext, MapLogicContext);
 
-@RuntimeAccessible
+@RuntimeAccessible('MyProxyHandler')
 export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibleClass implements ProxyHandler<T>{
-    public static cname: string = "MyProxyHandler";
     s: string = 'set_';
     g: string = 'get_';
     /*get(target: T, p: string | number | symbol, proxyitself: Proxyfied<T>): boolean {
@@ -132,14 +128,14 @@ console.log(obj2 + ""); // "true"    — hint is "default"        array, object,
 // so pointers cannot include "," char and toString() must return a pointer to keep lclass.extends += somepointer as a valid expression;
 // -= will call getPrimitive("number") which will result in array -> NaN, so NaN = NaN - pointer and cannot be done.
 
-@RuntimeAccessible
+@RuntimeAccessible('GetPathHandler')
 class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
-    strbuilder: string = '';
-    array: (string | number | symbol)[] = [];
-    calls: (GObject<'parameters of get calls'>)[] = [];
     public static __asCalls: boolean = false;
     public static __asArray: boolean = false;
     public static __nested: boolean = true;
+    private strbuilder: string = '';
+    private array: (string | number | symbol)[] = [];
+    private calls: (GObject<'parameters of get calls'>)[] = [];
 
     public constructor() { super(); }
 
@@ -181,9 +177,8 @@ class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
     }
 }
 RuntimeAccessibleClass.set_extend(MyProxyHandler, GetPathHandler);
-@RuntimeAccessible
+@RuntimeAccessible('TargetableProxyHandler')
 export class TargetableProxyHandler<ME extends GObject = DModelElement, LE extends LPointerTargetable = LModelElement> extends MyProxyHandler<ME> {
-    public static cname: string = "TargetableProxyHandler";
 // permette di fare cose tipo: user.name_surname che ritorna la concatenazione di nome e cognome anche se il campo name_surname non esiste.
     lg: LE & GObject; // to disable type check easily and access 'set_' + varname dynamically
     l: LE;
@@ -208,24 +203,22 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
     // damiano todo: this does not work
     private concatenableHandler(targetObj: ME, propKey: number | string | symbol, proxyitself: Proxyfied<ME>): NotAConcatenation | any[] | string {
-        console.log("concatenableHandler 1", {targetObj, propKey, proxyitself});
+        //console.log("concatenableHandler 1", {targetObj, propKey, proxyitself});
         if (propKey in targetObj)  return null as NotAConcatenation;
         const propKeyStr: null | string = U.asString(propKey, null);
         let _index: number = propKeyStr ? propKeyStr.indexOf('_') : -1;
-        console.log("concatenableHandler 2", {targetObj, propKey, propKeyStr, proxyitself, _index});
+        //console.log("concatenableHandler 2", {targetObj, propKey, propKeyStr, proxyitself, _index});
         if (_index < 0) return null as NotAConcatenation;
 
         let isConcatenable = true;
         let ret: any[] = (propKey as string).split('_').map( (subKey: string) => {
-            console.log("concatenableHandler 3.0", {targetObj, subKey, propKeyStr, proxyitself});
+            //console.log("concatenableHandler 3.0", {targetObj, subKey, propKeyStr, proxyitself});
             // se trovo multipli ___ li tratto come spazi aggiuntivi invece che come proprietà '' che ritornano undefined, così posso fare name___surname --> "damiano   di vincenzo"
             let val: any = subKey === '' ? ' ' : this.get(targetObj, subKey, proxyitself);
-            console.log("concatenableHandler 3.1", {targetObj, subKey, val, propKeyStr, proxyitself, isConcatenable});
             isConcatenable = isConcatenable && JsType.isPrimitive(val);
-            console.log("concatenableHandler 3.2", {targetObj, subKey, val, propKeyStr, proxyitself, isConcatenable});
             return val;
         });
-        console.log("concatenableHandler 4", {targetObj, propKey, propKeyStr, proxyitself, ret, isConcatenable});
+        //console.log("concatenableHandler 4", {targetObj, propKey, propKeyStr, proxyitself, ret, isConcatenable});
         return isConcatenable ? ret.join(' ') : ret; }
 
     public get(targetObj: ME, propKey: string | symbol, proxyitself: Proxyfied<ME>): any {
@@ -307,6 +300,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                     return this.d.className;
             }
         }
+        // @ts-ignore
+        console.trace("proxy $getter 2", {targetObj, n:targetObj.name, propKey, l:this.lg, dg:this.lg._defaultGetter});
 
         // if not exist check for children names
 
@@ -316,11 +311,17 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             catch (e) { lchildren = []; }
             // let dchildren: DPointerTargetable[] = lchildren.map<DPointerTargetable>(l => l.__raw as any);
             let lc: GObject;
-            if (childrenKeys.includes(propKey[0])) { propKey = propKey.substring(1); canThrowErrors = false; }
+            let pk: string;
+            if (childrenKeys.includes(propKey[0])) { pk = propKey.substring(1); canThrowErrors = false; }
+            else pk = propKey;
+            console.trace("proxy $getter 2.5", {targetObj, n:targetObj.name, propKey, pk, lchildren, l:this.lg, dg:this.lg._defaultGetter});
             for (lc of lchildren) {
-                if (lc.name === propKey) return lc;
+                let n = lc?.name;
+                console.trace("proxy $getter 2.9", {targetObj, n:targetObj.name, dn:n, d:lc.__raw, propKey, pk, lchildren, l:this.lg, dg:this.lg._defaultGetter});
+                if (n && n.toLowerCase() === pk.toLowerCase()) return lc;
             }
         }
+        console.log("proxy $getter 3", {propKey, l:this.lg, dg:this.lg._defaultGetter});//
 
         // if custom generic getter exist
         if (this.lg._defaultGetter) return this.lg._defaultGetter(new LogicContext(proxyitself as any, targetObj), propKey);
@@ -416,9 +417,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     }*/
 }
 RuntimeAccessibleClass.set_extend(MyProxyHandler, TargetableProxyHandler);
-@RuntimeAccessible
+@RuntimeAccessible('MapProxyHandler')
 export class MapProxyHandler extends TargetableProxyHandler<Dictionary, LPointerTargetable> {
-    public static cname: string = "MapProxyHandler";
     // todo: sposta alcune funzioni da TargetableProxy a MyProxy e fai estendere direttamente MyProxy a questa classe
     public subMapKeys: Dictionary<string, any | Dictionary<DocString<'nested map keys'>>>;
 

@@ -47,6 +47,7 @@ export class GraphElementReduxStateProps {
     node!: LGraphElement;
     data?: LModelElement;
     usageDeclarations!: DefaultUsageDeclarations;
+    invalidUsageDeclarations?: Error;
     // graph!: LGraph;
 
     // lastSelected!: LModelElement | null;
@@ -75,18 +76,18 @@ export class GraphElementOwnProps extends BasicReactOwnProps {
     graphid?: Pointer<DGraph, 1, 1, LGraph>; // injected
     parentViewId?: Pointer<DViewElement, 1, 1, LViewElement>; // injected
     htmlindex?: number; // injected
+    childStyle?: CSSProperties; // injected, indicates some properties are styled from <Polygon or such, and must be transferred to the first child of root
 }
 
 export class EdgeOwnProps extends GraphElementOwnProps {
     onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
     onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    isGraph?: boolean = false;
-    isVertex?: boolean = true;
+    isgraph?: boolean = false;
+    isvertex?: boolean = true;
     start!: LGraphElement["id"];
     end!: LGraphElement["id"];
-    label?: string;
-    // label?: DEdge["longestLabel"]; they were initial values to be stored in node, initialized in jsx. but i moved them to view
-    // labels?: DEdge["labels"];
+    label?: DEdge["longestLabel"];
+    labels?: DEdge["labels"];
 }
 
 export class EdgeStateProps extends GraphElementReduxStateProps {

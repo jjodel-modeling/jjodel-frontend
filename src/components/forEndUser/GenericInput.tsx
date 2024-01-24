@@ -36,6 +36,10 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
             let singleton: GObject<LPointerTargetable> = DConstructor.singleton;
             info = singleton['__info_of__' + this.props.field] ;
         } else info = this.props.info;
+        if (!info) {
+            Log.eDevv("<GenericInput/> could not find info of " + this.props.field, {props:this.props});
+            return <></>;
+        }
 
         let type: string;
         let enumOptions: Dic<String<'optgroup'>, Dic<String<'options'>, String<'values'>>> = {}; // 'Options' entry is a fallback for items without an optgroup
@@ -113,7 +117,7 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
             case 'text': case 'Function':
                 return <TextArea inputClassName={'input my-auto ms-auto '} {...otherProps} className={this.props.rootClassName}
                                  data={this.props.data} field={this.props.field}
-                                 jsxLabel={label} tooltip={this.props.tooltip}></TextArea>;
+                                 jsxLabel={label} tooltip={this.props.tooltip} />;
             case 'EEnum':
                 return <Select inputClassName={'my-auto ms-auto select'} {...otherProps} className={this.props.rootClassName}
                                data={this.props.data} field={this.props.field} options={enumOptionsJSX}
@@ -179,7 +183,7 @@ interface _OwnProps {
     // propsRequestedFromJSX_AsAttributes: string;
     data: DPointerTargetable | LPointerTargetable;
     field: string;
-    info: Info | undefined;
+    info?: Info | undefined;
     tooltip?: boolean|string;
 
     className?: string;

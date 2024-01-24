@@ -5,7 +5,7 @@ $true: #28A745FF;
 $false: #DC3545FF;
 $fill: -webkit-fill-available;
 
-
+// damiano: i verified scss variables cannot be used at runtime in user jsx, so i'm making classic css variables below.
 $model-color: purple;
 $package-color: green;
 $model-less-color: purple;
@@ -27,3 +27,14 @@ $vertex-color: brown;
 .w-min {width: min-content}
 .h-min {height: min-content}
 .cursor-pointer {cursor: pointer}
+
+body{ // fallback
+  --border-color: #333;
+  --border-width: 1px;
+}
+.DClass{ --border-color: red; }
+.DAttribute, .DReference, .DOperation, .DEnumLiteral, .DValue { --border-color: blue; }
+.DParameter,{ --border-color: pink; }
+.DObject,{ --border-color: indigo; }
+.DEnumerator,{ --border-color: orange; }
+.DPackage,{ --border-color: green; }
