@@ -3,11 +3,11 @@ import {DViewElement, DViewPoint, DObject, LModel, LObject, LViewPoint} from '..
 import {Dependencies} from './dependencies';
 
 export class StateMachine_Views {
-    static load(project: LProject, m1: LModel,  state: LClass, command: LClass, event: LClass, transition: LClass): LViewPoint {
-        return this.create(project, m1, state, command, event, transition);
+    static load(project: LProject, state: LClass, command: LClass, event: LClass, transition: LClass): LViewPoint {
+        return this.create(project, state, command, event, transition);
     }
 
-    private static create(project: LProject, m1: LModel, state: LClass, command: LClass, event: LClass, transition: LClass): LViewPoint {
+    private static create(project: LProject, state: LClass, command: LClass, event: LClass, transition: LClass): LViewPoint {
         /* Viewpoint */
         const viewpoint = DViewPoint.new('StateMachine', '');
         /* Model */
@@ -42,7 +42,9 @@ export class StateMachine_Views {
         /* Model to Text */
         const textViewpoint = DViewPoint.new('Text', '');
         const textView = DViewElement.new('Model', this.text(event, command, state));
-        textView.viewpoint = textViewpoint.id; textView.oclCondition = `context DModel inv: self.id = '${m1.id}'`;
+        textView.viewpoint = textViewpoint.id;
+        textView.oclCondition = `context DModel inv: not self.isMetamodel`;
+        // textView.oclCondition = `context DModel inv: self.id = '${m1.id}'`;
 
         return LViewPoint.fromD(viewpoint);
     }

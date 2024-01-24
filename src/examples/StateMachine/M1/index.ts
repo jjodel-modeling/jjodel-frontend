@@ -1,4 +1,4 @@
-import {DModel, DVertex, LClass, LGraphElement, LModel, LObject, LProject, SetFieldAction} from '../../../joiner';
+import {DModel, DValue, LClass, LModel, LObject, LProject, SetFieldAction, U} from '../../../joiner';
 
 export class StateMachine_M1 {
     static load1(project: LProject, m2: LModel, state: LClass, transition: LClass, command: LClass, event: LClass): [LModel, LObject] {
@@ -37,15 +37,15 @@ export class StateMachine_M1 {
         const commandsLength = 84; const eventsLength = 84; const statesLength = 40; const transitionsLength = 48;
         const commands: LObject[] = []; const events: LObject[] = []; const states: LObject[] = []; const transitions: LObject[] = [];
         for(let i = 0; i < commandsLength; i++)
-            commands.push(this.createCommand(m1, command, 'C' + i, 'C' + i));
+            commands.push(this.createCommand(m1, command, 'C' + i, U.getRandomString(5)));
         for(let i = 0; i < eventsLength; i++)
-            events.push(this.createEvent(m1, event, 'E' + i, 'E' + i));
+            events.push(this.createEvent(m1, event, 'E' + i, U.getRandomString(5)));
         const object = m1.addObject(undefined, 'Events');
         for(let i = 0; i < statesLength; i++)
             states.push(this.createState(m1, state, 'S' + i, [commands[i]]))
         for(let i = 0; i < transitionsLength; i++)
             transitions.push(this.createTransition(m1, transition, states[i % statesLength], states[(i + 1) % statesLength], events[i]));
-        return m1
+        return [m1];
     }
 
     private static create(project: LProject, m2: LModel): LModel {
@@ -58,6 +58,10 @@ export class StateMachine_M1 {
     private static createState(m1: LModel, state: LClass, name: string, actions: LObject[]): LObject {
         const dObject = m1.addObject(state.id);
         const lObject = LObject.fromD(dObject);
+        // const feature0 = DValue.new(undefined, state.attributes[0].id, [name]);
+        // const feature1 = DValue.new(undefined, state.references[0].id, actions.map(o => o.id));
+        // SetFieldAction.new(dObject.id, 'features', feature0.id, '+=', true);
+        // SetFieldAction.new(dObject.id, 'features', feature1.id, '+=', true);
         lObject.features[0].value = name;
         lObject.features[1].values = actions;
         return lObject;
@@ -76,6 +80,10 @@ export class StateMachine_M1 {
     public static createEvent(m1: LModel, event: LClass, name: string, code: string): LObject {
         const dObject = m1.addObject(event.id);
         const lObject = LObject.fromD(dObject);
+        // const feature0 = DValue.new(undefined, event.extends[0].attributes[0].id, [name]);
+        // const feature1 = DValue.new(undefined, event.extends[0].attributes[1].id, [code]);
+        // SetFieldAction.new(dObject.id, 'features', feature0.id, '+=', true);
+        // SetFieldAction.new(dObject.id, 'features', feature1.id, '+=', true);
         lObject.features[0].value = name;
         lObject.features[1].value = code;
         return lObject;
@@ -83,6 +91,12 @@ export class StateMachine_M1 {
     public static createTransition(m1: LModel, transition: LClass, source: LObject, target: LObject, event: LObject): LObject {
         const dObject = m1.addObject(transition.id);
         const lObject = LObject.fromD(dObject);
+        // const feature0 = DValue.new(undefined, transition.references[0].id, [source.id]);
+        // const feature1 = DValue.new(undefined, transition.references[1].id, [target.id]);
+        // const feature2 = DValue.new(undefined, transition.references[2].id, [event.id]);
+        // SetFieldAction.new(dObject.id, 'features', feature0.id, '+=', true);
+        // SetFieldAction.new(dObject.id, 'features', feature1.id, '+=', true);
+        // SetFieldAction.new(dObject.id, 'features', feature2.id, '+=', true);
         lObject.features[0].values = [source];
         lObject.features[1].values = [target];
         lObject.features[2].values = [event];

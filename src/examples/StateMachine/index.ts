@@ -9,7 +9,7 @@ import {
     LProject,
     LUser, LViewElement,
     LViewPoint,
-    SetFieldAction
+    SetFieldAction, SetRootFieldAction, U
 } from '../../joiner';
 import {StateMachine_M2} from './M2';
 import {StateMachine_M1} from './M1';
@@ -40,7 +40,7 @@ export class StateMachine {
     /* S11 */
     private static start: LClass;
 
-    static load0(name: string) {
+    private static loadM2(name: string) {
         this.user = LUser.fromPointer(DUser.current);
         /* Metamodel */
         BEGIN()
@@ -56,16 +56,35 @@ export class StateMachine {
         this.command = elementsM2[5];
         this.event = elementsM2[6];
         END()
+    }
+    private static loadViews() {
+        /* Views */
+        BEGIN()
+        this.viewpoint = StateMachine_Views.load(this.project, this.state, this.command, this.event, this.transition);
+        END()
+    }
 
+    static loadBig(name: string) {
+        SetRootFieldAction.new('isLoading', true);
+        this.loadM2(name);
+        /* Model */
+        for(let i = 0; i < 72; i++) {
+            console.log(`Loading ${i}/72`);
+            BEGIN()
+            StateMachine_M1.load2(this.project, this.M2, this.state, this.transition, this.command, this.event);
+            END()
+        }
+        this.loadViews();
+        SetRootFieldAction.new('isLoading', false);
+    }
+
+    static load0(name: string) {
+        this.loadM2(name);
         /* Model */
         const elementsM1 = StateMachine_M1.load1(this.project, this.M2, this.state, this.transition, this.command, this.event);
         this.M1 = elementsM1[0];
         this.idle = elementsM1[1];
-
-        /* Views */
-        BEGIN()
-        this.viewpoint = StateMachine_Views.load(this.project, this.M1, this.state, this.command, this.event, this.transition);
-        END()
+        this.loadViews();
     }
     static load1(name: string) {
         this.load0(name);

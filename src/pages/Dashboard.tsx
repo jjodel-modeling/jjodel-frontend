@@ -46,6 +46,9 @@ function DashboardComponent(props: AllProps) {
                 <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('collaborative')}>
                     + Collaborative
                 </button>*/}
+                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.loadBig('State Machine BIG')}>
+                    + BIG
+                </button>
                 <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load0('State Machine s0')}>
                     + S0
                 </button>
