@@ -2,7 +2,16 @@ import React, {Dispatch} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {DState, DUser, stateInitializer, LUser, statehistory, Json, SetRootFieldAction} from "./joiner";
+import {
+    DState,
+    DUser,
+    stateInitializer,
+    LUser,
+    statehistory,
+    Json,
+    SetRootFieldAction,
+    LPointerTargetable
+} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import Navbar from "./components/navbar/Navbar";
@@ -24,35 +33,36 @@ function firstInteraction(){
     statehistory.globalcanundostate = true;
 }
 
-function App(props: AllProps) {
+// todo: memoization which also checks for DUser.current and DUser.offlineMode changes other than prop changes
+function App(props: AllProps): JSX.Element {
     const debug = props.debug;
     const isLoading = props.isLoading;
-    const user = props.user;
-    const project = user?.project;
+    let user: LUser = props.user;
 
+    console.log("app render", {u:DUser.current, o:DUser.offlineMode})
+    if (DUser.offlineMode && !DUser.current) {
+        stateInitializer();
+        let du = DUser.new('adminOffline', "Pointer_adminOffline");
+        DUser.current = du.id;
+        user = LPointerTargetable.from(du);
+    }
     useEffectOnce(() => {
-        if (DUser.offlineMode) {
-            let du = DUser.new('adminOffline');
-            DUser.current = du.id;
-            stateInitializer();
-            // StateMachine.load1('State Machine v0');
-            // StateMachine.load0('State Machine v1');
-            return;
-        }
-        if (!debug) return;
+        if (!debug || DUser.offlineMode) return;
         (async function() {
             SetRootFieldAction.new('isLoading', true);
             const response = await PersistanceApi.login('admin@mail.it', 'admin');
             const user = response.body as Json;
             const id = user.id as string;
             const username = user.username as string;
-            DUser.new(username, id); DUser.current = id;
+            DUser.new(username, id);
+            DUser.current = id;
             stateInitializer();
             SetRootFieldAction.new('isLoading', false);
         })();
     })
 
-    if(DUser.current) {
+    const project = user?.project;
+    if (user) {
         return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? ' debug' : '')}
                     onClick={e => statehistory.globalcanundostate = true}>
             {isLoading && <Loader />}
@@ -70,6 +80,7 @@ function App(props: AllProps) {
 
 interface OwnProps {room?: string}
 interface StateProps {
+    offlineMode: boolean,
     debug: boolean,
     isLoading: boolean,
     user: LUser
@@ -83,6 +94,10 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.debug = state.debug;
     ret.isLoading = state.isLoading;
     ret.user = LUser.fromPointer(DUser.current);
+    // needed here as props, because apparently functional components are memoized by default.
+    ret.offlineMode = DUser.offlineMode;
+    console.log("app re mapstate", {u:DUser.current, o:DUser.offlineMode});
+
     return ret;
 }
 

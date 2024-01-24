@@ -123,7 +123,7 @@ export class StateMachine {
     }
     static load9(name: string) {
         this.load8(name);
-        this.view.viewpoint = undefined;
+        this.view.viewpoint = undefined as any;
     }
     static load10(name: string) {
         this.load9(name);

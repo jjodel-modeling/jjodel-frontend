@@ -1752,12 +1752,7 @@ let bb2 = fffff(a);
 @Leaf
 @RuntimeAccessible('DUser')
 export class DUser extends DPointerTargetable {
-<<<<<<< HEAD
-    public static cname: string = 'DUser';
-    public static offlineMode: boolean = true;
-=======
     public static offlineMode: boolean = !!localStorage.getItem("offlineMode");
->>>>>>> 2aef2e3f143d2d7d04a35c54ffea1f6f089f8e64
     // static current: Pointer<DUser> = 'Pointer_AnonymousUser';
     static current: Pointer<DUser> = '';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];

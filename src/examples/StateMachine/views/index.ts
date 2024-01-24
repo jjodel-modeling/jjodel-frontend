@@ -9,33 +9,39 @@ export class StateMachine_Views {
 
     private static create(project: LProject, state: LClass, command: LClass, event: LClass, transition: LClass): LViewPoint {
         /* Viewpoint */
-        const viewpoint = DViewPoint.new('StateMachine', '');
+        const viewpoint = DViewPoint.new2('StateMachine', '');
         /* Model */
         const modelView = DViewElement.new('Model', this.model);
-        modelView.viewpoint = viewpoint.id; modelView.oclCondition = 'context DModel inv: self.isMetamodel = false';
+        modelView.viewpoint = viewpoint.id;
+        modelView.oclCondition = 'context DModel inv: self.isMetamodel = false';
         /* State */
         const stateView = DViewElement.new('State', this.state(command));
-        stateView.viewpoint = viewpoint.id; stateView.oclCondition = `context DObject inv: self.instanceof.id = '${state.id}'`;
+        stateView.viewpoint = viewpoint.id;
+        stateView.oclCondition = `context DObject inv: self.instanceof.id = '${state.id}'`;
         stateView.adaptWidth = true; stateView.adaptHeight = true;
         stateView.usageDeclarations = Dependencies.state;
         /* Command */
         const commandView = DViewElement.new('Command', this.command);
-        commandView.viewpoint = viewpoint.id; commandView.oclCondition = `context DObject inv: self.instanceof.id = '${command.id}'`;
+        commandView.viewpoint = viewpoint.id;
+        commandView.oclCondition = `context DObject inv: self.instanceof.id = '${command.id}'`;
         commandView.draggable = false; commandView.resizable = false;
         commandView.usageDeclarations = Dependencies.command;
         /* Events */
         const eventsView = DViewElement.new('Events', this.events);
-        eventsView.viewpoint = viewpoint.id; eventsView.oclCondition = `context DObject inv: self.name = 'obj_1'`;
+        eventsView.viewpoint = viewpoint.id;
+        eventsView.oclCondition = `context DObject inv: self.name = 'obj_1'`;
         eventsView.adaptWidth = true; eventsView.adaptHeight = true;
         eventsView.usageDeclarations = Dependencies.events(event);
         /* Event */
         const eventView = DViewElement.new('Event', this.event);
-        eventView.viewpoint = viewpoint.id; eventView.oclCondition = `context DObject inv: self.instanceof.id = '${event.id}'`;
+        eventView.viewpoint = viewpoint.id;
+        eventView.oclCondition = `context DObject inv: self.instanceof.id = '${event.id}'`;
         eventView.draggable = false; eventView.resizable = false;
         eventView.usageDeclarations = Dependencies.event;
         /* Transition */
         const transitionView = DViewElement.new('Transition', this.transition);
-        transitionView.viewpoint = viewpoint.id; transitionView.oclCondition = `context DObject inv: self.instanceof.id = '${transition.id}'`;
+        transitionView.viewpoint = viewpoint.id;
+        transitionView.oclCondition = `context DObject inv: self.instanceof.id = '${transition.id}'`;
         transitionView.adaptWidth = true; transitionView.adaptHeight = true;
         transitionView.usageDeclarations = Dependencies.transition;
 
@@ -46,6 +52,9 @@ export class StateMachine_Views {
         textView.oclCondition = `context DModel inv: not self.isMetamodel`;
         // textView.oclCondition = `context DModel inv: self.id = '${m1.id}'`;
 
+
+        viewpoint.subViews = [modelView, stateView, commandView, eventsView, transitionView].map(v => v.id);
+        textViewpoint.subViews = [textView.id];
         return LViewPoint.fromD(viewpoint);
     }
 

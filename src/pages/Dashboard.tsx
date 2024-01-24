@@ -1,9 +1,6 @@
 import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import type {DState} from '../joiner';
-<<<<<<< HEAD
-import {DProject, DUser, LProject, LUser, SetFieldAction, SetRootFieldAction, U} from '../joiner';
-=======
 import {
     DModel,
     DProject,
@@ -16,7 +13,6 @@ import {
     TRANSACTION,
     U
 } from '../joiner';
->>>>>>> 2aef2e3f143d2d7d04a35c54ffea1f6f089f8e64
 import {FakeStateProps} from '../joiner/types';
 import PersistanceApi from "../api/persistance";
 import {useEffectOnce} from "usehooks-ts";
@@ -27,7 +23,6 @@ import DockManager from "../components/abstract/DockManager";
 
 function DashboardComponent(props: AllProps) {
     const user = props.user;
-
 
     useEffectOnce(() => {
         (async function() {
@@ -73,11 +68,7 @@ function DashboardComponent(props: AllProps) {
                 <i className={'bi bi-arrow-clockwise'}></i>
             </button>
             <div className={'d-flex ms-auto'}>
-<<<<<<< HEAD
-                {/*<button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('public')}>
-=======
                 <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('public', e)}>
->>>>>>> 2aef2e3f143d2d7d04a35c54ffea1f6f089f8e64
                     + Public
                 </button>
                 <button disabled={true} className={'btn btn-success p-1 mx-1'} onClick={e => createProject('private', e)}>
@@ -85,7 +76,7 @@ function DashboardComponent(props: AllProps) {
                 </button>
                 <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('collaborative', e)}>
                     + Collaborative
-                </button>*/}
+                </button>
                 <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.loadBig('State Machine BIG')}>
                     + BIG
                 </button>
