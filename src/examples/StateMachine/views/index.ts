@@ -12,35 +12,35 @@ export class StateMachine_Views {
         const viewpoint = DViewPoint.new2('StateMachine', '');
         /* Model */
         const modelView = DViewElement.new('Model', this.model);
-        modelView.viewpoint = viewpoint.id;
+        modelView.viewpoint = viewpoint.id; modelView.explicitApplicationPriority = 10;
         modelView.oclCondition = 'context DModel inv: self.isMetamodel = false';
         /* State */
         const stateView = DViewElement.new('State', this.state(command));
-        stateView.viewpoint = viewpoint.id;
+        stateView.viewpoint = viewpoint.id; stateView.explicitApplicationPriority = 10;
         stateView.oclCondition = `context DObject inv: self.instanceof.id = '${state.id}'`;
         stateView.adaptWidth = true; stateView.adaptHeight = true;
         stateView.usageDeclarations = Dependencies.state;
         /* Command */
         const commandView = DViewElement.new('Command', this.command);
-        commandView.viewpoint = viewpoint.id;
+        commandView.viewpoint = viewpoint.id; commandView.explicitApplicationPriority = 10;
         commandView.oclCondition = `context DObject inv: self.instanceof.id = '${command.id}'`;
         commandView.draggable = false; commandView.resizable = false;
         commandView.usageDeclarations = Dependencies.command;
         /* Events */
         const eventsView = DViewElement.new('Events', this.events);
-        eventsView.viewpoint = viewpoint.id;
+        eventsView.viewpoint = viewpoint.id; eventsView.explicitApplicationPriority = 10;
         eventsView.oclCondition = `context DObject inv: self.name = 'obj_1'`;
         eventsView.adaptWidth = true; eventsView.adaptHeight = true;
         eventsView.usageDeclarations = Dependencies.events(event);
         /* Event */
         const eventView = DViewElement.new('Event', this.event);
-        eventView.viewpoint = viewpoint.id;
+        eventView.viewpoint = viewpoint.id; eventView.explicitApplicationPriority = 10;
         eventView.oclCondition = `context DObject inv: self.instanceof.id = '${event.id}'`;
         eventView.draggable = false; eventView.resizable = false;
         eventView.usageDeclarations = Dependencies.event;
         /* Transition */
         const transitionView = DViewElement.new('Transition', this.transition);
-        transitionView.viewpoint = viewpoint.id;
+        transitionView.viewpoint = viewpoint.id; transitionView.explicitApplicationPriority = 2;
         transitionView.oclCondition = `context DObject inv: self.instanceof.id = '${transition.id}'`;
         transitionView.adaptWidth = true; transitionView.adaptHeight = true;
         transitionView.usageDeclarations = Dependencies.transition;
@@ -48,7 +48,7 @@ export class StateMachine_Views {
         /* Model to Text */
         const textViewpoint = DViewPoint.new('Text', '');
         const textView = DViewElement.new('Model', this.text(event, command, state));
-        textView.viewpoint = textViewpoint.id;
+        textView.viewpoint = textViewpoint.id; textView.explicitApplicationPriority = 10;
         textView.oclCondition = `context DModel inv: not self.isMetamodel`;
         // textView.oclCondition = `context DModel inv: self.id = '${m1.id}'`;
 
@@ -61,22 +61,19 @@ export class StateMachine_Views {
     private static model = `<div className={'root'}>
         {!data && 'Model data missing.'}
         <div className='edges' style={{zIndex:101, position: 'absolute', height: 0, width: 0, overflow: 'visible'}}>
-            {data.objects
-                .filter(o => o.instanceof)
-                .filter(o => o.instanceof.name === 'Transition')
+            {data.$transition.instances
                 .map((t, i) => {
-                    return(t.$source.value && t.$target.value && t.$trigger.value && 
-                        <Edge key={i} label={() => t.$trigger.value.$name.value} 
-                            data={t.id}
-                            view={'Pointer_ViewEdgeAssociation'} 
-                            start={t.$source.value.node} 
-                            end={t.$target.value.node} 
-                        />)
+                    if(t.$source.value && t.$target.value && t.$trigger.value)
+                        return(<Edge key={i} label={() => t.$trigger.value.$name.value} 
+                                    data={t.id}
+                                    view={'Pointer_ViewEdgeAssociation'} 
+                                    start={t.$source.value.node} 
+                                    end={t.$target.value.node} 
+                           />)
+                    return(<DefaultNode key={t.id} data={t} />)
                 })
             }
-            {data.objects
-                .filter(o => o.instanceof)
-                .filter(o => o.instanceof.name === 'Reset')
+            {data.$reset && data.$reset.instances
                 .map((r, i) => {
                     if(!r.node || !r.$transition.value) return(<div></div>)
                     return(<Edge key={i}
@@ -86,20 +83,13 @@ export class StateMachine_Views {
                     />)
             })}
         </div>
-        {data.objects
-            .filter(o => o.instanceof) 
-            .filter(o => 
-                (o.instanceof.name !== 'Transition' && o.instanceof.name !== 'Command' && o.instanceof.name !== 'Event') || 
-                (o.instanceof.name === 'Transition' && (!o.$source.value || !o.$target.value || !o.$trigger.value)) ||
-                (o.instanceof.name === 'Command' && !o.$name.value))
+        {data.otherObjects()
             .map(object => <DefaultNode key={object.id} data={object} />)
         }
-        {data.objects
-            .filter(o => !o.instanceof)
-            .map(o => <DefaultNode key={o.id} data={o} />)
-        }
         <button style={{position: 'absolute', right: 10, top: 10}} className={'p-1 btn btn-danger'} onClick={e => {
-            const objects = data.objects.filter(o => o.instanceof && (o.instanceof.name === 'State' || o.instanceof.name === 'Situation'));
+            const objects = [];
+            if(data.$state) objects.push(...data.$state.instances);
+            if(data.$situation) objects.push(...data.$situation.instances);
             if(objects.length < 5) return;
             objects.sort((a, b) => a.name.localeCompare(b.name))
             objects[0].node.x = 670; objects[0].node.y = 60; // active
@@ -143,9 +133,7 @@ export class StateMachine_Views {
         <label className={'d-block text-center bg-success text-white p-1'}>
             <b>Events</b>
         </label>
-        {data.model.objects
-            .filter(o => o.instanceof)
-            .filter(o => o.instanceof.name === 'Event')
+        {data.model.$event.instances
             .map(o => <Field key={o.id} data={o}></Field>)
         }
     </div>`;
@@ -161,16 +149,16 @@ export class StateMachine_Views {
 
     private static text = (event: LClass, command: LClass, state: LClass) => `<div className={'root bg-white p-2'}>
         <h5 className={'p-1'}>Model to Text</h5>
-        <hr className={'mt-4'} />
-        {data.objects.filter(o => o.instanceof && o.instanceof.id === '${event.id}').map(event => {
+        <hr className={'mt-2'} />
+        {data.$event.instances.map(event => {
             return(<div>event: {event.$name.value}, "{event.$code.value}"</div>);
         })}
         <hr className={'my-2'} />
-        {data.objects.filter(o => o.instanceof && o.instanceof.id === '${command.id}').map(command => {
+        {data.$command.instances.map(command => {
             return(<div>command: {command.$name.value}, "{command.$code.value}"</div>);
         })}
         <hr className={'my-2'} />
-        {data.objects.filter(o => o.instanceof && o.instanceof.id === '${state.id}').map(event => {
+        {data.$state.instances.map(event => {
             return(<div>
                 state: {event.$name.value} DO <br />
                 <div className={'ms-4 d-flex'}>

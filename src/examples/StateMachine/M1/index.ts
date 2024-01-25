@@ -2,7 +2,7 @@ import {DModel, DValue, LClass, LModel, LObject, LProject, SetFieldAction, U} fr
 
 export class StateMachine_M1 {
     static load1(project: LProject, m2: LModel, state: LClass, transition: LClass, command: LClass, event: LClass): [LModel, LObject] {
-        const m1 = this.create(project, m2);
+        const m1 = this.create(undefined, project, m2);
         /* Command */
         const command1 = this.createCommand(m1, command, 'unlockDoor ud', '');
         const command2 = this.createCommand(m1, command, 'lockPanel lp', '');
@@ -31,8 +31,8 @@ export class StateMachine_M1 {
 
         return [m1, idle];
     }
-    static load2(project: LProject, m2: LModel, state: LClass, transition: LClass, command: LClass, event: LClass) {
-        const m1 = this.create(project, m2);
+    static load2(name: string, project: LProject, m2: LModel, state: LClass, transition: LClass, command: LClass, event: LClass) {
+        const m1 = this.create(name, project, m2);
         /* 168 Properties (84 commands & 84 events), 40 states and 48 transitions */
         const commandsLength = 84; const eventsLength = 84; const statesLength = 40; const transitionsLength = 48;
         const commands: LObject[] = []; const events: LObject[] = []; const states: LObject[] = []; const transitions: LObject[] = [];
@@ -48,8 +48,8 @@ export class StateMachine_M1 {
         return [m1];
     }
 
-    private static create(project: LProject, m2: LModel): LModel {
-        const dModel: DModel = DModel.new(undefined, m2.id, false, true);
+    private static create(name: string|undefined, project: LProject, m2: LModel): LModel {
+        const dModel: DModel = DModel.new(name, m2.id, false, true);
         const lModel: LModel = LModel.fromD(dModel);
         SetFieldAction.new(project.id, 'models', lModel.id, '+=', true);
         SetFieldAction.new(project.id, 'graphs', lModel.node?.id, '+=', true);

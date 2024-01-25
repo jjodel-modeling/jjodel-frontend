@@ -9,7 +9,7 @@ import {
     LProject,
     LUser, LViewElement,
     LViewPoint,
-    SetFieldAction, SetRootFieldAction, U
+    SetFieldAction, SetRootFieldAction, TRANSACTION, U
 } from '../../joiner';
 import {StateMachine_M2} from './M2';
 import {StateMachine_M1} from './M1';
@@ -65,17 +65,14 @@ export class StateMachine {
     }
 
     static loadBig(name: string) {
-        SetRootFieldAction.new('isLoading', true);
         this.loadM2(name);
         /* Model */
-        for(let i = 0; i < 72; i++) {
-            console.log(`Loading ${i}/72`);
-            BEGIN()
-            StateMachine_M1.load2(this.project, this.M2, this.state, this.transition, this.command, this.event);
-            END()
-        }
+        TRANSACTION(() => {
+            for(let i = 0; i < 72; i++) {
+                StateMachine_M1.load2(`diagram_${i + 1}`, this.project, this.M2, this.state, this.transition, this.command, this.event);
+            }
+        })
         this.loadViews();
-        SetRootFieldAction.new('isLoading', false);
     }
 
     static load0(name: string) {
