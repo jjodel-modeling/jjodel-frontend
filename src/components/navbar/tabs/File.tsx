@@ -72,6 +72,7 @@ function FileComponent(props: AllProps) {
                         <i className={'ms-auto bi bi-caret-right-fill'} />
                         <ul className={'submenu dropdown-menu'}>
                             {metamodels.map((metamodel, index) => {
+                                if(!metamodel) return(<></>);
                                 return(<li key={index} tabIndex={-1} onClick={e => createM1(metamodel)} className={'dropdown-item'}>
                                     {metamodel.name}
                                 </li>)
@@ -84,6 +85,7 @@ function FileComponent(props: AllProps) {
                 <i className={'ms-auto bi bi-caret-right-fill'} />
                 <ul className={'submenu dropdown-menu'}>
                     {elements.map((m, index) => {
+                        if(!m) return(<></>);
                         return(<li key={index} tabIndex={-1} onClick={e => open(m)} className={'dropdown-item'}>
                             {m.name}
                         </li>)

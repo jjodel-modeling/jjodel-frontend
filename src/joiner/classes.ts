@@ -674,7 +674,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this; }
 
     DUser(username: string): this {
-        const _this: DUser = this.thiss as unknown as DUser;;
+        const _this: DUser = this.thiss as unknown as DUser;
         _this.username = username;
         statehistory[_this.id] = {undoable:[], redoable:[]};
         // todo: make it able to combine last 2 changes with a keystroke.
@@ -890,12 +890,14 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this;
     }
 
-    DProject(type: DProject['type'], name: string, m2: DModel[], m1: DModel[]): this {
+    DProject(type: DProject['type'], name: string, state: DProject['state'], m2: DProject['metamodels'], m1: DProject['models'], id?: DProject['id']): this {
         const _this: DProject = U.wrapper<DProject>(this.thiss);
-        _this.metamodels = Pointers.fromArr(m2) as Pointer<DModel>[];
-        _this.models = Pointers.fromArr(m1) as Pointer<DModel>[];
+        _this.metamodels = m2;
+        _this.models = m1;
         _this.type = type;
         _this.name = name;
+        _this.state = state;
+        if(id) _this.id = id;
         this.setExternalPtr(DUser.current, 'projects', '+=');
         return this;
     }
@@ -1828,9 +1830,11 @@ export class DProject extends DPointerTargetable {
     activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
     // collaborators dict user: priority
 
-    public static new(type: DProject['type'], name: string, m2?: DModel[], m1?: DModel[]): DProject {
+    state: string = '';
+
+    public static new(type: DProject['type'], name: string, state?: DProject['state'], m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id']): DProject {
         return new Constructors(new DProject('dwc'), undefined, true, undefined)
-            .DPointerTargetable().DProject(type, name, m2 || [], m1 || []).end(); }
+            .DPointerTargetable().DProject(type, name, state || '', m2 || [], m1 || [], id).end(); }
 }
 
 @RuntimeAccessible('LProject')
@@ -1850,6 +1854,9 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     // stackViews!: LViewElement[];
     viewpoints!: LViewPoint[];
     activeViewpoint!: LViewPoint;
+
+    // stringify state
+    state!: string;
 
     /* DATA */
     readonly packages!: LPackage[];
@@ -1893,6 +1900,15 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected set_author(val: Pack<this['author']>, context: Context): boolean {
         const data = context.data;
         SetFieldAction.new(data.id, 'author', Pointers.from(val), '', true);
+        return true;
+    }
+
+    protected get_state(context: Context): this['state'] {
+        return context.data.state;
+    }
+    protected set_state(val: this['state'], context: Context): boolean {
+        const data = context.data;
+        SetFieldAction.new(data.id, 'state', val, '', false);
         return true;
     }
 

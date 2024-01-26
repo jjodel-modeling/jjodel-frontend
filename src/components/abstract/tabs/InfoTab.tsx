@@ -1,6 +1,6 @@
 import type {DState, LProject} from '../../../joiner';
 import {U, Input, DUser, LUser, LModel} from '../../../joiner';
-import {Dispatch, ReactElement} from 'react';
+import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import type {Dictionary, FakeStateProps} from '../../../joiner/types';
 import DockManager from "../DockManager";
@@ -9,6 +9,7 @@ function m2Row(model: LModel) { return mRow(model, false) }
 function m1Row(model: LModel) { return mRow(model, true) }
 // too small to justify a separate file
 function mRow(model: LModel, showInstanceOf: boolean = false) {
+    if(!model) return(<></>);
     return (
         <label className={'ms-3 d-block'} key={model.id} onClick={()=>DockManager.open2(model)} style={{cursor: 'pointer'}}>
             - {model.name}{

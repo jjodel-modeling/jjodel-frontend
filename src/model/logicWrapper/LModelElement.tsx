@@ -1,19 +1,15 @@
 import type {
-    LVoidVertex,
-    PackagePointers,
-    EdgePointers,
-    AnnotationPointers,
     AttributePointers,
     EnumPointers,
     LiteralPointers,
-    OperationPointers,
+    LtoD,
+    LVoidVertex,
+    ModelPointers,
     ObjectPointers,
-    GraphPointers,
+    OperationPointers,
+    PackagePointers,
     ParameterPointers,
     ReferencePointers,
-    VertexPointers,
-    ModelPointers,
-    LtoD,
 } from "../../joiner";
 import {
     Abstract,
@@ -73,7 +69,6 @@ import {
     ECoreRoot
 } from "../../api/data";
 import {ValuePointers} from "./PointerDefinitions";
-import {ShortDefaultEClasses} from "../../common/U";
 
 
 @Node

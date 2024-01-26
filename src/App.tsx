@@ -1,17 +1,8 @@
-import React, {Dispatch} from 'react';
+import React, {Dispatch, useState} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {
-    DState,
-    DUser,
-    stateInitializer,
-    LUser,
-    statehistory,
-    Json,
-    SetRootFieldAction,
-    LPointerTargetable
-} from "./joiner";
+import {DState, DUser, LocalStorage, LUser, SetRootFieldAction, statehistory, stateInitializer} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import Navbar from "./components/navbar/Navbar";
@@ -21,47 +12,51 @@ import Editor from "./pages/Editor";
 import Helper from "./components/helper/Helper";
 import Auth from "./pages/Auth";
 import {useEffectOnce} from "usehooks-ts";
-import PersistanceApi from "./api/persistance";
 import CollaborativeAttacher from './components/collaborative/CollaborativeAttacher';
-import {StateMachine} from './examples/StateMachine';
+import {HashRouter, Route, Routes, useNavigate} from 'react-router-dom';
+import Storage from "./data/storage";
+import AuthPage from "./pages/Auth";
+import DashboardPage from "./pages/Dashboard";
+import {ProjectsApi} from "./api/persistance";
+import EditorPage from "./pages/Editor";
 
 let userHasInteracted = false;
 function endPendingActions() {
     if (!userHasInteracted) firstInteraction();
 }
-function firstInteraction(){
+function firstInteraction() {
     statehistory.globalcanundostate = true;
 }
 
-// todo: memoization which also checks for DUser.current and DUser.offlineMode changes other than prop changes
 function App(props: AllProps): JSX.Element {
     const debug = props.debug;
     const isLoading = props.isLoading;
-    let user: LUser = props.user;
+    const [user, setUser] = useState<DUser['id']|null>(null);
 
-    console.log("app render", {u:DUser.current, o:DUser.offlineMode})
-    if (DUser.offlineMode && !DUser.current) {
-        stateInitializer();
-        let du = DUser.new('adminOffline', "Pointer_adminOffline");
-        DUser.current = du.id;
-        user = LPointerTargetable.from(du);
-    }
     useEffectOnce(() => {
-        if (!debug || DUser.offlineMode) return;
+        stateInitializer();
         (async function() {
-            SetRootFieldAction.new('isLoading', true);
-            const response = await PersistanceApi.login('admin@mail.it', 'admin');
-            const user = response.body as Json;
-            const id = user.id as string;
-            const username = user.username as string;
-            DUser.new(username, id);
-            DUser.current = id;
-            stateInitializer();
-            SetRootFieldAction.new('isLoading', false);
+            const user = Storage.read<DUser>('user');
+            if(!user) return;
+            DUser.new(user.username, user.id);
+            DUser.current = user.id; setUser(user.id);
+            await ProjectsApi.getAll();
         })();
-    })
+    });
 
-    const project = user?.project;
+    if(isLoading) return(<Loader />);
+    return(<HashRouter>
+        <Routes>
+            {(!user) ? <>
+                <Route path={'*'} element={<AuthPage setUser={setUser} />} />
+            </> : <>
+                <Route path={'project'} element={<EditorPage />} />
+                <Route path={'*'} element={<DashboardPage />} />
+            </>}
+        </Routes>
+    </HashRouter>);
+
+    /*
     if (user) {
         return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? ' debug' : '')}
                     onClick={e => statehistory.globalcanundostate = true}>
@@ -76,14 +71,14 @@ function App(props: AllProps): JSX.Element {
             <Auth />
         </>);
     }
+    */
 }
 
 interface OwnProps {room?: string}
 interface StateProps {
     offlineMode: boolean,
     debug: boolean,
-    isLoading: boolean,
-    user: LUser
+    isLoading: boolean
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -93,11 +88,6 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     ret.debug = state.debug;
     ret.isLoading = state.isLoading;
-    ret.user = LUser.fromPointer(DUser.current);
-    // needed here as props, because apparently functional components are memoized by default.
-    ret.offlineMode = DUser.offlineMode;
-    console.log("app re mapstate", {u:DUser.current, o:DUser.offlineMode});
-
     return ret;
 }
 
@@ -112,12 +102,3 @@ export const AppConnected = connect<StateProps, DispatchProps, OwnProps, DState>
 )(App);
 
 export default AppConnected;
-
-
-/* SPLASH SCREEN
-return(<div className={'w-100 h-100 text-center bg-smoke'}>
-    <img style={{height: '60%', width: '80%'}} className={'mt-3 rounded shadow'} src={SplashImage}></img>
-    <Oval height={80} width={80} wrapperStyle={{justifyContent: 'center'}} wrapperClass={'mt-3'}
-          color={'#475e6c'} secondaryColor={'#ff8811'} />
-</div>);
-*/

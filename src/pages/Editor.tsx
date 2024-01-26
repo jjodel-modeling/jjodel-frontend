@@ -1,15 +1,35 @@
-import {Dispatch, ReactElement} from 'react';
+import {Dispatch, ReactElement, useEffect, useState} from 'react';
 import {connect} from 'react-redux';
-import {DState, DUser, LUser} from '../joiner';
+import {DProject, DState, DUser, LoadAction, LProject, LUser} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 import Dock from '../components/abstract/Dock';
+import useQuery from "../hooks/useQuery";
+import {ProjectsApi} from "../api/persistance";
+import Navbar from "../components/navbar/Navbar";
+import {SaveManager} from "../components/topbar/SaveManager";
 
 
 function EditorComponent(props: AllProps) {
     const user = props.user;
-    const project = user.project;
+    const query = useQuery();
+    const id = query.get('id') || '';
 
-    return(<Dock />);
+    useEffect(() => {
+        (async function() {
+            const project = await ProjectsApi.getOne(id);
+            if(!project) return;
+            user.project = LProject.fromPointer(project.id);
+            if(!project.state) return;
+            SaveManager.load(project.state);
+        })();
+    }, [id]);
+
+    if(user.project) return(<>
+        <Navbar />
+        <Dock />
+    </>);
+    return(<div>Error</div>)
+
 }
 interface OwnProps {}
 interface StateProps {user: LUser}
@@ -33,9 +53,9 @@ export const EditorConnected = connect<StateProps, DispatchProps, OwnProps, DSta
     mapDispatchToProps
 )(EditorComponent);
 
-const Editor = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+const EditorPage = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
     return <EditorConnected {...{...props, children}} />;
 }
 
-export default Editor;
+export default EditorPage;
 
