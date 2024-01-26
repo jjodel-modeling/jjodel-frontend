@@ -61,7 +61,7 @@ export class StateMachine_Views {
     private static model = `<div className={'root'}>
         {!data && 'Model data missing.'}
         <div className='edges' style={{zIndex:101, position: 'absolute', height: 0, width: 0, overflow: 'visible'}}>
-            {data.$transition.instances
+            {data.$transitions
                 .map((t, i) => {
                     if(t.$source.value && t.$target.value && t.$trigger.value)
                         return(<Edge key={i} label={() => t.$trigger.value.$name.value} 
@@ -73,7 +73,7 @@ export class StateMachine_Views {
                     return(<DefaultNode key={t.id} data={t} />)
                 })
             }
-            {data.$reset && data.$reset.instances
+            {data.$reset && data.$resets
                 .map((r, i) => {
                     if(!r.node || !r.$transition.value) return(<div></div>)
                     return(<Edge key={i}
@@ -83,7 +83,7 @@ export class StateMachine_Views {
                     />)
             })}
         </div>
-        {data.otherObjects()
+        {data.otherObjects(['Event', 'Command'])
             .map(object => <DefaultNode key={object.id} data={object} />)
         }
         <button style={{position: 'absolute', right: 10, top: 10}} className={'p-1 btn btn-danger'} onClick={e => {

@@ -14,7 +14,7 @@ export class StateMachine_M1 {
         const event3 = this.createEvent(m1, event, 'lightOn Io', '');
         const event4 = this.createEvent(m1, event, 'drawerOpened do', '');
         /* Events */
-        const events = m1.addObject({name: 'Events'}, undefined);
+        const events = m1.addObject({}, null);
         /* State */
         const idle = this.createState(m1, state, 'idle', [command1, command2]);
         const active = this.createState(m1, state, 'active', []);

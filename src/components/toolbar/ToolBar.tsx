@@ -2,36 +2,30 @@ import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import "./style.scss";
 import {
-    DState,
+    Constructors,
+    DEdge,
+    DEdgePoint,
     DGraphElement,
     Dictionary,
     DModel,
     DModelElement,
-    DNamedElement,
     DObject,
     DocString,
-    DPointerTargetable,
-    DViewElement,
+    DState,
+    DVoidEdge,
+    EdgeSegment,
+    LEdgePoint,
     LGraphElement,
     LModel,
     LModelElement,
     LObject,
+    Log,
     LValue,
-    LViewElement,
-    MyProxyHandler,
+    LVoidEdge,
     Pointer,
     SetFieldAction,
-    RuntimeAccessibleClass,
-    DVoidEdge,
-    DEdge,
-    DEdgePoint,
-    EdgeSegment,
-    LVoidEdge,
-    Constructors,
-    WVoidEdge,
-    Log,
-    LEdgePoint, DUser,
-    U, LPointerTargetable
+    U,
+    WVoidEdge
 } from "../../joiner";
 import {InitialVertexSizeObj} from "../../joiner/types";
 import ModellingIcon from "../forEndUser/ModellingIcon";

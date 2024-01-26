@@ -36,7 +36,7 @@ function DashboardComponent(props: AllProps) {
         let name = 'project_' + 0;
         let projectNames: string[] = user.projects.map(p => p.name);
         let project: DProject = null as any;
-        await TRANSACTION(()=>{
+        TRANSACTION(() => {
             SetRootFieldAction.new('isLoading', true);
             name = U.increaseEndingNumber(name, false, false, newName => projectNames.indexOf(newName) >= 0);
             let m2 = DModel.new('metamodel', undefined, true, true);
@@ -77,39 +77,41 @@ function DashboardComponent(props: AllProps) {
                 <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('collaborative', e)}>
                     + Collaborative
                 </button>
-                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.loadBig('State Machine BIG')}>
+                {DUser.isStateMachine && <section>
+                    <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.loadBig('State Machine BIG')}>
                     + BIG
-                </button>
-                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load0('State Machine s0')}>
-                    + S0
-                </button>
-                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load1('State Machine s1')}>
-                    + S1
-                </button>
-                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load2('State Machine s2')}>
-                    + S2
-                </button>
-                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load3('State Machine s3')}>
-                    + S3
-                </button>
-                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load4('State Machine s4')}>
-                    + S4
-                </button>
-                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load7('State Machine s7')}>
-                    + S7
-                </button>
-                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load9('State Machine s9')}>
-                    + S9
-                </button>
-                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load10('State Machine s10')}>
-                    + S10
-                </button>
-                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load11('State Machine s11')}>
-                    + S11
-                </button>
-                <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load12('State Machine s12')}>
-                    + S12
-                </button>
+                    </button>
+                    <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load0('State Machine s0')}>
+                        + S0
+                    </button>
+                    <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load1('State Machine s1')}>
+                        + S1
+                    </button>
+                    <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load2('State Machine s2')}>
+                        + S2
+                    </button>
+                    <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load3('State Machine s3')}>
+                        + S3
+                    </button>
+                    <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load4('State Machine s4')}>
+                        + S4
+                    </button>
+                    <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load7('State Machine s7')}>
+                        + S7
+                    </button>
+                    <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load9('State Machine s9')}>
+                        + S9
+                    </button>
+                    <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load10('State Machine s10')}>
+                        + S10
+                    </button>
+                    <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load11('State Machine s11')}>
+                        + S11
+                    </button>
+                    <button className={'btn btn-primary p-1 mx-1'} onClick={e => StateMachine.load12('State Machine s12')}>
+                        + S12
+                    </button>
+                </section>}
             </div>
 
         </div>
