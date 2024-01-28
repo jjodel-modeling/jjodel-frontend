@@ -12,7 +12,7 @@ import {SaveManager} from "../topbar/SaveManager";
 import Examples from "./tabs/Examples";
 import Storage from "../../data/storage";
 import {useLocation, useNavigate} from "react-router-dom";
-import {ProjectsApi} from "../../api/persistance";
+import {AuthApi, ProjectsApi} from "../../api/persistance";
 import * as path from "path";
 
 let clickTimestamps: number[] = [];
@@ -92,8 +92,8 @@ function NavbarComponent(props: AllProps) {
                     <label style={{cursor: 'pointer'}} className={'text-white'}>{user.username[0].toUpperCase()}</label>
                 </div>
                 <ul className={'dropdown-menu mt-2'} style={{left: '-3vw'}}>
-                    <li tabIndex={-1} onClick={() => {
-                        Storage.reset();
+                    <li tabIndex={-1} onClick={async() => {
+                        await AuthApi.logout();
                         navigate('/auth');
                         U.refresh();
                     }} className={'dropdown-item'}>

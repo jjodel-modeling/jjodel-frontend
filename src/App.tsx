@@ -33,12 +33,11 @@ function App(props: AllProps): JSX.Element {
     return(<HashRouter>
         <PathChecker />
         <Routes>
-            {(!DUser.current) ? <>
-                <Route path={'auth'} element={<AuthPage />} />
-            </> : <>
+            {DUser.current && <>
                 <Route path={'project'} element={<EditorPage />} />
                 <Route path={'dashboard'} element={<DashboardPage />} />
             </>}
+            <Route path={'auth'} element={<AuthPage />} />
             <Route path={'*'} element={<Loader />} />
         </Routes>
     </HashRouter>);

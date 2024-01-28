@@ -3,45 +3,50 @@ import {useStateIfMounted} from 'use-state-if-mounted';
 import {DUser, SetRootFieldAction, U} from '../joiner';
 import Storage from '../data/storage';
 import {useNavigate} from "react-router-dom";
+import {AuthApi} from "../api/persistance";
 
 function AuthPage() {
     const [isRegister, setIsRegister] = useStateIfMounted(false);
     const [username, setUsername] = useStateIfMounted('');
     const [email, setEmail] = useStateIfMounted('');
     const [password, setPassword] = useStateIfMounted('');
-    const [error, setError] = useStateIfMounted('');
     const navigate = useNavigate();
 
     const onSubmit = async(e: FormEvent<HTMLFormElement>) => {
-        e.preventDefault(); setError('');
+        e.preventDefault();
         SetRootFieldAction.new('isLoading', true);
-        Storage.write('offline', 'false');
-        await login(email, password);
+        if(isRegister) await register(username, email, password);
+        else await login(email, password);
         SetRootFieldAction.new('isLoading', false);
     }
     const login = async(email: string, password: string) => {
-        if(email === 'admin@mail.it' && password === 'admin') {
-            const user = DUser.new('admin');
-            Storage.write('user', user);
-            navigate('/dashboard');
-            U.refresh();
-        } else setError('Bad Data!');
+        const response = await AuthApi.login(email, password);
+        if(response.code !== 200) {
+            alert('Bad Data!');
+            return;
+        }
+        const data = U.wrapper<DUser>(response.data);
+        Storage.write('token', data.token);
+        const user = DUser.new(data.username, data.id);
+        Storage.write('user', user);
+        navigate('/dashboard');
+        U.refresh();
     }
     const register = async(username: string, email: string, password: string) => {
-        /*
-        const response = await PersistanceApi.register(username, email, password);
-        if(response.code === 200) {
-            const user = response.body as Json;
-            const id = user.id as string;
-            const username = user.username as string;
-            DUser.new(username, id); DUser.current = id;
-        } else setError(response.body as string);
-        */
+        const response = await AuthApi.register(username, email, password);
+        if(response.code !== 200) {
+            alert('Bad Data!');
+            return;
+        }
+        const data = U.wrapper<DUser>(response.data);
+        Storage.write('token', data.token);
+        const user = DUser.new(data.username, data.id);
+        Storage.write('user', user);
+        navigate('/dashboard');
+        U.refresh();
     }
     const offline = () => {
-        Storage.write('offline', 'true');
-        const user = DUser.new('admin');
-        Storage.write('user', user);
+        AuthApi.offline();
         navigate('/dashboard');
         U.refresh();
     }
@@ -52,7 +57,6 @@ function AuthPage() {
                 {isRegister ? 'REGISTER' : 'LOGIN'}
             </label>
             <hr />
-            {error && <section><label className={'text-danger mt-2 w-min text-center'}>{error}</label></section>}
             <input className={'w-100 input w-fit d-block mx-auto mt-3'} placeholder={'Email'}
                    value={email} onChange={e => setEmail(e.target.value)} type={'email'}  required={true} />
             {isRegister &&

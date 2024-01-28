@@ -8,10 +8,9 @@ function PathChecker() {
 
     useEffect(() => {
         const newRenders = renders + 1;
-        if(newRenders > 1) {U.refresh();}
+        if(newRenders > 1) U.refresh();
         setRenders(newRenders);
     }, [pathname]);
-
 
     return(<div className={'d-none'}>{renders}</div>)
 }

@@ -36,9 +36,8 @@ console.warn('loading ts U log');
 
 @RuntimeAccessible('U')
 export class U {
-
     static isOffline(): boolean {
-        return !!(Storage.read('offline'));
+        return Storage.read('offline') === 'true';
     }
     static refresh(): void {
         window.location.reload();

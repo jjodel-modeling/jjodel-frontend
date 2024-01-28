@@ -1762,6 +1762,7 @@ export class DUser extends DPointerTargetable {
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     id!: Pointer<DUser>;
     username!: string;
+    token!: string;
     projects: Pointer<DProject, 0, 'N', LProject> = [];
     project: Pointer<DProject, 0, 1, LProject> = '';
     __isUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.

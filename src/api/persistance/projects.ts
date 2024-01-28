@@ -1,31 +1,32 @@
 import {DProject, DUser, LProject, LUser, SetFieldAction, store, U} from '../../joiner';
 import Storage from "../../data/storage";
 import {SaveManager} from "../../components/topbar/SaveManager";
+import Api from "../../data/api";
 
 class ProjectsApi {
     static async create(type: DProject['type'], name: DProject['name']): Promise<DProject> {
         const project = DProject.new(type, name);
         if(U.isOffline()) Offline.create(project);
-        else await Online.dummy();
+        else await Online.create(project);
         return project;
     }
     static async getAll(): Promise<void> {
         if(U.isOffline()) Offline.getAll();
-        else await Online.dummy();
+        else await Online.getAll();
     }
     static async delete(project: LProject): Promise<void> {
         if(U.isOffline()) Offline.delete(project.__raw as DProject);
-        else await Online.dummy();
+        else await Online.delete(project.__raw as DProject);
         project.delete();
     }
     static async getOne(id: DProject['id']): Promise<null|DProject> {
         if(U.isOffline()) return Offline.getOne(id);
-        else return await Online.dummy();
+        else return await Online.getOne(id);
     }
     static async save(project: LUser['project']): Promise<void> {
         if(!project) return;
         if(U.isOffline()) Offline.save(project.__raw as DProject);
-        else await Online.dummy();
+        else await Online.save(project.__raw as DProject);
     }
 }
 
@@ -63,8 +64,36 @@ class Offline {
 }
 
 class Online {
-    static async dummy(): Promise<null> {
-        return null;
+    static async create (project: DProject): Promise<void> {
+        await Api.post(`${Api.persistance}/projects`, {
+           id: project.id,
+           name: project.name,
+           type: project.type
+        });
+    }
+    static async getAll(): Promise<void> {
+        const response = await Api.get(`${Api.persistance}/projects`);
+        if(response.code !== 200) {
+            /* 401: Unauthorized -> Invalid Token (Local Storage)  */
+            Storage.reset();
+            U.refresh();
+        }
+        const data = U.wrapper<DProject[]>(response.data);
+        for(const project of data)
+            DProject.new(project.type, project.name, project.state, [], [], project.id);
+    }
+    static async delete(project: DProject): Promise<void> {
+        await Api.delete(`${Api.persistance}/projects/${project.id}`);
+    }
+    static async getOne(id: string): Promise<DProject|null> {
+        const response = await Api.get(`${Api.persistance}/projects/${id}`);
+        if(response.code !== 200) return null;
+        return U.wrapper<DProject>(response.data);
+    }
+    static async save(project: DProject): Promise<void> {
+        const state = JSON.stringify(store.getState());
+        await Api.patch(`${Api.persistance}/projects/${project.id}`, {...project, state});
+        alert('Saved');
     }
 }
 
