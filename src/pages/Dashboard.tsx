@@ -18,14 +18,16 @@ function DashboardComponent(props: AllProps) {
         let name = 'project_' + 0;
         const projectNames: string[] = projects.map(p => p.name);
         name = U.increaseEndingNumber(name, false, false, newName => projectNames.indexOf(newName) >= 0);
-        await ProjectsApi.create(type, name);
+        const project = await ProjectsApi.create(type, name);
+        selectProject(project.id);
     }
     const deleteProject = async(project: LProject) => {
         await ProjectsApi.delete(project);
     }
     const selectProject = (project: DProject['id']) => {
-        window.open(`${window.location.origin}/#/project?id=${project}`)
-        // navigate(`/project?id=${project}`);
+        // window.open(`${window.location.origin}/#/project?id=${project}`)
+        navigate(`/project?id=${project}`);
+        U.refresh();
     }
 
     return (<>

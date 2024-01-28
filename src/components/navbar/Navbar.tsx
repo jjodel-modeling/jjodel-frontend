@@ -1,7 +1,7 @@
 import './style.scss';
-import React, {Dispatch, ReactElement} from 'react';
+import React, {Dispatch, ReactElement, useEffect, useState} from 'react';
 import {connect} from 'react-redux';
-import {DState, DUser, LUser, SetRootFieldAction} from '../../joiner';
+import {DState, DUser, LUser, SetRootFieldAction, U} from '../../joiner';
 import File from './tabs/File';
 import Edit from './tabs/Edit';
 import Debug from './tabs/Debug';
@@ -11,8 +11,9 @@ import Collaborative from "../collaborative/Collaborative";
 import {SaveManager} from "../topbar/SaveManager";
 import Examples from "./tabs/Examples";
 import Storage from "../../data/storage";
-import {useNavigate} from "react-router-dom";
+import {useLocation, useNavigate} from "react-router-dom";
 import {ProjectsApi} from "../../api/persistance";
+import * as path from "path";
 
 let clickTimestamps: number[] = [];
 const clicksRequired = 2;
@@ -22,10 +23,12 @@ function NavbarComponent(props: AllProps) {
     const user = props.user;
     const project = user.project;
     const navigate = useNavigate();
+    const {pathname} = useLocation();
+    const [renders, setRenders] = useState(0);
 
     const closeProject = async() => {
         navigate('/dashboard');
-        window.location.reload();
+        U.refresh();
         /*
         if(project?.type === 'collaborative') {
             SetRootFieldAction.new('collaborativeSession', false);
@@ -54,10 +57,10 @@ function NavbarComponent(props: AllProps) {
                         <Edit />
                         {/*<Share />*/}
                         {debug && undefined /* <Examples />*/}
-                        {/*<hr />
+                        <hr />
                         <li tabIndex={-1} onClick={closeProject} className={'text-danger dropdown-item'}>
                             Close Project
-                        </li>*/}
+                        </li>
                     </ul>
                 </li> :
                 <li className={'nav-item dropdown'}>
@@ -92,7 +95,7 @@ function NavbarComponent(props: AllProps) {
                     <li tabIndex={-1} onClick={() => {
                         Storage.reset();
                         navigate('/auth');
-                        window.location.reload();
+                        U.refresh();
                     }} className={'dropdown-item'}>
                         Logout
                     </li>

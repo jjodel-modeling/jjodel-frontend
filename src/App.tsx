@@ -2,23 +2,16 @@ import React, {Dispatch, useState} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {DState, DUser, LocalStorage, LUser, SetRootFieldAction, statehistory, stateInitializer} from "./joiner";
+import {DState, DUser, statehistory, stateInitializer} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
-import Navbar from "./components/navbar/Navbar";
 import {FakeStateProps} from "./joiner/types";
-import Dashboard from "./pages/Dashboard";
-import Editor from "./pages/Editor";
-import Helper from "./components/helper/Helper";
-import Auth from "./pages/Auth";
-import {useEffectOnce} from "usehooks-ts";
-import CollaborativeAttacher from './components/collaborative/CollaborativeAttacher';
-import {HashRouter, Route, Routes, useNavigate} from 'react-router-dom';
-import Storage from "./data/storage";
-import AuthPage from "./pages/Auth";
 import DashboardPage from "./pages/Dashboard";
-import {ProjectsApi} from "./api/persistance";
 import EditorPage from "./pages/Editor";
+import AuthPage from "./pages/Auth";
+import {useEffectOnce} from "usehooks-ts";
+import {HashRouter, Route, Routes} from 'react-router-dom';
+import PathChecker from "./components/pathChecker/PathChecker";
 
 let userHasInteracted = false;
 function endPendingActions() {
@@ -30,29 +23,23 @@ function firstInteraction() {
 
 function App(props: AllProps): JSX.Element {
     const debug = props.debug;
-    const isLoading = props.isLoading;
-    const [user, setUser] = useState<DUser['id']|null>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffectOnce(() => {
-        stateInitializer();
-        (async function() {
-            const user = Storage.read<DUser>('user');
-            if(!user) return;
-            DUser.new(user.username, user.id);
-            DUser.current = user.id; setUser(user.id);
-            await ProjectsApi.getAll();
-        })();
+        stateInitializer().then(() => setLoading(false));
     });
 
-    if(isLoading) return(<Loader />);
+    if(props.isLoading || loading) return(<Loader />);
     return(<HashRouter>
+        <PathChecker />
         <Routes>
-            {(!user) ? <>
-                <Route path={'*'} element={<AuthPage setUser={setUser} />} />
+            {(!DUser.current) ? <>
+                <Route path={'auth'} element={<AuthPage />} />
             </> : <>
                 <Route path={'project'} element={<EditorPage />} />
-                <Route path={'*'} element={<DashboardPage />} />
+                <Route path={'dashboard'} element={<DashboardPage />} />
             </>}
+            <Route path={'*'} element={<Loader />} />
         </Routes>
     </HashRouter>);
 

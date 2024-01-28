@@ -29,6 +29,8 @@ import React from "react";
 import {LoadAction, RedoAction, UndoAction} from "../action/action";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {SimpleTree} from "../../common/SimpleTree";
+import Storage from "../../data/storage";
+import {ProjectsApi} from "../../api/persistance";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -493,7 +495,7 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
     }
 }
 
-export function stateInitializer() {
+export async function stateInitializer() {
     statehistory[DUser.current] = {redoable: [], undoable: []};
     RuntimeAccessibleClass.fixStatics();
     let dClassesMap: Dictionary<string, typeof DPointerTargetable> = {};
@@ -526,4 +528,9 @@ export function stateInitializer() {
         1
     );
     DState.init();
+    const user = Storage.read<DUser>('user');
+    if(!user) return;
+    DUser.new(user.username, user.id);
+    DUser.current = user.id;
+    await ProjectsApi.getAll();
 }

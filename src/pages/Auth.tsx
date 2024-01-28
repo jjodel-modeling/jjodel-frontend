@@ -1,12 +1,10 @@
 import {FormEvent} from 'react';
 import {useStateIfMounted} from 'use-state-if-mounted';
-import {DUser, SetRootFieldAction} from '../joiner';
+import {DUser, SetRootFieldAction, U} from '../joiner';
 import Storage from '../data/storage';
 import {useNavigate} from "react-router-dom";
 
-type Props = {setUser: (user: DUser['id']) => void}
-function AuthPage(props: Props) {
-    const {setUser} = props;
+function AuthPage() {
     const [isRegister, setIsRegister] = useStateIfMounted(false);
     const [username, setUsername] = useStateIfMounted('');
     const [email, setEmail] = useStateIfMounted('');
@@ -17,6 +15,7 @@ function AuthPage(props: Props) {
     const onSubmit = async(e: FormEvent<HTMLFormElement>) => {
         e.preventDefault(); setError('');
         SetRootFieldAction.new('isLoading', true);
+        Storage.write('offline', 'false');
         await login(email, password);
         SetRootFieldAction.new('isLoading', false);
     }
@@ -24,8 +23,8 @@ function AuthPage(props: Props) {
         if(email === 'admin@mail.it' && password === 'admin') {
             const user = DUser.new('admin');
             Storage.write('user', user);
-            DUser.current = user.id; setUser(user.id);
             navigate('/dashboard');
+            U.refresh();
         } else setError('Bad Data!');
     }
     const register = async(username: string, email: string, password: string) => {
@@ -38,6 +37,13 @@ function AuthPage(props: Props) {
             DUser.new(username, id); DUser.current = id;
         } else setError(response.body as string);
         */
+    }
+    const offline = () => {
+        Storage.write('offline', 'true');
+        const user = DUser.new('admin');
+        Storage.write('user', user);
+        navigate('/dashboard');
+        U.refresh();
     }
 
     return(<section className={'w-100 h-100'}>
@@ -63,10 +69,7 @@ function AuthPage(props: Props) {
                 </b>
                 <br/>Or start in
                 <b tabIndex={-1} className={'ms-1 text-primary text-decoration-none cursor-pointer'}
-                   onClick={e => {
-                        DUser.offlineMode = true;
-                        SetRootFieldAction.new('forceRerender', Date.now());
-                    }}
+                   onClick={e => offline()}
                 >
                     Offline Mode
                 </b>

@@ -31,11 +31,18 @@ import {
 import Swal from "sweetalert2";
 import {AccessModifier} from "../api/data";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
-
+import Storage from '../data/storage';
 console.warn('loading ts U log');
 
 @RuntimeAccessible('U')
 export class U {
+
+    static isOffline(): boolean {
+        return !!(Storage.read('offline'));
+    }
+    static refresh(): void {
+        window.location.reload();
+    }
 
     // damiano: eseguire una funzione costa in performance, anche se è brutto fare questi cast
     static wrapper<T>(obj: any): T {

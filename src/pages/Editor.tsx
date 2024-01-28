@@ -7,6 +7,7 @@ import useQuery from "../hooks/useQuery";
 import {ProjectsApi} from "../api/persistance";
 import Navbar from "../components/navbar/Navbar";
 import {SaveManager} from "../components/topbar/SaveManager";
+import Loader from "../components/loader/Loader";
 
 
 function EditorComponent(props: AllProps) {
@@ -28,7 +29,7 @@ function EditorComponent(props: AllProps) {
         <Navbar />
         <Dock />
     </>);
-    return(<div>Error</div>)
+    return(<Loader />);
 
 }
 interface OwnProps {}
