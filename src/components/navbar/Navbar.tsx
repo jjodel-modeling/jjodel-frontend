@@ -27,6 +27,7 @@ function NavbarComponent(props: AllProps) {
     const [renders, setRenders] = useState(0);
 
     const closeProject = async() => {
+        Storage.write('projects', []);
         navigate('/dashboard');
         U.refresh();
         /*
@@ -105,7 +106,7 @@ function NavbarComponent(props: AllProps) {
             <ul className={'navbar-nav ms-auto'}>
             </ul>
             {user.project && <li className={'nav-item'}>
-                <button disabled={DUser.offlineMode || project?.type === 'collaborative'}
+                <button disabled={true || DUser.offlineMode || project?.type === 'collaborative'}
                         onClick={async(e) => ProjectsApi.save(user.project)} style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
                     Save
                 </button>

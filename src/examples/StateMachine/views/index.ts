@@ -1,17 +1,18 @@
 import type {LClass, LProject} from '../../../joiner';
-import {DViewElement, DViewPoint, DObject, LModel, LObject, LViewPoint} from '../../../joiner';
+import {DViewElement, DViewPoint, DObject, LModel, LObject, LViewPoint, LViewElement} from '../../../joiner';
 import {Dependencies} from './dependencies';
+import ModelViews from "./model";
 
 export class StateMachine_Views {
-    static load(project: LProject, state: LClass, command: LClass, event: LClass, transition: LClass): LViewPoint {
+    static load(project: LProject, state: LClass, command: LClass, event: LClass, transition: LClass): [LViewPoint, LViewElement, LViewElement] {
         return this.create(project, state, command, event, transition);
     }
 
-    private static create(project: LProject, state: LClass, command: LClass, event: LClass, transition: LClass): LViewPoint {
+    private static create(project: LProject, state: LClass, command: LClass, event: LClass, transition: LClass): [LViewPoint, LViewElement, LViewElement] {
         /* Viewpoint */
         const viewpoint = DViewPoint.new2('StateMachine', '');
         /* Model */
-        const modelView = DViewElement.new('Model', this.model);
+        const modelView = DViewElement.new('Model', ModelViews.zero);
         modelView.viewpoint = viewpoint.id; modelView.explicitApplicationPriority = 10;
         modelView.oclCondition = 'context DModel inv: self.isMetamodel = false';
         /* State */
@@ -52,55 +53,10 @@ export class StateMachine_Views {
         textView.oclCondition = `context DModel inv: not self.isMetamodel`;
         // textView.oclCondition = `context DModel inv: self.id = '${m1.id}'`;
 
-
         viewpoint.subViews = [modelView, stateView, commandView, eventsView, transitionView].map(v => v.id);
         textViewpoint.subViews = [textView.id];
-        return LViewPoint.fromD(viewpoint);
+        return [LViewPoint.fromD(viewpoint), LViewElement.fromD(modelView), LViewElement.fromD(textView)];
     }
-
-    private static model = `<div className={'root'}>
-        {!data && 'Model data missing.'}
-        <div className='edges' style={{zIndex:101, position: 'absolute', height: 0, width: 0, overflow: 'visible'}}>
-            {data.$transitions
-                .map((t, i) => {
-                    if(t.$source.value && t.$target.value && t.$trigger.value)
-                        return(<Edge key={i} label={() => t.$trigger.value.$name.value} 
-                                    data={t.id}
-                                    view={'Pointer_ViewEdgeAssociation'} 
-                                    start={t.$source.value.node} 
-                                    end={t.$target.value.node} 
-                           />)
-                    return(<DefaultNode key={t.id} data={t} />)
-                })
-            }
-            {data.$reset && data.$resets
-                .map((r, i) => {
-                    if(!r.node || !r.$transition.value) return(<div></div>)
-                    return(<Edge key={i}
-                        view={'Pointer_ViewEdgeAssociation'} 
-                        start={r.node} 
-                        end={r.$transition.value.node} 
-                    />)
-            })}
-        </div>
-        {data.otherObjects(['Event', 'Command'])
-            .map(object => <DefaultNode key={object.id} data={object} />)
-        }
-        <button style={{position: 'absolute', right: 10, top: 10}} className={'p-1 btn btn-danger'} onClick={e => {
-            const objects = [];
-            if(data.$state) objects.push(...data.$state.instances);
-            if(data.$situation) objects.push(...data.$situation.instances);
-            if(objects.length < 5) return;
-            objects.sort((a, b) => a.name.localeCompare(b.name))
-            objects[0].node.x = 670; objects[0].node.y = 60; // active
-            objects[1].node.x = 670; objects[1].node.y = 400; // idle
-            objects[2].node.x = 250; objects[2].node.y = 400; // unlockPanel 
-            objects[3].node.x = 350; objects[3].node.y = 220; // waitingForDrawer
-            objects[4].node.x = 50; objects[4].node.y = 220; // waitingForLight
-        }}>
-            Arrange
-        </button>
-    </div>`;
 
     private static state(command: LClass): string {
         const view = `<div className={'root bg-white'} style={{'border-radius':'8px', 'border':'black solid 1px'}}>
@@ -109,7 +65,7 @@ export class StateMachine_Views {
                 'border-bottom': (data.$actions.values.length > 0) ? 'black solid 1px' : 'none',
                 'padding':'4px 2px 4px 2px'
             }}>
-                {data.name}:<b className={'ms-1'}>{data.$name.value}</b>
+                {data.instanceof.name}:<b className={'ms-1'}>{data.$name.value}</b>
                 <button className={'ms-1 circle btn btn-primary p-0'} onClick={e => {
                     const dObject = data.model.addObject(command.id);
                     const lObject = LObject.fromD(dObject);
@@ -150,15 +106,16 @@ export class StateMachine_Views {
     private static text = (event: LClass, command: LClass, state: LClass) => `<div className={'root bg-white p-2'}>
         <h5 className={'p-1'}>Model to Text</h5>
         <hr className={'mt-2'} />
-        {data.$event.instances.map(event => {
+        {data.$events.map(event => {
             return(<div>event: {event.$name.value}, "{event.$code.value}"</div>);
         })}
         <hr className={'my-2'} />
-        {data.$command.instances.map(command => {
+        {data.$commands.map(command => {
             return(<div>command: {command.$name.value}, "{command.$code.value}"</div>);
         })}
         <hr className={'my-2'} />
-        {data.$state.instances.map(event => {
+        {data.otherObjects().map(event => {
+            if(!event.$actions) return(<div></div>);
             return(<div>
                 state: {event.$name.value} DO <br />
                 <div className={'ms-4 d-flex'}>

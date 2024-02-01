@@ -1,6 +1,7 @@
 import {useLocation} from "react-router-dom";
 import {useEffect, useState} from "react";
 import {U} from '../../joiner';
+import Storage from "../../data/storage";
 
 function PathChecker() {
     const {pathname} = useLocation();

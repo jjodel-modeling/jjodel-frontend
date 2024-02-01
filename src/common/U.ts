@@ -26,7 +26,7 @@ import {
     RuntimeAccessible,
     Selectors,
     TODO,
-    windoww, RuntimeAccessibleClass, PointedBy, DViewElement
+    windoww, RuntimeAccessibleClass, PointedBy, DViewElement, store
 } from "../joiner";
 import Swal from "sweetalert2";
 import {AccessModifier} from "../api/data";

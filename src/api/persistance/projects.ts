@@ -60,6 +60,7 @@ class Offline {
         filtered.push({...project, state} as DProject);
 
         Storage.write('projects', filtered);
+        // alert('Saved')
     }
 }
 
@@ -92,8 +93,9 @@ class Online {
     }
     static async save(project: DProject): Promise<void> {
         const state = JSON.stringify(store.getState());
-        await Api.patch(`${Api.persistance}/projects/${project.id}`, {...project, state});
-        alert('Saved');
+        const response = await Api.patch(`${Api.persistance}/projects/${project.id}`, {...project, state});
+        if(response.code !== 200) alert('Cannot Save');
+        else alert('Saved')
     }
 }
 

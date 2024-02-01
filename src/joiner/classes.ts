@@ -1755,7 +1755,7 @@ let bb2 = fffff(a);
 @RuntimeAccessible('DUser')
 export class DUser extends DPointerTargetable {
     public static offlineMode: boolean = !!localStorage.getItem("offlineMode");
-    public static isStateMachine = false;
+    public static isStateMachine = true;
     // static current: Pointer<DUser> = 'Pointer_AnonymousUser';
     static current: Pointer<DUser> = '';
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];

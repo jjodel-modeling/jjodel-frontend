@@ -2,7 +2,7 @@ import React, {Dispatch, useState} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {DState, DUser, statehistory, stateInitializer} from "./joiner";
+import {DState, DUser, statehistory, stateInitializer, U} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import {FakeStateProps} from "./joiner/types";
@@ -12,6 +12,7 @@ import AuthPage from "./pages/Auth";
 import {useEffectOnce} from "usehooks-ts";
 import {HashRouter, Route, Routes} from 'react-router-dom';
 import PathChecker from "./components/pathChecker/PathChecker";
+import {AuthApi} from "./api/persistance";
 
 let userHasInteracted = false;
 function endPendingActions() {
@@ -27,6 +28,8 @@ function App(props: AllProps): JSX.Element {
 
     useEffectOnce(() => {
         stateInitializer().then(() => setLoading(false));
+        /* Offline by default */
+        if(!DUser.current) AuthApi.offline();
     });
 
     if(props.isLoading || loading) return(<Loader />);
@@ -35,10 +38,10 @@ function App(props: AllProps): JSX.Element {
         <Routes>
             {DUser.current && <>
                 <Route path={'project'} element={<EditorPage />} />
-                <Route path={'dashboard'} element={<DashboardPage />} />
+                <Route path={'*'} element={<DashboardPage />} />
             </>}
             <Route path={'auth'} element={<AuthPage />} />
-            <Route path={'*'} element={<Loader />} />
+            {/*<Route path={'*'} element={<Loader />} />*/}
         </Routes>
     </HashRouter>);
 
