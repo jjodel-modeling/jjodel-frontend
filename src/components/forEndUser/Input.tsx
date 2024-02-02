@@ -104,7 +104,7 @@ function InputComponent(props: AllProps) {
         </span>}
 
         {jsxLabel && <span onMouseEnter={e => setShowTooltip(true)}
-                            onMouseLeave={e => setShowTooltip(false)}>{jsxLabel}
+                            onMouseLeave={e => setShowTooltip(false)} style={{width: '100%'}}>{jsxLabel}
         </span>}
 
         {(tooltip && showTooltip) && <div className={'my-tooltip'}>

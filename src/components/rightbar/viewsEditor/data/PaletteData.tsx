@@ -50,7 +50,7 @@ function PaletteDataComponent(props: AllProps) {
         palette[prefix] = palette[prefix].filter((c, i) => i !== index);
         view.palette = palette;
     }
-
+    const cssIsGlobal = view.cssIsGlobal;
     return(<section className={'p-3'}>
         {Object.entries(palette).map((entry, index, entries)=>{
             let prefix = entry[0];
@@ -85,11 +85,17 @@ function PaletteDataComponent(props: AllProps) {
                 break;
             }
         }}>+</button>
-        <Input data={view} field={'cssIsGlobal'} type={"checkbox"} label={(view.cssIsGlobal ? 'Global' : 'Local')+' CSS (LESS) Editor'} />
+        <Input data={view} field={'cssIsGlobal'} type={"checkbox"} jsxLabel={
+            <span style={{width:'80%', display:'inline-block'}}>
+                {cssIsGlobal ? <b style={{color: 'inherit', fontWeight:'bold'}}>Global</b> : <b style={{color: 'inherit'}}>Local</b>}
+                {' CSS & LESS Editor '}
+                {cssIsGlobal ? <b style={{color: 'red', fontSize:'0.7em', fontWeight:'bold'}}>Use with caution</b> : ''}
+            </span>
+        } />
         {/*<label className={'ms-1 mb-1'}>{view.cssIsGlobal ? 'Global' : 'Local'} CSS Editor</label>*/}
         <div className={"monaco-editor-wrapper"} style={{
-            minHeight: '20ùpx', height:'200px'/*there is a bug of height 100% on childrens not working if parent have only minHeight*/,
-            resize: 'vertical', overflow:'hidden'}} onBlur={blur}>
+                    minHeight: '20ùpx', height:'200px'/*there is a bug of height 100% on childrens not working if parent have only minHeight*/,
+                    resize: 'vertical', overflow:'hidden'}} onBlur={blur}>
             <Editor className={'mx-1'}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                     defaultLanguage={'less'} value={view.css} onChange={change}/>
@@ -104,9 +110,9 @@ function PaletteDataComponent(props: AllProps) {
             '/ *** custom css area *** /\n' + view.css + (!cssISGlobal ? '}\n' : '\n')
             view.css
         </textarea>*/}
-        {
-            // todo: if row have only 1 color can be accessed both as palette prefix-1 or as palett prefix without number, so i can name colors.
-        }
+                {
+                    // todo: if row have only 1 color can be accessed both as palette prefix-1 or as palett prefix without number, so i can name colors.
+                }
 
     </section>);
 }

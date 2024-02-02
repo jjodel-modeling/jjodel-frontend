@@ -3,6 +3,7 @@
 export const a = 0;
 
 let data:any, node:any, view:any, component:any;
+// todo: actually inject generated color palette to css editor as prefix, so monaco editor knows them and can validate variable usage, but those lines are hidden in visual editor.
 
 /*
 * verified! firing twice the same SetRootFieldAction("a", 1) does not change state twice, reducer returns old state.
