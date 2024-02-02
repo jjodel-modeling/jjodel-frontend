@@ -1,41 +1,40 @@
-import type {
-    GObject,
-    Info,
-    LogicContext,
-    Pointer,
-    Dictionary
-} from "../../joiner";
 import {
     BEGIN,
     Constructors,
     CoordinateMode,
-    CreateElementAction,
-    Debug, Defaults,
+    Debug,
     DGraphElement,
+    Dictionary,
     DModelElement,
     DocString,
     DPointerTargetable,
+    DState,
     DViewPoint,
     EdgeBendingMode,
+    EdgeGapMode,
     EGraphElements,
     EModelElements,
     END,
     getWParams,
+    GObject,
     GraphPoint,
     GraphSize,
+    Info,
     Log,
+    LogicContext,
     LPointerTargetable,
     LViewPoint,
     MyProxyHandler,
+    Pointer,
+    Pointers,
     RuntimeAccessible,
     RuntimeAccessibleClass,
     SetFieldAction,
-    SetRootFieldAction,
     ShortAttribETypes,
+    store,
     TRANSACTION,
     U,
-    windoww,
-    EdgeGapMode, Pointers
+    windoww
 } from "../../joiner";
 
 @RuntimeAccessible('DViewElement')
@@ -74,6 +73,7 @@ export class DViewElement extends DPointerTargetable {
     appliableToClasses!: string[]; // class names: DModel, DPackage, DAttribute...
     appliableTo!: 'node'|'edge'|'edgePoint';
     subViews!: Pointer<DViewElement, 0, 'N', LViewElement>;
+    allSubViews!: Pointer<DViewElement, 0, 'N', LViewElement>; // derivate attribute
     oclCondition!: string; // ocl selector
     explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
     defaultVSize!: GraphSize;
@@ -111,6 +111,11 @@ export class DViewElement extends DPointerTargetable {
     edgePointCoordMode!: CoordinateMode;
     edgeHeadSize!: GraphPoint;
     edgeTailSize!: GraphPoint;
+    palette!: Dictionary<DocString<"palette prefix">, DocString<"colors like #4fc">[]>;
+    css!: string;
+    cssIsGlobal!: boolean;
+    /* private */ compiled_css!: string;
+    /* private */ css_MUST_RECOMPILE!: boolean;
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
@@ -144,7 +149,6 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
 
     // own properties
-
     name!: string;
     __info_of__name: Info = {isGlobal: true, type: ShortAttribETypes.EString, txt:<div>Name of the view</div>}
 
@@ -187,6 +191,57 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             "}";
     }
 
+    private css_MUST_RECOMPILE: boolean = false;
+    public cssIsGlobal!: boolean;
+    __info_of__cssIsGlobal: Info = {type: ShortAttribETypes.EBoolean, txt: "Use with caution!\nIf true, custom css can affect even elements not matched with this view, or outside the graph."}
+    get_cssIsGlobal(c: Context): this["cssIsGlobal"] { return c.data.cssIsGlobal; }
+    set_cssIsGlobal(val: this["cssIsGlobal"], c: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data, "cssIsGlobal", !!val, '', false);
+            // compile only when accessed, to prevent color inputs to do a mess of compilations
+            SetFieldAction.new(c.data, "css_MUST_RECOMPILE", true, '', false);
+        });
+        return true;
+    }
+    public css!: string;
+    __info_of__css: Info = {type: "css string", txt: "Inject custom css that cannot be inserted inline like :hover or css variables.\nSupport LESS syntax."}
+    get_css(c: Context): this["css"] { return c.data.css; }
+    set_css(val:this["css"], c: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data, "css", val, '', false);
+            // compile only when accessed, to prevent color inputs to do a mess of compilations
+            SetFieldAction.new(c.data, "css_MUST_RECOMPILE", true, '', false);
+        });
+        return true;
+    }
+
+    compiled_css!: string;
+    __info_of__compiled_css: Info = { hidden: true, txt:'css + palettes compiled from less in css'};
+    get_compiled_css(c: Context): this["compiled_css"] {
+        if (!c.data.css_MUST_RECOMPILE) return c.data.compiled_css; // return c.proxyObject.r.__raw.compiled_css;
+        let s = c.data.css;
+        if (c.data.cssIsGlobal) s = '[data-viewid="'+c.data.id+'"] {\n' + U.replaceAll(s, '\n', '\n\t') + '\n}';
+        // not an error, i'm updating directly d-view that is usually wrong, this is to prevent multiple nodes with same view to trigger compile and redux actions
+        // count as if it's a derived attribute not really part of the store.
+        c.data.css_MUST_RECOMPILE = false; c.data.compiled_css = s;
+        return c.data.compiled_css;
+    }
+    set_compiled_css(val: this["compiled_css"], c: Context): boolean {
+        Log.exx("Do not use setter for this, set it directly in d-object, along with compiled_css." +
+        "\nOtherwise multiple nodes of the same view will start compiling together.\n");
+        return false;
+    }
+
+    public palette!: Dictionary<DocString<"palette prefix">, DocString<"colors like #4fc">[]>;
+    __info_of__palette: Info = {type: "Dictionary<prefix, colors[]>", txt:"Specify a set of colors to be used in the graphical syntax through css variables."}
+    get_palette(c: Context): this["palette"] { return c.data.palette; }
+    set_palette(val:this["palette"], c: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data, "palette", val, '', false);
+            SetFieldAction.new(c.data, "css_MUST_RECOMPILE", true, '', false);
+        });
+    return true; }
+
     forceNodeType?: DocString<'component name'>;
     __info_of__forceNodeType: Info = {isGlobal:true, type: "EGraphElements", enum: EGraphElements, label:"force node type",
         txt:<div>Forces this element to be rendered with your component of choice instead of automatic selection when generated by a &lt;DefaultNode&gt; tag.</div>}
@@ -217,6 +272,29 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__subViews: Info = {isGlobal: true, hidden: true, type: "DViewElement[]", label:"sub-views",
         txt:<div>Views that are suggested to render elements contained in the current one with a higher match priority.
             <br/>Like a package view giving priority to a specific Class or Enum view to render his contained Classifiers in a common theme.</div>}
+
+    allSubViews!: LViewElement[];
+    __info_of__allSubViews: Info = {type: "ViewElement[]", txt: "recursively get this.subViews."}
+    get_allSubViews(c: Context): this["allSubViews"] {
+        let arr: Pointer<DViewElement>[] = c.data.subViews;
+        let nextarr: Pointer<DViewElement>[] = [];
+        let idmap: Dictionary<Pointer, DViewElement> = {};
+        let s: DState = store.getState();
+        let dview: DViewElement;
+        while (arr.length) {
+            for (let vid of arr) {
+                if (idmap[vid]) continue;
+                dview = DPointerTargetable.fromPointer(vid, s);
+                if (!dview) continue;
+                idmap[vid] = dview;
+                U.arrayMergeInPlace(nextarr, dview.subViews);
+            }
+            arr = nextarr;
+            nextarr = [];
+        }
+        return LPointerTargetable.fromD(Object.values(idmap));
+    }
+    set_allSubViews(val: this["allSubViews"], c: Context): boolean { return this.wrongAccessMessage("cannot call set_allSubViews, it is a derived attribute"); }
 
 
     explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.

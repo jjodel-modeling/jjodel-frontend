@@ -74,8 +74,31 @@
 
   }
 }
+input[type="color"] {
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  margin-right: 5px;
+  vertical-align: middle;
+}
 
-.input[type='color'] { width: min-content; padding: 0.6em; cursor: pointer; }
+input[type="color"] {
+  padding: 0;
+  vertical-align: middle;
+  /*border: none;*/
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  /*il "bordo"?*/
+  padding: 2px;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  /*il centro*/
+  /*border-radius: 100%;*/
+  border: none;
+}
 .input[type='checkbox'] {
   background-image: url("../static/svg/toggle-off.svg");
   background-repeat: no-repeat; background-size: cover;

@@ -2,6 +2,7 @@ import React, {Dispatch} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
+
 import {
     DState,
     DUser,
@@ -24,6 +25,7 @@ import {useEffectOnce} from "usehooks-ts";
 import PersistanceApi from "./api/persistance";
 import CollaborativeAttacher from './components/collaborative/CollaborativeAttacher';
 import {StateMachine} from './examples/StateMachine';
+
 
 let userHasInteracted = false;
 function endPendingActions() {

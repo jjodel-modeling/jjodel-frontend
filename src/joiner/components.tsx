@@ -1,8 +1,4 @@
-import {OCLEditorAce} from "../components/forEndUser/OCLEditor";
-
 export {OclEditor} from "../components/rightbar/oclEditor/OclEditor";
-export {OCLEditorAce} from "../components/forEndUser/OCLEditor"
-
 
 export {Input} from "../components/forEndUser/Input";
 export {TextArea} from "../components/forEndUser/TextArea";

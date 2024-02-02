@@ -12,9 +12,11 @@ import CustomData from './data/CustomData';
 import SubViewsData from './data/SubViewsData';
 import {FakeStateProps} from "../../../joiner/types";
 import {connect} from "react-redux";
+import PaletteData from "./data/PaletteData";
 
 function ViewDataComponent(props: AllProps) {
     const view = props.view;
+    (window as any).view = view;
 /*
     if(!view) {
         SetRootFieldAction.new('stackViews', undefined, '-=', false);
@@ -25,19 +27,21 @@ function ViewDataComponent(props: AllProps) {
     const readOnly = !debug && Defaults.check(view.id);
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
+    let i = 1;
     const tabs = [
-        {id: '1', title: 'Info', group: '1', closable: false, content: <InfoData view={view} viewpoints={viewpoints} readonly={readOnly} />},
-        {id: '2', title: 'Node', group: '1', closable: false, content: <NodeData view={view} readonly={readOnly} />},
-        {id: '3', title: 'Template', group: '1', closable: false, content: <TemplateData view={view} readonly={readOnly} />},
-        {id: '4', title: 'Custom Data', group: '1', closable: false, content: <CustomData viewID={view.id} readonly={readOnly} />},
-        {id: '5', title: 'Sub Views', group: '1', closable: false, content: <SubViewsData viewID={view.id} readonly={readOnly} setSelectedView={props.setSelectedView} />}
+        {id: ''+i++, title: 'Info', group: '1', closable: false, content: <InfoData view={view} viewpoints={viewpoints} readonly={readOnly} />},
+        {id: ''+i++, title: 'Template', group: '1', closable: false, content: <TemplateData view={view} readonly={readOnly} />},
+        {id: ''+i++, title: 'Custom Data', group: '1', closable: false, content: <CustomData viewID={view.id} readonly={readOnly} />},
+        {id: ''+i++, title: 'Palette/Css', group: '1', closable: false, content: <PaletteData viewID={view.id} readonly={readOnly} />},
+        {id: ''+i++, title: 'Node', group: '1', closable: false, content: <NodeData view={view} readonly={readOnly} />},
     ];
     if(view.appliableTo === 'edge') tabs.push(
-        {id: '5', title: 'Edge', group: '1', closable: false, content: <EdgeData view={view} readonly={readOnly} />}
+        {id: ''+i++, title: 'Edge', group: '1', closable: false, content: <EdgeData view={view} readonly={readOnly} />}
     );
     if(view.appliableTo === 'edgePoint') tabs.push(
-        {id: '6', title: 'EdgePoint', group: '1', closable: false, content: <EdgePointData view={view} readonly={readOnly} />}
+        {id: ''+i++, title: 'EdgePoint', group: '1', closable: false, content: <EdgePointData view={view} readonly={readOnly} />}
     );
+    tabs.push({id: ''+i++, title: 'Sub Views', group: '1', closable: false, content: <SubViewsData viewID={view.id} readonly={readOnly} setSelectedView={props.setSelectedView} />});
     layout.dockbox.children.push({tabs});
 
     return(<div>

@@ -3588,6 +3588,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     public get_otherObjects(c: Context): (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[]{
         return this.get_otherInstances(c); }
     public get_otherInstances(c: Context): (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[]{
+        // todo:
         return (excludeInstances: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false)=>{
             let ret: LObject[];
             this.get_instancesOf(c)(excludeInstances, includeSubclasses) // and drop the result

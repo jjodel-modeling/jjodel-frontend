@@ -7,7 +7,6 @@ import './style.scss';
 
 
 function InputComponent(props: AllProps) {
-    // todo: data can be injected with UX, if field is present, can take type from a metainfo like __info_of__
     const data = props.data;
 
     /*  Uncomment this when we have user authentication: if a user is on a ME, it cannot be edited.
@@ -50,9 +49,9 @@ function InputComponent(props: AllProps) {
     css += (props.hidden) ? ' hidden-input' : '';
     let autosize: boolean = props.autosize === undefined ? false : props.autosize; // props.type==='text'
     css += autosize ? ' autosize-input' : '';
+    const isBoolean = (['checkbox', 'radio'].includes(type));
 
     const change = (evt: React.ChangeEvent<HTMLInputElement>) => {
-        const isBoolean = (['checkbox', 'radio'].includes(evt.target.type));
         if (isBoolean) {
             if (readOnly) return;
             const target = evt.target.checked;
@@ -65,7 +64,6 @@ function InputComponent(props: AllProps) {
     }
 
     const blur = (evt: React.FocusEvent<HTMLInputElement>) => {
-        const isBoolean = (['checkbox', 'radio'].includes(evt.target.type));
         if (readOnly || isBoolean) return;
         const newValue = evt.target.value;
         const oldValue = (!data) ? undefined : (getter) ? getter(data) : data[field]; // !== undefined) ? data[field] : 'undefined'
@@ -99,15 +97,15 @@ function InputComponent(props: AllProps) {
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
     return(<label className={'p-1'} {...otherprops}
-                  style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor: tooltip ? 'help' : 'auto', ...((props as any).style || {})}}>
+                  style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor: tooltip ? 'help' : (isBoolean ? 'pointer' : 'auto'), ...((props as any).style || {})}}>
 
-        {label && <label className={'my-auto'} onMouseEnter={e => setShowTooltip(true)}
+        {label && <span className={'my-auto'} onMouseEnter={e => setShowTooltip(true)}
                          onMouseLeave={e => setShowTooltip(false)}>{label}
-        </label>}
+        </span>}
 
-        {jsxLabel && <label onMouseEnter={e => setShowTooltip(true)}
+        {jsxLabel && <span onMouseEnter={e => setShowTooltip(true)}
                             onMouseLeave={e => setShowTooltip(false)}>{jsxLabel}
-        </label>}
+        </span>}
 
         {(tooltip && showTooltip) && <div className={'my-tooltip'}>
             <b className={'text-center text-capitalize'}>{field}</b>
