@@ -2,6 +2,7 @@ import type {LClass, LProject} from '../../../joiner';
 import {DViewElement, DViewPoint, DObject, LModel, LObject, LViewPoint, LViewElement} from '../../../joiner';
 import {Dependencies} from './dependencies';
 import ModelViews from "./model";
+import TextView from "./text";
 
 export class StateMachine_Views {
     static load(project: LProject, state: LClass, command: LClass, event: LClass, transition: LClass): [LViewPoint, LViewElement, LViewElement] {
@@ -48,7 +49,7 @@ export class StateMachine_Views {
 
         /* Model to Text */
         const textViewpoint = DViewPoint.new('Text', '');
-        const textView = DViewElement.new('Model', this.text(event, command, state));
+        const textView = DViewElement.new('Model', TextView.zero);
         textView.viewpoint = textViewpoint.id; textView.explicitApplicationPriority = 10;
         textView.oclCondition = `context DModel inv: not self.isMetamodel`;
         // textView.oclCondition = `context DModel inv: self.id = '${m1.id}'`;
@@ -67,10 +68,10 @@ export class StateMachine_Views {
             }}>
                 {data.instanceof.name}:<b className={'ms-1'}>{data.$name.value}</b>
                 <button className={'ms-1 circle btn btn-primary p-0'} onClick={e => {
-                    const dObject = data.model.addObject(command.id);
+                    const dObject = data.model.addObject({}, command.id);
                     const lObject = LObject.fromD(dObject);
                     lObject.features[0].value = 'Unnamed';
-                    lObject.features[1].value = '0000';
+                    lObject.features[1].value = U.getRandomString(2);
                     data.features[1].values = [lObject, ...data.features[1].values];
                 }}><i class="p-1 bi bi-plus"></i></button>
             </div>
@@ -103,28 +104,5 @@ export class StateMachine_Views {
         <label style={{color: data.$trigger.value ? 'green' : 'red'}} className={'p-1'}>Trigger</label>
     </div>`;
 
-    private static text = (event: LClass, command: LClass, state: LClass) => `<div className={'root bg-white p-2'}>
-        <h5 className={'p-1'}>Model to Text</h5>
-        <hr className={'mt-2'} />
-        {data.$events.map(event => {
-            return(<div>event: {event.$name.value}, "{event.$code.value}"</div>);
-        })}
-        <hr className={'my-2'} />
-        {data.$commands.map(command => {
-            return(<div>command: {command.$name.value}, "{command.$code.value}"</div>);
-        })}
-        <hr className={'my-2'} />
-        {data.otherObjects().map(event => {
-            if(!event.$actions) return(<div></div>);
-            return(<div>
-                state: {event.$name.value} DO <br />
-                <div className={'ms-4 d-flex'}>
-                    actions: {event.$actions.values.map(action => {
-                        return(<div className={'ms-2'}>{action.$name.value},</div>)
-                    })}
-                </div>
-                END
-            </div>);
-        })}
-    </div>`;
+
 }

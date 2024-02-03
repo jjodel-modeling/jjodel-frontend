@@ -67,10 +67,13 @@ function NavbarComponent(props: AllProps) {
                 <li className={'nav-item dropdown'}>
                     <i tabIndex={-1} className={'fs-3 dropdown-toggle bi bi-list'} data-bs-toggle={'dropdown'} />
                     <ul className={'dropdown-menu'}>
-                        <li tabIndex={-1} className={'dropdown-item'} onClick={(e) => SaveManager.load()}>
+                        {/*<li tabIndex={-1} className={'dropdown-item'} onClick={(e) => SaveManager.load()}>
                             Load
                         </li>
-                        <Examples />
+                        <Examples />*/}
+                        <li className={'dropdown-item'}>
+                            Nothing here
+                        </li>
                     </ul>
                 </li>
             }
@@ -106,7 +109,7 @@ function NavbarComponent(props: AllProps) {
             <ul className={'navbar-nav ms-auto'}>
             </ul>
             {user.project && <li className={'nav-item'}>
-                <button disabled={true || DUser.offlineMode || project?.type === 'collaborative'}
+                <button disabled={DUser.offlineMode || project?.type === 'collaborative'}
                         onClick={async(e) => ProjectsApi.save(user.project)} style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
                     Save
                 </button>

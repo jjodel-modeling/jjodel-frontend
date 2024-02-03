@@ -56,6 +56,9 @@ function ViewpointsEditorComponent(props: AllProps) {
                 </button>
             </div>
         })}
+        <label className={'p-1'}>
+            *To apply a custom viewpoint, first activate the default one, and then proceed to activate the custom one.
+        </label>
     </div>);
 }
 interface OwnProps { }

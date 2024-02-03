@@ -1,7 +1,16 @@
 import React, {Dispatch, MouseEvent, ReactElement} from 'react';
-import {LProject, Dictionary, Pointer, TRANSACTION, Pointers, LViewPoint} from '../../../joiner';
-import {CreateElementAction, Defaults, DState, DUser, DViewElement, LUser, LViewElement, U} from '../../../joiner';
-import {useStateIfMounted} from 'use-state-if-mounted';
+import {
+    Defaults,
+    DState,
+    DUser,
+    DViewElement,
+    LProject,
+    LUser,
+    LViewElement,
+    LViewPoint,
+    TRANSACTION,
+    U
+} from '../../../joiner';
 import {FakeStateProps} from "../../../joiner/types";
 import {connect} from "react-redux";
 import "./Vews.scss"
@@ -10,7 +19,7 @@ function ViewsDataComponent(props: AllProps) {
     const project = props.project;
     console.log("pv:", project.views, project.activeViewpoint.id)
     // const views = project.views.filter(v => v && (!v.viewpoint || v.viewpoint.id === project.activeViewpoint.id));
-    let vp: LViewPoint = project.activeViewpoint; //
+    const vp: LViewPoint = project.activeViewpoint; //
     const views = vp.subViews;
 
     const add = (e: MouseEvent) => {
@@ -27,7 +36,7 @@ function ViewsDataComponent(props: AllProps) {
         TRANSACTION(()=>{ v.duplicate(); })
     }
 
-    return(<div>
+    return(<div className={'mb-5'}>
         <div className={'d-flex p-2'}>
             <b className={'ms-1 my-auto'}>VIEWS</b>
             <button className={'btn btn-primary ms-auto'} onClick={add}>
@@ -62,7 +71,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    const user = LUser.fromPointer(DUser.current);
+    const user: LUser = LUser.fromPointer(DUser.current);
     ret.project = user.project as LProject;
     return ret;
 }

@@ -1,6 +1,6 @@
 import {Dispatch, ReactElement, useEffect, useState} from 'react';
 import {connect} from 'react-redux';
-import {DProject, DState, DUser, LoadAction, LProject, LUser} from '../joiner';
+import {DProject, DState, DUser, LoadAction, LProject, LUser, U} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 import Dock from '../components/abstract/Dock';
 import useQuery from "../hooks/useQuery";
@@ -21,7 +21,7 @@ function EditorComponent(props: AllProps) {
             if(!project) return;
             user.project = LProject.fromPointer(project.id);
             if(!project.state) return;
-            SaveManager.load(project.state);
+            SaveManager.load(await U.decompressState(project.state));
         })();
     }, [id]);
 

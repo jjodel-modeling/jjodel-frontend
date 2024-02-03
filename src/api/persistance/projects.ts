@@ -25,7 +25,7 @@ class ProjectsApi {
     }
     static async save(project: LUser['project']): Promise<void> {
         if(!project) return;
-        if(U.isOffline()) Offline.save(project.__raw as DProject);
+        if(U.isOffline()) await Offline.save(project.__raw as DProject);
         else await Online.save(project.__raw as DProject);
     }
 }
@@ -52,15 +52,15 @@ class Offline {
         if(filtered.length <= 0) return null;
         return filtered[0];
     }
-    static save(project: DProject): void {
+    static async save(project: DProject): Promise<void> {
         const projects = Storage.read<DProject[]>('projects') || [];
         const filtered = projects.filter(p => p.id !== project.id);
 
-        const state = JSON.stringify(store.getState());
+        const state = await U.compressedState();
         filtered.push({...project, state} as DProject);
 
         Storage.write('projects', filtered);
-        // alert('Saved')
+        alert('Saved');
     }
 }
 
@@ -92,7 +92,7 @@ class Online {
         return U.wrapper<DProject>(response.data);
     }
     static async save(project: DProject): Promise<void> {
-        const state = JSON.stringify(store.getState());
+        const state = await U.compressedState();
         const response = await Api.patch(`${Api.persistance}/projects/${project.id}`, {...project, state});
         if(response.code !== 200) alert('Cannot Save');
         else alert('Saved')

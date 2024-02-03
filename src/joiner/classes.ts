@@ -1675,7 +1675,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
                     SetRootFieldAction.new(root, val, op, false);
                 }
             }
-            // data.node?.delete(); <-- this is NOT working here, IDK why, on contextMenu it works.
+            // data.nodes.map(node => node.delete()) <-- this is NOT working here, IDK why, on contextMenu it works.
             DeleteElementAction.new(data.id);
             END();
         };

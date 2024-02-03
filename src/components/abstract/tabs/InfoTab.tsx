@@ -15,7 +15,7 @@ function mRow(model: LModel, showInstanceOf: boolean = false) {
             - {model.name}{
             showInstanceOf && <><b className={'text-success'}> {model.instanceof ? 'conforms to' : 'is shapeless'}</b> {model.instanceof?.name}</>
             }
-            <button className={'btn-outline-secondary btn bi bi-arrow-right-short'} style={{border:'none'}} onClick={()=>DockManager.open2(model)} />
+            <button className={'ms-1 btn-outline-secondary btn bi bi-arrow-right-short'} style={{border:'none'}} onClick={()=>DockManager.open2(model)} />
         </label>)
 }
 

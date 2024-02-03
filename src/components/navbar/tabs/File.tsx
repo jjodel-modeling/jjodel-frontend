@@ -62,8 +62,8 @@ function FileComponent(props: AllProps) {
     return(<li className={'dropdown-item'}>File
         <i className={'ms-auto bi bi-caret-right-fill'} />
         <ul className={'submenu dropdown-menu'}>
-            <li tabIndex={-1} onClick={save} className={'dropdown-item'}>Save</li>
-            <li tabIndex={-1} onClick={load} className={'dropdown-item'}>Load</li>
+            {/*<li tabIndex={-1} onClick={save} className={'dropdown-item'}>Save</li>
+            <li tabIndex={-1} onClick={load} className={'dropdown-item'}>Load</li>*/}
             <li tabIndex={-1} className={'dropdown-item'}>New
                 <i className={'ms-auto bi bi-caret-right-fill'} />
                 <ul className={'submenu dropdown-menu'}>
@@ -92,7 +92,7 @@ function FileComponent(props: AllProps) {
                     })}
                 </ul>
             </li>}
-            <Examples />
+            {/*<Examples />*/}
             <li tabIndex={-1} className={'dropdown-item'}>Export
                 <i className={'ms-auto bi bi-caret-right-fill'} />
                 <ul className={'submenu dropdown-menu'}>

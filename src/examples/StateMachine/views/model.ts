@@ -48,14 +48,14 @@ export default class ModelViews {
                     return(<DefaultNode key={t.id} data={t} />)
                 })
             }
-            {data.$resets
+            {data.$resets && data.$resets
                 .map((reset) => {
                     if(!reset.node || !reset.$transition.value) 
                          return(<DefaultNode key={reset.id} data={reset} />)
                     return(<Edge key={i}
                         view={'Pointer_ViewEdgeAssociation'} 
-                        start={r.node} 
-                        end={r.$transition.value.node} 
+                        start={reset.node} 
+                        end={reset.$transition.value.node} 
                     />)
             })}
         </div>

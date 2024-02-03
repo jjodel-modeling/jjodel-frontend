@@ -32,10 +32,18 @@ import Swal from "sweetalert2";
 import {AccessModifier} from "../api/data";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 import Storage from '../data/storage';
+import {compressToUTF16, decompressFromUTF16} from "async-lz-string";
+
 console.warn('loading ts U log');
 
 @RuntimeAccessible('U')
 export class U {
+    static async decompressState(state: string): Promise<string> {
+        return await decompressFromUTF16(state);
+    }
+    static async compressedState(): Promise<string> {
+        return await compressToUTF16(JSON.stringify(store.getState()));
+    }
     static isOffline(): boolean {
         return Storage.read('offline') === 'true';
     }
