@@ -29,8 +29,8 @@ class StructureEditorComponent extends PureComponent<AllProps, ThisState> {
         const node = this.props.node;
         const view = this.props.view;
         const data = this.props.data;
-        return <div className={'px-4'}>
-            <div className={'mt-3'}>
+        return <div className={'mb-5'}>
+            <div className={'px-3 mt-3'}>
                 {Structure.Editor(data || null)}
                 {data?.className === DObject.cname && U.wrapper<LObject>(data).features.map((f, i) => {
                     return(<div key={i}>
@@ -40,6 +40,7 @@ class StructureEditorComponent extends PureComponent<AllProps, ThisState> {
                     </div>);
                 })}
             </div>
+            <div className={'mt-2'}></div>
         </div>;
     }
 }

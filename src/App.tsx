@@ -29,7 +29,7 @@ function App(props: AllProps): JSX.Element {
     useEffectOnce(() => {
         stateInitializer().then(() => setLoading(false));
         /* Offline by default */
-        if(!DUser.current) AuthApi.offline();
+        // if(!DUser.current) AuthApi.offline();
     });
 
     if(props.isLoading || loading) return(<Loader />);

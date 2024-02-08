@@ -20,7 +20,7 @@ function DashboardComponent(props: AllProps) {
         const projectNames: string[] = projects.map(p => p.name);
         name = U.increaseEndingNumber(name, false, false, newName => projectNames.indexOf(newName) >= 0);
         const project = await ProjectsApi.create(type, name);
-        // selectProject(project.id);
+        selectProject(project.id);
     }
     const deleteProject = async(project: LProject) => {
         await ProjectsApi.delete(project);
