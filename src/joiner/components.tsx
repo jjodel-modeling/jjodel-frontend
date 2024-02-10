@@ -12,7 +12,6 @@ export {LoggerComponent} from "../components/logger/loggerComponent";
 /// import components that must save themselves to global variable to be accessible for user
 
 export {Overlap} from "../components/forEndUser/Overlap";
-export {ColorScheme} from "../components/colorScheme/colorScheme";
 export {GraphElement, GraphElementComponent} from "../graph/graphElement/graphElement";
 // export {Graph, GraphComponent} from "../graph/graph/graph"; // require graphelement
 // export {Graph} from "../graph/vertex/Vertex"; // require graphelement

@@ -257,7 +257,7 @@ export {
     VertexComponent,
     DefaultNodeComponent,
     // DockLayoutComponent,
-    ColorScheme,
+    //ColorScheme,
     EdgeComponent,
     DataOutputComponent, LoggerComponent, GenericInput,
     Polygon, Circle, Cross, Decagon,

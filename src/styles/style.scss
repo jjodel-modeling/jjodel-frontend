@@ -1,5 +1,8 @@
 @import "./variables";
 
+.REACT-ROOT:not(.debug) .debug{
+  display: none;
+}
 /* classes */
 .round { border-radius: $radius; }
 .circle { border-radius: 999px !important; }

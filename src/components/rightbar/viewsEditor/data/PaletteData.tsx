@@ -1,5 +1,5 @@
 import React, {Dispatch, ReactElement} from 'react';
-import {Dictionary, DState, DViewElement, Input, LViewElement, Pointer} from '../../../../joiner';
+import {Dictionary, DState, DViewElement, Input, LViewElement, Pointer, U} from '../../../../joiner';
 import {connect} from "react-redux";
 import {Function} from "../../../forEndUser/FunctionComponent";
 import { Color } from '../../../forEndUser/Color';
@@ -22,6 +22,7 @@ function PaletteDataComponent(props: AllProps) {
         view.palette = palette;
     }
     const changePrefix = (oldPrefix: string, newPrefix: string) => {
+        newPrefix = newPrefix.replaceAll(/[^\w\-]/g,'-'); // /^[^a-zA-Z0-9_\-]*$/, '-');
         if (palette[newPrefix]) return; // refuse to overwrite existing palette name (2 different palettes with same name)
         palette[newPrefix] = palette[oldPrefix] || [];
         delete palette[oldPrefix];
@@ -52,6 +53,7 @@ function PaletteDataComponent(props: AllProps) {
     }
     const cssIsGlobal = view.cssIsGlobal;
     return(<section className={'p-3'}>
+        <Input data={view} field={'isExclusiveView'} type={"checkbox"} />
         {Object.entries(palette).map((entry, index, entries)=>{
             let prefix = entry[0];
             let colors = entry[1];
@@ -100,6 +102,7 @@ function PaletteDataComponent(props: AllProps) {
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                     defaultLanguage={'less'} value={view.css} onChange={change}/>
         </div>
+        <div className={"debug"}><div style={{whiteSpace:'pre'}}>{view.compiled_css}</div></div>
         {/*<textarea>
             '[data-viewid="'+view.id+'"]{\n' +
             Object.entries(palette).flatMap((entry, index, entries)=>{

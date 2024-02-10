@@ -52,6 +52,7 @@ export class DViewElement extends DPointerTargetable {
 
     // own properties
     name!: string;
+    isExclusiveView!: boolean;
 
     // evaluate 1 sola volta all'applicazione della vista o all'editing del campo
     constants?: string;
@@ -151,18 +152,49 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     // own properties
     name!: string;
     __info_of__name: Info = {isGlobal: true, type: ShortAttribETypes.EString, txt:<div>Name of the view</div>}
+    isExclusiveView!: boolean;
+    __info_of__isExclusiveView: Info = {isGlobal:true, type: ShortAttribETypes.EBoolean, txt:<div>If not exclusive, the view is meant to add a functional outline of tools to a primary View, or css.
+    <br/>A non-exclusive view cannot be applied alone and needs an exclusive view to render the main graphical content.</div>};
+    get_isExclusiveView(c: Context): this["isExclusiveView"] { return c.data.isExclusiveView; }
+    set_isExclusiveView(val: this["isExclusiveView"], c: Context): boolean { return SetFieldAction.new(c.data, "isExclusiveView", !!val, '', false); }
 
     constants?: string;
     __info_of__constants: Info = {todo:true, isGlobal: true, type: "Function():Object", label:"constants declaration",
         txt:<div>Data used in the visual representation, meant to be static values evaluated only once when the view is first applied.<br/>
         Check default value view for an example.<br/>
-    </div>}
+    </div>};
     // Example 1: <code>{'{color:"red", background: "gray"}'}</code><br/>
     // Example 2: <code>{'function(){\n    let fib = [1,1]; for (let i = 2; i < 100) { fib[i] = fib[i-2]+fib[i-1]; }\n    return fib; }'}</code><br/>
 
     preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
     __info_of__preRenderFunc: Info = {isGlobal: true, obsolete: true, type: "Function():Object", label:"pre-render function",
         txt:<div>Data used in the visual representation, meant to be dynamic values evaluated every time the visual representation is updated.<br/>Replaced by usageDeclarations.</div>}
+    default_getter(c: Context, k: keyof DViewElement): any { return c.data[k]; }
+    default_setter(c: Context, k: keyof DViewElement, v: any): boolean {
+        const isPointerTentative: boolean = Pointers.isPointer(v, undefined, true);
+        let bytes = 0;
+        switch((this as any)["__info_of__"+k]?.type){
+            case ShortAttribETypes.EDate: break;
+            default: break;
+            case ShortAttribETypes.EBoolean: v = !!v; break;
+            case ShortAttribETypes.EByte: bytes = 8; break;
+            case ShortAttribETypes.EShort: bytes = 16; break;
+            case ShortAttribETypes.EInt: bytes = 32; break;
+            case ShortAttribETypes.ELong: bytes = 64; break;
+            case ShortAttribETypes.EString: v = ""+v; break;
+            case ShortAttribETypes.EChar: v = (""+v)[0]; break;
+            case ShortAttribETypes.EVoid: Log.exx("cannot set a void-typed value", {c, d:c.data, k, v}); return true;
+            case ShortAttribETypes.EDouble:
+            case ShortAttribETypes.EFloat: v = +v; break;
+        }
+        if (bytes) {
+            let max = (Math.round(+v))<<bytes;// left shift is the same as multiplying by a power of 2, but binary and more efficient.
+            let min = -max +1
+            if (v > max) v = max;
+            else if (v < min) v = min;
+        }
+        return SetFieldAction.new(c.data, k, v, '', isPointerTentative);
+    }
 
     jsxString!: string;
     __info_of__jsxString: Info = {isGlobal: true, type: "text", label:"JSX template",
@@ -219,12 +251,31 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__compiled_css: Info = { hidden: true, txt:'css + palettes compiled from less in css'};
     get_compiled_css(c: Context): this["compiled_css"] {
         if (!c.data.css_MUST_RECOMPILE) return c.data.compiled_css; // return c.proxyObject.r.__raw.compiled_css;
-        let s = c.data.css;
-        if (c.data.cssIsGlobal) s = '[data-viewid="'+c.data.id+'"] {\n' + U.replaceAll(s, '\n', '\n\t') + '\n}';
+        let s = '';
+        const allowLESS = false;
+        for (let paletteName in c.data.palette) {
+            let palette: DocString<"hexColors">[] = c.data.palette[paletteName];
+            let shortPaletteName: string;
+            if (['-', '_'].includes(paletteName[paletteName.length-1])) shortPaletteName = paletteName.substring(0, paletteName.length - 1);
+            else shortPaletteName = paletteName;
+            // set prefixed name without number
+            if (allowLESS) s += "\t@" + shortPaletteName + ": " + palette[0]+';\n';
+            s += "\t--" + shortPaletteName + ": " + palette[0]+';\n';
+            // set prefixed-0 name
+            if (allowLESS) s += "\t@" + paletteName + '0: ' + palette[0]+';\n';
+            s += "\t--" + paletteName + '0: ' + palette[0]+';\n';
+            // set prefixed-1 to prefixed-...n names
+            for (let i = 0 ; i < palette.length; i++) {
+                if (allowLESS) s += "\t@" + paletteName + (i+1) + ": " + palette[i]+';\n';
+                s += "\t--" + paletteName + (i+1) + ": " + palette[i]+';\n';
+            }
+        }
+        s += '\n\t' + U.replaceAll(c.data.css, '\n', '\n\t');
+        s = (!c.data.cssIsGlobal ? '[data-viewid="'+c.data.id+'"]' : 'body') +' {\n' + s + '\n}';
         // not an error, i'm updating directly d-view that is usually wrong, this is to prevent multiple nodes with same view to trigger compile and redux actions
         // count as if it's a derived attribute not really part of the store.
-        c.data.css_MUST_RECOMPILE = false; c.data.compiled_css = s;
-        return c.data.compiled_css;
+        c.data.css_MUST_RECOMPILE = false;
+        return c.data.compiled_css = s;
     }
     set_compiled_css(val: this["compiled_css"], c: Context): boolean {
         Log.exx("Do not use setter for this, set it directly in d-object, along with compiled_css." +

@@ -826,6 +826,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.oclCondition = oclCondition;
         thiss.explicitApplicationPriority = priority;
         thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 351, 201);
+        thiss.isExclusiveView = true;
         thiss.size = {};
         thiss.storeSize = false;
         thiss.lazySizeUpdate = true;
@@ -1294,7 +1295,9 @@ export class Pointers{
         return typeof data === "string" ? data : (data as any).id;
     }
 
-    static isPointer(val: any, state?: DState): val is Pointer {
+    static isPointer(val: any, state?: DState, doArrayCheck: boolean = false): val is Pointer {
+        // might cause endless loop if there are subarrays in a containment loop.
+        if (doArrayCheck && Array.isArray(val)) return (val as any[]).some((v) => Pointers.isPointer(val, state, true));
         if (state) return DPointerTargetable.from(val, state);
         return typeof val === "string" ? val.includes("Pointer") : false;
     }
