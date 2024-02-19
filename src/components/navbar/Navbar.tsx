@@ -27,7 +27,6 @@ function NavbarComponent(props: AllProps) {
     const [renders, setRenders] = useState(0);
 
     const closeProject = async() => {
-        Storage.write('projects', []);
         navigate('/dashboard');
         U.refresh();
         /*

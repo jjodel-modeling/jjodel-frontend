@@ -37,7 +37,7 @@ function ContextMenuComponent(props: AllProps) {
     if(!node || !data) return(<></>);
 
     const close = () => {
-        if (!windoww.ContextMenuVisible) return;
+        // if (!windoww.ContextMenuVisible) return;
         windoww.ContextMenuVisible = false;
         setSuggestedName('');
         setMemorec(null);
@@ -59,6 +59,8 @@ function ContextMenuComponent(props: AllProps) {
                 query = `context ${data.className} inv: self.id = '${data.id}'`;
                 break;
         }
+        DViewElement.new(data.name + 'View', jsx, undefined, '', '', '', [], query, 2);
+        close();
     }
 
     const structuralFeature = async () => {setMemorec(await MemoRec.structuralFeature(data))}

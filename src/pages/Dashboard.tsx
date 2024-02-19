@@ -37,7 +37,6 @@ function DashboardComponent(props: AllProps) {
             <div className={'d-flex p-2'}>
                 <b className={'ms-1 my-auto'}>MY PROJECTS</b>
                 <button onClick={() => {
-                    Storage.write('projects', []);
                     U.refresh();
                 }} className={'ms-2 p-1 btn btn-primary circle'}>
                     <i className={'bi bi-arrow-clockwise'}></i>
