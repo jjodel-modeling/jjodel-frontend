@@ -40,7 +40,7 @@ function App(props: AllProps): JSX.Element {
                 <Route path={'project'} element={<EditorPage />} />
                 <Route path={'*'} element={<DashboardPage />} />
             </>}
-            <Route path={'auth'} element={<AuthPage />} />
+            <Route path={'*'} element={<AuthPage />} />
             {/*<Route path={'*'} element={<Loader />} />*/}
         </Routes>
     </HashRouter>);
