@@ -48,9 +48,8 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
     SetRootFieldAction,
     U,
     UX,
-    windoww,
+    windoww, transientProperties
 } from "../../joiner";
-import {transientProperties, transientPropertiesByGraphTab} from "../../joiner/classes";
 
 // const Selectors: typeof Selectors_ = windoww.Selectors;
 
@@ -176,6 +175,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // NB: Edge constructor might have set it from props.start, so keep the check before overwriting.
         if (!ret.data?.__isProxy) { ret.data = LPointerTargetable.wrap(ownProps.data); }
         ret.dataid = ret.data?.id as string;
+        if (ret.dataid) {
+            /* now handled in Store.ClassNameChanged
+            if (!transientProperties.modelElement[ret.dataid]) {
+                transientProperties.modelElement[ret.dataid] = {nodes: {}};
+                RuntimeAccessibleClass.OCL_Constructors[]
+            }*/
+            transientProperties.modelElement[ret.dataid].nodes[ret.nodeid] = ret.node;
+        }
         /*
         const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : (ownProps.data as any as DModelElement)?.id) as string;
         // Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ret, ownProps, state});
@@ -192,7 +199,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let nodeid: string = ownProps.nodeid as string;
         let graphid: string = isDGraph ? isDGraph.id : ownProps.graphid as string;
         let parentnodeid: string = ownProps.parentnodeid as string;
-        ret.nodeid = ownProps.nodeid;
+        ret.nodeid = nodeid;
         // let data: Pointer<DModelElement, 0, 1, LModelElement> = ownProps.data || null;
         // Log.exDev(!nodeid || !graphid, 'node id injection failed', {ownProps, data: ret.data, name:(ret.data as any)?.name || (ret.data as any)?.className}); /*
         /*if (!nodeid) {

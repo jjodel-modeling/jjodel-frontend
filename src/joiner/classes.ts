@@ -139,9 +139,6 @@ import {
     TRANSACTION,
     U
 } from "./index";
-import TreeModel from "tree-model";
-import {types} from "util";
-import isBooleanObject = module
 import {OclEngine} from "@stekoe/ocl.js";
 
 var windoww = window as any;
@@ -170,6 +167,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     static extendMatrix: Dictionary<string, Dictionary<string, boolean>>;
     // static name: never; // it breaks with minification, don't use it
     static cname: string;
+    private static OCL_Constructors: Dictionary<Pointer<DModel>, Dictionary<DocString<"DClass name">, GObject<"Fake constructors for ocl \"Context\"">>> = {};
 
     static set_extend(superclass: typeof RuntimeAccessibleClass, subclass: typeof RuntimeAccessibleClass): void{
         if (!superclass.hasOwnProperty("subclasses")) superclass.subclasses = [subclass];
@@ -200,11 +198,11 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     }
     static fixStatics() {
         this.extendPrototypes();
-        // problem: se lo statico è un valore primitivo ne genera una copia.
         for (let classs of Object.values(RuntimeAccessibleClass.annotatedClasses)) {
             let gclass = classs as GObject;
             for (let statickey in gclass.s) { gclass[statickey] = gclass.s[statickey]; }
         }
+
     }
     // static allRuntimeClasses: string[] = [];
     static classes: Dictionary<string, typeof RuntimeAccessibleClass> = {};
@@ -361,6 +359,33 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         this.className = (finalObject as any).__proto__.className;
     }*/
 
+    static makeOCLConstructor(data: DClass, state: DState, oldState: DState): GObject<"fake constructor of m2-class for ocl's Context"> {
+        let rootModel: DModel = data as any;
+        while (rootModel && rootModel.className !== "DModel") rootModel = DPointerTargetable.fromPointer(rootModel.father, state);
+        if (!RuntimeAccessibleClass.OCL_Constructors[rootModel.id]) {
+            RuntimeAccessibleClass.OCL_Constructors[rootModel.id] = {};
+            RuntimeAccessibleClass.OCL_Constructors[rootModel.id].__proto__ = RuntimeAccessibleClass.classes;
+        }
+        const OclConstructor: GObject = data;
+        let namefixed: string;
+
+        if (oldState && oldState.idlookup[data.id]) {
+            let oldname = (oldState.idlookup[data.id] as DClass).name;
+            namefixed = U.replaceAll(U.replaceAll(oldname, '-', '_'), ' ', '_');
+            delete RuntimeAccessibleClass.OCL_Constructors[rootModel.id][oldname];
+            delete RuntimeAccessibleClass.OCL_Constructors[rootModel.id][namefixed];
+
+        }
+        namefixed = U.replaceAll(U.replaceAll(data.name, '-', '_'), ' ', '_');
+        RuntimeAccessibleClass.OCL_Constructors[rootModel.id][data.name] = OclConstructor;
+        RuntimeAccessibleClass.OCL_Constructors[rootModel.id][namefixed] = OclConstructor;
+
+        return data;
+    }
+
+    static getOCLClasses(model_id: Pointer<DModel>): GObject {
+        return RuntimeAccessibleClass.OCL_Constructors[model_id] || RuntimeAccessibleClass.classes;
+    }
 }
 export function Obsolete<T extends any>( constructor: T & GObject): T { return constructor; }
 export function Leaf<T extends any>( constructor: T & GObject): T { return constructor; }
@@ -511,23 +536,29 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // todo: in delete if the element was not persistent, just do nothing.
     }
 
-    private setExternalPtr<D extends DPointerTargetable>(target: D | Pointer<any>, property: string, accessModifier: "[]" | "+=" | "" = "") {
-        if (!target) return;
+    private setExternalRootProperty<D extends DPointerTargetable>(path: string, val: any, accessModifier: "[]" | "+=" | "", isPointer: boolean): this {
+        this.thiss._persistCallbacks.push(SetRootFieldAction.create(path, val, accessModifier, isPointer));
+        return this;
+    }
+
+    private setExternalPtr<D extends DPointerTargetable>(target: D | Pointer<any>, property: string, accessModifier: "[]" | "+=" | "" = ""): this {
+        if (!target) return this;
         if (typeof target === "object") target = target.id;
         let t;
         this.thiss._persistCallbacks.push(t = SetFieldAction.create(target, property, this.thiss.id, accessModifier, true));
-
+        return this;
         // PointedBy is set by reducer directly in this case.
         // this.thiss._persistCallbacks.push(SetFieldAction.create(this.thiss.id, "pointedBy", PointedBy.fromID(target, property as any), '+='));
     }
 
-    private setWithSideEffect<D extends DPointerTargetable>(property: string, val: any): void {
-        if (!val) return;
+    private setWithSideEffect<D extends DPointerTargetable>(property: string, val: any): this {
+        if (!val) return this;
         if (!this.state) this.state = store.getState();
         if (typeof val === "object") val = val.id;
         this.thiss._persistCallbacks.push( () => {
             (LPointerTargetable.from(this.thiss, this.state) as GObject<"L">)[property] = val;
         });
+        return this;
     }
 
     //static pause(): void { canFireActions = false; }
@@ -742,6 +773,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.partial = partial;
         thiss.partialdefaultname = partialdefaultname;
         this.setExternalPtr(thiss.father, "classifiers", "+=");
+        this.setExternalRootProperty('ClassNameChanged.'+thiss.id, thiss.name, "+=", false);
+
         // thiss.isClass = !isPrimitive;
         // thiss.isEnum = false;
         return this; }
@@ -828,7 +861,6 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.subViews = [];
         thiss.oclCondition = oclCondition || '';
         thiss.oclUpdateCondition = '';
-        thiss.oclUpdateCondition_PARSED = undefined;
         thiss.OCL_NEEDS_RECALCULATION = true;
         thiss.explicitApplicationPriority = priority;
         thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 351, 201);
@@ -2581,8 +2613,8 @@ type ViewTransientProperties = {
     oclEngine: OclEngine;
 }
 type METransientProperties = {
-    nodes: Dictionary<Pointer<DGraphElement, LGraphElement>;
-    node: LGraphElement;
+    nodes: Dictionary<Pointer<DGraphElement>, LGraphElement>;
+    node?: LGraphElement;
 }
 // score for all view ocl + sorted views by best match
 type TransientPropertiesByGraphTab = Dictionary<Pointer<DViewElement, number>> & {

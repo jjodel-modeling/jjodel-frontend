@@ -1,4 +1,13 @@
-import {U as UType, GraphDragManager, MouseUpEvent, orArr, DModelElement, DViewElement} from '../../joiner';
+import {
+    U as UType,
+    GraphDragManager,
+    MouseUpEvent,
+    orArr,
+    DModelElement,
+    DViewElement,
+    DClass,
+    DModel
+} from '../../joiner';
 import {
     Action,
     CompositeAction,
@@ -353,23 +362,31 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     // local changes to out-of-redux stuff
     if (ret.VIEWOCL_NEEDS_RECALCULATION.length) {
         // for (let gid of ret.graphs) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
-        transientProperties.viewsChanged = ret.VIEWOCL_NEEDS_RECALCULATION;
         // for (let vid of ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION) { }
         for (let vid of ret.VIEWOCL_NEEDS_RECALCULATION) {
+            transientProperties.view[vid].oclEngine = undefined as any; // force re-parse
             Selectors.updateViewMatchings2(DPointerTargetable.fromPointer(vid), false, true, ret);
         }
         ret.VIEWOCL_NEEDS_RECALCULATION = [];
-
     }
     if (ret.VIEWOCL_UPDATE_NEEDS_RECALCULATION.length) {
+        // not implemented for now
         ret.VIEWOCL_UPDATE_NEEDS_RECALCULATION = [];
     }
-    if (ret.CSS_NEEDS_RECALCULATION) {
-        ret.CSS_NEEDS_RECALCULATION = [];
+    for (let dataid in ret.ClassNameChanged) {
+        // NB: if i ever want to access a constructor's other properties in ocl, like "context Persona inv: self.$somecounter === Persona.instances.length",
+        // i would need to update this every time a DClass property changes instead of only when name changes.
+
+        // if it's first creation of a modelpiece
+        if (!transientProperties.modelElement[dataid]) {
+            transientProperties.modelElement[dataid] = {nodes: {}};
+        }
+        // update ocl type names
+        let data: DClass = ret.idlookup[dataid] as DClass;
+        RuntimeAccessibleClass.makeOCLConstructor(data, ret, oldState);
     }
-    if (ret.DATAOCL_NEEDS_RECALCULATION) {
-        ret.DATAOCL_NEEDS_RECALCULATION = [];
-    }
+    ret.ClassNameChanged = {};
+
     return ret;
 
 }

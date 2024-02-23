@@ -19,7 +19,7 @@ import {
     DLog,
     DModel,
     DModelElement,
-    DObject,
+    DObject, DocString,
     DOperation,
     DPackage,
     DParameter,
@@ -156,8 +156,9 @@ export class DState extends DPointerTargetable{
     VIEWOCL_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
     // views where both ocl needs to be reapplied and the oclUpdateCondition -> transient.view[v.id].oclUpdateCondition_PARSED needs to be remade
     VIEWOCL_UPDATE_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
-    CSS_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
-    DATAOCL_NEEDS_RECALCULATION: Pointer<DModelElement>[] = [];
+    // CSS_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
+    // DATAOCL_NEEDS_RECALCULATION: Pointer<DModelElement>[] = [];
+    ClassNameChanged: Dictionary<Pointer<DModelElement>, DocString<"name">> = {};
 
 
     static init(store?: DState): void {

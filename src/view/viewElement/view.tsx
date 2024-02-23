@@ -235,7 +235,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     }
 
     // format should be array of (usedPaths: string[]) starting with "data." AUTOMATICALLY inefered from the ocl editor.
-    oclUpdateCondition!: DocString<(oldData: LModelElement, newData:LModelElement) => boolean>;
+    oclUpdateCondition!: (oldData: LModelElement, newData:LModelElement) => boolean;
     __info_of__oclUpdateCondition: Info = {readType: '(view: LViewElement)=>boolean', writeType: 'function string',
         txt: "[Optionally] Declare variables that are used in OCL condition, so that OCL will be re-checked only when those values have changed."}
     get_oclUpdateCondition(c: Context): this["oclUpdateCondition"] { return transientProperties.view[c.data.id].oclUpdateCondition_PARSED; }
@@ -416,7 +416,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (val === c.data.oclCondition) return true;
         SetFieldAction.new(c.data, "oclCondition", val, '', false);
         // not recalculated right now because the change needs to be sent to collaborative editor users
-        SetFieldAction.new(c.data, "OCL_NEEDS_RECALCULATION", true, '', false);
+        SetRootFieldAction.new("VIEWOCL_NEEDS_RECALCULATION", c.data.id, '+=', false); // it is pointer, but for transient stuff there is no need to set pointedby's
         return true;
     }
 

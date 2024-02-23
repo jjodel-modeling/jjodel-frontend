@@ -49,7 +49,7 @@ import {
     RuntimeAccessible,
     RuntimeAccessibleClass,
     Selectors,
-    SetFieldAction,
+    SetFieldAction, SetRootFieldAction,
     ShortAttribETypes,
     ShortAttribSuperTypes,
     store,
@@ -1999,6 +1999,12 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
 
 
+    protected set_name(val: this["name"], context: Context): boolean {
+        if (context.data.name === val) return true;
+        super.set_name(val, context);
+        SetRootFieldAction.new('ClassNameChanged.'+context.data.id, val, '', false); // it is pointer, but related to transient stuff, so don't need pointedBy's
+        return true;
+    }
 
     protected set_partial(val: D["partial"], context: Context): boolean { return SetFieldAction.new(context.data.id, "partial", val); }
     protected get_partial(context: Context): D["partial"] { return context.data.partial; }

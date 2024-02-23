@@ -1,11 +1,14 @@
 import {OclEngine} from "@stekoe/ocl.js"
+import {OclResult} from "@stekoe/ocl.js/dist/components/OclResult";
+import {Utils} from "@stekoe/ocl.js/dist/components/Utils";
 import {
     AbstractConstructor,
     bool,
     Constructor,
     DGraphElement,
     Dictionary,
-    DModelElement,
+    DModel,
+    DModelElement, DPointerTargetable, DState,
     DViewElement,
     GObject,
     LGraphElement,
@@ -15,10 +18,9 @@ import {
     LValue,
     LViewElement,
     RuntimeAccessible,
-    RuntimeAccessibleClass
+    RuntimeAccessibleClass,
+    store,
 } from "../joiner";
-import {OclResult} from "@stekoe/ocl.js/dist/components/OclResult";
-import {Utils} from "@stekoe/ocl.js/dist/components/Utils";
 import {transientProperties, ViewEClassMatch} from "../joiner/classes";
 
 let windoww = window as any;
@@ -32,7 +34,7 @@ export class Persona {
     constructor(public name: string='pname', public age: number=18, public isUnemployed: boolean=true){ Persona.all.push(this) }
 }
 
-@RuntimeAccessible
+@RuntimeAccessible('OCL')
 export class OCL extends RuntimeAccessibleClass{
     public static evaluate<T extends GObject>(obj0: T, constructor: Constructor<T>, oclexp: string, typeused: Constructor[]=[], oclEngine?: OclEngine): OclResult {
         if (!oclEngine) {
@@ -74,6 +76,7 @@ export class OCL extends RuntimeAccessibleClass{
         return OCL.filter0(keepIndex, returnType, obj0, oclexp, typeused) as any;
     }
 
+    /* sandbox for when i will change dobject to have both type dobject and data.instanceof (his m2 class type)
     public static init() {
 
         OCL.Util.getClassName;
@@ -89,7 +92,7 @@ export class OCL extends RuntimeAccessibleClass{
                     so after this i need to make a prototype of fake constructor for each metaclass having m2class.__proto__ = DObject; ?
                     and every feature having fake constructor m2feature.__proto__ = DAttribute | DReference?
         }
-    }
+    }*/
     private static getOCLScore(ocl: string): number { return ocl.length; }
 
     public static test(mp0: DModelElement | LModelElement | undefined, view0: LViewElement | DViewElement | undefined, node0?: LGraphElement | DGraphElement): number {
@@ -108,8 +111,11 @@ export class OCL extends RuntimeAccessibleClass{
         if (transientProperties.view[view.id].oclEngine) oclEngine = transientProperties.view[view.id].oclEngine;
         else {
             transientProperties.view[view.id].oclEngine = oclEngine = OclEngine.create();
-            oclEngine.registerTypes(RuntimeAccessibleClass.classes);
-            oclEngine.addOclExpression(view.oclCondition); todo: make it that setter of view.set_oclCondituion cancels the transient.oclEngine or updates his addOclExpression;
+            let state: DState = store.getState();
+            let rootModel: DModel = mp as any;
+            while (rootModel && rootModel.className !== "DModel") rootModel = DPointerTargetable.fromPointer(rootModel.father, state);
+            oclEngine.registerTypes(RuntimeAccessibleClass.getOCLClasses(rootModel.id));
+            oclEngine.addOclExpression(view.oclCondition);
         }
         try {
             let oclResult: OclResult;
@@ -134,15 +140,15 @@ export class OCL extends RuntimeAccessibleClass{
     private static filter0<T extends GObject>(keepIndex: boolean, returnType: 'ocl' | 'bool' | 'src', obj0: T[], oclexp: string, typeused: Constructor[]=[]) {
         var oclEngine = OclEngine.create();
         var oclResult = null;
-        const typeregister: GObject = {}; cache this glovally
+        const typeregister: GObject = {};
         for (let type of typeused) { typeregister[(type as any as typeof RuntimeAccessibleClass).cname || type.name] = type; }
         oclEngine.registerTypes(typeregister);
-        oclEngine.addOclExpression(oclexp); cache this oclEngine vy view
+        oclEngine.addOclExpression(oclexp);
 
         let obj: T[] = obj0;
         let ret: ((OclResult | boolean) | (GObject | undefined))[] = [];
 
-        for (let i = 0; i < obj.length; i++) { do imsteasd simgle dumciom ocl.test(obj)
+        for (let i = 0; i < obj.length; i++) {
             let res: OclResult | undefined;
             try { res = oclEngine.evaluate(obj[i]); }
             catch(e) { console.error('failed to evalute OCL expression:', {e, obj, oclexp}); res = undefined; }
