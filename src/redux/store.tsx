@@ -6,7 +6,7 @@ import {
     CreateElementAction, Cross,
     DAttribute,
     DClass,
-    DClassifier, Decagon, DecoratedStar,
+    DClassifier, Decagon, DecoratedStar, DEdge,
     DEdgePoint,
     Defaults,
     DEnumerator,
@@ -106,11 +106,9 @@ export class DState extends DPointerTargetable{
     voidvertexs: Pointer<DGraphVertex, 0, 'N'> = [];
     vertexs: Pointer<DVertex, 0, 'N'> = [];
     graphvertexs: Pointer<DGraphVertex, 0, 'N'> = [];
-
+    graphelements: Pointer<DGraphVertex, 0, 'N'> = []; // actually fields
     edgepoints: Pointer<DEdgePoint, 0, 'N'> = [];
-    //my addon
-    extEdges: Pointer<DExtEdge, 0, "N"> = [];
-    refEdges: Pointer<DRefEdge, 0, "N"> = [];
+    edges: Pointer<DEdge, 0, "N"> = [];
 
     classifiers: Pointer<DClassifier, 0, 'N'> = [];
     enumerators: Pointer<DEnumerator, 0, 'N'> = [];
@@ -152,6 +150,15 @@ export class DState extends DPointerTargetable{
 
     projects: Pointer<DProject, 0, 'N'> = [];
     collaborativeSession: boolean = false;
+    ////////////////     flags shared, but handled locally      /////////////////////////////
+
+    // views whose oclCondition needs to be reapplied to all model elements
+    VIEWOCL_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
+    // views where both ocl needs to be reapplied and the oclUpdateCondition -> transient.view[v.id].oclUpdateCondition_PARSED needs to be remade
+    VIEWOCL_UPDATE_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
+    CSS_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
+    DATAOCL_NEEDS_RECALCULATION: Pointer<DModelElement>[] = [];
+
 
     static init(store?: DState): void {
         BEGIN()

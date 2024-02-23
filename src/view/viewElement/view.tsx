@@ -19,7 +19,7 @@ import {
     GObject,
     GraphPoint,
     GraphSize,
-    Info,
+    Info, LModelElement,
     Log,
     LogicContext,
     LPointerTargetable,
@@ -29,13 +29,14 @@ import {
     Pointers,
     RuntimeAccessible,
     RuntimeAccessibleClass,
-    SetFieldAction,
+    SetFieldAction, SetRootFieldAction,
     ShortAttribETypes,
     store,
     TRANSACTION,
     U,
     windoww
 } from "../../joiner";
+import { transientProperties } from "../../joiner/classes";
 
 @RuntimeAccessible('DViewElement')
 export class DViewElement extends DPointerTargetable {
@@ -76,6 +77,10 @@ export class DViewElement extends DPointerTargetable {
     subViews!: Pointer<DViewElement, 0, 'N', LViewElement>;
     allSubViews!: Pointer<DViewElement, 0, 'N', LViewElement>; // derivate attribute
     oclCondition!: string; // ocl selector
+    oclUpdateCondition!: DocString<(view: LViewElement)=>boolean>;
+    //oclUpdateCondition_PARSED!: undefined | ((view: LViewElement)=>boolean); moved in transient
+    OCL_NEEDS_RECALCULATION!: boolean; // if only the oclCondition needs to be reapplied to all model elements
+    OCL_UPDATE_NEEDS_RECALCULATION!: boolean; // if both ocl needsto be reapplied and the oclUpdateCondition -> transient.view[v.id].oclUpdateCondition_PARSED needs to be remade
     explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
     defaultVSize!: GraphSize;
     adaptHeight!: boolean;// | 'fit-content' | '-webkit-fill-available';
@@ -152,6 +157,12 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     // own properties
     name!: string;
     __info_of__name: Info = {isGlobal: true, type: ShortAttribETypes.EString, txt:<div>Name of the view</div>}
+    isOverlay!:boolean;
+    __info_of__isOverlay: Info = {isGlobal:true, type: ShortAttribETypes.EBoolean, txt:<div>If not exclusive, the view is meant to add a functional outline of tools to a primary View, or css.
+            <br/>A non-exclusive view cannot be applied alone and needs an exclusive view to render the main graphical content.</div>};
+    get_isOverlay(c: Context): this["isOverlay"] { return this.get_isExclusiveView(c); }
+    set_isOverlay(val: this["isOverlay"], c: Context): boolean { return this.set_isExclusiveView(val, c); }
+
     isExclusiveView!: boolean;
     __info_of__isExclusiveView: Info = {isGlobal:true, type: ShortAttribETypes.EBoolean, txt:<div>If not exclusive, the view is meant to add a functional outline of tools to a primary View, or css.
     <br/>A non-exclusive view cannot be applied alone and needs an exclusive view to render the main graphical content.</div>};
@@ -223,7 +234,34 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             "}";
     }
 
-    private css_MUST_RECOMPILE: boolean = false;
+    // format should be array of (usedPaths: string[]) starting with "data." AUTOMATICALLY inefered from the ocl editor.
+    oclUpdateCondition!: DocString<(oldData: LModelElement, newData:LModelElement) => boolean>;
+    __info_of__oclUpdateCondition: Info = {readType: '(view: LViewElement)=>boolean', writeType: 'function string',
+        txt: "[Optionally] Declare variables that are used in OCL condition, so that OCL will be re-checked only when those values have changed."}
+    get_oclUpdateCondition(c: Context): this["oclUpdateCondition"] { return transientProperties.view[c.data.id].oclUpdateCondition_PARSED; }
+    set_oclUpdateCondition(val: DocString<"function">, c: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data, "oclUpdateCondition", val || '', '', false);
+            // not recalculated right now because the change needs to be sent to collaborative editor users
+            // it is pointer, but i don't want to set pointedby's, it is very short lived.
+            SetRootFieldAction.new("OCL_UPDATE_NEEDS_RECALCULATION", c.data.id, '+=', false);
+        });
+        return true;
+    }
+/* moved it as setrootfield action and as array. check it after every reducer. update im same style the color palette too?
+    OCL_NEEDS_RECALCULATION!: boolean;
+    __info_of__OCL_NEEDS_RECALCULATION: Info = {hidden: true, type: ShortAttribETypes.EBoolean,
+        txt: "if only the oclCondition needs to be reapplied to all model elements"}
+    get_OCL_NEEDS_RECALCULATION(c: Context): this["OCL_NEEDS_RECALCULATION"] { return c.data.OCL_NEEDS_RECALCULATION; }
+    set_OCL_NEEDS_RECALCULATION(val: this["OCL_NEEDS_RECALCULATION"], c: Context): boolean { return this.cannotSet('OCL_NEEDS_RECALCULATION'); }
+
+    OCL_UPDATE_NEEDS_RECALCULATION!: boolean;
+    __info_of__OCL_UPDATE_NEEDS_RECALCULATION: Info = {hidden: true, type: ShortAttribETypes.EBoolean,
+        txt: "if both ocl needsto be reapplied and the oclUpdateCondition -> transient.view[v.id].oclUpdateCondition_PARSED needs to be remade"}
+    get_OCL_UPDATE_NEEDS_RECALCULATION(c: Context): this["OCL_UPDATE_NEEDS_RECALCULATION"] { return c.data.OCL_UPDATE_NEEDS_RECALCULATION; }
+    set_OCL_UPDATE_NEEDS_RECALCULATION(val: this["OCL_UPDATE_NEEDS_RECALCULATION"], c: Context): boolean { return this.cannotSet('OCL_UPDATE_NEEDS_RECALCULATION'); }*/
+
+    private css_MUST_RECOMPILE!: boolean;
     public cssIsGlobal!: boolean;
     __info_of__cssIsGlobal: Info = {type: ShortAttribETypes.EBoolean, txt: "Use with caution!\nIf true, custom css can affect even elements not matched with this view, or outside the graph."}
     get_cssIsGlobal(c: Context): this["cssIsGlobal"] { return c.data.cssIsGlobal; }
@@ -373,6 +411,14 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     oclCondition!: string; // ocl selector
     __info_of__oclCondition: Info = {isGlobal: true, hidden:true, label:"OCL apply condition", type: "text", // TODO: what's the difference with this.query?
         txt: 'OCL Query selector to determine which nodes or model elements should apply this view'}
+    set_oclCondition(val: string, c: Context): boolean {
+        val = (val || '').trim();
+        if (val === c.data.oclCondition) return true;
+        SetFieldAction.new(c.data, "oclCondition", val, '', false);
+        // not recalculated right now because the change needs to be sent to collaborative editor users
+        SetFieldAction.new(c.data, "OCL_NEEDS_RECALCULATION", true, '', false);
+        return true;
+    }
 
     // todo: how about allowing a view to be part in multiple vp's? so this reference would be an array or removed, and you navigate only from vp to v.
     viewpoint!: LViewPoint;

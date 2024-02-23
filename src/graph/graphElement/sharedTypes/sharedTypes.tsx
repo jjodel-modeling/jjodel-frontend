@@ -52,6 +52,8 @@ export class GraphElementReduxStateProps {
 
     // lastSelected!: LModelElement | null;
     isEdgePending!: { user: LUser, source: LClass };// vertex only
+    nodeid!: Pointer<DGraphElement>;
+    dataid!: Pointer<DModelElement>;
 }
 
 export class GraphElementDispatchProps {

@@ -1,4 +1,4 @@
-import type {U as UType, GraphDragManager, MouseUpEvent, orArr} from '../../joiner';
+import {U as UType, GraphDragManager, MouseUpEvent, orArr, DModelElement, DViewElement} from '../../joiner';
 import {
     Action,
     CompositeAction,
@@ -29,6 +29,8 @@ import React from "react";
 import {LoadAction, RedoAction, UndoAction} from "../action/action";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {SimpleTree} from "../../common/SimpleTree";
+import {transientProperties} from "../../joiner/classes";
+import {OclEngine} from "@stekoe/ocl.js";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -330,21 +332,43 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     const ret = _reducer(oldState, action);
     if (ret === oldState) return oldState;
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
+
     // client synchronization stuff
-    if (!oldState?.collaborativeSession) return ret;
-    const ignoredFields: (keyof DState)[]  = ['contextMenu', '_lastSelected', 'isLoading', 'collaborativeSession'];
-    /* Checking if CompositeAction has some actions that MUST be ignored */
-    let compositeAction: CompositeAction|null = null;
-    if(action.type === CompositeAction.type) {
-        compositeAction = action as CompositeAction;
-        const subActions = compositeAction.actions || [];
-        compositeAction.actions = subActions.filter(a => !ignoredFields.includes(a.field as keyof DState));
+    if (oldState?.collaborativeSession) {
+        const ignoredFields: (keyof DState)[]  = ['contextMenu', '_lastSelected', 'isLoading', 'collaborativeSession'];
+        /* Checking if CompositeAction has some actions that MUST be ignored */
+        let compositeAction: CompositeAction|null = null;
+        if(action.type === CompositeAction.type) {
+            compositeAction = action as CompositeAction;
+            const subActions = compositeAction.actions || [];
+            compositeAction.actions = subActions.filter(a => !ignoredFields.includes(a.field as keyof DState));
+        }
+        if(compositeAction && !compositeAction.actions.length) return ret;
+        action = (compositeAction) ? compositeAction : action;
+        if(action.sender === DUser.current && !ignoredFields.includes(action.field as keyof DState)) {
+            const parsedAction: JSON & GObject = JSON.parse(JSON.stringify(action));
+            Collaborative.client.emit('pushAction', parsedAction);
+        }
     }
-    if(compositeAction && !compositeAction.actions.length) return ret;
-    action = (compositeAction) ? compositeAction : action;
-    if(action.sender === DUser.current && !ignoredFields.includes(action.field as keyof DState)) {
-        const parsedAction: JSON & GObject = JSON.parse(JSON.stringify(action));
-        Collaborative.client.emit('pushAction', parsedAction);
+    // local changes to out-of-redux stuff
+    if (ret.VIEWOCL_NEEDS_RECALCULATION.length) {
+        // for (let gid of ret.graphs) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
+        transientProperties.viewsChanged = ret.VIEWOCL_NEEDS_RECALCULATION;
+        // for (let vid of ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION) { }
+        for (let vid of ret.VIEWOCL_NEEDS_RECALCULATION) {
+            Selectors.updateViewMatchings2(DPointerTargetable.fromPointer(vid), false, true, ret);
+        }
+        ret.VIEWOCL_NEEDS_RECALCULATION = [];
+
+    }
+    if (ret.VIEWOCL_UPDATE_NEEDS_RECALCULATION.length) {
+        ret.VIEWOCL_UPDATE_NEEDS_RECALCULATION = [];
+    }
+    if (ret.CSS_NEEDS_RECALCULATION) {
+        ret.CSS_NEEDS_RECALCULATION = [];
+    }
+    if (ret.DATAOCL_NEEDS_RECALCULATION) {
+        ret.DATAOCL_NEEDS_RECALCULATION = [];
     }
     return ret;
 

@@ -140,6 +140,9 @@ import {
     U
 } from "./index";
 import TreeModel from "tree-model";
+import {types} from "util";
+import isBooleanObject = module
+import {OclEngine} from "@stekoe/ocl.js";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -823,7 +826,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.onDataUpdate = '';
         // thiss.__transient = new DViewTransientProperties();
         thiss.subViews = [];
-        thiss.oclCondition = oclCondition;
+        thiss.oclCondition = oclCondition || '';
+        thiss.oclUpdateCondition = '';
+        thiss.oclUpdateCondition_PARSED = undefined;
+        thiss.OCL_NEEDS_RECALCULATION = true;
         thiss.explicitApplicationPriority = priority;
         thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 351, 201);
         thiss.isExclusiveView = true;
@@ -2545,3 +2551,59 @@ export enum EModelElements{
     "(m1) Object" = "DObject",
     "(m1) Value" = "DValue",
 }
+export class ViewEClassMatch {
+    static NOT_EVALUATED_YET = undefined;
+    static MISMATCH = Number.NEGATIVE_INFINITY;
+    static MISMATCH_PRECONDITIONS = Number.NEGATIVE_INFINITY;
+    static MISMATCH_OCL = 0;
+    static IMPLICIT_MATCH = 1;
+    static INHERITANCE_MATCH = 2;
+    static EXACT_MATCH = 3;
+}
+
+
+export class NodeTransientProperties{
+    viewSorted_modelused?: LModelElement; // L-version because it is used in oclUpdate function
+    viewSorted_pvid_used?: DViewElement;
+    viewSorted_nodeused?: LGraphElement;
+    stackViews!: LViewElement[]; // for each parentview, an array of Views[] sorted by score.
+    viewScores: Dictionary<Pointer<DViewElement>, {
+        score: number;
+        oldNode: DGraphElement; // ref to the actual node, not pointer. so even if it's modified through redux,
+        // it is still possible to compare old version and new version to check if view.oclUpdateCondition should trigger
+    }> = {} as any;
+    force1Update!: boolean;
+}
+type ViewTransientProperties = {
+    // css_MUST_RECOMPILE: boolean;
+    // compiled_css: string; maye those are better shared in sessions
+    oclUpdateCondition_PARSED: (oldData: LModelElement, newData:LModelElement) => boolean;
+    oclEngine: OclEngine;
+}
+type METransientProperties = {
+    nodes: Dictionary<Pointer<DGraphElement, LGraphElement>;
+    node: LGraphElement;
+}
+// score for all view ocl + sorted views by best match
+type TransientPropertiesByGraphTab = Dictionary<Pointer<DViewElement, number>> & {
+    /*
+    need_sorting: boolean;
+    sorted: Pointer<DViewElement>[];
+    // viewMatchings: Scored<DViewElement>[];
+    when to update?
+    1) data.parent.view.id: when "suviews" in place are changed by a view on a container element has changed (if pkg view changed, class view might change as well)
+    2) data.any --> when a direct value of the doject changed, amd that value was declared in ocl
+    3) view.appliableto --> when d-type changes (never, a class cannot become a enum or reference
+    4) node stuff never? or maybe entire nodes?
+    other data or view properties?*/
+};
+export const transientProperties = {
+    node: {} as Dictionary<Pointer<DGraphElement>, NodeTransientProperties>,
+    view: {} as Dictionary<Pointer<DViewElement>, ViewTransientProperties>,
+    modelElement: {} as Dictionary<Pointer<DModelElement>, METransientProperties>,
+}
+// transientProperties.nodes[nid].viewScores[vid]?.[pvid as string];
+/*
+export const transientPropertiesByGraphTab: {viewMatchings: Dictionary<Pointer<DGraph>, Dictionary<Pointer<DModelElement>, TransientPropertiesByGraphTab>>} = {
+ viewMatchings: {}
+};*/

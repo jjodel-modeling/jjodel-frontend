@@ -74,6 +74,7 @@ import {
 } from "../../api/data";
 import {ValuePointers} from "./PointerDefinitions";
 import {ShortDefaultEClasses} from "../../common/U";
+import {transientProperties} from "../../joiner/classes";
 
 
 @Node
@@ -298,8 +299,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
 
     protected get_nodes(context: Context): this["nodes"] {
+        return Object.values(transientProperties.modelElement[context.data.id]?.nodes || {});/*
         const nodes: LGraphElement[] = [];
-        const nodeElements = $('[data-dataid="' + context.data.id + '"]');
+        const nodeElements = $('[data-dataid="' + context.data.id + '"]'); nope, this must become more efficient. when node is created set action to update data.nodes array? or to update a transient property (better)
         for (let nodeElement of nodeElements) {
             const nodeId = nodeElement.id;
             if (nodeId) {
@@ -307,12 +309,13 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 if (lNode) nodes.push(lNode);
             }
         }
-        return nodes;
+        return nodes;*/
     }
 
     protected get_node(context: Context): this["node"] {
-        const nodes = context.proxyObject.nodes;
-        return nodes.filter( n => n.favoriteNode)[0] || nodes[0];
+        return transientProperties.modelElement[context.data.id]?.node;
+        // const nodes = context.proxyObject.nodes;
+        // return nodes.filter( n => n.favoriteNode)[0] || nodes[0];
     }
 
     /*

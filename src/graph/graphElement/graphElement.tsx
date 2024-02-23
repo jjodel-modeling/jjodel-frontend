@@ -50,6 +50,7 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
     UX,
     windoww,
 } from "../../joiner";
+import {transientProperties, transientPropertiesByGraphTab} from "../../joiner/classes";
 
 // const Selectors: typeof Selectors_ = windoww.Selectors;
 
@@ -141,20 +142,27 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     static mapViewStuff(state: DState, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
         // let dnode: DGraphElement | undefined = ownProps?.nodeid && DPointerTargetable.from(ownProps.nodeid, state) as any;
-        if (ownProps.view) {
-            ret.view = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(Pointers.from(ownProps.view), state) as DViewElement);
-            if (ret.view) ret.views = [ret.view];
-            Log.w(!ret.view, "Requested view "+ownProps.view+" not found. Another view got assigned.", {requested: ownProps.view, props: ownProps, state: ret});
-        }
+
         if (!ret.view) {
-            const viewScores = Selectors.getAppliedViews(ret.data,
+            /*const viewScores = Selectors.getAppliedViews(ret.data,
                 (ownProps.view as LViewElement)?.id || (ownProps.view as string) || null,
-                ownProps.parentViewId || null);
-            ret.views = viewScores.map<LViewElement>(e => LViewElement.fromD(e.element)).filter(v => !!v);
+                ownProps.parentViewId || null);* /
+            // transientProperties.node[ownProps.nodeid].viewStack[ownProps.data][ownProps.parentViewId]
+            const viewScores = Selectors.getAppliedViewsNew({data:ret.data, node: ret.node, did: ownProps.data, nid: ownProps.node,
+                pvid: ownProps.parentViewId,
+                vid: (ownProps.view as LViewElement)?.id || (ownProps.view as string) || undefined});
+            ret.views = viewScores.map<LViewElement>(e => LViewElement.fromD(e.element)).filter(v => !!v);*/
+            ret.views = Selectors.getAppliedViewsNew({data:ret.data, node: ret.node, nid: ownProps.nodeid as string,
+                pv: ownProps.parentViewId && DPointerTargetable.from(ownProps.parentViewId)});
             // console.log("debug",  {...this.props, data: this.props.data?.id, view: this.props.view?.id, v0: this.props.views, views: this.props.views?.map( v => v?.id )})
-            ret.view = ret.views[0];
+            if (ownProps.view) {
+                ret.view = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(Pointers.from(ownProps.view), state) as DViewElement);
+                Log.w(!ret.view, "Requested view "+ownProps.view+" not found. Another view got assigned.", {requested: ownProps.view, props: ownProps, state: ret});
+                if (ret.view) ret.views = [ret.view, ...ret.views];
+            }
+            else ret.view = ret.views[0];
             Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret});
-            (ret as any).viewScores = viewScores; // debug only
+            (ret as any).viewScores = transientProperties.node[ownProps.nodeid as string]; // debug only
         }
 
         /*        if (ownProps.view) {
@@ -166,7 +174,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     static mapLModelStuff(state: DState, ownProps: GraphElementOwnProps, ret: GraphElementReduxStateProps): void {
         // NB: Edge constructor might have set it from props.start, so keep the check before overwriting.
-        if (!ret.data?.__isProxy) ret.data = LPointerTargetable.wrap(ownProps.data);
+        if (!ret.data?.__isProxy) { ret.data = LPointerTargetable.wrap(ownProps.data); }
+        ret.dataid = ret.data?.id as string;
         /*
         const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : (ownProps.data as any as DModelElement)?.id) as string;
         // Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ret, ownProps, state});
@@ -183,6 +192,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let nodeid: string = ownProps.nodeid as string;
         let graphid: string = isDGraph ? isDGraph.id : ownProps.graphid as string;
         let parentnodeid: string = ownProps.parentnodeid as string;
+        ret.nodeid = ownProps.nodeid;
         // let data: Pointer<DModelElement, 0, 1, LModelElement> = ownProps.data || null;
         // Log.exDev(!nodeid || !graphid, 'node id injection failed', {ownProps, data: ret.data, name:(ret.data as any)?.name || (ret.data as any)?.className}); /*
         /*if (!nodeid) {
@@ -240,6 +250,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             // console.log("map ge2", {nodeid: nodeid+'', dge: {...dge}, dgeid: dge.id});
         }
         else { ret.node = MyProxyHandler.wrap(dnode); }
+
+
+        // set up transient model-> node map
+        if (!transientProperties.modelElement[ret.dataid]) transientProperties.modelElement[ret.dataid] = {nodes: {}} as any;
+        transientProperties.modelElement[ret.dataid].nodes[ownProps.nodeid as string] = ret.node;
+        transientProperties.modelElement[ret.dataid].node = ret.node;
     }
 
     ////// mapper func
@@ -291,6 +307,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 // le istanze obj di m1 non vengono agiornate se cambio nome alla classe m2
     public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any): boolean {
         // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
+        if (transientProperties.node[nextProps.nodeid].force1Update) {
+            transientProperties.node[nextProps.nodeid].force1Update = false;
+            Log.l(true, "ShouldComponentUpdate " + this.props.data?.name + " UPDATED", {ret: true, reason: 'transient properties edited (stackviews?)', oldProps:this.props, nextProps});
+            return true;
+        }
         let out = {reason:undefined};
         let skipDeepKeys = {pointedBy:true};
         // let skipPropKeys = {...skipDeepKeys, usageDeclarations: true, node:true, data:true, initialSize: true};

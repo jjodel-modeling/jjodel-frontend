@@ -3,6 +3,12 @@
 export const a = 0;
 
 let data:any, node:any, view:any, component:any;
+
+// get final viewstack for a node, also updates OCL scores if needed because of a change in model or parentView (NOT from a change in view)
+
+todo: i have fixed changes in data and in parentview.
+    now need to adress changes in view ocl or oclcondition
+and adress first evaluation for a mp where i need to check preconditions view.appliableto
 // todo: actually inject generated color palette to css editor as prefix, so monaco editor knows them and can validate variable usage, but those lines are hidden in visual editor.
 
 /*
