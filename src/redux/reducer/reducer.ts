@@ -373,7 +373,9 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         // not implemented for now
         ret.VIEWOCL_UPDATE_NEEDS_RECALCULATION = [];
     }
+
     for (let dataid in ret.ClassNameChanged) {
+        if (dataid === 'clonedCounter') continue;
         // NB: if i ever want to access a constructor's other properties in ocl, like "context Persona inv: self.$somecounter === Persona.instances.length",
         // i would need to update this every time a DClass property changes instead of only when name changes.
 

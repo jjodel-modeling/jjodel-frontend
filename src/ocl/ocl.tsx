@@ -96,27 +96,46 @@ export class OCL extends RuntimeAccessibleClass{
     private static getOCLScore(ocl: string): number { return ocl.length; }
 
     public static test(mp0: DModelElement | LModelElement | undefined, view0: LViewElement | DViewElement | undefined, node0?: LGraphElement | DGraphElement): number {
+
+        console.log('2302, IN ocl 0', {mp0, view0});
         if (!mp0 || !view0) return ViewEClassMatch.MISMATCH_OCL;
         let mp: DModelElement, lmp: LModelElement;
         let node: DGraphElement, lnode: LGraphElement;
         let view: DViewElement;
+        //console.log('2302, IN ocl 0.1', {mp0, view0, node0});
         // @ts-ignore
-        if ((mp = mp0.__raw)) lmp = mp0; else { lmp = mp0; mp = (lmp as LModelElement).__raw; }
+        if ((mp = mp0.__raw)) lmp = mp0; else { lmp = mp0; mp = (lmp as LModelElement)?.__raw; }
+        //console.log('2302, IN ocl 0.2', {mp0, view0});
+
         // @ts-ignore
         if ((node = node0?.__raw)) lnode = node0; else { lnode = node0; node = lnode?.__raw; }
+        console.log('2302, IN ocl 0.3', {mp0, view0});
         // @ts-ignore
-        if (!(view = view.__raw)) view = view0.__raw;
+        view = view0?.__raw || view0;
+        let oclCondition = view.oclCondition;
+        if (!view.oclCondition) {
+            console.log('2302, IN ocl 0.3 OCL without condtion return', {cond:view.oclCondition, view});
+            return 1;
+        }
+
         let oclEngine: OclEngine;
+        console.log('2302, IN ocl 0.4', {});
         if (!transientProperties.view[view.id]) transientProperties.view[view.id] = {} as any;
+        console.log('2302, IN ocl 1', {vid: view?.id, v: view, vt: transientProperties.view[view?.id]});
         if (transientProperties.view[view.id].oclEngine) oclEngine = transientProperties.view[view.id].oclEngine;
         else {
             transientProperties.view[view.id].oclEngine = oclEngine = OclEngine.create();
+            console.log('2302, IN ocl 1.1', {});
             let state: DState = store.getState();
             let rootModel: DModel = mp as any;
+            console.log('2302, IN ocl 1.2', {mp});
             while (rootModel && rootModel.className !== "DModel") rootModel = DPointerTargetable.fromPointer(rootModel.father, state);
+            console.log('2302, IN ocl 1.3', {rootModel, mp});
             oclEngine.registerTypes(RuntimeAccessibleClass.getOCLClasses(rootModel.id));
-            oclEngine.addOclExpression(view.oclCondition);
+            console.log('2302, IN ocl 1.4', {rootModel, mp});
+            oclEngine.addOclExpression(oclCondition);
         }
+        console.log('2302, IN ocl 2', {});
         try {
             let oclResult: OclResult;
             if (!lmp) lmp = LPointerTargetable.fromD(mp);
@@ -128,8 +147,9 @@ export class OCL extends RuntimeAccessibleClass{
                 transientProperties.modelElement[mp.id].node = oldNode;
             }
             else oclResult = oclEngine.evaluate(lmp);
+            console.log('2302, IN ocl 3', {oclResult});
 
-            return oclResult ? OCL.getOCLScore(view.oclCondition) : ViewEClassMatch.MISMATCH_OCL;
+            return oclResult ? OCL.getOCLScore(oclCondition) : ViewEClassMatch.MISMATCH_OCL;
         } catch(e) {
             console.error('failed to evalute OCL expression:', {e, obj: mp, view: view.name, oclexp: view.oclCondition, node});
             return -1;

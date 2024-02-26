@@ -53,7 +53,7 @@ export class GraphElementReduxStateProps {
     // lastSelected!: LModelElement | null;
     isEdgePending!: { user: LUser, source: LClass };// vertex only
     nodeid!: Pointer<DGraphElement>;
-    dataid!: Pointer<DModelElement>;
+    dataid?: Pointer<DModelElement>;
 }
 
 export class GraphElementDispatchProps {
@@ -70,7 +70,9 @@ export class BasicReactOwnProps {
 
 export class GraphElementOwnProps extends BasicReactOwnProps {
     data?: Pointer<DModelElement, 0, 1, LModelElement> | LModelElement;
-    view?: Pointer<DViewElement, 1, 1, LViewElement> | LViewElement
+    view?: Pointer<DViewElement, 1, 1, LViewElement> | LViewElement;
+    views?: LViewElement[] | Pointer<DViewElement>[];
+
     initialSize?: InitialVertexSize;
 
     parentnodeid?: Pointer<DGraphElement, 1, 1, LGraphElement>; // Injected

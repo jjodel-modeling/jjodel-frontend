@@ -328,8 +328,8 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>): DViewElement[] {
         "ret.typeString = data.typeString\n" +
         "}";
 
-    let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [DObject.cname], '', 1, false, true, vp);
-    voidView.appliableToClasses=["VoidVertex"];
+    let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [], '', 0, false, true, vp);
+    // voidView.appliableToClasses=["VoidVertex"];
     voidView.explicitApplicationPriority = 2;
     voidView.adaptWidth = true; voidView.adaptHeight = true;
 

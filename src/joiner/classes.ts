@@ -362,9 +362,10 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     static makeOCLConstructor(data: DClass, state: DState, oldState: DState): GObject<"fake constructor of m2-class for ocl's Context"> {
         let rootModel: DModel = data as any;
         while (rootModel && rootModel.className !== "DModel") rootModel = DPointerTargetable.fromPointer(rootModel.father, state);
-        if (!RuntimeAccessibleClass.OCL_Constructors[rootModel.id]) {
-            RuntimeAccessibleClass.OCL_Constructors[rootModel.id] = {};
-            RuntimeAccessibleClass.OCL_Constructors[rootModel.id].__proto__ = RuntimeAccessibleClass.classes;
+        let mid: Pointer<DModel> = rootModel?.id; // NB: for EBoolean etc, primitive type meteclasses don't have a model;
+        if (!RuntimeAccessibleClass.OCL_Constructors[mid]) {
+            RuntimeAccessibleClass.OCL_Constructors[mid] = {};
+            RuntimeAccessibleClass.OCL_Constructors[mid].__proto__ = RuntimeAccessibleClass.classes;
         }
         const OclConstructor: GObject = data;
         let namefixed: string;
@@ -372,13 +373,13 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         if (oldState && oldState.idlookup[data.id]) {
             let oldname = (oldState.idlookup[data.id] as DClass).name;
             namefixed = U.replaceAll(U.replaceAll(oldname, '-', '_'), ' ', '_');
-            delete RuntimeAccessibleClass.OCL_Constructors[rootModel.id][oldname];
-            delete RuntimeAccessibleClass.OCL_Constructors[rootModel.id][namefixed];
+            delete RuntimeAccessibleClass.OCL_Constructors[mid][oldname];
+            delete RuntimeAccessibleClass.OCL_Constructors[mid][namefixed];
 
         }
         namefixed = U.replaceAll(U.replaceAll(data.name, '-', '_'), ' ', '_');
-        RuntimeAccessibleClass.OCL_Constructors[rootModel.id][data.name] = OclConstructor;
-        RuntimeAccessibleClass.OCL_Constructors[rootModel.id][namefixed] = OclConstructor;
+        RuntimeAccessibleClass.OCL_Constructors[mid][data.name] = OclConstructor;
+        RuntimeAccessibleClass.OCL_Constructors[mid][namefixed] = OclConstructor;
 
         return data;
     }
@@ -773,7 +774,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.partial = partial;
         thiss.partialdefaultname = partialdefaultname;
         this.setExternalPtr(thiss.father, "classifiers", "+=");
-        this.setExternalRootProperty('ClassNameChanged.'+thiss.id, thiss.name, "+=", false);
+        this.setExternalRootProperty('ClassNameChanged.'+thiss.id, thiss.name, '', false);
 
         // thiss.isClass = !isPrimitive;
         // thiss.isEnum = false;
@@ -1118,10 +1119,10 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         INFERRED = {ret: RET, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR},>(ptr: T, s?: DState)
         : RET {
         s = s || store.getState();
+        if (!ptr) { return ptr as any; }
         if (Array.isArray(ptr)) {
             return ptr.map( (p: Pointer) => DPointerTargetable.fromPointer(p, s)) as any;
         }
-        if (!ptr) { return ptr as any; }
         if (typeof ptr !== "string") {
             console.error("wrong parameter in DPointerTargetable.fromPointers()", ptr);
             throw new Error("wrong parameter in DPointerTargetable.fromPointers()");
@@ -2601,7 +2602,7 @@ export class NodeTransientProperties{
     stackViews!: LViewElement[]; // for each parentview, an array of Views[] sorted by score.
     viewScores: Dictionary<Pointer<DViewElement>, {
         score: number;
-        oldNode: DGraphElement; // ref to the actual node, not pointer. so even if it's modified through redux,
+        // oldNode: DGraphElement; moved to viewSorted_nodeused // ref to the actual node, not pointer. so even if it's modified through redux,
         // it is still possible to compare old version and new version to check if view.oclUpdateCondition should trigger
     }> = {} as any;
     force1Update!: boolean;
@@ -2633,7 +2634,8 @@ export const transientProperties = {
     node: {} as Dictionary<Pointer<DGraphElement>, NodeTransientProperties>,
     view: {} as Dictionary<Pointer<DViewElement>, ViewTransientProperties>,
     modelElement: {} as Dictionary<Pointer<DModelElement>, METransientProperties>,
-}
+};
+(window as any).transient = (window as any).transientProperties = transientProperties;
 // transientProperties.nodes[nid].viewScores[vid]?.[pvid as string];
 /*
 export const transientPropertiesByGraphTab: {viewMatchings: Dictionary<Pointer<DGraph>, Dictionary<Pointer<DModelElement>, TransientPropertiesByGraphTab>>} = {

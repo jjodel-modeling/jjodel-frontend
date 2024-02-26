@@ -151,13 +151,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 pvid: ownProps.parentViewId,
                 vid: (ownProps.view as LViewElement)?.id || (ownProps.view as string) || undefined});
             ret.views = viewScores.map<LViewElement>(e => LViewElement.fromD(e.element)).filter(v => !!v);*/
-            ret.views = Selectors.getAppliedViewsNew({data:ret.data, node: ret.node, nid: ownProps.nodeid as string,
-                pv: ownProps.parentViewId && DPointerTargetable.from(ownProps.parentViewId)});
+            if (ownProps.views) ret.views = LPointerTargetable.fromArr(ownProps.views);
+            else ret.views = Selectors.getAppliedViewsNew({data:ret.data, node: ret.node,
+                nid: ownProps.nodeid as string, pv: ownProps.parentViewId && DPointerTargetable.from(ownProps.parentViewId)});
+
             // console.log("debug",  {...this.props, data: this.props.data?.id, view: this.props.view?.id, v0: this.props.views, views: this.props.views?.map( v => v?.id )})
             if (ownProps.view) {
                 ret.view = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(Pointers.from(ownProps.view), state) as DViewElement);
                 Log.w(!ret.view, "Requested view "+ownProps.view+" not found. Another view got assigned.", {requested: ownProps.view, props: ownProps, state: ret});
-                if (ret.view) ret.views = [ret.view, ...ret.views];
+                if (ret.view && !ownProps.views) ret.views = [ret.view, ...ret.views];
             }
             else ret.view = ret.views[0];
             Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret});
@@ -173,16 +175,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     static mapLModelStuff(state: DState, ownProps: GraphElementOwnProps, ret: GraphElementReduxStateProps): void {
         // NB: Edge constructor might have set it from props.start, so keep the check before overwriting.
-        if (!ret.data?.__isProxy) { ret.data = LPointerTargetable.wrap(ownProps.data); }
-        ret.dataid = ret.data?.id as string;
-        if (ret.dataid) {
-            /* now handled in Store.ClassNameChanged
-            if (!transientProperties.modelElement[ret.dataid]) {
-                transientProperties.modelElement[ret.dataid] = {nodes: {}};
-                RuntimeAccessibleClass.OCL_Constructors[]
-            }*/
-            transientProperties.modelElement[ret.dataid].nodes[ret.nodeid] = ret.node;
-        }
+        if (typeof ownProps.data === "object") { ret.dataid = (ownProps.data as any).id; }
+        else ret.dataid = ownProps.data as string | undefined;
+        ret.data = LPointerTargetable.wrap(ret.dataid) // forcing re-wrapping even if props was a dobject or lobject, because i want to get the latest version of it.
+
         /*
         const meid: string = (typeof ownProps.data === 'string' ? ownProps.data as string : (ownProps.data as any as DModelElement)?.id) as string;
         // Log.exDev(!meid, "model element id not found in GE.mapstatetoprops", {meid, ret, ownProps, state});
@@ -190,6 +186,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // Log.ex(!ret.data, "can't find model data:", {meid, state, ownpropsdata:ownProps.data, ownProps});
         */
     }
+
 
     static mapLGraphElementStuff(state: DState,
                                  ownProps: GraphElementOwnProps,
@@ -219,7 +216,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let dnode: DGraphElement = DPointerTargetable.from(nodeid, state) as DGraphElement;
 
         // console.log('dragx GE mapstate addGEStuff', {dGraphElementDataClass, created: new dGraphElementDataClass(false, nodeid, graphid)});
-        if (!dnode && !DPointerTargetable.pendingCreation[nodeid]) {/*
+        if (!dnode && !DPointerTargetable.pendingCreation[nodeid]) {
+            /*
             console.log("making node:", {dGraphElementDataClass, nodeid, parentnodeid, graphid, dataid, ownProps, ret,
                 pendings: {...DPointerTargetable.pendingCreation}, pending:DPointerTargetable.pendingCreation[nodeid]});*/
             // so this is called once, but createaction is triggered twice only for edgepoints? it works if i create it through console.
@@ -253,16 +251,24 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let initialSize = ownProps.initialSize;
                 dge = dGraphElementDataClass.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, initialSize);
                 ret.node =  MyProxyHandler.wrap(dge);
+                console.log("2302 wrapping node 0", {dge, node:ret.node, ret});
             }
             // console.log("map ge2", {nodeid: nodeid+'', dge: {...dge}, dgeid: dge.id});
         }
-        else { ret.node = MyProxyHandler.wrap(dnode); }
+        else {
+            ret.node = MyProxyHandler.wrap(dnode);
+            if (dGraphElementDataClass === DEdge) (ret as EdgeStateProps).edge = ret.node as any;
+            console.log("2302 wrapping node 1", {dnode, node:ret.node, ret});
+        }
 
-
-        // set up transient model-> node map
-        if (!transientProperties.modelElement[ret.dataid]) transientProperties.modelElement[ret.dataid] = {nodes: {}} as any;
-        transientProperties.modelElement[ret.dataid].nodes[ownProps.nodeid as string] = ret.node;
-        transientProperties.modelElement[ret.dataid].node = ret.node;
+        console.log("2302 wrapping node 2", {dnode, node:ret.node, ret});
+        if (ret.dataid) {
+            console.log('2302 mapge', {mid: ret.dataid, d:ret.data, nid: ret.nodeid, n:ret.node});
+            // set up transient model-> node map
+            if (!transientProperties.modelElement[ret.dataid]) transientProperties.modelElement[ret.dataid] = {nodes: {}} as any;
+            transientProperties.modelElement[ret.dataid].nodes[ownProps.nodeid as string] = ret.node;
+            transientProperties.modelElement[ret.dataid].node = ret.node;
+        }
     }
 
     ////// mapper func
@@ -735,6 +741,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         const addprops: boolean = true;
         let fiximport = !!this.props.node;
+        if (this.props.data?.name === "Concept 1") console.log("shouldcomponentupdate rendering " + this.props.data?.name, {cc: this.props.data.clonedCounter, attrs: (this.props.data as any).attributes});
         if (addprops && rawRElement && fiximport) {
             if (windoww.debugcount && debugcount++>windoww.debugcount) throw new Error("debug triggered stop");
             let fixdoubleroot = true;
