@@ -137,6 +137,9 @@ export class DV {
         false && props.children && "this would cause loop no idea why, needs to be fixed to allow passing EdgeNodes here" || []
     }
     */
+    static semanticErrorOverlay() { return (
+            `<div style={{background: '#300', color:'#f00', float: 'right'}}>Invalid value</div>`
+        )}
 }
 
 let valuecolormap: GObject = {};
@@ -199,7 +202,7 @@ class DefaultView {
     }
 
     public static class(): string {
-        return `<div className={'round bg-white root class'}>
+        return `<div className={'round root class'} style={{background: 'var(--background-1)', color:'var(--color-2)'}}>
     <Input jsxLabel={<b className={'class-name'}>EClass:</b>} 
            data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
@@ -223,8 +226,8 @@ class DefaultView {
     }
 
     public static feature(): string {
-        return `<div className={'w-100 root feature'}>
-    <Select className={'p-1  d-flex'} data={data} field={'type'} label={data.name} />
+        return `<div className={'w-100 root feature'} style={{background: 'var(--background-1)', color:'var(--color-2)'}}>
+    <Select className={'p-1 d-flex'} data={data} field={'type'} label={data.name} />
 </div>`;
     }
 
@@ -291,7 +294,6 @@ class DefaultView {
      {!instanceofname && <Input asLabel={true} data={data} field={'name'} hidden={true} autosize={true} />}
     <label className={'d-block m-auto'} style={{color: constants[typeString] || "gray"
     }}>: {valuesString}</label>
-    {console.log("inside eval", {thiss:this, props, ts: typeString, vs: valuesString})}
 </div>`
     }
 

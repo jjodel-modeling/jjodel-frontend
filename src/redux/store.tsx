@@ -267,6 +267,18 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>): DViewElement[] {
     let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.cname], '', 1, false, true, vp);
     classView.adaptWidth = true; classView.adaptHeight = true;
     classView.oclCondition = 'context DClass inv: true';
+    classView.palette = {
+        "color-": [
+            "#ff0000",
+            "#000000",
+            "#ffffff",
+        ],
+        "background-": [
+            "#ffffff",
+            "#eeeeee",
+            "#ff0000"
+        ]
+    };
 
     let enumView: DViewElement = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.cname], '', 1, false, true, vp);
     enumView.adaptWidth = true; enumView.adaptHeight = true;
@@ -274,6 +286,7 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>): DViewElement[] {
 
     let attributeView: DViewElement = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.cname], '', 1, false, true, vp);
     attributeView.oclCondition = 'context DAttribute inv: true';
+    // attributeView.palette = classView.palette;
 
     let referenceView: DViewElement = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.cname], '', 1, false, true, vp);
     referenceView.oclCondition = 'context DReference inv: true';
@@ -298,6 +311,12 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>): DViewElement[] {
         "ret.metaclassName = data.instanceof?.name || \"Object\"\n" +
         "ret.features = data.features\n" +
         "}";
+
+    let errorOverlayView: DViewElement = DViewElement.new2('Semantic error view', DV.semanticErrorOverlay(), (v) => {
+        v.appliableToClasses = ['neverrr']; // DValue.cname];
+        v.isExclusiveView = false;
+    }, false, vp);
+    errorOverlayView.oclCondition = 'context DValue inv: self.value < 0';
 
     let valuecolormap: GObject = {};
     valuecolormap[ShortAttribETypes.EBoolean] = "orange";
@@ -405,7 +424,7 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>): DViewElement[] {
     // nb: Error is not a view, just jsx. transform it in a view so users can edit it
 
     return [modelView, packageView, //defaultPackage,
-        classView, enumView, attributeView, referenceView, operationView,
+        classView, enumView, attributeView, referenceView, operationView, errorOverlayView,
         literalView, objectView, valueView, voidView, ...edgeViews, edgePointView];
 }
 

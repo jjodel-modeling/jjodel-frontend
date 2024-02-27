@@ -50,6 +50,7 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
     UX,
     windoww, transientProperties
 } from "../../joiner";
+import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsData";
 
 // const Selectors: typeof Selectors_ = windoww.Selectors;
 
@@ -251,19 +252,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let initialSize = ownProps.initialSize;
                 dge = dGraphElementDataClass.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, initialSize);
                 ret.node =  MyProxyHandler.wrap(dge);
-                console.log("2302 wrapping node 0", {dge, node:ret.node, ret});
             }
             // console.log("map ge2", {nodeid: nodeid+'', dge: {...dge}, dgeid: dge.id});
         }
         else {
             ret.node = MyProxyHandler.wrap(dnode);
             if (dGraphElementDataClass === DEdge) (ret as EdgeStateProps).edge = ret.node as any;
-            console.log("2302 wrapping node 1", {dnode, node:ret.node, ret});
         }
 
-        console.log("2302 wrapping node 2", {dnode, node:ret.node, ret});
         if (ret.dataid) {
-            console.log('2302 mapge', {mid: ret.dataid, d:ret.data, nid: ret.nodeid, n:ret.node});
             // set up transient model-> node map
             if (!transientProperties.modelElement[ret.dataid]) transientProperties.modelElement[ret.dataid] = {nodes: {}} as any;
             transientProperties.modelElement[ret.dataid].nodes[ownProps.nodeid as string] = ret.node;
@@ -504,7 +501,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
 
         try {
-                let preRenderFuncStr: string | undefined = this.props.view.preRenderFunc;
+            let preRenderFuncStr: string | undefined = this.props.view.preRenderFunc;
             if (preRenderFuncStr) {
                 // eval prerender
                 let obj: GObject = {};
@@ -524,6 +521,35 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         catch (e: any) { return this.displayError(e, "JSX Syntax"); }
 
         try { ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + jsxCodeString + '})()', context); }
+        catch (e: any) { return this.displayError(e, "JSX Semantic"); }
+        return ret;
+    }
+    private getTemplate2(v: LViewElement, sharedContext: GObject): ReactNode {
+        // abababababab
+        // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
+
+        let thisContext: GObject = {};
+        try {
+            let preRenderFuncStr: string | undefined = v.preRenderFunc;
+            if (preRenderFuncStr) {
+                // eval prerender
+                let tempContext: GObject = {__param: thisContext};
+                tempContext.__proto__ = sharedContext;
+                U.evalInContextAndScopeNew("("+preRenderFuncStr+")(this.__param)", tempContext, true, false);
+                U.objectMergeInPlace(thisContext, sharedContext);
+                // thisContext.__proto__ = sharedContext;
+            } else thisContext = sharedContext;
+        }
+        catch(e: any) { return this.displayError(e, "Pre-Render");  }
+
+        let ret;
+        // eval template
+        let jsxCodeString: DocString<ReactNode>;
+
+        try { jsxCodeString = JSXT.fromString(this.props.view.jsxString, {factory: 'React.createElement'}); }
+        catch (e: any) { return this.displayError(e, "JSX Syntax"); }
+
+        try { ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + jsxCodeString + '})()', thisContext); }
         catch (e: any) { return this.displayError(e, "JSX Semantic"); }
         return ret;
     }
@@ -690,7 +716,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         this.props.node.view = this.props.view;
     }*/
 
-    public render(nodeType?:string, styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
+    public render(nodeType:string = '', styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
         if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
             return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
         }
@@ -700,6 +726,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             return "Updating view...";
         }*/
 
+        // EMeasurableEvents.onDataUpdate -> handling and checking for loops
         if (!this.stopUpdateEvents || this.stopUpdateEvents !== this.props.view.clonedCounter) {
             this.stopUpdateEvents = undefined;
             if (this.doMeasurableEvent(EMeasurableEvents.onDataUpdate)) {
@@ -733,15 +760,44 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         else if (this.props.class) { classes.push(this.props.class); }
         /// end set classes
 
-        const rnode: ReactNode = this.getTemplate();
+
+        if (this.props.invalidUsageDeclarations) {
+            return this.displayError(this.props.invalidUsageDeclarations, "Usage Declaration");
+        }
+        let sharedContext: GObject = this.getContext();
+        let mainView: LViewElement = undefined as any;
+        let otherViews: LViewElement[] = [];
+        let decoratorViews: (ReactNode | ReactElement)[] = [];
+        for (let v of this.props.views) {
+            if (v.isExclusiveView) {
+                if (mainView) continue;
+                mainView = v;
+            } else otherViews.push(v);
+        }
+
+        for (let v of otherViews) {
+            // decoratorViews.push(this.renderView(this.props, v, sharedContext, nodeType, classes, styleoverride));
+        }
+
+        let mainViewElement: ReactNode | ReactElement = this.renderView(this.props, mainView, sharedContext, nodeType, classes, styleoverride,[]);// decoratorViews);
+        console.log('rendering view stack', {mainView, otherViews, mainViewElement, decoratorViews})
+        return mainViewElement;
+    }
+
+
+    private renderView(props: AllProps, v: LViewElement, sharedContext: GObject, nodeType: string, classes: string[], styleoverride: React.CSSProperties,
+                              otherViews?: (ReactNode | ReactElement)[]): ReactNode | ReactElement | undefined {
+        let dv = v.__raw;
+        const rnode: ReactNode = this.getTemplate2(v, sharedContext);
         let rawRElement: ReactElement | null = UX.ReactNodeAsElement(rnode);
-        const me: LModelElement | undefined = this.props.data; // this.props.model;
 
         // \console.log('GE render', {thiss: this, data:me, rnode, rawRElement, props:this.props, name: (me as any)?.name});
 
+        function makeItArray(val?: any) { return val ? [] : (Array.isArray(val) ? val : [val]); }
         const addprops: boolean = true;
         let fiximport = !!this.props.node;
         if (this.props.data?.name === "Concept 1") console.log("shouldcomponentupdate rendering " + this.props.data?.name, {cc: this.props.data.clonedCounter, attrs: (this.props.data as any).attributes});
+        let isMainView: boolean = !!otherViews;
         if (addprops && rawRElement && fiximport) {
             if (windoww.debugcount && debugcount++>windoww.debugcount) throw new Error("debug triggered stop");
             let fixdoubleroot = true;
@@ -757,57 +813,70 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     viewStyle = {};
                 */
                 // viewStyle.pointerEvents = "all";
-                viewStyle.order = viewStyle.zIndex = this.props.node?.zIndex; // alias? this.props.node.z
-                viewStyle.display = this.props.view?.display;
                 let injectProps: GObject = {};
-                if (countRenders) {
-                    classes.push(this.countRenders%2 ? "animate-on-update-even" : "animate-on-update-odd");
-                    injectProps["data-countrenders"] = this.countRenders++;
-                }
-                /// let excludeProps = ['data', 'node', 'view', 'children', ]
-                let p: GObject = this.props;
-                for (let k in p) {
-                    if (typeof p[k] === 'object' || typeof p[k] === 'function') continue;
-                    injectProps[k] = p[k];
-                }
-                // for (let k in this.props.childStyle) { delete viewStyle[k]; }
-                rawRElement = React.cloneElement(rawRElement, // i'm cloning a raw html (like div) being root of the rendered view
-                    {
-                        ...injectProps,
+                if (isMainView) {
+                    viewStyle.order = viewStyle.zIndex = props.node?.zIndex; // alias? this.props.node.z
+                    viewStyle.display = v?.display;
+                    const me: LModelElement | undefined = props.data; // this.props.model;
+                    if (countRenders) {
+                        classes.push(this.countRenders%2 ? "animate-on-update-even" : "animate-on-update-odd");
+                    }                /// let excludeProps = ['data', 'node', 'view', 'children', ]
+
+                    injectProps = {
                         ref: this.html,
                         // damiano: ref html viene settato correttamente a tutti tranne ad attribute, ref, operation (è perchè iniziano con <Select/> as root?)
-                        id: this.props.nodeid,
-                        "data-nodeid": this.props.nodeid,
+                        id: props.nodeid,
+                        "data-nodeid": props.nodeid,
                         "data-dataid": me?.id,
-                        "data-viewid": this.props.view.id,
+                        "data-viewid": dv.id,
                         "data-modelname": me?.className || "model-less",
-                        "data-userselecting": JSON.stringify(this.props.node?.isSelected || {}),
+                        "data-userselecting": JSON.stringify(props.node?.isSelected || {}),
                         "data-nodetype": nodeType,
                         // "data-order": this.props.node?.zIndex,
                         style: {...viewStyle, ...styleoverride},
                         className: classes.join(' '),
                         onClick: this.onClick,
-                        onContextMenu:this.onContextMenu,
-                        onMouseDown:this.onMouseDown,
-                        onMouseUp:this.onMouseUp,
+                        onContextMenu: this.onContextMenu,
+                        onMouseDown: this.onMouseDown,
+                        onMouseUp: this.onMouseUp,
                         onMouseWheel: this.onScroll,
-                        onMouseEnter:this.onEnter,
-                        onMouseLeave:this.onLeave,
-                        tabIndex: (this.props as any).tabIndex || -1,
-                        children: UX.recursiveMap(rawRElement/*.props.children*/,
-                            (rn: ReactNode, index: number, depthIndexes: number[]) => {
-                                let injectOffset: undefined | LGraph = ((this.props as any).isGraph && !depthIndexes[0] && !index) && (this.props.node as LGraph);
-                                injectOffset&&console.log("inject offset props0:", {injectOffset});
-                                //console.log("inject offset props00:", {injectOffset, ig:(this.props as any).isGraph, props:this.props, depthIndexes, index});
-                                return UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes, injectOffset)
-                            })});
+                        onMouseEnter: this.onEnter,
+                        onMouseLeave: this.onLeave,
+                        tabIndex: (props as any).tabIndex || -1,
+                        "data-countrenders": this.countRenders++,
+                    };
+                    let p: GObject = this.props;
+                    for (let k in p) {
+                        if (typeof p[k] === 'object' || typeof p[k] === 'function') continue;
+                        if (!injectProps[k]) injectProps[k] = p[k];
+                    }
+                }
+                else injectProps = {"data-viewid": v.id};
+
+                injectProps.children = UX.recursiveMap(rawRElement/*.props.children*/,
+                    (rn: ReactNode, index: number, depthIndexes: number[]) => {
+                        let injectOffset: undefined | LGraph = ((this.props as any).isGraph && !depthIndexes[0] && !index) && (this.props.node as LGraph);
+                        injectOffset&&console.log("inject offset props0:", {injectOffset});
+                        //console.log("inject offset props00:", {injectOffset, ig:(this.props as any).isGraph, props:this.props, depthIndexes, index});
+                        return UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes, injectOffset)
+                    });
+
+                if (otherViews && false) injectProps.children = [...injectProps.children, ...makeItArray(props.children), ...(otherViews as any[])];
+
+                // injectProps.children = [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)];
+                let children = makeItArray(injectProps.children); // [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)]; rawRElement.child are already in injectprops
+                // injectProps.children = [<div>{children}</div>];//[]; making any change at injectprops.children breaks it?
+                rawRElement = React.cloneElement(rawRElement, injectProps);//, ...children); // adding chioldrens after injectprops seems pointless
+                // rawRElement = React.cloneElement(rawRElement, {children: [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)]});
+                // console.log('rendering view stack fixing doubles', {v0:rnode, v1:rawRElement, fixed:rawRElement.props.children})
                 fixdoubleroot = false; // need to set the props to new root in that case.
                 if (fixdoubleroot) rawRElement = rawRElement.props.children;
+
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
             } catch (e: any) {
                 rawRElement = DV.errorView("error while injecting props to subnodes\n:" + (e.message || '').split('\n')[0],
-                        {e, rawRElement, key:this.props.key, newid: this.props.nodeid},
-                    'Subelement props', this.props.data?.__raw, this.props.node?.__raw, this.props.view.__raw) as ReactElement;
+                    {e, rawRElement, key: props.key, newid: props.nodeid},
+                    'Subelement props', props.data?.__raw, props.node?.__raw, dv) as ReactElement;
                 /*
                 rawRElement = U.eval InContextAndScope<ReactElement>('()=>{ return ' +
                     DV.errorView("error while injecting props to subnodes",
@@ -827,21 +896,19 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // rnode = React.cloneElement(rnode as ReactElement, injectprops);
 
         // console.log("nodeee", {thiss:this, props:this.props, node: this.props.node});
-        if (false && (this.props.node?.__raw as DGraphElement).father) {
-            let $containedIn = $('#' + this.props.node.father);
+        if (false && dv.isExclusiveView && (props.node?.__raw as DGraphElement).father) {
+            let $containedIn = $('#' + props.node.father);
             let $containerDropArea = $containedIn.find(".VertexContainer");
             const droparea = $containerDropArea[0] || $containedIn[0];
             Log.exDev(!droparea, 'invalid vertex container target', {$containedIn, $containerDropArea});
-            if (droparea) return createPortal(
-                rawRElement || rnode,
-                droparea
-            );
+            if (droparea) return createPortal(rawRElement || rnode, droparea);
         }/*
         if (countRenders) return <>{[
             rawRElement || rnode,
             <div className={this.countRenders%2 ? "animate-on-update-even" : "animate-on-update-odd"} data-countrenders={this.countRenders++} />
         ]}</>/*/
-        return rawRElement || rnode;
+
+        return  rawRElement || rnode;
     }
 
 }

@@ -62,16 +62,16 @@
 
 
 .class {
-  border-left: 0.25em solid $class-color;
+  border-left: 0.25em solid var(--color-1); // $class-color;
 }
 
 .class-name {
   font-weight: bold;
-  color: $class-color;
+  color: var(--color-1); // $class-color;
 }
 
 .class-children {
-  background-color: whitesmoke;
+  background-color: var(--background-2);
   height: fit-content;
   width: $fill;
 }

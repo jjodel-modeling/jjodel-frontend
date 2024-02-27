@@ -97,8 +97,10 @@ font-weight: 900 !important;
       top: -23px;
       left: 0;
       background: red;
+      background-color: var(--background-3);
+      color: var(--color-3);
       padding: 0 4px;
-      color: white;
+      // color: white;
       z-index: 100000;
     }
   }
@@ -112,6 +114,8 @@ font-weight: 900 !important;
   [data-countrenders]{
     &::before{
       content: attr(data-countrenders);
+      background-color: var(--background-3);
+      color: var(--color-3);
       display: inline-block;
       position: absolute;
       z-index: 999;

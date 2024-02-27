@@ -871,8 +871,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.lazySizeUpdate = true;
         thiss.constraints = [];
         thiss.palette = {
-            'color-':['#ffffff', '#ff0000', '#00ff00', '#0000ff','#aaaaaa', '#ffaaaa', '#aaffaa', '#aaaaff'],
-            'background-':['#000000', '#33333', '#777777']};
+            'color-': [], //['#ffffff', '#ff0000', '#00ff00', '#0000ff','#aaaaaa', '#ffaaaa', '#aaffaa', '#aaaaff'],
+            'background-':[]};// ['#000000', '#33333', '#777777']};
         thiss.css = '';
         thiss.compiled_css = '';
         thiss.css_MUST_RECOMPILE = true;

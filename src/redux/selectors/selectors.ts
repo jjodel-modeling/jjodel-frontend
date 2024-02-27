@@ -516,7 +516,7 @@ export class Selectors{
 
     // get final viewstack for a node, also updates OCL scores if needed because of a change in model or parentView (NOT from a change in view)
     static getAppliedViewsNew({data:data0, node, pv, nid}:{ node: LGraphElement | undefined; data: LModelElement | undefined; pv: DViewElement | undefined; nid: Pointer<DGraphElement>}): LViewElement[] {
-        console.trace('2302, getviews', {tnode: transientProperties.node[nid], nid, pv})
+        // console.trace('2302, getviews', {tnode: transientProperties.node[nid], nid, pv})
         let olddata = transientProperties.node[nid]?.viewSorted_modelused as LModelElement;
         let oldnode = transientProperties.node[nid]?.viewSorted_nodeused as LGraphElement;
         const data: LModelElement = data0 as LModelElement;
@@ -558,7 +558,7 @@ export class Selectors{
                 if (firstEvaluationForNodeView) {
                     const oldScore = transientProperties.node[nid].viewScores[vid].score;
                     const newScore = transientProperties.node[nid].viewScores[vid].score = this.matchesMetaClassTarget(dview, data?.__raw);
-                    console.log('2302, getviews evaluating viewwwwww ' + data?.name +"_"+ vid, {newScore, oldScore, vid});
+                    // console.log('2302, getviews evaluating viewwwwww ' + data?.name +"_"+ vid, {newScore, oldScore, vid});
                     if (newScore === ViewEClassMatch.MISMATCH_PRECONDITIONS) {
                         if (newScore === oldScore) needsorting = true;
                         continue;
@@ -568,7 +568,6 @@ export class Selectors{
                     // 67{}[]'?^&&||nb
                 } else {
                     const oldScore = transientProperties.node[nid].viewScores[vid].score;
-                    console.log('2302 getviews evaluating view_____ ' + data?.name +"_"+ vid, {oldScore, vid});
                     if (oldScore === ViewEClassMatch.MISMATCH_PRECONDITIONS) { continue; }
                 }
 
@@ -576,9 +575,7 @@ export class Selectors{
                 if (false && !transientProperties.view[vid].oclUpdateCondition_PARSED(data, olddata)) continue;
 
                 // check ocl
-                console.log('2302, pre ocl', {});
                 let score = OCL.test(data, dview, node)//Selectors.calculateOCLScore({data, node, dview});
-                console.log('2302, getviews setting oclscore?', {score, oldScore: transientProperties.node[nid].viewScores[vid].score});
                 if (score === transientProperties.node[nid].viewScores[vid].score/*?.[pvid as Pointer<DViewElement>]*/) continue;
                 // todo: currently ocl score replaces precondition score. eventually might be better to store precondition score separately,
                 //  and add a merged score between ocl and preconditions as in ocl*preconditions
@@ -589,7 +586,6 @@ export class Selectors{
 
         function applyParentViewBonus(baseScore: number, vid: Pointer<DViewElement>, parentView: DViewElement | undefined): number {
             if (!parentView || !baseScore) return baseScore;
-            console.log('2302 pv', {parentView, sv:parentView?.subViews});
             if (parentView.subViews.includes(vid)) return (baseScore + 100);
             return baseScore; }
 
@@ -605,7 +601,7 @@ export class Selectors{
         //nb{}[]
 
         // if data or view changed update the score dict, them re-sort the view arr first, fimally update Sorted_modelused, Sorted_modelused
-        console.log('2302 getviews ret', {dn: data?.name, data, stack: transientProperties.node[nid].stackViews, stackn: transientProperties.node[nid].stackViews.map(v => v.name), scores: transientProperties.node[nid]});
+        // console.log('2302 getviews ret', {dn: data?.name, data, stack: transientProperties.node[nid].stackViews, stackn: transientProperties.node[nid].stackViews.map(v => v.name), scores: transientProperties.node[nid]});
 
         // throw new Error("stop debug");
         return transientProperties.node[nid].stackViews;

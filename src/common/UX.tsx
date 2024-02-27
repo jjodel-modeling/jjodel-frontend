@@ -27,6 +27,7 @@ export class UX{
                 //@ts-ignore
                 child = React.cloneElement(child, { children: UX.recursiveMap(child.props.children,
                         (e: T, i2: number, ii) => fn(e, i2, ii), depthIndices) });
+                // this can be optimized, and i think i can avoid cloning here, as the nodes are already cloned in "fn" = ux.injectprops
             }
             return fn(child as T, i1, depthIndices);
         };
