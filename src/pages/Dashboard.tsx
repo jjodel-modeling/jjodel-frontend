@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement} from 'react';
+import React, {ChangeEvent, Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import type {DState} from '../joiner';
 import {DProject, DUser, LProject, LUser, U} from '../joiner';
@@ -30,6 +30,31 @@ function DashboardComponent(props: AllProps) {
         navigate(`/project?id=${project}`);
         U.refresh();
     }
+    const exportProject = async(project: LProject) => {
+        U.download(`${project.name}.jjodel`, JSON.stringify(project.__raw));
+    }
+
+    const reader = new FileReader();
+    reader.onload = async e => {
+        /* Import Project File */
+        const content = String(e.target?.result);
+        if(!content) return;
+        try {
+            const project = JSON.parse(content) as DProject;
+            const projects = Storage.read<DProject[]>('projects') || [];
+            const filtered = projects.filter(p => p.id !== project.id);
+            filtered.push(project);
+            Storage.write('projects', filtered);
+            U.refresh();
+        } catch (e) {alert('Invalid File.')}
+    }
+    const importProject = async(e: ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files || [];
+        if(!files.length) return;
+        const file = files[0];
+        reader.readAsText(file);
+    }
+
 
     return (<>
         <Navbar />
@@ -43,6 +68,7 @@ function DashboardComponent(props: AllProps) {
                 </button>
                 <div className={'d-flex ms-auto'}>
                     {!DUser.isStateMachine && <section>
+                        <input type={'file'} className={'btn btn-success p-1 mx-1'} onChange={async e => await importProject(e)} />
                         <button className={'btn btn-success p-1 mx-1'} onClick={e => createProject('public')}>
                         + Public
                         </button>
@@ -132,6 +158,10 @@ function DashboardComponent(props: AllProps) {
                 return(<div className={'d-flex p-3 border m-1 dashboard-row'} key={index}>
                     <button className={'btn btn-primary me-2'} onClick={e => selectProject(project.id)}>
                         <i className={'p-1 bi bi-eye-fill'}></i>
+                    </button>
+                    <button className={'btn btn-primary me-2'}
+                            onClick={async() => await exportProject(project)}>
+                        <i className={'p-1 bi bi-download'}></i>
                     </button>
                     <button disabled={project.author.id !== DUser.current} className={'btn btn-danger me-2'}
                             onClick={async() => await deleteProject(project)}>

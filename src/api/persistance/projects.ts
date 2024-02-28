@@ -1,6 +1,5 @@
-import {DProject, DUser, LProject, LUser, SetFieldAction, store, U} from '../../joiner';
+import {DProject, LProject, LUser, U} from '../../joiner';
 import Storage from "../../data/storage";
-import {SaveManager} from "../../components/topbar/SaveManager";
 import Api from "../../data/api";
 
 class ProjectsApi {
