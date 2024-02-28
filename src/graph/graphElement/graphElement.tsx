@@ -546,9 +546,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // eval template
         let jsxCodeString: DocString<ReactNode>;
 
-        try { jsxCodeString = JSXT.fromString(this.props.view.jsxString, {factory: 'React.createElement'}); }
+        try { jsxCodeString = JSXT.fromString(v.jsxString, {factory: 'React.createElement'}); }
         catch (e: any) { return this.displayError(e, "JSX Syntax"); }
 
+        console.log('context for ' + (this.props.data?.name), {thisContext, sharedContext})
         try { ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + jsxCodeString + '})()', thisContext); }
         catch (e: any) { return this.displayError(e, "JSX Semantic"); }
         return ret;
@@ -781,7 +782,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         let mainViewElement: ReactNode | ReactElement = this.renderView(this.props, mainView, sharedContext, nodeType, classes, styleoverride,[]);// decoratorViews);
         console.log('rendering view stack', {mainView, otherViews, mainViewElement, decoratorViews})
-        return mainViewElement;
+        return this.props.data?.className === "DValue" ? <div>{mainView.jsxString}{mainViewElement}</div> : mainViewElement;
     }
 
 
@@ -794,6 +795,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // \console.log('GE render', {thiss: this, data:me, rnode, rawRElement, props:this.props, name: (me as any)?.name});
 
         function makeItArray(val?: any) { return val ? [] : (Array.isArray(val) ? val : [val]); }
+        function getNodeText(node?: any | ReactNode): string | undefined {
+            if (['string', 'number'].includes(typeof node)) return node;
+            if (node instanceof Array) return node.map(getNodeText).join('');
+            if (typeof node === 'object' && node) return getNodeText(node.props.children);
+        }
+
         const addprops: boolean = true;
         let fiximport = !!this.props.node;
         if (this.props.data?.name === "Concept 1") console.log("shouldcomponentupdate rendering " + this.props.data?.name, {cc: this.props.data.clonedCounter, attrs: (this.props.data as any).attributes});
@@ -853,6 +860,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 }
                 else injectProps = {"data-viewid": v.id};
 
+                let debug: GObject = {};
                 injectProps.children = UX.recursiveMap(rawRElement/*.props.children*/,
                     (rn: ReactNode, index: number, depthIndexes: number[]) => {
                         let injectOffset: undefined | LGraph = ((this.props as any).isGraph && !depthIndexes[0] && !index) && (this.props.node as LGraph);
@@ -860,6 +868,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         //console.log("inject offset props00:", {injectOffset, ig:(this.props as any).isGraph, props:this.props, depthIndexes, index});
                         return UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes, injectOffset)
                     });
+/*
+                debug.injectPropsOriginal = injectProps.children;
+                debug.recursivemap = injectProps.children;
+                debug.injectChildrensAttempt = [...injectProps.children, ...makeItArray(props.children), ...(otherViews as any[])];
+                debug.rawRElement = {node:rawRElement, text: getNodeText(rawRElement)};*/
 
                 if (otherViews && false) injectProps.children = [...injectProps.children, ...makeItArray(props.children), ...(otherViews as any[])];
 
@@ -867,10 +880,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let children = makeItArray(injectProps.children); // [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)]; rawRElement.child are already in injectprops
                 // injectProps.children = [<div>{children}</div>];//[]; making any change at injectprops.children breaks it?
                 rawRElement = React.cloneElement(rawRElement, injectProps);//, ...children); // adding chioldrens after injectprops seems pointless
+                debug.rawRElementPostInjection = {node:rawRElement, text: getNodeText(rawRElement)};
                 // rawRElement = React.cloneElement(rawRElement, {children: [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)]});
                 // console.log('rendering view stack fixing doubles', {v0:rnode, v1:rawRElement, fixed:rawRElement.props.children})
                 fixdoubleroot = false; // need to set the props to new root in that case.
                 if (fixdoubleroot) rawRElement = rawRElement.props.children;
+                debug.rawRElementPostfixdoubleroot = {node:rawRElement, text: getNodeText(rawRElement)};
 
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
             } catch (e: any) {
@@ -908,7 +923,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             <div className={this.countRenders%2 ? "animate-on-update-even" : "animate-on-update-odd"} data-countrenders={this.countRenders++} />
         ]}</>/*/
 
-        return  rawRElement || rnode;
+        return rawRElement || rnode;
     }
 
 }

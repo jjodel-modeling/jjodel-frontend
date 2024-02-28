@@ -119,7 +119,8 @@ input[type="color"]::-webkit-color-swatch {
   font-size: 0.9rem;
   height: min-content;
   border-radius: $radius;
-  border: 1px solid $border-color; }
+  border: 1px solid $border-color;
+}
 .select:focus { border: 1px dashed $border-color; }
 .btn { padding: 0 0.1em; line-height: normal; border-radius: $radius; }
 

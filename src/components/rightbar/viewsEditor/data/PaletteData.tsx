@@ -64,7 +64,9 @@ function PaletteDataComponent(props: AllProps) {
                     <input className={"prefix"} value={prefix} onChange={(e)=> changePrefix(prefix, e.target.value)}/>
                     <div className="color-container hoverable">{
                         colors.map((val, i) => <Color key={prefix+i}
-                                                      childrenn={<button className={'btn btn-danger content delete-color mt-2'} onClick={()=>removeColor(prefix, i)}><i className="bi p-1 bi-trash3-fill"/></button> }
+                                                      childrenn={
+                            <button className={'btn btn-danger content delete-color mt-2'} onClick={()=>removeColor(prefix, i)}><i className="bi p-1 bi-trash3-fill"/></button>
+                        }
                                                       data={view} field={'palette'} canDelete={!readOnly}
                                                       getter={()=>colors[i]} setter={(newVal) => { setColor(prefix, i, newVal) }}/>)
                     }

@@ -3,6 +3,16 @@
 export const a = 0;
 
 let data:any, node:any, view:any, component:any;
+// todo: UD = usage declarations are conceptually wrongful implemented now that there are N views to a node.
+// tentative fix: compute N UD for all views in mapstatetoprops. store them in a map, check the map in shouldcomponentupdate, update if at least 1 view needs update.
+// re-check again the same thing in render() and recompute only the views whose UD tells you they need a recalculation. BUT HOW TO GET OLD VAL?
+
+// option2: make a graphcomponent that does not generate a node. the N views are rendered by N graphcomponents each with his mapstate and shouldcomponentupdate
+
+
+
+
+
 
 // get final viewstack for a node, also updates OCL scores if needed because of a change in model or parentView (NOT from a change in view)
 

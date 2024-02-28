@@ -226,7 +226,7 @@ class DefaultView {
     }
 
     public static feature(): string {
-        return `<div className={'w-100 root feature'} style={{background: 'var(--background-1)', color:'var(--color-2)'}}>
+        return `<div className={'w-100 root feature'} style={{background: 'var(--background-2)', color:'var(--color-2)'}}>
     <Select className={'p-1 d-flex'} data={data} field={'type'} label={data.name} />
 </div>`;
     }
