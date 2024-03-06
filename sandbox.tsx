@@ -16,7 +16,8 @@ let data:any, node:any, view:any, component:any;
 
 // get final viewstack for a node, also updates OCL scores if needed because of a change in model or parentView (NOT from a change in view)
 
-// todo: actually inject generated color palette to css editor as prefix, so monaco editor knows them and can validate variable usage, but those lines are hidden in visual editor.
+// todo: actually inject generated color palette to css editor as prefix to monaco editor inner string contents,
+//  so monaco editor knows them and can validate variable usage, but those lines are hidden in visual editor.
 
 /*
 * verified! firing twice the same SetRootFieldAction("a", 1) does not change state twice, reducer returns old state.
@@ -25,7 +26,6 @@ let data:any, node:any, view:any, component:any;
 * */
 
 /*
-make sure error view display meaningful messages with code line
 * prevent megacrash if someone does <Vertex data={"not a pointer"} /> or <Vertex data={1, null, undefined...} />
 */
 // on rename model, update view using .$name, but only when ocl condition includes the pointer of the meta class. (directly or through instanceof, so when it's a non-generic view)
