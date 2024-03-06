@@ -1,17 +1,36 @@
 // @ts-noinspect
 // @ts-ignore
+import {U} from "./src/joiner";
+
 export const a = 0;
 
 let data:any, node:any, view:any, component:any;
+// erase all __proto__ usages youj cam;
 // todo: UD = usage declarations are conceptually wrongful implemented now that there are N views to a node.
 // tentative fix: compute N UD for all views in mapstatetoprops. store them in a map, check the map in shouldcomponentupdate, update if at least 1 view needs update.
 // re-check again the same thing in render() and recompute only the views whose UD tells you they need a recalculation. BUT HOW TO GET OLD VAL?
 
 // option2: make a graphcomponent that does not generate a node. the N views are rendered by N graphcomponents each with his mapstate and shouldcomponentupdate
+// nella vista m1 della classe appare onhover un "+" per aggiungere e linkare un target a quella reference
+
+/*
+package[0].classes["c"] should be valid
+
+model.addObject({},  "C")
+should be valid as if it were:
+model.addObject({},  model.instanceof.allClasses["C"])
+naming for objects is broken, it's always concept 1_1 when should be "concept 1"_2 or 1.2
 
 
+for (keys in []) gives "joinOriginal" and "separator"!!! i did not override the proto correctly??
+* */
+// optimize jsx evaluation by parsing once in a functional value with variables as parameters ({data, view, node, DGraphElement, DAttribute, U ... all the context}) => jsx
+// and maybe improve it again by import memoize from "memoize-one"; it is high-order function that memorize the result if params are the same without re-executing it (must not have side effects)
 
+// todo: extract U.JodelObjectIsEqual from shouldcompoupdate that checks for .clonedCounter and with param depths,
+//  also save old context for unofficial memoization, if U.JodelObjectIsEqual(context, transient.node.oldContext) can usa cached jsx
 
+// BUG: Le istanze obj di m1 non vengono agiornate se cambio nome alla classe m2
 
 
 // get final viewstack for a node, also updates OCL scores if needed because of a change in model or parentView (NOT from a change in view)

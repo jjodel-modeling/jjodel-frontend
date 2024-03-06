@@ -34,6 +34,37 @@ import {AccessModifier} from "../api/data";
 
 console.warn('loading ts U log');
 
+@RuntimeAccessible('Color')
+export class Color {
+    r: number;
+    g: number;
+    b: number;
+
+    constructor(r: number, g: number, b: number) {
+        this.r = r;
+        this.g = g;
+        this.b = b;
+    }
+
+    static fromHex(hex:string): Color {
+        return undefined as any;
+    }
+    static fromHLS({h, l, s}:{h: number, l:number, s: number}): Color {
+        return undefined as any;
+    }
+    getHex(): string {
+        return undefined as any;
+    }
+    mixWith(c: Color): void {
+
+    }
+    getHLS(): {h: number, l:number, s: number} {
+        return undefined as any;
+    }
+    duplicate(): Color {
+        return undefined as any;
+    }
+}
 @RuntimeAccessible('U')
 export class U {
 

@@ -3675,7 +3675,11 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             return ret;
         }
     }
-
+/*
+* instanceof === some class -> instantiate object and forces to conform to that class
+instanceof === null  --> shapeless object
+instanceof === undefined or missing  --> auto-detect and assign the type
+ */
     addObject(json: GObject, instanceoff: LClass | Pointer<DClass> | DocString<"ClassName"> | undefined | null = undefined): ReturnType<LValue["addObject"]>{ return this.cannotCall("LValue.addObject"); }
     __info_of__addObject: Info = {type: "(json: object, instanceof?: LClass) => LObject",
         txt: "Appends an object instancing \"instanceof\" to the model.\n<br>Setting his own properties, and DValues according to the content of the parameter object."}

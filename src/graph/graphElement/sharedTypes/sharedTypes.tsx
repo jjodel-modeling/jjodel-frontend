@@ -42,18 +42,20 @@ export class GraphElementReduxStateProps {
     // model?: LModel;
     // [userMappedFromRedux: string]: any; // roba che l'utente ha dichiarato di voler prendere dallo stato e redux gli carica nelle props
     //preRenderFunc?: string;
-    evalContext!: Json;
+    // evalContext!: Json; moved to transient properties
     //template!: string;
     node!: LGraphElement;
     data?: LModelElement;
-    usageDeclarations!: DefaultUsageDeclarations;
-    invalidUsageDeclarations?: Error;
+    // usageDeclarations!: DefaultUsageDeclarations;
+    // invalidUsageDeclarations?: Error; // moved in stateProps.usageDeclarations.__invalidUsageDeclarations
     // graph!: LGraph;
 
     // lastSelected!: LModelElement | null;
     isEdgePending!: { user: LUser, source: LClass };// vertex only
     nodeid!: Pointer<DGraphElement>;
     dataid?: Pointer<DModelElement>;
+    viewid!: Pointer<DViewElement>;
+    viewsid!: Pointer<DViewElement>[];
 }
 
 export class GraphElementDispatchProps {

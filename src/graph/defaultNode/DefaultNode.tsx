@@ -78,15 +78,12 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
         ret.nodeid = ownProps.nodeid as Pointer<DGraphElement>; // but nodeid exists, passed from the parent along graphid and parentview
 */
         // try{
-            if (ownProps.view) {
-                ret.view = LPointerTargetable.wrap(Selectors.getViewByIDOrNameD(ownProps.view)) as LViewElement;
-                ret.views = [ret.view];
-            }
-            if (!ret.view) {
-                ret.views = Selectors.getAppliedViewsNew({data: LPointerTargetable.wrap(ownProps.data),
-                    node:undefined, nid:ownProps.nodeid as any, pv:DPointerTargetable.fromPointer(ownProps.parentViewId as Pointer, state)});
-                ret.view = ret.views[0];
-            }
+            let scores = Selectors.getAppliedViewsNew({data: LPointerTargetable.wrap(ownProps.data),
+                node:undefined, nid:ownProps.nodeid as any, pv:DPointerTargetable.fromPointer(ownProps.parentViewId as Pointer, state)});
+            ret.views = scores.stackViews;
+            if (ownProps.view) ret.view = LPointerTargetable.wrap(Selectors.getViewByIDOrNameD(ownProps.view)) as LViewElement;
+            if (!ret.view) ret.views = scores.stackViews;
+
             // GraphElementComponent.mapViewStuff(state, ret, ownProps);
             (ret as any).skiparenderforloading = false;
         //} catch(e) {

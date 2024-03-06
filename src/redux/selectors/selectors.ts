@@ -478,8 +478,8 @@ export class Selectors{
             if (true) {
                 let d: DModelElement | undefined = dg.model ? DPointerTargetable.fromPointer(dg.model) : undefined;
                 let firstEvaluationForNodeView: boolean = false;
-                if (!transientProperties.node[dg.id]) { transientProperties.node[dg.id] = {viewScores: {}, stackViews: [], force1Update: false}; firstEvaluationForNodeView = true; }
-                if (!transientProperties.node[dg.id].viewScores[vid]) { transientProperties.node[dg.id].viewScores[vid] = {score: undefined as any}; firstEvaluationForNodeView = true; }
+                if (!transientProperties.node[dg.id]) { transientProperties.node[dg.id] = {viewScores: {}} as any; firstEvaluationForNodeView = true; }
+                if (!transientProperties.node[dg.id].viewScores[vid]) { transientProperties.node[dg.id].viewScores[vid] = {score: undefined} as any; firstEvaluationForNodeView = true; }
 
                 if (firstEvaluationForNodeView || updatePreconditions) {
                     const oldScore = transientProperties.node[dg.id].viewScores[vid].score;
@@ -515,7 +515,7 @@ export class Selectors{
 
 
     // get final viewstack for a node, also updates OCL scores if needed because of a change in model or parentView (NOT from a change in view)
-    static getAppliedViewsNew({data:data0, node, pv, nid}:{ node: LGraphElement | undefined; data: LModelElement | undefined; pv: DViewElement | undefined; nid: Pointer<DGraphElement>}): LViewElement[] {
+    static getAppliedViewsNew({data:data0, node, pv, nid}:{ node: LGraphElement | undefined; data: LModelElement | undefined; pv: DViewElement | undefined; nid: Pointer<DGraphElement>}): NodeTransientProperties {
         // console.trace('2302, getviews', {tnode: transientProperties.node[nid], nid, pv})
         let olddata = transientProperties.node[nid]?.viewSorted_modelused as LModelElement;
         let oldnode = transientProperties.node[nid]?.viewSorted_nodeused as LGraphElement;
@@ -534,7 +534,7 @@ export class Selectors{
         // so if parentView changes, or if his subviews changed, need to resort array without recomputing any score value.
         let firstEvaluationForNode: boolean = false;
         let firstEvaluationForNodeView: boolean = false;
-        if (!transientProperties.node[nid]) { transientProperties.node[nid] = {viewScores: {}, stackViews: [], force1Update: false}; firstEvaluationForNode = true; }
+        if (!transientProperties.node[nid]) { transientProperties.node[nid] = {viewScores: {}} as any; firstEvaluationForNode = true; }
 
         transientProperties.node[nid].viewSorted_pvid_used = pv;
         transientProperties.node[nid].viewSorted_nodeused = node;
@@ -549,7 +549,7 @@ export class Selectors{
                 //console.log('2302, getviews evaluating view ' + vid, {vid, dview});
                 // check initialization
                 if (!transientProperties.node[nid].viewScores[vid]) {
-                    transientProperties.node[nid].viewScores[vid] = {score: ViewEClassMatch.NOT_EVALUATED_YET as any};
+                    transientProperties.node[nid].viewScores[vid] = {score: ViewEClassMatch.NOT_EVALUATED_YET} as any;
                     firstEvaluationForNodeView = true;
                 } else firstEvaluationForNodeView =
                     transientProperties.node[nid].viewScores[vid].score === ViewEClassMatch.NOT_EVALUATED_YET;
@@ -589,13 +589,24 @@ export class Selectors{
             if (parentView.subViews.includes(vid)) return (baseScore + 100);
             return baseScore; }
 
+        type ViewScoreEntry = {element: Pointer<DViewElement>, score: number, view: LViewElement}
         if (parentViewChanged) needsorting = true; // scores saved in dictionaries are the same, but score in final sorted array changed.
         if (needsorting || !transientProperties.node[nid].stackViews) {
-            transientProperties.node[nid].stackViews/*.[pvid as Pointer<DViewElement>]*/ = Object.keys(transientProperties.node[nid].viewScores)
-                .filter(vid => transientProperties.node[nid].viewScores[vid].score > 0)
-                .map( (vid)=> ({element:vid, score: applyParentViewBonus(transientProperties.node[nid].viewScores[vid].score || -1, vid, pv)} as Scored<Pointer<DViewElement>>))
-                .sort((s1, s2)=> s2.score - s1.score) // sorted from biggest to smallest
-                .map((s)=> LPointerTargetable.fromPointer(s.element));
+            let mainViews: ViewScoreEntry[] = [];
+            let decorativeViews: ViewScoreEntry[] = [];
+            for (let vid of Object.keys(transientProperties.node[nid].viewScores)) {
+                let entry = transientProperties.node[nid].viewScores[vid];
+                if (!(entry.score > 0)) continue; // do not flip to <=, because undefined and NEGATIVE_INFINITY always compute to false.
+                const view: LViewElement = LPointerTargetable.fromPointer(vid);
+                (view.isExclusiveView ? mainViews : decorativeViews).push( {element:vid, score: applyParentViewBonus(entry.score || -1, vid, pv), view} );
+            }
+            decorativeViews.sort((s1, s2)=> s2.score - s1.score); // sorted from biggest to smallest
+
+
+            transientProperties.node[nid].mainView = mainViews[0].view;
+            transientProperties.node[nid].validMainViews = mainViews.map((s)=> s.view);
+            transientProperties.node[nid].stackViews = decorativeViews.map((s)=> s.view);
+
         }
         // chamges to view or ocl comditiom are mot hamdled here, ut om multple mp/modes a omce
         //nb{}[]
@@ -604,7 +615,7 @@ export class Selectors{
         // console.log('2302 getviews ret', {dn: data?.name, data, stack: transientProperties.node[nid].stackViews, stackn: transientProperties.node[nid].stackViews.map(v => v.name), scores: transientProperties.node[nid]});
 
         // throw new Error("stop debug");
-        return transientProperties.node[nid].stackViews;
+        return transientProperties.node[nid];
 
     }
 

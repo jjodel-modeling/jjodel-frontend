@@ -2599,12 +2599,21 @@ export class NodeTransientProperties{
     viewSorted_modelused?: LModelElement; // L-version because it is used in oclUpdate function
     viewSorted_pvid_used?: DViewElement;
     viewSorted_nodeused?: LGraphElement;
-    stackViews!: LViewElement[]; // for each parentview, an array of Views[] sorted by score.
+    stackViews!: LViewElement[]; // for each parentview, an array of Decorative Views[] sorted by score (including parent view influence).
+    validMainViews!: LViewElement[]; // an array of Main Views[] sorted by score (including parent view influence).
+    mainView!: LViewElement;
     viewScores: Dictionary<Pointer<DViewElement>, {
+        jsxOutput: React.ReactNode | React.ReactElement | undefined;
         score: number;
+        usageDeclarations: GObject;
+        evalContext: GObject; // with added usageDeclarations for the current view
+        shouldUpdate: boolean; // computed along usageDeclarations in shouldComponentUpdate
+
+        // usageDeclarations!: DefaultUsageDeclarations;
         // oldNode: DGraphElement; moved to viewSorted_nodeused // ref to the actual node, not pointer. so even if it's modified through redux,
         // it is still possible to compare old version and new version to check if view.oclUpdateCondition should trigger
     }> = {} as any;
+    evalContext!: GObject; // global for this node (without view-specific usageDeclaration)
     force1Update!: boolean;
 }
 type ViewTransientProperties = {
@@ -2617,6 +2626,7 @@ type METransientProperties = {
     nodes: Dictionary<Pointer<DGraphElement>, LGraphElement>;
     node?: LGraphElement;
 }
+
 // score for all view ocl + sorted views by best match
 type TransientPropertiesByGraphTab = Dictionary<Pointer<DViewElement, number>> & {
     /*
