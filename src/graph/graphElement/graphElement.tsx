@@ -152,6 +152,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         );
     }
 
+    // requires data and node wrapping first
     static mapViewStuff(state: DState, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
         // let dnode: DGraphElement | undefined = ownProps?.nodeid && DPointerTargetable.from(ownProps.nodeid, state) as any;
 
@@ -368,7 +369,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         try{
             measurableCode = (this.props.view)[type];
             if (!measurableCode) return false;
-            context = this.getContext();
+            context = this.getUDContext(this.props.viewid); // context + usagedeclarations of main view only
             measurableCode = U.wrapUserFunction(measurableCode);
             console.log("measurable execute", {type, measurableCode});
             // eval measurable
@@ -451,8 +452,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (oldProps.view !== newProps.view) { this.setTemplateString(newProps.view); }
     }*/
 
+    protected getUDContext(vid: Pointer<DViewElement>): GObject{
+        let context: GObject = transientProperties.node[this.props.nodeid].viewScores[vid].evalContext;
+        context.component = this;
+        context._context = context;
+        return context;
+    }
     protected getContext(): GObject{
-        let context: GObject = transientProperties.node[this.props.nodeid].viewScores[this.props.viewid].evalContext; //{component:this, __proto__:this.props.evalContext};
+        let context: GObject = transientProperties.node[this.props.nodeid as string].evalContext;
+        // transientProperties.node[this.props.nodeid].viewScores[this.props.viewid].evalContext; //{component:this, __proto__:this.props.evalContext};
         context.component = this;
         context._context = context;
         return context;
@@ -825,7 +833,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         decoratorViews.push(jsxOutput);
 
         console.log('rendering view stack', {mainView, otherViews, mainViewElement: jsxOutput, decoratorViews})
-        return <>{jsxOutput}{...otherViews}</>;
+        return <>{jsxOutput}{otherViews}</>;
         // return this.props.data?.className === "DValue" ? <div>{mainView.jsxString}{mainViewElement}</div> : mainViewElement;
     }
 

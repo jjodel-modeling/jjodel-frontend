@@ -520,8 +520,9 @@ export class Selectors{
         let olddata = transientProperties.node[nid]?.viewSorted_modelused as LModelElement;
         let oldnode = transientProperties.node[nid]?.viewSorted_nodeused as LGraphElement;
         const data: LModelElement = data0 as LModelElement;
-        let datachanged: boolean = (!!data !== !!olddata) || !!(data && olddata) && (data?.clonedCounter !== olddata.clonedCounter);
-        let nodechanged: boolean = (!!node !== !!oldnode) || !!(node && oldnode) && (node?.clonedCounter !== oldnode.clonedCounter);
+        // console.error('changed', {data, olddata, node, oldnode, cdata:data?.clonedCounter, colddata:olddata?.clonedCounter})
+        let datachanged: boolean = (!!data !== !!olddata) || !!(data && olddata) && (data.clonedCounter !== olddata.clonedCounter);
+        let nodechanged: boolean = (!!node !== !!oldnode) || !!(node && oldnode) && (node.clonedCounter !== oldnode.clonedCounter);
 
         const pvid: Pointer<DViewElement> | undefined = pv?.id;
         const oldpv: DViewElement | undefined = transientProperties.node[nid]?.viewSorted_pvid_used;
@@ -602,7 +603,7 @@ export class Selectors{
             }
             decorativeViews.sort((s1, s2)=> s2.score - s1.score); // sorted from biggest to smallest
 
-
+            Log.exDev(!mainViews[0], 'cannot find a matching main view', {mainViews, decorativeViews, data, scores: transientProperties.node[nid].viewScores, datachanged, nodechanged})
             transientProperties.node[nid].mainView = mainViews[0].view;
             transientProperties.node[nid].validMainViews = mainViews.map((s)=> s.view);
             transientProperties.node[nid].stackViews = decorativeViews.map((s)=> s.view);
