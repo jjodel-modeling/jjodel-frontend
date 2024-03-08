@@ -21,6 +21,7 @@ should be valid as if it were:
 model.addObject({},  model.instanceof.allClasses["C"])
 naming for objects is broken, it's always concept 1_1 when should be "concept 1"_2 or 1.2
 
+// advanced mode and simple mode: hide some features like positional editor in simple mode or the entire tab in view/node, start in simple mode.
 
 for (keys in []) gives "joinOriginal" and "separator"!!! i did not override the proto correctly??
 * */
