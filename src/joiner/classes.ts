@@ -2614,7 +2614,7 @@ export class NodeTransientProperties{
         // it is still possible to compare old version and new version to check if view.oclUpdateCondition should trigger
     }> = {} as any;
     evalContext!: GObject; // global for this node (without view-specific usageDeclaration)
-    force1Update!: boolean;
+    //force1Update!: boolean;
 }
 type ViewTransientProperties = {
     // css_MUST_RECOMPILE: boolean;

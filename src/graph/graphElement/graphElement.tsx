@@ -321,43 +321,39 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     dataOldClonedCounter?: number; // undefined or data.clonedCounter;
 
 
-    public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any, thisprops?: Readonly<AllProps>): boolean {
-        if (!thisprops) thisprops = this.props;//for subviewcomponent
+    public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any, oldProps?: Readonly<AllProps>): boolean {
+        if (!oldProps) oldProps = this.props;//for subviewcomponent
         // return GraphElementComponent.defaultShouldComponentUpdate(this, nextProps, nextState, nextContext);
-        if (transientProperties.node[nextProps.nodeid].force1Update) {
-            transientProperties.node[nextProps.nodeid].force1Update = false;
-            Log.l(true, "ShouldComponentUpdate " + thisprops.data?.name + " UPDATED", {ret: true, reason: 'transient properties edited (stackviews?)', oldProps:thisprops, nextProps});
-            return true;
-        }
+        let data = nextProps.data?.__raw as DNamedElement | undefined;
+
         let out = {reason:undefined};
         let skipDeepKeys = {pointedBy:true};
         // let skipPropKeys = {...skipDeepKeys, usageDeclarations: true, node:true, data:true, initialSize: true};
-        let ret = false; // !U.isShallowEqualWithProxies(thisprops, nextProps, 0, 1, skipPropKeys, out);
+        let ret = false; // !U.isShallowEqualWithProxies(oldProps, nextProps, 0, 1, skipPropKeys, out);
         // todo: verify if this update work
         // if node and data in props must be ignored and not checked for changes. but they are checked if present in usageDeclarations
-        let data = thisprops.data?.__raw as DNamedElement | undefined;
 
         for (let vid of nextProps.views) {
             const vid: Pointer<DViewElement> = nextProps.view.id;
             let nodeviewentry = transientProperties.node[nextProps.nodeid].viewScores[vid];
             let old_ud = nodeviewentry.usageDeclarations;
             let new_ud = nodeviewentry.usageDeclarations = computeUsageDeclarations(nextProps, vid);
-            nodeviewentry.shouldUpdate = U.isShallowEqualWithProxies(old_ud, new_ud, 0, 1, skipDeepKeys, out);
+            nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, 0, 1, skipDeepKeys, out);
             if (!ret && nodeviewentry.shouldUpdate) ret = true;
-            Log.l(ret, "ShouldComponentUpdate " + data?.name + " UPDATED", {ret, reason: out.reason, oldProps:thisprops, nextProps});
+            Log.l(ret, "ShouldComponentUpdate " + data?.name + " UPDATED", {ret, reason: out.reason, oldProps:oldProps, nextProps});
         }
 
         const vid: Pointer<DViewElement> = nextProps.view.id;
         let nodeviewentry = transientProperties.node[nextProps.nodeid].viewScores[vid];
         let old_ud = nodeviewentry.usageDeclarations;
         let new_ud = nodeviewentry.usageDeclarations = computeUsageDeclarations(nextProps, vid);
-        nodeviewentry.shouldUpdate = U.isShallowEqualWithProxies(old_ud, new_ud, 0, 1, skipDeepKeys, out);
+        nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, 0, 1, skipDeepKeys, out);
         if (!ret && nodeviewentry.shouldUpdate) ret = true;
-        Log.l(ret, "ShouldComponentUpdate " + data?.name + " UPDATED", {ret, reason: out.reason, oldProps:thisprops, nextProps});
+        Log.l(ret, "ShouldComponentUpdate " + data?.name + " UPDATED", {ret, reason: out.reason, oldProps:oldProps, nextProps});
 
         Log.l(!ret,
             "ShouldComponentUpdate " + data?.name + (ret ? " UPDATED" : " REJECTED"),
-            {ret, reason: out.reason, oldProps:thisprops, nextProps}); //  oldnode:thisprops.node, newnode: nextProps.node,
+            {ret, reason: out.reason, oldProps:oldProps, nextProps}); //  oldnode:oldProps.node, newnode: nextProps.node,
         return ret; // if any of main view or decorative views need updating
         // apparently node changes are not working? also check docklayout shouldupdate
     }
@@ -426,6 +422,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         for (let f of functionsToBind) (this as any)[f.name] = f.bind(this);
         // @ts-ignore
         this.state = {classes: [] as string[]};
+        this.shouldComponentUpdate(this.props, this.state, undefined, undefined);
     }
 
     // constants: evalutate solo durante il primo render, può essere una funzione con effetti collaterali sul componente,
@@ -816,24 +813,25 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
 
         let nid = this.props.nodeid;
-        let jsxOutput: ReactNode;
+        let jsxOutput: ReactNode = undefined as any;
 
         for (let v of otherViews) {
             let viewnodescore = transientProperties.node[nid].viewScores[v.id];
-            if (!viewnodescore.shouldUpdate) jsxOutput = viewnodescore.jsxOutput;
-            else viewnodescore.jsxOutput = jsxOutput = this.renderView(this.props, v, sharedContext, nodeType, classes, styleoverride);
+            jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
+            if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput = this.renderView(this.props, v, sharedContext, nodeType, classes, styleoverride);
             viewnodescore.shouldUpdate = false;
             decoratorViews.push(jsxOutput);
         }
 
         let viewnodescore = transientProperties.node[nid].viewScores[mainView.id];
-        if (!viewnodescore.shouldUpdate) jsxOutput = viewnodescore.jsxOutput;
-        else viewnodescore.jsxOutput = jsxOutput = this.renderView(this.props, mainView, sharedContext, nodeType, classes, styleoverride, []);// decoratorViews);
+        jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
+        if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput = this.renderView(this.props, mainView, sharedContext, nodeType, classes, styleoverride, []);// decoratorViews);
         viewnodescore.shouldUpdate = false;
         decoratorViews.push(jsxOutput);
 
-        console.log('rendering view stack', {mainView, otherViews, mainViewElement: jsxOutput, decoratorViews})
-        return <>{jsxOutput}{otherViews}</>;
+        console.log('rendering view stack', {mainView, otherViews, mainViewElement: jsxOutput, decoratorViews});
+        windoww.debbugg= {jsxOutput,otherViews, ret:<>renderrr{jsxOutput}{otherViews}</>}
+        return jsxOutput;
         // return this.props.data?.className === "DValue" ? <div>{mainView.jsxString}{mainViewElement}</div> : mainViewElement;
     }
 
@@ -843,7 +841,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let dv = v.__raw;
         const nid = props.nodeid;
         const vid = v.id;
-        let ud = transientProperties.node[nid].viewScores[vid].usageDeclarations;
+        let ud: GObject | undefined = transientProperties.node[nid].viewScores[vid].usageDeclarations;
+        console.log('ud error',{vs:transientProperties.node[nid].viewScores[vid], vid, ns:transientProperties.node[nid]})
         if (ud.__invalidUsageDeclarations) {
             return this.displayError(ud.__invalidUsageDeclarations, "Usage Declaration", v);
         }
