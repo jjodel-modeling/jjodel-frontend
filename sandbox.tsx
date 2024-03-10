@@ -12,6 +12,13 @@ let data:any, node:any, view:any, component:any;
 
 // option2: make a graphcomponent that does not generate a node. the N views are rendered by N graphcomponents each with his mapstate and shouldcomponentupdate
 // nella vista m1 della classe appare onhover un "+" per aggiungere e linkare un target a quella reference
+// uncomment errorOverlayView.oclCondition = 'context DValue inv: self.value < 0';
+// decorative views rendered first time after creation/loading are crashing because UD is not set yet, seems ud of decorative views is not computed in shouldcomponentupdate
+
+
+/*cache for proxies with same clomedcoumter, erase cache whem clomedcoumter chamges
+proxycache[id] = (clomedCoumter: somemum, proxy: lstuff);
+durimg doject wrap, if cc is the same returm cache.proxy. otherwise update it*/
 
 /*
 package[0].classes["c"] should be valid

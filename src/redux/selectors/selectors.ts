@@ -559,13 +559,13 @@ export class Selectors{
                 if (firstEvaluationForNodeView) {
                     const oldScore = transientProperties.node[nid].viewScores[vid].score;
                     const newScore = transientProperties.node[nid].viewScores[vid].score = this.matchesMetaClassTarget(dview, data?.__raw);
-                    // console.log('2302, getviews evaluating viewwwwww ' + data?.name +"_"+ vid, {newScore, oldScore, vid});
+                    console.log('2302, getviews evaluating viewwwwww ' + data?.name +"_"+ vid, {newScore, oldScore, vid, appliableto:dview.appliableToClasses});
                     if (newScore === ViewEClassMatch.MISMATCH_PRECONDITIONS) {
                         if (newScore === oldScore) needsorting = true;
                         continue;
                     }
-                    //console.log('2302, getviews setting preconditions!', {newScore, oldScore, vid});
 
+                    console.log('2302, getviews setting preconditions!', {newScore, oldScore, vid, allViews});
                     // 67{}[]'?^&&||nb
                 } else {
                     const oldScore = transientProperties.node[nid].viewScores[vid].score;
@@ -577,6 +577,7 @@ export class Selectors{
 
                 // check ocl
                 let score = OCL.test(data, dview, node)//Selectors.calculateOCLScore({data, node, dview});
+                console.log('2302, getviews ocl score!', {score, vid});
                 if (score === transientProperties.node[nid].viewScores[vid].score/*?.[pvid as Pointer<DViewElement>]*/) continue;
                 // todo: currently ocl score replaces precondition score. eventually might be better to store precondition score separately,
                 //  and add a merged score between ocl and preconditions as in ocl*preconditions
@@ -613,7 +614,7 @@ export class Selectors{
         //nb{}[]
 
         // if data or view changed update the score dict, them re-sort the view arr first, fimally update Sorted_modelused, Sorted_modelused
-        // console.log('2302 getviews ret', {dn: data?.name, data, stack: transientProperties.node[nid].stackViews, stackn: transientProperties.node[nid].stackViews.map(v => v.name), scores: transientProperties.node[nid]});
+        console.log('2302 getviews ret', {dn: data?.name, data, stack: transientProperties.node[nid].stackViews, stackn: transientProperties.node[nid].stackViews.map(v => v.name), scores: transientProperties.node[nid]});
 
         // throw new Error("stop debug");
         return transientProperties.node[nid];

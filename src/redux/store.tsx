@@ -313,10 +313,31 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>): DViewElement[] {
         "}";
 
     let errorOverlayView: DViewElement = DViewElement.new2('Semantic error view', DV.semanticErrorOverlay(), (v) => {
-        v.appliableToClasses = ['neverrr']; // DValue.cname];
+        v.appliableToClasses = [DAttribute.cname]; // [DValue.cname];
         v.isExclusiveView = false;
-    }, false, vp);
-    errorOverlayView.oclCondition = 'context DValue inv: self.value < 0';
+        v.css =
+`&.mainView { text-decoration-line: spelling-error; }
+&.decorativeView {
+    text-decoration-line: spelling-error;
+    
+    .overlap{
+      outline: 4px solid var(--background-3);
+      display: flex;
+    }
+    .error-message{
+        background: #300;
+        position:absolute;
+        top:50%; right:0;
+        transform: translate(calc(100% + 3px), calc(-50%));
+        margin: auto;
+        color: var(--color-3);
+        background: var(--background-3);
+        padding: 8px;
+        border-radius: 0 16px 16px 0;
+    }
+}`
+    }, false, vp, 'Pointer_ViewOverlay' );
+    // errorOverlayView.oclCondition = 'context DValue inv: self.value < 0';
 
     let valuecolormap: GObject = {};
     valuecolormap[ShortAttribETypes.EBoolean] = "orange";

@@ -1,7 +1,7 @@
 import React, {CSSProperties, PureComponent, ReactChild, ReactNode} from "react";
 // import { connect } from "react-redux";
 // import {DState} from "../../redux/store";
-import './overlap.scss';
+//import './overlap.scss';
 
 // private
 interface ThisState {

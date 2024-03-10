@@ -31,9 +31,11 @@ export class DV {
         console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error(visibleMessage, errortype, data, node, v); }
 
-    static edgePointView(): string { return beautify(
-        `<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"white", width:"100%", height:"100%"}} />`
-    )}
+    static edgePointView(): string { return beautify((
+`<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"white", width:"100%", height:"100%"}}>
+    {otherViews}
+</div>`
+))}
     static edgePointViewSVG(): string { return beautify(
         `<ellipse stroke={"black"} fill={"red"} cx={"50"} cy={"50"} rx={"20"} ry={"20"} />`
         //`<ellipse stroke={"black"} fill={"red"} cx={props.node.x} cy={props.node.y} rx={props.node.w} ry={props.node.h} />`
@@ -120,6 +122,7 @@ export class DV {
             {
                 edge.midPoints.map( m => <EdgePoint data={edge.father.model.id} initialSize={m} key={m.id} view={"Pointer_ViewEdgePoint"} /> )
             }
+            {otherViews}
         </div>`
     )}
     /*
@@ -138,9 +141,13 @@ export class DV {
     }
     */
     static semanticErrorOverlay() { return (
-            `<div style={{background: '#300', color:'#f00', float: 'right'}}>Invalid value</div>`
-        )}
-}
+`<div className="overlap">
+    <div className="error-message">Too young to work</div>
+</div>`
+)}
+
+
+} // DV class end
 
 let valuecolormap: GObject = {};
 valuecolormap[ShortAttribETypes.EBoolean] = "orange";
@@ -161,8 +168,8 @@ let valuecolormap_str = JSON.stringify(valuecolormap); // can this be declared i
 
 class DefaultView {
 
-    public static model(): string {
-        return `<div className={'root'}>
+    public static model(): string { return (
+`<div className={'root'}>
     {!data && "Model data missing."}
     <div className="edges" style={{zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}>{[
             refEdges.map(se=> <Edge start={se.start.father.node} end={se.end.node} view={"Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association")} key={se.start.node.id+"~"+se.end.node.id}/>)
@@ -172,92 +179,95 @@ class DefaultView {
     {otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
     {firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
     {m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object}></DefaultNode>)}
-</div>`;
-    }
+    {otherViews}
+</div>`
+);}
 
-    public static void(): string {
-        return `<div className={'round bg-white root void model-less p-1'}>
+    public static void(): string { return (
+`<div className={'round bg-white root void model-less p-1'}>
     <div>voidvertex element test</div>
     <div>data: {props.data ? props.data.name : "empty"}</div>
-</div>`;
-    }
-    public static package(): string {
-        return `<div className={'round root bg-white package'}>
-    <div className={'package-children'}>
-        {data.children.map((child, index) => {
-            return <DefaultNode key={child.id} data={child} />
-        })}
-    </div>
-</div>`;
-    }
+    {otherViews}
+</div>`
+);}
 
-    public static defaultPackage(): string {
-        return `<div className={'root'}>
+    public static package(): string { return (
+`<div className={'round root bg-white package'}>
     <div className={'package-children'}>
-        {data.children.map((child, index) => {
-            return <DefaultNode key={child.id} data={child} />
-        })}
+        { data.children.map(c => <DefaultNode key={c.id} data={c} />) }
     </div>
-</div>`;
-    }
+    {otherViews}
+</div>`
+);}
 
-    public static class(): string {
-        return `<div className={'round root class'} style={{background: 'var(--background-1)', color:'var(--color-2)'}}>
-    <Input jsxLabel={<b className={'class-name'}>EClass:</b>} 
-           data={data} field={'name'} hidden={true} autosize={true} />
+    public static defaultPackage(): string { return (
+`<div className={'root'}>
+    <div className={'package-children'}>
+        { data.children.map(c => <DefaultNode key={c.id} data={c} />) }
+    </div>
+    {otherViews}
+</div>`
+);}
+
+    public static class(): string { return (
+`<div className={'round root class'} style={{background: 'var(--background-1)', color:'var(--color-2)'}}>
+    <Input jsxLabel={<b className={'class-name'}>EClass:</b>} data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
     <div className={'class-children'}>{ data.attributes.map(c => <DefaultNode key={c.id} data={c} />) }</div>
     <div className={'class-children'}>{ data.references.map(c => <DefaultNode key={c.id} data={c} />) }</div>
     <div className={'class-children'}>{ data.operations.map(c => <DefaultNode key={c.id} data={c} />) }</div>
-</div>`;
-    }
+    {otherViews}
+</div>`
+);}
 
-    public static enum(): string {
-        return `<div className={'round bg-white root enumerator'}>
-    <Input jsxLabel={<b className={'my-auto enumerator-name'}>EEnum:</b>} 
-           data={data} field={'name'} hidden={true} autosize={true} />
+    public static enum(): string { return (
+`<div className={'round bg-white root enumerator'}>
+    <Input jsxLabel={<b className={'my-auto enumerator-name'}>EEnum:</b>} data={data} field={'name'} hidden={true} autosize={true} />
     <hr />
     <div className={'enumerator-children'}>
-        {data.children.map((child, index) => {
-            return <DefaultNode key={child.id} data={child}></DefaultNode>
-        })}
+        { data.children.map(c => <DefaultNode key={c.id} data={c}/>) }
     </div>
-</div>`;
-    }
+    {otherViews}
+</div>`
+);}
 
-    public static feature(): string {
-        return `<div className={'w-100 root feature'} style={{background: 'var(--background-2)', color:'var(--color-2)'}}>
+    public static feature(): string { return (
+`<div className={'w-100 root feature'} style={{background: 'var(--background-2)', color:'var(--color-2)'}}>
     <Select className={'p-1 d-flex'} data={data} field={'type'} label={data.name} />
-</div>`;
-    }
+    {otherViews}
+</div>`
+);}
 
-    public static literal(): string {
-        return `<label className={'d-block text-center root literal'}>{data.name}</label>`
-    }
+    public static literal(): string { return (
+`<label className={'d-block text-center root literal'}>
+    {data.name}
+    {otherViews}
+</label>`
+);}
 
-    public static operation(): string {
-        // data.signature
-        return `<div className={'w-100'}>
+    public static operation(): string { return (
+`<div className={'w-100'}>
     <Select className={'p-1 root operation d-flex'} data={data} field={'type'} label={data.name + ' () => '} />
-</div>`;
-    }
+    {otherViews}
+</div>`
+);}
 
     // damiano: i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
     // it is still work in progress.
-    public static operationm1(): string {
-        return `<div className={'d-flex root operationm1'} style={{paddingRight: "6px"}}>
-             {<label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>}
-            <label className={'d-block ms-auto hover-root'} style={{color:` + valuecolormap_str + `[this.props.data.values.type] || "gray"
-            }}>→→→{
-                <div className="hover-content">{
-                    <ParameterForm operation = {this.props.data.id} vertical={true} />
-                }
-                }</label>
-        </div>`
-    }
+    public static operationm1(): string { return (
+`<div className={'d-flex root operationm1'} style={{paddingRight: "6px"}}>
+    <label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>
+    <label className={'d-block ms-auto hover-root'} style={{color:` + valuecolormap_str + `[this.props.data.values.type] || "gray"}}>
+        →→→
+        <div className="hover-content">
+            <ParameterForm operation={this.props.data.id} vertical={true} />
+        </div>
+    </label>
+    {otherViews}
+</div>`
+);}
 
-    public static objectOld(): string {
-        return ''+
+    public static objectOld(): string { return (
 `<div className={'round bg-white root class'}>
     <label className={'ms-1'}>
         <Input jsxLabel={<b className={'my-auto class-name'}>{data.instanceof ? data.instanceof.name : "Object"}:</b>} 
@@ -265,37 +275,36 @@ class DefaultView {
     </label>
     <hr />
     <div className={'object-children'}>
-        {data.features.map((child) => {
-            return <DefaultNode key={child.id} data={child}></DefaultNode>
-        })}
+        { features.map(c => <DefaultNode key={c.id} data={c} /> }
     </div>
-</div>`;
+    {otherViews}
+</div>`);
 }
 
-    public static object(): string { // object efficient mode
-        return ''+
+    public static object(): string { return (
 `<div className={'round bg-white root class'}>
     <label className={'ms-1'}>
         <Input jsxLabel={<b className={'my-auto class-name'}>{metaclassName}:</b>} 
-           data={data} field={'name'} hidden={true} autosize={true}/>
+           data={data} field={'name'} hidden={true} autosize={true} />
     </label>
     <hr />
     <div className={'object-children'}>
-        {features.map((child) => {
-            return <DefaultNode key={child.id} data={child}></DefaultNode>
-        })}
+        { features.map(c => <DefaultNode key={c.id} data={c} /> }
     </div>
-</div>`;
-}
+    {otherViews}
+</div>`
+);}
 
-    public static value() {
-        return `<div className={'d-flex root value'} style={{paddingRight: "6px"}}>
+    public static value() { return (
+`<div className={'d-flex root value'} style={{paddingRight: "6px"}}>
      {instanceofname && <label className={'d-block ms-1'}>{instanceofname}</label>}
      {!instanceofname && <Input asLabel={true} data={data} field={'name'} hidden={true} autosize={true} />}
-    <label className={'d-block m-auto'} style={{color: constants[typeString] || "gray"
-    }}>: {valuesString}</label>
+    <label className={'d-block m-auto'} style={{color: constants[typeString] || "gray"}}>
+        : {valuesString}
+    </label>
+    {otherViews}
 </div>`
-    }
+);}
 
 
 

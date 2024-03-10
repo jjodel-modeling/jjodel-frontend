@@ -63,7 +63,6 @@ class DefaultNodeStatee extends GraphElementStatee { }
 
 // from ownstateprops function getVertexID(props: AllPropss): Pointer<DVoidVertex, 0, 1, LVoidVertex> { return props.vertex?.id; }
 
-
 // Giordano: add ignore for webpack
 @RuntimeAccessible('DefaultNodeComponent')
 //@ts-ignore

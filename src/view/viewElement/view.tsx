@@ -309,7 +309,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             }
         }
         s += '\n\t' + U.replaceAll(c.data.css, '\n', '\n\t');
-        s = (!c.data.cssIsGlobal ? '[data-viewid="'+c.data.id+'"]' : 'body') +' {\n' + s + '\n}';
+        const localViewSelector = '.'+c.data.id; // '[data-viewid="'+c.data.id+'"]';
+        s = (!c.data.cssIsGlobal ? localViewSelector : 'body') +' {\n' + s + '\n}';
         // not an error, i'm updating directly d-view that is usually wrong, this is to prevent multiple nodes with same view to trigger compile and redux actions
         // count as if it's a derived attribute not really part of the store.
         c.data.css_MUST_RECOMPILE = false;
