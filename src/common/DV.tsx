@@ -141,9 +141,9 @@ export class DV {
     }
     */
     static semanticErrorOverlay() { return (
-`<div className="overlap">
-    <div className="error-message">Too young to work</div>
-</div>`
+`<section className="overlap">
+    <div className="error-message">Lowerbound violation</div>
+</section>`
 )}
 
 

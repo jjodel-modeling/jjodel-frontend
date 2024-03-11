@@ -325,15 +325,14 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>): DViewElement[] {
       display: flex;
     }
     .error-message{
-        background: #300;
+        color: var(--color-3);
+        background: var(--background-3);
+        border-radius: 0 16px 16px 0;
+        margin: auto;
+        padding: 8px;
         position:absolute;
         top:50%; right:0;
         transform: translate(calc(100% + 3px), calc(-50%));
-        margin: auto;
-        color: var(--color-3);
-        background: var(--background-3);
-        padding: 8px;
-        border-radius: 0 16px 16px 0;
     }
 }`
     }, false, vp, 'Pointer_ViewOverlay' );
