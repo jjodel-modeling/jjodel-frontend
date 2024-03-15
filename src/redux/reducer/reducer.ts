@@ -337,6 +337,28 @@ function updateRedundancies_OBSOLETE(state: DState, oldState:DState, possibleInc
 let initialState: DState = null as any;
 let storeLoaded: boolean = false;
 
+const UDRegexp = /(?:\s|;|}|\n|\t|\(|,)ret\s*\.\s*[a-zA-Z_$][0-9a-zA-Z_$]*\s*=/g;
+/* tested with:
+if (ret.key = stuff) ret.key2=morestuff;
+;ret.k=3;
+}ret. kk=3,ret. a = 3
+
+ret .b = 3
+*/
+
+const contextFixedKeys: Dictionary<string, boolean> = {
+    // "model", "graph",
+    "constants": true, "usageDeclarations": true,
+    "component": true,
+    "htmlindex": true,
+    "state": true, "stateProps": true, "ownProps": true,
+    // from props: "data", "node", "parentViewId", "parentnodeid",
+    // from props: "view", "views", "viewScores",
+    // from props: "children", "isgraph", "isvertex", "graphid", "nodeid",
+// @ts-ignore
+}
+// then add to it: content of props, constants, usageDeclarations
+
 export function reducer(oldState: DState = initialState, action: Action): DState {
     const ret = _reducer(oldState, action);
     if (ret === oldState) return oldState;
@@ -359,19 +381,98 @@ export function reducer(oldState: DState = initialState, action: Action): DState
             Collaborative.client.emit('pushAction', parsedAction);
         }
     }
+
+
+    let measurableKeys = ['onDataUpdate', 'onDragStart', 'onDragEnd', 'whileDragging', 'onResizeStart', 'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating'];
     // local changes to out-of-redux stuff
     if (ret.VIEWOCL_NEEDS_RECALCULATION.length) {
         // for (let gid of ret.graphs) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
         // for (let vid of ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION) { }
         for (let vid of ret.VIEWOCL_NEEDS_RECALCULATION) {
+            const dv: DViewElement = DPointerTargetable.fromPointer(vid);
             transientProperties.view[vid].oclEngine = undefined as any; // force re-parse
-            Selectors.updateViewMatchings2(DPointerTargetable.fromPointer(vid), false, true, ret);
+            Selectors.updateViewMatchings2(dv, false, true, ret);
         }
         ret.VIEWOCL_NEEDS_RECALCULATION = [];
     }
     if (ret.VIEWOCL_UPDATE_NEEDS_RECALCULATION.length) {
         // not implemented for now
         ret.VIEWOCL_UPDATE_NEEDS_RECALCULATION = [];
+    }
+
+    for (const vid of ret.constants_RECOMPILE) { // compiled in func, and executed, result does not vary between nodes.
+        let dv: DViewElement = DPointerTargetable.fromPointer(vid);
+        // transientProperties.view[vid].constantsList = dv.constants?.match(UDRegexp).map(s=>s.substring(4, s.length-1).trim()) || [];
+        // let allContextKeys = {...contextFixedKeys};
+        const constantsOutput = {};
+        const context = {view:dv}; // context at this point holds only static stuff, which are in gloval scope (window) plus view.
+        let paramStr = '{'+Object.keys(context).join(',')+'}, ret';
+        let constantsFunction: (context: GObject, ret: GObject) => void = new Function(paramStr, 'return ('+dv.constants+')(ret)').bind(context);// scope of this function is "window" and not the function where is called, unlike eval();
+        constantsFunction(context, constantsOutput);
+        transientProperties.view[vid].constants = constantsOutput;
+        transientProperties.view[vid].constantsList = Object.keys(transientProperties.view[vid].constants);
+        // not implemented for now
+        ret.constants_RECOMPILE = [];
+        // implies recompilation of: ud, jsx and all measurable events
+        ret.UD_RECOMPILE.push(vid);
+        ret.JSX_RECOMPILE.push(vid);
+        for (let k of measurableKeys) (ret as any)[k+"_RECOMPILE"].push(vid);
+    }
+    ret.constants_RECOMPILE = [];
+
+    for (const vid of ret.UD_RECOMPILE) { // compiled in func, but NOT executed, result varies between nodes.
+        let dv: DViewElement = DPointerTargetable.fromPointer(vid);
+        let matches = dv.usageDeclarations?.match(UDRegexp) || [];
+        transientProperties.view[vid].UDList = matches.map(s=>s.substring(4, s.length-1).trim());
+        // warning for user: do not redeclare ret in nested blocks.
+        // do not use ret[key] syntax.
+        // do not set nested values directly (ret.key.subkey syntax).
+        // do not use ret.key +=, -= or any other operator assignment different than "="
+        // if that is ever required, do instead
+        // do not assign values to ret in block comments
+        // those restrictions only apply to the ret object, all those violations can be done on other objects.
+        // so the following is valid, and a way to overcome the previous limitations:
+        // let subobject = {}; subobject[key] += stuff; ret.somefixedname = subobject;
+
+        let allContextKeys = {...contextFixedKeys};
+        for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
+        let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}, ret';
+        transientProperties.view[vid].UDFunction = new Function(paramStr, 'return ('+dv.usageDeclarations+')(ret)') as (...a:any)=>any;
+
+        // implies recompilation of: jsx and all measurable events
+        ret.JSX_RECOMPILE.push(vid);
+        for (let k of measurableKeys) (ret as any)[k+"_RECOMPILE"].push(vid);
+    }
+    for (const vid of ret.JSX_RECOMPILE) { // compiled in func, but NOT executed, result varies between nodes.
+        let dv: DViewElement = DPointerTargetable.fromPointer(vid);
+        let matches = dv.usageDeclarations?.match(UDRegexp) || [];
+        transientProperties.view[vid].UDList = matches.map(s=>s.substring(4, s.length-1).trim());
+
+        let allContextKeys = {...contextFixedKeys};
+        for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
+        for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
+
+        let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
+        transientProperties.view[vid].JSXFunction = new Function(paramStr, 'return ('+dv.jsxString+')') as (...a:any)=>any;
+        // transientProperties.view[vid].JSXFunction = (context: GObject)=> { return transientProperties.view[vid].JSXFunction.bind(context)(context); }
+
+
+        // implies recompilation of: ... nothing?
+    }
+    ret.JSX_RECOMPILE = [];
+
+
+    for (const key of measurableKeys) {
+        let vid: Pointer<DViewElement>;
+        for (vid of (ret as any)[key+"_RECOMPILE"]) {
+            let dv: DViewElement = DPointerTargetable.fromPointer(vid);
+            let str: string = (dv as any)[key];
+            let allContextKeys = {...contextFixedKeys};
+            for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
+            for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
+            let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
+            (transientProperties.view[vid] as any)[key] = new Function(paramStr, '()=>{'+str+'}');
+        }
     }
 
     for (let dataid in ret.ClassNameChanged) {

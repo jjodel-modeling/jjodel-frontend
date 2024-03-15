@@ -434,8 +434,13 @@ export class U {
     // if you want to pass a parameter to the function, pass it through scope insteand !! AND UNDECLARE the parameter in function string signature !!
     //if inner funcstr have parameters, need to declare them as codestrParamNames arr, and pass them in that order, after the scope which is fixed as first argument.
     // rest values are declared with ellipsis in codestrParamNames
-    public static parseFunctionWithContextAndScope<T extends Function = Function>(codeStr0: string | Function, context0: GObject | undefined, scope0: GObject | undefined, codestrParamNames: string[]=[],
-        protectShallowValues: boolean = false, doIdentifierValidation: boolean = false): T {
+    // !!! scope passed here, is only used for keys. values are not bound. scope is set as first parameter when you call the function.
+    // context is bound, but can be re-assigned by calling .bind(), .call() or .apply(), so neither context nor scope assigned in parsing phase are final.
+    // innerfunc params do not have to match the name on the string function, but only the correct amount. they can have any name i think, but i list them correctly to documentate.
+    public static parseFunctionWithContextAndScope<ParamNames extends string[], T extends Function = Function, TT extends GObject | undefined = GObject>(
+        codeStr0: string | Function, context0: GObject | undefined, scope0: TT, codestrParamNames?: ParamNames, protectShallowValues: boolean = false, doIdentifierValidation: boolean = false):
+        (TT extends undefined ? (...params: any)=>any : (scopee:TT, ...paramss: { [K in keyof ParamNames]: any;})=>any){
+        if (!codestrParamNames) codestrParamNames = [] as any;
 
         let codeStr: string = typeof codeStr0 === "function" ? codeStr0.toString() : codeStr0;
         let scopeParams: string = '';
@@ -452,8 +457,9 @@ export class U {
             } else context = undefined;
         } else { scope = scope0; context = context0; }
 
+
         if (scope) {
-            let scopekeys = Object.keys(scope);
+            let scopekeys: string[] = Object.keys(scope);
             if (doIdentifierValidation) scopekeys.map((key)=>{
                 key = key?.trim() || '';
                 if (!key || !U.validIdentfierRegexp.test(key)) return undefined;
@@ -462,14 +468,25 @@ export class U {
             scopeParams = '{'+scopekeys.join(',')+'}';
         }
 
-        let innerFuncParams = codestrParamNames.join(',');
+        let innerFuncParams = (codestrParamNames as string[]).join(',');
         let _jevalfunc = undefined as any; // is set by eval
-        codeStr = "_jevalfunc = function ("+(scopeParams && innerFuncParams ? scopeParams + ',' + innerFuncParams : scopeParams+innerFuncParams)+") { return ("+codeStr+")("+innerFuncParams+") }";
-        eval(codeStr);
-        console.log('ret', {context, scope, codeStr})
+        const evalmode = false;
+        console.log('parseFunctionWithContextAndScope', {codeStr, scope, context, params:{scopeParams, innerFuncParams}});
+        scopeParams = scopeParams && innerFuncParams ? scopeParams + ',' + innerFuncParams : scopeParams + innerFuncParams;
+        if (evalmode) {
+            codeStr = "_jevalfunc = function ("+scopeParams+") { return ("+codeStr+")("+innerFuncParams+") }";
+            eval(codeStr);
+        } else {
+            _jevalfunc = new Function(scopeParams, " return ("+codeStr+")("+innerFuncParams+")");
+        }
+
+        console.log('parseFunctionWithContextAndScope', {_jevalfunc, params:{scopeParams}});
+
         if (context) return _jevalfunc.bind(context);
         else return _jevalfunc;
-    }
+    }/*
+    public static evalInContextAndScope<T = any>(...a:any):any {return undefined}
+    public static evalInContextAndScopeNew<T = any>(...a:any):any {return undefined}*/
     public static evalInContextAndScopeNew<T = any>(codeStr: string | ((...a:any)=>any), context0: GObject, injectScopeToo: boolean,
                                                     protectShallowValues?: boolean, doIdentifierValidation?: boolean): T {
         return U.evalInContextAndScope(codeStr, context0, injectScopeToo ? context0 : undefined, protectShallowValues, doIdentifierValidation);

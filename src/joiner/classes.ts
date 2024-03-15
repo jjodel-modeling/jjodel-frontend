@@ -140,6 +140,7 @@ import {
     U
 } from "./index";
 import {OclEngine} from "@stekoe/ocl.js";
+import {ReactNode} from "react";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -869,7 +870,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.size = {};
         thiss.storeSize = false;
         thiss.lazySizeUpdate = true;
-        thiss.constraints = [];
+        //thiss.constraints = [];
         thiss.palette = {
             'color-': [], //['#ffffff', '#ff0000', '#00ff00', '#0000ff','#aaaaaa', '#ffaaaa', '#aaffaa', '#aaaaff'],
             'background-':[]};// ['#000000', '#33333', '#777777']};
@@ -907,13 +908,6 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
         thiss.edgeHeadSize = new GraphPoint(20, 20);
         thiss.edgeTailSize = new GraphPoint(20, 20);
-
-        this.nonPersistentCallbacks.push(() => {
-            if (thiss.constants) {
-                thiss._parsedConstants = (windoww["LViewElement"] as typeof LViewElement).parseConstants(thiss.constants);
-            } else thiss._parsedConstants = undefined;
-        });
-
         if (thiss.className !== 'DViewElement') return this;
         const user = LUser.fromPointer(DUser.current);
         // const project = user?.project; if(!project) return this;
@@ -922,6 +916,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             this.setExternalPtr(vp, 'subViews', '+=');
             this.setPtr("viewpoint", vp);
         }
+
+        let trview = transientProperties.view[thiss.id] = {} as any;
+        // trview.?? = ???
 
         // this.setExternalPtr(project.id, 'views', '+=');
         // this.setExternalPtr(project.id, 'stackViews', '+=');
@@ -2619,8 +2616,25 @@ export class NodeTransientProperties{
 type ViewTransientProperties = {
     // css_MUST_RECOMPILE: boolean;
     // compiled_css: string; maye those are better shared in sessions
-    oclUpdateCondition_PARSED: (oldData: LModelElement, newData:LModelElement) => boolean;
+    oclUpdateCondition_PARSED: (oldData: LModelElement, newData:LModelElement) => boolean;// not used anymore? was like UD+shouldcompoupdate for jsx, a pre-ocl check
     oclEngine: OclEngine;
+    JSXFunction: (scope: GObject)=>ReactNode;
+    UDFunction: (scope: GObject, ret: GObject)=>void;
+    constantsList: string[];
+    UDList: string[];
+    constants: GObject;
+    onDataUpdate: undefined | ((context:GObject)=>void);
+    onDragStart: undefined | ((context:GObject)=>void);
+    onDragEnd: undefined | ((context:GObject)=>void);
+    whileDragging: undefined | ((context:GObject)=>void);
+    onResizeStart: undefined | ((context:GObject)=>void);
+    onResizeEnd: undefined | ((context:GObject)=>void);
+    whileResizing: undefined | ((context:GObject)=>void);
+    onRotationStart: undefined | ((context:GObject)=>void);
+    onRotationEnd: undefined | ((context:GObject)=>void);
+    whileRotating: undefined | ((context:GObject)=>void);
+
+
 }
 type METransientProperties = {
     nodes: Dictionary<Pointer<DGraphElement>, LGraphElement>;

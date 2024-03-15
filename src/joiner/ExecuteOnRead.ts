@@ -9,9 +9,10 @@ import {
     ShortAttribETypes,
     windoww,
     AccessModifier,
-    EdgeGapMode
+    EdgeGapMode, GObject
 } from "../joiner";
 import * as Componentss from '../joiner/components';
+import React from "react";
 
 
 /*
@@ -96,7 +97,8 @@ Components.map(C=> {
 for (let Comp of Components) {
 
 }*/
-let wComponents = {...Components}
+let wComponents: GObject = {...Components}
+// set fallback keys without "Component" string, only if this does not make a naming conflict.
 for (let key in wComponents) {
     let index = key.indexOf("Component")
     if (index === -1) continue;
@@ -104,9 +106,14 @@ for (let key in wComponents) {
     if ((Components as any)[newkey]) continue;
     (wComponents as any)[newkey] = (Components as any)[key];
 }
-
+windoww.React = React;
 // (Components as any)["input"] = Components["InputComponent"];
 windoww.Components = wComponents;
+for (let k in wComponents) {
+    if (windoww[k]) throw new Error("Component naming conflict with a preexisting variable \"" + k + "\"");
+    windoww[k] = wComponents[k];
+}
+
 windoww.enumerators = {};
 
 

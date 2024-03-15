@@ -57,7 +57,7 @@ export class DViewElement extends DPointerTargetable {
 
     // evaluate 1 sola volta all'applicazione della vista o all'editing del campo
     constants?: string;
-    _parsedConstants?: GObject; // should be protected but LView is not subclass
+    // _parsedConstants?: GObject; // should be protected but LView is not subclass
 
     // evaluate tutte le volte che l'elemento viene aggiornato (il model o la view cambia).
     preRenderFunc!: string;
@@ -91,7 +91,7 @@ export class DViewElement extends DPointerTargetable {
     resizable!: boolean;
     viewpoint!: Pointer<DViewPoint>;
     display!: 'block'|'contents'|'flex'|string;
-    constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
+    //constraints!: GObject<"obsolete, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
     onDataUpdate!: string;
     onDragStart!: string;
     onDragEnd!: string;
@@ -544,8 +544,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__getSize: Info = {isNode:true, hidden:true, type:"Function(Pointer<GraphElement | ModelElement>) => GraphSize",
         txt:<div>Gets the size stored in this view for target element.</div>}
 
-    public _parsedConstants!: GObject;
-    public get__parsedConstants(c: Context): this['_parsedConstants'] { return c.data._parsedConstants || {}; }
+    // public _parsedConstants!: GObject;
+    // public get__parsedConstants(c: Context): this['_parsedConstants'] { return c.data._parsedConstants || {}; }
 
     public get_constants(c: Context): this['constants'] {
         return c.data.constants;
@@ -558,7 +558,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         let context: GObject = {__param: parsedConstants};
         context.__proto__ = windoww.defaultContext;
         try{
-            U.evalInContextAndScopeNew( "("+funcCode+")(this.__param)", context, true, false, false);
+            let parsedFunc = U.parseFunctionWithContextAndScope(funcCode, context, context, ['ret']);
+            parsedFunc(context, parsedConstants);
+            // U.evalInContextAndScopeNew( "("+funcCode+")(this.__param)", context, true, false, false);
         } catch (e: any) {
             Log.w("Attempted to save an invalid view.constant setup. Cause:\n" + e.message.split("\n")[0], e)
             return undefined;
@@ -568,10 +570,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     public set_constants(value: this['constants'], c: Context): boolean {
         if (value === c.data.constants) return true;
-        let parsedConstants: GObject | undefined = LViewElement.parseConstants(value) || {};
         BEGIN();
         SetFieldAction.new(c.data.id, 'constants', value, '', false);
-        SetFieldAction.new(c.data.id, '_parsedConstants', parsedConstants, '', false);
         END()
         return true;
     }

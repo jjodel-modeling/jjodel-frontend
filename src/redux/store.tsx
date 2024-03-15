@@ -156,6 +156,21 @@ export class DState extends DPointerTargetable{
     VIEWOCL_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
     // views where both ocl needs to be reapplied and the oclUpdateCondition -> transient.view[v.id].oclUpdateCondition_PARSED needs to be remade
     VIEWOCL_UPDATE_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
+    constants_RECOMPILE: Pointer<DViewElement>[] = [];
+    UD_RECOMPILE: Pointer<DViewElement>[] = [];
+    JSX_RECOMPILE: Pointer<DViewElement>[] = [];
+
+    onDataUpdate_RECOMPILE: Pointer<DViewElement>[] = [];
+    onDragStart_RECOMPILE: Pointer<DViewElement>[] = [];
+    onDragEnd_RECOMPILE: Pointer<DViewElement>[] = [];
+    whileDragging_RECOMPILE: Pointer<DViewElement>[] = [];
+    onResizeStart_RECOMPILE: Pointer<DViewElement>[] = [];
+    onResizeEnd_RECOMPILE: Pointer<DViewElement>[] = [];
+    whileResizing_RECOMPILE: Pointer<DViewElement>[] = [];
+    onRotationStart_RECOMPILE: Pointer<DViewElement>[] = [];
+    onRotationEnd_RECOMPILE: Pointer<DViewElement>[] = [];
+    whileRotating_RECOMPILE: Pointer<DViewElement>[] = [];
+
     // CSS_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
     // DATAOCL_NEEDS_RECALCULATION: Pointer<DModelElement>[] = [];
     ClassNameChanged: Dictionary<Pointer<DModelElement>, DocString<"name">> = {};
@@ -163,7 +178,6 @@ export class DState extends DPointerTargetable{
 
     static init(store?: DState): void {
         BEGIN()
-
         // const viewpoint = DViewPoint.new('Default', '', undefined, '', '', '', [], '', 0, false);
         const viewpoint = DViewPoint.new2('Default', '', ()=>{}, true, Defaults.viewpoints[0]);
         Log.exDev(viewpoint.id !== Defaults.viewpoints[0], "wrong vp id initialization", {viewpoint, def:Defaults.viewpoints});

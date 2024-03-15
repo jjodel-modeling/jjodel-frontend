@@ -5,6 +5,43 @@ import {U} from "./src/joiner";
 export const a = 0;
 
 let data:any, node:any, view:any, component:any;
+let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPackages:any, refEdges:any, extendEdges:any, React:any, Edge:any;
+// from this, either as a string or code, find a way to injectprops. as string regex with "Edge(" -> "Edge(nodeid," ?
+// pre-defining function Edge(...stuff) {return ActualEdgeComponent(nodeid, ...stuff) before the return React.createElement?
+/*
+let aa = ()=>{ return React.createElement('div', {className: 'root'}, [
+    !data && "Model data missing.",
+    React.createElement('div', {className: "edges", style: {zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}, [[
+        refEdges.map(se=> Edge({start: se.start.father.node, end: se.end.node, view: "Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association"), key: se.start.node.id+"~"+se.end.node.id}))
+        , extendEdges.map(se=>Edge({start: se.start, end: se.end, view: "Pointer_ViewEdgeInheritance", key: "EXT_"+se.start.node.id+"~"+se.end.node.id}))]
+
+    ]),
+    otherPackages.filter(p => p).map(pkg => DefaultNode({key: pkg.id, data: pkg})),
+    firstPackage && firstPackage.children.filter(c => c).map(classifier => DefaultNode({key: classifier.id, data: classifier})),
+    m1Objects.filter(o => o).map(m1object => DefaultNode({key: m1object.id, data: m1object})),
+    otherViews
+])});*/
+
+/*
+*
+    {(()=>{
+        let equality= {};
+        let inequality = {};
+        let missing = {};
+        window.equality = equality;
+        window.inequality = inequality;
+        window.missing = missing;
+        window.thiss = this;
+        for (let k in this) {
+            if (this[k] === window[k]) equality[k] = this[k];
+            else if (k in this && !(k in window)) missing[k] = this[k];
+            else inequality[k] = {w:window[k], t:this[k]};
+        }
+        return 1;
+    })()}
+*
+* */
+
 // erase all __proto__ usages youj cam;
 // todo: UD = usage declarations are conceptually wrongful implemented now that there are N views to a node.
 // tentative fix: compute N UD for all views in mapstatetoprops. store them in a map, check the map in shouldcomponentupdate, update if at least 1 view needs update.

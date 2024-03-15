@@ -54,7 +54,7 @@ import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsDat
 import {NodeTransientProperties} from "../../joiner/classes";
 
 // const Selectors: typeof Selectors_ = windoww.Selectors;
-
+/*
 export function makeEvalContext(view: LViewElement, state: DState, ownProps: GraphElementOwnProps, stateProps: GraphElementReduxStateProps): GObject {
     let component = GraphElementComponent.map[ownProps.nodeid as Pointer<DGraphElement>];
     let allProps = {...ownProps, ...stateProps};
@@ -90,46 +90,26 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
     // const evalContextOld = U.evalInContext(this, constants);
     // this.setState({evalContext});
 
-}
+}*/
 
 function computeUsageDeclarations(stateProps: AllPropss, lview: LViewElement): GObject {
     // compute usageDeclarations
     let udret: GObject = {};
     const view: DViewElement = lview.__raw;
     const vid: Pointer<DViewElement> = view.id;
-    let nodeEvalContext: GObject = transientProperties.node[stateProps.nodeid].evalContext;
+    let UDEvalContext: GObject = {...transientProperties.view[vid].constants}//transientProperties.node[stateProps.nodeid].evalContext;
 
     if (!view.usageDeclarations) {
         udret = {data: stateProps.data, view, node: stateProps.node};
     } else try {
-        // let context = { ...ret.evalContext, state, ret, ownProps, props: ret};
-        // eval usageDeclarations
-        // this is not really evaluated in provided context, as it does not find view, data in scope
-        // and if i open console data becomes the window.data of the one selected in console.
-
-        // scrapped function mode, doesn't look like possible to execute a function in a different scope after his definition,
-        // unless it becomes a string and is redefined through eval
-        /// let usageDeclarations: ((g:DefaultUsageDeclarations)=>DefaultUsageDeclarations) = U.evalInContextAndScope(ret.view.usageDeclarations, ret.evalContext, ret.evalContext);
-        // usageDeclarations(ret.usageDeclarations);
-        // ret.evalContext.usageDeclarations = ret.usageDeclarations;
-        transientProperties.node[stateProps.nodeid].viewScores[vid].usageDeclarations = {};
-
-        // todo: can i improve this by using proto indirectly by making something like new evalContext() ? where evalCotenxt is a GObject and not a function.
-        let tempContext: GObject = {...nodeEvalContext, __param: udret}; // cam i edit mested prop ovject__ should i_ ud starts empty ovject, them gets filled im shouldupdate_
-        tempContext.view = lview;
-        U.evalInContextAndScopeNew("("+view.usageDeclarations+")(this.__param)", tempContext, true, false);
-
-        // ret.evalContext.props = ret; mo more needed since UD doesn't update props anymore // hotfix to update context props after usageDeclaration mapping
-        // console.log("view compute usageDeclarations SUCCESS 1",
-        //     {UD_obj_result:stateProps.usageDeclarations, UD_view: view.usageDeclarations, context:evalContext, stateProps, ownProps});
+        transientProperties.view[vid].UDFunction.call(UDEvalContext, UDEvalContext, udret);
     } catch (e: any) {
         Log.ee("Invalid usage declarations", {e, str: view.usageDeclarations, view, data: stateProps.data, stateProps});
         udret = {data: stateProps.data, view, node: stateProps.node, __invalidUsageDeclarations: e};
     }
 
-    let merge = false;
-    if (merge) U.objectMergeInPlace(nodeEvalContext, udret);
-    U.objectMergeInPlace(transientProperties.node[stateProps.nodeid].viewScores[vid].evalContext = {}, nodeEvalContext, udret);
+    transientProperties.node[stateProps.nodeid].viewScores[vid].usageDeclarations = udret;
+    // do not merge to create jsx final context now, because if shouldcomponentupdate fails, i want to keep the OLD context for measurable events.
     return udret;
 }
 
@@ -300,11 +280,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // @ts-ignore
         ret.forceupdate = state.forceupdate;
 
-        // NB: after this function, ret (reduxstate) should not update shallow keys or ownProps, ret, usageDeclarations (because they are spread in ctx root)
-        // any further update will not be present in eval context.props unless merged like U.objectMergeInPlace(ret.evalContext.props, ...); (and same with ctx.stateProps)
-        setTemplateString(ret, ownProps, state); // todo: this is heavy, should be moved somewhere where it's executed once unless view changes (pre-render with if?)
-
-
         // Log.l((ret.data as any)?.name === "concept 1", "mapstatetoprops concept 1", {newnode: ret.node});
         return ret;
     }
@@ -340,7 +315,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             const vid: Pointer<DViewElement> = v.__raw.id;
             let nodeviewentry = transientProperties.node[nextProps.nodeid].viewScores[vid];
             let old_ud = nodeviewentry.usageDeclarations;
-            let new_ud = nodeviewentry.usageDeclarations = computeUsageDeclarations(nextProps, v);
+            computeUsageDeclarations(nextProps, v);
+            let new_ud = nodeviewentry.usageDeclarations;
             nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, 0, 1, skipDeepKeys, out);
             if (!ret && nodeviewentry.shouldUpdate) ret = true;
             Log.l(ret, "DECORATIVE_VIEW ShouldComponentUpdate " + data?.name + " UPDATED", {ret, reason: out.reason, oldProps:oldProps, nextProps, vid});
@@ -349,7 +325,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const vid: Pointer<DViewElement> = nextProps.view.__raw.id;
         let nodeviewentry = transientProperties.node[nextProps.nodeid].viewScores[vid];
         let old_ud = nodeviewentry.usageDeclarations;
-        let new_ud = nodeviewentry.usageDeclarations = computeUsageDeclarations(nextProps, nextProps.view);
+        computeUsageDeclarations(nextProps, nextProps.view);
+        let new_ud = nodeviewentry.usageDeclarations;
         nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, 0, 1, skipDeepKeys, out);
         if (!ret && nodeviewentry.shouldUpdate) ret = true;
         Log.l(ret, "ShouldComponentUpdate " + data?.name + " UPDATED", {ret, reason: out.reason, oldProps:oldProps, nextProps, views:nextProps.views});
@@ -361,20 +338,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // apparently node changes are not working? also check docklayout shouldupdate
     }
 
-    protected doMeasurableEvent(type: EMeasurableEvents): boolean {
+    protected doMeasurableEvent(type: EMeasurableEvents, vid: Pointer<DViewElement>): boolean {
         if (Debug.lightMode) return false;
-        let measurableCode: string = null as any;
-        let context: GObject = null as any;
-        try{
-            measurableCode = (this.props.view)[type];
-            if (!measurableCode) return false;
-            context = this.getUDContext(this.props.viewid); // context + usagedeclarations of main view only
-            measurableCode = U.wrapUserFunction(measurableCode);
-            console.log("measurable execute", {type, measurableCode});
-            // eval measurable
-            U.evalInContextAndScope<GObject>(measurableCode, context, context);
+        let measurableFunc: undefined | ((context:GObject)=>void) = (transientProperties.view[vid] as any)[type];
+        if (!measurableFunc) return false;
+        let context: GObject = this.getJSXContext(vid); // context + usagedeclarations of main view only
+        try {
+            measurableFunc.call(context, context);
+            console.log("measurable executed", {type, measurableFunc, vid, transient:transientProperties.view[vid]});
         }
-        catch (e: any) { Log.ee('Error in "'+type+'" ' + e.message, {e, measurableCode, context}); }
+        catch (e: any) { Log.ee('Error in measurable "'+type+'" ' + e.message, {e, measurableFunc, context}); }
         // it has executed at least partially.
         // i just need to know if he had the chance to do side-effects and the answer is yes regardless of exceptions
         return true;
@@ -452,24 +425,21 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (oldProps.view !== newProps.view) { this.setTemplateString(newProps.view); }
     }*/
 
-    protected getUDContext(vid: Pointer<DViewElement>): GObject{
-        let context: GObject = transientProperties.node[this.props.nodeid].viewScores[vid].evalContext;
+    protected updateJSXContext(vid: Pointer<DViewElement>): GObject{
+        let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
+        let tv = transientProperties.view[vid];
+        let context: GObject = tnv.evalContext = {...this.props, ...tv.constants, ...tnv.usageDeclarations};
+        // add component stuff that could not compute in reducer
         context.component = this;
-        context._context = context;
-        return context;
-    }
-    protected getContext(): GObject{
-        let context: GObject = transientProperties.node[this.props.nodeid as string].evalContext;
-        // transientProperties.node[this.props.nodeid].viewScores[this.props.viewid].evalContext; //{component:this, __proto__:this.props.evalContext};
-        context.component = this;
+        context.otherViews = this.props.views;
         context._context = context;
         return context;
     }
 
-    protected addToContext(context: GObject, newStuff: GObject): GObject{
-        U.objectMergeInPlace(context, newStuff);
-        // newStuff.__proto__ = context;
-        return newStuff;
+    protected getJSXContext(vid: Pointer<DViewElement>): GObject{
+        let context: GObject = transientProperties.node[this.props.nodeid].viewScores[vid].evalContext;
+        if (context.component) return this.updateJSXContext(vid);
+        return context;
     }
 
     protected displayError(e: Error, where: string, view: LViewElement): React.ReactNode {
@@ -589,7 +559,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         catch (e: any) { return this.displayError(e, "JSX Syntax", v); }
 
         // console.log('context for ' + (this.props.data?.name), {udContext});
-        try { ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + jsxCodeString + '})()', udContext); }
+        try {
+            let parsedFunc = U.parseFunctionWithContextAndScope('()=>{ return ' + jsxCodeString + '}', udContext, udContext);
+            ret = parsedFunc(udContext) as ReactNode;
+            /// ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + jsxCodeString + '})()', udContext);
+        }
         catch (e: any) { return this.displayError(e, "JSX Semantic", v); }
         return ret;
     }
@@ -756,21 +730,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         this.props.node.view = this.props.view;
     }*/
 
-    public render(nodeType:string = '', styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
-        if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
-            return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
-        }
-        if (!this.props.node) return "Loading...";
-        /*if (this.props.node.__raw.view !== this.props.view.id) {
-            this.onViewChange();
-            return "Updating view...";
-        }*/
-
+    onDataUpdateMeasurable(view: LViewElement, vid: Pointer<DViewElement>, index: number): void{
+        if (index > 0) { this.doMeasurableEvent(EMeasurableEvents.onDataUpdate, vid); return; }
+        // only on first of a sequence of onDataUpdate events for all stackviews (the mainview),
+        // set time of current stack of updates, to check if they are generating a loop
 
         // EMeasurableEvents.onDataUpdate -> handling and checking for loops
         if (!this.stopUpdateEvents || this.stopUpdateEvents !== this.props.view.clonedCounter) {
             this.stopUpdateEvents = undefined;
-            if (this.props.data && (this.dataOldClonedCounter !== this.props.data.clonedCounter) && this.doMeasurableEvent(EMeasurableEvents.onDataUpdate)) {
+            if (this.props.data && (this.dataOldClonedCounter !== this.props.data.clonedCounter) && this.doMeasurableEvent(EMeasurableEvents.onDataUpdate, vid)) {
                 this.dataOldClonedCounter = this.props.data.clonedCounter;
                 let thischange = {t: Date.now()};
                 this.lastOnUpdateChanges.push(thischange);
@@ -784,6 +752,28 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     } as any);
                 }
             }
+    }
+    }
+
+    public render(nodeType:string = '', styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
+        if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
+            return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
+        }
+        if (!this.props.node) return "Loading...";
+        /*if (this.props.node.__raw.view !== this.props.view.id) {
+            this.onViewChange();
+            return "Updating view...";
+        }*/
+        let nid = this.props.nodeid;
+        let allviews = [this.props.view, ...this.props.views];
+        for (let i = 0 ; i < allviews.length; i++){
+            let v = allviews[i];
+            const vid = v.id;
+            let viewnodescore = transientProperties.node[nid].viewScores[v.id];
+            if (!viewnodescore.shouldUpdate) continue;
+            // only if this exact view had UD changed, instead of being forced to rended by other in viewstack)
+            this.updateJSXContext(vid);
+            this.onDataUpdateMeasurable(v, vid, i);
         }
 
         /// set classes
@@ -804,7 +794,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         /// end set classes
 
 
-        let sharedContext: GObject = this.getContext();
         let mainView: LViewElement = this.props.view;
         let otherViews: LViewElement[] = this.props.views;
         let decoratorViewsOutput: (ReactNode | ReactElement)[] = [];/*
@@ -815,20 +804,19 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             } else otherViews.push(v);
         }*/
 
-        let nid = this.props.nodeid;
         let jsxOutput: ReactNode = undefined as any;
 
         for (let v of otherViews) {
             let viewnodescore = transientProperties.node[nid].viewScores[v.id];
             jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
-            if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput = this.renderView(this.props, v, sharedContext, nodeType, classes, styleoverride, undefined, mainView.id);
+            if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput = this.renderView(this.props, v, nodeType, classes, styleoverride, undefined, mainView.id);
             viewnodescore.shouldUpdate = false;
             decoratorViewsOutput.push(jsxOutput);
         }
 
         let viewnodescore = transientProperties.node[nid].viewScores[mainView.id];
         jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
-        if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput = this.renderView(this.props, mainView, sharedContext, nodeType, classes, styleoverride, decoratorViewsOutput, undefined, otherViews.map(v=>v.id));
+        if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput = this.renderView(this.props, mainView, nodeType, classes, styleoverride, decoratorViewsOutput, undefined, otherViews.map(v=>v.id));
         viewnodescore.shouldUpdate = false;
         decoratorViewsOutput.push(jsxOutput);
 
@@ -839,20 +827,17 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
 
-    protected renderView(props: AllProps, v: LViewElement, sharedContext: GObject, nodeType: string, classes: string[], styleoverride: React.CSSProperties,
+    protected renderView(props: AllProps, v: LViewElement, nodeType: string, classes: string[], styleoverride: React.CSSProperties,
                          otherViews?: (ReactNode | ReactElement)[], mainviewid?: Pointer<DViewElement>, subViewsID: Pointer<DViewElement>[] = []): ReactNode | ReactElement | undefined {
         let dv = v.__raw;
         const nid = props.nodeid;
         const vid = v.id;
         let ud: GObject | undefined = transientProperties.node[nid].viewScores[vid].usageDeclarations;
-        console.log('ud error',{vs:transientProperties.node[nid].viewScores[vid], vid, ns:transientProperties.node[nid]})
         if (ud.__invalidUsageDeclarations) {
             return this.displayError(ud.__invalidUsageDeclarations, "Usage Declaration", v);
         }
-        const context: GObject = {};
         let isMainView: boolean = !!otherViews;
-        U.objectMergeInPlace(context, ud, sharedContext);
-        context.otherViews = otherViews || [];
+        const context: GObject = this.getJSXContext(vid);
         const rnode: ReactNode = this.getTemplate2(v, context);
         let rawRElement: ReactElement | null = UX.ReactNodeAsElement(rnode);
 
