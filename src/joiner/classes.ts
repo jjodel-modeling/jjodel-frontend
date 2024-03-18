@@ -862,6 +862,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // thiss.__transient = new DViewTransientProperties();
         thiss.subViews = [];
         thiss.oclCondition = oclCondition || '';
+        thiss.jsCondition = '';
         thiss.oclUpdateCondition = '';
         thiss.OCL_NEEDS_RECALCULATION = true;
         thiss.explicitApplicationPriority = priority;
@@ -919,6 +920,14 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
         let trview = transientProperties.view[thiss.id] = {} as any;
         // trview.?? = ???
+
+        const keys = ['onDataUpdate', 'onDragStart', 'onDragEnd', 'whileDragging', 'onResizeStart',
+            'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating',
+            'usageDeclarations', 'jsxString', 'oclCondition', 'jsCondition'];
+        TRANSACTION(() => {
+            for(let key of keys) setexternalptr
+                SetRootFieldAction.new(`VIEWS_RECOMPILE_${key}`, thiss.id, '+=', true);
+        })
 
         // this.setExternalPtr(project.id, 'views', '+=');
         // this.setExternalPtr(project.id, 'stackViews', '+=');
