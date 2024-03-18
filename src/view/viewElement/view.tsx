@@ -45,6 +45,11 @@ export class DViewElement extends DPointerTargetable {
     // static singleton: LViewElement;
     // static logic: typeof LViewDViewElementElement;
     // static structure: typeof DViewElement;
+    public static MeasurableKeys: string[] = ['onDataUpdate', 'onDragStart', 'onDragEnd', 'whileDragging', 'onResizeStart',
+        'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating'];
+    public static RecompileKeys: string[] = ['onDataUpdate', 'onDragStart', 'onDragEnd', 'whileDragging', 'onResizeStart',
+        'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating',
+        'constants', 'usageDeclarations', 'jsxString', 'oclCondition', 'jsCondition'];
 
     // inherited redefine
     // public __raw!: DViewElement;
@@ -215,8 +220,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return context.data.jsxString;
     }
     protected set_jsxString(val: this['jsxString'], context: Context): boolean {
-        SetFieldAction.new(context.data, 'jsxString', val, '', false);
-        SetRootFieldAction.new('VIEWS_RECOMPILE_jsxString', context.data.id, '+=', true);
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'jsxString', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_jsxString', context.data.id, '+=', false);
+        });
         return true;
     }
 
@@ -243,8 +250,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             "}";
     }
     protected set_usageDeclarations(val: this['usageDeclarations'], context: Context): boolean {
-        SetFieldAction.new(context.data, 'usageDeclarations', val, '', false);
-        SetRootFieldAction.new('VIEWS_RECOMPILE_usageDeclarations', context.data.id, '+=', true);
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'usageDeclarations', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_usageDeclarations', context.data.id, '+=', false);
+        })
         return true;
     }
 
@@ -432,8 +441,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     set_oclCondition(val: string, context: Context): boolean {
         val = (val || '').trim();
         if (val === context.data.oclCondition) return true;
-        SetFieldAction.new(context.data, 'oclCondition', val, '', false);
-        SetRootFieldAction.new('VIEWS_RECOMPILE_oclCondition', context.data.id, '+=', true);
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'oclCondition', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_oclCondition', context.data.id, '+=', false);
+        })
         // SetRootFieldAction.new('VIEWOCL_NEEDS_RECALCULATION', context.data.id, '+=', false); // it is pointer, but for transient stuff there is no need to set pointedby's
         return true;
     }
@@ -447,8 +458,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     set_jsCondition(val: string, context: Context): boolean {
         val = (val || '').trim();
         if (val === context.data.jsCondition) return true;
-        SetFieldAction.new(context.data, 'jsCondition', val, '', false);
-        SetRootFieldAction.new('VIEWS_RECOMPILE_jsCondition', context.data.id, '+=', true);
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'jsCondition', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_jsCondition', context.data.id, '+=', false);
+        })
         return true;
     }
 
@@ -467,8 +480,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return context.data.onDragStart;
     }
     protected set_onDragStart(val: this['onDragStart'], context: Context): boolean {
-        SetFieldAction.new(context.data, 'onDragStart', val, '', false);
-        SetRootFieldAction.new('VIEWS_RECOMPILE_onDragStart', context.data.id, '+=', true);
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'onDragStart', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_onDragStart', context.data.id, '+=', false);
+        })
         return true;
     }
 
@@ -479,8 +494,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return context.data.onDragEnd;
     }
     protected set_onDragEnd(val: this['onDragEnd'], context: Context): boolean {
-        SetFieldAction.new(context.data, 'onDragEnd', val, '', false);
-        SetRootFieldAction.new('VIEWS_RECOMPILE_onDragEnd', context.data.id, '+=', true);
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'onDragEnd', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_onDragEnd', context.data.id, '+=', false);
+        })
         return true;
     }
 
@@ -491,8 +508,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return context.data.whileDragging;
     }
     protected set_whileDragging(val: this['whileDragging'], context: Context): boolean {
-        SetFieldAction.new(context.data, 'whileDragging', val, '', false);
-        SetRootFieldAction.new('VIEWS_RECOMPILE_whileDragging', context.data.id, '+=', true);
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'whileDragging', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_whileDragging', context.data.id, '+=', false);
+        })
         return true;
     }
 
@@ -503,8 +522,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return context.data.onResizeStart;
     }
     protected set_onResizeStart(val: this['onResizeStart'], context: Context): boolean {
-        SetFieldAction.new(context.data, 'onResizeStart', val, '', false);
-        SetRootFieldAction.new('VIEWS_RECOMPILE_onResizeStart', context.data.id, '+=', true);
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'onResizeStart', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_onResizeStart', context.data.id, '+=', false);
+        })
         return true;
     }
 
@@ -515,8 +536,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return context.data.onResizeEnd;
     }
     protected set_onResizeEnd(val: this['onResizeEnd'], context: Context): boolean {
-        SetFieldAction.new(context.data, 'onResizeEnd', val, '', false);
-        SetRootFieldAction.new('VIEWS_RECOMPILE_onResizeEnd', context.data.id, '+=', true);
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'onResizeEnd', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_onResizeEnd', context.data.id, '+=', false);
+        })
         return true;
     }
 
@@ -527,8 +550,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return context.data.whileResizing;
     }
     protected set_whileResizing(val: this['whileResizing'], context: Context): boolean {
-        SetFieldAction.new(context.data, 'whileResizing', val, '', false);
-        SetRootFieldAction.new('VIEWS_RECOMPILE_whileResizing', context.data.id, '+=', true);
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'whileResizing', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_whileResizing', context.data.id, '+=', false);
+        })
         return true;
     }
 
@@ -539,8 +564,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return context.data.onRotationStart;
     }
     protected set_onRotationStart(val: this['onRotationStart'], context: Context): boolean {
-        SetFieldAction.new(context.data, 'onRotationStart', val, '', false);
-        SetRootFieldAction.new('VIEWS_RECOMPILE_onRotationStart', context.data.id, '+=', true);
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'onRotationStart', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_onRotationStart', context.data.id, '+=', false);
+        })
         return true;
     }
 
@@ -551,8 +578,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return context.data.onRotationEnd;
     }
     protected set_onRotationEnd(val: this['onRotationEnd'], context: Context): boolean {
+        TRANSACTION(()=>{
         SetFieldAction.new(context.data, 'onRotationEnd', val, '', false);
-        SetRootFieldAction.new('VIEWS_RECOMPILE_onRotationEnd', context.data.id, '+=', true);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_onRotationEnd', context.data.id, '+=', false);
+        })
         return true;
     }
 
@@ -563,8 +592,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return context.data.whileRotating;
     }
     protected set_whileRotating(val: this['whileRotating'], context: Context): boolean {
-        SetFieldAction.new(context.data, 'whileRotating', val, '', false);
-        SetRootFieldAction.new('VIEWS_RECOMPILE_whileRotating', context.data.id, '+=', true);
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'whileRotating', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_whileRotating', context.data.id, '+=', false);
+        })
         return true;
     }
 
@@ -575,8 +606,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return context.data.onDataUpdate;
     }
     protected set_onDataUpdate(val: this['onDataUpdate'], context: Context): boolean {
-        SetFieldAction.new(context.data, 'onDataUpdate', val, '', false);
-        SetRootFieldAction.new('VIEWS_RECOMPILE_onDataUpdate', context.data.id, '+=', true);
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'onDataUpdate', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_onDataUpdate', context.data.id, '+=', false);
+        })
         return true;
     }
 
@@ -681,9 +714,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     public set_constants(value: this['constants'], c: Context): boolean {
         if (value === c.data.constants) return true;
-        BEGIN();
-        SetFieldAction.new(c.data.id, 'constants', value, '', false);
-        END()
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data.id, 'constants', value, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_constants', c.data.id, '+=', false);
+        })
         return true;
     }
 
@@ -847,11 +881,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 vp.subViews = oldViews as any;*/
                 // SetRootFieldAction.new('stackViews', dview.id, '+=', true);
 
-                const keys = ['onDataUpdate', 'onDragStart', 'onDragEnd', 'whileDragging', 'onResizeStart',
-                    'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating',
-                    'usageDeclarations', 'jsxString', 'oclCondition', 'jsCondition'];
-                for(let key of keys)
-                    SetRootFieldAction.new(`VIEWS_RECOMPILE_${key}`, c.data.id, '+=', true);
+
+                for(let key of DViewElement.RecompileKeys)
+                    SetRootFieldAction.new(`VIEWS_RECOMPILE_${key}`, c.data.id, '+=', false);
             })
             return lview;
         }

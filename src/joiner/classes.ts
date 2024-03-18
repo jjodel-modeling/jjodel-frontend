@@ -921,11 +921,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         let trview = transientProperties.view[thiss.id] = {} as any;
         // trview.?? = ???
 
-        const keys = ['onDataUpdate', 'onDragStart', 'onDragEnd', 'whileDragging', 'onResizeStart',
-            'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating',
-            'usageDeclarations', 'jsxString', 'oclCondition', 'jsCondition'];
         TRANSACTION(() => {
-            for(let key of keys) this.setExternalRootProperty('VIEWS_RECOMPILE_'+key, thiss.id, '+=', false) // is pointer, but no need to set pointedby
+            for(let key of (windoww.DViewElement as typeof DViewElement).RecompileKeys)
+                this.setExternalRootProperty('VIEWS_RECOMPILE_'+key, thiss.id, '+=', false) // is pointer, but no need to set pointedby
         })
 
         // this.setExternalPtr(project.id, 'views', '+=');

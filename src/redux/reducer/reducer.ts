@@ -383,7 +383,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     }
 
 
-    let measurableKeys = ['onDataUpdate', 'onDragStart', 'onDragEnd', 'whileDragging', 'onResizeStart', 'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating'];
+
     // local changes to out-of-redux stuff
     if (ret.VIEWOCL_NEEDS_RECALCULATION.length) {
         // for (let gid of ret.graphs) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
@@ -400,7 +400,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         ret.VIEWOCL_UPDATE_NEEDS_RECALCULATION = [];
     }
 
-    for (const vid of ret.constants_RECOMPILE) { // compiled in func, and executed, result does not vary between nodes.
+    for (const vid of ret.VIEWS_RECOMPILE_constants) { // compiled in func, and executed, result does not vary between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid);
         // transientProperties.view[vid].constantsList = dv.constants?.match(UDRegexp).map(s=>s.substring(4, s.length-1).trim()) || [];
         // let allContextKeys = {...contextFixedKeys};
@@ -411,16 +411,14 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         constantsFunction(context, constantsOutput);
         transientProperties.view[vid].constants = constantsOutput;
         transientProperties.view[vid].constantsList = Object.keys(transientProperties.view[vid].constants);
-        // not implemented for now
-        ret.constants_RECOMPILE = [];
         // implies recompilation of: ud, jsx and all measurable events
-        ret.UD_RECOMPILE.push(vid);
-        ret.JSX_RECOMPILE.push(vid);
-        for (let k of measurableKeys) (ret as any)[k+"_RECOMPILE"].push(vid);
+        ret.VIEWS_RECOMPILE_usageDeclarations.push(vid);
+        ret.VIEWS_RECOMPILE_jsxString.push(vid);
+        for (let k of DViewElement.MeasurableKeys) (ret as any)['VIEWS_RECOMPILE_'+k].push(vid);
     }
-    ret.constants_RECOMPILE = [];
+    ret.VIEWS_RECOMPILE_constants = [];
 
-    for (const vid of ret.UD_RECOMPILE) { // compiled in func, but NOT executed, result varies between nodes.
+    for (const vid of ret.VIEWS_RECOMPILE_usageDeclarations) { // compiled in func, but NOT executed, result varies between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid);
         let matches = dv.usageDeclarations?.match(UDRegexp) || [];
         transientProperties.view[vid].UDList = matches.map(s=>s.substring(4, s.length-1).trim());
@@ -440,10 +438,12 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         transientProperties.view[vid].UDFunction = new Function(paramStr, 'return ('+dv.usageDeclarations+')(ret)') as (...a:any)=>any;
 
         // implies recompilation of: jsx and all measurable events
-        ret.JSX_RECOMPILE.push(vid);
-        for (let k of measurableKeys) (ret as any)[k+"_RECOMPILE"].push(vid);
+        ret.VIEWS_RECOMPILE_jsxString.push(vid);
+        for (let k of DViewElement.MeasurableKeys) (ret as any)['VIEWS_RECOMPILE_'+k].push(vid);
     }
-    for (const vid of ret.JSX_RECOMPILE) { // compiled in func, but NOT executed, result varies between nodes.
+    ret.VIEWS_RECOMPILE_usageDeclarations = [];
+
+    for (const vid of ret.VIEWS_RECOMPILE_jsxString) { // compiled in func, but NOT executed, result varies between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid);
         let matches = dv.usageDeclarations?.match(UDRegexp) || [];
         transientProperties.view[vid].UDList = matches.map(s=>s.substring(4, s.length-1).trim());
@@ -459,12 +459,13 @@ export function reducer(oldState: DState = initialState, action: Action): DState
 
         // implies recompilation of: ... nothing?
     }
-    ret.JSX_RECOMPILE = [];
+    ret.VIEWS_RECOMPILE_jsxString = [];
 
 
-    for (const key of measurableKeys) {
+    ret.VIEWS_RECOMPILE_onDragEnd
+    for (const key of DViewElement.MeasurableKeys) {
         let vid: Pointer<DViewElement>;
-        for (vid of (ret as any)[key+"_RECOMPILE"]) {
+        for (vid of (ret as any)['VIEWS_RECOMPILE_'+key]) {
             let dv: DViewElement = DPointerTargetable.fromPointer(vid);
             let str: string = (dv as any)[key];
             let allContextKeys = {...contextFixedKeys};
@@ -473,6 +474,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
             let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
             (transientProperties.view[vid] as any)[key] = new Function(paramStr, '()=>{'+str+'}');
         }
+        (ret as any)['VIEWS_RECOMPILE_'+key] = [];
     }
 
     for (let dataid in ret.ClassNameChanged) {

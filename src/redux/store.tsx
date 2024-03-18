@@ -154,15 +154,20 @@ export class DState extends DPointerTargetable{
 
     /* RECOMPILES MODULE */
     VIEWS_RECOMPILE_onDataUpdate: Pointer<DViewElement>[] = [];
+
     VIEWS_RECOMPILE_onDragStart: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_onDragEnd: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_whileDragging: Pointer<DViewElement>[] = [];
+
     VIEWS_RECOMPILE_onResizeStart: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_onResizeEnd: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_whileResizing: Pointer<DViewElement>[] = [];
+
     VIEWS_RECOMPILE_onRotationStart: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_onRotationEnd: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_whileRotating: Pointer<DViewElement>[] = [];
+
+    VIEWS_RECOMPILE_constants: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_usageDeclarations: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_jsxString: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_oclCondition: Pointer<DViewElement>[] = []; // auto-detected
@@ -172,20 +177,7 @@ export class DState extends DPointerTargetable{
     VIEWOCL_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
     // views where both ocl needs to be reapplied and the oclUpdateCondition -> transient.view[v.id].oclUpdateCondition_PARSED needs to be remade
     VIEWOCL_UPDATE_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
-    constants_RECOMPILE: Pointer<DViewElement>[] = [];
-    UD_RECOMPILE: Pointer<DViewElement>[] = [];
-    JSX_RECOMPILE: Pointer<DViewElement>[] = [];
 
-    onDataUpdate_RECOMPILE: Pointer<DViewElement>[] = [];
-    onDragStart_RECOMPILE: Pointer<DViewElement>[] = [];
-    onDragEnd_RECOMPILE: Pointer<DViewElement>[] = [];
-    whileDragging_RECOMPILE: Pointer<DViewElement>[] = [];
-    onResizeStart_RECOMPILE: Pointer<DViewElement>[] = [];
-    onResizeEnd_RECOMPILE: Pointer<DViewElement>[] = [];
-    whileResizing_RECOMPILE: Pointer<DViewElement>[] = [];
-    onRotationStart_RECOMPILE: Pointer<DViewElement>[] = [];
-    onRotationEnd_RECOMPILE: Pointer<DViewElement>[] = [];
-    whileRotating_RECOMPILE: Pointer<DViewElement>[] = [];
 
     // CSS_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
     // DATAOCL_NEEDS_RECALCULATION: Pointer<DModelElement>[] = [];
