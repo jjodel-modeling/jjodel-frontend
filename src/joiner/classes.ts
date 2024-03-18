@@ -233,8 +233,8 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         if (typeof data === 'string') {
             data = DPointerTargetable.from(data, state) as D;
             if (!data) {
-                if (canThrow) return windoww.Log.exx('Cannot wrap:', {data, baseObjInLookup, path});
-                else return undefined as RET;
+                windoww.Log.e(canThrow, 'Cannot wrap:', {data, baseObjInLookup, path});
+                return undefined as RET;
             }
         }
         if (Array.isArray(data)) { console.error('use WrapAll instead for arrays', {data, baseObjInLookup, path, canThrow}); throw new Error("use WrapAll instead for arrays"); }

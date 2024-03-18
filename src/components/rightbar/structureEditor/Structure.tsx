@@ -1,17 +1,18 @@
 import React, {ReactNode} from "react";
 import type {GObject, LModelElement} from "../../../joiner";
 import {
+    DAnnotation, DAttribute,
     DObject,
     DValue,
-    Input,
+    Input, LAttribute,
     LModel,
     LObject,
     LOperation,
-    LPointerTargetable,
+    LPointerTargetable, LReference, LStructuralFeature,
     LValue,
     Select, Selectors,
     SetFieldAction,
-    store
+    store, U
 } from "../../../joiner";
 import Value from "./editors/Value";
 
@@ -85,6 +86,7 @@ export default class Structure {
             {Structure.TypedElementEditor(lAttribute)}
             {Structure.StructuralFeatureEditor(lAttribute)}
             <Input data={lAttribute} field={"isID"} label={"IsID"} type={"checkbox"} tooltip={"An ID attribute explicitly models the one unique ID of an object"} />
+            <Input data={lAttribute} field={'hasTopic'} label={'hasTopic'} type={'checkbox'} tooltip={'Define if the attribute has a topic in the MQTT Broker.'} />
         </>);
     }
     public static ReferenceEditor(lReference: LModelElement): ReactNode {
@@ -189,9 +191,20 @@ export default class Structure {
     }
     public static ValueEditor(me: LModelElement): ReactNode {
         const lValue: LValue = LValue.fromPointer(me.id);
+        const lInstaceof: LAttribute|LReference|undefined = lValue.instanceof;
         if(!lValue) return(<></>);
         return(<div>
             <Value value={lValue} />
+            {(lInstaceof?.className === DAttribute.name && U.wrapper<LAttribute>(lInstaceof).hasTopic) &&
+                <section>
+                    <hr className={'my-3'} />
+                    <Select data={lValue} field={'topic'} label={'Topic'} options={<>
+                        <option>sensors/sensor_1.timestamp</option>
+                        <option>sensors/sensor_1.temperature</option>
+                        <option>sensors/sensor_1.humidity</option>
+                    </>} />
+                </section>
+            }
         </div>);
     }
     public static Editor(lModelElement: LModelElement|null) : ReactNode {

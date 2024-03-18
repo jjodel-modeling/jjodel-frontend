@@ -14,6 +14,7 @@ import CollaboratorsEditor from '../rightbar/collaboratorsEditor/CollaboratorsEd
 import Console from '../rightbar/console/Console';
 import InfoTab from './tabs/InfoTab';
 import DockManager from './DockManager';
+import MqttEditor from "../rightbar/mqtt/MqttEditor";
 
 function DockComponent(props: AllProps) {
     const groups = {
@@ -32,7 +33,8 @@ function DockComponent(props: AllProps) {
     const node = {id: '4', title: 'Node', group: 'editors', closable: false, content: <NodeEditor />};
     const viewpoints = {id: '6', title: 'Viewpoints', group: 'editors', closable: false, content: <ViewpointEditor />};
     const collaborators = {id: '7', title: 'Collaborators', group: 'editors', closable: false, content: <CollaboratorsEditor />};
-    const console = {id: '8', title: 'Console', group: 'editors', closable: false, content: <Console />};
+    const mqtt = {id: '8', title: 'Mqtt', group: 'editors', closable: false, content: <MqttEditor />};
+    const console = {id: '9', title: 'Console', group: 'editors', closable: false, content: <Console />};
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     layout.dockbox.children.push({tabs: [info]});
@@ -43,6 +45,7 @@ function DockComponent(props: AllProps) {
         views,
         viewpoints,
         // collaborators,
+        mqtt,
         console
     ]});
 

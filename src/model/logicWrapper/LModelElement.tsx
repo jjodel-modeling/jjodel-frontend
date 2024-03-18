@@ -2833,6 +2833,7 @@ export class DAttribute extends DPointerTargetable { // DStructuralFeature
     unsettable: boolean = false;
     derived: boolean = false;
     defaultValueLiteral: string = '';
+    hasTopic: boolean = false;
     //@obsolete_attribute()
     parent: Pointer<DClass, 0, 'N', LClass> = [];
 
@@ -2898,6 +2899,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     derived!: boolean;
     // defaultValueLiteral!: string;
     defaultValue!: PrimitiveType[];
+    hasTopic!: boolean;
     parent!: LClass[];
     father!: LClass;
     instances!: LValue[];
@@ -2962,7 +2964,14 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         // @ts-ignore
         if (!val) (val) = []; else if (!Array.isArray(val)) val = [val];
         SetFieldAction.new(context.data, 'defaultValue', val, '', false);
-        return true; }
+        return true;
+    }
+
+    protected get_hasTopic(context: Context): this['hasTopic'] { return context.data.hasTopic; }
+    protected set_hasTopic(val: this['hasTopic'], context: Context): boolean {
+        SetFieldAction.new(context.data, 'hasTopic', val);
+        return true;
+    }
 
 }
 RuntimeAccessibleClass.set_extend(DStructuralFeature, DAttribute);
@@ -4495,6 +4504,21 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     conformsTo!:( LAttribute | LReference)[]; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
 
 
+    protected set_name(val: this["name"], context: Context): boolean {
+        let name = val;
+        const father = context.proxyObject.father;
+        if (father) {
+            const check = father.children.filter((child) => {
+                return (DNamedElement.fromPointer(child.id) as DNamedElement).name === name
+            });
+            if (check.length > 0) {
+                U.alert('error', 'Cannot rename the selected element since this name is already taken.');
+                return true
+            }
+        }
+        SetFieldAction.new(context.data, 'name', name, '', false);
+        return true;
+    }
 
     add(...val: any[]): void { return this.cannotCall("LValue.add"); }
     __info_of__add: Info = {type: "(...val: any|any[]) => void", txt: "Adds a value in the current value collection"}
@@ -5275,6 +5299,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         SetFieldAction.new(context.data, 'topic', val, '', false);
         return true;
     }
+
 }
 RuntimeAccessibleClass.set_extend(DNamedElement, DValue);
 RuntimeAccessibleClass.set_extend(LNamedElement, LValue);
