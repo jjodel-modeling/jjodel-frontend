@@ -110,7 +110,11 @@ windoww.React = React;
 // (Components as any)["input"] = Components["InputComponent"];
 windoww.Components = wComponents;
 for (let k in wComponents) {
-    if (windoww[k]) throw new Error("Component naming conflict with a preexisting variable \"" + k + "\"");
+    if (windoww[k] && windoww[k] !== wComponents[k]) {
+        let str = "Component naming conflict with a preexisting variable \"" + k + "\"";
+        console.error(str, {inWindow:windoww[k], inComponents:wComponents[k]});
+        throw new Error(str);
+    }
     windoww[k] = wComponents[k];
 }
 

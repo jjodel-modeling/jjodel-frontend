@@ -31,16 +31,14 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
 }
 
 
-export const ImageConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
+const ImageConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(ImageComponent);
 
-export const Image = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
-    return <ImageConnected {...{...props, children}} />;
-}
+// export const Image = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => { return <ImageConnected {...{...props, children}} />; }
 
 ImageComponent.cname = "ImageComponent";
 ImageConnected.cname = "ImageConnected";
-Image.cname = "Image";
-export default Image;
+// Image.cname = "Image";
+// export default Image;

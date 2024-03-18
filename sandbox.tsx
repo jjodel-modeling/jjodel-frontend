@@ -1,9 +1,9 @@
 // @ts-noinspect
 // @ts-ignore
-import {U} from "./src/joiner";
+import {transientProperties, U, windoww} from "./src/joiner";
+import {AllPropss} from "./src/graph/vertex/Vertex";
 
 export const a = 0;
-
 let data:any, node:any, view:any, component:any;
 let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPackages:any, refEdges:any, extendEdges:any, React:any, Edge:any;
 // from this, either as a string or code, find a way to injectprops. as string regex with "Edge(" -> "Edge(nodeid," ?

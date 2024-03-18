@@ -199,7 +199,8 @@ export const JSXT = jsxtt as any as JSXT_TYPE/*as {
     browserifyTransform: unknown | Function,
     visitor: unknown
 }*/
-
+windoww.jsxt = jsxtt;
+windoww.JSXT = jsxtt;
 
 
 export type Event = JQuery.Event;
@@ -244,7 +245,7 @@ w.GraphPoint = GraphPoint;
 w.$s = $s;
 */
 export {
-    TextArea, Select, Input, Image, Edge,
+    TextArea, Select, Input, Edge, // Image,
     GraphsContainerComponent,
     Overlap as OverlapComponent,
     GraphsContainer,

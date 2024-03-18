@@ -164,6 +164,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
             Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret});
             ret.viewid = ret.view.id;
+            ret.parentviewid = ownProps.parentViewId;
             (ret as any).viewScores = transientProperties.node[ownProps.nodeid as string]; // debug only
         }
 

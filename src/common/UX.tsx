@@ -7,9 +7,20 @@ import type { InputOwnProps } from '../components/forEndUser/Input';
 import type { SelectOwnProps } from '../components/forEndUser/Select';
 import type { TextAreaOwnProps } from '../components/forEndUser/TextArea';
 import {
-    LPointerTargetable, U, Log, GraphElementComponent,
-    windoww, RuntimeAccessible, EdgeComponent, RuntimeAccessibleClass, EdgeOwnProps, DGraphElement, DModelElement
+    LPointerTargetable,
+    U,
+    Log,
+    GraphElementComponent,
+    windoww,
+    RuntimeAccessible,
+    EdgeComponent,
+    RuntimeAccessibleClass,
+    EdgeOwnProps,
+    DGraphElement,
+    DModelElement,
+    transientProperties
 } from "../joiner";
+import {AllPropss} from "../graph/vertex/Vertex";
 
 // U-functions that require jsx
 @RuntimeAccessible('UX')
@@ -57,6 +68,7 @@ export class UX{
             console.log("inject offset props 2:", {oldre, re, injectProps});
             re = React.cloneElement(re, injectProps);
         }
+        //  fix the injection somehow. override Edge() Vertex() Asterisk() ...
         // const windoww = window as any;
         // console.log('ux.injectingProp pre ', {type: (re.type as any).WrappedComponent?.name || re.type}, {mycomponents: windoww.mycomponents, re, props:re.props});
         // add "view" (view id) prop as default to sub-elements of any depth to inherit the view of the parent unless the user forced another view to apply
@@ -168,4 +180,138 @@ export class UX{
             confirmButtonText: "Got It"
         });
     }
+
+
+
+
+
+
+
+
+
+    private static initPropInjectionStuff(): string[]{
+        UX.graphComponents = ['GraphElement', '...more'];
+        UX.inputComponents = ['Input', 'Select', 'TextArea','...more'];
+        UX.graphComponentsRegexp = new RegExp(UX.graphComponents.map(s=>'(?:;\}\)\]\,\;\s)'+s+'\(').join('|'));
+        UX.inputComponentRegexp = new RegExp(UX.graphComponents.map(s=>'(?:;\}\)\]\,\;\s)'+s+'\(').join('|'));
+        UX.viewRootProps = '"data-viewid": props.viewid,' +
+            ' addStyle: (offset ? {position:"absolute", left:offset.x, top:offset.y/*,transform:"scale("+zoom.x+","+zoom.y+")"*/} : undefined)';
+        UX.mainViewRootProps = 'ref: component.html, id: props.nodeid, "data-nodeid": props.nodeid, "data-dataid": props.dataid,\n' +
+            '"data-modelname": data?.className || "model-less",' +
+            '"data-userselecting": JSON.stringify(node.isSelected || {}),' +
+            '"data-nodetype": node.className, ' +
+            '"data-parentview": props.parentviewid, ' +
+            //'"data-order": node.zIndex,' +
+            'onClick: component.onClick,' +
+            'onContextMenu: component.onContextMenu,' +
+            'onMouseDown: component.onMouseDown,' +
+            'onMouseUp: component.onMouseUp,' +
+            'onMouseWheel: component.onScroll,' +
+            'onMouseEnter: component.onEnter,' +
+            'onMouseLeave: component.onLeave,' +
+            'tabIndex: (props as any).tabIndex || node.zIndex || -1,' +
+            '"data-countrenders": component.countRenders++,' +
+            'decorators: otherViews,'+// used in user jsx to inject decorator views
+            'classNameAdd: [(component.countRenders%2 ? "animate-on-update-even" : "animate-on-update-odd"),"mainView", props.viewid, ...props.viewsid].join(","),' +
+            '...this.props';
+        UX.decorativeViewRootProps +='classNameAdd: "decorativeView " + props.viewid, "data-mainview": mainviewid';
+        return UX.graphComponents
+    }
+    private static graphComponents: string[] = UX.initPropInjectionStuff();
+    private static inputComponents: string[] = undefined as any;
+    private static graphComponentsRegexp: RegExp = undefined as any;
+    private static inputComponentRegexp: RegExp = undefined as any;
+    private static GC_propsAdder(index: number): string { return "nodeid: window._assignnodeid(props, "+index+"), key:"+index; }
+    private static Input_propsAdder(index: number):string { return "key:"+index; }
+    private static injectPropsToString_addstuff(s: string, index: number, props: string, type: string, propsAdder?:((index: number)=>string) | undefined): string { // move out in global scope
+        switch (s[index]) {
+            case '{': // props object
+                // let propstr = JSON.stringify(propsToInjectAtRoot);
+                // propstr = propstr.substring(1, propstr.length-2);
+                s = s.substring(0, index+1) + props + (propsAdder ? ','+propsAdder(index) : '') + ',' + s.substring(index+1);
+                break;
+            case 'n': // null:
+                // let propstr = JSON.stringify(propsToInjectAtRoot)
+                s = s.substring(0, index) + '{'+props+(propsAdder ? ','+propsAdder(index) : '') + '}' + s.substring(index+4);
+                break;
+            default: Log.exDevv('unexpected string in '+type+' props injection parser',
+                {s_pre:s.substring(index-10, 10), s_post:s.substring(index, index+10), index, c:s[index], fullstr:s});
+                break;
+        }
+        return s;
+    }
+    private static viewRootProps: string;
+    private static decorativeViewRootProps: string;
+    private static mainViewRootProps: string;
+// propsToInject cannot be an object because i need variable names as prop values, NOT strings, not their immediate values. so i pass a string with a list of props
+    static injectPropsToString(s: string, asMainView:boolean, graphComponentsProps: string, inputComponentProps: string){
+        // non-root props are injected through Component constructors instead
+        // plan B instead: make it  "DefaultNde({pa: "pa"}, ["a", [b,c]])" ---> "Root(DefaultNde, {pa: "pa"}, ["a", [b,c]]) and handle injection in Root func
+        const propsToInjectAtRoot = UX.viewRootProps + ','+(asMainView ? UX.mainViewRootProps : UX.decorativeViewRootProps);
+        //add in context: component = (this as GraphElementComponent), otherViews
+        // 'style: {...viewStyle, ...styleoverride},' + need to fix this
+        // 'className: classes.join(\' \'),' + and this
+        // and otherViews as ReactNode[]
+        // context.mainviewid (different from context.view in decorative views)
+        s = s.trim();
+        if (propsToInjectAtRoot.length) {
+            let argStartIndex = s.indexOf('(', 1) + 1;//.match(/[A-Za-z_$0-9]+\(/)
+            // todo: hamdle props.addstyle
+            // add im props: offset: this.props.isGraph ££ this.props.ode.offset, zoom: this.props.isGraph ££ this.props.ode.zoom
+
+            if (s[argStartIndex] === "'") argStartIndex = s.indexOf("'", argStartIndex+1);// it is a lowercase component with name as string in first param
+            s = UX.injectPropsToString_addstuff(s, argStartIndex, propsToInjectAtRoot, 'root');
+
+            // used in GC_propsAdder as a string to be eval-ed
+            (window as any)._assignnodeid = function _assignnodeid(props: AllPropss, index:number): string {
+                const tnv = transientProperties.node[props.nodeid].viewScores[props.viewid];
+                if (!tnv.nodeidcounter) tnv.nodeidcounter = {};
+                if (tnv.nodeidcounter[index] === undefined) tnv.nodeidcounter[index] = 0;
+                else tnv.nodeidcounter[index]++;
+
+                return props.nodeid+'^'+index+'.'+tnv.nodeidcounter[index];
+                // every time before jsx render, " let nc = transientProperties.node[props.nodeid].viewScores[props.viewid].nodeidcounter; for (let k of nc) nc[k]=0; or just nodeidcounter={}
+            }
+        }
+
+        // lowercase, no props          React.createElement('defaultNde', null, ["a", [a,b,c]])
+        // uppercase, ++ props          DefaultNde({pa: "pa", pb: b, pc: "c"}, ["a", [a,b,c]])
+        // lowercase, ++ props          React.createElement('defaultNde', {a: "1"}, ["a", [a,b,c]])
+        // uppercase, no props          DefaultNde(null, ["a", [a,b,c]])
+        // might have () wrapping all
+        // or array wrapping all
+        // or comments (both inline and line)
+        // or even a string at beginning
+        // nightmare case is:          `(["a()", /*comment()*/ React.createElement('defaultNde', {a: "1"}, ["a", [a,b,c]]),2])`
+        // !! fix: force users to have < as first char?? and editor tells it's wrong if this is not the case?
+        // that forces mono-root, but arrays would be hard to inject root-level props and prone to break anyway
+        let match: RegExpExecArray | null;
+        //here i give up, because i cannot compute nodeid without htmlindex[] from root to component
+        // cannot even get nodeid according to jsxstr position because of loops / map generate multiple nodes from same string index
+        // NO! i can do srtindex+counters[strindex]++?
+        //
+
+        graphComponentsProps = 'parentnodeid: props.nodeid, graphid:this.props.node.className.indexOf("Graph")>=0 ? props.nodeid : props.graphid,' +
+            ' parentViewId:props.viewid';// + dynamically: 'nodeid, key' // - removed: htmlindex
+        inputComponentProps = 'data: props.data, field:"name"'; // + dynamically: 'key'
+
+        if (graphComponentsProps.length > 0) while (match = UX.graphComponentsRegexp.exec(s)) {
+            let matchstr: string = match[0];
+            //let pre = s.substring(0, match.index) + matchstr;
+            let argStartIndex = match.index + matchstr.length;
+            s = UX.injectPropsToString_addstuff(s, argStartIndex, graphComponentsProps, 'graphElement', UX.GC_propsAdder);
+        }
+        if (inputComponentProps.length > 0) while (match = UX.inputComponentRegexp.exec(s)) {
+            let matchstr: string = match[0];
+            //let pre = s.substring(0, match.index) + matchstr;
+            let argStartIndex = match.index + matchstr.length;
+            s = UX.injectPropsToString_addstuff(s, argStartIndex, inputComponentProps, 'inputComponent', UX.Input_propsAdder);
+        }
+        return s;
+    }
 }
+
+
+
+
+
