@@ -152,6 +152,22 @@ export class DState extends DPointerTargetable{
     collaborativeSession: boolean = false;
     ////////////////     flags shared, but handled locally      /////////////////////////////
 
+    /* RECOMPILES MODULE */
+    VIEWS_RECOMPILE_onDataUpdate: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_onDragStart: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_onDragEnd: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_whileDragging: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_onResizeStart: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_onResizeEnd: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_whileResizing: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_onRotationStart: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_onRotationEnd: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_whileRotating: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_usageDeclarations: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_jsxString: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_oclCondition: Pointer<DViewElement>[] = []; // auto-detected
+    VIEWS_RECOMPILE_jsCondition: Pointer<DViewElement>[] = [];
+
     // views whose oclCondition needs to be reapplied to all model elements
     VIEWOCL_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
     // views where both ocl needs to be reapplied and the oclUpdateCondition -> transient.view[v.id].oclUpdateCondition_PARSED needs to be remade

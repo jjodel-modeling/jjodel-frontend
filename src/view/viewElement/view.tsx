@@ -77,6 +77,7 @@ export class DViewElement extends DPointerTargetable {
     subViews!: Pointer<DViewElement, 0, 'N', LViewElement>;
     allSubViews!: Pointer<DViewElement, 0, 'N', LViewElement>; // derivate attribute
     oclCondition!: string; // ocl selector
+    jsCondition!: string; // js selector
     oclUpdateCondition!: DocString<(view: LViewElement)=>boolean>;
     //oclUpdateCondition_PARSED!: undefined | ((view: LViewElement)=>boolean); moved in transient
     OCL_NEEDS_RECALCULATION!: boolean; // if only the oclCondition needs to be reapplied to all model elements
@@ -210,6 +211,14 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     jsxString!: string;
     __info_of__jsxString: Info = {isGlobal: true, type: "text", label:"JSX template",
         txt:<div>The main ingredient, a <a href={"https://react.dev/learn/writing-markup-with-jsx"}>JSX template</a> that will be visualized in the graph.</div>}
+    protected get_jsxString(context: Context): this['jsxString'] {
+        return context.data.jsxString;
+    }
+    protected set_jsxString(val: this['jsxString'], context: Context): boolean {
+        SetFieldAction.new(context.data, 'jsxString', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_jsxString', context.data.id, '+=', true);
+        return true;
+    }
 
     usageDeclarations?: string;
     __info_of__usageDeclarations: Info = {todo: false, isGlobal: true, type: "Function():Object", label:"usage declarations",
@@ -221,7 +230,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             <br/>    plus a special variable "ret" where dependencies are registered.{/*and a "state" variable containing the entire application state.*/}
             <br/>Usage Example: see the default view for value.
     </div>}
-    get_usageDeclarations(c: Context): this["usageDeclarations"]{
+    protected get_usageDeclarations(c: Context): this["usageDeclarations"]{
         return c.data.usageDeclarations || "(ret)=>{ // scope contains: data, node, view, constants, state\n" +
             "// ** preparations and default behaviour here ** //\n" +
             "ret.data = data\n" +
@@ -232,6 +241,11 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
             "// ** declarations here ** //\n" +
             "}";
+    }
+    protected set_usageDeclarations(val: this['usageDeclarations'], context: Context): boolean {
+        SetFieldAction.new(context.data, 'usageDeclarations', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_usageDeclarations', context.data.id, '+=', true);
+        return true;
     }
 
     // format should be array of (usedPaths: string[]) starting with "data." AUTOMATICALLY inefered from the ocl editor.
@@ -318,7 +332,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     }
     set_compiled_css(val: this["compiled_css"], c: Context): boolean {
         Log.exx("Do not use setter for this, set it directly in d-object, along with compiled_css." +
-        "\nOtherwise multiple nodes of the same view will start compiling together.\n");
+        "\nOtherwise multiple nodes of the same view will start compiling together.\n" as any);
         return false;
     }
 
@@ -412,12 +426,29 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     oclCondition!: string; // ocl selector
     __info_of__oclCondition: Info = {isGlobal: true, hidden:true, label:"OCL apply condition", type: "text", // TODO: what's the difference with this.query?
         txt: 'OCL Query selector to determine which nodes or model elements should apply this view'}
-    set_oclCondition(val: string, c: Context): boolean {
+    protected get_oclCondition(context: Context): this['oclCondition'] {
+        return context.data.oclCondition;
+    }
+    set_oclCondition(val: string, context: Context): boolean {
         val = (val || '').trim();
-        if (val === c.data.oclCondition) return true;
-        SetFieldAction.new(c.data, "oclCondition", val, '', false);
-        // not recalculated right now because the change needs to be sent to collaborative editor users
-        SetRootFieldAction.new("VIEWOCL_NEEDS_RECALCULATION", c.data.id, '+=', false); // it is pointer, but for transient stuff there is no need to set pointedby's
+        if (val === context.data.oclCondition) return true;
+        SetFieldAction.new(context.data, 'oclCondition', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_oclCondition', context.data.id, '+=', true);
+        // SetRootFieldAction.new('VIEWOCL_NEEDS_RECALCULATION', context.data.id, '+=', false); // it is pointer, but for transient stuff there is no need to set pointedby's
+        return true;
+    }
+
+    jsCondition!: string; // js selector
+    __info_of__jsCondition: Info = {isGlobal: true, hidden:true, label:"js apply condition", type: "text",
+        txt: 'js Query selector to determine which nodes or model elements should apply this view'}
+    protected get_jsCondition(context: Context): this['jsCondition'] {
+        return context.data.jsCondition;
+    }
+    set_jsCondition(val: string, context: Context): boolean {
+        val = (val || '').trim();
+        if (val === context.data.jsCondition) return true;
+        SetFieldAction.new(context.data, 'jsCondition', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_jsCondition', context.data.id, '+=', true);
         return true;
     }
 
@@ -432,42 +463,122 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     onDragStart!: string;
     __info_of__onDragStart: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated when a node begins being dragged.'}
+    protected get_onDragStart(context: Context): this['onDragStart'] {
+        return context.data.onDragStart;
+    }
+    protected set_onDragStart(val: this['onDragStart'], context: Context): boolean {
+        SetFieldAction.new(context.data, 'onDragStart', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_onDragStart', context.data.id, '+=', true);
+        return true;
+    }
 
     onDragEnd!: string;
     __info_of__onDragEnd: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated when a node finishes being dragged.'}
+    protected get_onDragEnd(context: Context): this['onDragEnd'] {
+        return context.data.onDragEnd;
+    }
+    protected set_onDragEnd(val: this['onDragEnd'], context: Context): boolean {
+        SetFieldAction.new(context.data, 'onDragEnd', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_onDragEnd', context.data.id, '+=', true);
+        return true;
+    }
 
     whileDragging!: string;
     __info_of__whileDragging: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated multiple times when mouse is moved while a node is being dragged.'}
+    protected get_whileDragging(context: Context): this['whileDragging'] {
+        return context.data.whileDragging;
+    }
+    protected set_whileDragging(val: this['whileDragging'], context: Context): boolean {
+        SetFieldAction.new(context.data, 'whileDragging', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_whileDragging', context.data.id, '+=', true);
+        return true;
+    }
 
     onResizeStart!: string;
     __info_of__onResizeStart: Info = {isNode: true, type: "Function():void",
     txt: 'Custom event activated when a node begins being resized.'}
+    protected get_onResizeStart(context: Context): this['onResizeStart'] {
+        return context.data.onResizeStart;
+    }
+    protected set_onResizeStart(val: this['onResizeStart'], context: Context): boolean {
+        SetFieldAction.new(context.data, 'onResizeStart', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_onResizeStart', context.data.id, '+=', true);
+        return true;
+    }
 
     onResizeEnd!: string;
     __info_of__onResizeEnd: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated when a node finishes being resized.'}
+    protected get_onResizeEnd(context: Context): this['onResizeEnd'] {
+        return context.data.onResizeEnd;
+    }
+    protected set_onResizeEnd(val: this['onResizeEnd'], context: Context): boolean {
+        SetFieldAction.new(context.data, 'onResizeEnd', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_onResizeEnd', context.data.id, '+=', true);
+        return true;
+    }
 
     whileResizing!: string;
     __info_of__whileResizing: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated multiple times when mouse is moved while a node is being resized.'}
+    protected get_whileResizing(context: Context): this['whileResizing'] {
+        return context.data.whileResizing;
+    }
+    protected set_whileResizing(val: this['whileResizing'], context: Context): boolean {
+        SetFieldAction.new(context.data, 'whileResizing', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_whileResizing', context.data.id, '+=', true);
+        return true;
+    }
 
     onRotationStart!: string;
     __info_of__onRotationStart: Info = {isNode: true, type: "Function():void",
     txt: 'Custom event activated when a node begins being rotated.'}
+    protected get_onRotationStart(context: Context): this['onRotationStart'] {
+        return context.data.onRotationStart;
+    }
+    protected set_onRotationStart(val: this['onRotationStart'], context: Context): boolean {
+        SetFieldAction.new(context.data, 'onRotationStart', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_onRotationStart', context.data.id, '+=', true);
+        return true;
+    }
 
     onRotationEnd!: string;
     __info_of__onRotationEnd: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated when a node finishes being rotated.'}
+    protected get_onRotationEnd(context: Context): this['onRotationEnd'] {
+        return context.data.onRotationEnd;
+    }
+    protected set_onRotationEnd(val: this['onRotationEnd'], context: Context): boolean {
+        SetFieldAction.new(context.data, 'onRotationEnd', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_onRotationEnd', context.data.id, '+=', true);
+        return true;
+    }
 
     whileRotating!: string;
     __info_of__whileRotating: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated multiple times when mouse is moved while a node is being rotated.'}
+    protected get_whileRotating(context: Context): this['whileRotating'] {
+        return context.data.whileRotating;
+    }
+    protected set_whileRotating(val: this['whileRotating'], context: Context): boolean {
+        SetFieldAction.new(context.data, 'whileRotating', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_whileRotating', context.data.id, '+=', true);
+        return true;
+    }
 
     onDataUpdate!: string;
     __info_of__onDataUpdate: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated every time a property of his model, node or view is changed while the element is visibly rendered in a graph.\n<br>Caution! this might cause loops.'}
+    protected get_onDataUpdate(context: Context): this['onDataUpdate'] {
+        return context.data.onDataUpdate;
+    }
+    protected set_onDataUpdate(val: this['onDataUpdate'], context: Context): boolean {
+        SetFieldAction.new(context.data, 'onDataUpdate', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_onDataUpdate', context.data.id, '+=', true);
+        return true;
+    }
 
     constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
     __info_of__constraints: Info = {todo: true, isNode: true, type: "Function():void",
@@ -735,6 +846,12 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 else oldViews.splice(i+1, 0, dclone.id); // insert in-place right after the cloned view
                 vp.subViews = oldViews as any;*/
                 // SetRootFieldAction.new('stackViews', dview.id, '+=', true);
+
+                const keys = ['onDataUpdate', 'onDragStart', 'onDragEnd', 'whileDragging', 'onResizeStart',
+                    'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating',
+                    'usageDeclarations', 'jsxString', 'oclCondition', 'jsCondition'];
+                for(let key of keys)
+                    SetRootFieldAction.new(`VIEWS_RECOMPILE_${key}`, c.data.id, '+=', true);
             })
             return lview;
         }
