@@ -925,8 +925,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating',
             'usageDeclarations', 'jsxString', 'oclCondition', 'jsCondition'];
         TRANSACTION(() => {
-            for(let key of keys) setexternalptr
-                SetRootFieldAction.new(`VIEWS_RECOMPILE_${key}`, thiss.id, '+=', true);
+            for(let key of keys) this.setExternalRootProperty('VIEWS_RECOMPILE_'+key, thiss.id, '+=', false) // is pointer, but no need to set pointedby
         })
 
         // this.setExternalPtr(project.id, 'views', '+=');
