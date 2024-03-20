@@ -6,6 +6,8 @@ import {AllPropss} from "./src/graph/vertex/Vertex";
 export const a = 0;
 let data:any, node:any, view:any, component:any;
 let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPackages:any, refEdges:any, extendEdges:any, React:any, Edge:any;
+
+
 // from this, either as a string or code, find a way to injectprops. as string regex with "Edge(" -> "Edge(nodeid," ?
 // pre-defining function Edge(...stuff) {return ActualEdgeComponent(nodeid, ...stuff) before the return React.createElement?
 /*

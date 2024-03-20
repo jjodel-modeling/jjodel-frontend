@@ -92,23 +92,32 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 
 }*/
 
-function computeUsageDeclarations(stateProps: AllPropss, lview: LViewElement): GObject {
+function computeUsageDeclarations(component: GraphElementComponent, allProps: AllPropss, state: GraphElementStatee, lview: LViewElement): GObject {
     // compute usageDeclarations
     let udret: GObject = {};
     const view: DViewElement = lview.__raw;
     const vid: Pointer<DViewElement> = view.id;
-    let UDEvalContext: GObject = {...transientProperties.view[vid].constants}//transientProperties.node[stateProps.nodeid].evalContext;
-
+    const constants = transientProperties.view[vid].constants;
+    let UDEvalContext: GObject = {...allProps, ...constants, constants, component,
+        view:lview, // data and node are inherited through props, but view needs redefinition
+        usageDeclarations: undefined, stateProps: allProps, props:allProps, ownProps:allProps, state}//transientProperties.node[stateProps.nodeid].evalContext;
+/*
+*
+        "constants": true, "usageDeclarations": true,
+        "component": true,
+        "htmlindex": true,
+        "state": true, "stateProps": true, "ownProps": true,*/
     if (!view.usageDeclarations) {
-        udret = {data: stateProps.data, view, node: stateProps.node};
+        udret = {data: allProps.data, view, node: allProps.node};
     } else try {
         transientProperties.view[vid].UDFunction.call(UDEvalContext, UDEvalContext, udret);
+        console.log("computing usage declarations: ", {f:transientProperties.view[vid].UDFunction, udret, UDEvalContext});
     } catch (e: any) {
-        Log.ee("Invalid usage declarations", {e, str: view.usageDeclarations, view, data: stateProps.data, stateProps});
-        udret = {data: stateProps.data, view, node: stateProps.node, __invalidUsageDeclarations: e};
+        Log.ee("Invalid usage declarations", {e, str: view.usageDeclarations, view, data: allProps.data, stateProps: allProps});
+        udret = {data: allProps.data, view, node: allProps.node, __invalidUsageDeclarations: e};
     }
 
-    transientProperties.node[stateProps.nodeid].viewScores[vid].usageDeclarations = udret;
+    transientProperties.node[allProps.nodeid].viewScores[vid].usageDeclarations = udret;
     // do not merge to create jsx final context now, because if shouldcomponentupdate fails, i want to keep the OLD context for measurable events.
     return udret;
 }
@@ -311,14 +320,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let ret = false; // !U.isShallowEqualWithProxies(oldProps, nextProps, 0, 1, skipPropKeys, out);
         // todo: verify if this update work
         // if node and data in props must be ignored and not checked for changes. but they are checked if present in usageDeclarations
-
+        let component = nextProps.node.component;
         for (let v of nextProps.views) {
             const vid: Pointer<DViewElement> = v.__raw.id;
             let nodeviewentry = transientProperties.node[nextProps.nodeid].viewScores[vid];
             let old_ud = nodeviewentry.usageDeclarations;
-            computeUsageDeclarations(nextProps, v);
+            computeUsageDeclarations(component, nextProps, nextState, v);
             let new_ud = nodeviewentry.usageDeclarations;
             nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, 0, 1, skipDeepKeys, out);
+            nodeviewentry.shouldUpdate_reason = {...out};
+            (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
             if (!ret && nodeviewentry.shouldUpdate) ret = true;
             Log.l(ret, "DECORATIVE_VIEW ShouldComponentUpdate " + data?.name + " UPDATED", {ret, reason: out.reason, oldProps:oldProps, nextProps, vid});
         }
@@ -326,9 +337,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const vid: Pointer<DViewElement> = nextProps.view.__raw.id;
         let nodeviewentry = transientProperties.node[nextProps.nodeid].viewScores[vid];
         let old_ud = nodeviewentry.usageDeclarations;
-        computeUsageDeclarations(nextProps, nextProps.view);
+        computeUsageDeclarations(component, nextProps, nextState, nextProps.view);
         let new_ud = nodeviewentry.usageDeclarations;
         nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, 0, 1, skipDeepKeys, out);
+        nodeviewentry.shouldUpdate_reason = {...out};
+        (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
+
         if (!ret && nodeviewentry.shouldUpdate) ret = true;
         Log.l(ret, "ShouldComponentUpdate " + data?.name + " UPDATED", {ret, reason: out.reason, oldProps:oldProps, nextProps, views:nextProps.views});
 
@@ -443,7 +457,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return context;
     }
 
-    protected displayError(e: Error, where: string, view: LViewElement): React.ReactNode {
+    public static displayError(e: Error, where: string, view: DViewElement, data?: DModelElement, node?: DGraphElement, asString:boolean = false): React.ReactNode {
         // const view: LViewElement = this.props.view; //data._transient.currentView;
         let errormsg = (where === "preRenderFunc" ? "Pre-Render " : "") +(e.message||"\n").split("\n")[0];
         if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0) {
@@ -480,18 +494,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         { culpritlinesPost.map(l => <div>{l}</div>) }
                     </div>;
                 errormsg += " @line " + stackerrorlinenum.row + ":" + stackerrorlinenum.col;
-                return DV.errorView(
-                    <div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template:view.jsxString, view: view},
-                    where, this.props.data?.__raw, this.props.node?.__raw, view.__raw
-                    );
+                if (asString) return DV.errorView_string('<div>'+errormsg+'\n'+jsxcode+'</div>', {where:"in "+where+"()", e, template:view.jsxString, view: view}, where, data, node, view);
+                return DV.errorView(<div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template:view.jsxString, view: view}, where, data, node, view);
             } else {
                 // it means it is likely accessing a minified.js src code, sending generic error without source mapping
             }
         } catch(e2) {
             Log.eDevv("internal error in error view", {e, e2, where} );
         }
-        return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: view.jsxString, view: view},
-            where, this.props.data?.__raw, this.props.node?.__raw, view.__raw);
+        if (asString) return DV.errorView_string('<div>'+errormsg+'</div>', {where:"in "+where+"()", e, template: view.jsxString, view: view}, where, data, node, view);
+        return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: view.jsxString, view: view}, where, data, node, view);
     }
 /*
     protected getTemplate(): ReactNode {
@@ -533,6 +545,20 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         catch (e: any) { return this.displayError(e, "JSX Semantic"); }
         return ret;
     }*/
+    protected getTemplate3(vid: Pointer<DViewElement>, v: LViewElement, context: GObject): ReactNode {
+        let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
+        let ret = this.getTemplate3_(vid, v, context);
+        let tv = transientProperties.view[vid];
+        console.log("getTemplate jsx", {vid, v, context, ret, tnv, tv, shouldUp: tnv.shouldUpdate, jsxFunc:tv.JSXFunction});
+        return ret;
+    }
+    protected getTemplate3_(vid: Pointer<DViewElement>, v: LViewElement, context: GObject): ReactNode{
+        let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
+        if (!tnv.shouldUpdate) return tnv.jsxOutput;
+        let tv = transientProperties.view[vid];
+        return tnv.jsxOutput = tv.JSXFunction.call(context, context);
+    }
+
     protected getTemplate2(v: LViewElement, udContext: GObject): ReactNode {
         // todo: invece di fare un mapping ricorsivo dei figli per inserirgli delle prop, forse posso farlo passando una mia factory che wrappa React.createElement
 
@@ -557,7 +583,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let jsxCodeString: DocString<ReactNode>;
 
         try { jsxCodeString = JSXT.fromString(v.jsxString, {factory: 'React.createElement'}); }
-        catch (e: any) { return this.displayError(e, "JSX Syntax", v); }
+        catch (e: any) { return GraphElementComponent.displayError(e, "JSX Syntax", v.__raw, this.props.data?.__raw, this.props.node?.__raw); }
 
         // console.log('context for ' + (this.props.data?.name), {udContext});
         try {
@@ -565,7 +591,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             ret = parsedFunc(udContext) as ReactNode;
             /// ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + jsxCodeString + '})()', udContext);
         }
-        catch (e: any) { return this.displayError(e, "JSX Semantic", v); }
+        catch (e: any) { return GraphElementComponent.displayError(e, "JSX Semantic", v.__raw, this.props.data?.__raw, this.props.node?.__raw); }
         return ret;
     }
 
@@ -767,6 +793,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
         let nid = this.props.nodeid;
         let allviews = [this.props.view, ...this.props.views];
+
+
         for (let i = 0 ; i < allviews.length; i++){
             let v = allviews[i];
             const vid = v.id;
@@ -834,12 +862,24 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const nid = props.nodeid;
         const vid = v.id;
         let ud: GObject | undefined = transientProperties.node[nid].viewScores[vid].usageDeclarations;
+        /*if (false && !ud) {
+            this.forceUpdate();
+            return <div>Loading...</div>;
+        }*/
+
+        if (!ud) ud = {}; // todo: remove this, is for debug
         if (ud.__invalidUsageDeclarations) {
-            return this.displayError(ud.__invalidUsageDeclarations, "Usage Declaration", v);
+            return GraphElementComponent.displayError(ud.__invalidUsageDeclarations, "Usage Declaration", v.__raw, this.props.data?.__raw, this.props.node?.__raw);
         }
         let isMainView: boolean = !!otherViews;
         const context: GObject = this.getJSXContext(vid);
-        const rnode: ReactNode = this.getTemplate2(v, context);
+        let rnode: ReactNode;
+        try { rnode = this.getTemplate3(vid, v, context); }
+        catch (e: any) {
+            // rnode = undefined as any;
+            // where i put this? catch (e: any) { return GraphElementComponent.displayError(e, "JSX Syntax", v.__raw, this.props.data?.__raw, this.props.node?.__raw); }
+            rnode = GraphElementComponent.displayError(e, "JSX Semantic", v.__raw, this.props.data?.__raw, this.props.node?.__raw);
+        }
         let rawRElement: ReactElement | null = UX.ReactNodeAsElement(rnode);
 
 
@@ -854,6 +894,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         const addprops: boolean = true;
         let fiximport = !!this.props.node;
+        //let a: false = true as any; if (a) return "Loading...";
         if (this.props.data?.name === "Concept 1") console.log("shouldcomponentupdate rendering " + this.props.data?.name, {cc: this.props.data.clonedCounter, attrs: (this.props.data as any).attributes});
         if (addprops && rawRElement && fiximport) {
             if (windoww.debugcount && debugcount++>windoww.debugcount) throw new Error("debug triggered stop");

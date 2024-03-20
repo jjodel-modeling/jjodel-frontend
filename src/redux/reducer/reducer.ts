@@ -6,7 +6,8 @@ import {
     DModelElement,
     DViewElement,
     DClass,
-    DModel
+    DModel,
+    UX, EdgeOwnProps, EdgeStateProps
 } from '../../joiner';
 import {
     Action,
@@ -40,6 +41,7 @@ import Collaborative from "../../components/collaborative/Collaborative";
 import {SimpleTree} from "../../common/SimpleTree";
 import {transientProperties} from "../../joiner/classes";
 import {OclEngine} from "@stekoe/ocl.js";
+import { contextFixedKeys } from '../../graph/graphElement/sharedTypes/sharedTypes';
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -346,17 +348,7 @@ if (ret.key = stuff) ret.key2=morestuff;
 ret .b = 3
 */
 
-const contextFixedKeys: Dictionary<string, boolean> = {
-    // "model", "graph",
-    "constants": true, "usageDeclarations": true,
-    "component": true,
-    "htmlindex": true,
-    "state": true, "stateProps": true, "ownProps": true,
-    // from props: "data", "node", "parentViewId", "parentnodeid",
-    // from props: "view", "views", "viewScores",
-    // from props: "children", "isgraph", "isvertex", "graphid", "nodeid",
-// @ts-ignore
-}
+
 // then add to it: content of props, constants, usageDeclarations
 
 export function reducer(oldState: DState = initialState, action: Action): DState {
@@ -389,7 +381,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         // for (let gid of ret.graphs) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
         // for (let vid of ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION) { }
         for (let vid of ret.VIEWOCL_NEEDS_RECALCULATION) {
-            const dv: DViewElement = DPointerTargetable.fromPointer(vid);
+            const dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
             transientProperties.view[vid].oclEngine = undefined as any; // force re-parse
             Selectors.updateViewMatchings2(dv, false, true, ret);
         }
@@ -401,14 +393,16 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     }
 
     for (const vid of ret.VIEWS_RECOMPILE_constants) { // compiled in func, and executed, result does not vary between nodes.
-        let dv: DViewElement = DPointerTargetable.fromPointer(vid);
+        let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
         // transientProperties.view[vid].constantsList = dv.constants?.match(UDRegexp).map(s=>s.substring(4, s.length-1).trim()) || [];
         // let allContextKeys = {...contextFixedKeys};
-        const constantsOutput = {};
+        const constantsOutput: GObject = {};
         const context = {view:dv}; // context at this point holds only static stuff, which are in gloval scope (window) plus view.
         let paramStr = '{'+Object.keys(context).join(',')+'}, ret';
-        let constantsFunction: (context: GObject, ret: GObject) => void = new Function(paramStr, 'return ('+dv.constants+')(ret)').bind(context);// scope of this function is "window" and not the function where is called, unlike eval();
-        constantsFunction(context, constantsOutput);
+        if (dv.constants){
+            let constantsFunction: (context: GObject, ret: GObject) => void = new Function(paramStr, 'return ('+dv.constants+')(ret)').bind(context);// scope of this function is "window" and not the function where is called, unlike eval();
+            constantsFunction(context, constantsOutput);
+        }
         transientProperties.view[vid].constants = constantsOutput;
         transientProperties.view[vid].constantsList = Object.keys(transientProperties.view[vid].constants);
         // implies recompilation of: ud, jsx and all measurable events
@@ -419,23 +413,31 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     ret.VIEWS_RECOMPILE_constants = [];
 
     for (const vid of ret.VIEWS_RECOMPILE_usageDeclarations) { // compiled in func, but NOT executed, result varies between nodes.
-        let dv: DViewElement = DPointerTargetable.fromPointer(vid);
-        let matches = dv.usageDeclarations?.match(UDRegexp) || [];
-        transientProperties.view[vid].UDList = matches.map(s=>s.substring(4, s.length-1).trim());
-        // warning for user: do not redeclare ret in nested blocks.
-        // do not use ret[key] syntax.
-        // do not set nested values directly (ret.key.subkey syntax).
-        // do not use ret.key +=, -= or any other operator assignment different than "="
-        // if that is ever required, do instead
-        // do not assign values to ret in block comments
-        // those restrictions only apply to the ret object, all those violations can be done on other objects.
-        // so the following is valid, and a way to overcome the previous limitations:
-        // let subobject = {}; subobject[key] += stuff; ret.somefixedname = subobject;
+        let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
+        if (!dv.usageDeclarations) {
+            transientProperties.view[vid].UDList = [];
+            transientProperties.view[vid].UDFunction = undefined as any;
+        }
+        else {
+            let matches = dv.usageDeclarations?.match(UDRegexp) || [];
+            transientProperties.view[vid].UDList = matches.map(s=>s.trim().substring(s.indexOf('\.'), s.length-2).trim());
+            console.log('matches', {matches, udlist:transientProperties.view[vid].UDList});
+            // warning for user: do not redeclare ret in nested blocks.
+            // do not use ret[key] syntax.
+            // do not set nested values directly (ret.key.subkey syntax).
+            // do not use ret.key +=, -= or any other operator assignment different than "="
+            // if that is ever required, do instead
+            // do not assign values to ret in block comments
+            // those restrictions only apply to the ret object, all those violations can be done on other objects.
+            // so the following is valid, and a way to overcome the previous limitations:
+            // let subobject = {}; subobject[key] += stuff; ret.somefixedname = subobject;
 
-        let allContextKeys = {...contextFixedKeys};
-        for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
-        let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}, ret';
-        transientProperties.view[vid].UDFunction = new Function(paramStr, 'return ('+dv.usageDeclarations+')(ret)') as (...a:any)=>any;
+            let allContextKeys = {...contextFixedKeys};
+            for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
+            let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}, ret';
+            if (vid.includes('Model')) console.log("modelparse, ud", {paramStr, udstr:dv.usageDeclarations, udlist:transientProperties.view[vid].UDList});
+            transientProperties.view[vid].UDFunction = new Function(paramStr, 'return ('+dv.usageDeclarations+')(ret)') as (...a:any)=>any;
+        }
 
         // implies recompilation of: jsx and all measurable events
         ret.VIEWS_RECOMPILE_jsxString.push(vid);
@@ -444,16 +446,17 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     ret.VIEWS_RECOMPILE_usageDeclarations = [];
 
     for (const vid of ret.VIEWS_RECOMPILE_jsxString) { // compiled in func, but NOT executed, result varies between nodes.
-        let dv: DViewElement = DPointerTargetable.fromPointer(vid);
-        let matches = dv.usageDeclarations?.match(UDRegexp) || [];
-        transientProperties.view[vid].UDList = matches.map(s=>s.substring(4, s.length-1).trim());
-
+        let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
         let allContextKeys = {...contextFixedKeys};
         for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
         for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
 
         let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
-        transientProperties.view[vid].JSXFunction = new Function(paramStr, 'return ('+dv.jsxString+')') as (...a:any)=>any;
+        console.log('jsxparse', { allContextKeys, ud:transientProperties.view[vid].UDList, c:transientProperties.view[vid].constantsList });
+        const body: string =  'return ('+UX.parseAndInject(dv.jsxString, dv)+')';
+        if (vid.includes('Model')) console.log("modelparse, jsx", {paramStr, body});
+        console.log('jsxparse', {paramStr, body});
+        transientProperties.view[vid].JSXFunction = new Function(paramStr, body) as (...a:any)=>any;
         // transientProperties.view[vid].JSXFunction = (context: GObject)=> { return transientProperties.view[vid].JSXFunction.bind(context)(context); }
 
 
@@ -462,11 +465,11 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     ret.VIEWS_RECOMPILE_jsxString = [];
 
 
-    ret.VIEWS_RECOMPILE_onDragEnd
+
     for (const key of DViewElement.MeasurableKeys) {
         let vid: Pointer<DViewElement>;
         for (vid of (ret as any)['VIEWS_RECOMPILE_'+key]) {
-            let dv: DViewElement = DPointerTargetable.fromPointer(vid);
+            let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
             let str: string = (dv as any)[key];
             let allContextKeys = {...contextFixedKeys};
             for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;

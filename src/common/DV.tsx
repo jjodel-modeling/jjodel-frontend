@@ -23,13 +23,14 @@ export class DV {
     public static objectView(): string { return beautify(DefaultView.object()); }
     public static valueView(): string { return beautify(DefaultView.value()); }
     public static defaultPackage(): string { return beautify(DefaultView.defaultPackage()); }
-    public static errorView_string(publicmsg: string | JSX.Element, debughiddenmsg?:any): string {
-        let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error: ", "") : publicmsg;
-        console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg}); return DefaultView.error_string(visibleMessage); }
-    public static errorView(publicmsg: string | JSX.Element, debughiddenmsg:any, errortype: string, data: DModelElement | undefined, node: DGraphElement | undefined, v: DViewElement): React.ReactNode {
+    public static errorView(publicmsg: string | JSX.Element, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
         console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error(visibleMessage, errortype, data, node, v); }
+    public static errorView_string(publicmsg: string, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement): React.ReactNode {
+        let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
+        console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
+        return DefaultView.error_string(visibleMessage, errortype, data, node, v); }
 
     static edgePointView(): string { return beautify((
 `<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"white", width:"100%", height:"100%"}}>
@@ -275,7 +276,7 @@ class DefaultView {
     </label>
     <hr />
     <div className={'object-children'}>
-        { features.map(c => <DefaultNode key={c.id} data={c} /> }
+        { features.map(c => <DefaultNode key={c.id} data={c} />) }
     </div>
     {otherViews}
 </div>`);
@@ -289,7 +290,7 @@ class DefaultView {
     </label>
     <hr />
     <div className={'object-children'}>
-        { features.map(c => <DefaultNode key={c.id} data={c} /> }
+        { features.map(c => <DefaultNode key={c.id} data={c} />) }
     </div>
     {otherViews}
 </div>`
@@ -308,32 +309,36 @@ class DefaultView {
 
 
 
-    public static error(msg: undefined | string | JSX.Element, errortype: string | "SYNTAX" | "RUNTIME", data: DModelElement | undefined, node: DGraphElement | undefined, v: DViewElement) {
+    public static error(msg: undefined | string | JSX.Element, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement) {
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
         if (dname && dname.length >= 8) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         return <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"min-content"}}>
             <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
-                <b>{errortype} ERROR on {(dname ? dname  : '') + (false ? ' / ' + nodename : '')})</b>
+                <b>{errortype} ERROR on ${(dname ? dname  : '') + (false ? ' / ' + nodename : '')})</b>
                 <hr/>
                 <label className={'text-center mx-1 d-block'}>
-                    While applying view "{v.name}"
+                    While applying view "{v?.name}"
                 </label>
                 {msg && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>{msg}</label>}
             </div>
         </div>;
     }
-    public static error_string(msg: undefined | string | JSX.Element): string {
+    public static error_string(msg: undefined | string | JSX.Element, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement) {
+        let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
+        if (dname && dname.length >= 8) dname = dname.substring(0, 7) + '…';
+        let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         return `<div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"min-content"}}>
-            <div className={'text-center text-danger'} style={{background:"#fff7"}}>
-                <b>SYNTAX ERROR</b>
+            <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
+                <b>{errortype} ERROR on {${dname ? dname : ''} + (false ? ' / ' + ${nodename} : '')})</b>
                 <hr/>
                 <label className={'text-center mx-1 d-block'}>
-                    The JSX you provide is NOT valid!
+                    While applying view "${v?.name}"
                 </label>
-                ` + (msg ? `<label className={'text-center mx-1 d-block'} style={{color:"black"}>{"` + msg + `"}</label>` : "") + `
+                {${msg} && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>${msg}</label>}
             </div>
         </div>`;
     }
+
 
 }

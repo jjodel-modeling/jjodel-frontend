@@ -18,7 +18,7 @@ import {
     EdgeOwnProps,
     DGraphElement,
     DModelElement,
-    transientProperties
+    transientProperties, JSXT, DViewElement
 } from "../joiner";
 import {AllPropss} from "../graph/vertex/Vertex";
 
@@ -192,8 +192,8 @@ export class UX{
     private static initPropInjectionStuff(): string[]{
         UX.graphComponents = ['GraphElement', '...more'];
         UX.inputComponents = ['Input', 'Select', 'TextArea','...more'];
-        UX.graphComponentsRegexp = new RegExp(UX.graphComponents.map(s=>'(?:;\}\)\]\,\;\s)'+s+'\(').join('|'));
-        UX.inputComponentRegexp = new RegExp(UX.graphComponents.map(s=>'(?:;\}\)\]\,\;\s)'+s+'\(').join('|'));
+        UX.graphComponentsRegexp = new RegExp(UX.graphComponents.map(s=>'(?:;\\}\\)\\]\\,\\;\\s)'+s+'\\(').join('|'));
+        UX.inputComponentRegexp = new RegExp(UX.graphComponents.map(s=>'(?:;\\}\\)\]\\,\\;\\s)'+s+'\\(').join('|'));
         UX.viewRootProps = '"data-viewid": props.viewid,' +
             ' addStyle: (offset ? {position:"absolute", left:offset.x, top:offset.y/*,transform:"scale("+zoom.x+","+zoom.y+")"*/} : undefined)';
         UX.mainViewRootProps = 'ref: component.html, id: props.nodeid, "data-nodeid": props.nodeid, "data-dataid": props.dataid,\n' +
@@ -308,6 +308,15 @@ export class UX{
             s = UX.injectPropsToString_addstuff(s, argStartIndex, inputComponentProps, 'inputComponent', UX.Input_propsAdder);
         }
         return s;
+    }
+
+    static parseAndInject(jsxString: string, v: DViewElement): string | ReactNode {
+        let jsxCompiled: DocString<ReactNode> | ReactNode;
+        let e: any;
+        try { jsxCompiled = JSXT.fromString(jsxString, {factory: 'React.createElement'}); }
+        catch (ee: any) { e = ee; jsxCompiled = GraphElementComponent.displayError(e, "JSX Syntax", v, undefined, undefined, true); }
+        console.log('jsxparse' + (e ? '_ERROR' : '_ok'), {e, jsxString, jsxCompiled, v});
+        return jsxCompiled;
     }
 }
 

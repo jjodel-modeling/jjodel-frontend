@@ -12,7 +12,7 @@ import type {
     LViewElement,
     Pointer, PrimitiveType
 } from "../../../joiner";
-import {LClass, LEdge, LUser, LViewPoint, RuntimeAccessible} from "../../../joiner";
+import {Dictionary, LClass, LEdge, LUser, LViewPoint, LVoidVertex, RuntimeAccessible} from "../../../joiner";
 import {GObject, InitialVertexSize, orArr} from "../../../joiner/types";
 
 export class GraphElementStatee {/*
@@ -126,4 +126,50 @@ export class DefaultUsageDeclarations{
 export class EdgeDefaultUsageDeclarations extends DefaultUsageDeclarations{
     start!: EdgeOwnProps["start"];
     end!: EdgeOwnProps["end"];
+}
+
+
+
+export class VertexOwnProps extends GraphElementOwnProps {
+    // onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    // onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    isedgepoint?: boolean = false;
+    isgraph?: boolean = false;
+    isvertex?: boolean = true;
+    isvoid?: boolean = false;
+    decorated?: boolean; // for <decoratedStar /> (defaults true)
+    sides?: number // for <Polygon />, <Star /> and <Cross />
+    innerRadius?: number // for <Star /> and <Cross />
+    ratio?: number // for <Trapezoid />
+    rotate?: number // initial vertex rotation
+
+}
+
+export class VertexStateProps extends GraphElementReduxStateProps {
+    node!: LVoidVertex;
+    // lastSelected!: LModelElement | null;
+    // selected!: Dictionary<Pointer<DUser>, LModelElement|null>;
+    //selected!: LGraphElement|null;
+    isEdgePending!: { user: LUser, source: LClass };
+    viewpoint!: LViewPoint
+}
+
+
+export let contextFixedKeys: Dictionary<string, boolean> = {};
+setContextFixedKeys();
+
+function setContextFixedKeys(){
+    let propmakers: GObject[] = [new EdgeOwnProps(), new EdgeStateProps(), new VertexOwnProps(), new VertexStateProps(), {
+        // "model", "graph",
+        "constants": true, "usageDeclarations": true,
+        "component": true,
+        "htmlindex": true,
+        "state": true, "props": true, "stateProps": true, "ownProps": true,
+        //"data":true, "node":true, "parentViewId":true, "parentnodeid":true,// from props:
+        //"view":true, "views":true, "viewScores":true,// from props:
+        //"children":true, "isgraph":true, "isvertex":true, "graphid":true, "nodeid":true,// from props:
+    }];
+    for (let props of propmakers) for (let k in props) contextFixedKeys[k] = true;
+    delete contextFixedKeys.class;
+    return contextFixedKeys;
 }
