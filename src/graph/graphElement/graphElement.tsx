@@ -457,7 +457,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         return context;
     }
 
-    public static displayError(e: Error, where: string, view: DViewElement, data?: DModelElement, node?: DGraphElement, asString:boolean = false): React.ReactNode {
+    public static displayError(e: Error, where: string, view: DViewElement, data?: DModelElement, node?: DGraphElement, asString:boolean = false, printData?: GObject): React.ReactNode {
         // const view: LViewElement = this.props.view; //data._transient.currentView;
         let errormsg = (where === "preRenderFunc" ? "Pre-Render " : "") +(e.message||"\n").split("\n")[0];
         if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0) {
@@ -503,7 +503,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             Log.eDevv("internal error in error view", {e, e2, where} );
         }
         if (asString) return DV.errorView_string('<div>'+errormsg+'</div>', {where:"in "+where+"()", e, template: view.jsxString, view: view}, where, data, node, view);
-        return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: view.jsxString, view: view}, where, data, node, view);
+        return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: view.jsxString, view: view, ...(printData || {})}, where, data, node, view);
     }
 /*
     protected getTemplate(): ReactNode {
@@ -547,9 +547,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }*/
     protected getTemplate3(vid: Pointer<DViewElement>, v: LViewElement, context: GObject): ReactNode {
         let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
-        let ret = this.getTemplate3_(vid, v, context);
         let tv = transientProperties.view[vid];
-        console.log("getTemplate jsx", {vid, v, context, ret, tnv, tv, shouldUp: tnv.shouldUpdate, jsxFunc:tv.JSXFunction});
+        console.log("getTemplate jsx", {vid, v, context, tnv, tv, shouldUp: tnv.shouldUpdate, jsxFunc:tv.JSXFunction});
+        let ret = this.getTemplate3_(vid, v, context);
         return ret;
     }
     protected getTemplate3_(vid: Pointer<DViewElement>, v: LViewElement, context: GObject): ReactNode{
@@ -591,7 +591,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             ret = parsedFunc(udContext) as ReactNode;
             /// ret = U.evalInContextAndScope<() => ReactNode>('(()=>{ return ' + jsxCodeString + '})()', udContext);
         }
-        catch (e: any) { return GraphElementComponent.displayError(e, "JSX Semantic", v.__raw, this.props.data?.__raw, this.props.node?.__raw); }
+        catch (e: any) { return GraphElementComponent.displayError(e, "JSX Semantic", v.__raw, this.props.data?.__raw, this.props.node?.__raw, false, {udContext}); }
         return ret;
     }
 
@@ -869,7 +869,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         if (!ud) ud = {}; // todo: remove this, is for debug
         if (ud.__invalidUsageDeclarations) {
-            return GraphElementComponent.displayError(ud.__invalidUsageDeclarations, "Usage Declaration", v.__raw, this.props.data?.__raw, this.props.node?.__raw);
+            return GraphElementComponent.displayError(ud.__invalidUsageDeclarations, "Usage Declaration", v.__raw,
+                this.props.data?.__raw, this.props.node?.__raw, false, {ud});
         }
         let isMainView: boolean = !!otherViews;
         const context: GObject = this.getJSXContext(vid);
@@ -878,7 +879,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         catch (e: any) {
             // rnode = undefined as any;
             // where i put this? catch (e: any) { return GraphElementComponent.displayError(e, "JSX Syntax", v.__raw, this.props.data?.__raw, this.props.node?.__raw); }
-            rnode = GraphElementComponent.displayError(e, "JSX Semantic", v.__raw, this.props.data?.__raw, this.props.node?.__raw);
+            rnode = GraphElementComponent.displayError(e, "JSX Semantic", v.__raw, this.props.data?.__raw, this.props.node?.__raw, false, {context});
         }
         let rawRElement: ReactElement | null = UX.ReactNodeAsElement(rnode);
 
