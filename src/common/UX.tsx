@@ -30,7 +30,14 @@ export class UX{
         // NB: depthIndices is correct but if there is an expression children evaluated to false like {false && <jsx>},
         // it counts as children iterated regardless. so html indices might be apparently off, but like this is even safer as indices won't change when conditions are changed.
         const innermap = (child: ReactNode, i1: number, depthIndices: number[]): T => {
-            if (!React.isValidElement(child)) { return child as T; }
+            if (!React.isValidElement(child)) {
+                if (Array.isArray(child)) return React.Children.map(child as T, (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as T;
+                if (child && typeof child === "object") {
+                    if (!windoww.invalidObjsReact) windoww.invalidObjsReact = [];
+                    windoww.invalidObjsReact.push(child);
+                    return "<! Objects cannot be rendered in jsx : " + (child as any)?.name + ">" as T;
+                }
+                return child as T; }
             if (child.props.children) {
                 // let deeperDepthIndices = [...depthIndices, i1];  // depthIndices; //
                 // should probably change deeperDepthIndices in [...deeperDepthIndices, i] in next uncommented line.
@@ -43,6 +50,7 @@ export class UX{
             return fn(child as T, i1, depthIndices);
         };
         if (!Array.isArray(children)) return innermap(children as ReactNode, 0, [...depthIndices, 0]) as T;
+        // if (typeof children[0] === "object") return (children).map( (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as any as T;
         return React.Children.map(children, (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as T;
     }
     static injectProp(parentComponent: GraphElementComponent, e: ReactNode, gvidmap_useless: Dictionary<DocString<'VertexID'>, boolean>,
