@@ -318,11 +318,11 @@ export class UX{
         return s;
     }
 
-    static parseAndInject(jsxString: string, v: DViewElement): string | ReactNode {
-        let jsxCompiled: DocString<ReactNode> | ReactNode;
+    static parseAndInject(jsxString: string, v: DViewElement): string {
+        let jsxCompiled: DocString<ReactNode>;
         let e: any;
         try { jsxCompiled = JSXT.fromString(jsxString, {factory: 'React.createElement'}); }
-        catch (ee: any) { e = ee; jsxCompiled = GraphElementComponent.displayError(e, "JSX Syntax", v, undefined, undefined, true); }
+        catch (ee: any) { e = ee; jsxCompiled = GraphElementComponent.displayError(e, "JSX Syntax", v, undefined, undefined, true) as any; }
         console.log('jsxparse' + (e ? '_ERROR' : '_ok'), {e, jsxString, jsxCompiled, v});
         return jsxCompiled;
     }

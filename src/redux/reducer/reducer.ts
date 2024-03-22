@@ -7,7 +7,7 @@ import {
     DViewElement,
     DClass,
     DModel,
-    UX, EdgeOwnProps, EdgeStateProps
+    UX, EdgeOwnProps, EdgeStateProps, GraphElementComponent
 } from '../../joiner';
 import {
     Action,
@@ -456,7 +456,12 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         const body: string =  'return ('+UX.parseAndInject(dv.jsxString, dv)+')';
         if (vid.includes('Model')) console.log("modelparse, jsx", {paramStr, body});
         console.log('jsxparse', {paramStr, body});
-        transientProperties.view[vid].JSXFunction = new Function(paramStr, body) as (...a:any)=>any;
+        try {
+            transientProperties.view[vid].JSXFunction = new Function(paramStr, body) as ((...a:any)=>any);
+        }
+        catch (e: any) {
+            transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'JSX Syntax', dv);
+        }
         // transientProperties.view[vid].JSXFunction = (context: GObject)=> { return transientProperties.view[vid].JSXFunction.bind(context)(context); }
 
 

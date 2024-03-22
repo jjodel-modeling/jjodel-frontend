@@ -321,13 +321,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // todo: verify if this update work
         // if node and data in props must be ignored and not checked for changes. but they are checked if present in usageDeclarations
         let component = nextProps.node.component;
+        const nid = nextProps.nodeid;
         for (let v of nextProps.views) {
             const vid: Pointer<DViewElement> = v.__raw.id;
-            let nodeviewentry = transientProperties.node[nextProps.nodeid].viewScores[vid];
+            let nodeviewentry = transientProperties.node[nid].viewScores[vid];
             let old_ud = nodeviewentry.usageDeclarations;
             computeUsageDeclarations(component, nextProps, nextState, v);
             let new_ud = nodeviewentry.usageDeclarations;
             nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, 0, 1, skipDeepKeys, out);
+
             nodeviewentry.shouldUpdate_reason = {...out};
             (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
             if (!ret && nodeviewentry.shouldUpdate) ret = true;
@@ -440,20 +442,20 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (oldProps.view !== newProps.view) { this.setTemplateString(newProps.view); }
     }*/
 
-    protected updateJSXContext(vid: Pointer<DViewElement>): GObject{
+
+
+    protected getJSXContext(vid: Pointer<DViewElement>): GObject{
+        let context: GObject = transientProperties.node[this.props.nodeid].viewScores[vid].evalContext;
+        if (context && context.component) return context;
+
+        // else rebuild + update it
         let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
         let tv = transientProperties.view[vid];
-        let context: GObject = tnv.evalContext = {...this.props, ...tv.constants, ...tnv.usageDeclarations};
+        context = tnv.evalContext = {...this.props, ...tv.constants, ...tnv.usageDeclarations};
         // add component stuff that could not compute in reducer
         context.component = this;
         context.otherViews = this.props.views;
         context._context = context;
-        return context;
-    }
-
-    protected getJSXContext(vid: Pointer<DViewElement>): GObject{
-        let context: GObject = transientProperties.node[this.props.nodeid].viewScores[vid].evalContext;
-        if (context.component) return this.updateJSXContext(vid);
         return context;
     }
 
@@ -801,7 +803,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             let viewnodescore = transientProperties.node[nid].viewScores[v.id];
             if (!viewnodescore.shouldUpdate) continue;
             // only if this exact view had UD changed, instead of being forced to rended by other in viewstack)
-            this.updateJSXContext(vid);
             this.onDataUpdateMeasurable(v, vid, i);
         }
 
@@ -838,16 +839,26 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         for (let v of otherViews) {
             let viewnodescore = transientProperties.node[nid].viewScores[v.id];
             jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
+            if (viewnodescore.shouldUpdate) {
+                viewnodescore.evalContext = undefined as any; // force rebuild jsx context, needs to be done before renderView
+                jsxOutput = undefined;
+            } else jsxOutput = viewnodescore.jsxOutput;
             if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput = this.renderView(this.props, v, nodeType, classes, styleoverride, undefined, mainView.id);
-            viewnodescore.shouldUpdate = false;
+
+            if (viewnodescore.shouldUpdate) viewnodescore.shouldUpdate = false;// this needs to be placed post renderView call
+
             decoratorViewsOutput.push(jsxOutput);
         }
 
         let viewnodescore = transientProperties.node[nid].viewScores[mainView.id];
-        jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
+        if (viewnodescore.shouldUpdate) {
+            viewnodescore.evalContext = undefined as any; // force rebuild jsx context, needs to be done before renderView
+            jsxOutput = undefined;
+        } else jsxOutput = viewnodescore.jsxOutput;
+
         if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput = this.renderView(this.props, mainView, nodeType, classes, styleoverride, decoratorViewsOutput, undefined, otherViews.map(v=>v.id));
-        viewnodescore.shouldUpdate = false;
-        decoratorViewsOutput.push(jsxOutput);
+        if (viewnodescore.shouldUpdate) viewnodescore.shouldUpdate = false;// this needs to be placed post renderView call
+        //decoratorViewsOutput.push(jsxOutput);
 
         console.log('rendering view stack', {mainView, otherViews, mainJSX: jsxOutput, decoratorsJSX:decoratorViewsOutput});
         windoww.debbugg= {jsxOutput,otherViews, ret:<>renderrr{jsxOutput}{otherViews}</>}
@@ -857,11 +868,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
 
     protected renderView(props: AllProps, v: LViewElement, nodeType: string, classes: string[], styleoverride: React.CSSProperties,
-                         otherViews?: (ReactNode | ReactElement)[], mainviewid?: Pointer<DViewElement>, subViewsID: Pointer<DViewElement>[] = []): ReactNode | ReactElement | undefined {
+                         otherViews?: (ReactNode | ReactElement)[], mainviewid?: Pointer<DViewElement>, subViewsID: Pointer<DViewElement>[] = []): ReactNode | ReactElement {
         let dv = v.__raw;
         const nid = props.nodeid;
         const vid = v.id;
         let ud: GObject | undefined = transientProperties.node[nid].viewScores[vid].usageDeclarations;
+        console.log("renderrr 1");
         /*if (false && !ud) {
             this.forceUpdate();
             return <div>Loading...</div>;
@@ -874,14 +886,19 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         let isMainView: boolean = !!otherViews;
         const context: GObject = this.getJSXContext(vid);
+        console.log("renderrr 2");
+
+        if (isMainView) context.decorators = otherViews;
         let rnode: ReactNode;
         try { rnode = this.getTemplate3(vid, v, context); }
         catch (e: any) {
+            console.log("renderrr 2.5 err", {rnode});
             // rnode = undefined as any;
             // where i put this? catch (e: any) { return GraphElementComponent.displayError(e, "JSX Syntax", v.__raw, this.props.data?.__raw, this.props.node?.__raw); }
             rnode = GraphElementComponent.displayError(e, "JSX Semantic", v.__raw, this.props.data?.__raw, this.props.node?.__raw, false, {context});
         }
         let rawRElement: ReactElement | null = UX.ReactNodeAsElement(rnode);
+        console.log("renderrr 3", {rawRElement, rnode});
 
 
         // \console.log('GE render', {thiss: this, data:me, rnode, rawRElement, props:this.props, name: (me as any)?.name});
@@ -892,7 +909,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (node instanceof Array) return node.map(getNodeText).join('');
             if (typeof node === 'object' && node) return getNodeText(node.props.children);
         }
-
         const addprops: boolean = true;
         let fiximport = !!this.props.node;
         //let a: false = true as any; if (a) return "Loading...";
@@ -944,7 +960,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         onMouseLeave: this.onLeave,
                         tabIndex: (props as any).tabIndex || -1,
                         "data-countrenders": this.countRenders++,
-                        decorators: otherViews,
+                        // decorators: otherViews,
                     };
                     let p: GObject = this.props;
                     for (let k in p) {
@@ -953,6 +969,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                     }
                 }
                 else injectProps = {"data-viewid": v.id, className: "decorativeView " + v.id, "data-mainview": mainviewid};
+
+                console.log("renderrr 4");
 
                 let debug: GObject = {};
                 injectProps.children = UX.recursiveMap(rawRElement/*.props.children*/,
@@ -981,8 +999,12 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 if (fixdoubleroot) rawRElement = rawRElement.props.children;
                 debug.rawRElementPostfixdoubleroot = {node:rawRElement, text: getNodeText(rawRElement)};
 
+                console.log("renderrr 5");
+
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
             } catch (e: any) {
+                console.log("renderrr 6 err");
+
                 rawRElement = DV.errorView("error while injecting props to subnodes\n:" + (e.message || '').split('\n')[0],
                     {e, rawRElement, key: props.key, newid: props.nodeid},
                     'Subelement props', props.data?.__raw, props.node?.__raw, dv) as ReactElement;
@@ -1003,6 +1025,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         // const injectprops = {a:3, b:4} as DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
         // rnode = React.cloneElement(rnode as ReactElement, injectprops);
+
+        console.log("renderrr 7");
 
         // console.log("nodeee", {thiss:this, props:this.props, node: this.props.node});
         if (false && dv.isExclusiveView && (props.node?.__raw as DGraphElement).father) {

@@ -34,7 +34,7 @@ export class DV {
 
     static edgePointView(): string { return beautify((
 `<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"white", width:"100%", height:"100%"}}>
-    {otherViews}
+    {decorators}
 </div>`
 ))}
     static edgePointViewSVG(): string { return beautify(
@@ -123,7 +123,7 @@ export class DV {
             {
                 edge.midPoints.map( m => <EdgePoint data={edge.father.model.id} initialSize={m} key={m.id} view={"Pointer_ViewEdgePoint"} /> )
             }
-            {otherViews}
+            {decorators}
         </div>`
     )}
     /*
@@ -180,7 +180,7 @@ class DefaultView {
     {otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
     {firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
     {m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object}></DefaultNode>)}
-    {otherViews}
+    {decorators}
 </div>`
 );}
 
@@ -188,7 +188,7 @@ class DefaultView {
 `<div className={'round bg-white root void model-less p-1'}>
     <div>voidvertex element test</div>
     <div>data: {props.data ? props.data.name : "empty"}</div>
-    {otherViews}
+    {decorators}
 </div>`
 );}
 
@@ -197,7 +197,7 @@ class DefaultView {
     <div className={'package-children'}>
         { data.children.map(c => <DefaultNode key={c.id} data={c} />) }
     </div>
-    {otherViews}
+    {decorators}
 </div>`
 );}
 
@@ -206,7 +206,7 @@ class DefaultView {
     <div className={'package-children'}>
         { data.children.map(c => <DefaultNode key={c.id} data={c} />) }
     </div>
-    {otherViews}
+    {decorators}
 </div>`
 );}
 
@@ -217,7 +217,7 @@ class DefaultView {
     <div className={'class-children'}>{ data.attributes.map(c => <DefaultNode key={c.id} data={c} />) }</div>
     <div className={'class-children'}>{ data.references.map(c => <DefaultNode key={c.id} data={c} />) }</div>
     <div className={'class-children'}>{ data.operations.map(c => <DefaultNode key={c.id} data={c} />) }</div>
-    {otherViews}
+    {decorators}
 </div>`
 );}
 
@@ -228,28 +228,30 @@ class DefaultView {
     <div className={'enumerator-children'}>
         { data.children.map(c => <DefaultNode key={c.id} data={c}/>) }
     </div>
-    {otherViews}
+    {decorators}
 </div>`
 );}
 
     public static feature(): string { return (
 `<div className={'w-100 root feature'} style={{background: 'var(--background-2)', color:'var(--color-2)'}}>
     <Select className={'p-1 d-flex'} data={data} field={'type'} label={data.name} />
-    {otherViews}
+    {decorators}
+    {console.log("trying inject jsx", {decorators, otherViews}) && false }
+    {console.log("trying inject jsx 2", {parsed:<div>test</div>}) && false }
 </div>`
 );}
 
     public static literal(): string { return (
 `<label className={'d-block text-center root literal'}>
     {data.name}
-    {otherViews}
+    {decorators}
 </label>`
 );}
 
     public static operation(): string { return (
 `<div className={'w-100'}>
     <Select className={'p-1 root operation d-flex'} data={data} field={'type'} label={data.name + ' () => '} />
-    {otherViews}
+    {decorators}
 </div>`
 );}
 
@@ -264,7 +266,7 @@ class DefaultView {
             <ParameterForm operation={this.props.data.id} vertical={true} />
         </div>
     </label>
-    {otherViews}
+    {decorators}
 </div>`
 );}
 
@@ -278,7 +280,7 @@ class DefaultView {
     <div className={'object-children'}>
         { features.map(c => <DefaultNode key={c.id} data={c} />) }
     </div>
-    {otherViews}
+    {decorators}
 </div>`);
 }
 
@@ -292,7 +294,7 @@ class DefaultView {
     <div className={'object-children'}>
         { features.map(c => <DefaultNode key={c.id} data={c} />) }
     </div>
-    {otherViews}
+    {decorators}
 </div>`
 );}
 
@@ -303,7 +305,7 @@ class DefaultView {
     <label className={'d-block m-auto'} style={{color: constants[typeString] || "gray"}}>
         : {valuesString}
     </label>
-    {otherViews}
+    {decorators}
 </div>`
 );}
 

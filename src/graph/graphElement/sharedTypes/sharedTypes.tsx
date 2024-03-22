@@ -165,7 +165,7 @@ function setContextFixedKeys(){
         "component": true,
         "htmlindex": true,
         "state": true, "props": true, "stateProps": true, "ownProps": true,
-        "otherViews": true, // only on final jsx
+        "otherViews": true, 'decorators':true, // only on final jsx, decorators are injected
         //"data":true, "node":true, "parentViewId":true, "parentnodeid":true,// from props:
         //"view":true, "views":true, "viewScores":true,// from props:
         //"children":true, "isgraph":true, "isvertex":true, "graphid":true, "nodeid":true,// from props:
