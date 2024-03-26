@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import {DViewPoint, Input, LViewElement, LViewPoint, Select, SetFieldAction} from '../../../../joiner';
 import {OclEditor} from '../../oclEditor/OclEditor';
-import {GraphElements} from "../../../../joiner/components";
+import {Edges, Fields, GraphElements, Graphs, Vertexes} from "../../../../joiner/components";
 
 interface Props {view: LViewElement, viewpoints: LViewPoint[], readonly: boolean}
 
@@ -33,16 +33,16 @@ function InfoData(props: Props) {
             <>
                 <option value={'unset'} key={-1}>Automatic by model type (package, object, feature...)</option>
                 <optgroup label={'Graph'} key={0}>{
-                    Object.keys(GraphElements.Graphs).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
+                    Object.keys(Graphs).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
                 }</optgroup>
                 <optgroup label={'Edge'} key={1}>{
-                    Object.keys(GraphElements.Edges).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
+                    Object.keys(Edges).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
                 }</optgroup>
                 <optgroup label={'Vertex'} key={2}>{
-                    Object.keys(GraphElements.Vertexes).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
+                    Object.keys(Vertexes).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
                 }</optgroup>
                 <optgroup label={'Field'} key={3}>{
-                    Object.keys(GraphElements.Fields).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
+                    Object.keys(Fields).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
                 }</optgroup>
             </>
         } setter={(data, key, val) => { view.forceNodeType = val === 'unset' ? undefined : val; }}

@@ -186,32 +186,11 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     preRenderFunc?: string; // evalutate tutte le volte che l'elemento viene aggiornato (il model o la view cambia)
     __info_of__preRenderFunc: Info = {isGlobal: true, obsolete: true, type: "Function():Object", label:"pre-render function",
         txt:<div>Data used in the visual representation, meant to be dynamic values evaluated every time the visual representation is updated.<br/>Replaced by usageDeclarations.</div>}
-    default_getter(c: Context, k: keyof DViewElement): any { return c.data[k]; }
-    default_setter(c: Context, k: keyof DViewElement, v: any): boolean {
-        const isPointerTentative: boolean = Pointers.isPointer(v, undefined, true);
-        let bytes = 0;
-        switch((this as any)["__info_of__"+k]?.type){
-            case ShortAttribETypes.EDate: break;
-            default: break;
-            case ShortAttribETypes.EBoolean: v = !!v; break;
-            case ShortAttribETypes.EByte: bytes = 8; break;
-            case ShortAttribETypes.EShort: bytes = 16; break;
-            case ShortAttribETypes.EInt: bytes = 32; break;
-            case ShortAttribETypes.ELong: bytes = 64; break;
-            case ShortAttribETypes.EString: v = ""+v; break;
-            case ShortAttribETypes.EChar: v = (""+v)[0]; break;
-            case ShortAttribETypes.EVoid: Log.exx("cannot set a void-typed value", {c, d:c.data, k, v}); return true;
-            case ShortAttribETypes.EDouble:
-            case ShortAttribETypes.EFloat: v = +v; break;
-        }
-        if (bytes) {
-            let max = (Math.round(+v))<<bytes;// left shift is the same as multiplying by a power of 2, but binary and more efficient.
-            let min = -max +1
-            if (v > max) v = max;
-            else if (v < min) v = min;
-        }
-        return SetFieldAction.new(c.data, k, v, '', isPointerTentative);
-    }
+
+    protected _defaultGetter(c: Context, k: keyof Context["data"]): any { return this.__defaultGetter(c, k); }
+
+    protected _defaultSetter(v: any, c: Context, k: keyof Context["data"]): any { return this.__defaultSetter(v, c, k); }
+
 
     jsxString!: string;
     __info_of__jsxString: Info = {isGlobal: true, type: "text", label:"JSX template",

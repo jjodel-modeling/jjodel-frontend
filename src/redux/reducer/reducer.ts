@@ -339,7 +339,7 @@ function updateRedundancies_OBSOLETE(state: DState, oldState:DState, possibleInc
 let initialState: DState = null as any;
 let storeLoaded: boolean = false;
 
-const UDRegexp = /(?:\s|;|}|\n|\t|\(|,)ret\s*\.\s*[a-zA-Z_$][0-9a-zA-Z_$]*\s*=/g;
+const UDRegexp = /(?:^|\s|;|}|\n|\t|\(|,)ret\s*\.\s*[a-zA-Z_$][0-9a-zA-Z_$]*\s*=/g;
 /* tested with:
 if (ret.key = stuff) ret.key2=morestuff;
 ;ret.k=3;
@@ -396,13 +396,24 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
         // transientProperties.view[vid].constantsList = dv.constants?.match(UDRegexp).map(s=>s.substring(4, s.length-1).trim()) || [];
         // let allContextKeys = {...contextFixedKeys};
+        if (!dv.constants) {
+            transientProperties.view[vid].constants = {};
+            transientProperties.view[vid].constantsList = [];
+            // no need to recompile UD, jsx or measurables, they will have additional parameters in scope but they are undefined and cause no problems.
+            continue;
+        }
         const constantsOutput: GObject = {};
         const context = {view:dv}; // context at this point holds only static stuff, which are in gloval scope (window) plus view.
         let paramStr = '{'+Object.keys(context).join(',')+'}, ret';
-        if (dv.constants){
-            let constantsFunction: (context: GObject, ret: GObject) => void = new Function(paramStr, 'return ('+dv.constants+')(ret)').bind(context);// scope of this function is "window" and not the function where is called, unlike eval();
+        try {
+            // the scope of new Function() is "window" and not the function where is called, unlike eval();
+            let constantsFunction: (context: GObject, ret: GObject) => void = new Function(paramStr, 'return ('+dv.constants+')(ret)').bind(context);
             constantsFunction(context, constantsOutput);
+        } catch(e:any){
+            console.error('error constants parse', {vid, e, paramStr, body:'return ('+dv.constants+')(ret)'});
+            // todo: how do i render an error from here? even if i set jsx or ud.__invalidDeclarations it will be recompiled. need a constants.__invalidDeclarations too?
         }
+
         transientProperties.view[vid].constants = constantsOutput;
         transientProperties.view[vid].constantsList = Object.keys(transientProperties.view[vid].constants);
         // implies recompilation of: ud, jsx and all measurable events
@@ -414,30 +425,37 @@ export function reducer(oldState: DState = initialState, action: Action): DState
 
     for (const vid of ret.VIEWS_RECOMPILE_usageDeclarations) { // compiled in func, but NOT executed, result varies between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
+        const tv = transientProperties.view[vid];
         if (!dv.usageDeclarations) {
-            transientProperties.view[vid].UDList = [];
-            transientProperties.view[vid].UDFunction = undefined as any;
+            tv.UDList = [];
+            tv.UDFunction = undefined as any;
+            // no need to recompile jsx or measurables, they will have additional parameters in scope but they are undefined and cause no problems.
+            continue;
         }
-        else {
-            let matches = dv.usageDeclarations?.match(UDRegexp) || [];
-            transientProperties.view[vid].UDList = matches.map(s=>s.trim().substring(s.indexOf('\.'), s.length-2).trim());
-            console.log('matches', {matches, udlist:transientProperties.view[vid].UDList});
-            // warning for user: do not redeclare ret in nested blocks.
-            // do not use ret[key] syntax.
-            // do not set nested values directly (ret.key.subkey syntax).
-            // do not use ret.key +=, -= or any other operator assignment different than "="
-            // if that is ever required, do instead
-            // do not assign values to ret in block comments
-            // those restrictions only apply to the ret object, all those violations can be done on other objects.
-            // so the following is valid, and a way to overcome the previous limitations:
-            // let subobject = {}; subobject[key] += stuff; ret.somefixedname = subobject;
+        let matches = dv.usageDeclarations?.match(UDRegexp) || [];
+        transientProperties.view[vid].UDList = matches.map(s=>{ s = s.trim(); return s.substring(s.indexOf('\.')+1, s.length-2).trim()});
+        console.log('matches', {matches, udlist:transientProperties.view[vid].UDList});
+        // warning for user: do not redeclare ret in nested blocks.
+        // do not use ret[key] syntax.
+        // do not set nested values directly (ret.key.subkey syntax).
+        // do not use ret.key +=, -= or any other operator assignment different than "="
+        // if that is ever required, do instead
+        // do not assign values to ret in block comments
+        // those restrictions only apply to the ret object, all those violations can be done on other objects.
+        // so the following is valid, and a way to overcome the previous limitations:
+        // let subobject = {}; subobject[key] += stuff; ret.somefixedname = subobject;
 
-            let allContextKeys = {...contextFixedKeys};
-            for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
-            let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}, ret';
-            if (vid.includes('Model')) console.log("modelparse, ud", {paramStr, udstr:dv.usageDeclarations, udlist:transientProperties.view[vid].UDList});
-            transientProperties.view[vid].UDFunction = new Function(paramStr, 'return ('+dv.usageDeclarations+')(ret)') as (...a:any)=>any;
+        let allContextKeys = {...contextFixedKeys};
+        for (let k of tv.constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
+        let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}, ret';
+        if (vid.includes('Model')) console.log("modelparse, ud", {paramStr, udstr:dv.usageDeclarations, udlist:transientProperties.view[vid].UDList});
+        try {
+            tv.UDFunction = new Function(paramStr, 'return ('+dv.usageDeclarations+')(ret)') as (...a:any)=>any;
+        } catch (e:any) {
+            console.error('error udparse', {vid, e, paramStr, body: 'return ('+dv.usageDeclarations+')(ret)'});
+            tv.UDFunction = new Function("", "(ret)=>{ ret.__invalidUsageDeclarations = "+JSON.stringify(e)+"; ret.__invalidUsageDeclarations.isSyntax = true; }") as (...a:any)=>any;
         }
+
 
         // implies recompilation of: jsx and all measurable events
         ret.VIEWS_RECOMPILE_jsxString.push(vid);
@@ -447,6 +465,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
 
     for (const vid of ret.VIEWS_RECOMPILE_jsxString) { // compiled in func, but NOT executed, result varies between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
+        if (!dv.jsxString) { transientProperties.view[vid].JSXFunction = undefined as any; continue; }
         let allContextKeys = {...contextFixedKeys};
         for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
         for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
@@ -454,15 +473,15 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
         console.log('jsxparse', { allContextKeys, ud:transientProperties.view[vid].UDList, c:transientProperties.view[vid].constantsList });
         const body: string =  'return ('+UX.parseAndInject(dv.jsxString, dv)+')';
-        if (vid.includes('Model')) console.log("modelparse, jsx", {paramStr, body});
-        console.log('jsxparse', {paramStr, body});
+        // if (vid.includes('Model')) console.log("modelparse, jsx", {paramStr, body});
+        console.log('jsxparse', {vid, paramStr, body});
         try {
             transientProperties.view[vid].JSXFunction = new Function(paramStr, body) as ((...a:any)=>any);
         }
         catch (e: any) {
+            console.error('error jsxparse', {vid, e, paramStr, body});
             transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'JSX Syntax', dv);
         }
-        // transientProperties.view[vid].JSXFunction = (context: GObject)=> { return transientProperties.view[vid].JSXFunction.bind(context)(context); }
 
 
         // implies recompilation of: ... nothing?
@@ -476,11 +495,26 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         for (vid of (ret as any)['VIEWS_RECOMPILE_'+key]) {
             let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
             let str: string = (dv as any)[key];
+            if (!str) {
+                (transientProperties.view[vid] as any)[key] = undefined;
+                continue;
+            }
             let allContextKeys = {...contextFixedKeys};
             for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
             for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
             let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
-            (transientProperties.view[vid] as any)[key] = new Function(paramStr, '()=>{'+str+'}');
+            console.log('measurable parse '+key, {allContextKeys, ud:transientProperties.view[vid].UDList, c:transientProperties.view[vid].constantsList });
+            console.log('measurable parse '+key, {vid, paramStr, body:'()=>{'+str+'}',});
+            try {
+                (transientProperties.view[vid] as any)[key] = new Function(paramStr, '()=>{'+str+'}');
+            }
+            catch (e: any) {
+                console.error('error measurable parse '+key, {vid, e, paramStr, body:'()=>{'+str+'}'});
+                (transientProperties.view[vid] as any)[key] = undefined;
+                // display error in jsx
+                transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'Measurable ' + key + ' Syntax', dv);
+                break;
+            }
         }
         (ret as any)['VIEWS_RECOMPILE_'+key] = [];
     }

@@ -134,7 +134,7 @@ import {
     packageDefaultSize,
     ParsedAction,
     SetFieldAction,
-    SetRootFieldAction, statehistory,
+    SetRootFieldAction, ShortAttribETypes, statehistory,
     store,
     TRANSACTION,
     U
@@ -834,6 +834,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.isSelected = {};
         thiss.edgesIn = [];
         thiss.edgesOut = [];
+        thiss.state = {id: thiss.id+".state", className: thiss.className};
 
         this.setPtr("model", model);
         this.setPtr("graph", parentgraphID);
@@ -1540,6 +1541,60 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     protected _get_default< DD extends DPointerTargetable, T extends string & keyof (DD) & keyof (L), L extends LModelElement = LModelElement>(data: DD, key: T): L[T]{
         // @ts-ignore
         return LPointerTargetable.from(data[key]);
+    }
+
+    protected _defaultCollectionGetter(c: Context, k: keyof Context["data"]): LPointerTargetable[] { return LPointerTargetable.fromPointer((c.data as any)[k]); }
+    protected __defaultGetter(c: Context, k: keyof Context["data"]): any {
+        // console.log("default Getter");
+        let v = (c.data as any)[k];
+        if (Array.isArray(v)) {
+            if (v.length === 0) return [];
+            else if (Pointers.isPointer(v[0] as any)) return this._defaultCollectionGetter(c, k);
+            return v;
+        }
+        return v && Pointers.isPointer(v as any) ? LPointerTargetable.fromPointer(v) : v;
+    }
+
+    protected __defaultSetter(v: any, c: Context, k: keyof Context["data"]): any {
+        console.log("default Setter");
+        if (true || k in c.data) {
+            // check if is pointer
+            let isPointer: boolean;
+            if (Array.isArray(v)) {
+                if (v.length === 0) isPointer = true; // assumed, should not cause harm if it is not.
+                    // it will delete remove an entry in pointedBy from all oldValue entries in the array that should not be present anyway.
+                // like oldVal.map( id => U.arrayRemove(LData.wrap(id).pointedBy, c.data.this_id)
+                else isPointer = Pointers.isPointer(v[0] as any);
+            } else isPointer = Pointers.isPointer(v);
+
+            // autofix value
+            let bytes = 0;
+            let type: string = (this as any)["__info_of__"+k]?.type;
+            if (type) type = U.multiReplaceAll(type, ["array", "Array", "<", ">", "[]"], []);
+            switch(type){
+                case ShortAttribETypes.EDate: break;
+                default: break;
+                case ShortAttribETypes.EBoolean: v = !!v; break;
+                case ShortAttribETypes.EByte: bytes = 8; break;
+                case ShortAttribETypes.EShort: bytes = 16; break;
+                case ShortAttribETypes.EInt: bytes = 32; break;
+                case ShortAttribETypes.ELong: bytes = 64; break;
+                case ShortAttribETypes.EString: v = ""+v; break;
+                case ShortAttribETypes.EChar: v = (""+v)[0]; break;
+                case ShortAttribETypes.EVoid: Log.exx("cannot set a void-typed value", {c, d:c.data, k, v}); return true;
+                case ShortAttribETypes.EDouble:
+                case ShortAttribETypes.EFloat: v = +v; break;
+            }
+            if (bytes) {
+                v = Math.round(+v);
+                let max = v << bytes; // left shift is the same as multiplying by a power of 2, but binary and more efficient.
+                let min = -max + 1
+                if (v > max) v = max;
+                else if (v < min) v = min;
+            }
+            return SetFieldAction.new(c.data, k as any, v, '', isPointer);
+        }
+        return true;
     }
 
     public get__extends(superClassName: string, context: LogicContext<DPointerTargetable>): boolean {

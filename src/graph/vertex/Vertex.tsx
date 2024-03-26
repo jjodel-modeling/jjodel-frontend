@@ -111,7 +111,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     // if (size.w !== actualSize.w || size.h !== actualSize.h) this.setSize({w:actualSize.w, h:actualSize.h});
                     dragHelper.style.width = size.w + 'px';
                     dragHelper.style.height = size.h + 'px';
-                    dragHelper.style.opacity = this.props.view.constraints.length ? '1' : '0.5';
+                    dragHelper.style.opacity = '1'; // this.props.view.constraints.length ? '1' : '0.5';
                     if (this.props.view.lazySizeUpdate) dragHelper.classList.add('lazySizeUpdate');
                     else dragHelper.classList.remove('lazySizeUpdate');
                     return dragHelper;

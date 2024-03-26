@@ -244,6 +244,7 @@ w.IPoint = IPoint;
 w.GraphPoint = GraphPoint;
 w.$s = $s;
 */
+export {GraphElements, Graphs, Vertexes, Edges, Fields} from './components';
 export {
     TextArea, Select, Input, Edge, // Image,
     GraphsContainerComponent,

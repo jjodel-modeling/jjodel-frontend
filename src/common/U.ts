@@ -313,15 +313,19 @@ export class U {
         for (i = 0; i < kv.length; i++) { keys.push(kv[i][0]); vals.push(kv[i][0]); }
         return U.multiReplaceAll(a, keys, vals); }
 
+    // if replacement is empty, it will be filled with '';
+    // if replacement length < searchText, replacement will be filled with copies of his elements cycling from 0 to his length until his length matches searchText.length
     static multiReplaceAll(a: string, searchText: string[] = [], replacement: string[] = []): string {
         Log.ex(searchText.length !== replacement.length, 'search and replacement must be have same length: ' + searchText.length + "vs" + replacement.length + " " +JSON.stringify(searchText) + "   " + JSON.stringify(replacement));
         let i = -1;
+        while (replacement.length !== 0 && replacement.length < searchText.length) replacement.push(replacement[++i]);
+        i = -1;
         while (++i < searchText.length) { a = U.replaceAll(a, searchText[i], replacement[i]); }
         return a; }
 
-    static replaceAll(str: string, searchText: string, replacement: string, debug: boolean = false, warn: boolean = true): string {
+    static replaceAll(str: string, searchText: string, replacement: string | undefined, debug: boolean = false, warn: boolean = true): string {
         if (!str) { return str; }
-        return str.split(searchText).join(replacement); }
+        return str.split(searchText).join(replacement||''); }
 
     static toFileName(a: string = 'nameless.txt'): string {
         if (!a) { a = 'nameless.txt'; }

@@ -7,6 +7,7 @@ let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 
 @RuntimeAccessible('DV')
 export class DV {
+    public static invisibleJsx(): string { return ''; }
     public static modelView(): string { return beautify(DefaultView.model()); } // damiano: che fa beautify? magari potremmo settarlo in LView.set_jsx invece che solo qui, così viene formattato anche l'input utente?
     public static packageView(): string { return beautify(DefaultView.package()); }
     public static classView(): string { return beautify(DefaultView.class()); }
@@ -141,9 +142,13 @@ export class DV {
         false && props.children && "this would cause loop no idea why, needs to be fixed to allow passing EdgeNodes here" || []
     }
     */
-    static semanticErrorOverlay() { return (
+    static semanticErrorOverlay_old() { return (
 `<section className="overlap">
     <div className="error-message">Lowerbound violation</div>
+</section>`
+)}    static semanticErrorOverlay() { return (
+`<section className="overlap">
+    <div className="error-message">{errors.join(',')}</div>
 </section>`
 )}
 
@@ -317,7 +322,7 @@ class DefaultView {
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         return <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"min-content"}}>
             <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
-                <b>{errortype} ERROR on ${(dname ? dname  : '') + (false ? ' / ' + nodename : '')})</b>
+                <b>{errortype} ERROR on {(dname ? dname  : '') + (false ? ' / ' + nodename : '')})</b>
                 <hr/>
                 <label className={'text-center mx-1 d-block'}>
                     While applying view "{v?.name}"

@@ -7,6 +7,18 @@ export const a = 0;
 let data:any, node:any, view:any, component:any;
 let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPackages:any, refEdges:any, extendEdges:any, React:any, Edge:any;
 
+let missingLowerbound: any;
+let aq = ()=>{
+    if (!node.state.errors) node.state.errors = {};
+    let err = '';
+    if (missingLowerbound) node.state.errors = {...node.state.errors, lowerbound: (data.className.substring(1)) + " Lowerbound violation, missing ' + missingLowerbound + ' values.'."};
+    node.state.errors = {...node.state.errors, naming: err};
+}
+//N decorator views without jsx, that only set the node.state.errorlist[thisviewerror] = 'Lowerbound violation' etc...
+// then 1 view with jsx that displays them all
+
+// syntax error on constants, usageDeclarations are not catched
+
 /*reenable edge menù outside debug mode, (add color palette there? or not?)
 make uml arrows (and more common ones)
 *

@@ -25,7 +25,7 @@ export class Defaults {
     // @ts-ignore
     static defaultViewsMap: Dictionary<Pointer, boolean> = Defaults.views.reduce((acc, val) => { acc[val] = true; return acc; }, {}); // U.objectFromArrayValues(Defaults.views);
 
-    static viewpoints: Pointer<DViewPoint>[] = ['Pointer_ViewPointDefault'];
+    static viewpoints: Pointer<DViewPoint>[] = ['Pointer_ViewPointDefault', 'Pointer_ViewPointValidation'];
 
     static check(id: string): boolean {
         return !!Defaults.defaultViewsMap[id]; // id.indexOf('Pointer_View') !== -1

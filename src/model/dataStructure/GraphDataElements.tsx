@@ -72,7 +72,7 @@ export class DGraphElement extends DPointerTargetable {
     isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
-    state: DMap = {} as any;
+    state!: GObject; // DMap
     father!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     x!: number;
     y!: number;
@@ -120,7 +120,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[]; // shallow, direct subelements
-    state!: LMap;
+    state!: GObject<"proxified">; // LMap;
     allSubNodes!: LGraphElement[]; // deep, nested subelements
     x!: number;
     y!: number;
@@ -187,39 +187,17 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     public set_edgesEnd(val: PackArr<LVoidEdge>, context: Context): boolean { return this.set_edgesOut(val, context); }
 
 
-    protected _defaultCollectionGetter(c: Context, k: keyof Context["data"]): LPointerTargetable[] { return LPointerTargetable.fromPointer((c.data as any)[k]); }
     protected _defaultGetter(c: Context, k: keyof Context["data"]): any {
-        //console.log("default Getter");
-        if (k in c.data) {
-            let v = (c.data as any)[k];
-            if (Array.isArray(v)) {
-                if (v.length === 0) return [];
-                else if (Pointers.isPointer(v[0] as any)) return this._defaultCollectionGetter(c, k);
-                return v;
-            } else return v;
-        }
-        let ret: any;
+        if (k in c.data) return this.__defaultGetter(c, k);
+        // if value not found in node, check in view.
+        return (this.get_view(c) as any)[k];
+        /*let ret: any;
         let view = this.get_view(c);
         try { ret = (view as any)[k] } catch (e) { Log.ee("Could not find get_ property \"" + k + "\" in node or view.", {c, view, k}); return undefined; }
-        return ret;
+        return ret;*/
     }
 
-    protected _defaultSetter(v: any, c: Context, k: keyof Context["data"]): any {
-        console.log("default Setter");
-        if (k in c.data) {
-            let isPointer: boolean;
-            if (Array.isArray(v)) {
-                if (v.length === 0) isPointer = true; // assumed, should not cause harm if it is not.
-                // it will delete remove an entry in pointedBy from all oldValue entries in the array that should not be present anyway.
-                // like oldVal.map( id => U.arrayRemove(LData.wrap(id).pointedBy, c.data.this_id)
-                else isPointer = Pointers.isPointer(v[0] as any);
-            } else isPointer = false;
-            return SetFieldAction.new(c.data.id, k as any, v, '', isPointer);
-        }
-        let view = this.get_view(c);
-        try { (view as any)[k] = v; } catch (e) { Log.ee("Could not find set_ property \"" + k + "\" in node or view.", {c, v, k, view}); return false; }
-        return true;
-    }
+    protected _defaultSetter(v: any, c: Context, k: keyof Context["data"]): any { return this.__defaultSetter(v, c, k); }
 
     get_graphAncestors(c: Context): LGraph[] {
         let current = c.proxyObject;
@@ -617,17 +595,16 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     }*/
 
     get_state(context: LogicContext<DGraphElement>): this["state"] {
-        let state: GObject = context.data.state;
-        for (let key in state) {
-            switch(key) {
-                case "id": break;
-                default: state[key] = LPointerTargetable.wrap(state[key]); break;
-            }
-        }
-        return state as any;
+        return context.proxyObject;
+        // return LPointerTargetable.wrap(context.data.state); // this should work, because data.state have id = this.id+".state"
     }
-    set_state(val: this["state"], context: LogicContext<DGraphElement>): boolean {
-        return this.cannotSet("graphElement.setstate(): todo"); }
+    set_state(val: this["state"], c: LogicContext<DGraphElement>): boolean {
+        // 2 options:
+        // 1) if state === node, then setting whole state is invalid
+        // 2) if state is proxified with id = node.id+".state" so actions and proxy getters/setters will act on the subobject properties still invalid setting whole obj.
+        this.cannotSet("graphElement.state, set individual properties instead of the whole object.");
+        return true;
+    }
 
 
 
@@ -671,7 +648,7 @@ export class DGraph extends DGraphElement {
     isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
-    state: DMap = {} as any;
+    state!: GObject;
     // personal attributes
     zoom!: GraphPoint;
     offset!: GraphPoint; // in-graph scrolling offset
@@ -725,7 +702,7 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
-    state!: LMap;
+    state!: GObject<"proxified">; // LMap;
     // personal attributes
     zoom!: GraphPoint;
     graphSize!: GraphSize; // derived attribute: bounding rect containing all subnodes, while "size" is instead external size of the vertex holding the graph in GraphVertexes
@@ -823,7 +800,7 @@ export class DVoidVertex extends DGraphElement {
     isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
-    state: DMap = {} as any;
+    state!: GObject;
     zoom!: GraphPoint;
     // personal attributes
     x!: number;
@@ -860,7 +837,7 @@ export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C exte
     isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
-    state!: LMap;
+    state!: GObject<"proxified">; // LMap;
     zoom!: GraphPoint;
     isResized!: boolean;
 
@@ -1990,7 +1967,7 @@ export class DEdge extends DVoidEdge { // DVoidEdge
     isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
-    state: DMap = {} as any;
+    state!: GObject;
     start!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     end!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     __isDEdge!: true;
@@ -2014,7 +1991,7 @@ export class LEdge<Context extends LogicContext<DEdge> = any, D extends DEdge = 
     isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn!: LGraphElement;
     subElements!: LGraphElement[];
-    state!: LMap;
+    state!: GObject<"proxified">; // LMap;
     start!: LGraphElement;
     end!: LGraphElement;
     midnodes!: LEdgePoint[];
@@ -2039,7 +2016,7 @@ export class DExtEdge extends DEdge { // etends DEdge
     isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
     subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
-    state: DMap = {} as any;
+    state!: GObject;
     start!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     end!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     __isDExtEdge!: true;
@@ -2067,7 +2044,7 @@ export class LExtEdge extends LEdge{
     isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn!: LGraphElement;
     subElements!: LGraphElement[];
-    state!: LMap;
+    state!: GObject<"proxified">; // LMap;
     start!: LGraphElement;
     end!: LGraphElement;
     __isLExtEdge!: true;

@@ -451,10 +451,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // else rebuild + update it
         let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
         let tv = transientProperties.view[vid];
-        context = tnv.evalContext = {...this.props, ...tv.constants, ...tnv.usageDeclarations};
-        // add component stuff that could not compute in reducer
-        context.component = this;
-        context.otherViews = this.props.views;
+        context = tnv.evalContext = {...this.props, ...tv.constants, ...tnv.usageDeclarations,
+            // add component stuff that could not be computed in reducer
+            component: this,
+            otherViews: this.props.views,
+            constants: tv.constants,
+            usageDeclarations: tnv.usageDeclarations,
+            props: this.props};
         context._context = context;
         return context;
     }
@@ -558,7 +561,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
         if (!tnv.shouldUpdate) return tnv.jsxOutput;
         let tv = transientProperties.view[vid];
-        return tnv.jsxOutput = tv.JSXFunction.call(context, context);
+        return tnv.jsxOutput = (tv.JSXFunction ? tv.JSXFunction.call(context, context) : undefined);
     }
 
     protected getTemplate2(v: LViewElement, udContext: GObject): ReactNode {
@@ -881,7 +884,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         if (!ud) ud = {}; // todo: remove this, is for debug
         if (ud.__invalidUsageDeclarations) {
-            return GraphElementComponent.displayError(ud.__invalidUsageDeclarations, "Usage Declaration", v.__raw,
+            return GraphElementComponent.displayError(ud.__invalidUsageDeclarations, "Usage Declaration " + (ud.__invalidUsageDeclarations.isSyntax ? "Syntax" : "Semantic"), v.__raw,
                 this.props.data?.__raw, this.props.node?.__raw, false, {ud});
         }
         let isMainView: boolean = !!otherViews;
