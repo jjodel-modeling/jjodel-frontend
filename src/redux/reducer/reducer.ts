@@ -482,8 +482,6 @@ export function reducer(oldState: DState = initialState, action: Action): DState
             console.error('error jsxparse', {vid, e, paramStr, body});
             transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'JSX Syntax', dv);
         }
-
-
         // implies recompilation of: ... nothing?
     }
     ret.VIEWS_RECOMPILE_jsxString = [];
