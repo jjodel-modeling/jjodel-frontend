@@ -1518,6 +1518,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     public __serialize!: DocString<"json">;
     private inspect!: D;
     private __random!: number;
+    // public r!: this;
 
     private __info_of__id = {type:"Pointer&lt;this&gt;", txt:"<a href=\"https://github.com/DamianoNaraku/jodel-react/wiki/identifiers\"><span>Unique identifier, and value used to point this object.</span></a>"};
 

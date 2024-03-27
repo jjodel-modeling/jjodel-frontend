@@ -92,14 +92,22 @@ export class U {
     }
 
     static isShallowEqualWithProxies(obj1: GObject, obj2: GObject, depth: number = 0, maxDepth: number = 1, skipKeys: Dictionary<string, any>={}, out?: {reason?: string}): boolean {
-        if (typeof obj1 !== "object") {
-            if (out) out.reason = 'base object newly introduced';
+        let tobj1 = obj1 === null ? 'null' : typeof obj1;
+        let tobj2 = obj2 === null ? 'null' : typeof obj2;
+        if (obj1 === obj2) { if (out) { out.reason = "identical objects"; } return true; }
+        if (tobj1 !== tobj2) { if (out) { out.reason = "type changed: " + tobj1 + " --> " + tobj2; } return false; }
+
+        // at this point: same type, but different values
+
+        if (typeof obj1 !== "object") { // primitive with different values
+            if (out) {
+                if (undefined === tobj1) out.reason = 'primitive value newly introduced';
+                else if (undefined === tobj2) out.reason = 'primitive value got deleted';
+                else out.reason = 'primitive value changedd';
+            }
             return false;
         }
-        if (typeof obj2 !== "object") {
-            if (out) out.reason = 'base object got deleted';
-            return false;
-        }
+
         for (let key in obj1) {
             if (key in skipKeys) continue;
             let oldp: any = obj2[key];
@@ -151,7 +159,9 @@ export class U {
         }
         // just check for keys that were in props and are not in nextProps
         for (let key in obj2) {
-            if (!(key in skipKeys) && !(key in obj1)) return false;
+            if ((key in skipKeys) || (key in obj1)) continue;
+            if (out) out.reason = "deleted subobject property: " + key;
+            return false;
         }
         return true;
     }

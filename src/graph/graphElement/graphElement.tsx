@@ -169,7 +169,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (ownProps.view) {
                 ret.view = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(Pointers.from(ownProps.view), state) as DViewElement);
                 Log.w(!ret.view, "Requested view "+ownProps.view+" not found. Another view got assigned.", {requested: ownProps.view, props: ownProps, state: ret});
-            } else ret.view = scores.mainView;
+            } else ret.view = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
 
             Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret});
             ret.viewid = ret.view.id;
@@ -332,8 +332,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
             nodeviewentry.shouldUpdate_reason = {...out};
             (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
+            Log.l(true, "DECORATIVE_VIEW ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ")  + vid,
+                {ret:nodeviewentry.shouldUpdate, reason: out.reason, old_ud, new_ud, oldProps:oldProps, nextProps, vid});
+
             if (!ret && nodeviewentry.shouldUpdate) ret = true;
-            Log.l(ret, "DECORATIVE_VIEW ShouldComponentUpdate " + data?.name + " UPDATED", {ret, reason: out.reason, oldProps:oldProps, nextProps, vid});
         }
 
         const vid: Pointer<DViewElement> = nextProps.view.__raw.id;
@@ -345,12 +347,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         nodeviewentry.shouldUpdate_reason = {...out};
         (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
 
+        Log.l(true, "ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ") + vid,
+            {ret:nodeviewentry.shouldUpdate, reason: out.reason, old_ud, new_ud, oldProps:oldProps, nextProps});
         if (!ret && nodeviewentry.shouldUpdate) ret = true;
-        Log.l(ret, "ShouldComponentUpdate " + data?.name + " UPDATED", {ret, reason: out.reason, oldProps:oldProps, nextProps, views:nextProps.views});
-
-        Log.l(!ret,
-            "ShouldComponentUpdate " + data?.name + (ret ? " UPDATED" : " REJECTED"),
-            {ret, reason: out.reason, oldProps:oldProps, nextProps}); //  oldnode:oldProps.node, newnode: nextProps.node,
         return ret; // if any of main view or decorative views need updating
         // apparently node changes are not working? also check docklayout shouldupdate
     }
@@ -553,7 +552,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     protected getTemplate3(vid: Pointer<DViewElement>, v: LViewElement, context: GObject): ReactNode {
         let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
         let tv = transientProperties.view[vid];
-        console.log("getTemplate jsx", {vid, v, context, tnv, tv, shouldUp: tnv.shouldUpdate, jsxFunc:tv.JSXFunction});
+        // console.log("getTemplate jsx", {vid, v, context, tnv, tv, shouldUp: tnv.shouldUpdate, jsxFunc:tv.JSXFunction});
         let ret = this.getTemplate3_(vid, v, context);
         return ret;
     }
@@ -797,7 +796,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             return "Updating view...";
         }*/
         let nid = this.props.nodeid;
-        let allviews = [this.props.view, ...this.props.views];
+        let allviews = [...this.props.views, this.props.view]; // main view must be last, for renderView ordering
 
 
         for (let i = 0 ; i < allviews.length; i++){
@@ -805,6 +804,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             const vid = v.id;
             let viewnodescore = transientProperties.node[nid].viewScores[v.id];
             if (!viewnodescore.shouldUpdate) continue;
+            viewnodescore.evalContext = undefined as any; // force rebuild jsx context, needs to be done before renderView and measurable events
             // only if this exact view had UD changed, instead of being forced to rended by other in viewstack)
             this.onDataUpdateMeasurable(v, vid, i);
         }
@@ -838,34 +838,20 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
 
         let jsxOutput: ReactNode = undefined as any;
-
-        for (let v of otherViews) {
+        for (let v of allviews) {
             let viewnodescore = transientProperties.node[nid].viewScores[v.id];
             jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
-            if (viewnodescore.shouldUpdate) {
-                viewnodescore.evalContext = undefined as any; // force rebuild jsx context, needs to be done before renderView
-                jsxOutput = undefined;
-            } else jsxOutput = viewnodescore.jsxOutput;
-            if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput = this.renderView(this.props, v, nodeType, classes, styleoverride, undefined, mainView.id);
-
-            if (viewnodescore.shouldUpdate) viewnodescore.shouldUpdate = false;// this needs to be placed post renderView call
-
-            decoratorViewsOutput.push(jsxOutput);
+            let isMain: true | undefined = v === mainView || undefined;
+            if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput =
+                this.renderView(this.props, v, nodeType, classes, styleoverride, isMain && decoratorViewsOutput, mainView.id, isMain && otherViews.map(v=>v.id));
+            if (!isMain) decoratorViewsOutput.push(jsxOutput);
+            if (viewnodescore.shouldUpdate) viewnodescore.shouldUpdate = false; // this needs to be placed post renderView call
         }
 
-        let viewnodescore = transientProperties.node[nid].viewScores[mainView.id];
-        if (viewnodescore.shouldUpdate) {
-            viewnodescore.evalContext = undefined as any; // force rebuild jsx context, needs to be done before renderView
-            jsxOutput = undefined;
-        } else jsxOutput = viewnodescore.jsxOutput;
-
-        if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput = this.renderView(this.props, mainView, nodeType, classes, styleoverride, decoratorViewsOutput, undefined, otherViews.map(v=>v.id));
-        if (viewnodescore.shouldUpdate) viewnodescore.shouldUpdate = false;// this needs to be placed post renderView call
-        //decoratorViewsOutput.push(jsxOutput);
-
-        console.log('rendering view stack', {mainView, otherViews, mainJSX: jsxOutput, decoratorsJSX:decoratorViewsOutput});
-        windoww.debbugg= {jsxOutput,otherViews, ret:<>renderrr{jsxOutput}{otherViews}</>}
-        return jsxOutput;
+        let mainViewOutput: ReactNode = jsxOutput;
+        return mainViewOutput;
+        // console.log('rendering view stack', {mainView, otherViews, mainViewOutput, decoratorsJSX:decoratorViewsOutput});
+        // windoww.debbugg = {mainViewOutput,otherViews, ret:<>renderrr{mainViewOutput}{otherViews}</>}
         // return this.props.data?.className === "DValue" ? <div>{mainView.jsxString}{mainViewElement}</div> : mainViewElement;
     }
 
@@ -876,7 +862,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const nid = props.nodeid;
         const vid = v.id;
         let ud: GObject | undefined = transientProperties.node[nid].viewScores[vid].usageDeclarations;
-        console.log("renderrr 1");
         /*if (false && !ud) {
             this.forceUpdate();
             return <div>Loading...</div>;
@@ -889,19 +874,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         let isMainView: boolean = !!otherViews;
         const context: GObject = this.getJSXContext(vid);
-        console.log("renderrr 2");
 
         if (isMainView) context.decorators = otherViews;
         let rnode: ReactNode;
         try { rnode = this.getTemplate3(vid, v, context); }
         catch (e: any) {
-            console.log("renderrr 2.5 err", {rnode});
             // rnode = undefined as any;
             // where i put this? catch (e: any) { return GraphElementComponent.displayError(e, "JSX Syntax", v.__raw, this.props.data?.__raw, this.props.node?.__raw); }
             rnode = GraphElementComponent.displayError(e, "JSX Semantic", v.__raw, this.props.data?.__raw, this.props.node?.__raw, false, {context});
         }
         let rawRElement: ReactElement | null = UX.ReactNodeAsElement(rnode);
-        console.log("renderrr 3", {rawRElement, rnode});
 
 
         // \console.log('GE render', {thiss: this, data:me, rnode, rawRElement, props:this.props, name: (me as any)?.name});
@@ -973,7 +955,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 }
                 else injectProps = {"data-viewid": v.id, className: "decorativeView " + v.id, "data-mainview": mainviewid};
 
-                console.log("renderrr 4");
 
                 let debug: GObject = {};
                 injectProps.children = UX.recursiveMap(rawRElement/*.props.children*/,
@@ -1002,12 +983,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 if (fixdoubleroot) rawRElement = rawRElement.props.children;
                 debug.rawRElementPostfixdoubleroot = {node:rawRElement, text: getNodeText(rawRElement)};
 
-                console.log("renderrr 5");
 
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
             } catch (e: any) {
-                console.log("renderrr 6 err");
-
                 rawRElement = DV.errorView("error while injecting props to subnodes\n:" + (e.message || '').split('\n')[0],
                     {e, rawRElement, key: props.key, newid: props.nodeid},
                     'Subelement props', props.data?.__raw, props.node?.__raw, dv) as ReactElement;
@@ -1028,8 +1006,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         // const injectprops = {a:3, b:4} as DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
         // rnode = React.cloneElement(rnode as ReactElement, injectprops);
-
-        console.log("renderrr 7");
 
         // console.log("nodeee", {thiss:this, props:this.props, node: this.props.node});
         if (false && dv.isExclusiveView && (props.node?.__raw as DGraphElement).father) {

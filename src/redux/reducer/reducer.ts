@@ -504,12 +504,12 @@ export function reducer(oldState: DState = initialState, action: Action): DState
             for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
             let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
             console.log('measurable parse '+key, {allContextKeys, ud:transientProperties.view[vid].UDList, c:transientProperties.view[vid].constantsList });
-            console.log('measurable parse '+key, {vid, paramStr, body:'()=>{'+str+'}',});
+            console.log('measurable parse '+key, {vid, paramStr, body:str});
             try {
-                (transientProperties.view[vid] as any)[key] = new Function(paramStr, '()=>{'+str+'}');
+                (transientProperties.view[vid] as any)[key] = new Function(paramStr, str);
             }
             catch (e: any) {
-                console.error('error measurable parse '+key, {vid, e, paramStr, body:'()=>{'+str+'}'});
+                console.error('error measurable parse '+key, {vid, e, paramStr, body:str});
                 (transientProperties.view[vid] as any)[key] = undefined;
                 // display error in jsx
                 transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'Measurable ' + key + ' Syntax', dv);

@@ -1,7 +1,7 @@
-import React, {Dispatch, ReactElement, ReactNode} from 'react';
+import React, {Dispatch, KeyboardEvent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
-import {Defaults, DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer} from '../../joiner';
+import {Defaults, DPointerTargetable, GObject, Keystrokes, LPointerTargetable, Overlap, Pointer} from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './style.scss';
 
@@ -62,6 +62,18 @@ function InputComponent(props: AllProps) {
             setIsTouched(true);     // I'm editing the element in my local state.
         }
     }
+    const keyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
+        if (evt.key === Keystrokes.enter) blur(evt as any);
+        if (evt.key === Keystrokes.escape) {
+            const oldValue = (!data) ? undefined : (getter) ? getter(data) : data[field];
+            (evt.target as HTMLInputElement).value = oldValue;
+            setValue(oldValue);
+            setIsTouched(false);
+            (evt.target as HTMLInputElement).blur();
+            // to optimize: probably can remove a large part of this function because this should trigger blur event as well. or move "change" event contents here
+            // optimize 2: memoize the whole component, so it won't update unless the displayed value changed. this would also fix cursor going to input end when pressing enter.
+        }
+    }
 
     const blur = (evt: React.FocusEvent<HTMLInputElement>) => {
         if (readOnly || isBoolean) return;
@@ -87,13 +99,14 @@ function InputComponent(props: AllProps) {
     delete otherprops.inputStyle;
     delete otherprops.children;
     delete otherprops.autosize; // because react complains is bool in dom attribute or unknown attrib name
+
     let input = <input {...otherprops}
                        key={`${field}.${data.id}`}
                        className={props.inputClassName || css}
                        style={props.inputStyle}
                        spellCheck={false}
                        readOnly={readOnly}
-                       type={type} value={value} onChange={change} onBlur={blur}
+                       type={type} value={value} onChange={change} onBlur={blur} onKeyDown={keyDown}
                        checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
 
     return(<label className={'p-1'} {...otherprops}

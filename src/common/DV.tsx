@@ -217,7 +217,7 @@ class DefaultView {
 
     public static class(): string { return (
 `<div className={'round root class'} style={{background: 'var(--background-1)', color:'var(--color-2)'}}>
-    <Input jsxLabel={<b className={'class-name'}>EClass:</b>} data={data} field={'name'} hidden={true} autosize={true} />
+    <Input jsxLabel={<b className={'class-name'}>EClass:{data.name}</b>} data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
     <div className={'class-children'}>{ data.attributes.map(c => <DefaultNode key={c.id} data={c} />) }</div>
     <div className={'class-children'}>{ data.references.map(c => <DefaultNode key={c.id} data={c} />) }</div>
