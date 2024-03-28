@@ -7,6 +7,9 @@ import './index.scss';
 import {Provider} from 'react-redux';
 import {store} from './joiner';
 import App from './App';
+/*
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
+import reportWebVitals from './reportWebVitals';*/
 
 ReactDOM.render(
     <Provider store={store}>
@@ -14,4 +17,8 @@ ReactDOM.render(
     </Provider>,
     document.getElementById('root')
 );
-
+/*
+// enable offline PWA and 1-time loading
+serviceWorkerRegistration.register();
+reportWebVitals(console.warn); // optional
+*/

@@ -91,6 +91,7 @@ export class U {
         return fathers;
     }
 
+    /// maxDepth = 2 is the minimum to check the content of objects inside usageDeclarations or node state. like node.errors.naming
     static isShallowEqualWithProxies(obj1: GObject, obj2: GObject, skipKeys: Dictionary<string, any>={}, out?: {reason?: string},
                                      depth: number = 0, maxDepth: number = 2, returnIfMaxDepth:boolean = false): boolean {
         let tobj1 = obj1 === null ? 'null' : typeof obj1;
