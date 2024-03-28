@@ -315,7 +315,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let data = nextProps.data?.__raw as DNamedElement | undefined;
 
         let out = {reason:undefined};
-        let skipDeepKeys = {pointedBy:true};
+        let skipDeepKeys = {pointedBy:true, clonedCounter: true};// clonedCounter is checked manually before looping object keys
         // let skipPropKeys = {...skipDeepKeys, usageDeclarations: true, node:true, data:true, initialSize: true};
         let ret = false; // !U.isShallowEqualWithProxies(oldProps, nextProps, 0, 1, skipPropKeys, out);
         // todo: verify if this update work
@@ -328,7 +328,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             let old_ud = nodeviewentry.usageDeclarations;
             computeUsageDeclarations(component, nextProps, nextState, v);
             let new_ud = nodeviewentry.usageDeclarations;
-            nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, 0, 1, skipDeepKeys, out);
+            nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, skipDeepKeys, out);
 
             nodeviewentry.shouldUpdate_reason = {...out};
             (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
@@ -343,7 +343,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let old_ud = nodeviewentry.usageDeclarations;
         computeUsageDeclarations(component, nextProps, nextState, nextProps.view);
         let new_ud = nodeviewentry.usageDeclarations;
-        nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud, 0, 1, skipDeepKeys, out);
+        nodeviewentry.shouldUpdate = !U.isShallowEqualWithProxies(old_ud, new_ud,  skipDeepKeys, out);
         nodeviewentry.shouldUpdate_reason = {...out};
         (nodeviewentry as any).shouldUpdate_reasonDebug = {old_ud, new_ud};
 

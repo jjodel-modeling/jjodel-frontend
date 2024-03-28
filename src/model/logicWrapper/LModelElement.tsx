@@ -157,7 +157,14 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     [key: `$${string}`]: LModelElement;
 
     // protected _defaultGetter(c: Context, k: keyof Context["data"]): any {}
-    protected _defaultSetter(val: any, c: Context, k: keyof Context["data"] & string): boolean {
+
+    // this one must return true or the js engine throws an exception
+    protected _defaultSetter(val: any, c: GObject<Context>, k: any): true {
+        this._setterFor$stuff_canReturnFalse(val, c as any, k as any);
+        return true;
+    }
+    // this one must be able to return false because is called by DObject and DValue default setters and return type is checked
+    protected _setterFor$stuff_canReturnFalse(val: any, c: Context, k: keyof Context["data"] & string): boolean {
         if (!["@", "$"].includes(k[0])) return false;
         let target: LPointerTargetable = (c.proxyObject as GObject)[k];
         if (!target) return false;
@@ -4514,6 +4521,17 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     conformsTo!:( LAttribute | LReference)[]; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
 
 
+    protected _defaultGetter(c: Context, k: keyof Context["data"]): any {
+        if (k in c.data) return this.__defaultGetter(c, k);
+        // if value not found in node, check in view.
+        return (this.get_instanceof(c) as any)[k];
+    }
+
+    protected _defaultSetter(v: any, c: Context, k: keyof Context["data"]): true {
+        if (super._setterFor$stuff_canReturnFalse(v, c, k as string)) return true; // try setter for data.$feature = value; shortcut for data.$feature.value = value;
+        this.__defaultSetter(v, c, k);
+        return true;
+    }
 
     add(...val: any[]): void { return this.cannotCall("LValue.add"); }
     __info_of__add: Info = {type: "(...val: any|any[]) => void", txt: "Adds a value in the current value collection"}

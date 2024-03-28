@@ -91,78 +91,95 @@ export class U {
         return fathers;
     }
 
-    static isShallowEqualWithProxies(obj1: GObject, obj2: GObject, depth: number = 0, maxDepth: number = 1, skipKeys: Dictionary<string, any>={}, out?: {reason?: string}): boolean {
+    static isShallowEqualWithProxies(obj1: GObject, obj2: GObject, skipKeys: Dictionary<string, any>={}, out?: {reason?: string},
+                                     depth: number = 0, maxDepth: number = 2, returnIfMaxDepth:boolean = false): boolean {
         let tobj1 = obj1 === null ? 'null' : typeof obj1;
         let tobj2 = obj2 === null ? 'null' : typeof obj2;
-        if (obj1 === obj2) { if (out) { out.reason = "identical objects"; } return true; }
+        if (obj1 === obj2) {
+            // if (out) { out.reason = "identical objects"; }
+            return true; }
         if (tobj1 !== tobj2) { if (out) { out.reason = "type changed: " + tobj1 + " --> " + tobj2; } return false; }
 
         // at this point: same type, but different values
+        switch (tobj1) {
+            case "number": // if both re nan it fails
+                // NB: infinities are not nan, and they compare with === like normal numbers. weird js...
+                if (isNaN(obj1 as any) && isNaN(obj2 as any)) return true;
+                break;
+            default:
+                console.error("unexpected case in isshallowequal:", {tobj1, obj1, obj2});
 
-        if (typeof obj1 !== "object") { // primitive with different values
-            if (out) {
-                if (undefined === tobj1) out.reason = 'primitive value newly introduced';
-                else if (undefined === tobj2) out.reason = 'primitive value got deleted';
-                else out.reason = 'primitive value changedd';
-            }
-            return false;
-        }
-
-        for (let key in obj1) {
-            if (key in skipKeys) continue;
-            let oldp: any = obj2[key];
-            let newp: any = obj1[key];
-            if (oldp === newp) continue;
-            // from here below: on which cases obj1 !== obj2, but they can still be "equal"? only if function, array, object.
-            let told = typeof oldp;
-            if (told !== typeof newp) {
-                if (out) out.reason = '['+key+']: different types '+ told + '!=' + typeof newp;
-                return false;
-            }
-            switch (told) {
-                default: return false;
-                case "function": if (newp.toString() === oldp.toString()) break; else {
-                    if (out) out.reason = '['+key+']: function body changed';
-                    return false;
+                // primitive with different values
+                if (out) {
+                    if (undefined === tobj1) out.reason = 'primitive value newly introduced';
+                    else if (undefined === tobj2) out.reason = 'primitive value got deleted';
+                    else out.reason = 'primitive value changedd';
                 }
-                case "object":
-                    if (Array.isArray(newp)) {
-                        if (!Array.isArray(oldp)) {
-                            if (out) out.reason = '['+key+']: old is array, but new isn\'t';
-                            return false;
-                        }
-                        if (newp.length !== oldp.length) {
-                            if (out) out.reason = '['+key+']: array different lenghts '+oldp.length +' != '+newp.length;
-                            return false;
-                        }
-                        //todo array check, move the whole comparison func in U and do
-                        if (depth !== maxDepth) {
-                            for (let i = 0; i < newp.length; i++) if(!U.isShallowEqualWithProxies(newp[i], oldp[i], depth + 1, maxDepth, skipKeys, out)) {
-                                if (out) out.reason = '['+key+']['+i+']'+out.reason;
-                                return false;
-                            }
-                        } // else return retIfMaxDepthReached;
-                        break;
-                    }
-                    // for proxies and DObjects
-                    if (newp.clonedCounter !== undefined && newp.clonedCounter !== oldp.clonedCounter) {
-                        if (out) out.reason = '['+key+']: clonedCounter difference ' +oldp.clonedCounter+ ' != '+newp.clonedCounter;
+                return false;
+
+            case "function":
+                if (obj1.toString() === obj2.toString()) break;
+                if (out) out.reason = 'function body changed';
+                return false;
+
+            case "object":
+                let o1Raw = obj1.__raw;
+                let o2Raw = obj2.__raw;
+                if (o1Raw) {
+                    if (!o2Raw) {
+                        if (out) out.reason = o1Raw.className + 'replaced by another object type:' + o2Raw?.className;
                         return false;
                     }
-                    // for raw objects made from declarationUsages
-                    if (depth !== maxDepth && !U.isShallowEqualWithProxies(newp, oldp, depth + 1, maxDepth, skipKeys, out)) {
+                    obj1 = o1Raw;
+                    obj2 = o2Raw;
+                }
+                // for proxies and DObjects
+                if (obj1.clonedCounter !== undefined && obj2.clonedCounter !== obj1.clonedCounter) {
+                    if (out) out.reason = 'clonedCounter difference ' + obj1.clonedCounter+ ' != ' + obj2.clonedCounter;
+                    return false;
+                }/*
+                if (obj1.className !== obj2.className) {
+                 removed: too unlikely to happen that a DObject is raplaced in the same path with another type of DObject with same clonedCounter
+                 nd it's checked anyway in for(let key in obj1)
+                    if (out) out.reason = o1Raw.className + 'replaced by another object type:' + o2Raw?.className;
+                    return false;
+                }*/
+                if (Array.isArray(obj1)) {
+                    if (obj1.length !== obj2.length) {
+                        if (out) out.reason = 'array length different: ' + obj1.length + " !== " + obj2.length;
+                        return false;
+                    }
+                    if (!Array.isArray(obj2)){
+                        if (out) out.reason = 'array became an object';
+                        return false;
+                    }
+                }
+                if (depth > maxDepth) {
+                    // to debug and see where is too deep, make returnIfMaxDepth = false, so the path is displayed in out.reason
+                    if (out) out.reason = 'max depth reached, assumed ' + returnIfMaxDepth;
+                    return returnIfMaxDepth;
+                }
+                for (let key in obj1) {
+                    if (key in skipKeys) continue;
+                    let oldp: any = obj2[key];
+                    let newp: any = obj1[key];
+                    if (oldp === newp) continue;
+                    if (!U.isShallowEqualWithProxies(newp, oldp, skipKeys, out, depth +1, maxDepth, returnIfMaxDepth)) {
                         if (out) out.reason = '['+key+']'+out.reason;
                         return false;
                     }
-                    // else retIfMaxDepthReached; split the above if
-            }
+                }
+                // just check for keys that were in props and are not in nextProps
+                for (let key in obj2) {
+                    if ((key in skipKeys) || (key in obj1)) continue;
+                    if (out) out.reason = "deleted subobject property: " + key;
+                    return false;
+                }
+            // else retIfMaxDepthReached; split the above if
         }
-        // just check for keys that were in props and are not in nextProps
-        for (let key in obj2) {
-            if ((key in skipKeys) || (key in obj1)) continue;
-            if (out) out.reason = "deleted subobject property: " + key;
-            return false;
-        }
+
+
+
         return true;
     }
 
