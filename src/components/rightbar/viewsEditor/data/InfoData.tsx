@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {DViewPoint, Input, LViewElement, LViewPoint, Select, SetFieldAction} from '../../../../joiner';
+import {Defaults, DViewPoint, Input, LViewElement, LViewPoint, Select, SetFieldAction} from '../../../../joiner';
 import {OclEditor} from '../../oclEditor/OclEditor';
 import {Edges, Fields, GraphElements, Graphs, Vertexes} from "../../../../joiner/components";
 
@@ -21,6 +21,9 @@ function InfoData(props: Props) {
 
     return(<section className={'p-3'}>
         <Input data={view} field={'name'} label={'Name'} type={'text'} readonly={readOnly}/>
+        <Input data={view} field={'isExclusiveView'} label={'is Decorator'} type={"checkbox"} readonly={readOnly || Defaults.check(view.id)}
+               setter={(val) => { console.log("setting vex", {view, vex: view.isExclusiveView, val, nval:!val}); view.isExclusiveView = !val}}
+               getter={(data) => !(data as LViewElement).isExclusiveView}/>
         <Input data={view} field={'explicitApplicationPriority'} label={'Priority'} type={'number'} readonly={readOnly}/>
         {/*
         <Select data={view} field={'appliableTo'} label={'Appliable to node types'} readonly={readOnly} options={<optgroup label={'Appliable Types'}>
@@ -38,11 +41,11 @@ function InfoData(props: Props) {
                 <optgroup label={'Edge'} key={1}>{
                     Object.keys(Edges).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
                 }</optgroup>
-                <optgroup label={'Vertex'} key={2}>{
-                    Object.keys(Vertexes).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
-                }</optgroup>
                 <optgroup label={'Field'} key={3}>{
                     Object.keys(Fields).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
+                }</optgroup>
+                <optgroup label={'Vertex'} key={2}>{
+                    Object.keys(Vertexes).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
                 }</optgroup>
             </>
         } setter={(data, key, val) => { view.forceNodeType = val === 'unset' ? undefined : val; }}

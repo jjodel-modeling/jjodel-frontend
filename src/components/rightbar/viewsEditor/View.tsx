@@ -8,7 +8,7 @@ import EdgeData from './data/EdgeData';
 import EdgePointData from './data/EdgePointData';
 import {DockLayout} from 'rc-dock';
 import {LayoutData} from 'rc-dock/lib/DockData';
-import CustomData from './data/CustomData';
+import EventsData from './data/CustomData';
 import SubViewsData from './data/SubViewsData';
 import {FakeStateProps} from "../../../joiner/types";
 import {connect} from "react-redux";
@@ -29,11 +29,11 @@ function ViewDataComponent(props: AllProps) {
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     let i = 1;
     const tabs = [
-        {id: ''+i++, title: 'Info', group: '1', closable: false, content: <InfoData view={view} viewpoints={viewpoints} readonly={readOnly} />},
+        {id: ''+i++, title: 'Overview', group: '1', closable: false, content: <InfoData view={view} viewpoints={viewpoints} readonly={readOnly} />},
         {id: ''+i++, title: 'Template', group: '1', closable: false, content: <TemplateData view={view} readonly={readOnly} />},
-        {id: ''+i++, title: 'Custom Data', group: '1', closable: false, content: <CustomData viewID={view.id} readonly={readOnly} />},
         {id: ''+i++, title: 'Palette/Css', group: '1', closable: false, content: <PaletteData viewID={view.id} readonly={readOnly} />},
-        {id: ''+i++, title: 'Node', group: '1', closable: false, content: <NodeData view={view} readonly={readOnly} />},
+        {id: ''+i++, title: 'Events', group: '1', closable: false, content: <EventsData viewID={view.id} readonly={readOnly} />},
+        {id: ''+i++, title: 'Node behaviour', group: '1', closable: false, content: <NodeData view={view} readonly={readOnly} />},
     ];
     if(view.appliableTo === 'edge') tabs.push(
         {id: ''+i++, title: 'Edge', group: '1', closable: false, content: <EdgeData view={view} readonly={readOnly} />}

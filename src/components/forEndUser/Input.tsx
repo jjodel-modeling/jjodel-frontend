@@ -1,7 +1,7 @@
 import React, {Dispatch, KeyboardEvent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
-import {Defaults, DPointerTargetable, GObject, Keystrokes, LPointerTargetable, Overlap, Pointer} from '../../joiner';
+import {Defaults, DPointerTargetable, GObject, Keystrokes, LPointerTargetable, Overlap, Pointer, U} from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './style.scss';
 
@@ -100,6 +100,15 @@ function InputComponent(props: AllProps) {
     delete otherprops.children;
     delete otherprops.autosize; // because react complains is bool in dom attribute or unknown attrib name
 
+    let checked: boolean | undefined = undefined;
+    if (isBoolean) checked = typeof value === "boolean" ? value : (typeof value === "string" ? U.fromBoolString(value) : !!value);
+
+    let cursor: string;
+    if (tooltip) cursor = 'help';
+    else if (readOnly) cursor = 'not-allowed';
+    else if (isBoolean) cursor = 'pointer';
+    else cursor = 'auto';
+
     let input = <input {...otherprops}
                        key={`${field}.${data.id}`}
                        className={props.inputClassName || css}
@@ -107,10 +116,10 @@ function InputComponent(props: AllProps) {
                        spellCheck={false}
                        readOnly={readOnly}
                        type={type} value={value} onChange={change} onBlur={blur} onKeyDown={keyDown}
-                       checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
+                       checked={checked} />
 
     return(<label className={'p-1'} {...otherprops}
-                  style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor: tooltip ? 'help' : (isBoolean ? 'pointer' : 'auto'), ...((props as any).style || {})}}>
+                  style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor, ...((props as any).style || {})}}>
 
         {label && <span className={'my-auto'} onMouseEnter={e => setShowTooltip(true)}
                          onMouseLeave={e => setShowTooltip(false)}>{label}
@@ -136,7 +145,7 @@ InputComponent.cname = 'InputComponent';
 export interface InputOwnProps {
     data: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
-    getter?: (data: LPointerTargetable) => string;
+    getter?: (data: GObject<LPointerTargetable>) => string | boolean;
     setter?: (value: string|boolean) => void;
     label?: string;
     jsxLabel?: ReactNode;

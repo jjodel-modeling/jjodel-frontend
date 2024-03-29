@@ -3,6 +3,7 @@ import {
     Constructors,
     CoordinateMode,
     Debug,
+    Defaults,
     DGraphElement,
     Dictionary,
     DModelElement,
@@ -173,7 +174,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__isExclusiveView: Info = {isGlobal:true, type: ShortAttribETypes.EBoolean, txt:<div>If not exclusive, the view is meant to add a functional outline of tools to a primary View, or css.
     <br/>A non-exclusive view cannot be applied alone and needs an exclusive view to render the main graphical content.</div>};
     get_isExclusiveView(c: Context): this["isExclusiveView"] { return c.data.isExclusiveView; }
-    set_isExclusiveView(val: this["isExclusiveView"], c: Context): boolean { return SetFieldAction.new(c.data, "isExclusiveView", !!val, '', false); }
+    set_isExclusiveView(val: this["isExclusiveView"], c: Context): boolean {
+        if (Defaults.check(c.data.id)) return true; // cannot delete or "demote" to decorations the main views, to make sure there is always at least 1 appliable view.
+        return SetFieldAction.new(c.data, "isExclusiveView", !!val, '', false);
+    }
 
     constants?: string;
     __info_of__constants: Info = {todo:true, isGlobal: true, type: "Function():Object", label:"constants declaration",

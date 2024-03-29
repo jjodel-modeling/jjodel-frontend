@@ -56,7 +56,6 @@ function PaletteDataComponent(props: AllProps) {
     }
     const cssIsGlobal = view.cssIsGlobal;
     return(<section className={'p-3'}>
-        <Input data={view} field={'isExclusiveView'} type={"checkbox"} />
         {Object.entries(palette).map((entry, index, entries)=>{
             let prefix = entry[0];
             let colors = entry[1];
