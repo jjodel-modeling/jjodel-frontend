@@ -177,14 +177,15 @@ class DefaultView {
     public static model(): string { return (
 `<div className={'root'}>
     {!data && "Model data missing."}
-    <div className="edges" style={{zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}>{[
-            refEdges.map(se=> <Edge start={se.start.father.node} end={se.end.node} view={"Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association")} key={se.start.node.id+"~"+se.end.node.id}/>)
-            , extendEdges.map(se=><Edge start={se.start} end={se.end} view={"Pointer_ViewEdgeInheritance"} key={"EXT_"+se.start.node.id+"~"+se.end.node.id}/>)]
-        }
+    <div className={'edges'}>
+        {[
+            refEdges.map(se => <Edge start={se.start.father.node} end={se.end.node} view={'Pointer_ViewEdge' + ( se.start.containment && 'Composition' || 'Association')} key={'REF_' + se.start.node.id + '~' + se.end.node.id} />), 
+            extendEdges.map(se => <Edge start={se.start} end={se.end} view={'Pointer_ViewEdgeInheritance'} key={'EXT_' + se.start.node.id + '~' + se.end.node.id} />)
+        ]}
     </div>
     {otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
     {firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
-    {m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object}></DefaultNode>)}
+    {m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object} />)}
     {decorators}
 </div>`
 );}
@@ -198,9 +199,9 @@ class DefaultView {
 );}
 
     public static package(): string { return (
-`<div className={'round root bg-white package'}>
+`<div className={'root package'}>
     <div className={'package-children'}>
-        { data.children.map(c => <DefaultNode key={c.id} data={c} />) }
+        {data.children.map(c => <DefaultNode key={c.id} data={c} />) }
     </div>
     {decorators}
 </div>`
@@ -209,53 +210,53 @@ class DefaultView {
     public static defaultPackage(): string { return (
 `<div className={'root'}>
     <div className={'package-children'}>
-        { data.children.map(c => <DefaultNode key={c.id} data={c} />) }
+        {data.children.map(c => <DefaultNode key={c.id} data={c} />)}
     </div>
     {decorators}
 </div>`
 );}
 
     public static class(): string { return (
-`<div className={'round root class'} style={{background: 'var(--background-1)', color:'var(--color-2)'}}>
+`<div className={'root class'}>
     <Input jsxLabel={<b className={'class-name'}>EClass:</b>} data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
-    <div className={'class-children'}>{ data.attributes.map(c => <DefaultNode key={c.id} data={c} />) }</div>
-    <div className={'class-children'}>{ data.references.map(c => <DefaultNode key={c.id} data={c} />) }</div>
-    <div className={'class-children'}>{ data.operations.map(c => <DefaultNode key={c.id} data={c} />) }</div>
+    <div className={'class-children'}>
+        {data.attributes.map(c => <DefaultNode key={c.id} data={c} />)}
+        {data.references.map(c => <DefaultNode key={c.id} data={c} />)}
+        {data.operations.map(c => <DefaultNode key={c.id} data={c} />)}
+    </div>
     {decorators}
 </div>`
 );}
 
     public static enum(): string { return (
-`<div className={'round bg-white root enumerator'}>
-    <Input jsxLabel={<b className={'my-auto enumerator-name'}>EEnum:</b>} data={data} field={'name'} hidden={true} autosize={true} />
+`<div className={'root enumerator'}>
+    <Input jsxLabel={<b className={'enumerator-name'}>EEnum:</b>} data={data} field={'name'} hidden={true} autosize={true} />
     <hr />
     <div className={'enumerator-children'}>
-        { data.children.map(c => <DefaultNode key={c.id} data={c}/>) }
+        {data.children.map(c => <DefaultNode key={c.id} data={c}/>)}
     </div>
     {decorators}
 </div>`
 );}
 
     public static feature(): string { return (
-`<div className={'w-100 root feature'} style={{background: 'var(--background-2)', color:'var(--color-2)'}}>
+`<div className={'root w-100 feature'}>
     <Select className={'p-1 d-flex'} data={data} field={'type'} label={data.name} />
     {decorators}
-    {console.log("trying inject jsx", {decorators, otherViews}) && false }
-    {console.log("trying inject jsx 2", {parsed:<div>test</div>}) && false }
 </div>`
 );}
 
     public static literal(): string { return (
-`<label className={'d-block text-center root literal'}>
+`<label className={'root d-block text-center'}>
     {data.name}
     {decorators}
 </label>`
 );}
 
     public static operation(): string { return (
-`<div className={'w-100'}>
-    <Select className={'p-1 root operation d-flex'} data={data} field={'type'} label={data.name + ' () => '} />
+`<div className={'root w-100'}>
+    <Select className={'p-1 d-flex'} data={data} field={'type'} label={data.name + ' () => '} />
     {decorators}
 </div>`
 );}
@@ -278,7 +279,7 @@ class DefaultView {
     public static objectOld(): string { return (
 `<div className={'round bg-white root class'}>
     <label className={'ms-1'}>
-        <Input jsxLabel={<b className={'my-auto class-name'}>{data.instanceof ? data.instanceof.name : "Object"}:</b>} 
+        <Input jsxLabel={<b className={'object-name'}>{data.instanceof ? data.instanceof.name : "Object"}:</b>} 
            data={data} field={'name'} hidden={true} autosize={true}/>
     </label>
     <hr />
@@ -290,24 +291,21 @@ class DefaultView {
 }
 
     public static object(): string { return (
-`<div className={'round bg-white root class'}>
-    <label className={'ms-1'}>
-        <Input jsxLabel={<b className={'my-auto class-name'}>{metaclassName}:</b>} 
-           data={data} field={'name'} hidden={true} autosize={true} />
-    </label>
-    <hr />
+`<div className={'root object'}>
+    <Input jsxLabel={<b className={'object-name'}>EObject:</b>} data={data} field={'name'} hidden={true} autosize={true} />
+    <hr/>
     <div className={'object-children'}>
-        { features.map(c => <DefaultNode key={c.id} data={c} />) }
+        {features.map(f => <DefaultNode key={f.id} data={f} />)}
     </div>
     {decorators}
 </div>`
 );}
 
     public static value() { return (
-`<div className={'d-flex root value'} style={{paddingRight: "6px"}}>
+`<div className={'root d-flex value'}>
      {instanceofname && <label className={'d-block ms-1'}>{instanceofname}</label>}
      {!instanceofname && <Input asLabel={true} data={data} field={'name'} hidden={true} autosize={true} />}
-    <label className={'d-block m-auto'} style={{color: constants[typeString] || "gray"}}>
+    <label className={'d-block m-auto'} style={{color: constants[typeString] || 'gray'}}>
         : {valuesString}
     </label>
     {decorators}
