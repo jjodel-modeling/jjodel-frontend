@@ -67,7 +67,6 @@ export class Color {
 }
 @RuntimeAccessible('U')
 export class U {
-
     // damiano: eseguire una funzione costa in performance, anche se è brutto fare questi cast
     static wrapper<T>(obj: any): T {
         return obj as unknown as T;

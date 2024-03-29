@@ -28,7 +28,6 @@
     "http-proxy-middleware": "^2.0.6",
     "jquery": "^3.6.0",
     "jqueryui": "^1.11.1",
-    "js-beautify": "^1.14.7",
     "jsx-parser": "^1.0.8",
     "jsx-recast": "^0.1.1",
     "jsx-runtime": "^1.2.0",
@@ -106,8 +105,10 @@
   },
   "devDependencies": {
     "@types/jquery": "^3.5.5",
+    "@types/js-beautify": "^1.14.3",
     "dotenv-webpack": "^8.0.1",
     "gh-pages": "^4.0.0",
+    "js-beautify": "^1.15.1",
     "react-app-rewired": "^2.2.1",
     "ts-node": "^10.9.1"
   }

@@ -66,6 +66,7 @@ import {DV} from "../common/DV";
 //import {Selected} from "../joiner/types";
 import {DefaultEClasses, ShortDefaultEClasses} from "../common/U";
 import { GraphElements, Graphs, Vertexes, Edges, Fields } from '../joiner';
+import DefaultViews from "./defaults/views";
 
 console.warn('ts loading store');
 
@@ -223,86 +224,6 @@ export class DState extends DPointerTargetable{
 
 
 function makeDefaultGraphViews(vp: Pointer<DViewPoint>, validationVP: Pointer<DViewPoint>): DViewElement[] {
-    let modelView: DViewElement = DViewElement.new('Model', DV.modelView(), undefined, '',
-        '', '', [DModel.cname], '', 1, false, true, vp);
-    modelView.draggable = false; modelView.resizable = false;
-    modelView.oclCondition = 'context DModel inv: true';
-    modelView.usageDeclarations = "(ret)=>{\n" +
-        "// ** preparations and default behaviour here ** //\n" +
-        "//ret.data = data\n" +
-        "ret.node = node\n" +
-        "ret.view = view\n" +
-        "// custom preparations:\n" +
-        "let packages = data && data.isMetamodel ? data.packages : [];\n" +
-        "let suggestedEdges = data?.suggestedEdges || {};\n" +
-        "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
-        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
-        "// ** declarations here ** //\n" +
-        "ret.firstPackage = packages[0]\n"+
-        "ret.otherPackages = packages.slice(1)\n"+
-        "ret.m1Objects = data && !data.isMetamodel ? data.allSubObjects : []\n"+
-        "ret.refEdges = (suggestedEdges.reference || []).filter(e => !e.vertexOverlaps)\n"+
-        "ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps)\n"+
-        "}";
-
-    let packageView: DViewElement = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname], '', 1, false, true, vp);
-    packageView.defaultVSize = packageDefaultSize;
-    packageView.oclCondition = `context DPackage inv: true`;
-
-/*
-    const defaultPackage: DViewElement = DViewElement.new('DefaultPackage', DV.defaultPackage(), undefined, '', '', '', [], '', 1, false);
-    defaultPackage.defaultVSize = new GraphSize(0, 0);
-    defaultPackage.explicitApplicationPriority = 2;
-    defaultPackage.oclCondition = `context DPackage inv: self.name = 'default'`;
-    defaultPackage.draggable = false; defaultPackage.resizable = false;*/
-
-    let classView: DViewElement = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.cname], '', 1, false, true, vp);
-    classView.adaptWidth = true; classView.adaptHeight = true;
-    classView.oclCondition = 'context DClass inv: true';
-    classView.palette = {
-        "color-": [
-            "#ff0000",
-            "#000000",
-            "#ffffff",
-        ],
-        "background-": [
-            "#ffffff",
-            "#eeeeee",
-            "#ff0000"
-        ]
-    };
-
-    let enumView: DViewElement = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.cname], '', 1, false, true, vp);
-    enumView.adaptWidth = true; enumView.adaptHeight = true;
-    enumView.oclCondition = 'context DEnumerator inv: true';
-
-    let attributeView: DViewElement = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.cname], '', 1, false, true, vp);
-    attributeView.oclCondition = 'context DAttribute inv: true';
-    // attributeView.palette = classView.palette;
-
-    let referenceView: DViewElement = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.cname], '', 1, false, true, vp);
-    referenceView.oclCondition = 'context DReference inv: true';
-
-    let operationView: DViewElement = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.cname], '', 1, false, true, vp);
-    operationView.oclCondition = 'context DOperation inv: true';
-
-    let literalView: DViewElement = DViewElement.new('Literal', DV.literalView(), undefined, '', '', '', [DEnumLiteral.cname], '', 1, false, true, vp);
-    literalView.oclCondition = 'context DEnumLiteral inv: true';
-
-    let objectView: DViewElement = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.cname], '', 1, false, true, vp);
-    objectView.adaptWidth = true; objectView.adaptHeight = true;
-    objectView.oclCondition = 'context DObject inv: true';
-    objectView.usageDeclarations = "(ret)=>{\n" +
-        "// ** preparations and default behaviour here ** //\n" +
-        "ret.data = data\n" +
-        "ret.node = node\n" +
-        "ret.view = view\n" +
-        "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
-        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
-        "// ** declarations here ** //\n" +
-        "ret.metaclassName = data.instanceof?.name || \"Object\"\n" +
-        "ret.features = data.features\n" +
-        "}";
 
     let errorOverlayView_old: DViewElement = DViewElement.new2('Semantic error view old', DV.semanticErrorOverlay_old(), (v) => {
         v.appliableToClasses = [DAttribute.cname]; // [DValue.cname];
@@ -421,22 +342,7 @@ node.state.errors = {...node.state.errors, naming: err};
     valuecolormap[ShortAttribETypes.EString] = "green";
     valuecolormap[ShortAttribETypes.EChar] = "green";
     valuecolormap[ShortAttribETypes.EVoid] = "gray";
-    let valueView: DViewElement = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname], '', 1, false, true, vp);
-    valueView.oclCondition = 'context DValue inv: true';
 
-    valueView.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
-        "// ** preparations and default behaviour here ** //\n" +
-        "// ret.data = data // object does not need it because it displays only: features (listed individually) and name input being a subcomponent\n" +
-        "ret.node = node\n" +
-        "ret.view = view\n" +
-        "// todo: put only first N values as dependency and show only those.\n" +
-        "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
-        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
-        "// ** declarations here ** //\n" +
-        "ret.instanceofname = data.instanceof?.name\n" +
-        "ret.valuesString = data.valuesString()\n" +
-        "ret.typeString = data.typeString\n" +
-        "}";
 
     let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [], '', 0, false, true, vp);
     // voidView.appliableToClasses=["VoidVertex"];
@@ -514,9 +420,9 @@ node.state.errors = {...node.state.errors, naming: err};
     }*/
     // nb: Error is not a view, just jsx. transform it in a view so users can edit it
 
-    return [modelView, packageView, //defaultPackage,
-        classView, enumView, attributeView, referenceView, operationView,
-        literalView, objectView, valueView, voidView, ...edgeViews, edgePointView,
+    return [DefaultViews.model(vp), DefaultViews.package(vp), DefaultViews.class(vp), DefaultViews.enum(vp),
+        DefaultViews.attribute(vp), DefaultViews.reference(vp), DefaultViews.operation(vp),
+        DefaultViews.literal(vp), DefaultViews.object(vp), DefaultViews.value(vp), voidView, ...edgeViews, edgePointView,
         errorOverlayView, errorCheckLowerbound, errorCheckName
     ];
 }
