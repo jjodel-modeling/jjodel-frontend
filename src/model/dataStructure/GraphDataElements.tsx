@@ -197,7 +197,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return ret;*/
     }
 
-    protected _defaultSetter(v: any, c: Context, k: keyof Context["data"]): any { return this.__defaultSetter(v, c, k); }
+    protected _defaultSetter(v: any, c: Context, k: keyof Context["data"]): true { this.__defaultSetter(v, c, k); return true; }
 
     get_graphAncestors(c: Context): LGraph[] {
         let current = c.proxyObject;

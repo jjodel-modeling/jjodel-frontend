@@ -1556,7 +1556,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return v && Pointers.isPointer(v as any) ? LPointerTargetable.fromPointer(v) : v;
     }
 
-    protected __defaultSetter(v: any, c: Context, k: keyof Context["data"]): any {
+    protected __defaultSetter(v: any, c: Context, k: keyof Context["data"]): boolean {
         console.log("default Setter");
         if (true || k in c.data) {
             // check if is pointer
