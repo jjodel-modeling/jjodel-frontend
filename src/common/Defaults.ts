@@ -1,6 +1,6 @@
 import {Pointer, DViewElement, DViewPoint, Dictionary, U, RuntimeAccessible} from '../joiner';
 @RuntimeAccessible('Defaults')
-export class Defaults {
+export class Defaults { /// TODO: this really needs to become dynamically generated, after view creations.
     static cname: string = 'Defaults';
     static views: Pointer<DViewElement>[] = [
         'Pointer_ViewModel',
