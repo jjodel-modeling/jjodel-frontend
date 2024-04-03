@@ -64,7 +64,7 @@ function InfoData(props: Props) {
         </div>
         <OclEditor viewid={view.id} readonly={readOnly} />
         <span>OCL engine by Stephan Köninger, <a href={"https://ocl.stekoe.de/#examples"}>Supported instructions</a></span>
-        <JsEditor viewid={view.id} readonly={readOnly} />
+        <JsEditor viewid={view.id} readonly={readOnly} placeHolder={'/* Last Line should be the return (boolean) */\n'} />
     </section>);
 }
 

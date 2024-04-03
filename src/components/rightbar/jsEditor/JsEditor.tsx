@@ -17,18 +17,21 @@ function JsEditorComponent(props: AllProps) {
 
     return <section>
         <label className={'ms-1 mb-1'}>JS Editor</label>
+        {/* todo (Giordano): Info Button */}
         <div className={'monaco-editor-wrapper'} style={{
             minHeight: '20px', height:'200px'/*there is a bug of height 100% on childrens not working if parent have only minHeight*/,
             resize: 'vertical', overflow:'hidden'}} tabIndex={-1} onBlur={blur}>
             <Editor className={'mx-1'} onChange={change}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                    defaultLanguage={'js'} value={view.jsCondition} />
+                    defaultLanguage={'js'} value={view.jsCondition || props.placeHolder || ''} />
         </div>
     </section>;
 }
 interface OwnProps {
     readonly?: boolean;
-    viewid: Pointer<DViewElement, 1, 1, LViewElement>; }
+    viewid: Pointer<DViewElement, 1, 1, LViewElement>;
+    placeHolder?: string;
+}
 interface StateProps { view: LViewElement }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;

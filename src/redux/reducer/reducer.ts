@@ -466,16 +466,20 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     for (const vid of ret.VIEWS_RECOMPILE_jsCondition) {
         const dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
         if (!dv.jsCondition) continue;
+        const tv = transientProperties.view[vid];
         try {
-            const state = oldState; // User can write state instead oldState
-            const pointers: Pointers[] = eval(dv.jsCondition) || [];
-            console.log('JS Condition matches', pointers)
+            const lines = dv.jsCondition.trim().split('\n');
+            let lastLine = lines[lines.length - 1];
+            if(lastLine.indexOf('return') !== 0)
+                lines[lines.length - 1] = `return (${lastLine})`;
+            const fx = `() => {${lines.join('\n')}}`;
+            console.log('FX', fx);
+            tv.jsCondition = eval(fx);
+            console.log('JS Condition parsed', tv)
         } catch (e) {
-            const pointers: Pointers[] = [];
-            console.log('JS Condition matches error', e);
+            tv.jsCondition = undefined;
+            console.log('JS Condition parsed error', e);
         }
-        ret.VIEWS_RECOMPILE_jsxString.push(vid);
-        for (let k of DViewElement.MeasurableKeys) (ret as any)['VIEWS_RECOMPILE_' + k].push(vid);
     }
     ret.VIEWS_RECOMPILE_jsCondition = [];
 
