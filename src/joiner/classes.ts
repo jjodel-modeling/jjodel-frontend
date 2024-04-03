@@ -2687,6 +2687,7 @@ type ViewTransientProperties = {
     constantsList: string[];
     UDList: string[];
     constants: GObject;
+    jsCondition: undefined | ((context:GObject) => boolean);
     onDataUpdate: undefined | ((context:GObject)=>void);
     onDragStart: undefined | ((context:GObject)=>void);
     onDragEnd: undefined | ((context:GObject)=>void);

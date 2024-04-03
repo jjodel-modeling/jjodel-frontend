@@ -30,7 +30,6 @@ import {
     Pointer,
     Pointers,
     RuntimeAccessibleClass,
-    Selectors,
     SetFieldAction,
     SetRootFieldAction,
     statehistory
@@ -39,7 +38,7 @@ import React from "react";
 import {LoadAction, RedoAction, UndoAction} from "../action/action";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {SimpleTree} from "../../common/SimpleTree";
-import {transientProperties} from "../../joiner/classes";
+import {transientProperties, Selectors} from "../../joiner";
 import {OclEngine} from "@stekoe/ocl.js";
 import { contextFixedKeys } from '../../graph/graphElement/sharedTypes/sharedTypes';
 
@@ -462,6 +461,27 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         for (let k of DViewElement.MeasurableKeys) (ret as any)['VIEWS_RECOMPILE_'+k].push(vid);
     }
     ret.VIEWS_RECOMPILE_usageDeclarations = [];
+
+    /* JS CONDITION */
+    for (const vid of ret.VIEWS_RECOMPILE_jsCondition) {
+        const dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
+        if (!dv.jsCondition) continue;
+        const tv = transientProperties.view[vid];
+        try {
+            const lines = dv.jsCondition.trim().split('\n');
+            let lastLine = lines[lines.length - 1];
+            if(lastLine.indexOf('return') !== 0)
+                lines[lines.length - 1] = `return (${lastLine})`;
+            const fx = `() => {${lines.join('\n')}}`;
+            console.log('FX', fx);
+            tv.jsCondition = eval(fx);
+            console.log('JS Condition parsed', tv)
+        } catch (e) {
+            tv.jsCondition = undefined;
+            console.log('JS Condition parsed error', e);
+        }
+    }
+    ret.VIEWS_RECOMPILE_jsCondition = [];
 
     for (const vid of ret.VIEWS_RECOMPILE_jsxString) { // compiled in func, but NOT executed, result varies between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);

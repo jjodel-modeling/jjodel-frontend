@@ -1,7 +1,8 @@
-import React, {Component} from 'react';
-import {Defaults, DViewPoint, Input, LViewElement, LViewPoint, Select, SetFieldAction} from '../../../../joiner';
+import React from 'react';
+import {Defaults, DViewPoint, Input, LViewElement, LViewPoint, Select} from '../../../../joiner';
 import {OclEditor} from '../../oclEditor/OclEditor';
 import {Edges, Fields, GraphElements, Graphs, Vertexes} from "../../../../joiner/components";
+import JsEditor from "../../jsEditor/JsEditor";
 
 interface Props {view: LViewElement, viewpoints: LViewPoint[], readonly: boolean}
 
@@ -23,7 +24,7 @@ function InfoData(props: Props) {
         <Input data={view} field={'name'} label={'Name'} type={'text'} readonly={readOnly}/>
         <Input data={view} field={'isExclusiveView'} label={'is Decorator'} type={"checkbox"} readonly={readOnly || Defaults.check(view.id)}
                setter={(val) => { console.log("setting vex", {view, vex: view.isExclusiveView, val, nval:!val}); view.isExclusiveView = !val}}
-               getter={(data) => !(data as LViewElement).isExclusiveView}/>
+               getter={(data) => !(data as LViewElement).isExclusiveView as any}/>
         <Input data={view} field={'explicitApplicationPriority'} label={'Priority'} type={'number'} readonly={readOnly}/>
         {/*
         <Select data={view} field={'appliableTo'} label={'Appliable to node types'} readonly={readOnly} options={<optgroup label={'Appliable Types'}>
@@ -63,6 +64,7 @@ function InfoData(props: Props) {
         </div>
         <OclEditor viewid={view.id} readonly={readOnly} />
         <span>OCL engine by Stephan Köninger, <a href={"https://ocl.stekoe.de/#examples"}>Supported instructions</a></span>
+        <JsEditor viewid={view.id} readonly={readOnly} placeHolder={'/* Last Line should be the return (boolean) */\n'} />
     </section>);
 }
 
