@@ -30,7 +30,6 @@ import {
     Pointer,
     Pointers,
     RuntimeAccessibleClass,
-    Selectors,
     SetFieldAction,
     SetRootFieldAction,
     statehistory
@@ -39,7 +38,7 @@ import React from "react";
 import {LoadAction, RedoAction, UndoAction} from "../action/action";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {SimpleTree} from "../../common/SimpleTree";
-import {transientProperties} from "../../joiner/classes";
+import {transientProperties, Selectors} from "../../joiner";
 import {OclEngine} from "@stekoe/ocl.js";
 import { contextFixedKeys } from '../../graph/graphElement/sharedTypes/sharedTypes';
 
@@ -462,6 +461,23 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         for (let k of DViewElement.MeasurableKeys) (ret as any)['VIEWS_RECOMPILE_'+k].push(vid);
     }
     ret.VIEWS_RECOMPILE_usageDeclarations = [];
+
+    /* JS CONDITION */
+    for (const vid of ret.VIEWS_RECOMPILE_jsCondition) {
+        const dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
+        if (!dv.jsCondition) continue;
+        try {
+            const state = oldState; // User can write state instead oldState
+            const pointers: Pointers[] = eval(dv.jsCondition) || [];
+            console.log('JS Condition matches', pointers)
+        } catch (e) {
+            const pointers: Pointers[] = [];
+            console.log('JS Condition matches error', e);
+        }
+        ret.VIEWS_RECOMPILE_jsxString.push(vid);
+        for (let k of DViewElement.MeasurableKeys) (ret as any)['VIEWS_RECOMPILE_' + k].push(vid);
+    }
+    ret.VIEWS_RECOMPILE_jsCondition = [];
 
     for (const vid of ret.VIEWS_RECOMPILE_jsxString) { // compiled in func, but NOT executed, result varies between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);

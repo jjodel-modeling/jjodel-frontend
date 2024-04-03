@@ -1,7 +1,8 @@
 import React, {Component} from 'react';
-import {DViewPoint, Input, LViewElement, LViewPoint, Select, SetFieldAction} from '../../../../joiner';
+import {DViewPoint, Input, LViewElement, LViewPoint, Select, SetFieldAction, TextArea} from '../../../../joiner';
 import {OclEditor} from '../../oclEditor/OclEditor';
 import {Edges, Fields, GraphElements, Graphs, Vertexes} from "../../../../joiner/components";
+import JsEditor from "../../jsEditor/JsEditor";
 
 interface Props {view: LViewElement, viewpoints: LViewPoint[], readonly: boolean}
 
@@ -60,6 +61,7 @@ function InfoData(props: Props) {
         </div>
         <OclEditor viewid={view.id} readonly={readOnly} />
         <span>OCL engine by Stephan Köninger, <a href={"https://ocl.stekoe.de/#examples"}>Supported instructions</a></span>
+        <JsEditor viewid={view.id} readonly={readOnly} />
     </section>);
 }
 
