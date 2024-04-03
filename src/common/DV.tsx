@@ -218,6 +218,11 @@ class DefaultView {
 
     public static class(): string { return (
 `<div className={'root class'}>
+{()=>{
+    let a: IPoint = 0;
+    a.
+    return 1;
+}}
     <Input jsxLabel={<b className={'class-name'}>EClass:</b>} data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
     <div className={'class-children'}>

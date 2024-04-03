@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "outDir": "./src/static/tsc_output",
     "experimentalDecorators": true,
     "target": "es5",
     "lib": [
@@ -19,12 +20,15 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
     "jsx": "react-jsx",
-    "downlevelIteration": true
+    "downlevelIteration": true,
+    "noEmit": true
   },
   "include": [
     "src"
+  ],
+  "exclude": [
+    "common/libraries/*"
   ]
 }
 // "noImplicitUseStrict": true = "use strict" of js

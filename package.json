@@ -83,7 +83,14 @@
     "build-ssl": "react-scripts --openssl-legacy-provider build",
     "predeploy_old": "npm run build",
     "deploy_old": "gh-pages -d build",
-    "prebuild-rewired-local": "set PUBLIC_URL=/build/"
+    "prebuild-rewired-local": "set PUBLIC_URL=/build/",
+    "____________________________________tsc_____________________________": "",
+    "tsc_build": "tsc -p tsconfig.json --declaration --emitDeclarationOnly --outDir ./build/tsc_types/",
+    "tsc_public_uselessmaybe": "tsc -p tsconfig.json --declaration --emitDeclarationOnly --outDir ./public/tsc_types/",
+    "tsc_comment": "before running tsc commands, remove noEmit from tsconfig.json, but reenable it aftewards",
+    "cc": "for some weird reason non-built version (dev one with npm start) is using jodel-react/build instead of jodel-mde/build",
+    "tsc_list_paste_in_terminal": ".\\tsc_list.ps1 build\\tsc_types\\*.d.ts > ./build/tsc_types/list.txt",
+    "c":""
   },
   "eslintConfig": {
     "extends": [

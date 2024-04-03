@@ -1163,8 +1163,11 @@ export class DGraphVertex extends DGraphElement { // MixOnlyFuncs(DGraph, DVerte
 }
 class LG extends LGraph{}
 class LV extends LVertex{}
+
+const Mixed = MixOnlyFuncs(LG, LV) as (typeof LG & typeof LV & typeof RuntimeAccessibleClass);
 @RuntimeAccessible('LGraphVertex')
-export class LGraphVertex<Context extends LogicContext<any> = any, D extends DGraphVertex = any> extends MixOnlyFuncs(LG, LV) { // MixOnlyFuncs(LGraph, LVertex)
+//@ts-ignore TS2510
+export class LGraphVertex<Context extends LogicContext<any> = any, D extends DGraphVertex = any> extends Mixed { // MixOnlyFuncs(LGraph, LVertex)
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     // static singleton: LGraphVertex;
