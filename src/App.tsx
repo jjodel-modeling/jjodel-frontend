@@ -25,6 +25,7 @@ import {useEffectOnce} from "usehooks-ts";
 import PersistanceApi from "./api/persistance";
 import CollaborativeAttacher from './components/collaborative/CollaborativeAttacher';
 import {StateMachine} from './examples/StateMachine';
+import ToolTip from "./components/tooltip/ToolTip";
 
 
 let userHasInteracted = false;
@@ -39,6 +40,7 @@ function firstInteraction(){
 function App(props: AllProps): JSX.Element {
     const debug = props.debug;
     const isLoading = props.isLoading;
+    const tooltip = props.tooltip;
     let user: LUser = props.user;
 
     console.log("app render", {u:DUser.current, o:DUser.offlineMode})
@@ -68,6 +70,7 @@ function App(props: AllProps): JSX.Element {
         return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? ' debug' : '')}
                     onClick={e => statehistory.globalcanundostate = true}>
             {isLoading && <Loader />}
+            {tooltip && <ToolTip />}
             <Navbar />
             <Helper />
             {(project) ? (project.type === 'collaborative' && !DUser.offlineMode) ? <CollaborativeAttacher project={project} /> : <Editor /> : <Dashboard />}
@@ -85,6 +88,7 @@ interface StateProps {
     offlineMode: boolean,
     debug: boolean,
     isLoading: boolean,
+    tooltip: string,
     user: LUser
 }
 interface DispatchProps {}
@@ -98,8 +102,8 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.user = LUser.fromPointer(DUser.current);
     // needed here as props, because apparently functional components are memoized by default.
     ret.offlineMode = DUser.offlineMode;
+    ret.tooltip = state.tooltip;
     console.log("app re mapstate", {u:DUser.current, o:DUser.offlineMode});
-
     return ret;
 }
 

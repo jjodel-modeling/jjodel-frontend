@@ -1,6 +1,7 @@
 import React, {ReactNode} from "react";
 import type {GObject, LModelElement} from "../../../joiner";
 import {
+    DAnnotation,
     DObject,
     DValue,
     Input,
@@ -11,7 +12,7 @@ import {
     LValue,
     Select, Selectors,
     SetFieldAction,
-    store
+    store, TextArea
 } from "../../../joiner";
 import Value from "./editors/Value";
 
@@ -44,6 +45,14 @@ export default class Structure {
             <Input key={`input.abstract.${lClass.id}`} data={lClass} field={"abstract"} label={"IsAbstract"} type={"checkbox"} tooltip={"If set to True, the generated implementation class will have the abstract keyword"} />
             <Input key={`input.interface.${lClass.id}`} data={lClass} field={"interface"} label={"IsInterface"} type={"checkbox"} tooltip={"If set to True, only the java interface will be generated. There will be no corresponding implementation class and no create method in the factory"} />
             <Input key={`input.partial.${lClass.id}`} data={lClass} field={"partial"} label={"IsPartial"} type={"checkbox"} tooltip={"If set to True, the class will be partial."} />
+            <button className={'btn btn-primary p-1'} onClick={e => {
+                const annotation = DAnnotation.new('Empty Annotation');
+                SetFieldAction.new(lClass.id, 'annotations', annotation.id, '+=', true);
+            }}>Add Annotation</button>
+            {lClass.annotations.map(a => <div className={'d-flex'} key={a.id}>
+                <TextArea data={a} field={'source'} />
+                <button className={'btn btn-danger'} onClick={e => a.delete()}>Delete</button>
+            </div>)}
         </>);
     }
     private static DataTypeEditor(lDataType: LModelElement): ReactNode {

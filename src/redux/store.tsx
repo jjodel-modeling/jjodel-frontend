@@ -184,6 +184,8 @@ export class DState extends DPointerTargetable{
     // DATAOCL_NEEDS_RECALCULATION: Pointer<DModelElement>[] = [];
     ClassNameChanged: Dictionary<Pointer<DModelElement>, DocString<"name">> = {};
 
+    tooltip: string = '';
+
 
     static init(store?: DState): void {
         BEGIN()
