@@ -178,6 +178,8 @@ export class DState extends DPointerTargetable{
 
     ClassNameChanged: Dictionary<Pointer<DModelElement>, DocString<"name">> = {}; // for ocl matchings by m2 class name: "context inv Human: ..."
 
+    tooltip: string = '';
+
 
     static init(store?: DState): void {
         BEGIN()

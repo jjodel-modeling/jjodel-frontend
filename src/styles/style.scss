@@ -18,6 +18,8 @@
 .autosize-input { flex-grow: 1; flex-basis: 10px; }
 .hidden-input { border: 1px solid transparent; background-color: transparent; }
 .hidden-input:focus { border: 1px dashed $border-color; }
+.w-fill { width: $fill; }
+.h-fill { height: $fill; }
 
 .autosize-input{
   // opacity:0;
