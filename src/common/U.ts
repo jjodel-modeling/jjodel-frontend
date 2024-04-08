@@ -971,9 +971,9 @@ export class U {
         // nb: mind that typeof [] === 'object'
         return typeof v === 'object'; }
 
-    static objectFromArrayValues(arr: (string | number)[]): Dictionary<string | number, boolean> {
+    static objectFromArrayValues<T extends any>(arr: (string | number)[], val: T = true as T): Dictionary<string | number, T> {
         // @ts-ignore
-        return arr.reduce((acc, val) => { acc[val] = true; return acc; }, {});
+        return arr.reduce((acc, val) => { acc[val] = val; return acc; }, {});
         /*let ret: Dictionary = {};
         for (let val of arr) { ret[val] = true; }
         return ret;*/

@@ -34,7 +34,7 @@ import {
     ShortAttribETypes,
     store,
     TRANSACTION,
-    U,
+    U, ViewEClassMatch,
     windoww
 } from "../../joiner";
 import { transientProperties } from "../../joiner/classes";
@@ -50,7 +50,7 @@ export class DViewElement extends DPointerTargetable {
         'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating'];
     public static RecompileKeys: string[] = ['onDataUpdate', 'onDragStart', 'onDragEnd', 'whileDragging', 'onResizeStart',
         'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating',
-        'constants', 'usageDeclarations', 'jsxString', 'oclCondition', 'jsCondition'];
+        'constants', 'usageDeclarations', 'jsxString', 'preconditions', 'jsCondition', 'ocl'];
 
     // inherited redefine
     // public __raw!: DViewElement;
@@ -80,7 +80,7 @@ export class DViewElement extends DPointerTargetable {
     storeTemporaryPositions: boolean = false; // if true updates vertex position every X millisecond while dragging, if false updates it once when the vertex is released.
     appliableToClasses!: string[]; // class names: DModel, DPackage, DAttribute...
     appliableTo!: 'node'|'edge'|'edgePoint';
-    subViews!: Pointer<DViewElement, 0, 'N', LViewElement>;
+    subViews!: Dictionary<Pointer<DViewElement>, number/* priority boost */>;
     allSubViews!: Pointer<DViewElement, 0, 'N', LViewElement>; // derivate attribute
     oclCondition!: string; // ocl selector
     jsCondition!: string; // js selector
@@ -169,6 +169,16 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             <br/>A non-exclusive view cannot be applied alone and needs an exclusive view to render the main graphical content.</div>};
     get_isOverlay(c: Context): this["isOverlay"] { return this.get_isExclusiveView(c); }
     set_isOverlay(val: this["isOverlay"], c: Context): boolean { return this.set_isExclusiveView(val, c); }
+
+
+
+    explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
+    __info_of__explicitApplicationPriority: Info = {isGlobal: true, type: ShortAttribETypes.EByte, label:"explicit priority",
+        txt: 'Application priority of view. If multiple views match an element, the highest priority will render the main jsx.' }
+    get_explicitApplicationPriority(c: Context): this["explicitApplicationPriority"] { return (c.data.jsCondition?.length || 1) + (c.data.oclCondition?.length || 1); }
+    set_explicitApplicationPriority(val: this["explicitApplicationPriority"] | undefined, c: Context): boolean {
+        return SetFieldAction.new(c.data, "explicitApplicationPriority", val as number, '', false);
+    }
 
     isExclusiveView!: boolean;
     __info_of__isExclusiveView: Info = {isGlobal:true, type: ShortAttribETypes.EBoolean, txt:<div>If not exclusive, the view is meant to add a functional outline of tools to a primary View, or css.
@@ -372,7 +382,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     allSubViews!: LViewElement[];
     __info_of__allSubViews: Info = {type: "ViewElement[]", txt: "recursively get this.subViews."}
     get_allSubViews(c: Context): this["allSubViews"] {
-        let arr: Pointer<DViewElement>[] = c.data.subViews;
+        let arr: Pointer<DViewElement>[] = Object.keys(c.data.subViews);
         let nextarr: Pointer<DViewElement>[] = [];
         let idmap: Dictionary<Pointer, DViewElement> = {};
         let s: DState = store.getState();
@@ -383,7 +393,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 dview = DPointerTargetable.fromPointer(vid, s);
                 if (!dview) continue;
                 idmap[vid] = dview;
-                U.arrayMergeInPlace(nextarr, dview.subViews);
+                U.arrayMergeInPlace(nextarr, Object.keys(dview.subViews));
             }
             arr = nextarr;
             nextarr = [];
@@ -392,11 +402,6 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     }
     set_allSubViews(val: this["allSubViews"], c: Context): boolean { return this.wrongAccessMessage("cannot call set_allSubViews, it is a derived attribute"); }
 
-
-    explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
-    __info_of__explicitApplicationPriority: Info = {isGlobal: true, type: ShortAttribETypes.EByte, label:"explicit priority",
-        txt: 'Application priority of view. If multiple views match an element, the highest priority will render the main jsx,' +
-            'lowest priorities will only inject css and secondary jsx decorators (this part is still to do)'}
 
     defaultVSize!: GraphSize;
     __info_of__defaultVSize: Info = {isNode:true, type: "GraphSize", label:"default size", txt: 'starting size of the node'}
@@ -426,9 +431,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (val === context.data.oclCondition) return true;
         TRANSACTION(()=>{
             SetFieldAction.new(context.data, 'oclCondition', val, '', false);
-            SetRootFieldAction.new('VIEWS_RECOMPILE_oclCondition', context.data.id, '+=', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_ocl', context.data.id, '+=', false); // it is pointer, but for transient stuff there is no need to set pointedby's
         })
-        // SetRootFieldAction.new('VIEWOCL_NEEDS_RECALCULATION', context.data.id, '+=', false); // it is pointer, but for transient stuff there is no need to set pointedby's
         return true;
     }
 
@@ -729,23 +733,24 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return (LViewPoint.fromPointer(context.data.viewpoint as Pointer<DViewPoint>));
     }
     public set_subViews(v: Pointer<DViewPoint>[], context: Context): boolean { return this.cannotSet('subViews, call set_viewpoint on the sub-elements instead.'); }
-    public set_viewpoint(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement, atIndex: number = -1): boolean {
+    public set_viewpoint(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement): boolean {
         let ret = false;
-        let vpid: Pointer<DViewPoint> = Pointers.from(v);
+        let vpid: Pointer<DViewPoint> = v && Pointers.from(v);
         let id = (manualDview || context.data).id;
         let oldvpid: Pointer<DViewPoint> = (manualDview || context.data).viewpoint;
         if (vpid === oldvpid) return true;
 
         TRANSACTION(()=>{
             ret = SetFieldAction.new(id, "viewpoint", vpid, '', true);
-            oldvpid && SetFieldAction.new(oldvpid, "subViews", id as any, '-=', true);
-
-            if (atIndex === -1) {
-                SetFieldAction.new(vpid, "subViews", id, '+=', true);
-            } else {
-                let oldSubViews = [...DPointerTargetable.fromPointer(vpid).subViews];
-                oldSubViews.splice(atIndex, 0, id);
-                SetFieldAction.new(vpid, "subViews", oldSubViews, '', true);
+            if (oldvpid) {
+                let subViews = {...DPointerTargetable.fromPointer(oldvpid).subViews};
+                delete subViews[id];
+                SetFieldAction.new(oldvpid, "subViews", id as any, '', true);
+            }
+            if (vpid) {
+                let subViews = {...DPointerTargetable.fromPointer(vpid).subViews};
+                subViews[id] = 1.5;
+                SetFieldAction.new(vpid, "subViews", subViews, '', true);
             }
         })
         return ret;
@@ -755,9 +760,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     public get_subViews(context: Context, key: string): LViewElement[]{
         let subViewsPointers = context.data.subViews;
         let subViews: LViewElement[] = [];
-        for(let pointer of subViewsPointers){
+        for (let pointer in subViewsPointers) {
             let item: LViewElement = MyProxyHandler.wrap(pointer);
-            if(item !== undefined) subViews.push(item);
+            if (item !== undefined) subViews.push(item);
         }
         return subViews;
     }
@@ -824,7 +829,18 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     set_appliableToClasses(val: this["appliableToClasses"], context: Context): boolean {
         if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
-        return this.set_generic_entry(context, "appliableToClasses", val); }
+        val.sort();
+        let hasChanged: boolean = false;
+        if (val.length === context.data.appliableToClasses?.length) {
+            for (let i = 0; i < val.length; i++) if (val[i] !== context.data.appliableToClasses[i]) { hasChanged = true; break; }
+        }
+        if (!hasChanged) return true;
+        TRANSACTION(()=>{
+            this.set_generic_entry(context, "appliableToClasses", val);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_preconditions', context.data.id, '+=', false);
+        })
+        return true;
+    }
 
     set_defaultVSize(val: GraphSize, context: Context): boolean {
         console.log('set_defaultVSize', {context, val});
@@ -854,10 +870,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 // insert in viewpoint.subview
                 //let defaultViews: Dictionary<Pointer, boolean> = Defaults.defaultViewsMap;
                 let vp: LViewPoint = c.proxyObject.viewpoint;
-                let oldViews: Pointer<DViewElement>[] = Pointers.from(vp.__raw.subViews);
+                // let oldViews: Pointer<DViewElement>[] = Object.keys(vp.__raw.subViews);
                 // if (Defaults.viewpoints.indexOf(vpid)) oldViews = oldViews.filter( vid => !defaultViews[vid]);
-                let i: number = oldViews.indexOf(c.data.id);
-                this.set_viewpoint(vpid, undefined as any, dclone, i === -1 ? -1 : i+1); // insert in-place right after the cloned view
+                // let i: number = oldViews.indexOf(c.data.id);
+                this.set_viewpoint(vpid, undefined as any, dclone);//, i === -1 ? -1 : i+1); // insert in-place right after the cloned view
                 /*
                 if (i === -1) oldViews.push(dclone.id);
                 else oldViews.splice(i+1, 0, dclone.id); // insert in-place right after the cloned view
@@ -865,8 +881,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 // SetRootFieldAction.new('stackViews', dview.id, '+=', true);
 
 
-                for(let key of DViewElement.RecompileKeys)
-                    SetRootFieldAction.new(`VIEWS_RECOMPILE_${key}`, c.data.id, '+=', false);
+                for (let key of DViewElement.RecompileKeys) SetRootFieldAction.new(`VIEWS_RECOMPILE_${key}`, c.data.id, '+=', false);
             })
             return lview;
         }

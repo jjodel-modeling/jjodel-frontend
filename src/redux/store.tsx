@@ -171,18 +171,12 @@ export class DState extends DPointerTargetable{
     VIEWS_RECOMPILE_constants: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_usageDeclarations: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_jsxString: Pointer<DViewElement>[] = [];
-    VIEWS_RECOMPILE_oclCondition: Pointer<DViewElement>[] = []; // auto-detected
+
+    VIEWS_RECOMPILE_preconditions: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_jsCondition: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_ocl: Pointer<DViewElement>[] = [];
 
-    // views whose oclCondition needs to be reapplied to all model elements
-    VIEWOCL_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
-    // views where both ocl needs to be reapplied and the oclUpdateCondition -> transient.view[v.id].oclUpdateCondition_PARSED needs to be remade
-    VIEWOCL_UPDATE_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
-
-
-    // CSS_NEEDS_RECALCULATION: Pointer<DViewElement>[] = [];
-    // DATAOCL_NEEDS_RECALCULATION: Pointer<DModelElement>[] = [];
-    ClassNameChanged: Dictionary<Pointer<DModelElement>, DocString<"name">> = {};
+    ClassNameChanged: Dictionary<Pointer<DModelElement>, DocString<"name">> = {}; // for ocl matchings by m2 class name: "context inv Human: ..."
 
 
     static init(store?: DState): void {

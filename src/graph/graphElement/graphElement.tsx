@@ -773,13 +773,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 this.dataOldClonedCounter = this.props.data.clonedCounter;
                 let thischange = {t: Date.now()};
                 this.lastOnUpdateChanges.push(thischange);
-                if (thischange.t - this.lastOnUpdateChanges[this.lastOnUpdateChanges.length - 20]?.t < 200) {
+                if (thischange.t - this.lastOnUpdateChanges[this.lastOnUpdateChanges.length - 10]?.t < 300) {
                     // if N updates in <= 0.2 sec
                     this.stopUpdateEvents = this.props.view.clonedCounter;
                     Log.eDevv("loop in node.render() likely due to MeasurableEvent onDataUpdate. It has been disabled until the view changes.",{
                         change_log: this.lastOnUpdateChanges,
                         component: this,
-                        timediff: (thischange.t - this.lastOnUpdateChanges[this.lastOnUpdateChanges.length - 20]?.t)
+                        timediff: (thischange.t - this.lastOnUpdateChanges[this.lastOnUpdateChanges.length - 10]?.t)
                     } as any);
                 }
             }

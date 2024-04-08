@@ -3,7 +3,8 @@
 import {transientProperties, U, windoww} from "./src/joiner";
 import {AllPropss} from "./src/graph/vertex/Vertex";
 
-export const a = 0;
+// 67{}[]'?^&&||nb
+export const aaa = 0;
 let data:any, node:any, view:any, component:any;
 let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPackages:any, refEdges:any, extendEdges:any, React:any, Edge:any;
 // need to merge file declarations? or use a filename such as the imports will work (use inmemory://? or real urls)

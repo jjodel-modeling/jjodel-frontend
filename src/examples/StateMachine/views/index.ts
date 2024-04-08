@@ -1,4 +1,4 @@
-import type {LClass, LProject} from '../../../joiner';
+import {LClass, LProject, U} from '../../../joiner';
 import {DViewElement, DViewPoint, DObject, LModel, LObject, LViewPoint} from '../../../joiner';
 import {Dependencies} from './dependencies';
 
@@ -53,8 +53,8 @@ export class StateMachine_Views {
         // textView.oclCondition = `context DModel inv: self.id = '${m1.id}'`;
 
 
-        viewpoint.subViews = [modelView, stateView, commandView, eventsView, transitionView].map(v => v.id);
-        textViewpoint.subViews = [textView.id];
+        viewpoint.subViews = U.objectFromArrayValues([modelView, stateView, commandView, eventsView, transitionView].map(v => v.id), 1.5);
+        textViewpoint.subViews = U.objectFromArrayValues([textView.id], 1.5);
         return LViewPoint.fromD(viewpoint);
     }
 

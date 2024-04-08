@@ -31,7 +31,9 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
     unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap, Info,
     Constructor, AbstractConstructor, ApiResponse
 } from "./types";
-export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1 } from "./classes";
+export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1,
+    NodeTransientProperties, ViewTransientProperties, DataTransientProperties, ViewScore
+} from "./classes";
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
     WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
     ValueDetail, SetValueAtPositionInfoType

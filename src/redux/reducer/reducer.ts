@@ -7,7 +7,7 @@ import {
     DViewElement,
     DClass,
     DModel,
-    UX, EdgeOwnProps, EdgeStateProps, GraphElementComponent
+    UX, EdgeOwnProps, EdgeStateProps, GraphElementComponent, ViewEClassMatch, bool
 } from '../../joiner';
 import {
     Action,
@@ -376,19 +376,32 @@ export function reducer(oldState: DState = initialState, action: Action): DState
 
 
     // local changes to out-of-redux stuff
-    if (ret.VIEWOCL_NEEDS_RECALCULATION.length) {
+    if (ret.VIEWS_RECOMPILE_ocl.length) {
         // for (let gid of ret.graphs) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
         // for (let vid of ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION) { }
-        for (let vid of ret.VIEWOCL_NEEDS_RECALCULATION) {
-            const dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
+        for (let vid of ret.VIEWS_RECOMPILE_ocl) {
             transientProperties.view[vid].oclEngine = undefined as any; // force re-parse
-            Selectors.updateViewMatchings2(dv, false, true, ret);
+            transientProperties.view[vid].oclChanged = true;
+            for (let nid in transientProperties.node) {
+                let tnv = transientProperties.node[nid].viewScores[vid];
+                tnv.OCLScore = ViewEClassMatch.NOT_EVALUATED_YET as any as boolean;
+            }
         }
-        ret.VIEWOCL_NEEDS_RECALCULATION = [];
+        ret.VIEWS_RECOMPILE_ocl = [];
     }
+    /*
     if (ret.VIEWOCL_UPDATE_NEEDS_RECALCULATION.length) {
         // not implemented for now
         ret.VIEWOCL_UPDATE_NEEDS_RECALCULATION = [];
+    }*/
+    if (ret.VIEWS_RECOMPILE_preconditions.length) {
+        for (let vid of ret.VIEWS_RECOMPILE_preconditions) {
+            for (let nid in transientProperties.node) {
+                let tnv = transientProperties.node[nid].viewScores[vid];
+                tnv.metaclassScore = ViewEClassMatch.NOT_EVALUATED_YET as any as number;
+            }
+        }
+        ret.VIEWS_RECOMPILE_preconditions = [];
     }
 
     for (const vid of ret.VIEWS_RECOMPILE_constants) { // compiled in func, and executed, result does not vary between nodes.
@@ -465,13 +478,16 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     /* JS CONDITION */
     for (const vid of ret.VIEWS_RECOMPILE_jsCondition) {
         const dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
-        if (!dv.jsCondition) continue;
         const tv = transientProperties.view[vid];
+        tv.jsConditionChanged = true;
+        if (!dv.jsCondition) {
+            tv.jsCondition = undefined;
+            continue;
+        }
         try {
             const lines = dv.jsCondition.trim().split('\n');
             let lastLine = lines[lines.length - 1];
-            if(lastLine.indexOf('return') !== 0)
-                lines[lines.length - 1] = `return (${lastLine})`;
+            if (lastLine.indexOf('return') !== 0) lines[lines.length - 1] = `return (${lastLine})`;
             const fx = `() => {${lines.join('\n')}}`;
             console.log('FX', fx);
             tv.jsCondition = eval(fx);
@@ -549,6 +565,8 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         // update ocl type names
         let data: DClass = ret.idlookup[dataid] as DClass;
         RuntimeAccessibleClass.makeOCLConstructor(data, ret, oldState);
+        // here i should reset all tnv.oclEngine too and set all ocl scores to notevaluated, but it is too computationally heavy
+        // and it's useful to keep the old ocl condition valid with past names until manually edited.
     }
     ret.ClassNameChanged = {};
 
