@@ -1,6 +1,6 @@
 import {Pointer, DViewElement, DViewPoint, Dictionary, U, RuntimeAccessible} from '../joiner';
 @RuntimeAccessible('Defaults')
-export class Defaults {
+export class Defaults { /// TODO: this really needs to become dynamically generated, after view creations.
     static cname: string = 'Defaults';
     static views: Pointer<DViewElement>[] = [
         'Pointer_ViewModel',
@@ -25,7 +25,7 @@ export class Defaults {
     // @ts-ignore
     static defaultViewsMap: Dictionary<Pointer, boolean> = Defaults.views.reduce((acc, val) => { acc[val] = true; return acc; }, {}); // U.objectFromArrayValues(Defaults.views);
 
-    static viewpoints: Pointer<DViewPoint>[] = ['Pointer_ViewPointDefault'];
+    static viewpoints: Pointer<DViewPoint>[] = ['Pointer_ViewPointDefault', 'Pointer_ViewPointValidation'];
 
     static check(id: string): boolean {
         return !!Defaults.defaultViewsMap[id]; // id.indexOf('Pointer_View') !== -1

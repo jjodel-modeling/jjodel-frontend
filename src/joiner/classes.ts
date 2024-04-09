@@ -134,12 +134,13 @@ import {
     packageDefaultSize,
     ParsedAction,
     SetFieldAction,
-    SetRootFieldAction, statehistory,
+    SetRootFieldAction, ShortAttribETypes, statehistory,
     store,
     TRANSACTION,
     U
 } from "./index";
-import TreeModel from "tree-model";
+import {OclEngine} from "@stekoe/ocl.js";
+import {ReactNode} from "react";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -167,6 +168,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     static extendMatrix: Dictionary<string, Dictionary<string, boolean>>;
     // static name: never; // it breaks with minification, don't use it
     static cname: string;
+    private static OCL_Constructors: Dictionary<Pointer<DModel>, Dictionary<DocString<"DClass name">, GObject<"Fake constructors for ocl \"Context\"">>> = {};
 
     static set_extend(superclass: typeof RuntimeAccessibleClass, subclass: typeof RuntimeAccessibleClass): void{
         if (!superclass.hasOwnProperty("subclasses")) superclass.subclasses = [subclass];
@@ -197,11 +199,11 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     }
     static fixStatics() {
         this.extendPrototypes();
-        // problem: se lo statico è un valore primitivo ne genera una copia.
         for (let classs of Object.values(RuntimeAccessibleClass.annotatedClasses)) {
             let gclass = classs as GObject;
             for (let statickey in gclass.s) { gclass[statickey] = gclass.s[statickey]; }
         }
+
     }
     // static allRuntimeClasses: string[] = [];
     static classes: Dictionary<string, typeof RuntimeAccessibleClass> = {};
@@ -358,6 +360,34 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         this.className = (finalObject as any).__proto__.className;
     }*/
 
+    static makeOCLConstructor(data: DClass, state: DState, oldState: DState): GObject<"fake constructor of m2-class for ocl's Context"> {
+        let rootModel: DModel = data as any;
+        while (rootModel && rootModel.className !== "DModel") rootModel = DPointerTargetable.fromPointer(rootModel.father, state);
+        let mid: Pointer<DModel> = rootModel?.id; // NB: for EBoolean etc, primitive type meteclasses don't have a model;
+        if (!RuntimeAccessibleClass.OCL_Constructors[mid]) {
+            RuntimeAccessibleClass.OCL_Constructors[mid] = {};
+            RuntimeAccessibleClass.OCL_Constructors[mid].__proto__ = RuntimeAccessibleClass.classes;
+        }
+        const OclConstructor: GObject = data;
+        let namefixed: string;
+
+        if (oldState && oldState.idlookup[data.id]) {
+            let oldname = (oldState.idlookup[data.id] as DClass).name;
+            namefixed = U.replaceAll(U.replaceAll(oldname, '-', '_'), ' ', '_');
+            delete RuntimeAccessibleClass.OCL_Constructors[mid][oldname];
+            delete RuntimeAccessibleClass.OCL_Constructors[mid][namefixed];
+
+        }
+        namefixed = U.replaceAll(U.replaceAll(data.name, '-', '_'), ' ', '_');
+        RuntimeAccessibleClass.OCL_Constructors[mid][data.name] = OclConstructor;
+        RuntimeAccessibleClass.OCL_Constructors[mid][namefixed] = OclConstructor;
+
+        return data;
+    }
+
+    static getOCLClasses(model_id: Pointer<DModel>): GObject {
+        return RuntimeAccessibleClass.OCL_Constructors[model_id] || RuntimeAccessibleClass.classes;
+    }
 }
 export function Obsolete<T extends any>( constructor: T & GObject): T { return constructor; }
 export function Leaf<T extends any>( constructor: T & GObject): T { return constructor; }
@@ -508,23 +538,29 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // todo: in delete if the element was not persistent, just do nothing.
     }
 
-    private setExternalPtr<D extends DPointerTargetable>(target: D | Pointer<any>, property: string, accessModifier: "[]" | "+=" | "" = "") {
-        if (!target) return;
-        if (typeof target === "object") target = target.id;
-        let t;
-        this.thiss._persistCallbacks.push(t = SetFieldAction.create(target, property, this.thiss.id, accessModifier, true));
+    private setExternalRootProperty<D extends DPointerTargetable>(path: string, val: any, accessModifier: "[]" | "+=" | "", isPointer: boolean): this {
+        this.thiss._persistCallbacks.push(SetRootFieldAction.create(path, val, accessModifier, isPointer));
+        return this;
+    }
 
+    private setExternalPtr<D extends DPointerTargetable>(target: D | Pointer<any>, property: string, accessModifier: "[]" | "+=" | "" = "", val?: any): this {
+        if (!target) return this;
+        if (typeof target === "object") target = target.id;
+        if (!val) val = this.thiss.id;
+        this.thiss._persistCallbacks.push(SetFieldAction.create(target, property, val, accessModifier, true));
+        return this;
         // PointedBy is set by reducer directly in this case.
         // this.thiss._persistCallbacks.push(SetFieldAction.create(this.thiss.id, "pointedBy", PointedBy.fromID(target, property as any), '+='));
     }
 
-    private setWithSideEffect<D extends DPointerTargetable>(property: string, val: any): void {
-        if (!val) return;
+    private setWithSideEffect<D extends DPointerTargetable>(property: string, val: any): this {
+        if (!val) return this;
         if (!this.state) this.state = store.getState();
         if (typeof val === "object") val = val.id;
         this.thiss._persistCallbacks.push( () => {
             (LPointerTargetable.from(this.thiss, this.state) as GObject<"L">)[property] = val;
         });
+        return this;
     }
 
     //static pause(): void { canFireActions = false; }
@@ -739,6 +775,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.partial = partial;
         thiss.partialdefaultname = partialdefaultname;
         this.setExternalPtr(thiss.father, "classifiers", "+=");
+        this.setExternalRootProperty('ClassNameChanged.'+thiss.id, thiss.name, '', false);
+
         // thiss.isClass = !isPrimitive;
         // thiss.isEnum = false;
         return this; }
@@ -796,6 +834,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.isSelected = {};
         thiss.edgesIn = [];
         thiss.edgesOut = [];
+        thiss.state = {id: thiss.id+".state", className: thiss.className};
 
         this.setPtr("model", model);
         this.setPtr("graph", parentgraphID);
@@ -808,7 +847,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     }
 
     DViewElement(name: string, jsxString: string, vp?: Pointer<DViewPoint>, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
-                 preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '', priority: number = 1): this {
+                 preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '', priority?: number): this {
         const thiss: DViewElement = this.thiss as any;
         thiss.name = name;
         thiss.appliableToClasses = appliableToClasses;
@@ -822,14 +861,26 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.onRotationEnd = thiss.onRotationStart = thiss.whileRotating = '';
         thiss.onDataUpdate = '';
         // thiss.__transient = new DViewTransientProperties();
-        thiss.subViews = [];
-        thiss.oclCondition = oclCondition;
-        thiss.explicitApplicationPriority = priority;
+        thiss.subViews = {};
+        thiss.oclCondition = oclCondition || '';
+        thiss.jsCondition = '';
+        thiss.oclUpdateCondition = '';
+        thiss.OCL_NEEDS_RECALCULATION = true;
+        thiss.explicitApplicationPriority = undefined as any; //priority as any as number;
         thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 351, 201);
+        thiss.isExclusiveView = true;
         thiss.size = {};
         thiss.storeSize = false;
         thiss.lazySizeUpdate = true;
-        thiss.constraints = [];
+        //thiss.constraints = [];
+        thiss.palette = {
+            'color-': [], //['#ffffff', '#ff0000', '#00ff00', '#0000ff','#aaaaaa', '#ffaaaa', '#aaffaa', '#aaaaff'],
+            'background-':[]};// ['#000000', '#33333', '#777777']};
+        thiss.css = '';
+        thiss.compiled_css = '';
+        thiss.css_MUST_RECOMPILE = true;
+        thiss.cssIsGlobal = false;
+        // thiss.palette = {};
 
         // thiss.useSizeFrom = EuseSizeFrom.node;
         // thiss.adaptHeight = false;
@@ -859,21 +910,26 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
         thiss.edgeHeadSize = new GraphPoint(20, 20);
         thiss.edgeTailSize = new GraphPoint(20, 20);
-
-        this.nonPersistentCallbacks.push(() => {
-            if (thiss.constants) {
-                thiss._parsedConstants = (windoww["LViewElement"] as typeof LViewElement).parseConstants(thiss.constants);
-            } else thiss._parsedConstants = undefined;
-        });
-
         if (thiss.className !== 'DViewElement') return this;
         const user = LUser.fromPointer(DUser.current);
         // const project = user?.project; if(!project) return this;
         if (!vp) vp = user?.project?.activeViewpoint.id || Defaults.viewpoints[0];
         if (vp !== 'skip') {
-            this.setExternalPtr(vp, 'subViews', '+=');
+            let dvp = DPointerTargetable.fromPointer(vp);
+            // let subviews = {...dvp.subViews}; subviews[thiss.id] = 1.5;
+            // this.setExternalPtr(vp, 'subViews', '', subviews);
+            let subviews: GObject = {}; subviews[thiss.id] = 1.5;
+            this.setExternalPtr(vp, 'subViews', '+=', subviews);
             this.setPtr("viewpoint", vp);
         }
+
+        let trview = transientProperties.view[thiss.id] = {} as any;
+        // trview.?? = ???
+
+        TRANSACTION(() => {
+            for(let key of (windoww.DViewElement as typeof DViewElement).RecompileKeys)
+                this.setExternalRootProperty('VIEWS_RECOMPILE_'+key, thiss.id, '+=', false) // is pointer, but no need to set pointedby
+        })
 
         // this.setExternalPtr(project.id, 'views', '+=');
         // this.setExternalPtr(project.id, 'stackViews', '+=');
@@ -1073,10 +1129,10 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         INFERRED = {ret: RET, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR},>(ptr: T, s?: DState)
         : RET {
         s = s || store.getState();
+        if (!ptr) { return ptr as any; }
         if (Array.isArray(ptr)) {
             return ptr.map( (p: Pointer) => DPointerTargetable.fromPointer(p, s)) as any;
         }
-        if (!ptr) { return ptr as any; }
         if (typeof ptr !== "string") {
             console.error("wrong parameter in DPointerTargetable.fromPointers()", ptr);
             throw new Error("wrong parameter in DPointerTargetable.fromPointers()");
@@ -1288,7 +1344,9 @@ export class Pointers{
         return typeof data === "string" ? data : (data as any).id;
     }
 
-    static isPointer(val: any, state?: DState): val is Pointer {
+    static isPointer(val: any, state?: DState, doArrayCheck: boolean = false): val is Pointer {
+        // might cause endless loop if there are subarrays in a containment loop.
+        if (doArrayCheck && Array.isArray(val)) return (val as any[]).some((v) => Pointers.isPointer(val, state, true));
         if (state) return DPointerTargetable.from(val, state);
         return typeof val === "string" ? val.includes("Pointer") : false;
     }
@@ -1466,6 +1524,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     public __serialize!: DocString<"json">;
     private inspect!: D;
     private __random!: number;
+    // public r!: this;
 
     private __info_of__id = {type:"Pointer&lt;this&gt;", txt:"<a href=\"https://github.com/DamianoNaraku/jodel-react/wiki/identifiers\"><span>Unique identifier, and value used to point this object.</span></a>"};
 
@@ -1489,6 +1548,60 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     protected _get_default< DD extends DPointerTargetable, T extends string & keyof (DD) & keyof (L), L extends LModelElement = LModelElement>(data: DD, key: T): L[T]{
         // @ts-ignore
         return LPointerTargetable.from(data[key]);
+    }
+
+    protected _defaultCollectionGetter(c: Context, k: keyof Context["data"]): LPointerTargetable[] { return LPointerTargetable.fromPointer((c.data as any)[k]); }
+    protected __defaultGetter(c: Context, k: keyof Context["data"]): any {
+        // console.log("default Getter");
+        let v = (c.data as any)[k];
+        if (Array.isArray(v)) {
+            if (v.length === 0) return [];
+            else if (Pointers.isPointer(v[0] as any)) return this._defaultCollectionGetter(c, k);
+            return v;
+        }
+        return v && Pointers.isPointer(v as any) ? LPointerTargetable.fromPointer(v) : v;
+    }
+
+    protected __defaultSetter(v: any, c: Context, k: keyof Context["data"]): boolean {
+        console.log("default Setter");
+        if (true || k in c.data) {
+            // check if is pointer
+            let isPointer: boolean;
+            if (Array.isArray(v)) {
+                if (v.length === 0) isPointer = true; // assumed, should not cause harm if it is not.
+                    // it will delete remove an entry in pointedBy from all oldValue entries in the array that should not be present anyway.
+                // like oldVal.map( id => U.arrayRemove(LData.wrap(id).pointedBy, c.data.this_id)
+                else isPointer = Pointers.isPointer(v[0] as any);
+            } else isPointer = Pointers.isPointer(v);
+
+            // autofix value
+            let bytes = 0;
+            let type: string = (this as any)["__info_of__"+k]?.type;
+            if (type) type = U.multiReplaceAll(type, ["array", "Array", "<", ">", "[]"], []);
+            switch(type){
+                case ShortAttribETypes.EDate: break;
+                default: break;
+                case ShortAttribETypes.EBoolean: v = !!v; break;
+                case ShortAttribETypes.EByte: bytes = 8; break;
+                case ShortAttribETypes.EShort: bytes = 16; break;
+                case ShortAttribETypes.EInt: bytes = 32; break;
+                case ShortAttribETypes.ELong: bytes = 64; break;
+                case ShortAttribETypes.EString: v = ""+v; break;
+                case ShortAttribETypes.EChar: v = (""+v)[0]; break;
+                case ShortAttribETypes.EVoid: Log.exx("cannot set a void-typed value", {c, d:c.data, k, v}); return true;
+                case ShortAttribETypes.EDouble:
+                case ShortAttribETypes.EFloat: v = +v; break;
+            }
+            if (bytes) {
+                v = Math.round(+v);
+                let max = v << bytes; // left shift is the same as multiplying by a power of 2, but binary and more efficient.
+                let min = -max + 1
+                if (v > max) v = max;
+                else if (v < min) v = min;
+            }
+            return SetFieldAction.new(c.data, k as any, v, '', isPointer);
+        }
+        return true;
     }
 
     public get__extends(superClassName: string, context: LogicContext<DPointerTargetable>): boolean {
@@ -1960,11 +2073,9 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
 
     protected get_views(c: Context): this['views'] {
         // return LViewElement.fromPointer([...c.data.views, ...Defaults.views]);
-        let duplicateRemover: Dictionary<string, LViewElement> = {};
+        let duplicateRemover: Dictionary<Pointer, LViewElement> = {};
         let varr = this.get_viewpoints(c).flatMap(vp => vp.subViews);
-        for (let v of varr) {
-            duplicateRemover[v.id] = v;
-        }
+        for (let v of varr) duplicateRemover[v.id] = v;
         return Object.values(duplicateRemover);
     }
 
@@ -2552,3 +2663,97 @@ export enum EModelElements{
     "(m1) Object" = "DObject",
     "(m1) Value" = "DValue",
 }
+export class ViewEClassMatch {
+    static NOT_EVALUATED_YET = undefined;
+    static MISMATCH = Number.NEGATIVE_INFINITY;
+    static MISMATCH_PRECONDITIONS = Number.NEGATIVE_INFINITY;
+    static MISMATCH_JS = false;
+    static MISMATCH_OCL = false;
+    static IMPLICIT_MATCH = 1;
+    static INHERITANCE_MATCH = 1.5;
+    static EXACT_MATCH = 2;
+}
+
+export type ViewScore = {
+    jsxOutput: React.ReactNode | React.ReactElement | undefined;
+    metaclassScore: number;
+    jsScore: number | boolean;
+    OCLScore: boolean;
+    finalScore: number;
+    usageDeclarations: GObject;
+    evalContext: GObject; // with added usageDeclarations for the current view
+    shouldUpdate: boolean; // computed along usageDeclarations in shouldComponentUpdate
+    shouldUpdate_reason: GObject;
+    nodeidcounter: Dictionary<number/*jsx char index*/, number/*counter:how many nodes generated by that jsx string line until now*/>
+
+    // usageDeclarations!: DefaultUsageDeclarations;
+    // oldNode: DGraphElement; moved to viewSorted_nodeused // ref to the actual node, not pointer. so even if it's modified through redux,
+    // it is still possible to compare old version and new version to check if view.oclUpdateCondition should trigger
+}
+export class NodeTransientProperties{
+    viewSorted_modelused?: LModelElement; // L-version because it is used in oclUpdate function
+    viewSorted_pvid_used?: DViewElement;
+    viewSorted_nodeused?: LGraphElement;
+    stackViews!: LViewElement[]; // for each parentview, an array of Decorative Views[] sorted by score (including parent view influence).
+    validMainViews!: LViewElement[]; // an array of Main Views[] sorted by score (including parent view influence).
+    mainView!: LViewElement;
+    viewScores: Dictionary<Pointer<DViewElement>, ViewScore> = {} as any;
+    evalContext!: GObject; // global for this node (without view-specific usageDeclaration)
+    //force1Update!: boolean;
+}
+export type ViewTransientProperties = {
+    // css_MUST_RECOMPILE: boolean;
+    // compiled_css: string; maye those are better shared in sessions
+    oclChanged: boolean;
+    jsConditionChanged: boolean;
+    oclUpdateCondition_PARSED: (oldData: LModelElement, newData:LModelElement) => boolean;// not used anymore? was like UD+shouldcompoupdate for jsx, a pre-ocl check
+    oclEngine: OclEngine;
+    jsCondition: undefined | ((context:GObject) => boolean);
+    JSXFunction: (scope: GObject)=>ReactNode;
+    UDFunction: (scope: GObject, ret: GObject)=>void;
+    constantsList: string[];
+    UDList: string[];
+    constants: GObject;
+    onDataUpdate: undefined | ((context:GObject)=>void);
+    onDragStart: undefined | ((context:GObject)=>void);
+    onDragEnd: undefined | ((context:GObject)=>void);
+    whileDragging: undefined | ((context:GObject)=>void);
+    onResizeStart: undefined | ((context:GObject)=>void);
+    onResizeEnd: undefined | ((context:GObject)=>void);
+    whileResizing: undefined | ((context:GObject)=>void);
+    onRotationStart: undefined | ((context:GObject)=>void);
+    onRotationEnd: undefined | ((context:GObject)=>void);
+    whileRotating: undefined | ((context:GObject)=>void);
+
+
+}
+export type METransientProperties = {
+    nodes: Dictionary<Pointer<DGraphElement>, LGraphElement>;
+    node?: LGraphElement;
+}
+export type DataTransientProperties = METransientProperties;
+
+// score for all view ocl + sorted views by best match
+type TransientPropertiesByGraphTab = Dictionary<Pointer<DViewElement, number>> & {
+    /*
+    need_sorting: boolean;
+    sorted: Pointer<DViewElement>[];
+    // viewMatchings: Scored<DViewElement>[];
+    when to update?
+    1) data.parent.view.id: when "suviews" in place are changed by a view on a container element has changed (if pkg view changed, class view might change as well)
+    2) data.any --> when a direct value of the doject changed, amd that value was declared in ocl
+    3) view.appliableto --> when d-type changes (never, a class cannot become a enum or reference
+    4) node stuff never? or maybe entire nodes?
+    other data or view properties?*/
+};
+export const transientProperties = {
+    node: {} as Dictionary<Pointer<DGraphElement>, NodeTransientProperties>,
+    view: {} as Dictionary<Pointer<DViewElement>, ViewTransientProperties>,
+    modelElement: {} as Dictionary<Pointer<DModelElement>, METransientProperties>,
+};
+(window as any).transient = (window as any).transientProperties = transientProperties;
+// transientProperties.nodes[nid].viewScores[vid]?.[pvid as string];
+/*
+export const transientPropertiesByGraphTab: {viewMatchings: Dictionary<Pointer<DGraph>, Dictionary<Pointer<DModelElement>, TransientPropertiesByGraphTab>>} = {
+ viewMatchings: {}
+};*/

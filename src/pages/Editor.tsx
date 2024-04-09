@@ -1,6 +1,18 @@
 import {Dispatch, ReactElement, useEffect, useState} from 'react';
 import {connect} from 'react-redux';
-import {DProject, DState, DUser, LoadAction, LProject, LUser, U} from '../joiner';
+import {
+    Dictionary,
+    DProject,
+    DState,
+    DUser,
+    DViewElement,
+    LoadAction,
+    LProject,
+    LUser,
+    LViewPoint,
+    Pointer,
+    U
+} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 import Dock from '../components/abstract/Dock';
 import useQuery from "../hooks/useQuery";
@@ -14,6 +26,7 @@ function EditorComponent(props: AllProps) {
     const user = props.user;
     const query = useQuery();
     const id = query.get('id') || '';
+    const project: LProject = LProject.fromPointer(id);
 
     useEffect(() => {
         (async function() {
@@ -24,13 +37,17 @@ function EditorComponent(props: AllProps) {
             SaveManager.load(await U.decompressState(project.state));
         })();
     }, [id]);
-
+    let allviews = project?.viewpoints.flatMap((vp: LViewPoint) => vp.allSubViews) || [];
+    let views_deduplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
+    for (let v of allviews) views_deduplicator[v.id] = v;
     if(user.project) return(<>
         <Navbar />
         <Dock />
+        <style id={"views-css-injector"}>
+            {Object.values(views_deduplicator).map( v => v.compiled_css).join('\n\n')}
+        </style>
     </>);
     return(<Loader />);
-
 }
 interface OwnProps {}
 interface StateProps {user: LUser}

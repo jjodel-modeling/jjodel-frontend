@@ -12,7 +12,7 @@ import type {
     LViewElement,
     Pointer, PrimitiveType
 } from "../../../joiner";
-import {LClass, LEdge, LUser, LViewPoint, RuntimeAccessible} from "../../../joiner";
+import {Dictionary, LClass, LEdge, LUser, LViewPoint, LVoidVertex, RuntimeAccessible} from "../../../joiner";
 import {GObject, InitialVertexSize, orArr} from "../../../joiner/types";
 
 export class GraphElementStatee {/*
@@ -42,16 +42,21 @@ export class GraphElementReduxStateProps {
     // model?: LModel;
     // [userMappedFromRedux: string]: any; // roba che l'utente ha dichiarato di voler prendere dallo stato e redux gli carica nelle props
     //preRenderFunc?: string;
-    evalContext!: Json;
+    // evalContext!: Json; moved to transient properties
     //template!: string;
     node!: LGraphElement;
     data?: LModelElement;
-    usageDeclarations!: DefaultUsageDeclarations;
-    invalidUsageDeclarations?: Error;
+    // usageDeclarations!: DefaultUsageDeclarations;
+    // invalidUsageDeclarations?: Error; // moved in stateProps.usageDeclarations.__invalidUsageDeclarations
     // graph!: LGraph;
 
     // lastSelected!: LModelElement | null;
     isEdgePending!: { user: LUser, source: LClass };// vertex only
+    nodeid!: Pointer<DGraphElement>;
+    dataid?: Pointer<DModelElement>;
+    viewid!: Pointer<DViewElement>;
+    viewsid!: Pointer<DViewElement>[];
+    parentviewid?:Pointer<DViewElement>
 }
 
 export class GraphElementDispatchProps {
@@ -68,7 +73,9 @@ export class BasicReactOwnProps {
 
 export class GraphElementOwnProps extends BasicReactOwnProps {
     data?: Pointer<DModelElement, 0, 1, LModelElement> | LModelElement;
-    view?: Pointer<DViewElement, 1, 1, LViewElement> | LViewElement
+    view?: Pointer<DViewElement, 1, 1, LViewElement> | LViewElement;
+    views?: LViewElement[] | Pointer<DViewElement>[];
+
     initialSize?: InitialVertexSize;
 
     parentnodeid?: Pointer<DGraphElement, 1, 1, LGraphElement>; // Injected
@@ -76,7 +83,7 @@ export class GraphElementOwnProps extends BasicReactOwnProps {
     graphid?: Pointer<DGraph, 1, 1, LGraph>; // injected
     parentViewId?: Pointer<DViewElement, 1, 1, LViewElement>; // injected
     htmlindex?: number; // injected
-    childStyle?: CSSProperties; // injected, indicates some properties are styled from <Polygon or such, and must be transferred to the first child of root
+    childStyle?: CSSProperties; // obsolete use css // injected, indicates some properties are styled from <Polygon or such, and must be transferred to the first child of root
 }
 
 export class EdgeOwnProps extends GraphElementOwnProps {
@@ -119,4 +126,51 @@ export class DefaultUsageDeclarations{
 export class EdgeDefaultUsageDeclarations extends DefaultUsageDeclarations{
     start!: EdgeOwnProps["start"];
     end!: EdgeOwnProps["end"];
+}
+
+
+
+export class VertexOwnProps extends GraphElementOwnProps {
+    // onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    // onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    isedgepoint?: boolean = false;
+    isgraph?: boolean = false;
+    isvertex?: boolean = true;
+    isvoid?: boolean = false;
+    decorated?: boolean; // for <decoratedStar /> (defaults true)
+    sides?: number // for <Polygon />, <Star /> and <Cross />
+    innerRadius?: number // for <Star /> and <Cross />
+    ratio?: number // for <Trapezoid />
+    rotate?: number // initial vertex rotation
+
+}
+
+export class VertexStateProps extends GraphElementReduxStateProps {
+    node!: LVoidVertex;
+    // lastSelected!: LModelElement | null;
+    // selected!: Dictionary<Pointer<DUser>, LModelElement|null>;
+    //selected!: LGraphElement|null;
+    isEdgePending!: { user: LUser, source: LClass };
+    viewpoint!: LViewPoint
+}
+
+
+export let contextFixedKeys: Dictionary<string, boolean> = {};
+setContextFixedKeys();
+
+function setContextFixedKeys(){
+    let propmakers: GObject[] = [new EdgeOwnProps(), new EdgeStateProps(), new VertexOwnProps(), new VertexStateProps(), {
+        // "model", "graph",
+        "constants": true, "usageDeclarations": true,
+        "component": true,
+        "htmlindex": true,
+        "state": true, "props": true, "stateProps": true, "ownProps": true,
+        "otherViews": true, 'decorators':true, // only on final jsx, decorators are injected
+        //"data":true, "node":true, "parentViewId":true, "parentnodeid":true,// from props:
+        //"view":true, "views":true, "viewScores":true,// from props:
+        //"children":true, "isgraph":true, "isvertex":true, "graphid":true, "nodeid":true,// from props:
+    }];
+    for (let props of propmakers) for (let k in props) contextFixedKeys[k] = true;
+    delete contextFixedKeys.class;
+    return contextFixedKeys;
 }

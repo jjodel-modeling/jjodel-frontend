@@ -1,0 +1,50 @@
+.color-picker-root{
+  position: relative;
+}
+
+.delete-color{
+  margin-top: -100%;
+}
+
+.color-container, .suggestion-container{
+  height: 32px;
+  display: flex;
+}
+.palette-row{
+  display: flex;
+
+  input, button{ // prefix controls
+    height: 24px;
+    margin-top: auto;
+    margin-bottom: auto;
+    &.delete-color{
+      display:none;
+      width: 28px;
+      margin-left: calc((24px - 28px) / 2);
+    }
+    &.prefix{
+      width: 33%
+    }
+  }
+  label{
+    &.color-picker-root:hover{
+      // padding: 5px !important;
+      background: #dedede;
+      border: 1px solid gray;
+      border-radius: 20%;
+      overflow: visible;
+      height: 200%;
+      z-index:1; // otherwise when hovering the overflow delete button on bottom, it counts as if i'm hovering next line and button disappears. weird bug
+    }
+    input, button{ // in-palette color controls
+      width: 24px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+}
+
+.color-suggestion{
+  border: 2px solid white;
+  outline: 1px solid gray;
+}

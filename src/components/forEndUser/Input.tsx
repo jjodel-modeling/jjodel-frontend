@@ -1,13 +1,12 @@
-import React, {Dispatch, ReactElement, ReactNode} from 'react';
+import React, {Dispatch, KeyboardEvent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
-import {Defaults, DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer} from '../../joiner';
+import {Defaults, DPointerTargetable, GObject, Keystrokes, LPointerTargetable, Overlap, Pointer, U} from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './style.scss';
 
 
 function InputComponent(props: AllProps) {
-    // todo: data can be injected with UX, if field is present, can take type from a metainfo like __info_of__
     const data = props.data;
 
     /*  Uncomment this when we have user authentication: if a user is on a ME, it cannot be edited.
@@ -50,9 +49,9 @@ function InputComponent(props: AllProps) {
     css += (props.hidden) ? ' hidden-input' : '';
     let autosize: boolean = props.autosize === undefined ? false : props.autosize; // props.type==='text'
     css += autosize ? ' autosize-input' : '';
+    const isBoolean = (['checkbox', 'radio'].includes(type));
 
     const change = (evt: React.ChangeEvent<HTMLInputElement>) => {
-        const isBoolean = (['checkbox', 'radio'].includes(evt.target.type));
         if (isBoolean) {
             if (readOnly) return;
             const target = evt.target.checked;
@@ -63,9 +62,20 @@ function InputComponent(props: AllProps) {
             setIsTouched(true);     // I'm editing the element in my local state.
         }
     }
+    const keyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
+        if (evt.key === Keystrokes.enter) blur(evt as any);
+        if (evt.key === Keystrokes.escape) {
+            const oldValue = (!data) ? undefined : (getter) ? getter(data) : data[field];
+            (evt.target as HTMLInputElement).value = oldValue;
+            setValue(oldValue);
+            setIsTouched(false);
+            (evt.target as HTMLInputElement).blur();
+            // to optimize: probably can remove a large part of this function because this should trigger blur event as well. or move "change" event contents here
+            // optimize 2: memoize the whole component, so it won't update unless the displayed value changed. this would also fix cursor going to input end when pressing enter.
+        }
+    }
 
     const blur = (evt: React.FocusEvent<HTMLInputElement>) => {
-        const isBoolean = (['checkbox', 'radio'].includes(evt.target.type));
         if (readOnly || isBoolean) return;
         const newValue = evt.target.value;
         const oldValue = (!data) ? undefined : (getter) ? getter(data) : data[field]; // !== undefined) ? data[field] : 'undefined'
@@ -89,25 +99,35 @@ function InputComponent(props: AllProps) {
     delete otherprops.inputStyle;
     delete otherprops.children;
     delete otherprops.autosize; // because react complains is bool in dom attribute or unknown attrib name
+
+    let checked: boolean | undefined = undefined;
+    if (isBoolean) checked = typeof value === "boolean" ? value : (typeof value === "string" ? U.fromBoolString(value) : !!value);
+
+    let cursor: string;
+    if (tooltip) cursor = 'help';
+    else if (readOnly) cursor = 'not-allowed';
+    else if (isBoolean) cursor = 'pointer';
+    else cursor = 'auto';
+
     let input = <input {...otherprops}
                        key={`${field}.${data.id}`}
                        className={props.inputClassName || css}
                        style={props.inputStyle}
                        spellCheck={false}
                        readOnly={readOnly}
-                       type={type} value={value} onChange={change} onBlur={blur}
-                       checked={(['checkbox', 'radio'].includes(type)) ? !!value : undefined} />
+                       type={type} value={value} onChange={change} onBlur={blur} onKeyDown={keyDown}
+                       checked={checked} />
 
     return(<label className={'p-1'} {...otherprops}
-                  style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor: tooltip ? 'help' : 'auto', ...((props as any).style || {})}}>
+                  style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor, ...((props as any).style || {})}}>
 
-        {label && <label className={'my-auto'} onMouseEnter={e => setShowTooltip(true)}
+        {label && <span className={'my-auto'} onMouseEnter={e => setShowTooltip(true)}
                          onMouseLeave={e => setShowTooltip(false)}>{label}
-        </label>}
+        </span>}
 
-        {jsxLabel && <label onMouseEnter={e => setShowTooltip(true)}
-                            onMouseLeave={e => setShowTooltip(false)}>{jsxLabel}
-        </label>}
+        {jsxLabel && <span onMouseEnter={e => setShowTooltip(true)}
+                            onMouseLeave={e => setShowTooltip(false)} style={{width: '100%'}}>{jsxLabel}
+        </span>}
 
         {(tooltip && showTooltip) && <div className={'my-tooltip'}>
             <b className={'text-center text-capitalize'}>{field}</b>
@@ -125,7 +145,7 @@ InputComponent.cname = 'InputComponent';
 export interface InputOwnProps {
     data: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
-    getter?: (data: LPointerTargetable) => string;
+    getter?: (data: GObject<LPointerTargetable>) => string | boolean;
     setter?: (value: string|boolean) => void;
     label?: string;
     jsxLabel?: ReactNode;

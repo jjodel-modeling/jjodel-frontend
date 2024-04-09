@@ -7,7 +7,7 @@ import {
     DGraphElement,
     DGraphVertex,
     DState, DUser,
-    DVertex,
+    DVertex, DViewElement,
     DVoidVertex,
     EMeasurableEvents,
     GObject,
@@ -36,6 +36,7 @@ import 'jqueryui';
 import 'jqueryui/jquery-ui.css';
 import { lightModeAllowedElements } from '../graphElement/graphElement';
 import ContextMenu from "../../components/contextMenu/ContextMenu";
+import {VertexOwnProps, VertexStateProps} from '../graphElement/sharedTypes/sharedTypes';
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;
 class ThisStatee extends GraphElementStatee { forceupdate?: number }
@@ -84,6 +85,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         let view: LViewElement = this.props.view;
         let isDraggable: boolean = view.draggable;
         let isResizable: boolean = view.resizable;
+        let allviews: Pointer<DViewElement>[] = [view, ...this.props.views].map(v=>v.id);
         // $element = $(html).find('.measurable').addBack();
         try {
         if (!isDraggable) {
@@ -109,25 +111,25 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     // if (size.w !== actualSize.w || size.h !== actualSize.h) this.setSize({w:actualSize.w, h:actualSize.h});
                     dragHelper.style.width = size.w + 'px';
                     dragHelper.style.height = size.h + 'px';
-                    dragHelper.style.opacity = this.props.view.constraints.length ? '1' : '0.5';
+                    dragHelper.style.opacity = '1'; // this.props.view.constraints.length ? '1' : '0.5';
                     if (this.props.view.lazySizeUpdate) dragHelper.classList.add('lazySizeUpdate');
                     else dragHelper.classList.remove('lazySizeUpdate');
                     return dragHelper;
                 },
                 // disabled: !(view.draggable),
                 start: (event: GObject, obj: GObject) => {
-                    this.doMeasurableEvent(EMeasurableEvents.onDragStart);
+                    for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onDragStart, vid);
                 },
                 drag: (event: GObject, obj: GObject) => {
                     TRANSACTION(()=>{
                         if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
-                        this.doMeasurableEvent(EMeasurableEvents.whileDragging);
+                        for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileDragging, vid);
                     })
                 },
                 stop: (event: GObject, obj: GObject) => {
                     TRANSACTION(()=>{
                         this.setSize({x:obj.position.left, y:obj.position.top});
-                        this.doMeasurableEvent(EMeasurableEvents.onDragEnd);
+                        for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onDragEnd, vid);
                     })
                 }
             };
@@ -154,13 +156,13 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 start: (event: GObject, obj: GObject) => {
                     TRANSACTION(()=>{
                         if (!this.props.node.isResized) this.props.node.isResized = true; // set only on manual resize, so here and not on setSize()
-                        this.doMeasurableEvent(EMeasurableEvents.onResizeStart);
+                        for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onResizeStart, vid);
                     })
                 },
                 resize: (event: GObject, obj: GObject) => {
                     TRANSACTION(()=>{
                         if (!this.props.view.lazySizeUpdate) this.setSize({w:obj.position.width, h:obj.position.height});
-                        this.doMeasurableEvent(EMeasurableEvents.whileResizing);
+                        for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileResizing, vid);
                     })
                 },
                 stop: (event: GObject, obj: GObject) => {
@@ -235,7 +237,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
                         this.setSize(newSize);
                         // console.log('resize setsize:', obj, {w:obj.size.width, h:obj.size.height});
-                        this.doMeasurableEvent(EMeasurableEvents.onResizeEnd);
+                        for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onResizeEnd, vid);
                     })
 
                 }
@@ -383,36 +385,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 }
 
 
-export class OwnProps extends GraphElementOwnProps {
-    // onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    // onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    isedgepoint?: boolean = false;
-    isgraph?: boolean = false;
-    isvertex?: boolean = true;
-    isvoid?: boolean = false;
-    decorated?: boolean; // for <decoratedStar /> (defaults true)
-    sides?: number // for <Polygon />, <Star /> and <Cross />
-    innerRadius?: number // for <Star /> and <Cross />
-    ratio?: number // for <Trapezoid />
-    rotate?: number // initial vertex rotation
-
-}
-
-class StateProps extends GraphElementReduxStateProps {
-    node!: LVoidVertex;
-    // lastSelected!: LModelElement | null;
-    // selected!: Dictionary<Pointer<DUser>, LModelElement|null>;
-    //selected!: LGraphElement|null;
-    isEdgePending!: { user: LUser, source: LClass };
-    viewpoint!: LViewPoint
-}
-
 class DispatchProps extends GraphElementDispatchProps {
 }
 
-export type AllPropss = OwnProps & StateProps & DispatchProps;
+export type AllPropss = VertexOwnProps & VertexStateProps & DispatchProps;
 
-function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+function mapStateToProps(state: DState, ownProps: VertexOwnProps): VertexStateProps {
     let DGraphElementClass: typeof DGraphElement;
     if (ownProps.isedgepoint) DGraphElementClass = DEdgePoint; else
     if (ownProps.isvertex && ownProps.isgraph) DGraphElementClass = DGraphVertex; else
@@ -421,7 +399,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     else DGraphElementClass = DGraphElement; // DField;
 
     if (DGraphElementClass === DVertex && ownProps.isvoid) DGraphElementClass = DVoidVertex;
-    const superret: StateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass, {...ownProps}) as StateProps;
+    const superret: VertexStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass, {...ownProps}) as VertexStateProps;
     // superret.lastSelected = state._lastSelected?.modelElement;
     // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
 
@@ -442,7 +420,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         source: LPointerTargetable.from(state.isEdgePending.source)
     };
     // superret.viewpoint = LViewPoint.fromPointer(state.viewpoint);
-    const ret: StateProps = new StateProps();
+    const ret: VertexStateProps = new VertexStateProps();
     U.objectMergeInPlace(superret, ret);
     U.removeEmptyObjectKeys(superret);
     return superret;
@@ -455,33 +433,31 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     U.removeEmptyObjectKeys(superret);
     return superret;
 }
-
-
-export const VertexConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
+export const VertexConnected = connect<VertexStateProps, DispatchProps, VertexOwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
 )(VertexComponent as any);
 
-export const Vertex = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { //  children: (string | React.Component)[]
+export const Vertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { //  children: (string | React.Component)[]
     return <VertexConnected {...{...props, children}} isgraph={false} isvertex={true}/>;
 }
-export const VoidVertex = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const VoidVertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isgraph={false} isvertex={true} isvoid={true}/>;
 }
-export const EdgePoint = function EdgePoint (props: OwnProps, children: ReactNode | undefined = []): ReactElement {
+export const EdgePoint = function EdgePoint (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement {
     return <VertexConnected {...{...props, children}} isgraph={false} isedgepoint={true}/>;
 }
 // todo: name them all or verify the name is still usable.
 
-export const Graph = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { // doesn't work?
+export const Graph = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { // doesn't work?
     return <VertexConnected {...{...props, children}} isgraph={true} isvertex={false} />;
 }
 
-export const GraphVertex = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const GraphVertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isgraph={true} isvertex={true} />;
 }
 
-export const Field = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const Field = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...{...props, children}} isgraph={false} isvertex={false} />;
 }
 (window as any).componentdebug = {Graph, GraphVertex, Field, Vertex, VoidVertex, EdgePoint, VertexConnected, VertexComponent};

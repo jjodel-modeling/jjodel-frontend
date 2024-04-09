@@ -1,15 +1,19 @@
 import type {
+    LVoidVertex,
+    PackagePointers,
+    EdgePointers,
+    AnnotationPointers,
     AttributePointers,
     EnumPointers,
     LiteralPointers,
-    LtoD,
-    LVoidVertex,
-    ModelPointers,
-    ObjectPointers,
     OperationPointers,
-    PackagePointers,
+    ObjectPointers,
+    GraphPointers,
     ParameterPointers,
     ReferencePointers,
+    VertexPointers,
+    ModelPointers,
+    LtoD,
 } from "../../joiner";
 import {
     Abstract,
@@ -45,7 +49,7 @@ import {
     RuntimeAccessible,
     RuntimeAccessibleClass,
     Selectors,
-    SetFieldAction,
+    SetFieldAction, SetRootFieldAction,
     ShortAttribETypes,
     ShortAttribSuperTypes,
     store,
@@ -69,6 +73,8 @@ import {
     ECoreRoot
 } from "../../api/data";
 import {ValuePointers} from "./PointerDefinitions";
+import {ShortDefaultEClasses} from "../../common/U";
+import {transientProperties} from "../../joiner/classes";
 
 
 @Node
@@ -151,7 +157,14 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     [key: `$${string}`]: LModelElement;
 
     // protected _defaultGetter(c: Context, k: keyof Context["data"]): any {}
-    protected _defaultSetter(val: any, c: Context, k: keyof Context["data"] & string): boolean {
+
+    // this one must return true or the js engine throws an exception
+    protected _defaultSetter(val: any, c: GObject<Context>, k: any): true {
+        this._setterFor$stuff_canReturnFalse(val, c as any, k as any);
+        return true;
+    }
+    // this one must be able to return false because is called by DObject and DValue default setters and return type is checked
+    protected _setterFor$stuff_canReturnFalse(val: any, c: Context, k: keyof Context["data"] & string): boolean {
         if (!["@", "$"].includes(k[0])) return false;
         let target: LPointerTargetable = (c.proxyObject as GObject)[k];
         if (!target) return false;
@@ -293,8 +306,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
 
     protected get_nodes(context: Context): this["nodes"] {
+        return Object.values(transientProperties.modelElement[context.data.id]?.nodes || {});/*
         const nodes: LGraphElement[] = [];
-        const nodeElements = $('[data-dataid="' + context.data.id + '"]');
+        const nodeElements = $('[data-dataid="' + context.data.id + '"]'); nope, this must become more efficient. when node is created set action to update data.nodes array? or to update a transient property (better)
         for (let nodeElement of nodeElements) {
             const nodeId = nodeElement.id;
             if (nodeId) {
@@ -302,12 +316,13 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 if (lNode) nodes.push(lNode);
             }
         }
-        return nodes;
+        return nodes;*/
     }
 
     protected get_node(context: Context): this["node"] {
-        const nodes = context.proxyObject.nodes;
-        return nodes.filter( n => n.favoriteNode)[0] || nodes[0];
+        return transientProperties.modelElement[context.data.id]?.node;
+        // const nodes = context.proxyObject.nodes;
+        // return nodes.filter( n => n.favoriteNode)[0] || nodes[0];
     }
 
     /*
@@ -1991,6 +2006,12 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
 
 
+    protected set_name(val: this["name"], context: Context): boolean {
+        if (context.data.name === val) return true;
+        super.set_name(val, context);
+        SetRootFieldAction.new('ClassNameChanged.'+context.data.id, val, '', false); // it is pointer, but related to transient stuff, so don't need pointedBy's
+        return true;
+    }
 
     protected set_partial(val: D["partial"], context: Context): boolean { return SetFieldAction.new(context.data.id, "partial", val); }
     protected get_partial(context: Context): D["partial"] { return context.data.partial; }
@@ -2833,7 +2854,6 @@ export class DAttribute extends DPointerTargetable { // DStructuralFeature
     unsettable: boolean = false;
     derived: boolean = false;
     defaultValueLiteral: string = '';
-    hasTopic: boolean = false;
     //@obsolete_attribute()
     parent: Pointer<DClass, 0, 'N', LClass> = [];
 
@@ -2899,7 +2919,6 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     derived!: boolean;
     // defaultValueLiteral!: string;
     defaultValue!: PrimitiveType[];
-    hasTopic!: boolean;
     parent!: LClass[];
     father!: LClass;
     instances!: LValue[];
@@ -2964,14 +2983,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         // @ts-ignore
         if (!val) (val) = []; else if (!Array.isArray(val)) val = [val];
         SetFieldAction.new(context.data, 'defaultValue', val, '', false);
-        return true;
-    }
-
-    protected get_hasTopic(context: Context): this['hasTopic'] { return context.data.hasTopic; }
-    protected set_hasTopic(val: this['hasTopic'], context: Context): boolean {
-        SetFieldAction.new(context.data, 'hasTopic', val);
-        return true;
-    }
+        return true; }
 
 }
 RuntimeAccessibleClass.set_extend(DStructuralFeature, DAttribute);
@@ -3592,6 +3604,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     public get_otherObjects(c: Context): (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[]{
         return this.get_otherInstances(c); }
     public get_otherInstances(c: Context): (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[]{
+        // todo:
         return (excludeInstances: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false)=>{
             let ret: LObject[];
             this.get_instancesOf(c)(excludeInstances, includeSubclasses) // and drop the result
@@ -3669,7 +3682,11 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             return ret;
         }
     }
-
+/*
+* instanceof === some class -> instantiate object and forces to conform to that class
+instanceof === null  --> shapeless object
+instanceof === undefined or missing  --> auto-detect and assign the type
+ */
     addObject(json: GObject, instanceoff: LClass | Pointer<DClass> | DocString<"ClassName"> | undefined | null = undefined): ReturnType<LValue["addObject"]>{ return this.cannotCall("LValue.addObject"); }
     __info_of__addObject: Info = {type: "(json: object, instanceof?: LClass) => LObject",
         txt: "Appends an object instancing \"instanceof\" to the model.\n<br>Setting his own properties, and DValues according to the content of the parameter object."}
@@ -4504,19 +4521,15 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     conformsTo!:( LAttribute | LReference)[]; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
 
 
-    protected set_name(val: this["name"], context: Context): boolean {
-        let name = val;
-        const father = context.proxyObject.father;
-        if (father) {
-            const check = father.children.filter((child) => {
-                return (DNamedElement.fromPointer(child.id) as DNamedElement).name === name
-            });
-            if (check.length > 0) {
-                U.alert('error', 'Cannot rename the selected element since this name is already taken.');
-                return true
-            }
-        }
-        SetFieldAction.new(context.data, 'name', name, '', false);
+    protected _defaultGetter(c: Context, k: keyof Context["data"]): any {
+        if (k in c.data) return this.__defaultGetter(c, k);
+        // if value not found in node, check in view.
+        return (this.get_instanceof(c) as any)[k];
+    }
+
+    protected _defaultSetter(v: any, c: Context, k: keyof Context["data"]): true {
+        if (super._setterFor$stuff_canReturnFalse(v, c, k as string)) return true; // try setter for data.$feature = value; shortcut for data.$feature.value = value;
+        this.__defaultSetter(v, c, k);
         return true;
     }
 
@@ -5299,7 +5312,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         SetFieldAction.new(context.data, 'topic', val, '', false);
         return true;
     }
-
 }
 RuntimeAccessibleClass.set_extend(DNamedElement, DValue);
 RuntimeAccessibleClass.set_extend(LNamedElement, LValue);

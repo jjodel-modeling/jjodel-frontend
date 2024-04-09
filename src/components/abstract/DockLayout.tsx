@@ -26,7 +26,7 @@ import ViewpointEditor from "../rightbar/viewpointsEditor/ViewpointsEditor";
 import Console from "../rightbar/console/Console";
 import MetamodelTab from "./tabs/MetamodelTab";
 import ModelTab from "./tabs/ModelTab";
-import InfoTab from "./tabs/InfoTab";
+import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import TestTab from "./tabs/TestTab";
 import {FakeStateProps} from "../../joiner/types";
 
@@ -227,10 +227,10 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
 
     render(): ReactNode {
         const layout: LayoutData = { dockbox: { mode: 'horizontal', children: [] }};
-        const infoTab = { id: 'info', title: 'Summary', group: 'group1', closable: false, content:
-            <InfoTab />
+        const ModelsSummary = { id: 'info', title: 'Summary', group: 'group1', closable: false, content:
+            <ModelsSummaryTab />
         };
-        layout.dockbox.children.push({tabs: [infoTab]});
+        layout.dockbox.children.push({tabs: [ModelsSummary] });
         const tabs = [
             this.test,
             // this.iotEditor,

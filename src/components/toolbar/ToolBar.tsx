@@ -2,30 +2,36 @@ import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
 import "./style.scss";
 import {
-    Constructors,
-    DEdge,
-    DEdgePoint,
+    DState,
     DGraphElement,
     Dictionary,
     DModel,
     DModelElement,
+    DNamedElement,
     DObject,
     DocString,
-    DState,
-    DVoidEdge,
-    EdgeSegment,
-    LEdgePoint,
+    DPointerTargetable,
+    DViewElement,
     LGraphElement,
     LModel,
     LModelElement,
     LObject,
-    Log,
     LValue,
-    LVoidEdge,
+    LViewElement,
+    MyProxyHandler,
     Pointer,
     SetFieldAction,
-    U,
-    WVoidEdge
+    RuntimeAccessibleClass,
+    DVoidEdge,
+    DEdge,
+    DEdgePoint,
+    EdgeSegment,
+    LVoidEdge,
+    Constructors,
+    WVoidEdge,
+    Log,
+    LEdgePoint, DUser,
+    U, LPointerTargetable, SetRootFieldAction
 } from "../../joiner";
 import {InitialVertexSizeObj} from "../../joiner/types";
 import ModellingIcon from "../forEndUser/ModellingIcon";
@@ -213,7 +219,10 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         return(<div className={"toolbar mt-2"}>
             <b className={'d-block text-center text-uppercase mb-1'}>Add root level</b>
             {classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
-                return <div key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => {
+                return <div
+                    onMouseEnter={e => SetRootFieldAction.new('tooltip', lClass.annotations.map(a => a.source).join(' '))}
+                    onMouseLeave={e => SetRootFieldAction.new('tooltip', '')}
+                    key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => {
                     // @ts-ignore
                     console.log('model.addObject({}, lClass)) }', {lClass, n:lClass?.name});
                     select(model.addObject({}, lClass)) }}>

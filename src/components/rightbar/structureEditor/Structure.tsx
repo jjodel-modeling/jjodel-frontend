@@ -1,18 +1,18 @@
 import React, {ReactNode} from "react";
 import type {GObject, LModelElement} from "../../../joiner";
 import {
-    DAnnotation, DAttribute,
+    DAnnotation,
     DObject,
     DValue,
-    Input, LAttribute,
+    Input,
     LModel,
     LObject,
     LOperation,
-    LPointerTargetable, LReference, LStructuralFeature,
+    LPointerTargetable,
     LValue,
     Select, Selectors,
     SetFieldAction,
-    store, U
+    store, TextArea
 } from "../../../joiner";
 import Value from "./editors/Value";
 
@@ -45,6 +45,24 @@ export default class Structure {
             <Input key={`input.abstract.${lClass.id}`} data={lClass} field={"abstract"} label={"IsAbstract"} type={"checkbox"} tooltip={"If set to True, the generated implementation class will have the abstract keyword"} />
             <Input key={`input.interface.${lClass.id}`} data={lClass} field={"interface"} label={"IsInterface"} type={"checkbox"} tooltip={"If set to True, only the java interface will be generated. There will be no corresponding implementation class and no create method in the factory"} />
             <Input key={`input.partial.${lClass.id}`} data={lClass} field={"partial"} label={"IsPartial"} type={"checkbox"} tooltip={"If set to True, the class will be partial."} />
+            <hr className={'my-2'} />
+            <div className={'d-flex p-1'}>
+                <b className={'my-auto'}>ANNOTATIONS</b>
+                <button className={'btn btn-primary ms-auto'} onClick={e => {
+                    const annotation = DAnnotation.new('Empty Annotation');
+                    SetFieldAction.new(lClass.id, 'annotations', annotation.id, '+=', true);
+                }}>
+                    <i className={'p-1 bi bi-plus'}></i>
+                </button>
+            </div>
+            {lClass.annotations.map((a, index) => <div className={'d-flex'} key={a.id}>
+                <TextArea jsxLabel={<div className={'my-auto'}>
+                    <label >Annotation #{index + 1}</label>
+                    <button className={'ms-2 btn btn-danger'} onClick={e => a.delete()}>
+                        <i className={'bi bi-trash-fill'} />
+                    </button>
+                </div>} data={a} field={'source'} />
+            </div>)}
         </>);
     }
     private static DataTypeEditor(lDataType: LModelElement): ReactNode {
@@ -86,7 +104,6 @@ export default class Structure {
             {Structure.TypedElementEditor(lAttribute)}
             {Structure.StructuralFeatureEditor(lAttribute)}
             <Input data={lAttribute} field={"isID"} label={"IsID"} type={"checkbox"} tooltip={"An ID attribute explicitly models the one unique ID of an object"} />
-            <Input data={lAttribute} field={'hasTopic'} label={'hasTopic'} type={'checkbox'} tooltip={'Define if the attribute has a topic in the MQTT Broker.'} />
         </>);
     }
     public static ReferenceEditor(lReference: LModelElement): ReactNode {
@@ -191,20 +208,9 @@ export default class Structure {
     }
     public static ValueEditor(me: LModelElement): ReactNode {
         const lValue: LValue = LValue.fromPointer(me.id);
-        const lInstaceof: LAttribute|LReference|undefined = lValue.instanceof;
         if(!lValue) return(<></>);
         return(<div>
             <Value value={lValue} />
-            {(lInstaceof?.className === DAttribute.name && U.wrapper<LAttribute>(lInstaceof).hasTopic) &&
-                <section>
-                    <hr className={'my-3'} />
-                    <Select data={lValue} field={'topic'} label={'Topic'} options={<>
-                        <option>sensors/sensor_1.timestamp</option>
-                        <option>sensors/sensor_1.temperature</option>
-                        <option>sensors/sensor_1.humidity</option>
-                    </>} />
-                </section>
-            }
         </div>);
     }
     public static Editor(lModelElement: LModelElement|null) : ReactNode {

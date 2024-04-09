@@ -32,9 +32,7 @@ import {
     Dictionary,
     LUser,
     DUser,
-    Defaults, LProject,
-} from "../../joiner";
-import {
+    Defaults, LProject, ViewScore,
     DViewElement,
     DPointerTargetable,
     DModel,
@@ -46,17 +44,11 @@ import {
     RuntimeAccessibleClass,
     store,
     U,
-    toShortEType
+    toShortEType,
+    NodeTransientProperties, transientProperties, ViewEClassMatch, ViewTransientProperties
 } from "../../joiner";
 import {DefaultEClasses, ShortDefaultEClasses, toShortEClass} from "../../common/U";
-import { Selected } from "../../joiner/types";
 
-enum ViewEClassMatch { // this acts as a multiplier for explicit priority
-    MISMATCH = 0,
-    IMPLICIT_MATCH = 1,
-    INHERITANCE_MATCH = 2,
-    EXACT_MATCH = 3,
-}
 
 @RuntimeAccessible('Selectors')
 export class Selectors{
@@ -86,11 +78,11 @@ export class Selectors{
         return ret;
     }
 
-    static getAllViewElements(): DViewElement[] {
+    static getAllViewElements(state0?: DState): DViewElement[] {
         // return Object.values(store.getState().idlookup).filter(v => v.className === DViewElement.name) as DViewElement[];
-        let state: DState & GObject = store.getState();
-        const ptrs: Pointer<DViewElement, 0, 'N'> = Object.values((state).viewelements);
-        let views: DViewElement[] = ptrs.map<DViewElement>( (ptr) => state.idlookup[ptr] as DViewElement);
+        const state: GObject<DState> = state0 || store.getState();
+        const ptrs: Pointer<DViewElement>[] = Object.values((state).viewelements);
+        let views: DViewElement[] = ptrs.map<DViewElement>( (ptr) => DPointerTargetable.fromPointer(ptr, state) as DViewElement);
         return views;
     }
     //Giordano: start
@@ -181,10 +173,7 @@ export class Selectors{
         const state: DState = store.getState();
         return Object.values((state).references);
     }
-    static getAllReferenceEdges(): string[] {
-        const state: DState = store.getState();
-        return Object.values((state).refEdges);
-    }
+    // static getAllReferenceEdges(): string[] { const state: DState = store.getState(); return Object.values((state).refEdges); }
     static getAllClasses(): string[] {
         const state: DState = store.getState();
         return Object.values((state).classs);
@@ -289,15 +278,8 @@ export class Selectors{
         if (condition) return ret.filter( e => condition(e));
         return ret;
     }
-/*
-    static getModels(condition?: (m: DModel) => boolean): DModel[] {
-        /*
-        const className: Pointer<DPointerTargetable, 1, 1> = DViewElement.name.substr(1).toLowerCase() + 's';
-        const allByClassName: DPointerTargetable[] = state[className as string];
-        let models: DModel[] = state[className as string].map((mid) => state.idlookup[mid as string]) as DModel[];
-        if (condition) models = models.filter(condition);
-        return models; * /
-        return Selectors.getAll(DModel, undefined, undefined, resolvePointers, wrap); }*/
+
+    static getModels(condition?: (m: DModel) => boolean): DModel[] { return Selectors.getAll(DModel, undefined, undefined, true, false); }
 
     static getModel(name: string, caseSensitive: boolean = false, wrap: boolean = false): DModel | LModel | null {
         if (!caseSensitive) name = name.toLowerCase();
@@ -318,7 +300,7 @@ export class Selectors{
         let ret = Selectors.getAll(classe, condition, undefined, true, wrap as any)[0];
         return ret; }
 
-    static getViews(condition?: (m: DModel) => boolean): DViewElement[] { return Selectors.getAll(DViewElement); }
+    static getViewIDs(condition?: (m: DModel) => boolean): Pointer<DViewElement>[] { return Selectors.getAll(DViewElement); }
 
 
 
@@ -332,35 +314,11 @@ export class Selectors{
         return undefined as any;
     }*/
 
-
-    // 2 = explicit exact match (===), 1 = matches a subclass, 0 = implicit match (any *), -1 = not matches
-    private static matchesOclCondition(v: DViewElement, data: DModelElement | LModelElement): ViewEClassMatch.MISMATCH | ViewEClassMatch.IMPLICIT_MATCH | ViewEClassMatch.EXACT_MATCH {
-        if (!v.oclCondition) return ViewEClassMatch.MISMATCH;
-        const oclCondition = v.oclCondition;
-        const user: LUser = LUser.fromPointer(DUser.current); // todo: just avoid presenting invalid views to this function instead of wrapping and filtering inside.
-        const project: LProject = user.project as LProject;
-        const viewpoint = project.activeViewpoint;
-        const isDefault = Defaults.check(v.id);
-        const isActiveViewpoint = v.viewpoint === viewpoint.id;
-        // console.log('allviews matcher ocl@@', {isDefault, data, dn:(data as any).name, oclCondition});
-        if(!isActiveViewpoint && !isDefault) return ViewEClassMatch.MISMATCH;
-        let constructors: Constructor[] = RuntimeAccessibleClass.getAllClasses() as (Constructor|AbstractConstructor)[] as Constructor[];
-        try {
-            const flag = OCL.filter(false, 'src', [data], oclCondition, constructors);
-            //console.log('allviews matcher ocl##', {flag, data, dn:(data as any).name, oclCondition});
-            if(flag.length > 0 && isActiveViewpoint) return ViewEClassMatch.EXACT_MATCH;
-            if(flag.length > 0 && !isActiveViewpoint) return ViewEClassMatch.IMPLICIT_MATCH;
-            return ViewEClassMatch.MISMATCH;
-        } catch (e) { console.error('invalid ocl query'); }
-        return ViewEClassMatch.MISMATCH;
-    }
-
-
-    private static matchesMetaClassTarget(v: DViewElement, data: DModelElement | DGraphElement): ViewEClassMatch {
-        if (!v) return ViewEClassMatch.MISMATCH;
+    private static matchesMetaClassTarget(v: DViewElement, data?: DModelElement | DGraphElement | undefined): number {
+        if (!v) return ViewEClassMatch.MISMATCH_PRECONDITIONS;
         if (!v.appliableToClasses || !v.appliableToClasses.length) return ViewEClassMatch.IMPLICIT_MATCH;
-        if (!data) return ViewEClassMatch.MISMATCH;
-        let ThisClass: typeof DPointerTargetable = RuntimeAccessibleClass.get(data?.className);
+        if (!data) return ViewEClassMatch.MISMATCH_PRECONDITIONS;
+        let ThisClass: typeof DPointerTargetable = RuntimeAccessibleClass.get(data.className);
         Log.exDev(!ThisClass, 'unable to find class type:', {v, data}); // todo: v = view appliable to DModel, data = proxy<LModel>
         let gotSubclassMatch: boolean = false;
         for (let classtarget of v.appliableToClasses) {
@@ -369,7 +327,7 @@ export class Selectors{
             if (!gotSubclassMatch && U.classIsExtending(ThisClass, ClassTarget)) gotSubclassMatch = true; // explicit subclass match
             if (gotSubclassMatch) return ViewEClassMatch.INHERITANCE_MATCH;
         }
-        return ViewEClassMatch.MISMATCH;
+        return ViewEClassMatch.MISMATCH_PRECONDITIONS;
  }
 
     private static isOfSubclass(data: DPointerTargetable, classTarget: string | typeof DPointerTargetable, acceptEquality: boolean = false): boolean {
@@ -381,36 +339,9 @@ export class Selectors{
     }
 
 
-
-    private static scoreView(v1: DViewElement, data: LModelElement | undefined, sameViewPointViews: Pointer<DViewElement, 1, 1>[] = []): number {
-        let datascore: number = 1;
-        let nodescore: number = 1;
-        if (data) {// 1° priority: matching by EClass type
-            let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, data?.__raw);
-            //console.log('allviews matcher meta', {v1MatchingEClassScore, d:data?.name, n:v1.name, v1});
-            // Log.l('score view:', {v1, data, v1MatchingEClassScore});
-            if (v1MatchingEClassScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
-            // 2° priority: by ocl condition matching
-            let v1OclScore = Selectors.matchesOclCondition(v1, data); // todo: not a fixed priority but acording to the "complexity" of the query
-            //console.log('allviews matcher ocl_', {v1OclScore, d:data?.name, n:v1.name, v1});
-            if (v1OclScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH;
-            // 3° priority by sub-view
-            let v1SubViewScore: ViewEClassMatch = ViewEClassMatch.EXACT_MATCH as ViewEClassMatch; // todo
-            // if (v1SubViewScore === ViewEClassMatch.MISMATCH) return ViewEClassMatch.MISMATCH; probably better permanently off, subviews should be a priority and not a requirement
-            // second priority: matching by viewpoint / subViews
-            datascore = (v1MatchingEClassScore * v1OclScore * v1SubViewScore);
-        }/*
-        don't use node, check comment at getAppliedViews()
-        if (node){
-            // 1° priority: matching by DGraphElement type
-            let v1MatchingEClassScore: ViewEClassMatch = this.matchesMetaClassTarget(v1, node?.__raw);
-            nodescore = 1; // todo: ocl by node position or other node info
-        }*/
-        return datascore * nodescore * v1.explicitApplicationPriority;
-    }
-
-    static getViewByIDOrNameD(name: string, state?: DState): undefined | DViewElement {
+    static getViewByIDOrNameD(name: string | DViewElement | LViewElement, state?: DState): undefined | DViewElement {
         if (!state) state = store.getState();
+        if (typeof name === "object") { return (name as any).__raw || name as any; }
         if (state.idlookup[name]?.className === DViewElement.cname) return state.idlookup[name] as DViewElement;
         let id = Selectors.getViewIdFromName(name, state);
         if (id && state.idlookup[id]?.className === DViewElement.cname) return state.idlookup[id] as DViewElement;
@@ -430,35 +361,217 @@ export class Selectors{
             let name = names[i];
             eligibleContainers = eligibleContainers.filter(v => ((state as DState).idlookup[v] as DViewElement).name === name);
             if (i === names.length-1 || eligibleContainers.length === 0) return eligibleContainers[0];
-            eligibleContainers = eligibleContainers.flatMap(v => ((state as DState).idlookup[v] as DViewElement).subViews);
+            eligibleContainers = eligibleContainers.flatMap(v => Object.keys(((state as DState).idlookup[v] as DViewElement).subViews));
         }
         return undefined;
     }
 
-                             // NB: node must not be used to determine view.
-    // because node properties depend on the view, and it might cause a loop of swapping back and forth assigned view.
-    // view determines layout, not the other way around.
-    static getAppliedViews(data: LModelElement|undefined,
-                           selectedViewId: Pointer<DViewElement, 0, 1, LViewElement>, parentViewId: Pointer<DViewElement, 0, 1, LViewElement>): Scored<DViewElement>[] {
-        const state : DState = store.getState();
-        const allViews: DViewElement[] = [...Selectors.getAllViewElements()];
-        const selectedView: DViewElement | null = null; // selectedViewId ? state.idlookup[selectedViewId] as DViewElement : null;
-        const parentView: DViewElement | null = parentViewId ? state.idlookup[parentViewId] as DViewElement : null;
-        const sameViewPointSubViews: Pointer<DViewElement, 1, 1>[] = parentView ? parentView.subViews : []; // a viewpoint is a simple view that is targeting a model
-        if (selectedView) U.arrayRemoveAll(allViews, selectedView);
-        let sortedPriority: Scored<DViewElement>[] = allViews.map(
-            // v => new Scored<DViewElement>(Selectors.scoreView(v, data as any as DModelElement, hisnode, graph, sameViewPointSubViews), v)) as Scored<DViewElement>[];
-            (v) => {
-                return new Scored<DViewElement>(Selectors.scoreView(v, data, sameViewPointSubViews), v);}
-        ) as Scored<DViewElement>[];
-        sortedPriority.sort( (e1, e2) => e2.score - e1.score);
-        // todo: prioritize views "children" of the view of the graph, so they will display differnet views for the same element in different graphs
-        // then sort by  view selector matching: on classtype (eattribute, eoperation, eclass...), on values, upperbound...
-        if (selectedView) sortedPriority = [new Scored<DViewElement>('manually assigned' as any, selectedView), ...sortedPriority];
-        // sortedPriority = sortedPriority.map( s=> s.element) as any] : sortedPriority.map( s=> s.element) as any;
 
-        // Log.exDevv('viewscores', {data, sp:sortedPriority});
-        return sortedPriority;
+    // todo: idea, set query complexity = explicitpriority amd autoset explicit priority to query lemgth
+    private static getQueryComplexity = (query: string) => query.length; // todo: the more "or" and navigations there are, the more a query is "complex", the more the query match is a priority.
+
+
+    static getAllGraphElementPointers(): Pointer<DGraphElement>[] {
+        // graphelements = fields;
+        let state: DState = store.getState();
+        return [...state.graphs, ...state.graphvertexs, ...state.graphelements, ...state.vertexs, ...state.edgepoints, ...state.edges];
+    }
+
+    private static getFinalScore(entry: ViewScore, vid: Pointer<DViewElement>, parentView: DViewElement | undefined, dview: DViewElement): number {
+        if (entry.metaclassScore === ViewEClassMatch.MISMATCH_PRECONDITIONS) return ViewEClassMatch.MISMATCH;
+        if (entry.jsScore === ViewEClassMatch.MISMATCH_JS || entry.OCLScore === ViewEClassMatch.MISMATCH_JS) return ViewEClassMatch.MISMATCH;
+        let pvMatch: boolean = parentView ? vid in parentView.subViews : false;
+        let pvScore: number = pvMatch ? (parentView as DViewElement).subViews[vid] : 1;
+        let explicitprio: number;
+        if (typeof entry.jsScore === 'number') {
+            explicitprio = entry.jsScore;
+        } else if (dview.explicitApplicationPriority === undefined) {
+            // in editor put placeholder with computed expression
+            explicitprio = (dview.jsCondition?.length || 1) + (dview.oclCondition?.length || 1);
+        } else explicitprio = dview.explicitApplicationPriority;
+
+        return entry.metaclassScore * pvScore * explicitprio;
+        //score = precoditiom * paremtview(comfiguravle) * (explicitprio = jsValid*jslemgth + oclvalid*ocllemgth)
+        // or if jscomditiom returmed mumver --> * jsscore
+    }
+
+
+
+
+
+/*
+    //this function handles: what i do when view changes? do i recompute the score?
+    static updateViewMatchings(dview: DViewElement, updatePreconditions: boolean, updateOCLScore: boolean, store: DState, updateManualViews: boolean = false, forcedUpdateViews: boolean = false): void {
+
+        //  event           observed change         ignore change
+        //  ocl             data                    node, view (except view.ocl)
+        //  jsCondition     all                     none
+        //  appliableTo     view.appliableto
+        // if (!forcedUpdateViews && (dview.oclUpdateCondition === 'manual') !== updateManualViews) return;
+        // modularize getscoresnew split in setpreconditionscore, setoclscorem, setjscscore, and call those only if observed stuff changed
+
+        const allNodes: DGraphElement[] = DPointerTargetable.fromPointer(Selectors.getAllGraphElementPointers());
+        //let dview = view.__raw;
+        let vid = dview.id; // optimize searching multiple usages and replacing
+
+        // filter alldata to exclude modelpieces that didn't pass the view.appyto check
+        // let oclData: (LModelElement)[] = allData.filter(l => {
+        let oclnodes: (DGraphElement)[] = allNodes.filter((dg: DGraphElement) => {
+            if (!dg) return false;
+            if (true) {
+                let d: DModelElement | undefined = dg.model ? DPointerTargetable.fromPointer(dg.model) : undefined;
+                let firstEvaluationForNodeView: boolean = false;
+                if (!transientProperties.node[dg.id]) { transientProperties.node[dg.id] = {viewScores: {}} as any; firstEvaluationForNodeView = true; }
+                if (!transientProperties.node[dg.id].viewScores[vid]) { transientProperties.node[dg.id].viewScores[vid] = {score: undefined} as any; firstEvaluationForNodeView = true; }
+
+                if (firstEvaluationForNodeView || updatePreconditions) {
+                    const oldScore = transientProperties.node[dg.id].viewScores[vid].score;
+                    const newScore = transientProperties.node[dg.id].viewScores[vid].score = this.matchesMetaClassTarget(dview, d);
+                    if (oldScore !== newScore) transientProperties.node[dg.id].stackViews = undefined as any; // force re-sorting
+                    // 67{}[]'?^&&||nb>
+                } /* else {
+                    if (!transientProperties.view[dview.id].oclUpdateCondition_PARSED( transientProperties.node[dg.id].viewScores[vid].)) return;
+                }* /
+                // no need to check if parentview changed as well. i optimized by not having parentview affect the numeric scores, but only the view queue array sorting
+
+                // transient.node[dg.id].viewScores[vid].score = MISSING (hasOwnProperty);    if the view or model is new and they are not yet evaluated.
+                // transient.node[dg.id].viewScores[vid].score = Number.NEGATIVE_INFINITY;    if pre-ocl conditions failed (view.appliableTo)
+                // transient.node[dg.id].viewScores[vid].score = 0;                           if preconditions are met, but ocl failed
+                // transient.node[dg.id].viewScores[vid].score = number ocl score;            if preconditions are met and ocl matched
+                // transient.node[dg.id].viewScores[vid].score = number precondition score;   if preconditions are met, and there is no ocl condition
+                // changed: matching score and ocl score are summed.
+                return transientProperties.node[dg.id].viewScores[vid].score !== undefined;
+            }
+
+            // if (model_viewstack[vid]) { filledElementsInOclData++; return l; } return undefined;
+        });
+        function mergeViewScores(preconditionScore: number, oclScore: number): number{ return preconditionScore + oclScore; }
+    }*/
+
+
+
+
+    static updateScores(data0: LModelElement | undefined, node: LGraphElement | undefined, nid: Pointer<DGraphElement>, pv: DViewElement | undefined){
+        let needsorting: boolean = false;
+        let firstEvaluationForNode: boolean = false;
+        let firstEvaluationForNodeView: boolean = false;
+        let tn = transientProperties.node[nid];
+        if (!tn) { transientProperties.node[nid] = tn = {viewScores: {}} as any; firstEvaluationForNode = true; }
+        let olddata = tn.viewSorted_modelused as LModelElement;
+        //let oldnode = transientProperties.node[nid]?.viewSorted_nodeused as LGraphElement;
+        const data: LModelElement = data0 as LModelElement;
+        // console.error('changed', {data, olddata, node, oldnode, cdata:data?.clonedCounter, colddata:olddata?.clonedCounter})
+        const pvid: Pointer<DViewElement> | undefined = pv?.id;
+        const oldpv: DViewElement | undefined = tn.viewSorted_pvid_used;
+        let datachanged: boolean = (!!data !== !!olddata) || !!(data && olddata) && (data.clonedCounter !== olddata.clonedCounter);
+        //let nodechanged: boolean = (!!node !== !!oldnode) || !!(node && oldnode) && (node.clonedCounter !== oldnode.clonedCounter);
+        let parentViewChanged: boolean = (pvid !== oldpv?.id || (!!(pv && oldpv) && oldpv.subViews !== pv.subViews)); // shallow comparison is fine.
+        if (parentViewChanged) tn.viewSorted_pvid_used = pv;
+        //if (nodechanged) transientProperties.node[nid].viewSorted_nodeused = node;
+        if (datachanged) tn.viewSorted_modelused = data;
+
+        // let nodechanged: boolean
+        // important to remember: how i'm using parentView in score and storage.
+        // i'm calculating and storing every score without parentView, then i apply it right before sorting the array,
+        // the enhanced value is not sored anyway but affects array sorting.
+        // so if parentView changes, or if his subviews changed, need to resort array without recomputing any score value.
+
+        //console.log('2302, getviews 2', {datachanged, nodechanged, olddata, oldnode, data, node, allViews: Selectors.getAllViewElements()});
+
+        const allViews: DViewElement[] = Selectors.getAllViewElements();
+        // check if scores needs to be updated
+        for (const dview of allViews) {
+            let vid = dview.id;
+            const tv = transientProperties.view[vid];
+            let tnv = tn.viewScores[vid];
+            //console.log('2302, getviews evaluating view ' + vid, {vid, dview});
+            // check initialization
+            if (!tnv) {
+                transientProperties.node[nid].viewScores[vid] = tnv = {} as any;
+                /*{
+                    score: ViewEClassMatch.NOT_EVALUATED_YET,
+                    metaclassScore: ViewEClassMatch.NOT_EVALUATED_YET,
+                    //jsScore:ViewEClassMatch.NOT_EVALUATED_YET,
+                    //OCLScore: ViewEClassMatch.NOT_EVALUATED_YET
+                } as any;*/
+                firstEvaluationForNodeView = true;
+            } else firstEvaluationForNodeView = tnv.metaclassScore === ViewEClassMatch.NOT_EVALUATED_YET; // todo: when changing view.appliableTo, delete all tnv using that view.
+
+            // check preconditions
+            if (firstEvaluationForNodeView) {
+                const oldScore = tnv.metaclassScore;
+                tnv.metaclassScore = this.matchesMetaClassTarget(dview, data?.__raw);
+                needsorting = true; // sorting is mandatory here because it's the first evaluation of node-vie
+                // if mismatch i stop computing the score.
+                if (tnv.metaclassScore === ViewEClassMatch.MISMATCH_PRECONDITIONS) {
+                    tnv.finalScore = ViewEClassMatch.MISMATCH;
+                    continue;
+                }
+            } else if (tnv.metaclassScore === ViewEClassMatch.MISMATCH_PRECONDITIONS) continue;
+
+            if (true) {
+                // this needs to be called not only if datachanged || nodechanged, but everytime in case it is a reference like data.$value.name.length
+                // also his performances are so fast that it might be more costly to check if it's supposed to be reevaluated than just calling it.
+                let jsScoreChanged: boolean = Selectors.updateJSScore(node, data, dview, tv, tnv);
+                if (!needsorting && jsScoreChanged) needsorting = true;
+                // if mismatch i stop computing the score.
+                if (tnv.jsScore === ViewEClassMatch.MISMATCH_JS) { tnv.finalScore = ViewEClassMatch.MISMATCH; continue; }
+            }
+
+
+            // check pre-ocl guard
+            // if (!tv.oclUpdateCondition_PARSED(data, olddata)) continue;
+
+            if (datachanged || tnv.OCLScore === ViewEClassMatch.NOT_EVALUATED_YET) {
+                // check ocl: this can lead to mis-updating if ocl queries a reference.
+                // but OCL is computationally heavy, so i decided it is now a requirement to update the model to reevaluate ocl.
+                let oldScore = tnv.OCLScore;
+                tnv.OCLScore = OCL.test(data, dview, node)//Selectors.calculateOCLScore({data, node, dview});
+                tv.oclChanged = false;
+                if (!needsorting && tnv.OCLScore !== oldScore) needsorting = true;
+                if (tnv.OCLScore === ViewEClassMatch.MISMATCH_OCL) { tnv.finalScore = ViewEClassMatch.MISMATCH; continue; }
+            }
+        }
+
+        if (parentViewChanged) needsorting = true; // scores saved in dictionaries are the same, but score in final sorted array changed.
+        return needsorting;
+    }
+
+    // get final viewstack for a node, also updates OCL scores if needed because of a change in model or parentView (NOT from a change in view)
+    static getAppliedViewsNew({data:data0, node, pv, nid}:{ node: LGraphElement | undefined; data: LModelElement | undefined; pv: DViewElement | undefined; nid: Pointer<DGraphElement>}): NodeTransientProperties {
+        // console.trace('2302, getviews', {tnode: transientProperties.node[nid], nid, pv})
+        let needsorting: boolean = Selectors.updateScores(data0, node, nid, pv);
+
+        let tn: NodeTransientProperties = transientProperties.node[nid]; // needs to be placed after updateScores() which will initialize it.
+        type ViewScoreEntry = {element: Pointer<DViewElement>, score: number, view: LViewElement};
+        if (needsorting || !tn.stackViews) {
+            let mainViews: ViewScoreEntry[] = [];
+            let decorativeViews: ViewScoreEntry[] = [];
+            let state = store.getState();
+            for (let vid of Object.keys(tn.viewScores)) {
+                let tnv = tn.viewScores[vid];
+                const dview: DViewElement = DPointerTargetable.fromPointer(vid, state);
+                const score = tnv.finalScore = Selectors.getFinalScore(tnv, vid, pv, dview);
+                if (!(score > 0)) continue; // do not flip to <=, because undefined and NEGATIVE_INFINITY always compute to false.
+                (dview.isExclusiveView ? mainViews : decorativeViews).push( {element:vid, score, view: LPointerTargetable.fromD(dview)} );
+            }
+            decorativeViews.sort((s1, s2)=> s2.score - s1.score); // sorted from biggest to smallest
+            mainViews.sort((s1, s2)=> s2.score - s1.score); // sorted from biggest to smallest
+
+            // Log.exDev(!mainViews[0], 'cannot find a matching main view', {mainViews, decorativeViews, data0, scores: tn.viewScores})
+            tn.mainView = mainViews[0]?.view;
+            tn.validMainViews = mainViews.map((s)=> s.view);
+            tn.stackViews = decorativeViews.map((s)=> s.view);
+        }
+        // chamges to view or ocl comditiom are mot hamdled here, ut om multple mp/modes a omce
+        //nb{}[]
+
+        // if data or view changed update the score dict, them re-sort the view arr first, fimally update Sorted_modelused, Sorted_modelused
+        // console.log('2302 getviews ret', {dn: data?.name, data, stack: transientProperties.node[nid].stackViews, stackn: transientProperties.node[nid].stackViews.map(v => v.name), scores: transientProperties.node[nid]});
+
+        // throw new Error("stop debug");
+        return tn;
+
     }
 
     static getAllMP(state?: DState): DModelElement[] {
@@ -544,7 +657,39 @@ export class Selectors{
         }
         return enumerators;
     }
+
+    private static updateJSScore(node: LGraphElement | undefined, data: LModelElement | undefined, dview: DViewElement, tv: ViewTransientProperties, tnv: ViewScore) {
+        let oldjsScore = tnv.jsScore;
+        let jsConditionChanged: boolean = tv.jsConditionChanged;
+        tv.jsConditionChanged = false;
+
+        // tnv.jsScore = ViewEClassMatch.NOT_EVALUATED_YET as any as number;
+        if (tv.jsCondition) {
+            try {
+                tnv.jsScore = tv.jsCondition({data, node, view: LPointerTargetable.fromD(dview), constants: tv.constants});
+                // if (tnv.jsScore === true) tnv.jsScore = dview.jsCondition.length;
+                switch (typeof tnv.jsScore) {
+                    case "boolean": // bool is fine if true
+                        if (!tnv.jsScore) tnv.jsScore = ViewEClassMatch.MISMATCH_JS;
+                        break;
+                    case "number": // number is fine if not NaN and > 0
+                        if (isNaN(tnv.jsScore) || tnv.jsScore < 0) tnv.jsScore = ViewEClassMatch.MISMATCH_JS;
+                        break;
+                    default:
+                        tnv.jsScore = ViewEClassMatch.MISMATCH_JS;
+                        break;
+                }
+            }
+            catch (e) { // crash = mismatch
+                tnv.jsScore = ViewEClassMatch.MISMATCH_JS;
+            }
+        } else tnv.jsScore = true; // missing condition = match
+
+        // jsConditionChanged: because even if score didn't change, if jsc.length changed the final computed score is affected
+        return jsConditionChanged || tnv.jsScore !== oldjsScore;
+    }
 }
+
 (window as any).Selectors = Selectors;
 
 class Scored<T extends GObject> {

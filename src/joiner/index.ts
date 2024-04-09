@@ -31,7 +31,9 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
     unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap, Info,
     Constructor, AbstractConstructor, ApiResponse
 } from "./types";
-export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1 } from "./classes";
+export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1,
+    NodeTransientProperties, ViewTransientProperties, DataTransientProperties, ViewScore
+} from "./classes";
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
     WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
     ValueDetail, SetValueAtPositionInfoType
@@ -48,7 +50,7 @@ export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStatePro
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,
     Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs,
-    LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements} from "./classes";
+    LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements, transientProperties, ViewEClassMatch} from "./classes";
 
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, MapLogicContext} from './proxy';
@@ -199,7 +201,8 @@ export const JSXT = jsxtt as any as JSXT_TYPE/*as {
     browserifyTransform: unknown | Function,
     visitor: unknown
 }*/
-
+windoww.jsxt = jsxtt;
+windoww.JSXT = jsxtt;
 
 
 export type Event = JQuery.Event;
@@ -243,8 +246,9 @@ w.IPoint = IPoint;
 w.GraphPoint = GraphPoint;
 w.$s = $s;
 */
+export {GraphElements, Graphs, Vertexes, Edges, Fields} from './components';
 export {
-    TextArea, Select, Input, Image, Edge,
+    TextArea, Select, Input, Edge, // Image,
     GraphsContainerComponent,
     Overlap as OverlapComponent,
     GraphsContainer,
@@ -257,7 +261,7 @@ export {
     VertexComponent,
     DefaultNodeComponent,
     // DockLayoutComponent,
-    ColorScheme,
+    //ColorScheme,
     EdgeComponent,
     DataOutputComponent, LoggerComponent, GenericInput,
     Polygon, Circle, Cross, Decagon,

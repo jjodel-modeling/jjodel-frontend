@@ -10,16 +10,16 @@ function OclEditorComponent(props: AllProps) {
     const [ocl, setOcl] = useStateIfMounted(view.oclCondition);
     if(!view) return(<></>);
     const readOnly = props.readonly !== undefined ? props.readonly : Defaults.check(view.id);
-    const change = (value: string|undefined) => {
+    const change = (value: string|undefined) => { // save in local state for frequent changes.
         if(value !== undefined) setOcl(value);
-        //DAMIANO:
-        // ma questo non setta solo lo stato locale? prima era:
-        // if (value !== undefined) view.query = value;
     }
+    const blur = () => { view.oclCondition = ocl } // confirm in redux state for final state
 
     return <>
         <label className={'ms-1 mb-1'}>OCL Editor</label>
-        <div style={{minHeight: '5em', height: '6em', resize: 'vertical', overflowY: 'auto'}} tabIndex={-1} onBlur={e => view.oclCondition = ocl}>
+        <div className={"monaco-editor-wrapper"} style={{
+                minHeight: '20ùpx', height:'200px'/*there is a bug of height 100% on childrens not working if parent have only minHeight*/,
+                resize: 'vertical', overflow:'hidden'}} tabIndex={-1} onBlur={blur}>
             <Editor className={'mx-1'} onChange={change}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                     defaultLanguage={'js'} value={view.oclCondition} />

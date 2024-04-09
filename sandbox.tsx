@@ -1,8 +1,101 @@
 // @ts-noinspect
 // @ts-ignore
-export const a = 0;
+import {transientProperties, U, windoww} from "./src/joiner";
+import {AllPropss} from "./src/graph/vertex/Vertex";
 
+// 67{}[]'?^&&||nb
+export const aaa = 0;
 let data:any, node:any, view:any, component:any;
+let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPackages:any, refEdges:any, extendEdges:any, React:any, Edge:any;
+
+
+
+// need to merge file declarations? or use a filename such as the imports will work (use inmemory://? or real urls)
+
+//N decorator views without jsx, that only set the node.state.errorlist[thisviewerror] = 'Lowerbound violation' etc...
+// then 1 view with jsx that displays them all
+
+// syntax error on constants, usageDeclarations are not catched
+
+/*reenable edge menù outside debug mode, (add color palette there? or not?)
+make uml arrows (and more common ones)
+*
+* */
+// from this, either as a string or code, find a way to injectprops. as string regex with "Edge(" -> "Edge(nodeid," ?
+// pre-defining function Edge(...stuff) {return ActualEdgeComponent(nodeid, ...stuff) before the return React.createElement?
+/*
+let aa = ()=>{ return React.createElement('div', {className: 'root'}, [
+    !data && "Model data missing.",
+    React.createElement('div', {className: "edges", style: {zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}, [[
+        refEdges.map(se=> Edge({start: se.start.father.node, end: se.end.node, view: "Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association"), key: se.start.node.id+"~"+se.end.node.id}))
+        , extendEdges.map(se=>Edge({start: se.start, end: se.end, view: "Pointer_ViewEdgeInheritance", key: "EXT_"+se.start.node.id+"~"+se.end.node.id}))]
+
+    ]),
+    otherPackages.filter(p => p).map(pkg => DefaultNode({key: pkg.id, data: pkg})),
+    firstPackage && firstPackage.children.filter(c => c).map(classifier => DefaultNode({key: classifier.id, data: classifier})),
+    m1Objects.filter(o => o).map(m1object => DefaultNode({key: m1object.id, data: m1object})),
+    otherViews
+])});*/
+
+/*
+*
+    {(()=>{
+        let equality= {};
+        let inequality = {};
+        let missing = {};
+        window.equality = equality;
+        window.inequality = inequality;
+        window.missing = missing;
+        window.thiss = this;
+        for (let k in this) {
+            if (this[k] === window[k]) equality[k] = this[k];
+            else if (k in this && !(k in window)) missing[k] = this[k];
+            else inequality[k] = {w:window[k], t:this[k]};
+        }
+        return 1;
+    })()}
+*
+* */
+
+// erase all __proto__ usages youj cam;
+// todo: UD = usage declarations are conceptually wrongful implemented now that there are N views to a node.
+// tentative fix: compute N UD for all views in mapstatetoprops. store them in a map, check the map in shouldcomponentupdate, update if at least 1 view needs update.
+// re-check again the same thing in render() and recompute only the views whose UD tells you they need a recalculation. BUT HOW TO GET OLD VAL?
+
+// option2: make a graphcomponent that does not generate a node. the N views are rendered by N graphcomponents each with his mapstate and shouldcomponentupdate
+// nella vista m1 della classe appare onhover un "+" per aggiungere e linkare un target a quella reference
+// uncomment errorOverlayView.oclCondition = 'context DValue inv: self.value < 0';
+// decorative views rendered first time after creation/loading are crashing because UD is not set yet, seems ud of decorative views is not computed in shouldcomponentupdate
+
+
+/*cache for proxies with same clomedcoumter, erase cache whem clomedcoumter chamges
+proxycache[id] = (clomedCoumter: somemum, proxy: lstuff);
+durimg doject wrap, if cc is the same returm cache.proxy. otherwise update it*/
+
+/*
+package[0].classes["c"] should be valid
+
+model.addObject({},  "C")
+should be valid as if it were:
+model.addObject({},  model.instanceof.allClasses["C"])
+naming for objects is broken, it's always concept 1_1 when should be "concept 1"_2 or 1.2
+
+// advanced mode and simple mode: hide some features like positional editor in simple mode or the entire tab in view/node, start in simple mode.
+
+for (keys in []) gives "joinOriginal" and "separator"!!! i did not override the proto correctly??
+* */
+// optimize jsx evaluation by parsing once in a functional value with variables as parameters ({data, view, node, DGraphElement, DAttribute, U ... all the context}) => jsx
+// and maybe improve it again by import memoize from "memoize-one"; it is high-order function that memorize the result if params are the same without re-executing it (must not have side effects)
+
+// todo: extract U.JodelObjectIsEqual from shouldcompoupdate that checks for .clonedCounter and with param depths,
+//  also save old context for unofficial memoization, if U.JodelObjectIsEqual(context, transient.node.oldContext) can usa cached jsx
+
+// BUG: Le istanze obj di m1 non vengono agiornate se cambio nome alla classe m2
+
+
+// get final viewstack for a node, also updates OCL scores if needed because of a change in model or parentView (NOT from a change in view)
+
+// todo: actually inject generated color palette to css editor as prefix, so monaco editor knows them and can validate variable usage, but those lines are hidden in visual editor.
 
 /*
 * verified! firing twice the same SetRootFieldAction("a", 1) does not change state twice, reducer returns old state.

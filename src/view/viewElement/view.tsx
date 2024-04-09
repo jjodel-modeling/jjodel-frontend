@@ -1,42 +1,44 @@
-import type {
-    GObject,
-    Info,
-    LogicContext,
-    Pointer,
-    Dictionary
-} from "../../joiner";
 import {
     BEGIN,
     Constructors,
     CoordinateMode,
-    CreateElementAction,
-    Debug, Defaults,
+    Debug,
+    Defaults,
     DGraphElement,
+    Dictionary,
     DModelElement,
     DocString,
     DPointerTargetable,
+    DState,
     DViewPoint,
     EdgeBendingMode,
+    EdgeGapMode,
     EGraphElements,
     EModelElements,
     END,
     getWParams,
+    GObject,
     GraphPoint,
     GraphSize,
+    Info, LModelElement,
     Log,
+    LogicContext,
     LPointerTargetable,
     LViewPoint,
     MyProxyHandler,
+    Pointer,
+    Pointers,
     RuntimeAccessible,
     RuntimeAccessibleClass,
-    SetFieldAction,
-    SetRootFieldAction,
+    SetFieldAction, SetRootFieldAction,
     ShortAttribETypes,
+    store,
     TRANSACTION,
-    U,
-    windoww,
-    EdgeGapMode, Pointers
+    U, ViewEClassMatch,
+    windoww
 } from "../../joiner";
+import {Pack1, transientProperties } from "../../joiner/classes";
+import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsData";
 
 @RuntimeAccessible('DViewElement')
 export class DViewElement extends DPointerTargetable {
@@ -45,6 +47,11 @@ export class DViewElement extends DPointerTargetable {
     // static singleton: LViewElement;
     // static logic: typeof LViewDViewElementElement;
     // static structure: typeof DViewElement;
+    public static MeasurableKeys: string[] = ['onDataUpdate', 'onDragStart', 'onDragEnd', 'whileDragging', 'onResizeStart',
+        'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating'];
+    public static RecompileKeys: string[] = ['onDataUpdate', 'onDragStart', 'onDragEnd', 'whileDragging', 'onResizeStart',
+        'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating',
+        'constants', 'usageDeclarations', 'jsxString', 'preconditions', 'jsCondition', 'ocl'];
 
     // inherited redefine
     // public __raw!: DViewElement;
@@ -53,10 +60,11 @@ export class DViewElement extends DPointerTargetable {
 
     // own properties
     name!: string;
+    isExclusiveView!: boolean;
 
     // evaluate 1 sola volta all'applicazione della vista o all'editing del campo
     constants?: string;
-    _parsedConstants?: GObject; // should be protected but LView is not subclass
+    // _parsedConstants?: GObject; // should be protected but LView is not subclass
 
     // evaluate tutte le volte che l'elemento viene aggiornato (il model o la view cambia).
     preRenderFunc!: string;
@@ -73,8 +81,13 @@ export class DViewElement extends DPointerTargetable {
     storeTemporaryPositions: boolean = false; // if true updates vertex position every X millisecond while dragging, if false updates it once when the vertex is released.
     appliableToClasses!: string[]; // class names: DModel, DPackage, DAttribute...
     appliableTo!: 'node'|'edge'|'edgePoint';
-    subViews!: Pointer<DViewElement, 0, 'N', LViewElement>;
+    subViews!: Dictionary<Pointer<DViewElement>, number/* priority boost */>;
     oclCondition!: string; // ocl selector
+    jsCondition!: string; // js selector
+    oclUpdateCondition!: DocString<(view: LViewElement)=>boolean>;
+    //oclUpdateCondition_PARSED!: undefined | ((view: LViewElement)=>boolean); moved in transient
+    OCL_NEEDS_RECALCULATION!: boolean; // if only the oclCondition needs to be reapplied to all model elements
+    OCL_UPDATE_NEEDS_RECALCULATION!: boolean; // if both ocl needsto be reapplied and the oclUpdateCondition -> transient.view[v.id].oclUpdateCondition_PARSED needs to be remade
     explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
     defaultVSize!: GraphSize;
     adaptHeight!: boolean;// | 'fit-content' | '-webkit-fill-available';
@@ -85,7 +98,7 @@ export class DViewElement extends DPointerTargetable {
     resizable!: boolean;
     viewpoint!: Pointer<DViewPoint>;
     display!: 'block'|'contents'|'flex'|string;
-    constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
+    //constraints!: GObject<"obsolete, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
     onDataUpdate!: string;
     onDragStart!: string;
     onDragEnd!: string;
@@ -111,10 +124,15 @@ export class DViewElement extends DPointerTargetable {
     edgePointCoordMode!: CoordinateMode;
     edgeHeadSize!: GraphPoint;
     edgeTailSize!: GraphPoint;
+    palette!: Dictionary<DocString<"palette prefix">, DocString<"colors like #4fc">[]>;
+    css!: string;
+    cssIsGlobal!: boolean;
+    /* private */ compiled_css!: string;
+    /* private */ css_MUST_RECOMPILE!: boolean;
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
-                      priority: number = 1 , persist: boolean = true, isDefaultView: boolean = false, vp?: Pointer<DViewPoint>): DViewElement {
+                      priority?: number, persist: boolean = true, isDefaultView: boolean = false, vp?: Pointer<DViewPoint>): DViewElement {
         let id = isDefaultView ? 'Pointer_View' + name : undefined;
         return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id).DPointerTargetable().DViewElement(name, jsxString, vp, defaultVSize, usageDeclarations, constants,
             preRenderFunc, appliableToClasses, oclCondition, priority).end();
@@ -144,15 +162,38 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
 
     // own properties
-
     name!: string;
     __info_of__name: Info = {isGlobal: true, type: ShortAttribETypes.EString, txt:<div>Name of the view</div>}
+    isOverlay!:boolean;
+    __info_of__isOverlay: Info = {isGlobal:true, type: ShortAttribETypes.EBoolean, txt:<div>If not exclusive, the view is meant to add a functional outline of tools to a primary View, or css.
+            <br/>A non-exclusive view cannot be applied alone and needs an exclusive view to render the main graphical content.</div>};
+    get_isOverlay(c: Context): this["isOverlay"] { return this.get_isExclusiveView(c); }
+    set_isOverlay(val: this["isOverlay"], c: Context): boolean { return this.set_isExclusiveView(val, c); }
+
+
+
+    explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
+    __info_of__explicitApplicationPriority: Info = {isGlobal: true, type: ShortAttribETypes.EByte, label:"explicit priority",
+        txt: 'Application priority of view. If multiple views match an element, the highest priority will render the main jsx.' }
+    get_explicitApplicationPriority(c: Context): this["explicitApplicationPriority"] { return (c.data.jsCondition?.length || 1) + (c.data.oclCondition?.length || 1); }
+    set_explicitApplicationPriority(val: this["explicitApplicationPriority"] | undefined, c: Context): boolean {
+        return SetFieldAction.new(c.data, "explicitApplicationPriority", val as number, '', false);
+    }
+
+    isExclusiveView!: boolean;
+    __info_of__isExclusiveView: Info = {isGlobal:true, type: ShortAttribETypes.EBoolean, txt:<div>If not exclusive, the view is meant to add a functional outline of tools to a primary View, or css.
+    <br/>A non-exclusive view cannot be applied alone and needs an exclusive view to render the main graphical content.</div>};
+    get_isExclusiveView(c: Context): this["isExclusiveView"] { return c.data.isExclusiveView; }
+    set_isExclusiveView(val: this["isExclusiveView"], c: Context): boolean {
+        if (Defaults.check(c.data.id)) return true; // cannot delete or "demote" to decorations the main views, to make sure there is always at least 1 appliable view.
+        return SetFieldAction.new(c.data, "isExclusiveView", !!val, '', false);
+    }
 
     constants?: string;
     __info_of__constants: Info = {todo:true, isGlobal: true, type: "Function():Object", label:"constants declaration",
         txt:<div>Data used in the visual representation, meant to be static values evaluated only once when the view is first applied.<br/>
         Check default value view for an example.<br/>
-    </div>}
+    </div>};
     // Example 1: <code>{'{color:"red", background: "gray"}'}</code><br/>
     // Example 2: <code>{'function(){\n    let fib = [1,1]; for (let i = 2; i < 100) { fib[i] = fib[i-2]+fib[i-1]; }\n    return fib; }'}</code><br/>
 
@@ -160,9 +201,24 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__preRenderFunc: Info = {isGlobal: true, obsolete: true, type: "Function():Object", label:"pre-render function",
         txt:<div>Data used in the visual representation, meant to be dynamic values evaluated every time the visual representation is updated.<br/>Replaced by usageDeclarations.</div>}
 
+    protected _defaultGetter(c: Context, k: keyof Context["data"]): any { return this.__defaultGetter(c, k); }
+
+    protected _defaultSetter(v: any, c: Context, k: keyof Context["data"]): any { return this.__defaultSetter(v, c, k); }
+
+
     jsxString!: string;
     __info_of__jsxString: Info = {isGlobal: true, type: "text", label:"JSX template",
         txt:<div>The main ingredient, a <a href={"https://react.dev/learn/writing-markup-with-jsx"}>JSX template</a> that will be visualized in the graph.</div>}
+    protected get_jsxString(context: Context): this['jsxString'] {
+        return context.data.jsxString;
+    }
+    protected set_jsxString(val: this['jsxString'], context: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'jsxString', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_jsxString', context.data.id, '+=', false);
+        });
+        return true;
+    }
 
     usageDeclarations?: string;
     __info_of__usageDeclarations: Info = {todo: false, isGlobal: true, type: "Function():Object", label:"usage declarations",
@@ -174,7 +230,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             <br/>    plus a special variable "ret" where dependencies are registered.{/*and a "state" variable containing the entire application state.*/}
             <br/>Usage Example: see the default view for value.
     </div>}
-    get_usageDeclarations(c: Context): this["usageDeclarations"]{
+    protected get_usageDeclarations(c: Context): this["usageDeclarations"]{
         return c.data.usageDeclarations || "(ret)=>{ // scope contains: data, node, view, constants, state\n" +
             "// ** preparations and default behaviour here ** //\n" +
             "ret.data = data\n" +
@@ -186,6 +242,111 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             "// ** declarations here ** //\n" +
             "}";
     }
+    protected set_usageDeclarations(val: this['usageDeclarations'], context: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'usageDeclarations', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_usageDeclarations', context.data.id, '+=', false);
+        })
+        return true;
+    }
+
+    // format should be array of (usedPaths: string[]) starting with "data." AUTOMATICALLY inefered from the ocl editor.
+    oclUpdateCondition!: (oldData: LModelElement, newData:LModelElement) => boolean;
+    __info_of__oclUpdateCondition: Info = {readType: '(view: LViewElement)=>boolean', writeType: 'function string',
+        txt: "[Optionally] Declare variables that are used in OCL condition, so that OCL will be re-checked only when those values have changed."}
+    get_oclUpdateCondition(c: Context): this["oclUpdateCondition"] { return transientProperties.view[c.data.id].oclUpdateCondition_PARSED; }
+    set_oclUpdateCondition(val: DocString<"function">, c: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data, "oclUpdateCondition", val || '', '', false);
+            // not recalculated right now because the change needs to be sent to collaborative editor users
+            // it is pointer, but i don't want to set pointedby's, it is very short lived.
+            SetRootFieldAction.new("OCL_UPDATE_NEEDS_RECALCULATION", c.data.id, '+=', false);
+        });
+        return true;
+    }
+/* moved it as setrootfield action and as array. check it after every reducer. update im same style the color palette too?
+    OCL_NEEDS_RECALCULATION!: boolean;
+    __info_of__OCL_NEEDS_RECALCULATION: Info = {hidden: true, type: ShortAttribETypes.EBoolean,
+        txt: "if only the oclCondition needs to be reapplied to all model elements"}
+    get_OCL_NEEDS_RECALCULATION(c: Context): this["OCL_NEEDS_RECALCULATION"] { return c.data.OCL_NEEDS_RECALCULATION; }
+    set_OCL_NEEDS_RECALCULATION(val: this["OCL_NEEDS_RECALCULATION"], c: Context): boolean { return this.cannotSet('OCL_NEEDS_RECALCULATION'); }
+
+    OCL_UPDATE_NEEDS_RECALCULATION!: boolean;
+    __info_of__OCL_UPDATE_NEEDS_RECALCULATION: Info = {hidden: true, type: ShortAttribETypes.EBoolean,
+        txt: "if both ocl needsto be reapplied and the oclUpdateCondition -> transient.view[v.id].oclUpdateCondition_PARSED needs to be remade"}
+    get_OCL_UPDATE_NEEDS_RECALCULATION(c: Context): this["OCL_UPDATE_NEEDS_RECALCULATION"] { return c.data.OCL_UPDATE_NEEDS_RECALCULATION; }
+    set_OCL_UPDATE_NEEDS_RECALCULATION(val: this["OCL_UPDATE_NEEDS_RECALCULATION"], c: Context): boolean { return this.cannotSet('OCL_UPDATE_NEEDS_RECALCULATION'); }*/
+
+    private css_MUST_RECOMPILE!: boolean;
+    public cssIsGlobal!: boolean;
+    __info_of__cssIsGlobal: Info = {type: ShortAttribETypes.EBoolean, txt: "Use with caution!\nIf true, custom css can affect even elements not matched with this view, or outside the graph."}
+    get_cssIsGlobal(c: Context): this["cssIsGlobal"] { return c.data.cssIsGlobal; }
+    set_cssIsGlobal(val: this["cssIsGlobal"], c: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data, "cssIsGlobal", !!val, '', false);
+            // compile only when accessed, to prevent color inputs to do a mess of compilations
+            SetFieldAction.new(c.data, "css_MUST_RECOMPILE", true, '', false);
+        });
+        return true;
+    }
+    public css!: string;
+    __info_of__css: Info = {type: "css string", txt: "Inject custom css that cannot be inserted inline like :hover or css variables.\nSupport LESS syntax."}
+    get_css(c: Context): this["css"] { return c.data.css; }
+    set_css(val:this["css"], c: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data, "css", val, '', false);
+            // compile only when accessed, to prevent color inputs to do a mess of compilations
+            SetFieldAction.new(c.data, "css_MUST_RECOMPILE", true, '', false);
+        });
+        return true;
+    }
+
+    compiled_css!: string;
+    __info_of__compiled_css: Info = { hidden: true, txt:'css + palettes compiled from less in css'};
+    get_compiled_css(c: Context): this["compiled_css"] {
+        if (!c.data.css_MUST_RECOMPILE) return c.data.compiled_css; // return c.proxyObject.r.__raw.compiled_css;
+        let s = '';
+        const allowLESS = false;
+        for (let paletteName in c.data.palette) {
+            let palette: DocString<"hexColors">[] = c.data.palette[paletteName];
+            let shortPaletteName: string;
+            if (['-', '_'].includes(paletteName[paletteName.length-1])) shortPaletteName = paletteName.substring(0, paletteName.length - 1);
+            else shortPaletteName = paletteName;
+            // set prefixed name without number
+            if (allowLESS) s += "\t@" + shortPaletteName + ": " + palette[0]+';\n';
+            s += "\t--" + shortPaletteName + ": " + palette[0]+';\n';
+            // set prefixed-0 name
+            if (allowLESS) s += "\t@" + paletteName + '0: ' + palette[0]+';\n';
+            s += "\t--" + paletteName + '0: ' + palette[0]+';\n';
+            // set prefixed-1 to prefixed-...n names
+            for (let i = 0 ; i < palette.length; i++) {
+                if (allowLESS) s += "\t@" + paletteName + (i+1) + ": " + palette[i]+';\n';
+                s += "\t--" + paletteName + (i+1) + ": " + palette[i]+';\n';
+            }
+        }
+        s += '\n\t' + U.replaceAll(c.data.css, '\n', '\n\t');
+        const localViewSelector = '.'+c.data.id; // '[data-viewid="'+c.data.id+'"]';
+        s = (!c.data.cssIsGlobal ? localViewSelector : 'body') +' {\n' + s + '\n}';
+        // not an error, i'm updating directly d-view that is usually wrong, this is to prevent multiple nodes with same view to trigger compile and redux actions
+        // count as if it's a derived attribute not really part of the store.
+        c.data.css_MUST_RECOMPILE = false;
+        return c.data.compiled_css = s;
+    }
+    set_compiled_css(val: this["compiled_css"], c: Context): boolean {
+        Log.exx("Do not use setter for this, set it directly in d-object, along with compiled_css." +
+        "\nOtherwise multiple nodes of the same view will start compiling together.\n" as any);
+        return false;
+    }
+
+    public palette!: Dictionary<DocString<"palette prefix">, DocString<"colors like #4fc">[]>;
+    __info_of__palette: Info = {type: "Dictionary<prefix, colors[]>", txt:"Specify a set of colors to be used in the graphical syntax through css variables."}
+    get_palette(c: Context): this["palette"] { return c.data.palette; }
+    set_palette(val:this["palette"], c: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data, "palette", val, '', false);
+            SetFieldAction.new(c.data, "css_MUST_RECOMPILE", true, '', false);
+        });
+    return true; }
 
     forceNodeType?: DocString<'component name'>;
     __info_of__forceNodeType: Info = {isGlobal:true, type: "EGraphElements", enum: EGraphElements, label:"force node type",
@@ -216,13 +377,66 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     subViews!: LViewElement[];
     __info_of__subViews: Info = {isGlobal: true, hidden: true, type: "DViewElement[]", label:"sub-views",
         txt:<div>Views that are suggested to render elements contained in the current one with a higher match priority.
-            <br/>Like a package view giving priority to a specific Class or Enum view to render his contained Classifiers in a common theme.</div>}
+            <br/>Like a package view giving priority to a specific Class or Enum view to render his contained Classifiers in a common theme.
+            <br/>If you wish to see the subview weight attached to the collection, access view.__raw.subviews instead.</div>}
+    get_SubViews(c: Context): this["subViews"] {
+        delete c.data.subViews.clonedCounter;
+        return Object.keys(c.data.subViews).map( vid => LPointerTargetable.fromPointer(vid) as LViewElement);
+    }
+    set_SubViews(val: this["subViews"] | GObject, c: Context): boolean {
+        let subviewsmap: GObject;
+        if (Array.isArray(val)) {
+            let ptrsArr = Pointers.fromArr(val);
+            subviewsmap = U.objectFromArrayValues(ptrsArr, 1.5);
+        } else subviewsmap = val || {};
+        SetFieldAction.new(c.data, "subViews", subviewsmap, '', true);
+        return true; }
 
 
-    explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
-    __info_of__explicitApplicationPriority: Info = {isGlobal: true, type: ShortAttribETypes.EByte, label:"explicit priority",
-        txt: 'Application priority of view. If multiple views match an element, the highest priority will render the main jsx,' +
-            'lowest priorities will only inject css and secondary jsx decorators (this part is still to do)'}
+    setSubViewScore!: (subview: Pack1<LViewElement>, boost?: number | null) => void;
+    __info_of__setSubViewScore: Info = {isGlobal: true, hidden: true, type: "function(ViewElement, numeric_score): void", txt:<div>Adds, updates or unsets (if boost = null) a subview with his score.</div>}
+
+    // adds, updates or unsets (if boost = null) a subview with his score.
+    get_setSubViewScore(c: Context): ((subview: Pack1<LViewElement>, boost?: number | null) => void) {
+        return (subview: Pack1<LViewElement>, boost: number| null = 1.5 ) => {
+            let subviews = {...c.data.subViews};
+            let ptr = Pointers.from(subview) as Pointer<DViewElement>;
+            if (boost !== null) { // set mode
+                if (subviews[ptr] === boost) return;
+                subviews[ptr] = boost;
+            } else {// set mode
+                if (subviews[ptr] === undefined) return;
+                delete subviews[ptr];
+            }
+            SetFieldAction.new(c.data, 'subViews',  subviews, '', true);
+        };
+    }
+
+
+    allSubViews!: LViewElement[];
+    __info_of__allSubViews: Info = {type: "ViewElement[]", txt: "recursively get this.subViews."}
+    get_allSubViews(c: Context): this["allSubViews"] {
+        delete c.data.subViews.clonedCounter;
+        let arr: Pointer<DViewElement>[] = Object.keys(c.data.subViews);
+        let nextarr: Pointer<DViewElement>[] = [];
+        let idmap: Dictionary<Pointer, DViewElement> = {};
+        let s: DState = store.getState();
+        let dview: DViewElement;
+        while (arr.length) {
+            for (let vid of arr) {
+                if (idmap[vid]) continue;
+                dview = DPointerTargetable.fromPointer(vid, s);
+                if (!dview) continue;
+                idmap[vid] = dview;
+                U.arrayMergeInPlace(nextarr, Object.keys(dview.subViews));
+            }
+            arr = nextarr;
+            nextarr = [];
+        }
+        return LPointerTargetable.fromD(Object.values(idmap));
+    }
+    set_allSubViews(val: this["allSubViews"], c: Context): boolean { return this.wrongAccessMessage("cannot call set_allSubViews, it is a derived attribute"); }
+
 
     defaultVSize!: GraphSize;
     __info_of__defaultVSize: Info = {isNode:true, type: "GraphSize", label:"default size", txt: 'starting size of the node'}
@@ -244,6 +458,34 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     oclCondition!: string; // ocl selector
     __info_of__oclCondition: Info = {isGlobal: true, hidden:true, label:"OCL apply condition", type: "text", // TODO: what's the difference with this.query?
         txt: 'OCL Query selector to determine which nodes or model elements should apply this view'}
+    protected get_oclCondition(context: Context): this['oclCondition'] {
+        return context.data.oclCondition;
+    }
+    set_oclCondition(val: string, context: Context): boolean {
+        val = (val || '').trim();
+        if (val === context.data.oclCondition) return true;
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'oclCondition', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_ocl', context.data.id, '+=', false); // it is pointer, but for transient stuff there is no need to set pointedby's
+        })
+        return true;
+    }
+
+    jsCondition!: string; // js selector
+    __info_of__jsCondition: Info = {isGlobal: true, hidden:true, label:"js apply condition", type: "text",
+        txt: 'js Query selector to determine which nodes or model elements should apply this view'}
+    protected get_jsCondition(context: Context): this['jsCondition'] {
+        return context.data.jsCondition;
+    }
+    set_jsCondition(val: string, context: Context): boolean {
+        val = (val || '').trim();
+        if (val === context.data.jsCondition) return true;
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'jsCondition', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_jsCondition', context.data.id, '+=', false);
+        })
+        return true;
+    }
 
     // todo: how about allowing a view to be part in multiple vp's? so this reference would be an array or removed, and you navigate only from vp to v.
     viewpoint!: LViewPoint;
@@ -256,42 +498,142 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     onDragStart!: string;
     __info_of__onDragStart: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated when a node begins being dragged.'}
+    protected get_onDragStart(context: Context): this['onDragStart'] {
+        return context.data.onDragStart;
+    }
+    protected set_onDragStart(val: this['onDragStart'], context: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'onDragStart', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_onDragStart', context.data.id, '+=', false);
+        })
+        return true;
+    }
 
     onDragEnd!: string;
     __info_of__onDragEnd: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated when a node finishes being dragged.'}
+    protected get_onDragEnd(context: Context): this['onDragEnd'] {
+        return context.data.onDragEnd;
+    }
+    protected set_onDragEnd(val: this['onDragEnd'], context: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'onDragEnd', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_onDragEnd', context.data.id, '+=', false);
+        })
+        return true;
+    }
 
     whileDragging!: string;
     __info_of__whileDragging: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated multiple times when mouse is moved while a node is being dragged.'}
+    protected get_whileDragging(context: Context): this['whileDragging'] {
+        return context.data.whileDragging;
+    }
+    protected set_whileDragging(val: this['whileDragging'], context: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'whileDragging', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_whileDragging', context.data.id, '+=', false);
+        })
+        return true;
+    }
 
     onResizeStart!: string;
     __info_of__onResizeStart: Info = {isNode: true, type: "Function():void",
     txt: 'Custom event activated when a node begins being resized.'}
+    protected get_onResizeStart(context: Context): this['onResizeStart'] {
+        return context.data.onResizeStart;
+    }
+    protected set_onResizeStart(val: this['onResizeStart'], context: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'onResizeStart', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_onResizeStart', context.data.id, '+=', false);
+        })
+        return true;
+    }
 
     onResizeEnd!: string;
     __info_of__onResizeEnd: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated when a node finishes being resized.'}
+    protected get_onResizeEnd(context: Context): this['onResizeEnd'] {
+        return context.data.onResizeEnd;
+    }
+    protected set_onResizeEnd(val: this['onResizeEnd'], context: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'onResizeEnd', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_onResizeEnd', context.data.id, '+=', false);
+        })
+        return true;
+    }
 
     whileResizing!: string;
     __info_of__whileResizing: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated multiple times when mouse is moved while a node is being resized.'}
+    protected get_whileResizing(context: Context): this['whileResizing'] {
+        return context.data.whileResizing;
+    }
+    protected set_whileResizing(val: this['whileResizing'], context: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'whileResizing', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_whileResizing', context.data.id, '+=', false);
+        })
+        return true;
+    }
 
     onRotationStart!: string;
     __info_of__onRotationStart: Info = {isNode: true, type: "Function():void",
     txt: 'Custom event activated when a node begins being rotated.'}
+    protected get_onRotationStart(context: Context): this['onRotationStart'] {
+        return context.data.onRotationStart;
+    }
+    protected set_onRotationStart(val: this['onRotationStart'], context: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'onRotationStart', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_onRotationStart', context.data.id, '+=', false);
+        })
+        return true;
+    }
 
     onRotationEnd!: string;
     __info_of__onRotationEnd: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated when a node finishes being rotated.'}
+    protected get_onRotationEnd(context: Context): this['onRotationEnd'] {
+        return context.data.onRotationEnd;
+    }
+    protected set_onRotationEnd(val: this['onRotationEnd'], context: Context): boolean {
+        TRANSACTION(()=>{
+        SetFieldAction.new(context.data, 'onRotationEnd', val, '', false);
+        SetRootFieldAction.new('VIEWS_RECOMPILE_onRotationEnd', context.data.id, '+=', false);
+        })
+        return true;
+    }
 
     whileRotating!: string;
     __info_of__whileRotating: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated multiple times when mouse is moved while a node is being rotated.'}
+    protected get_whileRotating(context: Context): this['whileRotating'] {
+        return context.data.whileRotating;
+    }
+    protected set_whileRotating(val: this['whileRotating'], context: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'whileRotating', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_whileRotating', context.data.id, '+=', false);
+        })
+        return true;
+    }
 
     onDataUpdate!: string;
     __info_of__onDataUpdate: Info = {isNode: true, type: "Function():void",
         txt: 'Custom event activated every time a property of his model, node or view is changed while the element is visibly rendered in a graph.\n<br>Caution! this might cause loops.'}
+    protected get_onDataUpdate(context: Context): this['onDataUpdate'] {
+        return context.data.onDataUpdate;
+    }
+    protected set_onDataUpdate(val: this['onDataUpdate'], context: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'onDataUpdate', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_onDataUpdate', context.data.id, '+=', false);
+        })
+        return true;
+    }
 
     constraints!: GObject<"todo, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
     __info_of__constraints: Info = {todo: true, isNode: true, type: "Function():void",
@@ -368,8 +710,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__getSize: Info = {isNode:true, hidden:true, type:"Function(Pointer<GraphElement | ModelElement>) => GraphSize",
         txt:<div>Gets the size stored in this view for target element.</div>}
 
-    public _parsedConstants!: GObject;
-    public get__parsedConstants(c: Context): this['_parsedConstants'] { return c.data._parsedConstants || {}; }
+    // public _parsedConstants!: GObject;
+    // public get__parsedConstants(c: Context): this['_parsedConstants'] { return c.data._parsedConstants || {}; }
 
     public get_constants(c: Context): this['constants'] {
         return c.data.constants;
@@ -382,7 +724,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         let context: GObject = {__param: parsedConstants};
         context.__proto__ = windoww.defaultContext;
         try{
-            U.evalInContextAndScopeNew( "("+funcCode+")(this.__param)", context, true, false, false);
+            let parsedFunc = U.parseFunctionWithContextAndScope(funcCode, context, context, ['ret']);
+            parsedFunc(context, parsedConstants);
+            // U.evalInContextAndScopeNew( "("+funcCode+")(this.__param)", context, true, false, false);
         } catch (e: any) {
             Log.w("Attempted to save an invalid view.constant setup. Cause:\n" + e.message.split("\n")[0], e)
             return undefined;
@@ -392,11 +736,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     public set_constants(value: this['constants'], c: Context): boolean {
         if (value === c.data.constants) return true;
-        let parsedConstants: GObject | undefined = LViewElement.parseConstants(value) || {};
-        BEGIN();
-        SetFieldAction.new(c.data.id, 'constants', value, '', false);
-        SetFieldAction.new(c.data.id, '_parsedConstants', parsedConstants, '', false);
-        END()
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data.id, 'constants', value, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_constants', c.data.id, '+=', false);
+        })
         return true;
     }
 
@@ -424,24 +767,44 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     public get_viewpoint(context: Context): this["viewpoint"] {
         return (LViewPoint.fromPointer(context.data.viewpoint as Pointer<DViewPoint>));
     }
-    public set_subViews(v: Pointer<DViewPoint>[], context: Context): boolean { return this.cannotSet('subViews, call set_viewpoint on the sub-elements instead.'); }
-    public set_viewpoint(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement, atIndex: number = -1): boolean {
+    // public set_subViews(v: Pointer<DViewPoint>[], context: Context): boolean { return this.cannotSet('subViews, call set_viewpoint on the sub-elements instead.'); }
+    public set_viewpoint(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement): boolean {
         let ret = false;
-        let vpid: Pointer<DViewPoint> = Pointers.from(v);
+        let vpid: Pointer<DViewPoint> = v && Pointers.from(v);
         let id = (manualDview || context.data).id;
         let oldvpid: Pointer<DViewPoint> = (manualDview || context.data).viewpoint;
         if (vpid === oldvpid) return true;
 
         TRANSACTION(()=>{
             ret = SetFieldAction.new(id, "viewpoint", vpid, '', true);
-            oldvpid && SetFieldAction.new(oldvpid, "subViews", id as any, '-=', true);
+            if (oldvpid) {
+                let subViews = {...DPointerTargetable.fromPointer(oldvpid).subViews};
+                delete subViews[id];
+                SetFieldAction.new(oldvpid, "subViews", id as any, '', true);
+            }
+            if (vpid) {
+                let name = context.data.name;
+                let copyPos = name.indexOf("Copy");
+                let oldSubViews = DPointerTargetable.fromPointer(vpid).subViews;
+                let insertBefore: string = '';
+                let subViews: GObject;
+                if (copyPos) {
+                    let copiedFromName: string = copyPos ? name.substring(0, copyPos).trim() : '';
+                    if (copiedFromName in oldSubViews) insertBefore = copiedFromName;
+                    else {
+                        for (let key in oldSubViews) if (key.indexOf(copiedFromName) === 0) { insertBefore = key; break; }
+                    }
+                }
+                // reinsert subviews in order so Object.keys() fits the new subview near the cloned one.
+                if (insertBefore) {
+                    subViews = {};
+                    for (let key in oldSubViews) {
+                        subViews[key] = oldSubViews[key];
+                        if (key === insertBefore) subViews[id] = subViews[key];
+                    }
+                } else { subViews = {...oldSubViews}; subViews[id] = 1.5; }
 
-            if (atIndex === -1) {
-                SetFieldAction.new(vpid, "subViews", id, '+=', true);
-            } else {
-                let oldSubViews = [...DPointerTargetable.fromPointer(vpid).subViews];
-                oldSubViews.splice(atIndex, 0, id);
-                SetFieldAction.new(vpid, "subViews", oldSubViews, '', true);
+                SetFieldAction.new(vpid, "subViews", subViews, '', true);
             }
         })
         return ret;
@@ -451,9 +814,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     public get_subViews(context: Context, key: string): LViewElement[]{
         let subViewsPointers = context.data.subViews;
         let subViews: LViewElement[] = [];
-        for(let pointer of subViewsPointers){
+        for (let pointer in subViewsPointers) {
             let item: LViewElement = MyProxyHandler.wrap(pointer);
-            if(item !== undefined) subViews.push(item);
+            if (item !== undefined) subViews.push(item);
         }
         return subViews;
     }
@@ -520,7 +883,18 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     set_appliableToClasses(val: this["appliableToClasses"], context: Context): boolean {
         if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
-        return this.set_generic_entry(context, "appliableToClasses", val); }
+        val.sort();
+        let hasChanged: boolean = false;
+        if (val.length === context.data.appliableToClasses?.length) {
+            for (let i = 0; i < val.length; i++) if (val[i] !== context.data.appliableToClasses[i]) { hasChanged = true; break; }
+        }
+        if (!hasChanged) return true;
+        TRANSACTION(()=>{
+            this.set_generic_entry(context, "appliableToClasses", val);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_preconditions', context.data.id, '+=', false);
+        })
+        return true;
+    }
 
     set_defaultVSize(val: GraphSize, context: Context): boolean {
         console.log('set_defaultVSize', {context, val});
@@ -541,24 +915,28 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 const dclone: DViewElement = DViewElement.new2(`${c.data.name} Copy`, '', undefined, true, 'skip');
                 lview = LPointerTargetable.fromD(dclone);
                 for (let key in c.data) {
-                    if (key !== 'id' && key !== 'name' && key !== "pointedBy" && key !== 'viewpoint' && key !== 'subViews') {
-                        // @ts-ignore
-                        lview[key] = c.data[key];
+                    switch (key) {
+                        case 'id': case 'name': case 'pointedBy': case 'viewpoint': case 'subViews': case 'className':
+                            // @ts-ignore;
+                            try { lview[key] = c.data[key]} catch(e) { Log.ee("error un duplicate view:", e); }
                     }
                 }
 
                 // insert in viewpoint.subview
                 //let defaultViews: Dictionary<Pointer, boolean> = Defaults.defaultViewsMap;
                 let vp: LViewPoint = c.proxyObject.viewpoint;
-                let oldViews: Pointer<DViewElement>[] = Pointers.from(vp.__raw.subViews);
+                // let oldViews: Pointer<DViewElement>[] = Object.keys(vp.__raw.subViews);
                 // if (Defaults.viewpoints.indexOf(vpid)) oldViews = oldViews.filter( vid => !defaultViews[vid]);
-                let i: number = oldViews.indexOf(c.data.id);
-                this.set_viewpoint(vpid, undefined as any, dclone, i === -1 ? -1 : i+1); // insert in-place right after the cloned view
+                // let i: number = oldViews.indexOf(c.data.id);
+                this.set_viewpoint(vpid, undefined as any, dclone);//, i === -1 ? -1 : i+1); // insert in-place right after the cloned view
                 /*
                 if (i === -1) oldViews.push(dclone.id);
                 else oldViews.splice(i+1, 0, dclone.id); // insert in-place right after the cloned view
                 vp.subViews = oldViews as any;*/
                 // SetRootFieldAction.new('stackViews', dview.id, '+=', true);
+
+
+                for (let key of DViewElement.RecompileKeys) SetRootFieldAction.new(`VIEWS_RECOMPILE_${key}`, c.data.id, '+=', false);
             })
             return lview;
         }

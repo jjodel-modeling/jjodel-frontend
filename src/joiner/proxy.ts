@@ -301,7 +301,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             }
         }
         // @ts-ignore
-        console.trace("proxy $getter 2", {targetObj, n:targetObj.name, propKey, l:this.lg, dg:this.lg._defaultGetter});
+        //console.trace("proxy $getter 2", {targetObj, n:targetObj.name, propKey, l:this.lg, dg:this.lg._defaultGetter});
 
         // if not exist check for children names
 
@@ -314,14 +314,11 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             let pk: string;
             if (childrenKeys.includes(propKey[0])) { pk = propKey.substring(1); canThrowErrors = false; }
             else pk = propKey;
-            console.trace("proxy $getter 2.5", {targetObj, n:targetObj.name, propKey, pk, lchildren, l:this.lg, dg:this.lg._defaultGetter});
             for (lc of lchildren) {
                 let n = lc?.name;
-                console.trace("proxy $getter 2.9", {targetObj, n:targetObj.name, dn:n, d:lc.__raw, propKey, pk, lchildren, l:this.lg, dg:this.lg._defaultGetter});
                 if (n && n.toLowerCase() === pk.toLowerCase()) return lc;
             }
         }
-        console.log("proxy $getter 3", {propKey, l:this.lg, dg:this.lg._defaultGetter});//
 
         // if custom generic getter exist
         if (this.lg._defaultGetter) return this.lg._defaultGetter(new LogicContext(proxyitself as any, targetObj), propKey);

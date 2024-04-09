@@ -6,7 +6,8 @@ import {
     Dictionary,
     DModel,
     DModelElement,
-    DPackage, DV,
+    DPackage,
+    DV,
     GObject,
     GraphElementComponent,
     GraphElementDispatchProps,
@@ -17,13 +18,40 @@ import {
     LModelElement,
     Log,
     LViewElement,
-    RuntimeAccessibleClass, SetRootFieldAction,
+    RuntimeAccessibleClass,
+    SetRootFieldAction,
     windoww,
-    Field, Graph, GraphVertex, Vertex, VoidVertex, RuntimeAccessible,
-    Polygon, Circle, Cross, Decagon,
-    Asterisk, Ellipse, Enneagon, Hexagon, Nonagon,
-    Octagon, Heptagon, Pentagon, Rectangle, Septagon,
-    Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle
+    Field,
+    Graph,
+    GraphVertex,
+    Vertex,
+    VoidVertex,
+    RuntimeAccessible,
+    Polygon,
+    Circle,
+    Cross,
+    Decagon,
+    Asterisk,
+    Ellipse,
+    Enneagon,
+    Hexagon,
+    Nonagon,
+    Octagon,
+    Heptagon,
+    Pentagon,
+    Rectangle,
+    Septagon,
+    Square,
+    Star,
+    SimpleStar,
+    DecoratedStar,
+    Trapezoid,
+    Triangle,
+    Selectors,
+    LPointerTargetable,
+    Pointer,
+    DGraphElement,
+    DPointerTargetable, LGraphElement, transientProperties
 } from "../../joiner";
 import { GraphElements } from "../../joiner/components";
 // import {Field, Graph, GraphVertex} from "../vertex/Vertex";
@@ -35,7 +63,6 @@ class DefaultNodeStatee extends GraphElementStatee { }
 
 // from ownstateprops function getVertexID(props: AllPropss): Pointer<DVoidVertex, 0, 1, LVoidVertex> { return props.vertex?.id; }
 
-
 // Giordano: add ignore for webpack
 @RuntimeAccessible('DefaultNodeComponent')
 //@ts-ignore
@@ -43,17 +70,35 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
 
     static mapStateToProps(state: DState, ownProps: GraphElementOwnProps): GraphElementReduxStateProps {
         let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
-        GraphElementComponent.mapLModelStuff(state, ownProps, ret); // not necessary either?
+        // GraphElementComponent.mapLModelStuff(state, ownProps, ret); // not necessary either?
         // GraphElementComponent.mapLGraphElementStuff(state, ownProps, ret, dGraphDataClass); not necessary, it's demanded to sub-components
-        try{
-            GraphElementComponent.mapViewStuff(state, ret, ownProps);
-            (ret as any).skiparenderforloading = false;
-        } catch(e) {
-            (ret as any).skiparenderforloading = true; // model id is updated, but he's still trying to load old model which got replaced and is not in state.
-            /* crashes on loading because old model and new model have different timestamps? looks by id of old model with same number and diffferent timestamp*/
-            Log.eDev(!ret.data, "can't find model data:", {state, ret, ownpropsdata:ownProps.data, ownProps});
-            Log.eDevv("cannot map state to props:", {e, state, ret, ownpropsdata:ownProps.data, ownProps});
+/*        ret.data = LPointerTargetable.wrap(ownProps.data);
+        ret.node = undefined as any; // because DefaultNode is all about determining the correct node to create, so there is no node yet.
+        ret.nodeid = ownProps.nodeid as Pointer<DGraphElement>; // but nodeid exists, passed from the parent along graphid and parentview
+*/
+        // try{
+        ret.data = LPointerTargetable.wrap(ownProps.data);
+        ret.dataid = ownProps.data ? (typeof ownProps.data === "string" ? ownProps.data : ownProps.data.id) : undefined;
+        // if node does not exist yet it's fine, don't create it. let Vertex or Graph or Edge make it with appropriate constructor according fo first matching view on model.
+        // problem: what kind of node to make / initial view assign on shapeless objects? they have both data and node undefined at first render.
+        ret.node = LPointerTargetable.wrap(ownProps.nodeid) as LGraphElement;
+        if (ret.dataid) {
+            // set up transient model-> node map
+            if (!transientProperties.modelElement[ret.dataid]) transientProperties.modelElement[ret.dataid] = {nodes: {}} as any;
+            transientProperties.modelElement[ret.dataid].nodes[ownProps.nodeid as string] = ret.node;
+            transientProperties.modelElement[ret.dataid].node = ret.node;
         }
+
+        GraphElementComponent.mapViewStuff(state, ret, ownProps);
+
+            // GraphElementComponent.mapViewStuff(state, ret, ownProps);
+            (ret as any).skiparenderforloading = false;
+        //} catch(e) {
+            //(ret as any).skiparenderforloading = true; // model id is updated, but he's still trying to load old model which got replaced and is not in state.
+            /* crashes on loading because old model and new model have different timestamps? looks by id of old model with same number and diffferent timestamp*/
+            // Log.eDev(!ret.data, "can't find model data:", {state, ret, ownpropsdata:ownProps.data, ownProps});
+            // Log.eDevv("cannot map state to props:", {e, state, ret, ownpropsdata:ownProps.data, ownProps});
+        //}
         return ret; }
 
     constructor(props: AllProps, context: any) { super(props, context); }
@@ -66,19 +111,20 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
 
     render(): ReactNode {
         if ((this.props as any).skiparenderforloading) {
-            console.log("realoading render: ", {thiss:this, data:this.props.data});
             windoww.bugged = this;
             console.log("realoading render: ", {thiss:this, data:this.props.data});
             SetRootFieldAction.new("rerenderforloading", new Date().getTime()); return <div>loading...</div>;}
         const view: LViewElement = this.props.view;
         const modelElement: LModelElement | undefined = this.props.data;
-        if (!view) { Log.exx({props: this.props, thiss:this}); }
+        if (!view) { Log.exx("cannot find view in DefaultNode", {props: this.props, thiss:this}); }
         // if (!view) { SetRootFieldAction.new("uselessrefresh_afterload", new Date().getTime()); return <div>Loading...</div>; }
 
         let componentMap: Dictionary<string, (props: GObject, children?: (string | React.Component)[]) => ReactElement> = windoww.components;
         let dmodelMap: Dictionary<string, typeof DModelElement> = RuntimeAccessibleClass.classes as any;
 
-        let serializableProps = {...this.props, data: this.props.data?.id, view: this.props.view?.id, views: this.props.views?.map( v => v.id )};
+        let serializableProps = {...this.props, data: this.props.data, view: this.props.view, views: this.props.views};
+        // let serializableProps = {...this.props, data: this.props.data?.id, view: this.props.view?.id, views: this.props.views?.map( v => v.id )};
+
         // console.log('dnode render', {props: {...this.props}, serializableProps});
         let componentfunction: typeof Graph = null as any;
         if (view.forceNodeType) {

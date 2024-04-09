@@ -700,25 +700,10 @@
     vertical-align: middle;
   }
 
-  input[type="color"] {
-    padding: 0;
-    vertical-align: middle;
-    /*border: none;*/
-  }
-
-  input[type="color"]::-webkit-color-swatch-wrapper {
-    /*il "bordo"?*/
-    padding: 2px;
-  }
-
-  input[type="color"]::-webkit-color-swatch {
-    /*il centro*/
-    /*border-radius: 100%;*/
-    border: none;
-  }
 
   select {
     border-width: 1px;
+    background: inherit;
   }
 
   input[type="number"] {

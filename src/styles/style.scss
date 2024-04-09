@@ -1,5 +1,8 @@
 @import "./variables";
 
+.REACT-ROOT:not(.debug) .debug{
+  display: none;
+}
 /* classes */
 .round { border-radius: $radius; }
 .circle { border-radius: 999px !important; }
@@ -15,6 +18,8 @@
 .autosize-input { flex-grow: 1; flex-basis: 10px; }
 .hidden-input { border: 1px solid transparent; background-color: transparent; }
 .hidden-input:focus { border: 1px dashed $border-color; }
+.w-fill { width: $fill; }
+.h-fill { height: $fill; }
 
 .autosize-input{
   // opacity:0;
@@ -74,8 +79,31 @@
 
   }
 }
+input[type="color"] {
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  margin-right: 5px;
+  vertical-align: middle;
+}
 
-.input[type='color'] { width: min-content; padding: 0.6em; cursor: pointer; }
+input[type="color"] {
+  padding: 0;
+  vertical-align: middle;
+  /*border: none;*/
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  /*il "bordo"?*/
+  padding: 2px;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  /*il centro*/
+  /*border-radius: 100%;*/
+  border: none;
+}
 .input[type='checkbox'] {
   background-image: url("../static/svg/toggle-off.svg");
   background-repeat: no-repeat; background-size: cover;
@@ -93,7 +121,8 @@
   font-size: 0.9rem;
   height: min-content;
   border-radius: $radius;
-  border: 1px solid $border-color; }
+  border: 1px solid $border-color;
+}
 .select:focus { border: 1px dashed $border-color; }
 .btn { padding: 0 0.1em; line-height: normal; border-radius: $radius; }
 

@@ -1,8 +1,8 @@
-import React, {Dispatch, useState} from 'react';
+import React, {Dispatch} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {DState, DUser, statehistory, stateInitializer, U} from "./joiner";
+import {DState, DUser, LUser, statehistory, stateInitializer, U} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import {FakeStateProps} from "./joiner/types";
@@ -18,13 +18,16 @@ let userHasInteracted = false;
 function endPendingActions() {
     if (!userHasInteracted) firstInteraction();
 }
-function firstInteraction() {
+function firstInteraction(){
     statehistory.globalcanundostate = true;
 }
 
 function App(props: AllProps): JSX.Element {
     const debug = props.debug;
     const [loading, setLoading] = useState(true);
+    const isLoading = props.isLoading;
+    const tooltip = props.tooltip;
+    let user: LUser = props.user;
 
     useEffectOnce(() => {
         stateInitializer().then(() => setLoading(false));
@@ -50,6 +53,7 @@ function App(props: AllProps): JSX.Element {
         return(<div className={'d-flex flex-column h-100 p-1 REACT-ROOT' + (props.debug ? ' debug' : '')}
                     onClick={e => statehistory.globalcanundostate = true}>
             {isLoading && <Loader />}
+            {tooltip && <ToolTip />}
             <Navbar />
             <Helper />
             {(project) ? (project.type === 'collaborative' && !DUser.offlineMode) ? <CollaborativeAttacher project={project} /> : <Editor /> : <Dashboard />}
@@ -68,6 +72,8 @@ interface StateProps {
     offlineMode: boolean,
     debug: boolean,
     isLoading: boolean
+    tooltip: string,
+    user: LUser
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -77,6 +83,11 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     ret.debug = state.debug;
     ret.isLoading = state.isLoading;
+    ret.user = LUser.fromPointer(DUser.current);
+    // needed here as props, because apparently functional components are memoized by default.
+    ret.offlineMode = DUser.offlineMode;
+    ret.tooltip = state.tooltip;
+    console.log("app re mapstate", {u:DUser.current, o:DUser.offlineMode});
     return ret;
 }
 
@@ -91,3 +102,12 @@ export const AppConnected = connect<StateProps, DispatchProps, OwnProps, DState>
 )(App);
 
 export default AppConnected;
+
+
+/* SPLASH SCREEN
+return(<div className={'w-100 h-100 text-center bg-smoke'}>
+    <img style={{height: '60%', width: '80%'}} className={'mt-3 rounded shadow'} src={SplashImage}></img>
+    <Oval height={80} width={80} wrapperStyle={{justifyContent: 'center'}} wrapperClass={'mt-3'}
+          color={'#475e6c'} secondaryColor={'#ff8811'} />
+</div>);
+*/
