@@ -109,7 +109,8 @@ export class OCL extends RuntimeAccessibleClass{
         // @ts-ignore
         view = view0?.__raw || view0;
         let oclCondition = view.oclCondition;
-        let tv = transientProperties.view[view.id]
+        let tv = transientProperties.view[view.id];
+        console.log("Evaluating ocl:"+view.oclCondition, {view, ocl:view.oclCondition});
         if (!view.oclCondition) { return true; }
 
         let oclEngine: OclEngine;
