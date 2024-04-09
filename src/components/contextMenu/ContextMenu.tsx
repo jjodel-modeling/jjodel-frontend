@@ -37,7 +37,6 @@ function ContextMenuComponent(props: AllProps) {
     if(!node || !data) return(<></>);
 
     const close = () => {
-        if (!windoww.ContextMenuVisible) return;
         windoww.ContextMenuVisible = false;
         setSuggestedName('');
         setMemorec(null);
