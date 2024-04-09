@@ -307,7 +307,7 @@ let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error vie
                 "// ** preparations and default behaviour here ** //\n" +
                 "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
                 "// ** declarations here ** //\n" +
-                "ret.missingLowerbound = Math.min(0, data.lowerbound - data.values.length);\n" +
+                "ret.missingLowerbound = Math.min(0, data.lowerBound - data.values.length);\n" +
                 "ret.valuesLength = data.values.length;"+
                 "}";
             v.onDataUpdate = `

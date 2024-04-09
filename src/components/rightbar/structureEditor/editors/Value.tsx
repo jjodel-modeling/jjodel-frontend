@@ -13,7 +13,7 @@ import {
     LStructuralFeature,
     LValue, RuntimeAccessibleClass,
     Selectors,
-    SetFieldAction
+    SetFieldAction, U
 } from "../../../../joiner";
 
 
@@ -43,7 +43,7 @@ function Value(props: Props) {
 
     const add = (event: React.MouseEvent<HTMLButtonElement>) => {
         // SetFieldAction.new(dValue, 'value', U.initializeValue(feature?.type), '+=', false);
-        SetFieldAction.new(dValue, 'values', undefined, '+=', false);
+        SetFieldAction.new(dValue, 'values', U.initializeValue(feature?.type), '+=', false);
     }
     const remove = (index: number, isPointer: boolean | undefined) => {
         if (isPointer === undefined) isPointer = !!(filteredvalues[index].value as any)?.__isProxy; // Pointers.isPointer
