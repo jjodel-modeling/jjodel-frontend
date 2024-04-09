@@ -103,6 +103,7 @@ function mergeState(oldState: GObject, injectToModel: boolean = true, deleteNode
             // @ts-ignore
             if (vvv.query) vvv.oclCondition = vvv.query;
         }
+        // @ts-ignore
         customVP.subViews = U.objectFromArrayValues([...new Set(customVP.subViews as any)] as any[], 1.5);
         for (let pkg of pkgs) {
             pkg = {...pkg} as DPackage;
@@ -149,6 +150,7 @@ function loadOldState(obj: GObject, name: string = "oldSave"): void {
         project.graphs = obj.graphs;
         project.models = obj.models;
         let lastvp = obj.viewpoints[obj.viewpoints.length -1];
+        // @ts-ignore
         lastvp.subViews = obj.viewelements ? (Array.isArray(obj.viewelements) ? U.objectFromArrayValues(obj.viewelements, 1.5) : obj.viewelements) : {};
         for (let v of Object.keys(lastvp.subViews)) (DPointerTargetable.from(v) as DViewElement).viewpoint = lastvp;
         // project.views = obj.viewelements;

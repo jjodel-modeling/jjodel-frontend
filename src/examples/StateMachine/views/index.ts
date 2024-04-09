@@ -54,7 +54,9 @@ export class StateMachine_Views {
         textView.oclCondition = `context DModel inv: not self.isMetamodel`;
         // textView.oclCondition = `context DModel inv: self.id = '${m1.id}'`;
 
+        // @ts-ignore
         viewpoint.subViews = [modelView, stateView, commandView, eventsView, transitionView].map(v => v.id);
+        // @ts-ignore
         textViewpoint.subViews = [textView.id];
         return [LViewPoint.fromD(viewpoint), LViewElement.fromD(modelView), LViewElement.fromD(textView)];
     }

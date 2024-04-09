@@ -8,7 +8,7 @@ import {
     DViewElement,
     LoadAction,
     LProject,
-    LUser,
+    LUser, LViewElement,
     LViewPoint,
     Pointer,
     U

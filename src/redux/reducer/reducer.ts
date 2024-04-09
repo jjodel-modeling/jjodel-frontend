@@ -762,7 +762,7 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
     }
 }
 
-export function stateInitializer() {
+export async function stateInitializer() {
     statehistory[DUser.current] = {redoable: [], undoable: []};
     RuntimeAccessibleClass.fixStatics();
     let dClassesMap: Dictionary<string, typeof DPointerTargetable> = {};
