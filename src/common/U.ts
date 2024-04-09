@@ -343,7 +343,7 @@ export class U {
     // if replacement is empty, it will be filled with '';
     // if replacement length < searchText, replacement will be filled with copies of his elements cycling from 0 to his length until his length matches searchText.length
     static multiReplaceAll(a: string, searchText: string[] = [], replacement: string[] = []): string {
-        Log.ex(searchText.length !== replacement.length, 'search and replacement must be have same length: ' + searchText.length + "vs" + replacement.length + " " +JSON.stringify(searchText) + "   " + JSON.stringify(replacement));
+        // Log.ex(searchText.length !== replacement.length, 'search and replacement must be have same length: ' + searchText.length + "vs" + replacement.length + " " +JSON.stringify(searchText) + "   " + JSON.stringify(replacement));
         let i = -1;
         while (replacement.length !== 0 && replacement.length < searchText.length) replacement.push(replacement[++i]);
         i = -1;
