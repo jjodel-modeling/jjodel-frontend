@@ -558,8 +558,8 @@ export class Selectors{
             decorativeViews.sort((s1, s2)=> s2.score - s1.score); // sorted from biggest to smallest
             mainViews.sort((s1, s2)=> s2.score - s1.score); // sorted from biggest to smallest
 
-            Log.exDev(!mainViews[0], 'cannot find a matching main view', {mainViews, decorativeViews, data0, scores: tn.viewScores})
-            tn.mainView = mainViews[0].view;
+            // Log.exDev(!mainViews[0], 'cannot find a matching main view', {mainViews, decorativeViews, data0, scores: tn.viewScores})
+            tn.mainView = mainViews[0]?.view;
             tn.validMainViews = mainViews.map((s)=> s.view);
             tn.stackViews = decorativeViews.map((s)=> s.view);
         }

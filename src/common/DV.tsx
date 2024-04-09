@@ -318,7 +318,7 @@ class DefaultView {
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
         if (dname && dname.length >= 8) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
-        return <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"min-content"}}>
+        return <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
             <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
                 <b>{errortype} ERROR on {(dname ? dname  : '') + (false ? ' / ' + nodename : '')})</b>
                 <hr/>
@@ -333,7 +333,7 @@ class DefaultView {
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
         if (dname && dname.length >= 8) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
-        return `<div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"min-content"}}>
+        return `<div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
             <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
                 <b>{errortype} ERROR on {${dname ? dname : ''} + (false ? ' / ' + ${nodename} : '')})</b>
                 <hr/>

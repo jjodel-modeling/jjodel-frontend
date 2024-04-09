@@ -368,7 +368,7 @@ node.state.errors = {...node.state.errors, naming: err};
         "// ** preparations and default behaviour here ** //\n" +
         "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
         "// ** declarations here ** //\n" +
-        "ret.segments = edge.segments\n"+
+        "\n"+
         "}";
 
     let edgeUsageDeclarations = "(ret)=>{\n" +
@@ -381,6 +381,7 @@ node.state.errors = {...node.state.errors, naming: err};
         "// ** declarations here ** //\n" +
         "ret.start = edge.start\n"+
         "ret.end = edge.end\n"+
+        "ret.segments = edge.segments\n"+
         "}";
 
     function makeEdgeView(name: string, type: EdgeHead, headSize: GraphPoint | undefined, tailSize: GraphPoint | undefined, dashing: boolean): DViewElement{
