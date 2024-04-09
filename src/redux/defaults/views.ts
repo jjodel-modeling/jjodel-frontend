@@ -52,7 +52,7 @@ class DefaultViews {
         view.adaptWidth = true; view.adaptHeight = true;
         view.oclCondition = 'context DClass inv: true';
         view.palette = {'color-': ['#ff0000', '#000000', '#ffffff'], 'background-': ['#ffffff', '#eeeeee', '#ff0000']};
-        view.css = '.class {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color:var(--color-2);\n';
+        view.css = '.class {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color:var(--color-2);}\n';
         view.css += '.class-name {font-weight: bold; color: var(--color-1);}\n';
         view.css += '.class-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
         return view;
@@ -63,7 +63,7 @@ class DefaultViews {
         view.adaptWidth = true; view.adaptHeight = true;
         view.oclCondition = 'context DEnumerator inv: true';
         view.palette = {'color-': ['#ffa500', '#000000', '#ffffff'], 'background-': ['#ffffff', '#eeeeee', '#ff0000']};
-        view.css = '.enumerator {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);\n';
+        view.css = '.enumerator {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);}\n';
         view.css += '.enumerator-name {font-weight: bold; color: var(--color-1);}\n';
         view.css += '.enumerator-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
         return view;
@@ -102,7 +102,7 @@ class DefaultViews {
         view.adaptWidth = true; view.adaptHeight = true;
         view.oclCondition = 'context DObject inv: true';
         view.palette = {'color-': ['#ff0000', '#000000', '#ffffff'], 'background-': ['#ffffff', '#eeeeee', '#ff0000']};
-        view.css = '.object {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);\n';
+        view.css = '.object {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);}\n';
         view.css += '.object-name {font-weight: bold; color: var(--color-1);}\n';
         view.css += '.object-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
         view.usageDeclarations = '(ret) => {\n' +
