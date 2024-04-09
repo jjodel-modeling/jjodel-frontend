@@ -57,7 +57,7 @@ import {
     Pointer,
     Pointers, Polygon, Rectangle,
     RuntimeAccessible,
-    RuntimeAccessibleClass, Septagon,
+    RuntimeAccessibleClass, Septagon, SetFieldAction,
     SetRootFieldAction,
     ShortAttribETypes, SimpleStar, Square, Star,
     store, Trapezoid, Triangle, U, Vertex, VoidVertex,
@@ -416,11 +416,14 @@ node.state.errors = {...node.state.errors, naming: err};
     }*/
     // nb: Error is not a view, just jsx. transform it in a view so users can edit it
 
-    return [DefaultViews.model(vp), DefaultViews.package(vp), DefaultViews.class(vp), DefaultViews.enum(vp),
+    let dv_subviews = [DefaultViews.model(vp), DefaultViews.package(vp), DefaultViews.class(vp), DefaultViews.enum(vp),
         DefaultViews.attribute(vp), DefaultViews.reference(vp), DefaultViews.operation(vp),
-        DefaultViews.literal(vp), DefaultViews.object(vp), DefaultViews.value(vp), voidView, ...edgeViews, edgePointView,
-        errorOverlayView, errorCheckLowerbound, errorCheckName
-    ];
+        DefaultViews.literal(vp), DefaultViews.object(vp), DefaultViews.value(vp), voidView, ...edgeViews, edgePointView];
+
+    let validation_subviews = [errorOverlayView, errorCheckLowerbound, errorCheckName];
+    // SetFieldAction.new(vp, 'subViews', U.objectFromArrayValues(dv_subviews.map(dv=>dv.id), 1.5));
+    // SetFieldAction.new(validationVP, 'subViews', U.objectFromArrayValues(validation_subviews.map(dv=>dv.id), 1.5));
+    return [...dv_subviews, ...validation_subviews];
 }
 
 @RuntimeAccessible('ViewPointState')

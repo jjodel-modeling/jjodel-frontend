@@ -25,8 +25,7 @@ function SubViewsDataComponent(props: AllProps) {
 
     const add = (e: MouseEvent) => {
         if(!subViewID) return;
-        // view.subViews = [...view.subViews, LViewElement.fromPointer(subViewID)];
-        SetFieldAction.new(view.id, 'subViews', subViewID, '+=', true);
+        view.setSubViewScore(subViewID, 1.5);
         const _possibleSubViews = project.views.filter(v => v && v.id !== subViewID && v.id !== view.id && !view.subViews.map(v => v.id).includes(v.id));
         setPossibleSubViews(_possibleSubViews);
         setSubViewID((_possibleSubViews[0]) ? _possibleSubViews[0].id : '');
@@ -35,8 +34,7 @@ function SubViewsDataComponent(props: AllProps) {
 
     const remove = (e: MouseEvent, subView: LViewElement) => {
         e.preventDefault(); e.stopPropagation();
-        // view.subViews = view.subViews.filter(v => v.id !== subView.id);
-        SetFieldAction.new(view.id, 'subViews', subView.id as any, '-=', true);
+        view.setSubViewScore(subViewID, null);
         setPossibleSubViews([...possibleSubViews, subView]);
     }
 

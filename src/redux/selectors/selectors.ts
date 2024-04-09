@@ -379,7 +379,7 @@ export class Selectors{
 
     private static getFinalScore(entry: ViewScore, vid: Pointer<DViewElement>, parentView: DViewElement | undefined, dview: DViewElement): number {
         if (entry.metaclassScore === ViewEClassMatch.MISMATCH_PRECONDITIONS) return ViewEClassMatch.MISMATCH;
-        if (entry.jsScore === ViewEClassMatch.MISMATCH_JS || !entry.OCLScore === ViewEClassMatch.MISMATCH_JS) return ViewEClassMatch.MISMATCH;
+        if (entry.jsScore === ViewEClassMatch.MISMATCH_JS || entry.OCLScore === ViewEClassMatch.MISMATCH_JS) return ViewEClassMatch.MISMATCH;
         let pvMatch: boolean = parentView ? vid in parentView.subViews : false;
         let pvScore: number = pvMatch ? (parentView as DViewElement).subViews[vid] : 1;
         let explicitprio: number;
@@ -535,7 +535,6 @@ export class Selectors{
 
         if (parentViewChanged) needsorting = true; // scores saved in dictionaries are the same, but score in final sorted array changed.
         return needsorting;
-
     }
 
     // get final viewstack for a node, also updates OCL scores if needed because of a change in model or parentView (NOT from a change in view)

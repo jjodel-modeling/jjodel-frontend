@@ -543,11 +543,11 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this;
     }
 
-    private setExternalPtr<D extends DPointerTargetable>(target: D | Pointer<any>, property: string, accessModifier: "[]" | "+=" | "" = ""): this {
+    private setExternalPtr<D extends DPointerTargetable>(target: D | Pointer<any>, property: string, accessModifier: "[]" | "+=" | "" = "", val?: any): this {
         if (!target) return this;
         if (typeof target === "object") target = target.id;
-        let t;
-        this.thiss._persistCallbacks.push(t = SetFieldAction.create(target, property, this.thiss.id, accessModifier, true));
+        if (!val) val = this.thiss.id;
+        this.thiss._persistCallbacks.push(SetFieldAction.create(target, property, val, accessModifier, true));
         return this;
         // PointedBy is set by reducer directly in this case.
         // this.thiss._persistCallbacks.push(SetFieldAction.create(this.thiss.id, "pointedBy", PointedBy.fromID(target, property as any), '+='));
@@ -915,7 +915,11 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // const project = user?.project; if(!project) return this;
         if (!vp) vp = user?.project?.activeViewpoint.id || Defaults.viewpoints[0];
         if (vp !== 'skip') {
-            this.setExternalPtr(vp, 'subViews', '+=');
+            let dvp = DPointerTargetable.fromPointer(vp);
+            // let subviews = {...dvp.subViews}; subviews[thiss.id] = 1.5;
+            // this.setExternalPtr(vp, 'subViews', '', subviews);
+            let subviews: GObject = {}; subviews[thiss.id] = 1.5;
+            this.setExternalPtr(vp, 'subViews', '+=', subviews);
             this.setPtr("viewpoint", vp);
         }
 
@@ -2051,11 +2055,9 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
 
     protected get_views(c: Context): this['views'] {
         // return LViewElement.fromPointer([...c.data.views, ...Defaults.views]);
-        let duplicateRemover: Dictionary<string, LViewElement> = {};
+        let duplicateRemover: Dictionary<Pointer, LViewElement> = {};
         let varr = this.get_viewpoints(c).flatMap(vp => vp.subViews);
-        for (let v of varr) {
-            duplicateRemover[v.id] = v;
-        }
+        for (let v of varr) duplicateRemover[v.id] = v;
         return Object.values(duplicateRemover);
     }
 

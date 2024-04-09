@@ -74,16 +74,38 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
         if (i >= action.pathArray.length - 1) {
             let isArrayAppend = false;
             let isArrayRemove = false;
+            let isObjectMerge = false;
+            let isObjectDifference = false;
             // console.log('isarrayappend?', {endswith: U.endsWith(key, ['+=', '[]', '-1']), key, action, i});
             // console.log('isarraydelete?', {endswith: U.endsWith(key, ['-='])});
-            if (U.endsWith(key, ['+=', '[]'])) {
-                key = key.substr(0, key.length - 2).trim();
-                isArrayAppend = true; }
-            if (U.endsWith(key, ['-='])) {
-                key = key.substr(0, key.length - 2).trim();
-                isArrayRemove = true; }
 
             let oldValue: any;
+            if (U.endsWith(key, ['+=', '[]'])) {
+                key = key.substr(0, key.length - 2).trim();
+                oldValue = current[key];
+                switch (typeof oldValue){
+                    case 'object':
+                    if (Array.isArray(oldValue)) isArrayAppend = true;
+                    else isObjectMerge = true;
+                    break;
+                    default: newVal += oldValue; break;
+                }
+            }
+            if (U.endsWith(key, ['-='])) {
+                key = key.substr(0, key.length - 2).trim();
+                oldValue = current[key];
+                switch (typeof oldValue){
+                    case 'object':
+                        if (Array.isArray(oldValue)) isArrayRemove = true;
+                        else isObjectDifference = true;
+                        break;
+                    case "string":
+                        newVal = U.replaceAll(oldValue, newVal, '');
+                        break;
+                    default: newVal -= oldValue; break;
+                }
+                isArrayRemove = true; }
+
             // let unpointedElement: DPointerTargetable | undefined;
             // perform final assignment
             if (action.type === CreateElementAction.type && current[key]) {
@@ -93,6 +115,29 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                     preexistingValue: current[key], isShallowEqual: current[key] === action.value });
                 return false; // warning: use return only when you want to abort and skip subsequent CompositeAction sub-actions like now.
             }
+            if (isObjectMerge) {
+                if (typeof newVal === 'string') { let tmp: any = {}; tmp[newVal] = true; newVal = tmp; }
+                oldValue = {...current[key]};
+                current[key] = {...current[key]};
+                for (let subkey in newVal) {
+                    // console.warn("object merge", {current, key, subkey, newVal, old:current[key][subkey], new:newVal[subkey]});
+                    if (current[key][subkey] === newVal[subkey]) continue;
+                    current[key][subkey] = newVal[subkey];
+                    gotChanged = true;
+                    if (action.isPointer) { newRoot = PointedBy.add(key as Pointer, action, newRoot, "+="); }
+                }
+            } else
+            if (isObjectDifference) {
+                if (typeof newVal === 'string') { let tmp: any = {}; tmp[newVal] = true; newVal = tmp; }
+                oldValue = {...current[key]};
+                current[key] = {...current[key]};
+                for (let subkey in newVal) {
+                    if (!(subkey in current[key])) continue;
+                    delete current[key][subkey];
+                    gotChanged = true;
+                    if (action.isPointer) { newRoot = PointedBy.add(key as Pointer, action, newRoot, "-="); }
+                }
+            } else
             if (isArrayAppend) {
                 gotChanged = true;
                 if (!Array.isArray(current[key])) { current[key] = []; }
@@ -384,7 +429,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
             transientProperties.view[vid].oclChanged = true;
             for (let nid in transientProperties.node) {
                 let tnv = transientProperties.node[nid].viewScores[vid];
-                tnv.OCLScore = ViewEClassMatch.NOT_EVALUATED_YET as any as boolean;
+                if (tnv?.OCLScore !== ViewEClassMatch.NOT_EVALUATED_YET) tnv.OCLScore = ViewEClassMatch.NOT_EVALUATED_YET as any as boolean;
             }
         }
         ret.VIEWS_RECOMPILE_ocl = [];
@@ -398,7 +443,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         for (let vid of ret.VIEWS_RECOMPILE_preconditions) {
             for (let nid in transientProperties.node) {
                 let tnv = transientProperties.node[nid].viewScores[vid];
-                tnv.metaclassScore = ViewEClassMatch.NOT_EVALUATED_YET as any as number;
+                if (tnv?.metaclassScore !== ViewEClassMatch.NOT_EVALUATED_YET) tnv.metaclassScore = ViewEClassMatch.NOT_EVALUATED_YET as any as number;
             }
         }
         ret.VIEWS_RECOMPILE_preconditions = [];

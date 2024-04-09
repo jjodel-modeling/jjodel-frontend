@@ -11,7 +11,7 @@ import { shapes } from '../../../examples/shapes';
 import {
     Defaults, Dictionary,
     DModel, DObject,
-    DPackage,
+    DPackage, DPointerTargetable,
     DProject,
     DUser, DViewElement, DViewPoint,
     GObject, Log,
@@ -149,8 +149,8 @@ function loadOldState(obj: GObject, name: string = "oldSave"): void {
         project.graphs = obj.graphs;
         project.models = obj.models;
         let lastvp = obj.viewpoints[obj.viewpoints.length -1];
-        lastvp.subViews = obj.viewelements;
-        for (let v of obj.viewElements) v.viewpoint = lastvp;
+        lastvp.subViews = obj.viewelements ? (Array.isArray(obj.viewelements) ? U.objectFromArrayValues(obj.viewelements, 1.5) : obj.viewelements) : {};
+        for (let v of Object.keys(lastvp.subViews)) (DPointerTargetable.from(v) as DViewElement).viewpoint = lastvp;
         // project.views = obj.viewelements;
         project.viewpoints = obj.viewpoints;
         // project.activeViewpoint = obj.viewpoints[0];

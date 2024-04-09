@@ -51,7 +51,14 @@ font-weight: 900 !important;
   position: relative;
 }
 .hoverable:hover>.preview, .hoverable:hover>svg>.preview{ display: none; }
-.hoverable:hover>.content, .hoverable:hover>svg>.content{ display: block; position: absolute; z-index:1;}
+.hoverable:hover{
+  &>.content{
+    display: block; z-index:1; position: absolute;
+  }
+  &>svg>.content{
+    display: block; z-index:1; position: absolute;
+  }
+}
 .hoverable>.content, .hoverable>svg>.content{ display: none; }
 
 [data-nodetype], [data-nodetype]>*, {

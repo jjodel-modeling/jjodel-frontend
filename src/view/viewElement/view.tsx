@@ -37,7 +37,7 @@ import {
     U, ViewEClassMatch,
     windoww
 } from "../../joiner";
-import { transientProperties } from "../../joiner/classes";
+import {Pack1, transientProperties } from "../../joiner/classes";
 
 @RuntimeAccessible('DViewElement')
 export class DViewElement extends DPointerTargetable {
@@ -81,7 +81,6 @@ export class DViewElement extends DPointerTargetable {
     appliableToClasses!: string[]; // class names: DModel, DPackage, DAttribute...
     appliableTo!: 'node'|'edge'|'edgePoint';
     subViews!: Dictionary<Pointer<DViewElement>, number/* priority boost */>;
-    allSubViews!: Pointer<DViewElement, 0, 'N', LViewElement>; // derivate attribute
     oclCondition!: string; // ocl selector
     jsCondition!: string; // js selector
     oclUpdateCondition!: DocString<(view: LViewElement)=>boolean>;
@@ -377,11 +376,46 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     subViews!: LViewElement[];
     __info_of__subViews: Info = {isGlobal: true, hidden: true, type: "DViewElement[]", label:"sub-views",
         txt:<div>Views that are suggested to render elements contained in the current one with a higher match priority.
-            <br/>Like a package view giving priority to a specific Class or Enum view to render his contained Classifiers in a common theme.</div>}
+            <br/>Like a package view giving priority to a specific Class or Enum view to render his contained Classifiers in a common theme.
+            <br/>If you wish to see the subview weight attached to the collection, access view.__raw.subviews instead.</div>}
+    get_SubViews(c: Context): this["subViews"] {
+        delete c.data.subViews.clonedCounter;
+        return Object.keys(c.data.subViews).map( vid => LPointerTargetable.fromPointer(vid) as LViewElement);
+    }
+    set_SubViews(val: this["subViews"] | GObject, c: Context): boolean {
+        let subviewsmap: GObject;
+        if (Array.isArray(val)) {
+            let ptrsArr = Pointers.fromArr(val);
+            subviewsmap = U.objectFromArrayValues(ptrsArr, 1.5);
+        } else subviewsmap = val || {};
+        SetFieldAction.new(c.data, "subViews", subviewsmap, '', true);
+        return true; }
+
+
+    setSubViewScore!: (subview: Pack1<LViewElement>, boost?: number | null) => void;
+    __info_of__setSubViewScore: Info = {isGlobal: true, hidden: true, type: "function(ViewElement, numeric_score): void", txt:<div>Adds, updates or unsets (if boost = null) a subview with his score.</div>}
+
+    // adds, updates or unsets (if boost = null) a subview with his score.
+    get_setSubViewScore(c: Context): ((subview: Pack1<LViewElement>, boost?: number | null) => void) {
+        return (subview: Pack1<LViewElement>, boost: number| null = 1.5 ) => {
+            let subviews = {...c.data.subViews};
+            let ptr = Pointers.from(subview) as Pointer<DViewElement>;
+            if (boost !== null) { // set mode
+                if (subviews[ptr] === boost) return;
+                subviews[ptr] = boost;
+            } else {// set mode
+                if (subviews[ptr] === undefined) return;
+                delete subviews[ptr];
+            }
+            SetFieldAction.new(c.data, 'subViews',  subviews, '', true);
+        };
+    }
+
 
     allSubViews!: LViewElement[];
     __info_of__allSubViews: Info = {type: "ViewElement[]", txt: "recursively get this.subViews."}
     get_allSubViews(c: Context): this["allSubViews"] {
+        delete c.data.subViews.clonedCounter;
         let arr: Pointer<DViewElement>[] = Object.keys(c.data.subViews);
         let nextarr: Pointer<DViewElement>[] = [];
         let idmap: Dictionary<Pointer, DViewElement> = {};
@@ -732,7 +766,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     public get_viewpoint(context: Context): this["viewpoint"] {
         return (LViewPoint.fromPointer(context.data.viewpoint as Pointer<DViewPoint>));
     }
-    public set_subViews(v: Pointer<DViewPoint>[], context: Context): boolean { return this.cannotSet('subViews, call set_viewpoint on the sub-elements instead.'); }
+    // public set_subViews(v: Pointer<DViewPoint>[], context: Context): boolean { return this.cannotSet('subViews, call set_viewpoint on the sub-elements instead.'); }
     public set_viewpoint(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement): boolean {
         let ret = false;
         let vpid: Pointer<DViewPoint> = v && Pointers.from(v);
