@@ -41,6 +41,8 @@ import {SimpleTree} from "../../common/SimpleTree";
 import {transientProperties, Selectors} from "../../joiner";
 import {OclEngine} from "@stekoe/ocl.js";
 import { contextFixedKeys } from '../../graph/graphElement/sharedTypes/sharedTypes';
+import Storage from "../../data/storage";
+import {ProjectsApi} from "../../api/persistance";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -795,4 +797,9 @@ export async function stateInitializer() {
         1
     );
     DState.init();
+    const user = Storage.read<DUser>('user');
+    if(!user) return;
+    DUser.new(user.username, user.id);
+    DUser.current = user.id;
+    await ProjectsApi.getAll();
 }
