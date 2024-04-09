@@ -132,7 +132,7 @@ export class DViewElement extends DPointerTargetable {
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
-                      priority: number = 1 , persist: boolean = true, isDefaultView: boolean = false, vp?: Pointer<DViewPoint>): DViewElement {
+                      priority?: number, persist: boolean = true, isDefaultView: boolean = false, vp?: Pointer<DViewPoint>): DViewElement {
         let id = isDefaultView ? 'Pointer_View' + name : undefined;
         return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id).DPointerTargetable().DViewElement(name, jsxString, vp, defaultVSize, usageDeclarations, constants,
             preRenderFunc, appliableToClasses, oclCondition, priority).end();

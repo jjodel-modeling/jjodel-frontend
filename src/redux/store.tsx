@@ -341,12 +341,11 @@ node.state.errors = {...node.state.errors, naming: err};
     valuecolormap[ShortAttribETypes.EVoid] = "gray";
 
 
-    let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [], '', 0, false, true, vp);
+    let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '', [], '', undefined, false, true, vp);
     // voidView.appliableToClasses=["VoidVertex"];
-    voidView.explicitApplicationPriority = 2;
     voidView.adaptWidth = true; voidView.adaptHeight = true;
 
-    let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '', [], '', 1, false, true, vp);
+    let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '', [], '', undefined, false, true, vp);
     edgePointView.appliableTo = 'edgePoint'; edgePointView.resizable = false;
     // edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
     edgePointView.edgePointCoordMode = CoordinateMode.absolute;
@@ -388,7 +387,6 @@ node.state.errors = {...node.state.errors, naming: err};
         let ev = DViewElement.new2("Edge"+name,
             DV.edgeView(type, headSize ? DV.svgHeadTail("Head", type) : "", tailSize ? DV.svgHeadTail("Tail", type) : "", dashing ? "10.5,9,0,0" : undefined),
             (v: DViewElement) => {
-                v.explicitApplicationPriority = 2;
                 v.bendingMode = EdgeBendingMode.Line;
                 v.appliableToClasses = [DVoidEdge.cname];
                 v.edgeHeadSize = headSize || size0;
@@ -412,7 +410,6 @@ node.state.errors = {...node.state.errors, naming: err};
 
     /*
     for (let ev of edgeViews){
-        ev.explicitApplicationPriority = 2;
         ev.bendingMode = EdgeBendingMode.Line;
         ev.subViews = [edgePointView.id];
     }*/

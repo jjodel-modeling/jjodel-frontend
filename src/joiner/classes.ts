@@ -847,7 +847,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     }
 
     DViewElement(name: string, jsxString: string, vp?: Pointer<DViewPoint>, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
-                 preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '', priority: number = 1): this {
+                 preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '', priority?: number): this {
         const thiss: DViewElement = this.thiss as any;
         thiss.name = name;
         thiss.appliableToClasses = appliableToClasses;
@@ -866,7 +866,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.jsCondition = '';
         thiss.oclUpdateCondition = '';
         thiss.OCL_NEEDS_RECALCULATION = true;
-        thiss.explicitApplicationPriority = priority;
+        thiss.explicitApplicationPriority = undefined as any; //priority as any as number;
         thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 351, 201);
         thiss.isExclusiveView = true;
         thiss.size = {};
@@ -2652,8 +2652,8 @@ export class ViewEClassMatch {
     static MISMATCH_JS = false;
     static MISMATCH_OCL = false;
     static IMPLICIT_MATCH = 1;
-    static INHERITANCE_MATCH = 2;
-    static EXACT_MATCH = 3;
+    static INHERITANCE_MATCH = 1.5;
+    static EXACT_MATCH = 2;
 }
 
 export type ViewScore = {
