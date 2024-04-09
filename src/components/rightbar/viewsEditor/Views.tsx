@@ -38,8 +38,7 @@ function ViewsDataComponent(props: AllProps) {
         TRANSACTION(()=>{ v.duplicate(); })
     }
 
-    (window as any).views = subViewScores;
-    (window as any).vp = vp;
+
     const state: DState = store.getState();
     return(<div>
         <div className={'d-flex p-2'}>

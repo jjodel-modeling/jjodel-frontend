@@ -38,6 +38,7 @@ import {
     windoww
 } from "../../joiner";
 import {Pack1, transientProperties } from "../../joiner/classes";
+import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsData";
 
 @RuntimeAccessible('DViewElement')
 export class DViewElement extends DPointerTargetable {
@@ -782,8 +783,27 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 SetFieldAction.new(oldvpid, "subViews", id as any, '', true);
             }
             if (vpid) {
-                let subViews = {...DPointerTargetable.fromPointer(vpid).subViews};
-                subViews[id] = 1.5;
+                let name = context.data.name;
+                let copyPos = name.indexOf("Copy");
+                let oldSubViews = DPointerTargetable.fromPointer(vpid).subViews;
+                let insertBefore: string = '';
+                let subViews: GObject;
+                if (copyPos) {
+                    let copiedFromName: string = copyPos ? name.substring(0, copyPos).trim() : '';
+                    if (copiedFromName in oldSubViews) insertBefore = copiedFromName;
+                    else {
+                        for (let key in oldSubViews) if (key.indexOf(copiedFromName) === 0) { insertBefore = key; break; }
+                    }
+                }
+                // reinsert subviews in order so Object.keys() fits the new subview near the cloned one.
+                if (insertBefore) {
+                    subViews = {};
+                    for (let key in oldSubViews) {
+                        subViews[key] = oldSubViews[key];
+                        if (key === insertBefore) subViews[id] = subViews[key];
+                    }
+                } else { subViews = {...oldSubViews}; subViews[id] = 1.5; }
+
                 SetFieldAction.new(vpid, "subViews", subViews, '', true);
             }
         })
@@ -895,9 +915,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 const dclone: DViewElement = DViewElement.new2(`${c.data.name} Copy`, '', undefined, true, 'skip');
                 lview = LPointerTargetable.fromD(dclone);
                 for (let key in c.data) {
-                    if (key !== 'id' && key !== 'name' && key !== "pointedBy" && key !== 'viewpoint' && key !== 'subViews') {
-                        // @ts-ignore
-                        lview[key] = c.data[key];
+                    switch (key) {
+                        case 'id': case 'name': case 'pointedBy': case 'viewpoint': case 'subViews': case 'className':
+                            // @ts-ignore;
+                            try { lview[key] = c.data[key]} catch(e) { Log.ee("error un duplicate view:", e); }
                     }
                 }
 

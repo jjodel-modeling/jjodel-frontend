@@ -247,7 +247,7 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>, validationVP: Pointer<DV
     }, false, validationVP, 'Pointer_ViewOverlayOld' );
 
     let errorOverlayView: DViewElement = DViewElement.new2('Semantic error view', DV.semanticErrorOverlay(), (v) => {
-        v.jsCondition = 'node.state.errors?.length>0';
+        v.jsCondition = 'Object.values(node.state.errors || {}).join().length>0';
         v.usageDeclarations = "(ret)=>{\n" +
         "// ** preparations and default behaviour here ** //\n" +
         "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
@@ -295,7 +295,8 @@ else if (name.length === 0 && type !== "shapeless") err = type + "es must be nam
 else if (!name[0].match(/[A-Za-z_$]/)) err = type + " names must begin with an alphabet letter or $_ symbols.";
 else if (!name.match(/[A-Za-z_$]+[A-Za-z0-9$_]+/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
 console.log("measurable set naming error: "+err+", name:"+name, {err, name, dname:data.name, ddname:data.r.name});
-node.state.errors = {...node.state.errors, naming: err};
+if (err) node.state.errors = {...node.state.errors, naming: err};
+else { let errors = {...(node.state.errors || {})}; delete errors['naming']; node.state.errors = errors; }
 `;}, false, validationVP, 'Pointer_ViewCheckName' );
 
 let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), (v) => {
