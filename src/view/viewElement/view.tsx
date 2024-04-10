@@ -936,6 +936,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 // SetRootFieldAction.new('stackViews', dview.id, '+=', true);
 
 
+                SetRootFieldAction.new(`viewelements`, c.data.id, '+=', true);
                 for (let key of DViewElement.RecompileKeys) SetRootFieldAction.new(`VIEWS_RECOMPILE_${key}`, c.data.id, '+=', false);
             })
             return lview;
