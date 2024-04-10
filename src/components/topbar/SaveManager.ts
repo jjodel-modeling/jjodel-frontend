@@ -6,7 +6,7 @@ import {
     LoadAction,
     Log, U,
     LPointerTargetable, prjson2xml, prxml2json,
-    store, RuntimeAccessible, DModelElement, SetRootFieldAction, Selectors, Debug, DViewElement
+    store, RuntimeAccessible, DModelElement, SetRootFieldAction, Selectors, Debug, DViewElement, transientProperties
 } from '../../joiner';
 
 @RuntimeAccessible('SaveManager')
@@ -24,13 +24,14 @@ export class SaveManager {
         if (!state && SaveManager.tmpsave) { LoadAction.new(SaveManager.tmpsave); return; }
         state = state || localStorage.getItem('tmpsave') || 'null'; // priorities: 1) argument from file 2) state variable cached 3) localstorage 4) null prevent crash
         let save: GObject<DState> = SaveManager.tmpsave = JSON.parse(state);
-        for (let vid of save.viewelements) {
+        for (let vid of [...save.viewelements, ...save.viewpoints]) {
             for (let key of DViewElement.RecompileKeys) {
+                if(!transientProperties.view[vid]) transientProperties.view[vid] = {name: (save.idlookup[vid] as any)?.name || 'Unnamed'} as any;
+                key = 'VIEWS_RECOMPILE_' + key;
                 if (!save[key]) save[key] = [];
                 save[key].push(vid);
             }
         }
-
         LoadAction.new(save);
     }
 
