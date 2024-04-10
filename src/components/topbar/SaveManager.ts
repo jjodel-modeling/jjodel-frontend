@@ -6,7 +6,7 @@ import {
     LoadAction,
     Log, U,
     LPointerTargetable, prjson2xml, prxml2json,
-    store, RuntimeAccessible, DModelElement, SetRootFieldAction, Selectors, Debug
+    store, RuntimeAccessible, DModelElement, SetRootFieldAction, Selectors, Debug, DViewElement
 } from '../../joiner';
 
 @RuntimeAccessible('SaveManager')
@@ -23,8 +23,15 @@ export class SaveManager {
     static load(state?: string): void {
         if (!state && SaveManager.tmpsave) { LoadAction.new(SaveManager.tmpsave); return; }
         state = state || localStorage.getItem('tmpsave') || 'null'; // priorities: 1) argument from file 2) state variable cached 3) localstorage 4) null prevent crash
-        SaveManager.tmpsave = JSON.parse(state);
-        LoadAction.new(SaveManager.tmpsave);
+        let save: GObject<DState> = SaveManager.tmpsave = JSON.parse(state);
+        for (let vid of save.viewelements) {
+            for (let key of DViewElement.RecompileKeys) {
+                if (!save[key]) save[key] = [];
+                save[key].push(vid);
+            }
+        }
+
+        LoadAction.new(save);
     }
 
     public static exportEcore_click(toXML: boolean = false, toFile: boolean = true): void { // e: React.MouseEvent,
