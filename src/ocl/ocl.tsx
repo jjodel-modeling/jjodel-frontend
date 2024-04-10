@@ -1,28 +1,14 @@
 import {OclEngine} from "@stekoe/ocl.js"
-import {OclResult} from "@stekoe/ocl.js/dist/components/OclResult";
-import {Utils} from "@stekoe/ocl.js/dist/components/Utils";
 import {
-    AbstractConstructor,
-    bool,
-    Constructor,
-    DGraphElement,
-    Dictionary,
-    DModel,
-    DModelElement, DPointerTargetable, DState,
-    DViewElement,
-    GObject,
-    LGraphElement,
+    Constructor, DGraphElement,
+    DModelElement, DViewElement,
+    GObject, LGraphElement,
     LModelElement,
-    LObject,
-    Log,
-    LPointerTargetable,
-    LValue,
     LViewElement,
     RuntimeAccessible,
-    RuntimeAccessibleClass,
-    store,
+    RuntimeAccessibleClass, ViewEClassMatch
 } from "../joiner";
-import {transientProperties, ViewEClassMatch} from "../joiner/classes";
+import {OclResult} from "@stekoe/ocl.js/dist/components/OclResult";
 
 let windoww = window as any;
 
@@ -35,9 +21,9 @@ export class Persona {
     constructor(public name: string='pname', public age: number=18, public isUnemployed: boolean=true){ Persona.all.push(this) }
 }
 
-@RuntimeAccessible('OCL')
-export class OCL extends RuntimeAccessibleClass{
+export class OCL{
     public static evaluate<T extends GObject>(obj0: T, constructor: Constructor<T>, oclexp: string, typeused: Constructor[]=[], oclEngine?: OclEngine): OclResult {
+        windoww.OclEngine = OclEngine;
         if (!oclEngine) {
             oclEngine = OclEngine.create();
             var oclResult = null;
@@ -71,101 +57,41 @@ export class OCL extends RuntimeAccessibleClass{
         return oclResult;
     }
 
-    public static filter<T extends GObject, M extends 'ocl' | 'bool' | 'src',
-        R extends (M extends 'ocl' ? (OclResult | undefined) : (M extends 'src' ? T | undefined : boolean))
-        >(keepIndex: boolean, returnType: M, obj0: T[], oclexp: string, typeused: Constructor[]=[]): R[] {
-        return OCL.filter0(keepIndex, returnType, obj0, oclexp, typeused) as any;
-    }
-
-    /* sandbox for when i will change dobject to have both type dobject and data.instanceof (his m2 class type)
-    public static init() {
-
-        OCL.Util.getClassName;
-        Utils.getClassName_original = Utils.getClassName;
-        Utils.getClassName = (obj: any) => {
-            let dobj = obj?.__raw || obj;
-            switch (dobj?.className)
-                default:  return Utils.getClassName_original(obj);
-                case DValue.cname:
-                case DObject.cname:
-                    return (obj as LObject | LValue).instanceof?.name || dobj.className;
-                    not good, i want DObjects to have both type DOBject and their obj.instanceof.name,.
-                    so after this i need to make a prototype of fake constructor for each metaclass having m2class.__proto__ = DObject; ?
-                    and every feature having fake constructor m2feature.__proto__ = DAttribute | DReference?
-        }
-    }*/
-    private static getOCLScore(ocl: string): number { return ocl.length; }
-
-    public static test(mp0: DModelElement | LModelElement | undefined, view0: LViewElement | DViewElement | undefined, node0?: LGraphElement | DGraphElement): boolean | (typeof ViewEClassMatch)["MISMATCH_OCL"] {
-        if (!mp0 || !view0) return ViewEClassMatch.MISMATCH_OCL;
-        let mp: DModelElement, lmp: LModelElement;
-        let node: DGraphElement, lnode: LGraphElement;
-        let view: DViewElement;
-        // @ts-ignore
-        if ((mp = mp0.__raw)) lmp = mp0; else { lmp = mp0; mp = (lmp as LModelElement)?.__raw; }
-
-        // @ts-ignore
-        if ((node = node0?.__raw)) lnode = node0; else { lnode = node0; node = lnode?.__raw; }
-        // @ts-ignore
-        view = view0?.__raw || view0;
-        let oclCondition = view.oclCondition;
-        let tv = transientProperties.view[view.id];
-        console.log("Evaluating ocl:"+view.oclCondition, {view, ocl:view.oclCondition});
-        if (!view.oclCondition) { return true; }
-
-        let oclEngine: OclEngine;
-        if (!tv) transientProperties.view[view.id] = tv = {} as any;
-        if (tv.oclEngine) oclEngine = tv.oclEngine;
-        else {
-            tv.oclEngine = oclEngine = OclEngine.create();
-            let state: DState = store.getState();
-            let rootModel: DModel = mp as any;
-            while (rootModel && rootModel.className !== "DModel") rootModel = DPointerTargetable.fromPointer(rootModel.father, state);
-            oclEngine.registerTypes(RuntimeAccessibleClass.getOCLClasses(rootModel.id));
-            oclEngine.addOclExpression(oclCondition);
-        }
+    public static test(me: DModelElement | LModelElement | undefined, view: LViewElement | DViewElement | undefined, node?: LGraphElement | DGraphElement): boolean | (typeof ViewEClassMatch)["MISMATCH_OCL"] {
         try {
-            let oclResult: OclResult;
-            if (!lmp) lmp = LPointerTargetable.fromD(mp);
-            if (node) {
-                // dangerous cheat, to make ocl be able to access current "node" if model have multiple nodes.
-                const oldNode = transientProperties.modelElement[mp.id].node;
-                transientProperties.modelElement[mp.id].node = lnode || LPointerTargetable.fromD(node);
-                oclResult = oclEngine.evaluate(lmp)
-                transientProperties.modelElement[mp.id].node = oldNode;
-            }
-            else oclResult = oclEngine.evaluate(lmp);
-
-            // return oclResult ? OCL.getOCLScore(oclCondition) : ViewEClassMatch.MISMATCH_OCL;
-            return oclResult ? true : ViewEClassMatch.MISMATCH_OCL;
-        } catch(e) {
-            Log.ee('failed to evalute OCL expression:', {e, obj: mp, view: view.name, oclexp: view.oclCondition, node});
-            return ViewEClassMatch.MISMATCH_OCL;
+            const types = RuntimeAccessibleClass.getAllClasses();
+            if(!me || !view) return false;
+            return !!OCL.filter(true, 'src', [me], view.oclCondition, types as any)[0];
+        } catch (e) {
+            return false
         }
-        // oclEngine.setTypeDeterminer()
+
     }
 
-    private static filter0<T extends GObject>(keepIndex: boolean, returnType: 'ocl' | 'bool' | 'src', obj0: T[], oclexp: string, typeused: Constructor[]=[]) {
+
+    public static filter<T extends GObject>(keepIndex: boolean, returnType: 'ocl' | 'bool' | 'src', obj0: T[], oclexp: string, typeused: Constructor[]=[]) {
+        windoww.OclEngine = OclEngine;
         var oclEngine = OclEngine.create();
         var oclResult = null;
         const typeregister: GObject = {};
         for (let type of typeused) { typeregister[(type as any as typeof RuntimeAccessibleClass).cname || type.name] = type; }
         oclEngine.registerTypes(typeregister);
+        if (!oclexp) oclexp = "context Persona inv: self.age>0";
         oclEngine.addOclExpression(oclexp);
 
-        let obj: T[] = obj0;
-        let ret: ((OclResult | boolean) | (GObject | undefined))[] = [];
+        let obj: GObject[] = obj0;
+        let ret: ((OclResult | boolean) | (GObject | null))[] = [];
 
         for (let i = 0; i < obj.length; i++) {
-            let res: OclResult | undefined;
+            let res: OclResult | null;
             try { res = oclEngine.evaluate(obj[i]); }
-            catch(e) { console.error('failed to evalute OCL expression:', {e, obj, oclexp}); res = undefined; }
+            catch(e) { console.error('failed to evalute object:', {e}); res = null; }
             if (returnType === 'ocl') {
                 ret[i] = res;
                 continue; }
             let bool = res && res.getEvaluatedContexts().length > 0 && res.getResult();
             if (returnType === 'bool') ret[i] = bool;
-            else ret[i] = bool ? obj[i] : undefined;
+            else ret[i] = bool ? obj[i] : null;
         }
 
         if (!keepIndex) {

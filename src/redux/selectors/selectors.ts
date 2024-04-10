@@ -482,7 +482,8 @@ export class Selectors{
         // check if scores needs to be updated
         for (const dview of allViews) {
             let vid = dview.id;
-            const tv = transientProperties.view[vid];
+            let tv = transientProperties.view[vid];
+            if(!tv) transientProperties.view[vid] = tv = {} as any;
             let tnv = tn.viewScores[vid];
             //console.log('2302, getviews evaluating view ' + vid, {vid, dview});
             // check initialization
