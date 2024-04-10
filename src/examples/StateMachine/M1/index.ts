@@ -4,17 +4,17 @@ export class StateMachine_M1 {
     static load1(project: LProject, m2: LModel, state: LClass, transition: LClass, command: LClass, event: LClass): [LModel, LObject] {
         const m1 = this.create(undefined, project, m2);
         /* Command */
-        const command1 = this.createCommand(m1, command, 'unlockDoor ud', '');
-        const command2 = this.createCommand(m1, command, 'lockPanel lp', '');
-        const command3 = this.createCommand(m1, command, 'unlockPanel up', '');
-        const command4 = this.createCommand(m1, command, 'lockDoor ld', '');
+        const command1 = this.createCommand(m1, command, 'unlockDoor ud');
+        const command2 = this.createCommand(m1, command, 'lockPanel lp');
+        const command3 = this.createCommand(m1, command, 'unlockPanel up');
+        const command4 = this.createCommand(m1, command, 'lockDoor ld');
         /* Event */
-        const event1 = this.createEvent(m1, event, 'panelClosed pc', '');
-        const event2 = this.createEvent(m1, event, 'doorClosed dc', '');
-        const event3 = this.createEvent(m1, event, 'lightOn Io', '');
-        const event4 = this.createEvent(m1, event, 'drawerOpened do', '');
+        const event1 = this.createEvent(m1, event, 'panelClosed pc');
+        const event2 = this.createEvent(m1, event, 'doorClosed dc');
+        const event3 = this.createEvent(m1, event, 'lightOn Io');
+        const event4 = this.createEvent(m1, event, 'drawerOpened do');
         /* Events */
-        const events = m1.addObject({name: 'Events'}, undefined);
+        const events = m1.addObject({}, null);
         /* State */
         const idle = this.createState(m1, state, 'idle', [command1, command2]);
         const active = this.createState(m1, state, 'active', []);
@@ -37,9 +37,9 @@ export class StateMachine_M1 {
         const commandsLength = 84; const eventsLength = 84; const statesLength = 40; const transitionsLength = 48;
         const commands: LObject[] = []; const events: LObject[] = []; const states: LObject[] = []; const transitions: LObject[] = [];
         for(let i = 0; i < commandsLength; i++)
-            commands.push(this.createCommand(m1, command, 'C' + i, U.getRandomString(5)));
+            commands.push(this.createCommand(m1, command, 'C' + i));
         for(let i = 0; i < eventsLength; i++)
-            events.push(this.createEvent(m1, event, 'E' + i, U.getRandomString(5)));
+            events.push(this.createEvent(m1, event, 'E' + i));
         const object = m1.addObject({name: 'Events'}, undefined);
         for(let i = 0; i < statesLength; i++)
             states.push(this.createState(m1, state, 'S' + i, [commands[i]]))
@@ -56,50 +56,38 @@ export class StateMachine_M1 {
         return lModel;
     }
     private static createState(m1: LModel, state: LClass, name: string, actions: LObject[]): LObject {
-        const dObject = m1.addObject({$name: name, $actions: actions.map(o => o.id)}, state.id);
+        // const dObject = m1.addObject({$name: name, $actions: actions.map(o => o.id)}, state.id);
+        const dObject = m1.addObject({}, state.id);
         const lObject: LObject = LObject.fromD(dObject);
-        // const feature0 = DValue.new(undefined, state.attributes[0].id, [name]);
-        // const feature1 = DValue.new(undefined, state.references[0].id, actions.map(o => o.id));
-        // SetFieldAction.new(dObject.id, 'features', feature0.id, '+=', true);
-        // SetFieldAction.new(dObject.id, 'features', feature1.id, '+=', true);
-        // lObject.features[0].value = name;
-        // lObject.features[1].values = actions;
+        lObject.features[0].value = name;
+        lObject.features[1].values = actions;
         return lObject;
     }
-    private static createCommand(m1: LModel, command: LClass, name: string, code: string): LObject {
-        const dObject = m1.addObject({$name: name, $code: code}, command.id);
+    private static createCommand(m1: LModel, command: LClass, name: string): LObject {
+        const code = U.getRandomString(2);
+        // const dObject = m1.addObject({$name: name, $code: code}, command.id);
+        const dObject = m1.addObject({}, command.id);
         const lObject: LObject = LObject.fromD(dObject);
-        // const feature0 = DValue.new(undefined, command.extends[0].attributes[0].id, [name]);
-        // const feature1 = DValue.new(undefined, command.extends[0].attributes[1].id, [code]);
-        // SetFieldAction.new(dObject.id, 'features', feature0.id, '+=', true);
-        // SetFieldAction.new(dObject.id, 'features', feature1.id, '+=', true);
-        // lObject.features[0].value = name;
-        // lObject.features[1].value = code;
+        lObject.features[0].value = name;
+        lObject.features[1].value = code;
         return lObject;
     }
-    public static createEvent(m1: LModel, event: LClass, name: string, code: string): LObject {
-        const dObject = m1.addObject({$name: name, $code: code}, event.id);
+    public static createEvent(m1: LModel, event: LClass, name: string): LObject {
+        const code = U.getRandomString(2);
+        // const dObject = m1.addObject({$name: name, $code: code}, event.id);
+        const dObject = m1.addObject({}, event.id);
         const lObject: LObject = LObject.fromD(dObject);
-        // const feature0 = DValue.new(undefined, event.extends[0].attributes[0].id, [name]);
-        // const feature1 = DValue.new(undefined, event.extends[0].attributes[1].id, [code]);
-        // SetFieldAction.new(dObject.id, 'features', feature0.id, '+=', true);
-        // SetFieldAction.new(dObject.id, 'features', feature1.id, '+=', true);
-        // lObject.features[0].value = name;
-        // lObject.features[1].value = code;
+        lObject.features[0].value = name;
+        lObject.features[1].value = code;
         return lObject;
     }
     public static createTransition(m1: LModel, transition: LClass, source: LObject, target: LObject, event: LObject): LObject {
-        const dObject = m1.addObject({$source: source.id, $target: target.id, $trigger: event.id}, transition.id);
+        // const dObject = m1.addObject({$source: source.id, $target: target.id, $trigger: event.id}, transition.id);
+        const dObject = m1.addObject({}, transition.id);
         const lObject: LObject = LObject.fromD(dObject);
-        // const feature0 = DValue.new(undefined, transition.references[0].id, [source.id]);
-        // const feature1 = DValue.new(undefined, transition.references[1].id, [target.id]);
-        // const feature2 = DValue.new(undefined, transition.references[2].id, [event.id]);
-        // SetFieldAction.new(dObject.id, 'features', feature0.id, '+=', true);
-        // SetFieldAction.new(dObject.id, 'features', feature1.id, '+=', true);
-        // SetFieldAction.new(dObject.id, 'features', feature2.id, '+=', true);
-        // lObject.features[0].values = [source];
-        // lObject.features[1].values = [target];
-        // lObject.features[2].values = [event];
+        lObject.features[0].values = [source];
+        lObject.features[1].values = [target];
+        lObject.features[2].values = [event];
         return lObject;
     }
 }

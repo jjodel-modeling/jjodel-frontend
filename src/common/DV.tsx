@@ -7,6 +7,7 @@ let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 
 @RuntimeAccessible('DV')
 export class DV {
+    public static invisibleJsx(): string { return ''; }
     public static modelView(): string { return beautify(DefaultView.model()); } // damiano: che fa beautify? magari potremmo settarlo in LView.set_jsx invece che solo qui, così viene formattato anche l'input utente?
     public static packageView(): string { return beautify(DefaultView.package()); }
     public static classView(): string { return beautify(DefaultView.class()); }
@@ -23,17 +24,20 @@ export class DV {
     public static objectView(): string { return beautify(DefaultView.object()); }
     public static valueView(): string { return beautify(DefaultView.value()); }
     public static defaultPackage(): string { return beautify(DefaultView.defaultPackage()); }
-    public static errorView_string(publicmsg: string | JSX.Element, debughiddenmsg?:any): string {
-        let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error: ", "") : publicmsg;
-        console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg}); return DefaultView.error_string(visibleMessage); }
-    public static errorView(publicmsg: string | JSX.Element, debughiddenmsg:any, errortype: string, data: DModelElement | undefined, node: DGraphElement | undefined, v: DViewElement): React.ReactNode {
+    public static errorView(publicmsg: string | JSX.Element, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
         console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error(visibleMessage, errortype, data, node, v); }
+    public static errorView_string(publicmsg: string, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement): React.ReactNode {
+        let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
+        console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
+        return DefaultView.error_string(visibleMessage, errortype, data, node, v); }
 
-    static edgePointView(): string { return beautify(
-        `<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"white", width:"100%", height:"100%"}} />`
-    )}
+    static edgePointView(): string { return beautify((
+`<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"white", width:"100%", height:"100%"}}>
+    {decorators}
+</div>`
+))}
     static edgePointViewSVG(): string { return beautify(
         `<ellipse stroke={"black"} fill={"red"} cx={"50"} cy={"50"} rx={"20"} ry={"20"} />`
         //`<ellipse stroke={"black"} fill={"red"} cx={props.node.x} cy={props.node.y} rx={props.node.w} ry={props.node.h} />`
@@ -120,6 +124,7 @@ export class DV {
             {
                 edge.midPoints.map( m => <EdgePoint data={edge.father.model.id} initialSize={m} key={m.id} view={"Pointer_ViewEdgePoint"} /> )
             }
+            {decorators}
         </div>`
     )}
     /*
@@ -137,10 +142,18 @@ export class DV {
         false && props.children && "this would cause loop no idea why, needs to be fixed to allow passing EdgeNodes here" || []
     }
     */
-    static semanticErrorOverlay() { return (
-            `<div style={{background: '#300', color:'#f00', float: 'right'}}>Invalid value</div>`
-        )}
-}
+    static semanticErrorOverlay_old() { return (
+`<section className="overlap">
+    <div className="error-message">Lowerbound violation</div>
+</section>`
+)}    static semanticErrorOverlay() { return (
+`<section className="overlap">
+    <div className="error-message">{errors.join(',')}</div>
+</section>`
+)}
+
+
+} // DV class end
 
 let valuecolormap: GObject = {};
 valuecolormap[ShortAttribETypes.EBoolean] = "orange";
@@ -161,170 +174,176 @@ let valuecolormap_str = JSON.stringify(valuecolormap); // can this be declared i
 
 class DefaultView {
 
-    public static model(): string {
-        return `<div className={'root'}>
+    public static model(): string { return (
+`<div className={'root'}>
     {!data && "Model data missing."}
-    <div className="edges" style={{zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}>{[
-            refEdges.map(se=> <Edge start={se.start.father.node} end={se.end.node} view={"Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association")} key={se.start.node.id+"~"+se.end.node.id}/>)
-            , extendEdges.map(se=><Edge start={se.start} end={se.end} view={"Pointer_ViewEdgeInheritance"} key={"EXT_"+se.start.node.id+"~"+se.end.node.id}/>)]
-        }
+    <div className={'edges'}>
+        {[
+            refEdges.map(se => <Edge start={se.start.father.node} end={se.end.node} view={'Pointer_ViewEdge' + ( se.start.containment && 'Composition' || 'Association')} key={'REF_' + se.start.node.id + '~' + se.end.node.id} />), 
+            extendEdges.map(se => <Edge start={se.start} end={se.end} view={'Pointer_ViewEdgeInheritance'} key={'EXT_' + se.start.node.id + '~' + se.end.node.id} />)
+        ]}
     </div>
     {otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
     {firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
-    {m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object}></DefaultNode>)}
-</div>`;
-    }
+    {m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object} />)}
+    {decorators}
+</div>`
+);}
 
-    public static void(): string {
-        return `<div className={'round bg-white root void model-less p-1'}>
+    public static void(): string { return (
+`<div className={'round bg-white root void model-less p-1'}>
     <div>voidvertex element test</div>
     <div>data: {props.data ? props.data.name : "empty"}</div>
-</div>`;
-    }
-    public static package(): string {
-        return `<div className={'round root bg-white package'}>
-    <div className={'package-children'}>
-        {data.children.map((child, index) => {
-            return <DefaultNode key={child.id} data={child} />
-        })}
-    </div>
-</div>`;
-    }
+    {decorators}
+</div>`
+);}
 
-    public static defaultPackage(): string {
-        return `<div className={'root'}>
+    public static package(): string { return (
+`<div className={'root package'}>
     <div className={'package-children'}>
-        {data.children.map((child, index) => {
-            return <DefaultNode key={child.id} data={child} />
-        })}
+        {data.children.map(c => <DefaultNode key={c.id} data={c} />) }
     </div>
-</div>`;
-    }
+    {decorators}
+</div>`
+);}
 
-    public static class(): string {
-        return `<div className={'round root class'} style={{background: 'var(--background-1)', color:'var(--color-2)'}}>
-    <Input jsxLabel={<b className={'class-name'}>EClass:</b>} 
-           data={data} field={'name'} hidden={true} autosize={true} />
+    public static defaultPackage(): string { return (
+`<div className={'root'}>
+    <div className={'package-children'}>
+        {data.children.map(c => <DefaultNode key={c.id} data={c} />)}
+    </div>
+    {decorators}
+</div>`
+);}
+
+    public static class(): string { return (
+`<div className={'root class'}>
+    <Input jsxLabel={<b className={'class-name'}>EClass:</b>} data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
-    <div className={'class-children'}>{ data.attributes.map(c => <DefaultNode key={c.id} data={c} />) }</div>
-    <div className={'class-children'}>{ data.references.map(c => <DefaultNode key={c.id} data={c} />) }</div>
-    <div className={'class-children'}>{ data.operations.map(c => <DefaultNode key={c.id} data={c} />) }</div>
-</div>`;
-    }
+    <div className={'class-children'}>
+        {data.attributes.map(c => <DefaultNode key={c.id} data={c} />)}
+        {data.references.map(c => <DefaultNode key={c.id} data={c} />)}
+        {data.operations.map(c => <DefaultNode key={c.id} data={c} />)}
+    </div>
+    {decorators}
+</div>`
+);}
 
-    public static enum(): string {
-        return `<div className={'round bg-white root enumerator'}>
-    <Input jsxLabel={<b className={'my-auto enumerator-name'}>EEnum:</b>} 
-           data={data} field={'name'} hidden={true} autosize={true} />
+    public static enum(): string { return (
+`<div className={'root enumerator'}>
+    <Input jsxLabel={<b className={'enumerator-name'}>EEnum:</b>} data={data} field={'name'} hidden={true} autosize={true} />
     <hr />
     <div className={'enumerator-children'}>
-        {data.children.map((child, index) => {
-            return <DefaultNode key={child.id} data={child}></DefaultNode>
-        })}
+        {data.children.map(c => <DefaultNode key={c.id} data={c}/>)}
     </div>
-</div>`;
-    }
+    {decorators}
+</div>`
+);}
 
-    public static feature(): string {
-        return `<div className={'w-100 root feature'} style={{background: 'var(--background-2)', color:'var(--color-2)'}}>
+    public static feature(): string { return (
+`<div className={'root w-100 feature'}>
     <Select className={'p-1 d-flex'} data={data} field={'type'} label={data.name} />
-</div>`;
-    }
+    {decorators}
+</div>`
+);}
 
-    public static literal(): string {
-        return `<label className={'d-block text-center root literal'}>{data.name}</label>`
-    }
+    public static literal(): string { return (
+`<label className={'root d-block text-center'}>
+    {data.name}
+    {decorators}
+</label>`
+);}
 
-    public static operation(): string {
-        // data.signature
-        return `<div className={'w-100'}>
-    <Select className={'p-1 root operation d-flex'} data={data} field={'type'} label={data.name + ' () => '} />
-</div>`;
-    }
+    public static operation(): string { return (
+`<div className={'root w-100'}>
+    <Select className={'p-1 d-flex'} data={data} field={'type'} label={data.name + ' () => '} />
+    {decorators}
+</div>`
+);}
 
     // damiano: i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
     // it is still work in progress.
-    public static operationm1(): string {
-        return `<div className={'d-flex root operationm1'} style={{paddingRight: "6px"}}>
-             {<label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>}
-            <label className={'d-block ms-auto hover-root'} style={{color:` + valuecolormap_str + `[this.props.data.values.type] || "gray"
-            }}>→→→{
-                <div className="hover-content">{
-                    <ParameterForm operation = {this.props.data.id} vertical={true} />
-                }
-                }</label>
-        </div>`
-    }
+    public static operationm1(): string { return (
+`<div className={'d-flex root operationm1'} style={{paddingRight: "6px"}}>
+    <label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>
+    <label className={'d-block ms-auto hover-root'} style={{color:` + valuecolormap_str + `[this.props.data.values.type] || "gray"}}>
+        →→→
+        <div className="hover-content">
+            <ParameterForm operation={this.props.data.id} vertical={true} />
+        </div>
+    </label>
+    {decorators}
+</div>`
+);}
 
-    public static objectOld(): string {
-        return ''+
+    public static objectOld(): string { return (
 `<div className={'round bg-white root class'}>
     <label className={'ms-1'}>
-        <Input jsxLabel={<b className={'my-auto class-name'}>{data.instanceof ? data.instanceof.name : "Object"}:</b>} 
+        <Input jsxLabel={<b className={'object-name'}>{data.instanceof ? data.instanceof.name : "Object"}:</b>} 
            data={data} field={'name'} hidden={true} autosize={true}/>
     </label>
     <hr />
     <div className={'object-children'}>
-        {data.features.map((child) => {
-            return <DefaultNode key={child.id} data={child}></DefaultNode>
-        })}
+        { features.map(c => <DefaultNode key={c.id} data={c} />) }
     </div>
-</div>`;
+    {decorators}
+</div>`);
 }
 
-    public static object(): string { // object efficient mode
-        return ''+
-`<div className={'round bg-white root class'}>
-    <label className={'ms-1'}>
-        <Input jsxLabel={<b className={'my-auto class-name'}>{metaclassName}:</b>} 
-           data={data} field={'name'} hidden={true} autosize={true}/>
-    </label>
-    <hr />
+    public static object(): string { return (
+`<div className={'root object'}>
+    <Input jsxLabel={<b className={'object-name'}>EObject:</b>} data={data} field={'name'} hidden={true} autosize={true} />
+    <hr/>
     <div className={'object-children'}>
-        {features.map((child) => {
-            return <DefaultNode key={child.id} data={child}></DefaultNode>
-        })}
+        {features.map(f => <DefaultNode key={f.id} data={f} />)}
     </div>
-</div>`;
-}
+    {decorators}
+</div>`
+);}
 
-    public static value() {
-        return `<div className={'d-flex root value'} style={{paddingRight: "6px"}}>
+    public static value() { return (
+`<div className={'root d-flex value'}>
      {instanceofname && <label className={'d-block ms-1'}>{instanceofname}</label>}
      {!instanceofname && <Input asLabel={true} data={data} field={'name'} hidden={true} autosize={true} />}
-    <label className={'d-block m-auto'} style={{color: constants[typeString] || "gray"
-    }}>: {valuesString}</label>
+    <label className={'d-block m-auto'} style={{color: constants[typeString] || 'gray'}}>
+        : {valuesString}
+    </label>
+    {decorators}
 </div>`
-    }
+);}
 
 
 
-    public static error(msg: undefined | string | JSX.Element, errortype: string | "SYNTAX" | "RUNTIME", data: DModelElement | undefined, node: DGraphElement | undefined, v: DViewElement) {
+    public static error(msg: undefined | string | JSX.Element, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement) {
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
         if (dname && dname.length >= 8) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
-        return <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"min-content"}}>
+        return <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
             <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
                 <b>{errortype} ERROR on {(dname ? dname  : '') + (false ? ' / ' + nodename : '')})</b>
                 <hr/>
                 <label className={'text-center mx-1 d-block'}>
-                    While applying view "{v.name}"
+                    While applying view "{v?.name}"
                 </label>
                 {msg && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>{msg}</label>}
             </div>
         </div>;
     }
-    public static error_string(msg: undefined | string | JSX.Element): string {
-        return `<div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"min-content"}}>
-            <div className={'text-center text-danger'} style={{background:"#fff7"}}>
-                <b>SYNTAX ERROR</b>
+    public static error_string(msg: undefined | string | JSX.Element, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement) {
+        let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
+        if (dname && dname.length >= 8) dname = dname.substring(0, 7) + '…';
+        let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
+        return `<div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
+            <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
+                <b>{errortype} ERROR on {${dname ? dname : ''} + (false ? ' / ' + ${nodename} : '')})</b>
                 <hr/>
                 <label className={'text-center mx-1 d-block'}>
-                    The JSX you provide is NOT valid!
+                    While applying view "${v?.name}"
                 </label>
-                ` + (msg ? `<label className={'text-center mx-1 d-block'} style={{color:"black"}>{"` + msg + `"}</label>` : "") + `
+                {${msg} && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>${msg}</label>}
             </div>
         </div>`;
     }
+
 
 }

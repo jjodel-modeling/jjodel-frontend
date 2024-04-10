@@ -51,7 +51,14 @@ font-weight: 900 !important;
   position: relative;
 }
 .hoverable:hover>.preview, .hoverable:hover>svg>.preview{ display: none; }
-.hoverable:hover>.content, .hoverable:hover>svg>.content{ display: block; position: absolute; z-index:1;}
+.hoverable:hover{
+  &>.content{
+    display: block; z-index:1; position: absolute;
+  }
+  &>svg>.content{
+    display: block; z-index:1; position: absolute;
+  }
+}
 .hoverable>.content, .hoverable>svg>.content{ display: none; }
 
 [data-nodetype], [data-nodetype]>*, {
@@ -127,7 +134,18 @@ font-weight: 900 !important;
     }
   }
 }
+.overlap{
+  background: transparent;
+  position: absolute;
+  top: 0;
+  bottom:0;
+  left:0;
+  right:0;
+  pointer-events: none;
+  z-index: 1000;
+}
 /*
+
 .ui-draggable-dragging{ visibility: hidden; }
 
 .lazySizeUpdate.ui-draggable-dragging,
@@ -250,13 +268,13 @@ svg.hoverable {
 
 //.EdgePoint{ transform: translate(-50%, -50%); }
 
-
+/*
 .animate-on-update-even{
   animation: fade 1s forwards;
 }
 .animate-on-update-odd{
   animation: fade 1s forwards;
-}
+}*/
 
 @keyframes fade {
   0%   { opacity:0; }

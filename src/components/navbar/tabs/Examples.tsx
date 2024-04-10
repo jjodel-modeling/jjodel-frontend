@@ -11,7 +11,7 @@ import { shapes } from '../../../examples/shapes';
 import {
     Defaults, Dictionary,
     DModel, DObject,
-    DPackage,
+    DPackage, DPointerTargetable,
     DProject,
     DUser, DViewElement, DViewPoint,
     GObject, Log,
@@ -66,7 +66,7 @@ function mergeState(oldState: GObject, injectToModel: boolean = true, deleteNode
         }
         if (!customVP) customVP = {...viewpoints[viewpoints.length -1]} as DViewPoint;
         Log.ex(!customVP, "loading this save, requires to make a offline project with at least 1 custom viewpoint");
-        if (!customVP.subViews) customVP.subViews = [];
+        if (!customVP.subViews) customVP.subViews = {};
         // viewpoints[0].subViews = [...new Set( [...viewpoints[0].subViews, ...currState.viewelements])];
         let tmp: DViewElement[] = currState.viewelements.map(mid => currState.idlookup[mid]).filter(m => !!m) as DViewElement[];
         let views: Dictionary<string, DViewElement> = {};
@@ -87,7 +87,7 @@ function mergeState(oldState: GObject, injectToModel: boolean = true, deleteNode
             views[v.id] = v;
             v.name = v.name+"_old";
             v.viewpoint = customVP.id;
-            customVP.subViews.push(v.id);
+            customVP.subViews[v.id] = 10;
             currState.idlookup[v.id] = v;
         }
 
@@ -95,7 +95,7 @@ function mergeState(oldState: GObject, injectToModel: boolean = true, deleteNode
         for (let vvv of Object.values(views)) {
             currState.idlookup[vvv.id] = vvv;
             vvv.viewpoint = customVP.id;
-            customVP.subViews.push(vvv.id);
+            customVP.subViews[vvv.id] = 1.5;
             currState.idlookup[vvv.id] = vvv;
             if (!vvv.usageDeclarations) vvv.usageDeclarations = ''; // '()=>{return {}}';
             if (!vvv.preRenderFunc) vvv.preRenderFunc = ''; // '()=>{return {}}';
@@ -103,7 +103,8 @@ function mergeState(oldState: GObject, injectToModel: boolean = true, deleteNode
             // @ts-ignore
             if (vvv.query) vvv.oclCondition = vvv.query;
         }
-        customVP.subViews = [...new Set(customVP.subViews)];
+        // @ts-ignore
+        customVP.subViews = U.objectFromArrayValues([...new Set(customVP.subViews as any)] as any[], 1.5);
         for (let pkg of pkgs) {
             pkg = {...pkg} as DPackage;
             pkg.father = models[0].id;
@@ -149,8 +150,9 @@ function loadOldState(obj: GObject, name: string = "oldSave"): void {
         project.graphs = obj.graphs;
         project.models = obj.models;
         let lastvp = obj.viewpoints[obj.viewpoints.length -1];
-        lastvp.subViews = obj.viewelements;
-        for (let v of obj.viewElements) v.viewpoint = lastvp;
+        // @ts-ignore
+        lastvp.subViews = obj.viewelements ? (Array.isArray(obj.viewelements) ? U.objectFromArrayValues(obj.viewelements, 1.5) : obj.viewelements) : {};
+        for (let v of Object.keys(lastvp.subViews)) (DPointerTargetable.from(v) as DViewElement).viewpoint = lastvp;
         // project.views = obj.viewelements;
         project.viewpoints = obj.viewpoints;
         // project.activeViewpoint = obj.viewpoints[0];

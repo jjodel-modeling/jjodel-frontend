@@ -19,7 +19,9 @@
     "@types/node": "^12.20.7",
     "@types/react": "^17.0.3",
     "@types/react-dom": "^17.0.3",
+    "@types/tinycolor2": "^1.4.6",
     "ansi-to-html": "^0.7.2",
+    "async-lz-string": "^1.1.0",
     "axios": "^0.21.4",
     "bootstrap": "^5.2.1",
     "bootstrap-icons": "^1.9.1",
@@ -27,7 +29,6 @@
     "http-proxy-middleware": "^2.0.6",
     "jquery": "^3.6.0",
     "jqueryui": "^1.11.1",
-    "js-beautify": "^1.14.7",
     "jsx-parser": "^1.0.8",
     "jsx-recast": "^0.1.1",
     "jsx-runtime": "^1.2.0",
@@ -49,6 +50,7 @@
     "socket.io-client": "^4.7.2",
     "sweetalert2": "^11.7.3",
     "sweetalert2-react-content": "^4.1.1",
+    "tinycolor2": "^1.6.0",
     "tree-model": "^1.0.7",
     "ts-mixer": "^6.0.0",
     "typescript": "^4.6.2",
@@ -82,7 +84,14 @@
     "build-ssl": "react-scripts --openssl-legacy-provider build",
     "predeploy_old": "npm run build",
     "deploy_old": "gh-pages -d build",
-    "prebuild-rewired-local": "set PUBLIC_URL=/build/"
+    "prebuild-rewired-local": "set PUBLIC_URL=/build/",
+    "____________________________________tsc_____________________________": "",
+    "tsc_build": "tsc -p tsconfig.json --declaration --emitDeclarationOnly --outDir ./build/tsc_types/",
+    "tsc_public_uselessmaybe": "tsc -p tsconfig.json --declaration --emitDeclarationOnly --outDir ./public/tsc_types/",
+    "tsc_comment": "before running tsc commands, remove noEmit from tsconfig.json, but reenable it aftewards",
+    "cc": "for some weird reason non-built version (dev one with npm start) is using jodel-react/build instead of jodel-mde/build",
+    "tsc_list_paste_in_terminal": ".\\tsc_list.ps1 build\\tsc_types\\*.d.ts > ./build/tsc_types/list.txt",
+    "c":""
   },
   "eslintConfig": {
     "extends": [
@@ -104,8 +113,10 @@
   },
   "devDependencies": {
     "@types/jquery": "^3.5.5",
+    "@types/js-beautify": "^1.14.3",
     "dotenv-webpack": "^8.0.1",
     "gh-pages": "^4.0.0",
+    "js-beautify": "^1.15.1",
     "react-app-rewired": "^2.2.1",
     "ts-node": "^10.9.1"
   }

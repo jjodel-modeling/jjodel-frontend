@@ -12,8 +12,9 @@ import NodeEditor from '../rightbar/styleEditor/StyleEditor';
 import ViewpointEditor from '../rightbar/viewpointsEditor/ViewpointsEditor';
 import CollaboratorsEditor from '../rightbar/collaboratorsEditor/CollaboratorsEditor';
 import Console from '../rightbar/console/Console';
-import InfoTab from './tabs/InfoTab';
+import ModelsSummaryTab from './tabs/ModelsSummaryTab';
 import DockManager from './DockManager';
+import MqttEditor from "../rightbar/mqtt/MqttEditor";
 
 function DockComponent(props: AllProps) {
     const groups = {
@@ -22,7 +23,7 @@ function DockComponent(props: AllProps) {
     };
 
     /* Models */
-    const info = {id: '0', title: 'Summary', group: 'models', closable: false, content: <InfoTab />};
+    const ModelsSummary = {id: '0', title: 'Summary', group: 'models', closable: false, content: <ModelsSummaryTab />};
 
     /* Editors */
     const test = {id: '999', title: 'Test', group: 'editors', closable: false, content: <TestTab />};
@@ -32,17 +33,19 @@ function DockComponent(props: AllProps) {
     const node = {id: '4', title: 'Node', group: 'editors', closable: false, content: <NodeEditor />};
     const viewpoints = {id: '6', title: 'Viewpoints', group: 'editors', closable: false, content: <ViewpointEditor />};
     const collaborators = {id: '7', title: 'Collaborators', group: 'editors', closable: false, content: <CollaboratorsEditor />};
-    const console = {id: '8', title: 'Console', group: 'editors', closable: false, content: <Console />};
+    const mqtt = {id: '8', title: 'Mqtt', group: 'editors', closable: false, content: <MqttEditor />};
+    const console = {id: '9', title: 'Console', group: 'editors', closable: false, content: <Console />};
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
-    layout.dockbox.children.push({tabs: [info]});
+    layout.dockbox.children.push({tabs: [ModelsSummary]});
     layout.dockbox.children.push({tabs: [
         structure,
         tree,
-        node,
+        // node,
         views,
         viewpoints,
-        collaborators,
+        // collaborators,
+        mqtt,
         console
     ]});
 

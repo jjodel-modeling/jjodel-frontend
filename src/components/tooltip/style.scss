@@ -1,0 +1,13 @@
+.my-tooltip {
+    position: fixed;
+    bottom: 0.75em;
+    left: 50%;
+    transform: translate(-50%, 0);
+    z-index: 9999;
+    background: white;
+    border-radius: 4px;
+    border-style: solid;
+    border-width: 1px;
+    border-color: lightgray;
+    padding: 10px;
+}

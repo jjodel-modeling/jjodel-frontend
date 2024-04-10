@@ -1,8 +1,9 @@
+import type { VertexOwnProps } from "../graphElement/sharedTypes/sharedTypes";
 import React, {ReactElement, ReactNode} from "react";
 import {GObject, Point, U} from "../../joiner";
-import {OwnProps, VertexConnected} from "./Vertex";
-import {radian} from "../../joiner/types";
 import { Geom } from "../../common/Geom";
+import {VertexConnected} from "./Vertex";
+import {radian} from "../../joiner/types";
 
 
 function polygonSideLength(sides: number, radius: number = 1){
@@ -87,7 +88,7 @@ function makeSvg(pts: Point[]): string{
 
 
 // geom shortcuts
-function addStyle(props0: OwnProps, children:any, childStyle: React.CSSProperties, style: React.CSSProperties = {}){
+function addStyle(props0: VertexOwnProps, children:any, childStyle: React.CSSProperties, style: React.CSSProperties = {}){
     let props: GObject = {...props0, children, isgraph:false, isvertex:true, isvoid:true};
     // props.style = !props0.style ? {} : {...props0.style};
     props.childStyle = props.childStyle ? {...props.childStyle} : {};
@@ -104,16 +105,16 @@ function addStyle(props0: OwnProps, children:any, childStyle: React.CSSPropertie
     props.dataChildStyle = JSON.stringify(props.childStyle);
     return props;}
 
-export const Ellipse = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const Ellipse = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...addStyle(props, children, {borderRadius:'100%', // ellipse(50% 25% at 50% 50%)
     })} />;}
 Ellipse.cname = 'Ellipse';
 
-export const Rectangle = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { // default
+export const Rectangle = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { // default
     return <VertexConnected {...addStyle(props, children, {})} />;}
 Rectangle.cname = 'Rectangle (alias for default <Vertex />)';
 
-export const Polygon = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const Polygon = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     props = {...props};
     if (!props.sides) props.sides = 6;
     // if (!props.radius) props.radius = 0.5;
@@ -121,11 +122,11 @@ export const Polygon = (props: OwnProps, children: ReactNode | undefined = []): 
 }
 Polygon.cname = 'N-Polygon';
 
-export const Star = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { // pointed lines, N endings (include 6-stars and more)
+export const Star = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { // pointed lines, N endings (include 6-stars and more)
     return props.decorated === false ? SimpleStar(props, children) : DecoratedStar(props, children);
 }
 Star.cname = 'N-Star';
-export const DecoratedStar = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const DecoratedStar = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     props = {...props};
     if (!props.sides) props.sides = 4;
     // if (!props.radius) props.radius = 0.5;
@@ -133,7 +134,7 @@ export const DecoratedStar = (props: OwnProps, children: ReactNode | undefined =
     return <VertexConnected {...addStyle(props, children, {clipPath: makeClipPath(makeStar(props.sides, 0.5, props.innerRadius, true))})} />;
 }
 DecoratedStar.cname = 'N-DecoratedStar';
-export const SimpleStar = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const SimpleStar = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     props = {...props};
     if (!props.sides) props.sides = 6;
     // if (!props.radius) props.radius = 0.5;
@@ -142,13 +143,13 @@ export const SimpleStar = (props: OwnProps, children: ReactNode | undefined = []
 }
 SimpleStar.cname = 'N-SimpleStar';
 
-export const Cross = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { // cut lines, N endings (includes asterisk)
+export const Cross = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { // cut lines, N endings (includes asterisk)
     return <div>N-Crosses (Asterisk-like) shapes yet to do</div>;
 }
 Cross.cname = 'N-Cross';
 
-export const Trapezoid = (props0: OwnProps, children: ReactNode | undefined = []): ReactElement => { // cut lines, N endings (includes asterisk)
-    let props: OwnProps & {ratio: number} = props0 as any;
+export const Trapezoid = (props0: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { // cut lines, N endings (includes asterisk)
+    let props: VertexOwnProps & {ratio: number} = props0 as any;
     if (!props0.ratio) props = {...props, ratio: 0.2 };
     return <VertexConnected {...addStyle(props, children, {clipPath: 'polygon(' + props.ratio * 100 + '% 0%, ' + (1-props.ratio) * 100 + '% 0%, 100% 100%, 0% 100%)'})} />;}
 Trapezoid.cname = 'Trapezoid';
@@ -156,7 +157,7 @@ Trapezoid.cname = 'Trapezoid';
 
 //////////////// aliases (circle -> ellipse) ...
 
-export const Circle = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { // ellipse ellipse(50% 50% at 50% 50%)
+export const Circle = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { // ellipse ellipse(50% 50% at 50% 50%)
     return Ellipse(props, children); }
 Circle.cname = 'Ellipse/Circle';
 
@@ -167,53 +168,53 @@ in a way that mirrirong components will have the mirror name instead of the impl
 step 2) when parsing jsx to build nodes, edges, check if props like edge.start or node.favoriteNode are different from the same prop in DVertex/DEdge/DView
 in that case, update such value
 */
-export const Square = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { // rectangle
+export const Square = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { // rectangle
     return <VertexConnected {...{...props, children}} isgraph={false} isvertex={true} isvoid={true} />; }
 Square.cname = 'Rectangle/Square';
 /*
-export const Rhombus = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { // rectangle
+export const Rhombus = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { // rectangle
     return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} isVoid={true} rotate={props.rotate || 45} />; }
 Rhombus.cname = 'Rectangle/Diamond';
 
-export const Diamond = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { return Rhombus(props, children); }
+export const Diamond = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { return Rhombus(props, children); }
 Diamond.cname = 'Rectangle/Diamond';*/
 
 // polygon
-export const Triangle = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const Triangle = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...addStyle(props, children, {clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'})} />;}
 Triangle.cname = 'Polygon/Triangle';
 
-export const Pentagon = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const Pentagon = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...addStyle(props, children, {clipPath: 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)'})} />;}
 Pentagon.cname = 'Polygon/Pentagon';
 
-export const Hexagon = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const Hexagon = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...addStyle(props, children, {clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'})} />;}
 Hexagon.cname = 'Polygon/Hexagon';
 
-export const Heptagon = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const Heptagon = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...addStyle(props, children, {clipPath: 'polygon(50% 0%, 90% 20%, 100% 60%, 75% 100%, 25% 100%, 0% 60%, 10% 20%)'})} />;}
 Heptagon.cname = 'Polygon/Heptagon';
-export const Septagon = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const Septagon = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...addStyle(props, children, {clipPath: 'polygon(50% 0%, 90% 20%, 100% 60%, 75% 100%, 25% 100%, 0% 60%, 10% 20%)'})} />;}
 Septagon.cname = 'Polygon/Heptagon';
 
-export const Octagon = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const Octagon = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...addStyle(props, children, {clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)'})} />;}
 Octagon.cname = 'Polygon/Octagon';
 
-export const Nonagon = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const Nonagon = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...addStyle(props, children, {clipPath: 'polygon(50% 0%, 83% 12%, 100% 43%, 94% 78%, 68% 100%, 32% 100%, 6% 78%, 0% 43%, 17% 12%)'})} />;}
 Nonagon.cname = 'Polygon/Nonagon';
 
-export const Enneagon = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const Enneagon = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...addStyle(props, children, {clipPath: 'polygon(50% 0%, 83% 12%, 100% 43%, 94% 78%, 68% 100%, 32% 100%, 6% 78%, 0% 43%, 17% 12%)'})} />;}
 Enneagon.cname = 'Polygon/Nonagon';
 
-export const Decagon = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => {
+export const Decagon = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
     return <VertexConnected {...addStyle(props, children, {clipPath: 'polygon(50% 0%, 80% 10%, 100% 35%, 100% 70%, 80% 90%, 50% 100%, 20% 90%, 0% 70%, 0% 35%, 20% 10%)'})} />;}
 Decagon.cname = 'Polygon/Decagon';
 
-export const Asterisk = (props: OwnProps, children: ReactNode | undefined = []): ReactElement => { // cut lines, N endings (includes asterisk)
+export const Asterisk = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { // cut lines, N endings (includes asterisk)
     return Star(props, children); }
 Asterisk.cname = 'Cross/Asterisk';

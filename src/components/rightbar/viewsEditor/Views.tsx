@@ -1,5 +1,16 @@
 import React, {Dispatch, MouseEvent, ReactElement} from 'react';
-import {LProject, Dictionary, Pointer, TRANSACTION, Pointers, LViewPoint} from '../../../joiner';
+import {
+    LProject,
+    Dictionary,
+    Pointer,
+    TRANSACTION,
+    Pointers,
+    LViewPoint,
+    SetFieldAction,
+    DPointerTargetable,
+    store,
+    LPointerTargetable
+} from '../../../joiner';
 import {CreateElementAction, Defaults, DState, DUser, DViewElement, LUser, LViewElement, U} from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from "../../../joiner/types";
@@ -11,7 +22,7 @@ function ViewsDataComponent(props: AllProps) {
     console.log("pv:", project.views, project.activeViewpoint.id)
     // const views = project.views.filter(v => v && (!v.viewpoint || v.viewpoint.id === project.activeViewpoint.id));
     let vp: LViewPoint = project.activeViewpoint; //
-    const views = vp.subViews;
+    const subViewScores = vp.__raw.subViews;
 
     const add = (e: MouseEvent) => {
         const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
@@ -27,6 +38,8 @@ function ViewsDataComponent(props: AllProps) {
         TRANSACTION(()=>{ v.duplicate(); })
     }
 
+
+    const state: DState = store.getState();
     return(<div>
         <div className={'d-flex p-2'}>
             <b className={'ms-1 my-auto'}>VIEWS</b>
@@ -34,17 +47,29 @@ function ViewsDataComponent(props: AllProps) {
                 <i className={'p-1 bi bi-plus'}></i>
             </button>
         </div>
-        {views.map((view, i) => {
-            if(!view) return;
-            return <div key={view.id} className={'view-list-elem d-flex p-1 mt-1 border round mx-1'} tabIndex={-1}
-                        onClick={e => props.setSelectedView(view)}>
-                <label style={{cursor: 'pointer'}} className={'my-auto'}>{view.name}</label>
-                <button className={'btn btn-success ms-auto'} onClick={e => { clone(e, view); e.stopPropagation(); }}>
-                    <i className={'p-1 bi bi-clipboard2-fill'}></i>
+        {Object.keys(subViewScores).map((subviewid, i) => {
+            let scoreBoost: number = subViewScores[subviewid];
+            let subview: LViewElement = LPointerTargetable.fromPointer(subviewid, state);
+            // todo: add a "header" here with subview | subview piority boost or and turn the "subview" section of a vp/view into this stuff instead of separate tab
+            if (!subview) return;
+            // @ts-ignore
+            return <div key={subviewid} tabIndex={i} onClick={e => props.setSelectedView(subview)} className={'view-list-elem d-flex p-1 mt-1 border round mx-1 hoverable'}>
+                <label style={{cursor: 'pointer'}} className={'my-auto'}>{subview.name}</label>
+                <label className='preview ms-auto' style={{position:'unset'}} />
+                {false ? <label className='content ms-auto' style={{position:'unset'}} onClick={e => {e.stopPropagation();}} >
+                    <span>Sub-view matching boost</span>
+                    {/* @ts-ignore: digit={"2"} */}
+                    <input onBlur={(e) => subview.setSubViewScore(subviewid, +e.target.value)} type={"number"} digit={"4"}
+                           value={scoreBoost} className={"ms-1 me-1"} style={{maxHeight:'21px', width:"50px"}} />
+                </label>
+                    :
+                <label className='content ms-auto' style={{position:'unset'}} />
+                }
+                <button className={'btn btn-success ms-1'} onClick={e => { clone(e, subview); e.stopPropagation(); }}>
+                    <i className={'p-1 bi bi-clipboard2-fill'} />
                 </button>
-                <button className={'btn btn-danger ms-1'} disabled={Defaults.check(view.id)}
-                        onClick={e => { view.delete(); e.stopPropagation(); }}>
-                    <i className={'p-1 bi bi-trash3-fill'}></i>
+                <button onClick={e => { subview.delete(); e.stopPropagation(); }} className={'btn btn-danger ms-1'} disabled={Defaults.check(subview.id)}>
+                    <i className={'p-1 bi bi-trash3-fill'} />
                 </button>
             </div>
         })}

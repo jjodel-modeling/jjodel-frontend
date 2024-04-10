@@ -1,41 +1,74 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
-import React, {ReactElement} from "react";
 // import {Mixin} from "ts-mixer";
 import type {AbstractConstructor, Constructor, Dictionary, GObject, Pointer, Temporary} from "../joiner";
 import {
-    CreateElementAction,
-    DAttribute,
     DClassifier,
-    DLog,
     DModelElement,
     DPointerTargetable,
-    DRefEdge,
-    DReference,
-    GraphPoint,
-    DState,
-    DUser,
-    LUser,
     Json,
     JsType,
     LClassifier,
-    LGraphElement,
     LModelElement,
     LNamedElement,
     LogicContext,
     MyError,
     RuntimeAccessible,
-    Selectors,
-    TODO,
-    windoww, RuntimeAccessibleClass, PointedBy, DViewElement
+    RuntimeAccessibleClass, store,
+    windoww
 } from "../joiner";
 import Swal from "sweetalert2";
-import {AccessModifier} from "../api/data";
+import Storage from '../data/storage';
+import {compressToUTF16, decompressFromUTF16} from "async-lz-string";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
 console.warn('loading ts U log');
 
+@RuntimeAccessible('Color')
+export class Color {
+    r: number;
+    g: number;
+    b: number;
+
+    constructor(r: number, g: number, b: number) {
+        this.r = r;
+        this.g = g;
+        this.b = b;
+    }
+
+    static fromHex(hex:string): Color {
+        return undefined as any;
+    }
+    static fromHLS({h, l, s}:{h: number, l:number, s: number}): Color {
+        return undefined as any;
+    }
+    getHex(): string {
+        return undefined as any;
+    }
+    mixWith(c: Color): void {
+
+    }
+    getHLS(): {h: number, l:number, s: number} {
+        return undefined as any;
+    }
+    duplicate(): Color {
+        return undefined as any;
+    }
+}
 @RuntimeAccessible('U')
 export class U {
+
+    static async decompressState(state: string): Promise<string> {
+        return await decompressFromUTF16(state);
+    }
+    static async compressedState(): Promise<string> {
+        return await compressToUTF16(JSON.stringify(store.getState()));
+    }
+    static isOffline(): boolean {
+        return Storage.read('offline') === 'true';
+    }
+    static refresh(): void {
+        window.location.reload();
+    }
 
     // damiano: eseguire una funzione costa in performance, anche se è brutto fare questi cast
     static wrapper<T>(obj: any): T {
@@ -60,68 +93,96 @@ export class U {
         return fathers;
     }
 
-    static isShallowEqualWithProxies(obj1: GObject, obj2: GObject, depth: number = 0, maxDepth: number = 1, skipKeys: Dictionary<string, any>={}, out?: {reason?: string}): boolean {
-        if (typeof obj1 !== "object") {
-            if (out) out.reason = 'base object newly introduced';
-            return false;
-        }
-        if (typeof obj2 !== "object") {
-            if (out) out.reason = 'base object got deleted';
-            return false;
-        }
-        for (let key in obj1) {
-            if (key in skipKeys) continue;
-            let oldp: any = obj2[key];
-            let newp: any = obj1[key];
-            if (oldp === newp) continue;
-            // from here below: on which cases obj1 !== obj2, but they can still be "equal"? only if function, array, object.
-            let told = typeof oldp;
-            if (told !== typeof newp) {
-                if (out) out.reason = '['+key+']: different types '+ told + '!=' + typeof newp;
-                return false;
-            }
-            switch (told) {
-                default: return false;
-                case "function": if (newp.toString() === oldp.toString()) break; else {
-                    if (out) out.reason = '['+key+']: function body changed';
-                    return false;
+    /// maxDepth = 2 is the minimum to check the content of objects inside usageDeclarations or node state. like node.errors.naming
+    static isShallowEqualWithProxies(obj1: GObject, obj2: GObject, skipKeys: Dictionary<string, any>={}, out?: {reason?: string},
+                                     depth: number = 0, maxDepth: number = 2, returnIfMaxDepth:boolean = false): boolean {
+        let tobj1 = obj1 === null ? 'null' : typeof obj1;
+        let tobj2 = obj2 === null ? 'null' : typeof obj2;
+        if (obj1 === obj2) {
+            // if (out) { out.reason = "identical objects"; }
+            return true; }
+        if (tobj1 !== tobj2) { if (out) { out.reason = "type changed: " + tobj1 + " --> " + tobj2; } return false; }
+
+        // at this point: same type, but different values
+        switch (tobj1) {
+            case "number": // if both re nan it fails
+                // NB: infinities are not nan, and they compare with === like normal numbers. weird js...
+                if (isNaN(obj1 as any) && isNaN(obj2 as any)) return true;
+                break;
+            default:
+                console.error("unexpected case in isshallowequal:", {tobj1, obj1, obj2});
+
+                // primitive with different values
+                if (out) {
+                    if (undefined === tobj1) out.reason = 'primitive value newly introduced';
+                    else if (undefined === tobj2) out.reason = 'primitive value got deleted';
+                    else out.reason = 'primitive value changedd';
                 }
-                case "object":
-                    if (Array.isArray(newp)) {
-                        if (!Array.isArray(oldp)) {
-                            if (out) out.reason = '['+key+']: old is array, but new isn\'t';
-                            return false;
-                        }
-                        if (newp.length !== oldp.length) {
-                            if (out) out.reason = '['+key+']: array different lenghts '+oldp.length +' != '+newp.length;
-                            return false;
-                        }
-                        //todo array check, move the whole comparison func in U and do
-                        if (depth !== maxDepth) {
-                            for (let i = 0; i < newp.length; i++) if(!U.isShallowEqualWithProxies(newp[i], oldp[i], depth + 1, maxDepth, skipKeys, out)) {
-                                if (out) out.reason = '['+key+']['+i+']'+out.reason;
-                                return false;
-                            }
-                        } // else return retIfMaxDepthReached;
-                        break;
-                    }
-                    // for proxies and DObjects
-                    if (newp.clonedCounter !== undefined && newp.clonedCounter !== oldp.clonedCounter) {
-                        if (out) out.reason = '['+key+']: clonedCounter difference ' +oldp.clonedCounter+ ' != '+newp.clonedCounter;
+                return false;
+
+            case "function":
+                if (obj1.toString() === obj2.toString()) break;
+                if (out) out.reason = 'function body changed';
+                return false;
+
+            case "object":
+                let o1Raw = obj1.__raw;
+                let o2Raw = obj2.__raw;
+                if (o1Raw) {
+                    if (!o2Raw) {
+                        if (out) out.reason = o1Raw.className + 'replaced by another object type:' + o2Raw?.className;
                         return false;
                     }
-                    // for raw objects made from declarationUsages
-                    if (depth !== maxDepth && !U.isShallowEqualWithProxies(newp, oldp, depth + 1, maxDepth, skipKeys, out)) {
+                    obj1 = o1Raw;
+                    obj2 = o2Raw;
+                }
+                // for proxies and DObjects
+                if (obj1.clonedCounter !== undefined && obj2.clonedCounter !== obj1.clonedCounter) {
+                    if (out) out.reason = 'clonedCounter difference ' + obj1.clonedCounter+ ' != ' + obj2.clonedCounter;
+                    return false;
+                }/*
+                if (obj1.className !== obj2.className) {
+                 removed: too unlikely to happen that a DObject is raplaced in the same path with another type of DObject with same clonedCounter
+                 nd it's checked anyway in for(let key in obj1)
+                    if (out) out.reason = o1Raw.className + 'replaced by another object type:' + o2Raw?.className;
+                    return false;
+                }*/
+                if (Array.isArray(obj1)) {
+                    if (obj1.length !== obj2.length) {
+                        if (out) out.reason = 'array length different: ' + obj1.length + " !== " + obj2.length;
+                        return false;
+                    }
+                    if (!Array.isArray(obj2)){
+                        if (out) out.reason = 'array became an object';
+                        return false;
+                    }
+                }
+                if (depth > maxDepth) {
+                    // to debug and see where is too deep, make returnIfMaxDepth = false, so the path is displayed in out.reason
+                    if (out) out.reason = 'max depth reached, assumed ' + returnIfMaxDepth;
+                    return returnIfMaxDepth;
+                }
+                for (let key in obj1) {
+                    if (key in skipKeys) continue;
+                    let oldp: any = obj2[key];
+                    let newp: any = obj1[key];
+                    if (oldp === newp) continue;
+                    if (!U.isShallowEqualWithProxies(newp, oldp, skipKeys, out, depth +1, maxDepth, returnIfMaxDepth)) {
                         if (out) out.reason = '['+key+']'+out.reason;
                         return false;
                     }
-                    // else retIfMaxDepthReached; split the above if
-            }
+                }
+                // just check for keys that were in props and are not in nextProps
+                for (let key in obj2) {
+                    if ((key in skipKeys) || (key in obj1)) continue;
+                    if (out) out.reason = "deleted subobject property: " + key;
+                    return false;
+                }
+            // else retIfMaxDepthReached; split the above if
         }
-        // just check for keys that were in props and are not in nextProps
-        for (let key in obj2) {
-            if (!(key in skipKeys) && !(key in obj1)) return false;
-        }
+
+
+
         return true;
     }
 
@@ -282,15 +343,19 @@ export class U {
         for (i = 0; i < kv.length; i++) { keys.push(kv[i][0]); vals.push(kv[i][0]); }
         return U.multiReplaceAll(a, keys, vals); }
 
+    // if replacement is empty, it will be filled with '';
+    // if replacement length < searchText, replacement will be filled with copies of his elements cycling from 0 to his length until his length matches searchText.length
     static multiReplaceAll(a: string, searchText: string[] = [], replacement: string[] = []): string {
-        Log.ex(searchText.length !== replacement.length, 'search and replacement must be have same length: ' + searchText.length + "vs" + replacement.length + " " +JSON.stringify(searchText) + "   " + JSON.stringify(replacement));
+        // Log.ex(searchText.length !== replacement.length, 'search and replacement must be have same length: ' + searchText.length + "vs" + replacement.length + " " +JSON.stringify(searchText) + "   " + JSON.stringify(replacement));
         let i = -1;
+        while (replacement.length !== 0 && replacement.length < searchText.length) replacement.push(replacement[++i]);
+        i = -1;
         while (++i < searchText.length) { a = U.replaceAll(a, searchText[i], replacement[i]); }
         return a; }
 
-    static replaceAll(str: string, searchText: string, replacement: string, debug: boolean = false, warn: boolean = true): string {
+    static replaceAll(str: string, searchText: string, replacement: string | undefined, debug: boolean = false, warn: boolean = true): string {
         if (!str) { return str; }
-        return str.split(searchText).join(replacement); }
+        return str.split(searchText).join(replacement||''); }
 
     static toFileName(a: string = 'nameless.txt'): string {
         if (!a) { a = 'nameless.txt'; }
@@ -309,13 +374,13 @@ export class U {
     static objectMergeInPlace<A extends object, B extends object>(output: A, ...objarr: B[]): void {
         const out: GObject = output;
         if (objarr)
-        for (let o of objarr) {
-            if (o && typeof o === "object")
-            for (let key in o) {
-                // noinspection BadExpressionStatementJS,JSUnfilteredForInLoop
-                out[key] ?? (out[key] = o[key]);
+            for (let o of objarr) {
+                if (o && typeof o === "object")
+                    for (let key in o) {
+                        // noinspection BadExpressionStatementJS,JSUnfilteredForInLoop
+                        out[key] ?? (out[key] = o[key]);
+                    }
             }
-        }
     }
 
     public static log(obj: unknown, label: string = '###') {
@@ -399,6 +464,63 @@ export class U {
 
 
 
+    // NB: need to use result.apply(context) to have a usable "this"
+    // if you want to pass a parameter to the function, pass it through scope insteand !! AND UNDECLARE the parameter in function string signature !!
+    //if inner funcstr have parameters, need to declare them as codestrParamNames arr, and pass them in that order, after the scope which is fixed as first argument.
+    // rest values are declared with ellipsis in codestrParamNames
+    // !!! scope passed here, is only used for keys. values are not bound. scope is set as first parameter when you call the function.
+    // context is bound, but can be re-assigned by calling .bind(), .call() or .apply(), so neither context nor scope assigned in parsing phase are final.
+    // innerfunc params do not have to match the name on the string function, but only the correct amount. they can have any name i think, but i list them correctly to documentate.
+    public static parseFunctionWithContextAndScope<ParamNames extends string[], T extends Function = Function, TT extends GObject | undefined = GObject>(
+        codeStr0: string | Function, context0: GObject | undefined, scope0: TT, codestrParamNames?: ParamNames, protectShallowValues: boolean = false, doIdentifierValidation: boolean = false):
+        (TT extends undefined ? (...params: any)=>any : (scopee:TT, ...paramss: { [K in keyof ParamNames]: any;})=>any){
+        if (!codestrParamNames) codestrParamNames = [] as any;
+
+        let codeStr: string = typeof codeStr0 === "function" ? codeStr0.toString() : codeStr0;
+        let scopeParams: string = '';
+        let scope: GObject | undefined;
+        let context: GObject | undefined;
+        if (protectShallowValues) {
+            if (scope0) { //scope = {...scope0}; scope.__proto__ = scope0.__proto__; // for...in gets values in __proto__ too, {...o} instead gets only hasOwnProperty copied
+                scope = {};
+                for (let k in scope0) scope[k] = scope0[k];
+            } else scope = undefined;
+            if (context0) { // context = {...context0}; context.__proto__ = context0.__proto__;
+                context = {};
+                for (let k in context0) context[k] = context0[k];
+            } else context = undefined;
+        } else { scope = scope0; context = context0; }
+
+
+        if (scope) {
+            let scopekeys: string[] = Object.keys(scope);
+            if (doIdentifierValidation) scopekeys.map((key)=>{
+                key = key?.trim() || '';
+                if (!key || !U.validIdentfierRegexp.test(key)) return undefined;
+                return key;
+            }).filter(k=>!!k);
+            scopeParams = '{'+scopekeys.join(',')+'}';
+        }
+
+        let innerFuncParams = (codestrParamNames as string[]).join(',');
+        let _jevalfunc = undefined as any; // is set by eval
+        const evalmode = false;
+        console.log('parseFunctionWithContextAndScope', {codeStr, scope, context, params:{scopeParams, innerFuncParams}});
+        scopeParams = scopeParams && innerFuncParams ? scopeParams + ',' + innerFuncParams : scopeParams + innerFuncParams;
+        if (evalmode) {
+            codeStr = "_jevalfunc = function ("+scopeParams+") { return ("+codeStr+")("+innerFuncParams+") }";
+            eval(codeStr);
+        } else {
+            _jevalfunc = new Function(scopeParams, " return ("+codeStr+")("+innerFuncParams+")");
+        }
+
+        console.log('parseFunctionWithContextAndScope', {_jevalfunc, params:{scopeParams}});
+
+        if (context) return _jevalfunc.bind(context);
+        else return _jevalfunc;
+    }/*
+    public static evalInContextAndScope<T = any>(...a:any):any {return undefined}
+    public static evalInContextAndScopeNew<T = any>(...a:any):any {return undefined}*/
     public static evalInContextAndScopeNew<T = any>(codeStr: string | ((...a:any)=>any), context0: GObject, injectScopeToo: boolean,
                                                     protectShallowValues?: boolean, doIdentifierValidation?: boolean): T {
         return U.evalInContextAndScope(codeStr, context0, injectScopeToo ? context0 : undefined, protectShallowValues, doIdentifierValidation);
@@ -852,9 +974,9 @@ export class U {
         // nb: mind that typeof [] === 'object'
         return typeof v === 'object'; }
 
-    static objectFromArrayValues(arr: (string | number)[]): Dictionary<string | number, boolean> {
+    static objectFromArrayValues<T extends any>(arr: (string | number)[], val: T = true as T): Dictionary<string | number, T> {
         // @ts-ignore
-        return arr.reduce((acc, val) => { acc[val] = true; return acc; }, {});
+        return arr.reduce((acc, val) => { acc[val] = val; return acc; }, {});
         /*let ret: Dictionary = {};
         for (let val of arr) { ret[val] = true; }
         return ret;*/

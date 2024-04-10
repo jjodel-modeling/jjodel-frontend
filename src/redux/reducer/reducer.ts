@@ -6,7 +6,8 @@ import {
     DModelElement,
     DViewElement,
     DClass,
-    DModel
+    DModel,
+    UX, EdgeOwnProps, EdgeStateProps, GraphElementComponent, ViewEClassMatch, bool
 } from '../../joiner';
 import {
     Action,
@@ -29,7 +30,6 @@ import {
     Pointer,
     Pointers,
     RuntimeAccessibleClass,
-    Selectors,
     SetFieldAction,
     SetRootFieldAction,
     statehistory
@@ -38,8 +38,11 @@ import React from "react";
 import {LoadAction, RedoAction, UndoAction} from "../action/action";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {SimpleTree} from "../../common/SimpleTree";
-import {transientProperties} from "../../joiner/classes";
+import {transientProperties, Selectors} from "../../joiner";
 import {OclEngine} from "@stekoe/ocl.js";
+import { contextFixedKeys } from '../../graph/graphElement/sharedTypes/sharedTypes';
+import Storage from "../../data/storage";
+import {ProjectsApi} from "../../api/persistance";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -73,16 +76,38 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
         if (i >= action.pathArray.length - 1) {
             let isArrayAppend = false;
             let isArrayRemove = false;
+            let isObjectMerge = false;
+            let isObjectDifference = false;
             // console.log('isarrayappend?', {endswith: U.endsWith(key, ['+=', '[]', '-1']), key, action, i});
             // console.log('isarraydelete?', {endswith: U.endsWith(key, ['-='])});
-            if (U.endsWith(key, ['+=', '[]'])) {
-                key = key.substr(0, key.length - 2).trim();
-                isArrayAppend = true; }
-            if (U.endsWith(key, ['-='])) {
-                key = key.substr(0, key.length - 2).trim();
-                isArrayRemove = true; }
 
             let oldValue: any;
+            if (U.endsWith(key, ['+=', '[]'])) {
+                key = key.substr(0, key.length - 2).trim();
+                oldValue = current[key];
+                switch (typeof oldValue){
+                    case 'object':
+                    if (Array.isArray(oldValue)) isArrayAppend = true;
+                    else isObjectMerge = true;
+                    break;
+                    default: newVal += oldValue; break;
+                }
+            }
+            if (U.endsWith(key, ['-='])) {
+                key = key.substr(0, key.length - 2).trim();
+                oldValue = current[key];
+                switch (typeof oldValue){
+                    case 'object':
+                        if (Array.isArray(oldValue)) isArrayRemove = true;
+                        else isObjectDifference = true;
+                        break;
+                    case "string":
+                        newVal = U.replaceAll(oldValue, newVal, '');
+                        break;
+                    default: newVal -= oldValue; break;
+                }
+                isArrayRemove = true; }
+
             // let unpointedElement: DPointerTargetable | undefined;
             // perform final assignment
             if (action.type === CreateElementAction.type && current[key]) {
@@ -92,6 +117,29 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                     preexistingValue: current[key], isShallowEqual: current[key] === action.value });
                 return false; // warning: use return only when you want to abort and skip subsequent CompositeAction sub-actions like now.
             }
+            if (isObjectMerge) {
+                if (typeof newVal === 'string') { let tmp: any = {}; tmp[newVal] = true; newVal = tmp; }
+                oldValue = {...current[key]};
+                current[key] = {...current[key]};
+                for (let subkey in newVal) {
+                    // console.warn("object merge", {current, key, subkey, newVal, old:current[key][subkey], new:newVal[subkey]});
+                    if (current[key][subkey] === newVal[subkey]) continue;
+                    current[key][subkey] = newVal[subkey];
+                    gotChanged = true;
+                    if (action.isPointer) { newRoot = PointedBy.add(key as Pointer, action, newRoot, "+="); }
+                }
+            } else
+            if (isObjectDifference) {
+                if (typeof newVal === 'string') { let tmp: any = {}; tmp[newVal] = true; newVal = tmp; }
+                oldValue = {...current[key]};
+                current[key] = {...current[key]};
+                for (let subkey in newVal) {
+                    if (!(subkey in current[key])) continue;
+                    delete current[key][subkey];
+                    gotChanged = true;
+                    if (action.isPointer) { newRoot = PointedBy.add(key as Pointer, action, newRoot, "-="); }
+                }
+            } else
             if (isArrayAppend) {
                 gotChanged = true;
                 if (!Array.isArray(current[key])) { current[key] = []; }
@@ -337,6 +385,18 @@ function updateRedundancies_OBSOLETE(state: DState, oldState:DState, possibleInc
 let initialState: DState = null as any;
 let storeLoaded: boolean = false;
 
+const UDRegexp = /(?:^|\s|;|}|\n|\t|\(|,)ret\s*\.\s*[a-zA-Z_$][0-9a-zA-Z_$]*\s*=/g;
+/* tested with:
+if (ret.key = stuff) ret.key2=morestuff;
+;ret.k=3;
+}ret. kk=3,ret. a = 3
+
+ret .b = 3
+*/
+
+
+// then add to it: content of props, constants, usageDeclarations
+
 export function reducer(oldState: DState = initialState, action: Action): DState {
     const ret = _reducer(oldState, action);
     if (ret === oldState) return oldState;
@@ -359,19 +419,185 @@ export function reducer(oldState: DState = initialState, action: Action): DState
             Collaborative.client.emit('pushAction', parsedAction);
         }
     }
+
+
+
     // local changes to out-of-redux stuff
-    if (ret.VIEWOCL_NEEDS_RECALCULATION.length) {
+    if (ret.VIEWS_RECOMPILE_ocl.length) {
         // for (let gid of ret.graphs) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
         // for (let vid of ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION) { }
-        for (let vid of ret.VIEWOCL_NEEDS_RECALCULATION) {
+        for (let vid of ret.VIEWS_RECOMPILE_ocl) {
             transientProperties.view[vid].oclEngine = undefined as any; // force re-parse
-            Selectors.updateViewMatchings2(DPointerTargetable.fromPointer(vid), false, true, ret);
+            transientProperties.view[vid].oclChanged = true;
+            for (let nid in transientProperties.node) {
+                let tnv = transientProperties.node[nid].viewScores[vid];
+                if (tnv?.OCLScore !== ViewEClassMatch.NOT_EVALUATED_YET) tnv.OCLScore = ViewEClassMatch.NOT_EVALUATED_YET as any as boolean;
+            }
         }
-        ret.VIEWOCL_NEEDS_RECALCULATION = [];
+        ret.VIEWS_RECOMPILE_ocl = [];
     }
+    /*
     if (ret.VIEWOCL_UPDATE_NEEDS_RECALCULATION.length) {
         // not implemented for now
         ret.VIEWOCL_UPDATE_NEEDS_RECALCULATION = [];
+    }*/
+    if (ret.VIEWS_RECOMPILE_preconditions.length) {
+        for (let vid of ret.VIEWS_RECOMPILE_preconditions) {
+            for (let nid in transientProperties.node) {
+                let tnv = transientProperties.node[nid].viewScores[vid];
+                if (tnv?.metaclassScore !== ViewEClassMatch.NOT_EVALUATED_YET) tnv.metaclassScore = ViewEClassMatch.NOT_EVALUATED_YET as any as number;
+            }
+        }
+        ret.VIEWS_RECOMPILE_preconditions = [];
+    }
+
+    for (const vid of ret.VIEWS_RECOMPILE_constants) { // compiled in func, and executed, result does not vary between nodes.
+        let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
+        // transientProperties.view[vid].constantsList = dv.constants?.match(UDRegexp).map(s=>s.substring(4, s.length-1).trim()) || [];
+        // let allContextKeys = {...contextFixedKeys};
+        if (!dv.constants) {
+            transientProperties.view[vid].constants = {};
+            transientProperties.view[vid].constantsList = [];
+            // no need to recompile UD, jsx or measurables, they will have additional parameters in scope but they are undefined and cause no problems.
+            continue;
+        }
+        const constantsOutput: GObject = {};
+        const context = {view:dv}; // context at this point holds only static stuff, which are in gloval scope (window) plus view.
+        let paramStr = '{'+Object.keys(context).join(',')+'}, ret';
+        try {
+            // the scope of new Function() is "window" and not the function where is called, unlike eval();
+            let constantsFunction: (context: GObject, ret: GObject) => void = new Function(paramStr, 'return ('+dv.constants+')(ret)').bind(context);
+            constantsFunction(context, constantsOutput);
+        } catch(e:any){
+            console.error('error constants parse', {vid, e, paramStr, body:'return ('+dv.constants+')(ret)'});
+            // todo: how do i render an error from here? even if i set jsx or ud.__invalidDeclarations it will be recompiled. need a constants.__invalidDeclarations too?
+        }
+
+        transientProperties.view[vid].constants = constantsOutput;
+        transientProperties.view[vid].constantsList = Object.keys(transientProperties.view[vid].constants);
+        // implies recompilation of: ud, jsx and all measurable events
+        ret.VIEWS_RECOMPILE_usageDeclarations.push(vid);
+        ret.VIEWS_RECOMPILE_jsxString.push(vid);
+        for (let k of DViewElement.MeasurableKeys) (ret as any)['VIEWS_RECOMPILE_'+k].push(vid);
+    }
+    ret.VIEWS_RECOMPILE_constants = [];
+
+    for (const vid of ret.VIEWS_RECOMPILE_usageDeclarations) { // compiled in func, but NOT executed, result varies between nodes.
+        let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
+        const tv = transientProperties.view[vid];
+        if (!dv.usageDeclarations) {
+            tv.UDList = [];
+            tv.UDFunction = undefined as any;
+            // no need to recompile jsx or measurables, they will have additional parameters in scope but they are undefined and cause no problems.
+            continue;
+        }
+        let matches = dv.usageDeclarations?.match(UDRegexp) || [];
+        transientProperties.view[vid].UDList = matches.map(s=>{ s = s.trim(); return s.substring(s.indexOf('\.')+1, s.length-2).trim()});
+        console.log('matches', {matches, udlist:transientProperties.view[vid].UDList});
+        // warning for user: do not redeclare ret in nested blocks.
+        // do not use ret[key] syntax.
+        // do not set nested values directly (ret.key.subkey syntax).
+        // do not use ret.key +=, -= or any other operator assignment different than "="
+        // if that is ever required, do instead
+        // do not assign values to ret in block comments
+        // those restrictions only apply to the ret object, all those violations can be done on other objects.
+        // so the following is valid, and a way to overcome the previous limitations:
+        // let subobject = {}; subobject[key] += stuff; ret.somefixedname = subobject;
+
+        let allContextKeys = {...contextFixedKeys};
+        for (let k of tv.constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
+        let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}, ret';
+        if (vid.includes('Model')) console.log("modelparse, ud", {paramStr, udstr:dv.usageDeclarations, udlist:transientProperties.view[vid].UDList});
+        try {
+            tv.UDFunction = new Function(paramStr, 'return ('+dv.usageDeclarations+')(ret)') as (...a:any)=>any;
+        } catch (e:any) {
+            console.error('error udparse', {vid, e, paramStr, body: 'return ('+dv.usageDeclarations+')(ret)'});
+            tv.UDFunction = new Function("", "(ret)=>{ ret.__invalidUsageDeclarations = "+JSON.stringify(e)+"; ret.__invalidUsageDeclarations.isSyntax = true; }") as (...a:any)=>any;
+        }
+
+
+        // implies recompilation of: jsx and all measurable events
+        ret.VIEWS_RECOMPILE_jsxString.push(vid);
+        for (let k of DViewElement.MeasurableKeys) (ret as any)['VIEWS_RECOMPILE_'+k].push(vid);
+    }
+    ret.VIEWS_RECOMPILE_usageDeclarations = [];
+
+    /* JS CONDITION */
+    for (const vid of ret.VIEWS_RECOMPILE_jsCondition) {
+        const dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
+        const tv = transientProperties.view[vid];
+        tv.jsConditionChanged = true;
+        if (!dv.jsCondition) {
+            tv.jsCondition = undefined;
+            continue;
+        }
+        try {
+            const lines = dv.jsCondition.trim().split('\n');
+            let lastLine = lines[lines.length - 1];
+            if (lastLine.indexOf('return') !== 0) lines[lines.length - 1] = `return (${lastLine})`;
+            const fx = `() => {${lines.join('\n')}}`;
+            console.log('FX', fx);
+            tv.jsCondition = eval(fx);
+            console.log('JS Condition parsed', tv)
+        } catch (e) {
+            tv.jsCondition = undefined;
+            console.log('JS Condition parsed error', e);
+        }
+    }
+    ret.VIEWS_RECOMPILE_jsCondition = [];
+
+    for (const vid of ret.VIEWS_RECOMPILE_jsxString) { // compiled in func, but NOT executed, result varies between nodes.
+        let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
+        if (!dv.jsxString) { transientProperties.view[vid].JSXFunction = undefined as any; continue; }
+        let allContextKeys = {...contextFixedKeys};
+        for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
+        for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
+
+        let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
+        console.log('jsxparse', { allContextKeys, ud:transientProperties.view[vid].UDList, c:transientProperties.view[vid].constantsList });
+        const body: string =  'return ('+UX.parseAndInject(dv.jsxString, dv)+')';
+        // if (vid.includes('Model')) console.log("modelparse, jsx", {paramStr, body});
+        console.log('jsxparse', {vid, paramStr, body});
+        try {
+            transientProperties.view[vid].JSXFunction = new Function(paramStr, body) as ((...a:any)=>any);
+        }
+        catch (e: any) {
+            console.error('error jsxparse', {vid, e, paramStr, body});
+            transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'JSX Syntax', dv);
+        }
+        // implies recompilation of: ... nothing?
+    }
+    ret.VIEWS_RECOMPILE_jsxString = [];
+
+
+
+    for (const key of DViewElement.MeasurableKeys) {
+        let vid: Pointer<DViewElement>;
+        for (vid of (ret as any)['VIEWS_RECOMPILE_'+key]) {
+            let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
+            let str: string = (dv as any)[key];
+            if (!str) {
+                (transientProperties.view[vid] as any)[key] = undefined;
+                continue;
+            }
+            let allContextKeys = {...contextFixedKeys};
+            for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
+            for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
+            let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
+            console.log('measurable parse '+key, {allContextKeys, ud:transientProperties.view[vid].UDList, c:transientProperties.view[vid].constantsList });
+            console.log('measurable parse '+key, {vid, paramStr, body:str});
+            try {
+                (transientProperties.view[vid] as any)[key] = new Function(paramStr, str);
+            }
+            catch (e: any) {
+                console.error('error measurable parse '+key, {vid, e, paramStr, body:str});
+                (transientProperties.view[vid] as any)[key] = undefined;
+                // display error in jsx
+                transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'Measurable ' + key + ' Syntax', dv);
+                break;
+            }
+        }
+        (ret as any)['VIEWS_RECOMPILE_'+key] = [];
     }
 
     for (let dataid in ret.ClassNameChanged) {
@@ -386,6 +612,8 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         // update ocl type names
         let data: DClass = ret.idlookup[dataid] as DClass;
         RuntimeAccessibleClass.makeOCLConstructor(data, ret, oldState);
+        // here i should reset all tnv.oclEngine too and set all ocl scores to notevaluated, but it is too computationally heavy
+        // and it's useful to keep the old ocl condition valid with past names until manually edited.
     }
     ret.ClassNameChanged = {};
 
@@ -536,7 +764,7 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
     }
 }
 
-export function stateInitializer() {
+export async function stateInitializer() {
     statehistory[DUser.current] = {redoable: [], undoable: []};
     RuntimeAccessibleClass.fixStatics();
     let dClassesMap: Dictionary<string, typeof DPointerTargetable> = {};
@@ -569,4 +797,9 @@ export function stateInitializer() {
         1
     );
     DState.init();
+    const user = Storage.read<DUser>('user');
+    if(!user) return;
+    DUser.new(user.username, user.id);
+    DUser.current = user.id;
+    await ProjectsApi.getAll();
 }

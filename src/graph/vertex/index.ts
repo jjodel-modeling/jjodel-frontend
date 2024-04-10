@@ -22,4 +22,3 @@ let arr: ((typeof GraphElement | typeof Edge) & { cname:string })[] = [
     Vertex, VoidVertex, EdgePoint,
     Graph, GraphVertex,];*/
 type T = Dictionary<string, (typeof GraphElement | typeof Edge) & { cname:string }>;
-export const GraphElements: any = {}; // T & {vertexes: T, edges: T, graphs: T, fields: T} = {} as any;

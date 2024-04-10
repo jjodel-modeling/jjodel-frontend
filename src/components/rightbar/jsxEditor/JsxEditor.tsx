@@ -23,6 +23,7 @@ function JsxEditorComponent(props: AllProps) {
     }
 
     const monaco = useMonaco();
+    (window as any).monaco = monaco;
     useEffect(() => {
         if (!monaco) return;
         monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
@@ -35,29 +36,24 @@ function JsxEditorComponent(props: AllProps) {
             jsx: monaco.languages.typescript.JsxEmit.React,
             reactNamespace: "React",
             allowJs: true,
-            typeRoots: ["node_modules/@types", 'src/static/'], // doubt those can be accesed at runtime but trying
+            typeRoots: ["node_modules/@types"]//, 'src/static/'], // doubt those can be accesed at runtime but trying
         });
-        monaco.languages.typescript.typescriptDefaults.addExtraLib("declare var data: LModelElement;");
+
+        monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({ noSemanticValidation: false, noSyntaxValidation: false });
+        monaco.languages.typescript.javascriptDefaults.setEagerModelSync(true);
+
+        monaco.languages.typescript.typescriptDefaults.addExtraLib("declare var data: 'datatype';");
+        /*
         // doubt those files can be accesed at runtime but trying
-        monaco?.languages.typescript.javascriptDefaults.addExtraLib('declare var data: LModelElement; declare var node: LGraphElement;', 'src/static/monacotypes.d.ts');
-
-
-
-        monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-            noSemanticValidation: false,
-            noSyntaxValidation: false,
-        });
+        monaco.languages.typescript.javascriptDefaults.addExtraLib('declare var data: LModelElement; declare var node: LGraphElement;', 'src/static/monacotypes.d.ts');
 
         monaco.languages.typescript.typescriptDefaults.addExtraLib(
             '<<react-definition-file>>',
             `file:///node_modules/@react/types/index.d.ts`
-        );
-        // do conditional chaining
-        monaco?.languages.typescript.javascriptDefaults.setEagerModelSync(true);
-        // or make sure that it exists by other ways
-        if (monaco) {
-            console.log('here is the monaco instance:', monaco);
-        }
+        );*/
+
+
+
     }, [monaco]);
 
     /*todo: if we install a non-react version of monaco, probably we can set his options to jsx syntax */

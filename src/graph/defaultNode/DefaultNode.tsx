@@ -51,7 +51,7 @@ import {
     LPointerTargetable,
     Pointer,
     DGraphElement,
-    DPointerTargetable
+    DPointerTargetable, LGraphElement, transientProperties
 } from "../../joiner";
 import { GraphElements } from "../../joiner/components";
 // import {Field, Graph, GraphVertex} from "../vertex/Vertex";
@@ -62,7 +62,6 @@ const superclass: typeof GraphElementComponent = RuntimeAccessibleClass.classes.
 class DefaultNodeStatee extends GraphElementStatee { }
 
 // from ownstateprops function getVertexID(props: AllPropss): Pointer<DVoidVertex, 0, 1, LVoidVertex> { return props.vertex?.id; }
-
 
 // Giordano: add ignore for webpack
 @RuntimeAccessible('DefaultNodeComponent')
@@ -78,15 +77,20 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
         ret.nodeid = ownProps.nodeid as Pointer<DGraphElement>; // but nodeid exists, passed from the parent along graphid and parentview
 */
         // try{
-            if (ownProps.view) {
-                ret.view = LPointerTargetable.wrap(Selectors.getViewByIDOrNameD(ownProps.view)) as LViewElement;
-                ret.views = [ret.view];
-            }
-            if (!ret.view) {
-                ret.views = Selectors.getAppliedViewsNew({data: LPointerTargetable.wrap(ownProps.data),
-                    node:undefined, nid:ownProps.nodeid as any, pv:DPointerTargetable.fromPointer(ownProps.parentViewId as Pointer, state)});
-                ret.view = ret.views[0];
-            }
+        ret.data = LPointerTargetable.wrap(ownProps.data);
+        ret.dataid = ownProps.data ? (typeof ownProps.data === "string" ? ownProps.data : ownProps.data.id) : undefined;
+        // if node does not exist yet it's fine, don't create it. let Vertex or Graph or Edge make it with appropriate constructor according fo first matching view on model.
+        // problem: what kind of node to make / initial view assign on shapeless objects? they have both data and node undefined at first render.
+        ret.node = LPointerTargetable.wrap(ownProps.nodeid) as LGraphElement;
+        if (ret.dataid) {
+            // set up transient model-> node map
+            if (!transientProperties.modelElement[ret.dataid]) transientProperties.modelElement[ret.dataid] = {nodes: {}} as any;
+            transientProperties.modelElement[ret.dataid].nodes[ownProps.nodeid as string] = ret.node;
+            transientProperties.modelElement[ret.dataid].node = ret.node;
+        }
+
+        GraphElementComponent.mapViewStuff(state, ret, ownProps);
+
             // GraphElementComponent.mapViewStuff(state, ret, ownProps);
             (ret as any).skiparenderforloading = false;
         //} catch(e) {

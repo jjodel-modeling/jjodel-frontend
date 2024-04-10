@@ -1,16 +1,19 @@
 import './style.scss';
-import React, {Dispatch, ReactElement} from 'react';
+import React, {Dispatch, ReactElement, useEffect, useState} from 'react';
 import {connect} from 'react-redux';
-import {DState, DUser, LUser, SetRootFieldAction} from '../../joiner';
+import {DState, DUser, LUser, SetRootFieldAction, U} from '../../joiner';
 import File from './tabs/File';
 import Edit from './tabs/Edit';
 import Debug from './tabs/Debug';
 import DebugImage from '../../static/img/debug.png';
 import {FakeStateProps} from '../../joiner/types';
-import PersistanceApi from "../../api/persistance";
 import Collaborative from "../collaborative/Collaborative";
 import {SaveManager} from "../topbar/SaveManager";
 import Examples from "./tabs/Examples";
+import Storage from "../../data/storage";
+import {useLocation, useNavigate} from "react-router-dom";
+import {AuthApi, ProjectsApi} from "../../api/persistance";
+import * as path from "path";
 
 let clickTimestamps: number[] = [];
 const clicksRequired = 2;
@@ -19,14 +22,21 @@ function NavbarComponent(props: AllProps) {
     const debug = props.debug;
     const user = props.user;
     const project = user.project;
+    const navigate = useNavigate();
+    const {pathname} = useLocation();
+    const [renders, setRenders] = useState(0);
 
     const closeProject = async() => {
+        navigate('/dashboard');
+        U.refresh();
+        /*
         if(project?.type === 'collaborative') {
             SetRootFieldAction.new('collaborativeSession', false);
             Collaborative.client.disconnect();
             if(project.onlineUsers === 0) await PersistanceApi.saveProject();
         }
         user.project = null;
+        */
     }
 
     return(<nav className={'navbar navbar-expand-lg'}>
@@ -56,10 +66,13 @@ function NavbarComponent(props: AllProps) {
                 <li className={'nav-item dropdown'}>
                     <i tabIndex={-1} className={'fs-3 dropdown-toggle bi bi-list'} data-bs-toggle={'dropdown'} />
                     <ul className={'dropdown-menu'}>
-                        <li tabIndex={-1} className={'dropdown-item'}onClick={(e) => SaveManager.load()}>
+                        {/*<li tabIndex={-1} className={'dropdown-item'} onClick={(e) => SaveManager.load()}>
                             Load
                         </li>
-                        <Examples />
+                        <Examples />*/}
+                        <li className={'dropdown-item'}>
+                            Nothing here
+                        </li>
                     </ul>
                 </li>
             }
@@ -82,9 +95,10 @@ function NavbarComponent(props: AllProps) {
                     <label style={{cursor: 'pointer'}} className={'text-white'}>{user.username[0].toUpperCase()}</label>
                 </div>
                 <ul className={'dropdown-menu mt-2'} style={{left: '-3vw'}}>
-                    <li tabIndex={-1} onClick={async(e) => {
-                        SetRootFieldAction.new('isLoading', true);
-                        await PersistanceApi.logout();
+                    <li tabIndex={-1} onClick={async() => {
+                        await AuthApi.logout();
+                        navigate('/auth');
+                        U.refresh();
                     }} className={'dropdown-item'}>
                         Logout
                     </li>
@@ -94,7 +108,8 @@ function NavbarComponent(props: AllProps) {
             <ul className={'navbar-nav ms-auto'}>
             </ul>
             {user.project && <li className={'nav-item'}>
-                <button disabled={DUser.offlineMode || project?.type === 'collaborative'} onClick={async(e) => await PersistanceApi.saveProject()} style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
+                <button disabled={DUser.offlineMode || project?.type === 'collaborative'}
+                        onClick={async(e) => ProjectsApi.save(user.project)} style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
                     Save
                 </button>
             </li>}

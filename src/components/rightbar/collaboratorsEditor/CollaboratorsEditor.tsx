@@ -3,7 +3,6 @@ import {connect} from 'react-redux';
 import {DUser, GObject, LUser, SetRootFieldAction, U} from '../../../joiner';
 import type {DState, LProject} from '../../../joiner';
 import {FakeStateProps} from '../../../joiner/types';
-import PersistanceApi from '../../../api/persistance';
 
 function CollaboratorsEditorComponent(props: AllProps) {
     const project = props.project;
@@ -11,6 +10,7 @@ function CollaboratorsEditorComponent(props: AllProps) {
     const collaborators = props.collaborators;
 
     const addCollaborator = async() => {
+        /*
         const email = ($('#collaborator-email')[0] as GObject).value;
         if(!email) {alert('User not found!'); return;}
         const user = await PersistanceApi.getUserByEmail(email);
@@ -19,6 +19,7 @@ function CollaboratorsEditorComponent(props: AllProps) {
         if(project.collaborators.map(c => c.id).includes(user.id)) return;
         project.collaborators = [...project.collaborators, user];
         await PersistanceApi.saveProject();
+        */
     }
 
     return (<div className={'p-2'}>

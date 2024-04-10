@@ -32,8 +32,8 @@ function NodeData(props: Props) {
         <Input data={view} field={"height"} label={"Height"} type={"number"} readonly={readOnly} />*/}
         {/*<Input data={view} field={"scalezoomx"} label={"Zoom X"} type={"number"}/>*/}
         {/*<Input data={view} field={"scalezoomy"} label={"Zoom Y"} type={"number"}/>*/}
-        {/*<div className={'d-flex p-1'}>
-            <label className={'my-auto'}>Force Node</label>
+        {<div className={'d-flex p-1'}>
+            <label className={'my-auto'}>Preferred display</label>
             <select className={'my-auto ms-auto select'} disabled={readOnly}
                     value={view.forceNodeType} onChange={changeFN}>
                 <option value={undefined}>-----</option>
@@ -41,7 +41,7 @@ function NodeData(props: Props) {
                     return(<option key={index} value={node}>{node}</option>);
                 })}
             </select>
-        </div>*/}
+        </div>}
         {/*<Input data={view} field={"storeSize"} label={"Store Size"} readonly={readOnly}  tooltip={
             <div>"Active: the node position depends from the view currently displayed. Inactive: it depends from the graph."</div>} type={"checkbox"} />*/}
         <Input data={view} field={"lazySizeUpdate"} label={"Lazy Update"} type={"checkbox"} tooltip={true} readonly={readOnly} />
@@ -50,13 +50,7 @@ function NodeData(props: Props) {
         <Input data={view} field={"adaptHeight"} label={"Adapt Height"} type={"checkbox"} readonly={readOnly} />
         <Input data={view} field={"draggable"} label={"Draggable"} type={"checkbox"} readonly={readOnly} />
         <Input data={view} field={"resizable"} label={"Resizable"} type={"checkbox"} readonly={readOnly} />
-        <TextArea data={view} field={'onDataUpdate'} label={'onDataUpdate'} readonly={readOnly} />
-        <TextArea data={view} field={'onDragStart'} label={'OnDragStart'} readonly={readOnly} />
-        <TextArea data={view} field={'whileDragging'} label={'whileDragging'} readonly={readOnly} />
-        <TextArea data={view} field={'onDragEnd'} label={'OnDragEnd'} readonly={readOnly} />
-        <TextArea data={view} field={'onResizeStart'} label={'OnResizeStart'} readonly={readOnly} />
-        <TextArea data={view} field={'whileResizing'} label={'whileResizing'} readonly={readOnly} />
-        <TextArea data={view} field={'onResizeEnd'} label={'OnResizeEnd'} readonly={readOnly} />
+
     </section>);
 }
 

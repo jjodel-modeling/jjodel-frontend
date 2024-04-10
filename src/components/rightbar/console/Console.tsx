@@ -13,7 +13,7 @@ import {
     Pointer,
     RuntimeAccessibleClass,
     U,
-    windoww, store, Log, DUser
+    windoww, store, Log, DUser, transientProperties
 } from "../../../joiner";
 import * as util from "util";
 import {GraphElementComponent} from "../../../graph/graphElement/graphElement";
@@ -104,9 +104,10 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         let output;
         // let context = {...this.props, props: this.props}; // makeEvalContext(this.props as any, {} as any);
 
-        if (this.props.node?.id) {
-            let component = GraphElementComponent.map[this.props.node.id];
-            this._context = {...component.props.evalContext};
+        let nid = this.props.node?.id;
+        if (nid) {
+            // let component = GraphElementComponent.map[this.props.node.id];
+            this._context = {...transientProperties.node[nid].viewScores[transientProperties.node[nid].mainView.id].evalContext};
             this._context.fromcomponent = true;
         }
         else {

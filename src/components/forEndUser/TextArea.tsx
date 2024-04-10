@@ -22,7 +22,7 @@ function TextAreaComponent(props: AllProps) {
 
     if (!data) return(<></>);
     let css = 'my-auto input ';
-    css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
+    css += (jsxLabel || label) ? 'ms-auto' : '';
     css += (props.hidden) ? ' hidden-input' : '';
 
 
@@ -55,9 +55,9 @@ function TextAreaComponent(props: AllProps) {
     delete otherprops.inputStyle;
     delete otherprops.children;
 
-    return(<div style={{display: (jsxLabel || label) ? 'flex' : 'block'}} className={'p-1'} {...otherprops}>
+    return(<div style={{display: (jsxLabel || label) ? 'flex' : 'block'}} className={'p-1 w-fill'} {...otherprops}>
         <label onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)}
-               className={(label || jsxLabel) ? 'd-block' : 'd-none'}>
+               className={`h-100 ${(label || jsxLabel) ? 'd-block' : 'd-none'}`}>
             {(label) ? label : (jsxLabel) ? jsxLabel : ''}
         </label>
 

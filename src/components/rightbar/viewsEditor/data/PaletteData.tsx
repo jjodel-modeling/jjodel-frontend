@@ -5,6 +5,7 @@ import {Function} from "../../../forEndUser/FunctionComponent";
 import { Color } from '../../../forEndUser/Color';
 import Editor from "@monaco-editor/react";
 import {useStateIfMounted} from "use-state-if-mounted";
+import tinycolor from "tinycolor2";
 
  // delete button <button className="btn btn-danger ms-1"><i className="p-1 bi bi-trash3-fill"/></button>
 function PaletteDataComponent(props: AllProps) {
@@ -34,10 +35,12 @@ function PaletteDataComponent(props: AllProps) {
         view.palette = palette;
     }
 
-    const addColor = (prefix: string, hex: string) => {
+    const addColor = (prefix: string, hex: string | React.MouseEvent<HTMLElement>, i: number = -1) => {
+        if (typeof hex !== "string") hex = (hex.target as HTMLElement)?.style.background || '';
         if (!palette[prefix]) palette[prefix] = [];
         else palette[prefix] = [...palette[prefix]];
-        palette[prefix].push(hex);
+        if (i > 0) palette[prefix].splice(i, 0, hex);
+        else palette[prefix].push(hex);
         view.palette = palette;
     }
     const setColor = (prefix: string, index: number, hex: string) => {
@@ -53,7 +56,6 @@ function PaletteDataComponent(props: AllProps) {
     }
     const cssIsGlobal = view.cssIsGlobal;
     return(<section className={'p-3'}>
-        <Input data={view} field={'isExclusiveView'} type={"checkbox"} />
         {Object.entries(palette).map((entry, index, entries)=>{
             let prefix = entry[0];
             let colors = entry[1];
@@ -64,11 +66,42 @@ function PaletteDataComponent(props: AllProps) {
                     <input className={"prefix"} value={prefix} onChange={(e)=> changePrefix(prefix, e.target.value)}/>
                     <div className="color-container hoverable">{
                         colors.map((val, i) => <Color key={prefix+i}
-                                                      childrenn={
-                            <button className={'btn btn-danger content delete-color mt-2'} onClick={()=>removeColor(prefix, i)}><i className="bi p-1 bi-trash3-fill"/></button>
-                        }
                                                       data={view} field={'palette'} canDelete={!readOnly}
-                                                      getter={()=>colors[i]} setter={(newVal) => { setColor(prefix, i, newVal) }}/>)
+                                                      getter={()=>colors[i]} setter={(newVal) => { setColor(prefix, i, newVal) }}
+                                                      childrenn={
+                            <div className={"d-flex"}>
+                                {false && (()=>{ let color = tinycolor(val); return <>
+                                    <h6>Monochromatic</h6>
+                                    <div className={"row"}>
+                                        Analogous
+                                        {color.analogous().map ( (c) => <button style={{background: c.toHexString()}} onClick={(e)=>{addColor(prefix, e, i)}}>+</button>)}
+                                    </div>
+                                    <h6>Analogous</h6>
+                                    <div className={"row"}>
+                                        Monochromatic
+                                        {color.monochromatic().map ( (c) => <button style={{background: c.toHexString()}} onClick={(e)=>{addColor(prefix, e, i)}}>+</button>)}
+                                    </div>
+                                    <h6>Complementary</h6>
+                                    <div className={"row"}>
+                                        <button style={{background: color.complement().toHexString()}} onClick={(e)=>{addColor(prefix, e, i)}}>+</button>
+                                    </div>
+                                    <h6>Split Complementary</h6>
+                                    <div className={"row"}>
+                                        {color.splitcomplement().map ( (c) => <button style={{background: c.toHexString()}} onClick={(e)=>{addColor(prefix, e, i)}}>+</button>)}
+                                    </div>
+                                    <h6>Triadic</h6>
+                                    <div className={"row"}>
+                                        {color.triad().map ( (c) => <button style={{background: c.toHexString()}} onClick={(e)=>{addColor(prefix, e, i)}}>+</button>)}
+                                    </div>
+                                    <h6>Tetradic</h6>
+                                    <div className={"row"}>
+                                        {color.tetrad().map ( (c) => <button style={{background: c.toHexString()}} onClick={(e)=>{addColor(prefix, e, i)}}>+</button>)}
+                                    </div>
+                                </>})()}
+                                <button className={'btn btn-danger content delete-color mt-2'} onClick={()=>removeColor(prefix, i)}><i className="bi p-1 bi-trash3-fill"/></button>
+                            </div>
+                        }
+                                                          />)
                     }
                     </div>
                     <div className="suggestion-container">{
