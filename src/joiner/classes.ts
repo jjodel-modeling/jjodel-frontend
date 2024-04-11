@@ -1782,14 +1782,15 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
                 const op = dependency.op;
                 const val = (op === '-=') ? data.id : '';
                 if((root === 'idlookup') && obj && field) {
-                    console.log(`SetFieldAction.new('${obj}', '${field}', '${val}', '${op}'); // delete`);
+                    console.log('Delete', `SetFieldAction.new('${obj}', '${field}', '${val}', '${op}');`);
                     SetFieldAction.new(obj, field, val, op, false);
                 } else {
-                    console.log(`SetRootFieldAction.new('${root}', '${val}', '${op}'); // delete`);
+                    console.log('Delete', `SetRootFieldAction.new('${root}', '${val}', '${op}');`);
                     SetRootFieldAction.new(root, val, op, false);
                 }
             }
-            if(data.nodes) data.nodes.map((node: any) => node.delete())
+            if(data.nodes) data.nodes.map((node: any) => node.delete());
+            SetRootFieldAction.new('idlookup', data.id, '-=', false);
             DeleteElementAction.new(data.id);
             END();
         };
