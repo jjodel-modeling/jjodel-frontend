@@ -26,15 +26,16 @@ function DockComponent(props: AllProps) {
     const ModelsSummary = {id: '0', title: 'Summary', group: 'models', closable: false, content: <ModelsSummaryTab />};
 
     /* Editors */
-    const test = {id: '999', title: 'Test', group: 'editors', closable: false, content: <TestTab />};
-    const structure = {id: '1', title: 'Structure', group: 'editors', closable: false, content: <StructureEditor />};
-    const tree = {id: '2', title: 'Tree View', group: 'editors', closable: false, content: <TreeEditor />};
-    const views = {id: '3', title: 'Views', group: 'editors', closable: false, content: <ViewsEditor />};
-    const node = {id: '4', title: 'Node', group: 'editors', closable: false, content: <NodeEditor />};
-    const viewpoints = {id: '6', title: 'Viewpoints', group: 'editors', closable: false, content: <ViewpointEditor />};
-    const collaborators = {id: '7', title: 'Collaborators', group: 'editors', closable: false, content: <CollaboratorsEditor />};
-    const mqtt = {id: '8', title: 'Mqtt', group: 'editors', closable: false, content: <MqttEditor />};
-    const console = {id: '9', title: 'Console', group: 'editors', closable: false, content: <Console />};
+    let index = 1;
+    const test = {id: `${index++}`, title: 'Test', group: 'editors', closable: false, content: <TestTab />};
+    const structure = {id: `${index++}`, title: 'Structure', group: 'editors', closable: false, content: <StructureEditor />};
+    const tree = {id: `${index++}`, title: 'Tree View', group: 'editors', closable: false, content: <TreeEditor />};
+    const views = {id: `${index++}`, title: 'Views', group: 'editors', closable: false, content: <ViewsEditor />};
+    const node = {id: `${index++}`, title: 'Node', group: 'editors', closable: false, content: <NodeEditor />};
+    const viewpoints = {id: `${index++}`, title: 'Viewpoints', group: 'editors', closable: false, content: <ViewpointEditor />};
+    const collaborators = {id: `${index++}`, title: 'Collaborators', group: 'editors', closable: false, content: <CollaboratorsEditor />};
+    const mqtt = {id: `${index++}`, title: 'Mqtt', group: 'editors', closable: false, content: <MqttEditor />};
+    const console = {id: `${index++}`, title: 'Console', group: 'editors', closable: false, content: <Console />};
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     layout.dockbox.children.push({tabs: [ModelsSummary]});
@@ -45,7 +46,7 @@ function DockComponent(props: AllProps) {
         views,
         viewpoints,
         // collaborators,
-        mqtt,
+        // mqtt,
         console
     ]});
 

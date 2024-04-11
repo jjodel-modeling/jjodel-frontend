@@ -11,7 +11,7 @@ function ViewsEditorComponent(props: AllProps) {
     const stackViews = props.stackViews;
     const [selectedView, setView] = useStateIfMounted(undefined as (LViewElement | undefined));
 
-    return(<div>
+    return(<div style={{height: '70em', overflow: 'scroll'}}>
         {selectedView ?
             <ViewData view={selectedView} setSelectedView={setView} /> :
             <ViewsData setSelectedView={setView} />}

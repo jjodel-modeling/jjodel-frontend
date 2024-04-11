@@ -920,7 +920,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             // this.setExternalPtr(vp, 'subViews', '', subviews);
             let subviews: GObject = {}; subviews[thiss.id] = 1.5;
             this.setExternalPtr(vp, 'subViews', '+=', subviews);
-            this.setPtr("viewpoint", vp);
+            this.setPtr('viewpoint', vp);
         }
 
         let trview = transientProperties.view[thiss.id] = {} as any;
