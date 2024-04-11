@@ -51,7 +51,7 @@ function ViewDataComponent(props: AllProps) {
                 <i className={'p-1 bi bi-arrow-left'}></i>
             </button>
         </div>
-        <DockLayout defaultLayout={layout} style={{position: 'absolute', left: 10, top: 40, right: 10, bottom: 10}} />
+        <DockLayout defaultLayout={layout} style={{position: 'absolute', left: 10, top: 40, right: 10, bottom: 10, marginBottom: "20px"}} />
     </div>);
 }
 interface OwnProps {
