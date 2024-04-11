@@ -108,11 +108,12 @@ function InputComponent(props: AllProps) {
     else if (readOnly) cursor = 'not-allowed';
     else if (isBoolean) cursor = 'pointer';
     else cursor = 'auto';
-
+    let inputStyle = props.inputStyle || {};
+    if (!inputStyle.cursor && cursor === 'not-allowed') { inputStyle.cursor = cursor; }
     let input = <input {...otherprops}
                        key={`${field}.${data.id}`}
                        className={props.inputClassName || css}
-                       style={props.inputStyle}
+                       style={inputStyle}
                        spellCheck={false}
                        readOnly={readOnly}
                        type={type} value={value} onChange={change} onBlur={blur} onKeyDown={keyDown}
