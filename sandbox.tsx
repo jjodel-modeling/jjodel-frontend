@@ -11,8 +11,9 @@ let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPac
 
 
 // need to merge file declarations? or use a filename such as the imports will work (use inmemory://? or real urls)
+// advanced mode and simple mode: hide some features like positional editor in simple mode or the entire tab in view/node, start in simple mode.
 
-//N decorator views without jsx, that only set the node.state.errorlist[thisviewerror] = 'Lowerbound violation' etc...
+// N decorator views without jsx, that only set the node.state.errorlist[thisviewerror] = 'Lowerbound violation' etc...
 // then 1 view with jsx that displays them all
 
 // syntax error on constants, usageDeclarations are not catched

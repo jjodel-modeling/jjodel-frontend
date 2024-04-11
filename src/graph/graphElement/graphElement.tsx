@@ -171,10 +171,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 Log.w(!ret.view, "Requested view "+ownProps.view+" not found. Another view got assigned.", {requested: ownProps.view, props: ownProps, state: ret});
             } else ret.view = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
 
-            Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret});
+            (ret as any).viewScores = transientProperties.node[ownProps.nodeid as string]; // debug only
+            Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret, scores: (ret as any).viewScores});
             ret.viewid = ret.view.id;
             ret.parentviewid = ownProps.parentViewId;
-            (ret as any).viewScores = transientProperties.node[ownProps.nodeid as string]; // debug only
         }
 
     }

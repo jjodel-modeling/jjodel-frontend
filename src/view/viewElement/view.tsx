@@ -784,7 +784,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             if (oldvpid) {
                 let subViews = {...DPointerTargetable.fromPointer(oldvpid).subViews};
                 delete subViews[id];
-                SetFieldAction.new(oldvpid, "subViews", id as any, '', true);
+                SetFieldAction.new(oldvpid, "subViews", subViews, '', true);
             }
             if (vpid) {
                 let name = context.data.name;
