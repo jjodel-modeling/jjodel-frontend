@@ -1,10 +1,10 @@
-import {DProject, LProject, LUser, U} from '../../joiner';
+import {DModel, DProject, LProject, LUser, Pointer, U} from '../../joiner';
 import Storage from "../../data/storage";
 import Api from "../../data/api";
 
 class ProjectsApi {
-    static async create(type: DProject['type'], name: DProject['name']): Promise<DProject> {
-        const project = DProject.new(type, name);
+    static async create(type: DProject['type'], name: DProject['name'], m2: Pointer<DModel>[] = [], m1: Pointer<DModel>[] = []): Promise<DProject> {
+        const project = DProject.new(type, name, undefined, m2, m1);
         if(U.isOffline()) Offline.create(project);
         else await Online.create(project);
         return project;

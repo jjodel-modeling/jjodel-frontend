@@ -1,7 +1,17 @@
 import React, {ChangeEvent, Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import type {DState} from '../joiner';
-import {DProject, DUser, LProject, LUser, U} from '../joiner';
+import {
+    DModel,
+    DProject,
+    DUser, Keystrokes, LGraph, LModel,
+    LPointerTargetable,
+    LProject,
+    LUser,
+    SetRootFieldAction,
+    TRANSACTION,
+    U
+} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 import {StateMachine} from "../examples/StateMachine";
 import "./dashboard.scss"
@@ -9,6 +19,8 @@ import Navbar from "../components/navbar/Navbar";
 import {ProjectsApi} from "../api/persistance";
 import {useNavigate} from "react-router-dom";
 import Storage from "../data/storage";
+import TabDataMaker from "../components/abstract/tabs/TabDataMaker";
+import DockManager from "../components/abstract/DockManager";
 
 function DashboardComponent(props: AllProps) {
     const user = props.user;
@@ -22,6 +34,39 @@ function DashboardComponent(props: AllProps) {
         const project = await ProjectsApi.create(type, name);
         selectProject(project.id);
     }
+    const createProjectTentative = async(type: DProject['type']) => {
+        let name = 'project_' + 0;
+        const projectNames: string[] = projects.map(p => p.name);
+        let project: DProject = null as any;
+        name = U.increaseEndingNumber(name, false, false, newName => projectNames.indexOf(newName) >= 0);
+        project = await ProjectsApi.create(type, name);
+        let m2: DModel = null as any, m1: DModel =  null as any;
+
+        await TRANSACTION(function(){
+            m2 = DModel.new('metamodel', undefined, true, true);
+            m1 = DModel.new('model', m2.id, false, true);
+            const lm2: LModel = LModel.fromD(m2);
+            const lm1: LModel = LModel.fromD(m2);
+            project.metamodels = [...project.metamodels, lm2.id];
+            project.models = [...project.models, lm1.id];
+            project.graphs = [...project.graphs, lm2.node?.id as string, lm1.node?.id as string];
+            const dPackage = LPointerTargetable.fromD(m2).addChild('package');
+        })
+        await TRANSACTION(function(){
+            // const lPackage: LPackage = LPackage.fromD(dPackage);
+            // lPackage.name = 'default';
+            if (true) { // evt.button === Keystrokes.clickWheel || DUser.offlineMode) {
+                user.project = project as any as LProject;
+                setTimeout( () => {
+                    const tab1 = TabDataMaker.metamodel(m2);
+                    const tab2 = TabDataMaker.metamodel(m1);
+                    DockManager.open('models', tab1);
+                }, 1);
+                selectProject(project.id);
+            }
+        })
+    }
+
     const deleteProject = async(project: LProject) => {
         await ProjectsApi.delete(project);
     }

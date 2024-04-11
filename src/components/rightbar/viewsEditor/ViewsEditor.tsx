@@ -11,11 +11,9 @@ function ViewsEditorComponent(props: AllProps) {
     const stackViews = props.stackViews;
     const [selectedView, setView] = useStateIfMounted(undefined as (LViewElement | undefined));
 
-    return(<div>
-        {selectedView ?
-            <ViewData view={selectedView} setSelectedView={setView} /> :
-            <ViewsData setSelectedView={setView} />}
-    </div>);
+    return( selectedView ?
+            <ViewData viewid={selectedView.id} setSelectedView={setView} /> :
+            <ViewsData setSelectedView={setView} />);
 }
 interface OwnProps { }
 interface StateProps {

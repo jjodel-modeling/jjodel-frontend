@@ -145,7 +145,7 @@ InputComponent.cname = 'InputComponent';
 export interface InputOwnProps {
     data: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
-    getter?: (data: GObject<LPointerTargetable>) => string | boolean;
+    getter?: (data: any/*LPointerTargetable*/) => string | boolean | undefined;
     setter?: (value: string|boolean) => void;
     label?: string;
     jsxLabel?: ReactNode;
@@ -161,6 +161,7 @@ export interface InputOwnProps {
     inputStyle?: GObject;
     asLabel?: boolean;
     key?: React.Key | null;
+    placeholder?: string;
 }
 interface StateProps {
     debugmodee: string;

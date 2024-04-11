@@ -1,6 +1,6 @@
 import React, {Dispatch, ReactElement} from 'react';
-import type {LViewElement} from '../../../joiner';
-import {DState, DUser, LProject, LUser, LViewPoint, Defaults} from "../../../joiner";
+import type {DViewElement, LViewElement, Pointer} from '../../../joiner';
+import {DState, DUser, LProject, LUser, LViewPoint, Defaults, LPointerTargetable} from "../../../joiner";
 import InfoData from './data/InfoData';
 import NodeData from './data/NodeData';
 import TemplateData from './data/TemplateData';
@@ -29,7 +29,7 @@ function ViewDataComponent(props: AllProps) {
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     let i = 1;
     const tabs = [
-        {id: ''+i++, title: 'Overview', group: '1', closable: false, content: <InfoData view={view} viewpoints={viewpoints} readonly={readOnly} />},
+        {id: ''+i++, title: 'Overview', group: '1', closable: false, content: <InfoData viewid={view.id} viewpoints={viewpoints} readonly={readOnly} />},
         {id: ''+i++, title: 'Template', group: '1', closable: false, content: <TemplateData view={view} readonly={readOnly} />},
         {id: ''+i++, title: 'Palette/Css', group: '1', closable: false, content: <PaletteData viewID={view.id} readonly={readOnly} />},
         {id: ''+i++, title: 'Events', group: '1', closable: false, content: <EventsData viewID={view.id} readonly={readOnly} />},
@@ -55,10 +55,11 @@ function ViewDataComponent(props: AllProps) {
     </div>);
 }
 interface OwnProps {
-    view: LViewElement;
+    viewid: Pointer<DViewElement>;
     setSelectedView: React.Dispatch<React.SetStateAction<LViewElement | undefined>>;// (val: LViewElement | undefined) => {}
 }
 interface StateProps {
+    view: LViewElement;
     project: LProject;
     viewpoints: LViewPoint[];
     debug: boolean;
@@ -72,6 +73,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.project = user.project as LProject;
     ret.viewpoints = ret.project.viewpoints;
     ret.debug = state.debug;
+    ret.view = LPointerTargetable.fromPointer(ownProps.viewid, state);
     return ret;
 }
 

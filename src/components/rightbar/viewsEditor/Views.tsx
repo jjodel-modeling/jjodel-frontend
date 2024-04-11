@@ -40,7 +40,7 @@ function ViewsDataComponent(props: AllProps) {
 
 
     const state: DState = store.getState();
-    return(<div>
+    return(<div style={{maxHeight: "100%", overflow: "scroll", paddingBottom: "calc(42px + 15px)"}}>
         <div className={'d-flex p-2'}>
             <b className={'ms-1 my-auto'}>VIEWS</b>
             <button className={'btn btn-primary ms-auto'} onClick={add}>
