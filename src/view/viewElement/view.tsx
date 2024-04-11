@@ -888,10 +888,12 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
         val.sort();
-        let hasChanged: boolean = false;
+        let hasChanged: boolean;
         if (val.length === context.data.appliableToClasses?.length) {
+            hasChanged = false;
             for (let i = 0; i < val.length; i++) if (val[i] !== context.data.appliableToClasses[i]) { hasChanged = true; break; }
-        }
+        } else hasChanged = true;
+        console.log("set_appliableToClasses()", {hasChanged, val, oldV: context.data.appliableToClasses});
         if (!hasChanged) return true;
         TRANSACTION(()=>{
             this.set_generic_entry(context, "appliableToClasses", val);

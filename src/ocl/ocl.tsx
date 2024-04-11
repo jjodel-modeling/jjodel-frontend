@@ -58,10 +58,12 @@ export class OCL{
     }
 
     public static test(me: DModelElement | LModelElement | undefined, view: LViewElement | DViewElement | undefined, node?: LGraphElement | DGraphElement): boolean | (typeof ViewEClassMatch)["MISMATCH_OCL"] {
+        if (!me || !view) return false;
+        const condition = view.oclCondition;
+        if (!condition) return true;
         try {
             const types = RuntimeAccessibleClass.getAllClasses();
-            if(!me || !view) return false;
-            return !!OCL.filter(true, 'src', [me], view.oclCondition, types as any)[0];
+            return !!OCL.filter(true, 'src', [me], condition, types as any)[0];
         } catch (e) {
             return false
         }
