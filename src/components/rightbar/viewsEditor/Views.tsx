@@ -1,18 +1,18 @@
 import React, {Dispatch, MouseEvent, ReactElement} from 'react';
 import {
-    Defaults,
-    DState,
-    DUser,
-    DViewElement,
-    LPointerTargetable,
     LProject,
-    LUser,
-    LViewElement,
-    LViewPoint, SetFieldAction, SetRootFieldAction,
-    store,
+    Dictionary,
+    Pointer,
     TRANSACTION,
-    U
+    Pointers,
+    LViewPoint,
+    SetFieldAction,
+    DPointerTargetable,
+    store,
+    LPointerTargetable
 } from '../../../joiner';
+import {CreateElementAction, Defaults, DState, DUser, DViewElement, LUser, LViewElement, U} from '../../../joiner';
+import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from "../../../joiner/types";
 import {connect} from "react-redux";
 import "./Vews.scss"
@@ -20,7 +20,7 @@ import "./Vews.scss"
 function ViewsDataComponent(props: AllProps) {
     const project = props.project;
     console.log("pv:", project.views, project.activeViewpoint.id)
-    const views = project.views.filter(v => v && (!v.viewpoint || v.viewpoint.id === project.activeViewpoint.id));
+    // const views = project.views.filter(v => v && (!v.viewpoint || v.viewpoint.id === project.activeViewpoint.id));
     let vp: LViewPoint = project.activeViewpoint; //
     const subViewScores = vp.__raw.subViews;
 
@@ -35,14 +35,12 @@ function ViewsDataComponent(props: AllProps) {
 
     const clone = (e: MouseEvent, v: LViewElement) => {
         e.preventDefault(); e.stopPropagation();
-        TRANSACTION(() => {
-            v.duplicate();
-        });
+        TRANSACTION(()=>{ v.duplicate(); })
     }
 
 
     const state: DState = store.getState();
-    return(<div className={'h-100'}>
+    return(<div style={{maxHeight: "100%", overflow: "scroll", paddingBottom: "calc(42px + 15px)"}}>
         <div className={'d-flex p-2'}>
             <b className={'ms-1 my-auto'}>VIEWS</b>
             <button className={'btn btn-primary ms-auto'} onClick={add}>
@@ -70,10 +68,7 @@ function ViewsDataComponent(props: AllProps) {
                 <button className={'btn btn-success ms-1'} onClick={e => { clone(e, subview); e.stopPropagation(); }}>
                     <i className={'p-1 bi bi-clipboard2-fill'} />
                 </button>
-                <button onClick={e => {
-                    e.stopPropagation();
-                    subview.delete();
-                }} className={'btn btn-danger ms-1'} disabled={Defaults.check(subview.id)}>
+                <button onClick={e => { subview.delete(); e.stopPropagation(); }} className={'btn btn-danger ms-1'} disabled={Defaults.check(subview.id)}>
                     <i className={'p-1 bi bi-trash3-fill'} />
                 </button>
             </div>

@@ -105,9 +105,10 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         // let context = {...this.props, props: this.props}; // makeEvalContext(this.props as any, {} as any);
 
         let nid = this.props.node?.id;
-        if (nid) {
+        let tn = transientProperties.node[nid as string];
+        if (nid && tn) {
             // let component = GraphElementComponent.map[this.props.node.id];
-            this._context = {...transientProperties.node[nid].viewScores[transientProperties.node[nid].mainView.id].evalContext};
+            this._context = {...tn.viewScores[tn.mainView.id].evalContext};
             this._context.fromcomponent = true;
         }
         else {

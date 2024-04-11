@@ -158,6 +158,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     // inherited redefine
     public __raw!: DViewElement;
     id!: Pointer<DViewElement, 1, 1, LViewElement>;
+    public r!: this;
 
 
 
@@ -175,9 +176,12 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     explicitApplicationPriority!: number; // priority of the view, if a node have multiple applicable views, the view with highest priority is applied.
     __info_of__explicitApplicationPriority: Info = {isGlobal: true, type: ShortAttribETypes.EByte, label:"explicit priority",
         txt: 'Application priority of view. If multiple views match an element, the highest priority will render the main jsx.' }
-    get_explicitApplicationPriority(c: Context): this["explicitApplicationPriority"] { return (c.data.jsCondition?.length || 1) + (c.data.oclCondition?.length || 1); }
+    get_explicitApplicationPriority(c: Context): this["explicitApplicationPriority"] {
+        if (c.data.explicitApplicationPriority !== undefined) return c.data.explicitApplicationPriority;
+        else return (c.data.jsCondition?.length || 1) + (c.data.oclCondition?.length || 1); }
     set_explicitApplicationPriority(val: this["explicitApplicationPriority"] | undefined, c: Context): boolean {
-        return SetFieldAction.new(c.data, "explicitApplicationPriority", val as number, '', false);
+        SetFieldAction.new(c.data, "explicitApplicationPriority", val as number, '', false);
+        return true;
     }
 
     isExclusiveView!: boolean;
@@ -884,10 +888,12 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
         val.sort();
-        let hasChanged: boolean = false;
+        let hasChanged: boolean;
         if (val.length === context.data.appliableToClasses?.length) {
+            hasChanged = false;
             for (let i = 0; i < val.length; i++) if (val[i] !== context.data.appliableToClasses[i]) { hasChanged = true; break; }
-        }
+        } else hasChanged = true;
+        console.log("set_appliableToClasses()", {hasChanged, val, oldV: context.data.appliableToClasses});
         if (!hasChanged) return true;
         TRANSACTION(()=>{
             this.set_generic_entry(context, "appliableToClasses", val);
@@ -937,6 +943,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 // SetRootFieldAction.new('stackViews', dview.id, '+=', true);
 
 
+                SetRootFieldAction.new(`viewelements`, c.data.id, '+=', true);
                 for (let key of DViewElement.RecompileKeys) SetRootFieldAction.new(`VIEWS_RECOMPILE_${key}`, c.data.id, '+=', false);
             })
             return lview;

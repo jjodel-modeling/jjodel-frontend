@@ -1,12 +1,23 @@
-import React from 'react';
-import {Defaults, DViewPoint, Input, LViewElement, LViewPoint, Select} from '../../../../joiner';
+import React, {Dispatch} from 'react';
+import {
+    Defaults, DState, DUser,
+    DViewElement,
+    DViewPoint,
+    Input, LPointerTargetable,
+    LProject, LUser,
+    LViewElement,
+    LViewPoint,
+    Pointer,
+    Select
+} from '../../../../joiner';
 import {OclEditor} from '../../oclEditor/OclEditor';
 import {Edges, Fields, GraphElements, Graphs, Vertexes} from "../../../../joiner/components";
 import JsEditor from "../../jsEditor/JsEditor";
+import {FakeStateProps} from "../../../../joiner/types";
+import {connect} from "react-redux";
 
-interface Props {view: LViewElement, viewpoints: LViewPoint[], readonly: boolean}
 
-function InfoData(props: Props) {
+function InfoData(props: AllProps) {
     const view = props.view;
     const viewpoints = props.viewpoints;
     const readOnly = props.readonly;
@@ -25,7 +36,12 @@ function InfoData(props: Props) {
         <Input data={view} field={'isExclusiveView'} label={'is Decorator'} type={"checkbox"} readonly={readOnly || Defaults.check(view.id)}
                setter={(val) => { console.log("setting vex", {view, vex: view.isExclusiveView, val, nval:!val}); view.isExclusiveView = !val}}
                getter={(data) => !(data as LViewElement).isExclusiveView as any}/>
-        <Input data={view} field={'explicitApplicationPriority'} label={'Priority'} type={'number'} readonly={readOnly}/>
+        <Input data={view} field={'explicitApplicationPriority'} label={'Priority'} type={'number'} readonly={readOnly}
+               getter={(data: LViewElement)=>{ let v = data.__raw.explicitApplicationPriority; return v === undefined ? v : ''+v; }}
+               setter={(v: string | boolean)=>{ view.explicitApplicationPriority = v ? +v as number : undefined as any; }}
+               placeholder={'automatic: ' + view.explicitApplicationPriority}
+               key={''+view.explicitApplicationPriority/*just to force reupdate if placeholder changes, or it is bugged*/}
+        />
         {/*
         <Select data={view} field={'appliableTo'} label={'Appliable to node types'} readonly={readOnly} options={<optgroup label={'Appliable Types'}>
             <option value={'node'}>Node</option>
@@ -68,4 +84,32 @@ function InfoData(props: Props) {
     </section>);
 }
 
-export default InfoData;
+interface OwnProps {
+    viewid: Pointer<DViewElement>;
+    viewpoints: LViewPoint[];
+    readonly: boolean;
+}
+interface StateProps {
+    view: LViewElement;
+}
+interface DispatchProps { }
+type AllProps = OwnProps & StateProps & DispatchProps;
+
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+    const ret: StateProps = {} as FakeStateProps;
+    ret.view = LPointerTargetable.fromPointer(ownProps.viewid);
+    return ret;
+}
+
+function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
+    const ret: DispatchProps = {};
+    return ret;
+}
+
+
+export const InfoDataConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
+    mapStateToProps,
+    mapDispatchToProps
+)(InfoData);
+
+export default InfoDataConnected;
