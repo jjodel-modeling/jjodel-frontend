@@ -2672,9 +2672,14 @@ export class ViewEClassMatch {
     static IMPLICIT_MATCH = 1;
     static INHERITANCE_MATCH = 1.5;
     static EXACT_MATCH = 2;
+    static VP_MISMATCH: number = Number.NEGATIVE_INFINITY;
+    static VP_Default = 1;
+    static VP_Decorative = 1;
+    static VP_Explicit = 2;
 }
 
 export type ViewScore = {
+    viewPointMatch: number;
     jsxOutput: React.ReactNode | React.ReactElement | undefined;
     metaclassScore: number;
     jsScore: number | boolean;

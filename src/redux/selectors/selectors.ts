@@ -45,7 +45,7 @@ import {
     store,
     U,
     toShortEType,
-    NodeTransientProperties, transientProperties, ViewEClassMatch, ViewTransientProperties
+    NodeTransientProperties, transientProperties, ViewEClassMatch, ViewTransientProperties, DProject, DViewPoint
 } from "../../joiner";
 import {DefaultEClasses, ShortDefaultEClasses, toShortEClass} from "../../common/U";
 
@@ -379,6 +379,7 @@ export class Selectors{
 
     private static getFinalScore(entry: ViewScore, vid: Pointer<DViewElement>, parentView: DViewElement | undefined, dview: DViewElement): number {
         if (entry.metaclassScore === ViewEClassMatch.MISMATCH_PRECONDITIONS) return ViewEClassMatch.MISMATCH;
+        if (entry.viewPointMatch === ViewEClassMatch.VP_MISMATCH) return ViewEClassMatch.MISMATCH;
         if (entry.jsScore === ViewEClassMatch.MISMATCH_JS || entry.OCLScore === ViewEClassMatch.MISMATCH_JS) return ViewEClassMatch.MISMATCH;
         let pvMatch: boolean = parentView ? vid in parentView.subViews : false;
         let pvScore: number = pvMatch ? (parentView as DViewElement).subViews[vid] : 1;
@@ -390,7 +391,7 @@ export class Selectors{
             explicitprio = (dview.jsCondition?.length || 1) + (dview.oclCondition?.length || 1);
         } else explicitprio = dview.explicitApplicationPriority;
 
-        return entry.metaclassScore * pvScore * explicitprio;
+        return entry.viewPointMatch * entry.metaclassScore * pvScore * explicitprio;
         //score = precoditiom * paremtview(comfiguravle) * (explicitprio = jsValid*jslemgth + oclvalid*ocllemgth)
         // or if jscomditiom returmed mumver --> * jsscore
     }
@@ -478,12 +479,17 @@ export class Selectors{
 
         //console.log('2302, getviews 2', {datachanged, nodechanged, olddata, oldnode, data, node, allViews: Selectors.getAllViewElements()});
 
-        const allViews: DViewElement[] = Selectors.getAllViewElements();
+        let state: DState = store.getState();
+        const allViews: DViewElement[] = Selectors.getAllViewElements(state);
+
+        const user = LUser.fromPointer(DUser.current);
+        const project = user.project as LProject;
+        let activevpid: Pointer<DViewElement> = project.activeViewpoint.id;
         // check if scores needs to be updated
         for (const dview of allViews) {
             let vid = dview.id;
             let tv = transientProperties.view[vid];
-            if(!tv) transientProperties.view[vid] = tv = {} as any;
+            if (!tv) transientProperties.view[vid] = tv = {} as any;
             let tnv = tn.viewScores[vid];
             //console.log('2302, getviews evaluating view ' + vid, {vid, dview});
             // check initialization
@@ -497,6 +503,21 @@ export class Selectors{
                 } as any;*/
                 firstEvaluationForNodeView = true;
             } else firstEvaluationForNodeView = tnv.metaclassScore === ViewEClassMatch.NOT_EVALUATED_YET; // todo: when changing view.appliableTo, delete all tnv using that view.
+
+            // don't match exclusive views from other vp
+            let dvp: DViewPoint = DPointerTargetable.fromPointer(dview.viewpoint, state);
+            let oldVpMatch: number = tnv.viewPointMatch;
+            if (dvp.id === activevpid) tnv.viewPointMatch = ViewEClassMatch.VP_Explicit;
+            else if (dvp.id === 'Pointer_ViewPointDefault') tnv.viewPointMatch = ViewEClassMatch.VP_Default;
+            else if (!dvp.isExclusiveView) tnv.viewPointMatch = ViewEClassMatch.VP_Decorative;
+            else tnv.viewPointMatch = ViewEClassMatch.VP_MISMATCH;
+
+            if (!needsorting && (oldVpMatch !== tnv.viewPointMatch)) needsorting = true;
+            if (tnv.viewPointMatch === ViewEClassMatch.VP_MISMATCH) {
+                tnv.finalScore = ViewEClassMatch.MISMATCH;
+                continue;
+            }
+
 
             // check preconditions
             if (firstEvaluationForNodeView) {
