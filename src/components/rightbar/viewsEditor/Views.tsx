@@ -27,7 +27,7 @@ function ViewsDataComponent(props: AllProps) {
     const add = (e: MouseEvent) => {
         const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
         let name = 'view_' + 0;
-        let names: string[] = project.views.map(v => v && v.name);
+        let names: string[] = vp.subViews.map(v => v && v.name);
         name = U.increaseEndingNumber(name, false, false, newName => names.indexOf(newName) >= 0);
         DViewElement.new(name, jsx);
     }

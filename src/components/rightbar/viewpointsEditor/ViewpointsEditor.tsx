@@ -18,7 +18,7 @@ function ViewpointsEditorComponent(props: AllProps) {
     }
     const add = () => {
         let name = 'viewpoint_' + 0;
-        let viewpointNames: string[] = viewpoints.map(vp => vp.name);
+        let viewpointNames: string[] = viewpoints.map(vp => vp && vp.name);
         name = U.increaseEndingNumber(name, false, false, newName => viewpointNames.indexOf(newName) >= 0);
         DViewPoint.new(name, '');
     }

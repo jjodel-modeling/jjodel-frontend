@@ -37,14 +37,15 @@ function EditorComponent(props: AllProps) {
             SaveManager.load(await U.decompressState(project.state));
         })();
     }, [id]);
-    let allviews = project?.viewpoints.flatMap((vp: LViewPoint) => vp.allSubViews) || [];
-    let views_deduplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
-    for (let v of allviews) views_deduplicator[v.id] = v;
+    let allViews = project?.viewpoints.flatMap((vp: LViewPoint) => vp && vp.allSubViews) || [];
+    allViews = allViews.filter(v => v);
+    const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
+    for (let v of allViews) viewsDeDuplicator[v.id] = v;
     if(user.project) return(<>
         <Navbar />
         <Dock />
         <style id={"views-css-injector"}>
-            {Object.values(views_deduplicator).map( v => v.compiled_css).join('\n\n')}
+            {Object.values(viewsDeDuplicator).map(v => v.compiled_css).join('\n\n')}
         </style>
     </>);
     return(<Loader />);
