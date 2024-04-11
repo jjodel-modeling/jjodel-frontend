@@ -1,6 +1,6 @@
 import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
-import type {DState} from '../../../joiner';
+import {DState, Input} from '../../../joiner';
 import {DUser, DViewPoint, LProject, LUser, LViewPoint, U, SetFieldAction} from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from '../../../joiner/types';
@@ -46,11 +46,12 @@ function ViewpointsEditorComponent(props: AllProps) {
                                 (hoverID === viewpoint.id ? '#E0E0E0' : 'transparent')}}>
                 <input className={'p-0 input hidden-input'} value={viewpoint.name} type={'text'}
                        onChange={(evt) => {editName(evt, viewpoint)}} disabled={index === 0} />
-                <button className={'btn btn-success ms-auto'} disabled={active.id === viewpoint.id}
+                <Input className={"ms-auto"} data={viewpoint} field={"isExclusiveView"} type={"checkbox"} label={"Is exclusive"} readonly= {index <= 1} />
+                <button className={'btn btn-success ms-1'} disabled={active.id === viewpoint.id}
                         onClick={(evt) => {select(viewpoint)}}>
                     <i className={'p-1 bi bi-check2'}></i>
                 </button>
-                <button className={'btn btn-danger ms-1'} disabled={index === 0 || active.id === viewpoint.id}
+                <button className={'btn btn-danger ms-1'} disabled={index <= 1 || active.id === viewpoint.id}
                         onClick={() => remove(viewpoint)}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
                 </button>

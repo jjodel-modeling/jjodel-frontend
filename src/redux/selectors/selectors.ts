@@ -507,6 +507,7 @@ export class Selectors{
             // don't match exclusive views from other vp
             let dvp: DViewPoint = DPointerTargetable.fromPointer(dview.viewpoint, state);
             let oldVpMatch: number = tnv.viewPointMatch;
+            console.log("vp matching " +vid, {vid, dvp, activevpid });
             if (dvp.id === activevpid) tnv.viewPointMatch = ViewEClassMatch.VP_Explicit;
             else if (dvp.id === 'Pointer_ViewPointDefault') tnv.viewPointMatch = ViewEClassMatch.VP_Default;
             else if (!dvp.isExclusiveView) tnv.viewPointMatch = ViewEClassMatch.VP_Decorative;
