@@ -22,9 +22,10 @@ function ViewpointsEditorComponent(props: AllProps) {
         name = U.increaseEndingNumber(name, false, false, newName => viewpointNames.indexOf(newName) >= 0);
         DViewPoint.new(name, '');
     }
-    const remove = (removed: LViewPoint) => {
-        SetFieldAction.new(project.id, 'viewpoints', removed.id as any, '-=', false);
-        removed.delete()
+    const destroy = (viewPoint: LViewPoint) => {
+        SetFieldAction.new(project.id, 'viewpoints', viewPoint.id as any, '-=', false);
+        viewPoint.subViews.map(v => v.delete());
+        viewPoint.delete();
     }
     const select = (vp: LViewPoint) => {
         project.activeViewpoint = vp;
@@ -51,7 +52,7 @@ function ViewpointsEditorComponent(props: AllProps) {
                     <i className={'p-1 bi bi-check2'}></i>
                 </button>
                 <button className={'btn btn-danger ms-1'} disabled={index === 0 || active.id === viewpoint.id}
-                        onClick={() => remove(viewpoint)}>
+                        onClick={() => destroy(viewpoint)}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
                 </button>
             </div>
