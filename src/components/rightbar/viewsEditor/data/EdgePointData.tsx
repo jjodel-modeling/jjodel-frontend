@@ -1,8 +1,18 @@
-import React from 'react';
-import {GenericInput, GObject, Info, LViewElement} from '../../../../joiner';
+import React, {Dispatch} from 'react';
+import {
+    DState,
+    DViewElement,
+    GenericInput,
+    GObject,
+    Info,
+    LPointerTargetable,
+    LViewElement,
+    Pointer
+} from '../../../../joiner';
+import {FakeStateProps} from "../../../../joiner/types";
+import {connect} from "react-redux";
 
-interface Props {view: LViewElement, readonly: boolean}
-function EdgePointData(props: Props) {
+function EdgePointDataComponent(props: AllProps) {
     const view = props.view;
     const readOnly = props.readonly;
     let l: GObject & LViewElement = LViewElement.singleton as any;
@@ -23,5 +33,33 @@ function EdgePointData(props: Props) {
         {rows}
     </section>);
 }
+
+interface OwnProps {
+    viewID: Pointer<DViewElement>;
+    readonly : boolean;
+}
+
+interface StateProps {
+    view: LViewElement;
+}
+
+interface DispatchProps {}
+type AllProps = OwnProps & StateProps & DispatchProps;
+
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+    const ret: StateProps = {} as FakeStateProps;
+    ret.view = LPointerTargetable.fromPointer(ownProps.viewID);
+    return ret;
+}
+
+function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
+    const ret: DispatchProps = {};
+    return ret;
+}
+
+export const EdgePointData = connect<StateProps, DispatchProps, OwnProps, DState>(
+    mapStateToProps,
+    mapDispatchToProps
+)(EdgePointDataComponent);
 
 export default EdgePointData;

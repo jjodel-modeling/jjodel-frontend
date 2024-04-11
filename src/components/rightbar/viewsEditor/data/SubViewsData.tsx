@@ -76,7 +76,6 @@ interface StateProps {
 interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
 
-
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     ret.view = LViewElement.fromPointer(ownProps.viewID);
@@ -89,7 +88,6 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     const ret: DispatchProps = {};
     return ret;
 }
-
 
 export const SubViewsDataConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,

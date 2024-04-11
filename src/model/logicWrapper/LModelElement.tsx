@@ -3853,7 +3853,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     protected get_children_idlist(context: Context): Pointer<DAnnotation | (DPackage|DObject), 1, 'N'> {
         let children: Pointer<(DPackage|DObject), 0, 'N', (LPackage|LObject)>;
         if(context.data.isMetamodel) children = context.data.packages;
-        else children = context.data.objects;
+        else children = context.proxyObject.allSubObjects.map(o => o.id);
         return [...super.get_children_idlist(context) as Pointer<DAnnotation | (DPackage|DObject), 1, 'N'>,
             ...children];
     }
@@ -4012,7 +4012,6 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     protected get_values(context: Context): this['values'] {
         return context.proxyObject.objects.flatMap(o => o.features);
     }
-
 }
 RuntimeAccessibleClass.set_extend(DNamedElement, DModel);
 RuntimeAccessibleClass.set_extend(LNamedElement, LModel);
