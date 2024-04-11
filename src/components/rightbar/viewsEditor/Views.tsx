@@ -32,12 +32,16 @@ function ViewsDataComponent(props: AllProps) {
         DViewElement.new(name, jsx);
     }
 
-
     const clone = (e: MouseEvent, v: LViewElement) => {
         e.preventDefault(); e.stopPropagation();
         TRANSACTION(()=>{ v.duplicate(); })
     }
 
+    const destroy = (e: MouseEvent, view: LViewElement) => {
+        e.stopPropagation();
+        SetFieldAction.new(view.viewpoint.id, 'subViews', view.id as any, '-=', false);
+        view.delete();
+    }
 
     const state: DState = store.getState();
     return(<div style={{maxHeight: "100%", overflow: "scroll", paddingBottom: "calc(42px + 15px)"}}>
@@ -68,7 +72,7 @@ function ViewsDataComponent(props: AllProps) {
                 <button className={'btn btn-success ms-1'} onClick={e => { clone(e, subview); e.stopPropagation(); }}>
                     <i className={'p-1 bi bi-clipboard2-fill'} />
                 </button>
-                <button onClick={e => { subview.delete(); e.stopPropagation(); }} className={'btn btn-danger ms-1'} disabled={Defaults.check(subview.id)}>
+                <button onClick={e => destroy(e, subview)} className={'btn btn-danger ms-1'} disabled={Defaults.check(subview.id)}>
                     <i className={'p-1 bi bi-trash3-fill'} />
                 </button>
             </div>
@@ -96,7 +100,6 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     const ret: DispatchProps = {};
     return ret;
 }
-
 
 export const ViewsDataConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,

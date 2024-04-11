@@ -1,11 +1,19 @@
-import React from 'react';
-import {LViewElement, TextArea} from '../../../../joiner';
+import React, {Dispatch} from 'react';
+import {
+    DState,
+    DViewElement,
+    LPointerTargetable,
+    LViewElement,
+    LViewPoint,
+    Pointer,
+    TextArea
+} from '../../../../joiner';
 import JsxEditor from "../../jsxEditor/JsxEditor";
 import {Function} from "../../../forEndUser/FunctionComponent";
+import {FakeStateProps} from "../../../../joiner/types";
+import {connect} from "react-redux";
 
-interface Props {view: LViewElement, readonly: boolean}
-
-function TemplateData(props: Props) {
+function TemplateData(props: AllProps) {
     const view = props.view;
     const readOnly = props.readonly;
 
@@ -23,4 +31,32 @@ function TemplateData(props: Props) {
     </>);
 }
 
-export default TemplateData;
+interface OwnProps {
+    viewID: Pointer<DViewElement>;
+    readonly : boolean;
+}
+
+interface StateProps {
+    view: LViewElement;
+}
+
+interface DispatchProps {}
+type AllProps = OwnProps & StateProps & DispatchProps;
+
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+    const ret: StateProps = {} as FakeStateProps;
+    ret.view = LPointerTargetable.fromPointer(ownProps.viewID);
+    return ret;
+}
+
+function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
+    const ret: DispatchProps = {};
+    return ret;
+}
+
+export const TemplateDataConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
+    mapStateToProps,
+    mapDispatchToProps
+)(TemplateData);
+
+export default TemplateDataConnected;

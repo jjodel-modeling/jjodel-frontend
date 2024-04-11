@@ -1,9 +1,18 @@
-import React from 'react';
-import {LViewElement, Input, SetFieldAction, TextArea} from '../../../../joiner';
+import React, {Dispatch} from 'react';
+import {
+    LViewElement,
+    Input,
+    SetFieldAction,
+    TextArea,
+    Pointer,
+    DViewElement,
+    DState,
+    LPointerTargetable
+} from '../../../../joiner';
+import {FakeStateProps} from "../../../../joiner/types";
+import {connect} from "react-redux";
 
-interface Props {view: LViewElement, readonly: boolean}
-
-function NodeData(props: Props) {
+function NodeDataComponent(props: AllProps) {
     const view = props.view;
     const readOnly = props.readonly;
 
@@ -53,5 +62,33 @@ function NodeData(props: Props) {
 
     </section>);
 }
+
+interface OwnProps {
+    viewID: Pointer<DViewElement>;
+    readonly : boolean;
+}
+
+interface StateProps {
+    view: LViewElement;
+}
+
+interface DispatchProps {}
+type AllProps = OwnProps & StateProps & DispatchProps;
+
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+    const ret: StateProps = {} as FakeStateProps;
+    ret.view = LPointerTargetable.fromPointer(ownProps.viewID);
+    return ret;
+}
+
+function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
+    const ret: DispatchProps = {};
+    return ret;
+}
+
+export const NodeData = connect<StateProps, DispatchProps, OwnProps, DState>(
+    mapStateToProps,
+    mapDispatchToProps
+)(NodeDataComponent);
 
 export default NodeData;

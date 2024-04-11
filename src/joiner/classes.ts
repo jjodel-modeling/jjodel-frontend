@@ -927,6 +927,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // trview.?? = ???
 
         TRANSACTION(() => {
+            // add relation to vp
             for(let key of (windoww.DViewElement as typeof DViewElement).RecompileKeys)
                 this.setExternalRootProperty('VIEWS_RECOMPILE_'+key, thiss.id, '+=', false) // is pointer, but no need to set pointedby
         })
@@ -1781,14 +1782,15 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
                 const op = dependency.op;
                 const val = (op === '-=') ? data.id : '';
                 if((root === 'idlookup') && obj && field) {
-                    console.log(`SetFieldAction.new('${obj}', '${field}', '${val}', '${op}'); // delete`);
+                    console.log('Delete', `SetFieldAction.new('${obj}', '${field}', '${val}', '${op}');`);
                     SetFieldAction.new(obj, field, val, op, false);
                 } else {
-                    console.log(`SetRootFieldAction.new('${root}', '${val}', '${op}'); // delete`);
+                    console.log('Delete', `SetRootFieldAction.new('${root}', '${val}', '${op}');`);
                     SetRootFieldAction.new(root, val, op, false);
                 }
             }
-            // data.nodes.map(node => node.delete()) <-- this is NOT working here, IDK why, on contextMenu it works.
+            if(data.nodes) data.nodes.map((node: any) => node.delete());
+            SetRootFieldAction.new('idlookup', data.id, '-=', false);
             DeleteElementAction.new(data.id);
             END();
         };

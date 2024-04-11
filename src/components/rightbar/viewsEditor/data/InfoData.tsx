@@ -17,7 +17,7 @@ import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
 
 
-function InfoData(props: AllProps) {
+function InfoDataComponent(props: AllProps) {
     const view = props.view;
     const viewpoints = props.viewpoints;
     const readOnly = props.readonly;
@@ -85,19 +85,23 @@ function InfoData(props: AllProps) {
 }
 
 interface OwnProps {
-    viewid: Pointer<DViewElement>;
-    viewpoints: LViewPoint[];
+    viewID: Pointer<DViewElement>;
+    viewpointsID: Pointer<DViewPoint>[];
     readonly: boolean;
 }
+
 interface StateProps {
     view: LViewElement;
+    viewpoints: LViewPoint[];
 }
-interface DispatchProps { }
+
+interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.view = LPointerTargetable.fromPointer(ownProps.viewid);
+    ret.view = LPointerTargetable.fromPointer(ownProps.viewID);
+    ret.viewpoints = LPointerTargetable.fromPointer(ownProps.viewpointsID);
     return ret;
 }
 
@@ -106,10 +110,9 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret;
 }
 
-
-export const InfoDataConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
+export const InfoData = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
-)(InfoData);
+)(InfoDataComponent);
 
-export default InfoDataConnected;
+export default InfoData;
