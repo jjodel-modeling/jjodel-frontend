@@ -15,6 +15,23 @@
   position: absolute;
   z-index: 99999;
 }
+.color-picker-root.hoverable>input:focus + .content.suggestions {
+  // display: none !important;
+}
+
+.controls:not(:focus-within) .color-picker-root:hover, .color-picker-root:focus-within{
+  // padding: 5px !important;
+  background: #dedede;
+  outline: 1px solid gray;
+  border-radius: 20%;
+  overflow: visible;
+  // height: 200%;
+  z-index:1; // otherwise when hovering the overflow delete button on bottom, it counts as if i'm hovering next line and button disappears. weird bug
+}
+.controls:focus-within .content.suggestions{
+  display: none !important;
+}
+
 .suggestions{
   width: max-content;
   // min-width: 500px;
@@ -64,15 +81,6 @@
     }
   }
   label{
-    &.color-picker-root:hover{
-      // padding: 5px !important;
-      background: #dedede;
-      border: 1px solid gray;
-      border-radius: 20%;
-      overflow: visible;
-      // height: 200%;
-      z-index:1; // otherwise when hovering the overflow delete button on bottom, it counts as if i'm hovering next line and button disappears. weird bug
-    }
     input, button{ // in-palette color controls
       width: 24px;
       margin-left: auto;
