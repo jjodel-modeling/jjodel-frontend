@@ -40,6 +40,19 @@ import {
 import {Pack1, transientProperties } from "../../joiner/classes";
 import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsData";
 
+
+
+export type CSS_AbsoluteUnit = 'px' | 'cm' | 'mm' | 'pt' | 'pc' | 'in' | '';
+export type CSS_RelativeDomUnit = '%' | 'fr' | 'vw' | 'vh' | 'vmin' | 'vmax';
+export type CSS_RelativeFontUnit =  'em' | 'rem' | 'ex' | 'ch';
+export type CSSUnit = CSS_AbsoluteUnit | CSS_RelativeFontUnit | CSS_RelativeDomUnit;
+
+export type StringControl = {type:'text', value: string};
+export type NumberControl = {type:'number', value: number, unit: CSSUnit};
+export type PaletteControl = DocString<"colors like #4fc">[];
+export type PaletteType = Dictionary<string, PaletteControl | NumberControl | StringControl>;
+
+
 @RuntimeAccessible('DViewElement')
 export class DViewElement extends DPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -124,7 +137,7 @@ export class DViewElement extends DPointerTargetable {
     edgePointCoordMode!: CoordinateMode;
     edgeHeadSize!: GraphPoint;
     edgeTailSize!: GraphPoint;
-    palette!: Dictionary<DocString<"palette prefix">, DocString<"colors like #4fc">[]>;
+    palette!: Readonly<PaletteType>;
     css!: string;
     cssIsGlobal!: boolean;
     /* private */ compiled_css!: string;
@@ -312,20 +325,29 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         let s = '';
         const allowLESS = false;
         for (let paletteName in c.data.palette) {
-            let palette: DocString<"hexColors">[] = c.data.palette[paletteName];
-            let shortPaletteName: string;
-            if (['-', '_'].includes(paletteName[paletteName.length-1])) shortPaletteName = paletteName.substring(0, paletteName.length - 1);
-            else shortPaletteName = paletteName;
-            // set prefixed name without number
-            if (allowLESS) s += "\t@" + shortPaletteName + ": " + palette[0]+';\n';
-            s += "\t--" + shortPaletteName + ": " + palette[0]+';\n';
-            // set prefixed-0 name
-            if (allowLESS) s += "\t@" + paletteName + '0: ' + palette[0]+';\n';
-            s += "\t--" + paletteName + '0: ' + palette[0]+';\n';
-            // set prefixed-1 to prefixed-...n names
-            for (let i = 0 ; i < palette.length; i++) {
-                if (allowLESS) s += "\t@" + paletteName + (i+1) + ": " + palette[i]+';\n';
-                s += "\t--" + paletteName + (i+1) + ": " + palette[i]+';\n';
+            if (Array.isArray(c.data.palette[paletteName])) {
+                let palette: DocString<"hexColors">[] = c.data.palette[paletteName] as string[];
+                let shortPaletteName: string;
+                if (['-', '_'].includes(paletteName[paletteName.length-1])) shortPaletteName = paletteName.substring(0, paletteName.length - 1);
+                else shortPaletteName = paletteName;
+                // set prefixed name without number
+                if (allowLESS) s += "\t@" + shortPaletteName + ": " + palette[0]+';\n';
+                s += "\t--" + shortPaletteName + ": " + palette[0]+';\n';
+                // set prefixed-0 name
+                if (allowLESS) s += "\t@" + paletteName + '0: ' + palette[0] + ';\n';
+                s += "\t--" + paletteName + '0: ' + palette[0] + ';\n';
+                // set prefixed-1 to prefixed-...n names
+                for (let i = 0 ; i < palette.length; i++) {
+                    if (allowLESS) s += "\t@" + paletteName + (i+1) + ": " + palette[i] + ';\n';
+                    s += "\t--" + paletteName + (i+1) + ": " + palette[i] + ';\n';
+                }
+            } else {
+                // number or text
+                let palette: NumberControl | StringControl = c.data.palette[paletteName] as any;
+                let val = palette.value + ((palette as NumberControl).unit || '');
+                if (!val) val = "''";
+                if (allowLESS) s += "\t@" + paletteName + ": " + val + ';\n';
+                s += "\t--" + paletteName + '0: ' + val + ';\n';
             }
         }
         s += '\n\t' + U.replaceAll(c.data.css, '\n', '\n\t');
@@ -342,8 +364,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return false;
     }
 
-    public palette!: Dictionary<DocString<"palette prefix">, DocString<"colors like #4fc">[]>;
-    __info_of__palette: Info = {type: "Dictionary<prefix, colors[]>", txt:"Specify a set of colors to be used in the graphical syntax through css variables."}
+    public palette!: PaletteType;
+    __info_of__palette: Info = {type: "Dictionary<prefix, colors[]>", txt:"Specify a set of colors, numbers or text variables to be used in the graphical syntax through css variables."}
     get_palette(c: Context): this["palette"] { return c.data.palette; }
     set_palette(val:this["palette"], c: Context): boolean {
         TRANSACTION(()=>{

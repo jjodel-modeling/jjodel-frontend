@@ -838,12 +838,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
 
         let jsxOutput: ReactNode = undefined as any;
+        console.log("render", {mainView, otherViews, scores:transientProperties.node[nid].viewScores})
         for (let v of allviews) {
             let viewnodescore = transientProperties.node[nid].viewScores[v.id];
             jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
             let isMain: true | undefined = v === mainView || undefined;
             if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput =
-                this.renderView(this.props, v, nodeType, classes, styleoverride, isMain && decoratorViewsOutput, mainView.id, isMain && otherViews.map(v=>v.id));
+                this.renderView(this.props, v, nodeType, classes, styleoverride,
+                    isMain && decoratorViewsOutput, mainView.id, isMain && otherViews.map(v=>v.id));
             if (!isMain) decoratorViewsOutput.push(jsxOutput);
             if (viewnodescore.shouldUpdate) viewnodescore.shouldUpdate = false; // this needs to be placed post renderView call
         }

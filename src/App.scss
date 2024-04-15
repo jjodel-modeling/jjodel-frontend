@@ -280,3 +280,29 @@ svg.hoverable {
   0%   { opacity:0; }
   100% { opacity:1; }
 }
+
+.smart-drop-down-button .smart-scroll-viewer .smart-scroll-viewer-content-container{
+  width: 100%;
+}
+.smart-drop-down-button > .smart-container > .smart-content > .smart-drop-down-container{
+  margin: 0;
+  transform: translate3d(0px, 0px, 0px);
+  width: 100% !important;
+  max-width: unset;
+}
+
+.palette-row{
+  height: 32px;
+}
+.palette-row.textual, .palette-row.numeric{
+  display: flex;
+  &>.prefix{ flex-basis:0; flex-grow:2; min-width: 0; }
+  &>.value { flex-basis:0; flex-grow:4; min-width: 0; margin-left: 1em; }
+}
+
+.palette-row.numeric>.value{
+  display:flex;
+  &>.value{ flex-basis:0; flex-grow:9; min-width: 0; }
+  &>.spinnner { flex-basis:50px; flex-grow:1; min-width:0px; margin-left: 0.5em; }
+  &>.unit { flex-basis:35px; flex-grow:1; min-width:0px; margin-left: 0.5em; }
+}

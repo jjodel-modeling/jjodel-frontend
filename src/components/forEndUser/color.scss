@@ -2,25 +2,62 @@
   position: relative;
 }
 
-.delete-color{
-  margin-top: -100%;
-}
+
 
 .color-container, .suggestion-container{
+  background: white;
   height: 32px;
   display: flex;
 }
+.hoverable:hover .content.suggestions{
+  display:flex;
+  flex-flow: column;
+  position: absolute;
+  z-index: 99999;
+}
+.suggestions{
+  width: max-content;
+  // min-width: 500px;
+  transform: translate3d( calc(-50% + 24px / 2), 0px, 6600px);
+  >*{margin-left: 1em; margin-right: 1em;}
+  h6{
+    margin-top: .5em;
+    margin-bottom: 0.25em;
+    cursor: pointer;
+    &:hover{
+      font-weight: 700;
+    }
+  }
+
+}
+
 .palette-row{
   display: flex;
-
+  // position: relative;
+  // z-index: 2;
+  .roww .color-suggestion{
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+    content-visibility: hidden;
+    border-width: 0;
+    &:hover{
+      border-width:2px;
+      content-visibility: visible;
+      font-weight: 700;
+    }
+  }
   input, button{ // prefix controls
     height: 24px;
     margin-top: auto;
     margin-bottom: auto;
-    &.delete-color{
-      display:none;
-      width: 28px;
-      margin-left: calc((24px - 28px) / 2);
+    &.delete-color{/*
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      left: calc(50% - 16px - 32px);
+      top: calc(-32px - 0.25em);*/
+      width: calc(100% - 1em);
+      margin: 0.5em;
     }
     &.prefix{
       width: 33%
@@ -33,7 +70,7 @@
       border: 1px solid gray;
       border-radius: 20%;
       overflow: visible;
-      height: 200%;
+      // height: 200%;
       z-index:1; // otherwise when hovering the overflow delete button on bottom, it counts as if i'm hovering next line and button disappears. weird bug
     }
     input, button{ // in-palette color controls
