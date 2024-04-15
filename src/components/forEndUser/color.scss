@@ -28,7 +28,7 @@
   // height: 200%;
   z-index:1; // otherwise when hovering the overflow delete button on bottom, it counts as if i'm hovering next line and button disappears. weird bug
 }
-.controls:focus-within .content.suggestions{
+.controls:focus-within .content.suggestions:not(:focus-within){
   display: none !important;
 }
 

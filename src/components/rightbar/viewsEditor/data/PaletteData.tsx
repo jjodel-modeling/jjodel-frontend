@@ -160,7 +160,7 @@ function PaletteDataComponent(props: AllProps) {
         view.palette = palette = tmp;
     }
 
-    const addColor = (prefix: string, hexs: Instance[] | Instance | string | React.MouseEvent<HTMLElement>, index: number = -1, skipFirst: boolean = true) => {
+    const addColor = (prefix: string, hexs: (Instance | string)[] | Instance | string | React.MouseEvent<HTMLElement>, index: number = -1, skipFirst: boolean = true) => {
         if (!Array.isArray(hexs)) {
             hexs = [hexs as any];
             skipFirst = false;
@@ -226,7 +226,7 @@ function PaletteDataComponent(props: AllProps) {
                                         {color.monochromatic(7).map((c,ii) => ii===0?undefined: <button style={{background: c.toHexString(), color: U.invertHex(c.toHex())}}
                                                                                     onClick={(e)=>{addColor(prefix, c, i)}} className="btn color-suggestion">+</button>)}
                                     </div>
-                                    <h6 onClick={()=>addColor(prefix, color.complement(), i)} title={"Add all the colors"}>➕Complementary / Opposite</h6>
+                                    <h6 onClick={()=>addColor(prefix, [color.complement(), U.invertHex(color.toHex())], i, false)} title={"Add all the colors"}>➕Complementary / Opposite</h6>
                                     <div className={"roww"}>
                                         <button style={{background: color.complement().toHexString(), color: U.invertHex(color.complement().toHex())}}
                                                 onClick={(e)=>{addColor(prefix, color.complement(), i)}}  className="btn color-suggestion" >+</button>
