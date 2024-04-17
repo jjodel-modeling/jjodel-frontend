@@ -475,7 +475,8 @@ export function reducer(oldState: DState = initialState, action: Action): DState
 
         transientProperties.view[vid].constants = constantsOutput;
         transientProperties.view[vid].constantsList = Object.keys(transientProperties.view[vid].constants);
-        // implies recompilation of: ud, jsx and all measurable events
+        // implies recompilation of: jsCondition, ud, jsx and all measurable events
+        ret.VIEWS_RECOMPILE_jsCondition.push(vid);
         ret.VIEWS_RECOMPILE_usageDeclarations.push(vid);
         ret.VIEWS_RECOMPILE_jsxString.push(vid);
         for (let k of DViewElement.MeasurableKeys) (ret as any)['VIEWS_RECOMPILE_'+k].push(vid);
