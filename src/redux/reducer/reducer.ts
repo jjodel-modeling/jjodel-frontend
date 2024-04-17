@@ -531,14 +531,19 @@ export function reducer(oldState: DState = initialState, action: Action): DState
             tv.jsCondition = undefined;
             continue;
         }
+        const lines = dv.jsCondition.trim().split('\n');
+        let lastLine = lines[lines.length - 1];
+        if (lastLine.indexOf('return') !== 0) lines[lines.length - 1] = `return (${lastLine})`;
+
+
+        if (!dv.jsxString) { transientProperties.view[vid].JSXFunction = undefined as any; continue; }
+        let allContextKeys = {...contextFixedKeys};
+        for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
+
+        let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
+        const body = lines.join('\n');
         try {
-            const lines = dv.jsCondition.trim().split('\n');
-            let lastLine = lines[lines.length - 1];
-            if (lastLine.indexOf('return') !== 0) lines[lines.length - 1] = `return (${lastLine})`;
-            const fx = `() => {${lines.join('\n')}}`;
-            console.log('FX', fx);
-            tv.jsCondition = eval(fx);
-            console.log('JS Condition parsed', tv)
+            tv.jsCondition = new Function(paramStr, body) as ((...a:any)=>any);
         } catch (e) {
             tv.jsCondition = undefined;
             console.log('JS Condition parsed error', e);

@@ -166,12 +166,16 @@ function PaletteDataComponent(props: AllProps) {
             skipFirst = false;
         }
         let tmp: Dictionary<string, PaletteControl> = {...palette} as any;
+        let lastAdded: string = '';
         for (let i = hexs.length-1; i >= (skipFirst ? 1 : 0); i--) {
             let hex: string = hexs[i] as any;
             if (typeof hex !== "string") {
                 if ((hex as Instance).toHexString) hex = (hex as Instance).toHexString();
                 else hex = ((hex as any).target as HTMLElement)?.style.background || '';
             }
+            console.log("addingColor:", {hex, lastAdded});
+            if (hex === lastAdded) continue;
+            lastAdded = hex;
             if (readOnly || !tmp[prefix]) tmp[prefix] = [];
             else tmp[prefix] = [...tmp[prefix]];
             if (index >= 0) tmp[prefix].splice(index+1, 0, hex);
@@ -220,11 +224,21 @@ function PaletteDataComponent(props: AllProps) {
                                     <div className={"roww"}>
                                         {color.analogous(7, 30/1.5).map((c,ii) => ii===0?undefined: <button style={{background: c.toHexString(), color: U.invertHex(c.toHex())}}
                                                                                 onClick={(e)=>{addColor(prefix, c, i)}} className="btn color-suggestion">+</button>)}
-                                    </div>
+                                    </div>{/*
                                     <h6 onClick={()=>addColor(prefix, color.monochromatic(7), i)} title={"Add all the colors"}>➕Monochromatic</h6>
                                     <div className={"roww"}>
                                         {color.monochromatic(7).map((c,ii) => ii===0?undefined: <button style={{background: c.toHexString(), color: U.invertHex(c.toHex())}}
-                                                                                    onClick={(e)=>{addColor(prefix, c, i)}} className="btn color-suggestion">+</button>)}
+                                                                                                        onClick={(e)=>{addColor(prefix, c, i)}} className="btn color-suggestion">+</button>)}
+                                    </div>{/*[6/12, 5/12, 4/12, 3/12, 2/12, 1/12]*/}
+                                    <h6 onClick={()=>addColor(prefix, [1/12, 2/12, 3/12, 4/12, 5/12, 6/12].map(n=>color.clone().lighten(n*100)), i, false)} title={"Add all the colors"}>➕Lighten</h6>
+                                    <div className={"roww"}>
+                                        {[1/12, 2/12, 3/12, 4/12, 5/12, 6/12].map(n=>color.clone().lighten(n*100)).map((c,ii) => <button style={{background: c.toHexString(), color: U.invertHex(c.toHex())}}
+                                                                                                                                         onClick={(e)=>{addColor(prefix, c, i)}} className="btn color-suggestion">+</button>)}
+                                    </div>
+                                    <h6 onClick={()=>addColor(prefix, [6/12, 5/12, 4/12, 3/12, 2/12, 1/12].map(n=>color.clone().darken(n*100)), i, false)} title={"Add all the colors"}>➕Darken</h6>
+                                    <div className={"roww"}>
+                                        {[6/12, 5/12, 4/12, 3/12, 2/12, 1/12].map(n=>color.clone().darken(n*100)).map((c,ii) => <button style={{background: c.toHexString(), color: U.invertHex(c.toHex())}}
+                                                                                                                                         onClick={(e)=>{addColor(prefix, c, i)}} className="btn color-suggestion">+</button>)}
                                     </div>
                                     <h6 onClick={()=>addColor(prefix, [color.complement(), U.invertHex(color.toHex())], i, false)} title={"Add all the colors"}>➕Complementary / Opposite</h6>
                                     <div className={"roww"}>

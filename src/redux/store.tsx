@@ -252,7 +252,7 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>, validationVP: Pointer<DV
         "// ** preparations and default behaviour here ** //\n" +
         "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
         "// ** declarations here ** //\n" +
-        "console.log('overlayView ud inner ' + data.name, {errs:node.state.errors, node, noder:node.r, data});\n" +
+        "// console.log('overlayView ud inner ' + data.name, {errs:node.state.errors, node, noder:node.r, data});\n" +
         "ret.errors = Object.values(node.state.errors || {});\n" +
         "\n}"
         v.isExclusiveView = false;
@@ -288,15 +288,14 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>, validationVP: Pointer<DV
             "ret.type = data && data.className.substring(1) || 'shapeless';\n"+
             "}";
         v.onDataUpdate = `
-if (!node.state.errors) node.state.errors = {};
-let err = '';
-if (name.indexOf(" ") >= 0) err = "" + type + " names cannot contain white spaces.";
-else if (name.length === 0 && type !== "shapeless") err = type + "es must be named.";
+let err = undefined;
+//if (name.indexOf(" ") >= 0) err = "" + type + " names cannot contain white spaces."; else
+if (name.length === 0 && type !== "shapeless") err = type + "es must be named.";
 else if (!name[0].match(/[A-Za-z_$]/)) err = type + " names must begin with an alphabet letter or $_ symbols.";
 else if (!name.match(/[A-Za-z_$]+[A-Za-z0-9$_]+/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
-console.log("measurable set naming error: "+err+", name:"+name, {err, name, dname:data.name, ddname:data.r.name});
-if (err) node.state.errors = {...node.state.errors, naming: err};
-else { let errors = {...(node.state.errors || {})}; delete errors['naming']; node.state.errors = errors; }
+node.state = {errors:{naming:err}};
+// if (!node.state.errors) node.state.errors = {naming:err};
+// else if (node.state.errors.naming !== err) node.state.errors = {...node.state.errors, naming: err};
 `;}, false, validationVP, 'Pointer_ViewCheckName' );
 
 let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), (v) => {

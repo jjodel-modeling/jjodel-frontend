@@ -322,6 +322,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // if node and data in props must be ignored and not checked for changes. but they are checked if present in usageDeclarations
         let component = nextProps.node.component;
         const nid = nextProps.nodeid;
+        // todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or removed
+        // U.arrayDiff()
         for (let v of nextProps.views) {
             const vid: Pointer<DViewElement> = v.__raw.id;
             let nodeviewentry = transientProperties.node[nid].viewScores[vid];

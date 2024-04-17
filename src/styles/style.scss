@@ -69,7 +69,8 @@
     content: attr(data-value) ' ';
     color: inherit;
     border: 1px solid transparent;
-    white-space: nowrap;
+    white-space: pre;
+    // text-wrap: nowrap; white-space-collapse: pre;
 
     // below are only necessary for max width
     display: inline-flex;

@@ -105,19 +105,25 @@ export class U {
 
         // at this point: same type, but different values
         switch (tobj1) {
-            case "number": // if both re nan it fails
-                // NB: infinities are not nan, and they compare with === like normal numbers. weird js...
-                if (isNaN(obj1 as any) && isNaN(obj2 as any)) return true;
-                break;
-            default:
+            default: // primitive with different values
                 console.error("unexpected case in isshallowequal:", {tobj1, obj1, obj2});
-
-                // primitive with different values
                 if (out) {
                     if (undefined === tobj1) out.reason = 'primitive value newly introduced';
                     else if (undefined === tobj2) out.reason = 'primitive value got deleted';
                     else out.reason = 'primitive value changedd';
                 }
+                return false;
+            case 'string': case 'boolean': // primitive with different values
+                if (out) {
+                    if (undefined === tobj1) out.reason = 'primitive value newly introduced';
+                    else if (undefined === tobj2) out.reason = 'primitive value got deleted';
+                    else out.reason = 'primitive value changedd';
+                }
+                return false;
+            case "number": // if both re nan it fails
+                // NB: infinities are not nan, and they compare with === like normal numbers. weird js...
+                if (isNaN(obj1 as any) && isNaN(obj2 as any)) return true;
+                if (out) out.reason = 'number changed';
                 return false;
 
             case "function":

@@ -56,7 +56,6 @@ class Offline {
         const filtered = projects.filter(p => p.id !== project.id);
 
         const state = await U.compressedState();
-        filtered.push({...project, state} as DProject);
 
         Storage.write('projects', filtered);
         alert('Saved');

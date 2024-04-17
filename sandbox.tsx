@@ -8,10 +8,12 @@ export const aaa = 0;
 let data:any, node:any, view:any, component:any;
 let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPackages:any, refEdges:any, extendEdges:any, React:any, Edge:any;
 
-
+// todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or removed
 
 // need to merge file declarations? or use a filename such as the imports will work (use inmemory://? or real urls)
 // advanced mode and simple mode: hide some features like positional editor in simple mode or the entire tab in view/node, start in simple mode.
+// make .overlap.left .top .dow .right, .y-cemter, x-cemter, .cemter css selectors
+
 
 // N decorator views without jsx, that only set the node.state.errorlist[thisviewerror] = 'Lowerbound violation' etc...
 // then 1 view with jsx that displays them all
