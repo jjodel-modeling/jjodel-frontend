@@ -96,6 +96,7 @@ import type {
     Dictionary,
     DocString,
     GObject,
+    // Info,
     InitialVertexSize,
     InitialVertexSizeFunc,
     InitialVertexSizeObj,
@@ -239,7 +240,11 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
                 return undefined as RET;
             }
         }
-        if (Array.isArray(data)) { console.error('use WrapAll instead for arrays', {data, baseObjInLookup, path, canThrow}); throw new Error("use WrapAll instead for arrays"); }
+        if (Array.isArray(data)) {
+            console.error('use WrapAll instead for arrays', {data, baseObjInLookup, path, canThrow});
+            if (canThrow) throw new Error("use WrapAll instead for arrays");
+            else return undefined as any;
+        }
         if (!data) return data;
         // console.log('ProxyWrapping:', {data, baseObjInLookup, path});
         return new Proxy(data, new windoww.TargetableProxyHandler(data, baseObjInLookup, path)) as L;
@@ -319,8 +324,8 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
 
         return (thisclass instanceof superclass)
             || RuntimeAccessibleClass.extendMatrix[superclass.cname]?.[thisclass.cname]
-            // !!(RuntimeAccessibleClass.extendTree.first((node) => node.model === superclass)?.first((node) => node.model === thisclass))
-            // || true;
+        // !!(RuntimeAccessibleClass.extendTree.first((node) => node.model === superclass)?.first((node) => node.model === thisclass))
+        // || true;
     }
 
     getAllPrototypeSuperClasses(): GObject[] {
@@ -802,8 +807,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this; }
     DVertex(): this { return this; }
     DVoidEdge(start: DGraphElement["id"] | DGraphElement | LGraphElement | DModelElement["id"] | DModelElement | LModelElement,
-          end: DGraphElement["id"] | DGraphElement | LGraphElement | DModelElement["id"] | DModelElement | LModelElement,
-          longestLabel: DEdge["longestLabel"], labels: DEdge["labels"]): this {
+              end: DGraphElement["id"] | DGraphElement | LGraphElement | DModelElement["id"] | DModelElement | LModelElement,
+              longestLabel: DEdge["longestLabel"], labels: DEdge["labels"]): this {
         const thiss: DVoidEdge = this.thiss as any;
         let startid: DGraphElement["id"] = (windoww.LGraphElement as typeof LGraphElement).getNodeId(start);
         let endid: DGraphElement["id"] = (windoww.LGraphElement as typeof LGraphElement).getNodeId(end);
@@ -834,7 +839,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.isSelected = {};
         thiss.edgesIn = [];
         thiss.edgesOut = [];
-        thiss.state = {id: thiss.id+".state", className: thiss.className};
+        // thiss.state = {id: thiss.id+".state", className: thiss.className};
 
         this.setPtr("model", model);
         this.setPtr("graph", parentgraphID);
@@ -857,7 +862,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.constants = undefined; // '{}';
         thiss.preRenderFunc = ''; // '() => {return{}}';
         thiss.onDragEnd = thiss.onDragStart = thiss.whileDragging =
-        thiss.onResizeEnd = thiss.onResizeStart = thiss.whileResizing = '';
+            thiss.onResizeEnd = thiss.onResizeStart = thiss.whileResizing = '';
         thiss.onRotationEnd = thiss.onRotationStart = thiss.whileRotating = '';
         thiss.onDataUpdate = '';
         // thiss.__transient = new DViewTransientProperties();
@@ -1062,6 +1067,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     public static logic: typeof LPointerTargetable;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    static pendingCreation: Record<Pointer<DPointerTargetable, 1, 1>, DPointerTargetable> = {};
     clonedCounter?: number;
     _storePath?: string[];
     _subMaps?: Dictionary<string, boolean>;
@@ -1071,8 +1077,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     // ma gli oggetti puntati da A tramite sotto-oggetti o attributi (subviews...) non vengono aggiornati in "pointedby"
     pointedBy: PointedBy[] = [];
     public className!: string;
-    static pendingCreation: Record<Pointer<DPointerTargetable, 1, 1>, DPointerTargetable> = {};
-
+    _state: GObject = {};
 
     static defaultname<L extends LModelElement = LModelElement>(startingPrefix: string | ((meta:L)=>string), father?: Pointer | DPointerTargetable | ((a:string)=>boolean), metaptr?: Pointer | null): string {
         let lfather: LModelElement;
@@ -1527,7 +1532,9 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     private __random!: number;
     // public r!: this;
 
-    private __info_of__id = {type:"Pointer&lt;this&gt;", txt:"<a href=\"https://github.com/DamianoNaraku/jodel-react/wiki/identifiers\"><span>Unique identifier, and value used to point this object.</span></a>"};
+    private __info_of__id = {type:"Pointer&lt;this&gt;",
+        txt:"<a href=\"https://github.com/DamianoNaraku/jodel-react/wiki/identifiers\">" +
+            "<span>Unique identifier, and value used to point this object.</span></a>"};
 
     protected wrongAccessMessage(str: string): any {
         let msg = "Method "+str+" should not be called directly, attempting to do so should trigger get_"+str+"(). This is only a signature for type checking.";
@@ -1551,20 +1558,105 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return LPointerTargetable.from(data[key]);
     }
 
-    protected _defaultCollectionGetter(c: Context, k: keyof Context["data"]): LPointerTargetable[] { return LPointerTargetable.fromPointer((c.data as any)[k]); }
+    _state!: GObject;
+    __info_of___state = {type:"GObject", txt: `<div>A space where the user can store informations for their operations/views.<br/>
+            Example: The Validation viewpoint uses it to store validation messages.<br/>
+            WARNING! do not set proxies in the state, set pointers instead.<br/>
+            <a href='https://github.com/MDEGroup/jjodel/wiki/L%E2%80%90Object-state'>Learn more on the wiki</a></div>`};
+
+    get__state(c: Context): any { return this.wrongAccessMessage('obj._state, use obj.state instead.'); }
+    set__state(val: this["_state"], c: Context): boolean { return this.cannotSet('obj._state, use obj.state instead.'); }
+    get_state(context: any): any /*this['_state']*/ {
+        if (!context.data._state) return {};
+        return this.__shallowSolver(context.data._state, true, true); // to solve pointers in state
+        // return LPointerTargetable.wrap(context.data._state); // this should work, because data._state have id = this.id+"._state"
+    }
+    set_state(val: any, c: Context): boolean {
+        // todo: put those lobjects -> pointer checks into defaultsetter to improve it
+
+        // 3 options:
+        // 1) if state === node, then setting whole state is invalid
+        // 2) if state is a proxified obj with id = node.id+".state" so actions and proxy getters/setters will act on the subobject properties still invalid setting whole obj.
+        // 3) forbid to set the whole state, merge old state with new one, if val === undefined, state is reset.
+
+        // i choose 3)
+        let newState: GObject;
+        let oldState = c.data._state ? {...c.data._state} : {};
+        let changed: boolean = false;
+        if (val === undefined) {
+            if (!oldState || !Object.keys(oldState).length) return true;
+            newState = {};
+            changed = true;
+        }
+        else if (typeof val !== "object") { Log.ee("state can only be assigned with an object or undefined"); return true; }
+        else {
+            val = this.__sanitizeValue(val);
+            newState = {...oldState};
+            for (let k in val) {
+                if (val[k] === undefined) {
+                    if (oldState[k] === undefined) continue;
+                    delete newState[k];
+                    changed = true;
+                    continue;
+                }
+
+                if (oldState[k] === val[k]) continue;
+                newState[k] = val[k];
+                changed = true;
+            }
+        }
+
+        if (!changed) return true;
+
+        SetFieldAction.new(c.data, "_state", newState, undefined, false);
+        return true;
+    }
+    protected __sanitizeValue(val: any, canEditVal: boolean = true, canEditValDeep:boolean = false): any{
+        if (val === undefined) { return val; }
+        if (val.__isProxy || val.id && val.className) return val.id;
+        // if (typeof val === "string") { return val; } else
+        if (typeof val !== "object") { return val; }
+        else if (Array.isArray(val)) { return val.map(v => this.__sanitizeValue(v, canEditValDeep, canEditValDeep)); }
+        // case val is object not array, not proxy, not D. just a POJO
+        let ret = canEditVal ? val : {...val};
+        for (let k in val) {
+            if (Array.isArray(val[k])) ret[k] = val[k].map((v: any)=> v && (v.__isProxy || v.id && v.className) ? v.id : v);
+            else if (val[k] && (val[k].__isProxy || val[k].id && val[k].className)) ret[k] = val[k].id;
+        }
+        return ret;
+
+    }
+
+    // protected _defaultCollectionGetter(c: Context, k: keyof Context["data"]): LPointerTargetable[] { return LPointerTargetable.fromPointer((c.data as any)[k]); }
     protected __defaultGetter(c: Context, k: keyof Context["data"]): any {
         // console.log("default Getter");
         let v = (c.data as any)[k];
-        if (Array.isArray(v)) {
-            if (v.length === 0) return [];
-            else if (Pointers.isPointer(v[0] as any)) return this._defaultCollectionGetter(c, k);
-            return v;
+        return this.__shallowSolver(v, true, false);
+    }
+    protected __shallowSolver<T>(val: any, solveArrayValues: boolean, solveObjectKeys: boolean): any {
+        if (!val || (!solveArrayValues && !solveObjectKeys)) return val;
+        let state: DState = store.getState();
+        if (solveArrayValues && Array.isArray(val)) {
+            if (val.length === 0) return [];
+            else if (Pointers.isPointer(val[0] as any)) return LPointerTargetable.fromArr(val, state);
+            return val;
         }
-        return v && Pointers.isPointer(v as any) ? LPointerTargetable.fromPointer(v) : v;
+        if (solveObjectKeys && typeof val === "object"){
+            let ret = {...val};
+            for (let key in val){
+                let v = val[key];
+                if (!Pointers.isPointer(v, undefined, true)) continue;
+                ret[key] = Array.isArray(v) ? LPointerTargetable.fromPointer(v, state) : LPointerTargetable.fromArr(v, state);
+            }
+            return ret;
+        }
+        return val && Pointers.isPointer(val as any, undefined) ? LPointerTargetable.fromPointer(val, state) : val;
     }
 
     protected __defaultSetter(v: any, c: Context, k: keyof Context["data"]): boolean {
+        // todo: get the those lobjects -> pointer checks from set_state
         console.log("default Setter");
+        v = this.__sanitizeValue(v, false, false);
         if (true || k in c.data) {
             // check if is pointer
             let isPointer: boolean;
@@ -2019,10 +2111,10 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         return true;
     }
 
-    protected get_state(context: Context): this['state'] {
+    public get_state(context: any): this['state'] {
         return context.data.state;
     }
-    protected set_state(val: this['state'], context: Context): boolean {
+    public set_state(val: this['state'], context: Context): boolean {
         const data = context.data;
         SetFieldAction.new(data.id, 'state', val, '', false);
         return true;
@@ -2091,15 +2183,15 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         SetFieldAction.new(data.id, 'views', ptrs, '', true);
         return true;*/
     }
-/*
-    protected get_stackViews(context: Context): this['stackViews'] {
-        return LViewElement.fromPointer(context.data.stackViews || []);
-    }
-    protected set_stackViews(val: PackArr<this['stackViews']>, context: Context): boolean {
-        const data = context.data;
-        SetFieldAction.new(data.id, 'stackViews', Pointers.from(val), '', true);
-        return true;
-    }*/
+    /*
+        protected get_stackViews(context: Context): this['stackViews'] {
+            return LViewElement.fromPointer(context.data.stackViews || []);
+        }
+        protected set_stackViews(val: PackArr<this['stackViews']>, context: Context): boolean {
+            const data = context.data;
+            SetFieldAction.new(data.id, 'stackViews', Pointers.from(val), '', true);
+            return true;
+        }*/
 
     protected get_viewpoints(context: Context): this['viewpoints'] {
         return LViewPoint.fromPointer([...Defaults.viewpoints, ...context.data.viewpoints]);

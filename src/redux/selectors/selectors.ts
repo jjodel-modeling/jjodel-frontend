@@ -493,6 +493,7 @@ export class Selectors{
             let tnv = tn.viewScores[vid];
             //console.log('2302, getviews evaluating view ' + vid, {vid, dview});
             // check initialization
+
             if (!tnv) {
                 transientProperties.node[nid].viewScores[vid] = tnv = {} as any;
                 /*{
@@ -507,7 +508,7 @@ export class Selectors{
             // don't match exclusive views from other vp
             let dvp: DViewPoint = DPointerTargetable.fromPointer(dview.viewpoint, state);
             let oldVpMatch: number = tnv.viewPointMatch;
-            console.log("vp matching " +vid, {vid, dvp, activevpid });
+            // console.log("vp matching " +vid, {vid, dvp, activevpid });
             if (dvp.id === activevpid) tnv.viewPointMatch = ViewEClassMatch.VP_Explicit;
             else if (dvp.id === 'Pointer_ViewPointDefault') tnv.viewPointMatch = ViewEClassMatch.VP_Default;
             else if (!dvp.isExclusiveView) tnv.viewPointMatch = ViewEClassMatch.VP_Decorative;
@@ -515,7 +516,7 @@ export class Selectors{
 
             if (!needsorting && (oldVpMatch !== tnv.viewPointMatch)) needsorting = true;
             if (tnv.viewPointMatch === ViewEClassMatch.VP_MISMATCH) {
-                tnv.finalScore = ViewEClassMatch.MISMATCH;
+                tnv.finalScore = ViewEClassMatch.VP_MISMATCH;
                 continue;
             }
 
@@ -540,7 +541,6 @@ export class Selectors{
                 // if mismatch i stop computing the score.
                 if (tnv.jsScore === ViewEClassMatch.MISMATCH_JS) { tnv.finalScore = ViewEClassMatch.MISMATCH; continue; }
             }
-
 
             // check pre-ocl guard
             // if (!tv.oclUpdateCondition_PARSED(data, olddata)) continue;
@@ -687,6 +687,7 @@ export class Selectors{
         tv.jsConditionChanged = false;
 
         // tnv.jsScore = ViewEClassMatch.NOT_EVALUATED_YET as any as number;
+        let printstuff = {name: data?.name, jsc:tv.jsCondition, tv:{...tv}, data:data&&data.__raw, node:node&&{...node.__raw}, nerr: (node as any)?.errors}
         if (tv.jsCondition) {
             try {
                 tnv.jsScore = tv.jsCondition({data, node, view: LPointerTargetable.fromD(dview), constants: tv.constants});
@@ -703,7 +704,8 @@ export class Selectors{
                         break;
                 }
             }
-            catch (e) { // crash = mismatch
+            catch (e:any) { // crash = mismatch
+                Log.ee("failed to evaluate jsCondition: " + e.message?.split("\n")[0], {e, data, node, tnv, jsc:tv.jsCondition+''});
                 tnv.jsScore = ViewEClassMatch.MISMATCH_JS;
             }
         } else tnv.jsScore = true; // missing condition = match

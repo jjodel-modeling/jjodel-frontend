@@ -9,12 +9,13 @@ import Editor, { useMonaco } from "@monaco-editor/react";
 import monacoTypes from '../../../static/monacotypes';
 
 function JsxEditorComponent(props: AllProps) {
+    const monaco = useMonaco();
     const view = props.view;
     const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && Defaults.check(view.id);
     const [jsx, setJsx] = useStateIfMounted(view.jsxString);
 
     const change = (value: string|undefined) => { // save in local state for frequent changes.
-        if(value !== undefined) setJsx(value);
+        if (value !== undefined) setJsx(value);
     }
 
 
@@ -22,8 +23,6 @@ function JsxEditorComponent(props: AllProps) {
         view.jsxString = jsx;
     }
 
-    const monaco = useMonaco();
-    (window as any).monaco = monaco;
     useEffect(() => {
         if (!monaco) return;
         monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
@@ -62,7 +61,7 @@ function JsxEditorComponent(props: AllProps) {
         <div className={"monaco-editor-wrapper"} style={{
             minHeight: '20ùpx', height:'200px'/*there is a bug of height 100% on childrens not working if parent have only minHeight*/,
             resize: 'vertical', overflow:'hidden'}} tabIndex={-1} onBlur={blur}>
-            <Editor className={'mx-1'} onChange={change}
+            <Editor className={'mx-1'} onChange={change} language={"typescript"}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                     defaultLanguage={'typescript'}  value={view.jsxString} />
         </div>

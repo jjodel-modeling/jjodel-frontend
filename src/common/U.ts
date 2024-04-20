@@ -105,19 +105,25 @@ export class U {
 
         // at this point: same type, but different values
         switch (tobj1) {
-            case "number": // if both re nan it fails
-                // NB: infinities are not nan, and they compare with === like normal numbers. weird js...
-                if (isNaN(obj1 as any) && isNaN(obj2 as any)) return true;
-                break;
-            default:
+            default: // primitive with different values
                 console.error("unexpected case in isshallowequal:", {tobj1, obj1, obj2});
-
-                // primitive with different values
                 if (out) {
                     if (undefined === tobj1) out.reason = 'primitive value newly introduced';
                     else if (undefined === tobj2) out.reason = 'primitive value got deleted';
                     else out.reason = 'primitive value changedd';
                 }
+                return false;
+            case 'string': case 'boolean': // primitive with different values
+                if (out) {
+                    if (undefined === tobj1) out.reason = 'primitive value newly introduced';
+                    else if (undefined === tobj2) out.reason = 'primitive value got deleted';
+                    else out.reason = 'primitive value changedd';
+                }
+                return false;
+            case "number": // if both re nan it fails
+                // NB: infinities are not nan, and they compare with === like normal numbers. weird js...
+                if (isNaN(obj1 as any) && isNaN(obj2 as any)) return true;
+                if (out) out.reason = 'number changed';
                 return false;
 
             case "function":
@@ -1303,6 +1309,43 @@ export class U {
         var rstrip = toremove - lstrip;
         if (asArray) return [str.substring(0, midpoint-lstrip), ellipsisChar, str.substring(midpoint+rstrip)] as RET;
         else return str.substring(0, midpoint-lstrip) + ellipsisChar + str.substring(midpoint+rstrip) as RET;
+    }
+
+    // transform grays: if the color is <20% different from gray, transform it instead in black or white, 0 = don't, 1 = always black or white
+    public static invertHex(s: string, prefix: string='#', transformGrays: number = 0.2): string {
+        if (s.indexOf(prefix) === 0) s = s.substring(prefix.length);
+        let r: number, g: number, b: number, h: number | undefined; // might be NaN if parseInt fails
+        if (s.length === 3 || s.length === 4) {
+            r = parseInt('0x'+s[0]);// works with hex numbers
+            g = parseInt('0x'+s[1]);
+            b = parseInt('0x'+s[2]);
+            h = s.length === 4 ? parseInt('0x'+s[4]) : undefined;
+        } else if (s.length === 6 || s.length === 8){
+            r = parseInt('0x'+s.substring(0, 2));
+            g = parseInt('0x'+s.substring(2, 4));
+            b = parseInt('0x'+s.substring(4, 6));
+            h = s.length === 8 ? parseInt('0x'+s.substring(6, 8)) : undefined;
+        } else return Log.ee("cannot invert hex color " + s + ", invalid length", {s});
+        if (isNaN(r)) return Log.ee("cannot invert hex color " + s +", invalid red", {s});
+        if (isNaN(g)) return Log.ee("cannot invert hex color " + s +", invalid green", {g});
+        if (isNaN(b)) return Log.ee("cannot invert hex color " + s +", invalid blue", {b});
+
+        transformGrays = transformGrays * 128;
+        r = Math.abs(r-128) <= transformGrays ? (r >= 128 ? 0 : 255) : 255 - r;
+        g = Math.abs(g-128) <= transformGrays ? (g >= 128 ? 0 : 255) : 255 - g;
+        b = Math.abs(b-128) <= transformGrays ? (b >= 128 ? 0 : 255) : 255 - b;
+        if (h) h = 255 - h;
+
+        let rs = r.toString(16);
+        if (rs.length === 1) rs = '0'+rs;
+        let gs = g.toString(16);
+        if (gs.length === 1) gs = '0'+gs;
+        let bs = b.toString(16);
+        if (bs.length === 1) bs = '0'+bs;
+        let hs = h ? h.toString(16) : '';
+        if (hs.length === 1) hs = '0'+hs;
+
+        return (prefix) + rs+gs+bs+hs;
     }
 }
 export class DDate{

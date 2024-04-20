@@ -120,7 +120,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[]; // shallow, direct subelements
-    state!: GObject<"proxified">; // LMap;
+    _state!: GObject<"proxified">; // LMap;
     allSubNodes!: LGraphElement[]; // deep, nested subelements
     x!: number;
     y!: number;
@@ -594,18 +594,6 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return DPointerTargetable.mapWrap(context.data.isSelected, context.data, 'idlookup.' + context.data.id + '.isSelected', []);
     }*/
 
-    get_state(context: LogicContext<DGraphElement>): this["state"] {
-        return context.proxyObject;
-        // return LPointerTargetable.wrap(context.data.state); // this should work, because data.state have id = this.id+".state"
-    }
-    set_state(val: this["state"], c: LogicContext<DGraphElement>): boolean {
-        // 2 options:
-        // 1) if state === node, then setting whole state is invalid
-        // 2) if state is proxified with id = node.id+".state" so actions and proxy getters/setters will act on the subobject properties still invalid setting whole obj.
-        this.cannotSet("graphElement.state, set individual properties instead of the whole object.");
-        return true;
-    }
-
 
 
     // for edges
@@ -702,7 +690,7 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
-    state!: GObject<"proxified">; // LMap;
+    _state!: GObject<"proxified">; // LMap;
     // personal attributes
     zoom!: GraphPoint;
     graphSize!: GraphSize; // derived attribute: bounding rect containing all subnodes, while "size" is instead external size of the vertex holding the graph in GraphVertexes
@@ -837,7 +825,7 @@ export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C exte
     isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn?: LGraphElement;
     subElements!: LGraphElement[];
-    state!: GObject<"proxified">; // LMap;
+    _state!: GObject<"proxified">; // LMap;
     zoom!: GraphPoint;
     isResized!: boolean;
 
@@ -1994,7 +1982,7 @@ export class LEdge<Context extends LogicContext<DEdge> = any, D extends DEdge = 
     isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn!: LGraphElement;
     subElements!: LGraphElement[];
-    state!: GObject<"proxified">; // LMap;
+    _state!: GObject<"proxified">; // LMap;
     start!: LGraphElement;
     end!: LGraphElement;
     midnodes!: LEdgePoint[];
@@ -2047,7 +2035,7 @@ export class LExtEdge extends LEdge{
     isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
     // containedIn!: LGraphElement;
     subElements!: LGraphElement[];
-    state!: GObject<"proxified">; // LMap;
+    _state!: GObject<"proxified">; // LMap;
     start!: LGraphElement;
     end!: LGraphElement;
     __isLExtEdge!: true;

@@ -322,6 +322,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // if node and data in props must be ignored and not checked for changes. but they are checked if present in usageDeclarations
         let component = nextProps.node.component;
         const nid = nextProps.nodeid;
+        // todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or removed
+        // U.arrayDiff()
         for (let v of nextProps.views) {
             const vid: Pointer<DViewElement> = v.__raw.id;
             let nodeviewentry = transientProperties.node[nid].viewScores[vid];
@@ -838,12 +840,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
 
         let jsxOutput: ReactNode = undefined as any;
+        console.log("render", {mainView, otherViews, scores:transientProperties.node[nid].viewScores})
         for (let v of allviews) {
             let viewnodescore = transientProperties.node[nid].viewScores[v.id];
             jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
             let isMain: true | undefined = v === mainView || undefined;
             if (!jsxOutput) viewnodescore.jsxOutput = jsxOutput =
-                this.renderView(this.props, v, nodeType, classes, styleoverride, isMain && decoratorViewsOutput, mainView.id, isMain && otherViews.map(v=>v.id));
+                this.renderView(this.props, v, nodeType, classes, styleoverride,
+                    isMain && decoratorViewsOutput, mainView.id, isMain && otherViews.map(v=>v.id));
             if (!isMain) decoratorViewsOutput.push(jsxOutput);
             if (viewnodescore.shouldUpdate) viewnodescore.shouldUpdate = false; // this needs to be placed post renderView call
         }

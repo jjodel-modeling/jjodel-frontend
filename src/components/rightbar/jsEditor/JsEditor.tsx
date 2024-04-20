@@ -1,6 +1,6 @@
-import React, {Dispatch, ReactElement} from 'react';
+import React, {Dispatch, ReactElement, useEffect} from 'react';
 import {connect} from 'react-redux';
-import Editor from '@monaco-editor/react';
+import Editor, {useMonaco} from '@monaco-editor/react';
 import {DState, DViewElement, LViewElement, Pointer, Defaults} from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from '../../../joiner/types';
@@ -8,12 +8,33 @@ import {FakeStateProps} from '../../../joiner/types';
 function JsEditorComponent(props: AllProps) {
     const view = props.view;
     const [js, setJs] = useStateIfMounted(view.jsCondition);
-    if(!view) return(<></>);
+    // if(!view) return(<></>);
     const readOnly = props.readonly !== undefined ? props.readonly : Defaults.check(view.id);
     const change = (value: string|undefined) => { // save in local state for frequent changes.
         if(value !== undefined) setJs(value);
     }
     const blur = () => { view.jsCondition = js } // confirm in redux state for final state
+    const monaco = useMonaco();
+    (window as any).monaco = monaco;
+    useEffect(() => {
+        if (!monaco) return;
+        monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+            target: monaco.languages.typescript.ScriptTarget.Latest,
+            allowNonTsExtensions: true,
+            moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+            module: monaco.languages.typescript.ModuleKind.CommonJS,
+            noEmit: true,
+            esModuleInterop: true,
+            reactNamespace: "React",
+            allowJs: true,
+            typeRoots: ["node_modules/@types"]//, 'src/static/'], // doubt those can be accesed at runtime but trying
+        });
+
+        monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({ noSemanticValidation: false, noSyntaxValidation: false });
+        monaco.languages.typescript.javascriptDefaults.setEagerModelSync(true);
+
+        monaco.languages.typescript.typescriptDefaults.addExtraLib("declare var data: 'datatype';");},
+        [monaco]);
 
     return <section>
         <label className={'ms-1 mb-1'}>JS Editor</label>
@@ -23,7 +44,7 @@ function JsEditorComponent(props: AllProps) {
             resize: 'vertical', overflow:'hidden'}} tabIndex={-1} onBlur={blur}>
             <Editor className={'mx-1'} onChange={change}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                    defaultLanguage={'js'} value={view.jsCondition || props.placeHolder || ''} />
+                    defaultLanguage={'typescript'} value={view.jsCondition || props.placeHolder || ''} />
         </div>
     </section>;
 }
