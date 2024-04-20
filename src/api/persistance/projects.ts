@@ -1,4 +1,4 @@
-import {DModel, DProject, LPointerTargetable, LProject, LUser, Pointer, U} from '../../joiner';
+import {DModel, DProject, LPointerTargetable, LProject, LUser, Pointer, SetRootFieldAction, U} from '../../joiner';
 import Storage from "../../data/storage";
 import Api from "../../data/api";
 
@@ -24,6 +24,7 @@ class ProjectsApi {
     }
     static async save(project: LUser['project']): Promise<void> {
         if(!project) return;
+        SetRootFieldAction.new('_lastSelected', undefined);
         if(U.isOffline()) await Offline.save(project.__raw as DProject);
         else await Online.save(project.__raw as DProject);
     }
@@ -54,10 +55,8 @@ class Offline {
     static async save(project: DProject): Promise<void> {
         const projects = Storage.read<DProject[]>('projects') || [];
         const filtered = projects.filter(p => p.id !== project.id);
-
         const state = await U.compressedState();
-
-        Storage.write('projects', filtered);
+        Storage.write('projects', [...filtered, {...project, state}]);
         alert('Saved');
     }
 }

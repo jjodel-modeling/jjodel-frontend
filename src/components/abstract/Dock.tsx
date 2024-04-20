@@ -42,7 +42,7 @@ function DockComponent(props: AllProps) {
     layout.dockbox.children.push({tabs: [
         structure,
         tree,
-        // node,
+        node,
         views,
         viewpoints,
         // collaborators,
