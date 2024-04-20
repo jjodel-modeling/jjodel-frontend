@@ -1,4 +1,4 @@
-import {DModel, DProject, LProject, LUser, Pointer, U} from '../../joiner';
+import {DModel, DProject, LPointerTargetable, LProject, LUser, Pointer, U} from '../../joiner';
 import Storage from "../../data/storage";
 import Api from "../../data/api";
 
