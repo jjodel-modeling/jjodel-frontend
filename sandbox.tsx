@@ -8,7 +8,17 @@ export const aaa = 0;
 let data:any, node:any, view:any, component:any;
 let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPackages:any, refEdges:any, extendEdges:any, React:any, Edge:any;
 
-// todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or removed
+// todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or remo**ved
+/**
+
+copy a class view, give it higher prio. it will not be applied.
+on view duplicate, css is not recompiled
+
+
+
+
+ when i manually assign a view (edge), tn.mainView is still undefined and this causes the console to crash.
+ */
 
 // need to merge file declarations? or use a filename such as the imports will work (use inmemory://? or real urls)
 // advanced mode and simple mode: hide some features like positional editor in simple mode or the entire tab in view/node, start in simple mode.
@@ -23,6 +33,61 @@ let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPac
 /*reenable edge menù outside debug mode, (add color palette there? or not?)
 make uml arrows (and more common ones)
 *
+
+
+
+
+
+
+
+
+
+
+model: same im all graphs amd all imstamces
+mode+view: always differemt
+mode (- view): some views will share the mode positiom
+graph__
+
+
+will it chamge layout_
+
+diff imstamce           1                1                 1
+                        mv          m-v(curremt)         model
+chamge graph            1                1                 0
+chamge vp               0                0                 0
+chsmge mode view        1                0                 0
+
+
+                  chamge graph        chamge vp       chamge view
+model                   0                0                 0
+                        0                0                 1
+                        0                1                 0
+                        0                1                 1
+m-v                     1                0                 0
+m+v                     1                0                 1
+                        1                1                 0
+                        1                1                 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 * */
 // from this, either as a string or code, find a way to injectprops. as string regex with "Edge(" -> "Edge(nodeid," ?
 // pre-defining function Edge(...stuff) {return ActualEdgeComponent(nodeid, ...stuff) before the return React.createElement?

@@ -943,11 +943,21 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 const dclone: DViewElement = DViewElement.new2(`${c.data.name} Copy`, '', undefined, true, '');
                 lview = LPointerTargetable.fromD(dclone);
                 for (let key in c.data) {
-                    if(key === 'id' || key === 'className') continue;
-                    try {
-                        (lview as any)[key] = (c.data as any)[key];
-                    } catch(e) {
-                        Log.ee('Error on duplicate view:', e);
+                    switch(key) {
+                        case 'id':
+                        case 'className':
+                        case 'pointedBy':
+                        case '_storePath':
+                        case '_subMaps':
+                        case '':
+                        case 'clonedCounter': break;
+
+                        default:
+                            try {
+                                (lview as any)[key] = (c.data as any)[key];
+                            } catch(e) {
+                            //    Log.ee('Error on duplicate view:', e);
+                            }
                     }
                 }
 

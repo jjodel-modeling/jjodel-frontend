@@ -7,12 +7,13 @@ import {
     DPackage,
     packageDefaultSize,
     DClass,
-    DEnumerator, DAttribute, DReference, DOperation, DEnumLiteral, DObject, DValue
+    DEnumerator, DAttribute, DReference, DOperation, DEnumLiteral, DObject, DValue, DParameter
 } from '../../joiner';
 
 class DefaultViews {
     static model(vp: Pointer<DViewPoint>): DViewElement {
-        const view = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname], '', 1, false, true, vp);
+        const view = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname],
+            '', 1, false, true, vp);
         view.draggable = false; view.resizable = false;
         view.oclCondition = 'context DModel inv: true';
         view.palette = {'background-': ['#ffffff']};
@@ -68,7 +69,6 @@ class DefaultViews {
         view.css += '.enumerator-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
         return view;
     }
-
     static attribute(vp: Pointer<DViewPoint>): DViewElement {
         const view = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.cname], '', 1, false, true, vp);
         view.oclCondition = 'context DAttribute inv: true';
@@ -87,6 +87,14 @@ class DefaultViews {
         const view = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.cname], '', 1, false, true, vp);
         view.oclCondition = 'context DOperation inv: true';
         view.palette = {};
+        return view;
+    }
+
+    static parameter(vp: Pointer<DViewPoint>): DViewElement {
+        const view = DViewElement.new('Parameter', DV.parameterView(), undefined, '', '', '', [DParameter.cname],
+            '', 1, false, true, vp);
+        view.palette = {};
+        view.css = '*{\n\tfontSize:0.8rem;\n}'
         return view;
     }
 

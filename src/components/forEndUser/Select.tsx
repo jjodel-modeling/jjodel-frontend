@@ -96,6 +96,11 @@ function SelectComponent(props: AllProps) {
             </optgroup>}
             {props.options}
         </select>
+        {(props.postLabel) &&
+            <label className={'my-auto'} onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)}>
+                {props.postLabel}
+            </label>
+        }
     </label>);
 }
 SelectComponent.cname = 'SelectComponent';
@@ -103,6 +108,7 @@ export interface SelectOwnProps {
     data?: DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
     label?: string;
+    postLabel?: ReactNode;
     jsxLabel?: ReactNode;
     tooltip?: boolean|string;
     hidden?: boolean;

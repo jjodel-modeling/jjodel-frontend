@@ -2,7 +2,16 @@ import React, {Dispatch, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
 import toast from "react-hot-toast";
 import type {GObject, Pointer, Info} from "../../joiner";
-import {DPointerTargetable, DState, GenericInput, Log, LPointerTargetable, Input, ISize} from "../../joiner";
+import {
+    DPointerTargetable,
+    DState,
+    GenericInput,
+    Log,
+    LPointerTargetable,
+    Input,
+    ISize,
+    SetFieldAction
+} from "../../joiner";
 export let useless=1;
 
 // private
@@ -46,32 +55,37 @@ class SizeInputComponent extends PureComponent<AllProps, ThisState>{
         ));
 
         let size: Partial<ISize> = (l[field] || {}) as GObject;
+        const inputStyle = {justifyContent: "right", width: "auto", marginRight:"5px"};
+        let labelStyle = {height: '100%', display: 'inline-block', marginRight:"5px"}
         return (<>
-            <label className={this.props.rootClassName} style={this.props.rootStyle}>
-                {(this.props.label) && <label className={'my-auto'} onClick={() => { if (tooltip) notify() }}>
+            <label className={this.props.rootClassName} style={{fontFamily:'consolas', ...(this.props.rootStyle||{})}}>
+                {(this.props.label) && <label className={'my-auto'} style={{fontFamily:'-webkit-body'}} onClick={() => { if (tooltip) notify() }}>
                     {this.props.label}
                 </label>}
-                <label className={"d-flex my-auto ms-auto"}>
-                    {"x" in size && <Input {...otherProps} className={""} data={l} jsxLabel={<span style={{marginRight:"5px"}}>x</span>} field={field}
+                <label className={"d-flex my-auto ms-auto"} style={{flexWrap: "wrap"}}>
+                    {"x" in size && <Input {...otherProps} className={""} data={l} label={<span style={labelStyle}>x</span>} field={field} type={"number"}
                         getter={(ll)=>(l[field] as any as ISize).x+''}
-                        setter={(val)=>{(l[field] as any as Partial<ISize>) = {x: +val}}}
-                        style={{justifyContent: "right"}}
-                />}
-                {"y" in size && <Input {...otherProps} className={""} data={l} jsxLabel={<span style={{marginRight:"5px"}}>y</span>} field={field}
+                        setter={(val)=>{
+                            // SetFieldAction.new(l.id, field as string, {x: +val}, '+=', false)
+                            (l[field] as any as Partial<ISize>) = {x: +val}; // {y:? x: +val, w:?, h:?}}
+                    }}
+                        inputStyle={inputStyle}
+                    />}
+                    {"y" in size && <Input {...otherProps} className={""} data={l} label={<span style={labelStyle}>y</span>} field={field} type={"number"}
                        getter={(ll)=>(l[field] as any as ISize).y+''}
                        setter={(val)=>{(l[field] as any as Partial<ISize>) = {y: +val}}}
-                       style={{justifyContent: "right"}}
-                />}
-                {"w" in size && <Input {...otherProps} className={""} data={l} jsxLabel={<span style={{marginRight:"5px"}}>w</span>} field={field}
+                       inputStyle={inputStyle}
+                    />}
+                    {"w" in size && <Input {...otherProps} className={""} data={l} label={<span style={labelStyle}>w</span>} field={field} type={"number"}
                         getter={(ll)=>(l[field] as any as ISize).w+''}
                         setter={(val)=>{(l[field] as any as Partial<ISize>) = {w: +val}}}
-                        style={{justifyContent: "right"}}
-                />}
-                {"h" in size && <Input {...otherProps} className={""} data={l} jsxLabel={<span style={{marginRight:"5px"}}>h</span>} field={field}
+                        inputStyle={inputStyle}
+                    />}
+                    {"h" in size && <Input {...otherProps} className={""} data={l} label={<span style={labelStyle}>h</span>} field={field} type={"number"}
                        getter={(ll)=>(l[field] as any as ISize).h+''}
                        setter={(val)=>{(l[field] as any as Partial<ISize>) = {h: +val}}}
-                       style={{justifyContent: "right"}}
-                />}
+                       inputStyle={inputStyle}
+                    />}
                 </label>
             </label>
         </>); }

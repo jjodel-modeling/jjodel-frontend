@@ -40,7 +40,7 @@ function InputComponent(props: AllProps) {
     if (!data) return(<></>);
     const readOnly = (props.readonly !== undefined) ? props.readonly : props.debugmodee !== 'true' && Defaults.check(data.id);
     const type = (props.type) ? props.type : 'text';
-    const label: string|undefined = props.label;
+    const label: ReactNode|string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
     let tooltip: ReactNode|string|undefined = ((props.tooltip === true) ? data['__info_of__' + field]?.txt : props.tooltip) || '';
 
@@ -148,7 +148,7 @@ export interface InputOwnProps {
     field: string;
     getter?: (data: any/*LPointerTargetable*/) => string | boolean | undefined;
     setter?: (value: string|boolean) => void;
-    label?: string;
+    label?: string | ReactNode;
     jsxLabel?: ReactNode;
     type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|
     'number'|'password'|'radio'|'range'|'tel'|'text'|'time'|'url'|'week';

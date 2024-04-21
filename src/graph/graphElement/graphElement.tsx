@@ -162,14 +162,25 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 scores = Selectors.getAppliedViewsNew({data:ret.data, node: ret.node,
                     nid: ownProps.nodeid as string, pv: ownProps.parentViewId && DPointerTargetable.from(ownProps.parentViewId)});
             }
-            ret.views = (ownProps.views) ? LPointerTargetable.fromArr(ownProps.views) : scores.stackViews;
+            const tn = transientProperties.node[ownProps.nodeid as string];
+            if (ownProps.views){
+                ret.views = tn.stackViews = LPointerTargetable.fromArr(ownProps.views);
+                // tn.stackViews = [...(ret.views||[]), ...(tn.stackViews || [])];
+            } else {
+                ret.views = scores.stackViews = LPointerTargetable.fromArr( (scores.stackViews||[]).map((v:LViewElement)=>v?.id).filter(vid=>!!vid));
+            }
             ret.viewsid = Pointers.fromArr(ownProps.views) as Pointer<DViewElement>[];
 
             // console.log("debug",  {...this.props, data: this.props.data?.id, view: this.props.view?.id, v0: this.props.views, views: this.props.views?.map( v => v?.id )})
             if (ownProps.view) {
                 ret.view = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(Pointers.from(ownProps.view), state) as DViewElement);
+                tn.mainView = ret.view;
+                tn.validMainViews = [tn.mainView, ...(tn.validMainViews || [])];
                 Log.w(!ret.view, "Requested view "+ownProps.view+" not found. Another view got assigned.", {requested: ownProps.view, props: ownProps, state: ret});
-            } else ret.view = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
+            } else {
+                ret.view = tn.mainView = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
+                tn.validMainViews = [tn.mainView, ...(tn.validMainViews || [])];
+            }
 
             (ret as any).viewScores = transientProperties.node[ownProps.nodeid as string]; // debug only
             Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret, scores: (ret as any).viewScores});
