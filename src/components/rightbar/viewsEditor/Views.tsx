@@ -34,7 +34,9 @@ function ViewsDataComponent(props: AllProps) {
 
     const clone = (e: MouseEvent, v: LViewElement) => {
         e.preventDefault(); e.stopPropagation();
-        TRANSACTION(()=>{ v.duplicate(); })
+        TRANSACTION(() => {
+            v.duplicate();
+        });
     }
 
     const destroy = (e: MouseEvent, view: LViewElement) => {

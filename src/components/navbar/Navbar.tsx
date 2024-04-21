@@ -109,7 +109,9 @@ function NavbarComponent(props: AllProps) {
             </ul>
             {user.project && <li className={'nav-item'}>
                 <button disabled={DUser.offlineMode || project?.type === 'collaborative'}
-                        onClick={async(e) => ProjectsApi.save(user.project)} style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
+                        onClick={async(e) => {
+                            await ProjectsApi.save(user.project)
+                        }} style={{backgroundColor: '#9746fd', fontSize: '0.85rem'}} className={'text-white btn p-1'}>
                     Save
                 </button>
             </li>}

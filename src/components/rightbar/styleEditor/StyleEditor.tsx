@@ -1,6 +1,6 @@
-import React, {Dispatch, ReactElement} from "react";
-import {connect} from "react-redux";
-import {DState} from "../../../redux/store";
+import React, {Dispatch, ReactElement} from 'react';
+import {connect} from 'react-redux';
+import {DState} from '../../../redux/store';
 import {
     LModelElement,
     LViewElement,
@@ -14,7 +14,7 @@ import {
 function NodeEditorComponent(props: AllProps) {
     const selected = props.selected;
     const editable = true;
-    if (!selected || !selected.node) return(<></>);
+    if (!selected?.node) return(<></>);
     const node = selected.node;
     const dnode = (node.__raw || node) as DGraphElement
     let cname = dnode.className;
@@ -65,11 +65,11 @@ function NodeEditorComponent(props: AllProps) {
             <Input data={asVertex} field={"height"} label={"Height"} type={"number"} readonly={!editable} />
         </>}
         {asEdge && <><h3>Edge</h3>
-            <GenericInput data={asEdge} field={"longestLabel"} />
-            <TextArea data={asEdge} field={"labels"} label={"labels"}
-                   placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*: LGraphElement[]*/, allSegments/*: EdgeSegment[]*/) => {' +
-                       '\n\t return (edge.start.model)?.name + " ~ " + (e.end.model)?.name + "(" + segment.length.toFixed(1) + ")";' +
-                       '\n}'} readonly={!editable} />
+            <GenericInput data={asEdge} field={'longestLabel'} />
+            <TextArea data={asEdge} field={'labels'} label={'labels'}
+                   placeholder={`(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*: LGraphElement[]*/, allSegments/*: EdgeSegment[]*/) => {' +
+                       '\n\t return (edge.start.model)?.name + ' ~ ' + (e.end.model)?.name + '(' + segment.length.toFixed(1) + ')';' +
+                       '\n}`} readonly={!editable} />
         </>}
         {!asGraph && !asVertex && !asEdge &&<><h3>Field</h3>
             <Input data={node} field={"zIndex"} label={"Stacking order"} type={"number"} readonly={!editable} />

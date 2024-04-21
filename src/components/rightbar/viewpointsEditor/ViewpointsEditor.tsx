@@ -27,8 +27,16 @@ function ViewpointsEditorComponent(props: AllProps) {
         viewPoint.subViews.map(v => v.delete());
         viewPoint.delete();
     }
-    const select = (vp: LViewPoint) => {
-        project.activeViewpoint = vp;
+    const select = (viewPoint: LViewPoint) => {
+        project.activeViewpoint = viewPoint;
+    }
+    const clone = (viewPoint: LViewPoint) => {
+        const dvp: DViewPoint = DViewPoint.new(`${viewPoint.name} Copy`, '');
+        const lvp: LViewPoint = LViewPoint.fromD(dvp);
+        for(const view of viewPoint.subViews) {
+            const v = view.duplicate();
+            v.viewpoint = lvp;
+        }
     }
 
     return(<div>
@@ -51,6 +59,10 @@ function ViewpointsEditorComponent(props: AllProps) {
                 <button className={'btn btn-success ms-1'} disabled={active.id === viewpoint.id}
                         onClick={(evt) => {select(viewpoint)}}>
                     <i className={'p-1 bi bi-check2'}></i>
+                </button>
+                <button className={'btn btn-success ms-1'}
+                        onClick={(evt) => {clone(viewpoint)}}>
+                    <i className={'p-1 bi bi-clipboard2-fill'}></i>
                 </button>
                 <button className={'btn btn-danger ms-1'} disabled={index <= 1 || active.id === viewpoint.id}
                         onClick={() => destroy(viewpoint)}>
