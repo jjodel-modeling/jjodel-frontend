@@ -1,14 +1,21 @@
 import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../../../redux/store';
-import {
+import type {
     LModelElement,
     LViewElement,
     LGraphElement,
-    Input,
-    RuntimeAccessibleClass,
     LVoidVertex,
-    LVoidEdge, LGraph, GenericInput, TextArea, Pointer, DGraphElement, SetRootFieldAction, DNamedElement, LNamedElement
+    LVoidEdge, LGraph,Pointer, DGraphElement,
+    DNamedElement, LNamedElement} from '../../../joiner';
+import {
+    LPointerTargetable,
+    L,
+    Input,
+    GenericInput,
+    TextArea,
+    RuntimeAccessibleClass,
+    SetRootFieldAction,
 } from '../../../joiner';
 
 function NodeEditorComponent(props: AllProps) {
@@ -123,7 +130,7 @@ interface StateProps {
     selected?: {
         node: LGraphElement;
         view: LViewElement;
-        modelElement?: LModelElement
+        modelElement?: LModelElement;
     };
 }
 interface DispatchProps {}
@@ -139,9 +146,9 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         const view = state._lastSelected?.view;
         if(node && view) {
             ret.selected = {
-                node: LGraphElement.fromPointer(node),
-                view: LViewElement.fromPointer(node),
-                modelElement: (modelElement) ? LModelElement.fromPointer(modelElement) : undefined
+                node: L.fromPointer(node),
+                view: L.fromPointer(node),
+                modelElement: (modelElement) ? L.fromPointer(modelElement) : undefined
             }
         }
     }

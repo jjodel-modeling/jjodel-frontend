@@ -1196,6 +1196,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     _derivedSubElements!: DModelElement[]; // deleted when it becomes persistent
     // persist(): void { Constructors.persist(this); }// deleted when it becomes persistent
 }
+export const D = DPointerTargetable;
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, DPointerTargetable);
 /*
@@ -1357,6 +1358,7 @@ export class Pointers{
         return typeof val === "string" ? val.includes("Pointer") : false;
     }
 }
+export const P = Pointers;
 /*
 export type Pack1<L extends LPointerTargetable | undefined | null,
     // L extends LPointerTargetable | undefined | null = LL extends LPointerTargetable[] ? LPointerTargetable : null | undefined,
@@ -1890,6 +1892,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     }
 }
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LPointerTargetable);
+export const L = LPointerTargetable;
 /*
 let pttr: Pointer<DClassifier, 0, 1, LClassifier> = null as any;
 let ptrany: Pointer<DClassifier, 0|1, 1|'N'>[] = null as any;
@@ -2538,7 +2541,7 @@ export type Pointer<T extends DPointerTargetable = DPointerTargetable, lowerboun
 
 export type PtrString = any; // to convert Pointers to strings more explicitly then using as any
 // let ptr: Pointer<Object> = null as any;
-
+/*
 class D extends DPointerTargetable{
     parent!: Pointer<D>;
     dattrib!: boolean;
@@ -2581,7 +2584,7 @@ class P2 extends P { // singleton
 }
 class P3 extends P { // singleton
     get_d3() {}
-}
+}*/
 
 type ERROR = "_TYPE_ERROR_";
 // RegExp extends Animal ? number : string
@@ -2663,12 +2666,13 @@ windoww.buildWrapSignature = buildWrapSignature;
 *
 * DpointerTargetable.toPointer( d );
 *
+
+type subtractDL = subtract<D, L>;
 * */
 
 
 
 type subtract<P, C> = { [F in keyof P]: keyof C extends undefined ? undefined : P[F] };
-type subtractDL = subtract<D, L>;
 type Exclude3<T, U> = T & {[T in keyof U]: never};
 type Override<A, B> = Omit<A, keyof B> & B; //////////////////////////////////////////// best solution so far
 

@@ -235,6 +235,11 @@ function makeDefaultZoomView(vp: Pointer<DViewPoint>): void{
             'Model':
 `<div className={'root'}>
     {!data && "Model data missing."}
+    <label style={{position:'absolute', right:'-50px', top:'50px', display: 'flex', transform: 'rotate(270deg)'}}>
+        <input className="potenziometro" onChange={(e)=>{node.state = {level:+e.target.value}}} min="0" max="3" type="range" step="1" value={level}
+            style = {{}}/>
+            <div style={{transform: 'rotate(90deg) translate(0, 100%)'}}>Detail level:{level}</div>
+    </label>
     <div className={'edges'}>
         {[
             refEdges.map(se => <Edge start={se.start.father.node} end={se.end.node} view={'Pointer_ViewEdge' + ( se.start.containment && 'Composition' || 'Association')} key={'REF_' + se.start.node.id + '~' + se.end.node.id} />), 
@@ -248,11 +253,22 @@ function makeDefaultZoomView(vp: Pointer<DViewPoint>): void{
 </div>`,
             'Package':
 `<div className={'root package'}>
+
     <div className={'package-children'}>
-        {level >= 1 ? data.children.map(c => <DefaultNode key={c.id} data={c} />) :
+        {upperLevel >= 1 ? [
+            <label style={{position:'absolute', right:'-50px', top:'50px', display: 'flex', transform: 'rotate(270deg)'}}>
+                <input className="potenziometro" onChange={(e)=>{node.state = {level:+e.target.value}}} min="0" max="3" type="range" step="1" value={level}
+                    style = {{}}/>
+                <div style={{transform: 'rotate(90deg) translate(0, 100%)'}}>Detail level:{level}</div>
+            </label>,
+            data.children.map(c => <DefaultNode key={c.id} data={c} />)
+            ] :
         [
-            <div className={"row"}><b>Uri:</b><span className={"ms-1"}>{data.uri}</span></div>,
-            <div className={"row"}>{[data.classes.length ? data.classes + " classes" : '', data.enumerators.length ? data.enumerators + " enumerators" : ''].filter(v=>!!v).join(',')}</span></div>
+            <div className={""}><b>Uri:</b><span className={"ms-1"}>{data.uri}</span></div>,
+            <div className={""}>{[
+                data.classes.length ? data.classes.length + " classes" : '',
+                data.enumerators.length ? data.enumerators.length + " enumerators" : ''
+               ].filter(v=>!!v).join(',')}</div>
         ]
         }
     </div>
@@ -263,13 +279,21 @@ function makeDefaultZoomView(vp: Pointer<DViewPoint>): void{
     <Input jsxLabel={<b className={'class-name'}>EClass:</b>} data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
     <div className={'class-children'}>
-        {level >= 2 && [data.attributes.map(c => <DefaultNode key={c.id} data={c} />), data.references.map(c => <DefaultNode key={c.id} data={c} />), data.operations.map(c => <DefaultNode key={c.id} data={c} />)]
-         ||<>
-         <div className={"row"}><b>isInterface:</b><span className={"ms-1"}>{data.isInterface}</span></div>
-         <div className={"row"}><b>isAbstract:</b><span className={"ms-1"}>{data.isAbstract}</span></div>
-         <div className={"row"}><b>Instances:</b><span className={"ms-1"}>{data.instances.length}</span></div>
-         <div className={"row"}>{[data.attributes.length ? data.attributes + " attributes" : '', data.references.length ? data.references + " references" : '', data.operations.length ? data.operations + " operations" : ''].filter(v=>!!v).join(',')}</span></div>
-         </>
+        {level >= 2 && [
+            data.attributes.map(c => <DefaultNode key={c.id} data={c} />),
+            data.references.map(c => <DefaultNode key={c.id} data={c} />),
+            data.operations.map(c => <DefaultNode key={c.id} data={c} />)
+          ]
+         || [
+         <div className={""}><b>isInterface:</b><span className={"ms-1"}>{''+data.interface}</span></div>,
+         <div className={""}><b>isAbstract:</b><span className={"ms-1"}>{''+data.abstract}</span></div>,
+         <div className={""}><b>Instances:</b><span className={"ms-1"}>{data.instances.length}</span></div>,
+         <div className={""}>{[
+             data.attributes.length ? data.attributes.length + " attributes" : '',
+             data.references.length ? data.references.length + " references" : '',
+             data.operations.length ? data.operations.length + " operations" : ''
+            ].filter(v=>!!v).join(',')}</div>
+         ]
         }
     </div>
     {decorators}
@@ -280,7 +304,7 @@ function makeDefaultZoomView(vp: Pointer<DViewPoint>): void{
     <hr />
     <div className={'enumerator-children'}>
         {level >= 2 && data.children.map(c => <DefaultNode key={c.id} data={c}/>)
-          || <div className={"row"}>{data.literals} literals</span></div>}
+          || <div className={""}>{data.literals} literals</div>}
     </div>
     {decorators}
 </div>`,
@@ -306,11 +330,40 @@ function makeDefaultZoomView(vp: Pointer<DViewPoint>): void{
     }
 
     BEGIN();
+    let views: LViewElement[] = [];
     for (let name in jsxList) {
-        let v = (LPointerTargetable.wrap('Pointer_View'+name as any) as LViewElement).duplicate();
+        let original = (LPointerTargetable.wrap('Pointer_View'+name as any) as LViewElement);
+        let doriginal = original.__raw;
+        let v = original.duplicate();
         v.jsxString = jsxList[name];
-        (v as any).viewpoint = vp;
+        const udLevel = 'ret.level = '+(["Model", "Package"].includes(name) ? 'node' : 'node.graph')+'.state.level ?? 3';
+        if (!doriginal.usageDeclarations) v.usageDeclarations = '(ret) => {\n' +
+            '// ** preparations and default behaviour here ** //\n' +
+            'ret.node = node\n' +
+            'ret.view = view\n' +
+            '// custom preparations:\n' +
+            '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+            '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
+            '// ** declarations here ** //\n' +
+            udLevel + (name === 'Package' ? '\nret.upperLevel = node.graph.state.level ?? 3\n' : '\n') +
+            '}';
+        else {
+            let ud = doriginal.usageDeclarations.split('\n');
+            let i = ud.indexOf('// ** declarations here ** //');
+            ud.splice(i+1, 0, udLevel);
+            if (name === 'Package') ud.splice(i+2, 0, 'ret.upperLevel = node.graph.state.level ?? 3');
+            v.usageDeclarations = ud.join('\n');
+        }/*
+        if (name === 'Model') {
+            v.onDataUpdate = 'node.state = {level: node.state.level || 0}'
+        }*/
+        views.push(v);
     }
+    setTimeout(()=>{
+        for (let v of views){
+            (v as any).viewpoint = vp;
+        }
+    })
     END();
 
 }

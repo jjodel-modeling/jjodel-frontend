@@ -797,8 +797,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     public set_viewpoint(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement): boolean {
         let ret = false;
         let vpid: Pointer<DViewPoint> = v && Pointers.from(v);
-        let id = (manualDview || context.data).id;
-        let oldvpid: Pointer<DViewPoint> = (manualDview || context.data).viewpoint;
+        const data =  (manualDview || context.data);
+        let id = data.id;
+        let oldvpid: Pointer<DViewPoint> = data.viewpoint;
         if (vpid === oldvpid) return true;
 
         TRANSACTION(()=>{
@@ -809,7 +810,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 SetFieldAction.new(oldvpid, "subViews", subViews, '', true);
             }
             if (vpid) {
-                let name = context.data.name;
+                let name = data.name;
                 let copyPos = name.indexOf("Copy");
                 let oldSubViews = DPointerTargetable.fromPointer(vpid).subViews;
                 let insertBefore: string = '';

@@ -505,7 +505,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         // so the following is valid, and a way to overcome the previous limitations:
         // let subobject = {}; subobject[key] += stuff; ret.somefixedname = subobject;
 
-        let allContextKeys = {...contextFixedKeys};
+        let allContextKeys: Dictionary = {...contextFixedKeys};
         for (let k of tv.constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
         let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}, ret';
         if (vid.includes('Model')) console.log("modelparse, ud", {paramStr, udstr:dv.usageDeclarations, udlist:transientProperties.view[vid].UDList});
@@ -513,7 +513,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
             tv.UDFunction = new Function(paramStr, 'return ('+dv.usageDeclarations+')(ret)') as (...a:any)=>any;
         } catch (e:any) {
             console.error('error udparse', {vid, e, paramStr, body: 'return ('+dv.usageDeclarations+')(ret)'});
-            tv.UDFunction = new Function("", "(ret)=>{ ret.__invalidUsageDeclarations = "+JSON.stringify(e)+"; ret.__invalidUsageDeclarations.isSyntax = true; }") as (...a:any)=>any;
+            tv.UDFunction = new Function("ret", "ret.__invalidUsageDeclarations = "+JSON.stringify(e)+"; ret.__invalidUsageDeclarations.isSyntax = true; return ret; }") as (...a:any)=>any;
         }
 
 

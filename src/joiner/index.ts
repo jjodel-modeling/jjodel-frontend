@@ -49,6 +49,7 @@ export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStatePro
     EdgeStateProps, EdgeOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,
+    L, D, P,
     Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs,
     LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements, transientProperties, ViewEClassMatch} from "./classes";
 
