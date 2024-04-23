@@ -1,7 +1,7 @@
 import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
-import {SetRootFieldAction} from '../../redux/action/action';
+import {SetFieldAction, SetRootFieldAction} from '../../redux/action/action';
 import {
     DClass,
     DState,
@@ -11,11 +11,11 @@ import {
     GObject,
     LClass,
     LGraphElement,
-    LNamedElement,
+    LNamedElement, LObject,
     LPackage,
     LProject,
     LUser,
-    LValue,
+    LValue, U,
     windoww,
 } from '../../joiner';
 import MemoRec from '../../memorec/api';
@@ -30,7 +30,7 @@ function ContextMenuComponent(props: AllProps) {
     const position = props.position;
     const node = props.node;
     const data: LNamedElement = LNamedElement.fromPointer(node?.model?.id);
-    const jsxList: ReactNode[] = [];
+    let jsxList: ReactNode[] = [];
     const [memorec, setMemorec] = useStateIfMounted<{data:GObject[], type:'class'|'package'}|null>(null);
     const [suggestedName, setSuggestedName] = useStateIfMounted('');
 
@@ -79,9 +79,33 @@ function ContextMenuComponent(props: AllProps) {
         lPackage.addClass(suggestedName);
         close();
     }
+
+    /* Handling the add of composition children to specific M1 Object */
+    const getAddChildren = (): ReactNode[] => {
+        const list: ReactNode[] = [];
+        const object = U.wrapper<LObject>(data);
+        const instanceOf = U.wrapper<LObject>(data).instanceof;
+        if(!instanceOf) return [];
+        for(const reference of instanceOf.allReferences) {
+            if(!reference.containment) continue;
+            const feature =  U.wrapper<LValue>(object[`$${reference.name}`]);
+            if(feature.values.length >= reference.upperBound && reference.upperBound !== -1) continue;
+            list.push(<div onClick={() => {
+                close();
+                const child = object.model.addObject({}, reference.type);
+                SetFieldAction.new(feature.id, 'values', child.id, '+=', true);
+            }} className={'col item'}>Add {reference.name}</div>);
+        }
+        return list;
+    }
+
     if(display) {
         jsxList.push(<div className={'mt-1 col text-center'}><b>{data.className}</b></div>);
         jsxList.push(<hr className={'my-1'} />);
+
+        if(data.className === 'DObject') {
+            jsxList = [...jsxList, ...getAddChildren()];
+        }
 
         /* Memorec */
         if(data.className === 'DClass')
