@@ -97,7 +97,7 @@ function toolbarClick(item_dname: string, data: LModelElement|undefined, myDictV
 }
 let n_agonSides = 10; //this shuld be in react.setState(), but the function handling it is outside a component, so i don't wanna rewrite it.
 // it should be fine, except for the input value being shared on different sidebar components, which might even be better.
-function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]>, items: string[], node?:LGraphElement): ReactNode[] {
+function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]>, items: DocString<"D-ClassNames">[], node?:LGraphElement): ReactNode[] {
     const reactNodes: ReactNode[] = [];
     // todo: does myDictValidator have any reason to exist? if something is invalid it should not make it on toolbar jsx generated list
     for (let item_dname of items) {
@@ -108,19 +108,19 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
         let item = item_dname.substring(1).toLowerCase();
         reactNodes.push(<div className={'toolbar-item'} style={{cursor:"pointer"}} key={item_dname} onClick={()=>toolbarClick(item_dname, data, myDictValidator, node)}>
             <ModellingIcon name={item} />
-            <span className={'ms-1 text-capitalize'}>{item}</span>
+            <span className={'ms-1 my-auto text-capitalize'}>{item}</span>
             {/*
             <i className="bi bi-arrow-right-short hoverable">
                 <ul className={"content"}>
                     <li className={"hoverable"}>
-                        <span className={'ms-1 text-capitalize'}>Polygon</span>
+                        <span className={'ms-1 my-auto text-capitalize'}>Polygon</span>
                         <i className="bi bi-arrow-right-short hoverable">
                             <ul className={"content"}>
-                                <span className={'ms-1 text-capitalize'}>Triangle</span>
-                                <span className={'ms-1 text-capitalize'}>Pentagon</span>
-                                <span className={'ms-1 text-capitalize'}>Hexagon</span>
-                                <span className={'ms-1 text-capitalize'}>Octagon</span>
-                                <span className={'ms-1 text-capitalize'}>
+                                <span className={'ms-1 my-auto text-capitalize'}>Triangle</span>
+                                <span className={'ms-1 my-auto text-capitalize'}>Pentagon</span>
+                                <span className={'ms-1 my-auto text-capitalize'}>Hexagon</span>
+                                <span className={'ms-1 my-auto text-capitalize'}>Octagon</span>
+                                <span className={'ms-1 my-auto text-capitalize'}>
                                     <input className={"autosize-input"} type={"number"} min={3} step={1}
                                            value={n_agonSides} onClick{(evt) => { evt.stopPropagation()}}
                                         onChange={(evt) => {
@@ -136,7 +136,7 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
             <i className="bi bi-arrow-right-short hoverable">
                 <ul className={"content"}>
                     <li className={"hoverable"}>
-                        <span className={'ms-1 text-capitalize'}>Polygon</span>
+                        <span className={'ms-1 my-auto text-capitalize'}>Polygon</span>
                     </li>
                 </ul>
             </i>
@@ -149,6 +149,7 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
 }
 function select(dl: DModelElement | LModelElement): DModelElement {
     let d: DModelElement = (dl as LModelElement)?.__raw || dl as DModelElement;
+    console.log("selecting", {d, dl, selector:".Graph [data-dataid='"+d?.id+"']", $:$(".Graph [data-dataid='"+d?.id+"']")});
     if (d && d.id) setTimeout(()=>$(".Graph [data-dataid='"+d?.id+"']").trigger("click"), 10);
     return d; }
 function selectNode(d: DGraphElement|{id: string}): any {
@@ -219,20 +220,19 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         return(<div className={"toolbar mt-2"}>
             <b className={'d-block text-center text-uppercase mb-1'}>Add root level</b>
             {classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
+                let dclass = lClass.__raw;
                 return <div
                     onMouseEnter={e => SetRootFieldAction.new('tooltip', lClass.annotations.map(a => a.source).join(' '))}
                     onMouseLeave={e => SetRootFieldAction.new('tooltip', '')}
-                    key={"LObject_"+lClass.id} className={"toolbar-item LObject"} onClick={() => {
-                    // @ts-ignore
-                    console.log('model.addObject({}, lClass)) }', {lClass, n:lClass?.name});
+                    key={"LObject_"+dclass.id} className={"toolbar-item LObject"} onClick={() => {
                     select(model.addObject({}, lClass)) }}>
-                    <ModellingIcon name={'object'} />
-                    <span className={'ms-1 text-capitalize'}>{U.stringMiddleCut(lClass.name, 14)}</span>
+                    {dclass._state.icon ? <ModellingIcon src={dclass._state.icon}/> : <ModellingIcon name={'object'} />}
+                    <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)}</span>
                 </div>
             })}
             <div key={"RawObject"} className={'toolbar-item'} onClick={e => select(model.addObject({}, null))}>
                 <ModellingIcon name={'object'} />
-                <span className={'ms-1 text-capitalize'}>Object</span>
+                <span className={'ms-1 my-auto text-capitalize'}>Object</span>
             </div>
             <hr className={'my-2'} />
             <b className={'d-block text-center text-uppercase mb-1'}>Add sublevel</b>
@@ -240,7 +240,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             {(lfeat && lfeat.values.length < lfeat.upperBound) && <div key={"Value"} className={"toolbar-item value"} onClick={() => {
                 SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); }}>
                 <ModellingIcon name={'value'} />
-                <span className={'ms-1 text-capitalize'}>value</span>
+                <span className={'ms-1 my-auto text-capitalize'}>value</span>
             </div>}
             {node && addChildren(downward[node.className])}
             <hr className={'my-2'} />

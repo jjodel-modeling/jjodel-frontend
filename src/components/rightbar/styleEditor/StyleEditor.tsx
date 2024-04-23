@@ -57,6 +57,7 @@ function NodeEditorComponent(props: AllProps) {
     const edgeStart: LGraphElement | undefined = asEdge && asEdge.start;
     const edgeEnd: LGraphElement | undefined = asEdge && asEdge.end;
     const notFoundStyle = {color: 'orange', cursor:'not-allowed'};
+    const subElements = node.subElements;
     return(<div className={'p-3'}>
         {/*<Input obj={selected.node} field={'id'} label={'ID'} type={'text'} readonly={true}/>*/}
         {asGraph && <><h3>Graph</h3>
@@ -99,17 +100,19 @@ function NodeEditorComponent(props: AllProps) {
                     <span className={'ms-2'} onClick={(e)=> openNode(edgeStart.id)} style={clickableStyle}>
                         {getNodeLabel(edgeStart)}<i className={'ms-1 bi bi-arrow-right'}/>
                     </span>
-                    : <span style={{...clickableStyle, cursor:'not-allowed'}}>Missing</span>
+                    : <span style={notFoundStyle}>Missing</span>
             }</h6></div>,
             <div><h6 style={headerStyle}>Edge End:{
                 edgeEnd ?
                     <span className={'ms-2'} onClick={(e)=> openNode(edgeEnd.id)} style={clickableStyle}>
                         {getNodeLabel(edgeEnd)}<i className={'ms-1 bi bi-arrow-left'}/>
                     </span>
-                    : <span style={{...clickableStyle, cursor:'not-allowed'}}>Missing</span>
+                    : <span style={notFoundStyle}>Missing</span>
             }</h6></div>
         ]}
-        <div><h6 style={headerStyle}>Sub elements <i className={'ms-1 bi bi-arrow-down'}/></h6>{node.subElements.map(
+        <div><h6 style={headerStyle}>
+            Sub elements{subElements.length ? <i className={'ms-1 bi bi-arrow-down'}/> : [': ', <span style={notFoundStyle}>None</span>]}
+        </h6>{subElements.map(
             n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getNodeLabel(n)}</div>
         )}</div>
         <div><h6  style={headerStyle}>Outgoing Edges</h6>{node.edgesOut.map(

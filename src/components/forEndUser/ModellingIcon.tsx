@@ -8,24 +8,26 @@ import EEnumerator from '../../static/icon/modelling/enumerator.png';
 import ELiteral from '../../static/icon/modelling/literal.png';
 import Utility from '../../static/img/utility.png';
 
-interface Props {name: string, className?: string}
+interface Props {name?: string, className?: string, src?:string}
 function ModellingIcon(props: Props) {
     const name = props.name;
     const className = props.className ? props.className : '';
+    const pprops = {width:20, height:20, className:`my-auto ${className||''} ` + (name || '')}
+    if (props.src) return <img {...pprops} src={props.src} />;
     switch (name) {
-        case 'package': return(<img width={16} height={16} className={'d-block'} src={EPackage} />);
+        case 'package': return(<img {...pprops} src={EPackage} />);
         case 'object':
         case 'class':
-            return(<img width={16} height={16} className={'d-block'} src={EClass} />);
-        case 'reference': return(<img width={16} height={16} className={'d-block'} src={EReference} />);
-        case 'operation': return(<img width={16} height={16} className={'d-block'} src={EOperation} />);
-        case 'enumerator': return(<img width={16} height={16} className={'d-block'} src={EEnumerator} />);
-        case 'literal': return(<img width={16} height={16} className={'d-block'} src={ELiteral} />);
+            return(<img {...pprops} src={EClass} />);
+        case 'reference': return(<img {...pprops} src={EReference} />);
+        case 'operation': return(<img {...pprops} src={EOperation} />);
+        case 'enumerator': return(<img {...pprops} src={EEnumerator} />);
+        case 'literal': return(<img {...pprops} src={ELiteral} />);
         case 'value':
         case 'attribute':
-            return(<img width={16} height={16} className={`d-block ${className}`} src={EAttribute} />);
+            return(<img {...pprops} src={EAttribute} />);
         default:
-            return(<img width={16} height={16} className={`d-block ${className}`} src={Utility} />);
+            return(<img {...pprops} src={Utility} />);
 
     }
 }
