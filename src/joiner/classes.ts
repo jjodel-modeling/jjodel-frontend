@@ -854,6 +854,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     DViewElement(name: string, jsxString: string, vp?: Pointer<DViewPoint>, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                  preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '', priority?: number): this {
         const thiss: DViewElement = this.thiss as any;
+        const vid = thiss.id;
+        let tv = transientProperties.view[vid];
+        if (!tv) transientProperties.view[vid] = tv = {} as any;
+
         thiss.name = name;
         thiss.appliableToClasses = appliableToClasses;
         thiss.appliableTo = 'node';
@@ -877,6 +881,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.size = {};
         thiss.storeSize = false;
         thiss.lazySizeUpdate = true;
+        thiss.isValidation = false;
         //thiss.constraints = [];
         thiss.palette = {
             'color-': [], //['#ffffff', '#ff0000', '#00ff00', '#0000ff','#aaaaaa', '#ffaaaa', '#aaffaa', '#aaaaff'],
@@ -943,12 +948,12 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     }
 
     DViewPoint(): this {
-        const _this: DViewPoint = U.wrapper<DViewPoint>(this.thiss);
+        const thiss: DViewPoint = (this.thiss) as any;
         const user = LUser.fromPointer(DUser.current);
         const project = user?.project;
         if (!project) return this;
         this.setExternalPtr(project.id, 'viewpoints', '+=');
-        // _this._persistCallbacks.push( SetFieldAction.create(project.id, 'stackViews', [], '', false) );
+        // thiss._persistCallbacks.push( SetFieldAction.create(project.id, 'stackViews', [], '', false) );
         return this;
     }
 
@@ -1196,7 +1201,6 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     _derivedSubElements!: DModelElement[]; // deleted when it becomes persistent
     // persist(): void { Constructors.persist(this); }// deleted when it becomes persistent
 }
-export const D = DPointerTargetable;
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, DPointerTargetable);
 /*
@@ -1358,7 +1362,7 @@ export class Pointers{
         return typeof val === "string" ? val.includes("Pointer") : false;
     }
 }
-export const P = Pointers;
+
 /*
 export type Pack1<L extends LPointerTargetable | undefined | null,
     // L extends LPointerTargetable | undefined | null = LL extends LPointerTargetable[] ? LPointerTargetable : null | undefined,
@@ -1655,10 +1659,9 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return val && Pointers.isPointer(val as any, undefined) ? LPointerTargetable.fromPointer(val, state) : val;
     }
 
-    protected __defaultSetter(v: any, c: Context, k: keyof Context["data"]): boolean {
+    protected __defaultSetter(v0: any, c: Context, k: keyof Context["data"]): boolean {
         // todo: get the those lobjects -> pointer checks from set_state
-        console.log("default Setter");
-        v = this.__sanitizeValue(v, false, false);
+        let v: any = this.__sanitizeValue(v0, false, false);
         if (true || k in c.data) {
             // check if is pointer
             let isPointer: boolean;
@@ -1694,7 +1697,9 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
                 if (v > max) v = max;
                 else if (v < min) v = min;
             }
-            return SetFieldAction.new(c.data, k as any, v, '', isPointer);
+            console.log("default Setter["+k+"] = " + v , {type, v, v0, oldv:(c.data as any)[k], isPointer});
+            SetFieldAction.new(c.data, k as any, v, '', isPointer);
+            return true;
         }
         return true;
     }
@@ -1892,7 +1897,11 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     }
 }
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LPointerTargetable);
-export const L = LPointerTargetable;
+
+@RuntimeAccessible('D') export class D extends DPointerTargetable{}
+@RuntimeAccessible('L') export class L extends LPointerTargetable{}
+@RuntimeAccessible('P') export class P extends Pointers{}
+
 /*
 let pttr: Pointer<DClassifier, 0, 1, LClassifier> = null as any;
 let ptrany: Pointer<DClassifier, 0|1, 1|'N'>[] = null as any;

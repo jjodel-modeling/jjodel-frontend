@@ -110,6 +110,8 @@ function InputComponent(props: AllProps) {
     else cursor = 'auto';
     let inputStyle = props.inputStyle || {};
     if (!inputStyle.cursor && cursor === 'not-allowed') { inputStyle.cursor = cursor; }
+    let rootStyle = {display: (jsxLabel || label) ? 'flex' : 'block', cursor, ...((props as any).style || {})};
+    if (readOnly && !("color" in rootStyle)) rootStyle.color = "gray";
     let input = <input {...otherprops}
                        key={`${field}.${data.id}`}
                        className={props.inputClassName || css}
@@ -120,7 +122,7 @@ function InputComponent(props: AllProps) {
                        checked={checked} />
 
     return(<label className={'p-1'} {...otherprops}
-                  style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor, ...((props as any).style || {})}}>
+                  style={rootStyle}>
 
         {label && <span className={'my-auto'} onMouseEnter={e => setShowTooltip(true)}
                          onMouseLeave={e => setShowTooltip(false)}>{label}

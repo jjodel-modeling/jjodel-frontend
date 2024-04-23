@@ -32,7 +32,8 @@ function DockComponent(props: AllProps) {
     const tree = {id: `${index++}`, title: 'Tree View', group: 'editors', closable: false, content: <TreeEditor />};
     const views = {id: `${index++}`, title: 'Views', group: 'editors', closable: false, content: <ViewsEditor />};
     const node = {id: `${index++}`, title: 'Node', group: 'editors', closable: false, content: <NodeEditor />};
-    const viewpoints = {id: `${index++}`, title: 'Viewpoints', group: 'editors', closable: false, content: <ViewpointEditor />};
+    const viewpoints = {id: `${index++}`, title: 'Perspectives', group: 'editors', closable: false, content: <ViewpointEditor validation={false} />};
+    const validation = {id: `${index++}`, title: 'Validation', group: 'editors', closable: false, content: <ViewpointEditor validation={true} />};
     const collaborators = {id: `${index++}`, title: 'Collaborators', group: 'editors', closable: false, content: <CollaboratorsEditor />};
     const mqtt = {id: `${index++}`, title: 'Mqtt', group: 'editors', closable: false, content: <MqttEditor />};
     const console = {id: `${index++}`, title: 'Console', group: 'editors', closable: false, content: <Console />};
@@ -44,6 +45,7 @@ function DockComponent(props: AllProps) {
         tree,
         views,
         viewpoints,
+        validation,
         // collaborators,
         // mqtt,
         node,

@@ -427,6 +427,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         // for (let gid of ret.graphs) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
         // for (let vid of ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION) { }
         for (let vid of ret.VIEWS_RECOMPILE_ocl) {
+            if (!transientProperties.view[vid]) transientProperties.view[vid] = {} as any;
             transientProperties.view[vid].oclEngine = undefined as any; // force re-parse
             transientProperties.view[vid].oclChanged = true;
             for (let nid in transientProperties.node) {
@@ -456,6 +457,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         // transientProperties.view[vid].constantsList = dv.constants?.match(UDRegexp).map(s=>s.substring(4, s.length-1).trim()) || [];
         // let allContextKeys = {...contextFixedKeys};
         if (!dv.constants) {
+            if (!transientProperties.view[vid]) transientProperties.view[vid] = {} as any;
             transientProperties.view[vid].constants = {};
             transientProperties.view[vid].constantsList = [];
             // no need to recompile UD, jsx or measurables, they will have additional parameters in scope but they are undefined and cause no problems.
@@ -485,7 +487,8 @@ export function reducer(oldState: DState = initialState, action: Action): DState
 
     for (const vid of ret.VIEWS_RECOMPILE_usageDeclarations) { // compiled in func, but NOT executed, result varies between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
-        const tv = transientProperties.view[vid];
+        let tv = transientProperties.view[vid];
+        if (!tv) transientProperties.view[vid] = tv = {} as any;
         if (!dv.usageDeclarations) {
             tv.UDList = [];
             tv.UDFunction = undefined as any;
@@ -526,7 +529,8 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     /* JS CONDITION */
     for (const vid of ret.VIEWS_RECOMPILE_jsCondition) {
         const dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
-        const tv = transientProperties.view[vid];
+        let tv = transientProperties.view[vid];
+        if (!tv) transientProperties.view[vid] = tv = {} as any;
         tv.jsConditionChanged = true;
         if (!dv.jsCondition) {
             tv.jsCondition = undefined;
@@ -554,6 +558,8 @@ export function reducer(oldState: DState = initialState, action: Action): DState
 
     for (const vid of ret.VIEWS_RECOMPILE_jsxString) { // compiled in func, but NOT executed, result varies between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
+        let tv = transientProperties.view[vid];
+        if (!tv) transientProperties.view[vid] = tv = {} as any;
         if (!dv.jsxString) { transientProperties.view[vid].JSXFunction = undefined as any; continue; }
         let allContextKeys = {...contextFixedKeys};
         for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
@@ -581,6 +587,8 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         let vid: Pointer<DViewElement>;
         for (vid of (ret as any)['VIEWS_RECOMPILE_'+key]) {
             let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
+            let tv = transientProperties.view[vid];
+            if (!tv) transientProperties.view[vid] = tv = {} as any;
             let str: string = (dv as any)[key];
             if (!str) {
                 (transientProperties.view[vid] as any)[key] = undefined;

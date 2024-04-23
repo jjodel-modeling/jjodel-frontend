@@ -20,7 +20,7 @@ function ViewpointsEditorComponent(props: AllProps) {
         let name = 'viewpoint_' + 0;
         let viewpointNames: string[] = viewpoints.map(vp => vp && vp.name);
         name = U.increaseEndingNumber(name, false, false, newName => viewpointNames.indexOf(newName) >= 0);
-        DViewPoint.new(name, '');
+        DViewPoint.new2(name, '', (d) => { d.isExclusiveView = !(d.isValidation = props.validation); } );
     }
     const destroy = (viewPoint: LViewPoint) => {
         SetFieldAction.new(project.id, 'viewpoints', viewPoint.id as any, '-=', false);
@@ -31,40 +31,37 @@ function ViewpointsEditorComponent(props: AllProps) {
         project.activeViewpoint = viewPoint;
     }
     const clone = (viewPoint: LViewPoint) => {
-        const dvp: DViewPoint = DViewPoint.new(`${viewPoint.name} Copy`, '');
-        const lvp: LViewPoint = LViewPoint.fromD(dvp);
-        for(const view of viewPoint.subViews) {
-            const v = view.duplicate();
-            v.viewpoint = lvp;
-        }
+        viewPoint.duplicate(true);
     }
 
     return(<div>
         <div className={'d-flex p-2'}>
-            <b className={'ms-1 my-auto'}>VIEWPOINTS</b>
+            <b className={'ms-1 my-auto'}>Perspectives</b>
             <button className={'btn btn-primary ms-auto'} onClick={add}>
                 <i className={'p-1 bi bi-plus'}></i>
             </button>
         </div>
         {viewpoints.map((viewpoint, index) => {
-            if(!viewpoint) return(<></>);
             return <div key={index} className={'d-flex p-1 mt-1 border round mx-1'}
                         onMouseEnter={(e) => setHoverID(viewpoint.id)}
                         onMouseLeave={(e) => setHoverID('')}
                         style={{backgroundColor: (active.id === viewpoint.id) ? 'white' :
                                 (hoverID === viewpoint.id ? '#E0E0E0' : 'transparent')}}>
                 <input className={'p-0 input hidden-input'} value={viewpoint.name} type={'text'}
-                       onChange={(evt) => {editName(evt, viewpoint)}} disabled={index === 0} />
-                <Input className={"ms-auto"} data={viewpoint} field={"isExclusiveView"} type={"checkbox"} label={"Is exclusive"} readonly= {index <= 1} />
-                <button className={'btn btn-success ms-1'} disabled={active.id === viewpoint.id}
+                       onChange={(evt) => {editName(evt, viewpoint)}} disabled={index <= 0} />
+                <Input className={"ms-auto"} data={viewpoint} field={"isExclusiveView"} type={"checkbox"}
+                       label={"Is exclusive"} readonly={props.validation || index <= 0} />
+                {(!props.validation || true) && <button className={'btn btn-success ms-1'} disabled={active.id === viewpoint.id}
                         onClick={(evt) => {select(viewpoint)}}>
                     <i className={'p-1 bi bi-check2'}></i>
                 </button>
+                // todo: validation views should not be "activable" but so far it is the only way to see the subviews in it.
+                }
                 <button className={'btn btn-success ms-1'}
                         onClick={(evt) => {clone(viewpoint)}}>
                     <i className={'p-1 bi bi-clipboard2-fill'}></i>
                 </button>
-                <button className={'btn btn-danger ms-1'} disabled={index <= 1 || active.id === viewpoint.id}
+                <button className={'btn btn-danger ms-1'} disabled={index <= 0 || active.id === viewpoint.id}
                         onClick={() => destroy(viewpoint)}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
                 </button>
@@ -75,7 +72,9 @@ function ViewpointsEditorComponent(props: AllProps) {
         </label>
     </div>);
 }
-interface OwnProps { }
+interface OwnProps {
+    validation: boolean;
+}
 interface StateProps {
     project: LProject;
     viewpoints: LViewPoint[];
@@ -90,7 +89,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const user: LUser = LUser.fromPointer(DUser.current);
     const project = U.wrapper<LProject>(user.project);
     ret.project = project;
-    ret.viewpoints = project.viewpoints;
+    ret.viewpoints = project.viewpoints.filter( (vp) => !!vp && vp.isValidation === ownProps.validation);
     ret.active = project.activeViewpoint;
     return ret;
 }

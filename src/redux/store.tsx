@@ -183,9 +183,9 @@ export class DState extends DPointerTargetable{
 
     static init(store?: DState): void {
         BEGIN()
-        // const viewpoint = DViewPoint.new('Default', '', undefined, '', '', '', [], '', 0, false);
         const viewpoint = DViewPoint.new2('Default', '', (vp)=>{ vp.isExclusiveView = false; }, true, 'Pointer_ViewPointDefault');
-        const validationViewpoint = DViewPoint.new2('Validation', '', (vp)=>{ vp.isExclusiveView = false; }, true, 'Pointer_ViewPointValidation');
+        const validationViewpoint = DViewPoint.new2('Validation default', '', (vp)=>{ vp.isExclusiveView = false; vp.isValidation = true;}, true, 'Pointer_ViewPointValidation');
+
         Log.exDev(viewpoint.id !== Defaults.viewpoints[0], "wrong vp id initialization", {viewpoint, def:Defaults.viewpoints});
         const views: DViewElement[] = makeDefaultGraphViews(viewpoint.id, validationViewpoint.id);
 

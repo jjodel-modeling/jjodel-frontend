@@ -72,6 +72,7 @@ export class DViewElement extends DPointerTargetable {
 
 
     // own properties
+    isValidation!: boolean; // only for root views (ex viewpoints) to group views semantically.
     name!: string;
     isExclusiveView!: boolean;
 
@@ -145,13 +146,13 @@ export class DViewElement extends DPointerTargetable {
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
-                      priority?: number, persist: boolean = true, isDefaultView: boolean = false, vp?: Pointer<DViewPoint>): DViewElement {
+                      priority?: number, persist: boolean = true, isDefaultView: boolean = false, vp?: Pointer<DViewPoint> | 'skip'): DViewElement {
         let id = isDefaultView ? 'Pointer_View' + name : undefined;
         return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id).DPointerTargetable().DViewElement(name, jsxString, vp, defaultVSize, usageDeclarations, constants,
             preRenderFunc, appliableToClasses, oclCondition, priority).end();
 
     }
-    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true, vp?: Pointer<DViewPoint>, id?: string): DViewElement {
+    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true, vp?: Pointer<DViewPoint> | 'skip', id?: string): DViewElement {
         // let id = isDefaultView ? 'Pointer_View' + name : undefined;
         return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id)
             .DPointerTargetable().DViewElement(name, jsxString, vp).end(callback);
@@ -176,6 +177,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
 
     // own properties
+    isValidation!: boolean; // only for root views (ex viewpoints) to group views semantically.
     name!: string;
     __info_of__name: Info = {isGlobal: true, type: ShortAttribETypes.EString, txt:<div>Name of the view</div>}
     isOverlay!:boolean;
@@ -221,7 +223,6 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     protected _defaultGetter(c: Context, k: keyof Context["data"]): any { return this.__defaultGetter(c, k); }
 
     protected _defaultSetter(v: any, c: Context, k: keyof Context["data"]): any { return this.__defaultSetter(v, c, k); }
-
 
     jsxString!: string;
     __info_of__jsxString: Info = {isGlobal: true, type: "text", label:"JSX template",
@@ -794,7 +795,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return (LViewPoint.fromPointer(context.data.viewpoint as Pointer<DViewPoint>));
     }
     // public set_subViews(v: Pointer<DViewPoint>[], context: Context): boolean { return this.cannotSet('subViews, call set_viewpoint on the sub-elements instead.'); }
-    public set_viewpoint(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement): boolean {
+
+    // WARNING!! if there are mass vp assignments, preserveOrder=true will cause a vp to "lose" subviews and keep only the last assigned.
+    public set_viewpoint(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement, preserveOrder: boolean = false): boolean {
         let ret = false;
         let vpid: Pointer<DViewPoint> = v && Pointers.from(v);
         const data =  (manualDview || context.data);
@@ -814,7 +817,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 let copyPos = name.indexOf("Copy");
                 let oldSubViews = DPointerTargetable.fromPointer(vpid).subViews;
                 let insertBefore: string = '';
-                let subViews: GObject;
+                let subViews: GObject = {};
                 if (copyPos) {
                     let copiedFromName: string = copyPos ? name.substring(0, copyPos).trim() : '';
                     if (copiedFromName in oldSubViews) insertBefore = copiedFromName;
@@ -822,16 +825,19 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                         for (let key in oldSubViews) if (key.indexOf(copiedFromName) === 0) { insertBefore = key; break; }
                     }
                 }
-                // reinsert subviews in order so Object.keys() fits the new subview near the cloned one.
-                if (insertBefore) {
+
+
+                // WARNING!! if there are mass vp assignments, this will cause a vp to "lose" subviews and keep only the last assigned.
+                if (preserveOrder && insertBefore) {
                     subViews = {};
                     for (let key in oldSubViews) {
                         subViews[key] = oldSubViews[key];
-                        if (key === insertBefore) subViews[id] = subViews[key];
+                        // just to reinsert subviews **in order** so Object.keys() fits the new subview near the cloned one.
+                        if (key === insertBefore) subViews[id] = subViews[insertBefore];
                     }
                 } else { subViews = {...oldSubViews}; subViews[id] = 1.5; }
-
-                SetFieldAction.new(vpid, "subViews", subViews, '', true);
+                subViews[id] = insertBefore ? subViews[insertBefore] : 1.5;
+                SetFieldAction.new(vpid, "subViews", subViews, '+=', true);
             }
         })
         return ret;
@@ -934,25 +940,62 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 // @ts-ignore for $ at end of getpath
                 'idlookup.' + context.data.id + '.' + (getPath as LViewElement).__transient.$); }*/
 
-    public duplicate(deep: boolean = true): this {
+
+    public duplicate(deep: boolean = true, new_vp?: DuplicateVPChange): this {
         return this.wrongAccessMessage( (this.constructor as typeof RuntimeAccessibleClass).cname + "duplicate()"); }
-    protected get_duplicate(c: Context): ((deep?: boolean) => LViewElement) {
-        return (deep: boolean = false) => {
+    protected get_duplicate(c: Context): ((deep?: boolean, new_vp?: DuplicateVPChange) => LViewElement) {
+        return (deep: boolean = false, new_vp0?: DuplicateVPChange) => {
+            console.log("DViewelement.duplicate", {cn: c.data.className, n:c.data.name, deep, new_vp0});
             let lview: LViewElement = undefined as any;
+            let state: DState = store.getState();
             TRANSACTION( () => {
-                let vpid: Pointer<DViewPoint> = c.data.viewpoint as Pointer<DViewPoint>;
-                const dclone: DViewElement = DViewElement.new2(`${c.data.name} Copy`, '', undefined, true, '');
+                let pvid: Pointer<DViewPoint> = c.data.viewpoint as Pointer<DViewPoint>;
+                const dclone: DViewElement = c.data.className === 'DViewPoint' ?
+                    DViewPoint.new2(`${c.data.name} Copy`, '', undefined, true) :
+                    DViewElement.new2(`${c.data.name} Copy`, '', undefined, true, 'skip');
                 lview = LPointerTargetable.fromD(dclone);
+                const new_vp: DuplicateVPChange = new_vp0 || {pvid};
+                // || {pvid,  score: (DPointerTargetable.from(pvid, state) as DViewElement).subViews[c.data.id]}
+
                 for (let key in c.data) {
                     switch(key) {
+                        case 'subViews':
+                            // duplicate childrens only if deep
+                            if (!deep) break;
+                            // let subviews: Dictionary<Pointer, number> = {}
+                            for (const oldvid in c.data.subViews) {
+                                const oldScore = c.data.subViews[oldvid];
+                                (LPointerTargetable.fromPointer(oldvid, state) as LViewElement).duplicate(deep, {pvid:dclone.id/*, score:oldScore*/});
+                                // then everything is set inside case 'viewpoint' of subviews cloning
+                            }
+                            //lview.subViews = subviews as any;
+                            break;
+                        case 'father':
+                        case 'viewpoint':
+                            // update parent view
+                            /*
+                            let subviews: Dictionary<Pointer, number> = {};
+                            subviews[dclone.id] = new_vp.score;
+                            SetFieldAction.new(new_vp.pvid, 'subViews', subviews, '+=', true);
+                            SetFieldAction.new(dclone.id, 'viewpoint', new_vp.pvid, '+=', true);*/
+                            // insert in-place right after the cloned view, with old score.
+                            this.set_viewpoint(new_vp.pvid, undefined as any, dclone, !deep);
+                            // SetFieldAction.new(dclone.id, 'father', new_vp.vpid, '+=', true);
+                            break;
+                        case '':
                         case 'id':
+                        case 'name':
                         case 'className':
                         case 'pointedBy':
                         case '_storePath':
                         case '_subMaps':
-                        case '':
                         case 'clonedCounter': break;
+                        case 'css_MUST_RECOMPILE': break;
 
+                        case 'isValidation':
+                            console.log("duplicate " + c.data.name + " set isvalidation", {data:c.data, iv:c.data.isValidation});
+                            (lview as any)[key] = (c.data as any)[key];
+                            break;
                         default:
                             try {
                                 (lview as any)[key] = (c.data as any)[key];
@@ -968,7 +1011,6 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 // let oldViews: Pointer<DViewElement>[] = Object.keys(vp.__raw.subViews);
                 // if (Defaults.viewpoints.indexOf(vpid)) oldViews = oldViews.filter( vid => !defaultViews[vid]);
                 // let i: number = oldViews.indexOf(c.data.id);
-                this.set_viewpoint(vpid, undefined as any, dclone);//, i === -1 ? -1 : i+1); // insert in-place right after the cloned view
                 /*
                 if (i === -1) oldViews.push(dclone.id);
                 else oldViews.splice(i+1, 0, dclone.id); // insert in-place right after the cloned view
@@ -976,7 +1018,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 // SetRootFieldAction.new('stackViews', dview.id, '+=', true);
 
 
-                SetRootFieldAction.new(`viewelements`, c.data.id, '+=', true);
+                const isVP = c.data.className === 'DViewPoint';
+                if (isVP) SetRootFieldAction.new(`viewpoints`, c.data.id, '+=', true);
+                else SetRootFieldAction.new(`viewelements`, c.data.id, '+=', true);
                 for (let key of DViewElement.RecompileKeys) SetRootFieldAction.new(`VIEWS_RECOMPILE_${key}`, c.data.id, '+=', false);
             })
             return lview;
@@ -985,6 +1029,11 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 }
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DViewElement);
 RuntimeAccessibleClass.set_extend(LPointerTargetable, LViewElement);
+
+type DuplicateVPChange = {
+    pvid: Pointer<DViewElement>,
+    // score: number //unused
+}
 export type WViewElement = getWParams<LViewElement, DPointerTargetable>;
 
 @RuntimeAccessible('DViewTransientProperties')

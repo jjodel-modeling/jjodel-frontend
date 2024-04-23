@@ -83,7 +83,7 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
     private treeEditor = { id: '2', title: 'Tree View', group: 'group2', closable: false, content: <TreeEditor /> };
     private viewsEditor = { id: '3', title: 'Views', group: 'group2', closable: false, content: <ViewsEditor /> };
     private styleEditor = { id: '4', title: 'Node', group: 'group2', closable: false, content: <StyleEditor /> };
-    private viewpointEditor = { id: '6', title: 'Viewpoints', group: 'group2', closable: false, content: <ViewpointEditor /> };
+    private viewpointEditor = { id: '6', title: 'Viewpoints', group: 'group2', closable: false, content: <ViewpointEditor validation={false} /> };
     private console = { id: '7', title: 'Console', group: 'group2', closable: false, content: <Console /> };
 
     private views = this.props.views;
