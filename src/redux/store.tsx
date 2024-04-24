@@ -372,13 +372,14 @@ function makeDefaultZoomView(vp: Pointer<DViewPoint>): void{
 function makeDefaultGraphViews(vp: Pointer<DViewPoint>, validationVP: Pointer<DViewPoint>): DViewElement[] {
 
     let errorOverlayView: DViewElement = DViewElement.new2('Semantic error view', DV.semanticErrorOverlay(), (v) => {
-        v.jsCondition = 'Object.values(node.state.errors || {}).join().length>0';
+        v.jsCondition = 'let nstate = node.state;\nObject.keys(nstate).filter(k => k.indexOf("error_")===0).map(k=>nstate[k]).join(\'\\n\').length>0';
         v.usageDeclarations = "(ret)=>{\n" +
         "// ** preparations and default behaviour here ** //\n" +
         "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
         "// ** declarations here ** //\n" +
-        "// console.log('overlayView ud inner ' + data.name, {errs:node.state.errors, node, noder:node.r, data});\n" +
-        "ret.errors = Object.values(node.state.errors || {});\n" +
+        "// console.log('overlayView ud inner ' + data.name, {errs:node.state, node, noder:node.r, data});\n" +
+        "ret.nstate = node.state\n" +
+        "ret.errors = Object.keys(ret.nstate).filter(k => k.indexOf(\"error_\")===0).map(k=>ret.nstate[k])\n" +
         "\n}"
         v.isExclusiveView = false;
         v.css =
@@ -417,34 +418,27 @@ let err = undefined;
 //if (name.indexOf(" ") >= 0) err = "" + type + " names cannot contain white spaces."; else
 if (name.length === 0 && type !== "shapeless") err = type + "es must be named.";
 else if (!name[0].match(/[A-Za-z_$]/)) err = type + " names must begin with an alphabet letter or $_ symbols.";
-else if (!name.match(/[A-Za-z_$]+[A-Za-z0-9$_]+/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
-node.state = {errors:{naming:err}};
-// if (!node.state.errors) node.state.errors = {naming:err};
-// else if (node.state.errors.naming !== err) node.state.errors = {...node.state.errors, naming: err};
+else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]+$/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
+node.state = {error_naming:err};
 `;}, false, validationVP, 'Pointer_ViewCheckName' );
 
 let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), (v) => {
-            v.jsCondition = '(data, node)=> {\nnode.state.errors?.length>0';
+            // v.jsCondition = '(data, node)=> {\nnode.state.errors?.length>0';
             v.appliableToClasses = ['DValue'];
             v.isExclusiveView = false;
             v.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
                 "// ** preparations and default behaviour here ** //\n" +
                 "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
                 "// ** declarations here ** //\n" +
-                "ret.missingLowerbound = Math.min(0, data.lowerBound - data.values.length);\n" +
-                "ret.valuesLength = data.values.length;"+
+                "ret.valuesLength = data.values.filter(v=>(v!==undefined && v!=='')).length;\n"+
+                "ret.missingLowerbound = Math.max(0, data.lowerBound - ret.valuesLength);\n" +
                 "}";
             v.onDataUpdate = `
-node.state = {errors{lowerbound: missingLowerbound > 0 ? (data.className.substring(1)) + " Lowerbound violation, missing ' + missingLowerbound + ' values.'." : undefined}};
+let err = undefined;\n
+if (missingLowerbound > 0) err = (data.className.substring(1))\n
+ \t\t+ ' Lowerbound violation, missing ' + missingLowerbound + ' values.';\n
+node.state = {error_lowerbound: err};\n
 `;
-        v.css =
-`&.mainView { text-decoration-line: spelling-error; }
-&.decorativeView {
-    [data-field="name"]{
-        text-decoration-line: spelling-error;
-        outline: 4px solid var(--background-3);
-     }
-}`
     }, false, validationVP, 'Pointer_ViewLowerbound' );
     // errorOverlayView.oclCondition = 'context DValue inv: self.value < 0';
 

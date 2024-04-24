@@ -186,7 +186,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         (Array.prototype as any).separator = function(...separators: any[]/*: orArr<(PrimitiveType | null | undefined | JSX.Element)[]>*/): (string|JSX.Element)[]{
             if (Array.isArray(separators[0])) separators = separators[0]; // case .join([1,2,3])  --> .join(1, 2, 3)
             // console.log("separators debug", this, separators, this[0], typeof this[0]);
-            if (typeof this[0] !== "object") return (this as any).joinOriginal(separators);
+            // if (typeof this[0] !== "object") return (this as any).joinOriginal(separators);
             // if JSX
             // it handles empty cells like it handles '', but this is how native .join() handles them too: [emptyx5, "a", emptyx1, "b"].join(",") ->  ,,,,,a,,b
             let ret/*:JSX.Element[]*/ = [];

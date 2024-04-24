@@ -26,7 +26,6 @@ function ModelMetaDataComponent(props:AllProps): ReactElement{
                    onChange={(e)=>{ props.data.state={icon:e.target.value}}}/>
             {props.data.state.icon && <img className={"ms-1 my-auto"} style={{maxWidth: "50px", maxHeight: "50px"}} src={props.data.state.icon} alt={"Invalid url/data"}/>}
         </label>}
-
         </>}
     </div>);
 }

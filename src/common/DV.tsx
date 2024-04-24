@@ -149,7 +149,7 @@ export class DV {
 </section>`
 )}    static semanticErrorOverlay() { return (
 `<section className="overlap">
-    <div className="error-message">{errors.join(',')}</div>
+    <div className="error-message">{errors.join(<br/>)}</div>
 </section>`
 )}
 
@@ -320,7 +320,7 @@ public static parameter(): string { return (
 `<div className={'root d-flex value'}>
      {instanceofname && <label className={'d-block ms-1'}>{instanceofname}</label>}
      {!instanceofname && <Input asLabel={true} data={data} field={'name'} hidden={true} autosize={true} />}
-    <label className={'d-block m-auto'} style={{color: constants[typeString] || 'gray'}}>
+    <label className={'d-block m-auto'} style={{color: constants[typeString] || 'gray', maxWidth:'100px'}}>
         : {valuesString}
     </label>
     {decorators}
@@ -350,7 +350,7 @@ public static parameter(): string { return (
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         return `<div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
             <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
-                <b>{errortype} ERROR on {${dname ? dname : ''} + (false ? ' / ' + ${nodename} : '')})</b>
+                <b>{errortype}_ERROR on {${dname ? dname : ''} + (false ? ' / ' + ${nodename} : '')})</b>
                 <hr/>
                 <label className={'text-center mx-1 d-block'}>
                     While applying view "${v?.name}"
