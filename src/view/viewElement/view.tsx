@@ -123,6 +123,7 @@ export class DViewElement extends DPointerTargetable {
     onRotationStart!: string;
     onRotationEnd!: string;
     whileRotating!: string;
+    events!: string[];
     bendingMode!: EdgeBendingMode;
     edgeGapMode!: EdgeGapMode;
     //useSizeFrom!: EuseSizeFrom;
@@ -658,6 +659,18 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         TRANSACTION(()=>{
             SetFieldAction.new(context.data, 'onDataUpdate', val, '', false);
             SetRootFieldAction.new('VIEWS_RECOMPILE_onDataUpdate', context.data.id, '+=', false);
+        })
+        return true;
+    }
+
+    events!: string[];
+    protected get_events(context: Context): this['events'] {
+        return context.data.events;
+    }
+    protected set_events(val: this['events'], context: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'events', val, '', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_events', context.data.id, '+=', false);
         })
         return true;
     }

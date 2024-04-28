@@ -78,9 +78,11 @@ function InfoDataComponent(props: AllProps) {
                 })}
             </select>
         </div>
-        <OclEditor viewid={view.id} readonly={readOnly} />
-        <span>OCL engine by Stephan Köninger, <a href={"https://ocl.stekoe.de/#examples"}>Supported instructions</a></span>
-        <JsEditor viewid={view.id} readonly={readOnly} placeHolder={'/* Last Line should be the return (boolean) */\n'} />
+        <OclEditor viewID={view.id} />
+        <JsEditor
+            viewID={view.id} field={'jsCondition'}
+            placeHolder={'/* Last Line should be the return (boolean) */'}
+        />
     </section>);
 }
 

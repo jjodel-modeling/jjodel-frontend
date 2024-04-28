@@ -866,9 +866,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.constants = undefined; // '{}';
         thiss.preRenderFunc = ''; // '() => {return{}}';
         thiss.onDragEnd = thiss.onDragStart = thiss.whileDragging =
-            thiss.onResizeEnd = thiss.onResizeStart = thiss.whileResizing = '';
+        thiss.onResizeEnd = thiss.onResizeStart = thiss.whileResizing = '';
         thiss.onRotationEnd = thiss.onRotationStart = thiss.whileRotating = '';
-        thiss.onDataUpdate = '';
+        thiss.onDataUpdate = ''; thiss.events = [];
         // thiss.__transient = new DViewTransientProperties();
         thiss.subViews = {};
         thiss.oclCondition = oclCondition || '';

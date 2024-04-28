@@ -90,11 +90,14 @@ function ContextMenuComponent(props: AllProps) {
             if(!reference.containment) continue;
             const feature =  U.wrapper<LValue>(object[`$${reference.name}`]);
             if(feature.values.length >= reference.upperBound && reference.upperBound !== -1) continue;
-            list.push(<div onClick={() => {
-                close();
-                const child = object.model.addObject({}, reference.type);
-                SetFieldAction.new(feature.id, 'values', child.id, '+=', true);
-            }} className={'col item'}>Add {reference.name}</div>);
+            const options = [reference.type, ...reference.type.allSubClasses].filter(o => !o.abstract);
+            for(const option of options) {
+                list.push(<div onClick={() => {
+                    close();
+                    const child = object.model.addObject({}, option);
+                    feature.values = [...(feature.values as LObject[]), child];
+                }} className={'col item'}>Add {reference.name}: {option.name}</div>);
+            }
         }
         return list;
     }
