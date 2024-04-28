@@ -95,6 +95,8 @@ export class EdgeOwnProps extends GraphElementOwnProps {
     end!: LGraphElement["id"];
     label?: DEdge["longestLabel"];
     labels?: DEdge["labels"];
+    anchorStart?: string;
+    anchorEnd?: string;
 }
 
 export class EdgeStateProps extends GraphElementReduxStateProps {

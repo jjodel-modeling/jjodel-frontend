@@ -11,8 +11,24 @@ let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPac
 // todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or remo**ved
 /**
 
-copy a class view, give it higher prio. it will not be applied.
-on view duplicate, css is not recompiled
+<div onDragEnd={"dragAnchor("+i+")"}></div>
+<div onDragEnd={e()=> node.anchor[1].x = e.x;}></div>
+<div onDragEnd={e()=> node.anchor[2].x = e.x;}></div>
+
+
+ anchor roadmap
+ 1) multi ondrag... events with names
+ 2) jqui handling subelements with "draggable resizable rotatable" classes (or attributes or ondrag-* events)
+ 3) per dopo: edges able to target node with named anchors  how? end={nodeend} anchorEnd={anchorname} ? or end={node.id+'#'+anchorname}? the second one makes harder to allow end={dmodelelement}
+
+
+
+ */
+// todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or remo**ved
+/**
+ copy a class view, give it higher prio. it will not be applied.
+ on view duplicate, css is not recompiled
+
 
 
 

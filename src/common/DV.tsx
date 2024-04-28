@@ -34,6 +34,13 @@ export class DV {
         console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error_string(visibleMessage, errortype, data, node, v); }
 
+    // {ancors.map( a => <EdgePoint view={"aaaaa"} initialSize={{x: node.w * a.x, y: node.h * a.y}}/>)}
+    public static anchorJSX(): string { return (`
+<div className={"overlay overlap"}>
+{ancors.map( (a, i) => <div className={"anchor draggable resizable"} data-anchorName={a.name} onDragEnd={"dragAnchor("+i+")"}
+    style={{left: a.x+'%', y: top:node.h * a.y+'px', width:a.w+'px', height:a.h+'px'}} />)}
+</div>
+`);}
     static edgePointView(): string { return beautify((
 `<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"white", width:"100%", height:"100%"}}>
     {decorators}
