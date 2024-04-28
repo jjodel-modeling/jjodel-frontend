@@ -262,6 +262,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let longestLabel = edgeOwnProps.label;
                 let labels: DEdge["labels"] = edgeOwnProps.labels || [];
                 dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, longestLabel, labels);
+                /*dge = DEdge.new2(ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, (d)=>{
+                    d.longestLabel = longestLabel;
+                    d.labels = labels;
+                    d.zIndex = ownProps.htmlindex || 1;
+                    if (edgeOwnProps.anchorStart) d.anchorStart = edgeOwnProps.anchorStart;
+                    if (edgeOwnProps.anchorEnd) d.anchorEnd = edgeOwnProps.anchorEnd;
+                });*/
                 edgeStateProps.node = edgeStateProps.edge = MyProxyHandler.wrap(dge);
             }
             else {
