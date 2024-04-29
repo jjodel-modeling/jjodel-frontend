@@ -188,7 +188,7 @@ class DefaultView {
     {!data && "Model data missing."}
     <div className={'edges'}>
         {[
-            refEdges.map(se => <Edge start={se.start.father.node} end={se.end.node} view={'Pointer_ViewEdge' + ( se.start.containment && 'Composition' || 'Association')} key={'REF_' + se.start.node.id + '~' + se.end.node.id} />), 
+            refEdges.map(se => <Edge anchorStart={1} anchorEnd={2} start={se.start.father.node} end={se.end.node} view={'Pointer_ViewEdge' + ( se.start.containment && 'Composition' || 'Association')} key={'REF_' + se.start.node.id + '~' + se.end.node.id} />), 
             extendEdges.map(se => <Edge start={se.start} end={se.end} view={'Pointer_ViewEdgeInheritance'} key={'EXT_' + se.start.node.id + '~' + se.end.node.id} />)
         ]}
     </div>
