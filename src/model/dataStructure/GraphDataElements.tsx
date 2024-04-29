@@ -85,6 +85,7 @@ export class DGraphElement extends DPointerTargetable {
     favoriteNode!: boolean;
     edgesIn!: Pointer<DEdge>[];
     edgesOut!: Pointer<DEdge>[];
+    anchors!: Dictionary<string, GraphPoint/* as % of node size.*/>;
 
 
     public static new(htmlindex: number, model: DGraphElement["model"]|null|undefined, parentNodeID: DGraphElement["father"],
@@ -170,6 +171,19 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __info_of__graphAncestors: Info = {type:"LGraph[]",
         txt:"<span>collection of the stack of Graphs containing the current element where [0] is the most nested graph, and last is root graph.</span>"};
     graphAncestors!: LGraph[];
+
+    anchors!: Dictionary<string, GraphPoint/* as % of node size.*/>;
+    __info_of__anchors: Info = {type:"Dictionary<string, point>", txt: <div>A named list of all anchor points where edges are allowed to land or depart from.<br/>
+            {/*When reading it is in absolute sizes.<br/>*/}
+            When writing it must be done in percentages, with the same rules as node.state.</div>}
+    get_anchors(c: Context): this["anchors"]{ return c.data.anchors; }
+    set_anchors(v: this["anchors"], c: Context):boolean{
+        if (v !== undefined && (typeof v !== "object" || Array.isArray(v))){
+            Log.ee('cannot set anchors: invalid value provided');
+            return true;
+        }
+        SetFieldAction.new(c.data, "anchors", v, '+=', false);
+        return true; }
 
     edgesIn!: LVoidEdge[];
     edgesOut!: LVoidEdge[];
@@ -1226,14 +1240,23 @@ export class DVoidEdge extends DGraphElement {
 
     longestLabel!: PrimitiveType | labelfunc;
     labels!: PrimitiveType[] | labelfunc[];
+    anchorStart!: string;
+    anchorEnd!: string;
 
     public static new(htmlindex: number, model: DGraph["model"]|null|undefined, parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"],
                       nodeID: DGraphElement["id"]|undefined, start: DGraphElement["id"], end: DGraphElement["id"],
-                      longestLabel: DEdge["longestLabel"], labels: DEdge["labels"]): DEdge {
+                      longestLabel?: DEdge["longestLabel"], labels?: DEdge["labels"]): DEdge {
         return new Constructors(new DEdge('dwc'), parentNodeID, true, undefined, nodeID)
             .DPointerTargetable()
             .DGraphElement(model, graphID, htmlindex)
             .DVoidEdge(start, end, longestLabel, labels).end();
+    }
+    public static new2(model: DGraph["model"]|null|undefined, parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"],
+                       nodeID: DGraphElement["id"]|undefined, start: DGraphElement["id"], end: DGraphElement["id"], setter:((d: DEdge) => any)): DEdge {
+        return new Constructors(new DEdge('dwc'), parentNodeID, true, undefined, nodeID)
+            .DPointerTargetable()
+            .DGraphElement(model, graphID)
+            .DVoidEdge(start, end).end(setter);
     }
 }
 /*
@@ -1712,26 +1735,58 @@ replaced by startPoint
         return ret;
     }
 
-    private get_points_impl(allNodes: LGraphElement[], outer: boolean): segmentmaker[] {
-        function getAnchorOffset(size: GraphSize, offset: GraphPoint, isPercentage: boolean) {
+    private get_points_impl(allNodes: LGraphElement[], outer: boolean, c:Context): segmentmaker[] {
+        function getAnchorOffset(size: GraphSize, offset: GraphPoint, isPercentage: boolean, $factor: number = 100) {
             if (!size) size = new GraphSize(0, 0, 0, 0);
-            if (isPercentage) offset = new GraphPoint(offset.x/100*(size.w), offset.y/100*(size.h));
+            // else if (!size.tl) size = new GraphSize(size.x, size.y, size.w, size.h);
+            if (isPercentage) offset = new GraphPoint(offset.x/$factor*(size.w), offset.y/$factor*(size.h));
             return size.tl().add(offset, false);
         }
         const all: segmentmaker[] = allNodes.flatMap((ge, i) => {
+            let dge = ge.__raw;
             let base: segmentmaker = {view: ge.view, size: outer ? ge.outerSize : ge.innerSize, ge, pt: null as any, uncutPt: null as any};
             let rets: segmentmaker | undefined;// = base as any;
             let rete: segmentmaker | undefined;// = {...base} as any;
+            let debug = true;
+            if (debug) {
+                (base as any).anchor_e = dge.anchors[c.data.anchorEnd || 0] || dge.anchors[Object.keys(dge.anchors)[0]];
+                (base as any).anchor_s = dge.anchors[c.data.anchorStart || 0] || dge.anchors[Object.keys(dge.anchors)[0]];
+            }
+
+            // get endpoint, then startpoint (land on midnode, then depart from it)
             if (i !== 0){
-                rete = {...base};
-                rete.pt = (LEdgePoint.singleton as LEdgePoint).get_endPoint(undefined as any, rete.size, rete.view);
-                rete.pt = getAnchorOffset(rete.size, rete.view.edgeStartOffset, rete.view.edgeStartOffset_isPercentage);
+                if (i === allNodes.length - 1) {
+                    rete = {...base};
+                    // get end anchor from node
+                    let anchor = dge.anchors[c.data.anchorEnd || 0];
+                    if (!anchor) anchor = dge.anchors[Object.keys(dge.anchors)[0]];
+                    if (anchor) rete.pt = getAnchorOffset(rete.size, anchor, true, 1);
+                    else rete = undefined;
+                }
+                // if no anchor, treat the node as a midpoint
+                if (!rete) {
+                    rete = {...base};
+                    // get ending point from midpoint
+                    rete.pt = (LEdgePoint.singleton as LEdgePoint).get_endPoint(undefined as any, rete.size, rete.view);
+                    rete.pt = getAnchorOffset(rete.size, rete.view.edgeStartOffset, rete.view.edgeStartOffset_isPercentage);
+                }
                 rete.uncutPt = rete.pt;
             }
             if (i !== allNodes.length - 1){
                 rets = {...base};
-                rets.pt = (LEdgePoint.singleton as LEdgePoint).get_startPoint(undefined as any, rets.size, rets.view);
-                rets.pt = getAnchorOffset(rets.size, rets.view.edgeStartOffset, rets.view.edgeStartOffset_isPercentage);
+                if (i === 0) {
+                    // get start anchor from node
+                    let anchor = dge.anchors[c.data.anchorStart || 0];
+                    if (!anchor) anchor = dge.anchors[Object.keys(dge.anchors)[0]];
+                    if (anchor) rets.pt = getAnchorOffset(rets.size, anchor, true, 1);
+                    else rets = undefined;
+                }
+                if (!rets) {
+                    rets = {...base};
+                    // rets starting point from midpoint
+                    rets.pt = (LEdgePoint.singleton as LEdgePoint).get_startPoint(undefined as any, rets.size, rets.view);
+                    rets.pt = getAnchorOffset(rets.size, rets.view.edgeStartOffset, rets.view.edgeStartOffset_isPercentage);
+                }
                 rets.uncutPt = rets.pt;
             }
             // ret.pt = ge.startPoint
@@ -1739,9 +1794,10 @@ replaced by startPoint
         );
         return all;
     }
-    private get_points(allNodes: LGraphElement[], outer: boolean = false): segmentmaker[]{ return this.get_points_impl(allNodes, outer); }
-    private get_points_outer(allNodes: LGraphElement[]): segmentmaker[]{ return this.get_points_impl(allNodes, true); }
-    private get_points_inner(allNodes: LGraphElement[]): segmentmaker[]{ return this.get_points_impl(allNodes, false); }
+    private get_pointsDebug(c: Context): segmentmaker[]{ return this.get_points_impl(this.get_allNodes(c), true, c); }
+    private get_points(allNodes: LGraphElement[], outer: boolean = false, c: Context): segmentmaker[]{ return this.get_points_impl(allNodes, outer, c); }
+    private get_points_outer(allNodes: LGraphElement[], c: Context): segmentmaker[]{ return this.get_points_impl(allNodes, true, c); }
+    private get_points_inner(allNodes: LGraphElement[], c: Context): segmentmaker[]{ return this.get_points_impl(allNodes, false, c); }
     public d!: string;
     public __info_of__d: Info = {type: ShortAttribETypes.EString, txt:"the full suggested path of SVG path \"d\" attribute, merging all segments."}
     public get_d(c: Context) {
@@ -1760,7 +1816,7 @@ replaced by startPoint
         let v = this.get_view(c);
         let allNodes = l.allNodes;
         windoww.edge = l;
-        let all: segmentmaker[] = this.get_points(allNodes, outer);
+        let all: segmentmaker[] = this.get_points(allNodes, outer, c);
         //const all: {size: GraphSize, view: LViewElement, ge: LGraphElement}[] = allNodes.map((ge) => { return { view: ge.view, size: ge.size, ge}});
         let ret: EdgeSegment[] = [];
         let bm: EdgeBendingMode = v.bendingMode;

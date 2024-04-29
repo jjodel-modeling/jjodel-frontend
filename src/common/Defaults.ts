@@ -20,7 +20,8 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
         'Pointer_ViewEdgeInheritance',
         'Pointer_ViewEdgeAggregation',
         'Pointer_ViewEdgeComposition',
-        'Pointer_ViewEdgePoint'
+        'Pointer_ViewEdgePoint',
+        // 'Pointer_ViewAnchors',
     ];
     // @ts-ignore
     static defaultViewsMap: Dictionary<Pointer, boolean> = Defaults.views.reduce((acc, val) => { acc[val] = true; return acc; }, {}); // U.objectFromArrayValues(Defaults.views);

@@ -370,8 +370,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         while (rootModel && rootModel.className !== "DModel") rootModel = DPointerTargetable.fromPointer(rootModel.father, state);
         let mid: Pointer<DModel> = rootModel?.id; // NB: for EBoolean etc, primitive type meteclasses don't have a model;
         if (!RuntimeAccessibleClass.OCL_Constructors[mid]) {
-            RuntimeAccessibleClass.OCL_Constructors[mid] = {};
-            RuntimeAccessibleClass.OCL_Constructors[mid].__proto__ = RuntimeAccessibleClass.classes;
+            RuntimeAccessibleClass.OCL_Constructors[mid] = {...RuntimeAccessibleClass.classes};
         }
         const OclConstructor: GObject = data;
         let namefixed: string;
@@ -391,6 +390,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     }
 
     static getOCLClasses(model_id: Pointer<DModel>): GObject {
+        // return { ...(RuntimeAccessibleClass.OCL_Constructors[model_id] || {}), ...RuntimeAccessibleClass.classes}
         return RuntimeAccessibleClass.OCL_Constructors[model_id] || RuntimeAccessibleClass.classes;
     }
 }
@@ -808,18 +808,20 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     DVertex(): this { return this; }
     DVoidEdge(start: DGraphElement["id"] | DGraphElement | LGraphElement | DModelElement["id"] | DModelElement | LModelElement,
               end: DGraphElement["id"] | DGraphElement | LGraphElement | DModelElement["id"] | DModelElement | LModelElement,
-              longestLabel: DEdge["longestLabel"], labels: DEdge["labels"]): this {
+              longestLabel?: DEdge["longestLabel"], labels?: DEdge["labels"]): this {
         const thiss: DVoidEdge = this.thiss as any;
         let startid: DGraphElement["id"] = (windoww.LGraphElement as typeof LGraphElement).getNodeId(start);
         let endid: DGraphElement["id"] = (windoww.LGraphElement as typeof LGraphElement).getNodeId(end);
         Log.ex(!startid || !endid, "cannot create an edge without start or ending nodes", {start, end, startid, endid});
+        thiss.anchorStart = '0';
+        thiss.anchorEnd = '0';
         thiss.midnodes = [];
         thiss.midPoints = []; // the logic part which instructs to generate the midnodes
         // if (!thiss.model && isDModelElementPointer(startid)) thiss.model = startid;
         // thiss.labels = undefined;
         let ll: labelfunc = (e: LVoidEdge, s: EdgeSegment, allNodes: LGraphElement[], allSegments: EdgeSegment[]
         ) => /*defining the edge label (e.start.model as any)?.name + " ~ " + (e.end.model as any)?.name */" (" + s.length.toFixed(1) + ")";
-        // this is the edge's label (thiss.longestLabel = ll)
+        // complex edge label func example: (thiss.longestLabel = ll)
         thiss.longestLabel = longestLabel;
         this.setPtr("start", startid);
         this.setPtr("end", endid);
@@ -831,7 +833,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     DRefEdge(): this { return this; }
 
     DGraphElement(model: DGraphElement["model"]|null|undefined, parentgraphID: DGraphElement["graph"]|undefined,
-                  htmlindex: number): this {
+                  htmlindex: number = 1): this {
         const thiss: DGraphElement = this.thiss as any;
         thiss.subElements = [];
         thiss.favoriteNode = false;
@@ -840,6 +842,13 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.edgesIn = [];
         thiss.edgesOut = [];
         // thiss.state = {id: thiss.id+".state", className: thiss.className};
+        thiss.anchors = {'0':{x:0.5, y:0.5}, '1':{x:0.5, y:0}, '2':{x:1, y:0.5}, '3':{x:0.5, y:1}, '4':{x:0, y:0.5}} as any;
+        for (let k in (thiss.anchors as GObject)) {
+            let a: GObject = thiss.anchors[k];
+            if (!a.name) a.name = k;
+            if (!a.w) a.w = 15;
+            if (!a.h) a.h = 15;
+        }
 
         this.setPtr("model", model);
         this.setPtr("graph", parentgraphID);

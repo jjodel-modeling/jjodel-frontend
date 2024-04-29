@@ -404,7 +404,7 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>, validationVP: Pointer<DV
 }`
     }, false, validationVP, 'Pointer_ViewOverlay' );
 
-    let anchorView: DViewElement = DViewElement.new2('Naming error view', DV.anchorJSX(), (v) => {
+    let anchorView: DViewElement = DViewElement.new2('Anchors', DV.anchorJSX(), (v) => {
         v.isExclusiveView = false;
         v.palette={'anchor-':['#77f', '#007'], 'anchor-hover-':['#7f7', '#070']}
         v.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
@@ -418,13 +418,16 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>, validationVP: Pointer<DV
     position: absolute;
     background-color: var(--anchor-1);
     outline: 2px solid var(--anchor-2);
+    transform: translate(-50%, -50%);
+    pointer-events: all;
+    cursor: crosshair;
     &:hover{
         background-color: var(--anchor-hover-1);
         outline: 2px solid var(--anchor-hover-2);
     }
 }
 `
-    }, false, vp, 'Pointer_ViewCheckName' );
+    }, false, vp, 'Pointer_ViewAnchors' );
 
     let errorCheckName: DViewElement = DViewElement.new2('Naming error view', DV.invisibleJsx(), (v) => {
         v.isExclusiveView = false;
@@ -554,9 +557,10 @@ node.state = {error_lowerbound: err};\n
     }*/
     // nb: Error is not a view, just jsx. transform it in a view so users can edit it
 
+
     let dv_subviews = [DefaultViews.model(vp), DefaultViews.package(vp), DefaultViews.class(vp), DefaultViews.enum(vp),
         DefaultViews.attribute(vp), DefaultViews.reference(vp), DefaultViews.operation(vp), DefaultViews.parameter(vp),
-        DefaultViews.literal(vp), DefaultViews.object(vp), DefaultViews.value(vp), voidView, ...edgeViews, edgePointView];
+        DefaultViews.literal(vp), DefaultViews.object(vp), DefaultViews.value(vp), anchorView, voidView, ...edgeViews, edgePointView];
 
     let validation_subviews = [errorOverlayView, errorCheckLowerbound, errorCheckName];
     // SetFieldAction.new(vp, 'subViews', U.objectFromArrayValues(dv_subviews.map(dv=>dv.id), 1.5));
