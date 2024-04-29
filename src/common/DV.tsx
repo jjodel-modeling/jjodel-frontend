@@ -52,39 +52,46 @@ export class DV {
         //`<ellipse stroke={"black"} fill={"red"} cx={props.node.x} cy={props.node.y} rx={props.node.w} ry={props.node.h} />`
     )}
 
-    static svgHeadTail(head: "Head" | "Tail", type: EdgeHead): string {
-        let inner: string;
+    static svgHeadTail(head: "Head" | "Tail", type: EdgeHead, onlyAnchor:boolean = false): string {
+        let ret: string;
         let headstr = head==="Head" ? "segments.head" : "segments.tail";
         let styleTranslate = "{}"; // '{transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px)"}';
-        let styleTranslateRotate = '{transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px) rotate(" + (' + headstr + '.rad) + "rad)",' +
-            ' "transformOrigin":'+headstr+'.w/2+"px "+ '+headstr+'.h/2+"px"}';
-        let styleRotate = 'style={{transform:"rotate(" + ' + headstr + '.rad + "rad), transformOrigin:"noooope  not center"}}'; // edgeHead EdgeReference
-        let attrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={strokeColor} strokeWidth={strokeWidth}
+        let styleTranslateRotateCommon = '{transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px) rotate(" + (' + headstr + '.rad) + "rad)",';
+        let headTransformOrigin = ' "transformOrigin":'+headstr+'.w/2+"px "+ '+headstr+'.h/2+"px"}';
+        let anchorTransformOrigin = ' "transformOrigin": "calc(var(--anchor-w) / 2px) calc(var(--anchor-h) / 2px)"}';
+        let styleTranslateRotate = styleTranslateRotateCommon + headTransformOrigin;
+        let styleTranslateRotateAnchor = styleTranslateRotateCommon + anchorTransformOrigin;
+        let anchorSize = 'var(--anchor-w)';
+        let attrs = `\n\t\t\t\tstyle={`+styleTranslateRotate+`}\n\t\t\t\t stroke={strokeColor} strokeWidth={strokeWidth}
  className={"edge` + head + ` ` + type +` preview"}></path>\n`;
         let path: string;
         let hoverAttrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={segments.all[0]&&(segments.all[0].length > strokeLengthLimit )&& strokeColorLong || strokeColorHover} strokeWidth={strokeWidthHover}
  className={"edge` + head + ` ` + type +` clickable content"} tabIndex="-1"></path>\n`;
-        switch(type) {
+
+        ret = '<circle r="5" cy="0" cx="0" style={'+styleTranslateRotate+'} onClick={edge.end = undefined}/>'; // anchor point of edge
+
+
+        if (!onlyAnchor) switch (type) {
             default:
-                inner = "edge '" + head + "' with type: '" +type + "' not found";
+                ret += "edge '" + head + "' with type: '" +type + "' not found";
                 break;
             case EdgeHead.extend:
                 path = `<path d={"M 0 0   L " + `+headstr+`.w + " " + `+headstr+`.h/2 + "   L 0 " + `+headstr+`.h + "Z" } fill="#fff" `;
-                inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                ret += path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.reference:
                 path = `<path d={"M 0 0   L " + `+headstr+`.w + " " + `+headstr+`.h/2 + "   L 0 " + `+headstr+`.h } fill="none" `;
-                inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                ret += path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.aggregation:
                 path = `<path d={"M 0 " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
                     `+headstr+`.w + " " +`+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"} fill="#fff" `;
-                inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                ret += path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.composition:
                 path = `<path d={"M 0 " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
                     `+headstr+`.w + " " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"} fill="#000" `;
-                inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                ret += path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
                 /* `<svg width="20" height="20" viewBox="0 0 20 20" style={overflow: "visible"}>
                                             <path d={"M 10 0 L 0 20 L 20 20 Z"} fill="#ffffff" stroke="#808080" strokeWidth="1"></path>
@@ -92,8 +99,8 @@ export class DV {
                 //  style={transform: "rotate3d(xcenter, ycenter, zcenter??, 90deg)"}
         }
         //  transform={"rotate("+`+headstr+`.rad+"rad "+ segments.all[0].start.pt.toString(false, " ")}
-        return inner; // no wrap because of .hoverable > .preview  on root & subelements must be consecutive
-        // return `<g className="edge`+head + ` ` + type +`" style={` + styleTranslate + `}>\n`+ inner +`</g>`
+        return ret; // no wrap because of .hoverable > .preview  on root & subelements must be consecutive
+        // return `<g className="edge`+head + ` ` + type +`" style={` + styleTranslate + `}>\n`+ ret +`</g>`
     }
 
     // about label rotation in .edge > foreignObect > div (label)

@@ -527,7 +527,7 @@ node.state = {error_lowerbound: err};\n
 
     function makeEdgeView(name: string, type: EdgeHead, headSize: GraphPoint | undefined, tailSize: GraphPoint | undefined, dashing: boolean): DViewElement{
         let ev = DViewElement.new2("Edge"+name,
-            DV.edgeView(type, headSize ? DV.svgHeadTail("Head", type) : "", tailSize ? DV.svgHeadTail("Tail", type) : "", dashing ? "10.5,9,0,0" : undefined),
+            DV.edgeView(type, DV.svgHeadTail("Head", type), DV.svgHeadTail("Tail", type), dashing ? "10.5,9,0,0" : undefined),
             (v: DViewElement) => {
                 v.bendingMode = EdgeBendingMode.Line;
                 v.appliableToClasses = [DVoidEdge.cname];
