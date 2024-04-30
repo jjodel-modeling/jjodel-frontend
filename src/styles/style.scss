@@ -125,7 +125,14 @@ input[type="color"]::-webkit-color-swatch {
   border: 1px solid $border-color;
 }
 .select:focus { border: 1px dashed $border-color; }
-.btn { padding: 0 0.1em; line-height: normal; border-radius: $radius; }
+
+.btn {
+  padding: 0.3em;
+  height: min-content; width: fit-content;
+  margin-top: auto; margin-bottom: auto;
+  line-height: normal;
+  border-radius: 0.4em;
+}
 
 [data-nodetype="EdgePoint"]{
   pointer-events: all; // fix because edge root have pointerEvents none, and this is contained in edge
@@ -139,7 +146,18 @@ input[type="color"]::-webkit-color-swatch {
 
 /* tags */
 hr { margin: 0 0 !important; }
-label { height: min-content; font-size: 0.9rem; font-weight: lighter; }
+label {
+  height: min-content;
+  font-size: 0.9rem;
+  font-weight: lighter;
+  margin-top: auto; margin-bottom: auto;
+}
+b {
+  height: min-content;
+  font-size: 0.9rem;
+  font-weight: bolder;
+  margin-top: auto; margin-bottom: auto;
+}
 
 [rad]{
   transform-origin: center;

@@ -42,7 +42,7 @@ function DashboardComponent(props: AllProps) {
         project = await ProjectsApi.create(type, name);
         let m2: DModel = null as any, m1: DModel =  null as any;
 
-        await TRANSACTION(function(){
+        TRANSACTION(function(){
             m2 = DModel.new('metamodel', undefined, true, true);
             m1 = DModel.new('model', m2.id, false, true);
             const lm2: LModel = LModel.fromD(m2);
@@ -52,7 +52,7 @@ function DashboardComponent(props: AllProps) {
             project.graphs = [...project.graphs, lm2.node?.id as string, lm1.node?.id as string];
             const dPackage = LPointerTargetable.fromD(m2).addChild('package');
         })
-        await TRANSACTION(function(){
+        TRANSACTION(function(){
             // const lPackage: LPackage = LPackage.fromD(dPackage);
             // lPackage.name = 'default';
             if (true) { // evt.button === Keystrokes.clickWheel || DUser.offlineMode) {

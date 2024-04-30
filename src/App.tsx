@@ -2,17 +2,18 @@ import React, {Dispatch, useState} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {DState, DUser, LUser, statehistory, stateInitializer, U} from "./joiner";
+import {DState, DUser, LUser, SetRootFieldAction, statehistory, stateInitializer, U} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import {FakeStateProps} from "./joiner/types";
-import DashboardPage from "./pages/Dashboard";
+import Dashboard from "./pages/dashboard/Dashboard";
 import EditorPage from "./pages/Editor";
 import AuthPage from "./pages/Auth";
 import {useEffectOnce} from "usehooks-ts";
 import {HashRouter, Route, Routes} from 'react-router-dom';
 import PathChecker from "./components/pathChecker/PathChecker";
 import {AuthApi} from "./api/persistance";
+import AllProjectsPage from "./pages/AllProjects";
 
 let userHasInteracted = false;
 function endPendingActions() {
@@ -24,29 +25,32 @@ function firstInteraction(){
 
 function App(props: AllProps): JSX.Element {
     const debug = props.debug;
-    const [loading, setLoading] = useState(true);
     const isLoading = props.isLoading;
     const tooltip = props.tooltip;
     let user: LUser = props.user;
 
     useEffectOnce(() => {
-        stateInitializer().then(() => setLoading(false));
+        SetRootFieldAction.new('isLoading', true);
+        stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
         /* Offline by default */
-        // if(!DUser.current) AuthApi.offline();
+        if(!DUser.current) AuthApi.offline();
     });
 
-    if(props.isLoading || loading) return(<Loader />);
-    return(<HashRouter>
-        <PathChecker />
-        <Routes>
-            {DUser.current && <>
-                <Route path={'project'} element={<EditorPage />} />
-                <Route path={'*'} element={<DashboardPage />} />
-            </>}
-            <Route path={'*'} element={<AuthPage />} />
-            {/*<Route path={'*'} element={<Loader />} />*/}
-        </Routes>
-    </HashRouter>);
+    return(<>
+        {isLoading && <Loader />}
+        <HashRouter>
+            <PathChecker />
+            <Routes>
+                {DUser.current && <>
+                    <Route path={'project'} element={<EditorPage />} />
+                    <Route path={'allProjects'} element={<AllProjectsPage />} />
+                    <Route path={'*'} element={<Dashboard />} />
+                </>}
+                <Route path={'*'} element={<AuthPage />} />
+                {/*<Route path={'*'} element={<Loader />} />*/}
+            </Routes>
+        </HashRouter>
+    </>);
 
     /*
     if (user) {
