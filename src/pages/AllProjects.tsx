@@ -2,9 +2,10 @@ import React, {Dispatch, Component, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import {DProject, DState, DUser, LProject, U} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
-import Dashboard from './dashboard/Dashboard';
+import Dashboard from './Dashboard';
 import {ProjectsApi} from "../api/persistance";
 import {useNavigate} from "react-router-dom";
+import Project from "./components/Project";
 
 
 function AllProjectsComponent(props: AllProps) {
@@ -23,27 +24,9 @@ function AllProjectsComponent(props: AllProps) {
     }
 
     return(<Dashboard>
-        {projects.map((project, index) => {
-            return(<div className={'d-flex p-3 border m-1 dashboard-row'} key={index}>
-                <button className={'btn btn-primary me-2'} onClick={e => selectProject(project.id)}>
-                    <i className={'p-1 bi bi-eye-fill'}></i>
-                </button>
-                <button className={'btn btn-primary me-2'}
-                        onClick={async() => await exportProject(project)}>
-                    <i className={'p-1 bi bi-download'}></i>
-                </button>
-                <button disabled={project.author.id !== DUser.current} className={'btn btn-danger me-2'}
-                        onClick={async() => await deleteProject(project)}>
-                    <i className={'p-1 bi bi-trash-fill'}></i>
-                </button>
-                <div className={'d-flex w-100'}>
-                    <label className={'my-auto'}>
-                        <b className={'text-primary me-1'}>{project.name}</b>
-                        ({project.type})
-                    </label>
-                </div>
-            </div>);
-        })}
+        <div style={{overflow: 'scroll'}} className={'d-flex flex-wrap'}>
+            {projects.map(p => <Project key={p.id} data={p} />)}
+        </div>
     </Dashboard>);
 }
 

@@ -1,7 +1,7 @@
 import {ReactNode} from 'react';
 import Navbar from "./components/Navbar";
 import LeftBar from "./components/LeftBar";
-import '../style.scss'
+import './style.scss'
 
 type Props = {children?: ReactNode};
 function Dashboard(props: Props) {

@@ -6,7 +6,7 @@ import {DState, DUser, LUser, SetRootFieldAction, statehistory, stateInitializer
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import {FakeStateProps} from "./joiner/types";
-import Dashboard from "./pages/dashboard/Dashboard";
+import Dashboard from "./pages/Dashboard";
 import EditorPage from "./pages/Editor";
 import AuthPage from "./pages/Auth";
 import {useEffectOnce} from "usehooks-ts";

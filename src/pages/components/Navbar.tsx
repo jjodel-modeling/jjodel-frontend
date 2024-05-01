@@ -1,8 +1,8 @@
-import Logo from '../../../static/img/logo.png';
-import {ProjectsApi} from '../../../api/persistance';
+import Logo from '../../static/img/logo.png';
+import {ProjectsApi} from '../../api/persistance';
 import {useNavigate} from 'react-router-dom';
-import {SetRootFieldAction} from '../../../redux/action/action';
-import {U} from '../../../joiner';
+import {SetRootFieldAction} from '../../redux/action/action';
+import {U} from '../../joiner';
 
 type Props = {};
 function Navbar(props: Props) {
