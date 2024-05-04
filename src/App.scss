@@ -240,10 +240,18 @@ svg.hoverable {
   &>[hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{ transform: scale(1); }
   // transform: scale(attr(hoverscale number, 1)); correct but unsupported yet. i'm forced to hardcode a number
 }
-[data-nodetype="Edge"] path{
-  // d: attr(d);
-  transition: d 400ms, transform 400ms, transform-origin 400ms;
-  transition: all 400ms;
+
+.no-transition-following, .no-transition{
+  path{
+    transition: none !important;
+  }
+}
+[data-nodetype="Edge"]{
+  path {
+    // d: attr(d);
+    transition: d 400ms, transform 400ms, transform-origin 400ms;
+    transition: all 400ms;
+  }
 }
 [data-nodetype="Edge"]>.hide-ep [data-nodetype="EdgePoint"]{
   // display: none !important;

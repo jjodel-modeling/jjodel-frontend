@@ -48,6 +48,7 @@ import {
     windoww
 } from "../../joiner";
 import type {RefObject} from "react";
+import type {SVGPathElementt, SVGPathSegment} from '../../common/libraries/pathdata';
 import {EdgeGapMode, InitialVertexSize} from "../../joiner/types";
 import {labelfunc} from "../../joiner/classes";
 import {Geom} from "../../common/Geom";
@@ -1242,6 +1243,8 @@ export class DVoidEdge extends DGraphElement {
     labels!: PrimitiveType[] | labelfunc[];
     anchorStart!: string;
     anchorEnd!: string;
+    endFollow!: boolean;
+    startFollow!: boolean;
 
     public static new(htmlindex: number, model: DGraph["model"]|null|undefined, parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"],
                       nodeID: DGraphElement["id"]|undefined, start: DGraphElement["id"], end: DGraphElement["id"],
@@ -2001,9 +2004,126 @@ replaced by startPoint
     protected get_start(context: Context): this["start"] { return LPointerTargetable.from(context.data.start); }
     protected get_end(context: Context): this["end"] { return LPointerTargetable.from(context.data.end); }
 
+
+    endFollow!: boolean;
+    startFollow!: boolean;
+    __info_of__endFollow: Info = {writeType:"boolean", readType:"boolean", type:"boolean", // type:"read:(()=>void), write:boolean", readType:"(()=>void))",
+        txt:"makes the ending point of an edge follow the cursor, so it can be assigned to a new anchor or target."};
+    __info_of__startFollow: Info = {writeType:"boolean", readType:"boolean", type:"boolean", // type:"read:(()=>void), write:boolean", readType:"(()=>void))",
+        txt:"makes the starting point of an edge follow the cursor, so it can be assigned to a new anchor or source."};
+    get_endFollow(c: Context): boolean { return !!(c.data.end && c.data.endFollow); }
+    get_startFollow(c: Context): boolean { return !!(c.data.start && c.data.startFollow); }
+    // // what in multieditor? needs to be moved in transientstuff?
+    set_endFollow(val: boolean, c: Context): boolean { return this._set_start_endFollow(val, c, false); }
+    set_startFollow(val: boolean, c: Context): boolean { return this._set_start_endFollow(val, c, true); }
+    _set_start_endFollow(val: boolean, c: Context, isStart: boolean): boolean {
+        val = !!val;
+        console.log("_set_start_endFollow", {val, c, isStart});
+        if (val) {
+            if (isStart) LVoidEdge.startFollow = c.data.id;
+            else LVoidEdge.endFollow = c.data.id;
+            if (!LVoidEdge.following) {
+                console.log("_set_start_endFollow event attached");
+                document.body.addEventListener("mousemove", LVoidEdge.mousemove, false);
+                LVoidEdge.following = true;
+
+                let selector = ".Edge[nodeid='" + (LVoidEdge.endFollow || LVoidEdge.startFollow as any)+"']";
+                // [...document.querySelectorAll(selector)].map(e=>e.classList.add("no-transition-following")); gets refreshed by react
+                document.body.classList.add("no-transition-following");
+            }
+        }
+        else {
+            if (LVoidEdge.following && ((isStart ? LVoidEdge.startFollow : LVoidEdge.endFollow) === c.data.id)) {
+                document.body.removeEventListener("mousemove", LVoidEdge.mousemove, false);
+                let selector = ".Edge[nodeid='" + (LVoidEdge.endFollow || LVoidEdge.startFollow as any)+"']";
+                //[...document.querySelectorAll(selector)].map(e=>e.classList.remove("no-transition-following"));
+                document.body.classList.remove("no-transition-following");
+                if (isStart) LVoidEdge.startFollow = undefined;
+                else LVoidEdge.endFollow = undefined;
+                LVoidEdge.following = false;
+            }
+        }
+        //SetFieldAction.new(c.data, "startFollow", !!val, '', false);
+        return true; }
+    public static startFollow: Pointer<DVoidEdge> | undefined = undefined;
+    public static endFollow: Pointer<DVoidEdge> | undefined = undefined;
+    public static following: boolean = false;
+    public static tmp: number = 1;
+    public static mousemove(e0: Event): void {
+        if (!LVoidEdge.following) return;
+        LVoidEdge.tmp++;
+        let selector = ".Edge[nodeid='" + (LVoidEdge.endFollow || LVoidEdge.startFollow as any)+"']";
+        let root = document.querySelector(selector);
+        if (!root) return;
+        let paths: SVGPathElementt[] = [...root.querySelectorAll("path.full")] as SVGPathElementt[];
+        if (!paths.length) paths = [...root.querySelectorAll("path.segment")] as SVGPathElementt[];
+        let pathSegmentContainers: Element[] = [...new Set([...root.querySelectorAll("path.segment")].map(e=>e.parentElement))] as Element[];
+        for (let container of pathSegmentContainers){
+            let se: SVGPathElementt[] = [...container.querySelectorAll("path.segment")] as SVGPathElementt[];
+            paths.push(se[se.length-1]);
+        }
+        let headTail = [...root.querySelectorAll(LVoidEdge.endFollow ? '.edgeHead' : '.edgeTail')] as HTMLElement[];
+        let cursorPos = new Point((e0 as any as MouseEvent).pageX, (e0 as any as MouseEvent).pageY);
+
+        let segList: SVGPathSegment[] | undefined;
+        for (let p of paths) {
+            let svg: SVGElement = U.parentUntil("svg", p) as SVGElement;
+            let svgsize: Size = Size.of(svg);
+            let svgzoom: Point = new Point(1,1); // todo: check viewbox and css zoom
+            let gcursorPos = cursorPos.subtract(svgsize.tl(), true).multiply(svgzoom) as any as GraphPoint;
+            segList = [...p.getPathData()];
+            let lastSeg = {...segList[segList.length-1]};
+            switch (lastSeg.type){
+                case 'a': case 'A':
+                    segList.push('fake new segment to get replaced instead of actual last segment which is A' as any);
+                    lastSeg.type="L"; lastSeg.values = [gcursorPos.x, gcursorPos.y];
+                    break;
+                case "C": case "c": // bezier curves, keep type just change last point
+                case "Q": case "q":
+                case "S": case "s":
+                case "T": case "t":
+                    lastSeg.values[lastSeg.values.length-2] = gcursorPos.x;
+                    lastSeg.values[lastSeg.values.length-1] = gcursorPos.y; break;
+                case "M": case "m": // stuff forced to become a line
+                case "V": case "v":
+                case "H": case "h":
+                case "L": case "l":
+                case "Z": case "z":
+                    lastSeg.type="L"; lastSeg.values = [gcursorPos.x, gcursorPos.y];
+                    break;
+            }
+            segList[segList.length-1] = lastSeg;
+            console.log("svg set path data,", {segList, oldSeglist:p.getPathData(), p});
+            p.setPathData(segList);
+        }
+
+        for (let ht of headTail){
+            let svg: SVGElement = U.parentUntil("svg", ht) as SVGElement;
+            let svgsize: Size = Size.of(svg);
+            let svgzoom: Point = new Point(1,1); // todo: check viewbox and css zoom
+            let gcursorPos = cursorPos.subtract(svgsize.tl(), true).multiply(svgzoom) as any as GraphPoint;
+            let rotation: number;
+            let lastPt = segList && segList[segList.length - 2].values;
+
+            if (lastPt) {
+                let m = gcursorPos.getM(new Point(lastPt[lastPt.length-2], lastPt[lastPt.length-1]));
+                if (Number.POSITIVE_INFINITY === m) rotation = Geom.degToRad(90); else
+                if (Number.NEGATIVE_INFINITY === m) rotation = Geom.degToRad(270); else
+                    rotation = Math.atan(m);
+                if (lastPt[lastPt.length-2] > gcursorPos.x) rotation -= Geom.degToRad(180);
+            } else { rotation = 0;}
+            let headSize = Size.of(ht);
+
+            let headPos = gcursorPos.subtract({x:headSize.w/2, y:headSize.h/2}, true);//.subtract({x:Math.cos(rotation)*headSize.w/2, y: -Math.sin(rotation)*headSize.h/2}, true);
+
+            if (LVoidEdge.tmp%20===0) console.log("_set_start_endFollow move head", {selector:LVoidEdge.endFollow ? '.edgeHead' : '.edgeTail', headTail, root});
+            ht.style.transform = 'translate('+headPos.x+"px, "+headPos.y+"px) rotate("+rotation+"rad)";
+        }
+    }
 }
 RuntimeAccessibleClass.set_extend(DGraphElement, DVoidEdge);
 RuntimeAccessibleClass.set_extend(LGraphElement, LVoidEdge);
+
 @RuntimeAccessible('DEdge')
 export class DEdge extends DVoidEdge { // DVoidEdge
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];

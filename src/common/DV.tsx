@@ -38,7 +38,7 @@ export class DV {
     public static anchorJSX(): string { return (`
 <div className={"overlap"}>
 {Object.keys(anchors).map( (k, i) => { let a = anchors[k]; return(
-<div className={"anchor draggable resizable"} data-anchorName={a.name} data-anchorKey={k} onDragEnd={"dragAnchor("+i+")"}
+<div className={"anchor draggable resizable"} data-anchorName={a.name} data-anchorKey={k} onDragEnd={"dragAnchor("+i+")"} onMouseUp={()=>node.assignAnchor()}
     style={{left: 100*a.x+'%', top:100*a.y+'%', width:a.w+'px', height:a.h+'px'}} />)})
 }</div>
 `);}
@@ -52,46 +52,39 @@ export class DV {
         //`<ellipse stroke={"black"} fill={"red"} cx={props.node.x} cy={props.node.y} rx={props.node.w} ry={props.node.h} />`
     )}
 
-    static svgHeadTail(head: "Head" | "Tail", type: EdgeHead, onlyAnchor:boolean = false): string {
+    static svgHeadTail(head: "Head" | "Tail", type: EdgeHead): string {
         let ret: string;
         let headstr = head==="Head" ? "segments.head" : "segments.tail";
         let styleTranslate = "{}"; // '{transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px)"}';
-        let styleTranslateRotateCommon = '{transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px) rotate(" + (' + headstr + '.rad) + "rad)",';
-        let headTransformOrigin = ' "transformOrigin":'+headstr+'.w/2+"px "+ '+headstr+'.h/2+"px"}';
-        let anchorTransformOrigin = ' "transformOrigin": "calc(var(--anchor-w) / 2px) calc(var(--anchor-h) / 2px)"}';
-        let styleTranslateRotate = styleTranslateRotateCommon + headTransformOrigin;
-        let styleTranslateRotateAnchor = styleTranslateRotateCommon + anchorTransformOrigin;
-        let anchorSize = 'var(--anchor-w)';
-        let attrs = `\n\t\t\t\tstyle={`+styleTranslateRotate+`}\n\t\t\t\t stroke={strokeColor} strokeWidth={strokeWidth}
+        let styleTranslateRotate = '{transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px) rotate(" + (' + headstr + '.rad) + "rad)",' +
+            ' "transformOrigin":'+headstr+'.w/2+"px "+ '+headstr+'.h/2+"px"}';
+        let styleRotate = 'style={{transform:"rotate(" + ' + headstr + '.rad + "rad), transformOrigin:"noooope  not center"}}'; // edgeHead EdgeReference
+        let attrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={strokeColor} strokeWidth={strokeWidth}
  className={"edge` + head + ` ` + type +` preview"}></path>\n`;
         let path: string;
         let hoverAttrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={segments.all[0]&&(segments.all[0].length > strokeLengthLimit )&& strokeColorLong || strokeColorHover} strokeWidth={strokeWidthHover}
  className={"edge` + head + ` ` + type +` clickable content"} tabIndex="-1"></path>\n`;
-
-        ret = '<circle r="5" cy="0" cx="0" style={'+styleTranslateRotate+'} onClick={edge.end = undefined}/>'; // anchor point of edge
-
-
-        if (!onlyAnchor) switch (type) {
+        switch(type) {
             default:
-                ret += "edge '" + head + "' with type: '" +type + "' not found";
+                ret = "edge '" + head + "' with type: '" +type + "' not found";
                 break;
             case EdgeHead.extend:
                 path = `<path d={"M 0 0   L " + `+headstr+`.w + " " + `+headstr+`.h/2 + "   L 0 " + `+headstr+`.h + "Z" } fill="#fff" `;
-                ret += path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.reference:
                 path = `<path d={"M 0 0   L " + `+headstr+`.w + " " + `+headstr+`.h/2 + "   L 0 " + `+headstr+`.h } fill="none" `;
-                ret += path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.aggregation:
                 path = `<path d={"M 0 " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
                     `+headstr+`.w + " " +`+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"} fill="#fff" `;
-                ret += path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.composition:
                 path = `<path d={"M 0 " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
                     `+headstr+`.w + " " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"} fill="#000" `;
-                ret += path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
                 /* `<svg width="20" height="20" viewBox="0 0 20 20" style={overflow: "visible"}>
                                             <path d={"M 10 0 L 0 20 L 20 20 Z"} fill="#ffffff" stroke="#808080" strokeWidth="1"></path>
@@ -115,13 +108,13 @@ export class DV {
                  second is to enlarge the hover area of path.preview to the same as path.content, so i avoid hover loop enter-leave and graphical flashing
                 
                 */ }
-                <path className={"preview"} strokeWidth={strokeWidth} stroke={strokeColor}
+                <path className={"preview full"} strokeWidth={strokeWidth} stroke={strokeColor}
                 fill={"none"} d={this.edge.d} strokeDasharray="` + dashing + `"></path>
-                <path className={"preview"} strokeWidth={strokeWidthHover} stroke={"transparent"}
+                <path className={"preview full"} strokeWidth={strokeWidthHover} stroke={"transparent"}
                 fill={"none"} d={this.edge.d}></path>
                 { /* edge separate segments */ }
                 {segments && segments.all && segments.all.flatMap(s => [
-                    <path tabIndex="-1" className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={strokeWidthHover}
+                    <path tabIndex="-1" className={"clickable content segment"} style={{pointerEvents:"all"}} strokeWidth={strokeWidthHover}
                     stroke={s.length > strokeLengthLimit && strokeColorLong || strokeColorHover}
                      fill={"none"} d={s.dpart}></path>,
                     s.label && <foreignObject style={{overflow: "visible", height:"0", width:"0", whiteSpace:"pre", x:(s.start.pt.x + s.end.pt.x)/2+"px", y:(s.start.pt.y + s.end.pt.y)/2+"px"}}>
@@ -131,10 +124,23 @@ export class DV {
                      " translate(0%, -5px", color: strokeColor}}>{s.label}</div>
                     </foreignObject>
                 ])}
-            { /* edge head */ }
-            ` + head + `
-            { /* edge tail */ }
-            ` + tail + `
+                { /* edge head */ }
+                ` + head + `
+                { /* edge tail */ }
+                ` + tail + `
+                { /* edge anchor start */ }
+                <circle className="anchor" cx={0*segments.all[0].start.pt.x} cy={0*segments.all[0].start.pt.y}
+                 style={{pointerEvents: edge.start ? "all" : "none",
+                transform: "translate(" + segments.all[0].start.pt.x +"px, " + segments.all[0].start.pt.y +"px)"}}
+                 onMouseDown={()=> edge.startFollow=true}
+                 onMouseUp={()=> edge.startfollow=false} />
+            { /* edge anchor end */ }
+                <circle className="anchor" cx={0*segments.all.last().end.pt.x} cy={0*segments.all.last().end.pt.y}
+                style={{pointerEvents: edge.end ? "all" : "none",
+                transform: "translate(" + segments.all.last().end.pt.x +"px, " + segments.all.last().end.pt.y +"px)"}}
+                 onMouseDown={()=> edge.endFollow=true}
+                 onMouseUp={()=> edge.endfollow=false} />
+
             </svg>
             { /* interactively added edgepoints */ }
             {

@@ -52,12 +52,12 @@ export abstract class IPoint extends RuntimeAccessibleClass {
         // return this.subtract(tentativeEnd, true).absolute();
     }
 
-    public subtract(p2: IPoint, newInstance: boolean): this {
+    public subtract(p2: { x?: number, y?: number }, newInstance: boolean): this {
         Log.e(!p2, 'subtract argument must be a valid point: ', p2);
         let p1: this;
         if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
-        p1.x -= p2.x;
-        p1.y -= p2.y;
+        if (p2.x !== undefined) p1.x -= p2.x;
+        if (p2.y !== undefined) p1.y -= p2.y;
         return p1; }
 
     public add(p2: { x?: number, y?: number }, newInstance: boolean): this {

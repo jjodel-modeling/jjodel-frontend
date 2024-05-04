@@ -348,7 +348,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 let val = palette.value + ((palette as NumberControl).unit || '');
                 if (!val) val = "''";
                 if (allowLESS) s += "\t@" + paletteName + ": " + val + ';\n';
-                s += "\t--" + paletteName + '0: ' + val + ';\n';
+                s += "\t--" + paletteName + ': ' + val + ';\n';
             }
         }
         s += '\n\t' + U.replaceAll(c.data.css, '\n', '\n\t');

@@ -534,6 +534,10 @@ node.state = {error_lowerbound: err};\n
                 v.edgeHeadSize = headSize || size0;
                 v.edgeTailSize = tailSize || size0;
                 v.constants = edgeConstants;
+                v.palette = {anchorSize: {type: 'number', value:5, unit:'px'}};
+                v.css =
+`.anchor{ r:var(--anchorSize) }
+`;
                 v.usageDeclarations = edgeUsageDeclarations;
                 v.preRenderFunc = edgePrerenderFunc;
                 v.appliableTo = 'edge'; // todo: remove the entire property?

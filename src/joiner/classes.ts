@@ -183,6 +183,11 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
             return this.indexOf(o) !== -1;
         };
         (Array.prototype as any).joinOriginal = Array.prototype.join;
+        // @ts-ignore
+        Array.prototype.first = function(){ return this[0]; }
+        // @ts-ignore
+        eval("Array.prototype.last = function(){ return this[this.length-1]; }");// without eval it still gives typescript error even with tsignore
+        // @ts-ignore
         (Array.prototype as any).separator = function(...separators: any[]/*: orArr<(PrimitiveType | null | undefined | JSX.Element)[]>*/): (string|JSX.Element)[]{
             if (Array.isArray(separators[0])) separators = separators[0]; // case .join([1,2,3])  --> .join(1, 2, 3)
             // console.log("separators debug", this, separators, this[0], typeof this[0]);
@@ -815,6 +820,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         Log.ex(!startid || !endid, "cannot create an edge without start or ending nodes", {start, end, startid, endid});
         thiss.anchorStart = '0';
         thiss.anchorEnd = '0';
+        thiss.startFollow = false;
+        thiss.endFollow = false;
         thiss.midnodes = [];
         thiss.midPoints = []; // the logic part which instructs to generate the midnodes
         // if (!thiss.model && isDModelElementPointer(startid)) thiss.model = startid;

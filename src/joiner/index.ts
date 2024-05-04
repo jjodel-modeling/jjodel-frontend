@@ -3,10 +3,12 @@ import $$ from 'jquery';
 import {ReactNode} from "react";
 import * as _pr_json2xml from '../common/libraries/prj_json2xml.js';
 import * as _pr_xml2json from '../common/libraries/prj_xml2json.js';
+
 // true imports for this file (should all be import type
 import type {DocString} from './types';
 import type {U as UType} from "../common/U";
 
+var pathDataPolyfill = require("path-data-polyfill") // needs to be required (and automatically executed) before the creation of any svg element
 var windoww = (window as any);
 windoww.windoww = windoww;
 
