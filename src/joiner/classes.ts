@@ -868,7 +868,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.onDragEnd = thiss.onDragStart = thiss.whileDragging =
         thiss.onResizeEnd = thiss.onResizeStart = thiss.whileResizing = '';
         thiss.onRotationEnd = thiss.onRotationStart = thiss.whileRotating = '';
-        thiss.onDataUpdate = ''; thiss.events = [];
+        thiss.onDataUpdate = '';
+        thiss.events = {};
         // thiss.__transient = new DViewTransientProperties();
         thiss.subViews = {};
         thiss.oclCondition = oclCondition || '';
@@ -2816,6 +2817,7 @@ export class NodeTransientProperties{
 export type ViewTransientProperties = {
     // css_MUST_RECOMPILE: boolean;
     // compiled_css: string; maye those are better shared in sessions
+    events: Dictionary<DocString<"functionName">, ((...a:any)=>any)>;
     oclChanged: boolean;
     jsConditionChanged: boolean;
     oclUpdateCondition_PARSED: (oldData: LModelElement, newData:LModelElement) => boolean;// not used anymore? was like UD+shouldcompoupdate for jsx, a pre-ocl check

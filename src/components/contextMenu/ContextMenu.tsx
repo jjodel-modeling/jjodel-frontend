@@ -90,7 +90,7 @@ function ContextMenuComponent(props: AllProps) {
             if(!reference.containment) continue;
             const feature =  U.wrapper<LValue>(object[`$${reference.name}`]);
             if(feature.values.length >= reference.upperBound && reference.upperBound !== -1) continue;
-            const options = [reference.type, ...reference.type.allSubClasses].filter(o => !o.abstract);
+            const options = [reference.type, ...reference.type.allSubClasses].filter(o => !o.abstract && !o.interface);
             for(const option of options) {
                 list.push(<div onClick={() => {
                     close();

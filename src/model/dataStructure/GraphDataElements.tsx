@@ -42,7 +42,7 @@ import {
     ShortAttribETypes,
     Size,
     store,
-    TargetableProxyHandler,
+    TargetableProxyHandler, transientProperties,
     U,
     Uarr,
     windoww
@@ -529,6 +529,19 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         delete checked[context.data.id];
         return LPointerTargetable.from(Object.keys(checked), state);
     }
+
+    get_events(c: Context): LViewElement["events"] {
+        const tn = transientProperties.node[c.data.id];
+        let mainview: DViewElement = tn.mainView.__raw;
+        let otherViews: DViewElement[] = tn.stackViews.map(v=>v.__raw);
+        let allviews: DViewElement[] = [mainview, ...otherViews].reverse();
+        let ret: LViewElement["events"] = {}
+        for (let dv of allviews) U.objectMergeInPlace(ret, transientProperties.view[dv.id].events);
+
+        const lastContext: GObject = tn.viewScores[mainview.id].evalContext;
+        for (let k in ret) ret[k] = (..._params:any) => ret[k](lastContext, ..._params);
+
+        return ret; }
 
 
     get_father(context: Context): this["father"] { return LPointerTargetable.fromPointer(context.data.father); }
