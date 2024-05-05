@@ -64,7 +64,7 @@ export class DViewElement extends DPointerTargetable {
         'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating'];
     public static RecompileKeys: string[] = ['onDataUpdate', 'onDragStart', 'onDragEnd', 'whileDragging', 'onResizeStart',
         'onResizeEnd', 'whileResizing', 'onRotationStart', 'onRotationEnd', 'whileRotating',
-        'constants', 'usageDeclarations', 'jsxString', 'preconditions', 'jsCondition', 'ocl'];
+        'constants', 'usageDeclarations', 'jsxString', 'preconditions', 'jsCondition', 'ocl', 'events'];
 
     // inherited redefine
     // public __raw!: DViewElement;
@@ -123,6 +123,7 @@ export class DViewElement extends DPointerTargetable {
     onRotationStart!: string;
     onRotationEnd!: string;
     whileRotating!: string;
+    events!: Dictionary<DocString<"functionName">, DocString<"functionBody">>;
     bendingMode!: EdgeBendingMode;
     edgeGapMode!: EdgeGapMode;
     //useSizeFrom!: EuseSizeFrom;
@@ -658,6 +659,25 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         TRANSACTION(()=>{
             SetFieldAction.new(context.data, 'onDataUpdate', val, '', false);
             SetRootFieldAction.new('VIEWS_RECOMPILE_onDataUpdate', context.data.id, '+=', false);
+        })
+        return true;
+    }
+
+    events!: Dictionary<DocString<"functionName">, ((...a:any)=>any)>;
+    event!:  Dictionary<DocString<"functionName">, ((...a:any)=>any)>;
+    __info_of__events: Info = {todo: true, isGlobal: true, type: "Dictionary<name, function>",
+        txt: <div>Custom events callable through JSX user interaction<br/>eg: &lt;div onClick=&#123;()=&gt;view.eventname()&#125; /&gt;</div>}
+    __info_of__event: Info = {todo: true, isGlobal: true, type: "Dictionary<name, function>", txt: 'Alias for this.events'}
+    protected get_event(c: Context): this['events'] { return this.get_events(c); }
+    protected get_events(c: Context): this['events'] {
+        Log.exx("use node.events instead");
+        return {};
+        // return transientProperties.view[c.data.id]?.events || {};
+    }
+    protected set_events(val: DViewElement["events"], context: Context): boolean {
+        TRANSACTION(()=>{
+            SetFieldAction.new(context.data, 'events', val, '+=', false);
+            SetRootFieldAction.new('VIEWS_RECOMPILE_events', {vid:context.data.id, keys: Object.keys(val)}, '+=', false);
         })
         return true;
     }

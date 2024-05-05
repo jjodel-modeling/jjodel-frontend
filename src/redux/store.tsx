@@ -175,6 +175,7 @@ export class DState extends DPointerTargetable{
     VIEWS_RECOMPILE_preconditions: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_jsCondition: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_ocl: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_events: {vid: Pointer<DViewElement>, keys: string[] | undefined}[] = [];
 
     ClassNameChanged: Dictionary<Pointer<DModelElement>, DocString<"name">> = {}; // for ocl matchings by m2 class name: "context inv Human: ..."
 

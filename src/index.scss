@@ -1,18 +1,4 @@
-* {
-    user-select: none;
-    &:active::-webkit-scrollbar, &:hover::-webkit-scrollbar{
-        width: 0.4rem;
-        /* i was trying to make interactive area bigger while keeping it visually smaller, but those are not working
-        border-left: 0.2rem;
-        border-right: 0.2rem;
-        padding-left: 0.2rem;
-        padding-right: 0.2rem;
-        /*
-        border-radius: 2px;
-        background-clip: padding-box;
-        border: 2px solid transparent;*/
-    }
-}
+
 img { -webkit-user-drag: none; }
 body {
     max-width: 100vw;
@@ -36,4 +22,8 @@ body {
     &:active, &:hover{
         background: #555;
     }
+}
+
+.debug {
+    border: 1px dashed red;
 }

@@ -1,19 +1,19 @@
 import {useLocation} from "react-router-dom";
 import {useEffect, useState} from "react";
-import {U} from '../../joiner';
-import Storage from "../../data/storage";
+import {U} from "../../joiner";
 
-function PathChecker() {
+type Props = {};
+function PathChecker(props: Props) {
     const {pathname} = useLocation();
     const [renders, setRenders] = useState(0);
 
     useEffect(() => {
         const newRenders = renders + 1;
-        if(newRenders > 1) U.refresh();
+        if(pathname === '/project' && newRenders > 1) U.refresh();
         setRenders(newRenders);
     }, [pathname]);
 
-    return(<div className={'d-none'}>{renders}</div>)
+    return(<></>);
 }
 
 export default PathChecker;

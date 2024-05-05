@@ -1,0 +1,24 @@
+.dashboard-row{
+  background: #fff;
+  cursor: pointer;
+  &:hover{ background: #eee; }
+}
+
+.leftbar {
+  position: absolute;
+  background-color: white;
+  width: 12%; height: 100%;
+  & > div {
+    cursor: pointer;
+    display: block;
+  }
+  & > div:hover {
+    background-color: #eee;
+  }
+}
+
+.project-card {
+  position: relative;
+  width: min-content; height: min-content;
+}
+
