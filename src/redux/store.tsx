@@ -175,7 +175,7 @@ export class DState extends DPointerTargetable{
     VIEWS_RECOMPILE_preconditions: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_jsCondition: Pointer<DViewElement>[] = [];
     VIEWS_RECOMPILE_ocl: Pointer<DViewElement>[] = [];
-    VIEWS_RECOMPILE_events: {vid: Pointer<DViewElement>, keys: string[] | undefined}[] = [];
+    VIEWS_RECOMPILE_events: (Pointer<DViewElement> | {vid: Pointer<DViewElement>, keys: string[] | undefined})[] = [];
 
     ClassNameChanged: Dictionary<Pointer<DModelElement>, DocString<"name">> = {}; // for ocl matchings by m2 class name: "context inv Human: ..."
 
@@ -540,7 +540,11 @@ node.state = {error_lowerbound: err};\n
     let validation_subviews = [errorOverlayView, errorCheckLowerbound, errorCheckName];
     // SetFieldAction.new(vp, 'subViews', U.objectFromArrayValues(dv_subviews.map(dv=>dv.id), 1.5));
     // SetFieldAction.new(validationVP, 'subViews', U.objectFromArrayValues(validation_subviews.map(dv=>dv.id), 1.5));
-    return [...dv_subviews, ...validation_subviews];
+    const ret = [...dv_subviews, ...validation_subviews];
+    console.clear();
+    for (let v of ret) Log.e(!v.events, "missing events on view " + v.name, {v, ret});
+    for (let v of ret) Log.w(!!!v.events, "found events on view " + v.name, {v, ret});
+    return ret;
 }
 
 @RuntimeAccessible('ViewPointState')

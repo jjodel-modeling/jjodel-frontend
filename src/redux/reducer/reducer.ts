@@ -425,9 +425,19 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         // for (let gid of ret.graphs) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
         // for (let vid of ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION) { }
         for (let entry of ret.VIEWS_RECOMPILE_events) {
-            let vid = entry.vid;
-            let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
-            let keys = entry.keys || Object.keys(dv.events);
+            let vid: string;
+            let dv: DViewElement;
+            let keys: string[];
+            if (typeof entry === "object") {
+                vid = entry.vid;
+                dv = DPointerTargetable.fromPointer(vid, ret);
+                keys = entry.keys || Object.keys(dv.events);
+            }
+            else {
+                vid = entry;
+                dv = DPointerTargetable.fromPointer(vid, ret);
+                keys = Object.keys(dv.events);
+            }
             let tv = transientProperties.view[vid];
             if (!tv) transientProperties.view[vid] = tv = {} as any;
             if (!tv.events) tv.events = {};
@@ -517,7 +527,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         ret.VIEWS_RECOMPILE_jsCondition.push(vid);
         ret.VIEWS_RECOMPILE_usageDeclarations.push(vid);
         ret.VIEWS_RECOMPILE_jsxString.push(vid);
-        ret.VIEWS_RECOMPILE_events.push({vid, keys: undefined});
+        ret.VIEWS_RECOMPILE_events.push(vid);
         for (let k of DViewElement.MeasurableKeys) (ret as any)['VIEWS_RECOMPILE_'+k].push(vid);
     }
     ret.VIEWS_RECOMPILE_constants = [];
@@ -559,7 +569,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
 
         // implies recompilation of: jsx and all measurable events
         ret.VIEWS_RECOMPILE_jsxString.push(vid);
-        ret.VIEWS_RECOMPILE_events.push({vid, keys: undefined});
+        ret.VIEWS_RECOMPILE_events.push(vid);
         for (let k of DViewElement.MeasurableKeys) (ret as any)['VIEWS_RECOMPILE_'+k].push(vid);
     }
     ret.VIEWS_RECOMPILE_usageDeclarations = [];
