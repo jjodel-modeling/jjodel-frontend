@@ -239,7 +239,7 @@ class DefaultView {
 );}
 
     public static class(): string { return (
-`<div className={'root class'}>
+`<div className={'root class'} onClick={()=>{node.events.e1(Math.random().toFixed(3))}}>
     <Input jsxLabel={<b className={'class-name'}>EClass:</b>} data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
     <div className={'class-children'}>

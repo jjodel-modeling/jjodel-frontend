@@ -550,11 +550,17 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         let mainview: DViewElement = tn.mainView.__raw;
         let otherViews: DViewElement[] = tn.stackViews.map(v=>v.__raw);
         let allviews: DViewElement[] = [mainview, ...otherViews].reverse();
-        let ret: LViewElement["events"] = {}
-        for (let dv of allviews) U.objectMergeInPlace(ret, transientProperties.view[dv.id].events);
+        const keep_for_closure_original_funcs: LViewElement["events"] = {};
+        const ret: LViewElement["events"] = {};
+        for (let dv of allviews) U.objectMergeInPlace(keep_for_closure_original_funcs, transientProperties.view[dv.id].events);
 
         const lastContext: GObject = tn.viewScores[mainview.id].evalContext;
-        for (let k in ret) ret[k] = (..._params:any) => ret[k](lastContext, ..._params);
+        const keys = Object.keys(keep_for_closure_original_funcs);
+        // for (let k of keys) ret['_raw_'+k] = keep_for_closure_original_funcs[k];
+        for (let k of keys) {
+            if (!keep_for_closure_original_funcs[k]) continue;
+            ret[k] = (..._params: any) => keep_for_closure_original_funcs[k](lastContext, ..._params);
+        }
 
         return ret; }
 
