@@ -542,7 +542,10 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         const lastContext: GObject = tn.viewScores[mainview.id].evalContext;
         const keys = Object.keys(keep_for_closure_original_funcs);
         // for (let k of keys) ret['_raw_'+k] = keep_for_closure_original_funcs[k];
-        for (let k of keys) ret[k] = (..._params:any) => keep_for_closure_original_funcs[k](lastContext, ..._params);
+        for (let k of keys) {
+            if (!keep_for_closure_original_funcs[k]) continue;
+            ret[k] = (..._params: any) => keep_for_closure_original_funcs[k](lastContext, ..._params);
+        }
 
         return ret; }
 
