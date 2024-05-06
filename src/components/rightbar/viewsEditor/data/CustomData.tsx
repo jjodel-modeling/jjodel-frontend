@@ -34,9 +34,17 @@ function ViewEventsComponent(props: AllProps) {
         <hr className={'my-1'} />
         {Object.keys(dview.events).map((k) => {
             let val = dview.events[k];
-            return <JsEditor
+            return <>
+            <JsEditor
             viewID={view.id} key={k/* if val does not update, concatenate it to the key (k+val)*/}
-            title={`Event ${k}`}
+            title={<input defaultValue={k} onBlur={(e)=>{
+                let newname = e.target.value;
+                if (k === newname) return;
+                let newEvent: GObject = {};
+                newEvent[newname] = newEvent[k];
+                newEvent[k] = undefined;
+                view.events = newEvent;
+            }}/>}
             jsxLabel={<button className={'btn btn-danger my-auto ms-auto'} onClick={() => {
                 let newEvent: GObject = {};
                 newEvent[k] = undefined; // this is how you trigger deletion with object -= action
@@ -50,7 +58,7 @@ function ViewEventsComponent(props: AllProps) {
                 newEvent[k] = js;
                 view.events = newEvent;
             }}
-        />})}
+        /></>})}
         <div className={'p-4'}></div>
     </section>);
 }

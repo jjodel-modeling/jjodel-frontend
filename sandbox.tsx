@@ -29,12 +29,17 @@ on view duplicate, css is not recompiled
 // then 1 view with jsx that displays them all
 
 // syntax error on constants, usageDeclarations are not catched
-
+function () {
+    for (var _len = arguments.length, _params = new Array(_len), _key = 0; _key < _len; _key++) {
+    _params[_key] = arguments[_key];
+    }
+    return ret[k](lastContext, ..._params);
+}
 /*reenable edge menù outside debug mode, (add color palette there? or not?)
 make uml arrows (and more common ones)
 *
 
-
+''
 
 
 

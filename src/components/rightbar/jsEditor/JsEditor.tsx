@@ -69,7 +69,7 @@ interface OwnProps {
     viewID: Pointer<DViewElement, 1, 1, LViewElement>;
     field?: keyof LViewElement;
     placeHolder?: string;
-    title?: string;
+    title?: ReactNode;
     height?: number;
     style?: CSSProperties;
     jsxLabel?: ReactNode;
