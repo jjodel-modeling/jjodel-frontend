@@ -586,7 +586,7 @@ export function reducer(oldState: DState = initialState, action: Action): DState
                 const body: string = 'return (' +dv.events[key]+')(..._params)';
                 // if (vid.includes('Model')) console.log("modelparse, jsx", {paramStr, body});
                 try {
-                    tv.events[key] = new Function(paramStr, body) as ((...a:any)=>any);
+                    tv.events[key] = new Function(paramStr, body) as ((...a:any[])=>any);
                     // tv.events_raw[key] = new Function(paramStr, body) as ((...a:any)=>any);
                     // attempt to auto obtain node context
                     // impossile with view.event.name

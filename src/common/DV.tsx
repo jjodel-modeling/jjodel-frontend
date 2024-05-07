@@ -37,8 +37,9 @@ export class DV {
     // {ancors.map( a => <EdgePoint view={"aaaaa"} initialSize={{x: node.w * a.x, y: node.h * a.y}}/>)}
     public static anchorJSX(): string { return (`
 <div className={"overlap"}>
-{Object.keys(anchors).map( (k, i) => { let a = anchors[k]; return(
-<div className={"anchor draggable resizable"} data-anchorName={a.name} data-anchorKey={k} onDragEnd={"dragAnchor("+i+")"} onMouseUp={()=>node.assignAnchor()}
+{Object.keys(anchors).map( (k) => { let a = anchors[k]; return(
+<div className={"anchor draggable resizable"} data-anchorName={a.name} data-anchorKey={k}
+    onDragEnd={(coords/*Point*/)=>node.events.dragAnchor(coords, k)} onMouseUp={()=>{node.events.assignAnchor(k)}}
     style={{left: 100*a.x+'%', top:100*a.y+'%', width:a.w+'px', height:a.h+'px'}} />)})
 }</div>
 `);}

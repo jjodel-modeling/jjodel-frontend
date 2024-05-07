@@ -849,7 +849,12 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.edgesIn = [];
         thiss.edgesOut = [];
         // thiss.state = {id: thiss.id+".state", className: thiss.className};
-        thiss.anchors = {'0':{x:0.5, y:0.5}, '1':{x:0.5, y:0}, '2':{x:1, y:0.5}, '3':{x:0.5, y:1}, '4':{x:0, y:0.5}} as any;
+        // 5-way anchors thiss.anchors = {'0':{x:0.5, y:0.5}, '1':{x:0.5, y:0}, '2':{x:1, y:0.5}, '3':{x:0.5, y:1}, '4':{x:0, y:0.5}} as any;
+        thiss.anchors = {'0':{x:0.5, y:0.5}, 't':{x:0.5, y:0},
+            'tr':{x:1, y:0}, 'r':{x:1, y:0.5}, 'br':{x:1, y:1},
+            'b':{x:0.5, y:1},
+            'bl':{x:0, y:1}, 'l':{x:0, y:0.5}, 'tl':{x:0, y:0},
+        } as any;
         for (let k in (thiss.anchors as GObject)) {
             let a: GObject = thiss.anchors[k];
             if (!a.name) a.name = k;

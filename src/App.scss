@@ -244,6 +244,7 @@ svg.hoverable {
 .no-transition-following, .no-transition{
   path{
     transition: none !important;
+    pointer-events: none !important;
   }
 }
 [data-nodetype="Edge"]{

@@ -183,6 +183,22 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             Log.ee('cannot set anchors: invalid value provided');
             return true;
         }
+        if (v){ // if !v it means clear all anchors?
+            for (let ka in v){//for each anchor
+                if (!v[ka]) continue;
+
+                if (c.data.anchors[ka]) {
+                    for (let kk in v[ka]) { //for each key within an anchor (x, y, w, h)
+                        // if i was attempting to set a partial size, complete it with the old size values.
+                        if ((v[ka][kk] === undefined) && (c.data.anchors[ka][kk] !== undefined)) v[ka][kk] = c.data.anchors[ka][kk];
+                    }
+                }
+                if (v[ka].x === undefined || isNaN(v[ka].x)) v[ka].x = 0.5;
+                if (v[ka].y === undefined || isNaN(v[ka].y)) v[ka].y = 0.5;
+                // if (v[ka].w === undefined || isNaN(v[ka].w)) v[ka].w = 5;
+                // if (v[ka].h === undefined || isNaN(v[ka].h)) v[ka].h = 5;
+            }
+        }
         SetFieldAction.new(c.data, "anchors", v, '+=', false);
         return true; }
 
@@ -544,7 +560,28 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         delete checked[context.data.id];
         return LPointerTargetable.from(Object.keys(checked), state);
     }
+    assignEdgeAnchor!: ((anchorName?: string)=>void);
+    __info_of__assignEdgeAnchor!: {hidden:true, type:"(anchorName?: string)=>void", txt: "Assign a specific anchor of this node to the edge currently following the cursor, if any."};
+    get_assignEdgeAnchor(c: Context): ((anchorName?: string)=>void) {
+        return (anchorName?: string)=>{
+            if (anchorName && !c.data.anchors[anchorName]) anchorName = undefined;
+            if (LVoidEdge.startFollow) {
+                let de: DEdge = DPointerTargetable.fromPointer(LVoidEdge.startFollow);
+                if (de.start !== c.data.id) return; // cannot change edge targets, only an anchor within the current targets
+                let le: LVoidEdge = LPointerTargetable.fromD(de);
+                le.anchorStart = anchorName;
+                le.startFollow = false;
 
+            }
+            if (LVoidEdge.endFollow) {
+                let de = DPointerTargetable.fromPointer(LVoidEdge.endFollow);
+                if (de.end !== c.data.id) return; // cannot change edge targets, only an anchor within the current targets
+                let le = LPointerTargetable.fromD(de);
+                le.anchorEnd = anchorName;
+                le.endFollow = false;
+            }
+        }
+    }
     get_events(c: Context): LViewElement["events"] {
         const tn = transientProperties.node[c.data.id];
         let mainview: DViewElement = tn.mainView.__raw;
@@ -1260,8 +1297,8 @@ export class DVoidEdge extends DGraphElement {
 
     longestLabel!: PrimitiveType | labelfunc;
     labels!: PrimitiveType[] | labelfunc[];
-    anchorStart!: string;
-    anchorEnd!: string;
+    anchorStart?: string;
+    anchorEnd?: string;
     endFollow!: boolean;
     startFollow!: boolean;
 
@@ -2024,11 +2061,17 @@ replaced by startPoint
     protected get_end(context: Context): this["end"] { return LPointerTargetable.from(context.data.end); }
 
 
+    anchorStart?: string;
+    anchorEnd?: string;
+    __info_of__anchorStart: Info = {writeType:"string | undefined", type:"string", isEdge: true,
+        txt:"The name of a node anchor where the edge should originate from."};
+    __info_of__anchorEnd: Info = {writeType:"string | undefined", type:"string", isEdge: true,
+        txt:"The name of a node anchor where the edge should point to."};
     endFollow!: boolean;
     startFollow!: boolean;
-    __info_of__endFollow: Info = {writeType:"boolean", readType:"boolean", type:"boolean", // type:"read:(()=>void), write:boolean", readType:"(()=>void))",
+    __info_of__endFollow: Info = {writeType:"boolean", readType:"boolean", type:"boolean", isEdge: true,// type:"read:(()=>void), write:boolean", readType:"(()=>void))",
         txt:"makes the ending point of an edge follow the cursor, so it can be assigned to a new anchor or target."};
-    __info_of__startFollow: Info = {writeType:"boolean", readType:"boolean", type:"boolean", // type:"read:(()=>void), write:boolean", readType:"(()=>void))",
+    __info_of__startFollow: Info = {writeType:"boolean", readType:"boolean", type:"boolean", isEdge: true,// type:"read:(()=>void), write:boolean", readType:"(()=>void))",
         txt:"makes the starting point of an edge follow the cursor, so it can be assigned to a new anchor or source."};
     get_endFollow(c: Context): boolean { return !!(c.data.end && c.data.endFollow); }
     get_startFollow(c: Context): boolean { return !!(c.data.start && c.data.startFollow); }
@@ -2045,7 +2088,11 @@ replaced by startPoint
                 console.log("_set_start_endFollow event attached");
                 document.body.addEventListener("mousemove", LVoidEdge.mousemove, false);
                 LVoidEdge.following = true;
-
+                const $base = $(document.getElementById(isStart ? c.data.start : c.data.end) || []);
+                const $deepAnchors = $base.find("[nodeid] .anchor");
+                const $anchors = $base.find(".anchor").not($deepAnchors);
+                $anchors.addClass("valid-anchor");
+                $anchors.filter('[data-anchorname="'+((isStart ? c.data.anchorStart : c.data.anchorEnd)||0)+'"]').addClass("active-anchor");
                 let selector = ".Edge[nodeid='" + (LVoidEdge.endFollow || LVoidEdge.startFollow as any)+"']";
                 // [...document.querySelectorAll(selector)].map(e=>e.classList.add("no-transition-following")); gets refreshed by react
                 document.body.classList.add("no-transition-following");
@@ -2060,6 +2107,10 @@ replaced by startPoint
                 if (isStart) LVoidEdge.startFollow = undefined;
                 else LVoidEdge.endFollow = undefined;
                 LVoidEdge.following = false;
+                const $base = $(document.getElementById(isStart ? c.data.start : c.data.end) || []);
+                //const $deepAnchors = $base.find("[nodeid] .anchor");
+                const $anchors = $base.find(".anchor")//.not($deepAnchors);
+                $anchors.removeClass(["valid-anchor", "active-anchor"]);
             }
         }
         //SetFieldAction.new(c.data, "startFollow", !!val, '', false);
@@ -2091,7 +2142,7 @@ replaced by startPoint
             let svgzoom: Point = new Point(1,1); // todo: check viewbox and css zoom
             let gcursorPos = cursorPos.subtract(svgsize.tl(), true).multiply(svgzoom) as any as GraphPoint;
             segList = [...p.getPathData()];
-            let lastSeg = {...segList[segList.length-1]};
+            let lastSeg = {...segList[LVoidEdge.endFollow ? segList.length-1 : 0]};
             switch (lastSeg.type){
                 case 'a': case 'A':
                     segList.push('fake new segment to get replaced instead of actual last segment which is A' as any);
@@ -2103,16 +2154,18 @@ replaced by startPoint
                 case "T": case "t":
                     lastSeg.values[lastSeg.values.length-2] = gcursorPos.x;
                     lastSeg.values[lastSeg.values.length-1] = gcursorPos.y; break;
-                case "M": case "m": // stuff forced to become a line
-                case "V": case "v":
+                case "M": case "m":
+                    lastSeg.type = LVoidEdge.endFollow ? "L" : "M";
+                    lastSeg.values = [gcursorPos.x, gcursorPos.y]; break;
+                case "V": case "v": // stuff forced to become a line
                 case "H": case "h":
                 case "L": case "l":
                 case "Z": case "z":
                     lastSeg.type="L"; lastSeg.values = [gcursorPos.x, gcursorPos.y];
                     break;
             }
-            segList[segList.length-1] = lastSeg;
-            console.log("svg set path data,", {segList, oldSeglist:p.getPathData(), p});
+            segList[LVoidEdge.endFollow ? segList.length-1 : 0] = lastSeg;
+            if (LVoidEdge.tmp%20===0) console.log("svg set path data,", {segList, oldSeglist:p.getPathData(), p});
             p.setPathData(segList);
         }
 
@@ -2122,14 +2175,14 @@ replaced by startPoint
             let svgzoom: Point = new Point(1,1); // todo: check viewbox and css zoom
             let gcursorPos = cursorPos.subtract(svgsize.tl(), true).multiply(svgzoom) as any as GraphPoint;
             let rotation: number;
-            let lastPt = segList && segList[segList.length - 2].values;
+            let lastPt = segList && segList[LVoidEdge.endFollow ? segList.length-2 : 1].values;
 
             if (lastPt) {
-                let m = gcursorPos.getM(new Point(lastPt[lastPt.length-2], lastPt[lastPt.length-1]));
+                let m = gcursorPos.getM(new Point(lastPt[LVoidEdge.endFollow ? lastPt.length-2 : 1], lastPt[LVoidEdge.endFollow ? lastPt.length-1 : 0]));
                 if (Number.POSITIVE_INFINITY === m) rotation = Geom.degToRad(90); else
                 if (Number.NEGATIVE_INFINITY === m) rotation = Geom.degToRad(270); else
                     rotation = Math.atan(m);
-                if (lastPt[lastPt.length-2] > gcursorPos.x) rotation -= Geom.degToRad(180);
+                if (lastPt[LVoidEdge.endFollow ? lastPt.length-2 : 1] > gcursorPos.x) rotation -= Geom.degToRad(180);
             } else { rotation = 0;}
             let headSize = Size.of(ht);
 
