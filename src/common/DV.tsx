@@ -34,6 +34,15 @@ export class DV {
         console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error_string(visibleMessage, errortype, data, node, v); }
 
+    // {ancors.map( a => <EdgePoint view={"aaaaa"} initialSize={{x: node.w * a.x, y: node.h * a.y}}/>)}
+    public static anchorJSX(): string { return (`
+<div className={"overlap"}>
+{Object.keys(anchors).map( (k) => { let a = anchors[k]; return(
+<div className={"anchor draggable resizable"} data-anchorName={a.name} data-anchorKey={k}
+    onDragEnd={(coords/*Point*/)=>node.events.dragAnchor(coords, k)} onMouseUp={()=>{node.events.assignAnchor(k)}}
+    style={{left: 100*a.x+'%', top:100*a.y+'%', width:a.w+'px', height:a.h+'px'}} />)})
+}</div>
+`);}
     static edgePointView(): string { return beautify((
 `<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"white", width:"100%", height:"100%"}}>
     {decorators}
@@ -45,7 +54,7 @@ export class DV {
     )}
 
     static svgHeadTail(head: "Head" | "Tail", type: EdgeHead): string {
-        let inner: string;
+        let ret: string;
         let headstr = head==="Head" ? "segments.head" : "segments.tail";
         let styleTranslate = "{}"; // '{transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px)"}';
         let styleTranslateRotate = '{transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px) rotate(" + (' + headstr + '.rad) + "rad)",' +
@@ -58,25 +67,25 @@ export class DV {
  className={"edge` + head + ` ` + type +` clickable content"} tabIndex="-1"></path>\n`;
         switch(type) {
             default:
-                inner = "edge '" + head + "' with type: '" +type + "' not found";
+                ret = "edge '" + head + "' with type: '" +type + "' not found";
                 break;
             case EdgeHead.extend:
                 path = `<path d={"M 0 0   L " + `+headstr+`.w + " " + `+headstr+`.h/2 + "   L 0 " + `+headstr+`.h + "Z" } fill="#fff" `;
-                inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.reference:
                 path = `<path d={"M 0 0   L " + `+headstr+`.w + " " + `+headstr+`.h/2 + "   L 0 " + `+headstr+`.h } fill="none" `;
-                inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.aggregation:
                 path = `<path d={"M 0 " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
                     `+headstr+`.w + " " +`+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"} fill="#fff" `;
-                inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.composition:
                 path = `<path d={"M 0 " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
                     `+headstr+`.w + " " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"} fill="#000" `;
-                inner = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
+                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
                 /* `<svg width="20" height="20" viewBox="0 0 20 20" style={overflow: "visible"}>
                                             <path d={"M 10 0 L 0 20 L 20 20 Z"} fill="#ffffff" stroke="#808080" strokeWidth="1"></path>
@@ -84,8 +93,8 @@ export class DV {
                 //  style={transform: "rotate3d(xcenter, ycenter, zcenter??, 90deg)"}
         }
         //  transform={"rotate("+`+headstr+`.rad+"rad "+ segments.all[0].start.pt.toString(false, " ")}
-        return inner; // no wrap because of .hoverable > .preview  on root & subelements must be consecutive
-        // return `<g className="edge`+head + ` ` + type +`" style={` + styleTranslate + `}>\n`+ inner +`</g>`
+        return ret; // no wrap because of .hoverable > .preview  on root & subelements must be consecutive
+        // return `<g className="edge`+head + ` ` + type +`" style={` + styleTranslate + `}>\n`+ ret +`</g>`
     }
 
     // about label rotation in .edge > foreignObect > div (label)
@@ -100,13 +109,13 @@ export class DV {
                  second is to enlarge the hover area of path.preview to the same as path.content, so i avoid hover loop enter-leave and graphical flashing
                 
                 */ }
-                <path className={"preview"} strokeWidth={strokeWidth} stroke={strokeColor}
+                <path className={"preview full"} strokeWidth={strokeWidth} stroke={strokeColor}
                 fill={"none"} d={this.edge.d} strokeDasharray="` + dashing + `"></path>
-                <path className={"preview"} strokeWidth={strokeWidthHover} stroke={"transparent"}
+                <path className={"preview full"} strokeWidth={strokeWidthHover} stroke={"transparent"}
                 fill={"none"} d={this.edge.d}></path>
                 { /* edge separate segments */ }
                 {segments && segments.all && segments.all.flatMap(s => [
-                    <path tabIndex="-1" className={"clickable content"} style={{pointerEvents:"all"}} strokeWidth={strokeWidthHover}
+                    <path tabIndex="-1" className={"clickable content segment"} style={{pointerEvents:"all"}} strokeWidth={strokeWidthHover}
                     stroke={s.length > strokeLengthLimit && strokeColorLong || strokeColorHover}
                      fill={"none"} d={s.dpart}></path>,
                     s.label && <foreignObject style={{overflow: "visible", height:"0", width:"0", whiteSpace:"pre", x:(s.start.pt.x + s.end.pt.x)/2+"px", y:(s.start.pt.y + s.end.pt.y)/2+"px"}}>
@@ -116,10 +125,23 @@ export class DV {
                      " translate(0%, -5px", color: strokeColor}}>{s.label}</div>
                     </foreignObject>
                 ])}
-            { /* edge head */ }
-            ` + head + `
-            { /* edge tail */ }
-            ` + tail + `
+                { /* edge head */ }
+                ` + head + `
+                { /* edge tail */ }
+                ` + tail + `
+                { /* edge anchor start */ }
+                <circle className="anchor" cx={0*segments.all[0].start.pt.x} cy={0*segments.all[0].start.pt.y}
+                 style={{pointerEvents: edge.start ? "all" : "none",
+                transform: "translate(" + segments.all[0].start.pt.x +"px, " + segments.all[0].start.pt.y +"px)"}}
+                 onMouseDown={()=> edge.startFollow=true}
+                 onMouseUp={()=> edge.startfollow=false} />
+            { /* edge anchor end */ }
+                <circle className="anchor" cx={0*segments.all.last().end.pt.x} cy={0*segments.all.last().end.pt.y}
+                style={{pointerEvents: edge.end ? "all" : "none",
+                transform: "translate(" + segments.all.last().end.pt.x +"px, " + segments.all.last().end.pt.y +"px)"}}
+                 onMouseDown={()=> edge.endFollow=true}
+                 onMouseUp={()=> edge.endfollow=false} />
+
             </svg>
             { /* interactively added edgepoints */ }
             {
@@ -180,7 +202,7 @@ class DefaultView {
     {!data && "Model data missing."}
     <div className={'edges'}>
         {[
-            refEdges.map(se => <Edge start={se.start.father.node} end={se.end.node} view={'Pointer_ViewEdge' + ( se.start.containment && 'Composition' || 'Association')} key={'REF_' + se.start.node.id + '~' + se.end.node.id} />), 
+            refEdges.map(se => <Edge anchorStart={1} anchorEnd={2} start={se.start.father.node} end={se.end.node} view={'Pointer_ViewEdge' + ( se.start.containment && 'Composition' || 'Association')} key={'REF_' + se.start.node.id + '~' + se.end.node.id} />), 
             extendEdges.map(se => <Edge start={se.start} end={se.end} view={'Pointer_ViewEdgeInheritance'} key={'EXT_' + se.start.node.id + '~' + se.end.node.id} />)
         ]}
     </div>
@@ -218,7 +240,7 @@ class DefaultView {
 );}
 
     public static class(): string { return (
-`<div className={'root class'}>
+`<div className={'root class'} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
     <Input jsxLabel={<b className={'class-name'}>EClass:</b>} data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
     <div className={'class-children'}>

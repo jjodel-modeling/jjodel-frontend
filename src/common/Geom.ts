@@ -44,6 +44,7 @@ export abstract class IPoint extends RuntimeAccessibleClass {
     public clone(other: { x: number, y: number }): this { this.x = other.x; this.y = other.y; return this; }
 
     protected abstract new(): this;
+    abstract toSize(w: number, h?: number): ISize;
     public duplicate(): this { const ret = this.new(); ret.clone(this); return ret; }
 
     public distanceFromPoint(tentativeEnd: IPoint, skipSqrt: boolean = false): number {
@@ -52,12 +53,12 @@ export abstract class IPoint extends RuntimeAccessibleClass {
         // return this.subtract(tentativeEnd, true).absolute();
     }
 
-    public subtract(p2: IPoint, newInstance: boolean): this {
+    public subtract(p2: { x?: number, y?: number }, newInstance: boolean): this {
         Log.e(!p2, 'subtract argument must be a valid point: ', p2);
         let p1: this;
         if (!newInstance) { p1 = this; } else { p1 = this.duplicate(); }
-        p1.x -= p2.x;
-        p1.y -= p2.y;
+        if (p2.x !== undefined) p1.x -= p2.x;
+        if (p2.y !== undefined) p1.y -= p2.y;
         return p1; }
 
     public add(p2: { x?: number, y?: number }, newInstance: boolean): this {
@@ -198,6 +199,9 @@ export class GraphPoint extends IPoint{
         return g.toGraphCoord(p); }
 
     protected new(): this { return new GraphPoint() as this;}
+    public toSize(w: number, h?: number): GraphSize {
+        return new GraphSize(this.x, this.y, w, (h === undefined) ? w : h);
+    }
 
 }
 
@@ -213,6 +217,9 @@ export class Point extends IPoint{
         return p; }
 
     protected new(): this { return new Point() as this;}
+    public toSize(w: number, h?: number): Size {
+        return new Size(this.x, this.y, w, (h === undefined) ? w : h);
+    }
 }
 
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, IPoint);

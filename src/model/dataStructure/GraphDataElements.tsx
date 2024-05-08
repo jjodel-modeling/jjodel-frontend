@@ -48,6 +48,7 @@ import {
     windoww
 } from "../../joiner";
 import type {RefObject} from "react";
+import type {SVGPathElementt, SVGPathSegment} from '../../common/libraries/pathdata';
 import {EdgeGapMode, InitialVertexSize} from "../../joiner/types";
 import {labelfunc} from "../../joiner/classes";
 import {Geom} from "../../common/Geom";
@@ -85,6 +86,7 @@ export class DGraphElement extends DPointerTargetable {
     favoriteNode!: boolean;
     edgesIn!: Pointer<DEdge>[];
     edgesOut!: Pointer<DEdge>[];
+    anchors!: Dictionary<string, GraphPoint/* as % of node size.*/>;
 
 
     public static new(htmlindex: number, model: DGraphElement["model"]|null|undefined, parentNodeID: DGraphElement["father"],
@@ -170,6 +172,35 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __info_of__graphAncestors: Info = {type:"LGraph[]",
         txt:"<span>collection of the stack of Graphs containing the current element where [0] is the most nested graph, and last is root graph.</span>"};
     graphAncestors!: LGraph[];
+
+    anchors!: Dictionary<string, GraphPoint/* as % of node size.*/>;
+    __info_of__anchors: Info = {type:"Dictionary<string, point>", txt: <div>A named list of all anchor points where edges are allowed to land or depart from.<br/>
+            {/*When reading it is in absolute sizes.<br/>*/}
+            When writing it must be done in percentages, with the same rules as node.state.</div>}
+    get_anchors(c: Context): this["anchors"]{ return c.data.anchors; }
+    set_anchors(v: this["anchors"], c: Context):boolean{
+        if (v !== undefined && (typeof v !== "object" || Array.isArray(v))){
+            Log.ee('cannot set anchors: invalid value provided');
+            return true;
+        }
+        if (v){ // if !v it means clear all anchors?
+            for (let ka in v){//for each anchor
+                if (!v[ka]) continue;
+
+                if (c.data.anchors[ka]) {
+                    for (let kk in v[ka]) { //for each key within an anchor (x, y, w, h)
+                        // if i was attempting to set a partial size, complete it with the old size values.
+                        if ((v[ka][kk] === undefined) && (c.data.anchors[ka][kk] !== undefined)) v[ka][kk] = c.data.anchors[ka][kk];
+                    }
+                }
+                if (v[ka].x === undefined || isNaN(v[ka].x)) v[ka].x = 0.5;
+                if (v[ka].y === undefined || isNaN(v[ka].y)) v[ka].y = 0.5;
+                // if (v[ka].w === undefined || isNaN(v[ka].w)) v[ka].w = 5;
+                // if (v[ka].h === undefined || isNaN(v[ka].h)) v[ka].h = 5;
+            }
+        }
+        SetFieldAction.new(c.data, "anchors", v, '+=', false);
+        return true; }
 
     edgesIn!: LVoidEdge[];
     edgesOut!: LVoidEdge[];
@@ -529,17 +560,44 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         delete checked[context.data.id];
         return LPointerTargetable.from(Object.keys(checked), state);
     }
+    assignEdgeAnchor!: ((anchorName?: string)=>void);
+    __info_of__assignEdgeAnchor!: {hidden:true, type:"(anchorName?: string)=>void", txt: "Assign a specific anchor of this node to the edge currently following the cursor, if any."};
+    get_assignEdgeAnchor(c: Context): ((anchorName?: string)=>void) {
+        return (anchorName?: string)=>{
+            if (anchorName && !c.data.anchors[anchorName]) anchorName = undefined;
+            if (LVoidEdge.startFollow) {
+                let de: DEdge = DPointerTargetable.fromPointer(LVoidEdge.startFollow);
+                if (de.start !== c.data.id) return; // cannot change edge targets, only an anchor within the current targets
+                let le: LVoidEdge = LPointerTargetable.fromD(de);
+                le.anchorStart = anchorName;
+                le.startFollow = false;
 
+            }
+            if (LVoidEdge.endFollow) {
+                let de = DPointerTargetable.fromPointer(LVoidEdge.endFollow);
+                if (de.end !== c.data.id) return; // cannot change edge targets, only an anchor within the current targets
+                let le = LPointerTargetable.fromD(de);
+                le.anchorEnd = anchorName;
+                le.endFollow = false;
+            }
+        }
+    }
     get_events(c: Context): LViewElement["events"] {
         const tn = transientProperties.node[c.data.id];
         let mainview: DViewElement = tn.mainView.__raw;
         let otherViews: DViewElement[] = tn.stackViews.map(v=>v.__raw);
         let allviews: DViewElement[] = [mainview, ...otherViews].reverse();
-        let ret: LViewElement["events"] = {}
-        for (let dv of allviews) U.objectMergeInPlace(ret, transientProperties.view[dv.id].events);
+        const keep_for_closure_original_funcs: LViewElement["events"] = {};
+        const ret: LViewElement["events"] = {};
+        for (let dv of allviews) U.objectMergeInPlace(keep_for_closure_original_funcs, transientProperties.view[dv.id].events);
 
         const lastContext: GObject = tn.viewScores[mainview.id].evalContext;
-        for (let k in ret) ret[k] = (..._params:any) => ret[k](lastContext, ..._params);
+        const keys = Object.keys(keep_for_closure_original_funcs);
+        // for (let k of keys) ret['_raw_'+k] = keep_for_closure_original_funcs[k];
+        for (let k of keys) {
+            if (!keep_for_closure_original_funcs[k]) continue;
+            ret[k] = (..._params: any) => keep_for_closure_original_funcs[k](lastContext, ..._params);
+        }
 
         return ret; }
 
@@ -554,10 +612,10 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __info_of__isselected: Info = {type: "Dictionary<Pointer<User>, true>",
         txt:<div>A map that contains all the users selecting this element as keys, and always true as a value (if present).
             <br/>Edit it through node.select() and node.deselect()</div>}
-    __info_of_select: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Marks this node as selected by argument user."};
-    __info_of_deselect: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Un-marks this node as selected by argument user."};
-    __info_of_toggleSelect: Info = {type:"function(usr?:Pointer<User>):void", txt:"Calls this.select(usr) if the node is selected by argument user, this.deselect(usr) otherwise. If omitted, argument \"usr\" is the current user id.<br>Returns the result of this.isSelected() after the toggle."};
-    __info_of_isSelected: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Tells if this node is selected by argument user."};
+    __info_of__select: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Marks this node as selected by argument user."};
+    __info_of__deselect: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Un-marks this node as selected by argument user."};
+    __info_of__toggleSelect: Info = {type:"function(usr?:Pointer<User>):void", txt:"Calls this.select(usr) if the node is selected by argument user, this.deselect(usr) otherwise. If omitted, argument \"usr\" is the current user id.<br>Returns the result of this.isSelected() after the toggle."};
+    __info_of__isSelected: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Tells if this node is selected by argument user."};
     select(forUser?: Pointer<DUser>): void { return this.wrongAccessMessage("node.select()"); }
     deselect(forUser?: Pointer<DUser>): void { return this.wrongAccessMessage("node.deselect()"); }
     toggleSelected(forUser?: Pointer<DUser>): void { return this.wrongAccessMessage("node.toggleSelected()"); }
@@ -1239,14 +1297,25 @@ export class DVoidEdge extends DGraphElement {
 
     longestLabel!: PrimitiveType | labelfunc;
     labels!: PrimitiveType[] | labelfunc[];
+    anchorStart?: string;
+    anchorEnd?: string;
+    endFollow!: boolean;
+    startFollow!: boolean;
 
     public static new(htmlindex: number, model: DGraph["model"]|null|undefined, parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"],
                       nodeID: DGraphElement["id"]|undefined, start: DGraphElement["id"], end: DGraphElement["id"],
-                      longestLabel: DEdge["longestLabel"], labels: DEdge["labels"]): DEdge {
+                      longestLabel?: DEdge["longestLabel"], labels?: DEdge["labels"]): DEdge {
         return new Constructors(new DEdge('dwc'), parentNodeID, true, undefined, nodeID)
             .DPointerTargetable()
             .DGraphElement(model, graphID, htmlindex)
             .DVoidEdge(start, end, longestLabel, labels).end();
+    }
+    public static new2(model: DGraph["model"]|null|undefined, parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"],
+                       nodeID: DGraphElement["id"]|undefined, start: DGraphElement["id"], end: DGraphElement["id"], setter:((d: DEdge) => any)): DEdge {
+        return new Constructors(new DEdge('dwc'), parentNodeID, true, undefined, nodeID)
+            .DPointerTargetable()
+            .DGraphElement(model, graphID)
+            .DVoidEdge(start, end).end(setter);
     }
 }
 /*
@@ -1524,21 +1593,22 @@ replaced by startPoint
     longestLabel!: PrimitiveType;
     labels!: PrimitiveType[];
     allNodes!: [LGraphElement, ...Array<LEdgePoint>, LGraphElement];
-    __info_of__longestLabel: Info = {label:"longest label", type:"text", readType: "PrimitiveType",
+    __info_of__longestLabel: Info = {label:"Longest label", type:"function(edge)=>string | string", readType: "PrimitiveType",
         writeType:"PrimitiveType | (e:this, curr: LGraphElement, next: LGraphElement, curr_index: number, allNodes: LGraphElement[]) => PrimitiveType)",
         txt: <span>Label assigned to the longest path segment.</span>}
     __info_of__label: Info = {type: "", txt: <span>Alias for longestLabel</span>};
-    __info_of__labels: Info = {label:"multple labels", type: "text",
+    __info_of__labels: Info = {label:"Multiple labels", type: "function(edge)=>string | string",
         writeType: "type of label or Array<type of label>",
         txt: <span>Instructions to label to multiple or all path segments in an edge</span>};
     __info_of__allNodes: Info = {type: "[LGraphElement, ...Array<LEdgePoint>, LGraphElement]", txt: <span>first element is this.start. then all this.midnodes. this.end as last element</span>};
 
 
     get_label(c: Context): this["longestLabel"] { return this.get_longestLabel(c); }
+    set_label(val: this["longestLabel"], c: Context): boolean { return this.set_longestLabel(val, c); }
     get_longestLabel(c: Context): this["longestLabel"] { return c.data.longestLabel as any; }
-    set_longestLabel(val: this["longestLabel"], c: Context): boolean { return SetFieldAction.new(c.data, "longestLabel", val); }
+    set_longestLabel(val: this["longestLabel"], c: Context): boolean { SetFieldAction.new(c.data, "longestLabel", val); return true; }
     get_labels(c: Context): this["labels"] { return c.data.labels as any; }
-    set_labels(val: this["labels"], c: Context): boolean { return SetFieldAction.new(c.data, "labels", val); }
+    set_labels(val: this["labels"], c: Context): boolean { SetFieldAction.new(c.data, "labels", val); return true; }
     public headPos_impl(c: Context, isHead: boolean, headSize0?: GraphPoint, segment0?: EdgeSegment, zoom0?: GraphPoint): GraphSize & {rad: number} {
         let segment: EdgeSegment = segment0 || this.get_segments(c).segments[0];
         // let v: LViewElement = this.get_view(c);
@@ -1725,26 +1795,58 @@ replaced by startPoint
         return ret;
     }
 
-    private get_points_impl(allNodes: LGraphElement[], outer: boolean): segmentmaker[] {
-        function getAnchorOffset(size: GraphSize, offset: GraphPoint, isPercentage: boolean) {
+    private get_points_impl(allNodes: LGraphElement[], outer: boolean, c:Context): segmentmaker[] {
+        function getAnchorOffset(size: GraphSize, offset: GraphPoint, isPercentage: boolean, $factor: number = 100) {
             if (!size) size = new GraphSize(0, 0, 0, 0);
-            if (isPercentage) offset = new GraphPoint(offset.x/100*(size.w), offset.y/100*(size.h));
+            // else if (!size.tl) size = new GraphSize(size.x, size.y, size.w, size.h);
+            if (isPercentage) offset = new GraphPoint(offset.x/$factor*(size.w), offset.y/$factor*(size.h));
             return size.tl().add(offset, false);
         }
         const all: segmentmaker[] = allNodes.flatMap((ge, i) => {
+            let dge = ge.__raw;
             let base: segmentmaker = {view: ge.view, size: outer ? ge.outerSize : ge.innerSize, ge, pt: null as any, uncutPt: null as any};
             let rets: segmentmaker | undefined;// = base as any;
             let rete: segmentmaker | undefined;// = {...base} as any;
+            let debug = true;
+            if (debug) {
+                (base as any).anchor_e = dge.anchors[c.data.anchorEnd || 0] || dge.anchors[Object.keys(dge.anchors)[0]];
+                (base as any).anchor_s = dge.anchors[c.data.anchorStart || 0] || dge.anchors[Object.keys(dge.anchors)[0]];
+            }
+
+            // get endpoint, then startpoint (land on midnode, then depart from it)
             if (i !== 0){
-                rete = {...base};
-                rete.pt = (LEdgePoint.singleton as LEdgePoint).get_endPoint(undefined as any, rete.size, rete.view);
-                rete.pt = getAnchorOffset(rete.size, rete.view.edgeStartOffset, rete.view.edgeStartOffset_isPercentage);
+                if (i === allNodes.length - 1) {
+                    rete = {...base};
+                    // get end anchor from node
+                    let anchor = dge.anchors[c.data.anchorEnd || 0];
+                    if (!anchor) anchor = dge.anchors[Object.keys(dge.anchors)[0]];
+                    if (anchor) rete.pt = getAnchorOffset(rete.size, anchor, true, 1);
+                    else rete = undefined;
+                }
+                // if no anchor, treat the node as a midpoint
+                if (!rete) {
+                    rete = {...base};
+                    // get ending point from midpoint
+                    rete.pt = (LEdgePoint.singleton as LEdgePoint).get_endPoint(undefined as any, rete.size, rete.view);
+                    rete.pt = getAnchorOffset(rete.size, rete.view.edgeStartOffset, rete.view.edgeStartOffset_isPercentage);
+                }
                 rete.uncutPt = rete.pt;
             }
             if (i !== allNodes.length - 1){
                 rets = {...base};
-                rets.pt = (LEdgePoint.singleton as LEdgePoint).get_startPoint(undefined as any, rets.size, rets.view);
-                rets.pt = getAnchorOffset(rets.size, rets.view.edgeStartOffset, rets.view.edgeStartOffset_isPercentage);
+                if (i === 0) {
+                    // get start anchor from node
+                    let anchor = dge.anchors[c.data.anchorStart || 0];
+                    if (!anchor) anchor = dge.anchors[Object.keys(dge.anchors)[0]];
+                    if (anchor) rets.pt = getAnchorOffset(rets.size, anchor, true, 1);
+                    else rets = undefined;
+                }
+                if (!rets) {
+                    rets = {...base};
+                    // rets starting point from midpoint
+                    rets.pt = (LEdgePoint.singleton as LEdgePoint).get_startPoint(undefined as any, rets.size, rets.view);
+                    rets.pt = getAnchorOffset(rets.size, rets.view.edgeStartOffset, rets.view.edgeStartOffset_isPercentage);
+                }
                 rets.uncutPt = rets.pt;
             }
             // ret.pt = ge.startPoint
@@ -1752,9 +1854,10 @@ replaced by startPoint
         );
         return all;
     }
-    private get_points(allNodes: LGraphElement[], outer: boolean = false): segmentmaker[]{ return this.get_points_impl(allNodes, outer); }
-    private get_points_outer(allNodes: LGraphElement[]): segmentmaker[]{ return this.get_points_impl(allNodes, true); }
-    private get_points_inner(allNodes: LGraphElement[]): segmentmaker[]{ return this.get_points_impl(allNodes, false); }
+    private get_pointsDebug(c: Context): segmentmaker[]{ return this.get_points_impl(this.get_allNodes(c), true, c); }
+    private get_points(allNodes: LGraphElement[], outer: boolean = false, c: Context): segmentmaker[]{ return this.get_points_impl(allNodes, outer, c); }
+    private get_points_outer(allNodes: LGraphElement[], c: Context): segmentmaker[]{ return this.get_points_impl(allNodes, true, c); }
+    private get_points_inner(allNodes: LGraphElement[], c: Context): segmentmaker[]{ return this.get_points_impl(allNodes, false, c); }
     public d!: string;
     public __info_of__d: Info = {type: ShortAttribETypes.EString, txt:"the full suggested path of SVG path \"d\" attribute, merging all segments."}
     public get_d(c: Context) {
@@ -1773,7 +1876,7 @@ replaced by startPoint
         let v = this.get_view(c);
         let allNodes = l.allNodes;
         windoww.edge = l;
-        let all: segmentmaker[] = this.get_points(allNodes, outer);
+        let all: segmentmaker[] = this.get_points(allNodes, outer, c);
         //const all: {size: GraphSize, view: LViewElement, ge: LGraphElement}[] = allNodes.map((ge) => { return { view: ge.view, size: ge.size, ge}});
         let ret: EdgeSegment[] = [];
         let bm: EdgeBendingMode = v.bendingMode;
@@ -1958,9 +2061,142 @@ replaced by startPoint
     protected get_start(context: Context): this["start"] { return LPointerTargetable.from(context.data.start); }
     protected get_end(context: Context): this["end"] { return LPointerTargetable.from(context.data.end); }
 
+
+    anchorStart?: string;
+    anchorEnd?: string;
+    __info_of__anchorStart: Info = {writeType:"string | undefined", type:"string", isEdge: true,
+        txt:"The name of a node anchor where the edge should originate from."};
+    __info_of__anchorEnd: Info = {writeType:"string | undefined", type:"string", isEdge: true,
+        txt:"The name of a node anchor where the edge should point to."};
+    endFollow!: boolean;
+    startFollow!: boolean;
+    __info_of__endFollow: Info = {writeType:"boolean", readType:"boolean", type:"boolean", isEdge: true,// type:"read:(()=>void), write:boolean", readType:"(()=>void))",
+        txt:"makes the ending point of an edge follow the cursor, so it can be assigned to a new anchor or target."};
+    __info_of__startFollow: Info = {writeType:"boolean", readType:"boolean", type:"boolean", isEdge: true,// type:"read:(()=>void), write:boolean", readType:"(()=>void))",
+        txt:"makes the starting point of an edge follow the cursor, so it can be assigned to a new anchor or source."};
+    get_endFollow(c: Context): boolean { return !!(c.data.end && c.data.endFollow); }
+    get_startFollow(c: Context): boolean { return !!(c.data.start && c.data.startFollow); }
+    // // what in multieditor? needs to be moved in transientstuff?
+    set_endFollow(val: boolean, c: Context): boolean { return this._set_start_endFollow(val, c, false); }
+    set_startFollow(val: boolean, c: Context): boolean { return this._set_start_endFollow(val, c, true); }
+    _set_start_endFollow(val: boolean, c: Context, isStart: boolean): boolean {
+        val = !!val;
+        console.log("_set_start_endFollow", {val, c, isStart});
+        if (val) {
+            if (isStart) LVoidEdge.startFollow = c.data.id;
+            else LVoidEdge.endFollow = c.data.id;
+            if (!LVoidEdge.following) {
+                console.log("_set_start_endFollow event attached");
+                document.body.addEventListener("mousemove", LVoidEdge.mousemove, false);
+                LVoidEdge.following = true;
+                const $base = $(document.getElementById(isStart ? c.data.start : c.data.end) || []);
+                const $deepAnchors = $base.find("[nodeid] .anchor");
+                const $anchors = $base.find(".anchor").not($deepAnchors);
+                $anchors.addClass("valid-anchor");
+                $anchors.filter('[data-anchorname="'+((isStart ? c.data.anchorStart : c.data.anchorEnd)||0)+'"]').addClass("active-anchor");
+                let selector = ".Edge[nodeid='" + (LVoidEdge.endFollow || LVoidEdge.startFollow as any)+"']";
+                // [...document.querySelectorAll(selector)].map(e=>e.classList.add("no-transition-following")); gets refreshed by react
+                document.body.classList.add("no-transition-following");
+            }
+        }
+        else {
+            if (LVoidEdge.following && ((isStart ? LVoidEdge.startFollow : LVoidEdge.endFollow) === c.data.id)) {
+                document.body.removeEventListener("mousemove", LVoidEdge.mousemove, false);
+                let selector = ".Edge[nodeid='" + (LVoidEdge.endFollow || LVoidEdge.startFollow as any)+"']";
+                //[...document.querySelectorAll(selector)].map(e=>e.classList.remove("no-transition-following"));
+                document.body.classList.remove("no-transition-following");
+                if (isStart) LVoidEdge.startFollow = undefined;
+                else LVoidEdge.endFollow = undefined;
+                LVoidEdge.following = false;
+                const $base = $(document.getElementById(isStart ? c.data.start : c.data.end) || []);
+                //const $deepAnchors = $base.find("[nodeid] .anchor");
+                const $anchors = $base.find(".anchor")//.not($deepAnchors);
+                $anchors.removeClass(["valid-anchor", "active-anchor"]);
+            }
+        }
+        //SetFieldAction.new(c.data, "startFollow", !!val, '', false);
+        return true; }
+    public static startFollow: Pointer<DVoidEdge> | undefined = undefined;
+    public static endFollow: Pointer<DVoidEdge> | undefined = undefined;
+    public static following: boolean = false;
+    public static tmp: number = 1;
+    public static mousemove(e0: Event): void {
+        if (!LVoidEdge.following) return;
+        LVoidEdge.tmp++;
+        let selector = ".Edge[nodeid='" + (LVoidEdge.endFollow || LVoidEdge.startFollow as any)+"']";
+        let root = document.querySelector(selector);
+        if (!root) return;
+        let paths: SVGPathElementt[] = [...root.querySelectorAll("path.full")] as SVGPathElementt[];
+        if (!paths.length) paths = [...root.querySelectorAll("path.segment")] as SVGPathElementt[];
+        let pathSegmentContainers: Element[] = [...new Set([...root.querySelectorAll("path.segment")].map(e=>e.parentElement))] as Element[];
+        for (let container of pathSegmentContainers){
+            let se: SVGPathElementt[] = [...container.querySelectorAll("path.segment")] as SVGPathElementt[];
+            paths.push(se[se.length-1]);
+        }
+        let headTail = [...root.querySelectorAll(LVoidEdge.endFollow ? '.edgeHead' : '.edgeTail')] as HTMLElement[];
+        let cursorPos = new Point((e0 as any as MouseEvent).pageX, (e0 as any as MouseEvent).pageY);
+
+        let segList: SVGPathSegment[] | undefined;
+        for (let p of paths) {
+            let svg: SVGElement = U.parentUntil("svg", p) as SVGElement;
+            let svgsize: Size = Size.of(svg);
+            let svgzoom: Point = new Point(1,1); // todo: check viewbox and css zoom
+            let gcursorPos = cursorPos.subtract(svgsize.tl(), true).multiply(svgzoom) as any as GraphPoint;
+            segList = [...p.getPathData()];
+            let lastSeg = {...segList[LVoidEdge.endFollow ? segList.length-1 : 0]};
+            switch (lastSeg.type){
+                case 'a': case 'A':
+                    segList.push('fake new segment to get replaced instead of actual last segment which is A' as any);
+                    lastSeg.type="L"; lastSeg.values = [gcursorPos.x, gcursorPos.y];
+                    break;
+                case "C": case "c": // bezier curves, keep type just change last point
+                case "Q": case "q":
+                case "S": case "s":
+                case "T": case "t":
+                    lastSeg.values[lastSeg.values.length-2] = gcursorPos.x;
+                    lastSeg.values[lastSeg.values.length-1] = gcursorPos.y; break;
+                case "M": case "m":
+                    lastSeg.type = LVoidEdge.endFollow ? "L" : "M";
+                    lastSeg.values = [gcursorPos.x, gcursorPos.y]; break;
+                case "V": case "v": // stuff forced to become a line
+                case "H": case "h":
+                case "L": case "l":
+                case "Z": case "z":
+                    lastSeg.type="L"; lastSeg.values = [gcursorPos.x, gcursorPos.y];
+                    break;
+            }
+            segList[LVoidEdge.endFollow ? segList.length-1 : 0] = lastSeg;
+            if (LVoidEdge.tmp%20===0) console.log("svg set path data,", {segList, oldSeglist:p.getPathData(), p});
+            p.setPathData(segList);
+        }
+
+        for (let ht of headTail){
+            let svg: SVGElement = U.parentUntil("svg", ht) as SVGElement;
+            let svgsize: Size = Size.of(svg);
+            let svgzoom: Point = new Point(1,1); // todo: check viewbox and css zoom
+            let gcursorPos = cursorPos.subtract(svgsize.tl(), true).multiply(svgzoom) as any as GraphPoint;
+            let rotation: number;
+            let lastPt = segList && segList[LVoidEdge.endFollow ? segList.length-2 : 1].values;
+
+            if (lastPt) {
+                let m = gcursorPos.getM(new Point(lastPt[LVoidEdge.endFollow ? lastPt.length-2 : 1], lastPt[LVoidEdge.endFollow ? lastPt.length-1 : 0]));
+                if (Number.POSITIVE_INFINITY === m) rotation = Geom.degToRad(90); else
+                if (Number.NEGATIVE_INFINITY === m) rotation = Geom.degToRad(270); else
+                    rotation = Math.atan(m);
+                if (lastPt[LVoidEdge.endFollow ? lastPt.length-2 : 1] > gcursorPos.x) rotation -= Geom.degToRad(180);
+            } else { rotation = 0;}
+            let headSize = Size.of(ht);
+
+            let headPos = gcursorPos.subtract({x:headSize.w/2, y:headSize.h/2}, true);//.subtract({x:Math.cos(rotation)*headSize.w/2, y: -Math.sin(rotation)*headSize.h/2}, true);
+
+            if (LVoidEdge.tmp%20===0) console.log("_set_start_endFollow move head", {selector:LVoidEdge.endFollow ? '.edgeHead' : '.edgeTail', headTail, root});
+            ht.style.transform = 'translate('+headPos.x+"px, "+headPos.y+"px) rotate("+rotation+"rad)";
+        }
+    }
 }
 RuntimeAccessibleClass.set_extend(DGraphElement, DVoidEdge);
 RuntimeAccessibleClass.set_extend(LGraphElement, LVoidEdge);
+
 @RuntimeAccessible('DEdge')
 export class DEdge extends DVoidEdge { // DVoidEdge
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];

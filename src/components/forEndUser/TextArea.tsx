@@ -1,6 +1,6 @@
 import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
-import {DocString, DPointerTargetable, DState, GObject, LPointerTargetable, Overlap, Pointer, Defaults} from '../../joiner';
+import {DocString, DPointerTargetable, DState, GObject, LPointerTargetable, Overlap, Pointer, Defaults, Info} from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './style.scss';
 
@@ -13,8 +13,8 @@ function TextAreaComponent(props: AllProps) {
     const setter = props.setter;
     const label: string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
-    let tooltip: string|undefined = (props.tooltip === true) ? ((data['__info_of__' + field]) ? data['__info_of__' + field].txt: '') : props.tooltip;
-    tooltip = (tooltip) ? tooltip : '';
+    const info: Info | undefined = data && field && data['__info_of__' + field];
+    let tooltip: ReactNode = ((props.tooltip === true) ? (info ? info.txt : '') : props.tooltip) || '';
     let __value = (!data) ? 'undefined' : ((getter) ? getter(data, field) : (data[field] !== undefined) ? data[field] : 'undefined');
     const [value, setValue] = useStateIfMounted(__value);
     const [isTouched, setIsTouched] = useStateIfMounted(false);
@@ -79,8 +79,8 @@ export interface TextAreaOwnProps {
     getter?: <T extends LPointerTargetable>(data: T, field: DocString<"keyof T">) => string;
     setter?: <T extends LPointerTargetable>(value: string|boolean, data: T, field: DocString<"keyof T">) => void;
     jsxLabel?: ReactNode;
+    tooltip?: ReactNode;
     readonly?: boolean;
-    tooltip?: string | boolean | ReactElement;
     hidden?: boolean;
     key?: React.Key | null;
     className?: string;

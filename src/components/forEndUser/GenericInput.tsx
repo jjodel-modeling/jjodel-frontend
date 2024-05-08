@@ -15,6 +15,8 @@ import {
 } from '../../joiner';
 import {DState, DPointerTargetable, LPointerTargetable, RuntimeAccessibleClass} from '../../joiner';
 import {SizeInput} from './SizeInput';
+import JsEditor from "../rightbar/jsEditor/JsEditor";
+import JavascriptEditor from "../rightbar/jsEditor/JavascriptEditor";
 
 // private
 interface ThisState {
@@ -106,19 +108,30 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
             if (info.max !== undefined) otherProps.max = info.max;
             else otherProps.max = info.positive === false ? max/2 - 1 : max-1; // assume true if non specified
         }
-        let label = U.uppercaseFirstLetter(info.label || this.props.field);
+        let label: ReactNode = info.label || this.props.field;
+        if (typeof label === "string") label = U.uppercaseFirstLetter(info.label || this.props.field);
 
-        switch (type) {
+        if (type.toLowerCase().indexOf("function(") >=0 || type.indexOf("()=>") >=0) type = "Function";
+        switch (type.toLowerCase()) {
             default:
                 Log.e('invalid type in GenericInput', {type, props:this.props, info, d});
                 return <div {...otherProps as any} className={'danger'} style={{color: 'red', border: '1px solid red'}}>Invalid GInput type: '{type}'</div>;
-            case 'Point': case 'GraphPoint': case 'Size': case 'GraphSize':
+            case 'point': case 'graphpoint': case 'size': case 'graphSsize':
                 return <SizeInput {...otherProps} data={l} field={this.props.field} label={label} />;
-            case 'text': case 'Function':
-                return <TextArea inputClassName={'input my-auto ms-auto '} {...otherProps} className={this.props.rootClassName}
+            case 'text':
+                return <TextArea inputClassName={'input my-auto ms-auto '} {...otherProps} className={(this.props.rootClassName||'')+' '+(this.props.className||'')}
                                  data={this.props.data} field={this.props.field}
                                  jsxLabel={label} tooltip={this.props.tooltip} />;
-            case 'EEnum':
+            case 'function':
+                return <JavascriptEditor className={(this.props.rootClassName||'')+' '+(this.props.className||'')} placeHolder={this.props.placeholder}
+                                         jsxLabel={this.props.label}
+                                         data={this.props.data} field={this.props.field} tooltip={this.props.tooltip}
+                                         hide={this.props.hide} style={this.props.style} title={this.props.title}
+                                         getter={this.props.getter} setter={this.props.setter} key={this.props.key}
+                                         readonly={this.props.readOnly}
+                                         height={this.props.height}
+                                         {...otherProps as any /*not working? i had to list them all*/}  />;
+            case 'eenum':
                 return <Select inputClassName={'my-auto ms-auto select'} {...otherProps} className={this.props.rootClassName}
                                data={this.props.data} field={this.props.field} options={enumOptionsJSX}
                                jsxLabel={label} tooltip={this.props.tooltip} />;
@@ -139,37 +152,38 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
             case 'time': break;
             case 'url': break;
             // ecore
-            case ShortAttribETypes.EChar:
+            case ShortAttribETypes.EChar.toLowerCase():
                 type = 'text';
                 if (undefined === otherProps.minLength) otherProps.minLength = 1;
                 otherProps.maxLength = 1;
                 // otherProps.pattern = '^.{1}$';
                 break;
-            case ShortAttribETypes.EString: type = 'text'; break;
-            case ShortAttribETypes.EBoolean: type = 'checkbox'; break;
-            case ShortAttribETypes.EByte:
+            case "string":
+            case ShortAttribETypes.EString.toLowerCase(): type = 'text'; break;
+            case ShortAttribETypes.EBoolean.toLowerCase(): type = 'checkbox'; break;
+            case ShortAttribETypes.EByte.toLowerCase():
                 type = 'number';
                 setMinMax(2**8);
                 break;
-            case ShortAttribETypes.EShort:
+            case ShortAttribETypes.EShort.toLowerCase():
                 type = 'number';
                 setMinMax(2**16);
                 break;
-            case ShortAttribETypes.EInt:
+            case ShortAttribETypes.EInt.toLowerCase():
                 type = 'number';
                 setMinMax(2**32);
                 break;
-            case ShortAttribETypes.ELong:
+            case ShortAttribETypes.ELong.toLowerCase():
                 type = 'number';
                 setMinMax(2**64);
                 break;
-            case ShortAttribETypes.EFloat:
-            case ShortAttribETypes.EDouble:
+            case ShortAttribETypes.EFloat.toLowerCase():
+            case ShortAttribETypes.EDouble.toLowerCase():
                 type = 'number';
                 if (!otherProps.step) otherProps.step = info.step || 0.1;
                 if (!otherProps.pattern) otherProps.pattern = info.pattern || '^[0-9]+\.[0-9]{' + info.digits + '}$';
                 break;
-            case ShortAttribETypes.EDate: type = 'datetime-local'; break;
+            case ShortAttribETypes.EDate.toLowerCase(): type = 'datetime-local'; break;
         }
         // delete otherProps.field; delete otherProps.data; delete otherProps.infoof;
         return <Input inputClassName={'my-auto ms-auto input'} {...otherProps} className={this.props.rootClassName}
@@ -183,6 +197,9 @@ interface _OwnProps {
     // propsRequestedFromJSX_AsAttributes: string;
     data: DPointerTargetable | LPointerTargetable;
     field: string;
+    key?: string;
+    label?: ReactNode;
+    title?: ReactNode;
     info?: Info | undefined;
     tooltip?: boolean|string;
 
@@ -192,6 +209,9 @@ interface _OwnProps {
     rootStyle?: GObject;// this goes to root
     style?: GObject; // this goes at the root of <Input> or <Select> element(s)
     inputStyle?: GObject; // this goes to the actual native <input> or <select> element(s)
+    hide?: undefined | boolean; // for autohiding Javascript editor
+    getter?: <T extends LPointerTargetable>(data: T, field: DocString<"keyof T">) => string;
+    setter?: <T extends LPointerTargetable>(value: string|boolean, data: T, field: DocString<"keyof T">) => void;
 
     /*
     they might be useful, but can just add them in without declaring all of them. i pass them like <input ...otherprops>

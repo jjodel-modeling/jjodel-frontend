@@ -7,6 +7,7 @@ import JsEditor from "../../jsEditor/JsEditor";
 function ViewEventsComponent(props: AllProps) {
     const view = props.view;
     const dview = props.view.__raw;
+    const readOnly = props.readonly;
     function addEvent() {
         let eventname = "customEvent1";
         eventname = U.increaseEndingNumber(eventname, false, false, (s)=> s in dview.events);
@@ -27,21 +28,31 @@ function ViewEventsComponent(props: AllProps) {
         <JsEditor viewID={view.id} field={'onResizeEnd'} title={'onResizeEnd'}  />
         <div className={'d-flex mx-auto'}>
             <b style={{fontSize: '1.25em'}}>Custom Events</b>
-            <button className={'btn btn-primary ms-auto'} onClick={addEvent}>
+            <button className={'btn btn-primary ms-auto'} onClick={addEvent} disabled={readOnly}>
                 <i className={'p-1 bi bi-plus'} />
             </button>
         </div>
         <hr className={'my-1'} />
         {Object.keys(dview.events).map((k) => {
             let val = dview.events[k];
-            return <JsEditor
+            if (!val) return;
+            return <>
+            <JsEditor
             viewID={view.id} key={k/* if val does not update, concatenate it to the key (k+val)*/}
-            title={`Event ${k}`}
+            readonly={readOnly}
+            title={<input defaultValue={k} disabled={readOnly} onBlur={(e)=>{
+                let newname = e.target.value;
+                if (k === newname) return;
+                let newEvent: GObject = {};
+                newEvent[newname] = dview.events[k];
+                newEvent[k] = undefined;
+                view.events = newEvent;
+            }}/>}
             jsxLabel={<button className={'btn btn-danger my-auto ms-auto'} onClick={() => {
                 let newEvent: GObject = {};
                 newEvent[k] = undefined; // this is how you trigger deletion with object -= action
                 view.events = newEvent;
-            }}>
+            }} disabled={readOnly}>
                 <i className={'p-1 bi bi-trash3-fill'} />
             </button>}
             getter={() => val}
@@ -50,7 +61,7 @@ function ViewEventsComponent(props: AllProps) {
                 newEvent[k] = js;
                 view.events = newEvent;
             }}
-        />})}
+        /></>})}
         <div className={'p-4'}></div>
     </section>);
 }

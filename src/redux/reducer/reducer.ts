@@ -420,59 +420,37 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         }
     }
 
-
-    if (ret.VIEWS_RECOMPILE_events.length) {
-        // for (let gid of ret.graphs) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
-        // for (let vid of ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION) { }
-        for (let entry of ret.VIEWS_RECOMPILE_events) {
-            let vid: string;
-            let dv: DViewElement;
-            let keys: string[];
-            if (typeof entry === "object") {
-                vid = entry.vid;
-                dv = DPointerTargetable.fromPointer(vid, ret);
-                keys = entry.keys || Object.keys(dv.events);
+    if (ret.VIEWS_RECOMPILE_all === true) ret.VIEWS_RECOMPILE_all = Object.keys(ret.idlookup);
+    if ((ret.VIEWS_RECOMPILE_all as Pointer[])?.length) {
+        let resetAllNodes: boolean = false;
+        for (let id of new Set(ret.VIEWS_RECOMPILE_all as Pointer[])){
+            let d = ret.idlookup[id];
+            if (RuntimeAccessibleClass.extends(d.className, "DViewElement")) {
+                (d as DViewElement).css_MUST_RECOMPILE = true;
+                transientProperties.view[d.id as string] = { } as any;
+                for (let k of DViewElement.MeasurableKeys) (ret as any)['VIEWS_RECOMPILE_'+k].push(d.id);
+                if (!resetAllNodes) resetAllNodes = true;
             }
-            else {
-                vid = entry;
-                dv = DPointerTargetable.fromPointer(vid, ret);
-                keys = Object.keys(dv.events);
+            if (RuntimeAccessibleClass.extends(d.className, "DModelElement")) {
+                if (d.className === "DClass") {
+                    let oldname = (oldState.idlookup[d.id] as DClass)?.name;
+                    let newname = (ret.idlookup[d.id] as DClass)?.name;
+                    if (oldname !== newname) ret.ClassNameChanged[d.id as Pointer<DClass>] = oldname;
+                }
+                // transientProperties.modelElement[d.id] = { } as any; stuff in here does not need replacement, can never be dangerous.
             }
-            let tv = transientProperties.view[vid];
-            if (!tv) transientProperties.view[vid] = tv = {} as any;
-            if (!tv.events) tv.events = {};
-            // if (!tv.events_raw) tv.events_raw = {};
-            for (let key of keys) {
-                if (!key) { delete tv.events[key]; continue; }
-                let allContextKeys = {...contextFixedKeys};
-                for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
-                for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
-                let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}, ..._params';
-                // dv.events[key] = (...params)=> code
-                const body: string = 'return (' +dv.events[key]+')(..._params)';
-                // if (vid.includes('Model')) console.log("modelparse, jsx", {paramStr, body});
-                try {
-                    tv.events[key] = new Function(paramStr, body) as ((...a:any)=>any);
-                    // tv.events_raw[key] = new Function(paramStr, body) as ((...a:any)=>any);
-                    // attempt to auto obtain node context
-                    // impossile with view.event.name
-                    // could with node.event.name if node.get_event sets a current node thing__, no he must wrap the func!! in the getter
-                    // tv.events[key] = (..._params2:any) => { return tv.events_raw[key](context, ..._params2) };
-                }
-                catch (e: any) {
-                    console.error('error jsxparse', {vid, e, paramStr, body});
-                    tv.events[key] = (context) => Log.ee("failed to parse function body: " + e.message.split("\n")[0], e.message);
-                }
+            if (RuntimeAccessibleClass.extends(d.className, "DGraphElement")) {
+                transientProperties.node[d.id as string] = { } as any;
             }
         }
-        ret.VIEWS_RECOMPILE_events = [];
-        // triggers recompile of nothing
+        if (resetAllNodes) for (let nid in transientProperties.node) transientProperties.node[nid] = {} as any;
     }
+
     // local changes to out-of-redux stuff
     if (ret.VIEWS_RECOMPILE_ocl.length) {
         // for (let gid of ret.graphs) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
         // for (let vid of ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION) { }
-        for (let vid of ret.VIEWS_RECOMPILE_ocl) {
+        for (let vid of new Set(ret.VIEWS_RECOMPILE_ocl)) {
             if (!transientProperties.view[vid]) transientProperties.view[vid] = {} as any;
             transientProperties.view[vid].oclEngine = undefined as any; // force re-parse
             transientProperties.view[vid].oclChanged = true;
@@ -488,8 +466,9 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         // not implemented for now
         ret.VIEWOCL_UPDATE_NEEDS_RECALCULATION = [];
     }*/
+
     if (ret.VIEWS_RECOMPILE_preconditions.length) {
-        for (let vid of ret.VIEWS_RECOMPILE_preconditions) {
+        for (let vid of new Set(ret.VIEWS_RECOMPILE_preconditions)) {
             for (let nid in transientProperties.node) {
                 let tnv = transientProperties.node[nid].viewScores[vid];
                 if (tnv?.metaclassScore !== ViewEClassMatch.NOT_EVALUATED_YET) tnv.metaclassScore = ViewEClassMatch.NOT_EVALUATED_YET as any as number;
@@ -498,7 +477,8 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         ret.VIEWS_RECOMPILE_preconditions = [];
     }
 
-    for (const vid of ret.VIEWS_RECOMPILE_constants) { // compiled in func, and executed, result does not vary between nodes.
+    if (ret.VIEWS_RECOMPILE_constants?.length)
+    for (const vid of new Set(ret.VIEWS_RECOMPILE_constants)) { // compiled in func, and executed, result does not vary between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
         // transientProperties.view[vid].constantsList = dv.constants?.match(UDRegexp).map(s=>s.substring(4, s.length-1).trim()) || [];
         // let allContextKeys = {...contextFixedKeys};
@@ -532,7 +512,8 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     }
     ret.VIEWS_RECOMPILE_constants = [];
 
-    for (const vid of ret.VIEWS_RECOMPILE_usageDeclarations) { // compiled in func, but NOT executed, result varies between nodes.
+    if (ret.VIEWS_RECOMPILE_usageDeclarations?.length)
+    for (const vid of new Set(ret.VIEWS_RECOMPILE_usageDeclarations)) { // compiled in func, but NOT executed, result varies between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
         let tv = transientProperties.view[vid];
         if (!tv) transientProperties.view[vid] = tv = {} as any;
@@ -574,8 +555,56 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     }
     ret.VIEWS_RECOMPILE_usageDeclarations = [];
 
-    /* JS CONDITION */
-    for (const vid of ret.VIEWS_RECOMPILE_jsCondition) {
+    if (ret.VIEWS_RECOMPILE_events.length) {
+        // for (let gid of ret.graphs) Selectors.updateViewMatchings(gid, ret.modelElements, Object.values(ret.idlookup).map( d => RuntimeAccessibleClass.extends(d, DModelElement.cname)));
+        // for (let vid of ret.VIEW_APPLIABLETO_NEEDS_RECALCULATION) { }
+        for (let entry of new Set(ret.VIEWS_RECOMPILE_events)) {
+            let vid: string;
+            let dv: DViewElement;
+            let keys: string[];
+            if (typeof entry === "object") {
+                vid = entry.vid;
+                dv = DPointerTargetable.fromPointer(vid, ret);
+                keys = entry.keys || Object.keys(dv.events);
+            }
+            else {
+                vid = entry;
+                dv = DPointerTargetable.fromPointer(vid, ret);
+                keys = Object.keys(dv.events);
+            }
+            let tv = transientProperties.view[vid];
+            if (!tv) transientProperties.view[vid] = tv = {} as any;
+            if (!tv.events) tv.events = {};
+            // if (!tv.events_raw) tv.events_raw = {};
+            for (let key of keys) {
+                if (!key) { delete tv.events[key]; continue; }
+                let allContextKeys = {...contextFixedKeys};
+                for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
+                for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
+                let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}, ..._params';
+                // dv.events[key] = (...params)=> code
+                const body: string = 'return (' +dv.events[key]+')(..._params)';
+                // if (vid.includes('Model')) console.log("modelparse, jsx", {paramStr, body});
+                try {
+                    tv.events[key] = new Function(paramStr, body) as ((...a:any[])=>any);
+                    // tv.events_raw[key] = new Function(paramStr, body) as ((...a:any)=>any);
+                    // attempt to auto obtain node context
+                    // impossile with view.event.name
+                    // could with node.event.name if node.get_event sets a current node thing__, no he must wrap the func!! in the getter
+                    // tv.events[key] = (..._params2:any) => { return tv.events_raw[key](context, ..._params2) };
+                }
+                catch (e: any) {
+                    console.error('error jsxparse', {vid, e, paramStr, body});
+                    tv.events[key] = (context) => Log.ee("failed to parse function body: " + e.message.split("\n")[0], e.message);
+                }
+            }
+        }
+        ret.VIEWS_RECOMPILE_events = [];
+        // triggers recompile of nothing
+    }
+
+    if (ret.VIEWS_RECOMPILE_jsCondition?.length)
+    for (const vid of new Set(ret.VIEWS_RECOMPILE_jsCondition)) {
         const dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
         let tv = transientProperties.view[vid];
         if (!tv) transientProperties.view[vid] = tv = {} as any;
@@ -604,7 +633,9 @@ export function reducer(oldState: DState = initialState, action: Action): DState
     }
     ret.VIEWS_RECOMPILE_jsCondition = [];
 
-    for (const vid of ret.VIEWS_RECOMPILE_jsxString) { // compiled in func, but NOT executed, result varies between nodes.
+
+    if (ret.VIEWS_RECOMPILE_jsxString?.length)
+    for (const vid of new Set(ret.VIEWS_RECOMPILE_jsxString)) { // compiled in func, but NOT executed, result varies between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
         let tv = transientProperties.view[vid];
         if (!tv) transientProperties.view[vid] = tv = {} as any;
@@ -632,8 +663,8 @@ export function reducer(oldState: DState = initialState, action: Action): DState
 
 
     for (const key of DViewElement.MeasurableKeys) {
-        let vid: Pointer<DViewElement>;
-        for (vid of (ret as any)['VIEWS_RECOMPILE_'+key]) {
+        if ((ret as any)['VIEWS_RECOMPILE_'+key]?.length)
+        for (let vid of new Set((ret as any)['VIEWS_RECOMPILE_'+key]) as any) {
             let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
             let tv = transientProperties.view[vid];
             if (!tv) transientProperties.view[vid] = tv = {} as any;
@@ -686,14 +717,19 @@ export function reducer(oldState: DState = initialState, action: Action): DState
 export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: DState = initialState, action: Action): DState{
     let times: number;
     let state: DState;
+    let removedDeltas: (GObject | undefined)[] = [];
     switch (action.type) {
         case UndoAction.type:
             times = action.value;
             state = oldState;
             Log.exDev(times<=0, "undo must be positive", action);
             while (times--) {
-                state = undo(state, statehistory[DUser.current].undoable.pop());
+                const delta = statehistory[DUser.current].undoable.pop();
+                removedDeltas.push(delta);
+                state = undo(state, delta);
             }
+            state.VIEWS_RECOMPILE_all = removedDeltas.flatMap( d => Object.keys(d?.idlookup||{}));
+            // state.VIEWS_RECOMPILE_all = true;
             return state;
 
         case RedoAction.type:
@@ -701,8 +737,12 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             state = oldState;
             Log.exDev(times<=0, "redo must be positive", action);
             while (times--) {
-                state = undo(state, statehistory[DUser.current].redoable.pop(), false);
+                const delta = statehistory[DUser.current].redoable.pop();
+                removedDeltas.push(delta);
+                state = undo(state, delta, false);
             }
+            state.VIEWS_RECOMPILE_all = removedDeltas.flatMap( d => Object.keys(d?.idlookup||{}));
+            // state.VIEWS_RECOMPILE_all = true;
             return state;
         // case CombineHistoryAction.type: return combineHistory(oldState); break;
         // todo: se al posto di "annullare l'undo" memorizzo l'azione e la rieseguo, posso ripetere l'ultimo passo N volte e questa azione diventa utile per combinare passi e ripetere blocchi di azioni assieme

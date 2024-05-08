@@ -56,6 +56,7 @@ class DefaultViews {
         view.css = '.class {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color:var(--color-2);}\n';
         view.css += '.class-name {font-weight: bold; color: var(--color-1);}\n';
         view.css += '.class-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
+        // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
         return view;
     }
 

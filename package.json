@@ -33,6 +33,7 @@
     "jsx-recast": "^0.1.1",
     "jsx-runtime": "^1.2.0",
     "jsx-transform": "^2.4.1",
+    "path-data-polyfill": "^1.0.6",
     "rc-dock": "^3.0.14",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
@@ -91,7 +92,7 @@
     "tsc_comment": "before running tsc commands, remove noEmit from tsconfig.json, but reenable it aftewards",
     "cc": "for some weird reason non-built version (dev one with npm start) is using jodel-react/build instead of jodel-mde/build",
     "tsc_list_paste_in_terminal": ".\\tsc_list.ps1 build\\tsc_types\\*.d.ts > ./build/tsc_types/list.txt",
-    "c":""
+    "c": ""
   },
   "eslintConfig": {
     "extends": [

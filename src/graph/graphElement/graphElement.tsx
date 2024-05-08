@@ -261,7 +261,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 if (!startnodeid || !endnodeid) return;
                 let longestLabel = edgeOwnProps.label;
                 let labels: DEdge["labels"] = edgeOwnProps.labels || [];
-                dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, longestLabel, labels);
+                // dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, longestLabel, labels);
+                dge = DEdge.new2(ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, (d)=>{
+                    d.longestLabel = longestLabel;
+                    d.labels = labels;
+                    d.zIndex = ownProps.htmlindex || 1;
+                    if (edgeOwnProps.anchorStart) d.anchorStart = edgeOwnProps.anchorStart;
+                    if (edgeOwnProps.anchorEnd) d.anchorEnd = edgeOwnProps.anchorEnd;
+                });
                 edgeStateProps.node = edgeStateProps.edge = MyProxyHandler.wrap(dge);
             }
             else {
@@ -498,7 +505,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             let culpritlinesPre: string[] = jsxlines.slice(stackerrorlinenum.row-linesPre-1, stackerrorlinenum.row - 1);
             let culpritline: string = jsxlines[stackerrorlinenum.row - 1]; // stack start counting lines from 1
             let culpritlinesPost: string[] = jsxlines.slice(stackerrorlinenum.row, stackerrorlinenum.row + linesPost);
-            console.error("errr", {e, jsxlines, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
+            console.error("errr", {e, node, jsxlines, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
 
             let caretCursor = "▓" // ⵊ ꕯ 𝙸 Ꮖ
             if (culpritline && stackerrorlinenum.col < culpritline.length && stackerrorlast.indexOf("main.chunk.js") === -1) {

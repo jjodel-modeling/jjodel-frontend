@@ -1352,6 +1352,11 @@ export class U {
 
         return (prefix) + rs+gs+bs+hs;
     }
+
+    public static parentUntil(tagName: string, p: Element | null): Element | null {
+        while (p && p.tagName !== tagName) p = p.parentElement;
+        return p;
+    }
 }
 export class DDate{
     static cname: string = "DDate";
