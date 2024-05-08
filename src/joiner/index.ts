@@ -249,7 +249,7 @@ w.$s = $s;
 */
 export {GraphElements, Graphs, Vertexes, Edges, Fields} from './components';
 export {
-    TextArea, Select, Input, Edge, // Image,
+    Children, TextArea, Select, Input, Edge, // Image,
     GraphsContainerComponent,
     Overlap as OverlapComponent,
     GraphsContainer,

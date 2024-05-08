@@ -34,6 +34,7 @@ export {OclEditor} from "../components/rightbar/oclEditor/OclEditor";
 export {Input} from "../components/forEndUser/Input";
 export {TextArea} from "../components/forEndUser/TextArea";
 export {Select} from "../components/forEndUser/Select";
+export {Children} from "../components/forEndUser/Children";
 // export {Image} from "../components/forEndUser/Image";
 
 
