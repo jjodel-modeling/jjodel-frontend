@@ -28,10 +28,12 @@ function NodeEditorComponent(props: AllProps) {
     let isGraph = ['DGraph', 'DGraphVertex'].includes(cname); // RuntimeAccessibleClass.extends(cname, 'DGraph');
     let isVertex = ['DVoidVertex', 'DVertex', 'DEdgePoint'].includes(cname); // RuntimeAccessibleClass.extends(cname, 'DVoidVertex');
     let isEdge = ['DVoidEdge', 'DEdge'].includes(cname); // RuntimeAccessibleClass.extends(cname, 'DVoidEdge');
-    console.log('Style editor', {cname, isVertex, isGraph, isEdge, selected})
+    let isField = (!isGraph && !isVertex && !isEdge);
+    console.log('Style editor', {cname, isVertex, isGraph, isEdge, selected});
     let asGraph: LGraph | undefined = isGraph && node as any;
     let asVertex: LVoidVertex | undefined  = isVertex && node as any;
     let asEdge: LVoidEdge | undefined = isEdge && node as any;
+    let asField: LVoidEdge | undefined = isField && node as any;
     function openNode(id: Pointer<DGraphElement>) {
         SetRootFieldAction.new('_lastSelected.node', id, '', false);
     }
@@ -58,6 +60,9 @@ function NodeEditorComponent(props: AllProps) {
     const edgeEnd: LGraphElement | undefined = asEdge && asEdge.end;
     const notFoundStyle = {color: 'orange', cursor:'not-allowed'};
     const subElements = node.subElements;
+    let edgesIn = !isEdge && node.edgesIn || [];
+    let edgesOut = !isEdge && node.edgesOut || [];
+    let stackingOrder = <Input data={node} field={'zIndex'} label={'Stacking order'} type={'number'} readonly={!editable} />;
     return(<div className={'p-3'}>
         {/*<Input obj={selected.node} field={'id'} label={'ID'} type={'text'} readonly={true}/>*/}
         {asGraph && <><h3>Graph</h3>
@@ -66,21 +71,29 @@ function NodeEditorComponent(props: AllProps) {
             {/*graphSize readonly on LGraph but not on DGraph, = internal graph size. put it for info.*/ }
         </>}
         {asVertex && <><h3>Vertex</h3>
-            <Input data={node} field={'zIndex'} label={'Stacking order'} type={'number'} readonly={!editable} />
+            {stackingOrder}
             <Input data={asVertex} field={'x'} label={'X Position'} type={'number'} readonly={!editable} />
             <Input data={asVertex} field={'y'} label={'Y Position'} type={'number'} readonly={!editable} />
             <Input data={asVertex} field={'width'} label={'Width'} type={'number'} readonly={!editable} />
             <Input data={asVertex} field={'height'} label={'Height'} type={'number'} readonly={!editable} />
         </>}
         {asEdge && <><h3>Edge</h3>
-            <GenericInput data={asEdge} field={'longestLabel'} />
-            <TextArea data={asEdge} field={'labels'} label={'labels'}
-                   placeholder={`(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*: LGraphElement[]*/, allSegments/*: EdgeSegment[]*/) => {' +
-                       '\n\t return (edge.start.model)?.name + ' ~ ' + (e.end.model)?.name + '(' + segment.length.toFixed(1) + ')';' +
-                       '\n}`} readonly={!editable} />
+            {stackingOrder}
+            <GenericInput data={asEdge} field={'longestLabel'}
+                          placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
+                              '\n\t// a complex example. The label can be either a function like this or a simple string.' +
+                              '\n\t return (edge.start.model)?.name + \' ~ \' + (e.end.model)?.name + \'(\' + segment.length.toFixed(1) + \')\';' +
+                              '\n}'}/>
+            <GenericInput data={asEdge} field={'labels'}
+                          placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
+                            '\n\t// a complex example. The label can be either a function like this or a simple string.' +
+                            '\n\t return (edge.start.model)?.name + \' ~ \' + (e.end.model)?.name + \'(\' + segment.length.toFixed(1) + \')\';' +
+                            '\n}'}/>
+            <GenericInput data={asEdge} field={"anchorStart"}/>
+            <GenericInput data={asEdge} field={"anchorEnd"}/>
         </>}
-        {!asGraph && !asVertex && !asEdge &&<><h3>Field</h3>
-            <Input data={node} field={'zIndex'} label={'Stacking order'} type={'number'} readonly={!editable} />
+        {asField && <><h3>Field</h3>
+            {stackingOrder}
         </>}
 
         <div style={{marginTop:'1em', marginBottom:'1em', borderBottom:'1px solid gray'}}/>
@@ -115,15 +128,18 @@ function NodeEditorComponent(props: AllProps) {
         </h6>{subElements.map(
             n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getNodeLabel(n)}</div>
         )}</div>
-        <div><h6  style={headerStyle}>Outgoing Edges</h6>{node.edgesOut.map(
-            n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>
-        )}</div>
-        <div><h6  style={headerStyle}>Incoming Edges</h6>{node.edgesIn.map(
-            n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>
-        )}</div>
+        {!asEdge && <>
+            <div><h6 style={headerStyle}>Outgoing Edges{edgesOut.length === 0 && <>: <span style={notFoundStyle}>None</span></>}</h6>{edgesOut.length && edgesOut.map(
+                n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>
+            )}</div>
+            <div><h6 style={headerStyle}>Incoming Edges{edgesIn.length === 0 && <>: <span style={notFoundStyle}>None</span></>}</h6>{edgesIn.map(
+                n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>
+            )}</div>
+        </>}
 
-        <h6 style={headerStyle}>Node state:</h6>
-        <pre>{JSON.stringify(dnode._state, null, '\t')}</pre>
+
+        <h6 style={headerStyle}>Node state:{Object.keys(dnode._state).length === 0 && <span style={notFoundStyle}> Empty</span>}</h6>
+        <pre>{Object.keys(dnode._state).length ? JSON.stringify(dnode._state, null, '\t') : undefined}</pre>
 
     </div>);
 

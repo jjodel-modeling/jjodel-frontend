@@ -103,9 +103,9 @@ interface OwnProps {
     wsetter?: (value: string|boolean) => void;
     hgetter?: (data: LPointerTargetable) => string;
     hsetter?: (value: string|boolean) => void;
-    label?: JSX.Element | string;
+    label?: ReactNode;
+    tooltip?: ReactNode | true; // if true picks it up from __info_of__
     readonly?: boolean;
-    tooltip?: JSX.Element | boolean; // if true picks it up from __info_of__
     key?: React.Key | null;
     className?: string;
     rootClassName?: string;

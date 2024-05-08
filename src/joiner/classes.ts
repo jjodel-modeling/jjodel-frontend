@@ -834,6 +834,17 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         this.setPtr("end", endid);
         this.setExternalPtr(startid, "edgesOut", "+=");
         this.setExternalPtr(endid, "edgesIn", "+=");
+
+        let gthis: Partial<DVoidEdge> = thiss;
+        delete gthis.x;
+        delete gthis.y;
+        delete gthis.w;
+        delete gthis.h;
+        delete gthis.edgesIn;
+        delete gthis.edgesOut;
+        delete gthis.anchors;
+        delete gthis.__isDVoidEdge;
+        delete (gthis as Partial<DEdge>).__isDEdge;
         return this; }
 
     DExtEdge(): this { return this; }

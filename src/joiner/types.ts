@@ -66,9 +66,9 @@ export type PrimitiveType = string | number | boolean | null | undefined;
 type NotAFunction = NoCaller | NoBind | NoApply | NoCall;
 type NotFunction = GObject & NotAFunction | PrimitiveType;
 export type Info = {
-    txt: string | React.ReactElement,
+    txt: ReactNode,
+    label?: ReactNode,
     type?: ShortAttribETypes | string; //| GObject<"Enum">,
-    label?: JSX.Element | string,
     readType?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
     writeType?: ShortAttribETypes | string | typeof RuntimeAccessibleClass,
     obsolete?: boolean, // hidden because is about to be removed
@@ -77,8 +77,8 @@ export type Info = {
     isGlobal?: boolean, // for things that are common to all graph elements like jsx
     isNode?: boolean,
     isEdge?: boolean,
-    isEdgePoint?:boolean,
-    enum?:GObject, // todo: remove or use it
+    isEdgePoint?: boolean,
+    enum?: GObject, // todo: remove or use it
     pattern?: string // regexp validation
     min?: number; // for numeric types
     max?: number; // for numeric types

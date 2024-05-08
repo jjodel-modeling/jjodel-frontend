@@ -612,10 +612,10 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __info_of__isselected: Info = {type: "Dictionary<Pointer<User>, true>",
         txt:<div>A map that contains all the users selecting this element as keys, and always true as a value (if present).
             <br/>Edit it through node.select() and node.deselect()</div>}
-    __info_of_select: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Marks this node as selected by argument user."};
-    __info_of_deselect: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Un-marks this node as selected by argument user."};
-    __info_of_toggleSelect: Info = {type:"function(usr?:Pointer<User>):void", txt:"Calls this.select(usr) if the node is selected by argument user, this.deselect(usr) otherwise. If omitted, argument \"usr\" is the current user id.<br>Returns the result of this.isSelected() after the toggle."};
-    __info_of_isSelected: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Tells if this node is selected by argument user."};
+    __info_of__select: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Marks this node as selected by argument user."};
+    __info_of__deselect: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Un-marks this node as selected by argument user."};
+    __info_of__toggleSelect: Info = {type:"function(usr?:Pointer<User>):void", txt:"Calls this.select(usr) if the node is selected by argument user, this.deselect(usr) otherwise. If omitted, argument \"usr\" is the current user id.<br>Returns the result of this.isSelected() after the toggle."};
+    __info_of__isSelected: Info = {type:"function(forUser?:Pointer<User>):void", txt:"Tells if this node is selected by argument user."};
     select(forUser?: Pointer<DUser>): void { return this.wrongAccessMessage("node.select()"); }
     deselect(forUser?: Pointer<DUser>): void { return this.wrongAccessMessage("node.deselect()"); }
     toggleSelected(forUser?: Pointer<DUser>): void { return this.wrongAccessMessage("node.toggleSelected()"); }
@@ -1593,21 +1593,22 @@ replaced by startPoint
     longestLabel!: PrimitiveType;
     labels!: PrimitiveType[];
     allNodes!: [LGraphElement, ...Array<LEdgePoint>, LGraphElement];
-    __info_of__longestLabel: Info = {label:"longest label", type:"text", readType: "PrimitiveType",
+    __info_of__longestLabel: Info = {label:"Longest label", type:"function(edge)=>string | string", readType: "PrimitiveType",
         writeType:"PrimitiveType | (e:this, curr: LGraphElement, next: LGraphElement, curr_index: number, allNodes: LGraphElement[]) => PrimitiveType)",
         txt: <span>Label assigned to the longest path segment.</span>}
     __info_of__label: Info = {type: "", txt: <span>Alias for longestLabel</span>};
-    __info_of__labels: Info = {label:"multple labels", type: "text",
+    __info_of__labels: Info = {label:"Multiple labels", type: "function(edge)=>string | string",
         writeType: "type of label or Array<type of label>",
         txt: <span>Instructions to label to multiple or all path segments in an edge</span>};
     __info_of__allNodes: Info = {type: "[LGraphElement, ...Array<LEdgePoint>, LGraphElement]", txt: <span>first element is this.start. then all this.midnodes. this.end as last element</span>};
 
 
     get_label(c: Context): this["longestLabel"] { return this.get_longestLabel(c); }
+    set_label(val: this["longestLabel"], c: Context): boolean { return this.set_longestLabel(val, c); }
     get_longestLabel(c: Context): this["longestLabel"] { return c.data.longestLabel as any; }
-    set_longestLabel(val: this["longestLabel"], c: Context): boolean { return SetFieldAction.new(c.data, "longestLabel", val); }
+    set_longestLabel(val: this["longestLabel"], c: Context): boolean { SetFieldAction.new(c.data, "longestLabel", val); return true; }
     get_labels(c: Context): this["labels"] { return c.data.labels as any; }
-    set_labels(val: this["labels"], c: Context): boolean { return SetFieldAction.new(c.data, "labels", val); }
+    set_labels(val: this["labels"], c: Context): boolean { SetFieldAction.new(c.data, "labels", val); return true; }
     public headPos_impl(c: Context, isHead: boolean, headSize0?: GraphPoint, segment0?: EdgeSegment, zoom0?: GraphPoint): GraphSize & {rad: number} {
         let segment: EdgeSegment = segment0 || this.get_segments(c).segments[0];
         // let v: LViewElement = this.get_view(c);
