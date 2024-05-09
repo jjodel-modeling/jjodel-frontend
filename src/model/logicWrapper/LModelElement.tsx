@@ -22,7 +22,7 @@ import {
     Constructor,
     Constructors,
     Debug,
-    DEdge,
+    DEdge, DefaultNode,
     Dictionary,
     DocString,
     DPointerTargetable,
@@ -75,6 +75,7 @@ import {
 import {ValuePointers} from "./PointerDefinitions";
 import {ShortDefaultEClasses} from "../../common/U";
 import {transientProperties} from "../../joiner/classes";
+import {ReactNode} from "react";
 
 
 @Node
@@ -556,8 +557,10 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         throw this.wrongAccessMessage("AddException");
     }
 
-    public addChild(type: string): DModelElement { return this.cannotCall("addChild", type); }
-
+    public addChild(type: string): DModelElement {
+        return this.cannotCall('addChild', type);
+    }
+    
 }
 
 /*function isValidPointer<T extends DPointerTargetable = DModelElement, LB extends number = 0, UB extends number = 1, RET extends LPointerTargetable = LModelElement>

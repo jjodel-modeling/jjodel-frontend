@@ -43,6 +43,7 @@ import {OclEngine} from "@stekoe/ocl.js";
 import { contextFixedKeys } from '../../graph/graphElement/sharedTypes/sharedTypes';
 import Storage from "../../data/storage";
 import {ProjectsApi} from "../../api/persistance";
+import DSL from "../../DSL/DSL";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -643,14 +644,13 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         let allContextKeys = {...contextFixedKeys};
         for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
         for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
-
         let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
         console.log('jsxparse', { allContextKeys, ud:transientProperties.view[vid].UDList, c:transientProperties.view[vid].constantsList });
-        const body: string =  'return ('+UX.parseAndInject(dv.jsxString, dv)+')';
+        const body: string =  'return (' + UX.parseAndInject(DSL.parser(dv.jsxString), dv) + ')';
         // if (vid.includes('Model')) console.log("modelparse, jsx", {paramStr, body});
         console.log('jsxparse', {vid, paramStr, body});
         try {
-            transientProperties.view[vid].JSXFunction = new Function(paramStr, body) as ((...a:any)=>any);
+            transientProperties.view[vid].JSXFunction = new Function(paramStr, body) as ((...a: any) => any);
         }
         catch (e: any) {
             console.error('error jsxparse', {vid, e, paramStr, body});
