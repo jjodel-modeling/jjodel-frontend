@@ -40,6 +40,7 @@ function NodeDataComponent(props: AllProps) {
         }></Select>*/}
 
         {/*[<Input data={view} field={"scalezoomx"} label={"Zoom X"} type={"number"}/>,                <Input data={view} field={"scalezoomy"} label={"Zoom Y"} type={"number"}/>]*/}
+
         {<div className={'d-flex p-1'}>
             <label className={'my-auto'}>Preferred display</label>
             <select className={'my-auto ms-auto select'} disabled={readOnly}

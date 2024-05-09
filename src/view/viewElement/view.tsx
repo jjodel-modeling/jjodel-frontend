@@ -86,13 +86,12 @@ export class DViewElement extends DPointerTargetable {
     jsxString!: string; // l'html template
     usageDeclarations?: string;
 
-    forceNodeType?: DocString<'component name (Vertex, Field, GraphVertex, Graph)'>;
-    scalezoomx: boolean = false; // whether to resize the element normally using width-height or resize it using zoom-scale css
-    scalezoomy: boolean = false;
+    forceNodeType?: DocString<'component name (Vertex, Field, GraphVertex, Graph)'>; // used in DefaultNode
+    // scalezoomx: boolean = false; // whether to resize the element normally using width-height or resize it using zoom-scale css
+    // scalezoomy: boolean = false;
     // not persistent, some not shared. deve essere diverso da utente ad utente perchè dipende dal pan e zoom nel grafo dell'utente attuale.
     // facendo pan su grafo html sposti gli elementi, per simulare uno spostamento del grafo e farlo sembrare illimitato.
     // __transient: DViewTransientProperties;
-    storeTemporaryPositions: boolean = false; // if true updates vertex position every X millisecond while dragging, if false updates it once when the vertex is released.
     appliableToClasses!: string[]; // class names: DModel, DPackage, DAttribute...
     appliableTo!: 'node'|'edge'|'edgePoint';
     subViews!: Dictionary<Pointer<DViewElement>, number/* priority boost */>;
@@ -111,7 +110,7 @@ export class DViewElement extends DPointerTargetable {
     draggable!: boolean;
     resizable!: boolean;
     viewpoint!: Pointer<DViewPoint>;
-    display!: 'block'|'contents'|'flex'|string;
+    //display!: 'block'|'contents'|'flex'|string;
     //constraints!: GObject<"obsolete, used in Vertex. they are triggered by events (view.onDragStart....) and can bound the size of the vertex">[];
     onDataUpdate!: string;
     onDragStart!: string;
@@ -129,7 +128,7 @@ export class DViewElement extends DPointerTargetable {
     //useSizeFrom!: EuseSizeFrom;
     storeSize!: boolean;
     size!: Dictionary<Pointer<DModelElement> | Pointer<DGraphElement>, GraphSize>;
-    lazySizeUpdate!: boolean;
+    lazySizeUpdate!: boolean; // if true updates it once when the vertex is released. if false updates vertex position every X millisecond while dragging.
     edgeStartOffset!: GraphPoint;
     edgeEndOffset!: GraphPoint;
     edgeStartOffset_isPercentage!: boolean;

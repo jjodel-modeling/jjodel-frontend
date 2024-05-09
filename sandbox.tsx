@@ -46,6 +46,32 @@ let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPac
 
 // syntax error on constants, usageDeclarations are not catched
 
+/*
+view/node editor missing stuff
+
+    appliableTo!: 'node'|'edge'|'edgePoint';
+    subViews
+    bendingMode!: EdgeBendingMode;
+    edgeGapMode!: EdgeGapMode;
+    edgeStartStopAtBoundaries!: boolean;
+    edgeEndStopAtBoundaries!: boolean;
+    edgePointCoordMode!: CoordinateMode;
+
+    move in css:
+        edgeHeadSize!: GraphPoint;
+        edgeTailSize!: GraphPoint;
+
+    dunno if remove or are still used with anchors:
+        edgeStartOffset!: GraphPoint;
+        edgeEndOffset!: GraphPoint;
+        edgeStartOffset_isPercentage!: boolean;
+        edgeEndOffset_isPercentage!: boolean;
+    remove one of:
+        defaultVSize!: GraphSize;
+        width!: number; height!: number;
+
+
+ */
 /*reenable edge menù outside debug mode, (add color palette there? or not?)
 make uml arrows (and more common ones)
 *

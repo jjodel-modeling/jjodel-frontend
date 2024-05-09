@@ -51,7 +51,7 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
     windoww, transientProperties
 } from "../../joiner";
 import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsData";
-import {NodeTransientProperties} from "../../joiner/classes";
+import {NodeTransientProperties, Pack1} from "../../joiner/classes";
 
 // const Selectors: typeof Selectors_ = windoww.Selectors;
 /*
@@ -126,6 +126,11 @@ let debugcount = 0;
 let maxRenderCounter = Number.POSITIVE_INFINITY;
 export const lightModeAllowedElements = [DModel.cname, DPackage.cname, DClass.cname, DEnumerator.cname, DObject.cname];
 
+function getScores(ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps): NodeTransientProperties{
+    return Selectors.getAppliedViewsNew({data:ret.data, node: ret.node,
+        nid: ownProps.nodeid as string, pv: ownProps.parentViewId && DPointerTargetable.from(ownProps.parentViewId)});
+}
+
 const countRenders = true;
 @RuntimeAccessible('GraphElementComponent')
 export class GraphElementComponent<AllProps extends AllPropss = AllPropss, GraphElementState extends GraphElementStatee = GraphElementStatee>
@@ -147,46 +152,50 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     // requires data and node wrapping first
     static mapViewStuff(state: DState, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
         // let dnode: DGraphElement | undefined = ownProps?.nodeid && DPointerTargetable.from(ownProps.nodeid, state) as any;
+        console.log("viewsss mapstate 3 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, vv:ret.view, ownProps, stateProps:{...ret}, thiss:this});
+        ret.parentviewid = ownProps.parentViewId;
 
-        if (!ret.view) {
-            /*const viewScores = Selectors.getAppliedViews(ret.data,
-                (ownProps.view as LViewElement)?.id || (ownProps.view as string) || null,
-                ownProps.parentViewId || null);* /
-            // transientProperties.node[ownProps.nodeid].viewStack[ownProps.data][ownProps.parentViewId]
-            const viewScores = Selectors.getAppliedViewsNew({data:ret.data, node: ret.node, did: ownProps.data, nid: ownProps.node,
-                pvid: ownProps.parentViewId,
-                vid: (ownProps.view as LViewElement)?.id || (ownProps.view as string) || undefined});
-            ret.views = viewScores.map<LViewElement>(e => LViewElement.fromD(e.element)).filter(v => !!v);*/
-            let scores: NodeTransientProperties = undefined as any;
-            if (!ownProps.views || !ownProps.view) {
-                scores = Selectors.getAppliedViewsNew({data:ret.data, node: ret.node,
-                    nid: ownProps.nodeid as string, pv: ownProps.parentViewId && DPointerTargetable.from(ownProps.parentViewId)});
-            }
-            const tn = transientProperties.node[ownProps.nodeid as string];
-            if (ownProps.views){
-                ret.views = tn.stackViews = LPointerTargetable.fromArr(ownProps.views);
-                // tn.stackViews = [...(ret.views||[]), ...(tn.stackViews || [])];
-            } else {
-                ret.views = scores.stackViews = LPointerTargetable.fromArr( (scores.stackViews||[]).map((v:LViewElement)=>v?.id).filter(vid=>!!vid));
-            }
-            ret.viewsid = Pointers.fromArr(ownProps.views) as Pointer<DViewElement>[];
+        const explicitView: Pack1<LViewElement> | string | undefined = ret.view || ownProps.view;
+        const explicitViews: (Pack1<LViewElement> | string | undefined)[] = ret.views || ownProps.views;
 
-            // console.log("debug",  {...this.props, data: this.props.data?.id, view: this.props.view?.id, v0: this.props.views, views: this.props.views?.map( v => v?.id )})
-            if (ownProps.view) {
-                ret.view = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(Pointers.from(ownProps.view), state) as DViewElement);
-                tn.mainView = ret.view;
-                tn.validMainViews = [tn.mainView, ...(tn.validMainViews || [])];
-                Log.w(!ret.view, "Requested view "+ownProps.view+" not found. Another view got assigned.", {requested: ownProps.view, props: ownProps, state: ret});
-            } else {
-                ret.view = tn.mainView = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
-                tn.validMainViews = [tn.mainView, ...(tn.validMainViews || [])];
-            }
-
-            (ret as any).viewScores = transientProperties.node[ownProps.nodeid as string]; // debug only
-            Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret, scores: (ret as any).viewScores});
-            ret.viewid = ret.view.id;
-            ret.parentviewid = ownProps.parentViewId;
+        let scores: NodeTransientProperties = undefined as any;
+        const tn = transientProperties.node[ownProps.nodeid as string]; // tn === scores if getScore is called (getScore have a sideeffect)
+        if (explicitView) {
+            let idorname: string = Pointers.from(explicitView) || explicitView as any as string;
+            ret.view = tn.mainView = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(idorname, state) as DViewElement);
         }
+        if (!ret.view) { // if view is not explicitly set or the assigned view is not found, match a new one.
+            if (!scores) scores = getScores(ret, ownProps);
+            ret.view = tn.mainView = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
+            Log.w(explicitView, "Requested main view "+ownProps.view+" not found. Another view got assigned.", {requested: ownProps.view, props: ownProps, state: ret});
+        }
+        Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret, scores: (ret as any).viewScores});
+
+        if (explicitViews){
+            // ret.views = tn.stackViews = LPointerTargetable.fromArr(explicitView);
+            let views: LViewElement[] = [];
+            for (let v of explicitViews) {
+                let idorname: string = Pointers.from(v as DViewElement) || v as any as string;
+                let view: LViewElement = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(idorname, state) as DViewElement;
+                if (view) views.push(view);
+                else Log.ww("Requested decorative view "+v+" not found.", {requested: v, idorname, props: ownProps, state: ret});
+            }
+            ret.views = tn.stackViews = views;
+        }
+        if (!ret.views) {
+            // if views is not explicitly set. (if some are not found, they are just missing by choice, will not replace)
+            if (!scores) scores = getScores(ret, ownProps);
+            ret.views = scores.stackViews = LPointerTargetable.fromArr((scores.stackViews||[]).map((v:LViewElement)=>v?.id).filter(vid=>!!vid));
+        }
+        console.log("viewsss mapstate 4 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, ownProps, stateProps: {...ret}, thiss:this});
+
+
+        tn.validMainViews = [tn.mainView, ...(tn.validMainViews || [])];
+        ret.viewsid = Pointers.fromArr(ret.views) as Pointer<DViewElement>[];
+        ret.viewid = ret.view.id;
+        (ret as any).viewScores = tn; // debug only
+
+
 
     }
 
@@ -295,14 +304,20 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     static mapStateToProps(state: DState, ownProps: GraphElementOwnProps, dGraphDataClass: (typeof DGraphElement | typeof DEdge) = DGraphElement, startingobj?: GObject): GraphElementReduxStateProps {
         // console.log('dragx GE mapstate', {dGraphDataClass});
         let ret: GraphElementReduxStateProps = (startingobj || {}) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
+        console.log("viewsss mapstate 0 " + ownProps.view + " " + ret.data?.name, {views:ret.views, ownProps, stateProps:{...ret}, thiss:this});
+
         GraphElementComponent.mapLModelStuff(state, ownProps, ret);
         if (Debug.lightMode && (!ret.data || !(lightModeAllowedElements.includes(ret.data.className)))){
             return ret;
         }
         // console.log("map ge", {ownProps, ret, state});
         GraphElementComponent.mapLGraphElementStuff(state, ownProps, ret, dGraphDataClass);
+        console.log("viewsss mapstate 2 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, ownProps, stateProps:{...ret}, thiss:this});
+
         GraphElementComponent.mapViewStuff(state, ret, ownProps);
-        Log.exDev(!ret.view, 'failed to assign view:', {state, ownProps, reduxProps: ret});
+        console.log("viewsss mapstate 5 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, ownProps, stateProps:{...ret}, thiss:this});
+
+        Log.exDev(!ret.view || !ret.views, 'failed to assign view:', {state, ownProps, reduxProps: ret});
         // @ts-ignore
         ret.key = ret.key || ownProps.key;
         // @ts-ignore
@@ -341,6 +356,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let component = nextProps.node.component;
         const nid = nextProps.nodeid;
         // todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or removed
+        console.log("viewsss err " + nextProps.node?.className + " " + nextProps.data?.name, {views:nextProps.views, nextProps, thiss:this});
         // U.arrayDiff()
         for (let v of nextProps.views) {
             const vid: Pointer<DViewElement> = v.__raw.id;
@@ -769,17 +785,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     onClick(e: React.MouseEvent): void {
 
     }
-    /*
-    onViewChangeOld(): void {
-        let thischange = {t: Date.now(), vid: this.props.node.__raw.view, newvid:this.props.view.id, v: this.props.node.view, newv: this.props.view, key:this.props.key};
-        this.lastViewChanges.push(thischange);
-        // nan -> false <200 = true
-        if (thischange.t - this.lastViewChanges[this.lastViewChanges.length-20]?.t < 200) { // important! NaN<1  and NaN>1 are both false
-            // if N views changed in <= 0.2 sec
-            Log.exDevv("loop in updating View assigned to node. The cause might be missing or invalid keys on GraphElement JSX nodes.", {change_log:this.lastViewChanges, component: this});
-        }
-        this.props.node.view = this.props.view;
-    }*/
 
     onDataUpdateMeasurable(view: LViewElement, vid: Pointer<DViewElement>, index: number): void{
         if (index > 0) { this.doMeasurableEvent(EMeasurableEvents.onDataUpdate, vid); return; }

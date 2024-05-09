@@ -515,6 +515,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         persist = persist && canFireActions;
         this.thiss = t;
         this.setID(id, isUser);
+        // the same thing is done in reducer/createelementaction, but if the object is destructured before then, it will lose the constructor and reducer will fail to assign classname
+        t.className = t.className || (t.constructor as typeof RuntimeAccessibleClass).cname || t.constructor.name;
         DPointerTargetable.pendingCreation[t.id] = t;
         this.persist = persist;
         t._persistCallbacks = [];
@@ -909,7 +911,6 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.oclUpdateCondition = '';
         thiss.OCL_NEEDS_RECALCULATION = true;
         thiss.explicitApplicationPriority = undefined as any; //priority as any as number;
-        thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 351, 201);
         thiss.isExclusiveView = true;
         thiss.size = {};
         thiss.storeSize = false;
@@ -932,9 +933,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
         thiss.draggable = true;
         thiss.resizable = true;
-        thiss.display = 'flex' as any;
+        //thiss.display = 'flex' as any;
         thiss.width = 200;
         thiss.height = 100;
+        thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 351, 201);
         thiss.adaptWidth = false;
         thiss.adaptHeight = false; //'fit-content';
 
@@ -1384,8 +1386,8 @@ export class Pointers{
     // function from<PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:unknown | unknown[]): PTR | PTR[] | GObject {
     public static from<T extends LClass, PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:unknown | unknown[]): null | PTR | PTR[]{
         if (!data) return null;
-        if (Array.isArray(data)) return data.filter(d => !!d).map(d => (typeof d === "string" ? d : (d as any).id)) as any;
-        return typeof data === "string" ? data : (data as any).id;
+        if (Array.isArray(data)) return data.filter(d => !!d).map(d => (typeof d === "string" ? d : (d as any)?.id)) as any;
+        return typeof data === "string" ? data : (data as any)?.id;
     }
 
     static isPointer(val: any, state?: DState, doArrayCheck: boolean = false): val is Pointer {
