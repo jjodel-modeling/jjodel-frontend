@@ -28,8 +28,8 @@ let groupingsize: Dictionary<EdgeBendingMode, number> = {} as any;
 groupingsize[EdgeBendingMode.Line] = 1;
 groupingsize[EdgeBendingMode.Bezier_quadratic] = 2;
 groupingsize[EdgeBendingMode.Bezier_cubic] = 3;
-groupingsize[EdgeBendingMode.Bezier_quadratic_mirrored] = 1;
-groupingsize[EdgeBendingMode.Bezier_cubic_mirrored] = 2;
+// groupingsize[EdgeBendingMode.Bezier_quadratic_mirrored] = 1;
+// groupingsize[EdgeBendingMode.Bezier_cubic_mirrored] = 2;
 groupingsize[EdgeBendingMode.Elliptical_arc] = 2; // (1_coord), (rotation), (sweep    arc), (1_coord)
 
 const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAccessibleClass.classes.GraphElementComponent as any as typeof GraphElementComponent;

@@ -1540,7 +1540,7 @@ export class EdgeSegment{
 export class EdgeFillSegment extends EdgeSegment{
     public static cname: string = "EdgeFillSegment";
     makeD(index: number, gapMode: EdgeGapMode): string {
-        if (gapMode === EdgeGapMode.autoFill) { gapMode = this.svgLetter === EdgeBendingMode.Line ? EdgeGapMode.lineFill : EdgeGapMode.arcFill; }
+        // if (gapMode === EdgeGapMode.autoFill) { gapMode = this.svgLetter === EdgeBendingMode.Line ? EdgeGapMode.lineFill : EdgeGapMode.arcFill; }
         switch (gapMode) {
             case "closest" as any:// EdgeGapMode.closest:
             case EdgeGapMode.center:
@@ -1548,12 +1548,13 @@ export class EdgeFillSegment extends EdgeSegment{
             case EdgeGapMode.gap:
                 return ""; // should not have filler arcs
             default:
+                /*
             case EdgeGapMode.autoFill as any:
             case EdgeGapMode.lineFill:
                 this.bezier = [];
                 this.svgLetter = EdgeBendingMode.Line;
                 return super.makeD(index, gapMode);
-            case EdgeGapMode.arcFill:
+            case EdgeGapMode.arcFill:*/
                 this.svgLetter = this.svgLetter[0] as EdgeBendingMode;
                 if (this.svgLetter === "Q") this.bezier = this.bezier.length ? [this.bezier[0]] : [];
                 return super.makeD(index, gapMode);
@@ -2004,7 +2005,7 @@ replaced by startPoint
                 prev = ret[i-1];
                 curr = ret[i];
                 let doStartCut: boolean, doEndCut: boolean;
-                switch(gapMode){
+                switch(gapMode){/*
                     case EdgeGapMode.arcFill:
                     case EdgeGapMode.lineFill:
                     case EdgeGapMode.autoFill:
@@ -2020,15 +2021,15 @@ replaced by startPoint
                             ],
                             curr.start,
                             bm, gapMode, 0, undefined));
-                            /*
+                            / *
                             fillSegments.push(new FillEdgeSegment( // M <start_gap> C <bez1> <bez2> <end_gap>
                                // <start_gap> = end of last seg (start of gap) <end_gap> = first of curr seg (end of gap)
                             prev.end.pt,
                             EdgeSegment.invertLastBezierPt(prev.end.pt, prev.bezier[prev.bezier.length-1].pt || prev.start.pt),
                             EdgeSegment.invertLastBezierPt(curr.start.pt, curr.bezier[0].pt || curr.end.pt),
-                            curr.start.pt)
-                            */
-                        break;
+                            curr.start.pt)* /
+
+                        break;*/
                     case EdgeGapMode.gap:
                         console.log("ex4 gap", {curr, prev, csp:curr.start.pt, ret});
                         // just snap to vertex edge         prevSegment.endp and ret.startp

@@ -124,9 +124,9 @@ export enum EdgeBendingMode {
 }
 export enum EdgeGapMode {
     "gap" = "gap",
-    "autoFill" = "autoFill",
-    "lineFill" = "lineFill",
-    "arcFill" = "arcFill",
+    //"autoFill" = "autoFill",
+    //"lineFill" = "lineFill",
+    //"arcFill" = "arcFill",
     "center" = "center",
     "average" = "average",
     // "closest" = "closest", does not work properly, just disabled. average is doing similar and better.
