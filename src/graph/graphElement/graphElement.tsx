@@ -159,15 +159,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const explicitViews: (Pack1<LViewElement> | string | undefined)[] = ret.views || ownProps.views;
 
         let scores: NodeTransientProperties = undefined as any;
-        const tn = transientProperties.node[ownProps.nodeid as string]; // tn === scores if getScore is called (getScore have a sideeffect)
+        let tn = transientProperties.node[ownProps.nodeid as string]; // tn === scores if getScore is called (getScore have a sideeffect)
+        if (!tn) transientProperties.node[ownProps.nodeid as string] = tn = new NodeTransientProperties();
         if (explicitView) {
             let idorname: string = Pointers.from(explicitView) || explicitView as any as string;
             ret.view = tn.mainView = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(idorname, state) as DViewElement);
         }
         if (!ret.view) { // if view is not explicitly set or the assigned view is not found, match a new one.
             if (!scores) scores = getScores(ret, ownProps);
-            ret.view = tn.mainView = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
-            Log.w(explicitView, "Requested main view "+ownProps.view+" not found. Another view got assigned.", {requested: ownProps.view, props: ownProps, state: ret});
+            ret.view = scores.mainView = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
+            Log.w(explicitView, "Requested main view "+ownProps.view+" not found. Another view got assigned: " + ret.view.__raw.name, {requested: ownProps.view, props: ownProps, state: ret});
         }
         Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret, scores: (ret as any).viewScores});
 
@@ -176,7 +177,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             let views: LViewElement[] = [];
             for (let v of explicitViews) {
                 let idorname: string = Pointers.from(v as DViewElement) || v as any as string;
-                let view: LViewElement = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(idorname, state) as DViewElement;
+                let view: LViewElement = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(idorname, state) as DViewElement);
                 if (view) views.push(view);
                 else Log.ww("Requested decorative view "+v+" not found.", {requested: v, idorname, props: ownProps, state: ret});
             }
@@ -193,10 +194,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         tn.validMainViews = [tn.mainView, ...(tn.validMainViews || [])];
         ret.viewsid = Pointers.fromArr(ret.views) as Pointer<DViewElement>[];
         ret.viewid = ret.view.id;
+
+        let dnode = ret.node?.__raw;
+        if (dnode) dnode.view = ret.viewid;
         (ret as any).viewScores = tn; // debug only
-
-
-
     }
 
     static mapLModelStuff(state: DState, ownProps: GraphElementOwnProps, ret: GraphElementReduxStateProps): void {
@@ -223,6 +224,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let graphid: string = isDGraph ? isDGraph.id : ownProps.graphid as string;
         let parentnodeid: string = ownProps.parentnodeid as string;
         ret.nodeid = nodeid;
+        let tn = transientProperties.node[nodeid];
+        if (!tn) tn = transientProperties.node[nodeid] = new NodeTransientProperties();
         // let data: Pointer<DModelElement, 0, 1, LModelElement> = ownProps.data || null;
         // Log.exDev(!nodeid || !graphid, 'node id injection failed', {ownProps, data: ret.data, name:(ret.data as any)?.name || (ret.data as any)?.className}); /*
         /*if (!nodeid) {
@@ -292,12 +295,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (dGraphElementDataClass === DEdge) (ret as EdgeStateProps).edge = ret.node as any;
         }
 
+
         if (ret.dataid) {
             // set up transient model-> node map
-            if (!transientProperties.modelElement[ret.dataid]) transientProperties.modelElement[ret.dataid] = {nodes: {}} as any;
-            transientProperties.modelElement[ret.dataid].nodes[ownProps.nodeid as string] = ret.node;
-            transientProperties.modelElement[ret.dataid].node = ret.node;
+            let ta = transientProperties.modelElement[ret.dataid];
+            if (!ta) transientProperties.modelElement[ret.dataid] = {nodes: {}} as any;
+            ta.nodes[ownProps.nodeid as string] = ret.node;
+            ta.node = ret.node;
         }
+
+
     }
 
     ////// mapper func

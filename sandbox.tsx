@@ -1,6 +1,6 @@
 // @ts-noinspect
 // @ts-ignore
-import {transientProperties, U, windoww} from "./src/joiner";
+import {GraphPoint, GraphSize, Log, LViewElement, transientProperties, U, windoww} from "./src/joiner";
 import {AllPropss} from "./src/graph/vertex/Vertex";
 
 // 67{}[]'?^&&||nb
@@ -25,6 +25,8 @@ let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPac
 
  */
 // todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or remo**ved
+
+
 /**
  copy a class view, give it higher prio. it will not be applied.
  on view duplicate, css is not recompiled

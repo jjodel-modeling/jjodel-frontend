@@ -115,8 +115,8 @@ export enum EdgeBendingMode {
     "Line"="L", // end
     "Bezier_quadratic"="Q", // bending1, end
     "Bezier_cubic"="C", // bending1, bending2, end
-    "Bezier_cubic_mirrored"="S", // bending1, end // when there are multiple bezier curves on a row, this takes a bendingpoint1 from the last bezier curves mirrored https://css-tricks.com/svg-path-syntax-illustrated-guide/
-    "Bezier_quadratic_mirrored"="T", // end // when there are multiple bezier curves on a row, this takes a bendingpoint1 from the last bezier curves mirrored https://css-tricks.com/svg-path-syntax-illustrated-guide/
+    // "Bezier_cubic_mirrored"="S", // bending1, end // when there are multiple bezier curves on a row, this takes a bendingpoint1 from the last bezier curves mirrored https://css-tricks.com/svg-path-syntax-illustrated-guide/
+    // "Bezier_quadratic_mirrored"="T", // end // when there are multiple bezier curves on a row, this takes a bendingpoint1 from the last bezier curves mirrored https://css-tricks.com/svg-path-syntax-illustrated-guide/
     "Elliptical_arc" = "A",// x y, rot, arc sweep, x y.  x,y are coords. rot is angle [0, 360), arc & sweep are {0,1}
     // can do elliptical arc with a single EP. rotation i take it from rotating the actual EP. arc & sweep i take it from node state (maybe rotation too)
     "Bezier_QT"="QT", // first a Quadratic, then N quadratic mirrored
@@ -129,6 +129,7 @@ export enum EdgeGapMode {
     "arcFill" = "arcFill",
     "center" = "center",
     "average" = "average",
+    // "closest" = "closest", does not work properly, just disabled. average is doing similar and better.
 }
 export enum EMeasurableEvents {
     // data

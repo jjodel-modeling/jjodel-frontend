@@ -457,7 +457,7 @@ export class Selectors{
         let firstEvaluationForNode: boolean = false;
         let firstEvaluationForNodeView: boolean = false;
         let tn = transientProperties.node[nid];
-        if (!tn) { transientProperties.node[nid] = tn = {viewScores: {}} as any; firstEvaluationForNode = true; }
+        if (!tn) { transientProperties.node[nid] = tn = new NodeTransientProperties(); firstEvaluationForNode = true; }
         let olddata = tn.viewSorted_modelused as LModelElement;
         //let oldnode = transientProperties.node[nid]?.viewSorted_nodeused as LGraphElement;
         const data: LModelElement = data0 as LModelElement;

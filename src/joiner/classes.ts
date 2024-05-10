@@ -2847,39 +2847,49 @@ export class NodeTransientProperties{
     viewScores: Dictionary<Pointer<DViewElement>, ViewScore> = {} as any;
     evalContext!: GObject; // global for this node (without view-specific usageDeclaration)
     //force1Update!: boolean;
+    constructor(){
+        // this.stackViews = []; this.validMainViews = [];
+        this.viewScores = {};
+    }
 }
-export type ViewTransientProperties = {
+export class ViewTransientProperties {
     // css_MUST_RECOMPILE: boolean;
     // compiled_css: string; maye those are better shared in sessions
-    events: Dictionary<DocString<"functionName">, ((...a:any)=>any)>;
-    oclChanged: boolean;
-    jsConditionChanged: boolean;
-    oclUpdateCondition_PARSED: (oldData: LModelElement, newData:LModelElement) => boolean;// not used anymore? was like UD+shouldcompoupdate for jsx, a pre-ocl check
-    oclEngine: OclEngine;
-    jsCondition: undefined | ((context:GObject) => boolean);
-    JSXFunction: (scope: GObject)=>ReactNode;
-    UDFunction: (scope: GObject, ret: GObject)=>void;
-    constantsList: string[];
-    UDList: string[];
-    constants: GObject;
-    onDataUpdate: undefined | ((context:GObject)=>void);
-    onDragStart: undefined | ((context:GObject)=>void);
-    onDragEnd: undefined | ((context:GObject)=>void);
-    whileDragging: undefined | ((context:GObject)=>void);
-    onResizeStart: undefined | ((context:GObject)=>void);
-    onResizeEnd: undefined | ((context:GObject)=>void);
-    whileResizing: undefined | ((context:GObject)=>void);
-    onRotationStart: undefined | ((context:GObject)=>void);
-    onRotationEnd: undefined | ((context:GObject)=>void);
-    whileRotating: undefined | ((context:GObject)=>void);
+    events!: Dictionary<DocString<"functionName">, ((...a:any)=>any)>;
+    oclChanged!: boolean;
+    jsConditionChanged!: boolean;
+    oclUpdateCondition_PARSED!: (oldData: LModelElement, newData:LModelElement) => boolean;// not used anymore? was like UD+shouldcompoupdate for jsx, a pre-ocl check
+    oclEngine!: OclEngine;
+    jsCondition!: undefined | ((context:GObject) => boolean);
+    JSXFunction!: (scope: GObject)=>ReactNode;
+    UDFunction!: (scope: GObject, ret: GObject)=>void;
+    constantsList!: string[];
+    UDList!: string[];
+    constants!: GObject;
+    onDataUpdate!: undefined | ((context:GObject)=>void);
+    onDragStart!: undefined | ((context:GObject)=>void);
+    onDragEnd!: undefined | ((context:GObject)=>void);
+    whileDragging!: undefined | ((context:GObject)=>void);
+    onResizeStart!: undefined | ((context:GObject)=>void);
+    onResizeEnd!: undefined | ((context:GObject)=>void);
+    whileResizing!: undefined | ((context:GObject)=>void);
+    onRotationStart!: undefined | ((context:GObject)=>void);
+    onRotationEnd!: undefined | ((context:GObject)=>void);
+    whileRotating!: undefined | ((context:GObject)=>void);
+
+    constructor(){
+        this.events = {};
+    }
 
 
 }
-export type METransientProperties = {
-    nodes: Dictionary<Pointer<DGraphElement>, LGraphElement>;
+export class DataTransientProperties {
+    nodes!: Dictionary<Pointer<DGraphElement>, LGraphElement>;
     node?: LGraphElement;
+    constructor(){
+        this.nodes = {};
+    }
 }
-export type DataTransientProperties = METransientProperties;
 
 // score for all view ocl + sorted views by best match
 type TransientPropertiesByGraphTab = Dictionary<Pointer<DViewElement, number>> & {
@@ -2897,7 +2907,7 @@ type TransientPropertiesByGraphTab = Dictionary<Pointer<DViewElement, number>> &
 export const transientProperties = {
     node: {} as Dictionary<Pointer<DGraphElement>, NodeTransientProperties>,
     view: {} as Dictionary<Pointer<DViewElement>, ViewTransientProperties>,
-    modelElement: {} as Dictionary<Pointer<DModelElement>, METransientProperties>,
+    modelElement: {} as Dictionary<Pointer<DModelElement>, DataTransientProperties>,
 };
 (window as any).transient = (window as any).transientProperties = transientProperties;
 // transientProperties.nodes[nid].viewScores[vid]?.[pvid as string];

@@ -6,7 +6,6 @@ import {
     CoordinateMode,
     Debug,
     Dictionary,
-    DMap,
     DModelElement,
     DocString,
     DPointerTargetable,
@@ -22,7 +21,6 @@ import {
     GraphSize,
     Info,
     Leaf,
-    LMap,
     LModelElement,
     Log,
     LogicContext,
@@ -42,7 +40,8 @@ import {
     ShortAttribETypes,
     Size,
     store,
-    TargetableProxyHandler, transientProperties,
+    TargetableProxyHandler,
+    transientProperties,
     U,
     Uarr,
     windoww
@@ -329,8 +328,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return GraphElementComponent.map[context.data.id]; }
     // get_view(context: Context): this["view"] { return this.get_component(context).props.view; }
     get_view(context: Context): this["view"] {
-        return (this.get_component(context)?.props.view as this["view"]);
-        // return LPointerTargetable.fromPointer(context.data.view);
+        return transientProperties.node[context.data.id]?.mainView || LPointerTargetable.from(context.data.view) || this.get_component(context)?.props.view;
     }
     set_view(val: Pack1<this["view"]>, context: Context){
         Log.eDevv("node.view is readonly, change it through props or the model");
@@ -359,6 +357,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     }
     protected get_innerSize_impl(context: Context, canTriggerSet: boolean = true, outerSize: boolean = false): Readonly<GraphSize> {
         canTriggerSet = canTriggerSet && !Debug.lightMode;
+        console.log("ex4 getsize 0 " + context.data.className, {context, canTriggerSet, outerSize});
         switch (context.data.className){
             default: return Log.exDevv("unexpected classname in get_size switch: " + context.data.className);
             case DEdge.cname:
@@ -367,23 +366,30 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             // case DField.cname:
             case DGraphElement.cname:
                 let graph = outerSize ? this.get_outerGraph(context) : this.get_innerGraph(context);
+                console.log("ex4 getsize 1 " + context.data.className, {graph, html:this.get_htmlSize(context), context, canTriggerSet, outerSize});
                 return graph.coord(this.get_htmlSize(context));
             case DVoidVertex.cname:
             case DVertex.cname:
             case DEdgePoint.cname:
             case DGraphVertex.cname: break;
         }
+        console.log("ex4 getsize 3 " + context.data.className, {context, canTriggerSet, outerSize});
+
         // low prio todo: memoization in proxy, as long state does not change keep a collection Dictionary[object][key] = returnval. it gets emptied when state is updated.
         /*console.log("get_size("+(this.props?.data as any).name+")", {
             view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
             node:this.props.node?.size,
             default: this.props.view.defaultVSize});*/
-        let component = this.get_component(context);
         // windoww.debugg = context;
         // console.log("edgee getsize", {component, view:component?.props?.view, data:{...context.data}});
-        let view = component?.props?.view || this.get_view(context);
+        console.log("ex4 getsize 4 " + context.data.className, {context});
+        // when loading a save, edge segements and edgepoints/nodes are computed before creating the edgepoint component
+        let view: LViewElement = this.get_view(context);
+        console.log("ex4 getsize 5 " + context.data.className, {context, view, thiss:this});
         // (window as any).retry = ()=>view.getSize(context.data.id);
         let ret: GraphSize = view.getSize(context.data.id) as any; // (this.props.dataid || this.props.nodeid as string)
+
+        console.log("ex4 getsize 6 " + context.data.className, {context, ret});
         // console.log("getSize() from view", {ret: ret ? {...ret} : ret});
         if (!ret) {
             ret = new GraphSize();
@@ -399,15 +405,18 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             // console.log("getSize() from node merged with defaultVSize", {ret: ret ? {...ret} : ret});
         }
         if (context.data.className === DEdgePoint.cname) { ret = (this as any as LEdgePoint).decodePosCoords(context, ret, view); }
-/*
-        if ((context.data as DVoidVertex).isResized) {
-            return ret;
-        }*/
+        console.log("ex4 getsize 7 " + context.data.className, {context, view, ret});
+
+        /*
+                if ((context.data as DVoidVertex).isResized) {
+                    return ret;
+                }*/
         if (!canTriggerSet) {
             if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
+            console.log("ex4 getsize 8 " + context.data.className, {context, view, ret});
             return ret;
         }
-        let html: RefObject<HTMLElement | undefined> | undefined = component?.html;
+        let html: RefObject<HTMLElement | undefined> | undefined = this.get_component(context)?.html;
         let actualSize: Partial<Size> & {w:number, h:number} = html?.current ? Size.of(html.current) : {w:0, h:0};
         let updateSize: boolean = false;
         let isOldElement = (context.data.clonedCounter as number) > 3;
@@ -429,6 +438,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
         if (updateSize) this.set_size(ret, context);
         if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
+        console.log("ex4 getsize 8 " + context.data.className, {context, view, ret});
         return ret;
     }
     // set_size(size: Partial<this["size"]>, context: Context): boolean {
@@ -1028,16 +1038,26 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
                 // offset = sp - size
                 // size = offset - sp
                 // in reverse: actualsize = offset, size=offset
-                Log.exDev(size.x&&!Array.isArray(size.x) || size.y&&!Array.isArray(size.y),
-                    "decoding relative offset require an array size coordinate system. x=[x1, x2] --> x", {size});
-                let offsetsp = useStart ? new GraphPoint(size.x[0] + sp.x, size.y[0] + sp.y) : new GraphPoint();
-                let offsetep = useEnd ? new GraphPoint(size.x[1] + ep.x, size.y[1] + ep.y) : new GraphPoint();
+
+                // if coords are already in absolute mode.
+                let xIsAbsolute: number | undefined = (size.x&&!Array.isArray(size.x)) ? size.x : undefined;
+                let yIsAbsolute: number | undefined = (size.x&&!Array.isArray(size.x)) ? size.x : undefined;
+                Log.w(xIsAbsolute || yIsAbsolute, "decoding relative offset require an array size coordinate system. x=[x1, x2] --> x", {size});
+
+                let offsetsp = useStart ? new GraphPoint(xIsAbsolute || size.x[0] + sp.x, yIsAbsolute || size.y[0] + sp.y) : new GraphPoint();
+                let offsetep = useEnd ? new GraphPoint(xIsAbsolute || size.x[1] + ep.x, yIsAbsolute || size.y[1] + ep.y) : new GraphPoint();
                 // if the start and endpoint of the edge didn't move, offsetsp = offsetep.
                 // if they moved, those 2 are discordant --> i pick middle
                 offsetsp.add(offsetep, false);
                 if (useStart && useEnd) offsetsp.divide(2, false);
-                if (size.x !== undefined) ret.x = offsetsp.x;
-                if (size.y !== undefined) ret.y = offsetsp.y;
+                if (!xIsAbsolute && size.x !== undefined) ret.x = offsetsp.x;
+                if (!yIsAbsolute && size.y !== undefined) ret.y = offsetsp.y;
+                if (xIsAbsolute) {
+                    ret.x = size.x;
+                }
+                if (yIsAbsolute) {
+                    ret.y = size.y;
+                }
                 break;
         }
         if (size.x === undefined) delete ret.x;
@@ -1378,14 +1398,16 @@ export class EdgeSegment{
         this.prev = prevSegment;
         //this.segments = segments;
         // the idea: forbid all T and S or transform them in C, Q by calculating and manually adding their mirrored bezier pts
-        if (svgLetter[1]) svgLetter = (svgLetter[0]) as any;
-        if (svgLetter === EdgeBendingMode.Bezier_quadratic_mirrored) {
+        // if (svgLetter[1]) svgLetter = (svgLetter[0]) as any;
+        if (svgLetter === EdgeBendingMode.Bezier_QT) {
+            this.svgLetter = EdgeBendingMode.Bezier_QT[0] as any as EdgeBendingMode;
+            // this.svgLetter = (index === 0 ? EdgeBendingMode.Bezier_QT[0] : EdgeBendingMode.Bezier_QT[1]) as any as EdgeBendingMode;
             this.addBezierPoint();
-            this.svgLetter = EdgeBendingMode.Bezier_quadratic;
         } else
-        if (svgLetter === EdgeBendingMode.Bezier_cubic_mirrored) {
+        if (svgLetter === EdgeBendingMode.Bezier_CS) {
+            this.svgLetter = EdgeBendingMode.Bezier_CS[0] as any as EdgeBendingMode;
+            // this.svgLetter = (index === 0 ? EdgeBendingMode.Bezier_CS[0] : EdgeBendingMode.Bezier_CS[1]) as any as EdgeBendingMode;
             this.addBezierPoint();
-            this.svgLetter = EdgeBendingMode.Bezier_cubic;
         }
         else this.svgLetter = svgLetter;
 
@@ -1406,8 +1428,8 @@ export class EdgeSegment{
                 else this.svgLetter = EdgeBendingMode.Line; // straight to end ignoring midpoints that are NOT coordinates when using elliptical arc.
                 break;
             default:
-            case EdgeBendingMode.Bezier_quadratic_mirrored as string:
-            case EdgeBendingMode.Bezier_cubic_mirrored as string: // translated to Q or C by adding mirrored bezier points explicitly
+            //case EdgeBendingMode.Bezier_quadratic_mirrored as string:
+            //case EdgeBendingMode.Bezier_cubic_mirrored as string: // translated to Q or C by adding mirrored bezier points explicitly
             case EdgeBendingMode.Bezier_QT:
             case EdgeBendingMode.Bezier_CS: // translated to Q or C by sending the right letter to each segment
                 Log.exDevv("this svg letter should not appear here", this.svgLetter);
@@ -1455,7 +1477,7 @@ export class EdgeSegment{
                 // dpart = T sp X mp2 ep // S = S if X = C,
                 // sp is the startingpoint from the prev node, which might be != from endpoint of last node if last node have w>0 && h>0
                 // so i'm "filling" the gap with a T, or L arc wich can use only 1 parameter (they are the only 1-parameter arcs)
-                if (this.prev && this.prev.end.pt.equals(this.start.pt)) gapMode = EdgeGapMode.average; // if the 2 points coincide, i use any 1 of the gapmodes that are continuous
+                // if (this.prev && this.prev.end.pt.equals(this.start.pt)) gapMode = EdgeGapMode.average; // if the 2 points coincide, i use any 1 of the gapmodes that are continuous
                 /*switch (gapMode){
                     case EdgeGapMode.center:
                     case EdgeGapMode.average:
@@ -1520,6 +1542,7 @@ export class EdgeFillSegment extends EdgeSegment{
     makeD(index: number, gapMode: EdgeGapMode): string {
         if (gapMode === EdgeGapMode.autoFill) { gapMode = this.svgLetter === EdgeBendingMode.Line ? EdgeGapMode.lineFill : EdgeGapMode.arcFill; }
         switch (gapMode) {
+            case "closest" as any:// EdgeGapMode.closest:
             case EdgeGapMode.center:
             case EdgeGapMode.average:
             case EdgeGapMode.gap:
@@ -1768,9 +1791,11 @@ replaced by startPoint
         switch (s) {
             default: ret = Log.exDevv("unexpected svg path letter: \"" + s + "\"", s); break;
             case EdgeBendingMode.Line:
-            case EdgeBendingMode.Bezier_quadratic_mirrored: ret = {first:1, others:1}; break;
+            //case EdgeBendingMode.Bezier_quadratic_mirrored:
+                ret = {first:1, others:1}; break;
             case EdgeBendingMode.Bezier_quadratic:
-            case EdgeBendingMode.Bezier_cubic_mirrored: ret = {first:2, others:2}; break;
+            //case EdgeBendingMode.Bezier_cubic_mirrored:
+                ret = {first:2, others:2}; break;
             case EdgeBendingMode.Bezier_cubic: ret = {first:3, others:3}; break;
             case EdgeBendingMode.Elliptical_arc: ret = {first:4, others:4}; break;
 
@@ -1805,6 +1830,7 @@ replaced by startPoint
         const all: segmentmaker[] = allNodes.flatMap((ge, i) => {
             let dge = ge.__raw;
             let base: segmentmaker = {view: ge.view, size: outer ? ge.outerSize : ge.innerSize, ge, pt: null as any, uncutPt: null as any};
+            Log.exDev(typeof base.size !== "object", "could not get node size:", {base, c, outer})
             let rets: segmentmaker | undefined;// = base as any;
             let rete: segmentmaker | undefined;// = {...base} as any;
             let debug = true;
@@ -1815,40 +1841,37 @@ replaced by startPoint
 
             // get endpoint, then startpoint (land on midnode, then depart from it)
             if (i !== 0){
+                rete = {rete:true, ...base} as any as segmentmaker;
                 if (i === allNodes.length - 1) {
-                    rete = {...base};
                     // get end anchor from node
                     let anchor = dge.anchors[c.data.anchorEnd || 0];
                     if (!anchor) anchor = dge.anchors[Object.keys(dge.anchors)[0]];
                     if (anchor) rete.pt = getAnchorOffset(rete.size, anchor, true, 1);
-                    else rete = undefined;
                 }
                 // if no anchor, treat the node as a midpoint
-                if (!rete) {
-                    rete = {...base};
+                if (!rete.pt) {
                     // get ending point from midpoint
-                    rete.pt = (LEdgePoint.singleton as LEdgePoint).get_endPoint(undefined as any, rete.size, rete.view);
+                    //rete.pt = (LEdgePoint.singleton as LEdgePoint).get_endPoint(undefined as any, rete.size, rete.view);
                     rete.pt = getAnchorOffset(rete.size, rete.view.edgeStartOffset, rete.view.edgeStartOffset_isPercentage);
                 }
                 rete.uncutPt = rete.pt;
             }
             if (i !== allNodes.length - 1){
-                rets = {...base};
+                rets = {rets: true, ...base} as any as segmentmaker;
                 if (i === 0) {
                     // get start anchor from node
                     let anchor = dge.anchors[c.data.anchorStart || 0];
                     if (!anchor) anchor = dge.anchors[Object.keys(dge.anchors)[0]];
                     if (anchor) rets.pt = getAnchorOffset(rets.size, anchor, true, 1);
-                    else rets = undefined;
                 }
-                if (!rets) {
-                    rets = {...base};
+                if (!rets.pt) {
                     // rets starting point from midpoint
-                    rets.pt = (LEdgePoint.singleton as LEdgePoint).get_startPoint(undefined as any, rets.size, rets.view);
+                    // rets.pt = (LEdgePoint.singleton as LEdgePoint).get_startPoint(undefined as any, rets.size, rets.view);
                     rets.pt = getAnchorOffset(rets.size, rets.view.edgeStartOffset, rets.view.edgeStartOffset_isPercentage);
                 }
                 rets.uncutPt = rets.pt;
             }
+
             // ret.pt = ge.startPoint
             return rets && rete ? [rete, rets] : (rets ? [rets] : [rete as segmentmaker]); }
         );
@@ -1885,6 +1908,7 @@ replaced by startPoint
         let increase: number = segmentSize.first;
         let segment: EdgeSegment | undefined;
         /// grouping points according to SvgLetter
+        console.log("ex4 points", {segments:ret.map(s=>printablesegment(s)), points:all.map(s=>printablesegment(s))});
         for (let i = 0; i < all.length - 1; ) {
             // let start = all[i], end = all[i+increase];
             let start: segmentmaker = all[i];
@@ -1901,12 +1925,29 @@ replaced by startPoint
             if (increase !== segmentSize.others) increase = segmentSize.others;
             // if (longestLabel !== undefined && longest < s.length) { longest = s.length; longestindex = i; } todo: move to after snapping to borders
         }
+        function printablesegment(s:GObject) {
+            let r: GObject = {};
+            for (let k in s) {
+                let v = s[k];
+                v = v?.__raw || v;
+                if (typeof v === "object") r[k] = JSON.parse(JSON.stringify(v));
+                else r[k] = v;
+            }
+            return r;
+        }
+
         let fillSegments: EdgeSegment[] = [];
         this.snapSegmentsToNodeBorders(c, v, ret, fillSegments);
         let longestLabel = c.data.longestLabel;
         this.setLabels(c, ret, allNodes);
         // console.log("getSegments() labeled:", {main:ret, fillSegments});
         let rett: this["segments"] = {all: [...ret, ...fillSegments], segments: ret, fillers: fillSegments} as any;
+        /*switch(bm){
+            default: break;
+            case EdgeBendingMode.Bezier_QT:
+            case EdgeBendingMode.Bezier_CS:
+                rett.
+        }*/
         for (let i = 0; i < rett.all.length; i++) {
             let s = rett.all[i];
             s.makeD(i, gapMode);
@@ -1955,6 +1996,9 @@ replaced by startPoint
         // cut middle segments maybe
         let prev: EdgeSegment;
         let curr: EdgeSegment = ret[0];
+        //console.log("ex4 gap pre", util.inspect(ret, true, 2, false));
+
+        // if (gapMode === EdgeGapMode.gap) return;
         if (canCutStart || canCutEnd) // do the for below
             for (let i = 1; i < ret.length; i++){
                 prev = ret[i-1];
@@ -1986,27 +2030,42 @@ replaced by startPoint
                             */
                         break;
                     case EdgeGapMode.gap:
+                        console.log("ex4 gap", {curr, prev, csp:curr.start.pt, ret});
                         // just snap to vertex edge         prevSegment.endp and ret.startp
-                        doStartCut = true;
-                        doEndCut = true;
+                        doEndCut = true; doStartCut = true;
                         break;
                     // average: todo: maybe rename in join (merges start-end at closest pt to both (avg), then snap on edge)
+                    case "closest" as any: //EdgeGapMode.closest:
+                        // does not work properly, i think i need to get next.end instead of curr.end, just disabled for now
+                        let nextpt: GraphPoint = (curr.bezier[0] || curr.end).pt;
+                        let prevpt: GraphPoint = (prev.bezier[prev.bezier.length-1] || prev.start).pt;
+                        let midexternalpt = prevpt.add(nextpt, true);
+                        let midedgepoint = curr.start.size.tl().add(curr.start.size.br(), false).divide(2, false);
+                        // od average between the 2 points before and after that are not part of this edgepoint, then raw a line from there to center of ep, find that intersection.
+                        ci = GraphSize.closestIntersection(curr.start.size, midedgepoint, midexternalpt, grid);
+                        doEndCut = doStartCut = false;
+                        if (canCutEnd && ci) prev.end.pt = ci;
+                        if (canCutStart && ci) curr.start.pt = ci;
+                        break;
                     case EdgeGapMode.average:
+                        console.log("ex4 cut avg", {curr, prev, csp:curr.start.pt});
                         // first move to average of the 2 points in the gap, then snap to edge
                         doEndCut = true; doStartCut = true;
                         // indipendent from cutStart, cutEnd.
                         // they merge if just 1 of cutting sides are true. (and if they are both false we don't even enter the for loop)
-                        curr.start.pt.add(prev.end.pt, false).divide(2, false);
-                        prev.end.pt = curr.start.pt.duplicate() // intentionally not the same pt because during snap to edge they can temporarly diverge.again,
+                        curr.start.pt = curr.start.pt.add(prev.end.pt, false).divide(2, false);
+                        prev.end.pt = curr.start.pt.duplicate(); // intentionally not the same pt because during snap to edge they can diverge again.
                         prev.start.uncutPt = prev.start.pt;
                         prev.end.uncutPt = prev.end.pt;
+                        console.log("ex4 cut avg end", {curr});
                         break;
                     // center: first move it to center of edgePoint/node, then snap to edge.
                     // this mode might be as well deleted, it can be specified with anchor points
                     case EdgeGapMode.center:
                         doEndCut = false; doStartCut = false;
+                        console.log("ex4 cut center", {curr, prev, csp:curr.start.pt});
                         curr.start.pt = curr.start.size.tl().add(curr.start.size.br(), false).divide(2, false);
-                        prev.end.pt = curr.start.pt.duplicate(); // intentionally not the same pt because during snap to edge they can diverge.again,
+                        prev.end.pt = curr.start.pt.duplicate(); // intentionally not the same pt because during snap to edge they can diverge again.
                         prev.start.uncutPt = prev.start.pt; // only update them when point moves without being cut (average and center)
                         prev.end.uncutPt = prev.end.pt;
                         break;
@@ -2014,8 +2073,10 @@ replaced by startPoint
                         return Log.exDevv("unexpected EdgeGapMode:" + gapMode);
                 }
                 if (canCutStart && doStartCut){
-                    let extpt: GraphPoint = (curr.bezier[0] || curr.end).pt;
-                    ci = GraphSize.closestIntersection(curr.start.size, curr.start.pt, extpt, grid);
+                    console.log("ex4 cut start0", {curr});
+                    console.log("ex4 cutStart", {curr, bz:curr.bezier[0], end:curr.end, grid, ssize: curr.start?.size});
+                    let nextpt: GraphPoint = (curr.bezier[0] || curr.end).pt;
+                    ci = GraphSize.closestIntersection(curr.start.size, curr.start.pt, nextpt, grid);
                     if (ci) curr.start.pt = ci;// || Geom.closestPoint(curr.start.size, curr.start.pt);
                     //if (gapMode === EdgeGapMode.average && prev) { prev.end.pt = curr.start.pt.add(prev.end.pt, false).divide(2, false); }
                 }

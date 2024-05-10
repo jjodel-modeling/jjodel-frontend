@@ -13,7 +13,6 @@ var windoww = (window as any);
 windoww.windoww = windoww;
 
 
-
 windoww.$ = $$;
 export const $: JQueryStatic = $$;
 export const prjson2xml = _pr_json2xml;
@@ -33,8 +32,7 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
     unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap, Info,
     Constructor, AbstractConstructor, ApiResponse
 } from "./types";
-export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1,
-    NodeTransientProperties, ViewTransientProperties, DataTransientProperties, ViewScore
+export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, ViewScore
 } from "./classes";
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
     WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
@@ -53,6 +51,7 @@ export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,
     L, D, P,
     Obsolete, Leaf, Node, Abstract, Instantiable, MixOnlyFuncs,
+    NodeTransientProperties, ViewTransientProperties, DataTransientProperties,
     LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements, transientProperties, ViewEClassMatch} from "./classes";
 
 // export type {Pointer} from './typeconverter';
