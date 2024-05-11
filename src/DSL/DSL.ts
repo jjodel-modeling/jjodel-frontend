@@ -1,13 +1,16 @@
-
 class DSL {
     public static parser(jsx: string): string {
-        jsx = DSL.Children(jsx);
+        let children = DSL.Children(jsx);
+        while(children) {
+            jsx = children;
+            children = DSL.Children(children);
+        }
         return jsx;
     }
 
-    private static Children(jsx: string): string {
+    private static Children(jsx: string): string|undefined {
         const params = DSL.extractParameters(jsx, 'Children');
-        if(!params) return jsx;
+        if(!params) return undefined;
         const includes = DSL.extractParameter(params, 'includes') || '[]';
         const excludes = DSL.extractParameter(params, 'excludes') || '[]';
         const includesJsx = (includes !== '[]') ? `.filter(c => c.name && ${includes}.includes(c.name))` : '';
@@ -40,7 +43,6 @@ class DSL {
     private static replace(jsx: string, component: string, dsl: string): string {
         const regex = new RegExp(`<${component}(.*?)\\/>`);
         return jsx.replace(regex, dsl);
-
     }
 
 }
