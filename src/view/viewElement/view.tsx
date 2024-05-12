@@ -2,7 +2,7 @@ import {
     BEGIN,
     Constructors,
     CoordinateMode,
-    Debug,
+    Debug, DEdgePoint,
     Defaults,
     DGraphElement,
     Dictionary,
@@ -37,7 +37,7 @@ import {
     U, ViewEClassMatch,
     windoww
 } from "../../joiner";
-import {Pack1, transientProperties } from "../../joiner/classes";
+import {EPSize, Pack1, transientProperties } from "../../joiner/classes";
 import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsData";
 
 
@@ -902,18 +902,38 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     // returns the delta of change
     public updateSize(id: Pointer<DModelElement> | Pointer<DGraphElement>, size: Partial<GraphSize>): boolean { return this.wrongAccessMessage("updateSize"); }
     public get_updateSize(context: Context): this["updateSize"] {
-        return (id: Pointer<DModelElement> | Pointer<DGraphElement>, size: Partial<GraphSize>) => {
+        return (id: Pointer<DModelElement> | Pointer<DGraphElement>, size0: Partial<GraphSize>) => {
+            let size: EPSize = size0 as any;
             let vp = context.proxyObject.viewpoint;
             if (!context.data.storeSize) {
                 if (vp?.storeSize) return vp.updateSize(id, size);
                 return false;
             }
-            let vsize = context.data.size[id] || vp?.__raw.size[id] || context.data.defaultVSize || vp?.__raw.defaultVSize;
-            let newSize: GraphSize = new GraphSize();
-            newSize.x = size?.x !== undefined ? size.x : vsize.x;
-            newSize.y = size?.y !== undefined ? size.y : vsize.y;
+            let vsize: EPSize = (context.data.size[id] || vp?.__raw.size[id]) as EPSize;
+            let newSize: EPSize = new GraphSize() as EPSize;
+            if (size.currentCoordType === vsize.currentCoordType) { // if samecoord system mix them.
+                newSize.x = size?.x !== undefined ? size.x : vsize.x;
+                newSize.y = size?.y !== undefined ? size.y : vsize.y;
+            } else if (size.x !== undefined && size.y !== undefined) { // if different coord system pick all of size
+                newSize.x = size.x;
+                newSize.y = size.y;
+                newSize.currentCoordType = size.currentCoordType || CoordinateMode.absolute;
+            } else if (vsize.x !== undefined && vsize.y !== undefined) { // or all of vsize if size was invalid
+                newSize.x = vsize.x;
+                newSize.y = vsize.y;
+                newSize.currentCoordType = vsize.currentCoordType || CoordinateMode.absolute;
+            }
+            let defaultsize = context.data.defaultVSize || vp?.__raw.defaultVSize;
+            if (newSize.x === undefined || newSize.y == undefined) { // only if pos is invalid, i take defaultvsize and force to use coord absolute.
+                newSize = new GraphSize().clone(defaultsize) as EPSize;
+                newSize.currentCoordType = CoordinateMode.absolute;
+            }
+            // w and h are always absolute so they can be mixed to whathever coordinate mode indipendently from the rest.
             newSize.w = size?.w !== undefined ? size.w : vsize.w;
             newSize.h = size?.h !== undefined ? size.h : vsize.h;
+            if (newSize.h === undefined) newSize.h = defaultsize.h || 10;
+            if (newSize.w === undefined) newSize.w = defaultsize.w || 10;
+
             if (!newSize.equals(vsize)) SetFieldAction.new(context.data.id, "size." + id as any, newSize);
             return true;
         }
@@ -932,7 +952,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             let vp = context.proxyObject.viewpoint;
             if (vp && view.id !== vp.id && vp.storeSize){
                 ret = vp.size[id];
-                if(ret) return ret; }
+                if (ret) return ret; }
             return undefined;
         }
 

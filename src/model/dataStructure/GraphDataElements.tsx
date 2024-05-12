@@ -14,6 +14,7 @@ import {
     DViewElement,
     EdgeBendingMode,
     END,
+    EPSize,
     getWParams,
     GObject,
     GraphElementComponent,
@@ -442,17 +443,20 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return ret;
     }
     // set_size(size: Partial<this["size"]>, context: Context): boolean {
-    set_size(size: Partial<GraphSize>, c: Context): boolean {
+    set_size(size0: Partial<GraphSize>, c: Context): boolean {
         // console.log("setSize("+(this.props?.data as any).name+") thisss", this);
-        if (!size) return false;
+        if (!size0) return false;
+        let size = size0 as Partial<EPSize>;
         let view = this.get_view(c);
-        if (c.data.className === DEdgePoint.cname) size = (this as any as LEdgePoint).encodePosCoords(c as any, size, view);
+        if (c.data.className === DEdgePoint.cname && size.currentCoordType !== CoordinateMode.absolute) size = (this as any as LEdgePoint).encodePosCoords(c as any, size, view);
         if (view.updateSize(c.data.id, size)) return true;
         BEGIN()
         if (size.x !== c.data.x && size.x !== undefined) SetFieldAction.new(c.data.id, "x", size.x, undefined, false);
         if (size.y !== c.data.y && size.y !== undefined) SetFieldAction.new(c.data.id, "y", size.y, undefined, false);
         if (size.w !== c.data.w && size.w !== undefined) SetFieldAction.new(c.data.id, "w", size.w, undefined, false);
         if (size.h !== c.data.h && size.h !== undefined) SetFieldAction.new(c.data.id, "h", size.h, undefined, false);
+        let epdata: DEdgePoint = c.data as DEdgePoint;
+        if (size.currentCoordType !== epdata.currentCoordType && size.currentCoordType !== undefined) SetFieldAction.new(epdata.id, "currentCoordType", size.currentCoordType, undefined, false);
         END()
         return true; }
 
@@ -957,6 +961,7 @@ export class DEdgePoint extends DVoidVertex { // DVoidVertex
     size?: GraphSize; //／／ virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
     // personal attributes
     __isDEdgePoint!: true;
+    currentCoordType?: CoordinateMode;
 
     public static new(htmlindex: number, model: DEdgePoint["model"] | undefined, parentNodeID: DEdgePoint["father"], graphID?: DEdgePoint["graph"], nodeID?: DGraphElement["id"],
                       size?: InitialVertexSize): DEdgePoint {
@@ -999,22 +1004,21 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
     public get_edge(c: Context): LVoidEdge { return c.proxyObject.father; }
     public set_edge(v: Pack1<LVoidEdge>, c: Context): boolean { return this.set_father(v as any, c); }
 
-    // from x,y as coords, to x%,y% as % of ((1-val)%*startpt) + ((val)%*endpt)
-    public decodePosCoords<T extends Partial<GraphSize> | Partial<GraphPoint>>(c: Context, size: T&any, view: LViewElement, sp0?: GraphPoint, ep0?: GraphPoint): T {
-        if (!view) view = this.get_view(c);
-        let edgePointCoordMode = view.edgePointCoordMode;
-        if (edgePointCoordMode === CoordinateMode.absolute) return size;
-        let le: LVoidEdge = c&&c.proxyObject.father;
-        // console.log("decodepos:", {le, sp0, lesp:le?.startPoint});
-        let sp: GraphPoint = sp0||le.startPoint;
-        let ep: GraphPoint = ep0||le.endPoint;
+
+
+
+    static decodeCoords<T extends Partial<EPSize>>(size0: T, sp:GraphPoint, ep: GraphPoint): T/*absolute*/{
+        let size: any = size0;
         let ret: any = (("w" in size || "h" in size) ? new GraphSize() : new GraphPoint()); // GObject<Partial<GraphSize>>;
-        switch (edgePointCoordMode) {
-            default: return Log.exDevv("translatePosCoords() invalid coordinate mode", {mode:edgePointCoordMode, view});
+        switch (size.currentCoordType) {
+            default: return Log.exDevv("translatePosCoords() invalid coordinate mode", {mode:size.currentCoordType});
             // case CoordinateMode.absolute: return size;
+            case CoordinateMode.absolute: case undefined: case null:
+                if (size.x !== undefined) ret.x = size.x;
+                if (size.y !== undefined) ret.y = size.y;
+                break;
             case CoordinateMode.relativePercent:
                 //maybe do: dampening factor on relative % offset? is it possible?
-
                 // let s = this.getBasicSize(c);
                 // MATH:
                 // size.x = sp.x*x% + ep.x*(1-x%)
@@ -1029,7 +1033,7 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
             case CoordinateMode.relativeOffsetEnd:
                 let useStart: boolean;
                 let useEnd: boolean;
-                switch (edgePointCoordMode) {
+                switch (size.currentCoordType) {
                     default:
                     case CoordinateMode.relativeOffset: useStart = true; useEnd = true; break;
                     case CoordinateMode.relativeOffsetStart: useStart = true; useEnd = false; break;
@@ -1064,21 +1068,27 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
         if (size.y === undefined) delete ret.y;
         if ((size as any).w === undefined) delete ret.w; else ret.w = size.w;
         if ((size as any).h === undefined) delete ret.h; else ret.h = size.h;
+        ret.currentCoordType = CoordinateMode.absolute;
         // console.log("decode coords", {size, sp, ep, ret});
-
         return ret;
     }
-
-    public encodePosCoords<T extends Partial<GraphSize> | Partial<GraphPoint>>(c: Context, size: T, view: LViewElement, sp0?: GraphPoint, ep0?: GraphPoint): T {
-        if (!view) view = this.get_view(c);
-        let edgePointCoordMode = view.edgePointCoordMode;
-        if (edgePointCoordMode === CoordinateMode.absolute) return size;
+    // from x,y as coords, to x%,y% as % of ((1-val)%*startpt) + ((val)%*endpt)
+    public decodePosCoords<T extends Partial<GraphSize> | Partial<GraphPoint>>(c: Context, size: T&any, view: LViewElement, sp0?: GraphPoint, ep0?: GraphPoint): T {
         let le: LVoidEdge = c&&c.proxyObject.father;
-        let sp: GraphPoint = sp0 || le.startPoint;//todo: delete sp0, ep0 parameters after testing
-        let ep: GraphPoint = ep0 || le.endPoint;
+        // console.log("decodepos:", {le, sp0, lesp:le?.startPoint});
+        let sp: GraphPoint = sp0||le.startPoint;
+        let ep: GraphPoint = ep0||le.endPoint;
+        return LEdgePoint.decodeCoords(size, sp, ep);
+    }
+
+    static encodeCoords<T extends Partial<EPSize>>(size0: T, edgePointCoordMode: CoordinateMode, sp:GraphPoint, ep: GraphPoint): T/*absolute*/{
+        let size: T = size0 as any;
+        if (edgePointCoordMode === size.currentCoordType) return size;
+        if (size.currentCoordType !== CoordinateMode.absolute) size = LEdgePoint.decodeCoords(size, sp, ep);
+
         let ret: any = (("w" in size || "h" in size) ? new GraphSize() : new GraphPoint()); // GObject<Partial<GraphSize>>;
         switch (edgePointCoordMode) {
-            default: return Log.exDevv("translatePosCoords() invalid coordinate mode", {mode:edgePointCoordMode, view});
+            default: return Log.exDevv("translatePosCoords() invalid coordinate mode", {mode:edgePointCoordMode});
             // case CoordinateMode.absolute: return size;
             case CoordinateMode.relativePercent:
                 // let s = this.getBasicSize(c);
@@ -1113,7 +1123,17 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
         if ((size as any).w === undefined) delete ret.w; else ret.w = (size as any).w;
         if ((size as any).h === undefined) delete ret.h; else ret.h = (size as any).h;
         // console.log("encode coorde", {size, sp, ep, ret});
+        ret.currentCoordType = edgePointCoordMode;
         return ret;
+    }
+    public encodePosCoords(c: Context, size0: Partial<EPSize>, view: LViewElement, sp0?: GraphPoint, ep0?: GraphPoint): Partial<EPSize> {
+        if (!view) view = this.get_view(c);
+        let size: Partial<EPSize> = size0 as any;
+        let edgePointCoordMode = (view.__raw || view).edgePointCoordMode;
+        let le: LVoidEdge = c&&c.proxyObject.father;
+        let sp: GraphPoint = sp0 || le.startPoint;
+        let ep: GraphPoint = ep0 || le.endPoint;
+        return LEdgePoint.encodeCoords(size, edgePointCoordMode, sp, ep);
     }
 
     /* 13/10/2023 Giordano comment (defined in LPointerTargetable

@@ -485,6 +485,7 @@ export enum CoordinateMode {
     "relativeOffsetEnd"     = "relativeOffsetEnd",
 }
 
+export type EPSize = GraphSize & {currentCoordType: CoordinateMode};
 export enum EdgeHead {
     composition = "EdgeComposition",
     aggregation = "EdgeAggregation",

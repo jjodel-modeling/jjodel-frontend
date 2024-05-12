@@ -465,7 +465,6 @@ export class Size extends ISize<Point> {
     protected makePoint(x: number, y: number): Point { return new Point(x, y); }
     protected new(...args:any): this { return new Size(...args) as this; }
 }
-
 @RuntimeAccessible('GraphSize')
 export class GraphSize extends ISize<GraphPoint> {
     private dontMixWithSize: any;

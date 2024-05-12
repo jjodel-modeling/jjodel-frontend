@@ -17,26 +17,12 @@ let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPac
 
 
  anchor roadmap
- 1) multi ondrag... events with names
  2) jqui handling subelements with "draggable resizable rotatable" classes (or attributes or ondrag-* events)
- 3) per dopo: edges able to target node with named anchors  how? end={nodeend} anchorEnd={anchorname} ? or end={node.id+'#'+anchorname}? the second one makes harder to allow end={dmodelelement}
-
-
 
  */
 // todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or remo**ved
 
 
-/**
- copy a class view, give it higher prio. it will not be applied.
- on view duplicate, css is not recompiled
-
-
-
-
-
- when i manually assign a view (edge), tn.mainView is still undefined and this causes the console to crash.
- */
 
 // need to merge file declarations? or use a filename such as the imports will work (use inmemory://? or real urls)
 // advanced mode and simple mode: hide some features like positional editor in simple mode or the entire tab in view/node, start in simple mode.
@@ -49,21 +35,28 @@ let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPac
 // syntax error on constants, usageDeclarations are not catched
 
 /*
-view/node editor missing stuff
 
-    appliableTo!: 'node'|'edge'|'edgePoint';
-    subViews
+
+view/node editor stuff done:
+
     bendingMode!: EdgeBendingMode;
     edgeGapMode!: EdgeGapMode;
     edgeStartStopAtBoundaries!: boolean;
     edgeEndStopAtBoundaries!: boolean;
     edgePointCoordMode!: CoordinateMode;
 
+
+missing stuff
+
+    appliableTo!: 'node'|'edge'|'edgePoint';
+    subViews
+
+
     move in css:
         edgeHeadSize!: GraphPoint;
         edgeTailSize!: GraphPoint;
 
-    dunno if remove or are still used with anchors:
+    kinda obsolute, but still used like a fixed amount anchor, edgepoints can only have 1 incoming and 1 outgoing anchor given by those coords
         edgeStartOffset!: GraphPoint;
         edgeEndOffset!: GraphPoint;
         edgeStartOffset_isPercentage!: boolean;
