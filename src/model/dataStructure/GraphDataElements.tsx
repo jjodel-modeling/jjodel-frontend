@@ -374,39 +374,35 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             case DEdgePoint.cname:
             case DGraphVertex.cname: break;
         }
-        console.log("ex4 getsize 3 " + context.data.className, {context, canTriggerSet, outerSize});
 
         // low prio todo: memoization in proxy, as long state does not change keep a collection Dictionary[object][key] = returnval. it gets emptied when state is updated.
-        /*console.log("get_size("+(this.props?.data as any).name+")", {
-            view:this.props.view.getSize(this.props.dataid || this.props.nodeid as string),
-            node:this.props.node?.size,
-            default: this.props.view.defaultVSize});*/
-        // windoww.debugg = context;
-        // console.log("edgee getsize", {component, view:component?.props?.view, data:{...context.data}});
-        console.log("ex4 getsize 4 " + context.data.className, {context});
+
         // when loading a save, edge segements and edgepoints/nodes are computed before creating the edgepoint component
         let view: LViewElement = this.get_view(context);
-        console.log("ex4 getsize 5 " + context.data.className, {context, view, thiss:this});
         // (window as any).retry = ()=>view.getSize(context.data.id);
-        let ret: GraphSize = view.getSize(context.data.id) as any; // (this.props.dataid || this.props.nodeid as string)
+        let ret: EPSize = view.getSize(context.data.id) as any; // (this.props.dataid || this.props.nodeid as string)
 
-        console.log("ex4 getsize 6 " + context.data.className, {context, ret});
+        console.log("ex4 getsize 10 " + context.data.className, {context, viewVertexSize:ret});
         // console.log("getSize() from view", {ret: ret ? {...ret} : ret});
         if (!ret) {
-            ret = new GraphSize();
+            ret = new GraphSize() as EPSize;
             ret.x = context.data.x;
             ret.y = context.data.y;
             ret.w = context.data.w;
             ret.h = context.data.h;
             let def: GraphSize | undefined;
-            if (undefined===(ret.x)) { if (!def) def = view.defaultVSize; ret.x = def.x;}
-            if (undefined===(ret.y)) { if (!def) def = view.defaultVSize; ret.y = def.y;}
-            if (undefined===(ret.w)) { if (!def) def = view.defaultVSize; ret.w = def.w;}
-            if (undefined===(ret.h)) { if (!def) def = view.defaultVSize; ret.h = def.h;}
+            if (undefined===(ret.x)) { if (!def) def = view.defaultVSize; ret.x = def.x || 0;}
+            if (undefined===(ret.y)) { if (!def) def = view.defaultVSize; ret.y = def.y || 0;}
+            if (undefined===(ret.w)) { if (!def) def = view.defaultVSize; ret.w = def.w || 10;}
+            if (undefined===(ret.h)) { if (!def) def = view.defaultVSize; ret.h = def.h | 10;}
+            ret.currentCoordType = (context.data as DEdgePoint).currentCoordType as any;
             // console.log("getSize() from node merged with defaultVSize", {ret: ret ? {...ret} : ret});
         }
-        if (context.data.className === DEdgePoint.cname) { ret = (this as any as LEdgePoint).decodePosCoords(context, ret, view); }
-        console.log("ex4 getsize 7 " + context.data.className, {context, view, ret});
+        console.log("ex4 getsize 11 pre decode" + context.data.className, {context, ret});
+        if (context.data.className === DEdgePoint.cname) {
+            ret = (this as any as LEdgePoint).decodePosCoords(context, ret, view);
+            console.log("ex4 getsize 12 decoded" + context.data.className, {context, view, ret});
+        }
 
         /*
                 if ((context.data as DVoidVertex).isResized) {
@@ -414,7 +410,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
                 }*/
         if (!canTriggerSet) {
             if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
-            console.log("ex4 getsize 8 " + context.data.className, {context, view, ret});
+            console.log("ex4 getsize 13 " + context.data.className, {context, view, ret});
             return ret;
         }
         let html: RefObject<HTMLElement | undefined> | undefined = this.get_component(context)?.html;
@@ -439,7 +435,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
         if (updateSize) this.set_size(ret, context);
         if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
-        console.log("ex4 getsize 8 " + context.data.className, {context, view, ret});
+        console.log("ex4 getsize 14 " + context.data.className, {context, view, ret});
         return ret;
     }
     // set_size(size: Partial<this["size"]>, context: Context): boolean {
@@ -448,7 +444,9 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         if (!size0) return false;
         let size = size0 as Partial<EPSize>;
         let view = this.get_view(c);
+        console.log("ex4 setsize " + c.data.className, {size});
         if (c.data.className === DEdgePoint.cname && size.currentCoordType !== CoordinateMode.absolute) size = (this as any as LEdgePoint).encodePosCoords(c as any, size, view);
+        console.log("ex4 setsize encoded " + c.data.className, {size});
         if (view.updateSize(c.data.id, size)) return true;
         BEGIN()
         if (size.x !== c.data.x && size.x !== undefined) SetFieldAction.new(c.data.id, "x", size.x, undefined, false);
@@ -1081,10 +1079,30 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
         return LEdgePoint.decodeCoords(size, sp, ep);
     }
 
+    static testCoords(range: number = 30){
+        outer: for (let mode of ["absolute", "relative%", "relativeOffset", "relativeOffsetStart", "relativeOffsetEnd"])
+            for (let i = -range; i < range; i++)
+                for (let j = -range; j < range; j++){
+                    var s0 = {x:i, y:j};
+                    var sp = {x:10, y:10};
+                    var ep = {x:10, y:-10};
+                    // @ts-ignore
+                    var s1 = LEdgePoint.encodeCoords(s0, mode, sp, ep)
+                    // @ts-ignore
+                    var s00 = LEdgePoint.decodeCoords(s1, sp, ep);
+                    // @ts-ignore
+                    var error = Object.keys(s0).map( k=> s0[k].toFixed(3) === s00[k].toFixed(3) ? '' : k).join('');
+                    (mode != "relative%" && error ? console.error : console.log)({diff:[s00.x-s0.x, s00.y-s0.y].join(), i, j, mode, s1:[s1.x, s1.y].join(), s0, s00, error});
+                    if (mode != "relative%" && error ) break outer;
+                }
+    }
+    // @ts-ignore a
+
     static encodeCoords<T extends Partial<EPSize>>(size0: T, edgePointCoordMode: CoordinateMode, sp:GraphPoint, ep: GraphPoint): T/*absolute*/{
         let size: T = size0 as any;
-        if (edgePointCoordMode === size.currentCoordType) return size;
-        if (size.currentCoordType !== CoordinateMode.absolute) size = LEdgePoint.decodeCoords(size, sp, ep);
+        if (edgePointCoordMode === size.currentCoordType ||
+            !size.currentCoordType && edgePointCoordMode === CoordinateMode.absolute) return size;
+        if (size.currentCoordType && size.currentCoordType !== CoordinateMode.absolute) size = LEdgePoint.decodeCoords(size, sp, ep);
 
         let ret: any = (("w" in size || "h" in size) ? new GraphSize() : new GraphPoint()); // GObject<Partial<GraphSize>>;
         switch (edgePointCoordMode) {
@@ -1097,8 +1115,11 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
                 // size.x = sp.x*x% + ep.x - ep.x*x%
                 // size.x - ep.x= (sp.x - ep.x)*x%
                 // (size.x - ep.x) / (sp.x - ep.x) = x% // actually i inverted <sp, ep> in first equation, so reverse them in result too.
-                if (size.x !== undefined) ret.x = (size.x - sp.x) / (ep.x - sp.x);
-                if (size.y !== undefined) ret.y = (size.y - sp.y) / (ep.y - sp.y);
+
+                if (sp.x === ep.x) ret.x = 0.5; // because otherwise it is infinity. so i force him to return in line.
+                else if (size.x !== undefined) ret.x = (size.x - sp.x) / (ep.x - sp.x);
+                if (sp.y === ep.y) ret.y = 0.5;
+                else if (size.y !== undefined) ret.y = (size.y - sp.y) / (ep.y - sp.y);
                 break;
             case CoordinateMode.relativeOffset:
             case CoordinateMode.relativeOffsetStart:

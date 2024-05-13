@@ -523,6 +523,17 @@ node.state = {error_lowerbound: err};\n
     let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '',
         [], '', undefined, false, true, vp);
     edgePointView.appliableTo = 'edgePoint'; edgePointView.resizable = false;
+    edgePointView.usageDeclarations = "(ret)=>{ // scope contains: data, node, view, constants, state\n" +
+        "// ** preparations and default behaviour here ** //\n" +
+        "ret.data = data\n" +
+        "ret.node = node\n" +
+        "ret.view = view\n" +
+        "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
+        "// add preparation code here (like for loops to count something), then list the dependencies below.\n\n" +
+        "// ** declarations here ** //\n" +
+        "ret.edgestart = node.edge.start?.size+''\n" +
+        "ret.edgeend = node.edge.end?.size+''\n" +
+        "}"
     // edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
     edgePointView.edgePointCoordMode = CoordinateMode.absolute;
 
