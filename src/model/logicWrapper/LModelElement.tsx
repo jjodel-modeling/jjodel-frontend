@@ -560,7 +560,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     public addChild(type: string): DModelElement {
         return this.cannotCall('addChild', type);
     }
-    
+
 }
 
 /*function isValidPointer<T extends DPointerTargetable = DModelElement, LB extends number = 0, UB extends number = 1, RET extends LPointerTargetable = LModelElement>
@@ -2886,6 +2886,7 @@ export class DAttribute extends DPointerTargetable { // DStructuralFeature
 
     // personal
     isID: boolean = false; // ? exist in ecore as "iD" ?
+    isIoT: boolean = false;
 
     public static new(name?: DAttribute["name"], type?: DAttribute["type"], father?: DAttribute["father"], persist: boolean = true): DAttribute {
         if (!name) name = this.defaultname("attr_", father);
@@ -2945,6 +2946,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
 
     // personal
     isID: boolean = false; // ? exist in ecore as "iD" ?
+    isIoT: boolean = false;
 
     protected generateEcoreJson_impl(context: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
         loopDetectionObj[context.data.id] = context.data;
@@ -2979,7 +2981,8 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
             de.transient = context.data.transient;
             de.unsettable = context.data.unsettable;
             de.volatile = context.data.volatile;
-            de.isID = context.data.isID
+            de.isID = context.data.isID;
+            de.isIoT = context.data.isIoT;
             let we: WAttribute = le as any;
             we.type = context.data.type;
             we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
@@ -2993,9 +2996,19 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     protected get_addEnumerator(context: Context): this["addEnumerator"] {
         return (name?: DEnumerator["name"], father?: DEnumerator["father"]) => LPointerTargetable.fromD(DEnumerator.new(name, context.proxyObject.package?.id, true)); }
 
-    protected get_ID(context: Context): this["isID"] { return context.data.isID; }
-    protected set_ID(val: this["isID"], context: Context): boolean {
+    protected get_isID(context: Context): this["isID"] { return context.data.isID; }
+    protected set_isID(val: this["isID"], context: Context): boolean {
         SetFieldAction.new(context.data, 'isID', val);
+        return true;
+    }
+    protected get_isIoT(context: Context): this["isIoT"] { return context.data.isIoT; }
+    protected set_isIoT(val: this["isIoT"], context: Context): boolean {
+        TRANSACTION(() => {
+            for(const value of context.proxyObject.instances) {
+                SetFieldAction.new(value, 'topic', '', '', false);
+            }
+            SetFieldAction.new(context.data, 'isIoT', val);
+        })
         return true;
     }
     protected get_defaultValue(context: Context): this["defaultValue"] { return context.data.defaultValue; }
