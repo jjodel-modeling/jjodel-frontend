@@ -24,7 +24,7 @@ function InputComponent(props: AllProps) {
 
     const getter = props.getter;
     const setter = props.setter;
-    const field = props.field;
+    const field: string = props.field as string;
     const oldValue = (!data) ? undefined : (getter) ? getter(data) : data[field]; // !== undefined); ? data[field] : 'undefined'
     const [value, setValue] = useStateIfMounted(oldValue);
     const [isTouched, setIsTouched] = useStateIfMounted(false);
@@ -37,12 +37,12 @@ function InputComponent(props: AllProps) {
     }
 
 
-    if (!data) return(<></>);
-    const readOnly = (props.readonly !== undefined) ? props.readonly : props.debugmodee !== 'true' && Defaults.check(data.id);
+    if (!(data || (getter && setter))) return(<>Either props.data or both getter & setter are required.</>);
+    const readOnly = (props.readonly !== undefined) ? props.readonly : props.debugmodee !== 'true' && Defaults.check(data?.id);
     const type = (props.type) ? props.type : 'text';
     const label: ReactNode|string|undefined = props.label;
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
-    let tooltip: ReactNode|string|undefined = ((props.tooltip === true) ? data['__info_of__' + field]?.txt : props.tooltip) || '';
+    let tooltip: ReactNode|string|undefined = ((props.tooltip === true) ? data?.['__info_of__' + field]?.txt : props.tooltip) || '';
 
     let css = 'my-auto input ';
     css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
@@ -65,7 +65,7 @@ function InputComponent(props: AllProps) {
     const keyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
         if (evt.key === Keystrokes.enter) blur(evt as any);
         if (evt.key === Keystrokes.escape) {
-            const oldValue = (!data) ? undefined : (getter) ? getter(data) : data[field];
+            const oldValue = getter ? getter(data) : data[field];
             (evt.target as HTMLInputElement).value = oldValue;
             setValue(oldValue);
             setIsTouched(false);
@@ -78,7 +78,7 @@ function InputComponent(props: AllProps) {
     const blur = (evt: React.FocusEvent<HTMLInputElement>) => {
         if (readOnly || isBoolean) return;
         const newValue = evt.target.value;
-        const oldValue = (!data) ? undefined : (getter) ? getter(data) : data[field]; // !== undefined) ? data[field] : 'undefined'
+        const oldValue = getter ? getter(data) : data[field];
         if (newValue !== oldValue) {
             if (setter) setter(newValue);
             else data[field] = newValue;
@@ -113,7 +113,7 @@ function InputComponent(props: AllProps) {
     let rootStyle = {display: (jsxLabel || label) ? 'flex' : 'block', cursor, ...((props as any).style || {})};
     if (readOnly && !("color" in rootStyle)) rootStyle.color = "gray";
     let input = <input {...otherprops}
-                       key={`${field}.${data.id}`}
+                       key={`${field}.${data?.id}`}
                        className={props.inputClassName || css}
                        style={inputStyle}
                        spellCheck={false}
@@ -146,8 +146,8 @@ function InputComponent(props: AllProps) {
 
 InputComponent.cname = 'InputComponent';
 export interface InputOwnProps {
-    data: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
-    field: string;
+    data?: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
+    field?: string;
     getter?: (data: any/*LPointerTargetable*/) => string | boolean | undefined;
     setter?: (value: string|boolean) => void;
     label?: string | ReactNode;
@@ -177,9 +177,9 @@ type AllProps = Overlap<InputOwnProps, Overlap<StateProps, DispatchProps>>;
 
 function mapStateToProps(state: DState, ownProps: InputOwnProps): StateProps {
     const ret: StateProps = {} as any;
-    const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
+    const pointer: Pointer | undefined = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data?.id;
     ret.debugmodee = state.debug ? 'true' : 'false';
-    ret.data = LPointerTargetable.fromPointer(pointer);
+    if (pointer) ret.data = LPointerTargetable.fromPointer(pointer);
     /*
     const selected = state.selected;
     ret.selected = {};

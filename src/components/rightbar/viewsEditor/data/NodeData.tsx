@@ -16,16 +16,12 @@ function NodeDataComponent(props: AllProps) {
     const view = props.view;
     let dview = (view.__raw || view) as DViewElement;
     const readOnly = props.readonly;
-
+/*
     const objectTypes = ["", "DModel", "DPackage", "DEnumerator", "DEnumLiteral", "DClass", "DAttribute", "DReference", "DOperation", "DParameter", "DObject", "DValue", "DStructuralFeature"];
+
     const classesOptions = <optgroup label={"Object type"}>
         {objectTypes.map((o)=><option key={o} value={o}>{o.length ? o.substring(1) : "anything"}</option>)}
-    </optgroup>;
-
-    const changeFN = (evt: React.ChangeEvent<HTMLSelectElement>) => {
-        const value = evt.target.value;
-        SetFieldAction.new(dview.id, 'forceNodeType', value, '', false);
-    }
+    </optgroup>;*/
 
     return(<section className={'p-3'}>
         {/*<Select obj={view} field={"useSizeFrom"} readonly={readOnly} options={
@@ -41,16 +37,7 @@ function NodeDataComponent(props: AllProps) {
 
         {/*[<Input data={view} field={"scalezoomx"} label={"Zoom X"} type={"number"}/>,                <Input data={view} field={"scalezoomy"} label={"Zoom Y"} type={"number"}/>]*/}
 
-        {<div className={'d-flex p-1'}>
-            <label className={'my-auto'}>Preferred display</label>
-            <select className={'my-auto ms-auto select'} disabled={readOnly}
-                    value={dview.forceNodeType} onChange={changeFN}>
-                <option value={undefined}>-----</option>
-                {['Graph', 'GraphVertex', 'Vertex', 'Field'].map((node, index) => {
-                    return(<option key={index} value={node}>{node}</option>);
-                })}
-            </select>
-        </div>}
+        <h5>Vertex</h5>
         {<Input data={view} field={"storeSize"} label={"Store Size in view"} readonly={readOnly}  tooltip={
             <div>On - The node position depends from the view currently displayed.<br/>Off - It depends from the graph.</div>} type={"checkbox"} />
             /* on = EuseSizeFrom.nv,   off = EuseSizeFrom.n */
@@ -62,8 +49,10 @@ function NodeDataComponent(props: AllProps) {
         <Input data={view} field={"draggable"} label={"Draggable"} type={"checkbox"} readonly={readOnly} />
         <Input data={view} field={"resizable"} label={"Resizable"} type={"checkbox"} readonly={readOnly} />
         <div className={"w-100"}>{[
-            !dview.adaptWidth && <Input data={view} field={"width"} label={"Default Width"} type={"number"} readonly={readOnly} />,
-            !dview.adaptHeight && <Input data={view} field={"height"} label={"Default Height"} type={"number"} readonly={readOnly} />
+            !dview.adaptWidth && <Input data={view} label={"Default Width"} type={"number"} readonly={readOnly}
+                                        getter={()=>''+view.defaultVSize.w} setter={(val) => view.defaultVSize = {w:+val} as any}/>,
+            !dview.adaptHeight && <Input data={view} label={"Default Height"} type={"number"} readonly={readOnly}
+                                         getter={()=>''+view.defaultVSize.h} setter={(val) => view.defaultVSize = {h:+val} as any} />
         ]}</div>
 
 

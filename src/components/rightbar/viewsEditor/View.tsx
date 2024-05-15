@@ -13,6 +13,7 @@ import SubViewsData from './data/SubViewsData';
 import {FakeStateProps} from "../../../joiner/types";
 import {connect} from "react-redux";
 import PaletteData from "./data/PaletteData";
+import GenericNodeData from "./data/GenericNodeData";
 
 function ViewDataComponent(props: AllProps) {
     const view = props.view;
@@ -33,14 +34,18 @@ function ViewDataComponent(props: AllProps) {
         {id: ''+i++, title: 'Template', group: '1', closable: false, content: <TemplateData viewID={view.id} readonly={readOnly} />},
         {id: ''+i++, title: 'Palette/Css', group: '1', closable: false, content: <PaletteData viewID={view.id} readonly={readOnly} />},
         {id: ''+i++, title: 'Events', group: '1', closable: false, content: <EventsData viewID={view.id} readonly={readOnly} />},
-        {id: ''+i++, title: 'Node behaviour', group: '1', closable: false, content: <NodeData viewID={view.id} readonly={readOnly} />},
+        {id: 'sharedid', title: 'Options', group: '1', closable: false, content: <GenericNodeData viewID={view.id} readonly={readOnly} />},
     ];
+    /*
+    if(view.appliableTo === 'node') tabs.push(
+        {id: 'sharedid', title: 'Node behaviour', group: '1', closable: false, content: <NodeData viewID={view.id} readonly={readOnly} />},
+    );
     if(view.appliableTo === 'edge') tabs.push(
-        {id: ''+i++, title: 'Edge', group: '1', closable: false, content: <EdgeData viewID={view.id} readonly={readOnly} />}
+        {id: 'sharedid', title: 'Edge', group: '1', closable: false, content: <EdgeData viewID={view.id} readonly={readOnly} />}
     );
     if(view.appliableTo === 'edgePoint') tabs.push(
-        {id: ''+i++, title: 'EdgePoint', group: '1', closable: false, content: <EdgePointData viewID={view.id} readonly={readOnly} />}
-    );
+        {id: 'sharedid', title: 'EdgePoint', group: '1', closable: false, content: <EdgePointData viewID={view.id} readonly={readOnly} />}
+    );*/
     tabs.push({id: ''+i++, title: 'Sub Views', group: '1', closable: false, content: <SubViewsData viewID={view.id} readonly={readOnly} setSelectedView={props.setSelectedView} />});
     layout.dockbox.children.push({tabs});
 

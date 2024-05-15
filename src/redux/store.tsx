@@ -53,7 +53,7 @@ import {
     LValue,
     LViewElement,
     LViewPoint, Nonagon, Octagon,
-    packageDefaultSize, Pentagon,
+    Pentagon,
     Pointer,
     Pointers, Polygon, Rectangle,
     RuntimeAccessible,
@@ -520,22 +520,7 @@ node.state = {error_lowerbound: err};\n
     // voidView.appliableToClasses=["VoidVertex"];
     voidView.adaptWidth = true; voidView.adaptHeight = true;
 
-    let edgePointView: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '',
-        [], '', undefined, false, true, vp);
-    edgePointView.appliableTo = 'edgePoint'; edgePointView.resizable = false;
-    edgePointView.usageDeclarations = "(ret)=>{ // scope contains: data, node, view, constants, state\n" +
-        "// ** preparations and default behaviour here ** //\n" +
-        "ret.data = data\n" +
-        "ret.node = node\n" +
-        "ret.view = view\n" +
-        "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
-        "// add preparation code here (like for loops to count something), then list the dependencies below.\n\n" +
-        "// ** declarations here ** //\n" +
-        "ret.edgestart = node.edge.start?.size+''\n" +
-        "ret.edgeend = node.edge.end?.size+''\n" +
-        "}"
-    // edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
-    edgePointView.edgePointCoordMode = CoordinateMode.absolute;
+
 
     let edgeViews: DViewElement[] = [];
     let size0: GraphPoint = new GraphPoint(0, 0), size1: GraphPoint = new GraphPoint(20, 20), size2: GraphPoint = new GraphPoint(20, 20);
@@ -574,8 +559,9 @@ node.state = {error_lowerbound: err};\n
         let ev = DViewElement.new2("Edge"+name,
             DV.edgeView(type, DV.svgHeadTail("Head", type), DV.svgHeadTail("Tail", type), dashing ? "10.5,9,0,0" : undefined),
             (v: DViewElement) => {
-                v.bendingMode = EdgeBendingMode.Line;
                 v.appliableToClasses = [DVoidEdge.cname];
+                v.appliableTo = 'Edge';
+                v.bendingMode = EdgeBendingMode.Line;
                 v.edgeHeadSize = headSize || size0;
                 v.edgeTailSize = tailSize || size0;
                 v.constants = edgeConstants;
@@ -585,7 +571,6 @@ node.state = {error_lowerbound: err};\n
 `;
                 v.usageDeclarations = edgeUsageDeclarations;
                 v.preRenderFunc = edgePrerenderFunc;
-                v.appliableTo = 'edge'; // todo: remove the entire property?
         }, false, vp, 'Pointer_ViewEdge' + name);
         edgeViews.push(ev);
         return ev;
@@ -609,7 +594,7 @@ node.state = {error_lowerbound: err};\n
 
     let dv_subviews = [DefaultViews.model(vp), DefaultViews.package(vp), DefaultViews.class(vp), DefaultViews.enum(vp),
         DefaultViews.attribute(vp), DefaultViews.reference(vp), DefaultViews.operation(vp), DefaultViews.parameter(vp),
-        DefaultViews.literal(vp), DefaultViews.object(vp), DefaultViews.value(vp), anchorView, voidView, ...edgeViews, edgePointView];
+        DefaultViews.literal(vp), DefaultViews.object(vp), DefaultViews.value(vp), anchorView, voidView, ...edgeViews, DefaultViews.edgepoint(vp)];
 
     let validation_subviews = [errorOverlayView, errorCheckLowerbound, errorCheckName];
     // SetFieldAction.new(vp, 'subViews', U.objectFromArrayValues(dv_subviews.map(dv=>dv.id), 1.5));

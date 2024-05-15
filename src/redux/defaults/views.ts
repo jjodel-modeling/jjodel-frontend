@@ -5,16 +5,30 @@ import {
     DViewPoint,
     Pointer,
     DPackage,
-    packageDefaultSize,
     DClass,
-    DEnumerator, DAttribute, DReference, DOperation, DEnumLiteral, DObject, DValue, DParameter
+    DEnumerator,
+    DAttribute,
+    DReference,
+    DOperation,
+    DEnumLiteral,
+    DObject,
+    DValue,
+    DParameter,
+    GraphSize,
+    CoordinateMode
 } from '../../joiner';
+
+var nosize: GraphSize = {x:0, y:0, w:0, h:0, nosize:true} as any;
+var defaultEdgePointSize: GraphSize = {x:0, y:0, w:5, h:5} as any;
+var defaultVertexSize: GraphSize = {x:0, y:0, w:140.6818084716797, h:32.52840805053711} as any;
+var defaultPackageSize = new GraphSize(0, 0, 400, 500);
 
 class DefaultViews {
     static model(vp: Pointer<DViewPoint>): DViewElement {
         const view = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname],
             '', 1, false, true, vp);
         view.draggable = false; view.resizable = false;
+        view.appliableTo = 'Graph';
         view.oclCondition = 'context DModel inv: true';
         view.palette = {'background-': ['#ffffff']};
         view.css = '.root {background-color: var(--background-1);}\n';
@@ -40,22 +54,25 @@ class DefaultViews {
 
     static package(vp: Pointer<DViewPoint>): DViewElement {
         const view = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname], '', 1, false, true, vp);
-        view.defaultVSize = packageDefaultSize;
         view.oclCondition = 'context DPackage inv: true';
+        view.appliableTo = 'GraphVertex';
         view.palette = {'color-': ['#028012'], 'background-': ['#ffffff']};
         view.css = '.package {background-color: var(--background-0); border-radius: 0.2em; border-left: 0.25em solid var(--color-1);}\n';
         view.css += '.package-children {height: -webkit-fill-available; width: -webkit-fill-available;}';
+        view.defaultVSize = defaultPackageSize;
         return view
     }
 
     static class(vp: Pointer<DViewPoint>): DViewElement {
         const view = DViewElement.new('Class', DV.classView(), undefined, '', '', '', [DClass.cname], '', 1, false, true, vp);
         view.adaptWidth = true; view.adaptHeight = true;
+        view.appliableTo = 'Vertex';
         view.oclCondition = 'context DClass inv: true';
         view.palette = {'color-': ['#ff0000', '#000000', '#ffffff'], 'background-': ['#ffffff', '#eeeeee', '#ff0000']};
         view.css = '.class {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color:var(--color-2);}\n';
         view.css += '.class-name {font-weight: bold; color: var(--color-1);}\n';
         view.css += '.class-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
+        view.defaultVSize = defaultVertexSize;
         // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
         return view;
     }
@@ -63,16 +80,19 @@ class DefaultViews {
     static enum(vp: Pointer<DViewPoint>): DViewElement {
         const view = DViewElement.new('Enum', DV.enumeratorView(), undefined, '', '', '', [DEnumerator.cname], '', 1, false, true, vp);
         view.adaptWidth = true; view.adaptHeight = true;
+        view.appliableTo = 'Vertex';
         view.oclCondition = 'context DEnumerator inv: true';
         view.palette = {'color-': ['#ffa500', '#000000', '#ffffff'], 'background-': ['#ffffff', '#eeeeee', '#ff0000']};
         view.css = '.enumerator {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);}\n';
         view.css += '.enumerator-name {font-weight: bold; color: var(--color-1);}\n';
         view.css += '.enumerator-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
+        view.defaultVSize = defaultVertexSize;
         return view;
     }
     static attribute(vp: Pointer<DViewPoint>): DViewElement {
         const view = DViewElement.new('Attribute', DV.attributeView(), undefined, '', '', '', [DAttribute.cname], '', 1, false, true, vp);
         view.oclCondition = 'context DAttribute inv: true';
+        view.appliableTo = 'Field';
         view.palette = {};
         return view;
     }
@@ -80,6 +100,7 @@ class DefaultViews {
     static reference(vp: Pointer<DViewPoint>): DViewElement {
         const view = DViewElement.new('Reference', DV.referenceView(), undefined, '', '', '', [DReference.cname], '', 1, false, true, vp);
         view.oclCondition = 'context DReference inv: true';
+        view.appliableTo = 'Field';
         view.palette = {};
         return view;
     }
@@ -87,6 +108,7 @@ class DefaultViews {
     static operation(vp: Pointer<DViewPoint>): DViewElement {
         const view = DViewElement.new('Operation', DV.operationView(), undefined, '', '', '', [DOperation.cname], '', 1, false, true, vp);
         view.oclCondition = 'context DOperation inv: true';
+        view.appliableTo = 'Field';
         view.palette = {};
         return view;
     }
@@ -95,13 +117,15 @@ class DefaultViews {
         const view = DViewElement.new('Parameter', DV.parameterView(), undefined, '', '', '', [DParameter.cname],
             '', 1, false, true, vp);
         view.palette = {};
-        view.css = '*{\n\tfontSize:0.8rem;\n}'
+        view.appliableTo = 'Field';
+        view.css = '*{\n\tfontSize:0.8rem;\n}';
         return view;
     }
 
     static literal(vp: Pointer<DViewPoint>): DViewElement {
         const view: DViewElement = DViewElement.new('Literal', DV.literalView(), undefined, '', '', '', [DEnumLiteral.cname], '', 1, false, true, vp);
         view.oclCondition = 'context DEnumLiteral inv: true';
+        view.appliableTo = 'Field';
         view.palette = {};
         return view
     }
@@ -114,6 +138,8 @@ class DefaultViews {
         view.css = '.object {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);}\n';
         view.css += '.object-name {font-weight: bold; color: var(--color-1);}\n';
         view.css += '.object-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
+        view.defaultVSize = defaultVertexSize;
+        view.appliableTo = 'Vertex';
         view.usageDeclarations = '(ret) => {\n' +
             '// ** preparations and default behaviour here ** //\n' +
             'ret.data = data\n' +
@@ -132,7 +158,8 @@ class DefaultViews {
         const view = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname], '', 1, false, true, vp);
         view.oclCondition = 'context DValue inv: true';
         view.palette = {};
-        view.css = '.value {padding-right: 6px}'
+        view.css = '.value {padding-right: 6px}';
+        view.appliableTo = 'Field';
         view.usageDeclarations = '(ret) =>  {\n' +
             '// ** preparations and default behaviour here ** //\n' +
             'ret.node = node\n' +
@@ -144,6 +171,27 @@ class DefaultViews {
             'ret.valuesString = data.valuesString()\n' +
             'ret.typeString = data.typeString\n' +
         '}';
+        return view;
+    }
+    static edgepoint(vp: Pointer<DViewPoint>): DViewElement{
+        let view: DViewElement = DViewElement.new('EdgePoint', DV.edgePointView(), new GraphSize(0, 0, 25, 25), '', '', '',
+            [], '', undefined, false, true, vp);
+        view.appliableTo = 'EdgePoint';
+        view.resizable = false;
+        view.usageDeclarations = "(ret)=>{ // scope contains: data, node, view, constants, state\n" +
+            "// ** preparations and default behaviour here ** //\n" +
+            "ret.data = data\n" +
+            "ret.node = node\n" +
+            "ret.view = view\n" +
+            "// data, node, view are dependencies by default. delete them above if you want to remove them.\n" +
+            "// add preparation code here (like for loops to count something), then list the dependencies below.\n\n" +
+            "// ** declarations here ** //\n" +
+            "ret.edgestart = node.edge.start?.size+''\n" +
+            "ret.edgeend = node.edge.end?.size+''\n" +
+            "}"
+        // edgePointView.edgePointCoordMode = CoordinateMode.relativePercent;
+        view.edgePointCoordMode = CoordinateMode.absolute;
+        view.defaultVSize = defaultEdgePointSize;
         return view;
     }
 }

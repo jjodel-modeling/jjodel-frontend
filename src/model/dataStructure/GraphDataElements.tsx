@@ -56,8 +56,6 @@ import {Geom} from "../../common/Geom";
 
 console.warn('ts loading graphDataElement');
 
-export const packageDefaultSize = new GraphSize(0, 0, 400, 500);
-
 @Node
 @RuntimeAccessible('DGraphElement')
 export class DGraphElement extends DPointerTargetable {
@@ -445,7 +443,9 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         let size = size0 as Partial<EPSize>;
         let view = this.get_view(c);
         console.log("ex4 setsize " + c.data.className, {size});
+        let testmode: boolean = false;
         if (c.data.className === DEdgePoint.cname && size.currentCoordType !== CoordinateMode.absolute) size = (this as any as LEdgePoint).encodePosCoords(c as any, size, view);
+
         console.log("ex4 setsize encoded " + c.data.className, {size});
         if (view.updateSize(c.data.id, size)) return true;
         BEGIN()
@@ -753,9 +753,11 @@ export class DGraph extends DGraphElement {
     }
 
 }
-var nosize = {x:0, y:0, w:0, h:0, nosize:true};
-var defaultEdgePointSize = {x:0, y:0, w:5, h:5};
-var defaultVertexSize = {x:0, y:0, w:140.6818084716797, h:32.52840805053711};
+var nosize: GraphSize = {x:0, y:0, w:0, h:0, nosize:true} as any;
+var defaultEdgePointSize: GraphSize = undefined as any; // = {x:0, y:0, w:5, h:5};
+var defaultVertexSize: GraphSize = undefined as any; // {x:0, y:0, w:140.6818084716797, h:32.52840805053711};
+
+
 @RuntimeAccessible('LGraph')
 export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph = any> extends LGraphElement {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -1147,10 +1149,10 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
         ret.currentCoordType = edgePointCoordMode;
         return ret;
     }
-    public encodePosCoords(c: Context, size0: Partial<EPSize>, view: LViewElement, sp0?: GraphPoint, ep0?: GraphPoint): Partial<EPSize> {
+    public encodePosCoords(c: Context, size0: Partial<EPSize>, view: LViewElement, sp0?: GraphPoint, ep0?: GraphPoint, mode?: CoordinateMode): Partial<EPSize> {
         if (!view) view = this.get_view(c);
         let size: Partial<EPSize> = size0 as any;
-        let edgePointCoordMode = (view.__raw || view).edgePointCoordMode;
+        let edgePointCoordMode = mode || (view.__raw || view).edgePointCoordMode;
         let le: LVoidEdge = c&&c.proxyObject.father;
         let sp: GraphPoint = sp0 || le.startPoint;
         let ep: GraphPoint = ep0 || le.endPoint;

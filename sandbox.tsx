@@ -10,6 +10,9 @@ let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPac
 
 // todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or remo**ved
 /**
+ problem when changing ep mode, need to move the ep before it works
+
+ only when changing relative % -> absolute it goes crazy, i think it uses absolute pos as a %
 
 <div onDragEnd={"dragAnchor("+i+")"}></div>
 <div onDragEnd={e()=> node.anchor[1].x = e.x;}></div>
@@ -35,7 +38,7 @@ let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPac
 // syntax error on constants, usageDeclarations are not catched
 
 /*
-
+problem: ep will not update their coordmode until dragged once
 
 view/node editor stuff done:
 
@@ -44,26 +47,22 @@ view/node editor stuff done:
     edgeStartStopAtBoundaries!: boolean;
     edgeEndStopAtBoundaries!: boolean;
     edgePointCoordMode!: CoordinateMode;
-
-
-missing stuff
-
-    appliableTo!: 'node'|'edge'|'edgePoint';
-    subViews
-
-
-    move in css:
-        edgeHeadSize!: GraphPoint;
-        edgeTailSize!: GraphPoint;
+    edgeHeadSize!: GraphPoint;
+    edgeTailSize!: GraphPoint;
 
     kinda obsolute, but still used like a fixed amount anchor, edgepoints can only have 1 incoming and 1 outgoing anchor given by those coords
         edgeStartOffset!: GraphPoint;
         edgeEndOffset!: GraphPoint;
         edgeStartOffset_isPercentage!: boolean;
         edgeEndOffset_isPercentage!: boolean;
-    remove one of:
+
+missing stuff
+
+    appliableTo!: 'node'|'edge'|'edgePoint';
+    subViews
         defaultVSize!: GraphSize;
-        width!: number; height!: number;
+
+
 
 
  */

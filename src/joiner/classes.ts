@@ -132,7 +132,6 @@ import {
     Log,
     LViewElement,
     LViewPoint,
-    packageDefaultSize,
     ParsedAction,
     SetFieldAction,
     SetRootFieldAction, ShortAttribETypes, statehistory,
@@ -895,7 +894,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
         thiss.name = name;
         thiss.appliableToClasses = appliableToClasses;
-        thiss.appliableTo = 'node';
+        thiss.appliableTo = 'Any';
         thiss.jsxString = jsxString;
         thiss.usageDeclarations = usageDeclarations;
         thiss.constants = undefined; // '{}';
@@ -935,9 +934,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.draggable = true;
         thiss.resizable = true;
         //thiss.display = 'flex' as any;
-        thiss.width = 200;
-        thiss.height = 100;
-        thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 351, 201);
+        thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 140.6818084716797, 32.52840805053711);
         thiss.adaptWidth = false;
         thiss.adaptHeight = false; //'fit-content';
 
@@ -1029,8 +1026,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             // todo: set to default graphvertex size, so it can skip a rerender
             thiss.x = 0;
             thiss.y = 0;
-            thiss.w = packageDefaultSize.w;
-            thiss.h = packageDefaultSize.h;
+            //thiss.w = packageDefaultSize.w;
+            //thiss.h = packageDefaultSize.h;
         }
         return this; }
 
@@ -1043,22 +1040,6 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         let defaultVSizeObj: InitialVertexSizeObj | undefined;
         let defaultVSizeFunc: InitialVertexSizeFunc;
         thiss.isResized = false;
-        /*
-        if (typeof defaultVSize !== "function") {
-            defaultVSizeObj = defaultVSize;
-            // NB: they are going to be overwritten in callback func, but if the value is correct ahead i skip that
-            if (defaultVSizeObj.x !== undefined) thiss.x = defaultVSizeObj.x;
-            if (defaultVSizeObj.y !== undefined) thiss.y = defaultVSizeObj.y;
-            if (defaultVSizeObj.w !== undefined) thiss.w = defaultVSizeObj.w;
-            if (defaultVSizeObj.h !== undefined) thiss.h = defaultVSizeObj.h;
-        }
-        else {
-            thiss.x = 0;
-            thiss.y = 0;
-            thiss.w = 0;
-            thiss.h = 0;
-        }*/
-
 
         let lvertex: LVoidVertex = LPointerTargetable.fromD(thiss);
         if (typeof defaultVSize !== "function") { defaultVSizeObj = defaultVSize; }

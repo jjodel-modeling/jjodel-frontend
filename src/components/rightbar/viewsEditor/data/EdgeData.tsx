@@ -30,6 +30,7 @@ function EdgeDataComponent(props: AllProps) {
     }
 
     return(<section className={'p-3'}>
+        <h5>Edge</h5>
         {rows}
     </section>);
 }

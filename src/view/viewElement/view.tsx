@@ -20,7 +20,7 @@ import {
     GObject,
     GraphPoint,
     GraphSize,
-    Info, LModelElement,
+    Info, LEdgePoint, LModelElement,
     Log,
     LogicContext,
     LPointerTargetable,
@@ -93,7 +93,7 @@ export class DViewElement extends DPointerTargetable {
     // facendo pan su grafo html sposti gli elementi, per simulare uno spostamento del grafo e farlo sembrare illimitato.
     // __transient: DViewTransientProperties;
     appliableToClasses!: string[]; // class names: DModel, DPackage, DAttribute...
-    appliableTo!: 'node'|'edge'|'edgePoint';
+    appliableTo!: 'Any'|'Graph'|'GraphVertex'|'Vertex'|'Edge'|'EdgePoint'|'Field';
     subViews!: Dictionary<Pointer<DViewElement>, number/* priority boost */>;
     oclCondition!: string; // ocl selector
     jsCondition!: string; // js selector
@@ -105,8 +105,8 @@ export class DViewElement extends DPointerTargetable {
     defaultVSize!: GraphSize;
     adaptHeight!: boolean;// | 'fit-content' | '-webkit-fill-available';
     adaptWidth!: boolean;
-    width!: number;
-    height!: number;
+    /*width!: number;
+    height!: number;*/
     draggable!: boolean;
     resizable!: boolean;
     viewpoint!: Pointer<DViewPoint>;
@@ -399,7 +399,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             <br/>This is just a shortcut with a lower priority than a OCL match.
             <br/>The same result can be obtained through OCL.</div>}
 
-    appliableTo!: 'node'|'edge'|'edgePoint';
+    appliableTo!: 'Any'|'Graph'|'GraphVertex'|'Vertex'|'Edge'|'EdgePoint'|'Field';
 
     subViews!: LViewElement[];
     __info_of__subViews: Info = {isGlobal: true, hidden: true, type: "DViewElement[]", label:"sub-views",
@@ -467,6 +467,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     defaultVSize!: GraphSize;
     __info_of__defaultVSize: Info = {isNode:true, type: "GraphSize", label:"default size", txt: 'starting size of the node'}
+
 
     adaptWidth!: boolean;
     __info_of__adaptWidth: Info = {isNode:true, type: ShortAttribETypes.EBoolean, label:"adapt width",
@@ -765,6 +766,23 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     edgePointCoordMode!: CoordinateMode;
     __info_of__edgePointCoordMode: Info = {isEdgePoint: true, type: "CoordinateMode", enum: CoordinateMode, label:"coordinate mode",
         txt:<div>Store coordinates as absolute coordinates or relative to start/end nodes.</div>}
+    set_edgePointCoordMode(val: CoordinateMode, c: Context): boolean {
+        TRANSACTION(()=>{
+            setTimeout(()=>{ // needs to be done after coordinatemode change is applied
+                let s: DState = store.getState();
+                for (let nid in transientProperties.node) {
+                    let tn = transientProperties.node[nid];
+                    if (!tn || tn.mainView?.id !== c.data.id) continue;
+                    let lnode: LEdgePoint = LPointerTargetable.fromPointer(nid, s);
+                    let triggerCoordinateModeChange = lnode as any;
+                    console.log("ex4 force re-set coordinates", {lnode, view:c.data, size:lnode.size})
+                    triggerCoordinateModeChange.size = lnode.size;
+                }
+            }, 100);
+            SetFieldAction.new(c.data, 'edgePointCoordMode', val, '', false);
+        })
+        return true;
+    }
 
     edgeHeadSize!: GraphPoint;
     __info_of__edgeHeadSize: Info = {isEdge: true, type:GraphPoint.cname, label:"head decorator size", txt:<div>Size of the edge head decorator if present.</div>}
@@ -977,6 +995,35 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return this.set_generic_entry(context, 'bendingMode', val);
     }
 
+    set_appliableTo(val: this["appliableTo"], c: Context): boolean { // appliableTo >= forcenodetype
+        if (!val) val = 'Any';
+        let forceNodeType: string = c.data.forceNodeType as string;
+        if (forceNodeType !== val) switch(val) {
+            // case "Any": break;
+            default: forceNodeType = val;
+        }
+
+        console.log("set_appliableTo", {forceNodeType, val});
+        BEGIN()
+        if (forceNodeType !== c.data.forceNodeType) SetFieldAction.new(c.data, "forceNodeType", forceNodeType, '', false);
+        SetFieldAction.new(c.data, "appliableTo", val, '', false);
+        END();
+        return true;
+    }
+    set_forceNodeType(val: this["forceNodeType"], c: Context): boolean {
+        if (!val) val = 'Any';
+        /*let appliableTo: string = c.data.appliableTo as string;
+        if (appliableTo !== val) switch (appliableTo){
+            case undefined: case 'Any': break;
+            //case 'GraphVertex': if ((appliableTo as any) !== 'Graph' && (appliableTo as any) !== 'Vertex') appliableTo = val; break;
+            default: appliableTo = val; break;
+        }*/
+        BEGIN()
+        // if (appliableTo !== c.data.appliableTo) SetFieldAction.new(c.data, "appliableTo", appliableTo, '', false);
+        SetFieldAction.new(c.data, "forceNodeType", val, '', false);
+        END();
+        return true;
+    }
     get_appliableToClasses(context: Context): this["appliableToClasses"] { return context.data.appliableToClasses || []; }
     set_appliableToClasses(val: this["appliableToClasses"], context: Context): boolean {
         if (!val) val = [];
@@ -987,7 +1034,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             hasChanged = false;
             for (let i = 0; i < val.length; i++) if (val[i] !== context.data.appliableToClasses[i]) { hasChanged = true; break; }
         } else hasChanged = true;
-        console.log("set_appliableToClasses()", {hasChanged, val, oldV: context.data.appliableToClasses});
+
         if (!hasChanged) return true;
         TRANSACTION(()=>{
             this.set_generic_entry(context, "appliableToClasses", val);
@@ -996,14 +1043,20 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return true;
     }
 
-    set_defaultVSize(val: GraphSize, context: Context): boolean {
-        console.log('set_defaultVSize', {context, val});
-        return this.set_generic_entry(context, 'defaultVSize', val); }
-    /*
-        get___transient(context: LogicContext<this>): LViewTransientProperties {
-            return DPointerTargetable.wrap<DViewTransientProperties, LViewTransientProperties>(context.data.__transient, context.data,
-                // @ts-ignore for $ at end of getpath
-                'idlookup.' + context.data.id + '.' + (getPath as LViewElement).__transient.$); }*/
+    set_defaultVSize(val: GraphSize, c: Context): boolean{
+        if (!val || typeof val !== "object") return true;
+        let x = val.x ?? +val.x;
+        let y = val.y ?? +val.y;
+        let w = val.w ?? +val.w;
+        let h = val.h ?? +val.h;
+        if (isNaN(x)) x = c.data.defaultVSize.x;
+        if (isNaN(y)) y = c.data.defaultVSize.y;
+        if (isNaN(w)) w = c.data.defaultVSize.w;
+        if (isNaN(h)) h = c.data.defaultVSize.h;
+        if (x === c.data.defaultVSize.x && y === c.data.defaultVSize.y && w === c.data.defaultVSize.w && h === c.data.defaultVSize.h) return true;
+        SetFieldAction.new(c.data, 'defaultVSize', {x, y, w, h} as any, '', false);
+        return true
+    }
 
 
     public duplicate(deep: boolean = true, new_vp?: DuplicateVPChange): this {

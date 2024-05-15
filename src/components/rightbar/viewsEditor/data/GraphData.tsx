@@ -7,30 +7,20 @@ import {
     Info,
     LPointerTargetable,
     LViewElement,
-    Pointer
+    Pointer,
+    Select
 } from '../../../../joiner';
 import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
 
-function EdgePointDataComponent(props: AllProps) {
+function GraphDataComponent(props: AllProps) {
     const view = props.view;
     const readOnly = props.readonly;
-    let l: GObject & LViewElement = LViewElement.singleton as any;
-    let prefixLength = '__info_of__'.length;
-    let rows: JSX.Element[] = [];
-    for (let fullKey in l) {
-        if (fullKey[0] !== '_' || fullKey.indexOf('__info_of__') !== 0) continue;
-        let info: Info = l[fullKey];
-        // infos[key] = info;
-        let key: string = fullKey.substring(prefixLength);
-        if (!info.isEdgePoint || info.hidden || info.obsolete || info.todo) continue;
-        rows.push(<GenericInput rootClassName={'mx-3 mt-1 d-flex'} className={'d-flex'} data={view}
-                                field={key as any} tooltip={true} info={info} disabled={readOnly} />);
-    }
-
+    let empty = true;
+    // if (empty) return null;
     return(<section className={'p-3'}>
-        <h5>EdgePoint</h5>
-        {rows}
+        {<h5>Graph</h5>}
+        No options for Graphs so far...
     </section>);
 }
 
@@ -57,9 +47,9 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret;
 }
 
-export const EdgePointData = connect<StateProps, DispatchProps, OwnProps, DState>(
+export const GraphData = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
-)(EdgePointDataComponent);
+)(GraphDataComponent);
 
-export default EdgePointData;
+export default GraphData;
