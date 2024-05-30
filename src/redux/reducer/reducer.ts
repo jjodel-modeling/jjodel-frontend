@@ -399,7 +399,6 @@ ret .b = 3
 // then add to it: content of props, constants, usageDeclarations
 
 export function reducer(oldState: DState = initialState, action: Action): DState {
-    console.log(action);
     const ret = _reducer(oldState, action);
     if (ret === oldState) return oldState;
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;

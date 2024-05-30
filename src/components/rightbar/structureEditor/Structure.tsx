@@ -104,7 +104,7 @@ export default class Structure {
             {Structure.TypedElementEditor(lAttribute)}
             {Structure.StructuralFeatureEditor(lAttribute)}
             <Input data={lAttribute} field={"isID"} label={"IsID"} type={"checkbox"} tooltip={"An ID attribute explicitly models the one unique ID of an object"} />
-            <Input data={lAttribute} field={"isIoT"} label={"IsIoT"} type={"checkbox"} tooltip={"A Boolean value that allows the connection to an MQTT Broker"} />
+            {/*<Input data={lAttribute} field={"isIoT"} label={"IsIoT"} type={"checkbox"} tooltip={"A Boolean value that allows the connection to an MQTT Broker"} />*/}
         </>);
     }
     public static ReferenceEditor(lReference: LModelElement): ReactNode {
