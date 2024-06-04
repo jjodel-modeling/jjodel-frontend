@@ -39,6 +39,7 @@ import {
 } from "../../joiner";
 import {EPSize, Pack1, transientProperties } from "../../joiner/classes";
 import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsData";
+import DSL from "../../DSL/DSL";
 
 
 
@@ -231,7 +232,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return context.data.jsxString;
     }
     protected set_jsxString(val: this['jsxString'], context: Context): boolean {
-        TRANSACTION(()=>{
+        TRANSACTION(() => {
+            // const jsx = DSL.parser(val);
             SetFieldAction.new(context.data, 'jsxString', val, '', false);
             SetRootFieldAction.new('VIEWS_RECOMPILE_jsxString', context.data.id, '+=', false);
         });

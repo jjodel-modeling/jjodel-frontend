@@ -34,7 +34,9 @@ function EditorComponent(props: AllProps) {
             if(!project) return;
             user.project = LProject.fromPointer(project.id);
             if(!project.state) return;
-            SaveManager.load(await U.decompressState(project.state));
+            const state = await U.decompressState(project.state);
+            U.log(JSON.parse(state));
+            SaveManager.load(state);
         })();
     }, [id]);
     let allViews = project?.viewpoints.flatMap((vp: LViewPoint) => vp && vp.allSubViews) || [];

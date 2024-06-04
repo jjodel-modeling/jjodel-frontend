@@ -1,6 +1,6 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
 // import {Mixin} from "ts-mixer";
-import type {AbstractConstructor, Constructor, Dictionary, GObject, Pointer, Temporary} from "../joiner";
+import type {AbstractConstructor, Constructor, Dictionary, GObject, Pointer, PrimitiveType, Temporary} from "../joiner";
 import {
     DClassifier,
     DModelElement,
@@ -70,6 +70,35 @@ export class U {
     }
     static refresh(): void {
         window.location.reload();
+    }
+
+    static extractByKey(dict: Dictionary, path: string): PrimitiveType[]|undefined {
+        const keys = path.split('.');
+        const topic = keys[0];
+        const data = dict[topic];
+        const values: PrimitiveType[] = [];
+        if(!Array.isArray(data)) return undefined;
+        for(const d of data) {
+            let value = d;
+            for (const k of keys) if (value.hasOwnProperty(k)) value = value[k];
+            values.push(value);
+        }
+        return values;
+
+    }
+
+    static extractKeys(dict: Dictionary): string[] {
+        const keys: string[] = [];
+        function traverse(obj: any, path: string) {
+            for (const key in obj) {
+                if (typeof obj[key] === 'object') traverse(obj[key], path ? `${path}.${key}` : key);
+                else keys.push(path ? `${path}.${key}` : key);
+            }
+        }
+        for (const key in dict) {
+            traverse(dict[key][0], key);
+        }
+        return keys;
     }
 
     // damiano: eseguire una funzione costa in performance, anche se è brutto fare questi cast

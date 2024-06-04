@@ -364,7 +364,7 @@ class DefaultView {
 
     public static class(): string { return (
 `<div className={'root class'} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
-    <Input jsxLabel={<b className={'class-name'}>EClass:</b>} data={data} field={'name'} hidden={true} autosize={true} />
+    <Input jsxLabel={<b className={'class-name'}>Class:</b>} data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
     <div className={'class-children'}>
         {data.attributes.map(c => <DefaultNode key={c.id} data={c} />)}
@@ -377,7 +377,7 @@ class DefaultView {
 
     public static enum(): string { return (
 `<div className={'root enumerator'}>
-    <Input jsxLabel={<b className={'enumerator-name'}>EEnum:</b>} data={data} field={'name'} hidden={true} autosize={true} />
+    <Input jsxLabel={<b className={'enumerator-name'}>Enum:</b>} data={data} field={'name'} hidden={true} autosize={true} />
     <hr />
     <div className={'enumerator-children'}>
         {data.children.map(c => <DefaultNode key={c.id} data={c}/>)}

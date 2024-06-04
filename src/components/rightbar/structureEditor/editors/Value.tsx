@@ -1,24 +1,30 @@
-import React from "react";
+import React, {Dispatch, ReactElement} from "react";
 import type {Dictionary, DocString, LClassifier, LReference, Pointer, ValueDetail} from "../../../../joiner";
 import {
     DAttribute,
     DClass,
     DEnumerator,
     DReference,
+    DState, DValue,
     LAttribute,
     LClass,
     LEnumerator,
+    LGraphElement,
+    LModelElement,
     LObject,
     LPointerTargetable,
-    LStructuralFeature,
-    LValue, RuntimeAccessibleClass,
+    LStructuralFeature, LValue,
+    LViewElement,
+    Select,
     Selectors,
-    SetFieldAction, U
+    SetFieldAction,
+    U
 } from "../../../../joiner";
+import {FakeStateProps} from "../../../../joiner/types";
+import {connect} from "react-redux";
 
 
-interface Props {value: LValue}
-function Value(props: Props) {
+function ValueComponent(props: AllProps) {
     const lValue = props.value;
     const dValue = lValue.__raw;
     const feature: LStructuralFeature = LStructuralFeature.fromPointer(lValue.instanceof?.id);
@@ -153,7 +159,7 @@ function Value(props: Props) {
                     {<option key="undefined" value={'undefined'}>-----</option>}
                     { select_options }
                 </select>}
-                { isref && <select onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
+                {isref && <select onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
                     <option value={'undefined'}>-----</option>
                     {select_options}
                 </select>}
@@ -176,10 +182,43 @@ function Value(props: Props) {
                 <i className={'p-1 bi bi-plus'}></i>
             </button>
         </div>
-        { valueslist }
-        {/*<hr className={"my-3"} />
-        <MqttEditor valueId={dValue.id} />*/}
+        {valueslist}
+        {lValue.instanceof?.className === 'DAttribute' && (lValue.instanceof as LAttribute).isIoT && <>
+            <hr className={"my-3"} />
+            <Select data={dValue} field={'topic'} label={'Topic'} options={<optgroup label={'Topics'}>
+                <option value={''}>------</option>
+                {U.extractKeys(props.topics).map(t => <option key={t} value={t}>{t}</option>)}
+            </optgroup>} />
+            {JSON.stringify(U.extractByKey(props.topics, lValue.topic))}
+        </>}
     </div>)
 }
 
+interface OwnProps {valueID: Pointer<DValue>}
+interface StateProps {value: LValue, topics: DState['topics']}
+interface DispatchProps {}
+
+type AllProps = OwnProps & StateProps & DispatchProps;
+
+function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+    const ret: StateProps = {} as FakeStateProps;
+    ret.value = LValue.fromPointer(ownProps.valueID);
+    ret.topics = state.topics;
+    return ret;
+}
+
+function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
+    const ret: DispatchProps = {} as any;
+    return ret;
+}
+
+
+export const ValueConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
+    mapStateToProps,
+    mapDispatchToProps
+)(ValueComponent);
+
+export const Value = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ValueConnected {...{...props, children}} />;
+}
 export default Value;

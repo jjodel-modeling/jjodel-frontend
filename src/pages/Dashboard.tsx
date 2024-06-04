@@ -6,6 +6,7 @@ import './style.scss'
 type Props = {children?: ReactNode};
 function Dashboard(props: Props) {
     const {children} = props;
+
     return(<>
         <Navbar />
         <LeftBar />
