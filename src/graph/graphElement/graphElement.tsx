@@ -8,7 +8,7 @@ import {
     LGraph, MouseUpEvent, Point,
     Pointers,
     Selectors as Selectors_, Size, TRANSACTION, WGraph,
-    GraphDragManager, GraphPoint, Selectors, DNamedElement
+    GraphDragManager, GraphPoint, Selectors, DNamedElement, DVoidEdge
 } from "../../joiner";
 import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
 
@@ -601,9 +601,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
     protected getTemplate3_(vid: Pointer<DViewElement>, v: LViewElement, context: GObject): ReactNode{
         let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
-        if (!tnv.shouldUpdate) return tnv.jsxOutput;
+        if (!tnv.shouldUpdate && tnv.jsxOutput) return tnv.jsxOutput;
         let tv = transientProperties.view[vid];
-        return tnv.jsxOutput = (tv.JSXFunction ? tv.JSXFunction.call(context, context) : undefined);
+        let ret = tnv.jsxOutput = (tv.JSXFunction ? tv.JSXFunction.call(context, context) : null);
+        if (DVoidEdge.isFollowingCoords) console.log("mousepos:", {x:DVoidEdge.isFollowingCoords.x, y:DVoidEdge.isFollowingCoords.y});
+        return ret;
     }
 
     protected getTemplate2(v: LViewElement, udContext: GObject): ReactNode {
@@ -870,8 +872,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }*/
 
         let jsxOutput: ReactNode = undefined as any;
-        console.log("render", {mainView, otherViews, scores:transientProperties.node[nid].viewScores})
-        for (let v of allviews) {
+        const tn = transientProperties.node[nid]
+        console.log("render", {mainView, otherViews, scores:tn.viewScores, tnv:tn.viewScores[this.props.viewid], ud:tn.viewScores[this.props.viewid].usageDeclarations});
+        for (let v of allviews) { // main view is the last
             let viewnodescore = transientProperties.node[nid].viewScores[v.id];
             jsxOutput = viewnodescore.shouldUpdate ? undefined : viewnodescore.jsxOutput;
             let isMain: true | undefined = v === mainView || undefined;
@@ -895,14 +898,18 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let dv = v.__raw;
         const nid = props.nodeid;
         const vid = v.id;
-        let ud: GObject | undefined = transientProperties.node[nid].viewScores[vid].usageDeclarations;
+        const tnv = transientProperties.node[nid].viewScores[vid];
+        let ud: GObject | undefined = tnv.usageDeclarations;
         /*if (false && !ud) {
             this.forceUpdate();
             return <div>Loading...</div>;
         }*/
 
-        if (!ud) ud = {}; // todo: remove this, is for debug
+        if (!ud) tnv.usageDeclarations = ud = computeUsageDeclarations(this, props, this.state, v);
+        console.log("renderView", {dv, tnv, ud});
+
         if (ud.__invalidUsageDeclarations) {
+            console.error("renderView error ud:", {dv, tnv, ud});
             return GraphElementComponent.displayError(ud.__invalidUsageDeclarations, "Usage Declaration " + (ud.__invalidUsageDeclarations.isSyntax ? "Syntax" : "Semantic"), v.__raw,
                 this.props.data?.__raw, this.props.node?.__raw, false, {ud});
         }
@@ -913,11 +920,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let rnode: ReactNode;
         try { rnode = this.getTemplate3(vid, v, context); }
         catch (e: any) {
+            console.error("renderView error get template:", {e, dv, tnv});
             // rnode = undefined as any;
-            // where i put this? catch (e: any) { return GraphElementComponent.displayError(e, "JSX Syntax", v.__raw, this.props.data?.__raw, this.props.node?.__raw); }
+            // todo: move in reducer parser of jsx: catch (e: any) { return GraphElementComponent.displayError(e, "JSX Syntax", v.__raw, this.props.data?.__raw, this.props.node?.__raw); }
             rnode = GraphElementComponent.displayError(e, "JSX Semantic", v.__raw, this.props.data?.__raw, this.props.node?.__raw, false, {context});
         }
         let rawRElement: ReactElement | null = UX.ReactNodeAsElement(rnode);
+        console.log("renderView 1:", {rnode, rawRElement});
 
 
         // \console.log('GE render', {thiss: this, data:me, rnode, rawRElement, props:this.props, name: (me as any)?.name});
@@ -1010,16 +1019,17 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 let children = makeItArray(injectProps.children); // [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)]; rawRElement.child are already in injectprops
                 // injectProps.children = [<div>{children}</div>];//[]; making any change at injectprops.children breaks it?
                 rawRElement = React.cloneElement(rawRElement, injectProps);//, ...children); // adding chioldrens after injectprops seems pointless
+
+                console.log("renderView 2:", {rnode, rawRElement});
                 debug.rawRElementPostInjection = {node:rawRElement, text: getNodeText(rawRElement)};
                 // rawRElement = React.cloneElement(rawRElement, {children: [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)]});
                 // console.log('rendering view stack fixing doubles', {v0:rnode, v1:rawRElement, fixed:rawRElement.props.children})
                 fixdoubleroot = false; // need to set the props to new root in that case.
                 if (fixdoubleroot) rawRElement = rawRElement.props.children;
-                debug.rawRElementPostfixdoubleroot = {node:rawRElement, text: getNodeText(rawRElement)};
-
-
+                // debug.rawRElementPostfixdoubleroot = {node:rawRElement, text: getNodeText(rawRElement)};
                 // console.log("probem", {rawRElement, children:(rawRElement as any)?.children, pchildren:(rawRElement as any)?.props?.children});
             } catch (e: any) {
+                console.error("renderView error inject props:", {e, dv, tnv});
                 rawRElement = DV.errorView("error while injecting props to subnodes\n:" + (e.message || '').split('\n')[0],
                     {e, rawRElement, key: props.key, newid: props.nodeid},
                     'Subelement props', props.data?.__raw, props.node?.__raw, dv) as ReactElement;
@@ -1054,6 +1064,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             <div className={this.countRenders%2 ? "animate-on-update-even" : "animate-on-update-odd"} data-countrenders={this.countRenders++} />
         ]}</>/*/
 
+        console.log("renderView return:", rawRElement || rnode);
         return rawRElement || rnode;
     }
 

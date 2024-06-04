@@ -8,7 +8,7 @@ export const aaa = 0;
 let data:any, node:any, view:any, component:any;
 let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPackages:any, refEdges:any, extendEdges:any, React:any, Edge:any;
 
-// todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or remo**ved
+// todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or removed
 /**
  problem when changing ep mode, need to move the ep before it works
 

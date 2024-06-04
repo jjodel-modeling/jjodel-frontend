@@ -49,7 +49,7 @@ export type CSSUnit = CSS_AbsoluteUnit | CSS_RelativeFontUnit | CSS_RelativeDomU
 
 export type StringControl = {type:'text', value: string};
 export type NumberControl = {type:'number', value: number, unit: CSSUnit};
-export type PaletteControl = DocString<"colors like #4fc">[];
+export type PaletteControl = {type:'color', value: tinycolor.ColorFormats.RGBA[]}; // array of rgba: red, green, blue, alpha
 export type PaletteType = Dictionary<string, PaletteControl | NumberControl | StringControl>;
 
 
@@ -325,22 +325,31 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (!c.data.css_MUST_RECOMPILE) return c.data.compiled_css; // return c.proxyObject.r.__raw.compiled_css;
         let s = '';
         const allowLESS = false;
+        let shortPaletteName: string;
+        let cc = c;
+        function rgbastring(c: tinycolor.ColorFormats.RGBA): string{
+            Log.exDev(!c, "invalid color:", {id: cc.data.id, c, shortPaletteName, p:cc.data.palette});
+            return "rgba("+c.r+","+c.g+","+c.b+","+c.a+")";
+        }
         for (let paletteName in c.data.palette) {
-            if (Array.isArray(c.data.palette[paletteName])) {
-                let palette: DocString<"hexColors">[] = c.data.palette[paletteName] as string[];
-                let shortPaletteName: string;
+            if (c.data.palette[paletteName].type === "color") {
+                let palette = c.data.palette[paletteName] as PaletteControl;
+                let colors = palette.value;
+                if (!colors.length) continue;
                 if (['-', '_'].includes(paletteName[paletteName.length-1])) shortPaletteName = paletteName.substring(0, paletteName.length - 1);
                 else shortPaletteName = paletteName;
+                let rgba = rgbastring(colors[0]);
                 // set prefixed name without number
-                if (allowLESS) s += "\t@" + shortPaletteName + ": " + palette[0]+';\n';
-                s += "\t--" + shortPaletteName + ": " + palette[0]+';\n';
+                if (allowLESS) s += "\t@" + shortPaletteName + ": " + rgba + ';\n';
+                s += "\t--" + shortPaletteName + ": " + rgba + ';\n';
                 // set prefixed-0 name
-                if (allowLESS) s += "\t@" + paletteName + '0: ' + palette[0] + ';\n';
-                s += "\t--" + paletteName + '0: ' + palette[0] + ';\n';
+                if (allowLESS) s += "\t@" + paletteName + '0: ' + rgba + ';\n';
+                s += "\t--" + paletteName + '0: ' + rgba + ';\n';
                 // set prefixed-1 to prefixed-...n names
-                for (let i = 0 ; i < palette.length; i++) {
-                    if (allowLESS) s += "\t@" + paletteName + (i+1) + ": " + palette[i] + ';\n';
-                    s += "\t--" + paletteName + (i+1) + ": " + palette[i] + ';\n';
+                for (let i = 0 ; i < colors.length; i++) {
+                    rgba = rgbastring(colors[i]);
+                    if (allowLESS) s += "\t@" + paletteName + (i+1) + ": " + rgba + ';\n';
+                    s += "\t--" + paletteName + (i+1) + ": " + rgba + ';\n';
                 }
             } else {
                 // number or text
@@ -942,7 +951,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 newSize.currentCoordType = vsize.currentCoordType || CoordinateMode.absolute;
             }
             let defaultsize = context.data.defaultVSize || vp?.__raw.defaultVSize;
-            if (newSize.x === undefined || newSize.y == undefined) { // only if pos is invalid, i take defaultvsize and force to use coord absolute.
+            if (newSize.x === undefined || newSize.y === undefined) { // only if pos is invalid, i take defaultvsize and force to use coord absolute.
                 newSize = new GraphSize().clone(defaultsize) as EPSize;
                 newSize.currentCoordType = CoordinateMode.absolute;
             }

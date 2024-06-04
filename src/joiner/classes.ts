@@ -822,8 +822,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         Log.ex(!startid || !endid, "cannot create an edge without start or ending nodes", {start, end, startid, endid});
         thiss.anchorStart = '0';
         thiss.anchorEnd = '0';
-        thiss.startFollow = false;
-        thiss.endFollow = false;
+        // thiss.startFollow = false;
+        // thiss.endFollow = false;
         thiss.midnodes = [];
         thiss.midPoints = []; // the logic part which instructs to generate the midnodes
         // if (!thiss.model && isDModelElementPointer(startid)) thiss.model = startid;
@@ -918,8 +918,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.isValidation = false;
         //thiss.constraints = [];
         thiss.palette = {
-            'color-': [], //['#ffffff', '#ff0000', '#00ff00', '#0000ff','#aaaaaa', '#ffaaaa', '#aaffaa', '#aaaaff'],
-            'background-':[]};// ['#000000', '#33333', '#777777']};
+            'color-': U.hexToPalette(), //['#ffffff', '#ff0000', '#00ff00', '#0000ff','#aaaaaa', '#ffaaaa', '#aaffaa', '#aaaaff'],
+            'background-': U.hexToPalette() // ['#000000', '#33333', '#777777']};
+        };
         thiss.css = '';
         thiss.compiled_css = '';
         thiss.css_MUST_RECOMPILE = true;

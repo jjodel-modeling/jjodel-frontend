@@ -15,7 +15,8 @@ import {
     DValue,
     DParameter,
     GraphSize,
-    CoordinateMode
+    CoordinateMode,
+    U
 } from '../../joiner';
 
 var nosize: GraphSize = {x:0, y:0, w:0, h:0, nosize:true} as any;
@@ -30,7 +31,7 @@ class DefaultViews {
         view.draggable = false; view.resizable = false;
         view.appliableTo = 'Graph';
         view.oclCondition = 'context DModel inv: true';
-        view.palette = {'background-': ['#ffffff']};
+        view.palette = {'background-': U.hexToPalette('#fff')};
         view.css = '.root {background-color: var(--background-1);}\n';
         view.css += '.edges {z-index: 101; position: absolute; height: 0; width: 0; overflow: visible;}';
         view.usageDeclarations = '(ret) => {\n' +
@@ -56,7 +57,7 @@ class DefaultViews {
         const view = DViewElement.new('Package', DV.packageView(), undefined, '', '', '', [DPackage.cname], '', 1, false, true, vp);
         view.oclCondition = 'context DPackage inv: true';
         view.appliableTo = 'GraphVertex';
-        view.palette = {'color-': ['#028012'], 'background-': ['#ffffff']};
+        view.palette = {'color-':  U.hexToPalette('#028012'), 'background-':  U.hexToPalette('#fff')};
         view.css = '.package {background-color: var(--background-0); border-radius: 0.2em; border-left: 0.25em solid var(--color-1);}\n';
         view.css += '.package-children {height: -webkit-fill-available; width: -webkit-fill-available;}';
         view.defaultVSize = defaultPackageSize;
@@ -68,7 +69,7 @@ class DefaultViews {
         view.adaptWidth = true; view.adaptHeight = true;
         view.appliableTo = 'Vertex';
         view.oclCondition = 'context DClass inv: true';
-        view.palette = {'color-': ['#ff0000', '#000000', '#ffffff'], 'background-': ['#ffffff', '#eeeeee', '#ff0000']};
+        view.palette = {'color-': U.hexToPalette('#f00', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
         view.css = '.class {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color:var(--color-2);}\n';
         view.css += '.class-name {font-weight: bold; color: var(--color-1);}\n';
         view.css += '.class-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
@@ -82,7 +83,7 @@ class DefaultViews {
         view.adaptWidth = true; view.adaptHeight = true;
         view.appliableTo = 'Vertex';
         view.oclCondition = 'context DEnumerator inv: true';
-        view.palette = {'color-': ['#ffa500', '#000000', '#ffffff'], 'background-': ['#ffffff', '#eeeeee', '#ff0000']};
+        view.palette = {'color-':  U.hexToPalette('#ffa500', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
         view.css = '.enumerator {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);}\n';
         view.css += '.enumerator-name {font-weight: bold; color: var(--color-1);}\n';
         view.css += '.enumerator-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
@@ -127,14 +128,14 @@ class DefaultViews {
         view.oclCondition = 'context DEnumLiteral inv: true';
         view.appliableTo = 'Field';
         view.palette = {};
-        return view
+        return view;
     }
 
     static object(vp: Pointer<DViewPoint>): DViewElement {
         const view = DViewElement.new('Object', DV.objectView(), undefined, '', '', '', [DObject.cname], '', 1, false, true, vp);
         view.adaptWidth = true; view.adaptHeight = true;
         view.oclCondition = 'context DObject inv: true';
-        view.palette = {'color-': ['#ff0000', '#000000', '#ffffff'], 'background-': ['#ffffff', '#eeeeee', '#ff0000']};
+        view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
         view.css = '.object {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);}\n';
         view.css += '.object-name {font-weight: bold; color: var(--color-1);}\n';
         view.css += '.object-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';

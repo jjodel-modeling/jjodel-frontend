@@ -67,6 +67,7 @@ import {DV} from "../common/DV";
 import {DefaultEClasses, ShortDefaultEClasses} from "../common/U";
 import { GraphElements, Graphs, Vertexes, Edges, Fields } from '../joiner';
 import DefaultViews from "./defaults/views";
+import tinycolor, {Instance} from "tinycolor2";
 
 console.warn('ts loading store');
 
@@ -183,7 +184,16 @@ export class DState extends DPointerTargetable{
     tooltip: string = '';
 
 
+    static fixcolors(){
+        (window as any).tinycolor = tinycolor;
+        let tofix = ["tetrad", "triad", "splitcomplement"];
+        for (let f of tofix) {
+            tinycolor.prototype[f + "0"] = tinycolor.prototype[f];
+            tinycolor.prototype[f] = function (){ let a = this.getAlpha(); return this[f+'0']().map((t: Instance) => t.setAlpha(a)); }
+        }
+    }
     static init(store?: DState): void {
+        this.fixcolors();
         BEGIN()
         const viewpoint = DViewPoint.new2('Default', '', (vp)=>{ vp.isExclusiveView = false; }, true, 'Pointer_ViewPointDefault');
         const validationViewpoint = DViewPoint.new2('Validation default', '', (vp)=>{ vp.isExclusiveView = false; vp.isValidation = true;}, true, 'Pointer_ViewPointValidation');
@@ -408,8 +418,8 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>, validationVP: Pointer<DV
 
     let anchorView: DViewElement = DViewElement.new2('Anchors', DV.anchorJSX(), (v) => {
         v.isExclusiveView = false;
-        v.palette={'anchor-':['#77f', '#f77', '#007'],
-            'anchor-hover-':['#7f7', '#a44', '#070']}
+        v.palette={'anchor-': U.hexToPalette('#77f', '#f77', '#007'),
+            'anchor-hover-': U.hexToPalette('#7f7', '#a44', '#070')}
         v.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
             "// ** preparations and default behaviour here ** //\n" +
             "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
@@ -431,13 +441,7 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>, validationVP: Pointer<DV
 .anchor.valid-anchor{
     display:block;
 }
-.Edge:hover .anchor, .Edge:focus-within .anchor{
-    display: block;
-    opacity: 0;
-    //outline: none;
-    r: 25;
-    border-radius: 100%;
-}
+
 .anchor{
     display:none;
     position: absolute;
@@ -524,54 +528,10 @@ node.state = {error_lowerbound: err};\n
 
     let edgeViews: DViewElement[] = [];
     let size0: GraphPoint = new GraphPoint(0, 0), size1: GraphPoint = new GraphPoint(20, 20), size2: GraphPoint = new GraphPoint(20, 20);
-    let edgeConstants: string = "(ret)=>{\n" +
-        "// ** preparations and default behaviour here ** //\n" +
-        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
-        "// ** declarations here ** //\n" +
-        "   ret.strokeColor = 'gray'\n"+
-        "   ret.strokeWidth = '2px'\n"+
-        "   ret.strokeColorHover = 'black'\n"+
-        "   ret.strokeColorLong = 'gray'\n"+
-        "   ret.strokeLengthLimit = 300\n"+
-        "   ret.strokeWidthHover = '4px'\n"+
-        "}";
-    let edgePrerenderFunc: string = "(ret)=>{\n" +
-        "// ** preparations and default behaviour here ** //\n" +
-        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
-        "// ** declarations here ** //\n" +
-        "\n"+
-        "}";
 
-    let edgeUsageDeclarations = "(ret)=>{\n" +
-        "// ** preparations and default behaviour here ** //\n" +
-        "// ret.data = data\n" +
-        "ret.edgeview = edge.view.id\n" +
-        "ret.view = view\n" +
-        "// data, edge, view are dependencies by default. delete them above if you want to remove them.\n" +
-        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
-        "// ** declarations here ** //\n" +
-        "ret.start = edge.start\n"+
-        "ret.end = edge.end\n"+
-        "ret.segments = edge.segments\n"+
-        "}";
 
     function makeEdgeView(name: string, type: EdgeHead, headSize: GraphPoint | undefined, tailSize: GraphPoint | undefined, dashing: boolean): DViewElement{
-        let ev = DViewElement.new2("Edge"+name,
-            DV.edgeView(type, DV.svgHeadTail("Head", type), DV.svgHeadTail("Tail", type), dashing ? "10.5,9,0,0" : undefined),
-            (v: DViewElement) => {
-                v.appliableToClasses = [DVoidEdge.cname];
-                v.appliableTo = 'Edge';
-                v.bendingMode = EdgeBendingMode.Line;
-                v.edgeHeadSize = headSize || size0;
-                v.edgeTailSize = tailSize || size0;
-                v.constants = edgeConstants;
-                v.palette = {anchorSize: {type: 'number', value:5, unit:'px'}};
-                v.css =
-`.anchor{ r:var(--anchorSize) }
-`;
-                v.usageDeclarations = edgeUsageDeclarations;
-                v.preRenderFunc = edgePrerenderFunc;
-        }, false, vp, 'Pointer_ViewEdge' + name);
+        let ev = DV.edgeView(type, headSize || size0, tailSize || size0, dashing ? "10.5,9,0,0" : undefined, vp, name);
         edgeViews.push(ev);
         return ev;
     }

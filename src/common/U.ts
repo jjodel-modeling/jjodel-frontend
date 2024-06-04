@@ -19,6 +19,8 @@ import {
 import Swal from "sweetalert2";
 import Storage from '../data/storage';
 import {compressToUTF16, decompressFromUTF16} from "async-lz-string";
+import {PaletteControl} from "../view/viewElement/view";
+import tinycolor from "tinycolor2";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
 console.warn('loading ts U log');
@@ -79,6 +81,33 @@ export class U {
         return JSON.parse(JSON.stringify(dElement.__raw));
     }
 
+    static hexToPalette(...hexs: string[]): PaletteControl{
+        return {type: "color", value: hexs.map( hex => {
+                if (hex[0] === '#') hex = hex.substring(1);
+                let r: number, g: number, b: number, a: number = 1;
+                if (hex.length === 4) {
+                    a = Number.parseInt('0x' + hex[3] + hex[3])/255;
+                    hex = hex.substring(0, 3);
+                }
+                if (hex.length === 7) {
+                    a = Number.parseInt('0x' + hex[5] + hex[6])/255;
+                    hex = hex.substring(0, 6);
+                }
+                Log.exDev(hex.length !== 3 && hex.length !== 6, "invalid hex length", {hex, a});
+                let i: number = 0;
+                if (hex.length === 3) {
+                    r =  Number.parseInt('0x' + hex[i] + hex[i++]);
+                    g =  Number.parseInt('0x' + hex[i] + hex[i++]);
+                    b =  Number.parseInt('0x' + hex[i] + hex[i]);
+                }
+                else {
+                    r =  Number.parseInt('0x' + hex[i++] + hex[i++]);
+                    g =  Number.parseInt('0x' + hex[i++] + hex[i++]);
+                    b =  Number.parseInt('0x' + hex[i++] + hex[i]);
+                }
+                return {r,g,b,a} as tinycolor.ColorFormats.RGBA;
+            })};
+    }
     public static fatherChain(me: LModelElement): Pointer<DModelElement, 0, 'N', LModelElement> {
         if(!me) return [];  // without this line go through delete error
         const fathers: Pointer<DModelElement, 0, 'N', LModelElement>= [me.id];
@@ -1339,7 +1368,7 @@ export class U {
         r = Math.abs(r-128) <= transformGrays ? (r >= 128 ? 0 : 255) : 255 - r;
         g = Math.abs(g-128) <= transformGrays ? (g >= 128 ? 0 : 255) : 255 - g;
         b = Math.abs(b-128) <= transformGrays ? (b >= 128 ? 0 : 255) : 255 - b;
-        if (h) h = 255 - h;
+        if (h || h === 0) h = 255 - h;
 
         let rs = r.toString(16);
         if (rs.length === 1) rs = '0'+rs;

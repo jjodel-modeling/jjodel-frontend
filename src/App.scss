@@ -49,27 +49,24 @@ font-weight: 900 !important;
 }
 .hoverable{
   position: relative;
+  &>.content, &>svg>.content{
+    display: none;
+  }
 }
-.hoverable:hover>.preview, .hoverable:hover>svg>.preview{ display: none; }
-.hoverable:hover{
-  &>.content{
+.hoverable:hover, .hoverable:focus, .hoverable:focus-within{
+  &>.preview, &>svg>.preview{
+    display: none;
+  }
+  &>.content, &>svg>.content{
     display: block; z-index:1; position: absolute;
     box-shadow: var(--smart-elevation-8);
   }
-  &>svg>.content{
-    display: block; z-index:1; position: absolute;
-    box-shadow: var(--smart-elevation-8);
-  }
 }
-.hoverable>.content, .hoverable>svg>.content{ display: none; }
 
 [data-nodetype], [data-nodetype]>*, {
   overflow: hidden;
   &.selected-by-me, &:has(.selected-by-me), // for some reason focus does not work?? so this is a fallback but needs to be properly fixed
-  &:hover, &:active, &:focus-within{
-    overflow: visible;
-  }
-  &:hover, &:active, &:focus-within{
+  &:hover, &:active, &:focus-within, &:focus{
     overflow: visible;
     z-index: 1000 !important;
   }
@@ -210,6 +207,12 @@ path{
     outline: none;
   }
 }
+body.no-transition-following{
+  path, .edge-anchor{
+    pointer-events: none;
+  }
+}
+
 /*
 .hoverable>.preview, .hoverable>svg>.preview{
   pointer-events: stroke;

@@ -1,6 +1,18 @@
-import {DGraphElement, DModelElement, DocString, DViewElement, EdgeHead, ShortAttribETypes as SAType, U} from '../joiner';
+import {
+    DGraphElement,
+    DModelElement,
+    DocString,
+    DViewElement, DViewPoint,
+    DVoidEdge, EdgeBendingMode,
+    EdgeHead, GraphPoint,
+    Pointer,
+    ShortAttribETypes as SAType,
+    U
+} from '../joiner';
 import {GObject, RuntimeAccessible} from '../joiner';
 import React, {ReactElement} from "react";
+import {PaletteControl, PaletteType} from "../view/viewElement/view";
+import tinycolor from "tinycolor2";
 // const beautify = require('js-beautify').html; // BEWARE: this adds some newline that might be breaking and introduce syntax errors in our JSX parser
 const beautify = (s: string) => s;
 let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
@@ -53,38 +65,38 @@ export class DV {
         //`<ellipse stroke={"black"} fill={"red"} cx={props.node.x} cy={props.node.y} rx={props.node.w} ry={props.node.h} />`
     )}
 
-    static svgHeadTail(head: "Head" | "Tail", type: EdgeHead): string {
+    static svgHeadTail(head: "head" | "tail", type: EdgeHead): string | undefined {
         let ret: string;
-        let headstr = head==="Head" ? "segments.head" : "segments.tail";
-        let styleTranslate = "{}"; // '{transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px)"}';
-        let styleTranslateRotate = '{transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px) rotate(" + (' + headstr + '.rad) + "rad)",' +
-            ' "transformOrigin":'+headstr+'.w/2+"px "+ '+headstr+'.h/2+"px"}';
-        let styleRotate = 'style={{transform:"rotate(" + ' + headstr + '.rad + "rad), transformOrigin:"noooope  not center"}}'; // edgeHead EdgeReference
-        let attrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={strokeColor} strokeWidth={strokeWidth}
- className={"edge` + head + ` ` + type +` preview"}></path>\n`;
+        let headstr = head==="head" ? "segments.head" : "segments.tail";
+        let styleTranslateRotate = 'transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px) rotate(" + (' + headstr + '.rad) + "rad)",' +
+            ' "transformOrigin":'+headstr+'.w/2+"px "+ '+headstr+'.h/2+"px"';
+        let attrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` preview"} />\n`;
         let path: string;
-        let hoverAttrs = `\n\t\t\t\tstyle={`+styleTranslateRotate +`}\n\t\t\t\t stroke={segments.all[0]&&(segments.all[0].length > strokeLengthLimit )&& strokeColorLong || strokeColorHover} strokeWidth={strokeWidthHover}
- className={"edge` + head + ` ` + type +` clickable content"} tabIndex="-1"></path>\n`;
-        switch(type) {
+        let hoverAttrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` clickable content"} tabIndex="-1" />\n`;
+        switch (type) {
             default:
                 ret = "edge '" + head + "' with type: '" +type + "' not found";
                 break;
             case EdgeHead.extend:
-                path = `<path d={"M 0 0   L " + `+headstr+`.w + " " + `+headstr+`.h/2 + "   L 0 " + `+headstr+`.h + "Z" } fill="#fff" `;
+                if (head === "tail") return undefined;
+                path = `<path d={"M 0 0   L " + `+headstr+`.w + " " + `+headstr+`.h/2 + "   L 0 " + `+headstr+`.h + "Z" } `;
                 ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.reference:
-                path = `<path d={"M 0 0   L " + `+headstr+`.w + " " + `+headstr+`.h/2 + "   L 0 " + `+headstr+`.h } fill="none" `;
+                if (head === "tail") return undefined;
+                path = `<path d={"M 0 0   L " + `+headstr+`.w + " " + `+headstr+`.h/2 + "   L 0 " + `+headstr+`.h }`;
                 ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.aggregation:
+                if (head === "head") return undefined;
                 path = `<path d={"M 0 " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
-                    `+headstr+`.w + " " +`+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"} fill="#fff" `;
+                    `+headstr+`.w + " " +`+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"}`;
                 ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.composition:
+                if (head === "head") return undefined;
                 path = `<path d={"M 0 " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
-                    `+headstr+`.w + " " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"} fill="#000" `;
+                    `+headstr+`.w + " " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"} `;
                 ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
                 /* `<svg width="20" height="20" viewBox="0 0 20 20" style={overflow: "visible"}>
@@ -99,9 +111,93 @@ export class DV {
 
     // about label rotation in .edge > foreignObect > div (label)
     // first transform is h-center. second is rotate, third adds [0, 50%] of 50% vertical offset AFTER rotation to take label out of edge. fourth is to add a margin.
-    static edgeView(modename: EdgeHead, head: DocString<"JSX">, tail: DocString<"JSX">, dashing: string | undefined): string { return beautify(
-        `<div className={"hoverable edge hide-ep ` + modename + `"} style={{overflow: "visible", width:"100vw", height:"100vh", pointerEvents:"none"}}>
-            <svg style={{width:"100vw", height:"100vh", pointerEvents:"none", overflow: "visible"}}>
+    static edgeView(modename: EdgeHead, headSize: GraphPoint, tailSize: GraphPoint, dashing: string | undefined, vp: Pointer<DViewPoint>, name: string): DViewElement {
+
+        let edgeConstants: string = "(ret)=>{\n" +
+            "// ** preparations and default behaviour here ** //\n" +
+            "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+            "// ** declarations here ** //\n" +
+            "   ret.strokeColor = 'gray'\n"+
+            "   ret.strokeWidth = '2px'\n"+
+            "   ret.strokeColorHover = 'black'\n"+
+            "   ret.strokeColorLong = 'gray'\n"+
+            "   ret.strokeLengthLimit = 300\n"+
+            "   ret.strokeWidthHover = '4px'\n"+
+            "}";
+
+        let fill: string;
+        switch (modename){
+            default: fill = '#fff0'; break;
+            case EdgeHead.composition: fill = '#000'; break;
+            case EdgeHead.aggregation: fill = '#fff'; break;
+        }
+        let palette: PaletteType = {
+            'anchorSize': {type: 'number', value:20, unit:'px'},
+            'dashing': {value:dashing || '', type: "text"},
+            'stroke-color': U.hexToPalette('#777'),
+            'fill': U.hexToPalette(fill),
+            'stroke-width': {value:2, type: 'number', unit: 'px'},
+            'stroke-color-hover': U.hexToPalette('#000'),
+            'stroke-width-hover': {value:4, type: 'number', unit: 'px'},
+        };
+        let css = ".edge-anchor{" +
+        "\n\tcursor: crosshair;" +
+        "\n\tstroke: transparent;" +
+        "\n\tfill: none;" +
+        "\n\tr:var(--anchorSize);" +
+        "\n\toutline: var(--stroke-width) solid var(--stroke-color);"+
+        "\n\toutline-offset: calc(var(--stroke-width) * -1);" +
+        "\n\tborder-radius: 100%;" +
+        "\n}" +
+        "\n.clickthrough, .unclickable{" +
+        "\n\tpointer-events: none;" +
+        "\n}" +
+        "\n.clickable{" +
+        "\n\tpointer-events: all;" +
+        "\n}" +
+        "\n.fullscreen{" +
+        "\n\toverflow: visible;" +
+        "\n\twidth: 100vw;" +
+        "\n\theight: 100vh;" +
+        "\n}" +
+        "\npath{" +
+        "\n\tfill: none" +
+        "\n}" +
+        "\npath.edge.full, path.tail, path.head{" +
+        "\n\tstroke: var(--stroke-color);" +
+        "\n\tstroke-width: var(--stroke-width);" +
+        "\n}" +
+        "\npath.tail, path.head{" +
+        "\n\tfill:var(--fill);" +
+        "\n}" +
+        "\npath.edge.full.hover-activator{" +
+        "\n\tstroke-width: var(--stroke-width-hover);" +
+        "\n\tstroke: none;" +
+        "\n}" +
+        "\n.dashed{" +
+        "\n\tstroke-dash-array: var(--dashing);" +
+        "\n}" +
+        "\npath.content{" +
+        "\n\tstroke: var(--stroke-color-hover);" +
+        "\n\tstroke-width: var(--stroke-width-hover);" +
+        "\n}" +
+        "\nforeignObject.label{" +
+        "\n\toverflow: visible;" +
+        "\n\twidth:0;" +
+        "\n\theight:0;" +
+        "\n\twhite-space: pre;" +
+        "\n\t> div{" +
+        "\n\t\twidth: fit-content;" +
+        "\n\t}" +
+        "\n}" +
+        "\n\t" +
+        "\n\t" +
+        "";
+        let head = DV.svgHeadTail("head", modename) || '';
+        let tail = DV.svgHeadTail("tail", modename) || '';
+        let jsx = beautify(
+        `<div className={"edge hoverable hide-ep clickthrough fullscreen ` + modename + `"}>
+            <svg className={"clickthrough fullscreen"}>
                 { /* edge full paths
                
                  first is preview path, normally seen
@@ -109,19 +205,14 @@ export class DV {
                  second is to enlarge the hover area of path.preview to the same as path.content, so i avoid hover loop enter-leave and graphical flashing
                 
                 */ }
-                <path className={"preview full"} strokeWidth={strokeWidth} stroke={strokeColor}
-                fill={"none"} d={this.edge.d} strokeDasharray="` + dashing + `"></path>
-                <path className={"preview full"} strokeWidth={strokeWidthHover} stroke={"transparent"}
-                fill={"none"} d={this.edge.d}></path>
+                <path className={"preview edge full"` + (dashing ? ' dashed' : '') + `} d={this.edge.d} />
+                <path className={"preview edge full hover-activator"} d={this.edge.d} />
                 { /* edge separate segments */ }
                 {segments && segments.all && segments.all.flatMap(s => [
-                    <path tabIndex="-1" className={"clickable content segment"} style={{pointerEvents:"all"}} strokeWidth={strokeWidthHover}
-                    stroke={s.length > strokeLengthLimit && strokeColorLong || strokeColorHover}
-                     fill={"none"} d={s.dpart}></path>,
-                    s.label && <foreignObject style={{overflow: "visible", height:"0", width:"0", whiteSpace:"pre", x:(s.start.pt.x + s.end.pt.x)/2+"px", y:(s.start.pt.y + s.end.pt.y)/2+"px"}}>
+                    <path tabIndex="-1" className={"clickable content segment"} d={s.dpart}></path>,
+                    s.label && <foreignObject className="label" x={(s.start.pt.x + s.end.pt.x)/2+"px"} y={(s.start.pt.y + s.end.pt.y)/2+"px"}>
                     <div
-                     style={{width: "fit-content",
-                      transform: "translate(-50%, 0%) rotate("+s.radLabels+"rad) translate(0%, -"+(1-0.5*Math.abs(Math.abs(s.radLabels)%Math.PI)/(Math.PI/2))*100+"%)"+
+                     style={{transform: "translate(-50%, 0%) rotate("+s.radLabels+"rad) translate(0%, -"+(1-0.5*Math.abs(Math.abs(s.radLabels)%Math.PI)/(Math.PI/2))*100+"%)"+
                      " translate(0%, -5px", color: strokeColor}}>{s.label}</div>
                     </foreignObject>
                 ])}
@@ -130,17 +221,15 @@ export class DV {
                 { /* edge tail */ }
                 ` + tail + `
                 { /* edge anchor start */ }
-                <circle className="anchor" cx={0*segments.all[0].start.pt.x} cy={0*segments.all[0].start.pt.y}
-                 style={{pointerEvents: edge.start ? "all" : "none",
-                transform: "translate(" + segments.all[0].start.pt.x +"px, " + segments.all[0].start.pt.y +"px)"}}
+                {edge.start && <circle className="edge-anchor content clickable"
+                 style={{transform: "translate(" + segments.all[0].start.pt.x +"px, " + segments.all[0].start.pt.y +"px)"}}
                  onMouseDown={()=> edge.startFollow=true}
-                 onMouseUp={()=> edge.startfollow=false} />
-            { /* edge anchor end */ }
-                <circle className="anchor" cx={0*segments.all.last().end.pt.x} cy={0*segments.all.last().end.pt.y}
-                style={{pointerEvents: edge.end ? "all" : "none",
-                transform: "translate(" + segments.all.last().end.pt.x +"px, " + segments.all.last().end.pt.y +"px)"}}
+                 onMouseUp={()=> edge.startfollow=false} />}
+                { /* edge anchor end */ }
+                {edge.end && <circle className="edge-anchor content clickable" `+ // cx={0*segments.all.last().end.pt.x} cy={0*segments.all.last().end.pt.y}
+                `style={{transform: "translate(" + segments.all.last().end.pt.x +"px, " + segments.all.last().end.pt.y +"px)"}}
                  onMouseDown={()=> edge.endFollow=true}
-                 onMouseUp={()=> edge.endfollow=false} />
+                 onMouseUp={()=> edge.endfollow=false} />}
 
             </svg>
             { /* interactively added edgepoints */ }
@@ -149,7 +238,41 @@ export class DV {
             }
             {decorators}
         </div>`
-    )}
+    );
+        let edgePrerenderFunc: string = "(ret)=>{\n" +
+            "// ** preparations and default behaviour here ** //\n" +
+            "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+            "// ** declarations here ** //\n" +
+            "\n"+
+            "}";
+
+        let edgeUsageDeclarations = "(ret)=>{\n" +
+            "// ** preparations and default behaviour here ** //\n" +
+            "// ret.data = data\n" +
+            "ret.edgeview = edge.view.id\n" +
+            "ret.view = view\n" +
+            "// data, edge, view are dependencies by default. delete them above if you want to remove them.\n" +
+            "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+            "// ** declarations here ** //\n" +
+            "ret.start = edge.start\n"+
+            "ret.end = edge.end\n"+
+            "ret.segments = edge.segments\n"+
+            "}";
+        let ev = DViewElement.new2("Edge"+name, jsx,
+            (v: DViewElement) => {
+                v.appliableToClasses = [DVoidEdge.cname];
+                v.appliableTo = 'Edge';
+                v.bendingMode = EdgeBendingMode.Line;
+                v.edgeHeadSize = headSize;
+                v.edgeTailSize = tailSize;
+                //v.constants = edgeConstants;
+                v.palette = palette;
+                v.css = css
+                v.usageDeclarations = edgeUsageDeclarations;
+                v.preRenderFunc = edgePrerenderFunc;
+            }, false, vp, 'Pointer_ViewEdge' + name);
+        return ev;
+    }
     /*
     {
         false && edge.end.model.attributes.map( (m, index, arr) => <EdgePoint data={m.id} initialSize={(parent) => {

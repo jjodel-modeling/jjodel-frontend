@@ -1362,8 +1362,10 @@ export class DVoidEdge extends DGraphElement {
     labels!: PrimitiveType[] | labelfunc[];
     anchorStart?: string;
     anchorEnd?: string;
-    endFollow!: boolean;
-    startFollow!: boolean;
+    // endFollow!: boolean; they became derived attributes from static properties
+    // startFollow!: boolean;
+
+    static isFollowingCoords: GraphPoint;
 
     public static new(htmlindex: number, model: DGraph["model"]|null|undefined, parentNodeID: DGraphElement["father"], graphID: DGraphElement["graph"],
                       nodeID: DGraphElement["id"]|undefined, start: DGraphElement["id"], end: DGraphElement["id"],
@@ -1919,6 +1921,19 @@ replaced by startPoint
             // ret.pt = ge.startPoint
             return rets && rete ? [rete, rets] : (rets ? [rets] : [rete as segmentmaker]); }
         );
+
+        if (DVoidEdge.isFollowingCoords){
+            if (c.data.id === LVoidEdge.endFollow) {
+                let seg = all[all.length - 1];
+                seg.pt = DVoidEdge.isFollowingCoords;
+                seg.size = new GraphSize(seg.pt.x, seg.pt.y, 0.01, 0.01);
+            }
+            if (c.data.id === LVoidEdge.startFollow) {
+                let seg = all[0];
+                seg.pt = DVoidEdge.isFollowingCoords;
+                seg.size = new GraphSize(seg.pt.x, seg.pt.y, 0.01, 0.01);
+            }
+        }
         return all;
     }
     private get_pointsDebug(c: Context): segmentmaker[]{ return this.get_points_impl(this.get_allNodes(c), true, c); }
@@ -2179,8 +2194,8 @@ replaced by startPoint
         txt:"makes the ending point of an edge follow the cursor, so it can be assigned to a new anchor or target."};
     __info_of__startFollow: Info = {writeType:"boolean", readType:"boolean", type:"boolean", isEdge: true,// type:"read:(()=>void), write:boolean", readType:"(()=>void))",
         txt:"makes the starting point of an edge follow the cursor, so it can be assigned to a new anchor or source."};
-    get_endFollow(c: Context): boolean { return !!(c.data.end && c.data.endFollow); }
-    get_startFollow(c: Context): boolean { return !!(c.data.start && c.data.startFollow); }
+    get_endFollow(c: Context): boolean { return (c.data.id === LVoidEdge.endFollow); }
+    get_startFollow(c: Context): boolean { return (c.data.id === LVoidEdge.startFollow); }
     // // what in multieditor? needs to be moved in transientstuff?
     set_endFollow(val: boolean, c: Context): boolean { return this._set_start_endFollow(val, c, false); }
     set_startFollow(val: boolean, c: Context): boolean { return this._set_start_endFollow(val, c, true); }
@@ -2194,6 +2209,7 @@ replaced by startPoint
                 console.log("_set_start_endFollow event attached");
                 document.body.addEventListener("mousemove", LVoidEdge.mousemove, false);
                 LVoidEdge.following = true;
+                LVoidEdge.followingContext = c as any;
                 const $base = $(document.getElementById(isStart ? c.data.start : c.data.end) || []);
                 const $deepAnchors = $base.find("[nodeid] .anchor");
                 const $anchors = $base.find(".anchor").not($deepAnchors);
@@ -2224,22 +2240,55 @@ replaced by startPoint
     public static startFollow: Pointer<DVoidEdge> | undefined = undefined;
     public static endFollow: Pointer<DVoidEdge> | undefined = undefined;
     public static following: boolean = false;
+    public static followingContext: LogicContext<DVoidVertex, LVoidVertex>;
     public static tmp: number = 1;
+    public static canForceUpdate: boolean = true;
+    public static getCursorPos(e0: Event): Point { return new Point((e0 as any as MouseEvent).pageX, (e0 as any as MouseEvent).pageY); }
+    /*public static getGCursorPos(e0: Event): GraphPoint {
+        return LVLoidEdge.getCursorPos(e0).subtract(svgsize.tl(), true).multiply(svgzoom) as any as GraphPoint;
+    }*/
     public static mousemove(e0: Event): void {
-        if (!LVoidEdge.following) return;
+        let forcererendermode = true;
+        if (forcererendermode) {
+            if (!LVoidEdge.following) return;
+            if (!LVoidEdge.canForceUpdate) return;
+
+
+            let c = LVoidEdge.followingContext;
+            let g: LGraph = c.proxyObject.graph;
+            let cursorPos = LVoidEdge.getCursorPos(e0);
+            let gcursorpos = g.translateHtmlSize(cursorPos);
+            DVoidEdge.isFollowingCoords = gcursorpos;
+
+            let component: GraphElementComponent = GraphElementComponent.map[(LVoidEdge.startFollow || LVoidEdge.endFollow) as string];
+            LVoidEdge.canForceUpdate = false;
+            let timer = setTimeout(()=>{LVoidEdge.canForceUpdate = true; }, 5000);
+            let tn = transientProperties.node[c.data.id];
+            for (let vid in tn.viewScores) { // required to truly force an update
+                let tnv = tn.viewScores[vid];
+                tnv.jsxOutput = undefined;
+                tnv.usageDeclarations = undefined as any;
+                tnv.shouldUpdate = true;
+            }
+            component.setState({forceupdate:new Date().getDate()} as any, ()=>{LVoidEdge.canForceUpdate = true; clearTimeout(timer)});
+            // component.forceUpdate(()=>{LVoidEdge.canForceUpdate = true; clearTimeout(timer)});
+            return;
+        }
+
         LVoidEdge.tmp++;
         let selector = ".Edge[nodeid='" + (LVoidEdge.endFollow || LVoidEdge.startFollow as any)+"']";
         let root = document.querySelector(selector);
         if (!root) return;
         let paths: SVGPathElementt[] = [...root.querySelectorAll("path.full")] as SVGPathElementt[];
-        if (!paths.length) paths = [...root.querySelectorAll("path.segment")] as SVGPathElementt[];
-        let pathSegmentContainers: Element[] = [...new Set([...root.querySelectorAll("path.segment")].map(e=>e.parentElement))] as Element[];
+        let pathSegments = root.querySelectorAll("path.segment.preview") as any as SVGPathElementt[];
+        // if (!paths.length) paths = pathSegments;
+        let pathSegmentContainers: Element[] = [...new Set([...pathSegments].map(e=>e.parentElement))] as Element[];
         for (let container of pathSegmentContainers){
-            let se: SVGPathElementt[] = [...container.querySelectorAll("path.segment")] as SVGPathElementt[];
-            paths.push(se[se.length-1]);
+            let se: SVGPathElementt[] = [...container.querySelectorAll("path.segment.preview")] as SVGPathElementt[];
+            paths.push(se[LVoidEdge.endFollow ? se.length-1 : 0]);
         }
         let headTail = [...root.querySelectorAll(LVoidEdge.endFollow ? '.edgeHead' : '.edgeTail')] as HTMLElement[];
-        let cursorPos = new Point((e0 as any as MouseEvent).pageX, (e0 as any as MouseEvent).pageY);
+        let cursorPos = LVoidEdge.getCursorPos(e0)
 
         let segList: SVGPathSegment[] | undefined;
         for (let p of paths) {
