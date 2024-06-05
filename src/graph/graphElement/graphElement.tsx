@@ -114,7 +114,7 @@ function computeUsageDeclarations(component: GraphElementComponent, allProps: Al
         console.log("computing usage declarations: ", {f:transientProperties.view[vid].UDFunction, udret, UDEvalContext});
     } catch (e: any) {
         Log.ee("Invalid usage declarations", {e, str: view.usageDeclarations, view, data: allProps.data, stateProps: allProps});
-        udret = {data: allProps.data, view, node: allProps.node, __invalidUsageDeclarations: e};
+        udret = {data: allProps.data, view, node: allProps.node, __invalidUsageDeclarations: "@runtime:" +e};
     }
 
     transientProperties.node[allProps.nodeid].viewScores[vid].usageDeclarations = udret;
@@ -519,9 +519,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             let jsxString = view.jsxString;
             // let col = stackerrorlast.substring(icol+1);
             let irow = stackerrorlast.lastIndexOf(":", icol-1);
+            const offset={row:-2, col:1};
             let stackerrorlinenum: GObject = {
-                row: Number.parseInt(stackerrorlast.substring(irow+1, icol)),
-                col: Number.parseInt(stackerrorlast.substring(icol+1)) };
+                row: Number.parseInt(stackerrorlast.substring(irow+1, icol)) + offset.row,
+                col: Number.parseInt(stackerrorlast.substring(icol+1)) + offset.col };
             let linesPre = 1;
             let linesPost = 1;
             let jsxlines = jsxString.split("\n");
@@ -530,8 +531,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             let culpritlinesPost: string[] = jsxlines.slice(stackerrorlinenum.row, stackerrorlinenum.row + linesPost);
             console.error("errr", {e, node, jsxlines, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
 
+            if (stackerrorlinenum.col - offset.col > culpritline.length && stackerrorlinenum.row === 1) stackerrorlinenum.col = 0;
             let caretCursor = "▓" // ⵊ ꕯ 𝙸 Ꮖ
-            if (culpritline && stackerrorlinenum.col < culpritline.length && stackerrorlast.indexOf("main.chunk.js") === -1) {
+            if (culpritline && stackerrorlinenum.col - offset.col <= culpritline.length && stackerrorlast.indexOf("main.chunk.js") === -1) {
                 let rowPre = culpritline.substring(0, stackerrorlinenum.col);
                 let rowPost = culpritline.substring(stackerrorlinenum.col);
                 let jsxcode =
@@ -540,7 +542,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         <div>{rowPre} <b style={{color:"red"}}> {caretCursor} </b> {rowPost}</div>
                         { culpritlinesPost.map(l => <div>{l}</div>) }
                     </div>;
-                errormsg += " @line " + stackerrorlinenum.row + ":" + stackerrorlinenum.col;
+                errormsg += " @ line " + stackerrorlinenum.row + ", col:" + stackerrorlinenum.col;
                 if (asString) return DV.errorView_string('<div>'+errormsg+'\n'+jsxcode+'</div>', {where:"in "+where+"()", e, template:view.jsxString, view: view}, where, data, node, view);
                 return DV.errorView(<div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template:view.jsxString, view: view}, where, data, node, view);
             } else {
@@ -604,7 +606,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!tnv.shouldUpdate && tnv.jsxOutput) return tnv.jsxOutput;
         let tv = transientProperties.view[vid];
         let ret = tnv.jsxOutput = (tv.JSXFunction ? tv.JSXFunction.call(context, context) : null);
-        if (DVoidEdge.isFollowingCoords) console.log("mousepos:", {x:DVoidEdge.isFollowingCoords.x, y:DVoidEdge.isFollowingCoords.y});
+        if (typeof ret === "object" && !React.isValidElement(ret)) {
+            // plain objects cannot be react nodes, but react noeds are objects. so i try serializing
+            // this only happens if someone puts an object in jsx
+            try{
+                ret = JSON.stringify(ret);
+            }
+            catch(e){ ret = "{__ Cyclic Object __}"; }
+        }
         return ret;
     }
 

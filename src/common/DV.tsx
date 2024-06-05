@@ -476,11 +476,13 @@ public static parameter(): string { return (
 
     public static error(msg: undefined | string | JSX.Element, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement) {
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
-        if (dname && dname.length >= 8) dname = dname.substring(0, 7) + '…';
+        if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
+        let on = dname && nodename ? " on " + dname + " / " + nodename : (dname || nodename ? " on " + (dname || nodename) : '');
         return <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
             <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
-                <b>{errortype} ERROR on {(dname ? dname  : '') + (false ? ' / ' + nodename : '')})</b>
+                <b data-dname={dname} data-nodename={nodename} data-str={true}>
+                    {errortype} ERROR{on}</b>
                 <hr/>
                 <label className={'text-center mx-1 d-block'}>
                     While applying view "{v?.name}"
@@ -491,11 +493,12 @@ public static parameter(): string { return (
     }
     public static error_string(msg: undefined | string | JSX.Element, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement) {
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
-        if (dname && dname.length >= 8) dname = dname.substring(0, 7) + '…';
+        if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
+        let on = dname && nodename ? " on " + dname + " / " + nodename : (dname || nodename ? " on " + (dname || nodename) : '');
         return `<div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
             <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
-                <b>{errortype}_ERROR on {${dname ? dname : ''} + (false ? ' / ' + ${nodename} : '')})</b>
+                <b>{errortype}_ERROR` + on + `</b>
                 <hr/>
                 <label className={'text-center mx-1 d-block'}>
                     While applying view "${v?.name}"

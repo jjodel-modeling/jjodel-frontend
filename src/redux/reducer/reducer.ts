@@ -544,8 +544,10 @@ export function reducer(oldState: DState = initialState, action: Action): DState
         try {
             tv.UDFunction = new Function(paramStr, 'return ('+dv.usageDeclarations+')(ret)') as (...a:any)=>any;
         } catch (e:any) {
-            console.error('error udparse', {vid, e, paramStr, body: 'return ('+dv.usageDeclarations+')(ret)'});
-            tv.UDFunction = new Function("ret", "ret.__invalidUsageDeclarations = "+JSON.stringify(e)+"; ret.__invalidUsageDeclarations.isSyntax = true; return ret; }") as (...a:any)=>any;
+            let strerr = JSON.stringify((e.message || '').split('\n')[0]);
+            let errbody = "ret.__invalidUsageDeclarations = "+strerr+"; ret.__invalidUsageDeclarations.isSyntax = true; return ret;"
+            console.error('error udparse', {vid, e, paramStr, body: 'return ('+dv.usageDeclarations+')(ret)', strerr, errbody});
+            tv.UDFunction = new Function("ret", errbody) as (...a:any)=>any;
         }
 
 
@@ -653,6 +655,12 @@ export function reducer(oldState: DState = initialState, action: Action): DState
             transientProperties.view[vid].JSXFunction = new Function(paramStr, body) as ((...a: any) => any);
         }
         catch (e: any) {
+            /*try{
+                let try_to_get_better_error = eval("let __f = function(" + paramStr+") {\n" + body + "}");
+            } catch(eeval){
+                console.error("eval error same as func error", {e, eeval});
+                e = eeval;
+            }*/
             console.error('error jsxparse', {vid, e, paramStr, body});
             transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'JSX Syntax', dv);
         }
