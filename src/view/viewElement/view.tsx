@@ -51,7 +51,8 @@ export type CSSUnit = CSS_AbsoluteUnit | CSS_RelativeFontUnit | CSS_RelativeDomU
 export type StringControl = {type:'text', value: string};
 export type NumberControl = {type:'number', value: number, unit: CSSUnit};
 export type PaletteControl = {type:'color', value: tinycolor.ColorFormats.RGBA[]}; // array of rgba: red, green, blue, alpha
-export type PaletteType = Dictionary<string, PaletteControl | NumberControl | StringControl>;
+export type PathControl = {type:'path', value: string, x: string, y: string, options: {k: string, v:string}[]}; // array of rgba: red, green, blue, alpha
+export type PaletteType = Dictionary<string, PaletteControl | NumberControl | StringControl | PathControl>;
 
 
 @RuntimeAccessible('DViewElement')
@@ -77,7 +78,7 @@ export class DViewElement extends DPointerTargetable {
     name!: string;
     isExclusiveView!: boolean;
 
-    // evaluate 1 sola volta all'applicazione della vista o all'editing del campo
+    // processate 1 sola volta all'applicazione della vista o all'editing del campo
     constants?: string;
     // _parsedConstants?: GObject; // should be protected but LView is not subclass
 
@@ -333,9 +334,11 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             Log.exDev(!c, "invalid color:", {id: cc.data.id, c, shortPaletteName, p:cc.data.palette});
             return "rgba("+c.r+","+c.g+","+c.b+","+c.a+")";
         }
+        //let palettes = U.paletteSplit(c.data.palette);
         for (let paletteName in c.data.palette) {
-            if (c.data.palette[paletteName].type === "color") {
-                let palette = c.data.palette[paletteName] as PaletteControl;
+            let palette0 = c.data.palette[paletteName] as any;
+            if (palette0.type === "color") {
+                let palette = palette0 as PaletteControl;
                 let colors = palette.value;
                 if (!colors.length) continue;
                 if (['-', '_'].includes(paletteName[paletteName.length-1])) shortPaletteName = paletteName.substring(0, paletteName.length - 1);
@@ -353,9 +356,54 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                     if (allowLESS) s += "\t@" + paletteName + (i+1) + ": " + rgba + ';\n';
                     s += "\t--" + paletteName + (i+1) + ": " + rgba + ';\n';
                 }
-            } else {
+            } else if (palette0.type === 'path'){
+                let palette: PathControl = palette0;
+                let val = U.replaceAll(palette.value, 'view.', '');
+                val = U.replaceAll(val, 'this.', '');
+                val = U.replaceAll(val, 'x', palette.x);
+                val = U.replaceAll(val, 'y', palette.y);
+                val = U.replaceAll(val, '+', ' +');
+                val = U.replaceAll(val, '-', ' -'); // important: cannot add space post-dash or it's harder to distinguish unary and binary -
+                val = U.replaceAll(val, '/', ' / ');
+                val = U.replaceAll(val, '*', ' * ');
+                console.log('ex4', {palette, val});
+                let valarr: (string | number)[] = val.split(/[,\s]/);
+                // [] not allowed
+                valarr = (valarr as string[]).map(val => {
+                    console.log("ex4 valarr", {val, nval:+val});
+                    if (!isNaN(+val)) return val;
+                    let patharr: string[] = val.split('.');
+                    let curr: GObject = c.data;
+                    for (let pathseg of patharr) {
+                        curr = curr[pathseg];
+                        console.log("ex4 valarr path", {curr, pathseg});
+                        Log.e(!curr && (val.length > 1 || patharr.length > 1), "invalid variable path in css path control", {token:val, view:c.data.name});
+                        if (!curr) break;
+                    }
+                    if (typeof curr === "object" || (typeof curr === "undefined" && (val.length > 1 || patharr.length > 1)))
+                        Log.ee( "invalid variable path in css path control", {token:val, view:c.data.name});
+                    else val = curr || val;
+                    return val;
+                }).filter(p=>!!p);
+
+                for (let i = 0 ; i < valarr.length; i++) {
+                    let val = valarr[i];
+                    switch (val) { // i avoid subtracting L 1 -1 with spaces. it's unary if doesn't have a postfix space.
+                        default: continue;
+                        case '*': valarr[i] = +valarr[i-1] * +valarr[i+1]; valarr[i-1] = valarr[i+1] = ''; break;
+                        case '/': valarr[i] = +valarr[i-1] / +valarr[i+1]; valarr[i-1] = valarr[i+1] = ''; break;
+                        case '+': valarr[i] = +valarr[i-1] + +valarr[i+1]; valarr[i-1] = valarr[i+1] = ''; break;
+                        case '-': valarr[i] = +valarr[i-1] - +valarr[i+1]; valarr[i-1] = valarr[i+1] = ''; break;
+                    }
+                }
+                val = valarr.filter(p=>!!p).join(' ');
+                val = "'"+val+"'";
+                if (allowLESS) s += "\t@" + paletteName + ": " + val + ';\n';
+                s += "\t--" + paletteName + ': ' + val + ';\n';
+            }
+            else {
                 // number or text
-                let palette: NumberControl | StringControl = c.data.palette[paletteName] as any;
+                let palette: NumberControl | StringControl = palette0;
                 let val = palette.value + ((palette as NumberControl).unit || '');
                 if (!val) val = "''";
                 if (allowLESS) s += "\t@" + paletteName + ": " + val + ';\n';
@@ -837,9 +885,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     public set_constants(value: this['constants'], c: Context): boolean {
         if (value === c.data.constants) return true;
-        TRANSACTION(()=>{
+        TRANSACTION(()=> {
             SetFieldAction.new(c.data.id, 'constants', value, '', false);
             SetRootFieldAction.new('VIEWS_RECOMPILE_constants', c.data.id, '+=', false);
+            SetFieldAction.new(c.data.id, "css_MUST_RECOMPILE", true, '', false);
         })
         return true;
     }
@@ -858,12 +907,21 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         let s = c.data.edgeHeadSize || new GraphPoint(0, 0);
         if (!("x" in v)) v.x = s.x;
         if (!("y" in v)) v.y = s.y;
-        return SetFieldAction.new(c.data.id, "edgeHeadSize", v as GraphPoint, '', false); }
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data.id, "css_MUST_RECOMPILE", true, '', false);
+            SetFieldAction.new(c.data.id, "edgeHeadSize", v as GraphPoint, '', false);
+        });
+        return true; }
     public set_edgeTailSize(v: Partial<this["edgeTailSize"]>, c: Context): boolean {
         let s = c.data.edgeTailSize || new GraphPoint(0, 0);
         if (!("x" in v)) v.x = s.x;
         if (!("y" in v)) v.y = s.y;
-        return SetFieldAction.new(c.data.id, "edgeTailSize", v as GraphPoint, '', false); }
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data.id, "css_MUST_RECOMPILE", true, '', false);
+            SetFieldAction.new(c.data.id, "edgeTailSize", v as GraphPoint, '', false);
+        });
+        return true;
+    }
 
     public get_viewpoint(context: Context): this["viewpoint"] {
         return (LViewPoint.fromPointer(context.data.viewpoint as Pointer<DViewPoint>));

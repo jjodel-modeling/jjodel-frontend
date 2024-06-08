@@ -486,10 +486,10 @@ export enum CoordinateMode {
 
 export type EPSize = GraphSize & {currentCoordType: CoordinateMode};
 export enum EdgeHead {
-    composition = "EdgeComposition",
-    aggregation = "EdgeAggregation",
-    reference   = "EdgeReference",
-    extend      = "EdgeExtend"
+    composition = "Composition",
+    aggregation = "Aggregation",
+    reference   = "Association",
+    extend      = "Extension"
 }
 
 

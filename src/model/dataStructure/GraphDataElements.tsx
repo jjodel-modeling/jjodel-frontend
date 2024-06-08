@@ -1967,7 +1967,7 @@ replaced by startPoint
         let increase: number = segmentSize.first;
         let segment: EdgeSegment | undefined;
         /// grouping points according to SvgLetter
-        console.log("ex4 points", {segments:ret.map(s=>printablesegment(s)), points:all.map(s=>printablesegment(s))});
+        // console.log("ex4 points", {segments:ret.map(s=>printablesegment(s)), points:all.map(s=>printablesegment(s))});
         for (let i = 0; i < all.length - 1; ) {
             // let start = all[i], end = all[i+increase];
             let start: segmentmaker = all[i];

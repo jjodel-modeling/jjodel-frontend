@@ -73,14 +73,7 @@
   line-height: 1.4;
   background-color: var(--mainBackgroundColor);
 
-  -webkit-touch-callout: none; /* iOS Safari */
-  -webkit-user-select: none; /* Safari */
-  -khtml-user-select: none; /* Konqueror HTML */
-  -moz-user-select: none; /* Firefox */
-  -ms-user-select: none; /* Internet Explorer/Edge */
-  -o-user-select: none; /*?*/
-  user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
-  /* css variables */
+
   --topbarH: 40px;
   --sidebarW: 283px;
   --mainBorderWidth: 5px;
@@ -658,20 +651,6 @@
 
   }
 
-
-
-  input, textarea, [contenteditable] {
-    -webkit-touch-callout: default;
-    -webkit-user-select: text;
-    -khtml-user-select: default;
-    -khtml-user-select: text;
-    -o-user-select: default;
-    -o-user-select: text; /*not sure wich works on -khtml and -o*/
-    -moz-user-select: text;
-    -ms-user-select: text;
-    user-select: text;
-    border-radius: 7.5px;
-  }
 
   input, select {
     border-radius: 4px;

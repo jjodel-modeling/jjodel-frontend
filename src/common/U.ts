@@ -19,8 +19,9 @@ import {
 import Swal from "sweetalert2";
 import Storage from '../data/storage';
 import {compressToUTF16, decompressFromUTF16} from "async-lz-string";
-import {PaletteControl} from "../view/viewElement/view";
+import {NumberControl, PaletteControl, PaletteType, PathControl, StringControl} from "../view/viewElement/view";
 import tinycolor from "tinycolor2";
+import {StringDecoder} from "string_decoder";
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
 console.warn('loading ts U log');
@@ -1414,6 +1415,27 @@ export class U {
     public static parentUntil(tagName: string, p: Element | null): Element | null {
         while (p && p.tagName !== tagName) p = p.parentElement;
         return p;
+    }
+
+    static paletteSplit(palette: Readonly<PaletteType>): {
+        color: Dictionary<string, PaletteControl>,
+        number: Dictionary<string, NumberControl>,
+        text: Dictionary<string, StringControl>,
+        path: Dictionary<string, PathControl>,
+    } {
+        type clist = PaletteControl | NumberControl | StringControl | PathControl;
+        let ret = {
+            color: {} as Dictionary<string, PaletteControl>,
+            number: {} as Dictionary<string, NumberControl>,
+            text: {} as Dictionary<string, StringControl>,
+            path: {} as Dictionary<string, PathControl>,
+        } as Dictionary<(clist)["type"], Dictionary<string, any>>;
+        for (let entry of Object.entries(palette)) {
+            let k = entry[0];
+            let v = entry[1];
+            ret[(v as clist).type][k] = v;
+        }
+        return ret;
     }
 }
 export class DDate{

@@ -94,7 +94,7 @@ function setTemplateString(stateProps: InOutParam<GraphElementReduxStateProps>, 
 
 function computeUsageDeclarations(component: GraphElementComponent, allProps: AllPropss, state: GraphElementStatee, lview: LViewElement): GObject {
     // compute usageDeclarations
-    let udret: GObject = {};
+    let udret: GObject = {__notInitialized: true};
     const view: DViewElement = lview.__raw;
     const vid: Pointer<DViewElement> = view.id;
     const constants = transientProperties.view[vid].constants;
@@ -113,8 +113,8 @@ function computeUsageDeclarations(component: GraphElementComponent, allProps: Al
         transientProperties.view[vid].UDFunction.call(UDEvalContext, UDEvalContext, udret);
         console.log("computing usage declarations: ", {f:transientProperties.view[vid].UDFunction, udret, UDEvalContext});
     } catch (e: any) {
-        Log.ee("Invalid usage declarations", {e, str: view.usageDeclarations, view, data: allProps.data, stateProps: allProps});
         udret = {data: allProps.data, view, node: allProps.node, __invalidUsageDeclarations: "@runtime:" +e};
+        Log.ee("Invalid usage declarations", {e, str: view.usageDeclarations, view, data: allProps.data, stateProps: allProps});
     }
 
     transientProperties.node[allProps.nodeid].viewScores[vid].usageDeclarations = udret;
@@ -606,7 +606,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!tnv.shouldUpdate && tnv.jsxOutput) return tnv.jsxOutput;
         let tv = transientProperties.view[vid];
         let ret = tnv.jsxOutput = (tv.JSXFunction ? tv.JSXFunction.call(context, context) : null);
-        if (typeof ret === "object" && !React.isValidElement(ret)) {
+        if (typeof ret === "object" && ret !== null && !React.isValidElement(ret)) {
             // plain objects cannot be react nodes, but react noeds are objects. so i try serializing
             // this only happens if someone puts an object in jsx
             try{

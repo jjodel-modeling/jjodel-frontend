@@ -1,15 +1,22 @@
-import React, {Dispatch, ReactElement, Ref, RefObject, SyntheticEvent} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, Ref, RefObject, SyntheticEvent} from 'react';
 import {connect} from "react-redux";
 import {useStateIfMounted} from "use-state-if-mounted";
 import tinycolor, {Instance} from "tinycolor2";
 import Editor from "@monaco-editor/react";
 import DropDownButton from "smart-webcomponents-react/dropdownbutton";
 import 'smart-webcomponents-react/source/styles/smart.default.css';
-import type {PaletteControl, NumberControl, StringControl, PaletteType, CSSUnit} from '../../../../view/viewElement/view';
+import type {
+    PaletteControl,
+    NumberControl,
+    StringControl,
+    PaletteType,
+    CSSUnit,
+    PathControl
+} from '../../../../view/viewElement/view';
 import {
     Dictionary,
     DState,
-    DViewElement, GObject,
+    DViewElement, EdgeHead, GObject,
     Input,
     KeyDownEvent,
     Keystrokes,
@@ -85,12 +92,16 @@ function PaletteDataComponent(props: AllProps) {
     const change = (value: string|undefined) => { if(value !== undefined) setCss(value); } // save in local state for frequent changes.
     const blur = () => view.css = css; // confirm in redux state for final state
 
-    const addControl = (type: 'palette' | 'number' | 'text') => {
+    const addControl = (type: 'palette' | 'number' | 'text' | 'path') => {
         if (readOnly) return;
         let i: number;
         let prefix0: string;//= 'palette_' + i + '-';
         switch (type){
             default: Log.exDevv("unexpected case in addControl:" + type); return;
+            case 'path':
+                i = Object.values(palette).filter( o => (o as PathControl).type === "path").length + 1;
+                prefix0 = 'path_';
+                break;
             case 'text':
                 i = Object.values(palette).filter( o => (o as StringControl).type === "text").length + 1;
                 prefix0 = 'text_';
@@ -112,6 +123,20 @@ function PaletteDataComponent(props: AllProps) {
         }
         switch (type){
             default: Log.exDevv("unexpected case in addControl:" + type); return;
+            case 'path':
+                const agglabel = "◇ Aggregation / Composition";
+                const extendlabel = "△ "+EdgeHead.extend;
+                const asslabel = "Λ "+EdgeHead.reference;
+                let headdict: Dictionary<string, string> = {
+                    [asslabel]: 'M 0 0   L x y/2   L 0 y',
+                    [extendlabel]: 'M 0 0   L x y/2   L 0 y   Z',
+                    [agglabel]: 'M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z',
+                };
+                let predefinedPaths: {k:string, v:string}[] = Object.entries(headdict).map((e)=>({k:e[0], v:e[1]}));
+
+                tmp = {...palette};
+                tmp[prefix] = {type: 'path', value: '', x:'edgeHeadSize.x', y:'edgeHeadSize.y', options: predefinedPaths};
+                break;
             case 'text':
                 tmp = {...palette};
                 tmp[prefix] = {type: 'text', value: ''};
@@ -127,7 +152,13 @@ function PaletteDataComponent(props: AllProps) {
         }
         view.palette = palette = tmp;
     }
-    const setText = (e: React.FocusEvent<HTMLInputElement>, prefix: string) => {
+    const setGeneric = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>, prefix: string, key: string) => {
+        const val: string = e.target.value;
+        if (readOnly || (palette[prefix] as any)[key] === val) return;
+        let tmp: Dictionary<string, StringControl> = {...palette} as any;
+        (tmp[prefix] as any)[key] = val;
+        view.palette = palette = tmp; }
+    const setText = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>, prefix: string) => {
         const val: string = e.target.value;
         if (readOnly || (palette[prefix] as StringControl).value === val) return;
         let tmp: Dictionary<string, StringControl> = {...palette} as any;
@@ -240,80 +271,87 @@ function PaletteDataComponent(props: AllProps) {
         return {backgroundColor: c.toRgbString(), color:invert(c)};
     }
 
+    let palettes = U.paletteSplit(palette);
+    function palettewrap(prefix: string, node: ReactNode): ReactNode{
+        return (
+            <div className="palette-row-container">
+                <button className="btn btn-danger me-1" onClick={()=>removeControl(prefix)} disabled={readOnly}><i className="p-1 bi bi-trash3-fill"/></button>
+                <input className={"prefix"} placeholder={"variable name"} value={prefix} onChange={(e)=> changePrefix(prefix, e.target.value)} disabled={readOnly} />
+                {node}
+            </div>)
+    }
+
     return(<section className={'p-3'}>
         <div className={"controls"} style={{position:'relative', zIndex:2}}>
-            {Object.entries(palette).map((entry, index, entries)=>{
+            {Object.entries(palettes.color).map((entry, index, entries)=>{
                 let prefix = entry[0];
                 let paletteobj: PaletteControl = entry[1] as PaletteControl;
-                if (paletteobj.type !== 'color') return undefined;
                 let colors: Instance[] = paletteobj.value.map(v=> tinycolor(v));
                 let suggestions = [tinycolor('#ffaaaa')]; // todo: compute according to current row "colors"
-                return (<>
+                return palettewrap(prefix, <>
                     <div className="palette-row">
-                        <button className="btn btn-danger me-1" onClick={()=>removeControl(prefix)}  disabled={readOnly}><i className="p-1 bi bi-trash3-fill"/></button>
-                        <input className={"prefix"} placeholder={"variable name"} value={prefix} onChange={(e)=> changePrefix(prefix, e.target.value)}  disabled={readOnly}/>
                         <div className="color-container">{
                             colors.map((color, i) => <Color key={prefix+i} readonly={readOnly}
-                                                          data={view} field={'palette'} canDelete={!readOnly}
-                                                          getter={()=>colors[i].toHexString()} setter={(newVal) => { setColor(prefix, i, newVal) }}
-                                                          style ={{background: 'white'}}
-                                                          inputStyle ={{opacity: color.getAlpha()}}
-                                                          childrenn={
-                                                              <div className={"content suggestions"} style={{backgroundColor: "inherit"}} onClick={(e) => {e.preventDefault(); e.stopPropagation();}}>
-                                                                  {(()=>{ return <>
-                                                                      <h6 title={"Alter current color transparency"}>Opacity</h6>
-                                                                      <input style={{width: "auto", marginLeft:"1em", marginRight:"1em"}} type={"range"} min={0} max={1} step={"any"} value={color.getAlpha()} onChange={(e)=>{ transparencyColor(prefix, i, color, +e.target.value) }} />
-                                                                      <h6 onClick={()=>addColor(prefix, color.analogous(7, 30/1.5), i)} title={"Add all the colors"}>➕Analogous</h6>
-                                                                      <div className={"roww"}>
-                                                                          {color.analogous(7, 30/1.5).map((c,ii) => ii===0?undefined:
-                                                                              <button style={style(c)} onClick={(e)=>{addColor(prefix, c, i)}} className="btn color-suggestion">+</button>
-                                                                          )}
-                                                                      </div>{/*
+                                                            data={view} field={'palette'} canDelete={!readOnly}
+                                                            getter={()=>colors[i].toHexString()} setter={(newVal) => { setColor(prefix, i, newVal) }}
+                                                            style ={{background: 'white'}}
+                                                            inputStyle ={{opacity: color.getAlpha()}}
+                                                            childrenn={
+                                                                <div className={"content suggestions"} style={{backgroundColor: "inherit"}} onClick={(e) => {e.preventDefault(); e.stopPropagation();}}>
+                                                                    {(()=>{ return <>
+                                                                        <h6 title={"Alter current color transparency"}>Opacity</h6>
+                                                                        <input style={{width: "auto", marginLeft:"1em", marginRight:"1em"}} type={"range"} min={0} max={1} step={"any"} value={color.getAlpha()} onChange={(e)=>{ transparencyColor(prefix, i, color, +e.target.value) }} />
+                                                                        <h6 onClick={()=>addColor(prefix, color.analogous(7, 30/1.5), i)} title={"Add all the colors"}>➕Analogous</h6>
+                                                                        <div className={"roww"}>
+                                                                            {color.analogous(7, 30/1.5).map((c,ii) => ii===0?undefined:
+                                                                                <button style={style(c)} onClick={(e)=>{addColor(prefix, c, i)}} className="btn color-suggestion">+</button>
+                                                                            )}
+                                                                        </div>{/*
                                     <h6 onClick={()=>addColor(prefix, color.monochromatic(7), i)} title={"Add all the colors"}>➕Monochromatic</h6>
                                     <div className={"roww"}>
                                         {color.monochromatic(7).map((c,ii) => ii===0?undefined: <button style={style(c)}
                                                                                                         onClick={(e)=>{addColor(prefix, c, i)}} className="btn color-suggestion">+</button>)}
                                     </div>{/*[6/12, 5/12, 4/12, 3/12, 2/12, 1/12]*/}
-                                                                      <h6 onClick={()=>addColor(prefix, [1/12, 2/12, 3/12, 4/12, 5/12, 6/12].map(n=>color.clone().lighten(n*100)), i, false)} title={"Add all the colors"}>➕Lighten</h6>
-                                                                      <div className={"roww"}>
-                                                                          {[1/12, 2/12, 3/12, 4/12, 5/12, 6/12].map(n=>color.clone().lighten(n*100))
-                                                                              .map((c,ii) => <button style={style(c)} className="btn color-suggestion"
-                                                                                                     onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
-                                                                      </div>
-                                                                      <h6 onClick={()=>addColor(prefix, [6/12, 5/12, 4/12, 3/12, 2/12, 1/12].map(n=>color.clone().darken(n*100)), i, false)} title={"Add all the colors"}>➕Darken</h6>
-                                                                      <div className={"roww"}>
-                                                                          {[6/12, 5/12, 4/12, 3/12, 2/12, 1/12].map(n=>color.clone().darken(n*100))
-                                                                              .map((c,ii) => <button style={style(c)} className="btn color-suggestion"
-                                                                                                     onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
-                                                                      </div>
-                                                                      <h6 onClick={()=>addColor(prefix, [color.complement(), tinycolor(invert(color))], i, false)} title={"Add all the colors"}>➕Complementary / Opposite</h6>
-                                                                      <div className={"roww"}>
-                                                                          <button style={style(color.complement())} className="btn color-suggestion"
-                                                                                  onClick={(e)=>{addColor(prefix, color.complement(), i)}}>+</button>
-                                                                          <button style={style(color)} className="btn color-suggestion"
-                                                                                  onClick={(e)=>{addColor(prefix, tinycolor(invert(color)), i)}}>+</button>
-                                                                      </div>
-                                                                      <h6 onClick={()=>addColor(prefix, color.splitcomplement(), i)} title={"Add all the colors"}>➕Split Complementary</h6>
-                                                                      <div className={"roww"}>
-                                                                          {color.splitcomplement().map((c) => <button style={{...style(c)}} className="btn color-suggestion"
-                                                                                                                      onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
-                                                                      </div>
-                                                                      <h6 onClick={()=>addColor(prefix, color.triad(), i)} title={"Add all the colors"}>➕Triadic</h6>
-                                                                      <div className={"roww"}>
-                                                                          {color.triad().map ( (c) => <button style={{...style(c)}} className="btn color-suggestion"
-                                                                                                              onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
-                                                                      </div>
-                                                                      <h6 onClick={()=>addColor(prefix, color.tetrad(), i)} title={"Add all the colors"}>➕Tetradic</h6>
-                                                                      <div className={"roww"}>
-                                                                          {color.tetrad().map ( (c) => <button style={{...style(c)}} className="btn color-suggestion"
-                                                                                                               onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
-                                                                      </div>
-                                                                  </>})()}
-                                                                  <button className={'btn btn-danger content delete-color mt-2'} onClick={()=>removeColor(prefix, i)} disabled={readOnly}>
-                                                                      <i className="bi p-1 bi-trash3-fill"/>
-                                                                  </button>
-                                                              </div>
-                                                          }
+                                                                        <h6 onClick={()=>addColor(prefix, [1/12, 2/12, 3/12, 4/12, 5/12, 6/12].map(n=>color.clone().lighten(n*100)), i, false)} title={"Add all the colors"}>➕Lighten</h6>
+                                                                        <div className={"roww"}>
+                                                                            {[1/12, 2/12, 3/12, 4/12, 5/12, 6/12].map(n=>color.clone().lighten(n*100))
+                                                                                .map((c,ii) => <button style={style(c)} className="btn color-suggestion"
+                                                                                                       onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
+                                                                        </div>
+                                                                        <h6 onClick={()=>addColor(prefix, [6/12, 5/12, 4/12, 3/12, 2/12, 1/12].map(n=>color.clone().darken(n*100)), i, false)} title={"Add all the colors"}>➕Darken</h6>
+                                                                        <div className={"roww"}>
+                                                                            {[6/12, 5/12, 4/12, 3/12, 2/12, 1/12].map(n=>color.clone().darken(n*100))
+                                                                                .map((c,ii) => <button style={style(c)} className="btn color-suggestion"
+                                                                                                       onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
+                                                                        </div>
+                                                                        <h6 onClick={()=>addColor(prefix, [color.complement(), tinycolor(invert(color))], i, false)} title={"Add all the colors"}>➕Complementary / Opposite</h6>
+                                                                        <div className={"roww"}>
+                                                                            <button style={style(color.complement())} className="btn color-suggestion"
+                                                                                    onClick={(e)=>{addColor(prefix, color.complement(), i)}}>+</button>
+                                                                            <button style={style(color)} className="btn color-suggestion"
+                                                                                    onClick={(e)=>{addColor(prefix, tinycolor(invert(color)), i)}}>+</button>
+                                                                        </div>
+                                                                        <h6 onClick={()=>addColor(prefix, color.splitcomplement(), i)} title={"Add all the colors"}>➕Split Complementary</h6>
+                                                                        <div className={"roww"}>
+                                                                            {color.splitcomplement().map((c) => <button style={{...style(c)}} className="btn color-suggestion"
+                                                                                                                        onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
+                                                                        </div>
+                                                                        <h6 onClick={()=>addColor(prefix, color.triad(), i)} title={"Add all the colors"}>➕Triadic</h6>
+                                                                        <div className={"roww"}>
+                                                                            {color.triad().map ( (c) => <button style={{...style(c)}} className="btn color-suggestion"
+                                                                                                                onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
+                                                                        </div>
+                                                                        <h6 onClick={()=>addColor(prefix, color.tetrad(), i)} title={"Add all the colors"}>➕Tetradic</h6>
+                                                                        <div className={"roww"}>
+                                                                            {color.tetrad().map ( (c) => <button style={{...style(c)}} className="btn color-suggestion"
+                                                                                                                 onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
+                                                                        </div>
+                                                                    </>})()}
+                                                                    <button className={'btn btn-danger content delete-color mt-2'} onClick={()=>removeColor(prefix, i)} disabled={readOnly}>
+                                                                        <i className="bi p-1 bi-trash3-fill"/>
+                                                                    </button>
+                                                                </div>
+                                                            }
                             />)
                         }
                         </div>
@@ -325,64 +363,83 @@ function PaletteDataComponent(props: AllProps) {
                     </div>
                 </>); })
             }
-            {Object.entries(palette).map((entry, index, entries)=>{
+            {Object.entries(palettes.path).map((entry, index, entries)=>{
+                    let prefix = entry[0];
+                    let path: PathControl = entry[1] as any;
+                    return palettewrap(prefix,
+                        <div className="palette-row path" title={"todo: proper tooltip.\nedgeHeadSize is in the \"Options\" tab and determines the position of the head.\nBasic math operators are allowed, but the minus and plus must have spaces around them or they will be traated as unary operators.\nx and y are variables local to this path used to scale his shape."}>
+                            <div className={"value hoverable"}>
+                                <div className={"d-flex w-100"}>
+                                    <input className={"value w-100 my-auto"} placeholder={"svg path [d]"} defaultValue={path.value} key={path.value} onBlur={e => {setText(e as any, prefix)}} disabled={readOnly}
+                                           onKeyDown={e => {
+                                               if (e.key === Keystrokes.enter) setText(e as any, prefix);
+                                               if (e.key === Keystrokes.escape) (e.target as HTMLInputElement).value = path.value; }} />
+                                </div>
+                                <div className={"content d-flex"} style={{backgroundColor: 'whitesmoke'}}>
+                                    <input className={"spacer w-100"}/>
+                                    <label className={"mx-auto"}>x:&nbsp;<input className="x" placeholder={"x"} defaultValue={path.x} disabled={readOnly} onChange={(e)=>setGeneric(e, prefix, "x")}/></label>
+                                    <label className={"mx-auto"}>y:&nbsp;<input className="y" placeholder={"y"} defaultValue={path.y} disabled={readOnly} onChange={(e)=>setGeneric(e, prefix, "y")}/></label>
+                                </div>
+                            </div>
+                            <select value={path.value} disabled={readOnly} onChange={(e)=>setText(e as any, prefix)}>
+                                {[<option style={{fontStyle:'italic', color:'gray'}} value={""}>Custom</option>, path.options.map((e)=>{
+                                let k = e.k;
+                                let v = e.v;
+                                return <option value={v}>{k}</option>
+                            })]}</select>
+                        </div>)
+                }
+            )}
+            {Object.entries(palettes.number).map((entry, index, entries)=>{
+                    let prefix = entry[0];
+                    let number: NumberControl = entry[1] as any;
+                    return palettewrap(prefix,
+                        <div className="palette-row numeric">
+                            {makeNumericInput(prefix, number, setNumber, setText, readOnly)}
+                            <select className={"unit"} placeholder={"unit"} value={number.unit} onChange={e => {setUnit(e as any, prefix)}} disabled={readOnly}>
+                                <optgroup label={"Recommended units"}>
+                                    <option value={"px"}>px - pixels</option>
+                                    <option value={"%"}>% - Relative to parent</option>
+                                    <option value={"em"}>em - font height</option>
+                                    <option value={"vw"}>vw - viewport width</option>
+                                    <option value={"vh"}>vh - viewport height</option>
+                                    <option value={""}>Unit-less</option>
+                                </optgroup>
+                                <optgroup label={"Absolute units"}>
+                                    <option value={"px"}>px - pixels</option>
+                                    <option value={"cm"}>cm - centimeters</option>
+                                    <option value={"mm"}>mm - millimiters</option>
+                                    <option value={"pt"}>pt - points</option>
+                                    <option value={"pc"}>pc - picas</option>
+                                    <option value={"in"}>in - inches</option>
+                                </optgroup>
+                                <optgroup label={"Relative (DOM) units"}>
+                                    <option value={"%"}>% - Relative to parent</option>
+                                    <option value={"fr"}>fr - grid fraction</option>
+                                    <option value={"vw"}>vw - viewport width</option>
+                                    <option value={"vh"}>vh - viewport height</option>
+                                    <option value={"vmin"}>vmin - x% of viewport min axis</option>
+                                    <option value={"vmax"}>vmax - x% of viewport max axis</option>
+                                </optgroup>
+                                <optgroup label={"Relative (font) units"}>
+                                    <option value={"em"}>em - font height</option>
+                                    <option value={"rem"}>rem - &lt;body&gt; font height</option>
+                                    <option value={"ex"}>ex - height of the "x" char</option>
+                                    <option value={"ch"}>ch - width of the "0" char</option>
+                                </optgroup>
+                            </select>
+                        </div>)
+                }
+            )}
+            {Object.entries(palettes.text).map((entry, index, entries)=>{
                     let prefix = entry[0];
                     let string: StringControl = entry[1] as any;
-                    if (string.type !== 'text') return undefined;
-                    return (
-                        <div className="palette-row textual">
-                            <button className="btn btn-danger me-1" onClick={()=>removeControl(prefix)} disabled={readOnly}><i className="p-1 bi bi-trash3-fill"/></button>
-                            <input className={"prefix"} placeholder={"variable name"} value={prefix} onChange={(e)=> changePrefix(prefix, e.target.value)} disabled={readOnly} />
+                    return palettewrap(prefix,
+                        <div className={"palette-row textual"}>
                             <input className={"value"} placeholder={"value"} defaultValue={string.value} onBlur={e => {setText(e as any, prefix)}} disabled={readOnly}
                                    onKeyDown={e => {
                                        if (e.key === Keystrokes.enter) setText(e as any, prefix);
                                        if (e.key === Keystrokes.escape) (e.target as HTMLInputElement).value = string.value; }} />
-                        </div>)
-                }
-            )}
-            {Object.entries(palette).map((entry, index, entries)=>{
-                    let prefix = entry[0];
-                    let number: NumberControl = entry[1] as any;
-                    if (number.type !== 'number') return undefined;
-                    return (
-                        <div className="palette-row numeric">
-                            <button className="btn btn-danger me-1" onClick={()=>removeControl(prefix)}><i className="p-1 bi bi-trash3-fill"/></button>
-                            <input className={"prefix"} placeholder={"variable name"} value={prefix} onChange={(e)=> changePrefix(prefix, e.target.value)} disabled={readOnly} />
-                            <div className={"value"}>
-                                {makeNumericInput(prefix, number, setNumber, setText, readOnly)}
-                                <select className={"unit"} placeholder={"unit"} value={number.unit} onChange={e => {setUnit(e as any, prefix)}} disabled={readOnly}>
-                                    <optgroup label={"Recommended units"}>
-                                        <option value={"px"}>px - pixels</option>
-                                        <option value={"%"}>% - Relative to parent</option>
-                                        <option value={"em"}>em - font height</option>
-                                        <option value={"vw"}>vw - viewport width</option>
-                                        <option value={"vh"}>vh - viewport height</option>
-                                        <option value={""}>Unit-less</option>
-                                    </optgroup>
-                                    <optgroup label={"Absolute units"}>
-                                        <option value={"px"}>px - pixels</option>
-                                        <option value={"cm"}>cm - centimeters</option>
-                                        <option value={"mm"}>mm - millimiters</option>
-                                        <option value={"pt"}>pt - points</option>
-                                        <option value={"pc"}>pc - picas</option>
-                                        <option value={"in"}>in - inches</option>
-                                    </optgroup>
-                                    <optgroup label={"Relative (DOM) units"}>
-                                        <option value={"%"}>% - Relative to parent</option>
-                                        <option value={"fr"}>fr - grid fraction</option>
-                                        <option value={"vw"}>vw - viewport width</option>
-                                        <option value={"vh"}>vh - viewport height</option>
-                                        <option value={"vmin"}>vmin - x% of viewport min axis</option>
-                                        <option value={"vmax"}>vmax - x% of viewport max axis</option>
-                                    </optgroup>
-                                    <optgroup label={"Relative (font) units"}>
-                                        <option value={"em"}>em - font height</option>
-                                        <option value={"rem"}>rem - &lt;body&gt; font height</option>
-                                        <option value={"ex"}>ex - height of the "x" char</option>
-                                        <option value={"ch"}>ch - width of the "0" char</option>
-                                    </optgroup>
-                                </select>
-                            </div>
                         </div>)
                 }
             )}
@@ -399,6 +456,8 @@ function PaletteDataComponent(props: AllProps) {
                             onClick={()=>addControl('number')}>+ Number</button>
                     <button className={"w-100 btn btn-outline-success"} style={{height: 'var(--smart-editor-height)'}}
                             onClick={()=>addControl('text')}>+ Text</button>
+                    <button className={"w-100 btn btn-outline-success"} style={{height: 'var(--smart-editor-height)'}}
+                            onClick={()=>addControl('path')}>+ Path</button>
                 </div>
             </DropDownButton>
         </div>

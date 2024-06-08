@@ -1,18 +1,20 @@
 import {
-    DGraphElement,
+    DGraphElement, Dictionary,
     DModelElement,
-    DocString,
-    DViewElement, DViewPoint,
-    DVoidEdge, EdgeBendingMode,
-    EdgeHead, GraphPoint,
+    DViewElement,
+    DViewPoint,
+    DVoidEdge,
+    EdgeBendingMode,
+    EdgeHead,
+    GObject,
+    GraphPoint,
     Pointer,
+    RuntimeAccessible,
     ShortAttribETypes as SAType,
     U
 } from '../joiner';
-import {GObject, RuntimeAccessible} from '../joiner';
-import React, {ReactElement} from "react";
-import {PaletteControl, PaletteType} from "../view/viewElement/view";
-import tinycolor from "tinycolor2";
+import React from "react";
+import {PaletteType} from "../view/viewElement/view";
 // const beautify = require('js-beautify').html; // BEWARE: this adds some newline that might be breaking and introduce syntax errors in our JSX parser
 const beautify = (s: string) => s;
 let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
@@ -73,30 +75,33 @@ export class DV {
         let attrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` preview"} />\n`;
         let path: string;
         let hoverAttrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` clickable content"} tabIndex="-1" />\n`;
+        let d: string;
         switch (type) {
             default:
                 ret = "edge '" + head + "' with type: '" +type + "' not found";
                 break;
             case EdgeHead.extend:
-                if (head === "tail") return undefined;
-                path = `<path d={"M 0 0   L " + `+headstr+`.w + " " + `+headstr+`.h/2 + "   L 0 " + `+headstr+`.h + "Z" } `;
+                //if (head === "tail") return undefined;
+                d = `M 0 0   L x y/2   L 0 y   Z`;
+                path = `<path  `;
                 ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.reference:
-                if (head === "tail") return undefined;
-                path = `<path d={"M 0 0   L " + `+headstr+`.w + " " + `+headstr+`.h/2 + "   L 0 " + `+headstr+`.h }`;
+                //if (head === "tail") return undefined;
+                d = `M 0 0   L x y/2   L 0 y`;
+                path = `<path  `;
                 ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.aggregation:
-                if (head === "head") return undefined;
-                path = `<path d={"M 0 " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
-                    `+headstr+`.w + " " +`+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"}`;
+                //if (head === "head") return undefined;
+                d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
+                path = `<path  `;
                 ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.composition:
-                if (head === "head") return undefined;
-                path = `<path d={"M 0 " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " 0 L " +
-                    `+headstr+`.w + " " + `+headstr+`.h/2 + " L " + `+headstr+`.w/2 + " " + `+headstr+`.h + " Z"} `;
+                //if (head === "head") return undefined;
+                d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
+                path = `<path  `;
                 ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
                 /* `<svg width="20" height="20" viewBox="0 0 20 20" style={overflow: "visible"}>
@@ -131,15 +136,42 @@ export class DV {
             case EdgeHead.composition: fill = '#000'; break;
             case EdgeHead.aggregation: fill = '#fff'; break;
         }
+
+        const agglabel = "◇ Aggregation / Composition";
+        const extendlabel = "△ "+EdgeHead.extend;
+        const asslabel = "Λ "+EdgeHead.reference;
+        let headdict: Dictionary<string, string> = {
+            [asslabel]: 'M 0 0   L x y/2   L 0 y',
+            [extendlabel]: 'M 0 0   L x y/2   L 0 y   Z',
+            [agglabel]: 'M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z',
+        };
+        let predefinedPaths: {k:string, v:string}[] = Object.entries(headdict).map((e)=>({k:e[0], v:e[1]}));
+
+        let headPath: string = '', tailPath: string = '';
+        switch (modename) {
+            default: break;
+            case EdgeHead.extend: headPath = extendlabel; break;
+            case EdgeHead.reference: headPath = asslabel; break;
+            case EdgeHead.aggregation: tailPath = agglabel; break;
+            case EdgeHead.composition: tailPath = agglabel; break;
+        }
+        //console.error('ex4 head', {modename, headPath, headdict, val:headdict[headPath], v: name});
+        //console.error('ex4 tail', {modename, tailPath, headdict, val:headdict[tailPath], v: name});
+        headPath = headdict[headPath] || '';
+        tailPath = headdict[tailPath] || '';
+
         let palette: PaletteType = {
             'anchorSize': {type: 'number', value:20, unit:'px'},
             'dashing': {value:dashing || '', type: "text"},
             'stroke-color': U.hexToPalette('#777'),
-            'fill': U.hexToPalette(fill),
             'stroke-width': {value:2, type: 'number', unit: 'px'},
             'stroke-color-hover': U.hexToPalette('#000'),
             'stroke-width-hover': {value:4, type: 'number', unit: 'px'},
+            'head': {type:'path', value:headPath, options: predefinedPaths, x:'edgeHeadSize.x', y:'edgeHeadSize.y'},
+            'tail': {type:'path', value:tailPath, options: predefinedPaths, x:'edgeTailSize.x', y:'edgeTailSize.y'},
+            'fill': U.hexToPalette(fill),
         };
+
         let css = ".edge-anchor{" +
         "\n\tcursor: crosshair;" +
         "\n\tstroke: transparent;" +
@@ -161,7 +193,14 @@ export class DV {
         "\n\theight: 100vh;" +
         "\n}" +
         "\npath{" +
-        "\n\tfill: none" +
+        "\n\tfill: none;" +
+        "\n\tstroke-dasharray: var(--dashing);" +
+        "\n\t&.head{" +
+        "\n\t\td: path(var(--head));" +
+        "\n\t}" +
+        "\n\t&.tail{" +
+        "\n\t\td: path(var(--tail));" +
+        "\n\t}" +
         "\n}" +
         "\npath.edge.full, path.tail, path.head{" +
         "\n\tstroke: var(--stroke-color);" +
@@ -173,9 +212,6 @@ export class DV {
         "\npath.edge.full.hover-activator{" +
         "\n\tstroke-width: var(--stroke-width-hover);" +
         "\n\tstroke: none;" +
-        "\n}" +
-        "\n.dashed{" +
-        "\n\tstroke-dash-array: var(--dashing);" +
         "\n}" +
         "\npath.content{" +
         "\n\tstroke: var(--stroke-color-hover);" +
