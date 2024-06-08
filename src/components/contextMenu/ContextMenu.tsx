@@ -3,11 +3,12 @@ import {connect} from 'react-redux';
 import './style.scss';
 import {SetFieldAction, SetRootFieldAction} from '../../redux/action/action';
 import {
-    DClass,
+    DClass, DNamedElement,
     DState,
     DUser,
     DValue,
     DViewElement,
+    DViewPoint,
     GObject,
     LClass,
     LGraphElement,
@@ -15,7 +16,7 @@ import {
     LPackage,
     LProject,
     LUser,
-    LValue, U,
+    LValue, Pointer, U,
     windoww,
 } from '../../joiner';
 import MemoRec from '../../memorec/api';
@@ -45,21 +46,7 @@ function ContextMenuComponent(props: AllProps) {
     }
 
     const addView = async() => {
-        const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
-        let query = '';
-        switch(data.className) {
-            case 'DClass':
-                query = `context DObject inv: self.instanceof.id = '${data.id}'`;
-                break;
-            case 'DAttribute':
-            case 'DReference':
-                query = `context DValue inv: self.instanceof.id = '${data.id}'`;
-                break;
-            default:
-                query = `context ${data.className} inv: self.id = '${data.id}'`;
-                break;
-        }
-        DViewElement.new(data.name + 'View', jsx, undefined, '', '', '', [], query, undefined);
+        DViewElement.newDefault(data?.__raw as DNamedElement || undefined);
         close();
     }
 

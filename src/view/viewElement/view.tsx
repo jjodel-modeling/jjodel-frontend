@@ -7,6 +7,7 @@ import {
     DGraphElement,
     Dictionary,
     DModelElement,
+    DNamedElement,
     DocString,
     DPointerTargetable,
     DState,
@@ -23,7 +24,7 @@ import {
     Info, LEdgePoint, LModelElement,
     Log,
     LogicContext,
-    LPointerTargetable,
+    LPointerTargetable, LUser,
     LViewPoint,
     MyProxyHandler,
     Pointer,
@@ -37,7 +38,7 @@ import {
     U, ViewEClassMatch,
     windoww
 } from "../../joiner";
-import {EPSize, Pack1, transientProperties } from "../../joiner/classes";
+import {DUser, EPSize, Pack1, transientProperties } from "../../joiner/classes";
 import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsData";
 import DSL from "../../DSL/DSL";
 
@@ -158,6 +159,86 @@ export class DViewElement extends DPointerTargetable {
         // let id = isDefaultView ? 'Pointer_View' + name : undefined;
         return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id)
             .DPointerTargetable().DViewElement(name, jsxString, vp).end(callback);
+    }
+
+    static newDefault(forData?: DNamedElement): DViewElement{
+        const jsx = `<div className={'root'}>
+    <div className={'header'}>
+        <Input
+            placeholder={"?"}
+            autosize={"true"}
+            hidden={true}
+            data={data}
+            field={"name"}
+        />
+    </div>
+    <div className={'body'}>To add information here,<br/> edit the view<br/><i>"{view.name}"</i></div>
+</div>`;
+        const palettes: PaletteType = {
+            "border-color-": {type:"color", value: [{r:187, g:187, b:187, a:1}]},
+            "background-": {type:"color", value: [{r:238, g:242, b:243, a:1}]},
+            "color-": {type:"color", value: [{r:3, g:54, b:86, a:1}]},
+        }
+            const css = `.root {
+    border: 1px solid var(--border-color-1);
+    border-radius: 4px;
+    background-color: var(--background-1);
+    
+    font-family: Verdana, sans-serif;
+    color: var(--color-1);
+    font-size: 11px;
+}
+ 
+.root div.header {
+    text-align: center;
+    border-bottom: 1px solid var(--border-color-1);
+    padding: 0px;
+    margin: 0px;
+}
+ 
+.root div.header {
+    font-size: 5px;
+}
+ 
+.root div.header input:empty {
+    margin-left: 0px;
+}
+.root div.body {
+    text-align: center;
+    font-weight: normal;  
+    height: auto;
+    padding: 5px;
+}
+ `;
+        let query = '';
+        if (forData) switch(forData.className) {
+            case 'DClass':
+                query = `context DObject inv: self.instanceof.id = '${forData.id}'`;
+                break;
+            case 'DAttribute':
+            case 'DReference':
+                query = `context DValue inv: self.instanceof.id = '${forData.id}'`;
+                break;
+            default:
+                query = `context ${forData.className} inv: self.id = '${forData.id}'`;
+                break;
+        }
+        const user = LUser.fromPointer(DUser.current);
+        // const project = user?.project; if(!project) return this;
+        let name: string;
+        if (forData?.name) {
+            name = forData.name + 'View';
+        } else {
+            const vp: LViewPoint = user?.project?.activeViewpoint || LPointerTargetable.fromPointer(Defaults.viewpoints[0]);
+            let names: string[] = vp.subViews.map(v => v && v.name);
+            name = U.increaseEndingNumber( 'view_' + 0, false, false, newName => names.indexOf(newName) >= 0);
+        }
+        return DViewElement.new2(name, jsx, (d)=>{
+            d.css = css;
+            d.palette = palettes;
+            d.css_MUST_RECOMPILE = true;
+            d.oclCondition = query;
+        }, true);
     }
 }
 

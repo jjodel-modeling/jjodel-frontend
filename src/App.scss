@@ -68,7 +68,7 @@ font-weight: 900 !important;
   &.selected-by-me, &:has(.selected-by-me), // for some reason focus does not work?? so this is a fallback but needs to be properly fixed
   &:hover, &:active, &:focus-within, &:focus{
     overflow: visible;
-    z-index: 1000 !important;
+    z-index: 1000;
   }
 }
 [data-nodetype]{
@@ -76,6 +76,9 @@ font-weight: 900 !important;
   select, input{
     background: inherit;
     color: inherit;
+    &:empty{
+      font-style: italic;
+    }
   }
 }
 /*

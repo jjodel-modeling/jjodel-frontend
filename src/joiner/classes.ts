@@ -937,7 +937,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         //thiss.display = 'flex' as any;
         thiss.defaultVSize = defaultVSize || new GraphSize(0, 0, 140.6818084716797, 32.52840805053711);
         thiss.adaptWidth = false;
-        thiss.adaptHeight = false; //'fit-content';
+        thiss.adaptHeight = true; //'fit-content';
 
         thiss.edgeStartOffset = new GraphPoint(50, 50);
         thiss.edgeEndOffset = new GraphPoint(50, 50);

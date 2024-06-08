@@ -25,11 +25,7 @@ function ViewsDataComponent(props: AllProps) {
     const subViewScores = vp.__raw.subViews;
 
     const add = (e: MouseEvent) => {
-        const jsx =`<div className={'root bg-white'}>Hello World!</div>`;
-        let name = 'view_' + 0;
-        let names: string[] = vp.subViews.map(v => v && v.name);
-        name = U.increaseEndingNumber(name, false, false, newName => names.indexOf(newName) >= 0);
-        DViewElement.new(name, jsx);
+        DViewElement.newDefault();
     }
 
     const clone = (e: MouseEvent, v: LViewElement) => {
