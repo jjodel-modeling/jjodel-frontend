@@ -68,7 +68,7 @@
     "serve": "serve -s build",
     "______________________________________deploy________________________________": "",
     "build": "react-app-rewired build",
-    "postbuild": "npm run serve",
+    "postbuild": "echo \"paste the whole /build folder inside the root of branch gitpages, no source code included.\" && npm run serve",
     "dev": "docker-compose -f docker-compose.dev.yml up",
     "________________________________other_build_modes___________________________": "",
     "build_2": "ts-node esbuild.config.ts",
