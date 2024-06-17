@@ -57,7 +57,7 @@ export class UX{
                       parentnodeid: string, index: number, indices: number[], injectOffset?: LGraph): ReactNode {
         let re: ReactElement | null = UX.ReactNodeAsElement(e);
 
-        injectOffset&&console.log("inject offset props 1:", {e, re, injectOffset});
+        // injectOffset&&console.log("inject offset props 1:", {e, re, injectOffset});
         if (!re) return e;
         // @ts-ignore this
         // const parentComponent = this;

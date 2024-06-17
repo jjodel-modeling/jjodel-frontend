@@ -24,7 +24,13 @@ var defaultEdgePointSize: GraphSize = {x:0, y:0, w:5, h:5} as any;
 var defaultVertexSize: GraphSize = {x:0, y:0, w:140.6818084716797, h:32.52840805053711} as any;
 var defaultPackageSize = new GraphSize(0, 0, 400, 500);
 
+const udLevel = 'ret.level = node.graph.state.level ?? 3\n';
+const udLevelG = 'ret.level = node.state.level ?? 3\n';
+const udLevelPkg = udLevelG + 'ret.upperLevel = node.graph.state.level ?? 3\n';
+
 class DefaultViews {
+
+
     static model(vp: Pointer<DViewPoint>): DViewElement {
         const view = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname],
             '', 1, false, true, vp);
@@ -32,8 +38,20 @@ class DefaultViews {
         view.appliableTo = 'Graph';
         view.oclCondition = 'context DModel inv: true';
         view.palette = {'background-': U.hexToPalette('#fff')};
-        view.css = '.root {background-color: var(--background-1);}\n';
-        view.css += '.edges {z-index: 101; position: absolute; height: 0; width: 0; overflow: visible;}';
+        view.css = `
+.root { background-color: var(--background-1); }
+.edges {z-index: 101; position: absolute; height: 0; width: 0; overflow: visible; }
+.detail-level{
+    position: absolute;
+    right: -50px;
+    top: 50px;
+    display: flex;
+    transform: rotate(270deg);
+    &>div{
+        transform: rotate(90deg) translate(0, 100%);
+    }
+}`
+
         view.usageDeclarations = '(ret) => {\n' +
             '// ** preparations and default behaviour here ** //\n' +
             'ret.node = node\n' +
@@ -49,7 +67,9 @@ class DefaultViews {
             'ret.m1Objects = data && !data.isMetamodel ? data.allSubObjects : []\n'+
             'ret.refEdges = (suggestedEdges.reference || []).filter(e => !e.vertexOverlaps)\n'+
             'ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps)\n'+
-        '}';
+            'ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps)\n'+
+            udLevelG +
+            '}';
         return view;
     }
 
@@ -58,9 +78,31 @@ class DefaultViews {
         view.oclCondition = 'context DPackage inv: true';
         view.appliableTo = 'GraphVertex';
         view.palette = {'color-':  U.hexToPalette('#028012'), 'background-':  U.hexToPalette('#fff')};
-        view.css = '.package {background-color: var(--background-0); border-radius: 0.2em; border-left: 0.25em solid var(--color-1);}\n';
-        view.css += '.package-children {height: -webkit-fill-available; width: -webkit-fill-available;}';
+        view.css = `
+.package { background-color: var(--background-0); border-radius: 0.2em; border-left: 0.25em solid var(--color-1); }
+.package-children { height: -webkit-fill-available; width: -webkit-fill-available; }
+.detail-level {
+    position: absolute;
+    right: -50px;
+    top: 50px;
+    display: flex;
+    transform: rotate(270deg);
+    &>div {
+        transform: rotate(90deg) translate(0, 100%);
+    }
+}`
         view.defaultVSize = defaultPackageSize;
+        view.usageDeclarations = '(ret) => {\n' +
+            '// ** preparations and default behaviour here ** //\n' +
+            'ret.data = data\n' +
+            'ret.node = node\n' +
+            'ret.view = view\n' +
+            '// custom preparations:\n' +
+            '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+            '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
+            '// ** declarations here ** //\n' +
+            udLevelPkg +
+            '}';
         return view
     }
 
@@ -74,6 +116,21 @@ class DefaultViews {
         view.css += '.class-name {font-weight: bold; color: var(--color-1);}\n';
         view.css += '.class-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
         view.defaultVSize = defaultVertexSize;
+        view.usageDeclarations = '(ret) => {\n' +
+            '// ** preparations and default behaviour here ** //\n' +
+            'ret.node = node\n' +
+            'ret.view = view\n' +
+            '// custom preparations:\n' +
+            '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+            '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
+            '// ** declarations here ** //\n' +
+            'ret.attributes = data.attributes\n' +
+            'ret.references = data.references\n' +
+            'ret.operations = data.operations\n' +
+            'ret.abstract = data.abstract\n' +
+            'ret.interface = data.interface\n' +
+            udLevel +
+            '}';
         // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
         return view;
     }
@@ -88,6 +145,17 @@ class DefaultViews {
         view.css += '.enumerator-name {font-weight: bold; color: var(--color-1);}\n';
         view.css += '.enumerator-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
         view.defaultVSize = defaultVertexSize;
+        view.usageDeclarations = '(ret) => {\n' +
+            '// ** preparations and default behaviour here ** //\n' +
+            'ret.node = node\n' +
+            'ret.view = view\n' +
+            '// custom preparations:\n' +
+            '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+            '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
+            '// ** declarations here ** //\n' +
+            'ret.literals = data.literals\n' +
+            udLevel +
+            '}';
         return view;
     }
     static attribute(vp: Pointer<DViewPoint>): DViewElement {
@@ -111,6 +179,17 @@ class DefaultViews {
         view.oclCondition = 'context DOperation inv: true';
         view.appliableTo = 'Field';
         view.palette = {};
+        view.usageDeclarations = '(ret) => {\n' +
+            '// ** preparations and default behaviour here ** //\n' +
+            'ret.data = data\n' +
+            'ret.node = node\n' +
+            'ret.view = view\n' +
+            '// custom preparations:\n' +
+            '// data, node, view are dependencies by default. delete them above if you want to remove them.\n' +
+            '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
+            '// ** declarations here ** //\n' +
+            udLevel +
+            '}';
         return view;
     }
 
@@ -128,6 +207,7 @@ class DefaultViews {
         view.oclCondition = 'context DEnumLiteral inv: true';
         view.appliableTo = 'Field';
         view.palette = {};
+        view.css = "display: block;";
         return view;
     }
 
@@ -150,7 +230,7 @@ class DefaultViews {
             '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
             '// ** declarations here ** //\n' +
             'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
-            'ret.features = data.features\n' +
+            udLevel +
         '}';
         return view;
     }
@@ -159,7 +239,12 @@ class DefaultViews {
         const view = DViewElement.new('Value', DV.valueView(), undefined, '', '', '', [DValue.cname], '', 1, false, true, vp);
         view.oclCondition = 'context DValue inv: true';
         view.palette = {};
-        view.css = '.value {padding-right: 6px}';
+        view.css = `.value{
+    padding-right: 6px;
+    max-width: 200px;
+    overflow:hidden;
+    &:hover, &:focus-within{ overflow: visible; }
+}`;
         view.appliableTo = 'Field';
         view.usageDeclarations = '(ret) =>  {\n' +
             '// ** preparations and default behaviour here ** //\n' +
@@ -179,6 +264,23 @@ class DefaultViews {
             [], '', undefined, false, true, vp);
         view.appliableTo = 'EdgePoint';
         view.resizable = false;
+        view.palette = {'color-':  U.hexToPalette('#000'), 'background-': U.hexToPalette('#fff'), 'border-':  U.hexToPalette('#000'), 'hover-scale':{type:'number', unit:'', value:1.3}};
+        view.css = `[hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{
+    transform-origin: center;
+    transform: scale(var(--hover-scale));
+    &>[hoverscale]:hover, &>[hoverscale]:focus-within, &>[hoverscale]:focus{ transform: scale(1); }
+}
+  
+.edgePoint{
+    border-radius: 999px;
+    border: 2px solid var(--border-1);
+    background: var(--background-1);
+    color: var(--color-1);
+    width: 100%;
+    height: 100%;
+    min-height: 15px;
+}
+`
         view.usageDeclarations = "(ret)=>{ // scope contains: data, node, view, constants, state\n" +
             "// ** preparations and default behaviour here ** //\n" +
             "ret.data = data\n" +

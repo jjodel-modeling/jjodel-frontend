@@ -1,10 +1,20 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
 // import {Mixin} from "ts-mixer";
-import type {AbstractConstructor, Constructor, Dictionary, GObject, Pointer, PrimitiveType, Temporary} from "../joiner";
+import type {
+    AbstractConstructor,
+    Constructor,
+    Dictionary,
+    DocString,
+    GObject,
+    Pointer,
+    PrimitiveType,
+    Temporary,
+    LPointerTargetable,
+    DPointerTargetable,
+} from "../joiner";
 import {
     DClassifier,
     DModelElement,
-    DPointerTargetable,
     Json,
     JsType,
     LClassifier,
@@ -1436,6 +1446,28 @@ export class U {
             ret[(v as clist).type][k] = v;
         }
         return ret;
+    }
+
+    static mergeNamedArray<T extends GObject>(ret: T[] & Dictionary<DocString<"$name">, T>, classes: T[] & Dictionary<DocString<"$name">, T>) {
+        for (let key of Object.getOwnPropertyNames(classes)) { // ownPropertyNames skips "first, last, separator" created by extending array prototype
+            if (key === "length") continue;
+            if (!isNaN(+key)) ret.push(classes[key]);
+            // not else, if a class is named like a number it can be accessed by name until is overwrite by index being reached.
+            if (!ret[key]) ret[key] = classes[key];
+        }
+    }
+    static toNamedArray<D extends DPointerTargetable, L extends LPointerTargetable>(larr:L[], darr?:D[]): L[] & Dictionary<DocString<"$name">, L>{
+        if (!darr || darr.length !== larr.length) darr = larr.map(l=>l.__raw as D);
+
+        for (let i = 0; i < larr.length; i++) if (darr[i] && larr[i]) (larr as GObject)["$"+(darr[i] as GObject).name] = larr[i];
+        /*for (let index of Object.getOwnPropertyNames(larr)) { // ownPropertyNames skips "first, last, separator" created by extending array prototype
+            if (index === "length") continue;
+            let d = darr[index as any as number];
+            let l = larr[index as any as number];
+            if (!d || !l) continue;
+            (larr as any)["$" + (d as any).name] = l;
+        }*/
+        return larr as any;
     }
 }
 export class DDate{

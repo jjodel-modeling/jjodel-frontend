@@ -272,7 +272,6 @@ function makeDefaultZoomView(vp: Pointer<DViewPoint>): void{
 </div>`,
             'Package':
 `<div className={'root package'}>
-
     <div className={'package-children'}>
         {upperLevel >= 1 ? [
             <label style={{position:'absolute', right:'-50px', top:'50px', display: 'flex', transform: 'rotate(270deg)'}}>
@@ -534,7 +533,7 @@ node.state = {error_lowerbound: err};\n
 
 
     let edgeViews: DViewElement[] = [];
-    let size0: GraphPoint = new GraphPoint(0, 0), size1: GraphPoint = new GraphPoint(20, 20), size2: GraphPoint = new GraphPoint(20, 20);
+    let size0: GraphPoint = new GraphPoint(0, 0), size1: GraphPoint = new GraphPoint(12, 12), size2: GraphPoint = new GraphPoint(18, 12);
 
 
     function makeEdgeView(name: string, type: EdgeHead, headSize: GraphPoint | undefined, tailSize: GraphPoint | undefined, dashing: boolean): DViewElement{

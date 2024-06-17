@@ -458,7 +458,15 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         END()
         return true; }
 
-    get_html(context: Context): this["html"] { return this.get_component(context).html.current || undefined; }
+    get_html(c: Context): this["html"] {
+        let component = this.get_component(c);
+        let html = component.html.current;
+        if (html) return html;
+        html = $('[nodeid="' + c.data.id + '"]')[0];
+        if (!html) return undefined;
+        (component.html as any).current = html;
+        return html;
+    }
     // get_html(context: Context): this["html"] { return $("[node-id='" + context.data.id + "']")[0]; }
     set_html(val: this["htmlSize"], context: Context): boolean { return this.cannotSet("set_html(). html is generated through jsx. edit the view instead."); }
 
@@ -543,7 +551,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     }
 
     get_model(context: Context): this["model"] {
-        const modelElementId = $('[id="' + context.data.id + '"]')[0].dataset.dataid;
+        const modelElementId = context.data.model; //$('[id="' + context.data.id + '"]')[0].dataset.dataid;
         const lModelElement: LModelElement = LPointerTargetable.from(modelElementId as string);
         return lModelElement;
     }

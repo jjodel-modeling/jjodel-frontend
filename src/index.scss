@@ -3,9 +3,18 @@ img { -webkit-user-drag: none; }
 body {
     max-width: 100vw;
     max-height: 100vh;
+    width: 100vw;
+    height: 100vh;
+    background-color: whitesmoke;
     overflow: hidden;
     font-family: Lato, 'Helvetica Neue', Arial,Helvetica, sans-serif !important;
     font-size: small;
+    #root{
+        max-width: 100vw;
+        max-height: 100vh;
+        width: 100vw;
+        height: 100vh;
+    }
 }
 
 ::-webkit-scrollbar {

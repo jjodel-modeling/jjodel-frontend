@@ -168,7 +168,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!ret.view) { // if view is not explicitly set or the assigned view is not found, match a new one.
             if (!scores) scores = getScores(ret, ownProps);
             ret.view = scores.mainView = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
-            Log.w(explicitView, "Requested main view "+ownProps.view+" not found. Another view got assigned: " + ret.view.__raw.name, {requested: ownProps.view, props: ownProps, state: ret});
+            Log.w(explicitView, "Requested main view "+ownProps.view+" not found. Another view got assigned: " + ret.view?.__raw.name, {requested: ownProps.view, props: ownProps, state: ret});
         }
         Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret, scores: (ret as any).viewScores});
 
@@ -443,7 +443,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         this.countRenders = 0;
         this.id = GraphElementComponent.maxid++;
         GraphElementComponent.all[this.id] = this;
-        GraphElementComponent.map[props.nodeid as Pointer<DGraphElement>] = this;
+        GraphElementComponent.map[props.nodeid as Pointer<DGraphElement>] = this; // props might change at runtime, setting in constructor is not enough
         this.html = React.createRef();
         let functionsToBind = [this.onClick,
             this.onLeave, this.onEnter,
@@ -830,6 +830,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     public render(nodeType:string = '', styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
+        GraphElementComponent.map[this.props.nodeid as Pointer<DGraphElement>] = this; // props might change at runtime, setting in constructor is not enough
         if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
             return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
         }

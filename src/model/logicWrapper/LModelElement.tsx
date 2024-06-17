@@ -1317,7 +1317,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         // this.get_allSubPackages(context, s).flatMap(p => (p.classes || [])); this was losing the naming $keys!
         for (let a of arr) {
             let classarr: LClass[] & Dictionary<DocString<"$name">, LClass> = (a.classes || []) as any;
-            for (let key of Object.getOwnPropertyNames(classarr)) { if (key !== "length") ret[key] = classarr[key]; }
+            U.mergeNamedArray(ret, classarr);
         }
         return ret; }
 
@@ -1329,28 +1329,31 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         // this.get_allSubPackages(context, s).flatMap(p => (p.enums || [])); this was losing the naming $keys!
         for (let a of arr) {
             let enumarr: (LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>) = (a.enumerators || []) as any;
-            for (let key of Object.getOwnPropertyNames(enumarr)) { if (key !== "length") ret[key] = enumarr[key]; }
+            U.mergeNamedArray(ret, enumarr);
         }
         return ret;
     }
 
-    private get_allSubPackages(context: Context, state?: DState): LPackage[] {
+    protected get_allSubPackages(c: Context, state?: DState): this["allSubPackages"] {
         // return context.data.packages.map(p => LPointerTargetable.from(p));
         state = state || store.getState();
-        let tocheck: Pointer<DPackage>[] = context.data.subpackages || [];
-        let checked: Dictionary<Pointer, true> = {};
-        checked[context.data.id] = true;
+        let tocheck: Pointer<DPackage>[] = c.data.subpackages || [];
+        let checked: Dictionary<Pointer, DPackage> = {};
+        checked[c.data.id] = c.data;
         while (tocheck.length) {
             let newtocheck: Pointer<DPackage>[] = [];
             for (let ptr of tocheck) {
                 if (checked[ptr]) throw new Error("loop in packages containing themselves");
-                checked[ptr] = true;
                 let dpackage: DPackage = DPointerTargetable.from(ptr, state);
+                checked[ptr] = dpackage;
                 U.arrayMergeInPlace(newtocheck, dpackage?.subpackages);
             }
             tocheck = newtocheck;
         }
-        return LPointerTargetable.from(Object.keys(checked), state);
+        let darr: DPackage[] = Object.values(checked);
+        let larr: LPackage[] & Dictionary<DocString<"$name">, LPackage> = LPointerTargetable.fromArr(darr, state);
+        U.toNamedArray(larr, darr);
+        return larr;
     }
 
     protected get_children_idlist(context: Context): Pointer<DAnnotation | DPackage | DClassifier, 1, 'N'> {
@@ -3742,6 +3745,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         let ret: this["suggestedEdges"];
         if (context.data.isMetamodel) ret = this.impl_get_suggestedEdgesM2(context);
         else ret = this.impl_get_suggestedEdgesM1(context);
+
         return ret;
     }
 
@@ -3762,13 +3766,13 @@ instanceof === undefined or missing  --> auto-detect and assign the type
                     for (let v of (dval.values || [])) {
                         if (!Pointers.isPointer(v, state)) continue inner;
                         let snode = lval.node;
-                        if (!snode) continue outer;
+                        if (!snode || !snode.html) continue outer;
                         if (v === dval.id) continue inner; // pointing to itself
                         let ltarget: undefined | LEnumLiteral | LObject = LPointerTargetable.fromPointer(v, state);
                         if (!ltarget) continue;
                         if (ltarget.className !== DObject.cname) continue inner;
                         let enode = ltarget.node;
-                        if (!enode) continue inner;
+                        if (!enode || !enode.html) continue inner;
                         if (!map[dval.id]) map[dval.id] = [];
                         map[dval.id].push(new EdgeStarter(lval, ltarget, snode, enode, undefined));
                     }
@@ -3783,12 +3787,13 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         let classes: LClass[] = this.get_classes(context, s);
         let references: LReference[] = Debug.lightMode ? [] : classes.flatMap(c=>c.references);
         ret.reference = references.map( (r) => {
-            let sn = r.node;
-            if (!sn) return undefined;
+            let sn = r?.node;
+            console.log('ex51', {sc:sn?.component?.id, s:r?.name, e:r?.type?.name, sn, sh:sn?.html, en:r?.type?.node, eh:r?.type?.node?.html});
+            if (!sn || !sn.html) return undefined;
             let end = r.type;
-            if (end.id === r.id) return undefined;
-            let en = end.node;
-            if (!en) return undefined;
+            // if (end.id === r.id) return undefined;
+            let en = end?.node;
+            if (!en || !en.html) return undefined;
             return new EdgeStarter(r, end, sn, en);
         }).filter<EdgeStarter>(function(e):e is EdgeStarter{ return !!e});
         // ret.extend = classes.flatMap( c => EdgeStarter.oneToMany(c, c.extends));
@@ -3800,14 +3805,15 @@ instanceof === undefined or missing  --> auto-detect and assign the type
             if (rootCall) { alreadyAdded = {}; alreadyAdded[start.id] = start; } // end classes can get added twice if from a different starting subclass path (in classes.flatMap -> each one should have his own dict).
             // ret.start = start;
             let sn = start.node;
-            if (!sn) return [];
+            if (!sn || !sn.html) return [];
             //  let end: LClass[] = start.extends;
             for (let e of end) {
+                if (!e) continue;
                 let eid = e.id;
                 if (alreadyAdded[eid]) continue; // without this there might be duplicates if A extends B1, B2;  and both B1 & B2 extends C
                 alreadyAdded[eid] = e;
                 let en = e.node;
-                if (en) { ret.push({start, end:e, sn, en}); continue; } // continue;
+                if (en && en.html) { ret.push({start, end:e, sn, en}); continue; }
                 let secondTierExtends = e.extends;
                 // for (let eend of secondTierExtends) {
                 ret.push(...SkipExtendNodeHidden(start, secondTierExtends, false));
@@ -3826,19 +3832,23 @@ instanceof === undefined or missing  --> auto-detect and assign the type
             let src: LPackage | null = d.src.package;
             if (!src) continue;
             let srcnode: LGraphElement | undefined = src.node;
-            if (!srcnode) continue;
+            if (!srcnode || !srcnode.html) continue;
             let ends: Dictionary<Pointer, {end:LPackage, en:LGraphElement}> = {};
             for (let end of d.ends) {
                 let ep: LPackage|null = end.package;
                 if (!ep) continue;
                 let epnode: LGraphElement | undefined = ep.node;
-                if (!epnode) continue;
+                if (!epnode || !epnode.html) continue;
                 ends[ep.id] = {end:ep, en:epnode};
             }
             pkgdependencies.push( {src, sn:srcnode, ends});
         }
-        ret.packageDependencies = pkgdependencies.flatMap( pd => ( Object.values(pd.ends).map((end) => new EdgeStarter(pd.src, end.end, pd.sn, end.en)))); // todo: check
-        return ret; }
+        // todo: check
+        ret.packageDependencies = pkgdependencies.flatMap(
+            (pd) => ( Object.values(pd.ends).map((end) => new EdgeStarter(pd.src, end.end, pd.sn, end.en)))
+        );
+        return ret;
+    }
 
 
     protected get_models(context: Context): LModel[] { // todo: should this not be data.instances instead?
@@ -3942,7 +3952,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         const pkgs: LPackage[] = this.get_packages(context);  // it's ok not having deep packages
         for (let p of pkgs) {
             const classes: LClass[] & Dictionary<DocString<"$name">> = p.allSubClasses || [];
-            for (let key of Object.getOwnPropertyNames(classes)) { if (key !== "length") ret[key] = classes[key]; }
+            U.mergeNamedArray(ret, classes);
         }
         return ret;
     }
@@ -3964,7 +3974,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         const pkgs: LPackage[] = this.get_packages(context);  // it's ok not having deep packages
         for (let p of pkgs) {
             const enums: LEnumerator[] & Dictionary<DocString<"$name">> = p.allSubEnums || [];
-            for (let key of Object.getOwnPropertyNames(enums)) { if (key !== "length") ret[key] = enums[key]; }
+            U.mergeNamedArray(ret, enums);
         }
         return ret;
     }
@@ -3973,44 +3983,55 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         if (!context.data.isMetamodel) { return context.data.instanceof ? (this.get_instanceof(context) as LModel).allSubPackages : []; }
         state = state || store.getState();
         let tocheck: Pointer<DPackage>[] = context.data.packages || [];
-        let checked: Dictionary<Pointer, true> = {};
+        let checked: Dictionary<Pointer, DPackage> = {};
         while (tocheck.length) {
             let newtocheck: Pointer<DPackage>[] = [];
             for (let ptr of tocheck) {
                 if (checked[ptr]) throw new Error("loop in packages containing themselves");
-                checked[ptr] = true;
                 let dpackage: DPackage = DPointerTargetable.from(ptr, state);
+                checked[ptr] = dpackage;
                 U.arrayMergeInPlace(newtocheck, dpackage?.subpackages);
             }
             tocheck = newtocheck;
         }
-        return LPointerTargetable.from(Object.keys(checked), state);
+        let darr: DPackage[] = Object.values(checked);
+        let larr: LPackage[] & Dictionary<DocString<"$name">, LPackage> = LPointerTargetable.fromArr(darr, state);
+        U.toNamedArray(larr, darr);
+        return larr;
     }
 
     protected get_allSubValues(context: Context, state?: DState): this["allSubValues"] {
         state = state || store.getState();
-        return (Selectors.getAll(DValue, undefined, state, true, true) as LValue[])
-            .filter( (o: LValue) => o.model.id === context.data.id);
+        let darr = Selectors.getAll(DValue, undefined, state, true, false) as DValue[];
+        let larr = [];
+        for (let i = 0; i < larr.length; i++){
+            let l = LPointerTargetable.fromD(darr[i]);
+            if (!l || l.model.id !== context.data.id) {
+                darr[i] = undefined as any;
+                continue;
+            }
+            larr.push(l);
+        }
+        darr = darr.filter(d=>!!d);
+        U.toNamedArray(larr, darr);
+        return larr;
     }
 
     protected get_allSubObjects(context: Context, state?: DState): this["allSubObjects"] {
         state = state || store.getState();
-        return (Selectors.getAll(DObject, undefined, state, true, true) as LObject[])
-            .filter( (o: LObject) => o.model.id === context.data.id);
-        /*
-        let tocheck: Pointer<DObject>[] = context.data.objects || [];
-        let checked: Dictionary<DObject, true> = {};
-        while (tocheck.length) {
-            let newtocheck: Pointer<DObject>[] = [];
-            for (let ptr of tocheck) {
-                if (checked[ptr]) throw new Error("loop in packages containing themselves");
-                checked[ptr] = true;
-                let dpackage: DObject = DPointerTargetable.from(ptr, state);
-                U.arrayMergeInPlace(newtocheck, dpackage?.values.... it's a mess, filter subobjects here);
+        let darr = Selectors.getAll(DObject, undefined, state, true, false) as DObject[];
+        let larr = [];
+        for (let i = 0; i < larr.length; i++){
+            let l = LPointerTargetable.fromD(darr[i]);
+            if (!l || l.model.id !== context.data.id) {
+                darr[i] = undefined as any;
+                continue;
             }
-            tocheck = newtocheck;
+            larr.push(l);
         }
-        return LPointerTargetable.from(Object.keys(checked), state);*/
+        darr = darr.filter(d=>!!d);
+        U.toNamedArray(larr, darr);
+        return larr;
     }
 
     public getClassByNameSpace(namespacedclass: string): LClass | undefined { return this.cannotCall("getClassByNameSpace"); }

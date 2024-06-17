@@ -58,7 +58,7 @@ export class DV {
 }</div>
 `);}
     static edgePointView(): string { return beautify((
-`<div className={"edgePoint"} tabIndex="-1" hoverscale={"hardcoded in css"} style={{borderRadius:"999px", border: "2px solid black", background:"white", width:"100%", height:"100%"}}>
+`<div className={"edgePoint"} tabIndex="-1">
     {decorators}
 </div>`
 ))}
@@ -117,24 +117,13 @@ export class DV {
     // about label rotation in .edge > foreignObect > div (label)
     // first transform is h-center. second is rotate, third adds [0, 50%] of 50% vertical offset AFTER rotation to take label out of edge. fourth is to add a margin.
     static edgeView(modename: EdgeHead, headSize: GraphPoint, tailSize: GraphPoint, dashing: string | undefined, vp: Pointer<DViewPoint>, name: string): DViewElement {
-
-        let edgeConstants: string = "(ret)=>{\n" +
-            "// ** preparations and default behaviour here ** //\n" +
-            "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
-            "// ** declarations here ** //\n" +
-            "   ret.strokeColor = 'gray'\n"+
-            "   ret.strokeWidth = '2px'\n"+
-            "   ret.strokeColorHover = 'black'\n"+
-            "   ret.strokeColorLong = 'gray'\n"+
-            "   ret.strokeLengthLimit = 300\n"+
-            "   ret.strokeWidthHover = '4px'\n"+
-            "}";
-
         let fill: string;
         switch (modename){
+            case EdgeHead.reference:
             default: fill = '#fff0'; break;
             case EdgeHead.composition: fill = '#000'; break;
-            case EdgeHead.aggregation: fill = '#fff'; break;
+            case EdgeHead.aggregation:
+            case EdgeHead.extend: fill = '#fff'; break;
         }
 
         const agglabel = "◇ Aggregation / Composition";
@@ -164,9 +153,9 @@ export class DV {
             'anchorSize': {type: 'number', value:20, unit:'px'},
             'dashing': {value:dashing || '', type: "text"},
             'stroke-color': U.hexToPalette('#777'),
-            'stroke-width': {value:2, type: 'number', unit: 'px'},
+            'stroke-width': {value:1, type: 'number', unit: 'px'},
             'stroke-color-hover': U.hexToPalette('#000'),
-            'stroke-width-hover': {value:4, type: 'number', unit: 'px'},
+            'stroke-width-hover': {value:3, type: 'number', unit: 'px'},
             'head': {type:'path', value:headPath, options: predefinedPaths, x:'edgeHeadSize.x', y:'edgeHeadSize.y'},
             'tail': {type:'path', value:tailPath, options: predefinedPaths, x:'edgeTailSize.x', y:'edgeTailSize.y'},
             'fill': U.hexToPalette(fill),
@@ -270,7 +259,7 @@ export class DV {
             </svg>
             { /* interactively added edgepoints */ }
             {
-                edge.midPoints.map( m => <EdgePoint data={edge.father.model.id} initialSize={m} key={m.id} view={"Pointer_ViewEdgePoint"} /> )
+                edge.midPoints.map( m => <EdgePoint data={edge.father.model.id} initialSize={m} key={m.id} view={"EdgePoint"} /> )
             }
             {decorators}
         </div>`
@@ -359,15 +348,20 @@ class DefaultView {
     public static model(): string { return (
 `<div className={'root'}>
     {!data && "Model data missing."}
+    <label className={"detail-level"}>
+        <input onChange={(e)=>{node.state = {level:+e.target.value}}} min="0" max="3" type="range" step="1" value={level}/>
+        <div>Detail level:{level}</div>
+    </label>
     <div className={'edges'}>
         {[
-            refEdges.map(se => <Edge anchorStart={1} anchorEnd={2} start={se.start.father.node} end={se.end.node} view={'Pointer_ViewEdge' + ( se.start.containment && 'Composition' || 'Association')} key={'REF_' + se.start.node.id + '~' + se.end.node.id} />), 
-            extendEdges.map(se => <Edge start={se.start} end={se.end} view={'Pointer_ViewEdgeInheritance'} key={'EXT_' + se.start.node.id + '~' + se.end.node.id} />)
+            refEdges.map(se => <Edge anchorStart={0} anchorEnd={0} key={'REF_' + se.start.node.id + '~' + se.end.node.id}
+            start={se.start.father.node} end={se.end.node} view={'Edge' + ( se.start.containment && 'Composition' || 'Association')} />),
+            extendEdges.map(se => <Edge start={se.start} end={se.end} view={'EdgeInheritance'} key={'EXT_' + se.start.node.id + '~' + se.end.node.id} />)
         ]}
     </div>
     {otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
-    {firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
-    {m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object} />)}
+    {level >= 1 && firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
+    {level >= 1 && m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object} />)}
     {decorators}
 </div>`
 );}
@@ -383,7 +377,20 @@ class DefaultView {
     public static package(): string { return (
 `<div className={'root package'}>
     <div className={'package-children'}>
-        {data.children.map(c => <DefaultNode key={c.id} data={c} />) }
+        {upperLevel >= 1 ? [
+            <label className={"detail-level"}>
+                <input onChange={(e)=>{node.state = {level:+e.target.value}}} min="0" max="3" type="range" step="1" value={level}/>
+                <div>Detail level:{level}</div>
+            </label>,
+            data.children.map(c => <DefaultNode key={c.id} data={c} />)
+        ] :
+        [
+            <div className={""}><b>Uri:</b><span className={"ms-1"}>{data.uri}</span></div>,
+            <div className={""}>{[
+                data.classes.length ? data.classes.length + " classes" : '',
+                data.enumerators.length ? data.enumerators.length + " enumerators" : ''
+               ].filter(v=>!!v).join(',')}</div>
+        ]}
     </div>
     {decorators}
 </div>`
@@ -400,12 +407,26 @@ class DefaultView {
 
     public static class(): string { return (
 `<div className={'root class'} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
-    <Input jsxLabel={<b className={'class-name'}>Class:</b>} data={data} field={'name'} hidden={true} autosize={true} />
+    <Input data={data} field={'name'} hidden={true} autosize={true} 
+           jsxLabel={<b className={'class-name'}>{interface ? "Interface" : abstract ? "Abstract" : "Class"}:</b>} />
     <hr/>
     <div className={'class-children'}>
-        {data.attributes.map(c => <DefaultNode key={c.id} data={c} />)}
-        {data.references.map(c => <DefaultNode key={c.id} data={c} />)}
-        {data.operations.map(c => <DefaultNode key={c.id} data={c} />)}
+        {level >= 2 && [
+            attributes.map(c => <DefaultNode key={c.id} data={c} />),
+            references.map(c => <DefaultNode key={c.id} data={c} />),
+            operations.map(c => <DefaultNode key={c.id} data={c} />)
+          ]
+         || [/*
+         <div className={""}><b>isInterface:</b><span className={"ms-1"}>{''+data.interface}</span></div>,
+         <div className={""}><b>isAbstract:</b><span className={"ms-1"}>{''+data.abstract}</span></div>,
+         <div className={""}><b>Instances:</b><span className={"ms-1"}>{data.instances.length}</span></div>,*/
+         <div className={""}>{[
+             attributes.length ? attributes.length + " attributes" : '',
+             references.length ? references.length + " references" : '',
+             operations.length ? operations.length + " operations" : ''
+            ].filter(v=>!!v).join(',')}</div>
+         ]
+        }
     </div>
     {decorators}
 </div>`
@@ -416,7 +437,8 @@ class DefaultView {
     <Input jsxLabel={<b className={'enumerator-name'}>Enum:</b>} data={data} field={'name'} hidden={true} autosize={true} />
     <hr />
     <div className={'enumerator-children'}>
-        {data.children.map(c => <DefaultNode key={c.id} data={c}/>)}
+        {level >= 2 && literals.map(c => <DefaultNode key={c.id} data={c}/>)
+          || <div className={""}>{literals.length} literals</div>}
     </div>
     {decorators}
 </div>`
@@ -441,7 +463,7 @@ class DefaultView {
     <Select className={'p-1 d-flex'} data={data} field={'type'} label={data.name + ' =>'} />
     {data.exceptions.length ? " throws " + data.exceptions.join(", ") : ''}
     <div className={"parameters"}>{
-        data.parameters.map(p => <DefaultNode data={p} key={p.id} />)
+        level >= 3 && data.parameters.map(p => <DefaultNode data={p} key={p.id} />)
     }</div>
     {decorators}
 </div>`
@@ -491,7 +513,7 @@ public static parameter(): string { return (
             data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
     <div className={'object-children'}>
-        {features.map(f => <DefaultNode key={f.id} data={f} />)}
+        {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
     </div>
     {decorators}
 </div>`
