@@ -35,10 +35,13 @@ function ViewsDataComponent(props: AllProps) {
         });
     }
 
-    const destroy = (e: MouseEvent, view: LViewElement) => {
+    const destroy = (e: MouseEvent, view: LViewElement, candelete: boolean) => {
         e.stopPropagation();
-        SetFieldAction.new(view.viewpoint.id, 'subViews', view.id as any, '-=', false);
-        view.delete();
+        if (!candelete) return;
+        TRANSACTION(()=>{
+            SetFieldAction.new(view.viewpoint.id, 'subViews', view.id as any, '-=', false);
+            view.delete();
+        })
     }
 
     const state: DState = store.getState();
@@ -54,6 +57,7 @@ function ViewsDataComponent(props: AllProps) {
             let subview: LViewElement = LPointerTargetable.fromPointer(subviewid, state);
             // todo: add a "header" here with subview | subview piority boost or and turn the "subview" section of a vp/view into this stuff instead of separate tab
             if (!subview) return;
+            let candelete = false && Defaults.check(subview.id); // todo: credo esploda perchè il click di delete triggera anche l'apertura della tab con la vista ora cancellata.
             // @ts-ignore
             return <div key={subviewid} tabIndex={i} onClick={e => props.setSelectedView(subview)} className={'view-list-elem d-flex p-1 mt-1 border round mx-1 hoverable'}>
                 <label style={{cursor: 'pointer'}} className={'my-auto'}>{subview.name}</label>
@@ -70,9 +74,9 @@ function ViewsDataComponent(props: AllProps) {
                 <button className={'btn btn-success ms-1'} onClick={e => { clone(e, subview); e.stopPropagation(); }}>
                     <i className={'p-1 bi bi-clipboard2-fill'} />
                 </button>
-                <button onClick={e => destroy(e, subview)} className={'btn btn-danger ms-1'} disabled={Defaults.check(subview.id)}>
-                    <i className={'p-1 bi bi-trash3-fill'} />
-                </button>
+                {<button onClick={e => destroy(e, subview, candelete)} className={'btn btn-danger ms-1'} disabled={!candelete}>
+                    <i className={'p-1 bi bi-trash3-fill'}/>
+                </button>}
             </div>
         })}
     </div>);

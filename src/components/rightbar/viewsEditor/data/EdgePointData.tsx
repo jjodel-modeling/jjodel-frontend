@@ -1,4 +1,4 @@
-import React, {Dispatch} from 'react';
+import React, {Dispatch, ReactNode} from 'react';
 import {
     DState,
     DViewElement,
@@ -17,7 +17,7 @@ function EdgePointDataComponent(props: AllProps) {
     const readOnly = props.readonly;
     let l: GObject & LViewElement = LViewElement.singleton as any;
     let prefixLength = '__info_of__'.length;
-    let rows: JSX.Element[] = [];
+    let rows: ReactNode[] = [];
     for (let fullKey in l) {
         if (fullKey[0] !== '_' || fullKey.indexOf('__info_of__') !== 0) continue;
         let info: Info = l[fullKey];

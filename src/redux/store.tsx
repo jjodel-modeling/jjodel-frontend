@@ -487,7 +487,7 @@ let err = undefined;
 //if (name.indexOf(" ") >= 0) err = "" + type + " names cannot contain white spaces."; else
 if (name.length === 0 && type !== "shapeless") err = type + "es must be named.";
 else if (!name[0].match(/[A-Za-z_$]/)) err = type + " names must begin with an alphabet letter or $_ symbols.";
-else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]+$/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
+else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]*$/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
 node.state = {error_naming:err};
 `;}, false, validationVP, 'Pointer_ViewCheckName' );
 

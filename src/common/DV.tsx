@@ -13,7 +13,7 @@ import {
     ShortAttribETypes as SAType,
     U
 } from '../joiner';
-import React from "react";
+import React, {ReactNode} from "react";
 import {PaletteType} from "../view/viewElement/view";
 // const beautify = require('js-beautify').html; // BEWARE: this adds some newline that might be breaking and introduce syntax errors in our JSX parser
 const beautify = (s: string) => s;
@@ -39,7 +39,11 @@ export class DV {
     public static objectView(): string { return beautify(DefaultView.object()); }
     public static valueView(): string { return beautify(DefaultView.value()); }
     public static defaultPackage(): string { return beautify(DefaultView.defaultPackage()); }
-    public static errorView(publicmsg: string | JSX.Element, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement): React.ReactNode {
+    public static error_raw(...a: Parameters<(typeof DefaultView)["error"]>): React.ReactNode {
+        return DefaultView.error(...a);
+    }
+
+    public static errorView(publicmsg: ReactNode, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
         console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error(visibleMessage, errortype, data, node, v); }
@@ -385,8 +389,8 @@ class DefaultView {
             data.children.map(c => <DefaultNode key={c.id} data={c} />)
         ] :
         [
-            <div className={""}><b>Uri:</b><span className={"ms-1"}>{data.uri}</span></div>,
-            <div className={""}>{[
+            <div className={"summary"}><b>URI:</b><span className={"ms-1"}>{data.uri}</span></div>,
+            <div className={"summary"}>{[
                 data.classes.length ? data.classes.length + " classes" : '',
                 data.enumerators.length ? data.enumerators.length + " enumerators" : ''
                ].filter(v=>!!v).join(',')}</div>
@@ -407,8 +411,10 @@ class DefaultView {
 
     public static class(): string { return (
 `<div className={'root class'} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
-    <Input data={data} field={'name'} hidden={true} autosize={true} 
-           jsxLabel={<b className={'class-name'}>{interface ? "Interface" : abstract ? "Abstract" : "Class"}:</b>} />
+    <div className={(abstract ? 'abstract' : '')}>
+        <Input data={data} field={'name'} hidden={true} autosize={true} 
+            jsxLabel={<b className={'class-name'}>{interface ? "Interface" : "Class"}:</b>} />
+    </div>
     <hr/>
     <div className={'class-children'}>
         {level >= 2 && [
@@ -420,10 +426,11 @@ class DefaultView {
          <div className={""}><b>isInterface:</b><span className={"ms-1"}>{''+data.interface}</span></div>,
          <div className={""}><b>isAbstract:</b><span className={"ms-1"}>{''+data.abstract}</span></div>,
          <div className={""}><b>Instances:</b><span className={"ms-1"}>{data.instances.length}</span></div>,*/
-         <div className={""}>{[
+         <div className={"summary"}>{[
              attributes.length ? attributes.length + " attributes" : '',
              references.length ? references.length + " references" : '',
-             operations.length ? operations.length + " operations" : ''
+             operations.length ? operations.length + " operations" : '',
+             !(attributes.length + references.length + operations.length) ? '- empty -' : ''
             ].filter(v=>!!v).join(',')}</div>
          ]
         }
@@ -438,7 +445,7 @@ class DefaultView {
     <hr />
     <div className={'enumerator-children'}>
         {level >= 2 && literals.map(c => <DefaultNode key={c.id} data={c}/>)
-          || <div className={""}>{literals.length} literals</div>}
+          || <div className={"summary"}>{literals.length} literals</div>}
     </div>
     {decorators}
 </div>`
@@ -523,7 +530,7 @@ public static parameter(): string { return (
 `<div className={'root d-flex value'}>
      {instanceofname && <label className={'d-block ms-1'}>{instanceofname}</label>}
      {!instanceofname && <Input asLabel={true} data={data} field={'name'} hidden={true} autosize={true} />}
-    <label className={'d-block m-auto'} style={{color: constants[typeString] || 'gray', maxWidth:'100px'}}>
+    <label className={'d-block m-auto values_str'} style={{color: constants[typeString] || 'gray'}}>
         : {valuesString}
     </label>
     {decorators}
@@ -532,7 +539,9 @@ public static parameter(): string { return (
 
 
 
-    public static error(msg: undefined | string | JSX.Element, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement) {
+    public static error(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME",
+                        data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement): React.ReactNode {
+
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
         if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
@@ -549,7 +558,7 @@ public static parameter(): string { return (
             </div>
         </div>;
     }
-    public static error_string(msg: undefined | string | JSX.Element, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement) {
+    public static error_string(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement) {
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
         if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);

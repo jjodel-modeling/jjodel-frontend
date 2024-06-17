@@ -42,7 +42,82 @@ import {DUser, EPSize, Pack1, transientProperties } from "../../joiner/classes";
 import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsData";
 import DSL from "../../DSL/DSL";
 
+let units = {'Local-font relative':{
+        'cap':     'cap - (Cap height) the nominal height of capital letters of the element\'s font.',
+        'ch':      'ch - Average character advance of a narrow glyph in the element\'s font, as represented by the "0" (ZERO, U+0030) glyph.',
+        'em':      'em - Font size of the element\'s font.',
+        'ex':      'ex - x-height of the element\'s font.',
+        'ic':      'ic - Average character advance of a full-width glyph in the element\'s font, as represented by the "水" (CJK water ideograph, U+6C34) glyph.',
+        'lh':      'lh - Line height of the element.',
+    },
 
+    'Root-font relative':{
+        'rcap':    'rcap - Cap height (the nominal height of capital letters) of the root element\'s font.',
+        'rch':     'rch - Average character advance of a narrow glyph in the root element\'s font, as represented by the "0" (ZERO, U+0030) glyph.',
+        'rem':     'rem - Font size of the root element\'s font.',
+        'rex':     'rex - x-height of the root element\'s font.',
+        'ric':     'ric - Average character advance of a full-width glyph in the root element\'s font, as represented by the "水" (CJK water ideograph, U+6C34) glyph.',
+        'rlh':     'rlh - Line height of the root element.',
+    },
+
+    'Relative':{
+        'dvh':      'dvh - 1% of the dynamic viewport\'s height.',
+        'dvw':      'dvw - 1% of the dynamic viewport\'s width.',
+        'lvh':      'lvh - 1% of the large viewport\'s height.',
+        'lvw':      'lvw - 1% of the large viewport\'s width.',
+        'svh':      'svh - 1% of the small viewport\'s height.',
+        'svw':      'svw - 1% of the small viewport\'s width.',
+        'vb':       'vb - 1% of viewport\'s size in the root element\'s block axis.',
+        'vh':       'vh - 1% of viewport\'s height.',
+        'vi':       'vi - 1% of viewport\'s size in the root element\'s inline axis.',
+        'vmax':     'vmax - 1% of viewport\'s larger dimension.',
+        'vmin':     'vmin - 1% of viewport\'s smaller dimension.',
+        'vw':       'vw - 1% of viewport\'s width.',
+        'fr':       'fr - (Flex) Represents a flexible length within a grid container',
+        '%':        '% - Percentage',
+    },
+
+    'Container @Query relative':{
+        'cqb':      'cqb - 1% of a query container\'s block size',
+        'cqh':      'cqh - 1% of a query container\'s height',
+        'cqi':      'cqi - 1% of a query container\'s inline size',
+        'cqmax':    'cqmax - The larger value of cqi or cqb',
+        'cqmin':    'cqmin - The smaller value of cqi or cqb',
+        'cqw':      'cqw - 1% of a query container\'s width',
+    },
+
+    'Absolute lengths':{
+        'cm':      'cm - (Centimeters) 1cm = 96px/2.54',
+        'in':      'in - (Inches) 1in = 2.54cm = 96px',
+        'mm':      'mm - (Millimeters) 1mm = 1/10th of 1cm',
+        'pc':      'pc - (Picas) 1pc = 1/6th of 1in',
+        'pt':      'pt - (Points) 1pt = 1/72th of 1in',
+        'px':      'px - (Pixels) 1px = 1/96th of 1in',
+        'Q':       'Q - (Quarter-millimeters) 1Q = 1/40th of 1cm',
+    },
+
+    'Angles':{
+        'deg':      'deg - (Degrees) There are 360 degrees in a full circle.',
+        'grad':     'grad - (Gradians) There are 400 gradians in a full circle.',
+        'rad':      'rad - (Radians) There are 2π radians in a full circle.',
+        'turn':     'turn - (Turns) There is 1 turn in a full circle.',
+    },
+
+    'Time':{
+        'ms':     'ms - Milliseconds',
+        's':      's - (Seconds) There are 1,000 milliseconds in a second.',
+    },
+
+    'Frequency':{
+        'Hz':      'Hz - (Hertz) Represents the number of occurrences per second.',
+        'kHz':     'kHz - (KiloHertz) A kiloHertz is 1000 Hertz.',
+    },
+
+    'Resolution':{
+        'dpcm':     'dpcm - Dots per centimeter.',
+        'dpi':      'dpi - Dots per inch.',
+        'dppx':     'dppx - Dots per px unit.',
+    },};
 
 export type CSS_AbsoluteUnit = 'px' | 'cm' | 'mm' | 'pt' | 'pc' | 'in' | '';
 export type CSS_RelativeDomUnit = '%' | 'fr' | 'vw' | 'vh' | 'vmin' | 'vmax';

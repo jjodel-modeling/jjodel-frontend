@@ -205,7 +205,9 @@ export const InputConnected =
 export function Input(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement {
     return <InputConnected {...{...props, children}} />;
 }
+export const Edit = Input;
 
 InputComponent.cname = 'InputComponent';
 InputConnected.cname = 'InputConnected';
 Input.cname = 'Input';
+Edit.cname = 'Edit';

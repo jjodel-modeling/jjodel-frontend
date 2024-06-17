@@ -250,7 +250,7 @@ w.$s = $s;
 */
 export {GraphElements, Graphs, Vertexes, Edges, Fields} from './components';
 export {
-    TextArea, Select, Input, Edge, // Image,
+    TextArea, Select, Input, Edit, Edge, // Image,
     GraphsContainerComponent,
     Overlap as OverlapComponent,
     GraphsContainer,
@@ -269,11 +269,14 @@ export {
     Polygon, Circle, Cross, Decagon,
     Asterisk, Ellipse, Enneagon, Hexagon, Nonagon,
     Octagon, Heptagon, Pentagon, Rectangle, Septagon,
-    Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle
+    Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle,
+    View, Try,
 } from './components'
 //export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file
 export {fakeExport} from './ExecuteOnRead';
 // console.info('joiner loaded');
+
+class joiner{}
 class Joiner{
     // just to help the file search
 }

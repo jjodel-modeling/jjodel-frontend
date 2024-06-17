@@ -10,7 +10,7 @@ import {
     LProject,
     LUser, LViewElement,
     LViewPoint,
-    Pointer,
+    Pointer, Try,
     U
 } from '../joiner';
 import {FakeStateProps} from '../joiner/types';
@@ -43,12 +43,12 @@ function EditorComponent(props: AllProps) {
     allViews = allViews.filter(v => v);
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
-    if(user.project) return(<>
-        <Navbar />
-        <Dock />
-        <style id={"views-css-injector"}>
+    if (user.project) return(<>
+        <Try><Navbar /></Try>
+        <Try><style id={"views-css-injector"}>
             {Object.values(viewsDeDuplicator).map(v => v.compiled_css).join('\n\n')}
-        </style>
+        </style></Try>
+        <Try><Dock /></Try>
     </>);
     return(<Loader />);
 }

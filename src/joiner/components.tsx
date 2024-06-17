@@ -31,9 +31,12 @@ export {GenericInput} from "../components/forEndUser/GenericInput"
 //export {DockLayoutComponent} from "../components/abstract/DockLayoutComponent";
 export {OclEditor} from "../components/rightbar/oclEditor/OclEditor";
 
-export {Input} from "../components/forEndUser/Input";
+export {Input, Edit} from "../components/forEndUser/Input";
 export {TextArea} from "../components/forEndUser/TextArea";
 export {Select} from "../components/forEndUser/Select";
+export {View} from "../components/forEndUser/Aliases";
+export {Try} from "../components/forEndUser/Try";
+
 // export {Image} from "../components/forEndUser/Image";
 
 

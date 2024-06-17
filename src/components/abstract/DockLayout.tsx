@@ -16,7 +16,7 @@ import {
     Pointer,
     Selectors,
     U,
-    LPackage, SetRootFieldAction, Dictionary, DUser, TRANSACTION
+    LPackage, SetRootFieldAction, Dictionary, DUser, TRANSACTION, Try
 } from '../../joiner';
 import StructureEditor from "../rightbar/structureEditor/StructureEditor";
 import TreeEditor from "../rightbar/treeEditor/treeEditor";
@@ -32,12 +32,12 @@ import {FakeStateProps} from "../../joiner/types";
 
 export class TabDataMaker {
     static metamodel (model: LModel | DModel): TabData {
-        if (model.isMetamodel) return { id: model.id, title: model.name, group: 'group1', closable: true, content: <MetamodelTab modelid={model.id} /> };
+        if (model.isMetamodel) return { id: model.id, title: model.name, group: 'group1', closable: true, content: <Try><MetamodelTab modelid={model.id} /></Try>};
         return {} as any;
     }
     static model(model: LModel | DModel): TabData {
         return { id: model.id, title: model.name, group: 'group1', closable: true, content:
-            <ModelTab modelid={model.id} metamodelid={(model.instanceof as any)?.id || model.instanceof} />
+            <Try><ModelTab modelid={model.id} metamodelid={(model.instanceof as any)?.id || model.instanceof} /></Try>
         };
     }
 }
@@ -78,13 +78,13 @@ class DockLayoutComponent extends PureComponent<AllProps, ThisState>{
         }
     };
 
-    private test = { id: '999', title: "Test", group: "2", closable: false, content: <TestTab /> };
-    private structureEditor = { id: '1', title: 'Structure', group: 'group2', closable: false, content: <StructureEditor /> };
-    private treeEditor = { id: '2', title: 'Tree View', group: 'group2', closable: false, content: <TreeEditor /> };
-    private viewsEditor = { id: '3', title: 'Views', group: 'group2', closable: false, content: <ViewsEditor /> };
-    private styleEditor = { id: '4', title: 'Node', group: 'group2', closable: false, content: <StyleEditor /> };
-    private viewpointEditor = { id: '6', title: 'Viewpoints', group: 'group2', closable: false, content: <ViewpointEditor validation={false} /> };
-    private console = { id: '7', title: 'Console', group: 'group2', closable: false, content: <Console /> };
+    private test = { id: '999', title: "Test", group: "2", closable: false, content: <Try><TestTab /></Try> };
+    private structureEditor = { id: '1', title: 'Structure', group: 'group2', closable: false, content: <Try><StructureEditor /></Try> };
+    private treeEditor = { id: '2', title: 'Tree View', group: 'group2', closable: false, content: <Try><TreeEditor /></Try> };
+    private viewsEditor = { id: '3', title: 'Views', group: 'group2', closable: false, content: <Try><ViewsEditor /></Try> };
+    private styleEditor = { id: '4', title: 'Node', group: 'group2', closable: false, content: <Try><StyleEditor /></Try> };
+    private viewpointEditor = { id: '6', title: 'Viewpoints', group: 'group2', closable: false, content: <Try><ViewpointEditor validation={false} /></Try> };
+    private console = { id: '7', title: 'Console', group: 'group2', closable: false, content: <Try><Console /></Try> };
 
     private views = this.props.views;
     private moveOnStructure = false;

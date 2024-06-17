@@ -81,6 +81,7 @@ class DefaultViews {
         view.css = `
 .package { background-color: var(--background-0); border-radius: 0.2em; border-left: 0.25em solid var(--color-1); }
 .package-children { height: -webkit-fill-available; width: -webkit-fill-available; }
+.summary { padding: 0.25rem; text-align: center; }
 .detail-level {
     position: absolute;
     right: -50px;
@@ -112,9 +113,12 @@ class DefaultViews {
         view.appliableTo = 'Vertex';
         view.oclCondition = 'context DClass inv: true';
         view.palette = {'color-': U.hexToPalette('#f00', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
-        view.css = '.class {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color:var(--color-2);}\n';
-        view.css += '.class-name {font-weight: bold; color: var(--color-1);}\n';
-        view.css += '.class-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
+        view.css = `
+.class { border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color:var(--color-2); }
+.class-name{  font-weight: bold; color: var(--color-1); }
+.class-children { background-color: var(--background-2); height: fit-content; width: -webkit-fill-available; }
+.abstract { font-style: italic; }
+.summary { padding: 0.25rem; text-align: center; }`;
         view.defaultVSize = defaultVertexSize;
         view.usageDeclarations = '(ret) => {\n' +
             '// ** preparations and default behaviour here ** //\n' +
@@ -141,9 +145,12 @@ class DefaultViews {
         view.appliableTo = 'Vertex';
         view.oclCondition = 'context DEnumerator inv: true';
         view.palette = {'color-':  U.hexToPalette('#ffa500', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
-        view.css = '.enumerator {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);}\n';
-        view.css += '.enumerator-name {font-weight: bold; color: var(--color-1);}\n';
-        view.css += '.enumerator-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
+        view.css =  `
+.enumerator { border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2); }
+.enumerator-name { font-weight: bold; color: var(--color-1); }
+.enumerator-children { background-color: var(--background-2); height: fit-content; width: -webkit-fill-available; }
+.summary { padding: 0.25rem; text-align: center; }
+`
         view.defaultVSize = defaultVertexSize;
         view.usageDeclarations = '(ret) => {\n' +
             '// ** preparations and default behaviour here ** //\n' +
@@ -241,9 +248,13 @@ class DefaultViews {
         view.palette = {};
         view.css = `.value{
     padding-right: 6px;
-    max-width: 200px;
+    max-width: 300px;
+    min-width: 100%;
     overflow:hidden;
     &:hover, &:focus-within{ overflow: visible; }
+    /*.values_str{
+        maxWidth: 100px;
+    }*/
 }`;
         view.appliableTo = 'Field';
         view.usageDeclarations = '(ret) =>  {\n' +

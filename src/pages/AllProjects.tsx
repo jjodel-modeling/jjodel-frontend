@@ -1,6 +1,6 @@
 import React, {Dispatch, Component, ReactElement, ChangeEvent} from 'react';
 import {connect} from 'react-redux';
-import {DProject, DState, DUser, LProject, U} from '../joiner';
+import {DProject, DState, DUser, LProject, Try, U} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 import Dashboard from './Dashboard';
 import {ProjectsApi} from "../api/persistance";
@@ -45,12 +45,12 @@ function AllProjectsComponent(props: AllProps) {
         reader.readAsText(file);
     }
 
-    return(<Dashboard>
+    return(<Try><Dashboard>
         <input type={'file'} className={'btn btn-success p-1 mx-1'} onChange={async e => await importProject(e)} />
         <div style={{overflow: 'scroll'}} className={'d-flex flex-wrap'}>
             {projects.map(p => <Project key={p.id} data={p} />)}
         </div>
-    </Dashboard>);
+    </Dashboard></Try>);
 }
 
 interface OwnProps {}
