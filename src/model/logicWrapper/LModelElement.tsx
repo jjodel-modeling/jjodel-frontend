@@ -4004,7 +4004,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         state = state || store.getState();
         let darr = Selectors.getAll(DValue, undefined, state, true, false) as DValue[];
         let larr = [];
-        for (let i = 0; i < larr.length; i++){
+        for (let i = 0; i < darr.length; i++){
             let l = LPointerTargetable.fromD(darr[i]);
             if (!l || l.model.id !== context.data.id) {
                 darr[i] = undefined as any;
@@ -4020,8 +4020,9 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     protected get_allSubObjects(context: Context, state?: DState): this["allSubObjects"] {
         state = state || store.getState();
         let darr = Selectors.getAll(DObject, undefined, state, true, false) as DObject[];
+        // console.log("gao", {darr:[...darr]});
         let larr = [];
-        for (let i = 0; i < larr.length; i++){
+        for (let i = 0; i < darr.length; i++){
             let l = LPointerTargetable.fromD(darr[i]);
             if (!l || l.model.id !== context.data.id) {
                 darr[i] = undefined as any;
@@ -4029,7 +4030,9 @@ instanceof === undefined or missing  --> auto-detect and assign the type
             }
             larr.push(l);
         }
+        // console.log("gao", {darr:[...darr], larr});
         darr = darr.filter(d=>!!d);
+        // console.log("gao", {darr, larr});
         U.toNamedArray(larr, darr);
         return larr;
     }
