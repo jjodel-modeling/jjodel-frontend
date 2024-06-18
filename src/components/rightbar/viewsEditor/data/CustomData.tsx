@@ -8,6 +8,9 @@ function ViewEventsComponent(props: AllProps) {
     const view = props.view;
     const dview = props.view.__raw;
     const readOnly = props.readonly;
+
+    let t = true;
+    if (t) throw new Error("artificial error test")
     function addEvent() {
         let eventname = "customEvent1";
         eventname = U.increaseEndingNumber(eventname, false, false, (s)=> s in dview.events);

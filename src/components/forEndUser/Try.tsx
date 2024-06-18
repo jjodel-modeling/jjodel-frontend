@@ -28,7 +28,7 @@ class TryComponent extends React.Component<AllProps, State> {
     static cname: string = "TryComponent";
     constructor(props: AllProps) {
         super(props);
-        this.state = { error: undefined, info: undefined, stateUpdateTime: 0 };
+        this.state = { error: undefined, info: undefined, stateUpdateTime: 0, canUseClipboard: true};
     }
 
     static getDerivedStateFromError(error: Error) {
@@ -37,6 +37,7 @@ class TryComponent extends React.Component<AllProps, State> {
     }
 
     componentDidCatch(error: Error, info: React.ErrorInfo): void {
+        console.error("uncatched error didcatch:", {info});
         // this is called after error propagation and a full render cycle is complete, i use it to trigger a rerender with more accurate infos.
         this.setState({error, info, stateUpdateTime: this.props.stateUpdateTime});
     }
@@ -72,26 +73,54 @@ class TryComponent extends React.Component<AllProps, State> {
                 console.error("uncatched error WITH INVALID CATCHING FUNC", {catcherFuncError:e});
             }
         }
-        let mailbody: string = encodeURIComponent(
-            "This mail is auto-generated, it might contain data of your views or model.\n" +
+        function cropStack(msg: string, atStart: number = 10, atEnd: number = 0): string{
+            let arr = msg.split('\n');
+            if (atEnd + atStart < arr.length) {
+                //arr = arr.slice(0, 10) + arr.slice(10, 0);
+                arr.splice(atStart, arr.length - atStart - atEnd, '...')
+            }
+            return arr.join('\n');
+        }
+        const msgbody_notencoded: string = "This mail is auto-generated, it might contain data of your views or model.\n" +
             "If your project have sensitive personal information please check the report below to omit them.\n\n" +
             "" + error?.message + "\n\n" +
-            "_error_stack:\n" + (info ? info.componentStack : '')
-        );
-        let mailtitle: string =  encodeURIComponent("Jodel assisted error report");
-        let mailrecipients = ["damiano.divincenzo@student.univaq.it", "giordano.tinella@student.univaq.it"];
+            "_stack:\n" + cropStack(error.stack || '', 30) + '\n\n'+
+            "_component_stack:\n" + (info ? cropStack(info.componentStack, 10) : '');
+        const msgbody: string = encodeURIComponent(msgbody_notencoded);
+        const mailtitle: string =  encodeURIComponent("Jodel assisted error report");
+        const mailrecipients = ["damiano.divincenzo@student.univaq.it", "giordano.tinella@student.univaq.it"];
         // "mailto:no-one@snai1mai1.com?subject=look at this website&body=Hi,I found this website and thought you might like it http://www.geocities.com/wowhtml"
-        let mailto = "mailto:"+mailrecipients.join(',')+"?subject="+mailtitle+"&body="+mailbody;
-        let gitissue = "https://github.com/MDEGroup/jjodel/issues/new?title="+mailtitle+"&body="+mailbody;
+        const gitissue = "https://github.com/MDEGroup/jjodel/issues/new?title="+mailtitle+"&body="+msgbody;
+        let mailto: string | undefined = "mailto:"+mailrecipients.join(';')+"?subject="+mailtitle+"&body="+msgbody;
+        const mailtolimit = 2042 - 23/*for safety*/;
+        if (mailto.length > mailtolimit){
+            if (this.state.canUseClipboard) {
+                const mailfallback = encodeURIComponent("mail body exceeded maximum mailto: link length.\n" +
+                    "It has been copied to your clipboard, please past it here or use github issue report.");
+                U.clipboardCopy(msgbody_notencoded, ()=>{}, ()=>{this.setState({canUseClipboard: false})});
+                mailto =  "mailto:"+mailrecipients.join(';')+"?subject="+mailtitle+"&body=" + mailfallback;
+            }
+            else mailto = undefined;
+        }
+/*
+mailto: limits
+2042 characters on Chrome 64.0.3282.186
+2046 characters on Edge 16.16299
+approximately 32700 characters on Firefox 58.0
+
+max URI lengths:
+chrome: 15613 chars
+firefox: 15708
+*/
+
         let shortErrorBody = (error?.message || "\n").split("\n")[0];
-
-
         let visibleMessage: ReactNode = <div onClick={()=> this.setState({error:undefined, info: undefined})}>
+            <div>{info ? "has info": "###########"}</div>
             <div>ut:{this.state.stateUpdateTime}, { shortErrorBody }</div>
             <div>What you can try:</div>
             <ul>
                 <li>- Undo the last change</li>
-                <li>- <a href={mailto}>Mail the developers</a> or <a href={gitissue} target="_blank">open an issue</a></li>
+                <li>- {mailto && [<a href={mailto}>Mail the developers</a>, " or"]} <a href={gitissue} target="_blank">open an issue</a></li>
             </ul>
         </div>
         return DV.error_raw(visibleMessage, "unhandled");
@@ -101,6 +130,7 @@ interface State{
     error?: Error;
     info?: React.ErrorInfo;
     stateUpdateTime: number;
+    canUseClipboard: boolean;
 }
 interface OwnProps {
     key?: React.Key | null;

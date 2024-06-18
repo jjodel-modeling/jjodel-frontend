@@ -1,5 +1,5 @@
 import React, {Dispatch, ReactElement} from 'react';
-import type {DViewElement, LViewElement, Pointer} from '../../../joiner';
+import {DViewElement, LViewElement, Pointer, Try} from '../../../joiner';
 import {DState, DUser, LProject, LUser, LViewPoint, Defaults, LPointerTargetable} from "../../../joiner";
 import InfoData from './data/InfoData';
 import NodeData from './data/NodeData';
@@ -30,11 +30,11 @@ function ViewDataComponent(props: AllProps) {
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     let i = 1;
     const tabs = [
-        {id: ''+i++, title: 'Overview', group: '1', closable: false, content: <InfoData viewID={view.id} viewpointsID={viewpoints.map(vp => vp.id)} readonly={readOnly} />},
-        {id: ''+i++, title: 'Template', group: '1', closable: false, content: <TemplateData viewID={view.id} readonly={readOnly} />},
-        {id: ''+i++, title: 'Palette/Css', group: '1', closable: false, content: <PaletteData viewID={view.id} readonly={readOnly} />},
-        {id: ''+i++, title: 'Events', group: '1', closable: false, content: <EventsData viewID={view.id} readonly={readOnly} />},
-        {id: 'sharedid', title: 'Options', group: '1', closable: false, content: <GenericNodeData viewID={view.id} readonly={readOnly} />},
+        {id: ''+i++, title: 'Overview', group: '1', closable: false, content: <Try><InfoData viewID={view.id} viewpointsID={viewpoints.map(vp => vp.id)} readonly={readOnly} /></Try>},
+        {id: ''+i++, title: 'Template', group: '1', closable: false, content: <Try><TemplateData viewID={view.id} readonly={readOnly} /></Try>},
+        {id: ''+i++, title: 'Palette/Css', group: '1', closable: false, content: <Try><PaletteData viewID={view.id} readonly={readOnly} /></Try>},
+        {id: ''+i++, title: 'Events', group: '1', closable: false, content: <Try><EventsData viewID={view.id} readonly={readOnly} /></Try>},
+        {id: 'sharedid', title: 'Options', group: '1', closable: false, content: <Try><GenericNodeData viewID={view.id} readonly={readOnly} /></Try>},
     ];
     /*
     if(view.appliableTo === 'node') tabs.push(
@@ -46,7 +46,7 @@ function ViewDataComponent(props: AllProps) {
     if(view.appliableTo === 'edgePoint') tabs.push(
         {id: 'sharedid', title: 'EdgePoint', group: '1', closable: false, content: <EdgePointData viewID={view.id} readonly={readOnly} />}
     );*/
-    tabs.push({id: ''+i++, title: 'Sub Views', group: '1', closable: false, content: <SubViewsData viewID={view.id} readonly={readOnly} setSelectedView={props.setSelectedView} />});
+    tabs.push({id: ''+i++, title: 'Sub Views', group: '1', closable: false, content: <Try><SubViewsData viewID={view.id} readonly={readOnly} setSelectedView={props.setSelectedView} /></Try>});
     layout.dockbox.children.push({tabs});
 
     return(<div>

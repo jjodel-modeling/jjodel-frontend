@@ -1456,6 +1456,42 @@ export class U {
             if (!ret[key]) ret[key] = classes[key];
         }
     }
+
+    private static prefix = 'ULibrary_';
+    private static clipboardinput: HTMLInputElement;
+    static async clipboardCopy<T>(text: string, onSuccess:()=>T, onFailure:()=>T): Promise<T> {
+        let ret: boolean = false;
+        return navigator.clipboard.writeText(text).then(() => {
+            ret = true;
+            return onSuccess();
+        },() => {
+            ret = U.clipboardCopy_old(text);
+            return ret ? onSuccess() : onFailure();
+        });
+    }
+    static clipboardCopy_old(text: string): boolean {
+        try{
+        if (!U.clipboardinput) {
+            U.clipboardinput = document.createElement('input');
+            U.clipboardinput.id = U.prefix + 'CopyDataToClipboard';
+            U.clipboardinput.type = 'text';
+            U.clipboardinput.style.display = 'block';
+            U.clipboardinput.style.position = 'absolute';
+            U.clipboardinput.style.top = '-100vh'; }
+        document.body.appendChild(U.clipboardinput);
+        U.clipboardinput.value = text;
+        U.clipboardinput.select();
+        if (!document.execCommand) return false;
+        let ret = document.execCommand('copy');
+        document.body.removeChild(U.clipboardinput);
+        U.clearSelection();
+        return ret;
+        }
+        catch(e){ return false; }
+    }
+
+    static clearSelection() {}
+
     static toNamedArray<D extends DPointerTargetable, L extends LPointerTargetable>(larr:L[], darr?:D[]): L[] & Dictionary<DocString<"$name">, L>{
         if (!darr || darr.length !== larr.length) darr = larr.map(l=>l.__raw as D);
 
