@@ -19,7 +19,7 @@ import "./Vews.scss"
 
 function ViewsDataComponent(props: AllProps) {
     const project = props.project;
-    console.log("pv:", project.views, project.activeViewpoint.id)
+    console.log("pv:", project.views, project.activeViewpoint.id);
     // const views = project.views.filter(v => v && (!v.viewpoint || v.viewpoint.id === project.activeViewpoint.id));
     let vp: LViewPoint = project.activeViewpoint; //
     const subViewScores = vp.__raw.subViews;

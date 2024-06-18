@@ -14,7 +14,16 @@ import {
 } from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './style.scss';
-
+/*
+*   What's uncatched:
+*   - reducer
+*   - mapstatetoprops, if reducer doesn't do his job
+*
+*
+*
+*
+*
+* */
 class TryComponent extends React.Component<AllProps, State> {
     static cname: string = "TryComponent";
     constructor(props: AllProps) {
@@ -33,18 +42,27 @@ class TryComponent extends React.Component<AllProps, State> {
     }
 
     render() {
+        /*
         if (this.props.stateUpdateTime !== this.state.stateUpdateTime) {
             // after a redux state update try checking if error is gone
             return this.props.children;
-        }
+        }*/
         if (this.state.error) {
             // You can render any custom fallback UI
             return this.catch(this.state.error, this.state.info);
+        }
+        if (!React.isValidElement(this.props.children)) {
+            // You can render any custom fallback UI
+            console.error("Children is not a valid React Element", this.props.children, this);
+            return this.catch({message: "Children is not a valid React Element"} as any, undefined);
         }
         return this.props.children;
     }
 
     catch(error: Error, info?: React.ErrorInfo): ReactNode{
+        console.error("uncatched error:", {state:{...this.state}});
+        let debug = false;
+        if (debug) return<div>error</div>;
         if (this.props.catch) {
             try{
                 if (typeof this.props.catch === "function") return this.props.catch(error, info);
@@ -54,11 +72,10 @@ class TryComponent extends React.Component<AllProps, State> {
                 console.error("uncatched error WITH INVALID CATCHING FUNC", {catcherFuncError:e});
             }
         }
-        console.error("uncatched error:", {state:{...this.state}});
         let mailbody: string = encodeURIComponent(
             "This mail is auto-generated, it might contain data of your views or model.\n" +
-            "If your project have sensitive personal information please check the report below to omit them.\n" +
-            "" + error?.message + "\n\n\n" +
+            "If your project have sensitive personal information please check the report below to omit them.\n\n" +
+            "" + error?.message + "\n\n" +
             "_error_stack:\n" + (info ? info.componentStack : '')
         );
         let mailtitle: string =  encodeURIComponent("Jodel assisted error report");
@@ -69,15 +86,14 @@ class TryComponent extends React.Component<AllProps, State> {
         let shortErrorBody = (error?.message || "\n").split("\n")[0];
 
 
-        let visibleMessage: ReactNode = <>
-            <div>ut:{this.state.stateUpdateTime}</div>
-            <div>Unhandled Error:{ shortErrorBody }</div>
-            <div>What you can do:</div>
+        let visibleMessage: ReactNode = <div onClick={()=> this.setState({error:undefined, info: undefined})}>
+            <div>ut:{this.state.stateUpdateTime}, { shortErrorBody }</div>
+            <div>What you can try:</div>
             <ul>
-                <li>Undo the last change</li>
-                <li><a href={mailto}>Mail the developers</a> or <a href={gitissue}>open an issue</a></li>
+                <li>- Undo the last change</li>
+                <li>- <a href={mailto}>Mail the developers</a> or <a href={gitissue} target="_blank">open an issue</a></li>
             </ul>
-        </>
+        </div>
         return DV.error_raw(visibleMessage, "unhandled");
     }
 }
@@ -113,8 +129,8 @@ const TryConnected =
     connect<StateProps, DispatchProps, OwnProps, DState>(mapStateToProps, mapDispatchToProps)(TryComponent);
 
 
-export function Try(props: OwnProps, children: ReactNode[] = []): ReactElement {
-    return <TryConnected {...{...props, children}} />;
+export function Try(props: OwnProps): ReactElement {
+    return <TryConnected {...{...props}}>{props.children}</TryConnected>;
 }
 
 TryComponent.cname = 'TryComponent';

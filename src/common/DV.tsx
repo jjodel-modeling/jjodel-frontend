@@ -234,7 +234,7 @@ export class DV {
                  second is to enlarge the hover area of path.preview to the same as path.content, so i avoid hover loop enter-leave and graphical flashing
                 
                 */ }
-                <path className={"preview edge full"` + (dashing ? ' dashed' : '') + `} d={this.edge.d} />
+                <path className={"preview edge full` + (dashing ? ' dashed' : '') + `"} d={this.edge.d} />
                 <path className={"preview edge full hover-activator"} d={this.edge.d} />
                 { /* edge separate segments */ }
                 {segments && segments.all && segments.all.flatMap(s => [
@@ -410,7 +410,7 @@ class DefaultView {
 );}
 
     public static class(): string { return (
-`<div className={'root class'} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
+`<View className={'root class'} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
     <div className={(abstract ? 'abstract' : '')}>
         <Input data={data} field={'name'} hidden={true} autosize={true} 
             jsxLabel={<b className={'class-name'}>{interface ? "Interface" : "Class"}:</b>} />
@@ -436,7 +436,7 @@ class DefaultView {
         }
     </div>
     {decorators}
-</div>`
+</View>`
 );}
 
     public static enum(): string { return (
@@ -546,14 +546,14 @@ public static parameter(): string { return (
         if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         let on = dname && nodename ? " on " + dname + " / " + nodename : (dname || nodename ? " on " + (dname || nodename) : '');
-        return <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
+        return <div className={(v ? 'w-100 h-100' : 'raw_error') + ' round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
             <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
                 <b data-dname={dname} data-nodename={nodename} data-str={true}>
                     {errortype} ERROR{on}</b>
                 <hr/>
-                <label className={'text-center mx-1 d-block'}>
-                    While applying view "{v?.name}"
-                </label>
+                {v && <label className={'text-center mx-1 d-block'}>
+                    While applying view "{v.name}"
+                </label>}
                 {msg && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>{msg}</label>}
             </div>
         </div>;

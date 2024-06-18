@@ -531,9 +531,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             let culpritlinesPost: string[] = jsxlines.slice(stackerrorlinenum.row, stackerrorlinenum.row + linesPost);
             console.error("errr", {e, node, jsxlines, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
 
-            if (stackerrorlinenum.col - offset.col > culpritline.length && stackerrorlinenum.row === 1) stackerrorlinenum.col = 0;
+            if (stackerrorlinenum.col - offset.col > culpritline?.length && stackerrorlinenum.row === 1) stackerrorlinenum.col = 0;
             let caretCursor = "▓" // ⵊ ꕯ 𝙸 Ꮖ
-            if (culpritline && stackerrorlinenum.col - offset.col <= culpritline.length && stackerrorlast.indexOf("main.chunk.js") === -1) {
+            if (culpritline && stackerrorlinenum.col - offset.col <= culpritline?.length && stackerrorlast.indexOf("main.chunk.js") === -1) {
                 let rowPre = culpritline.substring(0, stackerrorlinenum.col);
                 let rowPost = culpritline.substring(stackerrorlinenum.col);
                 let jsxcode =
@@ -550,6 +550,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             }
         } catch(e2) {
             Log.eDevv("internal error in error view", {e, e2, where} );
+            return null;
         }
         if (asString) return DV.errorView_string('<div>'+errormsg+'</div>', {where:"in "+where+"()", e, template: view.jsxString, view: view}, where, data, node, view);
         return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: view.jsxString, view: view, ...(printData || {})}, where, data, node, view);
