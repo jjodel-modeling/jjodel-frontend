@@ -127,9 +127,10 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
 
         // console.log('dnode render', {props: {...this.props}, serializableProps});
         let componentfunction: typeof Graph = null as any;
-        if (view.forceNodeType) {
-            componentfunction = GraphElements[view.forceNodeType] as any;
-            Log.exDev(!componentfunction, 'unrecognized View.forceNodeType:' + view.forceNodeType, {view, modelElement, nt: view.forceNodeType, GraphElements, });
+        let forceNodeType = view.forceNodeType;
+        if (forceNodeType && forceNodeType !== "Any") {
+            componentfunction = GraphElements[forceNodeType] as any;
+            Log.exDev(!componentfunction, 'unrecognized View.forceNodeType:' + view.forceNodeType, {view, modelElement, nt: forceNodeType, GraphElements, });
             // console.log("force node type", {requested:view.forceNodeType, G:  windoww.GraphComponent.name, GE: windoww.GraphElementComponent.name, GV: windoww.GraphVertexComponent.name, V: windoww.VertexComponent.name, F:windoww.FieldComponent.name})
             return componentfunction(serializableProps, this.props.children); }
 
