@@ -1,28 +1,13 @@
-import React, {Dispatch, Component, ReactElement, ChangeEvent} from 'react';
+import React, {ChangeEvent, Component, Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
-import {DProject, DState, DUser, LProject, Try, U} from '../joiner';
+import {DProject, DState, LProject, Try, U} from '../joiner';
 import {FakeStateProps} from '../joiner/types';
-import Dashboard from './Dashboard';
-import {ProjectsApi} from "../api/persistance";
-import {useNavigate} from "react-router-dom";
-import Project from "./components/Project";
+import {Dashboard, Project} from './components';
 import Storage from "../data/storage";
 
 
-function AllProjectsComponent(props: AllProps) {
+function AllProjectsComponent(props: AllProps): JSX.Element {
     const {projects} = props;
-    const navigate = useNavigate();
-
-    const selectProject = (id: DProject['id']) => {
-        navigate(`/project?id=${id}`);
-        U.refresh();
-    }
-    const exportProject = async(project: LProject) => {
-        U.download(`${project.name}.jjodel`, JSON.stringify(project.__raw));
-    }
-    const deleteProject = async(project: LProject) => {
-        await ProjectsApi.delete(project);
-    }
 
     const reader = new FileReader();
     reader.onload = async e => {
@@ -45,12 +30,19 @@ function AllProjectsComponent(props: AllProps) {
         reader.readAsText(file);
     }
 
-    return(<Try><Dashboard>
-        <input type={'file'} className={'btn btn-success p-1 mx-1'} onChange={async e => await importProject(e)} />
-        <div style={{overflow: 'scroll'}} className={'d-flex flex-wrap'}>
-            {projects.map(p => <Project key={p.id} data={p} />)}
-        </div>
-    </Dashboard></Try>);
+    return(<Try>
+        <Dashboard active={'All'}>
+            <section>
+                <div className={'ms-2 p-1 bg-primary w-25 rounded me-auto'}>
+                    <b className={'d-block text-center text-gray'}>Do you want to import a project?</b>
+                    <input className={'form-control w-100'} type={'file'} onChange={async e => await importProject(e)} />
+                </div>
+                <div style={{display: (projects.length > 0) ? 'flex' : 'none', overflow: 'scroll'}} className={'flex-wrap'}>
+                    {projects.map(p => <Project key={p.id} data={p} />)}
+                </div>
+            </section>
+        </Dashboard>
+    </Try>);
 }
 
 interface OwnProps {}
@@ -79,5 +71,5 @@ const AllProjectsPage = (props: OwnProps, children: (string | Component)[] = [])
     return <AllProjectsConnected {...{...props, children}} />;
 }
 
-export default AllProjectsPage;
+export {AllProjectsPage};
 

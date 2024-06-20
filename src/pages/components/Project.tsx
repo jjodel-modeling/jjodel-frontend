@@ -1,11 +1,11 @@
-import {DProject, DUser, LProject, U} from '../../joiner';
+import {DUser, LProject, U} from '../../joiner';
 import Banner1 from '../../static/banner/1.png'
 import React from 'react';
 import {ProjectsApi} from '../../api/persistance';
 import {useNavigate} from 'react-router-dom';
 
 type Props = {data: LProject};
-function Project(props: Props) {
+function Project(props: Props): JSX.Element {
     const {data} = props;
     const navigate = useNavigate();
 
@@ -43,4 +43,4 @@ function Project(props: Props) {
     </div>)
 }
 
-export default Project;
+export {Project};

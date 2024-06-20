@@ -5,7 +5,7 @@ import {SetRootFieldAction} from '../../redux/action/action';
 import {U} from '../../joiner';
 
 type Props = {};
-function Navbar(props: Props) {
+function Navbar(props: Props): JSX.Element {
     const navigate = useNavigate();
 
     const createProject = async() => {
@@ -31,4 +31,4 @@ function Navbar(props: Props) {
     </div>)
 }
 
-export default Navbar;
+export {Navbar};

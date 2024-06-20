@@ -1,4 +1,4 @@
-import React, {Dispatch, useState} from 'react';
+import React, {Dispatch} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
@@ -6,14 +6,20 @@ import {DState, DUser, LUser, SetRootFieldAction, statehistory, stateInitializer
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import {FakeStateProps} from "./joiner/types";
-import Dashboard from "./pages/Dashboard";
-import EditorPage from "./pages/Editor";
-import AuthPage from "./pages/Auth";
 import {useEffectOnce} from "usehooks-ts";
 import {HashRouter, Route, Routes} from 'react-router-dom';
 import PathChecker from "./components/pathChecker/PathChecker";
 import {AuthApi} from "./api/persistance";
-import AllProjectsPage from "./pages/AllProjects";
+import {
+    AccountPage,
+    AllProjectsPage,
+    ArchivePage,
+    AuthPage,
+    CommunityPage,
+    ProjectPage,
+    SettingsPage,
+    UpdatesPage
+} from "./pages";
 
 let userHasInteracted = false;
 function endPendingActions() {
@@ -29,11 +35,17 @@ function App(props: AllProps): JSX.Element {
     const tooltip = props.tooltip;
     let user: LUser = props.user;
 
+
     useEffectOnce(() => {
-        SetRootFieldAction.new('isLoading', true);
-        stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
-        /* Offline by default */
-        if(!DUser.current) AuthApi.offline();
+        (async function () {
+            SetRootFieldAction.new('isLoading', true);
+            await stateInitializer();
+            /* Offline by default */
+            if(!DUser.current) AuthApi.offline();
+            await U.sleep(1);
+            SetRootFieldAction.new('isLoading', false);
+        })();
+
     });
 
     return(<>
@@ -42,12 +54,17 @@ function App(props: AllProps): JSX.Element {
             <PathChecker />
             <Routes>
                 {DUser.current && <>
-                    <Route path={'project'} element={<EditorPage />} />
+                    <Route path={'account'} element={<AccountPage />} />
+                    <Route path={'settings'} element={<SettingsPage />} />
+                    <Route path={'updates'} element={<UpdatesPage />} />
+                    <Route path={'community'} element={<CommunityPage />} />
                     <Route path={'allProjects'} element={<AllProjectsPage />} />
-                    <Route path={'*'} element={<Dashboard />} />
+                    <Route path={'archive'} element={<ArchivePage />} />
+                    <Route path={'project'} element={<ProjectPage />} />
+                    <Route path={'*'} element={<AccountPage />} />
                 </>}
-                <Route path={'*'} element={<AuthPage />} />
-                {/*<Route path={'*'} element={<Loader />} />*/}
+                <Route path={'auth'} element={<AuthPage />} />
+                <Route path={'*'} element={isLoading ? <div></div> : <Loader />} />
             </Routes>
         </HashRouter>
     </>);

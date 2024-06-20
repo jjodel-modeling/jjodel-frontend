@@ -5,7 +5,7 @@ import Storage from '../data/storage';
 import {useNavigate} from "react-router-dom";
 import {AuthApi} from "../api/persistance";
 
-function AuthPage() {
+function AuthPage(): JSX.Element {
     const [isRegister, setIsRegister] = useStateIfMounted(false);
     const [username, setUsername] = useStateIfMounted('');
     const [email, setEmail] = useStateIfMounted('');
@@ -82,4 +82,4 @@ function AuthPage() {
     </section>);
 }
 
-export default AuthPage;
+export {AuthPage};

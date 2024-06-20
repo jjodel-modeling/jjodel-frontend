@@ -1,16 +1,16 @@
-import {Dispatch, ReactElement, useEffect, useState} from 'react';
+import {Dispatch, ReactElement, useEffect} from 'react';
 import {connect} from 'react-redux';
 import {
     Dictionary,
-    DProject,
     DState,
     DUser,
     DViewElement,
-    LoadAction,
     LProject,
-    LUser, LViewElement,
+    LUser,
+    LViewElement,
     LViewPoint,
-    Pointer, Try,
+    Pointer,
+    Try,
     U
 } from '../joiner';
 import {FakeStateProps} from '../joiner/types';
@@ -22,7 +22,7 @@ import {SaveManager} from "../components/topbar/SaveManager";
 import Loader from "../components/loader/Loader";
 
 
-function EditorComponent(props: AllProps) {
+function ProjectComponent(props: AllProps): JSX.Element {
     const user = props.user;
     const query = useQuery();
     const id = query.get('id') || '';
@@ -69,14 +69,14 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     return ret;
 }
 
-export const EditorConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
+export const ProjectConnected = connect<StateProps, DispatchProps, OwnProps, DState>(
     mapStateToProps,
     mapDispatchToProps
-)(EditorComponent);
+)(ProjectComponent);
 
-const EditorPage = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
-    return <EditorConnected {...{...props, children}} />;
+const ProjectPage = (props: OwnProps, children: (string | React.Component)[] = []): ReactElement => {
+    return <ProjectConnected {...{...props, children}} />;
 }
 
-export default EditorPage;
+export {ProjectPage};
 

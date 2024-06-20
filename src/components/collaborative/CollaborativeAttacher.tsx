@@ -2,7 +2,7 @@ import Collaborative from './Collaborative';
 import {Action, SetRootFieldAction, U} from '../../joiner';
 import type {CompositeAction, GObject, LProject} from '../../joiner';
 import {useEffectOnce} from 'usehooks-ts';
-import Editor from '../../pages/Editor';
+import {ProjectPage} from "../../pages";
 
 interface Props {project: LProject}
 function CollaborativeAttacher(props: Props) {
@@ -21,7 +21,7 @@ function CollaborativeAttacher(props: Props) {
         receivedAction.fire();
     });
 
-    return(<Editor />);
+    return(<ProjectPage />);
 }
 
 export default CollaborativeAttacher;
