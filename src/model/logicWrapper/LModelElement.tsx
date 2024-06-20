@@ -3394,6 +3394,7 @@ export class DModel extends DNamedElement { // DNamedElement
 
 @RuntimeAccessible('EdgeStarter')
 export class EdgeStarter<T1=any, T2=any>{ // <T1 extends LPointerTargetable = LPointerTargetable, T2 extends LPointerTargetable = LPointerTargetable>{
+    id: string; // suggested id & key for the element.
     start: LModelElement;
     end: LModelElement;
     startNode: LGraphElement;
@@ -3407,7 +3408,7 @@ export class EdgeStarter<T1=any, T2=any>{ // <T1 extends LPointerTargetable = LP
     otherEnds: LGraphElement[];
     overlaps: boolean;
     vertexOverlaps: boolean;
-    constructor(start: LModelElement, end: LModelElement, sn: LGraphElement, en: LGraphElement, otherPossibleEnds: LGraphElement[] = []) {
+    constructor(start: LModelElement, end: LModelElement, sn: LGraphElement, en: LGraphElement, otherPossibleEnds: LGraphElement[] = [], m1refindex: number = 0) {
         this.start = start;
         this.end = end;
         this.startNode = sn;
@@ -3421,7 +3422,18 @@ export class EdgeStarter<T1=any, T2=any>{ // <T1 extends LPointerTargetable = LP
         this.endVertexSize = this.endVertex === en ? this.endSize : this.endVertex.outerSize;
         this.overlaps = this.startSize?.isOverlapping(this.endSize);
         this.vertexOverlaps = this.startVertexSize?.isOverlapping(this.endVertexSize);
+        // how to pick edgeid:
+        // using nodeid is useless, as a ref might be hidden and take the node of a class or upper, it must be resolved at conceptual model-level
+        // mid = model id
+        // NB: mid -> mid is safe for extends, why:
+        // if a->b1->c && a->b2->c and both b1,b2 are hidden, extend edges might become both a->c, but in that case is fine to have it only once (filter it in suggestions)
+        // mid -> mid                   is safe for package-dependencies for the same reason as class inheritance.
+        // mid -> mid                   is not safe for dvalues which might have duplicate references. (DValue.a -> [Object.b, Object.b])
+        // mid + (valueindex) -> mid    is safe for everything i think.
+        // !!!! REMEMBER, DOTS AND ~ ARE NOT ALLOWED IN ID (css selector char) !!!
+        this.id = start.id + ('_' + m1refindex) + '-' + end.id;
     }
+    /*
     static oneToMany<T1 extends LModelElement = LModelElement, T2 extends LModelElement = LModelElement>(start: T1, ends:T2[]): EdgeStarter<T1, T2>[] {
         let sn = start.node;
         if (!sn) return [];
@@ -3433,7 +3445,7 @@ export class EdgeStarter<T1=any, T2=any>{ // <T1 extends LPointerTargetable = LP
         let ret: (EdgeStarter)[] = rett.filter<EdgeStarter>(function(e: EdgeStarter|undefined): e is EdgeStarter { return !!e });
         // let ret: (EdgeStarter)[] = rett.filter<EdgeStarter>((e): (e is EdgeStarter) => { return !!e });
         return ret;
-    }
+    }*/
 }
 
 @RuntimeAccessible('LModel')
@@ -3761,9 +3773,11 @@ instanceof === undefined or missing  --> auto-detect and assign the type
             for (let lval of values) {
                 if (!lval) continue;
                 let dval = lval.__raw;
+                let values: any[] = dval.values || [];
                 // NB: ELiterals can be pointers in L, but string or ordinal numbers in D, but they won't make edges, so i use .__raw
                 inner:
-                    for (let v of (dval.values || [])) {
+                    for (let valindex = 0; valindex < values.length; valindex++) {
+                        let v: any = dval.values;
                         if (!Pointers.isPointer(v, state)) continue inner;
                         let snode = lval.node;
                         if (!snode || !snode.html) continue outer;
@@ -3774,7 +3788,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
                         let enode = ltarget.node;
                         if (!enode || !enode.html) continue inner;
                         if (!map[dval.id]) map[dval.id] = [];
-                        map[dval.id].push(new EdgeStarter(lval, ltarget, snode, enode, undefined));
+                        map[dval.id].push(new EdgeStarter(lval, ltarget, snode, enode, undefined, valindex));
                     }
             }
         ret.reference = Object.values(map).flat();
@@ -3788,7 +3802,6 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         let references: LReference[] = Debug.lightMode ? [] : classes.flatMap(c=>c.references);
         ret.reference = references.map( (r) => {
             let sn = r?.node;
-            console.log('ex51', {sc:sn?.component?.id, s:r?.name, e:r?.type?.name, sn, sh:sn?.html, en:r?.type?.node, eh:r?.type?.node?.html});
             if (!sn || !sn.html) return undefined;
             let end = r.type;
             // if (end.id === r.id) return undefined;
@@ -3824,7 +3837,10 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         ret.extend = classes.flatMap(c => SkipExtendNodeHidden(c, c.extends, true)).map( (es) => new EdgeStarter(es.start, es.end, es.sn, es.en));
 
         let dependencies: {src:LModelElement, ends: LModelElement[]}[] =
-            Debug.lightMode ? [] : [...(classes.map(c=>{ return {src:c, ends:c.superclasses}})), ...(references.map(r=> { return {src:r, ends:[r.type]}}))]
+            Debug.lightMode ? [] : [
+                ...(classes.map(c=>{ return {src:c, ends:c.superclasses}})),
+                ...(references.map(r=> { return {src:r, ends:[r.type]}}))
+            ]
         let pkgdependencies: {src: LPackage, sn: LGraphElement, ends: Dictionary<Pointer, {end:LPackage, en:LGraphElement}>}[] = []; // transform form in dictionary to prevent duplicates
         //dependencies.map( d=> { let end = d.end.package; return {src:d.src.package, end, endid:end.id}})
 

@@ -1006,7 +1006,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     static DGraph_maxID: number = 0;
     public static DGraph_makeID(modelid: DGraph["model"]): Pointer<DGraph, 1, 1, LGraph> {
         if (!modelid) modelid = "shapeless";
-        return modelid + '^graph' + Constructors.DGraph_maxID++;
+        return modelid + '_graph' + Constructors.DGraph_maxID++;
     }
     DGraph(): this {
         const thiss: DGraph = this.thiss as any;

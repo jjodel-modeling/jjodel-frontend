@@ -111,7 +111,7 @@ function computeUsageDeclarations(component: GraphElementComponent, allProps: Al
         udret = {data: allProps.data, view, node: allProps.node};
     } else try {
         transientProperties.view[vid].UDFunction.call(UDEvalContext, UDEvalContext, udret);
-        console.log("computing usage declarations: ", {f:transientProperties.view[vid].UDFunction, udret, UDEvalContext});
+        // console.log("computing usage declarations: ", {f:transientProperties.view[vid].UDFunction, udret, UDEvalContext});
     } catch (e: any) {
         udret = {data: allProps.data, view, node: allProps.node, __invalidUsageDeclarations: "@runtime:" +e};
         Log.ee("Invalid usage declarations", {e, str: view.usageDeclarations, view, data: allProps.data, stateProps: allProps});
@@ -152,7 +152,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     // requires data and node wrapping first
     static mapViewStuff(state: DState, ret: GraphElementReduxStateProps, ownProps: GraphElementOwnProps) {
         // let dnode: DGraphElement | undefined = ownProps?.nodeid && DPointerTargetable.from(ownProps.nodeid, state) as any;
-        console.log("viewsss mapstate 3 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, vv:ret.view, ownProps, stateProps:{...ret}, thiss:this});
+        // console.log("viewsss mapstate 3 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, vv:ret.view, ownProps, stateProps:{...ret}, thiss:this});
         ret.parentviewid = ownProps.parentViewId;
 
         const explicitView: Pack1<LViewElement> | string | undefined = ret.view || ownProps.view;
@@ -188,7 +188,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (!scores) scores = getScores(ret, ownProps);
             ret.views = scores.stackViews = LPointerTargetable.fromArr((scores.stackViews||[]).map((v:LViewElement)=>v?.id).filter(vid=>!!vid));
         }
-        console.log("viewsss mapstate 4 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, ownProps, stateProps: {...ret}, thiss:this});
+        // console.log("viewsss mapstate 4 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, ownProps, stateProps: {...ret}, thiss:this});
 
 
         tn.validMainViews = [tn.mainView, ...(tn.validMainViews || [])];
@@ -229,7 +229,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // let data: Pointer<DModelElement, 0, 1, LModelElement> = ownProps.data || null;
         // Log.exDev(!nodeid || !graphid, 'node id injection failed', {ownProps, data: ret.data, name:(ret.data as any)?.name || (ret.data as any)?.className}); /*
         /*if (!nodeid) {
-            nodeid = 'nodeof_' + stateProps.data.id + (stateProps.view.storeSize ? '^' + stateProps.view.id : '') + '^1';
+            nodeid = 'nodeof_' + stateProps.data.id + (stateProps.view.storeSize ? '_' + stateProps.view.id : '') + '_1';
             stateProps.nodeid = U.increaseEndingNumber(nodeid, false, false, id => !DPointerTargetable.from(id, state));
             todo: quando il componente si aggiorna questo viene perso, come posso rendere permanente un settaggio di reduxstate in mapstatetoprops? o devo metterlo nello stato normale?
         }*/
@@ -311,7 +311,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     static mapStateToProps(state: DState, ownProps: GraphElementOwnProps, dGraphDataClass: (typeof DGraphElement | typeof DEdge) = DGraphElement, startingobj?: GObject): GraphElementReduxStateProps {
         // console.log('dragx GE mapstate', {dGraphDataClass});
         let ret: GraphElementReduxStateProps = (startingobj || {}) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
-        console.log("viewsss mapstate 0 " + ownProps.view + " " + ret.data?.name, {views:ret.views, ownProps, stateProps:{...ret}, thiss:this});
+        // console.log("viewsss mapstate 0 " + ownProps.view + " " + ret.data?.name, {views:ret.views, ownProps, stateProps:{...ret}, thiss:this});
 
         GraphElementComponent.mapLModelStuff(state, ownProps, ret);
         if (Debug.lightMode && (!ret.data || !(lightModeAllowedElements.includes(ret.data.className)))){
@@ -319,10 +319,10 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         // console.log("map ge", {ownProps, ret, state});
         GraphElementComponent.mapLGraphElementStuff(state, ownProps, ret, dGraphDataClass);
-        console.log("viewsss mapstate 2 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, ownProps, stateProps:{...ret}, thiss:this});
+        // console.log("viewsss mapstate 2 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, ownProps, stateProps:{...ret}, thiss:this});
 
         GraphElementComponent.mapViewStuff(state, ret, ownProps);
-        console.log("viewsss mapstate 5 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, ownProps, stateProps:{...ret}, thiss:this});
+        // console.log("viewsss mapstate 5 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, ownProps, stateProps:{...ret}, thiss:this});
 
         Log.exDev(!ret.view || !ret.views, 'failed to assign view:', {state, ownProps, reduxProps: ret});
         // @ts-ignore
@@ -363,7 +363,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let component = nextProps.node.component;
         const nid = nextProps.nodeid;
         // todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or removed
-        console.log("viewsss err " + nextProps.node?.className + " " + nextProps.data?.name, {views:nextProps.views, nextProps, thiss:this});
+
         // U.arrayDiff()
         for (let v of nextProps.views) {
             const vid: Pointer<DViewElement> = v.__raw.id;
@@ -937,7 +937,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             rnode = GraphElementComponent.displayError(e, "JSX Semantic", v.__raw, this.props.data?.__raw, this.props.node?.__raw, false, {context});
         }
         let rawRElement: ReactElement | null = UX.ReactNodeAsElement(rnode);
-        console.log("renderView 1:", {rnode, rawRElement});
 
 
         // \console.log('GE render', {thiss: this, data:me, rnode, rawRElement, props:this.props, name: (me as any)?.name});
@@ -1031,7 +1030,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 // injectProps.children = [<div>{children}</div>];//[]; making any change at injectprops.children breaks it?
                 rawRElement = React.cloneElement(rawRElement, injectProps);//, ...children); // adding chioldrens after injectprops seems pointless
 
-                console.log("renderView 2:", {rnode, rawRElement});
                 debug.rawRElementPostInjection = {node:rawRElement, text: getNodeText(rawRElement)};
                 // rawRElement = React.cloneElement(rawRElement, {children: [...makeItArray(rawRElement.props.children), ...makeItArray(injectProps.children)]});
                 // console.log('rendering view stack fixing doubles', {v0:rnode, v1:rawRElement, fixed:rawRElement.props.children})

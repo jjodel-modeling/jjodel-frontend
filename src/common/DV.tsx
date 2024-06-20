@@ -148,8 +148,6 @@ export class DV {
             case EdgeHead.aggregation: tailPath = agglabel; break;
             case EdgeHead.composition: tailPath = agglabel; break;
         }
-        //console.error('ex4 head', {modename, headPath, headdict, val:headdict[headPath], v: name});
-        //console.error('ex4 tail', {modename, tailPath, headdict, val:headdict[tailPath], v: name});
         headPath = headdict[headPath] || '';
         tailPath = headdict[tailPath] || '';
 
@@ -358,9 +356,9 @@ class DefaultView {
     </label>
     <div className={'edges'}>
         {[
-            refEdges.map(se => <Edge anchorStart={0} anchorEnd={0} key={'REF_' + se.start.node.id + '~' + se.end.node.id}
+            refEdges.map(se => <Edge anchorStart={0} anchorEnd={0} key={se.id}
             start={se.start.father.node} end={se.end.node} view={'Edge' + ( se.start.containment && 'Composition' || 'Association')} />),
-            extendEdges.map(se => <Edge start={se.start} end={se.end} view={'EdgeInheritance'} key={'EXT_' + se.start.node.id + '~' + se.end.node.id} />)
+            extendEdges.map(se => <Edge start={se.start} end={se.end} view={'EdgeInheritance'} key={se.id} />)
         ]}
     </div>
     {otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}

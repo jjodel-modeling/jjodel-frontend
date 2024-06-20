@@ -131,8 +131,8 @@ m+v                     1                0                 1
 let aa = ()=>{ return React.createElement('div', {className: 'root'}, [
     !data && "Model data missing.",
     React.createElement('div', {className: "edges", style: {zIndex:101, position: "absolute", height:0, width:0, overflow: "visible"}}, [[
-        refEdges.map(se=> Edge({start: se.start.father.node, end: se.end.node, view: "Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association"), key: se.start.node.id+"~"+se.end.node.id}))
-        , extendEdges.map(se=>Edge({start: se.start, end: se.end, view: "Pointer_ViewEdgeInheritance", key: "EXT_"+se.start.node.id+"~"+se.end.node.id}))]
+        refEdges.map(se=> Edge({start: se.start.father.node, end: se.end.node, view: "Pointer_ViewEdge" + ( se.start.containment && "Composition" || "Association"), key: se.start.node.id+"-"+se.end.node.id}))
+        , extendEdges.map(se=>Edge({start: se.start, end: se.end, view: "Pointer_ViewEdgeInheritance", key: "EXT_"+se.start.node.id+"-"+se.end.node.id}))]
 
     ]),
     otherPackages.filter(p => p).map(pkg => DefaultNode({key: pkg.id, data: pkg})),

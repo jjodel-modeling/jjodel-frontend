@@ -356,7 +356,6 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     }
     protected get_innerSize_impl(context: Context, canTriggerSet: boolean = true, outerSize: boolean = false): Readonly<GraphSize> {
         canTriggerSet = canTriggerSet && !Debug.lightMode;
-        console.log("ex4 getsize 0 " + context.data.className, {context, canTriggerSet, outerSize});
         switch (context.data.className){
             default: return Log.exDevv("unexpected classname in get_size switch: " + context.data.className);
             case DEdge.cname:
@@ -365,7 +364,6 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             // case DField.cname:
             case DGraphElement.cname:
                 let graph = outerSize ? this.get_outerGraph(context) : this.get_innerGraph(context);
-                console.log("ex4 getsize 1 " + context.data.className, {graph, html:this.get_htmlSize(context), context, canTriggerSet, outerSize});
                 return graph.coord(this.get_htmlSize(context));
             case DVoidVertex.cname:
             case DVertex.cname:
@@ -380,7 +378,6 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         // (window as any).retry = ()=>view.getSize(context.data.id);
         let ret: EPSize = view.getSize(context.data.id) as any; // (this.props.dataid || this.props.nodeid as string)
 
-        console.log("ex4 getsize 10 " + context.data.className, {context, viewVertexSize:ret});
         // console.log("getSize() from view", {ret: ret ? {...ret} : ret});
         if (!ret) {
             ret = new GraphSize() as EPSize;
@@ -396,10 +393,8 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             ret.currentCoordType = (context.data as DEdgePoint).currentCoordType as any;
             // console.log("getSize() from node merged with defaultVSize", {ret: ret ? {...ret} : ret});
         }
-        console.log("ex4 getsize 11 pre decode" + context.data.className, {context, ret});
         if (context.data.className === DEdgePoint.cname) {
             ret = (this as any as LEdgePoint).decodePosCoords(context, ret, view);
-            console.log("ex4 getsize 12 decoded" + context.data.className, {context, view, ret});
         }
 
         /*
@@ -408,7 +403,6 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
                 }*/
         if (!canTriggerSet) {
             if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
-            console.log("ex4 getsize 13 " + context.data.className, {context, view, ret});
             return ret;
         }
         let html: RefObject<HTMLElement | undefined> | undefined = this.get_component(context)?.html;
@@ -433,7 +427,6 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
         if (updateSize) this.set_size(ret, context);
         if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
-        console.log("ex4 getsize 14 " + context.data.className, {context, view, ret});
         return ret;
     }
     // set_size(size: Partial<this["size"]>, context: Context): boolean {
@@ -442,11 +435,9 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         if (!size0) return false;
         let size = size0 as Partial<EPSize>;
         let view = this.get_view(c);
-        console.log("ex4 setsize " + c.data.className, {size});
         let testmode: boolean = false;
         if (c.data.className === DEdgePoint.cname && size.currentCoordType !== CoordinateMode.absolute) size = (this as any as LEdgePoint).encodePosCoords(c as any, size, view);
 
-        console.log("ex4 setsize encoded " + c.data.className, {size});
         if (view.updateSize(c.data.id, size)) return true;
         BEGIN()
         if (size.x !== c.data.x && size.x !== undefined) SetFieldAction.new(c.data.id, "x", size.x, undefined, false);
@@ -1975,7 +1966,6 @@ replaced by startPoint
         let increase: number = segmentSize.first;
         let segment: EdgeSegment | undefined;
         /// grouping points according to SvgLetter
-        // console.log("ex4 points", {segments:ret.map(s=>printablesegment(s)), points:all.map(s=>printablesegment(s))});
         for (let i = 0; i < all.length - 1; ) {
             // let start = all[i], end = all[i+increase];
             let start: segmentmaker = all[i];
@@ -2063,7 +2053,6 @@ replaced by startPoint
         // cut middle segments maybe
         let prev: EdgeSegment;
         let curr: EdgeSegment = ret[0];
-        //console.log("ex4 gap pre", util.inspect(ret, true, 2, false));
 
         // if (gapMode === EdgeGapMode.gap) return;
         if (canCutStart || canCutEnd) // do the for below
@@ -2097,7 +2086,6 @@ replaced by startPoint
 
                         break;*/
                     case EdgeGapMode.gap:
-                        console.log("ex4 gap", {curr, prev, csp:curr.start.pt, ret});
                         // just snap to vertex edge         prevSegment.endp and ret.startp
                         doEndCut = true; doStartCut = true;
                         break;
@@ -2115,7 +2103,6 @@ replaced by startPoint
                         if (canCutStart && ci) curr.start.pt = ci;
                         break;
                     case EdgeGapMode.average:
-                        console.log("ex4 cut avg", {curr, prev, csp:curr.start.pt});
                         // first move to average of the 2 points in the gap, then snap to edge
                         doEndCut = true; doStartCut = true;
                         // indipendent from cutStart, cutEnd.
@@ -2124,13 +2111,11 @@ replaced by startPoint
                         prev.end.pt = curr.start.pt.duplicate(); // intentionally not the same pt because during snap to edge they can diverge again.
                         prev.start.uncutPt = prev.start.pt;
                         prev.end.uncutPt = prev.end.pt;
-                        console.log("ex4 cut avg end", {curr});
                         break;
                     // center: first move it to center of edgePoint/node, then snap to edge.
                     // this mode might be as well deleted, it can be specified with anchor points
                     case EdgeGapMode.center:
                         doEndCut = false; doStartCut = false;
-                        console.log("ex4 cut center", {curr, prev, csp:curr.start.pt});
                         curr.start.pt = curr.start.size.tl().add(curr.start.size.br(), false).divide(2, false);
                         prev.end.pt = curr.start.pt.duplicate(); // intentionally not the same pt because during snap to edge they can diverge again.
                         prev.start.uncutPt = prev.start.pt; // only update them when point moves without being cut (average and center)
@@ -2140,8 +2125,6 @@ replaced by startPoint
                         return Log.exDevv("unexpected EdgeGapMode:" + gapMode);
                 }
                 if (canCutStart && doStartCut){
-                    console.log("ex4 cut start0", {curr});
-                    console.log("ex4 cutStart", {curr, bz:curr.bezier[0], end:curr.end, grid, ssize: curr.start?.size});
                     let nextpt: GraphPoint = (curr.bezier[0] || curr.end).pt;
                     ci = GraphSize.closestIntersection(curr.start.size, curr.start.pt, nextpt, grid);
                     if (ci) curr.start.pt = ci;// || Geom.closestPoint(curr.start.size, curr.start.pt);
