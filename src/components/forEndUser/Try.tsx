@@ -73,19 +73,12 @@ class TryComponent extends React.Component<AllProps, State> {
                 console.error("uncatched error WITH INVALID CATCHING FUNC", {catcherFuncError:e});
             }
         }
-        function cropStack(msg: string, atStart: number = 10, atEnd: number = 0): string{
-            let arr = msg.split('\n');
-            if (atEnd + atStart < arr.length) {
-                //arr = arr.slice(0, 10) + arr.slice(10, 0);
-                arr.splice(atStart, arr.length - atStart - atEnd, '...')
-            }
-            return arr.join('\n');
-        }
+
         const msgbody_notencoded: string = "This mail is auto-generated, it might contain data of your views or model.\n" +
             "If your project have sensitive personal information please check the report below to omit them.\n\n" +
             "" + error?.message + "\n\n" +
-            "_stack:\n" + cropStack(error.stack || '', 30) + '\n\n'+
-            "_component_stack:\n" + (info ? cropStack(info.componentStack, 10) : '');
+            "_stack:\n" + U.cropStr(error.stack || '', 30) + '\n\n'+
+            "_component_stack:\n" + (info ? U.cropStr(info.componentStack, 10) : '');
         const msgbody: string = encodeURIComponent(msgbody_notencoded);
         const mailtitle: string =  encodeURIComponent("Jodel assisted error report");
         const mailrecipients = ["damiano.divincenzo@student.univaq.it", "giordano.tinella@student.univaq.it"];

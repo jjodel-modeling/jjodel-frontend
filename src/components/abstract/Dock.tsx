@@ -1,7 +1,7 @@
 import './style.scss';
 import {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
-import {DState, Try} from '../../joiner';
+import {DState, LoggerComponent, Try} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
 import {DockLayout, LayoutData} from 'rc-dock';
 import TestTab from './tabs/TestTab';
@@ -39,6 +39,7 @@ function DockComponent(props: AllProps) {
     const collaborators = {id: `${index++}`, title: 'Collaborators', group: 'editors', closable: false, content: <Try><CollaboratorsEditor /></Try>};
     const mqtt = {id: `${index++}`, title: 'Mqtt', group: 'editors', closable: false, content: <Try><MqttEditor /></Try>};
     const console = {id: `${index++}`, title: 'Console', group: 'editors', closable: false, content: <Try><Console /></Try>};
+    const logger = {id: `${index++}`, title: 'Logger', group: 'editors', closable: false, content: <Try><LoggerComponent /></Try>};
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     layout.dockbox.children.push({tabs: [ModelsSummary]});
@@ -52,7 +53,8 @@ function DockComponent(props: AllProps) {
         // collaborators,
         // mqtt,
         node,
-        console
+        console,
+        logger
     ]});
 
     return (<DockLayout ref={dock => DockManager.dock = dock} defaultLayout={layout} groups={groups} />);

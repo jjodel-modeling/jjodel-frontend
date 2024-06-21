@@ -240,7 +240,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         switch(typeof propKey){
             case "symbol":
                 switch(String(propKey)){
-                    default: Log.exDevv('unexpected symbol:', propKey); break;
+                    default: Log.exDevv('unexpected  in proxy getter:', propKey); break;
+                    case 'Symbol(Symbol.toStringTag)': return (targetObj as any)[propKey].toString || (()=>"[Proxy]");
                     case "Symbol(Symbol.toPrimitive)": return (targetObj as any)[propKey];//  || typeof targetObj;
                 }
                 return null;

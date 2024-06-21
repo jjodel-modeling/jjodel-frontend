@@ -1,98 +1,156 @@
 import React, {PureComponent, ReactNode} from "react";
 import './logger.scss';
 import {DataOutputComponent, DDate, Dictionary, GObject, Log, U, UnixTimestamp} from "../../joiner";
+import type {LoggerType} from "../../common/U";
+import {LoggerCategoryState} from "../../common/U";
 
 // private
-interface ThisState {
+class ThisState {
+    categoriesActive: Dictionary<LoggerType, boolean> = {l: true, i: true, w: true, e: true, ex: true, eDev: true, exDev: true};
+    searchTag: string = '';
+    searchTagAsRegExp: boolean = false;
+    searchTagIsDeep: boolean = false;
+    regexpIsInvalid: boolean = false; // to mark the input as invalid without triggering a Log.e message loop
+
+    // counters to force update. (data source is in Log.messageMapping
+    l_counter: number = 0;
+    i_counter: number = 0;
+    w_counter: number = 0;
+    e_counter: number = 0;
+    ex_counter: number = 0;
+    eDev_counter: number = 0;
+    exDev_counter: number = 0;
+}
+/*interface ThisState
     messages: Dictionary<string, Dictionary<string, any[]>>
     filters: {category: ((cat: string) => boolean) | null, tag: ((tag: string) => boolean) | null, datafilter: ((data: any[]) => boolean) | null};
-    categoriesActive: Dictionary<string, boolean>;
-    searchTag: string;
-    searchTagAsRegExp: boolean;
     id: number;
     minDate: UnixTimestamp;
     maxDate: UnixTimestamp;
-}
+}*/
 
 export class LoggerComponent extends PureComponent<AllProps, ThisState>{
     public static cname: string = "LoggerComponent";
     public static loggers: LoggerComponent[] = [];
     private static max_id: number = 0;
-    public static Log(category: string, key: string, data: any[]): void{
+    id: number;
+    categoryAliases: Partial<Dictionary<LoggerType, LoggerType>>;
+    /*public static Log(category: string, key: string, data: any[]): void{
         for (let logger of LoggerComponent.loggers) { logger.log(category, key, data); }
-    }
+    }*/
 
     constructor(props: AllProps, context: any) {
         super(props, context);
-        this.state = {
-            id: LoggerComponent.max_id++,
-            messages: {},
-            searchTag: '',
-            searchTagAsRegExp: false,
-            categoriesActive: {},
-            minDate: DDate.addYear(new Date(), -1, true).getTime(),
-            maxDate: DDate.addYear(new Date(), +1, true).getTime(),
-            filters: {category: null, tag: null, datafilter: null}};
+        this.id =  LoggerComponent.max_id++;
+        this.state = new ThisState();
+            // minDate: DDate.addYear(new Date(), -1, true).getTime(),
+            // maxDate: DDate.addYear(new Date(), +1, true).getTime()};
         LoggerComponent.loggers.push(this);
-        Log.registerLogger(this, Log.e);
+        Log._loggerComponent = this;
+
+        this.categoryAliases = {l: null as any, ex:"e", exDev:"eDev"};
+        // Log.registerLogger(this, Log.e);
     }
 
-    private isCatActive(cat: string): boolean {
-        return !!(this.state.categoriesActive[cat] && this.state.filters.category?.(cat));
+    private isCatActive(cat: LoggerType): boolean {
+        if (this.categoryAliases[cat] !== undefined/* null must pass! */) cat = this.categoryAliases[cat] as LoggerType;
+        return !!this.state.categoriesActive[cat];
     }
 
-    private changeSearchTag = (e: React.ChangeEvent<HTMLInputElement>): void => {
-        this.setState({...this.state, searchTag: e.target.value});
+    private changeSearch = (e: React.ChangeEvent<HTMLInputElement>): void => {
+        this.setState({...this.state, searchTag: e.target.value, regexpIsInvalid: false});
     }
-    private changeRegexpTag = (e: React.ChangeEvent<HTMLInputElement>) => {
+    private changeRegexpSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         this.setState({...this.state, searchTagAsRegExp: e.target.checked});
-
     }
+    private changeDeepSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+        this.setState({...this.state, searchTagIsDeep: e.target.checked});
+    }
+    /*
     private changeMinDate = (e: React.ChangeEvent<HTMLInputElement>) => {
         this.setState({...this.state, minDate: new Date(e.target.value).getTime() });
 
     }
     private changeMaxDate = (e: React.ChangeEvent<HTMLInputElement>) => {
         this.setState({...this.state, maxDate: new Date(e.target.value).getTime() });
+    }*/
+    filter(msg: LoggerCategoryState): boolean{
+        let s = this.state.searchTagIsDeep ?  msg.long_string : msg.short_string;
+        if (this.state.searchTagAsRegExp) {
+            try {
+                let regexp = new RegExp(this.state.searchTag);
+                return regexp.test(s);
+            } catch (e: any) {
+
+                // this is to avoid a loop of render-error
+                if (!this.state.regexpIsInvalid){
+                    this.setState({regexpIsInvalid: true});
+                    Log.ee("invalid regular expression in Logger.filter", (e.message || '').split('\n')[0]);
+                }
+            }
+        }
+        return s.indexOf(this.state.searchTag) >= 0;
+    }
+
+    toggleCat(cat: LoggerType): void{
+        this.setState({categoriesActive:{...this.state.categoriesActive, [cat]: !this.state.categoriesActive[cat]}} )
+    }
+    displayArgs(args: any[], category: LoggerType): ReactNode{
+        if (!args) return undefined;
+        if (!Array.isArray(args)) args = [args];
+        let objs: GObject[] = [];
+        let primitives: any[] = [];
+        for (let a of args){
+            switch(typeof a){
+                case "object": case "function": objs.push(a); primitives.push("["+(typeof a)+"_"+(objs.length)+"]"); break;
+                case "symbol": primitives.push(a.toString()); break;
+                default: primitives.push(a);
+            }
+        }
+        return <div className={"cat cat_"+category}>
+            <div className={"text"}>{primitives.join(" ")}</div>
+            { objs.map((o,i) => <DataOutputComponent data={o} rootName={""+(typeof o)+"_"+(i+1)+""} />) }
+        </div>;
     }
 
     render(): ReactNode {
-        const allCategories: string[] = Object.keys(this.state.messages);
-        const activeCategories: string[] = allCategories.filter( cat => this.isCatActive(cat));
-        const allTags: string[] = U.arrayUnique(activeCategories.flatMap( (cat) => Object.keys(this.state.messages[cat])))
-        const activeTags: string[] = allTags.filter( (tag: string) => (this.state.searchTagAsRegExp ? tag.match(this.state.searchTag) : tag === this.state.searchTag));
+        let key: LoggerType;
+        const categoryAliases = this.categoryAliases;
+        const labelAliases: Dictionary<string, string> = {i:"Info", w:"Warning", e:"Errors", eDev:"Exceptions"};
+        const categories: LoggerType[] = (Object.keys(Log.messageMapping) as LoggerType[]).filter(c => categoryAliases[c] !== null);
+        const allMessages: LoggerCategoryState[] = [];
+        for (key of categories) {
+            if (!this.isCatActive(key)) continue; // U.arrayMergeInPlace(allMessages, Log.messageMapping[key])
+            for (let msg of Log.messageMapping[key]) {
+                if (this.filter(msg)) allMessages.push(msg);
+            }
+        }
         return (<>
             <div>
-                <h1>Search by tag</h1>
-                <datalist>
-                    { allTags.map(tag => <option key={tag} value={tag}>{tag}</option>) }
-                </datalist>
-                <input list={"#logger_" + this.state.id + "_keylist"} value={this.state.searchTag} onChange={ this.changeSearchTag } />
-                {/*<Input label={"as RegExp"} type="checkbox" checked={this.state.searchTagAsRegExp} onChange={this.changeRegexpTag} />
-                <input label={"from"} type="datetime-local" value={ new Date(this.state.minDate).toString()} onChange={this.changeMinDate} />
+                <h1>Filter</h1>
+                <input className={"search " + (this.state.regexpIsInvalid && "invalid")} type={"search"} value={this.state.searchTag} onChange={ this.changeSearch } />
+                <label className={"checkbox"}><label>as RegExp</label><input type="checkbox" checked={this.state.searchTagAsRegExp} onChange={this.changeRegexpSearch} /></label>
+                <label className={"checkbox"}><label>deep</label><input type="checkbox" checked={this.state.searchTagIsDeep} onChange={this.changeDeepSearch} /></label>
+                {/*<input label={"from"} type="datetime-local" value={ new Date(this.state.minDate).toString()} onChange={this.changeMinDate} />
                 <input label={"to"} type="datetime-local" value={ new Date(this.state.maxDate).toString()} onChange={this.changeMaxDate} /> */}
             </div>
-            <ul className={"categories"}>
-                { allCategories.map((cat, i) => <li className={"category cat_"+ i + " " + cat} key={cat} data-active={this.isCatActive(cat)}>{cat}</li>) }
-            </ul>
+            <div className={"categories"}>
+                { categories.filter(cat => !(cat in categoryAliases)).map((cat) => <button className={"btn btn"+(this.isCatActive(cat) && "-outline")+"-danger cat cat_" + cat + (this.isCatActive(cat) ? " active" : " inactive")}
+                                                  key={cat} onClick={e=>this.toggleCat(cat)}>{labelAliases[cat] || cat}</button>) }
+            </div>
             <ul className={"entries"}>
-                {
-                    activeCategories.flatMap( (cat) => {
-                        return Object.keys(this.state.messages[cat]).map( (tag) => {
-                            let entries = this.state.messages[cat][tag]
-                            return <li><span className={"tag"}>{tag}</span>{
-                                entries.map( (parameter) => <span className="parameter">
-                                    <DataOutputComponent data={parameter} rootName={tag} />
-                                </span>)
-                            }</li>;
-                        });
-                    })
+                { allMessages.map( (msg) => (
+                        <li className={"hoverable cat cat_"+msg.category}>
+                            {false && <span className={"preview"}>{msg.short_string}</span>}
+                            {false && <span className={"content"}>{msg.long_string}</span>}
+                            {this.displayArgs(msg.raw_args, msg.category)}
+                        </li>))
                 }
             </ul>
         </>); }
 
 
-
+/*
     public log = (category: string, key: string, data: any[], fullconcat?: string): void => {
         if (!this.state.categoriesActive.hasOwnProperty(category)) {
             this.setState({categoriesActive: { ...this.state.categoriesActive, category: true}});
@@ -106,8 +164,9 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
         messages[category][key] = messages[category][key] ? [ ...messages[category][key], data] : [data];
         this.setState( {messages});
     }// .bind(this);
-
+*/
     componentWillUnmount(): void {
+        Log._loggerComponent = undefined;
         U.arrayRemoveAll(LoggerComponent.loggers, this);
     }
 }

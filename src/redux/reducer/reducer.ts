@@ -552,10 +552,14 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         try {
             tv.UDFunction = new Function(paramStr, 'return ('+dv.usageDeclarations+')(ret)') as (...a:any)=>any;
         } catch (e:any) {
-            let strerr = JSON.stringify((e.message || '').split('\n')[0]);
-            let errbody = "ret.__invalidUsageDeclarations = "+strerr+"; ret.__invalidUsageDeclarations.isSyntax = true; return ret;"
-            console.error('error udparse', {vid, e, paramStr, body: 'return ('+dv.usageDeclarations+')(ret)', strerr, errbody});
-            tv.UDFunction = new Function("ret", errbody) as (...a:any)=>any;
+            // problem: errors cannot be serialized in any way? they have no keys. let strerr = JSON.stringify(e); //(e.message || '').split('\n')[0]);
+            let udErrors: GObject =  windoww.udErrors;
+            if (!windoww.udErrors) windoww.udErrors = udErrors = {maxi: 0};
+            udErrors["e"+(++udErrors.maxi)] = e;
+            e.isSyntax = true;
+            let errbody = "ret.__invalidUsageDeclarations = window.udErrors.e"+udErrors.maxi+"; return ret;";
+            console.error('error udparse', {vid, e, paramStr, body: 'return ('+dv.usageDeclarations+')(ret)', errbody});
+            tv.UDFunction = new Function("unusedContext, ret", errbody) as (...a:any)=>any;
         }
 
 

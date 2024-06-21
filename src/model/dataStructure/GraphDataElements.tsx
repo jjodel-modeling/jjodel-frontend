@@ -264,16 +264,15 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     }
 
     get_innerGraph(context: Context): LGraph {
-        let lcurrent: LGraphElement = LPointerTargetable.fromPointer(context.data.father);
-        let dcurrent = lcurrent?.__raw;
+        let dcurrent = DPointerTargetable.fromPointer(context.data.father);
 
         // if no parent, but it's a graph, return itself.
         if (!dcurrent) {
             dcurrent = context.data;
             switch(dcurrent.className){
                 case DGraph.cname:
-                case DGraphVertex.cname: return (lcurrent || LPointerTargetable.fromD(dcurrent)) as LGraph;
-                default: return Log.exDevv("node failed to get containing graph", context.data, dcurrent, lcurrent);
+                case DGraphVertex.cname: return (LPointerTargetable.fromD(dcurrent)) as LGraph;
+                default: return Log.exDevv("root node failed to get containing graph", {cdata:context.data, dcurrent});
             }
         }
 
@@ -281,17 +280,16 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         while(true){
             switch(dcurrent?.className){
                 case DGraph.cname:
-                case DGraphVertex.cname: return (lcurrent || LPointerTargetable.fromD(dcurrent)) as LGraph;
+                case DGraphVertex.cname: return (LPointerTargetable.fromD(dcurrent)) as LGraph;
                 default:
                     if (!dcurrent.father || dcurrent.id === dcurrent.father) {
                         /*switch(dcurrent.className){
                             case DGraph.name:
                             case DGraphVertex.name: return (lcurrent || LPointerTargetable.fromD(dcurrent)) as LGraph;
-                            default: */return Log.exDevv("node failed to get containing graph", context.data, dcurrent, lcurrent);
+                            default: */return Log.exDevv("node failed to get containing graph", {cdata:context.data, dcurrent});
                         //}
                     }
-                    lcurrent = LPointerTargetable.fromPointer(dcurrent.father);
-                    dcurrent = lcurrent.__raw;
+                    dcurrent = DPointerTargetable.fromPointer(dcurrent.father);
             }
         }
     }

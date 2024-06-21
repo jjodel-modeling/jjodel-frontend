@@ -882,7 +882,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__event: Info = {todo: true, isGlobal: true, type: "Dictionary<name, function>", txt: 'Alias for this.events'}
     protected get_event(c: Context): this['events'] { return this.get_events(c); }
     protected get_events(c: Context): this['events'] {
-        Log.exx("use node.events instead");
+        Log.exx("use node.events instead", U.getStackTrace());
         return {};
         // return transientProperties.view[c.data.id]?.events || {};
     }

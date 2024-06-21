@@ -113,7 +113,8 @@ function computeUsageDeclarations(component: GraphElementComponent, allProps: Al
         transientProperties.view[vid].UDFunction.call(UDEvalContext, UDEvalContext, udret);
         // console.log("computing usage declarations: ", {f:transientProperties.view[vid].UDFunction, udret, UDEvalContext});
     } catch (e: any) {
-        udret = {data: allProps.data, view, node: allProps.node, __invalidUsageDeclarations: "@runtime:" +e};
+        e.isSyntax = false;
+        udret = {data: allProps.data, view, node: allProps.node, __invalidUsageDeclarations: e};// "@runtime:" +e};
         Log.ee("Invalid usage declarations", {e, str: view.usageDeclarations, view, data: allProps.data, stateProps: allProps});
     }
 

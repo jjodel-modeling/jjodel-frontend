@@ -22,6 +22,8 @@ import {
 } from "../joiner";
 import {AllPropss} from "../graph/vertex/Vertex";
 
+var Convert = require('ansi-to-html');
+
 // U-functions that require jsx
 @RuntimeAccessible('UX')
 export class UX{
