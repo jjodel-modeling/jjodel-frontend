@@ -1,14 +1,33 @@
-.search{
-  &.invalid{
-    border-color: red;
-    text-decoration: grammar-error;
-    &::after{
-      content: 'this is not a valid regular expression';
+.search-row{
+  display: flex;
+  flex-wrap: nowrap;
+
+  .search{
+    flex-basis: 100px;
+    flex-grow: 1;
+    margin-right: 0.25rem;
+    text-align: center;
+    font-size: 1.25em;
+    max-height: 35px;
+    margin-bottom: 0.25rem;
+    &.invalid{
+      border-color: red;
+      text-decoration: grammar-error;
+      &::after{
+        content: 'this is not a valid regular expression';
+      }
     }
   }
-}
-label.checkbox{
-
+  label.checkbox{
+    margin: auto;
+    display: flex;
+    >*{margin: auto;}
+    input{
+      // padding: 5px;
+      margin-left: 0.5rem;
+      margin-right: 2px;
+    }
+  }
 }
 
 .categories{

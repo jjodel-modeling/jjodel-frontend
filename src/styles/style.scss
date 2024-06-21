@@ -105,15 +105,17 @@ input[type="color"]::-webkit-color-swatch {
   /*border-radius: 100%;*/
   border: none;
 }
-.input[type='checkbox'] {
+input[type='checkbox'] { // was .input as class
   background-image: url("../static/svg/toggle-off.svg");
   background-repeat: no-repeat; background-size: cover;
   width: min-content;
-  cursor: pointer; padding: 0.8em;
+  cursor: pointer;
+  padding: 0.88em; // above this, the total height become bigger than a char because of some input native stylings
+  scale: 1.2;
   background-color: transparent;
   border: none;
 }
-.input[type='checkbox']:checked {
+input[type='checkbox']:checked { // was .input as class
   background-image: url("../static/svg/toggle-on.svg");
 }
 .select {

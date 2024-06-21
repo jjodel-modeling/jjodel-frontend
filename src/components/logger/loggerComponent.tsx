@@ -113,24 +113,42 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
         </div>;
     }
 
+    clearLogs() {
+        for (let key in Log.messageMapping) Log.messageMapping[key] = [];
+        this.forceUpdate();
+        // just need to modify any counter in a way that is different from both curr val and the next counter update
+        // this.setState({e_counter: -1});
+    }
     render(): ReactNode {
         let key: LoggerType;
         const categoryAliases = this.categoryAliases;
         const labelAliases: Dictionary<string, string> = {i:"Info", w:"Warning", e:"Errors", eDev:"Exceptions"};
         const categories: LoggerType[] = (Object.keys(Log.messageMapping) as LoggerType[]).filter(c => categoryAliases[c] !== null);
-        const allMessages: LoggerCategoryState[] = [];
+        let allMessages: LoggerCategoryState[] = [];
         for (key of categories) {
             if (!this.isCatActive(key)) continue; // U.arrayMergeInPlace(allMessages, Log.messageMapping[key])
             for (let msg of Log.messageMapping[key]) {
                 if (this.filter(msg)) allMessages.push(msg);
             }
         }
+        allMessages = allMessages.sort((a, b) => a.time - b.time);
+
         return (<>
             <div>
-                <h1>Filter</h1>
-                <input className={"search " + (this.state.regexpIsInvalid && "invalid")} type={"search"} value={this.state.searchTag} onChange={ this.changeSearch } />
-                <label className={"checkbox"}><label>as RegExp</label><input type="checkbox" checked={this.state.searchTagAsRegExp} onChange={this.changeRegexpSearch} /></label>
-                <label className={"checkbox"}><label>deep</label><input type="checkbox" checked={this.state.searchTagIsDeep} onChange={this.changeDeepSearch} /></label>
+                <div className={"d-flex search-row p-1"}>
+                    <input placeholder={"filter"} className={"form-control search " + (this.state.regexpIsInvalid && "invalid")} type={"search"} value={this.state.searchTag} onChange={ this.changeSearch } />
+                    <label className={"checkbox"}>
+                        <input className="input" type="checkbox" checked={this.state.searchTagAsRegExp} onChange={this.changeRegexpSearch} />
+                        <label>RegExp</label>
+                    </label>
+                    <label className={"checkbox"}>
+                        <input className="input" type="checkbox" checked={this.state.searchTagIsDeep} onChange={this.changeDeepSearch} />
+                        <label>Deep</label>
+                    </label>
+                    <button onClick={e => this.clearLogs()} className={'btn btn-danger ms-1'}>
+                        <i className={'p-1 bi bi-trash3-fill'}>Clear</i>
+                    </button>
+                </div>
                 {/*<input label={"from"} type="datetime-local" value={ new Date(this.state.minDate).toString()} onChange={this.changeMinDate} />
                 <input label={"to"} type="datetime-local" value={ new Date(this.state.maxDate).toString()} onChange={this.changeMaxDate} /> */}
             </div>
@@ -166,8 +184,11 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
     }// .bind(this);
 */
     componentWillUnmount(): void {
-        Log._loggerComponent = undefined;
-        U.arrayRemoveAll(LoggerComponent.loggers, this);
+        Log._loggerComponent = null;
+        // U.arrayRemoveAll(LoggerComponent.loggers, this);
+    }
+    componentDidMount() {
+        Log._loggerComponent = this;
     }
 }
 
