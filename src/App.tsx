@@ -20,6 +20,7 @@ import {
     SettingsPage,
     UpdatesPage
 } from "./pages";
+import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 
 let userHasInteracted = false;
 function endPendingActions() {
@@ -50,6 +51,7 @@ function App(props: AllProps): JSX.Element {
 
     return(<>
         {isLoading && <Loader />}
+        <ExternalLibraries />
         <HashRouter>
             <PathChecker />
             <Routes>

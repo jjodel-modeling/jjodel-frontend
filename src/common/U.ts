@@ -1944,7 +1944,7 @@ export class Log{
         Log.messageMapping[type].push(update);
         // (Log as GObject)["last_"+type].push(args);
         if (!c) return;
-        c.setState({[type+"_counter"]: c.state[type+"_counter"]++}); // so it doesn't pass through redux
+        c.setState({[type+"_counter"]: c.state[type+"_counter"]+1}); // so it doesn't pass through redux
     }
     public static l(b: boolean, ...restArgs: any[]): string | null {
         if (!b) return null;
