@@ -165,13 +165,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (explicitView) {
             let idorname: string = Pointers.from(explicitView) || explicitView as any as string;
             ret.view = tn.mainView = LPointerTargetable.fromD(Selectors.getViewByIDOrNameD(idorname, state) as DViewElement);
+
         }
         if (!ret.view) { // if view is not explicitly set or the assigned view is not found, match a new one.
             if (!scores) scores = getScores(ret, ownProps);
             ret.view = scores.mainView = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
             Log.w(explicitView, "Requested main view "+ownProps.view+" not found. Another view got assigned: " + ret.view?.__raw.name, {requested: ownProps.view, props: ownProps, state: ret});
         }
-        Log.ex(!ret.view, "Could not find any view appliable to element.", {data:ret.data, props: ownProps, state: ret, scores: (ret as any).viewScores});
+        if (!tn.validMainViews?.[0] || tn.validMainViews[0].id !== tn.mainView?.id) tn.validMainViews = [tn.mainView, ...(tn.validMainViews || [])];
+        Log.ex(!ret.view, "Could not find any view appliable to element.",
+            {data:ret.data, props: ownProps, state: ret, scores: (ret as any).viewScores, nid: ownProps.nodeid, tn:transientProperties.node[ownProps.nodeid as any]});
 
         if (explicitViews){
             // ret.views = tn.stackViews = LPointerTargetable.fromArr(explicitView);
@@ -186,13 +189,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         if (!ret.views) {
             // if views is not explicitly set. (if some are not found, they are just missing by choice, will not replace)
-            if (!scores) scores = getScores(ret, ownProps);
-            ret.views = scores.stackViews = LPointerTargetable.fromArr((scores.stackViews||[]).map((v:LViewElement)=>v?.id).filter(vid=>!!vid));
+            if (!scores) {
+                scores = getScores(ret, ownProps);
+                ret.views = scores.stackViews;
+            }
+            else ret.views = scores.stackViews = LPointerTargetable.fromArr((scores.stackViews||[]).map((v:LViewElement)=>v?.id).filter(vid=>!!vid));
         }
         // console.log("viewsss mapstate 4 " + ret.node?.className + " " + ret.data?.name, {views:ret.views, ownProps, stateProps: {...ret}, thiss:this});
 
 
-        tn.validMainViews = [tn.mainView, ...(tn.validMainViews || [])];
         ret.viewsid = Pointers.fromArr(ret.views) as Pointer<DViewElement>[];
         ret.viewid = ret.view.id;
 

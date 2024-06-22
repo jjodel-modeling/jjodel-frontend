@@ -429,6 +429,35 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         }
     }
 
+    for (let ptr of ret.ELEMENT_CREATED){
+        let d = ret.idlookup[ptr];
+        if (!d) continue; // creation rejected, no-op
+        switch(d.className){
+            default: break;
+            case "DViewElement":
+                for(let nid in transientProperties.node){
+                    let tn = transientProperties.node[nid];
+                    tn.viewScores[d.id as any] = {} as any;
+                }
+        }
+    }
+    ret.ELEMENT_CREATED = [];
+    for (let ptr of ret.ELEMENT_DELETED){
+        let d = oldState.idlookup[ptr];
+        if (!d) continue; // already deleted, no-op
+        switch(d.className){
+            default: break;
+            case "DViewElement":
+                for (let nid in transientProperties.node) {
+                    let tn = transientProperties.node[nid];
+                    // delete tn.stackViews; // trigger recalc of all scores.
+                    delete tn.viewScores[d.id as any];
+                    tn.needSorting = true;
+                }
+        }
+    }
+    ret.ELEMENT_DELETED = [];
+
     if (ret.VIEWS_RECOMPILE_all === true) ret.VIEWS_RECOMPILE_all = Object.keys(ret.idlookup);
     if ((ret.VIEWS_RECOMPILE_all as Pointer[])?.length) {
         let resetAllNodes: boolean = false;

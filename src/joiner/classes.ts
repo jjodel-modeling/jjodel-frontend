@@ -594,6 +594,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                 for (let c of subElements) Constructors.persist([c]);
                 // finally fire the actions for "this"
                 for (let c of callbacks) (c as Action).fire ? (c as Action).fire() : (c as () => void)();
+                SetRootFieldAction.new('ELEMENT_CREATED', e.id, '+=', false); // here no need to IsPointer because it only affects Transient stuff
             }
         })
     }
@@ -1562,7 +1563,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
 
     protected wrongAccessMessage(str: string): any {
         let msg = "Method "+str+" should not be called directly, attempting to do so should trigger get_"+str+"(). This is only a signature for type checking.";
-        Log.ex(msg);
+        Log.ex(true, msg);
         throw new Error(msg); }
 
     public toString(): string { throw this.wrongAccessMessage("toString"); }
@@ -1885,13 +1886,14 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         const data: LPointerTargetable & GObject = context.proxyObject;
         const dependencies = data.dependencies();
 
-        for(let child of data.children) {
-            child.delete();
-            child.node?.delete();
-        }
-
         const ret = () => {
-            BEGIN();
+            for(let child of data.children) {
+                child.delete();
+                // todo: if a m1-dvalue which conforms to a m2-reference with "containment" is deleted, need to delete also target.
+                // maybe better to do through override?
+                child.node?.delete();
+            }
+
             for (let dependency of dependencies) {
                 const root = dependency.root;
                 const obj = dependency.obj;
@@ -1906,12 +1908,13 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
                     SetRootFieldAction.new(root, val, op, false);
                 }
             }
-            if(data.nodes) data.nodes.map((node: any) => node.delete());
-            SetRootFieldAction.new('idlookup', data.id, '-=', false);
+            if (data.nodes) data.nodes.map((node: any) => node.delete());
+
+            SetRootFieldAction.new('ELEMENT_DELETED', data.id, '+=', false); // here no need to IsPointer because it only affects Transient stuff
+            SetRootFieldAction.new('idlookup', data.id, '-=', false); // damiano: shouldn't be isPointer = true?
             DeleteElementAction.new(data.id);
-            END();
         };
-        return ret;
+        return () => TRANSACTION(ret);
     }
 }
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LPointerTargetable);
@@ -2829,6 +2832,7 @@ export class NodeTransientProperties{
     mainView!: LViewElement;
     viewScores: Dictionary<Pointer<DViewElement>, ViewScore> = {} as any;
     evalContext!: GObject; // global for this node (without view-specific usageDeclaration)
+    needSorting!: boolean;
     //force1Update!: boolean;
     constructor(){
         // this.stackViews = []; this.validMainViews = [];
