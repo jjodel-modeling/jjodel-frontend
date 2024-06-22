@@ -31,7 +31,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
     }
 
     return(<Try>
-        <Dashboard active={'All'}>
+        <Dashboard active={'All'} version={props.version}>
             <section>
                 <div className={'ms-2 p-1 bg-primary w-25 rounded me-auto'}>
                     <b className={'d-block text-center text-gray'}>Do you want to import a project?</b>
@@ -46,7 +46,10 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
 }
 
 interface OwnProps {}
-interface StateProps {projects: LProject[]}
+interface StateProps {
+    projects: LProject[];
+    version: DState["version"];
+}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -54,6 +57,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     ret.projects = LProject.fromArr(state.projects);
+    ret.version = state.version;
     return ret;
 }
 

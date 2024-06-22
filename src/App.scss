@@ -59,10 +59,18 @@ font-weight: 900 !important;
   &>.preview, &>svg>.preview{
     display: none;
   }
+
   &>.content, &>svg>.content{
     display: block; z-index:1; position: absolute;
     box-shadow: var(--smart-elevation-8);
   }
+
+  &>.content.inline, &>svg>.content.inline{
+    display: inline-block;
+    position: relative;
+    box-shadow: none;
+  }
+
 }
 
 [data-nodetype], [data-nodetype]>*, {

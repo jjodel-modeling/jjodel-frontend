@@ -17,6 +17,12 @@ import ModelsSummaryTab from './tabs/ModelsSummaryTab';
 import DockManager from './DockManager';
 import MqttEditor from "../rightbar/mqtt/MqttEditor";
 
+
+const tabidprefix = "DockComponent_rightbar_";
+let idcounter = 0;
+function id(){ // NB: cannot use just indexes or tab title because the id is injected in html, so it must be unique in the whole page.
+    return tabidprefix + (idcounter++);
+}
 function DockComponent(props: AllProps) {
     const groups = {
         'models': {floatable: true, maximizable: true},
@@ -24,22 +30,21 @@ function DockComponent(props: AllProps) {
     };
 
     /* Models */
-    const ModelsSummary = {id: '0', title: 'Summary', group: 'models', closable: false, content: <Try><ModelsSummaryTab /></Try>};
+    const ModelsSummary = {id: id(), title: 'Summary', group: 'models', closable: false, content: <Try><ModelsSummaryTab /></Try>};
 
     /* Editors */
-    let index = 1;
-    const test = {id: `${index++}`, title: 'Test', group: 'editors', closable: false, content: <TestTab />};
-    const structure = {id: `${index++}`, title: 'Structure', group: 'editors', closable: false, content: <Try><StructureEditor /></Try>};
-    const metadata = {id: `${index++}`, title: 'Metadata', group: 'editors', closable: false, content: <Try><ModelMetaData /></Try>};
-    const tree = {id: `${index++}`, title: 'Tree View', group: 'editors', closable: false, content: <Try><TreeEditor /></Try>};
-    const views = {id: `${index++}`, title: 'Views', group: 'editors', closable: false, content: <Try><ViewsEditor /></Try>};
-    const node = {id: `${index++}`, title: 'Node', group: 'editors', closable: false, content: <Try><NodeEditor /></Try>};
-    const viewpoints = {id: `${index++}`, title: 'Perspectives', group: 'editors', closable: false, content: <Try><ViewpointEditor validation={false} /></Try>};
-    const validation = {id: `${index++}`, title: 'Validation', group: 'editors', closable: false, content: <Try><ViewpointEditor validation={true} /></Try>};
-    const collaborators = {id: `${index++}`, title: 'Collaborators', group: 'editors', closable: false, content: <Try><CollaboratorsEditor /></Try>};
-    const mqtt = {id: `${index++}`, title: 'Mqtt', group: 'editors', closable: false, content: <Try><MqttEditor /></Try>};
-    const console = {id: `${index++}`, title: 'Console', group: 'editors', closable: false, content: <Try><Console /></Try>};
-    const logger = {id: `${index++}`, title: 'Logger', group: 'editors', closable: false, content: <Try><LoggerComponent /></Try>};
+    const test = {id: id(), title: 'Test', group: 'editors', closable: false, content: <TestTab />};
+    const structure = {id: id(), title: 'Structure', group: 'editors', closable: false, content: <Try><StructureEditor /></Try>};
+    const metadata = {id: id(), title: 'Metadata', group: 'editors', closable: false, content: <Try><ModelMetaData /></Try>};
+    const tree = {id: id(), title: 'Tree View', group: 'editors', closable: false, content: <Try><TreeEditor /></Try>};
+    const views = {id: id(), title: 'Views', group: 'editors', closable: false, content: <Try><ViewsEditor /></Try>};
+    const node = {id: id(), title: 'Node', group: 'editors', closable: false, content: <Try><NodeEditor /></Try>};
+    const viewpoints = {id: id(), title: 'Perspectives', group: 'editors', closable: false, content: <Try><ViewpointEditor validation={false} /></Try>};
+    const validation = {id: id(), title: 'Validation', group: 'editors', closable: false, content: <Try><ViewpointEditor validation={true} /></Try>};
+    const collaborators = {id: id(), title: 'Collaborators', group: 'editors', closable: false, content: <Try><CollaboratorsEditor /></Try>};
+    const mqtt = {id: id(), title: 'Mqtt', group: 'editors', closable: false, content: <Try><MqttEditor /></Try>};
+    const console = {id: id(), title: 'Console', group: 'editors', closable: false, content: <Try><Console /></Try>};
+    const logger = {id: id(), title: 'Logger', group: 'editors', closable: false, content: <Try><LoggerComponent /></Try>};
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     layout.dockbox.children.push({tabs: [ModelsSummary]});

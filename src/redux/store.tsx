@@ -90,6 +90,8 @@ export class DState extends DPointerTargetable{
         return new Constructors(new DState('dwc'), undefined, false, undefined).DPointerTargetable().DState().end();
     }
 
+    version:{n:number, date:string} = {n:2.1, date: '22-06-2024'};
+
     env: Dictionary = process.env;  //damiano: this might make problems on load
     debug: boolean = false;
     logs: Pointer<DLog>[] = [];

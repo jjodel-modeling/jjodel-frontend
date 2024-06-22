@@ -57,7 +57,7 @@ function JsxEditorComponent(props: AllProps) {
     }, [monaco]);
 
     return <>
-        <label className={'ms-1 mb-1 d-block'}>JSX Editor</label>
+        <label className={"ms-1 mb-1 d-block jj-editor-title"}>JSX Editor</label>
         {(jsx).indexOf('<>') >= 0 &&
             <b><span style={{color:'red'}}>Warning:</span>: JSX.Fragment {"<>"} is valid JSX but is not supported by our compiler.<br/>
                 Please replace it with an array [] instead.</b>}
