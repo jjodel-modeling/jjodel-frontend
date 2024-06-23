@@ -18,6 +18,7 @@ import {
     CoordinateMode,
     U
 } from '../../joiner';
+import DSL from "../../DSL/DSL";
 
 var nosize: GraphSize = {x:0, y:0, w:0, h:0, nosize:true} as any;
 var defaultEdgePointSize: GraphSize = {x:0, y:0, w:5, h:5} as any;
@@ -32,14 +33,14 @@ class DefaultViews {
 
 
     static model(vp: Pointer<DViewPoint>): DViewElement {
-        const view = DViewElement.new('Model', DV.modelView(), undefined, '', '', '', [DModel.cname],
+        const view = DViewElement.new('Model', DSL.parser(DV.modelView()), undefined, '', '', '', [DModel.cname],
             '', 1, false, true, vp);
         view.draggable = false; view.resizable = false;
         view.appliableTo = 'Graph';
         view.oclCondition = 'context DModel inv: true';
         view.palette = {
             'background-': U.hexToPalette('#fff'),
-            'color-': U.hexToPalette('#000', '#111', '#222', '#333', '#444')
+            'color-': U.hexToPalette('#123cd0', '#4b0082', '#ff0000', '#3191bb', '#3191bb')
         };
         view.css = `
 .root { background-color: var(--background-1); }
@@ -80,17 +81,17 @@ class DefaultViews {
    height: 62px;
    padding: 14px 0 0 0px;
    border-radius: 4px 0 0 4px;
-   color: var(--color5);
-   background-color: var(--color2);
-   border-left: 3px solid var(--color1);
-   border-top: 0px solid var(--color4);
-   border-bottom: 0px solid var(--color4);
+   color: var(--color-5);
+   background-color: var(--color-2);
+   border-left: 3px solid var(--color-1);
+   border-top: 0px solid var(--color-4);
+   border-bottom: 0px solid var(--color-4);
    &:hover {
       cursor: pointer;
    }
 }
 .control-panel-container .button .bi {
-   color: var(--color1);
+   color: var(--color-1);
    font-size: 14px;
 }
 .control-panel {
@@ -98,13 +99,13 @@ class DefaultViews {
    margin-left: 50px;
    height: 100%;
    width: 270px;
-   background: var(--color1);
+   background: var(--color-1);
    display: block;
    opacity: 1;
-   border-left: 3px solid var(--color2);
-   color: var(--color2);
+   border-left: 3px solid var(--color-2);
+   color: var(--color-2);
    padding: 20px;
-   box-shadow: -0px -0px 1px var(--color4);
+   box-shadow: -0px -0px 1px var(--color-4);
    
 }
 .open {
@@ -124,7 +125,7 @@ class DefaultViews {
    padding-top: 0px;
    float: right;
    display: block;
-   color: var(--color2);
+   color: var(--color-2);
    opacity: 1;
    &:hover {
       cursor: pointer;

@@ -1,9 +1,14 @@
 class DSL {
     public static parser(jsx: string): string {
-        let children = DSL.Children(jsx);
-        while(children) {
-            jsx = children;
-            children = DSL.Children(children);
+        jsx = DSL.loop('Children', jsx);
+        return jsx;
+    }
+
+    private static loop(component: 'Children', jsx: string): string {
+        let tag = DSL[component](jsx);
+        while(tag) {
+            jsx = tag;
+            tag = DSL[component](tag);
         }
         return jsx;
     }
@@ -24,7 +29,6 @@ class DSL {
         </div>`;
         return DSL.replace(jsx, 'Children', dsl);
     }
-
 
     private static extractParameters(jsx: string, component: string): string|undefined {
         const regex = new RegExp(`<${component}(.*?)\\/>`);
