@@ -1,6 +1,6 @@
 
 .toolbar {
-  padding: 0.25rem;
+  padding: 0.5rem;
   cursor: move;
   display: flex;
 
@@ -26,8 +26,8 @@
     color: var(--palette-w);
     cursor: pointer;
     position: absolute;
-    top: 0;
-    right: 5px;
+    top: 0.25rem;
+    right: 0.5rem;
     z-index: 2 !important;
   }
   .toolbar-item{
