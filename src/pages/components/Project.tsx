@@ -1,8 +1,9 @@
 import {DUser, LProject, U} from '../../joiner';
-import Banner1 from '../../static/banner/1.png'
+import Banner1 from '../../static/banner/1.png';
 import React from 'react';
 import {ProjectsApi} from '../../api/persistance';
 import {useNavigate} from 'react-router-dom';
+
 
 type Props = {data: LProject};
 function Project(props: Props): JSX.Element {
@@ -21,7 +22,7 @@ function Project(props: Props): JSX.Element {
     }
 
     return(<div className={'project-card p-1 m-1'}>
-        <img className={'rounded'} alt={`Project's image`} src={Banner1} style={{height: '12em'}} />
+        <img className={'rounded'} alt={`Project's image`} src={Banner1} loading={'lazy'} style={{height: '12em'}} />
         <div style={{position: 'absolute', top: 10, right: 5}} className={'d-flex'}>
             <button className={'btn btn-primary'} onClick={e => selectProject()}>
                 <i className={'p-1 bi bi-eye-fill'} />

@@ -270,7 +270,7 @@ export {
     Asterisk, Ellipse, Enneagon, Hexagon, Nonagon,
     Octagon, Heptagon, Pentagon, Rectangle, Septagon,
     Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle,
-    View, Try,
+    View, Try, ControlPanel
 } from './components'
 //export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file
 export {fakeExport} from './ExecuteOnRead';
