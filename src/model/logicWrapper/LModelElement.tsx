@@ -3777,7 +3777,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
                 // NB: ELiterals can be pointers in L, but string or ordinal numbers in D, but they won't make edges, so i use .__raw
                 inner:
                     for (let valindex = 0; valindex < values.length; valindex++) {
-                        let v: any = dval.values;
+                        let v: any = values[valindex];
                         if (!Pointers.isPointer(v, state)) continue inner;
                         let snode = lval.node;
                         if (!snode || !snode.html) continue outer;

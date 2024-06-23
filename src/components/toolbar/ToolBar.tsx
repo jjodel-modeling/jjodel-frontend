@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, ReactNode} from "react";
+import React, {Dispatch, ReactElement, ReactNode, useEffect, useRef, useState} from "react";
 import {connect} from "react-redux";
 import "./style.scss";
 import {
@@ -31,12 +31,15 @@ import {
     WVoidEdge,
     Log,
     LEdgePoint, DUser,
-    U, LPointerTargetable, SetRootFieldAction
+    U, LPointerTargetable, SetRootFieldAction, GObject, EMeasurableEvents, TRANSACTION
 } from "../../joiner";
 import {InitialVertexSizeObj} from "../../joiner/types";
 import ModellingIcon from "../forEndUser/ModellingIcon";
 
 interface ThisState {}
+
+let ti = 0; // tabindex counter
+
 function toolbarClick(item_dname: string, data: LModelElement|undefined, myDictValidator: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]>, node?:LGraphElement) {
     switch(item_dname){
         case DVoidEdge.cname:
@@ -106,7 +109,7 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
             data = data?.father || data;
         }
         let item = item_dname.substring(1).toLowerCase();
-        reactNodes.push(<div className={'toolbar-item'} style={{cursor:"pointer"}} key={item_dname} onClick={()=>toolbarClick(item_dname, data, myDictValidator, node)}>
+        reactNodes.push(<div className={'toolbar-item'} tabIndex={ti} style={{cursor:"pointer"}} key={item_dname} onClick={()=>toolbarClick(item_dname, data, myDictValidator, node)}>
             <ModellingIcon name={item} />
             <span className={'ms-1 my-auto text-capitalize'}>{item}</span>
             {/*
@@ -158,7 +161,23 @@ function selectNode(d: DGraphElement|{id: string}): any {
 
 function ToolBarComponent(props: AllProps, state: ThisState) {
     const node = props.node;
-    if (!node) return(<div className={'toolbar'}></div>);
+    let [pinned, setPinned] = useState(false);
+
+    const htmlref: React.MutableRefObject<null | HTMLDivElement>= useRef(null);
+    useEffect(() => {
+        if (!htmlref.current) return;
+        let draggableOptions = {
+            cursor: 'grabbing',
+            axis: "y",
+            opacity: 0.0,
+            distance: 5,
+            containment: 'parent',
+            // helper: 'clone'
+        };
+        ($(htmlref.current) as GObject<'JQuery + ui plugin'>).draggable(draggableOptions);
+    }, [htmlref.current]);
+
+    if (!node) return null;
     const data: LModelElement|LModel = (node.model) ? node.model : LModel.fromPointer(props.model);
 
     const isMetamodel: boolean = props.isMetamodel;
@@ -195,21 +214,27 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     upward["DEdgePoint"] = ["DEdgePoint"]; //, "DEdge", "DVoidEdge"]; because from a edgeNode, i don't want to prompt the user to create a edge in toolbar.
     // upward["DClass"] = ["_pDPackage", "DClass", "DEnumerator"];
 
+    let content: ReactNode;
     // if (RuntimeAccessibleClass.extends(props.selected?.node?.className, DVoidEdge)) { }
     if (isMetamodel) {
-        return(<div className={"toolbar mt-2"}>
-            <b className={'d-block text-center text-uppercase mb-1'}>Add sibling</b>
-            {data && addChildren(upward[data.className])}
-            {node && addChildren(upward[node.className])}
-            <hr className={'my-2'} />
-            <b className={'d-block text-center text-uppercase mb-1'}>Add sublevel</b>
-            {data && addChildren(downward[data.className])}
-            <hr className={'my-2'} />
+        let siblings = data ? addChildren(upward[data.className]) : [];
+        if (node) siblings.push(...addChildren(upward[node.className]));
+        let subelements = data ? addChildren(downward[data.className]) : [];
+        content = (<>
+            {siblings.length > 0 &&
+                [<b className={'toolbar-section-label'}>Sibling</b>, siblings]
+            }
+            {siblings.length > 0 && subelements.length > 0 && <hr className={'my-2'} />}
+            {subelements.length > 0 &&
+                [<b className={'toolbar-section-label'}>Sublevel</b>, subelements]
+            }
+            {/*<hr className={'my-2'} />
             <b className={'d-block text-center text-uppercase mb-1'}>Add shape</b>
             {node && addChildren(downward[node.className])}
-            {/*<div className={"toolbar-item annotation"} onClick={() => select(lModelElement.addChild("annotation"))}>+annotation</div>*/}
+            {/*<div className={"toolbar-item annotation"} tabIndex={ti} onClick={() => select(lModelElement.addChild("annotation"))}>+annotation</div>* /}
             <hr className={'my-2'} />
-        </div>);
+            */}
+        </>);
     }
     else {
         const classes = metamodel?.classes;
@@ -217,37 +242,58 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         const lobj: LObject | undefined = data.className === "DObject" ? data as LObject : undefined;
         const lfeat: LValue | undefined = data.className === "DValue" ? data as LValue : undefined;
 
-        return(<div className={"toolbar mt-2"}>
-            <b className={'d-block text-center text-uppercase mb-1'}>Add root level</b>
+        let subleveloptions = [];
+        if (lobj && (!lobj.instanceof || lobj.partial)) subleveloptions.push(
+            <div key={"Feature"} className={"toolbar-item feature"} tabIndex={ti} onClick={() => { lobj.addValue(); }}>+Feature</div>
+        );
+        if (lfeat && lfeat.values.length < lfeat.upperBound) subleveloptions.push(
+            <div key={"Value"} className={"toolbar-item value"} tabIndex={ti} onClick={() => {SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); }}>
+                <ModellingIcon name={'value'} />
+                <span className={'ms-1 my-auto text-capitalize'}>value</span>
+            </div>
+        );
+        if (node) subleveloptions.push(...addChildren(downward[node.className]));
+        content = (<>
+            <b className={'toolbar-section-label'} style={{marginRight:"1.5em"/*to avoid overlap with pin*/}}>Root level</b>
             {classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
                 let dclass = lClass.__raw;
                 return <div
                     onMouseEnter={e => SetRootFieldAction.new('tooltip', lClass.annotations.map(a => a.source).join(' '))}
                     onMouseLeave={e => SetRootFieldAction.new('tooltip', '')}
-                    key={"LObject_"+dclass.id} className={"toolbar-item LObject"} onClick={() => {
-                    select(model.addObject({}, lClass)) }}>
+                    key={"LObject_"+dclass.id} className={"toolbar-item LObject"} tabIndex={ti} onClick={()=>select(model.addObject({}, lClass)) }>
                     {dclass._state.icon ? <ModellingIcon src={dclass._state.icon}/> : <ModellingIcon name={'object'} />}
                     <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)}</span>
                 </div>
             })}
-            <div key={"RawObject"} className={'toolbar-item'} onClick={e => select(model.addObject({}, null))}>
+            <div key={"RawObject"} className={'toolbar-item'} tabIndex={ti} onClick={()=>select(model.addObject({}, null))}>
                 <ModellingIcon name={'object'} />
                 <span className={'ms-1 my-auto text-capitalize'}>Object</span>
             </div>
-            <hr className={'my-2'} />
-            <b className={'d-block text-center text-uppercase mb-1'}>Add sublevel</b>
-            {(lobj && (!lobj.instanceof || lobj.partial)) && <div key={"Feature"} className={"toolbar-item feature"} onClick={() => { lobj.addValue(); }}>+Feature</div>}
-            {(lfeat && lfeat.values.length < lfeat.upperBound) && <div key={"Value"} className={"toolbar-item value"} onClick={() => {
-                SetFieldAction.new(lfeat.id, 'value' as any, undefined, '+=', false); }}>
-                <ModellingIcon name={'value'} />
-                <span className={'ms-1 my-auto text-capitalize'}>value</span>
-            </div>}
-            {node && addChildren(downward[node.className])}
-            <hr className={'my-2'} />
-        </div>);
+            { subleveloptions.length > 0 && <>
+                <hr className={'my-2'} />
+                <b className={'toolbar-section-label'}>Sublevel</b>
+                {subleveloptions}
+            </>}
+            {/*<hr className={'my-2'} />*/}
+        </>);
     }
 
+    return (
+        <div className="toolbar-draggable" ref={htmlref} style={{top: '35px', position:"absolute"}} // refuses to focus without event...
+             onClick={(e)=>{ console.log("click focus", {htmlref}); setTimeout(()=> {
+                 if (htmlref.current) (htmlref.current as any).children[0].focus();
+             }, 1)}}>
+            <div className={"toolbar mt-2 hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
+                <div className={"drag-handle dark"}>
+                </div>
+
+                <i className={"content pin bi bi-pin-angle"+(pinned ? "-fill" : '')} onClick={()=> setPinned(!pinned) } />
+                <div className={"preview toolbar-section-label mb-0 mx-1"}>Add</div>
+                <div className={"content inline"}>{content}</div>
+            </div>
+        </div>);
 }
+
 interface OwnProps {
     model: Pointer<DModel, 1, 1, LModel>;
     isMetamodel: boolean;

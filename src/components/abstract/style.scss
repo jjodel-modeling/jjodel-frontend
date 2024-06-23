@@ -477,8 +477,7 @@ body.dock-dragging iframe {
 .dock-layout {
   overflow: hidden;
   position: relative;
-  // my-addons
-  height: inherit;
+  flex-grow: 1;
 }
 .dock-layout > .dock-box {
   position: absolute;

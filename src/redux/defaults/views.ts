@@ -67,7 +67,6 @@ class DefaultViews {
             'ret.m1Objects = data && !data.isMetamodel ? data.allSubObjects : []\n'+
             'ret.refEdges = (suggestedEdges.reference || []).filter(e => !e.vertexOverlaps)\n'+
             'ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps)\n'+
-            'ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps)\n'+
             udLevelG +
             '}';
         return view;

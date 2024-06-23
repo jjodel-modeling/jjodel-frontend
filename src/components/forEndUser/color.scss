@@ -45,7 +45,7 @@
     width: auto;
   }
 }
-.hoverable:hover, .hoverable:focus-within{
+.hoverable:hover, .hoverable:focus-within, .hoverable:active, .hoverable.pinned{
   .content.suggestions{
   display:flex;
   flex-flow: column;

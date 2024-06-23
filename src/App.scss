@@ -46,16 +46,13 @@ font-weight: 900 !important;
   // works only on "block" elements? not even flex?
   text-transform: uppercase;
 }
-.toolbar-item:hover{
-  background: #ddd;
-}
 .hoverable{
   position: relative;
   &>.content, &>svg>.content{
     display: none;
   }
 }
-.hoverable:hover, .hoverable:focus, .hoverable:focus-within{
+.hoverable:hover, .hoverable:focus, .hoverable:focus-within, .hoverable:active, .hoverable.pinned{
   &>.preview, &>svg>.preview{
     display: none;
   }

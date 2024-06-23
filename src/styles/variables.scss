@@ -28,6 +28,17 @@ body{
   --background-color-3: var(--background-color-danger);
 }
 
+
+.drag-handle, .drag-handle.light{
+  background-image: url('data:image/svg+xml,<svg width="6" height="6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" fill="%23084c61" /></svg>');
+  //background-position-x: -5.48px;
+}
+
+.drag-handle.dark{
+  background-image: url('data:image/svg+xml,<svg width="6" height="6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" fill="%2353b3cb" /></svg>');
+  //background-position-x: -5.48px;
+}
+
 $radius: .2em;
 $border-color: #0000005c;
 $background: white;

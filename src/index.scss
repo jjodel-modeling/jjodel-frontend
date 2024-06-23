@@ -10,10 +10,13 @@ body {
     font-family: Lato, 'Helvetica Neue', Arial,Helvetica, sans-serif !important;
     font-size: small;
     #root{
+        position: fixed; // without this, it can scroll
         max-width: 100vw;
         max-height: 100vh;
         width: 100vw;
         height: 100vh;
+        display: flex;
+        flex-direction: column;
     }
 }
 
