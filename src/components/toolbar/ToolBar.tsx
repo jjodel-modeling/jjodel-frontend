@@ -161,7 +161,7 @@ function selectNode(d: DGraphElement|{id: string}): any {
 
 function ToolBarComponent(props: AllProps, state: ThisState) {
     const node = props.node;
-    let [pinned, setPinned] = useState(false);
+    let [pinned, setPinned] = useState(true);
 
     const htmlref: React.MutableRefObject<null | HTMLDivElement>= useRef(null);
     useEffect(() => {
@@ -185,6 +185,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     const downward: Dictionary<DocString<"DClassName">, DocString<"hisChildren">[]> = {}
     const addChildren = (items: string[]) => items ? getItems(data, downward, [...new Set(items)], node) : [];
 
+    // downward["DModel"] = ["DPackage"];
     // downward["DModel"] = ["DPackage"];
     downward["DPackage"] = ["DPackage", "DClass", "DEnumerator"];
     downward["DClass"] = ["DAttribute", "DReference", "DOperation"];
