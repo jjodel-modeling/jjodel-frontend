@@ -522,17 +522,14 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 val = U.replaceAll(val, '-', ' -'); // important: cannot add space post-dash or it's harder to distinguish unary and binary -
                 val = U.replaceAll(val, '/', ' / ');
                 val = U.replaceAll(val, '*', ' * ');
-                console.log('ex4', {palette, val});
                 let valarr: (string | number)[] = val.split(/[,\s]/);
                 // [] not allowed
                 valarr = (valarr as string[]).map(val => {
-                    console.log("ex4 valarr", {val, nval:+val});
                     if (!isNaN(+val)) return val;
                     let patharr: string[] = val.split('.');
                     let curr: GObject = c.data;
                     for (let pathseg of patharr) {
                         curr = curr[pathseg];
-                        console.log("ex4 valarr path", {curr, pathseg});
                         Log.e(!curr && (val.length > 1 || patharr.length > 1), "invalid variable path in css path control", {token:val, view:c.data.name});
                         if (!curr) break;
                     }
@@ -885,7 +882,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     __info_of__event: Info = {todo: true, isGlobal: true, type: "Dictionary<name, function>", txt: 'Alias for this.events'}
     protected get_event(c: Context): this['events'] { return this.get_events(c); }
     protected get_events(c: Context): this['events'] {
-        Log.exx("use node.events instead");
+        Log.exx("use node.events instead", U.getStackTrace());
         return {};
         // return transientProperties.view[c.data.id]?.events || {};
     }
@@ -990,7 +987,6 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                     if (!tn || tn.mainView?.id !== c.data.id) continue;
                     let lnode: LEdgePoint = LPointerTargetable.fromPointer(nid, s);
                     let triggerCoordinateModeChange = lnode as any;
-                    console.log("ex4 force re-set coordinates", {lnode, view:c.data, size:lnode.size})
                     triggerCoordinateModeChange.size = lnode.size;
                 }
             }, 100);

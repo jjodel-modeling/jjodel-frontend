@@ -16,7 +16,9 @@ export function DropDownButton(props: DropDownButtonProps){
     const [collapsed, setCollapsed] = useStateIfMounted(false);
 
     let transitionTime = 300;
-    let chevronStyle = {cursor: 'pointer', transition:transitionTime/2 + "ms all",
+    let chevronStyle = {
+        cursor: 'pointer',
+        transition:transitionTime/2 + "ms all",
         transform: "scaleY("+(collapsed ? 1 : -1 )+")  translateY(" + (collapsed ? -0 : 0.1) +"em)"
     };
     let buttons: Dictionary<DocString<"label">, ReactNode[]>;
@@ -36,6 +38,6 @@ export function DropDownButton(props: DropDownButtonProps){
                     </div>)
                 )}
             </div>}
-            <i className={ "p1 bi m-auto mx-1 bi bi-chevron-down btn-outline-secondary"} style={chevronStyle} />
+            <i className={ "p1 bi m-auto mx-1 bi bi-chevron-bar-down btn-outline-secondary"} style={chevronStyle} />
         </div>);
 }

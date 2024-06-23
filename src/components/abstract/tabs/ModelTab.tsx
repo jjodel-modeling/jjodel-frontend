@@ -6,8 +6,6 @@ import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import ContextMenu from "../../contextMenu/ContextMenu";
 
-function PendingEdge(props: any){ return <>{/* todo: <DamEdge start={store.getState().pendingEdge.start} end={} />*/}</>}
-
 
 function ModelTabComponent(props: AllProps) {
     const model = props.model;
@@ -23,7 +21,6 @@ function ModelTabComponent(props: AllProps) {
 
     return(<div className={'w-100 h-100'}>
         <ContextMenu />
-        <PendingEdge />
         <div className={'d-flex h-100'}>
             <ToolBar model={model.id} isMetamodel={model.isMetamodel} metamodelId={props.metamodelid} />
             <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>

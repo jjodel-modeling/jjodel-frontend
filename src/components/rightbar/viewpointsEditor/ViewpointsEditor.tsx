@@ -22,7 +22,8 @@ function ViewpointsEditorComponent(props: AllProps) {
         name = U.increaseEndingNumber(name, false, false, newName => viewpointNames.indexOf(newName) >= 0);
         DViewPoint.new2(name, '', (d) => { d.isExclusiveView = !(d.isValidation = props.validation); } );
     }
-    const destroy = (viewPoint: LViewPoint) => {
+    const destroy = (e: React.MouseEvent, viewPoint: LViewPoint) => {
+        e.stopPropagation();
         SetFieldAction.new(project.id, 'viewpoints', viewPoint.id as any, '-=', false);
         viewPoint.subViews.map(v => v.delete());
         viewPoint.delete();
@@ -62,7 +63,7 @@ function ViewpointsEditorComponent(props: AllProps) {
                     <i className={'p-1 bi bi-clipboard2-fill'}></i>
                 </button>
                 <button className={'btn btn-danger ms-1'} disabled={index <= 0 || active.id === viewpoint.id}
-                        onClick={() => destroy(viewpoint)}>
+                        onClick={(e) => destroy(e, viewpoint)}>
                     <i className={'p-1 bi bi-trash3-fill'}></i>
                 </button>
             </div>

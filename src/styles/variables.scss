@@ -1,3 +1,44 @@
+body{
+  // fallbacks
+  --border-color: #333;
+  --border-width: 1px;
+
+  // palette
+  --palette-1: #084c61;
+  --palette-2: #db504a;
+  --palette-3: #e3b505;
+  --palette-4: #53b3cb;
+  --palette-5: #00A896;
+  --palette-b: var(--palette-1);
+  --palette-w: #fff;
+  --palette-r: #dc3545; // btn-danger in bootstrap #f00;
+  --palette-g: #6c757d; // btn-secondary in boostrap #777;
+  --palette-1-hover: var(--palette-4); // or #185f91; // invented
+  --palette-w-hover: #fff;
+
+  --background-color-add: var(--palette-5);
+  --background-color-warn: var(--palette-3);
+  --background-color-danger: var(--palette-2);
+  --font-color-1: var(--palette-1);
+  --font-color-1-hover: var(--palette-1-hover);
+  --font-color-2: var(--palette-w);
+  --border-color-1: var(--palette-1);
+  --background-color-1: var(--background-color-add);
+  --background-color-2: var(--background-color-warn);
+  --background-color-3: var(--background-color-danger);
+}
+
+
+.drag-handle, .drag-handle.light{
+  background-image: url('data:image/svg+xml,<svg width="6" height="6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" fill="%23084c61" /></svg>');
+  //background-position-x: -5.48px;
+}
+
+.drag-handle.dark{
+  background-image: url('data:image/svg+xml,<svg width="6" height="6" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="3" r="2" fill="%2353b3cb" /></svg>');
+  //background-position-x: -5.48px;
+}
+
 $radius: .2em;
 $border-color: #0000005c;
 $background: white;
@@ -27,10 +68,6 @@ $vertex-color: brown;
 .h-min {height: min-content}
 .cursor-pointer {cursor: pointer}
 
-body{ // fallback
-  --border-color: #333;
-  --border-width: 1px;
-}
 .DClass{ --border-color: red; }
 .DAttribute, .DReference, .DOperation, .DEnumLiteral, .DValue { --border-color: blue; }
 .DParameter,{ --border-color: pink; }

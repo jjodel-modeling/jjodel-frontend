@@ -31,7 +31,9 @@ import Storage from '../data/storage';
 import {compressToUTF16, decompressFromUTF16} from "async-lz-string";
 import {NumberControl, PaletteControl, PaletteType, PathControl, StringControl} from "../view/viewElement/view";
 import tinycolor from "tinycolor2";
-import {StringDecoder} from "string_decoder";
+import util from "util";
+import Convert from "ansi-to-html";
+// var Convert = require('ansi-to-html');
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
 console.warn('loading ts U log');
@@ -67,6 +69,8 @@ export class Color {
         return undefined as any;
     }
 }
+
+
 @RuntimeAccessible('U')
 export class U {
 
@@ -81,6 +85,31 @@ export class U {
     }
     static refresh(): void {
         window.location.reload();
+    }
+
+    public static inspect(object: any, showHidden?: boolean, depth?: number | null, color?: boolean): string {
+        let o0 = object;
+        object = object?.__raw || object;
+        if (Array.isArray(object)) object = object.map(o => o?.__raw || o);
+        // todo: use lodash "clonedeepwith" to clean proxies
+        console.error("inspect", {o0, object});
+        return util.inspect(object, showHidden, depth, color);
+    }
+
+    public static objectInspect(val: GObject, depth: number = 2, color: boolean = true, showHidden = true): string{
+        let ansiConvert = (window as any).ansiConvert;
+        if (!ansiConvert) (window as any).ansiconvert = ansiConvert = new Convert();
+        return U.replaceAll(ansiConvert.toHtml(U.inspect(val, showHidden, depth, color)),
+            "style=\"color:#FFF\"", "style=\"color:#000\"");
+    }
+
+    public static cropStr(msg: string, atStart: number = 10, atEnd: number = 0): string{
+        let arr = msg.split('\n');
+        if (atEnd + atStart < arr.length) {
+            //arr = arr.slice(0, 10) + arr.slice(10, 0);
+            arr.splice(atStart, arr.length - atStart - atEnd, '...')
+        }
+        return arr.join('\n');
     }
 
     static extractByKey(dict: Dictionary, path: string): PrimitiveType[]|undefined {
@@ -1772,18 +1801,78 @@ export class ParseNumberOrBooleanOptions{
         this.allowBooleans = allowBooleans; this.trueValue = trueValue; this.falseValue = falseValue;
     }
 }
-
+export type LoggerType = "l" | "i" | "w" | "e" | "ex" | "eDev" | "exDev";
+export class LoggerCategoryState{
+    category: LoggerType;
+    time: number;
+    raw_args: any[];
+    short_string: string;
+    long_string: string;
+    constructor(args: any[], short_string: string, cat: LoggerType) {
+        this.raw_args = args;
+        this.time = new Date().getTime();
+        this.category = cat;
+        this.short_string = short_string;
+        this.long_string = '';
+        /*
+        const maxChars: Dictionary<string, [number, number]> = {
+            function: [50, 0],
+            object: [100, 0],
+            string: [80, 20],
+        }
+        let ansiConvert = (window as any).ansiConvert;
+        if (!ansiConvert) {
+            (window as any).ansiconvert = ansiConvert = new Convert();
+        }
+        for (let a of args){
+            let s: string;
+            let ta: string = typeof a;
+            switch(ta){
+                case "function": s = a.toString(); break;
+                case "object":
+                    let outstr = U.inspect(a, true, 2, true);
+                    outstr = U.replaceAll(ansiConvert.toHtml(outstr), "style=\"color:#FFF\"", "style=\"color:#000\"");
+                    let regexpCloseTags = new RegExp("(\\<span style\\=\"color\\:\\#)", "gm");
+                    outstr = U.replaceAll( outstr, "$", "£");
+                    outstr = outstr.replace(regexpCloseTags,  "</span>$1");
+                    outstr = U.replaceAll(outstr, "£", "$");
+                    s = outstr;
+                    break;
+                default: s = ''+a;
+            }
+            if (maxChars[ta]) s = U.cropStr(s, maxChars[ta][0], maxChars[ta][1]);
+            this.long_string += s;
+        }*/
+    }
+}
 @RuntimeAccessible('Log')
 export class Log{
-    constructor() { }
     // public static history: Dictionary<string, Dictionary<string, any[]>> = {}; // history['pe']['key'] = ...parameters
-    public static lastError: any[];
-    private static loggerMapping: Dictionary<string, LoggerInterface[]> = {} // takes function name returns logger list
+    public static lastError: any[];/*
+    public static last_e: LoggerCategoryState[] = [];
+    public static last_eDev: LoggerCategoryState[] = [];
+    public static last_ex: LoggerCategoryState[] = [];
+    public static last_exDev: LoggerCategoryState[] = [];
+    public static last_w: LoggerCategoryState[] = [];
+    public static last_i: LoggerCategoryState[] = [];*/
+    // private static loggerMapping: Dictionary<string, LoggerInterface[]> = {} // takes function name returns logger list
+    private static messageMapping: Dictionary<LoggerType, LoggerCategoryState[]> = {
+        l: [],
+        i: [],
+        w: [],
+        e: [],
+        ex: [],
+        eDev: [],
+        exDev: [],
+    } // takes function name returns log messages list
+
+
+/*
     public static registerLogger(logger: LoggerInterface, triggerAt: (typeof windoww.U.pe) & {name: string, cname:string}) {
         let tname: string = (triggerAt as any).cname || (triggerAt as any).name;
         if (!Log.loggerMapping[tname]) Log.loggerMapping[tname] = [];
         Log.loggerMapping[tname].push(logger);
-    }
+    }*/
 
     static disableConsole(){
         // @ts-ignore
@@ -1794,11 +1883,11 @@ export class Log{
         // @ts-ignore
         if (console['logg']) console.log = console['logg']; }
 
-    private static log(prefix: string, category: string, originalFunc: typeof console.log, b: boolean, ...restArgs: any[]): string {
+    private static log(prefix: string, category: LoggerType, originalFunc: typeof console.log, b: boolean, ...restArgs: any[]): string {
         if (!b) { return ''; }
-        const key: string = windoww.U.getCaller(1);
+        const key: string = windoww.U.getCaller(1); // todo: remove replace heavy fumc
         if (restArgs === null || restArgs === undefined) { restArgs = []; }
-        let str = '[' + prefix + ']' + key + ': ';
+        let str = key + ': ';
         for (let i = 0; i < restArgs.length; i++) {
             // console.log(prefix, {i, restArgs, curr:restArgs[i]});
             str += '' +
@@ -1806,9 +1895,10 @@ export class Log{
                     '' + String(restArgs[i]) :
                     restArgs[i])
                 + '\t\r\n'; }
-        if (Log.loggerMapping[category]) for (const logger of Log.loggerMapping[category]) { logger.log(category, key, restArgs, str); }
+        Log.updateLoggerComponent(category, restArgs, str, category);
+        // merged loggers if (Log.loggerMapping[category]) for (const logger of Log.loggerMapping[category]) { logger.log(category, key, restArgs, str); }
         originalFunc(key, ...restArgs);
-        return str; }
+        return '[' + prefix + ']' + str; }
 
     public static e(b: boolean, ...restArgs: any[]): string {
         if (!b) return '';
@@ -1842,25 +1932,43 @@ export class Log{
         windoww.e1 = restArgs[1];
         throw new MyError(str, ...restArgs); }
 
-    public static i(b: boolean, ...restArgs: any[]): string { return Log.log('Info', 'i', console.log, b, ...restArgs); }
-    public static l(b: boolean, ...restArgs: any[]): string { return Log.log('Log', 'l', console.log, b, ...restArgs); }
-    public static w(b: boolean, ...restArgs: any[]): string { return Log.log('Warn', 'w', console.warn, b, ...restArgs); }
+    public static i(b: boolean, ...restArgs: any[]): string | null {
+        if (!b) return null;
+        return Log.log('Info', 'i', console.log, b, ...restArgs);
+    }
+    public static _loggerComponent: any = undefined as any;
+    private static get_loggercomponent(): any { return Log._loggerComponent; }
+    private static updateLoggerComponent(type: LoggerType, args: any[], short_str: string, cat: LoggerType): void {
+        let c = Log.get_loggercomponent();
+        let update: LoggerCategoryState = new LoggerCategoryState(args, short_str, cat);
+        Log.messageMapping[type].push(update);
+        // (Log as GObject)["last_"+type].push(args);
+        if (!c) return;
+        c.setState({[type+"_counter"]: c.state[type+"_counter"]+1}); // so it doesn't pass through redux
+    }
+    public static l(b: boolean, ...restArgs: any[]): string | null {
+        if (!b) return null;
+        return Log.log('Log', 'l', console.log, b, ...restArgs);
+    }
+    public static w(b: boolean, ...restArgs: any[]): string | null {
+        if (!b) return null;
+        return Log.log('Warn', 'w', console.warn, b, ...restArgs); }
 
 
     public static eDevv<T extends any = any>(firstParam?: NotBool<T>, ...restAgs: any): string { return Log.eDev(true, ...[firstParam, ...restAgs]); }
     public static ee(...restAgs: any): string { return Log.e(true, ...restAgs); }
     public static exDevv<T extends any = any>(firstParam?: NotBool<T>, ...restAgs: any): never | any { return Log.exDev(true, ...[firstParam, ...restAgs]); }
     public static exx(...restAgs: any): never | any { return Log.ex(true, ...restAgs); }
-    public static ii(...restAgs: any): string { return Log.i(true, ...restAgs); }
-    public static ll(...restAgs: any): string { return Log.l(true, ...restAgs); }
-    public static ww(...restAgs: any): string { return Log.w(true, ...restAgs); }
+    public static ii(...restAgs: any): string { return Log.i(true, ...restAgs) as string; }
+    public static ll(...restAgs: any): string { return Log.l(true, ...restAgs) as string; }
+    public static ww(...restAgs: any): string { return Log.w(true, ...restAgs) as string; }
 }
 
 type NotBool<T> = Exclude<T, boolean>;
-
+/*
 interface LoggerInterface{
-    log: (category: string, key: string, data: any[], fullconcat?: string) => any;
-}
+    log: (category: string, key: string, data: any[], fullconcat?: string, stringified?: string) => any;
+}*/
 
 
 

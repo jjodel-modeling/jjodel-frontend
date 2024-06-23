@@ -7,7 +7,7 @@ import {connect} from "react-redux";
 function AccountComponent(props: AllProps): JSX.Element {
     const {user} = props;
     return(<Try>
-        <Dashboard active={'Account'}>
+        <Dashboard active={'Account'} version={props.version}>
             <div className={'p-2'}>
                 <text className={'d-block'}><b>ID: </b>{user.id}</text>
                 <text className={'d-block'}><b>Username: </b>{user.username}</text>
@@ -18,7 +18,10 @@ function AccountComponent(props: AllProps): JSX.Element {
 }
 
 interface OwnProps {}
-interface StateProps {user: LUser}
+interface StateProps {
+    user: LUser;
+    version: DState["version"];
+}
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
 
@@ -26,6 +29,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     ret.user = LUser.fromPointer(DUser.current);
+    ret.version = state.version;
     return ret;
 }
 

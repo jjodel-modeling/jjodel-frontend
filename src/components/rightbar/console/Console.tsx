@@ -13,17 +13,18 @@ import {
     Pointer,
     RuntimeAccessibleClass,
     U,
-    windoww, store, Log, DUser, transientProperties
+    windoww, store, Log, DUser, transientProperties, LoggerComponent
 } from "../../../joiner";
-import * as util from "util";
 import {GraphElementComponent} from "../../../graph/graphElement/graphElement";
 import ReactDOM from "react-dom";
 import Router from "../../../router/Router";
 import {FakeStateProps} from "../../../joiner/types";
+import { useStateIfMounted } from "use-state-if-mounted";
 
 var Convert = require('ansi-to-html');
-var ansiConvert = new Convert();
-(window as any).ansiconvert = ansiConvert;
+
+let ansiConvert = (window as any).ansiConvert;
+if (!ansiConvert) (window as any).ansiconvert = ansiConvert = new Convert();
 
 class ThisState{
     expression!: string;
@@ -162,8 +163,7 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 if (output?._reactInternals) {
                     output = {"React.Component": {props:"...navigate to expand...", state:"", _isMounted:output._isMounted}}
                 }
-                let format = (val: GObject) => U.replaceAll(ansiConvert.toHtml(util.inspect(val, true, 2, true)), "style=\"color:#FFF\"", "style=\"color:#000\"");
-                outstr = '<h4>Result:</h4><div class="output-row" tabindex="984">' + format(output)+"<span>";
+                outstr = '<h4>Result:</h4><div class="output-row" tabindex="984">' + U.objectInspect(output)+"<span>";
                 let commentsPopup = "";
                 if (shortcuts || comments){
                     // if(!shortcuts) shortcuts = {};
@@ -191,7 +191,7 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                         outstr = outstr.replace(regexpCloseTags,  "</span>$1");
                         outstr = U.replaceAll(outstr, "£", "$");
                     }
-                    if (shortcuts) outstr += "</div><br><br><h4>Shortcuts</h4><div class=\"output-row\" tabindex=\"984\">" + format(shortcuts);
+                    if (shortcuts) outstr += "</div><br><br><h4>Shortcuts</h4><div class=\"output-row\" tabindex=\"984\">" + U.objectInspect(shortcuts);
                     // if (hidden) outstr +="</div><br><br><h4>Other less useful properties</h4><div class=\"output-row\" tabindex=\"984\">" + format(hidden);
                     // warning: unicode char but should not make a problem.
                     // outstr = U.replaceAll( outstr, '𐀹,\n', '],</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
@@ -232,8 +232,8 @@ export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 {/*<label>Query {(this.state.expression)}</label>*/}
                 <label>On {((data as GObject)?.name || "model-less node (" + this.props.node.className + ")") + " - " + this.props.node?.className}</label>
                 <hr className={'mt-1 mb-1'} />
-                { ashtml && <div className={"console-output-container"} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
-                { !ashtml && <div style={{whiteSpace:"pre"}}>{ outstr }</div>}
+                { this.state.expression &&  ashtml && <div className={"console-output-container"} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
+                { this.state.expression && !ashtml && <div style={{whiteSpace:"pre"}}>{ outstr }</div>}
                 <label className={"mt-2"}>Context keys:</label>
                 {
                     <div style={{whiteSpace:"pre"}}> {contextkeys} </div>

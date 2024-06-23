@@ -10,6 +10,7 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
         'Pointer_ViewAttribute',
         'Pointer_ViewReference',
         'Pointer_ViewOperation',
+        'Pointer_ViewParameter',
         'Pointer_ViewLiteral',
         'Pointer_ViewObject',
         'Pointer_ViewValue',

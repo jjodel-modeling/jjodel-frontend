@@ -452,7 +452,7 @@ export class Selectors{
 
 
 
-    static updateScores(data0: LModelElement | undefined, node: LGraphElement | undefined, nid: Pointer<DGraphElement>, pv: DViewElement | undefined){
+    static updateScores(data0: LModelElement | undefined, node: LGraphElement | undefined, nid: Pointer<DGraphElement>, pv: DViewElement | undefined, state: DState){
         let needsorting: boolean = false;
         let firstEvaluationForNode: boolean = false;
         let firstEvaluationForNodeView: boolean = false;
@@ -479,7 +479,7 @@ export class Selectors{
 
         //console.log('2302, getviews 2', {datachanged, nodechanged, olddata, oldnode, data, node, allViews: Selectors.getAllViewElements()});
 
-        let state: DState = store.getState();
+        if (!state) state = store.getState();
         const allViews: DViewElement[] = Selectors.getAllViewElements(state);
 
         const user = LUser.fromPointer(DUser.current);
@@ -563,14 +563,16 @@ export class Selectors{
     // get final viewstack for a node, also updates OCL scores if needed because of a change in model or parentView (NOT from a change in view)
     static getAppliedViewsNew({data:data0, node, pv, nid}:{ node: LGraphElement | undefined; data: LModelElement | undefined; pv: DViewElement | undefined; nid: Pointer<DGraphElement>}): NodeTransientProperties {
         // console.trace('2302, getviews', {tnode: transientProperties.node[nid], nid, pv})
-        let needsorting: boolean = Selectors.updateScores(data0, node, nid, pv);
+        let state = store.getState();
+        let needsorting: boolean = Selectors.updateScores(data0, node, nid, pv, state);
 
         let tn: NodeTransientProperties = transientProperties.node[nid]; // needs to be placed after updateScores() which will initialize it.
+        if (!needsorting && tn.needSorting) needsorting = tn.needSorting;
+
         type ViewScoreEntry = {element: Pointer<DViewElement>, score: number, view: LViewElement};
         if (needsorting || !tn.stackViews) {
             let mainViews: ViewScoreEntry[] = [];
             let decorativeViews: ViewScoreEntry[] = [];
-            let state = store.getState();
             for (let vid of Object.keys(tn.viewScores)) {
                 let tnv = tn.viewScores[vid];
                 const dview: DViewElement = DPointerTargetable.fromPointer(vid, state);
@@ -583,7 +585,7 @@ export class Selectors{
 
             // Log.exDev(!mainViews[0], 'cannot find a matching main view', {mainViews, decorativeViews, data0, scores: tn.viewScores})
             tn.mainView = mainViews[0]?.view;
-            tn.validMainViews = mainViews.map((s)=> s.view);
+            tn.validMainViews = mainViews.map((s)=> s.view); // this have duplicates of newly created elements
             tn.stackViews = decorativeViews.map((s)=> s.view);
         }
         // chamges to view or ocl comditiom are mot hamdled here, ut om multple mp/modes a omce

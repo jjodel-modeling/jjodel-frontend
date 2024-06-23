@@ -15,6 +15,7 @@
 .input { width: 50%; outline: none; font-size: 0.9rem; appearance: none; height: min-content;
   border-radius: $radius; border: 1px solid $border-color; }
 .input:focus { border: 1px dashed $border-color; }
+.input[type="checkbox"]:focus, .input[type="radio"]:focus { border: none; }
 .autosize-input { flex-grow: 1; flex-basis: 10px; }
 .hidden-input { border: 1px solid transparent; background-color: transparent; }
 .hidden-input:focus { border: 1px dashed $border-color; }
@@ -105,15 +106,17 @@ input[type="color"]::-webkit-color-swatch {
   /*border-radius: 100%;*/
   border: none;
 }
-.input[type='checkbox'] {
+input[type='checkbox'] { // was .input as class
   background-image: url("../static/svg/toggle-off.svg");
   background-repeat: no-repeat; background-size: cover;
   width: min-content;
-  cursor: pointer; padding: 0.8em;
+  cursor: pointer;
+  padding: 0.88em; // above this, the total height become bigger than a char because of some input native stylings
+  scale: 1.2;
   background-color: transparent;
   border: none;
 }
-.input[type='checkbox']:checked {
+input[type='checkbox']:checked { // was .input as class
   background-image: url("../static/svg/toggle-on.svg");
 }
 .select {
@@ -162,4 +165,126 @@ b {
 [rad]{
   transform-origin: center;
   transform: rotate(attr(rad)); // not working properly
+}
+/*
+button:hover{// experimental, doesn't go well because it applies to N parent elements before applying to last node, so it is applied a ton of times.
+  filter: hue-rotate(5deg);
+}
+*/
+.button-add{
+  background: var(--background-color-add);
+  border-color: var(--border-color-1);
+  color: var(--palette-w);
+
+  // override bootstrap hover
+  // --bs-btn-hover-bg: var(--background-color-add);
+  --bs-btn-hover-bg: var(--palette-1);
+  --bs-btn-hover-color: var(--palette-w);
+  &:hover{
+    color: var(--palette-w-hover);
+    background: var(--palette-1);
+    // filter: hue-rotate(45deg);
+  }
+
+}
+
+.monaco-editor-wrapper {
+  border: 1px solid var(--border-color-1);
+  border-radius: 4px;
+}
+
+label.jj-editor-title {
+  color: var(--palette-w);
+  background-color: var(--palette-3);
+  width: fit-content;
+  padding: 2px 12px 2px 12px;
+  border-radius: 0.4em;
+  font-weight: 200;
+  // font-size: 1rem;
+  //margin-bottom: 6px!important;
+}
+
+i.bi {
+  color: var(--font-color-1);
+  &:hover{
+    color: var(--palette-1-hover);
+  }
+}
+.btn i.bi, .bg i.bi{
+  color: var(--palette-w);
+}
+/*
+.jj-btn-info, .jj-btn-view, .jj-btn-up, .jj-btn-back {
+  font-size: 24px;
+  color: var(--font-color-1);
+}
+
+.jj-btn-view {
+  margin-right: 10px!important;
+}
+
+.jj-btn-add {
+  margin: 0px !important;
+  margin-top: 3px!important;
+  margin-right: -9px!important;
+  border: none;
+  font-size: 24px;
+  color: #00A896;
+}
+
+.jj-btn-delete {
+  margin: 0px !important;
+  margin-top: 0px!important;
+  font-size: 24px;
+  color: #db504a;
+  border: none;
+  background-color:none;
+}*/
+
+
+.btn-back{
+  color: var(--palette-w);
+  background: var(--palette-1);
+  &:hover{
+    color: var(--palette-w-hover);
+    background: var(--palette-1-hover);
+  }
+  i::before{
+    scale: 1.4;
+  }
+  border: none;
+  padding: 0;
+  width: 1.9em;
+  height: 1.9em;
+  border-radius: 0.4rem;
+  font-size: 1rem;
+  line-height: 1.9em;
+}
+
+.btn-delete{
+  color: var(--palette-w);
+  background: var(--palette-g);
+  &:hover{
+   color: var(--palette-w-hover);
+   background: var(--palette-r);
+  }
+  border: none;
+  padding: 0;
+  width: 1.9em;
+  height: 1.9em;
+  border-radius: 0.4rem;
+  font-size: 1rem;
+  line-height: 1.9em;
+
+  i::before{
+    scale: 1.5;
+  }
+ }
+
+
+
+.jj-conf-area {
+  border: none;
+  border-radius: 4px;
+  padding-left: 10px;
 }

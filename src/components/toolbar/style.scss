@@ -1,12 +1,60 @@
 
 .toolbar {
-  width: 10em;
-  background: whitesmoke;
+  padding: 0.5rem;
+  cursor: move;
+  display: flex;
+
+  .drag-handle{
+    flex-grow: 1;
+    width: 1em;
+  }
+
+  .toolbar-section-label{
+    margin-bottom: 0.25rem;
+    margin-right: 2em;
+    text-transform: uppercase;
+    text-align: center;
+    display: block;
+  }
+
+  background: var(--palette-1);
+  color: var(--palette-w);
+  white-space: pre;
+
+  .pin{
+    background: var(--palette-1);
+    color: var(--palette-w);
+    cursor: pointer;
+    position: absolute;
+    top: 0.25rem;
+    right: 0.5rem;
+    z-index: 2 !important;
+  }
+  .toolbar-item{
+    border-radius: 6px;
+    padding-right: 0.25em;
+    display: flex;
+    cursor: pointer;
+
+    > span{
+      display: inline-block;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      max-width: 400px;
+      margin: auto;
+    }
+  }
+  .toolbar-item:hover, .toolbar-item:focus{
+    background: var(--palette-w);
+    color: var(--palette-1);
+  }
   z-index: 1;
-  box-shadow: 6px 0 4px -4px #999, -6px 0 4px -4px #999;
+  box-shadow: var(--smart-elevation-8); // 6px 0 4px -4px #999, -6px 0 4px -4px #999;
+
   b {
     font-size: 0.75rem;
-    color: rgba(0, 0, 0, 0.75);
+    // color: rgba(0, 0, 0, 0.75);
   }
   >.toolbar-item {
     display: flex;

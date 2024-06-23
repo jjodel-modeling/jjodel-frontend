@@ -46,23 +46,28 @@ font-weight: 900 !important;
   // works only on "block" elements? not even flex?
   text-transform: uppercase;
 }
-.toolbar-item:hover{
-  background: #ddd;
-}
 .hoverable{
   position: relative;
   &>.content, &>svg>.content{
     display: none;
   }
 }
-.hoverable:hover, .hoverable:focus, .hoverable:focus-within{
+.hoverable:hover, .hoverable:focus, .hoverable:focus-within, .hoverable:active, .hoverable.pinned{
   &>.preview, &>svg>.preview{
     display: none;
   }
+
   &>.content, &>svg>.content{
     display: block; z-index:1; position: absolute;
     box-shadow: var(--smart-elevation-8);
   }
+
+  &>.content.inline, &>svg>.content.inline{
+    display: inline-block;
+    position: relative;
+    box-shadow: none;
+  }
+
 }
 
 [data-nodetype], [data-nodetype]>*, {

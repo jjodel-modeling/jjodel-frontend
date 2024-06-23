@@ -14,6 +14,14 @@ import {FakeStateProps} from "../../../joiner/types";
 import {connect} from "react-redux";
 import PaletteData from "./data/PaletteData";
 import GenericNodeData from "./data/GenericNodeData";
+// import "./view.scss";
+
+const tabidprefix = "Dock_in_view_detail";
+let idcounter = 0;
+function id(){ // NB: cannot use just indexes or tab title because the id is injected in html, so it must be unique in the whole page.
+    return tabidprefix + (idcounter++);
+}
+
 
 function ViewDataComponent(props: AllProps) {
     const view = props.view;
@@ -30,11 +38,11 @@ function ViewDataComponent(props: AllProps) {
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     let i = 1;
     const tabs = [
-        {id: ''+i++, title: 'Overview', group: '1', closable: false, content: <Try><InfoData viewID={view.id} viewpointsID={viewpoints.map(vp => vp.id)} readonly={readOnly} /></Try>},
-        {id: ''+i++, title: 'Template', group: '1', closable: false, content: <Try><TemplateData viewID={view.id} readonly={readOnly} /></Try>},
-        {id: ''+i++, title: 'Palette/Css', group: '1', closable: false, content: <Try><PaletteData viewID={view.id} readonly={readOnly} /></Try>},
-        {id: ''+i++, title: 'Events', group: '1', closable: false, content: <Try><EventsData viewID={view.id} readonly={readOnly} /></Try>},
-        {id: 'sharedid', title: 'Options', group: '1', closable: false, content: <Try><GenericNodeData viewID={view.id} readonly={readOnly} /></Try>},
+        {id: id(), title: 'Overview', group: '1', closable: false, content: <Try><InfoData viewID={view.id} viewpointsID={viewpoints.map(vp => vp.id)} readonly={readOnly} /></Try>},
+        {id: id(), title: 'Template', group: '1', closable: false, content: <Try><TemplateData viewID={view.id} readonly={readOnly} /></Try>},
+        {id: id(), title: 'Palette/Css', group: '1', closable: false, content: <Try><PaletteData viewID={view.id} readonly={readOnly} /></Try>},
+        {id: id(), title: 'Events', group: '1', closable: false, content: <Try><EventsData viewID={view.id} readonly={readOnly} /></Try>},
+        {id: id(), title: 'Options', group: '1', closable: false, content: <Try><GenericNodeData viewID={view.id} readonly={readOnly} /></Try>},
     ];
     /*
     if(view.appliableTo === 'node') tabs.push(
@@ -46,13 +54,16 @@ function ViewDataComponent(props: AllProps) {
     if(view.appliableTo === 'edgePoint') tabs.push(
         {id: 'sharedid', title: 'EdgePoint', group: '1', closable: false, content: <EdgePointData viewID={view.id} readonly={readOnly} />}
     );*/
-    tabs.push({id: ''+i++, title: 'Sub Views', group: '1', closable: false, content: <Try><SubViewsData viewID={view.id} readonly={readOnly} setSelectedView={props.setSelectedView} /></Try>});
+    tabs.push({id: id(), title: 'Sub Views', group: '1', closable: false, content: <Try><SubViewsData viewID={view.id} readonly={readOnly} setSelectedView={props.setSelectedView} /></Try>});
+
+
+
     layout.dockbox.children.push({tabs});
 
     return(<div>
-        <div className={'d-flex p-2'}>
+        <div className={'d-flex p-2 view-editor'}>
             <b className={'ms-1 my-auto'}>{view.name}</b>
-            <button className={'btn btn-danger ms-auto'} onClick={ () => props.setSelectedView(undefined)}>
+            <button className={'bg btn-back ms-auto'} onClick={ () => props.setSelectedView(undefined)}>
                 <i className={'p-1 bi bi-arrow-left'}></i>
             </button>
         </div>

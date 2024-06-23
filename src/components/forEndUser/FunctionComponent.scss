@@ -8,3 +8,28 @@
 [data-mode="simpleMode"]{
   .detailedMode{ display: none; }
 }
+
+
+.function-editor-header{
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+
+  .function-editor-label>*{
+    margin: auto 0;
+  }
+  .button-add{
+    margin: auto 0.5rem;
+    border: none;
+    padding: 0;
+    width: 1.6em;
+    height: 1.6em;
+  }
+  i.bi{
+    font-size: 1.6em;
+  }
+}
+
+.collapsable-section .input {
+  background: #fff7;
+}
+
