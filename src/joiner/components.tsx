@@ -47,6 +47,8 @@ export {LoggerComponent} from "../components/logger/loggerComponent";
 
 export {Overlap} from "../components/forEndUser/Overlap";
 
+export {ControlPanel} from '../components/forEndUser/ControlPanel';
+
 type dict = Dictionary<string, typeof GraphElement | typeof Edge>;
 
 

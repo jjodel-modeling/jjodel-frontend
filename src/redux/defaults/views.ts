@@ -37,11 +37,14 @@ class DefaultViews {
         view.draggable = false; view.resizable = false;
         view.appliableTo = 'Graph';
         view.oclCondition = 'context DModel inv: true';
-        view.palette = {'background-': U.hexToPalette('#fff')};
+        view.palette = {
+            'background-': U.hexToPalette('#fff'),
+            'color-': U.hexToPalette('#000', '#111', '#222', '#333', '#444')
+        };
         view.css = `
 .root { background-color: var(--background-1); }
 .edges {z-index: 101; position: absolute; height: 0; width: 0; overflow: visible; }
-.detail-level{
+.detail-level {
     position: absolute;
     right: -50px;
     top: 50px;
@@ -50,7 +53,96 @@ class DefaultViews {
     &>div{
         transform: rotate(90deg) translate(0, 100%);
     }
-}`
+}
+    
+/*** CONTROL PANEL BEGIN ***/
+ 
+.control-panel-container {
+   position: absolute;
+   z-index: 1000;
+   top: 0px;
+   right: -269px; /* open: 0px, close: -275px */
+   width: 320px;
+   height: 100%;
+   transition: right 0.6s;
+   transition-timing-function: cubic-bezier(0.32, 0, 0.58, 1);
+}
+.control-panel-container .open {
+   right: -0px;
+}
+.control-panel-container .button {
+   position: absolute;
+   z-index: 1001;
+   top: 10px;
+   left: 36px;
+   font-size: 1.5em;
+   width: 16px;
+   height: 62px;
+   padding: 14px 0 0 0px;
+   border-radius: 4px 0 0 4px;
+   color: var(--color5);
+   background-color: var(--color2);
+   border-left: 3px solid var(--color1);
+   border-top: 0px solid var(--color4);
+   border-bottom: 0px solid var(--color4);
+   &:hover {
+      cursor: pointer;
+   }
+}
+.control-panel-container .button .bi {
+   color: var(--color1);
+   font-size: 14px;
+}
+.control-panel {
+   position: relative;
+   margin-left: 50px;
+   height: 100%;
+   width: 270px;
+   background: var(--color1);
+   display: block;
+   opacity: 1;
+   border-left: 3px solid var(--color2);
+   color: var(--color2);
+   padding: 20px;
+   box-shadow: -0px -0px 1px var(--color4);
+   
+}
+.open {
+   position: absolute;
+   right: 0px!important;
+   transition: right 0.6s;
+   transition-timing-function: cubic-bezier(0.32, 0, 0.58, 1);
+}
+.control-panel h1 {
+   font-size: 1.4em;
+}
+.control-panel .section h2 {
+   font-size: 1.2em;
+   padding: 40px 0px 10px 0px;
+}
+.control-panel .btn-close {
+   padding-top: 0px;
+   float: right;
+   display: block;
+   color: var(--color2);
+   opacity: 1;
+   &:hover {
+      cursor: pointer;
+   }
+   
+}
+.control-panel .section .slider {
+   margin-top: 15px;
+   position: relative;
+   display: flex;
+   
+}
+control-panel .section .toggle {
+   width: 100%;
+}
+
+/*** CONTROL PANEL END ***/
+`;
 
         view.usageDeclarations = '(ret) => {\n' +
             '// ** preparations and default behaviour here ** //\n' +

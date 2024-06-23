@@ -352,6 +352,9 @@ class DefaultView {
     public static model(): string { return (
 `<div className={'root'}>
     {!data && "Model data missing."}
+    <ControlPanel>
+        <div>Test</div>
+    </ControlPanel>
     <label className={"detail-level"}>
         <input onChange={(e)=>{node.state = {level:+e.target.value}}} min="0" max="3" type="range" step="1" value={level}/>
         <div>Detail level:{level}</div>
