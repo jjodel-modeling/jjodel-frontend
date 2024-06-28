@@ -114,7 +114,7 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
         if (type.toLowerCase().indexOf("function(") >=0 || type.indexOf("()=>") >=0) type = "Function";
         switch (type.toLowerCase()) {
             default:
-                Log.e('invalid type in GenericInput', {type, props:this.props, info, d});
+                Log.ee('invalid type in GenericInput', {type, props:this.props, info, d});
                 return <div {...otherProps as any} className={'danger'} style={{color: 'red', border: '1px solid red'}}>Invalid GInput type: '{type}'</div>;
             case 'point': case 'graphpoint': case 'size': case 'graphSsize':
                 return <SizeInput {...otherProps} data={l} field={this.props.field} label={label} />;

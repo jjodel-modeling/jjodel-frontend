@@ -110,7 +110,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     // needed here as props, because apparently functional components are memoized by default.
     ret.offlineMode = DUser.offlineMode;
     ret.tooltip = state.tooltip;
-    console.log("app re mapstate", {u:DUser.current, o:DUser.offlineMode});
+    // console.log("app re mapstate", {u:DUser.current, o:DUser.offlineMode});
     return ret;
 }
 

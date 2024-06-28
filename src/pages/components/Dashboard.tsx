@@ -5,7 +5,7 @@ import '../style.scss'
 type Props = {
     children?: JSX.Element,
     active: 'Account'|'Settings'|'Updates'|'Community'|'All'|'Archive',
-    version: DState["version"];
+    version: Partial<DState["version"]>;
 };
 function Dashboard(props: Props): JSX.Element {
     const {children, active} = props;

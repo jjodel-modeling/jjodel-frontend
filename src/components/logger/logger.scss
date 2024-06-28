@@ -1,3 +1,7 @@
+.copy-to-clipboard-container{
+  display: none !important; // default copy button from JSON JSX library is bugged, cannot handle recursive objects.
+}
+
 .search-row{
   display: flex;
   flex-wrap: nowrap;
@@ -89,9 +93,9 @@ li.cat {
     background-color: 1px solid var(--cat-color);
   }
   //&.cat_e, &.cat_ex,
-  &.cat_eDev, &.cat_exDev{
+  /*&.cat_eDev, &.cat_exDev{
     .content{ color: white; } // same as &:hover
-  }
+  }*/
 }
 ul.entries{
   list-style-type: none;

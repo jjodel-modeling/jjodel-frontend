@@ -62,7 +62,7 @@ function JsxEditorComponent(props: AllProps) {
             <b><span style={{color:'red'}}>Warning:</span>: JSX.Fragment {"<>"} is valid JSX but is not supported by our compiler.<br/>
                 Please replace it with an array [] instead.</b>}
         {(jsx).indexOf('?.') >= 0 &&
-            <b><span style={{color:'red'}}>Warning:</span> Optional chaining {".?"} is valid JS but is not supported by our compiler.<br/>
+            <b><span style={{color:'red'}}>Warning:</span> Optional chaining {"?."} is valid JS but is not supported by our compiler.<br/>
                 Please replace it with && instead. Eg: from (a?.b) to (a && a.b)</b>}
         {(jsx).indexOf('??') >= 0 &&
             <b><span style={{color:'red'}}>Warning:</span>: Nullish coalescing {"??"} is valid JS but is not supported by our compiler.<br/>

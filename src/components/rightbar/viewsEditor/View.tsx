@@ -1,5 +1,5 @@
 import React, {Dispatch, ReactElement} from 'react';
-import {DViewElement, LViewElement, Pointer, Try} from '../../../joiner';
+import {DViewElement, Log, LViewElement, Pointer, Try} from '../../../joiner';
 import {DState, DUser, LProject, LUser, LViewPoint, Defaults, LPointerTargetable} from "../../../joiner";
 import InfoData from './data/InfoData';
 import NodeData from './data/NodeData';
@@ -58,6 +58,7 @@ function ViewDataComponent(props: AllProps) {
 
 
 
+    Log.exx('$crash', "test crash", {props});
     layout.dockbox.children.push({tabs});
 
     return(<div>

@@ -261,13 +261,18 @@ i.bi {
   line-height: 1.9em;
 }
 
-.btn-delete{
+.btn-delete, .btn-clipboard{
   color: var(--palette-w);
   background: var(--palette-g);
-  &:hover{
+  &.btn-delete:hover{
    color: var(--palette-w-hover);
    background: var(--palette-r);
   }
+  &.btn-clipboard:hover{
+   color: var(--palette-w-hover);
+   background: var(--palette-gg);
+  }
+
   border: none;
   padding: 0;
   width: 1.9em;
@@ -279,6 +284,7 @@ i.bi {
   i::before{
     scale: 1.5;
   }
+
  }
 
 

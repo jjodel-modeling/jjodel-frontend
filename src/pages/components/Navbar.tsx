@@ -6,7 +6,7 @@ import type {DState} from '../../joiner';
 import {U} from '../../joiner';
 
 type Props = {
-    version: DState["version"];
+    version: Partial<DState["version"]>;
 };
 function Navbar(props: Props): JSX.Element {
     const navigate = useNavigate();

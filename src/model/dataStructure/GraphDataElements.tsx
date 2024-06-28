@@ -282,13 +282,9 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
                 case DGraph.cname:
                 case DGraphVertex.cname: return (LPointerTargetable.fromD(dcurrent)) as LGraph;
                 default:
-                    if (!dcurrent.father || dcurrent.id === dcurrent.father) {
-                        /*switch(dcurrent.className){
-                            case DGraph.name:
-                            case DGraphVertex.name: return (lcurrent || LPointerTargetable.fromD(dcurrent)) as LGraph;
-                            default: */return Log.exDevv("node failed to get containing graph", {cdata:context.data, dcurrent});
-                        //}
-                    }
+                    Log.exDev(!dcurrent.father, "node failed to get containing graph", {cdata:context.data, dcurrent});
+                    Log.exDev(dcurrent.id === dcurrent.father, "node failed to get containing graph, found loop",
+                        {cdata:context.data, dcurrent, father: LPointerTargetable.from(dcurrent)?.father});
                     dcurrent = DPointerTargetable.fromPointer(dcurrent.father);
             }
         }
@@ -1043,7 +1039,7 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
                 // if coords are already in absolute mode.
                 let xIsAbsolute: number | undefined = (size.x&&!Array.isArray(size.x)) ? size.x : undefined;
                 let yIsAbsolute: number | undefined = (size.x&&!Array.isArray(size.x)) ? size.x : undefined;
-                Log.w(xIsAbsolute || yIsAbsolute, "decoding relative offset require an array size coordinate system. x=[x1, x2] --> x", {size});
+                Log.w(!!(xIsAbsolute || yIsAbsolute), "decoding relative offset require an array size coordinate system. x=[x1, x2] --> x", {size});
 
                 let offsetsp = useStart ? new GraphPoint(xIsAbsolute || size.x[0] + sp.x, yIsAbsolute || size.y[0] + sp.y) : new GraphPoint();
                 let offsetep = useEnd ? new GraphPoint(xIsAbsolute || size.x[1] + ep.x, yIsAbsolute || size.y[1] + ep.y) : new GraphPoint();

@@ -7,10 +7,11 @@ import {
     DV,
     GObject,
     Keystrokes,
+    Log,
     LPointerTargetable,
     Overlap,
-    Pointer,
-    U
+    Pointer, store,
+    U, LoggerCategoryState
 } from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './style.scss';
@@ -26,6 +27,8 @@ import './style.scss';
 * */
 class TryComponent extends React.Component<AllProps, State> {
     static cname: string = "TryComponent";
+    static mailRecipients = ["damiano.divincenzo@student.univaq.it", "giordano.tinella@student.univaq.it"];
+
     constructor(props: AllProps) {
         super(props);
         this.state = { error: undefined, info: undefined, stateUpdateTime: 0, canUseClipboard: true};
@@ -65,7 +68,7 @@ class TryComponent extends React.Component<AllProps, State> {
         let debug = false;
         if (debug) return<div>error</div>;
         if (this.props.catch) {
-            try{
+            try {
                 if (typeof this.props.catch === "function") return this.props.catch(error, info);
                 if (React.isValidElement(this.props.catch)) return this.props.catch;
             }
@@ -74,37 +77,20 @@ class TryComponent extends React.Component<AllProps, State> {
             }
         }
 
+
+        let state: DState = store.getState();
+        let title = "Jodel assisted error report V"+state?.version?.n;
+        let loggerReport = this.getLoggerReport(error);
+        (window as any).tryerror = error;
         const msgbody_notencoded: string = "This mail is auto-generated, it might contain data of your views or model.\n" +
             "If your project have sensitive personal information please check the report below to omit them.\n\n" +
             "" + error?.message + "\n\n" +
-            "_stack:\n" + U.cropStr(error.stack || '', 30) + '\n\n'+
-            "_component_stack:\n" + (info ? U.cropStr(info.componentStack, 10) : '');
-        const msgbody: string = encodeURIComponent(msgbody_notencoded);
-        const mailtitle: string =  encodeURIComponent("Jodel assisted error report");
-        const mailrecipients = ["damiano.divincenzo@student.univaq.it", "giordano.tinella@student.univaq.it"];
-        // "mailto:no-one@snai1mai1.com?subject=look at this website&body=Hi,I found this website and thought you might like it http://www.geocities.com/wowhtml"
-        const gitissue = "https://github.com/MDEGroup/jjodel/issues/new?title="+mailtitle+"&body="+msgbody;
-        let mailto: string | undefined = "mailto:"+mailrecipients.join(';')+"?subject="+mailtitle+"&body="+msgbody;
-        const mailtolimit = 2042 - 23/*for safety*/;
-        if (mailto.length > mailtolimit){
-            if (this.state.canUseClipboard) {
-                const mailfallback = encodeURIComponent("mail body exceeded maximum mailto: link length.\n" +
-                    "It has been copied to your clipboard, please past it here or use github issue report.");
-                U.clipboardCopy(msgbody_notencoded, ()=>{}, ()=>{this.setState({canUseClipboard: false})});
-                mailto =  "mailto:"+mailrecipients.join(';')+"?subject="+mailtitle+"&body=" + mailfallback;
-            }
-            else mailto = undefined;
-        }
-/*
-mailto: limits
-2042 characters on Chrome 64.0.3282.186
-2046 characters on Edge 16.16299
-approximately 32700 characters on Firefox 58.0
+            (loggerReport ? 'logger report:\n'+U.cropDeepObject(loggerReport) +'\n\n' : '') +
+            "_stack:\n" + U.cropStr(error.stack || '', 30, 0, 35, 5) + '\n\n'+
+            "_component_stack:\n" + (info ? U.cropStr(info.componentStack, 10, 0, 35, 5) : '');
 
-max URI lengths:
-chrome: 15613 chars
-firefox: 15708
-*/
+        let {mailto, gitissue} = U.mailerror(TryComponent.mailRecipients, title, msgbody_notencoded, this.state.canUseClipboard,
+            undefined, ()=>{this.setState({canUseClipboard: false})});
 
         let shortErrorBody = (error?.message || "\n").split("\n")[0];
         let visibleMessage: ReactNode = <div onClick={()=> this.setState({error:undefined, info: undefined})}>
@@ -117,6 +103,10 @@ firefox: 15708
             </ul>
         </div>
         return DV.error_raw(visibleMessage, "unhandled");
+    }
+
+    private getLoggerReport(error: Error): LoggerCategoryState | undefined {
+        return Log.getByError(error);
     }
 }
 interface State{

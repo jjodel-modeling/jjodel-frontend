@@ -641,7 +641,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         while(targets.length) { // gather superclasses in map "alreadyParsed"
             let nextTargets = [];
             for (let target of targets) {
-                if (!target) { Log.w("Invalid father pointer in DStructuralFeature", {feature: thiss, father:target, superclasses: alreadyParsed}); continue; }
+                if (!target) { Log.ww("Invalid father pointer in DStructuralFeature", {feature: thiss, father:target, superclasses: alreadyParsed}); continue; }
                 if (alreadyParsed[target.id]) continue;
                 alreadyParsed[target.id] = target;
                 for(let ext of target.extendedBy) nextTargets.push((_DClass as typeof DPointerTargetable).from(ext));
@@ -1048,7 +1048,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         else {
             defaultVSizeFunc = defaultVSize;
             try { defaultVSizeObj = defaultVSizeFunc(lvertex.father, lvertex); }
-            catch (e) { Log.e("Error in user DefaultVSize function:", {e, defaultVSizeFunc, txt:defaultVSizeFunc.toString()}); }
+            catch (e) { Log.exx("Error in user DefaultVSize function:", {e, defaultVSizeFunc, txt:defaultVSizeFunc.toString()}); }
         }
         if (defaultVSizeObj) {
             if (defaultVSizeObj.x !== undefined) thiss.x = defaultVSizeObj.x;
@@ -1569,8 +1569,21 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     public toString(): string { throw this.wrongAccessMessage("toString"); }
     protected get_toString(context: Context): () => string {
         const data = context.data as DNamedElement;
-        return () => ( data.name ? data.name : data.className.substring(0));
+        return () => ( data.name || data.className.substring(0));
         // return () => data.id;
+    }
+    public toPrimitive(): string { throw this.wrongAccessMessage("toPrimitive"); }
+    protected get_toPrimitive(c: Context): ((hint?: "number" | "string" | "default" ) => (number | string)) {
+        return (hint?: "number" | "string" | "default") => {
+            switch (hint){
+                default:
+                case "number":
+                    return c.data.clonedCounter || -1;
+                case "string":
+                case "default":
+                    return this.get_toString(c)();
+            }
+        }
     }
 
 
@@ -1589,8 +1602,8 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
             WARNING! do not set proxies in the state, set pointers instead.<br/>
             <a href='https://github.com/MDEGroup/jjodel/wiki/L%E2%80%90Object-state'>Learn more on the wiki</a></div>`};
 
-    get__state(c: Context): any { return this.wrongAccessMessage('obj._state, use obj.state instead.'); }
-    set__state(val: this["_state"], c: Context): boolean { return this.cannotSet('obj._state, use obj.state instead.'); }
+    // get__state(c: Context): any { return this.wrongAccessMessage('_state',', use obj.state instead.'); }
+    // set__state(val: this["_state"], c: Context): boolean { return this.cannotSet('_state', 'use obj.state instead.'); }
     get_state(context: any): any /*this['_state']*/ {
         if (!context.data._state) return {};
         return this.__shallowSolver(context.data._state, true, true); // to solve pointers in state
@@ -1653,6 +1666,13 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     }
 
     // protected _defaultCollectionGetter(c: Context, k: keyof Context["data"]): LPointerTargetable[] { return LPointerTargetable.fromPointer((c.data as any)[k]); }
+    protected _defaultGetter(c: Context, k: keyof Context["data"]): any {
+        return this.__defaultGetter(c, k);
+    }
+    protected _defaultSetter(v0: any, c: Context, k: keyof Context["data"]): boolean {
+        this.__defaultSetter(v0, c, k);
+        return true;
+    }
     protected __defaultGetter(c: Context, k: keyof Context["data"]): any {
         // console.log("default Getter");
         let v = (c.data as any)[k];

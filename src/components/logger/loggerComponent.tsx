@@ -1,8 +1,7 @@
 import React, {PureComponent, ReactNode} from "react";
 import './logger.scss';
-import {DataOutputComponent, DDate, Dictionary, GObject, Log, U, UnixTimestamp} from "../../joiner";
-import type {LoggerType} from "../../common/U";
-import {LoggerCategoryState} from "../../common/U";
+import {DataOutputComponent, Log, U} from "../../joiner";
+import type {Dictionary, GObject, LoggerType, LoggerCategoryState} from "../../joiner";
 
 // private
 class ThisState {
@@ -95,8 +94,9 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
     toggleCat(cat: LoggerType): void{
         this.setState({categoriesActive:{...this.state.categoriesActive, [cat]: !this.state.categoriesActive[cat]}} )
     }
-    displayArgs(args: any[], category: LoggerType): ReactNode{
-        if (!args) return undefined;
+    displayArgs(msg: LoggerCategoryState, category: LoggerType): ReactNode{
+        if (!msg?.raw_args) return undefined;
+        let args = msg.raw_args;
         if (!Array.isArray(args)) args = [args];
         let objs: GObject[] = [];
         let primitives: any[] = [];
@@ -107,14 +107,33 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
                 default: primitives.push(a);
             }
         }
-        return <div className={"cat cat_"+category}>
+        let date = new Date(msg.time);
+        return <div className={"cat hoverable cat_"+category}>
             <div className={"text"}>{primitives.join(" ")}</div>
-            { objs.map((o,i) => <DataOutputComponent data={o} rootName={""+(typeof o)+"_"+(i+1)+""} />) }
+            <div className={"text content"} style={{right: 0, top: 0, boxShadow: 'none', background: 'inherit'}}>
+                {date.getDate() +'/'+ date.toLocaleTimeString()}
+                <button title={"copy to clipboard"} className={"bg btn-clipboard my-auto ms-2"}
+                        onClick={(e)=> {
+                            (window as any).lastmsg = msg;
+                            console.log(msg);
+                            U.clipboardCopy(msg.long_string)
+                        }}
+                ><i className={"copy bi bi-clipboard"} /></button>
+                <button title={"report error"} className={"bg btn-clipboard my-auto ms-2"}
+                        onClick={(e)=> {
+                            (window as any).lastmsg = msg;
+                            console.log(msg);
+                            U.clipboardCopy(msg.long_string)
+                        }}
+                ><i className={"copy bi bi-clipboard"} /></button>
+            </div>
+            { objs.map((o,i) => <DataOutputComponent key={i} data={o} rootName={""+(typeof o)+"_"+(i+1)+""} />) }
         </div>;
     }
 
     clearLogs() {
-        for (let key in Log.messageMapping) Log.messageMapping[key] = [];
+        for (let key in Log.messageMapping) Log.messageMapping[key as LoggerType] = [];
+        Log.allMessages = [];
         this.forceUpdate();
         // just need to modify any counter in a way that is different from both curr val and the next counter update
         // this.setState({e_counter: -1});
@@ -127,11 +146,13 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
         let allMessages: LoggerCategoryState[] = [];
         for (key of categories) {
             if (!this.isCatActive(key)) continue; // U.arrayMergeInPlace(allMessages, Log.messageMapping[key])
-            for (let msg of Log.messageMapping[key]) {
+            let msg: LoggerCategoryState;
+            for (msg of Log.messageMapping[key]) {
                 if (this.filter(msg)) allMessages.push(msg);
             }
         }
-        allMessages = allMessages.sort((a, b) => a.time - b.time);
+        // order is reversed so newest is first in list
+        allMessages = allMessages.sort((a, b) => b.time - a.time);
 
         return (<>
             <div>
@@ -153,15 +174,17 @@ export class LoggerComponent extends PureComponent<AllProps, ThisState>{
                 <input label={"to"} type="datetime-local" value={ new Date(this.state.maxDate).toString()} onChange={this.changeMaxDate} /> */}
             </div>
             <div className={"categories"}>
-                { categories.filter(cat => !(cat in categoryAliases)).map((cat) => <button className={"btn btn"+(this.isCatActive(cat) && "-outline")+"-danger cat cat_" + cat + (this.isCatActive(cat) ? " active" : " inactive")}
-                                                  key={cat} onClick={e=>this.toggleCat(cat)}>{labelAliases[cat] || cat}</button>) }
+                { categories.filter(cat => !(cat in categoryAliases)).map((cat) => (
+                    <button className={"btn btn"+(this.isCatActive(cat) && "-outline")+"-danger cat cat_" + cat + (this.isCatActive(cat) ? " active" : " inactive")}
+                            key={cat} onClick={e=>this.toggleCat(cat)}>{labelAliases[cat] || cat}</button>))
+                }
             </div>
             <ul className={"entries"}>
                 { allMessages.map( (msg) => (
-                        <li className={"hoverable cat cat_"+msg.category}>
+                        <li className={"hoverable cat cat_"+msg.category} key={msg.time+'_'+msg.short_string}>
                             {false && <span className={"preview"}>{msg.short_string}</span>}
                             {false && <span className={"content"}>{msg.long_string}</span>}
-                            {this.displayArgs(msg.raw_args, msg.category)}
+                            {this.displayArgs(msg, msg.category)}
                         </li>))
                 }
             </ul>

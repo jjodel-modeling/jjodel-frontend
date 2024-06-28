@@ -1029,7 +1029,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             parsedFunc(context, parsedConstants);
             // U.evalInContextAndScopeNew( "("+funcCode+")(this.__param)", context, true, false, false);
         } catch (e: any) {
-            Log.w("Attempted to save an invalid view.constant setup. Cause:\n" + e.message.split("\n")[0], e)
+            Log.ee("Attempted to save an invalid view.constant setup. Cause:\n" + e.message.split("\n")[0], e)
             return undefined;
         }
         return parsedConstants;

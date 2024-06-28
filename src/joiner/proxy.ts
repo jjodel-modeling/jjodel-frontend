@@ -127,6 +127,7 @@ console.log(obj2 + ""); // "true"    — hint is "default"        array, object,
 // array + string will cause getPrimitive("default") to array, then .join(',') on it, and finally and toString() to be called on all array members.
 // so pointers cannot include "," char and toString() must return a pointer to keep lclass.extends += somepointer as a valid expression;
 // -= will call getPrimitive("number") which will result in array -> NaN, so NaN = NaN - pointer and cannot be done.
+// or maybe it can because if getPrimitive fails it calls toString as fallback, and viceversa
 
 @RuntimeAccessible('GetPathHandler')
 class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
@@ -235,17 +236,17 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     public get0(targetObj: ME, propKey: string | symbol, proxyitself: Proxyfied<ME>): any {
         // console.log('proxy keysearch', {propKey, targetObj, l: this.l, proxyitself, d: this.d});
         let canThrowErrors = true;
-        if (propKey === "__raw") return targetObj;
 
-        switch(typeof propKey){
+        switch(typeof propKey) {
             case "symbol":
-                switch(String(propKey)){
-                    default: Log.exDevv('unexpected  in proxy getter:', propKey); break;
-                    case 'Symbol(Symbol.toStringTag)': return (targetObj as any)[propKey].toString || (()=>"[Proxy]");
-                    case "Symbol(Symbol.toPrimitive)": return (targetObj as any)[propKey];//  || typeof targetObj;
+                propKey = String(propKey);
+                switch (propKey) {
+                    default: Log.exDevv('unexpected symbol in proxy getter:', propKey); break;
+                    case 'Symbol(Symbol.toStringTag)': propKey = 'toString'; break; //return (()=>"[Proxy]");
+                    case "Symbol(Symbol.toPrimitive)": propKey = 'toPrimitive'; break;
                 }
-                return null;
-            case "number": return null;
+                break;
+            // case "number": return null;
         }
 
         switch (propKey) {
@@ -265,15 +266,17 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             case 'clonedcounter':
             case 'clonedCounter':
                 return targetObj.clonedCounter || 0;
+            case '$$typeof':
+            case "typeName":
+                return this.d.className;
         }
         if (propKey[0] === "_" && propKey.indexOf("__info_of__")===0) {
             return (this.l as GObject)[propKey];
         }
 
 
-        const proxyacceptables = {typeName:'', $$typeof:''};
         // check if exist directly in D.key, L.key or through a get_key
-        if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.g + (propKey as string)] || propKey in proxyacceptables) {
+        if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.g + (propKey as string)]) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
             if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) return this.lg[this.g + propKey](new LogicContext(proxyitself as any, targetObj));
 
@@ -284,28 +287,13 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                 let getterMethod: Function = this.lg[this.g + propKey]; // || this.defaultGetter;
                 // console.log("gets method", {getterMethod, lg:this.lg, thiss: this});
                 if (getterMethod) return getterMethod(new LogicContext(proxyitself as any, targetObj));
-
             }
 
-
-            switch (propKey){
-                default:
-                    //constructor.prototype.typeName
-                    // se esiste la proprietà ma non esiste il getter, che fare? do errore?
-                    // Log.eDevv("dev error: property exist but getter does not: ", propKey, this);
-                    // console.error('proxy GET direct match', {targetObj, propKey, ret: this.d[propKey as keyof ME]});
-                    // console.error('proxy GET direct match', {l:this.l});
-                    return this.d[propKey as keyof ME];
-                case '$$typeof':
-                case "typeName":
-                    return this.d.className;
-            }
         }
         // @ts-ignore
         //console.trace("proxy $getter 2", {targetObj, n:targetObj.name, propKey, l:this.lg, dg:this.lg._defaultGetter});
 
         // if not exist check for children names
-
         if (typeof propKey === "string" && propKey !== "children" && ("children" in this.l)) { // __info_of_children__
             let lchildren: LPointerTargetable[];
             try { lchildren = this.get(targetObj, 'children', proxyitself); }
@@ -320,15 +308,17 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                 if (n && n.toLowerCase() === pk.toLowerCase()) return lc;
             }
         }
-
+        let lg = this.lg;
         // if custom generic getter exist
+        // @ts-ignore
         if (this.lg._defaultGetter) return this.lg._defaultGetter(new LogicContext(proxyitself as any, targetObj), propKey);
 
         // if property do not exist, try a concatenation
-        let concatenationTentative = null;
+        /*let concatenationTentative = null;
         try {concatenationTentative = this.concatenableHandler(targetObj, propKey, proxyitself); } catch(e) {}
         if (concatenationTentative !== null) return concatenationTentative;
-        Log.ex(canThrowErrors,'GET property "'+ (propKey as any)+ '" do not exist in object of type "' + U.getType(this.l) + " DType:" +  U.getType(this.l), {logic: this.l, data: targetObj});
+        */
+        Log.e(canThrowErrors, 'GET property "'+ (propKey as any)+ '" do not exist in object of type "' + U.getType(this.l) + " DType:" +  U.getType(this.d), {data: targetObj});
         return undefined;
         // todo: credo che con espressioni sui tipi siano tipizzabili tutti i return di proprietà note eccetto quelle ottenute per concatenazione.
     }
@@ -358,27 +348,23 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
 
 
-            // if custom generic getter exist
-            if (this.lg._defaultSetter) return this.lg._defaultSetter(value, new LogicContext(proxyitself as any, targetObj), propKey);
-            if (enableFallbackSetter) {
-                return this.defaultSetter(targetObj as any as DPointerTargetable, propKey as string, value, proxyitself);
-                // new SetFieldAction(new LogicContext(proxyitself as any, targetObj).data as any, propKey as string, value); return true;
-            }
-            // if custom generic getter exist
-            if (this.lg._defaultSetter) return this.lg._defaultSetter(value, new LogicContext(proxyitself as any, targetObj), propKey);
+            // if custom generic setter exist
+            // @ts-ignore
+            //if (this.lg._defaultSetter) return this.lg._defaultSetter(value, new LogicContext(proxyitself as any, targetObj), propKey);
+
             // se esiste la proprietà ma non esiste il setter, che fare? do errore.
-            Log.eDevv("dev error: property exist but setter does not: ", propKey, this);
+            // Log.eDevv("dev error: property exist but setter does not: ", propKey, this);
             return false;
         }
         // if property do not exist
-        let breakpoint = 1;
 
-        // if custom generic getter exist
+        // if custom generic setter exist
+        // @ts-ignore
         if (this.lg._defaultSetter) return this.lg._defaultSetter(value, new LogicContext(proxyitself as any, targetObj), propKey);
-        if (enableFallbackSetter && typeof (propKey === "string") && ((propKey as string)[0] === '_' || (propKey as string).indexOf('tmp') > 0)) {
+        /*if (enableFallbackSetter && typeof (propKey === "string") && ((propKey as string)[0] === '_' || (propKey as string).indexOf('tmp') > 0)) {
             return this.defaultSetter(targetObj as any as DPointerTargetable, propKey as string, value, proxyitself);
             // new SetFieldAction(new LogicContext(proxyitself as any, targetObj).data as any, propKey as string, value); return true;
-        }
+        }*/
         Log.exx('SET property "set_' + (propKey as any) + '" do not exist in object of type "' + U.getType(this.l) + " DType:" +  U.getType(this.l), {'this': this, targetObj});
         return false; }
     /*      problema: ogni oggetto deve avere multipli puntatori, quando ne modifico uno devo modificarli tutti, come tengo traccia?

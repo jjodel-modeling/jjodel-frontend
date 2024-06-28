@@ -137,7 +137,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         }
         } catch(e) {
             this.draggableOptions = undefined;
-            Log.w("failed to setup / update draggable uptions", e, this, this.props.node, this.props.data);
+            Log.ee("failed to setup / update draggable uptions", e, this, this.props.node, this.props.data);
             return;
             // might throw error if element is not visible or in the dom or similar, but i won't care in that case.
             // but i reset draggableOptions so it can retry later if element enters the DOM instead of thinking it is already finished setup
@@ -247,7 +247,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         } catch(e){
             // check draggable catch comment
             this.resizableOptions = undefined;
-            Log.w("failed to setup / update resizable uptions", e, this, this.props.node, this.props.data);
+            Log.ee("failed to setup / update resizable uptions", e, this, this.props.node, this.props.data);
             return;
         }
 
@@ -277,7 +277,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             this.draggableOptions = undefined;
             this.resizableOptions = undefined;
             this.rotableOptions = undefined;
-            Log.w("failed to update measurable uptions", e, this, this.props.node, this.props.data);
+            Log.ee("failed to update measurable uptions", e, this, this.props.node, this.props.data);
             return;
         }
     }

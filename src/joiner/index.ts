@@ -7,6 +7,7 @@ import * as _pr_xml2json from '../common/libraries/prj_xml2json.js';
 // true imports for this file (should all be import type
 import type {DocString} from './types';
 import type {U as UType} from "../common/U";
+import type {Log as LogType} from "../common/Log";
 
 var pathDataPolyfill = require("path-data-polyfill") // needs to be required (and automatically executed) before the creation of any svg element
 var windoww = (window as any);
@@ -43,10 +44,13 @@ export type {PackagePointers, EdgePointers, AnnotationPointers, AttributePointer
     LiteralPointers, OperationPointers, ObjectPointers, GraphPointers, ParameterPointers, ReferencePointers, VertexPointers,
     ModelPointers,
 } from "../model/logicWrapper/PointerDefinitions";
+export type {LoggerCategoryState, LoggerType} from "../common/Log";
+
 
 export {windoww, EdgeBendingMode, EdgeGapMode, EMeasurableEvents} from './types';
 export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
     EdgeStateProps, EdgeOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
+
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,
     L, D, P,
@@ -62,12 +66,13 @@ export {Uarr,  DDate, ParseNumberOrBooleanOptions, myFileReader,
     Keystrokes, ShortAttribETypes, AttribETypes, FileReadTypeEnum, FocusHistoryEntry, SelectorOutput,
     toShortEType, toLongEType, ShortAttribSuperTypes,
     } from "../common/U";
+export {Log} from "../common/Log";
 export {DV} from '../common/DV';
 export {Defaults} from '../common/Defaults';
 export {Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Geom";
 export { CSSRuleSorted, CSSParser, TagNames } from "../common/Uhtml";
 // export {Log as Logg, Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Log";
-export const Log = windoww.Log;
+// export const Log = (windoww.Log) as typeof LogType;
 export {UX} from "../common/UX";
 export var U = windoww.U as typeof UType;
 export {DLog} from "../model/classes/D";
