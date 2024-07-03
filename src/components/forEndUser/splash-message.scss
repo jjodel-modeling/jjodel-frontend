@@ -1,0 +1,35 @@
+.splash-message-container{
+  display: flex;
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  baclground-color: transparent;
+  animation: 400ms all;
+
+  &.blocking{
+    pointer-events: all;
+    baclground-color: rgba(127, 127, 127, 0.5); // todo: make it more stylish, radial?
+  }
+}
+
+.splash-message{
+  animation: 400ms all;
+  margin: auto;
+  padding: 0.25rem;
+  &.s{
+    background-color: #28a745;
+  }
+  &.l, &.i{
+    background-color: #0078d7;
+  }
+  &.w{
+    background-color: #ccaa00;
+  }
+  &.e{
+    background-color: #dc3545;
+  }
+  &.ex{
+    background-color: #990000;
+  }
+}

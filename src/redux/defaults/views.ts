@@ -43,7 +43,16 @@ class DefaultViews {
             'color-': U.hexToPalette('#123cd0', '#4b0082', '#ff0000', '#3191bb', '#3191bb')
         };
         view.css = `
-.root { background-color: var(--background-1); }
+&, .Graph{
+  //position: absolute;
+  background-color: var(--background-1);
+  &:hover{ overflow: hidden; }
+  height: 100%;
+  width: -webkit-fill-available;
+}
+.root {
+    overflow: scroll;
+}
 .edges {z-index: 101; position: absolute; height: 0; width: 0; overflow: visible; }
 .detail-level {
     position: absolute;
@@ -55,7 +64,43 @@ class DefaultViews {
         transform: rotate(90deg) translate(0, 100%);
     }
 }
-    
+
+/* stuff for subelements */
+[data-nodetype="GraphVertex"] {
+  width: 50%;
+  height: 50%;
+}
+&,[data-nodetype]{
+  select, input{
+    background: inherit;
+    color: inherit;
+    &:empty{
+      font-style: italic;
+    }
+  }
+}
+[data-nodetype="Field"] {
+  white-space: nowrap;
+}
+[data-nodetype="VoidVertex"],
+[data-nodetype="Vertex"],
+[data-nodetype="GraphVertex"] {
+  position: absolute;
+  &>*{ border: 0.1em solid #a3a3a3; }
+  &>.ui-resizable-handle{ border: none; }
+}
+&,[data-nodetype], [data-nodetype]>*{
+  /* for some reason focus does not work?? so this is a fallback but needs to be properly fixed */
+  overflow: hidden;
+  &.selected-by-me, &:has(.selected-by-me), &:hover, &:active, &:focus-within, &:focus{
+    overflow: visible;
+    z-index: 1000 !important;
+  }
+}
+.Edge{
+    overflow: visible;
+}
+
 /*** CONTROL PANEL BEGIN ***/
  
 .control-panel-container {

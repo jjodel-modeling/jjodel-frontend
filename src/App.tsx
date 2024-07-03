@@ -21,6 +21,8 @@ import {
     UpdatesPage
 } from "./pages";
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
+import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
+import {MessageVisualizer} from "./components/forEndUser/SplashMessage";
 
 let userHasInteracted = false;
 function endPendingActions() {
@@ -52,6 +54,8 @@ function App(props: AllProps): JSX.Element {
     return(<>
         {isLoading && <Loader />}
         <ExternalLibraries />
+        <TooltipVisualizer />
+        <MessageVisualizer />
         <HashRouter>
             <PathChecker />
             <Routes>

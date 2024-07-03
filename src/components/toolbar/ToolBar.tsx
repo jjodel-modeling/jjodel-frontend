@@ -1,6 +1,6 @@
 import React, {Dispatch, ReactElement, ReactNode, useEffect, useRef, useState} from "react";
 import {connect} from "react-redux";
-import "./style.scss";
+import "./toolbar.scss";
 import {
     DState,
     DGraphElement,
@@ -152,9 +152,10 @@ function getItems(data: LModelElement|undefined, myDictValidator: Dictionary<Doc
 }
 function select(dl: DModelElement | LModelElement): DModelElement {
     let d: DModelElement = (dl as LModelElement)?.__raw || dl as DModelElement;
-    console.log("selecting", {d, dl, selector:".Graph [data-dataid='"+d?.id+"']", $:$(".Graph [data-dataid='"+d?.id+"']")});
+    //console.log("selecting", {d, dl, selector:".Graph [data-dataid='"+d?.id+"']", $ : $(".Graph [data-dataid='"+d?.id+"']")});
     if (d && d.id) setTimeout(()=>$(".Graph [data-dataid='"+d?.id+"']").trigger("click"), 10);
     return d; }
+
 function selectNode(d: DGraphElement|{id: string}): any {
     if (d && d.id) setTimeout(()=>$(".Graph [data-nodeid='"+d?.id+"']").trigger("click"), 10);
     return d; }
@@ -217,25 +218,14 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
 
     let content: ReactNode;
     // if (RuntimeAccessibleClass.extends(props.selected?.node?.className, DVoidEdge)) { }
+    let contentarr: ReactNode[][] = [];
     if (isMetamodel) {
         let siblings = data ? addChildren(upward[data.className]) : [];
         if (node) siblings.push(...addChildren(upward[node.className]));
         let subelements = data ? addChildren(downward[data.className]) : [];
-        content = (<>
-            {siblings.length > 0 &&
-                [<b className={'toolbar-section-label'}>Sibling</b>, siblings]
-            }
-            {siblings.length > 0 && subelements.length > 0 && <hr className={'my-2'} />}
-            {subelements.length > 0 &&
-                [<b className={'toolbar-section-label'}>Sublevel</b>, subelements]
-            }
-            {/*<hr className={'my-2'} />
-            <b className={'d-block text-center text-uppercase mb-1'}>Add shape</b>
-            {node && addChildren(downward[node.className])}
-            {/*<div className={"toolbar-item annotation"} tabIndex={ti} onClick={() => select(lModelElement.addChild("annotation"))}>+annotation</div>* /}
-            <hr className={'my-2'} />
-            */}
-        </>);
+        if (siblings.length > 0)    contentarr.push([<b className={'toolbar-section-label'}>Sibling</b>, siblings]);
+        if (subelements.length > 0) contentarr.push([<b className={'toolbar-section-label'}>Sublevel</b>, subelements]);
+
     }
     else {
         const classes = metamodel?.classes;
@@ -254,30 +244,34 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             </div>
         );
         if (node) subleveloptions.push(...addChildren(downward[node.className]));
-        content = (<>
-            <b className={'toolbar-section-label'} style={{marginRight:"1.5em"/*to avoid overlap with pin*/}}>Root level</b>
-            {classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
-                let dclass = lClass.__raw;
-                return <div
-                    onMouseEnter={e => SetRootFieldAction.new('tooltip', lClass.annotations.map(a => a.source).join(' '))}
-                    onMouseLeave={e => SetRootFieldAction.new('tooltip', '')}
-                    key={"LObject_"+dclass.id} className={"toolbar-item LObject"} tabIndex={ti} onClick={()=>select(model.addObject({}, lClass)) }>
-                    {dclass._state.icon ? <ModellingIcon src={dclass._state.icon}/> : <ModellingIcon name={'object'} />}
-                    <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)}</span>
-                </div>
-            })}
-            <div key={"RawObject"} className={'toolbar-item'} tabIndex={ti} onClick={()=>select(model.addObject({}, null))}>
-                <ModellingIcon name={'object'} />
-                <span className={'ms-1 my-auto text-capitalize'}>Object</span>
+        let rootobjs = classes?.filter((lClass) => {return !lClass.abstract && !lClass.interface}).map((lClass, index) => {
+            let dclass = lClass.__raw;
+            return <div
+                onMouseEnter={e => SetRootFieldAction.new('tooltip', lClass.annotations.map(a => a.source).join(' '))}
+                onMouseLeave={e => SetRootFieldAction.new('tooltip', '')}
+                key={"LObject_"+dclass.id} className={"toolbar-item LObject"} tabIndex={ti} onClick={()=>select(model.addObject({}, lClass)) }>
+                {dclass._state.icon ? <ModellingIcon src={dclass._state.icon}/> : <ModellingIcon name={'object'} />}
+                <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)}</span>
             </div>
-            { subleveloptions.length > 0 && <>
-                <hr className={'my-2'} />
-                <b className={'toolbar-section-label'}>Sublevel</b>
-                {subleveloptions}
-            </>}
-            {/*<hr className={'my-2'} />*/}
-        </>);
+        }) || [];
+        rootobjs.push(<div key={"RawObject"} className={'toolbar-item'} tabIndex={ti} onClick={()=>select(model.addObject({}, null))}>
+            <ModellingIcon name={'object'} />
+            <span className={'ms-1 my-auto text-capitalize'}>Object</span>
+        </div>);
+
+
+        if (rootobjs.length > 0)    contentarr.push([<b className={'toolbar-section-label'} style={{marginRight:"1.5em"/*to avoid overlap with pin*/}}>Root level</b>, rootobjs]);
+        if (subleveloptions.length > 0) contentarr.push([<b className={'toolbar-section-label'}>Sublevel</b>, subleveloptions]);
     }
+
+
+    let shapes = node ? addChildren(downward[node.className]) : [];
+    if (shapes.length > 0)      contentarr.push([<b className={'toolbar-section-label'}>Shape</b>, shapes]);
+
+    let separator = <hr className={'my-2'} /> as any;
+    // @ts-ignore
+    content = contentarr.separator(separator);// .flat() as any;
+    console.log("toolbar", {contentarr, separator, content});
 
     return (
         <div className="toolbar-draggable" ref={htmlref} style={{top: '35px', position:"absolute"}} // refuses to focus without event...

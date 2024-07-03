@@ -253,6 +253,23 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         // console.log('ProxyWrapping:', {data, baseObjInLookup, path});
         return new Proxy(data, new windoww.TargetableProxyHandler(data, baseObjInLookup, path)) as L;
     }
+
+    // if v can be wrapped, wrap it. otherwise return the parameter v.
+    public static attemptWrap(v: any, s?: DState): any{
+        let ret: any = undefined;
+        switch (typeof v){
+            case "string": s = store.getState(); ret = LPointerTargetable.fromPointer(v, s); break
+            case "object":
+                if(v.__isProxy) return v;
+                if (v.className) {
+                    if (!RuntimeAccessibleClass.get(v?.className)?.logic?.singleton) break;
+                    ret = LPointerTargetable.fromD(v);
+                }
+                break;
+            default: break;
+        }
+        return ret || v;
+    }
     /*
         static mapWrap2<D extends DPointerTargetable, L extends LPointerTargetable>(map: RuntimeAccessibleClass, container: D, baseObjInLookup?: DPointerTargetable, path: string = ''): L{
             if (!map || (map as any).__isProxy) return map as any;
@@ -1679,19 +1696,18 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return this.__shallowSolver(v, true, false);
     }
     protected __shallowSolver<T>(val: any, solveArrayValues: boolean, solveObjectKeys: boolean): any {
-        if (!val || (!solveArrayValues && !solveObjectKeys)) return val;
+        if (!val) return val;
         let state: DState = store.getState();
         if (solveArrayValues && Array.isArray(val)) {
             if (val.length === 0) return [];
-            else if (Pointers.isPointer(val[0] as any)) return LPointerTargetable.fromArr(val, state);
-            return val;
+            return val.map(v => LPointerTargetable.attemptWrap(v));
+            // else if (Pointers.isPointer(val[0] as any)) return LPointerTargetable.fromArr(val, state);
+            // return val;
         }
         if (solveObjectKeys && typeof val === "object"){
             let ret = {...val};
             for (let key in val){
-                let v = val[key];
-                if (!Pointers.isPointer(v, undefined, true)) continue;
-                ret[key] = Array.isArray(v) ? LPointerTargetable.fromPointer(v, state) : LPointerTargetable.fromArr(v, state);
+                ret[key] = LPointerTargetable.attemptWrap(val[key]);
             }
             return ret;
         }

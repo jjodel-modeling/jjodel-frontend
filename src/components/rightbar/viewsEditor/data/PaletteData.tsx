@@ -280,6 +280,7 @@ function PaletteDataComponent(props: AllProps) {
                 {node}
             </div>)
     }
+    const vcss = view.css;
 
     return(<section className={'p-3'}>
         <div className={"controls"} style={{position:'relative', zIndex:2}}>
@@ -471,12 +472,15 @@ function PaletteDataComponent(props: AllProps) {
             </span>
         } />
         {/*<label className={'ms-1 mb-1'}>{view.cssIsGlobal ? 'Global' : 'Local'} CSS Editor</label>*/}
-        <div className={"monaco-editor-wrapper"} style={{
+        {vcss.indexOf('//') >= 0 && <b><span style={{color:'red'}}>Warning:</span> Inline comments // are not supported by our compiler.<br/>
+            Please replace them with /* block comments */</b>}
+
+            <div className={"monaco-editor-wrapper"} style={{
             minHeight: '20ùpx', height:'200px'/*there is a bug of height 100% on childrens not working if parent have only minHeight*/,
             resize: 'vertical', overflow:'hidden'}} onBlur={blur}>
             <Editor className={'mx-1'}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                    defaultLanguage={'less'} value={view.css} onChange={change}/>
+                    defaultLanguage={'less'} value={vcss} onChange={change}/>
         </div>
         <div className={"debug"}><div style={{whiteSpace:'pre'}}>{view.compiled_css}</div></div>
         {/*<textarea>

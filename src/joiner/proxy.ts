@@ -293,22 +293,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         // @ts-ignore
         //console.trace("proxy $getter 2", {targetObj, n:targetObj.name, propKey, l:this.lg, dg:this.lg._defaultGetter});
 
-        // if not exist check for children names
-        if (typeof propKey === "string" && propKey !== "children" && ("children" in this.l)) { // __info_of_children__
-            let lchildren: LPointerTargetable[];
-            try { lchildren = this.get(targetObj, 'children', proxyitself); }
-            catch (e) { lchildren = []; }
-            // let dchildren: DPointerTargetable[] = lchildren.map<DPointerTargetable>(l => l.__raw as any);
-            let lc: GObject;
-            let pk: string;
-            if (childrenKeys.includes(propKey[0])) { pk = propKey.substring(1); canThrowErrors = false; }
-            else pk = propKey;
-            for (lc of lchildren) {
-                let n = lc?.name;
-                if (n && n.toLowerCase() === pk.toLowerCase()) return lc;
-            }
-        }
-        let lg = this.lg;
+
         // if custom generic getter exist
         // @ts-ignore
         if (this.lg._defaultGetter) return this.lg._defaultGetter(new LogicContext(proxyitself as any, targetObj), propKey);
@@ -338,13 +323,14 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     }
 
     public set(targetObj: ME, propKey: string | symbol, value: any, proxyitself?: Proxyfied<ME>): boolean {
-        let enableFallbackSetter = true;
-
         // console.error('_proxy set PRE:', {targetObj, propKey, value, proxyitself, arguments});
         // if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.s + (propKey as string)] || (this.l as GObject)[(propKey as string)]) {
         if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.s + (propKey as string)]) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
-            if (typeof propKey !== 'symbol' && this.s + propKey in this.lg) return this.lg[this.s + propKey](value, new LogicContext(proxyitself as any, targetObj));
+            if (typeof propKey !== 'symbol' && this.s + propKey in this.lg) {
+                this.lg[this.s + propKey](value, new LogicContext(proxyitself as any, targetObj));
+                return true;
+            }
 
 
 
@@ -354,18 +340,21 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
             // se esiste la proprietà ma non esiste il setter, che fare? do errore.
             // Log.eDevv("dev error: property exist but setter does not: ", propKey, this);
-            return false;
+            // return false;
         }
         // if property do not exist
 
         // if custom generic setter exist
-        // @ts-ignore
-        if (this.lg._defaultSetter) return this.lg._defaultSetter(value, new LogicContext(proxyitself as any, targetObj), propKey);
+        // @ts-ignore private property
+        if (this.lg._defaultSetter) { this.lg._defaultSetter(value, new LogicContext(proxyitself as any, targetObj), propKey);
+            return true;
+        }
         /*if (enableFallbackSetter && typeof (propKey === "string") && ((propKey as string)[0] === '_' || (propKey as string).indexOf('tmp') > 0)) {
             return this.defaultSetter(targetObj as any as DPointerTargetable, propKey as string, value, proxyitself);
             // new SetFieldAction(new LogicContext(proxyitself as any, targetObj).data as any, propKey as string, value); return true;
         }*/
-        Log.exx('SET property "set_' + (propKey as any) + '" do not exist in object of type "' + U.getType(this.l) + " DType:" +  U.getType(this.l), {'this': this, targetObj});
+        let canThrowErrors = true;
+        Log.ex(canThrowErrors,'SET property "set_' + (propKey as any) + '" do not exist in object of type "' + U.getType(this.l) + " DType:" +  U.getType(this.l), {'this': this, targetObj});
         return false; }
     /*      problema: ogni oggetto deve avere multipli puntatori, quando ne modifico uno devo modificarli tutti, come tengo traccia?
             ipotesi 1: lo memorizzo in un solo posto (store.idlookup) e uso Pointer<type, lb, ub> che è una stringa che simula un puntatore

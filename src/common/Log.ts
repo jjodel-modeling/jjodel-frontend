@@ -20,7 +20,7 @@ export class LoggerCategoryState{
         this.long_string = '';
         this.exception = exception;
 
-        this.long_string = JSON.stringify(U.cropDeepObject(args, 10, 20, 45, 35, 5), null, '\t');
+        // this.long_string = JSON.stringify(U.cropDeepObject(args, 10, 20, 45, 35, 5), null, '\t');
         /*
         const maxChars: Dictionary<string, [number, number]> = {
             function: [50, 0],

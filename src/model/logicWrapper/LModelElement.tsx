@@ -159,6 +159,30 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     // protected _defaultGetter(c: Context, k: keyof Context["data"]): any {}
 
+    protected _defaultGetter(c: Context, k: keyof any): any {
+        let targetObj = c.data;
+        let proxyitself = c.proxyObject;
+        // if not exist check for children names
+        if (typeof k === "string" && k !== "children" && (!(k in c.data) && !(k in this))) { // __info_of_children__
+            console.log("me default child getter", {k});
+            let lchildren: LPointerTargetable[];
+            try { lchildren = this.get_children(c); }
+            catch (e) { lchildren = []; }
+            // let dchildren: DPointerTargetable[] = lchildren.map<DPointerTargetable>(l => l.__raw as any);
+            let lc: GObject;
+            let pk: string;
+            const childrenKeys = ["@", "$"];
+            if (childrenKeys.includes(k[0])) { pk = k.substring(1); }
+            else pk = k;
+            if (Array.isArray(lchildren)) for (lc of lchildren) {
+                let n = lc?.name;
+                if (n && n.toLowerCase() === pk.toLowerCase()) return lc;
+            }
+        }
+        console.log("me default getter", {k});
+        return super.__defaultGetter(c, k);
+    }
+
     // this one must return true or the js engine throws an exception
     protected _defaultSetter(val: any, c: GObject<Context>, k: any): true {
         this._setterFor$stuff_canReturnFalse(val, c as any, k as any);
@@ -3570,11 +3594,10 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return this._defaultGetterM2(c, key);
     }
     _defaultGetterM2(c: Context, key: string): any{
-        let s = store.getState();
         if (key[0] === "$"){
             // look for m1 matches
             let k = key.substring(1).toLowerCase();
-            console.log("$getter m2 0", {k, key});
+            let s = store.getState();
 
             for (let subelement of this.get_allSubPackages(c, s)){
                 let n = subelement.__raw.name;
@@ -3639,6 +3662,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             console.log("$getter 5", {k, key, m2, m2item});
             if (!m2) return Log.ee("Could not find any subelement with name " + key + " on M1 or M2 Models", {c, key, m1: c.data, m2});
         }
+
+        return this.__defaultGetter(c, key);
     }
     private static otherObjectsTemp: Dictionary<DocString<"className">, LObject[]> = undefined as any;
     private static otherObectsAccessedKeys: DocString<"className">[] = [];
@@ -4041,6 +4066,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         let larr = [];
         for (let i = 0; i < darr.length; i++){
             let l = LPointerTargetable.fromD(darr[i]);
+            Log.exDev(l && !l.model, "missing model in model element", {l, context});
             if (!l || l.model.id !== context.data.id) {
                 darr[i] = undefined as any;
                 continue;

@@ -58,7 +58,7 @@ function ViewDataComponent(props: AllProps) {
 
 
 
-    Log.exx('$crash', "test crash", {props});
+    // Log.exx('$crash', "test crash", {propss:props});
     layout.dockbox.children.push({tabs});
 
     return(<div>

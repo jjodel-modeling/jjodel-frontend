@@ -34,6 +34,7 @@ import {NumberControl, PaletteControl, PaletteType, PathControl, StringControl} 
 import tinycolor from "tinycolor2";
 import util from "util";
 import Convert from "ansi-to-html";
+import {isValidElement} from "react";
 // var Convert = require('ansi-to-html');
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
@@ -105,19 +106,40 @@ export class U {
     }
 
     // exponential: undefined = only if it's over digits. false = never, true = always.
-    public static cropNum(num: number, digits?: number, exponential?: boolean): string{
-        if (!digits || isNaN(num)) return ''+num;
-        if (exponential) return num.toExponential(digits);
+    public static cropNum(num: number, digits: number=5, exponential?: boolean, atLeast1Decimal:boolean=true): number | string{
+        if (!digits || isNaN(num)) return num;
+        if (exponential) return num.toExponential(digits-1);
         else if (exponential === undefined) {
-            let limit = 10**(digits - 1);
-            if (num >= limit || num <= -limit) return num.toExponential(digits);
+            let limit = 10**(digits + 4); // 3 extra chars for e+x
+            if (num >= limit || num <= -limit) return num.toExponential(digits-1);
         }
-        let intpart = Math.trunc(num);
-        let s = ''+num;
-        if (intpart === num) return s;
-        let miss = (s.length - digits);
-        if (miss > 0) s+='.'+Math.trunc((num % 1)*(10**(miss-1)))
-        return s;
+        let intpart: number = Math.trunc(num);
+        if (intpart === num) return num;
+        /*let s = ''+num;
+        let excess = (s.length - digits);
+        if (excess <= 0) return num;*/
+        // must cut decimals
+        let intpart_s = intpart + '';
+        let allowedDecimals = digits - intpart_s.length - 1;
+        if (allowedDecimals <= 0) {
+            if (!atLeast1Decimal) return intpart;
+            else allowedDecimals = 1;
+        }
+        let decimalPart = num%1;
+
+        // nb: here in concatenation ((-0)+'') --> '0'. it will lose sign on cropNum(x) with x € (-1, 0)
+        // so need to check if it was negative
+        let sign = (num < 0 ? '-' : '');
+        // let exp = (10**allowedDecimals);
+        // return sign + (intpart_s)+'.'+ (Math.round(decimalPart * exp)/exp).substring(2, allowedDecimals+2);
+        let decimal_s = decimalPart+'';
+        let firsti = sign.length + 2; // 0. in decimal string
+        let lasti = allowedDecimals + firsti +1;
+        while (--lasti > firsti && decimal_s[lasti] === '0') {   }
+        if (++lasti <= firsti) return intpart;
+        let ret = +((num < 0 && intpart === -0 ? '-' : '') + (intpart_s)+'.'+ (decimal_s.substring(firsti, lasti)));
+        // console.log('cropNum', {num, ret, oth:{sign, firsti, lasti, decimal_s, intpart_s}});
+        return ret;
     }
     public static cropStr(msg: string, linesStart: number = 5, linesEnd: number = 5, stringRowStart: number = 25, stringRowEnd: number = 25): string{
         let arr = msg.split('\n');
@@ -1373,7 +1395,8 @@ export class U {
 
     // faster than jquery, underscore and many native methods checked https://stackoverflow.com/a/59787784
     public static isEmptyObject(obj: GObject | undefined): boolean {
-        for(var i in obj) return false;
+        if (typeof obj !== "object") return false;
+        for (var i in obj) return false;
         return true;
     }
 
@@ -1566,25 +1589,75 @@ export class U {
         }*/
         return larr as any;
     }
+    public static isDPointerTargetable(e: any): e is (DPointerTargetable | LPointerTargetable){
+        return e && (e.__isProxy || (e.className && e.id && e.pointedBy && e._state));
+    }
+    public static arrayCount<T extends any>(arr: T[], find: T | ((e:T)=>boolean)): number{
+        if (typeof find === "function") return arr.reduce((total,x) => total+( (find as any as ((a:any)=>boolean) )(x) ? 1:0), 0);
+        return arr.reduce((total,x) => total+(x===find?1:0), 0);
+    }
+    /*public static cropDObject(o: any): GObject{
+        if (!o) return o as any;
+        let d: any & Partial<DPointerTargetable> = {...(o.__raw || o)};
+        // delete d.pointedBy;
+        // defaultValue, instanceClassName, isPrimitive, partialdefault_ame, _storePath, _su_maps, OCL__EEDS_RECALCULATIO_, compiled_css, css, cssISGlo_al, isValidatio_, oclUpdateCo_ditio_, everythimg empty str or 0 or empty arr or empty ovj, palette,
+
+        // remove all falsy properties, just knowing they are not there i know they are falsy, save space.
+        for (let k in o){
+            let v = o[k];
+            //  v === "" || v === null || v === undefined
+            if (!v || U.isEmptyObject(v) || Array.isArray(v) || v.lemgth === 0) delete o[k];
+        }
+        return d;
+    }*/
 
     public static cropDeepObject(o: any, lines_start_crop: number=20, lines_end_crop: number=10, string_start_crop: number=45, string_end_crop: number=35, num_digit_crop: number=5): any{
         if (!o) return o;
-        let replacer = (o: GObject) => {
+        let replacer = (key: string | number | undefined, o: GObject, depth: number) => {
+            switch(key) {
+                case "props": return "[_props_]";
+            }
             switch (typeof o) {
-                default:
-                    return o;
+                default: return o;
                 case "string":
                     return U.cropStr(o, lines_start_crop, lines_end_crop, string_start_crop, string_end_crop);
                 case "function":
                     return U.cropStr(o.toString(), lines_start_crop, lines_end_crop, string_start_crop, string_end_crop);
                 case "number":
-                    return U.cropNum(num_digit_crop);
+                    return U.cropNum(o, num_digit_crop);
                 case "object":
                     if (o === null) return null;
                     if (U.isHtmlNode(o)) return '[HTMLElement]';
-                    if (U.isError(o)) return {stack: o.stack, message: o.message};
+                    if (isValidElement(o)) return '[ReactElement]';
+                    // because native Error properties are not iterable. need to take them out manually.
+                    if (U.isError(o)) return {...o, message:o.message, stack:o.stack};
+                    /*if (Array.isArray(o)) {
+                        let delements = U.arrayCount(o, U.isDPointerTargetable);
+                        if (delements > 0){
+                            o = o.map(e=>(U.isDPointerTargetable(e) ? U.cropDObject(o) : e));
+                        }
+                    }*/
+                    if (U.isDPointerTargetable(o)) {
+                        if (depth >= 5) return o.id;
+                        // if (depth >= 2) return U.cropDObject(o);
+                        else o = (o as LPointerTargetable).__raw || o;
+                    }
+                    if (o.className === 'IPoint') return {x:o.x, y:o.y};
+                    if (o.className === 'ISize') return {x:o.x, y:o.y, w:o.w, h:o.h};
+
+                    // remove all falsy properties, just knowing they are not there i know they are falsy, save space.
+                    let isArr = Array.isArray(o);
+                    o = isArr ? [...(o as any[])] : {...o};
+                    for (let k in o) {
+                        let v = o[k];
+                        /*if (isArr) switch(k){ default: break;
+                            case 'contains': case 'joinOriginal': case 'first': case 'last': case 'separator': delete o[k]; continue;
+                        }*/
+                        //  v === "" || v === null || v === undefined
+                        if (!v || U.isEmptyObject(v) || (Array.isArray(v) && v.length === 0)) delete o[k];
+                    }
                     // if (U.isDate(o)) return "[Date "+o.getTime()+"]";
-                    return o.__raw || o;
+                    return o;
             }
         }
         return U.deepReplace(o, replacer);
@@ -1595,7 +1668,7 @@ export class U {
     }
 
     // does make a deep copy too.
-    static deepReplace(obj: any, replacer?: ((o: any) => any),
+    static deepReplace(obj: any, replacer?: ((key: undefined | string | number, o: any, depth: number) => any),
                        circularReferenceValue: any | ((obj_alreadymet: GObject)=>any) = (o: GObject)=>((o.__raw || o).id || '_circular_ref_')): any {
 
         const avoidloop: WeakMap<any, true> = new WeakMap();
@@ -1624,9 +1697,9 @@ export class U {
      instead let a = {l:{b:1}, a:a};    [a,a] will return [{l:{b:1}, a:'_loop_'}, {l:{b:1}, a:'_loop_'}] with no '_loop_' tags
      while
      */
-    static deepReplace_rec(obj: any, avoidloop: GObject & WeakMap<any, true>, replacer?: ((o: any) => any),
-                           circularReferenceValue?: any | ((obj_alreadymet: GObject)=>any), curdept:number=0, eagerLoopReturn: boolean = false): any {
-        if (typeof obj === "symbol") return replacer ? replacer(obj) : obj;
+    static deepReplace_rec(obj: any, avoidloop: GObject & WeakMap<any, true>, replacer?: ((key: undefined | string | number, o: any, depth: number) => any),
+                           circularReferenceValue?: any | ((obj_alreadymet: GObject)=>any), key?: number | string, curdept:number=0, eagerLoopReturn: boolean = false): any {
+        if (typeof obj === "symbol") return replacer ? replacer(key, obj, curdept) : obj;
 
         let old_obj = obj;
         switch (typeof old_obj) {
@@ -1653,18 +1726,20 @@ export class U {
         }
 
 
-        if (replacer) obj = replacer(obj);
+        if (replacer) obj = replacer(key, obj, curdept);
         switch (typeof obj){
             default: break; // obj = obj; return obj; // for any leaf type
             case "object":
                 if (U.isHtmlNode(obj)) return obj;
+                if (isValidElement(obj)) return obj;
+                if (U.isError(obj)) return obj;
                 if (Array.isArray(obj)) {
-                    obj = obj.map(o => U.deepReplace_rec(o, avoidloop, replacer, circularReferenceValue, curdept+1));
+                    obj = obj.map((o, i) => U.deepReplace_rec(o, avoidloop, replacer, circularReferenceValue, i,curdept+1));
                     break;
                 }
                 let o: GObject = {};
                 for (let k in obj) {
-                    o[k] = U.deepReplace_rec(obj[k], avoidloop, replacer, circularReferenceValue, curdept+1);
+                    o[k] = U.deepReplace_rec(obj[k], avoidloop, replacer, circularReferenceValue, k, curdept+1);
                 }
                 obj = o;
                 break;
@@ -1701,6 +1776,9 @@ export class U {
             default: return undefined;
             case "object":
                 if (U.isHtmlNode(obj)) return undefined;
+                if (isValidElement(obj)) return undefined; // ReactElement
+                if (U.isError(obj)) return undefined;
+
                 if (Array.isArray(obj)) {
                     for (let i = 0; i < obj.length; i++) {
                         let found = U.deepFindInObject_rec(obj[i], subobject, avoidloop, maxDepth, compareFunc, curdepth+1);
@@ -1729,6 +1807,8 @@ export class U {
         let mailto: string | undefined = "mailto:"+recipients.join(';')+"?subject="+mailtitle+"&body="+msgbody;
         const mailtolimit = 2042 - 23/*for safety*/;
         /*
+            git uri limit: the requests start failing at exactly 8202 characters.
+
             mailto: limits
             2042 characters on Chrome 64.0.3282.186
             2046 characters on Edge 16.16299

@@ -228,8 +228,9 @@ export class DState extends DPointerTargetable{
         /// creating m3 "Object" metaclass
         let dObject = DClass.new(ShortDefaultEClasses.EObject, false, false, false, false,
             '', undefined, true, 'Pointer_' + ShortDefaultEClasses.EObject.toUpperCase());
+
         SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
-        for (let defaultEcoreClass of Object.values(DefaultEClasses)){
+        for (let defaultEcoreClass of Object.values(DefaultEClasses)) {
             // todo: creat everyone and not just object, make the whole m3 populated.
         }
 

@@ -1,6 +1,7 @@
 import React, {Dispatch, ErrorInfo, KeyboardEvent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
+import {compressToBase64, compressToUTF16, decompressFromBase64, decompressFromUTF16} from "async-lz-string";
 import {
     Defaults,
     DPointerTargetable,
@@ -25,6 +26,8 @@ import './style.scss';
 *
 *
 * */
+
+// todo: after we have a server, instead of this, make an automatic error report with POST requests to the server without having the uri char limit
 class TryComponent extends React.Component<AllProps, State> {
     static cname: string = "TryComponent";
     static mailRecipients = ["damiano.divincenzo@student.univaq.it", "giordano.tinella@student.univaq.it"];
@@ -37,6 +40,31 @@ class TryComponent extends React.Component<AllProps, State> {
     static getDerivedStateFromError(error: Error) {
         // Update state so the next render will show the fallback UI.
         return { error, info: undefined }; // this first set an error and stops error propagation
+    }
+
+    private postGitIssue(content: string){
+        let owner = 'MDEGroup';
+        let repo = 'jjodel';
+        let obj = {
+            owner,
+            repo,
+            title: 'Automatic bug report',
+            body: content,
+            labels: [
+                'bug', 'auto-bug'
+            ],
+            headers: {
+                'X-GitHub-Api-Version': '2022-11-28'
+            }
+        }
+        this.postBugReport(`https://api.github.com/repos/${owner}/${repo}/issues`, JSON.stringify(obj));
+
+    }
+    private postBugReport(url: string, content: string){
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", url, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(content);
     }
 
     componentDidCatch(error: Error, info: React.ErrorInfo): void {
@@ -62,6 +90,9 @@ class TryComponent extends React.Component<AllProps, State> {
         }
         return this.props.children;
     }
+    reset(){
+        this.setState({error:undefined, info: undefined, lz: undefined});
+    }
 
     catch(error: Error, info?: React.ErrorInfo): ReactNode{
         console.error("uncatched error:", {state:{...this.state}});
@@ -80,20 +111,21 @@ class TryComponent extends React.Component<AllProps, State> {
 
         let state: DState = store.getState();
         let title = "Jodel assisted error report V"+state?.version?.n;
-        let loggerReport = this.getLoggerReport(error);
         (window as any).tryerror = error;
+        let reportstr = this.state.lz || this.stringreport(Log.getByError(error));
+
         const msgbody_notencoded: string = "This mail is auto-generated, it might contain data of your views or model.\n" +
-            "If your project have sensitive personal information please check the report below to omit them.\n\n" +
+            "If your project have sensitive personal information please do a manual report instead."+// check the report below to omit them.\n\n" +
             "" + error?.message + "\n\n" +
-            (loggerReport ? 'logger report:\n'+U.cropDeepObject(loggerReport) +'\n\n' : '') +
-            "_stack:\n" + U.cropStr(error.stack || '', 30, 0, 35, 5) + '\n\n'+
+            (reportstr ? 'logger report'+(this.state.lz ? ' (lz-base64)' : '')+':\n' + encodeURIComponent(reportstr) +'\n\n' : '') +
+            "_stack:\n" + U.cropStr(error.stack || '', 30, 0, 35, 15) + '\n\n'+
             "_component_stack:\n" + (info ? U.cropStr(info.componentStack, 10, 0, 35, 5) : '');
 
         let {mailto, gitissue} = U.mailerror(TryComponent.mailRecipients, title, msgbody_notencoded, this.state.canUseClipboard,
             undefined, ()=>{this.setState({canUseClipboard: false})});
 
         let shortErrorBody = (error?.message || "\n").split("\n")[0];
-        let visibleMessage: ReactNode = <div onClick={()=> this.setState({error:undefined, info: undefined})}>
+        let visibleMessage: ReactNode = <div onClick={()=> this.reset()}>
             <div>{info ? "has info": "###########"}</div>
             <div>ut:{this.state.stateUpdateTime}, { shortErrorBody }</div>
             <div>What you can try:</div>
@@ -101,12 +133,58 @@ class TryComponent extends React.Component<AllProps, State> {
                 <li>- Undo the last change</li>
                 <li>- {mailto && [<a href={mailto}>Mail the developers</a>, " or"]} <a href={gitissue} target="_blank">open an issue</a></li>
             </ul>
+            {state.debug ? this.decompress() : undefined}
         </div>
         return DV.error_raw(visibleMessage, "unhandled");
     }
 
-    private getLoggerReport(error: Error): LoggerCategoryState | undefined {
-        return Log.getByError(error);
+    decompress(){
+        function dec(e:any){
+            e.stopPropagation();
+            let s: any=undefined, s1: any=undefined, s2:Promise<string>=undefined as any, o: any=undefined;
+            try { s = e.target.value; } catch (e) {
+                console.error("crashed decompress", e);
+            }
+            try { s1 = decodeURIComponent(s); } catch (e) {
+                console.error("crashed decompress uri", e);
+            }
+            try { s2 = decompressFromBase64(s1); } catch (e) {
+                console.error("crashed decompress lz", e);
+            }
+            if (s2) {s2.then(v=> {
+                try { o = JSON.parse(s2=v as any) } catch (e) { console.error("crashed decompress p", e, v); }
+            }).finally(()=>{
+                let out = {s, uri:s1, lz:s2, o};
+                console.log('decompress final', out);
+                $('#decompress')[0].innerText = JSON.stringify(o ||  out, null, 4);
+
+            })} else {
+                let out = {s, uri:s1, lz:s2, o};
+                console.log('decompress else', out);
+                $('#decompress')[0].innerText = JSON.stringify(o ||  out, null, 4);
+            }
+        }
+        return (<><span>Debug mode: paste error report to decompress it.</span><textarea className={"w-100"} onChange={dec}></textarea><textarea id={"decompress"} className={"w-100"} /></>);
+    }
+
+
+    private stringreport(loggerReport0?: GObject): string | undefined{
+        if (!loggerReport0) return undefined;
+        let loggerReport = {...loggerReport0};
+        (window as any).loggerReport = loggerReport;
+        delete loggerReport.exception;
+        loggerReport = U.cropDeepObject(loggerReport);
+        loggerReport.time = loggerReport0.time; // do not "crop" timestamp
+        delete loggerReport.short_string
+        let s = JSON.stringify(U.cropDeepObject(loggerReport));
+        /*(window as any).compressToUTF16 = compressToUTF16;
+        (window as any).decompressFromUTF16 = decompressFromUTF16;
+        (window as any).compressToBase64 = compressToBase64;
+        (window as any).decompressFromBase64 = decompressFromBase64;
+        (window as any).ss = s;*/
+        // or: LZString.compressToBase64()
+        if (s.length > 100) compressToBase64(s).then((v)=> this.setState({lz:v}));
+        return s;
     }
 }
 interface State{
@@ -114,6 +192,7 @@ interface State{
     info?: React.ErrorInfo;
     stateUpdateTime: number;
     canUseClipboard: boolean;
+    lz?: string;
 }
 interface OwnProps {
     key?: React.Key | null;

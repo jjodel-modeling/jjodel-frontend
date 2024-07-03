@@ -999,7 +999,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         onContextMenu: this.onContextMenu,
                         onMouseDown: this.onMouseDown,
                         onMouseUp: this.onMouseUp,
-                        onMouseWheel: this.onScroll,
+                        onwheel: this.onScroll,
                         onMouseEnter: this.onEnter,
                         onMouseLeave: this.onLeave,
                         tabIndex: (props as any).tabIndex || -1,

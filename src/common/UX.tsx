@@ -228,7 +228,7 @@ export class UX{
             'onContextMenu: component.onContextMenu,' +
             'onMouseDown: component.onMouseDown,' +
             'onMouseUp: component.onMouseUp,' +
-            'onMouseWheel: component.onScroll,' +
+            'onwheel: component.onScroll,' +
             'onMouseEnter: component.onEnter,' +
             'onMouseLeave: component.onLeave,' +
             'tabIndex: (props as any).tabIndex || node.zIndex || -1,' +
