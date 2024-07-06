@@ -213,8 +213,9 @@ export class DV {
         "\n}" +
         "\nforeignObject.label{" +
         "\n\toverflow: visible;" +
-        "\n\twidth:0;" +
-        "\n\theight:0;" +
+        "\n\tcolor: var(--stroke-color);" +
+        "\n\twidth: 0;" +
+        "\n\theight: 0;" +
         "\n\twhite-space: pre;" +
         "\n\t> div{" +
         "\n\t\twidth: fit-content;" +

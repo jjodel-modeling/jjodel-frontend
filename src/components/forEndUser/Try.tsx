@@ -83,6 +83,10 @@ class TryComponent extends React.Component<AllProps, State> {
             // You can render any custom fallback UI
             return this.catch(this.state.error, this.state.info);
         }
+        if (Array.isArray(this.props.children)) {
+            console.error("<Try /> can have only 1 subcomponent", this.props.children, this);
+            return this.catch({message: "<Try /> can have only 1 subcomponent. If you need more wrap them inside a <>React.fragment</>"} as any, undefined);
+        }
         if (!React.isValidElement(this.props.children)) {
             // You can render any custom fallback UI
             console.error("Children is not a valid React Element", this.props.children, this);

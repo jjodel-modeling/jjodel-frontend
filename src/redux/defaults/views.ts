@@ -51,7 +51,8 @@ class DefaultViews {
   width: -webkit-fill-available;
 }
 .root {
-    overflow: scroll;
+    overflow: hidden;
+    position: relative;
 }
 .edges {z-index: 101; position: absolute; height: 0; width: 0; overflow: visible; }
 .detail-level {
@@ -413,22 +414,26 @@ control-panel .section .toggle {
         view.appliableTo = 'EdgePoint';
         view.resizable = false;
         view.palette = {'color-':  U.hexToPalette('#000'), 'background-': U.hexToPalette('#fff'), 'border-':  U.hexToPalette('#000'), 'hover-scale':{type:'number', unit:'', value:1.3}};
-        view.css = `[hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{
-    transform-origin: center;
-    transform: scale(var(--hover-scale));
-    &>[hoverscale]:hover, &>[hoverscale]:focus-within, &>[hoverscale]:focus{ transform: scale(1); }
-}
-  
-.edgePoint{
-    border-radius: 999px;
+        view.css = `.edgePoint{
     border: 2px solid var(--border-1);
     background: var(--background-1);
     color: var(--color-1);
     width: 100%;
     height: 100%;
     min-height: 15px;
+    min-width: 5px;
+    &:hover, &:focus-within, &:focus{
+        transform-origin: center;
+        transform: scale(1.3);
+    }
 }
-`
+[hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{
+    transform-origin: center;
+    transform: scale(var(--hover-scale));
+    &>[hoverscale]:hover, &>[hoverscale]:focus-within, &>[hoverscale]:focus{ transform: scale(1); }
+}
+
+`;
         view.usageDeclarations = "(ret)=>{ // scope contains: data, node, view, constants, state\n" +
             "// ** preparations and default behaviour here ** //\n" +
             "ret.data = data\n" +

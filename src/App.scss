@@ -194,13 +194,7 @@ svg.hoverable {
 }*/
 // .EdgePoint[data-nodetype="EdgePoint"]>
 // [data-nodetype]:has(>[hoverscale]){ overflow: visible !important; }
-[hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{
-  transform-origin: center;
-  transform: scale(1.3);
-  // todo: temp fix to avoid double trigger because root attributes are duplicated, remove when attributes cloning is fixed
-  &>[hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{ transform: scale(1); }
-  // transform: scale(attr(hoverscale number, 1)); correct but unsupported yet. i'm forced to hardcode a number
-}
+
 
 .no-transition-following, .no-transition{
   path{
@@ -298,5 +292,13 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
   -moz-user-select: text;
   -ms-user-select: text;
   user-select: text;
+  &:invalid{
+    border-color: var(--palette-r);
+    outline-color: var(--palette-r);
+  }
   // border-radius: 7.5px;
+}
+
+.dock-content .dock-tabpane:has(.GraphContainer){
+  overflow-y: hidden;
 }

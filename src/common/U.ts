@@ -1830,6 +1830,37 @@ export class U {
         return {gitissue, mailto};
     }
 
+
+
+    // NB: does not owrk if there is an overflow of pos:absolute elements needs to be updated before use.
+    public static findOverflowingNodes_broken(element : Element) : {element: Element, overflowingFrom: string }[] {
+        if (!element) return [];
+        // type Direction = {v: number, e: Element};
+        // const biggestChilds: Partial<{[k: keyof DOMRect]: {v: number, e: Element}}> = {};
+        //const biggestChilds: Partial<{[k: keyof DOMRectReadOnly]: {v: number, e: Element}}> = {};
+        const biggestChilds: Record<keyof DOMRectReadOnly, {v: number, e: Element}> = {} as any;
+        let childarr: {element: Element, size: DOMRect}[] = [];
+        let ret: {element: Element, overflowingFrom: string }[] = [];
+        while (element) {
+            const size = element.getBoundingClientRect();
+            childarr.push({element, size});
+            let k: keyof DOMRectReadOnly;
+            for (k in size) {
+                let v = size[k] as number;
+                if (!biggestChilds[k] || v > biggestChilds[k].v) biggestChilds[k] = {e: element, v};
+            }
+            if (childarr.length <= 1) continue;
+            let {element: child, size: childSize} = childarr[childarr.length -1];
+
+            for (k in size) {
+                let v = size[k];
+                if (childSize[k] > v) ret.push({element, overflowingFrom:k});
+            }
+            element = element.parentElement as Element;
+        }
+        return ret;
+    }
+
     // warning: nodes from other iframes will say are not instance from Element of the current frame, in that case need duck typing.
     private static isHtmlNode(element: any): element is Element {
         return element instanceof Element || element instanceof HTMLDocument || element instanceof SVGElement;
