@@ -86,6 +86,14 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
     setVertexProperties(){
         if (!this.props.node || !this.html.current) return;
+        switch (this.nodeType){
+            case 'GraphVertex':
+            case 'Vertex':
+            case 'VoidVertex':
+            case 'EdgePoint': break;
+            default: return;
+        }
+
         let html = this.html.current;
         const $measurable: GObject<'JQuery + ui plugin'> = $(html); // todo: install typings
 
@@ -336,6 +344,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     }
 
     oldHtml?: Element | null = null;
+    nodeType!: string;
     render(): ReactNode {
         if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
             return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
@@ -354,21 +363,21 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         //return this.r || <div>loading...</div>;
 
         // set classes
-        let nodeType = 'NODE_TYPE_ERROR';
-        if ( this.props.isedgepoint) nodeType = 'EdgePoint'; else
-        if ( this.props.isgraph &&  this.props.isvertex) nodeType = 'GraphVertex'; else
-        if ( this.props.isgraph && !this.props.isvertex) nodeType = 'Graph'; else
-        if (!this.props.isgraph &&  this.props.isvertex && (this.props.isvoid || !this.props.data)) nodeType = 'VoidVertex'; else
-        if (!this.props.isgraph &&  this.props.isvertex) nodeType = 'Vertex'; else
-        if (!this.props.isgraph && !this.props.isvertex) nodeType = 'Field';
+        this.nodeType = 'NODE_TYPE_ERROR';
+        if ( this.props.isedgepoint) this.nodeType = 'EdgePoint'; else
+        if ( this.props.isgraph &&  this.props.isvertex) this.nodeType = 'GraphVertex'; else
+        if ( this.props.isgraph && !this.props.isvertex) this.nodeType = 'Graph'; else
+        if (!this.props.isgraph &&  this.props.isvertex && (this.props.isvoid || !this.props.data)) this.nodeType = 'VoidVertex'; else
+        if (!this.props.isgraph &&  this.props.isvertex) this.nodeType = 'Vertex'; else
+        if (!this.props.isgraph && !this.props.isvertex) this.nodeType = 'Field';
 
         // const named: LNamedElement = this.props.data as LNamedElement; // LNamedElement.fromPointer(this.props.dataid);
-        const classesOverride = [nodeType, ...cssOverride]; // , (named?.name === 'default') ? 'default' : ''];
+        const classesOverride = [this.nodeType, ...cssOverride]; // , (named?.name === 'default') ? 'default' : ''];
         const styleOverride: React.CSSProperties = {};
         // set classes end
         const size: Readonly<GraphSize> = this.getSize();
 
-        switch (nodeType){
+        switch (this.nodeType){
             case 'GraphVertex':
             case 'Vertex':
             case 'VoidVertex':
@@ -380,17 +389,23 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 else styleOverride.width = undefined;
                 if (isResized || !this.props.view.adaptHeight) styleOverride.height = size.h+'px';
                 else styleOverride.height = undefined; // todo: the goal is to reset jqui inline style, but not override user-defined inline style
-                this.setVertexProperties(); break;
+                break;
             default: break;
         }
 
 
-        return super.render(nodeType, styleOverride, classesOverride);
+        return super.render(this.nodeType, styleOverride, classesOverride);
         // return <RootVertex props={this.props} render={super.render()} super={this} key={this.props.nodeid+'.'+this.state?.forceupdate} />;
     }
 
     select(forUser?: Pointer<DUser>): void{
         super.select(forUser);
+    }
+    componentDidMount(){
+        this.setVertexProperties();
+    }
+    componentDidUpdate(prevProps: Readonly<AllProps>, prevState: Readonly<ThisState>, snapshot?: any) {
+        this.setVertexProperties();
     }
 }
 
