@@ -383,6 +383,8 @@ class DefaultView {
 
     public static package(): string { return (
 `<div className={'root package'}>
+    <Measurable draggable={true} resizable={true}><div>draggable resizable</div></Measurable>
+    <Measurable draggable={true}><div>draggable</div></Measurable>
     <div className={'package-children'}>
         {upperLevel >= 1 ? [
             <label className={"detail-level"}>
@@ -414,7 +416,7 @@ class DefaultView {
 
     public static class(): string { return (
 `<View className={'root class'} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
-    <div className={(abstract ? 'abstract' : '')}>
+    <div className={abstract ? 'abstract' : ''}>
         <Input data={data} field={'name'} hidden={true} autosize={true} 
             jsxLabel={<b className={'class-name'}>{interface ? "Interface" : "Class"}:</b>} />
     </div>

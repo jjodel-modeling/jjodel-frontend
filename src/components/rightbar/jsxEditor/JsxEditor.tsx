@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, useEffect} from "react";
+import React, {Dispatch, ReactElement, ReactNode, useEffect} from "react";
 import {connect} from "react-redux";
 import {useStateIfMounted} from "use-state-if-mounted";
 import type {FakeStateProps} from "../../../joiner/types";
@@ -56,17 +56,22 @@ function JsxEditorComponent(props: AllProps) {
 
     }, [monaco]);
 
+    const unsupported = "is valid JS but is not supported by our compiler.";
+    function warn(condition: any, txt: ReactNode){ return condition ? <b><span style={{color:'red'}}>Warning:</span>: {txt}</b> : undefined}
     return <>
         <label className={"ms-1 mb-1 d-block jj-editor-title"}>JSX Editor</label>
-        {(jsx).indexOf('<>') >= 0 &&
-            <b><span style={{color:'red'}}>Warning:</span>: JSX.Fragment {"<>"} is valid JSX but is not supported by our compiler.<br/>
-                Please replace it with an array [] instead.</b>}
-        {(jsx).indexOf('?.') >= 0 &&
-            <b><span style={{color:'red'}}>Warning:</span> Optional chaining {"?."} is valid JS but is not supported by our compiler.<br/>
-                Please replace it with && instead. Eg: from (a?.b) to (a && a.b)</b>}
-        {(jsx).indexOf('??') >= 0 &&
-            <b><span style={{color:'red'}}>Warning:</span>: Nullish coalescing {"??"} is valid JS but is not supported by our compiler.<br/>
-                Please replace it with explicit null and undefined checks, or a ||.</b>}
+        {warn(jsx.match(/{\s*\(.+\?.+\:.+\)\s*}/gm),
+            <b>prop=&#123;( expression ? exp_b : exp_c )&#125; syntax{unsupported}<br/>
+            Please remove the round parenthesis, concatenate it with an empty string as in &#123;(a ? b : c)+''&#125;<br/>or replace the ternary operator as in (a && b || c).</b>)}
+        {warn(jsx.indexOf('<>') >= 0,
+            <b>JSX.Fragment {"<>"}{unsupported}<br/>
+                Please replace it with an array [] instead.</b>)}
+        {warn(jsx.indexOf('?.') >= 0,
+            <b>Optional chaining {"?."} <br/>
+                Please replace it with && instead. Eg: from (a?.b) to (a && a.b)</b>)}
+        {warn(jsx.indexOf('??') >= 0,
+            <b>Nullish coalescing {"??"}{unsupported}<br/>
+                Please replace it with explicit null and undefined checks, or a ||.</b>)}
         <div className={"monaco-editor-wrapper"} style={{
             minHeight: '20ùpx', height:'200px'/*there is a bug of height 100% on childrens not working if parent have only minHeight*/,
             resize: 'vertical', overflow:'hidden'}} tabIndex={-1} onBlur={blur}>

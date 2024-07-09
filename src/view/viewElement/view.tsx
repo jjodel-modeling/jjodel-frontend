@@ -287,7 +287,7 @@ export class DViewElement extends DPointerTargetable {
     
     font-family: Verdana, sans-serif;
     color: var(--color-1);
-    font-size: 11px;
+    font-size: 0.7rem;
 }
  
 .root div.header {
@@ -298,7 +298,7 @@ export class DViewElement extends DPointerTargetable {
 }
  
 .root div.header {
-    font-size: 5px;
+    font-size: 1rem;
 }
  
 .root div.header input:empty {

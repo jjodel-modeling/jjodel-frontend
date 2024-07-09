@@ -39,6 +39,12 @@ body {
 .debug {
     border: 1px dashed red;
 }
+.ui-draggable, .ui-resizable, ui-rotatable{
+    border: 1px solid var(--palette-g);
+    width: fit-content;
+    height: fit-content;
+    overflow: hidden;
+}
 /*
 .form-control:focus {
     border-color: #e0e0e0 !important;

@@ -77,6 +77,13 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         this.rotableOptions = undefined;
     }*/
 
+    onHtmlNodeChange(){
+        this.draggableOptions = undefined;
+        this.resizableOptions = undefined;
+        this.rotableOptions = undefined;
+        this.oldHtml = this.html.current;
+    }
+
     setVertexProperties(){
         if (!this.props.node || !this.html.current) return;
         let html = this.html.current;
@@ -328,11 +335,14 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         this.props.node.size = size as GraphSize;
     }
 
+    oldHtml?: Element | null = null;
     render(): ReactNode {
         if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
             return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;
         }
         if (!this.props.node) return 'Loading Node...';
+
+        if (this.html.current !== this.oldHtml){ this.onHtmlNodeChange(); }
 
         const cssOverride: string[] = [];
         // const selected = this.props.selected;

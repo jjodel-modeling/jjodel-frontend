@@ -11,7 +11,7 @@ import {
     Temporary,
     LPointerTargetable,
     DPointerTargetable,
-    Log,
+    Log, EMeasurableEvents, TRANSACTION,
 } from "../joiner";
 import {
     DClassifier,
@@ -239,16 +239,20 @@ export class U {
     }
 
     /// maxDepth = 2 is the minimum to check the content of objects inside usageDeclarations or node state. like node.errors.naming
-    static isShallowEqualWithProxies(obj1: GObject, obj2: GObject, skipKeys: Dictionary<string, any>={}, out?: {reason?: string},
+    static isShallowEqualWithProxies(obj1?: any, obj2?: any, skipKeys: Dictionary<string>={}, out?: {reason?: string},
                                      depth: number = 0, maxDepth: number = 2, returnIfMaxDepth:boolean = false): boolean {
-        let tobj1 = obj1 === null ? 'null' : typeof obj1;
-        let tobj2 = obj2 === null ? 'null' : typeof obj2;
         if (obj1 === obj2) {
             // if (out) { out.reason = "identical objects"; }
             return true; }
+        let tobj1 = obj1 === null ? 'null' : typeof obj1;
+        let tobj2 = obj2 === null ? 'null' : typeof obj2;
         if (tobj1 !== tobj2) { if (out) { out.reason = "type changed: " + tobj1 + " --> " + tobj2; } return false; }
 
+        //
         // at this point: same type, but different values
+        //
+
+        if (!obj1 || !obj2) return false; // cannot happen but compiler wants it to narrow types
         switch (tobj1) {
             default: // primitive with different values
                 console.error("unexpected case in isshallowequal:", {tobj1, obj1, obj2});
@@ -284,8 +288,8 @@ export class U {
                         if (out) out.reason = o1Raw.className + 'replaced by another object type:' + o2Raw?.className;
                         return false;
                     }
-                    obj1 = o1Raw;
-                    obj2 = o2Raw;
+                    obj1 = o1Raw as GObject;
+                    obj2 = o2Raw as GObject;
                 }
                 // for proxies and DObjects
                 if (obj1.clonedCounter !== undefined && obj2.clonedCounter !== obj1.clonedCounter) {
@@ -846,9 +850,9 @@ export class U {
         Log.eDev(useEval, 'loadScript', 'useEval','useEval todo. potrebbe essere utile per avviare codice fuori dalle funzioni in futuro.');
         document.body.append(script); }
 
-    static ancestorArray<T extends Element>(domelem: T, stopNode?: Node, includeSelf: boolean = true): Array<T> {
+    static ancestorArray<T extends Element>(domelem: T | null | undefined, stopNode?: Node, includeSelf: boolean = true): Array<T> {
         // [0]=element, [1]=father, [2]=grandfather... [n]=document
-        if (domelem === null || domelem === undefined) { return []; }
+        if (!domelem) { return []; }
         const arr = includeSelf ? [domelem] : [];
         let tmp: T = domelem.parentNode as T;
         while (tmp !== null && tmp !== stopNode) {
@@ -1132,7 +1136,7 @@ export class U {
 
     static objectFromArrayValues<T extends any>(arr: (string | number)[], val: T = true as T): Dictionary<string | number, T> {
         // @ts-ignore
-        return arr.reduce((acc, val) => { acc[val] = val; return acc; }, {});
+        return arr.reduce((acc, v) => { acc[v] = val; return acc; }, {});
         /*let ret: Dictionary = {};
         for (let val of arr) { ret[val] = true; }
         return ret;*/
@@ -1860,11 +1864,91 @@ export class U {
         }
         return ret;
     }
+/*
+    public static makeDraggable(e: HTMLElement, v: LViewElement, n: LGraphElement, type: "draggable" | "resizable" | "rotatable" = "draggable"): boolean {
+        let draggableOptions: string = e.dataset[type];
+        let disabled = !!e.attributes.disabled;
+
+        let options: GObject;
+        switch (typeof draggableOptions){
+            case "string":
+                try{ options = JSON.parse(draggableOptions); }
+                catch(e) { Log.ee("JSX error in " + type + ", cannot parse options. Make sure they are a valid JSON object in string format."); return false; }
+                break;
+            case "object": options = draggableOptions; break;
+            default: Log.ee("JSX error in " + type + ", unexpected type of options, only strings and objects are allowed, found instead: " + typeof draggableOptions); return false;
+        }
+
+        let $measurable: GObject<'JQuery + ui plugin'> = $(e);
+        if (disabled && $measurable.data("uiDraggable")) { $measurable.draggable('disable'); return false; }
+        if ($measurable.data("uiDraggable")) $measurable.draggable('enable');
+        // todo: change options, put disable then remove disable attr and check if changing options at runtime works
+
+        let defaultoptions = {
+            cursor: 'grabbing',
+            // containment: 'parent',
+            opacity: 0.0,
+            distance: 5,
+            helper: 'clone', // 'original' or 'csselector'? or func=>html
+            // disabled: !(view.draggable),
+            drag: (event: GObject, obj: GObject) => {
+                TRANSACTION(()=>{
+                    if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
+                    for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileDragging, vid);
+                })
+            },
+            stop: (event: GObject, obj: GObject) => {
+                TRANSACTION(()=>{
+                    this.setSize({x:obj.position.left, y:obj.position.top});
+                    for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onDragEnd, vid);
+                })
+            }
+        };
+
+        let aval: string;
+        let eventmap = {
+            's':    {'draggable': 'onDragStart',    'rotatable': 'onRotateStart',   'resizable': 'onResizeStart'},
+            'ing':  {'draggable': 'whileDragging',  'rotatable': 'whileRotating',   'resizable': 'whileResizing'},
+            'e':    {'draggable': 'onDragEnd',      'rotatable': 'onRotateEnd',     'resizable': 'onResizeEnd'  },
+        }
+        let event = {'s': eventmap.s[type], 'ing': eventmap.ing[type], 'e': eventmap.e[type]};
+        let jqui_ing: string;
+        switch (type){
+            default: jqui_ing = Log.eDevv("unexpected measurable event: " + type); return false;
+            case "draggable": jqui_ing = 'drag'; break;
+            case "resizable": jqui_ing = 'resize'; break;
+            case "rotatable": jqui_ing = 'rotate'; break;
+        }
+        let jquievent = {'s': 'start', 'ing': jqui_ing, 'e':'end'};
+        for (let evtkey in jquievent) {
+            // @ts-ignore
+            aval = e.attributes[event[evtkey]]?.value || '';
+            if (aval) defaultoptions[jquievent[evtkey]] = (event: GObject, obj: GObject) => {
+                // jqui event callback
+                // 1) call html-defined events (onDragStart="my_custom_event_name")
+                // todo: currently only support jqui default parameters, not custom ones. make an eval and allow using stuff like whileDragging="(coords)=>myevent(coords, 1,2,3)"
+                v.events[aval](event, obj);
+                let evt = options[evtkey];
+                delete options[evtkey];
+                switch(evt){
+                    case "string": v.events[evt]?.(event, obj);break;
+                    case "function": evt(); break;
+                    default: break;
+                }
+            }
+            U.objectMergeInPlace(options, defaultoptions);
+            $measurable[type](options);
+        }
+
+        return true;
+    }
+*/
 
     // warning: nodes from other iframes will say are not instance from Element of the current frame, in that case need duck typing.
     private static isHtmlNode(element: any): element is Element {
         return element instanceof Element || element instanceof HTMLDocument || element instanceof SVGElement;
     }
+
 }
 export class DDate{
     static cname: string = "DDate";

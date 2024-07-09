@@ -179,7 +179,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 if (n && n.toLowerCase() === pk.toLowerCase()) return lc;
             }
         }
-        console.log("me default getter", {k});
         return super.__defaultGetter(c, k);
     }
 

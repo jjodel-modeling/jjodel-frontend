@@ -54,7 +54,7 @@ class DefaultViews {
     overflow: hidden;
     position: relative;
 }
-.edges {z-index: 101; position: absolute; height: 0; width: 0; overflow: visible; }
+.edges {z-index: 101; position: absolute; top: 0; left: 0; height: 0; width: 0; overflow: visible; }
 .detail-level {
     position: absolute;
     right: -50px;

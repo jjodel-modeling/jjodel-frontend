@@ -364,12 +364,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let skipDeepKeys = {pointedBy:true, clonedCounter: true};// clonedCounter is checked manually before looping object keys
         // let skipPropKeys = {...skipDeepKeys, usageDeclarations: true, node:true, data:true, initialSize: true};
         let ret = false; // !U.isShallowEqualWithProxies(oldProps, nextProps, 0, 1, skipPropKeys, out);
-        // todo: verify if this update work
         // if node and data in props must be ignored and not checked for changes. but they are checked if present in usageDeclarations
         let component = nextProps.node.component;
         const nid = nextProps.nodeid;
-        // todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or removed
-
         // U.arrayDiff()
         for (let v of nextProps.views) {
             const vid: Pointer<DViewElement> = v.__raw.id;
