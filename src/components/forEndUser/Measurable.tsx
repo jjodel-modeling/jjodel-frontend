@@ -111,6 +111,11 @@ export class MeasurableComponent extends Component<AllProps, ThisState>{
         ($measurable as GObject)[type](options);
     }
     shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<ThisState>, nextContext: any): boolean {
+        console.log("measurable shouldup", {nc:nextProps.children, tc:this.props.children, eq: nextProps.children == this.props.children});
+        // todo: would need to check if pros.children has changed, but that requires a deep search of subcomponents props and state.
+        // currently with just return true it works and rerenders every time the parent component rerenders. not when other elements are interacted.
+        // it works also with <Input> as direct child and it updates.
+        if (window) return true;
         const oldProps = this.props || {};
         this.dragOptionsChanged = false;
         this.resizeOptionsChanged = false;
