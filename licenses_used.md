@@ -14,27 +14,29 @@ Maintained by https://github/tombigel
 Original developer https://github.com/yonran
     dual-licensed under the WTFPL and MIT license
 
- 
-# jqwidgets
+???
 import DropDownButton from "smart-webcomponents-react/dropdownbutton";
+
+# jqwidgets
 https://www.jqwidgets.com/license/
-date retrieved: 12/04/2024
-    Community License
-    We offer the Community License to boost your startup to success.
-    
-    It requires you to:
-    
+not used anymore?
+
+# smarthtmlelements
+https://www.htmlelements.com/license/
+used for: dock, some buttons 
+date retrieved: 13/07/2024
+Community License
+Smart HTML Elements Community version is licensed under the permissive Apache v2 license and is copyright 2019 jQWidgets LTD.
+
+It requires you to:
     Keep the license and copyright notice included in our JavaScript files when you use them in your works.
-    It does not include these widgets:
-    
-    jqxGrid, jqxTreeGrid, jqxPivotGrid, jqxScheduler, jqxDataTable, jqxChart, jqxGantt and jqxKanban
-    It allows you to:
-    
-    Freely download and use jQWidgets for personal, private, company internal, or commercial purposes.
-    We’ll appreciate if you provide a reference to our website or share a testimonial or case study.
-    It forbids you to:
-    
-    Redistribute any piece of jQWidgets without proper attribution.
-    Hold the creators or copyright holders of the product liable.
-    Hold the authors and license owners liable for damages as our product is provided without warranty.
-    Use any marks owned by us in any way that might state or imply that our company endorses your distribution or that you created the software in question.
+
+It allows you to:
+    Freely download and use Smart HTML Elements, in whole or in part, for personal, private, company internal, or commercial purposes
+    Use our Custom Elements in packages or distributions that you create
+It forbids you to:
+    Redistribute any piece of Smart HTML Elements without proper attribution
+    Hold the authors and license owners liable for damages as our product is provided without warranty
+    Hold the creators or copyright holders of the product liable
+    Use any marks owned by us in any way that might state or imply that our company endorses your distribution or
+    that you created the software in question

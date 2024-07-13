@@ -153,7 +153,7 @@ export type CSSUnit = CSS_AbsoluteUnit | CSS_RelativeFontUnit | CSS_RelativeDomU
 export type StringControl = {type:'text', value: string};
 export type NumberControl = {type:'number', value: number, unit: DocString<"css unit">};
 export type PaletteControl = {type:'color', value: tinycolor.ColorFormats.RGBA[]}; // array of rgba: red, green, blue, alpha
-export type PathControl = {type:'path', value: string, x: string, y: string, options: {k: string, v:string}[]}; // array of rgba: red, green, blue, alpha
+export type PathControl = {type:'path', value: string, x: string, y: string, options: {k: string, v:string}[]};
 export type PaletteType = Dictionary<string, PaletteControl | NumberControl | StringControl | PathControl>;
 
 

@@ -94,6 +94,7 @@ export class DState extends DPointerTargetable{
         return ds; // do not trigger persist and CreateElement for state, or it will be stored in idlookup making a loop
     }
 
+    // important! every new version update version.n, but leave date = new Date().toString() and conversionList = empty arr []
     version:{n:number, date:string, conversionList: number[]} = {n:2.2, date: new Date().toString(), conversionList: []};
 
     env: Dictionary = process.env;  //damiano: this might make problems on load

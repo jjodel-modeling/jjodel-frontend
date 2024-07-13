@@ -1,0 +1,28 @@
+body {
+  --smart-tab-item-padding-y: 6px;
+  --smart-tab-item-padding-x: 9px;
+  // !important do not set sd-tab-height first. better just adjust it through --smart-tab-item-padding-y first, then set this to the result innerheight+padding*2
+  --sd-tab-height: 32px;
+  --smart-tab-item-padding: var(--smart-tab-item-padding-y) var(--smart-tab-item-padding-x);
+}
+.smart-window.smart-tabs-window .smart-content-container>.smart-content{
+  height: 100%;
+}
+.smart-content-container{
+  .smart-buttons-container{
+    z-index:1;
+    // color: black;
+  }
+  .smart-tab-label-container{
+    // height: var(--sd-tab-height); this changes also for vertical tabs
+  }
+}
+.smart-window .smart-content-container>.smart-header-section {
+  --smart-window-header-height: var(--sd-tab-height);
+  position: absolute; // important! activate this to remove double header. remove for debug only
+  // height: calc(100% - var(--smart-window-header-height));
+}
+.smart-window.smart-tabs-window[active] .smart-content-container>.smart-header-section, .smart-window.smart-tabs-window[dragged] .smart-content-container>.smart-header-section, .smart-window.smart-tabs-window[focus] .smart-content-container>.smart-header-section, .smart-window[active] .smart-content-container>.smart-header-section, .smart-window[dragged] .smart-content-container>.smart-header-section {
+  color: black;
+  --smart-window-header-height: var(--sd-tab-height);
+}

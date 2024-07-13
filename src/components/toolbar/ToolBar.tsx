@@ -278,12 +278,12 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
              onClick={(e)=>{ console.log("click focus", {htmlref}); setTimeout(()=> {
                  if (htmlref.current) (htmlref.current as any).children[0].focus();
              }, 1)}}>
-            <div className={"toolbar mt-2 hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
+            <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
                 <div className={"drag-handle dark"}>
                 </div>
 
                 <i className={"content pin bi bi-pin-angle"+(pinned ? "-fill" : '')} onClick={()=> setPinned(!pinned) } />
-                <div className={"preview toolbar-section-label mb-0 mx-1"}>Add</div>
+                <div className={"preview toolbar-section-label my-auto mx-1"}>Add</div>
                 <div className={"content inline"}>{content}</div>
             </div>
         </div>);

@@ -804,6 +804,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.isPrimitive = isPrimitive;
         thiss.partial = partial;
         thiss.partialdefaultname = partialdefaultname;
+        thiss.isSingleton = false;
         this.setExternalPtr(thiss.father, "classifiers", "+=");
         this.setExternalRootProperty('ClassNameChanged.'+thiss.id, thiss.name, '', false);
 

@@ -14,23 +14,29 @@
   .drag-handle{
     flex-grow: 1;
     // width: 1em;
-    width: 10px;
+    width: 12px;
     height: 30px;
-    margin-left: 0.55em;
+    /*margin-left: 0.55em;
     margin-top: 0.25em;
     margin-right: 0.7em;
-
+    margin-bottom: 0.25em;*/
+    margin-left: calc(-0.5rem + 0.4rem);
+    margin-right: calc(-0.3rem + 0.4rem);
+    margin-top: 0.25em;
+    margin-bottom: 0.25em;
 
   }
 
   .toolbar-section-label{
     margin-bottom: 0.25rem;
+    margin-left: 0.3rem;
     // margin-right: 2em;
     //text-transform: uppercase;
     // text-align: center;
     display: block;
     font-size: 0.9rem;
     font-weight: bold;
+
   }
 
   background: var(--palette-1);

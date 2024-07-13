@@ -282,6 +282,9 @@ body, .my-tooltip, .unselectable{
   user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
   /* css variables */
 }
+a[id]{
+  z-index: -1 !important;
+}
 input, textarea, [contenteditable], pre, .console-output-container, .selectable{
   -webkit-touch-callout: default;
   -webkit-user-select: text;

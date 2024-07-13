@@ -377,7 +377,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         // set classes end
         const size: Readonly<GraphSize> = this.getSize();
 
-        switch (this.nodeType){
+        switch (this.nodeType) {
             case 'GraphVertex':
             case 'Vertex':
             case 'VoidVertex':

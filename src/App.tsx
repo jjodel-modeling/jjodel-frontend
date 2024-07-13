@@ -23,6 +23,7 @@ import {
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
 import {MessageVisualizer} from "./components/forEndUser/SplashMessage";
+import {JQDock, MyDock} from "./components/dock/MyDock";
 
 let userHasInteracted = false;
 function endPendingActions() {
@@ -60,6 +61,7 @@ function App(props: AllProps): JSX.Element {
             <PathChecker />
             <Routes>
                 {DUser.current && <>
+                    <Route path={'dock'} element={<MyDock />} />
                     <Route path={'account'} element={<AccountPage />} />
                     <Route path={'settings'} element={<SettingsPage />} />
                     <Route path={'updates'} element={<UpdatesPage />} />

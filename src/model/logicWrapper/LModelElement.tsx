@@ -1824,6 +1824,7 @@ export class DClass extends DPointerTargetable { // extends DClassifier
     implementedBy: Pointer<DClass, 0, 'N', LClass> = [];
     partial!: boolean;
     partialdefaultname!: string;
+    isSingleton!: boolean;
 
     // for m1:
     // hideExcessFeatures: boolean = true; // isn't it like partial?? // old comment: se attivo questo e creo una DClass di sistema senza nessuna feature e di nome Object, ho creato lo schema di un oggetto schema-less a cui tutti sono conformi
