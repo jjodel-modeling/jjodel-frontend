@@ -110,7 +110,7 @@ export class SmartDock extends React.Component {
     savehtmlmap: Dictionary<DocString<"id">, NodeListOf<ChildNode>> = {}
     beforeUpdate(){
         if (!this.html) return;
-        let $tabs = $(this.html).find(".tab-root");
+        let $tabs = $(this.html).find("smart-tab-item.smart-element.smart-tab-item");
         let tab: HTMLElement;
         for (tab of $tabs){
             if (!tab.id) { Log.eDevv("tabs must have id's", {tab}); }
@@ -123,7 +123,10 @@ export class SmartDock extends React.Component {
             this.forceUpdate();
             // dock failed to load from localStorage, i'm forcing rerender.
         }
-        (window as any).debugafterupdate = ()=> this.afterUpdate();
+        (window as any).debugafterupdate = ()=> {
+            this.forceUpdate();
+        }
+        if (window) return; // weirdly it works also without this?
         // ReactDOM.render(<MultilineTextBox />, document.querySelector("#firstContainer"));
         //ReactDOM.render(<Slider />, document.querySelector("#secondContainer"));
         if (!this.html) return;
@@ -140,17 +143,20 @@ export class SmartDock extends React.Component {
 
 
     render() {
-        const random = Math.random().toFixed(2);
+        const random = Math.random();
         let layout: GObject = this.layout;
+        let r = (random*255).toFixed(0);
+        this.beforeUpdate();
         return (
             <div onMouseEnter={()=>this.forceUpdate()} ref={(e)=>this.html = e}>
-                <h1>{random}</h1>
+                <h1>{r}</h1>
                 <DockingLayout id={"docking-smart-1"} autoSaveState={true} autoLoadState={true}
                                ref={(e)=> {
                                    this.dock = e;
                                    if (!this.dock) return; //
                                    // this.dock.loadState(layout);
                                }}
+                               style={{backgroundColor: 'rgb('+r+", " +r+", "+r+")"}}
                     onReady={()=>this.dockReady()} layout={layout} draggable={true}>
                 </DockingLayout>
                 <MyPortal container={'#tab1'}><div id={"tab1content"}>tab1 content!</div></MyPortal>
