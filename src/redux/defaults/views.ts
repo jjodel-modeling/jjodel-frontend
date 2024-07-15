@@ -43,8 +43,18 @@ class DefaultViews {
             'color-': U.hexToPalette('#123cd0', '#4b0082', '#ff0000', '#3191bb', '#3191bb')
         };
         view.css = `
-.root { background-color: var(--background-1); }
-.edges {z-index: 101; position: absolute; height: 0; width: 0; overflow: visible; }
+&, .Graph{
+  //position: absolute;
+  background-color: var(--background-1);
+  &:hover{ overflow: hidden; }
+  height: 100%;
+  width: -webkit-fill-available;
+}
+.root {
+    overflow: hidden;
+    position: relative;
+}
+.edges {z-index: 101; position: absolute; top: 0; left: 0; height: 0; width: 0; overflow: visible; }
 .detail-level {
     position: absolute;
     right: -50px;
@@ -55,7 +65,43 @@ class DefaultViews {
         transform: rotate(90deg) translate(0, 100%);
     }
 }
-    
+
+/* stuff for subelements */
+[data-nodetype="GraphVertex"] {
+  width: 50%;
+  height: 50%;
+}
+&,[data-nodetype]{
+  select, input{
+    background: inherit;
+    color: inherit;
+    &:empty{
+      font-style: italic;
+    }
+  }
+}
+[data-nodetype="Field"] {
+  white-space: nowrap;
+}
+[data-nodetype="VoidVertex"],
+[data-nodetype="Vertex"],
+[data-nodetype="GraphVertex"] {
+  position: absolute;
+  &>*{ border: 0.1em solid #a3a3a3; }
+  &>.ui-resizable-handle{ border: none; }
+}
+&,[data-nodetype], [data-nodetype]>*{
+  /* for some reason focus does not work?? so this is a fallback but needs to be properly fixed */
+  overflow: hidden;
+  &.selected-by-me, &:has(.selected-by-me), &:hover, &:active, &:focus-within, &:focus{
+    overflow: visible;
+    z-index: 1000 !important;
+  }
+}
+.Edge{
+    overflow: visible;
+}
+
 /*** CONTROL PANEL BEGIN ***/
  
 .control-panel-container {
@@ -368,22 +414,26 @@ control-panel .section .toggle {
         view.appliableTo = 'EdgePoint';
         view.resizable = false;
         view.palette = {'color-':  U.hexToPalette('#000'), 'background-': U.hexToPalette('#fff'), 'border-':  U.hexToPalette('#000'), 'hover-scale':{type:'number', unit:'', value:1.3}};
-        view.css = `[hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{
-    transform-origin: center;
-    transform: scale(var(--hover-scale));
-    &>[hoverscale]:hover, &>[hoverscale]:focus-within, &>[hoverscale]:focus{ transform: scale(1); }
-}
-  
-.edgePoint{
-    border-radius: 999px;
+        view.css = `.edgePoint{
     border: 2px solid var(--border-1);
     background: var(--background-1);
     color: var(--color-1);
     width: 100%;
     height: 100%;
     min-height: 15px;
+    min-width: 5px;
+    &:hover, &:focus-within, &:focus{
+        transform-origin: center;
+        transform: scale(1.3);
+    }
 }
-`
+[hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{
+    transform-origin: center;
+    transform: scale(var(--hover-scale));
+    &>[hoverscale]:hover, &>[hoverscale]:focus-within, &>[hoverscale]:focus{ transform: scale(1); }
+}
+
+`;
         view.usageDeclarations = "(ret)=>{ // scope contains: data, node, view, constants, state\n" +
             "// ** preparations and default behaviour here ** //\n" +
             "ret.data = data\n" +

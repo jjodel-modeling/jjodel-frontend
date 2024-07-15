@@ -10,7 +10,7 @@ class Fetch {
             console.log(`GET: ${url}`, response);
             return response;
         } catch(e) {
-            Log.e('Connection Error');
+            Log.ee('Connection Error');
             return null;
         }
     }
@@ -26,7 +26,7 @@ class Fetch {
             console.log(`POST: ${url}`, body, response);
             return response;
         } catch(e) {
-            Log.e('Connection Error');
+            Log.ee('Connection Error');
             return null;
         }
     }
@@ -42,7 +42,7 @@ class Fetch {
             console.log(`PATCH: ${url}`, body, response);
             return response;
         } catch(e) {
-            Log.e('Connection Error');
+            Log.ee('Connection Error');
             return null;
         }
     }
@@ -53,7 +53,7 @@ class Fetch {
             console.log(`DELETE: ${url}`, response);
             return response;
         } catch(e) {
-            Log.e('Connection Error');
+            Log.ee('Connection Error');
             return null;
         }
     }

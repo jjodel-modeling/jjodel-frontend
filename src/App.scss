@@ -70,24 +70,7 @@ font-weight: 900 !important;
 
 }
 
-[data-nodetype], [data-nodetype]>*, {
-  overflow: hidden;
-  &.selected-by-me, &:has(.selected-by-me), // for some reason focus does not work?? so this is a fallback but needs to be properly fixed
-  &:hover, &:active, &:focus-within, &:focus{
-    overflow: visible;
-    z-index: 1000;
-  }
-}
-[data-nodetype]{
-  position: relative;
-  select, input{
-    background: inherit;
-    color: inherit;
-    &:empty{
-      font-style: italic;
-    }
-  }
-}
+
 /*
 *:hover:has(>.forceForeground), *:hover:has([data-nodetype]){
   transform-style: preserve-3d;
@@ -166,49 +149,14 @@ body .ui-icon{ // override jqueryui fixed resizable handles at 16px, making drag
   max-width: 33%;
   max-height: 33%;
 }
-[data-nodetype="Graph"]{
-  position: absolute !important;
-  overflow: hidden !important;
-  &:hover{ overflow: hidden; }
-  height: -webkit-fill-available;
-  width: -webkit-fill-available;
-  &::after{
-    content: '';
-  }
-}
-[data-nodetype="Vertex"], [data-nodetype="VertexGraph"]{
-  position: absolute !important;
-}
 
 
-[data-nodetype="GraphVertex"] {
-  width: 50%;
-  height: 50%;
-}
-[data-nodetype="Field"] {
-  white-space: nowrap;
-  // overflow: hidden;
-  // &:hover{ overflow: visible; }
-}
+
+
 [data-nodetype="Graph"]::after {
   top: 0px;
   left: 0px;
 }
-/*
-*:has(>[data-nodetype]){
-  display: flex;
-  flex-wrap: wrap;
-  flex-direction: column;
-  // counter-reset: line-number-mycounter 0;
-}
-
-[data-nodetype]{
-  // counter-increment: line-number-mycounter 1;
-  //noinspection CssInvalidPropertyValue
-  // order: counter(line-number-mycounter);
-  //noinspection CssInvalidPropertyValue
-  order: attr(data-order);
-}*/
 
 //////////// edge paths
 path{
@@ -246,13 +194,7 @@ svg.hoverable {
 }*/
 // .EdgePoint[data-nodetype="EdgePoint"]>
 // [data-nodetype]:has(>[hoverscale]){ overflow: visible !important; }
-[hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{
-  transform-origin: center;
-  transform: scale(1.3);
-  // todo: temp fix to avoid double trigger because root attributes are duplicated, remove when attributes cloning is fixed
-  &>[hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{ transform: scale(1); }
-  // transform: scale(attr(hoverscale number, 1)); correct but unsupported yet. i'm forced to hardcode a number
-}
+
 
 .no-transition-following, .no-transition{
   path{
@@ -262,8 +204,7 @@ svg.hoverable {
 }
 [data-nodetype="Edge"]{
   path {
-    // d: attr(d);
-    transition: d 400ms, transform 400ms, transform-origin 400ms;
+    //transition: d 400ms, transform 400ms, transform-origin 400ms;
     transition: all 400ms;
   }
 }
@@ -341,6 +282,9 @@ body, .my-tooltip, .unselectable{
   user-select: none; /* Non-prefixed version, currently supported by Chrome and Opera */
   /* css variables */
 }
+a[id]{
+  z-index: -1 !important;
+}
 input, textarea, [contenteditable], pre, .console-output-container, .selectable{
   -webkit-touch-callout: default;
   -webkit-user-select: text;
@@ -351,5 +295,13 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
   -moz-user-select: text;
   -ms-user-select: text;
   user-select: text;
+  &:invalid{
+    border-color: var(--palette-r);
+    outline-color: var(--palette-r);
+  }
   // border-radius: 7.5px;
+}
+
+.dock-content .dock-tabpane:has(.GraphContainer){
+  overflow-y: hidden;
 }

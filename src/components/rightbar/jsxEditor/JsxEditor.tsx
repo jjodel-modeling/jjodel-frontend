@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, useEffect} from "react";
+import React, {Dispatch, ReactElement, ReactNode, useEffect} from "react";
 import {connect} from "react-redux";
 import {useStateIfMounted} from "use-state-if-mounted";
 import type {FakeStateProps} from "../../../joiner/types";

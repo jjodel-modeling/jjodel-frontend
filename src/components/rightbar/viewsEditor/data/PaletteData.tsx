@@ -6,25 +6,27 @@ import Editor from "@monaco-editor/react";
 import DropDownButton from "smart-webcomponents-react/dropdownbutton";
 import 'smart-webcomponents-react/source/styles/smart.default.css';
 import type {
+    Dictionary,
+    GObject,
+    Pointer,
+} from '../../../../joiner';
+import type {
     PaletteControl,
     NumberControl,
     StringControl,
     PaletteType,
-    CSSUnit,
     PathControl
 } from '../../../../view/viewElement/view';
 import {
-    Dictionary,
     DState,
-    DViewElement, EdgeHead, GObject,
+    DViewElement, EdgeHead,
     Input,
-    KeyDownEvent,
     Keystrokes,
     Log,
     LViewElement,
-    Pointer,
-    U
+    U,
 } from '../../../../joiner';
+import{CSS_Units} from '../../../../view/viewElement/view';
 import {Function} from "../../../forEndUser/FunctionComponent";
 import { Color } from '../../../forEndUser/Color';
 
@@ -32,16 +34,11 @@ import { Color } from '../../../forEndUser/Color';
 function makeNumericInput(prefix: string, number: NumberControl,
                           setNumber: (e: React.FocusEvent<HTMLInputElement>, prefix: string) => void,
                           setText: (e: React.FocusEvent<HTMLInputElement>, prefix: string) => void, readOnly: boolean) {
-    let type: string;
     let min: number | undefined;
     let max: number | undefined;
     let step: number | undefined = undefined;
     switch (number.unit) {
-        case '': return <input className={"value"} placeholder={"value"} type={"text"}
-                               defaultValue={number.value} onBlur={e => setText(e as any, prefix)} disabled={readOnly}
-                               onKeyDown={e => {
-                                   if (e.key === Keystrokes.enter) setText(e as any, prefix);
-                                   if (e.key === Keystrokes.escape) (e.target as HTMLInputElement).value = '' + number.value; }} />
+        case '':
         case 'px': min = 0; max = 300; break;
         case 'pt': break; // 1pt = 1.33 px; 1px = 0.75pt
         case 'cm':
@@ -53,10 +50,7 @@ function makeNumericInput(prefix: string, number: NumberControl,
         case 'in': // 1in = 96px
         case 'pc': // 2px = 0.125 picas; 18.75pc = 300px
         case 'fr': min=0; max=20; step = 0.5; break;
-
-        default: type = "number"; break;
         case "%": case "vh": case "vw": case "vmax": case "vmin":
-            type = "range";
             min = 0;
             max = 100;
             break;
@@ -174,7 +168,7 @@ function PaletteDataComponent(props: AllProps) {
         const val: string = e.target.value === undefined ? 'px' : e.target.value;
         if (readOnly || val === (palette[prefix] as NumberControl).unit) return;
         let tmp: Dictionary<string, NumberControl> = {...palette} as any;
-        tmp[prefix].unit = val as CSSUnit;
+        tmp[prefix].unit = val;
         view.palette = palette = tmp; }
     const changePrefix = (oldPrefix: string, newPrefix: string) => {
         newPrefix = newPrefix.replaceAll(/[^\w\-]/g,'-'); // /^[^a-zA-Z0-9_\-]*$/, '-');
@@ -280,6 +274,7 @@ function PaletteDataComponent(props: AllProps) {
                 {node}
             </div>)
     }
+    const vcss = view.css;
 
     return(<section className={'p-3'}>
         <div className={"controls"} style={{position:'relative', zIndex:2}}>
@@ -396,38 +391,8 @@ function PaletteDataComponent(props: AllProps) {
                     return palettewrap(prefix,
                         <div className="palette-row numeric">
                             {makeNumericInput(prefix, number, setNumber, setText, readOnly)}
-                            <select className={"unit"} placeholder={"unit"} value={number.unit} onChange={e => {setUnit(e as any, prefix)}} disabled={readOnly}>
-                                <optgroup label={"Recommended units"}>
-                                    <option value={"px"}>px - pixels</option>
-                                    <option value={"%"}>% - Relative to parent</option>
-                                    <option value={"em"}>em - font height</option>
-                                    <option value={"vw"}>vw - viewport width</option>
-                                    <option value={"vh"}>vh - viewport height</option>
-                                    <option value={""}>Unit-less</option>
-                                </optgroup>
-                                <optgroup label={"Absolute units"}>
-                                    <option value={"px"}>px - pixels</option>
-                                    <option value={"cm"}>cm - centimeters</option>
-                                    <option value={"mm"}>mm - millimiters</option>
-                                    <option value={"pt"}>pt - points</option>
-                                    <option value={"pc"}>pc - picas</option>
-                                    <option value={"in"}>in - inches</option>
-                                </optgroup>
-                                <optgroup label={"Relative (DOM) units"}>
-                                    <option value={"%"}>% - Relative to parent</option>
-                                    <option value={"fr"}>fr - grid fraction</option>
-                                    <option value={"vw"}>vw - viewport width</option>
-                                    <option value={"vh"}>vh - viewport height</option>
-                                    <option value={"vmin"}>vmin - x% of viewport min axis</option>
-                                    <option value={"vmax"}>vmax - x% of viewport max axis</option>
-                                </optgroup>
-                                <optgroup label={"Relative (font) units"}>
-                                    <option value={"em"}>em - font height</option>
-                                    <option value={"rem"}>rem - &lt;body&gt; font height</option>
-                                    <option value={"ex"}>ex - height of the "x" char</option>
-                                    <option value={"ch"}>ch - width of the "0" char</option>
-                                </optgroup>
-                            </select>
+                            <input className={"unit"} placeholder={"unit"} value={number.unit} pattern={CSS_Units.pattern} disabled={readOnly}
+                                   list={"__jodel_CSS_units"} onChange={e => {setUnit(e as any, prefix)}} />
                         </div>)
                 }
             )}
@@ -471,12 +436,15 @@ function PaletteDataComponent(props: AllProps) {
             </span>
         } />
         {/*<label className={'ms-1 mb-1'}>{view.cssIsGlobal ? 'Global' : 'Local'} CSS Editor</label>*/}
-        <div className={"monaco-editor-wrapper"} style={{
+        {vcss.indexOf('//') >= 0 && <b><span style={{color:'red'}}>Warning:</span> Inline comments // are not supported by our compiler.<br/>
+            Please replace them with /* block comments */</b>}
+
+            <div className={"monaco-editor-wrapper"} style={{
             minHeight: '20ùpx', height:'200px'/*there is a bug of height 100% on childrens not working if parent have only minHeight*/,
             resize: 'vertical', overflow:'hidden'}} onBlur={blur}>
             <Editor className={'mx-1'}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                    defaultLanguage={'less'} value={view.css} onChange={change}/>
+                    defaultLanguage={'less'} value={vcss} onChange={change}/>
         </div>
         <div className={"debug"}><div style={{whiteSpace:'pre'}}>{view.compiled_css}</div></div>
         {/*<textarea>

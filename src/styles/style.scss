@@ -58,17 +58,17 @@
   &>input,
   &::after{ // input and fake element must have same sizes
     // todo: maybe they can be css variables injected with jsx, so can change ::after css rendering from jsx
-    color: transparent;
-    font-size: 0.9rem !important;
+    color: transparent !important;
+    font-size: 1em !important;
     border-width: 1px !important;
     padding: 0px 2px !important;
     margin: 0 4px !important;
     border-radius: 0.2em !important;
-    line-height: 20px;
+    line-height: 100% !important;
   }
   &::after {
     content: attr(data-value) ' ';
-    color: inherit;
+    color: inherit !important;
     border: 1px solid transparent;
     white-space: pre;
     // text-wrap: nowrap; white-space-collapse: pre;
@@ -151,7 +151,6 @@ input[type='checkbox']:checked { // was .input as class
 hr { margin: 0 0 !important; }
 label {
   height: min-content;
-  font-size: 0.9rem;
   font-weight: lighter;
   margin-top: auto; margin-bottom: auto;
 }
@@ -262,13 +261,18 @@ i.bi {
   line-height: 1.9em;
 }
 
-.btn-delete{
+.btn-delete, .btn-clipboard{
   color: var(--palette-w);
   background: var(--palette-g);
-  &:hover{
+  &.btn-delete:hover{
    color: var(--palette-w-hover);
    background: var(--palette-r);
   }
+  &.btn-clipboard:hover{
+   color: var(--palette-w-hover);
+   background: var(--palette-gg);
+  }
+
   border: none;
   padding: 0;
   width: 1.9em;
@@ -280,6 +284,7 @@ i.bi {
   i::before{
     scale: 1.5;
   }
+
  }
 
 

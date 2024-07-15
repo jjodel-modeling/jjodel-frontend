@@ -170,7 +170,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!ret.view) { // if view is not explicitly set or the assigned view is not found, match a new one.
             if (!scores) scores = getScores(ret, ownProps);
             ret.view = scores.mainView = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
-            Log.w(explicitView, "Requested main view "+ownProps.view+" not found. Another view got assigned: " + ret.view?.__raw.name, {requested: ownProps.view, props: ownProps, state: ret});
+            Log.w(!!explicitView, "Requested main view "+ownProps.view+" not found. Another view got assigned: " + ret.view?.__raw.name, {requested: ownProps.view, props: ownProps, state: ret});
         }
         if (!tn.validMainViews?.[0] || tn.validMainViews[0].id !== tn.mainView?.id) tn.validMainViews = [tn.mainView, ...(tn.validMainViews || [])];
         Log.ex(!ret.view, "Could not find any view appliable to element.",
@@ -364,12 +364,9 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let skipDeepKeys = {pointedBy:true, clonedCounter: true};// clonedCounter is checked manually before looping object keys
         // let skipPropKeys = {...skipDeepKeys, usageDeclarations: true, node:true, data:true, initialSize: true};
         let ret = false; // !U.isShallowEqualWithProxies(oldProps, nextProps, 0, 1, skipPropKeys, out);
-        // todo: verify if this update work
         // if node and data in props must be ignored and not checked for changes. but they are checked if present in usageDeclarations
         let component = nextProps.node.component;
         const nid = nextProps.nodeid;
-        // todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or removed
-
         // U.arrayDiff()
         for (let v of nextProps.views) {
             const vid: Pointer<DViewElement> = v.__raw.id;
@@ -999,7 +996,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         onContextMenu: this.onContextMenu,
                         onMouseDown: this.onMouseDown,
                         onMouseUp: this.onMouseUp,
-                        onMouseWheel: this.onScroll,
+                        onwheel: this.onScroll,
                         onMouseEnter: this.onEnter,
                         onMouseLeave: this.onLeave,
                         tabIndex: (props as any).tabIndex || -1,

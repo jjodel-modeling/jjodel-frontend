@@ -87,3 +87,4 @@ export const GraphElements: dict = {...Graphs, ...Vertexes, ...Fields, ...Edges}
 for (let key in GraphElements) if (!(GraphElements as any)[key]) { console.log({GraphElements, v:(GraphElements as any)[key]}); throw new Error("wrong initialization fo components"); }
 // U.objectMergeInPlace(GraphElements, Graphs, Edges as any, Vertexes, Fields, {Graphs, Edges, Vertexes, Fields});
 // console.info('components loaded');
+export {Measurable, MeasurableComponent} from "../components/forEndUser/Measurable";

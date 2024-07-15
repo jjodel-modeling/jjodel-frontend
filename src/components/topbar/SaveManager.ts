@@ -81,7 +81,7 @@ export class SaveManager {
         let filename;
         U.fileRead((e: Event, files?: FileList | null, fileContents?: string[]) => {
             Log.ex(!fileContents || !files || fileContents.length !== files.length, 'Failed to get file contents:', files, fileContents);
-            Log.ex(fileContents && fileContents.length > 1, 'Should not be possible to input multiple files yet.');
+            Log.ex(!!fileContents && fileContents.length > 1, 'Should not be possible to input multiple files yet.');
             if (!fileContents) return;
             if (fileContents.length == 0) return;
             // @ts-ignore
@@ -114,7 +114,7 @@ export class SaveManager {
                 /*if (jsonstring.includes("\n")) throw new Error(jsonstring0.substring(0, 1000)+"\n\n\n\n" + jsonstring.substring(0, 1000));
                 */
                 // jsonstring = JSON.stringify(jsonobj);
-                if (jsonobj.parsererror) { Log.e("failed to parse XML->JSON", {parseError:jsonobj.parseerror, jsonobj});  return; }
+                if (jsonobj.parsererror) { Log.ee("failed to parse XML->JSON", {parseError:jsonobj.parseerror, jsonobj});  return; }
                 console.log('importEcore jsonstr input: ', jsonobj);
             }
             else jsonstring = filestring;

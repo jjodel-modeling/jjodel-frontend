@@ -21,6 +21,9 @@ import {
     UpdatesPage
 } from "./pages";
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
+import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
+import {MessageVisualizer} from "./components/forEndUser/SplashMessage";
+import {JQDock, MyDock} from "./components/dock/MyDock";
 
 let userHasInteracted = false;
 function endPendingActions() {
@@ -52,10 +55,13 @@ function App(props: AllProps): JSX.Element {
     return(<>
         {isLoading && <Loader />}
         <ExternalLibraries />
+        <TooltipVisualizer />
+        <MessageVisualizer />
         <HashRouter>
             <PathChecker />
             <Routes>
                 {DUser.current && <>
+                    <Route path={'dock'} element={<MyDock />} />
                     <Route path={'account'} element={<AccountPage />} />
                     <Route path={'settings'} element={<SettingsPage />} />
                     <Route path={'updates'} element={<UpdatesPage />} />
@@ -109,7 +115,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     // needed here as props, because apparently functional components are memoized by default.
     ret.offlineMode = DUser.offlineMode;
     ret.tooltip = state.tooltip;
-    console.log("app re mapstate", {u:DUser.current, o:DUser.offlineMode});
+    // console.log("app re mapstate", {u:DUser.current, o:DUser.offlineMode});
     return ret;
 }
 

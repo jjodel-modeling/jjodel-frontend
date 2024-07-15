@@ -55,6 +55,17 @@ export class UX{
         // if (typeof children[0] === "object") return (children).map( (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as any as T;
         return React.Children.map(children, (c: T, i3: number)=>innermap(c, i3, [...depthIndices,i3])) as T;
     }
+    /*
+    public static draggable_eventmap = {
+        's':    {'draggable': 'onDragStart',    'rotatable': 'onRotateStart',   'resizable': 'onResizeStart'},
+        'ing':  {'draggable': 'whileDragging',  'rotatable': 'whileRotating',   'resizable': 'whileResizing'},
+        'e':    {'draggable': 'onDragEnd',      'rotatable': 'onRotateEnd',     'resizable': 'onResizeEnd'  },
+    };
+    public static draggable_eventprops= UX.initMeasurable();
+    static initMeasurable(): Dictionary<string, boolean>{
+        return U.objectFromArrayValues(Object.values(UX.draggable_eventmap).flatMap(v=>Object.values(v)), true);
+    }*/
+
     static injectProp(parentComponent: GraphElementComponent, e: ReactNode, gvidmap_useless: Dictionary<DocString<'VertexID'>, boolean>,
                       parentnodeid: string, index: number, indices: number[], injectOffset?: LGraph): ReactNode {
         let re: ReactElement | null = UX.ReactNodeAsElement(e);
@@ -228,7 +239,7 @@ export class UX{
             'onContextMenu: component.onContextMenu,' +
             'onMouseDown: component.onMouseDown,' +
             'onMouseUp: component.onMouseUp,' +
-            'onMouseWheel: component.onScroll,' +
+            'onwheel: component.onScroll,' +
             'onMouseEnter: component.onEnter,' +
             'onMouseLeave: component.onLeave,' +
             'tabIndex: (props as any).tabIndex || node.zIndex || -1,' +

@@ -159,6 +159,29 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     // protected _defaultGetter(c: Context, k: keyof Context["data"]): any {}
 
+    protected _defaultGetter(c: Context, k: keyof any): any {
+        let targetObj = c.data;
+        let proxyitself = c.proxyObject;
+        // if not exist check for children names
+        if (typeof k === "string" && k !== "children" && (!(k in c.data) && !(k in this))) { // __info_of_children__
+            console.log("me default child getter", {k});
+            let lchildren: LPointerTargetable[];
+            try { lchildren = this.get_children(c); }
+            catch (e) { lchildren = []; }
+            // let dchildren: DPointerTargetable[] = lchildren.map<DPointerTargetable>(l => l.__raw as any);
+            let lc: GObject;
+            let pk: string;
+            const childrenKeys = ["@", "$"];
+            if (childrenKeys.includes(k[0])) { pk = k.substring(1); }
+            else pk = k;
+            if (Array.isArray(lchildren)) for (lc of lchildren) {
+                let n = lc?.name;
+                if (n && n.toLowerCase() === pk.toLowerCase()) return lc;
+            }
+        }
+        return super.__defaultGetter(c, k);
+    }
+
     // this one must return true or the js engine throws an exception
     protected _defaultSetter(val: any, c: GObject<Context>, k: any): true {
         this._setterFor$stuff_canReturnFalse(val, c as any, k as any);
@@ -186,7 +209,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
         // actiong classNames
         switch (tClassName) {
-            default: Log.ex("default setter not supported for model element: " + c.data.className, {c, k, val, target}); return false;
+            default: Log.exx("default setter not supported for model element: " + c.data.className, {c, k, val, target}); return false;
             case DEnumLiteral.cname:
                 l = target as LEnumLiteral;
                 switch (typeof val){
@@ -1801,6 +1824,7 @@ export class DClass extends DPointerTargetable { // extends DClassifier
     implementedBy: Pointer<DClass, 0, 'N', LClass> = [];
     partial!: boolean;
     partialdefaultname!: string;
+    isSingleton!: boolean;
 
     // for m1:
     // hideExcessFeatures: boolean = true; // isn't it like partial?? // old comment: se attivo questo e creo una DClass di sistema senza nessuna feature e di nome Object, ho creato lo schema di un oggetto schema-less a cui tutti sono conformi
@@ -3559,23 +3583,21 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             // try as id
             let d: DNamedElement = DPointerTargetable.from(target as Pointer, state);
             if (d && dAllowedNamesMap[d.name]) { ret.push(target as Pointer<T>); continue; }
-            Log.w("namesORDObjectsToID() could not resolve name:", {name: target, namedCandidates, targets});
+            Log.ww("namesORDObjectsToID() could not resolve name:", {name: target, namedCandidates, targets});
         }
         return ret;
     }
 
     _defaultGetter(c: Context, key: string): any {
-        console.log("$getter 000", {key, ism1:!c.data.isMetamodel, ism:c.data.isMetamodel, data:c.data});
+        //console.log("$getter 000", {key, ism1:!c.data.isMetamodel, ism:c.data.isMetamodel, data:c.data});
         if (!c.data.isMetamodel) return this._defaultGetterM1(c, key);
         return this._defaultGetterM2(c, key);
     }
     _defaultGetterM2(c: Context, key: string): any{
-        Log.ee("Could not find property " + key + " on MetaModel", {c, key});
-        let s = store.getState();
         if (key[0] === "$"){
             // look for m1 matches
             let k = key.substring(1).toLowerCase();
-            console.log("$getter m2 0", {k, key});
+            let s = store.getState();
 
             for (let subelement of this.get_allSubPackages(c, s)){
                 let n = subelement.__raw.name;
@@ -3586,6 +3608,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
                 if (n && n.toLowerCase() === k) return subelement;
             }
         }
+        return this.__defaultGetter(c, key);
+        // Log.ee("Could not find property " + key + " on MetaModel", {c, key});
     }
     _defaultGetterM1(c: Context, key: string): any{
         // if m1.$m1RootObjectName then --> return that root object
@@ -3638,6 +3662,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             console.log("$getter 5", {k, key, m2, m2item});
             if (!m2) return Log.ee("Could not find any subelement with name " + key + " on M1 or M2 Models", {c, key, m1: c.data, m2});
         }
+
+        return this.__defaultGetter(c, key);
     }
     private static otherObjectsTemp: Dictionary<DocString<"className">, LObject[]> = undefined as any;
     private static otherObectsAccessedKeys: DocString<"className">[] = [];
@@ -3692,7 +3718,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             let name: string | undefined = idtoname[o.__raw.instanceof];
             if (!LModel.otherObjectsTemp[name]) {
                 LModel.otherObjectsTemp[name] = [o];
-                Log.eDev("model._populateOtherObjects() this case should never happen", {name, o, allObjects, namemap, idtoname});
+                Log.eDevv("model._populateOtherObjects() this case should never happen", {name, o, allObjects, namemap, idtoname});
             }
             else LModel.otherObjectsTemp[name].push(o);
         }
@@ -3706,7 +3732,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     }
     // M1
     public get_instancesOf(c:Context): (this["instancesOf"]){
-        if (c.data.isMetamodel) { return (...a:any) => { Log.w("cannot call instancesOf() on a metamodel"); return []; } }
+        if (c.data.isMetamodel) { return (...a:any) => { Log.ww("cannot call instancesOf() on a metamodel"); return []; } }
         return (instancetypes0: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false): LObject[] => {
             let state: DState = store.getState();
             let classes = this.get_classes(c, state);
@@ -3749,7 +3775,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
             "\n<br>loose parameter set to true makes return instead a list of matching scores of all subclasses.", hidden: true}
     // M1
     get_instantiableClasses(c: Context): LValue["instantiableClasses"] {
-        if (c.data.isMetamodel) { return (...a:any)=> { Log.w("cannot call instantiableClasses() on a metamodel"); return []; } }
+        if (c.data.isMetamodel) { return (...a:any)=> { Log.ww("cannot call instantiableClasses() on a metamodel"); return []; } }
         return (LValue.singleton as LValue).get_instantiableClasses.call(this, c)
     }
 
@@ -3763,7 +3789,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
 
     private impl_get_suggestedEdgesM1(context: Context, state?: DState): this["suggestedEdges"]{
         let ret: this["suggestedEdges"] = {extend: [], reference: [], packageDependencies: []};
-        if (context.data.isMetamodel) { Log.w("cannot call suggestedEdgesM1() on a metamodel"); return ret; }
+        if (context.data.isMetamodel) { Log.ww("cannot call suggestedEdgesM1() on a metamodel"); return ret; }
         if (Debug.lightMode) { return ret; }
         let s: DState = store.getState();
         let values: LValue[] = this.get_allSubValues(context, s);
@@ -3796,7 +3822,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     }
     private impl_get_suggestedEdgesM2(context: Context): this["suggestedEdges"]{
         let ret: this["suggestedEdges"] = {extend: [], reference: [], packageDependencies: []};
-        if (!context.data.isMetamodel) { Log.w("cannot call suggestedEdgesM2() on a model"); return ret; }
+        if (!context.data.isMetamodel) { Log.ww("cannot call suggestedEdgesM2() on a model"); return ret; }
         let s: DState = store.getState();
         let classes: LClass[] = this.get_classes(context, s);
         let references: LReference[] = Debug.lightMode ? [] : classes.flatMap(c=>c.references);
@@ -4040,6 +4066,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         let larr = [];
         for (let i = 0; i < darr.length; i++){
             let l = LPointerTargetable.fromD(darr[i]);
+            Log.exDev(l && !l.model, "missing model in model element", {l, context});
             if (!l || l.model.id !== context.data.id) {
                 darr[i] = undefined as any;
                 continue;
@@ -4855,7 +4882,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                             // if child dvalue with that name do not exist
                             if (isShapeless || isPartial) { lobj.addValue(key, undefined, json[key], false); continue; }
                             // this should never happen, if there is a mismatch in finding the correct type conforming to the schema, the function should have already stopped and returned before.
-                            Log.eDev('addObject(schema) error: cannot find value collection named "' + key + ' " as defined in the schema parameter.',
+                            Log.eDevv('addObject(schema) error: cannot find value collection named "' + key + ' " as defined in the schema parameter.',
                                 {lmetaclass, this:c.data, instanceof: constructorPointers.instanceof});
                             continue;
                         }
@@ -4869,7 +4896,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                                 continue;
                             }
                             else if (isShapeless || isPartial) { lobj.addValue(key, undefined, json[key], false); continue; }
-                            Log.eDev('addObject(schema) error: cannot find value collection named "' + key + ' " as defined in the schema parameter.',
+                            Log.eDevv('addObject(schema) error: cannot find value collection named "' + key + ' " as defined in the schema parameter.',
                                 {lmetaclass, this:c.data, instanceof: constructorPointers.instanceof, dobjkeys});
                             continue;
                         }

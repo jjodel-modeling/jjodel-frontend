@@ -1,6 +1,6 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
 // import {Mixin} from "ts-mixer";
-import type {
+import {
     AbstractConstructor,
     Constructor,
     Dictionary,
@@ -11,10 +11,11 @@ import type {
     Temporary,
     LPointerTargetable,
     DPointerTargetable,
+    Log, EMeasurableEvents, TRANSACTION,
 } from "../joiner";
 import {
     DClassifier,
-    DModelElement,
+    DModelElement, DState,
     Json,
     JsType,
     LClassifier,
@@ -33,6 +34,7 @@ import {NumberControl, PaletteControl, PaletteType, PathControl, StringControl} 
 import tinycolor from "tinycolor2";
 import util from "util";
 import Convert from "ansi-to-html";
+import {isValidElement} from "react";
 // var Convert = require('ansi-to-html');
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
@@ -103,13 +105,58 @@ export class U {
             "style=\"color:#FFF\"", "style=\"color:#000\"");
     }
 
-    public static cropStr(msg: string, atStart: number = 10, atEnd: number = 0): string{
-        let arr = msg.split('\n');
-        if (atEnd + atStart < arr.length) {
-            //arr = arr.slice(0, 10) + arr.slice(10, 0);
-            arr.splice(atStart, arr.length - atStart - atEnd, '...')
+    // exponential: undefined = only if it's over digits. false = never, true = always.
+    public static cropNum(num: number, digits: number=5, exponential?: boolean, atLeast1Decimal:boolean=true): number | string{
+        if (!digits || isNaN(num)) return num;
+        if (exponential) return num.toExponential(digits-1);
+        else if (exponential === undefined) {
+            let limit = 10**(digits + 4); // 3 extra chars for e+x
+            if (num >= limit || num <= -limit) return num.toExponential(digits-1);
         }
-        return arr.join('\n');
+        let intpart: number = Math.trunc(num);
+        if (intpart === num) return num;
+        /*let s = ''+num;
+        let excess = (s.length - digits);
+        if (excess <= 0) return num;*/
+        // must cut decimals
+        let intpart_s = intpart + '';
+        let allowedDecimals = digits - intpart_s.length - 1;
+        if (allowedDecimals <= 0) {
+            if (!atLeast1Decimal) return intpart;
+            else allowedDecimals = 1;
+        }
+        let decimalPart = num%1;
+
+        // nb: here in concatenation ((-0)+'') --> '0'. it will lose sign on cropNum(x) with x € (-1, 0)
+        // so need to check if it was negative
+        let sign = (num < 0 ? '-' : '');
+        // let exp = (10**allowedDecimals);
+        // return sign + (intpart_s)+'.'+ (Math.round(decimalPart * exp)/exp).substring(2, allowedDecimals+2);
+        let decimal_s = decimalPart+'';
+        let firsti = sign.length + 2; // 0. in decimal string
+        let lasti = allowedDecimals + firsti +1;
+        while (--lasti > firsti && decimal_s[lasti] === '0') {   }
+        if (++lasti <= firsti) return intpart;
+        let ret = +((num < 0 && intpart === -0 ? '-' : '') + (intpart_s)+'.'+ (decimal_s.substring(firsti, lasti)));
+        // console.log('cropNum', {num, ret, oth:{sign, firsti, lasti, decimal_s, intpart_s}});
+        return ret;
+    }
+    public static cropStr(msg: string, linesStart: number = 5, linesEnd: number = 5, stringRowStart: number = 25, stringRowEnd: number = 25): string{
+        let arr = msg.split('\n');
+        if (linesEnd + linesStart + 1 < arr.length) {
+            //arr = arr.slice(0, 10) + arr.slice(10, 0);
+            arr.splice(linesStart, arr.length - linesStart - linesEnd, '...')
+        }
+        let ret: string = '';
+        let i = 0;
+        for (let line of arr){
+            if (stringRowEnd + stringRowStart + 1 < line.length) {
+                ret += line.substring(0, stringRowStart) + '...' + line.substring(line.length - stringRowEnd) + (i === arr.length-1 ?'':'\n');
+            }
+            else ret += line + (i === arr.length-1 ?'':'\n');
+            i++;
+        }
+        return ret;
     }
 
     static extractByKey(dict: Dictionary, path: string): PrimitiveType[]|undefined {
@@ -192,16 +239,20 @@ export class U {
     }
 
     /// maxDepth = 2 is the minimum to check the content of objects inside usageDeclarations or node state. like node.errors.naming
-    static isShallowEqualWithProxies(obj1: GObject, obj2: GObject, skipKeys: Dictionary<string, any>={}, out?: {reason?: string},
+    static isShallowEqualWithProxies(obj1?: any, obj2?: any, skipKeys: Dictionary<string>={}, out?: {reason?: string},
                                      depth: number = 0, maxDepth: number = 2, returnIfMaxDepth:boolean = false): boolean {
-        let tobj1 = obj1 === null ? 'null' : typeof obj1;
-        let tobj2 = obj2 === null ? 'null' : typeof obj2;
         if (obj1 === obj2) {
             // if (out) { out.reason = "identical objects"; }
             return true; }
+        let tobj1 = obj1 === null ? 'null' : typeof obj1;
+        let tobj2 = obj2 === null ? 'null' : typeof obj2;
         if (tobj1 !== tobj2) { if (out) { out.reason = "type changed: " + tobj1 + " --> " + tobj2; } return false; }
 
+        //
         // at this point: same type, but different values
+        //
+
+        if (!obj1 || !obj2) return false; // cannot happen but compiler wants it to narrow types
         switch (tobj1) {
             default: // primitive with different values
                 console.error("unexpected case in isshallowequal:", {tobj1, obj1, obj2});
@@ -237,8 +288,8 @@ export class U {
                         if (out) out.reason = o1Raw.className + 'replaced by another object type:' + o2Raw?.className;
                         return false;
                     }
-                    obj1 = o1Raw;
-                    obj2 = o2Raw;
+                    obj1 = o1Raw as GObject;
+                    obj2 = o2Raw as GObject;
                 }
                 // for proxies and DObjects
                 if (obj1.clonedCounter !== undefined && obj2.clonedCounter !== obj1.clonedCounter) {
@@ -799,9 +850,9 @@ export class U {
         Log.eDev(useEval, 'loadScript', 'useEval','useEval todo. potrebbe essere utile per avviare codice fuori dalle funzioni in futuro.');
         document.body.append(script); }
 
-    static ancestorArray<T extends Element>(domelem: T, stopNode?: Node, includeSelf: boolean = true): Array<T> {
+    static ancestorArray<T extends Element>(domelem: T | null | undefined, stopNode?: Node, includeSelf: boolean = true): Array<T> {
         // [0]=element, [1]=father, [2]=grandfather... [n]=document
-        if (domelem === null || domelem === undefined) { return []; }
+        if (!domelem) { return []; }
         const arr = includeSelf ? [domelem] : [];
         let tmp: T = domelem.parentNode as T;
         while (tmp !== null && tmp !== stopNode) {
@@ -1085,7 +1136,7 @@ export class U {
 
     static objectFromArrayValues<T extends any>(arr: (string | number)[], val: T = true as T): Dictionary<string | number, T> {
         // @ts-ignore
-        return arr.reduce((acc, val) => { acc[val] = val; return acc; }, {});
+        return arr.reduce((acc, v) => { acc[v] = val; return acc; }, {});
         /*let ret: Dictionary = {};
         for (let val of arr) { ret[val] = true; }
         return ret;*/
@@ -1348,7 +1399,8 @@ export class U {
 
     // faster than jquery, underscore and many native methods checked https://stackoverflow.com/a/59787784
     public static isEmptyObject(obj: GObject | undefined): boolean {
-        for(var i in obj) return false;
+        if (typeof obj !== "object") return false;
+        for (var i in obj) return false;
         return true;
     }
 
@@ -1488,14 +1540,14 @@ export class U {
 
     private static prefix = 'ULibrary_';
     private static clipboardinput: HTMLInputElement;
-    static async clipboardCopy<T>(text: string, onSuccess:()=>T, onFailure:()=>T): Promise<T> {
+    static async clipboardCopy<T>(text: string, onSuccess?:()=>T, onFailure?:()=>T): Promise<T | undefined> {
         let ret: boolean = false;
         return navigator.clipboard.writeText(text).then(() => {
             ret = true;
-            return onSuccess();
+            if (onSuccess) return onSuccess();
         },() => {
             ret = U.clipboardCopy_old(text);
-            return ret ? onSuccess() : onFailure();
+            return ret ? onSuccess && onSuccess() : onFailure && onFailure();
         });
     }
     static clipboardCopy_old(text: string): boolean {
@@ -1521,6 +1573,13 @@ export class U {
 
     static clearSelection() {}
 
+    static isError(obj: unknown): obj is Error{
+        // obj istanceof Error // this is not iframe-safe, Errors from different iframes are considered different instances
+        // this is iframe-safe and catches all error types
+        return Object.prototype.toString.call(obj) === "[object Error]";
+        // or err.toString --> "Error: message" dunno if stack is printed too i tested with a fake error.
+    }
+
     static toNamedArray<D extends DPointerTargetable, L extends LPointerTargetable>(larr:L[], darr?:D[]): L[] & Dictionary<DocString<"$name">, L>{
         if (!darr || darr.length !== larr.length) darr = larr.map(l=>l.__raw as D);
 
@@ -1534,6 +1593,362 @@ export class U {
         }*/
         return larr as any;
     }
+    public static isDPointerTargetable(e: any): e is (DPointerTargetable | LPointerTargetable){
+        return e && (e.__isProxy || (e.className && e.id && e.pointedBy && e._state));
+    }
+    public static arrayCount<T extends any>(arr: T[], find: T | ((e:T)=>boolean)): number{
+        if (typeof find === "function") return arr.reduce((total,x) => total+( (find as any as ((a:any)=>boolean) )(x) ? 1:0), 0);
+        return arr.reduce((total,x) => total+(x===find?1:0), 0);
+    }
+    /*public static cropDObject(o: any): GObject{
+        if (!o) return o as any;
+        let d: any & Partial<DPointerTargetable> = {...(o.__raw || o)};
+        // delete d.pointedBy;
+        // defaultValue, instanceClassName, isPrimitive, partialdefault_ame, _storePath, _su_maps, OCL__EEDS_RECALCULATIO_, compiled_css, css, cssISGlo_al, isValidatio_, oclUpdateCo_ditio_, everythimg empty str or 0 or empty arr or empty ovj, palette,
+
+        // remove all falsy properties, just knowing they are not there i know they are falsy, save space.
+        for (let k in o){
+            let v = o[k];
+            //  v === "" || v === null || v === undefined
+            if (!v || U.isEmptyObject(v) || Array.isArray(v) || v.lemgth === 0) delete o[k];
+        }
+        return d;
+    }*/
+
+    public static cropDeepObject(o: any, lines_start_crop: number=20, lines_end_crop: number=10, string_start_crop: number=45, string_end_crop: number=35, num_digit_crop: number=5): any{
+        if (!o) return o;
+        let replacer = (key: string | number | undefined, o: GObject, depth: number) => {
+            switch(key) {
+                case "props": return "[_props_]";
+            }
+            switch (typeof o) {
+                default: return o;
+                case "string":
+                    return U.cropStr(o, lines_start_crop, lines_end_crop, string_start_crop, string_end_crop);
+                case "function":
+                    return U.cropStr(o.toString(), lines_start_crop, lines_end_crop, string_start_crop, string_end_crop);
+                case "number":
+                    return U.cropNum(o, num_digit_crop);
+                case "object":
+                    if (o === null) return null;
+                    if (U.isHtmlNode(o)) return '[HTMLElement]';
+                    if (isValidElement(o)) return '[ReactElement]';
+                    // because native Error properties are not iterable. need to take them out manually.
+                    if (U.isError(o)) return {...o, message:o.message, stack:o.stack};
+                    /*if (Array.isArray(o)) {
+                        let delements = U.arrayCount(o, U.isDPointerTargetable);
+                        if (delements > 0){
+                            o = o.map(e=>(U.isDPointerTargetable(e) ? U.cropDObject(o) : e));
+                        }
+                    }*/
+                    if (U.isDPointerTargetable(o)) {
+                        if (depth >= 5) return o.id;
+                        // if (depth >= 2) return U.cropDObject(o);
+                        else o = (o as LPointerTargetable).__raw || o;
+                    }
+                    if (o.className === 'IPoint') return {x:o.x, y:o.y};
+                    if (o.className === 'ISize') return {x:o.x, y:o.y, w:o.w, h:o.h};
+
+                    // remove all falsy properties, just knowing they are not there i know they are falsy, save space.
+                    let isArr = Array.isArray(o);
+                    o = isArr ? [...(o as any[])] : {...o};
+                    for (let k in o) {
+                        let v = o[k];
+                        /*if (isArr) switch(k){ default: break;
+                            case 'contains': case 'joinOriginal': case 'first': case 'last': case 'separator': delete o[k]; continue;
+                        }*/
+                        //  v === "" || v === null || v === undefined
+                        if (!v || U.isEmptyObject(v) || (Array.isArray(v) && v.length === 0)) delete o[k];
+                    }
+                    // if (U.isDate(o)) return "[Date "+o.getTime()+"]";
+                    return o;
+            }
+        }
+        return U.deepReplace(o, replacer);
+    }
+
+    static deepCopy(obj: any, circularReferenceValue?: any | ((obj_alreadymet: GObject)=>any)): any {
+        return U.deepReplace(obj, undefined, circularReferenceValue);
+    }
+
+    // does make a deep copy too.
+    static deepReplace(obj: any, replacer?: ((key: undefined | string | number, o: any, depth: number) => any),
+                       circularReferenceValue: any | ((obj_alreadymet: GObject)=>any) = (o: GObject)=>((o.__raw || o).id || '_circular_ref_')): any {
+
+        const avoidloop: WeakMap<any, true> = new WeakMap();
+        return U.deepReplace_rec(obj, avoidloop, replacer, circularReferenceValue);
+    }
+
+    /**
+     replacing always preserves same reference statuses. eg, when  {a:"x", b:"x"} -> {a:"y", b:"y"}
+     if the original x,y values are the same reference (not just value),
+     in the output object a,b will also be the same reference (replacer will not be called twice on the same string)
+
+     note that let arr = ["a", "a"] is an array with 2 equal values but different references.
+     while let a = "a"; let arr = [a, a] have equal references.
+
+     circularReferenceValue === "__preserve" causes any duplicate reference causing a loop to be replaced
+     with the target of the first reference instead of the "__preserve" string.
+
+     todo: add parameter eagerLoopReturn (current behaviour is eagerLoopReturn = true)
+     eagerLoopReturn = true returns as soon a duplicate objects is found, the returned structure is guaranteed to not have duplicates. [a,a] => [a,'loop','loop']
+     eagerLoopReturn = false returns 'loop' only if an object is already found AND have subobjects.
+     let a = {id:"a1", l:{b:1}};    [a,a] --> [{id:"a1", l:{b:1}, {id:"a1", l:'_loop_']
+     finaly eagerLoopReturn = 'inline' replaces with '_loop_' only when there is really a circular ref
+     (found an object already found in the current "path" from root to current obj)
+     so i need to copy the current map and pass a new copy every time i go deep on a new subobject, branching a tree.
+     let a = {id:"a1", l:{b:1}};    [a,a] will still return [a,a] with no '_loop_' tags
+     instead let a = {l:{b:1}, a:a};    [a,a] will return [{l:{b:1}, a:'_loop_'}, {l:{b:1}, a:'_loop_'}] with no '_loop_' tags
+     while
+     */
+    static deepReplace_rec(obj: any, avoidloop: GObject & WeakMap<any, true>, replacer?: ((key: undefined | string | number, o: any, depth: number) => any),
+                           circularReferenceValue?: any | ((obj_alreadymet: GObject)=>any), key?: number | string, curdept:number=0, eagerLoopReturn: boolean = false): any {
+        if (typeof obj === "symbol") return replacer ? replacer(key, obj, curdept) : obj;
+
+        let old_obj = obj;
+        switch (typeof old_obj) {
+            case "symbol": // don't know what really do with symbols and funcs
+            case "function":
+                break;
+            default: // because primitive types cannot be used as WeakMap.set(key), but can as Object keys
+                if (obj in avoidloop) return avoidloop[obj];
+                else avoidloop[old_obj] = obj;
+                break;
+            case "object":
+                if (old_obj === null) {
+                    if (avoidloop[old_obj]) return avoidloop[old_obj];
+                    else avoidloop[old_obj] = obj;
+                    break;
+                }
+                if (avoidloop.has(obj)) { // for objects
+                    if (Array.isArray(obj) && obj.length === 0 || Object.keys(obj).length === 0) return obj;
+
+                    if (circularReferenceValue === "__preserve" || typeof obj !== "object") return avoidloop.get(obj);
+                    else return typeof circularReferenceValue === "function" ? circularReferenceValue(obj) : circularReferenceValue;
+                } else avoidloop.set(old_obj, obj);
+                break;
+        }
+
+
+        if (replacer) obj = replacer(key, obj, curdept);
+        switch (typeof obj){
+            default: break; // obj = obj; return obj; // for any leaf type
+            case "object":
+                if (U.isHtmlNode(obj)) return obj;
+                if (isValidElement(obj)) return obj;
+                if (U.isError(obj)) return obj;
+                if (Array.isArray(obj)) {
+                    obj = obj.map((o, i) => U.deepReplace_rec(o, avoidloop, replacer, circularReferenceValue, i,curdept+1));
+                    break;
+                }
+                let o: GObject = {};
+                for (let k in obj) {
+                    o[k] = U.deepReplace_rec(obj[k], avoidloop, replacer, circularReferenceValue, k, curdept+1);
+                }
+                obj = o;
+                break;
+        }
+
+        return obj;
+    }
+
+
+
+    // returns path to that object to find
+    public static deepFindInObject(obj: any, subobject: any, compareFunc?:(a:any,b:any)=>boolean, maxDepth: number = Number.POSITIVE_INFINITY): string | undefined {
+        const avoidloop: WeakMap<any, true> = new WeakMap();
+        let ret = U.deepFindInObject_rec(obj, subobject, avoidloop, maxDepth, compareFunc);
+        if (ret === '') return 'this';
+        else return ret;
+    }
+    private static deepFindInObject_rec(obj: any, subobject: any, avoidloop: GObject & WeakMap<any, true>, maxDepth: number, compareFunc?:((a:any,b:any)=>boolean), curdepth:number=0): string | undefined {
+        if (compareFunc ? compareFunc(obj, subobject) : obj === subobject) return ''
+        if (curdepth >= maxDepth) return undefined;
+
+        let old_obj = obj;
+        switch (typeof old_obj) {
+            default: return undefined;
+            case "object":
+                if (old_obj === null) return undefined;
+                if (avoidloop.has(obj)) { // for objects
+                    return undefined;
+                } else avoidloop.set(old_obj, obj);
+                break;
+        }
+
+        switch (typeof obj){
+            default: return undefined;
+            case "object":
+                if (U.isHtmlNode(obj)) return undefined;
+                if (isValidElement(obj)) return undefined; // ReactElement
+                if (U.isError(obj)) return undefined;
+
+                if (Array.isArray(obj)) {
+                    for (let i = 0; i < obj.length; i++) {
+                        let found = U.deepFindInObject_rec(obj[i], subobject, avoidloop, maxDepth, compareFunc, curdepth+1);
+                        if (found === '') return i+'';
+                        else if (found !== undefined) return i+'.'+found;
+                    }
+                    return undefined;
+                }
+                for (let k in obj) {
+                    let found = U.deepFindInObject_rec(obj[k], subobject, avoidloop, maxDepth, compareFunc, curdepth+1);
+                    if (found === '') return k+'';
+                    if (found !== undefined) return k+'.'+found;
+                }
+                return undefined;
+        }
+        return undefined;
+    }
+
+
+    public static mailerror(recipients: string[], title: string, msgbody_notencoded: string, canUseClipboard: boolean, clipboardSuccess?: ()=>any, clipboardFailure?: ()=>any) {
+
+        const msgbody: string = encodeURIComponent(msgbody_notencoded);
+        const mailtitle: string =  encodeURIComponent(title);
+        // "mailto:no-one@snai1mai1.com?subject=look at this website&body=Hi,I found this website and thought you might like it http://www.geocities.com/wowhtml"
+        const gitissue = "https://github.com/MDEGroup/jjodel/issues/new?title="+mailtitle+"&body="+msgbody;
+        let mailto: string | undefined = "mailto:"+recipients.join(';')+"?subject="+mailtitle+"&body="+msgbody;
+        const mailtolimit = 2042 - 23/*for safety*/;
+        /*
+            git uri limit: the requests start failing at exactly 8202 characters.
+
+            mailto: limits
+            2042 characters on Chrome 64.0.3282.186
+            2046 characters on Edge 16.16299
+            approximately 32700 characters on Firefox 58.0
+
+            max URI lengths:
+            chrome: 15613 chars
+            firefox: 15708
+        */
+        if (mailto.length > mailtolimit){
+            if (canUseClipboard) {
+                const mailfallback = encodeURIComponent("mail body exceeded maximum mailto: link length.\n" +
+                    "It has been copied to your clipboard, please past it here or use github issue report.");
+                U.clipboardCopy(msgbody_notencoded, clipboardSuccess, clipboardFailure);
+                mailto =  "mailto:"+recipients.join(';')+"?subject="+mailtitle+"&body=" + mailfallback;
+            }
+            else mailto = undefined;
+        }
+        return {gitissue, mailto};
+    }
+
+
+
+    // NB: does not owrk if there is an overflow of pos:absolute elements needs to be updated before use.
+    public static findOverflowingNodes_broken(element : Element) : {element: Element, overflowingFrom: string }[] {
+        if (!element) return [];
+        // type Direction = {v: number, e: Element};
+        // const biggestChilds: Partial<{[k: keyof DOMRect]: {v: number, e: Element}}> = {};
+        //const biggestChilds: Partial<{[k: keyof DOMRectReadOnly]: {v: number, e: Element}}> = {};
+        const biggestChilds: Record<keyof DOMRectReadOnly, {v: number, e: Element}> = {} as any;
+        let childarr: {element: Element, size: DOMRect}[] = [];
+        let ret: {element: Element, overflowingFrom: string }[] = [];
+        while (element) {
+            const size = element.getBoundingClientRect();
+            childarr.push({element, size});
+            let k: keyof DOMRectReadOnly;
+            for (k in size) {
+                let v = size[k] as number;
+                if (!biggestChilds[k] || v > biggestChilds[k].v) biggestChilds[k] = {e: element, v};
+            }
+            if (childarr.length <= 1) continue;
+            let {element: child, size: childSize} = childarr[childarr.length -1];
+
+            for (k in size) {
+                let v = size[k];
+                if (childSize[k] > v) ret.push({element, overflowingFrom:k});
+            }
+            element = element.parentElement as Element;
+        }
+        return ret;
+    }
+/*
+    public static makeDraggable(e: HTMLElement, v: LViewElement, n: LGraphElement, type: "draggable" | "resizable" | "rotatable" = "draggable"): boolean {
+        let draggableOptions: string = e.dataset[type];
+        let disabled = !!e.attributes.disabled;
+
+        let options: GObject;
+        switch (typeof draggableOptions){
+            case "string":
+                try{ options = JSON.parse(draggableOptions); }
+                catch(e) { Log.ee("JSX error in " + type + ", cannot parse options. Make sure they are a valid JSON object in string format."); return false; }
+                break;
+            case "object": options = draggableOptions; break;
+            default: Log.ee("JSX error in " + type + ", unexpected type of options, only strings and objects are allowed, found instead: " + typeof draggableOptions); return false;
+        }
+
+        let $measurable: GObject<'JQuery + ui plugin'> = $(e);
+        if (disabled && $measurable.data("uiDraggable")) { $measurable.draggable('disable'); return false; }
+        if ($measurable.data("uiDraggable")) $measurable.draggable('enable');
+        // todo: change options, put disable then remove disable attr and check if changing options at runtime works
+
+        let defaultoptions = {
+            cursor: 'grabbing',
+            // containment: 'parent',
+            opacity: 0.0,
+            distance: 5,
+            helper: 'clone', // 'original' or 'csselector'? or func=>html
+            // disabled: !(view.draggable),
+            drag: (event: GObject, obj: GObject) => {
+                TRANSACTION(()=>{
+                    if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
+                    for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileDragging, vid);
+                })
+            },
+            stop: (event: GObject, obj: GObject) => {
+                TRANSACTION(()=>{
+                    this.setSize({x:obj.position.left, y:obj.position.top});
+                    for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onDragEnd, vid);
+                })
+            }
+        };
+
+        let aval: string;
+        let eventmap = {
+            's':    {'draggable': 'onDragStart',    'rotatable': 'onRotateStart',   'resizable': 'onResizeStart'},
+            'ing':  {'draggable': 'whileDragging',  'rotatable': 'whileRotating',   'resizable': 'whileResizing'},
+            'e':    {'draggable': 'onDragEnd',      'rotatable': 'onRotateEnd',     'resizable': 'onResizeEnd'  },
+        }
+        let event = {'s': eventmap.s[type], 'ing': eventmap.ing[type], 'e': eventmap.e[type]};
+        let jqui_ing: string;
+        switch (type){
+            default: jqui_ing = Log.eDevv("unexpected measurable event: " + type); return false;
+            case "draggable": jqui_ing = 'drag'; break;
+            case "resizable": jqui_ing = 'resize'; break;
+            case "rotatable": jqui_ing = 'rotate'; break;
+        }
+        let jquievent = {'s': 'start', 'ing': jqui_ing, 'e':'end'};
+        for (let evtkey in jquievent) {
+            // @ts-ignore
+            aval = e.attributes[event[evtkey]]?.value || '';
+            if (aval) defaultoptions[jquievent[evtkey]] = (event: GObject, obj: GObject) => {
+                // jqui event callback
+                // 1) call html-defined events (onDragStart="my_custom_event_name")
+                // todo: currently only support jqui default parameters, not custom ones. make an eval and allow using stuff like whileDragging="(coords)=>myevent(coords, 1,2,3)"
+                v.events[aval](event, obj);
+                let evt = options[evtkey];
+                delete options[evtkey];
+                switch(evt){
+                    case "string": v.events[evt]?.(event, obj);break;
+                    case "function": evt(); break;
+                    default: break;
+                }
+            }
+            U.objectMergeInPlace(options, defaultoptions);
+            $measurable[type](options);
+        }
+
+        return true;
+    }
+*/
+
+    // warning: nodes from other iframes will say are not instance from Element of the current frame, in that case need duck typing.
+    private static isHtmlNode(element: any): element is Element {
+        return element instanceof Element || element instanceof HTMLDocument || element instanceof SVGElement;
+    }
+
 }
 export class DDate{
     static cname: string = "DDate";
@@ -1801,170 +2216,6 @@ export class ParseNumberOrBooleanOptions{
         this.allowBooleans = allowBooleans; this.trueValue = trueValue; this.falseValue = falseValue;
     }
 }
-export type LoggerType = "l" | "i" | "w" | "e" | "ex" | "eDev" | "exDev";
-export class LoggerCategoryState{
-    category: LoggerType;
-    time: number;
-    raw_args: any[];
-    short_string: string;
-    long_string: string;
-    constructor(args: any[], short_string: string, cat: LoggerType) {
-        this.raw_args = args;
-        this.time = new Date().getTime();
-        this.category = cat;
-        this.short_string = short_string;
-        this.long_string = '';
-        /*
-        const maxChars: Dictionary<string, [number, number]> = {
-            function: [50, 0],
-            object: [100, 0],
-            string: [80, 20],
-        }
-        let ansiConvert = (window as any).ansiConvert;
-        if (!ansiConvert) {
-            (window as any).ansiconvert = ansiConvert = new Convert();
-        }
-        for (let a of args){
-            let s: string;
-            let ta: string = typeof a;
-            switch(ta){
-                case "function": s = a.toString(); break;
-                case "object":
-                    let outstr = U.inspect(a, true, 2, true);
-                    outstr = U.replaceAll(ansiConvert.toHtml(outstr), "style=\"color:#FFF\"", "style=\"color:#000\"");
-                    let regexpCloseTags = new RegExp("(\\<span style\\=\"color\\:\\#)", "gm");
-                    outstr = U.replaceAll( outstr, "$", "£");
-                    outstr = outstr.replace(regexpCloseTags,  "</span>$1");
-                    outstr = U.replaceAll(outstr, "£", "$");
-                    s = outstr;
-                    break;
-                default: s = ''+a;
-            }
-            if (maxChars[ta]) s = U.cropStr(s, maxChars[ta][0], maxChars[ta][1]);
-            this.long_string += s;
-        }*/
-    }
-}
-@RuntimeAccessible('Log')
-export class Log{
-    // public static history: Dictionary<string, Dictionary<string, any[]>> = {}; // history['pe']['key'] = ...parameters
-    public static lastError: any[];/*
-    public static last_e: LoggerCategoryState[] = [];
-    public static last_eDev: LoggerCategoryState[] = [];
-    public static last_ex: LoggerCategoryState[] = [];
-    public static last_exDev: LoggerCategoryState[] = [];
-    public static last_w: LoggerCategoryState[] = [];
-    public static last_i: LoggerCategoryState[] = [];*/
-    // private static loggerMapping: Dictionary<string, LoggerInterface[]> = {} // takes function name returns logger list
-    private static messageMapping: Dictionary<LoggerType, LoggerCategoryState[]> = {
-        l: [],
-        i: [],
-        w: [],
-        e: [],
-        ex: [],
-        eDev: [],
-        exDev: [],
-    } // takes function name returns log messages list
-
-
-/*
-    public static registerLogger(logger: LoggerInterface, triggerAt: (typeof windoww.U.pe) & {name: string, cname:string}) {
-        let tname: string = (triggerAt as any).cname || (triggerAt as any).name;
-        if (!Log.loggerMapping[tname]) Log.loggerMapping[tname] = [];
-        Log.loggerMapping[tname].push(logger);
-    }*/
-
-    static disableConsole(){
-        // @ts-ignore
-        console['logg'] = console.log;
-        console.log = () => {}; }
-
-    static enableConsole() {
-        // @ts-ignore
-        if (console['logg']) console.log = console['logg']; }
-
-    private static log(prefix: string, category: LoggerType, originalFunc: typeof console.log, b: boolean, ...restArgs: any[]): string {
-        if (!b) { return ''; }
-        const key: string = windoww.U.getCaller(1); // todo: remove replace heavy fumc
-        if (restArgs === null || restArgs === undefined) { restArgs = []; }
-        let str = key + ': ';
-        for (let i = 0; i < restArgs.length; i++) {
-            // console.log(prefix, {i, restArgs, curr:restArgs[i]});
-            str += '' +
-                (typeof restArgs[i] === 'symbol' ?
-                    '' + String(restArgs[i]) :
-                    restArgs[i])
-                + '\t\r\n'; }
-        Log.updateLoggerComponent(category, restArgs, str, category);
-        // merged loggers if (Log.loggerMapping[category]) for (const logger of Log.loggerMapping[category]) { logger.log(category, key, restArgs, str); }
-        originalFunc(key, ...restArgs);
-        return '[' + prefix + ']' + str; }
-
-    public static e(b: boolean, ...restArgs: any[]): string {
-        if (!b) return '';
-        const str = Log.log('Error', 'e', console.error, b, ...restArgs);
-        Log.lastError = restArgs;
-        return str;
-        // throw new Error(str);
-    }
-
-    public static eDev(b: boolean, ...restArgs: any[]): string {
-        if (!b) return '';
-        const str = Log.log('Dev Error','eDev', console.error, b, ...restArgs);
-        Log.lastError = restArgs;
-        return str;
-        // throw new Error(str);
-    }
-
-    public static ex(b: boolean, ...restArgs: any[]): null | never | any {
-        if (!b) return null;
-        const str = Log.log('Error', 'e', console.error, b, ...restArgs);
-        Log.lastError = restArgs;
-        windoww.ee = restArgs;
-        windoww.e1 = restArgs[1];
-        throw new MyError(str, ...restArgs); }
-
-    public static exDev(b: boolean, ...restArgs: any[]): null | never | any {
-        if (!b) return null;
-        const str = Log.log('Dev Error','eDev', console.error, b, ...restArgs);
-        Log.lastError = restArgs;
-        windoww.ee = restArgs;
-        windoww.e1 = restArgs[1];
-        throw new MyError(str, ...restArgs); }
-
-    public static i(b: boolean, ...restArgs: any[]): string | null {
-        if (!b) return null;
-        return Log.log('Info', 'i', console.log, b, ...restArgs);
-    }
-    public static _loggerComponent: any = undefined as any;
-    private static get_loggercomponent(): any { return Log._loggerComponent; }
-    private static updateLoggerComponent(type: LoggerType, args: any[], short_str: string, cat: LoggerType): void {
-        let c = Log.get_loggercomponent();
-        let update: LoggerCategoryState = new LoggerCategoryState(args, short_str, cat);
-        Log.messageMapping[type].push(update);
-        // (Log as GObject)["last_"+type].push(args);
-        if (!c) return;
-        c.setState({[type+"_counter"]: c.state[type+"_counter"]+1}); // so it doesn't pass through redux
-    }
-    public static l(b: boolean, ...restArgs: any[]): string | null {
-        if (!b) return null;
-        return Log.log('Log', 'l', console.log, b, ...restArgs);
-    }
-    public static w(b: boolean, ...restArgs: any[]): string | null {
-        if (!b) return null;
-        return Log.log('Warn', 'w', console.warn, b, ...restArgs); }
-
-
-    public static eDevv<T extends any = any>(firstParam?: NotBool<T>, ...restAgs: any): string { return Log.eDev(true, ...[firstParam, ...restAgs]); }
-    public static ee(...restAgs: any): string { return Log.e(true, ...restAgs); }
-    public static exDevv<T extends any = any>(firstParam?: NotBool<T>, ...restAgs: any): never | any { return Log.exDev(true, ...[firstParam, ...restAgs]); }
-    public static exx(...restAgs: any): never | any { return Log.ex(true, ...restAgs); }
-    public static ii(...restAgs: any): string { return Log.i(true, ...restAgs) as string; }
-    public static ll(...restAgs: any): string { return Log.l(true, ...restAgs) as string; }
-    public static ww(...restAgs: any): string { return Log.w(true, ...restAgs) as string; }
-}
-
-type NotBool<T> = Exclude<T, boolean>;
 /*
 interface LoggerInterface{
     log: (category: string, key: string, data: any[], fullconcat?: string, stringified?: string) => any;

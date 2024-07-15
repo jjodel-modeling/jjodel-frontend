@@ -113,5 +113,3 @@ const Navbar = (props: OwnProps, children: (string | Component)[] = []): ReactEl
 }
 
 export {Navbar};
-
-

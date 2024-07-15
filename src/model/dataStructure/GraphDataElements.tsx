@@ -20,7 +20,7 @@ import {
     GraphElementComponent,
     GraphPoint,
     GraphSize,
-    Info,
+    Info, Keystrokes,
     Leaf,
     LModelElement,
     Log,
@@ -47,6 +47,7 @@ import {
     Uarr,
     windoww
 } from "../../joiner";
+import type {Tooltip} from "../../components/forEndUser/Tooltip";
 import type {RefObject} from "react";
 import type {SVGPathElementt, SVGPathSegment} from '../../common/libraries/pathdata';
 import {EdgeGapMode, InitialVertexSize} from "../../joiner/types";
@@ -226,7 +227,10 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return ret;*/
     }
 
-    protected _defaultSetter(v: any, c: Context, k: keyof Context["data"]): true { this.__defaultSetter(v, c, k); return true; }
+    protected _defaultSetter(v: any, c: Context, k: keyof Context["data"]): true {
+        this.__defaultSetter(v, c, k);
+        return true;
+    }
 
     get_graphAncestors(c: Context): LGraph[] {
         let current = c.proxyObject;
@@ -282,13 +286,9 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
                 case DGraph.cname:
                 case DGraphVertex.cname: return (LPointerTargetable.fromD(dcurrent)) as LGraph;
                 default:
-                    if (!dcurrent.father || dcurrent.id === dcurrent.father) {
-                        /*switch(dcurrent.className){
-                            case DGraph.name:
-                            case DGraphVertex.name: return (lcurrent || LPointerTargetable.fromD(dcurrent)) as LGraph;
-                            default: */return Log.exDevv("node failed to get containing graph", {cdata:context.data, dcurrent});
-                        //}
-                    }
+                    Log.exDev(!dcurrent.father, "node failed to get containing graph", {cdata:context.data, dcurrent});
+                    Log.exDev(dcurrent.id === dcurrent.father, "node failed to get containing graph, found loop",
+                        {cdata:context.data, dcurrent, father: LPointerTargetable.from(dcurrent)?.father});
                     dcurrent = DPointerTargetable.fromPointer(dcurrent.father);
             }
         }
@@ -1043,7 +1043,7 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
                 // if coords are already in absolute mode.
                 let xIsAbsolute: number | undefined = (size.x&&!Array.isArray(size.x)) ? size.x : undefined;
                 let yIsAbsolute: number | undefined = (size.x&&!Array.isArray(size.x)) ? size.x : undefined;
-                Log.w(xIsAbsolute || yIsAbsolute, "decoding relative offset require an array size coordinate system. x=[x1, x2] --> x", {size});
+                Log.w(!!(xIsAbsolute || yIsAbsolute), "decoding relative offset require an array size coordinate system. x=[x1, x2] --> x", {size});
 
                 let offsetsp = useStart ? new GraphPoint(xIsAbsolute || size.x[0] + sp.x, yIsAbsolute || size.y[0] + sp.y) : new GraphPoint();
                 let offsetep = useEnd ? new GraphPoint(xIsAbsolute || size.x[1] + ep.x, yIsAbsolute || size.y[1] + ep.y) : new GraphPoint();
@@ -2196,22 +2196,22 @@ replaced by startPoint
             else LVoidEdge.endFollow = c.data.id;
             if (!LVoidEdge.following) {
                 console.log("_set_start_endFollow event attached");
-                document.body.addEventListener("mousemove", LVoidEdge.mousemove, false);
+                document.body.addEventListener("mousemove", LVoidEdge.mousemove_pendingEdge, false);
+                document.body.addEventListener("keydown", LVoidEdge.onKeyDown_pendingEdge, false);
                 LVoidEdge.following = true;
-                LVoidEdge.followingContext = c as any;
-                const $base = $(document.getElementById(isStart ? c.data.start : c.data.end) || []);
-                const $deepAnchors = $base.find("[nodeid] .anchor");
-                const $anchors = $base.find(".anchor").not($deepAnchors);
-                $anchors.addClass("valid-anchor");
-                $anchors.filter('[data-anchorname="'+((isStart ? c.data.anchorStart : c.data.anchorEnd)||0)+'"]').addClass("active-anchor");
-                let selector = ".Edge[nodeid='" + (LVoidEdge.endFollow || LVoidEdge.startFollow as any)+"']";
+                LVoidEdge.followingContext = c;
+                LVoidEdge.showAnchors();
+                (windoww.Tooltip as (typeof Tooltip)).show(<div>Changing anchor, press <b>Esc</b> to undo.</div>);
+
+                //let selector = ".Edge[nodeid='" + (LVoidEdge.endFollow || LVoidEdge.startFollow as any)+"']";
                 // [...document.querySelectorAll(selector)].map(e=>e.classList.add("no-transition-following")); gets refreshed by react
                 document.body.classList.add("no-transition-following");
             }
         }
         else {
             if (LVoidEdge.following && ((isStart ? LVoidEdge.startFollow : LVoidEdge.endFollow) === c.data.id)) {
-                document.body.removeEventListener("mousemove", LVoidEdge.mousemove, false);
+                document.body.removeEventListener("mousemove", LVoidEdge.mousemove_pendingEdge, false);
+                document.body.removeEventListener("keydown", LVoidEdge.onKeyDown_pendingEdge, false);
                 let selector = ".Edge[nodeid='" + (LVoidEdge.endFollow || LVoidEdge.startFollow as any)+"']";
                 //[...document.querySelectorAll(selector)].map(e=>e.classList.remove("no-transition-following"));
                 document.body.classList.remove("no-transition-following");
@@ -2219,9 +2219,12 @@ replaced by startPoint
                 else LVoidEdge.endFollow = undefined;
                 LVoidEdge.following = false;
                 const $base = $(document.getElementById(isStart ? c.data.start : c.data.end) || []);
+                if (!$base.length) return true;
                 //const $deepAnchors = $base.find("[nodeid] .anchor");
                 const $anchors = $base.find(".anchor")//.not($deepAnchors);
                 $anchors.removeClass(["valid-anchor", "active-anchor"]);
+                $base[0].style.overflow = '';
+                (windoww.Tooltip as (typeof Tooltip)).hide();
             }
         }
         //SetFieldAction.new(c.data, "startFollow", !!val, '', false);
@@ -2229,18 +2232,48 @@ replaced by startPoint
     public static startFollow: Pointer<DVoidEdge> | undefined = undefined;
     public static endFollow: Pointer<DVoidEdge> | undefined = undefined;
     public static following: boolean = false;
-    public static followingContext: LogicContext<DVoidVertex, LVoidVertex>;
+    public static followingContext: LogicContext<DVoidEdge, LVoidEdge>;
     public static tmp: number = 1;
     public static canForceUpdate: boolean = true;
     public static getCursorPos(e0: Event): Point { return new Point((e0 as any as MouseEvent).pageX, (e0 as any as MouseEvent).pageY); }
     /*public static getGCursorPos(e0: Event): GraphPoint {
         return LVLoidEdge.getCursorPos(e0).subtract(svgsize.tl(), true).multiply(svgzoom) as any as GraphPoint;
     }*/
-    public static mousemove(e0: Event): void {
+    public static onKeyDown_pendingEdge(e: KeyboardEvent): void{
+        if (e.key === Keystrokes.escape) {
+            const c = LVoidEdge.followingContext;
+            if (!c || (!LVoidEdge.startFollow && !LVoidEdge.endFollow)) return;
+            let isStart = LVoidEdge.startFollow ? true : false;
+            let l = (c.proxyObject as any as LVoidEdge);
+            if (isStart) l.startFollow = false;
+            else l.endFollow = false;
+            // l.component?.forceUpdate(); does not work?
+            l.clonedCounter = (l.clonedCounter || 0) + 2;
+        }
+    }
+    public static showAnchors(): void{
+        const c = LVoidEdge.followingContext;
+        if (!c || (!LVoidEdge.startFollow && !LVoidEdge.endFollow)) return;
+        let isStart = LVoidEdge.startFollow ? true : false;
+        let nodeid: Pointer<DGraphElement> = isStart ? c.data.start : c.data.end;
+        let activeAnchor: string | number = (isStart ? c.data.anchorStart : c.data.anchorEnd) || 0;
+
+        const $base = $(document.getElementById(nodeid) || []);
+        if (!$base.length) return;
+        const $deepAnchors = $base.find("[nodeid] .anchor");
+        const $anchors = $base.find(".anchor").not($deepAnchors);
+        $anchors.addClass("valid-anchor");
+        $anchors.filter('[data-anchorname="'+activeAnchor+'"]').addClass("active-anchor");
+        $base[0].style.overflow = "visible";
+
+    }
+    private static mousemovei: number = 0;
+    public static mousemove_pendingEdge(e0: Event): void {
         let forcererendermode = true;
         if (forcererendermode) {
             if (!LVoidEdge.following) return;
             if (!LVoidEdge.canForceUpdate) return;
+            if (LVoidEdge.mousemovei++%30 === 0) LVoidEdge.showAnchors();
 
 
             let c = LVoidEdge.followingContext;

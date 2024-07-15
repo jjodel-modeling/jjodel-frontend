@@ -1,20 +1,18 @@
 
 img { -webkit-user-drag: none; }
 body {
-    max-width: 100vw;
-    max-height: 100vh;
-    width: 100vw;
-    height: 100vh;
-    background-color: whitesmoke;
-    overflow: hidden;
-    font-family: Lato, 'Helvetica Neue', Arial,Helvetica, sans-serif !important;
-    font-size: small;
-    #root{
-        position: fixed; // without this, it can scroll
+    &,#root{
         max-width: 100vw;
         max-height: 100vh;
         width: 100vw;
         height: 100vh;
+        background-color: whitesmoke;
+        overflow: hidden;
+    }
+    font-family: Lato, 'Helvetica Neue', Arial,Helvetica, sans-serif !important;
+    font-size: small;
+    #root{
+        position: fixed; // without this, it can scroll
         display: flex;
         flex-direction: column;
     }
@@ -38,6 +36,13 @@ body {
 
 .debug {
     border: 1px dashed red;
+}
+.ui-draggable, .ui-resizable, ui-rotatable{
+    position: absolute !important; // because jqui sets the html style attr to relative
+    border: 1px solid var(--palette-g);
+    width: fit-content;
+    height: fit-content;
+    overflow: hidden;
 }
 /*
 .form-control:focus {

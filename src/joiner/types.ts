@@ -58,6 +58,8 @@ interface NoApply { apply?: never; }
 interface NoCall { call?: never; }
 
 
+
+
 export type orArr<T> = T | T[];
 export type unArr<T extends any[] | any> = T extends any[] ? T[0] : T;
 
@@ -109,6 +111,7 @@ export type nstring = null | string;
 export type nnumber = null | number;
 export type nbool = null | boolean;
 export type bool = boolean;
+export type NotBool<T> = Exclude<T, boolean>;
 export type TODO<T = any> = any;
 export type NonEmptyString = Exclude<string, ''>;
 export enum EdgeBendingMode {

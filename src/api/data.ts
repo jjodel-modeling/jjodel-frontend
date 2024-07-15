@@ -256,7 +256,7 @@ export class EcoreParser{
             }
                 // todo: problem, uml.ecore have "isComposite" operation and attribute on sme class "property", so who is referenced by "#//property/isComposite" ??
             // else Log.exDev(nameMap[typeprefix + name], "found 2 elements with same name", {nameMap, dobj, name, shortname: dobj.name, typeprefix});
-            else Log.w(nameMap[typeprefix + name], "found 2 elements with same name", {nameMap, new:dobj, old:nameMap[typeprefix + name], name, shortname: dobj.name, typeprefix});
+            else Log.w(!!nameMap[typeprefix + name], "found 2 elements with same name", {nameMap, new:dobj, old:nameMap[typeprefix + name], name, shortname: dobj.name, typeprefix});
             nameMap[typeprefix + name] = dobj;
             // nameMap[typeprefix + dobj.name] = dobj; // <eAnnotations source="subsets" references="#//Activity/group"/>
         }
@@ -314,7 +314,7 @@ export class EcoreParser{
             let type: DEnumerator = DfromPtr(meta.type) as DEnumerator;
             if (!type || type.className !== DEnumLiteral.cname) continue;
             let mapper = (v: unknown): Pointer<DEnumLiteral> => {
-                if (typeof v !== "number") { Log.e("found non-numeric value in a literal value.", v, dval); return v as any; }
+                if (typeof v !== "number") { Log.ee("found non-numeric value in a literal value.", v, dval); return v as any; }
                 let l = getLiteral(type.id, v);
                 return l ? l.id : v as any;
             }
@@ -943,7 +943,7 @@ export class EcoreParser{
     private static getEcoreTypeName(parent: DClassifier): string {
         if (parent.className === DEnumerator.cname || parent.className === DClass.cname) return this.classTypePrefix + this.name;
         // return Type.classTypePrefix + parent.parent.name; problem: need L-object to navigate
-        return Log.ex("getEcoreTypeName failed", parent);
+        return Log.exx("getEcoreTypeName failed", parent);
     }
 
 }

@@ -914,6 +914,24 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
         // for (let sc of d.subclasses) { if (!sc["_extends"]) sc["_extends"] = [];  sc["_extends"].push(d); }
     }
 }
+function setDocumentEvents(){
+    // do not use typings or class constructors here or it will change import order
+    setTimeout(
+        ()=> $(document).on("mouseup",
+            (e: MouseUpEvent) => RuntimeAccessibleClass.get<typeof GraphDragManager>("GraphDragManager").stopPanning(e)),
+        // ()=> $(document).on("mouseup", (e: MouseUpEvent) => (window as any).GraphDragManager.stopPanning(e)), //a
+        1
+    );
+    // document.body.addEventListener("mousedown", fixResizables, false);
+}
+function fixResizables(e: MouseEvent){
+    /*let parents = U.ancestorArray(e.target as HTMLElement);
+    for (let e of parents){
+        if (e.classList.contains("draggable")) U.makeDraggable(e, e.dataset.draggableOptions, e.attributes.disabled);
+        if (e.classList.contains("resizable")) U.makeResizable(e, e.dataset.draggableOptions);
+        if (e.classList.contains("resizable")) U.makeRotatable(e, e.dataset.draggableOptions);
+    }*/
+}
 
 export async function stateInitializer() {
     statehistory[DUser.current] = {redoable: [], undoable: []};
@@ -940,13 +958,10 @@ export async function stateInitializer() {
     windoww.defaultContext = {$: windoww.$, getPath, React: React, Selectors, ...RuntimeAccessibleClass.getAllClassesDictionary(), ...windoww.Components};
     // global document events
 
-    // do not use typings or class constructors here or it will change import order
-    setTimeout(
-        ()=> $(document).on("mouseup",
-            (e: MouseUpEvent) => RuntimeAccessibleClass.get<typeof GraphDragManager>("GraphDragManager").stopPanning(e)),
-        // ()=> $(document).on("mouseup", (e: MouseUpEvent) => (window as any).GraphDragManager.stopPanning(e)), //a
-        1
-    );
+
+    setDocumentEvents();
+
+
     DState.init();
     const user = Storage.read<DUser>('user');
     if(!user) return;

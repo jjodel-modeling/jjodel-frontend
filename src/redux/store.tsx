@@ -88,10 +88,15 @@ export class DState extends DPointerTargetable{
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     static new(): DState {
-        return new Constructors(new DState('dwc'), undefined, false, undefined).DPointerTargetable().DState().end();
+        let ds = new DState('dwc');
+        new Constructors(ds, undefined, false, undefined)
+            .DPointerTargetable().DState();
+        // .end();
+        return ds; // do not trigger persist and CreateElement for state, or it will be stored in idlookup making a loop
     }
 
-    version:{n:number, date:string} = {n:2.1, date: '22-06-2024'};
+    // important! every new version update version.n, but leave date = new Date().toString() and conversionList = empty arr []
+    version:{n:number, date:string, conversionList: number[]} = {n:2.2, date: new Date().toString(), conversionList: []};
 
     env: Dictionary = process.env;  //damiano: this might make problems on load
     debug: boolean = false;
@@ -227,8 +232,9 @@ export class DState extends DPointerTargetable{
         /// creating m3 "Object" metaclass
         let dObject = DClass.new(ShortDefaultEClasses.EObject, false, false, false, false,
             '', undefined, true, 'Pointer_' + ShortDefaultEClasses.EObject.toUpperCase());
+
         SetRootFieldAction.new('ecoreClasses', dObject.id, '+=', true);
-        for (let defaultEcoreClass of Object.values(DefaultEClasses)){
+        for (let defaultEcoreClass of Object.values(DefaultEClasses)) {
             // todo: creat everyone and not just object, make the whole m3 populated.
         }
 
@@ -469,17 +475,14 @@ export class LState<Context extends LogicContext<DState> = any, C extends Contex
     _lastSelected?: {modelElement?: LModelElement, node?: LGraphElement, view?: LViewElement};
     idlookup!:Dictionary<Pointer, DPointerTargetable>;
 
-    get_contextMenu(c: Context): this["contextMenu"] { return c.data.contextMenu; }
-    // get_user(c: Context): this["user"] { return LState.wrap(c.data.user) as LUser; }
-    get_debug(c: Context): this["debug"] { return c.data.debug; }
-    get_idlookup(c: Context): this["idlookup"] { return c.data.idlookup; }
     get__lastSelected(c: Context): this["_lastSelected"] {
         let ls = c.data._lastSelected;
         return ls && {modelElement: LState.wrap(ls.modelElement), node: LState.wrap(ls.node), view: LState.wrap(ls.view)}; }
 
-    _defaultCollectionGetter(c: Context, k: keyof DState): LPointerTargetable[] { return LPointerTargetable.fromPointer(c.data[k] as any); }
+    _defaultCollectionGetter(c: Context, k: keyof DState): LPointerTargetable[] {
+        return LPointerTargetable.fromPointer(c.data[k] as any);
+    }
     _defaultGetter(c: Context, k: keyof DState) {
-        //console.log("default Getter");
         let v = c.data[k];
         if (Array.isArray(v)) {
             if (v.length === 0) return [];

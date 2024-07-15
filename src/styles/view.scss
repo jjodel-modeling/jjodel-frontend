@@ -1,32 +1,12 @@
 @import "./variables";
 
-// [data-nodetype="EdgePoint"],
-
-[data-nodetype="VoidVertex"],
-[data-nodetype="Vertex"],
-[data-nodetype="GraphVertex"] {
-  &>*{ border: 0.1em solid $border-color; }
-  &>.ui-resizable-handle{ border: none; }
-}
-
 .root {height: 100%; width: 100%;}
-.DModel > .root {overflow: scroll}
-
-.Graph.DModel {
-  position: absolute;
-  margin: 3px;
-  height: $fill;
-  width: $fill;
-  background: white;
-}
 
 .default.DPackage {
   position: absolute;
   height: inherit !important;
   width: inherit !important;
-}
-.default.DPackage > .root {
-  border: none;
+  & > .root { border: none; }
 }
 
 .selected-by-me {

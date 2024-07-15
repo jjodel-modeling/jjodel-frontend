@@ -41,8 +41,9 @@ import {
 import {DUser, EPSize, Pack1, transientProperties } from "../../joiner/classes";
 import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsData";
 import DSL from "../../DSL/DSL";
+import {ReactNode} from "react";
 
-let units = {'Local-font relative':{
+let CSS_Units0 = {'Local-font relative':{
         'cap':     'cap - (Cap height) the nominal height of capital letters of the element\'s font.',
         'ch':      'ch - Average character advance of a narrow glyph in the element\'s font, as represented by the "0" (ZERO, U+0030) glyph.',
         'em':      'em - Font size of the element\'s font.',
@@ -117,17 +118,42 @@ let units = {'Local-font relative':{
         'dpcm':     'dpcm - Dots per centimeter.',
         'dpi':      'dpi - Dots per inch.',
         'dppx':     'dppx - Dots per px unit.',
-    },};
+    },
+};
+export let CSS_Units: typeof CSS_Units0 & { jsx: ReactNode, pattern: string } = CSS_Units0 as any;
 
+let pattern: string[] = [];
+
+CSS_Units.jsx = <datalist id={"__jodel_CSS_units"}>{
+   (Object.keys(CSS_Units) as (keyof typeof CSS_Units0)[]).map(k1 => {
+        let v1: GObject = CSS_Units[k1];
+       console.log("optgroup css units", {k1, v1, karr:Object.keys(v1), k1arr:Object.keys(CSS_Units)});
+
+       return <optgroup label={k1}>
+            {Object.keys(v1).map(k => {
+                let v = v1[k];
+                console.log("css units", {k, v, k1, v1, karr:Object.keys(v1), k1arr:Object.keys(CSS_Units)});
+                pattern.push(k);
+                return <option value={k} title={v}></option>
+            })}
+        </optgroup>
+    })
+}</datalist>;
+//throw new Error("Stop");
+CSS_Units.pattern = "^(" + pattern.join('|') + ")$";
+windoww.CSS_Units = CSS_Units;
+
+
+/*
 export type CSS_AbsoluteUnit = 'px' | 'cm' | 'mm' | 'pt' | 'pc' | 'in' | '';
 export type CSS_RelativeDomUnit = '%' | 'fr' | 'vw' | 'vh' | 'vmin' | 'vmax';
 export type CSS_RelativeFontUnit =  'em' | 'rem' | 'ex' | 'ch';
-export type CSSUnit = CSS_AbsoluteUnit | CSS_RelativeFontUnit | CSS_RelativeDomUnit;
+export type CSSUnit = CSS_AbsoluteUnit | CSS_RelativeFontUnit | CSS_RelativeDomUnit;*/
 
 export type StringControl = {type:'text', value: string};
-export type NumberControl = {type:'number', value: number, unit: CSSUnit};
+export type NumberControl = {type:'number', value: number, unit: DocString<"css unit">};
 export type PaletteControl = {type:'color', value: tinycolor.ColorFormats.RGBA[]}; // array of rgba: red, green, blue, alpha
-export type PathControl = {type:'path', value: string, x: string, y: string, options: {k: string, v:string}[]}; // array of rgba: red, green, blue, alpha
+export type PathControl = {type:'path', value: string, x: string, y: string, options: {k: string, v:string}[]};
 export type PaletteType = Dictionary<string, PaletteControl | NumberControl | StringControl | PathControl>;
 
 
@@ -258,7 +284,7 @@ export class DViewElement extends DPointerTargetable {
     
     font-family: Verdana, sans-serif;
     color: var(--color-1);
-    font-size: 11px;
+    font-size: 0.7rem;
 }
  
 .root div.header {
@@ -269,7 +295,7 @@ export class DViewElement extends DPointerTargetable {
 }
  
 .root div.header {
-    font-size: 5px;
+    font-size: 1rem;
 }
  
 .root div.header input:empty {
@@ -1026,7 +1052,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             parsedFunc(context, parsedConstants);
             // U.evalInContextAndScopeNew( "("+funcCode+")(this.__param)", context, true, false, false);
         } catch (e: any) {
-            Log.w("Attempted to save an invalid view.constant setup. Cause:\n" + e.message.split("\n")[0], e)
+            Log.ee("Attempted to save an invalid view.constant setup. Cause:\n" + e.message.split("\n")[0], e)
             return undefined;
         }
         return parsedConstants;

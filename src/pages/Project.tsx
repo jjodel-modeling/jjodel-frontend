@@ -20,6 +20,12 @@ import {ProjectsApi} from '../api/persistance';
 import {SaveManager} from '../components/topbar/SaveManager';
 import Loader from '../components/loader/Loader';
 import {BottomBar, Editors, Navbar} from "./components";
+import useQuery from "../hooks/useQuery";
+import {ProjectsApi} from "../api/persistance";
+import Navbar from "../components/navbar/Navbar";
+import {SaveManager} from "../components/topbar/SaveManager";
+import Loader from "../components/loader/Loader";
+import {CSS_Units} from "../view/viewElement/view";
 
 
 function ProjectComponent(props: AllProps): JSX.Element {
@@ -44,22 +50,15 @@ function ProjectComponent(props: AllProps): JSX.Element {
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
     if (user.project) return(<>
-        {/*<Try><Navbar /></Try>*/}
-        <Try>
-            <style id={'views-css-injector'}>
+        <Try><Navbar /></Try>
+        <Try><>
+            <style id={"views-css-injector"}>
                 {Object.values(viewsDeDuplicator).map(v => v.compiled_css).join('\n\n')}
             </style>
+            {CSS_Units.jsx}
+        </>
         </Try>
-        <Navbar />
-        <Try>
-            <Dock />
-        </Try>
-        <Try>
-            <Editors />
-        </Try>
-        <Try>
-            <BottomBar />
-        </Try>
+        <Try><Dock /></Try>
     </>);
     return(<Loader />);
 }

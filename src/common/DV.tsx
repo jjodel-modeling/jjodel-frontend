@@ -208,10 +208,14 @@ export class DV {
         "\n\tstroke: var(--stroke-color-hover);" +
         "\n\tstroke-width: var(--stroke-width-hover);" +
         "\n}" +
+        "\n.label-text{" +
+        "\n\tcolor: var(--stroke-color);" +
+        "\n}" +
         "\nforeignObject.label{" +
         "\n\toverflow: visible;" +
-        "\n\twidth:0;" +
-        "\n\theight:0;" +
+        "\n\tcolor: var(--stroke-color);" +
+        "\n\twidth: 0;" +
+        "\n\theight: 0;" +
         "\n\twhite-space: pre;" +
         "\n\t> div{" +
         "\n\t\twidth: fit-content;" +
@@ -238,9 +242,9 @@ export class DV {
                 {segments && segments.all && segments.all.flatMap(s => [
                     <path tabIndex="-1" className={"clickable content segment"} d={s.dpart}></path>,
                     s.label && <foreignObject className="label" x={(s.start.pt.x + s.end.pt.x)/2+"px"} y={(s.start.pt.y + s.end.pt.y)/2+"px"}>
-                    <div
+                    <div className={"label-text"}
                      style={{transform: "translate(-50%, 0%) rotate("+s.radLabels+"rad) translate(0%, -"+(1-0.5*Math.abs(Math.abs(s.radLabels)%Math.PI)/(Math.PI/2))*100+"%)"+
-                     " translate(0%, -5px", color: strokeColor}}>{s.label}</div>
+                     " translate(0%, -5px"}}>{s.label}</div>
                     </foreignObject>
                 ])}
                 { /* edge head */ }
@@ -379,6 +383,8 @@ class DefaultView {
 
     public static package(): string { return (
 `<div className={'root package'}>
+    <Measurable draggable={true} resizable={true}><div>draggable resizable</div></Measurable>
+    <Measurable draggable={true}><div>draggable</div></Measurable>
     <div className={'package-children'}>
         {upperLevel >= 1 ? [
             <label className={"detail-level"}>

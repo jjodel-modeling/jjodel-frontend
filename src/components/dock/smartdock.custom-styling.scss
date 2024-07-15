@@ -1,0 +1,62 @@
+body {
+  --smart-tab-item-padding-y: 6px;
+  --smart-tab-item-padding-x: 9px;
+  // !important do not set sd-tab-height first. better just adjust it through --smart-tab-item-padding-y first, then set this to the result innerheight+padding*2
+  --sd-tab-height: 32px;
+  --smart-tab-item-padding: var(--smart-tab-item-padding-y) var(--smart-tab-item-padding-x);
+}
+.smart-window.smart-tabs-window .smart-content-container>.smart-content{
+  height: 100%;
+}
+.smart-content-container{
+  .smart-buttons-container{
+    z-index:1;
+    // color: black;
+  }
+  .smart-tab-label-container{
+    // height: var(--sd-tab-height); this changes also for vertical tabs
+  }
+}
+.smart-window .smart-content-container>.smart-header-section {
+  --smart-window-header-height: var(--sd-tab-height);
+  position: absolute; // important! activate this to remove double header. remove for debug only
+  // height: calc(100% - var(--smart-window-header-height));
+}
+.smart-window.smart-tabs-window[active] .smart-content-container>.smart-header-section, .smart-window.smart-tabs-window[dragged] .smart-content-container>.smart-header-section, .smart-window.smart-tabs-window[focus] .smart-content-container>.smart-header-section, .smart-window[active] .smart-content-container>.smart-header-section, .smart-window[dragged] .smart-content-container>.smart-header-section {
+  color: black;
+  --smart-window-header-height: var(--sd-tab-height);
+}
+.smart-docking-layout smart-splitter-item.smart-placeholder smart-tab-item .smart-container:after{
+  content: "Drop Tabs here to fill";
+}
+// this applies to floating tabs only
+body > smart-tabs-window{
+  .smart-tabs-content-section, // body of the tab
+  .smart-header-section{ // drag handler in the first double-header which i usually hide
+    pointer-events: all;
+  }
+  &:active{
+    .smart-tabs-content-section { // body of the tab
+      pointer-events: none; // or it cannot drop
+     }
+    .smart-header-section{ // drag handler in the first double-header which i usually hide
+      pointer-events: none !important; // or it cannot drop
+      // display: none; // if subelements have pointer-events overriding this, it might be necessary to put this too
+    }
+  }
+  .smart-content{
+    pointer-events: none;
+  }
+  .smart-container{
+    pointer-events: none;
+    &>.smart-header{
+      pointer-events: none;
+      &>.smart-tabs-header-items{
+        pointer-events: none;
+      }
+    }
+  }
+  .smart-window .smart-content-container>.smart-header-section {
+    // position: relative; // if you want to reactivate double header on floating tabs
+  }
+}
