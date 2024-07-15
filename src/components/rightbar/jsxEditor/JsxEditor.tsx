@@ -13,7 +13,9 @@ function JsxEditorComponent(props: AllProps) {
     const view = props.view;
     const dview = view.__raw;
     const readOnly = props.readonly !== undefined ? props.readonly : !props.debugmode && Defaults.check(dview.id);
-    const [jsx, setJsx] = useStateIfMounted(dview.jsxString||'');
+    const [jsx, setJsx] = useStateIfMounted(dview.jsxString || '');
+    const [show, setShow] = useStateIfMounted(true);
+
 
     const change = (value: string|undefined) => { // save in local state for frequent changes.
         if (value !== undefined) setJsx(value);
@@ -56,25 +58,41 @@ function JsxEditorComponent(props: AllProps) {
 
     }, [monaco]);
 
-    return <>
-        <label className={"ms-1 mb-1 d-block jj-editor-title"}>JSX Editor</label>
-        {(jsx).indexOf('<>') >= 0 &&
-            <b><span style={{color:'red'}}>Warning:</span>: JSX.Fragment {"<>"} is valid JSX but is not supported by our compiler.<br/>
-                Please replace it with an array [] instead.</b>}
-        {(jsx).indexOf('?.') >= 0 &&
-            <b><span style={{color:'red'}}>Warning:</span> Optional chaining {".?"} is valid JS but is not supported by our compiler.<br/>
-                Please replace it with && instead. Eg: from (a?.b) to (a && a.b)</b>}
-        {(jsx).indexOf('??') >= 0 &&
-            <b><span style={{color:'red'}}>Warning:</span>: Nullish coalescing {"??"} is valid JS but is not supported by our compiler.<br/>
-                Please replace it with explicit null and undefined checks, or a ||.</b>}
-        <div className={"monaco-editor-wrapper"} style={{
-            minHeight: '20ùpx', height:'200px'/*there is a bug of height 100% on childrens not working if parent have only minHeight*/,
-            resize: 'vertical', overflow:'hidden'}} tabIndex={-1} onBlur={blur}>
+
+    return(<>
+        <div className={'d-flex'}>
+            <span className={'cursor-pointer my-auto'} tabIndex={-1} onClick={e => setShow(!show)}>
+                {show ? <i className={'bi bi-eye-fill'} /> : <i className={'bi bi-eye-slash-fill'} /> }
+            </span>
+            <label className={'ms-2 mb-1 my-auto'}>
+                JSX Editor
+            </label>
+        </div>
+        {show && <div className={'mt-1'}>
+            {(jsx).indexOf('<>') >= 0 && <label>
+                <b className={'text-warning'}>Warning:</b>
+                JSX.Fragment {'<>'} is valid JSX but is not supported by our compiler.
+                Please replace it with an array [] instead.
+            </label>}
+            {(jsx).indexOf('?.') >= 0 && <label>
+                <b className={'text-warning'}>Warning:</b>
+                Optional chaining {'.?'} is valid JS but is not supported by our compiler.
+                Please replace it with && instead. Eg: from (a?.b) to (a && a.b).
+            </label>}
+            {(jsx).indexOf('??') >= 0 && <label>
+                <b className={'text-warning'}>Warning:</b>
+                Nullish coalescing {'??'} is valid JS but is not supported by our compiler.
+                Please replace it with explicit null and undefined checks, or a ||.
+            </label>}
+        </div>}
+        {show && <div className={'monaco-editor-wrapper'}
+                      style={{padding: '5px', minHeight: '20px', height:'100px', resize: 'vertical', overflow:'hidden'}}
+                      tabIndex={-1} onBlur={blur}>
             <Editor className={'mx-1'} onChange={change} language={"typescript"}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                     defaultLanguage={'typescript'} value={dview.jsxString} />
-        </div>
-    </>;
+        </div>}
+    </>);
 }
 interface OwnProps {
     viewid: Pointer<DViewElement, 1, 1, LViewElement>;

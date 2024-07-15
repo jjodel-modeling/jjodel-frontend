@@ -48,7 +48,7 @@ function DockComponent(props: AllProps) {
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     layout.dockbox.children.push({tabs: [ModelsSummary]});
-    layout.dockbox.children.push({tabs: [
+    /*layout.dockbox.children.push({tabs: [
         structure,
         metadata,
         tree,
@@ -60,7 +60,7 @@ function DockComponent(props: AllProps) {
         node,
         console,
         logger
-    ]});
+    ]});*/
 
     return (<DockLayout ref={dock => DockManager.dock = dock} defaultLayout={layout} groups={groups} />);
 }

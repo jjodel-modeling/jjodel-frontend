@@ -15,7 +15,9 @@ function mRow(model: LModel, showInstanceOf: boolean = false) {
             - {model.name}{
             showInstanceOf && <><b className={'text-success'}> {model.instanceof ? 'conforms to' : 'is shapeless'}</b> {model.instanceof?.name}</>
             }
-            <button className={'ms-1 btn-outline-secondary btn bi bi-arrow-right-short'} style={{border:'none'}} onClick={()=>DockManager.open2(model)} />
+            <button style={{borderRadius: '999px'}} className={'ms-2 btn btn-primary p-0'} onClick={() => DockManager.open2(model)}>
+                <i className={'bi bi-arrow-right-short'} />
+            </button>
         </label>)
 }
 
@@ -33,8 +35,10 @@ function InfoTabComponent(props: AllProps) {
     models = Object.values(modelmap).flat();  // this way they are sorted by metamodel
 
     return(<div className={'p-3'}>
-        <h3 className={'text-primary'}>{project.name}</h3>
-        <Input data={project.id} field={'name'} jsxLabel={<b className={'text-primary my-auto me-2'}>Name</b>} hidden={true} />
+        <div className={'input-container w-50'}>
+            <b className={'me-2'}>Project Name:</b>
+            <Input data={project.id} field={'name'} hidden={true} />
+        </div>
         {(project.type === 'collaborative') &&
             <b className={'d-block'}><label className={'text-primary '}>Online Users:</label> {project.onlineUsers}</b>
         }

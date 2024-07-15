@@ -112,7 +112,7 @@ function InputComponent(props: AllProps) {
     if (!inputStyle.cursor && cursor === 'not-allowed') { inputStyle.cursor = cursor; }
     let rootStyle = {display: (jsxLabel || label) ? 'flex' : 'block', cursor, ...((props as any).style || {})};
     if (readOnly && !("color" in rootStyle)) rootStyle.color = "gray";
-    let input = <input {...otherprops}
+    return <input {...otherprops}
                        key={`${field}.${data?.id}`}
                        className={props.inputClassName || css}
                        style={inputStyle}
@@ -120,28 +120,6 @@ function InputComponent(props: AllProps) {
                        readOnly={readOnly}
                        type={type} value={value} onChange={change} onBlur={blur} onKeyDown={keyDown}
                        checked={checked} />
-
-    return(<label className={'p-1'} {...otherprops}
-                  style={rootStyle}>
-
-        {label && <span className={'my-auto'} onMouseEnter={e => setShowTooltip(true)}
-                         onMouseLeave={e => setShowTooltip(false)}>{label}
-        </span>}
-
-        {jsxLabel && <span onMouseEnter={e => setShowTooltip(true)}
-                            onMouseLeave={e => setShowTooltip(false)} style={{width: '100%'}}>{jsxLabel}
-        </span>}
-
-        {(tooltip && showTooltip) && <div className={'my-tooltip'}>
-            <b className={'text-center text-capitalize'}>{field}</b>
-            <br />
-            <label>{tooltip}</label>
-        </div>}
-
-        {autosize ? <div className={(autosize ? 'autosize-input-container' : '') + (props.asLabel ? ' labelstyle' : '')}
-                         data-value={value}>{input}
-        </div> : input}
-    </label>);
 }
 
 InputComponent.cname = 'InputComponent';

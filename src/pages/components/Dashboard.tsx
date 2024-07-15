@@ -11,7 +11,7 @@ function Dashboard(props: Props): JSX.Element {
     const {children, active} = props;
 
     return(<>
-        <Navbar version={props.version}/>
+        <Navbar />
         <LeftBar active={active} />
         <div style={{marginLeft: '12%'}} className={'p-2'}>
             {children}

@@ -4,14 +4,14 @@ import {
     DViewElement,
     GenericInput,
     GObject,
-    Info,
+    Info, Input,
     LPointerTargetable,
     LViewElement,
     Pointer,
     Select, SetFieldAction
 } from '../../../../joiner';
-import {FakeStateProps} from "../../../../joiner/types";
-import {connect} from "react-redux";
+import {FakeStateProps} from '../../../../joiner/types';
+import {connect} from 'react-redux';
 
 function FieldDataComponent(props: AllProps) {
     const view = props.view;
@@ -30,7 +30,7 @@ function FieldDataComponent(props: AllProps) {
         case 'GraphVertex': if (preferredDisplay !== 'Graph' || (preferredDisplay as any) !== 'Vertex') preferredDisplay = appliableTo; break;
         default: preferredDisplay = appliableTo; break;
     }
-    let graphElementOptions = <optgroup label={"Type of GraphElement"}>
+    let graphElementOptions = <optgroup label={'Type of GraphElement'}>
         <option>Any</option>
         <option>Graph</option>
         <option>GraphVertex</option>
@@ -38,21 +38,18 @@ function FieldDataComponent(props: AllProps) {
         <option>Edge</option>
         <option>EdgePoint</option>
         <option>Field</option>
-    </optgroup>
-    return(<section className={'p-3'}>
-        {/*<h5>Common Options</h5>*/}
-        <Select data={view} field={'appliableTo'} label={"Appliable to"}
-                options={graphElementOptions}
-                getter={() => dview.appliableTo || 'Any'}
-                setter={(data: DViewElement, field: string, v: string)=>view.appliableTo = v as any} />
-
-        {false && /* already in overview but done better. */(!dview.appliableTo || dview.appliableTo === 'Any') && <div className={'d-flex p-1'}>
-            <label className={'my-auto'}>Preferred display (in &lt;DefaultNode /&gt;)</label>
-            <select className={'my-auto ms-auto select'} disabled={readOnly}
-                    value={dview.forceNodeType} onChange={changeFN}>{graphElementOptions}
-            </select>
-        </div>}
-
+    </optgroup>;
+    return(<section>
+        <h5>Field</h5>
+        <div className={'px-2'}>
+            <div className={'input-container'}>
+                <b className={'me-2'}>Appliable to:</b>
+                <Select data={view} field={'appliableTo'}
+                        options={graphElementOptions}
+                        getter={() => dview.appliableTo || 'Any'}
+                        setter={(data: DViewElement, field: string, v: string)=>view.appliableTo = v as any} />
+            </div>
+        </div>
     </section>);
 }
 

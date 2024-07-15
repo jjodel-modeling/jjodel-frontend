@@ -111,8 +111,8 @@ input[type='checkbox'] { // was .input as class
   background-repeat: no-repeat; background-size: cover;
   width: min-content;
   cursor: pointer;
-  padding: 0.88em; // above this, the total height become bigger than a char because of some input native stylings
-  scale: 1.2;
+  padding: 0.9em; // above this, the total height become bigger than a char because of some input native stylings
+  scale: 0.9;
   background-color: transparent;
   border: none;
 }
@@ -189,7 +189,8 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
 }
 
 .monaco-editor-wrapper {
-  border: 1px solid var(--border-color-1);
+  margin: 5px;
+  background: white;
   border-radius: 4px;
 }
 

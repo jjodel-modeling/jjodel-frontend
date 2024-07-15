@@ -44,15 +44,14 @@ function DataTree(props: DataTreeProps): JSX.Element {
         }, '', false);
     }
 
-    return(<div>
+    return(<section>
         <div className={'d-flex tree'}>
-            <button className={'btn'} onClick={setFilter}>
-                {(data.children?.length > 0 && hide) ? <i className={'bi bi-chevron-up'} /> : <i className={'bi bi-chevron-down'} />}
+            <button className={`d-block my-auto btn btn-${(data.children?.length > 0 && hide) ? 'danger' : 'success'}`} style={{width: '0.4em'}} onClick={setFilter}>
             </button>
-            <label className={data.className + ' ms-1 text-capitalize my-auto'}>
+            <label className={data.className + ' ms-1 text-capitalize'}>
                 <b>{data.className}</b>:
             </label>
-            <label tabIndex={-1} role={'button'} onClick={click} className={'name ms-1 my-auto'}>
+            <label tabIndex={-1} role={'button'} onClick={click} className={'name ms-1'}>
                 {(data.name) ? data.name : 'unnamed'}
             </label>
         </div>
@@ -61,7 +60,7 @@ function DataTree(props: DataTreeProps): JSX.Element {
                 <Tree data={child} depth={depth} />
             </div>);
         })}
-    </div>);
+    </section>);
 }
 
 interface HtmlTreeProps {data: GObject, hide: boolean, depth: string[], setFilter: () => void}

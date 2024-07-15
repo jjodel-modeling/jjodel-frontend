@@ -7,7 +7,7 @@ import {
     Pointer,
     DViewElement,
     DState,
-    LPointerTargetable
+    LPointerTargetable, GenericInput
 } from '../../../../joiner';
 import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
@@ -23,7 +23,7 @@ function NodeDataComponent(props: AllProps) {
         {objectTypes.map((o)=><option key={o} value={o}>{o.length ? o.substring(1) : "anything"}</option>)}
     </optgroup>;*/
 
-    return(<section className={'p-3'}>
+    return(<section>
         {/*<Select obj={view} field={"useSizeFrom"} readonly={readOnly} options={
             <optgroup label="Node position depends from what?">
                 <option value={EuseSizeFrom.nv}>Node & View: Will change his position when the view or graph changes</option>
@@ -38,24 +38,51 @@ function NodeDataComponent(props: AllProps) {
         {/*[<Input data={view} field={"scalezoomx"} label={"Zoom X"} type={"number"}/>,                <Input data={view} field={"scalezoomy"} label={"Zoom Y"} type={"number"}/>]*/}
 
         <h5>Vertex</h5>
-        {<Input data={view} field={"storeSize"} label={"Store Size in view"} readonly={readOnly}  tooltip={
-            <div>On - The node position depends from the view currently displayed.<br/>Off - It depends from the graph.</div>} type={"checkbox"} />
-            /* on = EuseSizeFrom.nv,   off = EuseSizeFrom.n */
-        }
-        <Input data={view} field={"lazySizeUpdate"} label={"Lazy Update"} type={"checkbox"} tooltip={true} readonly={readOnly} />
+        <div className={'px-2'}>
+            <div className={'input-container'}>
+                <b className={'me-2'}>Store Size in View:</b>
+                {<Input data={view} field={"storeSize"} readonly={readOnly}  tooltip={
+                    <div>On - The node position depends from the view currently displayed.<br/>Off - It depends from the graph.</div>} type={"checkbox"} />
+                    /* on = EuseSizeFrom.nv,   off = EuseSizeFrom.n */
+                }
+            </div>
+            <div className={'input-container'}>
+                <b className={'me-2'}>Lazy Update:</b>
+                <Input data={view} field={"lazySizeUpdate"} type={"checkbox"} tooltip={true} readonly={readOnly} />
+            </div>
 
-        <Input data={view} field={"adaptWidth"} label={"Adapt Width"} type={"checkbox"} readonly={readOnly} />
-        <Input data={view} field={"adaptHeight"} label={"Adapt Height"} type={"checkbox"} readonly={readOnly} />
-        <Input data={view} field={"draggable"} label={"Draggable"} type={"checkbox"} readonly={readOnly} />
-        <Input data={view} field={"resizable"} label={"Resizable"} type={"checkbox"} readonly={readOnly} />
-        <div className={"w-100"}>{[
-            !dview.adaptWidth && <Input data={view} label={"Default Width"} type={"number"} readonly={readOnly}
-                                        getter={()=>''+view.defaultVSize.w} setter={(val) => view.defaultVSize = {w:+val} as any}/>,
-            !dview.adaptHeight && <Input data={view} label={"Default Height"} type={"number"} readonly={readOnly}
-                                         getter={()=>''+view.defaultVSize.h} setter={(val) => view.defaultVSize = {h:+val} as any} />
-        ]}</div>
+            <div className={'input-container'}>
+                <b className={'me-2'}>Adapt Width:</b>
+                <Input data={view} field={"adaptWidth"} type={"checkbox"} readonly={readOnly} />
+            </div>
 
+            <div className={'input-container'}>
+                <b className={'me-2'}>Adapt Height:</b>
+                <Input data={view} field={"adaptHeight"} type={"checkbox"} readonly={readOnly} />
+            </div>
 
+            <div className={'input-container'}>
+                <b className={'me-2'}>Draggable:</b>
+                <Input data={view} field={"draggable"} type={"checkbox"} readonly={readOnly} />
+            </div>
+
+            <div className={'input-container'}>
+                <b className={'me-2'}>Resizable:</b>
+                <Input data={view} field={"resizable"} type={"checkbox"} readonly={readOnly} />
+            </div>
+
+            <div className={'input-container'} hidden={dview.adaptWidth}>
+                <b className={'me-2'}>Default Width:</b>
+                <Input data={view} type={"number"} readonly={readOnly}
+                       getter={() => '' + view.defaultVSize.w} setter={(val) => view.defaultVSize = {w: +val} as any}/>
+            </div>
+
+            <div className={'input-container'} hidden={dview.adaptHeight}>
+                <b className={'me-2'}>Default Height:</b>
+                <Input data={view} type={"number"} readonly={readOnly}
+                       getter={() => '' + view.defaultVSize.h} setter={(val) => view.defaultVSize = {h: +val} as any} />
+            </div>
+        </div>
     </section>);
 }
 

@@ -350,7 +350,7 @@ class DefaultView {
     public static model(): string { return (
 `<div className={'root'}>
     {!data && "Model data missing."}
-    <ControlPanel node={node}></ControlPanel>
+    {/*<ControlPanel node={node}></ControlPanel>*/}
     <label className={"detail-level"}>
         <input onChange={(e)=>{node.state = {level:+e.target.value}}} min="0" max="3" type="range" step="1" value={level}/>
         <div>Detail level:{level}</div>
@@ -410,9 +410,11 @@ class DefaultView {
 
     public static class(): string { return (
 `<View className={'root class'} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
-    <div className={(abstract ? 'abstract' : '')}>
-        <Input data={data} field={'name'} hidden={true} autosize={true} 
-            jsxLabel={<b className={'class-name'}>{interface ? "Interface" : "Class"}:</b>} />
+    <div>
+        <div className={'input-container mx-2'}>
+            <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}:</b>
+            <Input data={data} field={'name'} hidden={true} />
+        </div>
     </div>
     <hr/>
     <div className={'class-children'}>
@@ -440,7 +442,10 @@ class DefaultView {
 
     public static enum(): string { return (
 `<div className={'root enumerator'}>
-    <Input jsxLabel={<b className={'enumerator-name'}>Enum:</b>} data={data} field={'name'} hidden={true} autosize={true} />
+    <div className={'input-container mx-2'}>
+        <b className={'enumerator-name'}>Enum:</b>
+        <Input data={data} field={'name'} hidden={true} />
+    </div>
     <hr />
     <div className={'enumerator-children'}>
         {level >= 2 && literals.map(c => <DefaultNode key={c.id} data={c}/>)
@@ -452,7 +457,10 @@ class DefaultView {
 
     public static feature(): string { return (
 `<div className={'root w-100 feature'}>
-    <Select className={'p-1 d-flex'} data={data} field={'type'} label={data.name} />
+    <div className={'input-container mx-2'}>
+        <b className={'feature-name'}>{data.name}:</b>
+        <Select data={data} field={'type'} />
+    </div>
     {decorators}
 </div>`
 );}
@@ -466,7 +474,10 @@ class DefaultView {
 
     public static operation(): string { return (
 `<div className={'root w-100'}>
-    <Select className={'p-1 d-flex'} data={data} field={'type'} label={data.name + ' =>'} />
+    <div className={'input-container mx-2'}>
+        <b className={'feature-name'}>{data.name + ' =>'}</b>
+        <Select data={data} field={'type'} />
+    </div>
     {data.exceptions.length ? " throws " + data.exceptions.join(", ") : ''}
     <div className={"parameters"}>{
         level >= 3 && data.parameters.map(p => <DefaultNode data={p} key={p.id} />)
@@ -477,9 +488,13 @@ class DefaultView {
 
 public static parameter(): string { return (
 `<div className={'root w-100 ms-1'}>
-    <Select className={'p-1 d-flex'} data={data} field={'type'}
-        label={data.name + '' + (data.lowerBound === 0 ? '?:' : ':' )}
-        postlabel={data.upperBound === 0 ? '&nbsp;&nbsp;' : '[]'}/>
+    <div className={'input-container mx-2'}>
+        <b className={'feature-name'}>
+            {data.name + '' + (data.lowerBound === 0 ? '?:' : ':' )}
+            {data.upperBound === 0 ? '&nbsp;&nbsp;' : '[]'}
+        </b>
+        <Select data={data} field={'type'} />
+    </div>
     {decorators}
 </div>`
 );}
@@ -515,8 +530,10 @@ public static parameter(): string { return (
 
     public static object(): string { return (
 `<div className={'root object'}>
-    <Input jsxLabel={<b className={'object-name'}>{data.instanceof ? data.instanceof.name : "Object"}:</b>}
-            data={data} field={'name'} hidden={true} autosize={true} />
+    <div className={'input-container mx-2'}>
+        <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
+        <Input data={data} field={'name'} hidden={true} />
+    </div>
     <hr/>
     <div className={'object-children'}>
         {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
@@ -527,8 +544,11 @@ public static parameter(): string { return (
 
     public static value() { return (
 `<div className={'root d-flex value'}>
-     {instanceofname && <label className={'d-block ms-1'}>{instanceofname}</label>}
-     {!instanceofname && <Input asLabel={true} data={data} field={'name'} hidden={true} autosize={true} />}
+    {instanceofname && <label className={'d-block ms-1'}>{instanceofname}</label>}
+    {!instanceofname && <div className={'input-container mx-2'}>
+        <b className={'object-name'}>Name:</b>
+        <Input data={data} field={'name'} hidden={true} />
+    </div>}
     <label className={'d-block m-auto values_str'} style={{color: constants[typeString] || 'gray'}}>
         : {valuesString}
     </label>

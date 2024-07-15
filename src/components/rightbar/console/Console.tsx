@@ -1,25 +1,24 @@
 import "./console.scss";
 import React, {Dispatch, PureComponent, ReactElement} from "react";
-import {connect, Provider} from "react-redux";
+import {connect} from "react-redux";
 import {
-    DState,
     DGraphElement,
     Dictionary,
+    DState,
     GObject,
     LGraphElement,
     LModelElement,
+    Log,
     LPointerTargetable,
     LViewElement,
     Pointer,
     RuntimeAccessibleClass,
+    transientProperties,
     U,
-    windoww, store, Log, DUser, transientProperties, LoggerComponent
+    windoww
 } from "../../../joiner";
-import {GraphElementComponent} from "../../../graph/graphElement/graphElement";
 import ReactDOM from "react-dom";
-import Router from "../../../router/Router";
 import {FakeStateProps} from "../../../joiner/types";
-import { useStateIfMounted } from "use-state-if-mounted";
 
 var Convert = require('ansi-to-html');
 
@@ -87,7 +86,8 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
             }
             break;
     }
-    return ret; }
+    return ret;
+}
 
 export class ConsoleComponent extends PureComponent<AllProps, ThisState>{
     public static cname: string = "ConsoleComponent";

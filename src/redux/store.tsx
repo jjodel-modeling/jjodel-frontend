@@ -68,6 +68,7 @@ import {DefaultEClasses, ShortDefaultEClasses} from "../common/U";
 import { GraphElements, Graphs, Vertexes, Edges, Fields } from '../joiner';
 import DefaultViews from "./defaults/views";
 import tinycolor, {Instance} from "tinycolor2";
+import {ReactNode} from "react";
 
 console.warn('ts loading store');
 
@@ -193,6 +194,8 @@ export class DState extends DPointerTargetable{
         'sensors/2': [{value: {raw: 20, unit: 's'}, timestamp: 2}],
         'sensors/3': [{value: {raw: 30, unit: 's'}, timestamp: 3}]
     };
+
+    advanced: boolean = false;
 
 
     static fixcolors(){

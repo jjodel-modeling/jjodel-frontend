@@ -43,7 +43,7 @@ function App(props: AllProps): JSX.Element {
             await stateInitializer();
             /* Offline by default */
             if(!DUser.current) AuthApi.offline();
-            await U.sleep(1);
+            await U.sleep(2);
             SetRootFieldAction.new('isLoading', false);
         })();
 
@@ -66,7 +66,6 @@ function App(props: AllProps): JSX.Element {
                     <Route path={'*'} element={<AccountPage />} />
                 </>}
                 <Route path={'auth'} element={<AuthPage />} />
-                <Route path={'*'} element={isLoading ? <div></div> : <Loader />} />
             </Routes>
         </HashRouter>
     </>);

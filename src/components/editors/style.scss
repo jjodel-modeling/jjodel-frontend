@@ -1,0 +1,53 @@
+.input-container {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+}
+
+.v-container {
+  display: flex;
+}
+
+.v-container > label:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+.v-panel {
+  position: absolute;
+  background: white;
+}
+.v-panel > .v-link {
+  display: block;
+}
+
+.v-panel > .v-link:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.v-item {
+  padding: 0.2em;
+  font-size: 0.85em;
+}
+.v-item:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.output-row {
+  // white-space: pre;
+  .output-comment{
+    display: none;
+    position: fixed;
+  }
+  &:hover .output-comment,
+  &:focus-within .output-comment,
+  &:focus .output-comment,
+  &:active .output-comment,
+  {
+    &:first-of-type{
+      display: block;
+    }
+  }
+}
