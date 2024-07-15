@@ -1,5 +1,5 @@
 import {
-    CSSUnit, LViewElement,
+    CSS_Units, LViewElement,
     NumberControl,
     PaletteControl,
     PaletteType,
@@ -158,7 +158,7 @@ function ViewStyle(props: Props): JSX.Element {
         const val: string = e.target.value === undefined ? 'px' : e.target.value;
         if (readOnly || val === (palette[prefix] as NumberControl).unit) return;
         let tmp: Dictionary<string, NumberControl> = {...palette} as any;
-        tmp[prefix].unit = val as CSSUnit;
+        tmp[prefix].unit = val as any; // The type was 'CSSUnit';
         view.palette = palette = tmp; }
     const changePrefix = (oldPrefix: string, newPrefix: string) => {
         newPrefix = newPrefix.replaceAll(/[^\w\-]/g,'-'); // /^[^a-zA-Z0-9_\-]*$/, '-');

@@ -50,7 +50,7 @@ function ViewpointsComponent(props: AllProps) {
         vp.isExclusiveView = !vp.isExclusiveView;
     }
 
-    return(<section>
+    return(<section className={'p-2'}>
         <div className={'v-container'}>
             <label className={'text-primary'} onClick={e => create()}>
                 Create new...
@@ -63,7 +63,7 @@ function ViewpointsComponent(props: AllProps) {
                 {v.isExclusiveView && <i className={'bi bi-exclamation-lg text-danger ms-1'} />}
             </label>
         </div>)}
-        {clicked.viewpointID && <div className={'v-panel rounded border p-2'} style={{top: clicked.y - 23}}>
+        {clicked.viewpointID && <div className={'v-panel rounded border p-2'} style={{top: clicked.y - 43}}>
             <label className={'v-link'} onClick={e => select(clicked.viewpointID)}>Activate</label>
             <label className={'v-link'} onClick={e => exclusive(clicked.viewpointID)}>Exclusive</label>
             <label className={'v-link'} onClick={e => duplicate(clicked.viewpointID)}>Duplicate</label>

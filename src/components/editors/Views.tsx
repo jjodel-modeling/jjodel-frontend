@@ -41,7 +41,7 @@ function ViewsComponent(props: AllProps) {
     }
 
 
-    if(!view) return(<section>
+    if(!view) return(<section className={'p-2'}>
         <div className={'v-container'}>
             <label className={'text-primary'} onClick={e => create()}>
                 Create new...
@@ -52,7 +52,7 @@ function ViewsComponent(props: AllProps) {
                 {v.name}
             </label>
         </div>)}
-        {clicked.viewID && <div className={'v-panel rounded border p-2'} style={{top: clicked.y - 23}}>
+        {clicked.viewID && <div className={'v-panel rounded border p-2'} style={{top: clicked.y - 53}}>
             <label className={'v-link'} onClick={e => setView(LViewElement.fromPointer(clicked.viewID))}>Open</label>
             <label className={'v-link'} onClick={e => duplicate(clicked.viewID)}>Duplicate</label>
             <label className={'v-link'} onClick={e => remove(clicked.viewID)}>Delete</label>
@@ -68,7 +68,7 @@ function ViewsComponent(props: AllProps) {
             {name: 'options', component: <ViewOptions view={view} />},
             {name: 'subviews', component: <ViewSubViews view={view} views={user.project?.views || []} />}
         ];
-        return(<section>
+        return(<section className={'p-2'}>
             <nav className={'w-100 p-1 bg-white border rounded text-center mb-2'}>
                 {tabs.map((t, i) => <label style={{color: (tab === i) ? '#5F0F40' : 'black'}} onClick={e => setTab(i)} key={i} className={'v-item'}>
                     {t.name}

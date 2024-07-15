@@ -24,6 +24,7 @@ import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
 import {MessageVisualizer} from "./components/forEndUser/SplashMessage";
 import {JQDock, MyDock} from "./components/dock/MyDock";
+import {BottomBar} from "./pages/components";
 
 let userHasInteracted = false;
 function endPendingActions() {
@@ -57,6 +58,7 @@ function App(props: AllProps): JSX.Element {
         <ExternalLibraries />
         <TooltipVisualizer />
         <MessageVisualizer />
+        <BottomBar />
         <HashRouter>
             <PathChecker />
             <Routes>

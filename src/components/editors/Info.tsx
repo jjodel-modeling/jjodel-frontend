@@ -154,7 +154,7 @@ class builder {
         </section>);
     }
     static literal(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section>
+        return (<section className={'p-2'}>
             {this.named(data, advanced)}
             <div className={'input-container'}>
                 <b className={'me-2'}>Ordinal:</b>

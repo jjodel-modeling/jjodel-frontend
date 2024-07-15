@@ -69,6 +69,11 @@ function JsxEditorComponent(props: AllProps) {
             </label>
         </div>
         {show && <div className={'mt-1'}>
+            {jsx.match(/{\s*\(.+\?.+\:.+\)\s*}/gm) && <label>
+                <b className={'text-warning'}>Warning:</b>
+                Please remove the round parenthesis, concatenate it with an empty string as in &#123; (a ? b : c) + '' &#125;
+                or replace the ternary operator as in (a && b || c).
+            </label>}
             {(jsx).indexOf('<>') >= 0 && <label>
                 <b className={'text-warning'}>Warning:</b>
                 JSX.Fragment {'<>'} is valid JSX but is not supported by our compiler.

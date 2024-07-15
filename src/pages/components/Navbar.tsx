@@ -8,7 +8,7 @@ import {ProjectsApi} from "../../api/persistance";
 import {useNavigate} from "react-router-dom";
 
 function NavbarComponent(props: AllProps): JSX.Element {
-    const {version, project, metamodels, debug} = props;
+    const {version, project, metamodels, advanced, debug} = props;
     const [focussed, setFocussed] = useState('');
     const [clicked, setClicked] = useState('');
     const navigate = useNavigate();
@@ -45,9 +45,15 @@ function NavbarComponent(props: AllProps): JSX.Element {
                         }} className={'sub-item'}>{si.name}</label>)}
                     </div>
                 </div>)}
-                <label onClick={e => SetRootFieldAction.new('debug', !debug)} className={`cursor-pointer ms-auto px-1 item text-white rounded ${debug ? 'bg-success' : 'bg-danger'}`}>
-                    DEBUG
-                </label>
+                <div className={'ms-auto px-1 d-flex'}>
+                    <div className={'input-container mx-2'}>
+                        <b className={'object-name'}>Advanced:</b>
+                        <input onClick={e => SetRootFieldAction.new('advanced', !advanced)} className={'input'} type={'checkbox'} />
+                    </div>
+                    <label onClick={e => SetRootFieldAction.new('debug', !debug)} className={`ms-2 cursor-pointer item text-white rounded ${debug ? 'bg-success' : 'bg-danger'}`}>
+                        DEBUG
+                    </label>
+                </div>
             </nav>
             {clicked === 'new.metamodel' && <MetamodelPopup {...{project, setClicked}} />}
             {clicked === 'new.model' && <ModelPopup {...{metamodels, project, setClicked}} />}
@@ -82,6 +88,7 @@ interface StateProps {
     project?: LProject;
     metamodels: LModel[];
     version: DState['version'];
+    advanced: boolean;
     debug: boolean;
 }
 interface DispatchProps {}
@@ -94,6 +101,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.project = ret.user.project || undefined;
     ret.metamodels = LModel.fromArr(state.m2models);
     ret.version = state.version;
+    ret.advanced = state.advanced;
     ret.debug = state.debug;
     return ret;
 }

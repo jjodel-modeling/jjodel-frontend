@@ -19,12 +19,12 @@ import Tree from "../forEndUser/Tree";
 function SkeletonComponent(props: AllProps) {
     const {data} = props;
 
-    if(!data) return(<section>
+    if(!data) return(<section className={'p-2'}>
         <label className={'d-block text-center'}>
             No Data to display!
         </label>
     </section>);
-    else return(<section>
+    else return(<section className={'p-2'}>
         <Tree data={data} />
     </section>)
 

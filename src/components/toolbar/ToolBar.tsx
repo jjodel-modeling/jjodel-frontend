@@ -283,10 +283,6 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
                 </div>
 
                 <i className={"content pin bi bi-pin-angle"+(pinned ? "-fill" : '')} onClick={()=> setPinned(!pinned) } />
-                <div className={"preview toolbar-section-label mb-0 mx-1"}>
-                    <i className={'bi bi-plus-lg'} />
-                </div>
-                <div className={"preview toolbar-section-label my-auto mx-1"}>Add</div>
                 <div className={"content inline"}>{content}</div>
             </div>
         </div>);

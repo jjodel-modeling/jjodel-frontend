@@ -4,18 +4,9 @@ import {connect} from 'react-redux';
 import {DState, LoggerComponent, Try} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
 import {DockLayout, LayoutData} from 'rc-dock';
-import TestTab from './tabs/TestTab';
-import StructureEditor from '../rightbar/structureEditor/StructureEditor';
-import {ModelMetaData} from '../rightbar/structureEditor/ModelMetaData';
-import TreeEditor from '../rightbar/treeEditor/treeEditor';
-import ViewsEditor from '../rightbar/viewsEditor/ViewsEditor';
-import NodeEditor from '../rightbar/styleEditor/StyleEditor';
-import ViewpointEditor from '../rightbar/viewpointsEditor/ViewpointsEditor';
-import CollaboratorsEditor from '../rightbar/collaboratorsEditor/CollaboratorsEditor';
-import Console from '../rightbar/console/Console';
-import ModelsSummaryTab from './tabs/ModelsSummaryTab';
+import {Info, Skeleton, Viewpoints, Views, Logger, Console} from "../../components/editors";
 import DockManager from './DockManager';
-import MqttEditor from "../rightbar/mqtt/MqttEditor";
+import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 
 
 const tabidprefix = "DockComponent_rightbar_";
@@ -33,34 +24,35 @@ function DockComponent(props: AllProps) {
     const ModelsSummary = {id: id(), title: 'Summary', group: 'models', closable: false, content: <Try><ModelsSummaryTab /></Try>};
 
     /* Editors */
-    const test = {id: id(), title: 'Test', group: 'editors', closable: false, content: <TestTab />};
-    const structure = {id: id(), title: 'Structure', group: 'editors', closable: false, content: <Try><StructureEditor /></Try>};
-    const metadata = {id: id(), title: 'Metadata', group: 'editors', closable: false, content: <Try><ModelMetaData /></Try>};
-    const tree = {id: id(), title: 'Tree View', group: 'editors', closable: false, content: <Try><TreeEditor /></Try>};
-    const views = {id: id(), title: 'Views', group: 'editors', closable: false, content: <Try><ViewsEditor /></Try>};
-    const node = {id: id(), title: 'Node', group: 'editors', closable: false, content: <Try><NodeEditor /></Try>};
-    const viewpoints = {id: id(), title: 'Perspectives', group: 'editors', closable: false, content: <Try><ViewpointEditor validation={false} /></Try>};
-    const validation = {id: id(), title: 'Validation', group: 'editors', closable: false, content: <Try><ViewpointEditor validation={true} /></Try>};
-    const collaborators = {id: id(), title: 'Collaborators', group: 'editors', closable: false, content: <Try><CollaboratorsEditor /></Try>};
-    const mqtt = {id: id(), title: 'Mqtt', group: 'editors', closable: false, content: <Try><MqttEditor /></Try>};
+    const structure = {id: id(), title: 'Structure', group: 'editors', closable: false, content: <Try><Info /></Try>};
+    // const metadata = {id: id(), title: 'Metadata', group: 'editors', closable: false, content: <Try><ModelMetaData /></Try>};
+    const tree = {id: id(), title: 'Tree View', group: 'editors', closable: false, content: <Try><Skeleton /></Try>};
+    const views = {id: id(), title: 'Views', group: 'editors', closable: false, content: <Try><Views /></Try>};
+    // const node = {id: id(), title: 'Node', group: 'editors', closable: false, content: <Try><NodeEditor /></Try>};
+    const viewpoints = {id: id(), title: 'Perspectives', group: 'editors', closable: false, content: <Try><Viewpoints /></Try>};
+    // const validation = {id: id(), title: 'Validation', group: 'editors', closable: false, content: <Try><ViewpointEditor validation={true} /></Try>};
+    // const collaborators = {id: id(), title: 'Collaborators', group: 'editors', closable: false, content: <Try><CollaboratorsEditor /></Try>};
+    // const mqtt = {id: id(), title: 'Mqtt', group: 'editors', closable: false, content: <Try><MqttEditor /></Try>};
     const console = {id: id(), title: 'Console', group: 'editors', closable: false, content: <Try><Console /></Try>};
-    const logger = {id: id(), title: 'Logger', group: 'editors', closable: false, content: <Try><LoggerComponent /></Try>};
+    // const logger = {id: id(), title: 'Logger', group: 'editors', closable: false, content: <Try><LoggerComponent /></Try>};
+    const logger = {id: id(), title: 'Logger', group: 'editors', closable: false, content: <Try><Logger /></Try>};
+
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
     layout.dockbox.children.push({tabs: [ModelsSummary]});
-    /*layout.dockbox.children.push({tabs: [
+    layout.dockbox.children.push({tabs: [
         structure,
-        metadata,
+        // metadata,
         tree,
         views,
         viewpoints,
-        validation,
+        // validation,
         // collaborators,
         // mqtt,
-        node,
+        // node,
         console,
         logger
-    ]});*/
+    ]});
 
     return (<DockLayout ref={dock => DockManager.dock = dock} defaultLayout={layout} groups={groups} />);
 }
