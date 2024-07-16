@@ -1,11 +1,11 @@
 import './style.scss';
 import {DState, DUser, LModel, LProject, LUser, SetRootFieldAction, U} from '../../joiner';
 import React, {Component, Dispatch, ReactElement, useState} from 'react';
-import {FakeStateProps} from "../../joiner/types";
-import {connect} from "react-redux";
-import {MetamodelPopup, ModelPopup} from "./popups";
-import {ProjectsApi} from "../../api/persistance";
-import {useNavigate} from "react-router-dom";
+import {FakeStateProps} from '../../joiner/types';
+import {connect} from 'react-redux';
+import {MetamodelPopup, ModelPopup} from './popups';
+import {ProjectsApi} from '../../api/persistance';
+import {useNavigate} from 'react-router-dom';
 
 function NavbarComponent(props: AllProps): JSX.Element {
     const {version, project, metamodels, advanced, debug} = props;
@@ -13,7 +13,7 @@ function NavbarComponent(props: AllProps): JSX.Element {
     const [clicked, setClicked] = useState('');
     const navigate = useNavigate();
 
-    const items = [
+    const projectItems = [
         {name: 'New',
             subItems: [
                 {name: 'Metamodel', function: async() => {}},
@@ -31,53 +31,68 @@ function NavbarComponent(props: AllProps): JSX.Element {
         }
     ];
 
+    const dashboardItems = [
+        {name: 'Project',
+            subItems: [
+                {name: 'New', function: async() => {
+                    navigate('/allProjects');
+                    SetRootFieldAction.new('isLoading', true);
+                    await U.sleep(1);
+                    await ProjectsApi.create('public', 'Unnamed Project');
+                    SetRootFieldAction.new('isLoading', false);
+                }},
+            ]
+        }
+    ];
+
+
+
+
     if(project)
         return(<>
-            <nav className={'my-navbar'}>
-                {items.map(i => <div className={'items-container'} onMouseEnter={e => setFocussed(i.name)}>
-                    <label className={'item'}>
-                        {i.name}
-                    </label>
-                    <div className={'sub-items-container border'} onMouseLeave={e => setFocussed('')} style={{display: (i.name === focussed) ? 'block' : 'none'}}>
-                        {i.subItems.map(si => <label onClick={async() => {
-                            setClicked(`${i.name}.${si.name}`.toLowerCase());
-                            await si.function()
-                        }} className={'sub-item'}>{si.name}</label>)}
+            <nav style={{zIndex: 99}}>
+                <ul className={'new-navbar'}>
+                    {projectItems.map(i => <li key={i.name} className={'new-dropdown'}>
+                        <label>{i.name}</label>
+                        <ul className={'new-dropdown-content'}>
+                            {i.subItems.map(si => <li key={si.name} onClick={async() => {
+                                setClicked(`${i.name}.${si.name}`.toLowerCase());
+                                await si.function();
+                            }}>
+                                <label>{si.name}</label>
+                            </li>)}
+                        </ul>
+                    </li>)}
+                    <div className={'ms-auto d-flex'}>
+                        <li className={'input-container mx-2'}>
+                            <b className={'object-name'}>Advanced:</b>
+                            <input onClick={e => SetRootFieldAction.new('advanced', !advanced)} className={'input my-auto'} type={'checkbox'} />
+                        </li>
+                        <label onClick={e => SetRootFieldAction.new('debug', !debug)} className={`my-auto py-0 mx-2 cursor-pointer item text-white rounded ${debug ? 'bg-success' : 'bg-danger'}`}>
+                            DEBUG
+                        </label>
                     </div>
-                </div>)}
-                <div className={'ms-auto px-1 d-flex'}>
-                    <div className={'input-container mx-2'}>
-                        <b className={'object-name'}>Advanced:</b>
-                        <input onClick={e => SetRootFieldAction.new('advanced', !advanced)} className={'input'} type={'checkbox'} />
-                    </div>
-                    <label onClick={e => SetRootFieldAction.new('debug', !debug)} className={`ms-2 cursor-pointer item text-white rounded ${debug ? 'bg-success' : 'bg-danger'}`}>
-                        DEBUG
-                    </label>
-                </div>
+                </ul>
             </nav>
             {clicked === 'new.metamodel' && <MetamodelPopup {...{project, setClicked}} />}
             {clicked === 'new.model' && <ModelPopup {...{metamodels, project, setClicked}} />}
         </>);
     else
         return(<>
-            <nav className={'my-navbar'}>
-                <div className={'items-container'} onMouseEnter={e => setFocussed('Project')}>
-                    <label className={'item'}>
-                        Project
-                    </label>
-                    <div className={'sub-items-container border'} onMouseLeave={e => setFocussed('')} style={{display: ('Project' === focussed) ? 'block' : 'none'}}>
-                        <label onClick={async() => {
-                            setClicked(`Project.New`.toLowerCase());
-                            navigate('/allProjects');
-                            SetRootFieldAction.new('isLoading', true);
-                            await U.sleep(1);
-                            await ProjectsApi.create('public', 'Unnamed Project');
-                            SetRootFieldAction.new('isLoading', false);
-                        }} className={'sub-item'}>
-                            New
-                        </label>
-                    </div>
-                </div>
+            <nav style={{zIndex: 99}}>
+                <ul className={'new-navbar'}>
+                    {dashboardItems.map(i => <li key={i.name} className={'new-dropdown'}>
+                        <label>{i.name}</label>
+                        <ul className={'new-dropdown-content'}>
+                            {i.subItems.map(si => <li key={si.name} onClick={async() => {
+                                setClicked(`${i.name}.${si.name}`.toLowerCase());
+                                await si.function();
+                            }}>
+                                <label>{si.name}</label>
+                            </li>)}
+                        </ul>
+                    </li>)}
+                </ul>
             </nav>
         </>);
 }
