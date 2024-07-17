@@ -46,8 +46,10 @@ function DataTree(props: DataTreeProps): JSX.Element {
 
     return(<section>
         <div className={'d-flex tree'}>
-            <button className={`d-block my-auto btn btn-${(data.children?.length > 0 && hide) ? 'danger' : 'success'}`} style={{width: '0.4em'}} onClick={setFilter}>
-            </button>
+            {(data.children?.length > 0 && hide) ?
+                <i className={'bi bi-chevron-up cursor-pointer d-block my-auto'} onClick={setFilter} /> :
+                <i className={'bi bi-chevron-down cursor-pointer d-block my-auto'} onClick={setFilter} />
+            }
             <label className={data.className + ' ms-1 text-capitalize'}>
                 <b>{data.className}</b>:
             </label>
@@ -76,9 +78,10 @@ function HtmlTree(props: HtmlTreeProps) {
             const children: (string|ReactNode)[] = (Array.isArray(element.props.children)) ? element.props.children: [element.props.children];
             return(<>
                 <div className={'d-flex'}>
-                    <button className={'btn'} onClick={setFilter}>
-                        {(children.length > 0 && hide) ? <i className={'bi bi-chevron-up'} /> : <i className={'bi bi-chevron-down'} />}
-                    </button>
+                    {(children.length > 0 && hide) ?
+                        <i className={'bi bi-chevron-up cursor-pointer d-block my-auto'} onClick={setFilter} /> :
+                        <i className={'bi bi-chevron-down cursor-pointer d-block my-auto'} onClick={setFilter} />
+                    }
                     <label className={'ms-1 my-auto'}>
                         {element.props['label'] ? element.props['label'] : 'unnamed'}
                     </label>

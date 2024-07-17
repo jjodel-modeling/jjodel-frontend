@@ -51,13 +51,13 @@ function ViewsComponent(props: AllProps) {
             <label style={{fontWeight: (v.id === clicked.viewID ? 'bold' : 'lighter')}} onClick={e => setClicked({viewID: v.id, x: e.clientX, y: e.clientY})}>
                 {v.name}
             </label>
+            {clicked.viewID === v.id && <div className={'v-panel rounded border p-2'} style={{marginTop: '1.3em'}}>
+                <label className={'v-link'} onClick={e => setView(LViewElement.fromPointer(clicked.viewID))}>Open</label>
+                <label className={'v-link'} onClick={e => duplicate(clicked.viewID)}>Duplicate</label>
+                <label className={'v-link'} onClick={e => remove(clicked.viewID)}>Delete</label>
+                <label className={'v-link text-danger'} onClick={e => setClicked({viewID: '', x: 0, y: 0})}>Close</label>
+            </div>}
         </div>)}
-        {clicked.viewID && <div className={'v-panel rounded border p-2'} style={{top: clicked.y - 53}}>
-            <label className={'v-link'} onClick={e => setView(LViewElement.fromPointer(clicked.viewID))}>Open</label>
-            <label className={'v-link'} onClick={e => duplicate(clicked.viewID)}>Duplicate</label>
-            <label className={'v-link'} onClick={e => remove(clicked.viewID)}>Delete</label>
-            <label className={'v-link text-danger'} onClick={e => setClicked({viewID: '', x: 0, y: 0})}>Close</label>
-        </div>}
     </section>);
     else {
         const tabs = [

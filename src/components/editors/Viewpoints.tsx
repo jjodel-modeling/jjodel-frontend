@@ -57,19 +57,21 @@ function ViewpointsComponent(props: AllProps) {
             </label>
         </div>
         {viewpoints.map(v => <div className={'v-container'}>
-            <label style={{fontWeight: (v.id === clicked.viewpointID ? 'bold' : 'lighter')}} onClick={e => setClicked({viewpointID: v.id, x: e.clientX, y: e.clientY})}>
+            <label style={{fontWeight: (v.id === clicked.viewpointID ? 'bold' : 'lighter')}} onClick={e =>
+                setClicked({viewpointID: v.id, x: e.clientX, y: e.clientY})
+            }>
                 {v.name}
                 {project.activeViewpoint.id === v.id && <i className={'bi bi-check-lg text-success ms-2'} />}
                 {v.isExclusiveView && <i className={'bi bi-exclamation-lg text-danger ms-1'} />}
             </label>
+            {clicked.viewpointID === v.id && <div className={'v-panel rounded border p-2'} style={{marginTop: '1.3em'}}>
+                <label className={'v-link'} onClick={e => select(clicked.viewpointID)}>Activate</label>
+                <label className={'v-link'} onClick={e => exclusive(clicked.viewpointID)}>Exclusive</label>
+                <label className={'v-link'} onClick={e => duplicate(clicked.viewpointID)}>Duplicate</label>
+                <label className={'v-link'} onClick={e => remove(clicked.viewpointID)}>Delete</label>
+                <label className={'v-link text-danger'} onClick={e => setClicked({viewpointID: '', x: 0, y: 0})}>Close</label>
+            </div>}
         </div>)}
-        {clicked.viewpointID && <div className={'v-panel rounded border p-2'} style={{top: clicked.y - 43}}>
-            <label className={'v-link'} onClick={e => select(clicked.viewpointID)}>Activate</label>
-            <label className={'v-link'} onClick={e => exclusive(clicked.viewpointID)}>Exclusive</label>
-            <label className={'v-link'} onClick={e => duplicate(clicked.viewpointID)}>Duplicate</label>
-            <label className={'v-link'} onClick={e => remove(clicked.viewpointID)}>Delete</label>
-            <label className={'v-link text-danger'} onClick={e => setClicked({viewpointID: '', x: 0, y: 0})}>Close</label>
-        </div>}
     </section>);
 }
 

@@ -65,8 +65,11 @@ function NavbarComponent(props: AllProps): JSX.Element {
                     </li>)}
                     <div className={'ms-auto d-flex'}>
                         <li className={'input-container mx-2'}>
-                            <b className={'object-name'}>Advanced:</b>
-                            <input onClick={e => SetRootFieldAction.new('advanced', !advanced)} className={'input my-auto'} type={'checkbox'} />
+                            <b className={'object-name text-white'}>Advanced</b>
+                            <input checked={advanced} onClick={e =>
+                                    SetRootFieldAction.new('advanced', !advanced)
+                                } className={'input switch my-auto ms-2'} type={'checkbox'}
+                            />
                         </li>
                         <label onClick={e => SetRootFieldAction.new('debug', !debug)} className={`my-auto py-0 mx-2 cursor-pointer item text-white rounded ${debug ? 'bg-success' : 'bg-danger'}`}>
                             DEBUG

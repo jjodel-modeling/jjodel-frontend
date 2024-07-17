@@ -119,6 +119,14 @@ input[type='checkbox'] { // was .input as class
 input[type='checkbox']:checked { // was .input as class
   background-image: url("../static/svg/toggle-on.svg");
 }
+
+.switch {
+  background-image: url("../static/svg/switch-off.svg") !important;
+}
+.switch:checked {
+  background-image: url("../static/svg/switch-on.svg") !important;
+}
+
 .select {
   width: 50%;
   outline: none;
