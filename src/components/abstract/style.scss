@@ -91,10 +91,7 @@ body > .dragging-layer > div:last-child {
 .dock-tab.dragging {
   opacity: 0.3;
 }
-.dock-tab > div {
-  padding: 4px 14px;
-  outline-color: #108ee9;
-}
+
 .dock-tab:hover {
   color: #349fec;
 }
@@ -649,12 +646,13 @@ body.dock-dragging iframe {
 .dock-mbox .dock-panel-max-btn:focus:before {
   color: #999;
 }
+/*
 .dock-panel.dock-style-place-holder {
   border: none;
 }
 .dock-panel.dock-style-place-holder .dock-bar {
   display: none;
-}
+}*/
 .dock-layout > :not(.dock-fbox) .dock-panel.dock-style-headless {
   border: none;
 }

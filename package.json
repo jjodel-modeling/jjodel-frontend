@@ -118,6 +118,7 @@
   "devDependencies": {
     "@types/jquery": "^3.5.5",
     "@types/js-beautify": "^1.14.3",
+    "@types/lodash": "^4.17.7",
     "dotenv-webpack": "^8.0.1",
     "gh-pages": "^4.0.0",
     "js-beautify": "^1.15.1",

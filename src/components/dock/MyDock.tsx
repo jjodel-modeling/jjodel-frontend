@@ -1,5 +1,5 @@
 import JqxDockingLayout, {IDockingLayoutProps} from "jqwidgets-scripts/jqwidgets-react-tsx/jqxdockinglayout";
-import React, {ReactElement, ReactNode} from "react";
+import React, {PureComponent, ReactElement, ReactNode} from "react";
 import ReactDOM from "react-dom";
 /*import "./jqx.base.css"
 import "./jqx.darkblue.css"*/
@@ -10,6 +10,7 @@ import 'jqwidgets-scripts/jqwidgets/styles/jqx.material-purple.css';
 import $ from "jquery";
 import {Dictionary, DocString, GObject, Log} from "../../joiner";
 import { DockingLayout } from 'smart-webcomponents-react/dockinglayout';
+import {DockLayout, LayoutData} from 'rc-dock';
 import { Slider } from 'smart-webcomponents-react/slider';
 import { MultilineTextBox } from 'smart-webcomponents-react/multilinetextbox';
 class PortalOwnProps{
@@ -157,15 +158,13 @@ export class SmartDock extends React.Component {
                                    // this.dock.loadState(layout);
                                }}
                                style={{backgroundColor: 'rgb('+r+", " +r+", "+r+")"}}
-                    onReady={()=>this.dockReady()} layout={layout} draggable={true}>
+                               onReady={()=>this.dockReady()} layout={layout} draggable={true}>
                 </DockingLayout>
                 <MyPortal container={'#tab1'}><div id={"tab1content"}>tab1 content!</div></MyPortal>
             </div>
         );
     }
 }
-
-
 
 /*
 how to do custom pinned tabs:
@@ -409,7 +408,7 @@ export class JQDock extends React.PureComponent<{}, IDockingLayoutProps> {
         );
     }
 }
-export class MyDock extends SmartDock{}
+export const MyDock = JQDock;
 // export class MyDock extends JQDock{}
 
 

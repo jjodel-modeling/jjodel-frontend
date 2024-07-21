@@ -15,6 +15,8 @@ import {
 } from "../../../joiner";
 import Structure from "./Structure";
 import {FakeStateProps} from '../../../joiner/types';
+import {DockContextType} from "rc-dock/src/DockData";
+
 
 
 
