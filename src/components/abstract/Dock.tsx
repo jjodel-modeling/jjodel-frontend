@@ -24,9 +24,9 @@ function DockComponent(props: AllProps) {
     const ModelsSummary = {id: id(), title: 'Summary', group: 'models', closable: false, content: <Try><ModelsSummaryTab /></Try>};
 
     /* Editors */
-    const structure = {id: id(), title: 'Structure', group: 'editors', closable: false, content: <Try><Info /></Try>};
+    const structure = {id: id(), title: 'Info', group: 'editors', closable: false, content: <Try><Info /></Try>};
     // const metadata = {id: id(), title: 'Metadata', group: 'editors', closable: false, content: <Try><ModelMetaData /></Try>};
-    const tree = {id: id(), title: 'Tree View', group: 'editors', closable: false, content: <Try><Skeleton /></Try>};
+    const tree = {id: id(), title: 'Structure', group: 'editors', closable: false, content: <Try><Skeleton /></Try>};
     const views = {id: id(), title: 'Views', group: 'editors', closable: false, content: <Try><Views /></Try>};
     // const node = {id: id(), title: 'Node', group: 'editors', closable: false, content: <Try><NodeEditor /></Try>};
     const viewpoints = {id: id(), title: 'Perspectives', group: 'editors', closable: false, content: <Try><Viewpoints /></Try>};

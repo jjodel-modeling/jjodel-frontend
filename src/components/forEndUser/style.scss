@@ -33,3 +33,64 @@
   border-color: lightgray;
   padding: 10px;
 }
+
+/* TREE */
+
+.tree-icon  {
+  float: left;
+  font-weight: bold;
+  display: flex;
+  margin: 1px  3px;
+  width: fit-content;
+  border-radius: 2px;
+  border: 1px solid gray;
+  overflow: hidden;
+  font-size: 0.75em;
+}
+
+.tree-icon .type {
+  border-right: 1px solid gray;
+  height: 100%;
+  display: block; margin: auto;
+  padding: 0 3px;
+  color: white;
+  width: 18px;
+  text-align: center;
+}
+
+.tree-icon .name {
+  padding: 0 4px;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.tree-DModel {
+  background-color: #5F0F40;
+}
+.tree-DPackage {
+  background-color: #087E8B;
+}
+.tree-DClass {
+  background-color: #DF1619;
+}
+.tree-DAttribute {
+  background-color: #C5D86D;
+}
+.tree-DReference {
+  background-color: #ABC7D8;
+}
+.tree-DOperation {
+  background-color: #FA8334;
+}
+.tree-DEnumerator {
+  background-color: #F3B700;
+}
+.tree-DEnumLiteral {
+  background-color: #857C8D;
+}
+.tree-DObject {
+  background-color: #C2B2B4;
+}
+.tree-DValue {
+  background-color: #C19AB7;
+}
