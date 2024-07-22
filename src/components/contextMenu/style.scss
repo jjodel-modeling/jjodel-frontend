@@ -3,22 +3,50 @@
   z-index: 1001;
   top: 9%;
   box-shadow: 0 0 2px #C0C0C0;
-  background: whitesmoke;
-  border-radius: 4px;
+  width: 200px;
+  border-radius: 8px;
   border-style: solid;
   border-width: 1px;
-  border-color: lightgray;
+  border-color: #1e1e1e;
   padding: 3px;
+  color: white;
+  background: #1e1e1e;
+  box-shadow: 5px 10px #888888;
+  box-shadow:0px 10px 20px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.8); 
 }
 
 .context-menu > div >.item {
   cursor: pointer;
-  padding: 7px 30px 7px 30px;
+  margin: 0 4px 0 4px;
+  padding: 3px 8px 3px 8px;
   font-size: 12px;
+  font-weight: 200;
+  
+}
+
+.context-menu > div hr.my-1{
+  position: relative;
+  color: #8a8a8a;
+  width: 180px;
+  left: 5px;
+
+}
+
+.context-menu > div >.item div {
+  font-size: 0.9em;
+  font-kerning: none;
+  float: right;
+  padding-top: 2px;
+}
+
+
+.context-menu > div >.item .bi {
+  color: white!important;
 }
 
 .context-menu > div > .item:hover {
-  background-color: #e0e0e0;
+  background-color: #F3B700;
+  border-radius: 4px;
 }
 
 .memorec-overlay {

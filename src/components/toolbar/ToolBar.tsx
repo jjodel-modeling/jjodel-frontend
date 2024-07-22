@@ -274,7 +274,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     console.log("toolbar", {contentarr, separator, content});
 
     return (
-        <div className="toolbar-draggable" ref={htmlref} style={{top: '35px', position:"absolute"}} // refuses to focus without event...
+        <div className="toolbar-draggable" ref={htmlref} style={{top: '35px', position:"absolute", backgroundColor: 'red !important'}} // refuses to focus without event...
              onClick={(e)=>{ console.log("click focus", {htmlref}); setTimeout(()=> {
                  if (htmlref.current) (htmlref.current as any).children[0].focus();
              }, 1)}}>
