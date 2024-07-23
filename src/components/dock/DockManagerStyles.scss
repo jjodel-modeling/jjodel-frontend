@@ -3,6 +3,8 @@
     flex-flow: column;
     flex-grow:1;
 
+    //.dock:hover{overflow: visible;}
+
     .pinnable-strip{
         --pinnable-strip-h: calc(0px + 31px);
         --pinnable-strip-w: calc(0px + 31px);
@@ -13,6 +15,30 @@
         &.empty{
             display: none;
         }
+        .view-editor+.dock-layout{
+            position: relative !important;// rc-dock sets pos:absolute in direct style
+            min-height: 75vh;
+            min-width: 550px;
+        }
+        .view-list-elem{
+            // min-width: 550px; if you want the whole view editor to match single view size
+        }
+
+        .dock-tab {
+            height: calc(10px + var(--pinnable-strip-h)); // it will be overflow hidden but i don't want to have a "hole" in pointer-events:hover when i move to content.
+        }
+        .dock-tabpane{
+            display: none;// original jus had visibility hidden which makes inactive tab take space for pinned tabs:hover
+            &.dock-tabpane-active{
+                display: block;
+            }
+        }
+    .pinnable-strip .dock-content{
+        position: absolute;
+        left: 100%;
+        border: 2px solid red;
+    }
+
 
         &.dock-drop-indicator.empty{
             display: flex;
@@ -52,28 +78,47 @@
             overflow: visible;
         }
     }
-
     transform-style: preserve-3d;
-    &>.pinnable-strip:has(.dock-nav-list:hover, .dock-content-holder:hover){
+    //.dock-nav-list:hover{ background: red; }
+    .pinnable-strip{
+        .dock-content-holder{
+            opacity: 0;
+            min-height: 50px;
+            min-width: 50px;
+            background: whitesmoke;
+            transition: all .3s ease-in;
+            // transition-delay: 0.5s;
+        }
+
         transform-style: preserve-3d;
+
         &>.dock-layout{
             transform-style: preserve-3d;
             &>.dock-box {
-            transform-style: preserve-3d;
+                transform-style: preserve-3d;
                 &>.dock-panel{
                     transform-style: preserve-3d;
                     &>.dock {
                         transform-style: preserve-3d;
                         overflow: visible;
                         &>.dock-content-holder{
-                            transform: translateZ(1px);
+                           // transform: translateZ(1px) scaleY or x(0); put in strip-t and strip-l cases separetely
                         }
                     }
                 }
             }
         }
     }
+
+    .pinnable-strip:has(.dock-nav-list:hover, .dock-content-holder:hover){
+        transform-style: preserve-3d;
+        .dock-content-holder{
+            transition: all .3s ease-out;
+            opacity: 1;
+        }
+    }
 }
+
 .pinnable-strip{
 
     .dock-bar.drag-initiator{
@@ -107,7 +152,17 @@
         pointer-events: all;
         max-width: calc(100vw - var(--pinnable-strip-w) - var(--safetymargin));
         max-height: calc(100vh - var(--navbar-h) - var(--pinnable-strip-h) - var(--safetymargin));
+
         overflow: auto;
+        //outline: 2px solid red;
+        direction:rtl; // puts scrollbar left
+        >*{
+            direction:ltr;
+        }
+
+    }
+    .dock-content{
+        display:block;
     }
 }
 .dock-tab > div {
@@ -115,6 +170,9 @@
     outline-color: #108ee9;
 }
 .pinnable-strip{
+    .dock-content-holder{
+        border: 1px solid var(--content-border);
+    }
     .dock-tab > div {
         padding: 0px;
     }
@@ -135,41 +193,72 @@
     display: none;
 }
 
-.pinnable-strip-t{
+.pinnable-strip-t, .pinnable-strip-b{
     width: 100%;
     height: var(--pinnable-strip-h);
-    .dock-content-holder{
-        top: calc(var(--pinnable-strip-h) - 3px);
-        border: var(--content-border);
+    .dock-content-holder {
         border-top: none;
+        transform: translateZ(1px) scaleY(0);
+        //width: 100vw;
+        // width: calc(100vw - var(--pinnable-strip-w));
+        height: max-content;
+        width: max-content;
+    }
+
+    &:has(.dock-nav-list:hover, .dock-content-holder:hover){
+        .dock-content-holder {
+            transform: translateZ(1px) scaleY(1) !important;
+        }
+    }
+}
+.pinnable-strip-t{
+    .dock-content-holder{
+        transform-origin: top;
+        top: calc(var(--pinnable-strip-h) - 3px);
     }
 }
 .pinnable-strip-b{
-    width: 100%;
-    height: var(--pinnable-strip-h);
     .dock-content-holder{
+        transform-origin: bottom;
         bottom: calc(var(--pinnable-strip-h) - 3px);
-        border: var(--content-border);
-        border-bottom: none;
     }
 }
 
-.pinnable-strip-l{
+.pinnable-strip-l, .pinnable-strip-r{
     width: var(--pinnable-strip-w);
     height: 100%;
+    .dock-content-holder {
+        transform: translateZ(1px) scaleX(0);
+        //height: 100vh;
+        // height: calc(100vh - var(--navbar-h) - var(--pinnable-strip-h));
+        width: max-content;
+        height: max-content;
+    }
+    &:has(.dock-nav-list:hover, .dock-content-holder:hover){
+        .dock-content-holder {
+            transform: translateZ(1px) scaleX(1) !important;
+        }
+    }
+    .dock-nav{
+        transform: translateX(23px) rotate(90deg);
+        // transform: translateX(calc(var(--pinnable-strip-h) - 2px)) rotate(90deg);
+        //transform: translateX(29px) rotate(90deg);
+        transform-origin: top left;
+        width: calc(100vh - var(--navbar-h) - var(--pinnable-strip-h)) !important;
+        height: var(--pinnable-strip-h) !important;
+
+    }
+}
+.pinnable-strip-l{
     .dock-content-holder{
-        left: calc(var(--pinnable-strip-w) - 3px);
-        border: var(--content-border);
-        border-left: none;
+        transform-origin: left;
+        left: calc(var(--pinnable-strip-w) - 2px);
     }
 }
 .pinnable-strip-r{
-    width: var(--pinnable-strip-w);
-    height: 100%;
     .dock-content-holder{
-        right: calc(var(--pinnable-strip-w) - 3px);
-        border: var(--content-border);
-        border-right: none;
+        transform-origin: right;
+        right: calc(var(--pinnable-strip-w) - 2px);
     }
 }
 .pinnable-dock-middle-strip{
@@ -177,6 +266,7 @@
     flex-grow: 1;
     display: flex;
     position: relative;
+    transform-style: preserve-3d;
 }
 .dock-layout.dock-drop-indicator{
     /*background: #88c7f4 !important;
@@ -212,5 +302,53 @@ div.dock-drop-layer{
         top: calc(50% + var(--drop-button-size) * 2);
         &::before{content:'📌'}
         &:hover{background: #88c7f4;  color: white;}
+    }
+}
+
+
+.pinnable-dock-root.gray-style{
+    --hover-color: black;
+    --font-color: #767676;
+    --underline-color: #B2B2B2;
+    --bg-color: #D9D9D9;
+
+    --bs-primary-rgb: var(--font-color); // for project summary left tab
+    .active-on-mouseenter{ // only for pinned tabs, additional pad
+        padding: 0px 1px;
+    }
+    .pinnable-strip{
+        --content-border: #767676;
+    }
+    .dock-content-holder{
+        background: var(--bg-color);
+    }
+    .dock-nav-list{
+        background: var(--bg-color);
+        .dock-tab{
+            background: var(--bg-color);
+            color: var(--font-color); //rgba(0, 0, 0, 0.85);
+            border-bottom: 1px solid var(--underline-color); //#ddd;
+
+            &.dock-tab-active{
+                color: var(--hover-color);
+            }
+        }
+        .dock-tab > div {
+            padding: 8px 8px;
+        }
+        .dock-ink-bar{
+            background-color: var(--hover-color); //#108ee9
+        }
+    }
+
+    .dock-top .dock-bar{
+        background: var(--bg-color);
+        border-bottom: none; //1px solid #f3f3f3
+    }
+    .dock-panel{
+        background: var(--bg-color);
+    }
+    .dock-content .dock-tabpane{
+        background-color: var(--bg-color); // whitesmoke;
     }
 }

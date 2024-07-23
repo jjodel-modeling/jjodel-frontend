@@ -1,5 +1,17 @@
 import React, {Component, PureComponent, ReactElement, ReactNode, useState} from "react";
-import {Dictionary, DocString, GObject, Log, LoggerComponent, RuntimeAccessible, Try, U, windoww} from "../../joiner";
+import {
+    Dictionary,
+    DocString,
+    GObject,
+    Log,
+    LoggerComponent,
+    Point,
+    RuntimeAccessible,
+    Size,
+    Try,
+    U,
+    windoww
+} from "../../joiner";
 import {DockingLayout} from "smart-webcomponents-react/dockinglayout";
 import $ from "jquery";
 import {DockLayout, LayoutProps, PanelData, TabData, TabGroup} from "rc-dock";
@@ -64,10 +76,40 @@ export class TabHeader extends React.Component<TabHeaderProps, TabHeaderState>{
     setAsActiveTab(){
         let strip = this.getTabStrip();
         const tabdata: TabData = strip.dockLayout!.find(this.props.tid+"_pinned") as TabData;
+        if (!this.html) return; // not pinned
         strip.dockLayout!.updateTab(tabdata.id as string, tabdata, true);
-        console.log("setActiveTab", {strip, tabdata, tid: this.props.tid});
+        // if (windoww) return;
+        let tabcontent: HTMLElement = document.getElementById(this.props.tid+"_pinned") as HTMLElement;
+        if (!tabcontent) return Log.eDevv("cannot find pinned tab content", {tid: this.props.tid, tabdata});
+        // let e: HTMLElement = strip.html!.querySelector('.dock-content-holder') as HTMLElement;
+        let csize = Size.of(tabcontent);
+        let tabh: HTMLElement = this.html;
+        let tabsize = Size.of(tabh);
+        //let tabcenter: Point = new Point(tabsize.x + tabsize.w/2, tabsize.y + tabsize.h/2);
+        console.log("setActiveTab", {strip, tabdata, tabcontent, csize, tabh, tabsize});
+        let offset: Point = new Point(tabsize.x + tabsize.w/2 - csize.w/2, tabsize.y + tabsize.h/2 - csize.h/2);
+        let s: string;
+        let tabcontentholder: HTMLElement|null|undefined = tabcontent.parentElement?.parentElement;
+        if (!tabcontentholder?.classList.contains('dock-content-holder'))
+            return Log.exDevv('rc-dock changed structure, need code update or downgrading of rc-dock library.', {tabcontent, tabcontentholder})
+        switch(strip.props.side){
+            default: return;
+            case "t": case "b":
+                s = "clamp(0px, " + offset.x + "px, 100vw)";
+                //s = "clamp(0px, calc(" + tabcenter.x + "px ), 100vw)";
+                console.log("clamp: ", s);
+                tabcontentholder.style.left = s;
+                break;
+            case "l": case "r":
+                s = "clamp(0px, " + offset.y + "px, 100vw)";
+                //s = "clamp(0px, calc(" + tabcenter.y + "px ), 100vw)";
+                console.log("clamp: ", s);
+                tabcontentholder.style.top = s;
+                break;
+        }
     }
 
+    private html: HTMLElement | null = null
     render(): ReactNode {
         const props: TabHeaderProps = this.props;
         let pinned = this.state.pinned;
@@ -81,7 +123,7 @@ export class TabHeader extends React.Component<TabHeaderProps, TabHeaderState>{
         function preventFocusOnOriginDock(e: any): void{
             e.stopPropagation();
         }
-        content = <div className={"active-on-mouseenter"} onMouseDown={preventFocusOnOriginDock} onClick={preventFocusOnOriginDock} onMouseEnter={()=>this.onMouseHoverExpand()} onMouseLeave={()=>this.onMouseLeaveExpand()}>{content}</div>
+        content = <div className={"active-on-mouseenter"} ref={(e) => this.html = e} onMouseDown={preventFocusOnOriginDock} onClick={preventFocusOnOriginDock} onMouseEnter={()=>this.onMouseHoverExpand()} onMouseLeave={()=>this.onMouseLeaveExpand()}>{content}</div>
         return <><MyPortal container={html}>{content}</MyPortal><div className={"moved-content"}>moved</div></>;
     }
 }
@@ -409,12 +451,11 @@ export class PinnableDock extends DockLayout{
     // }
 
     render(): React.ReactNode {
-        return <div className={"pinnable-dock-root"}>
+        return <div className={"pinnable-dock-root gray-style"}>
             <PinnableStrip side={"t"} />
             <div className={"pinnable-dock-middle-strip"}>
                 <PinnableStrip side={"l"} />
-                {super.render
-                ()}
+                {super.render()}
                 <PinnableStrip side={"r"} />
             </div>
             <PinnableStrip side={"b"} />
