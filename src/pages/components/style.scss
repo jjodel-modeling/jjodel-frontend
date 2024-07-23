@@ -27,13 +27,56 @@
 
 /* FOOTER */
 .footer {
+    width: 100%;
     position: absolute;
     display: flex;
     bottom: 0;
-    padding: 0.25em;
-    background: #5F0F40;
+    font-weight: 400;
+    background: #233d4d;
+    color: #e2e2e1;
     width: 100%;
     z-index: 99;
+    border-top: 1px solid #233d4d;
+}
+
+.footer label {
+    border-right: 1px solid #525251;
+    padding: 0.25em 2em 0.25em 2em;
+}
+
+.footer .coordinates {
+    text-align: center;
+    color: #e2e2e1;
+    padding-top: 0.3em;
+    width: 300px!important;
+    border-right: 1px solid #525251;
+    padding-right: 20px;
+    font-weight: 200;
+}
+
+.footer .bi {
+    color: #ed474a;
+    font-size: 1.1em;
+    padding: 0 4px;
+}
+
+.footer .bi-bell, .footer .bi-terminal {
+    color: white;
+    font-size: 1.3em;
+}
+
+.footer .widgetbar {
+    position: absolute;
+    bottom: 0;
+    right: 2em;
+    font-size: 1.1em;
+    padding-bottom: 0em;
+
+}
+
+.footer .bi:hover {
+    color: #f3b700;
+    cursor: pointer;
 }
 
 /* NAVBAR */

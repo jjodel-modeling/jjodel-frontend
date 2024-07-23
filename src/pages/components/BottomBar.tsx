@@ -7,8 +7,16 @@ import {connect} from "react-redux";
 function BottomBarComponent(props: AllProps): JSX.Element {
     const {node} = props;
     return(<footer className={'footer'}>
-        <label className={'me-3 text-white'}> JJodel</label>
-        <div className={'text-white'} hidden={!node}>(x: {node?.x}, y: {node?.y})</div>
+        <label className={'me-3'}>
+            Made with <i className="bi bi-heart-fill"></i> in the swen group
+        </label>
+        <div className={'coordinates'} hidden={!node}>
+            ({node?.x},{node?.y},{node?.zIndex}) w:{node?.w} h:{node?.h} 
+        </div>
+        <div className={'widgetbar float-end'}>
+            <i className="bi bi-terminal"></i>
+            <i className="bi bi-bell"></i>
+        </div>
     </footer>)
 }
 interface OwnProps {}

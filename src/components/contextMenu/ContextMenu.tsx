@@ -118,9 +118,9 @@ function ContextMenuComponent(props: AllProps) {
             className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}}></i></div>);
         jsxList.push(<hr className={'my-1'} />);
         jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={'col item'}>Up<div><i
-        className='bi bi-command'></i> <i className="bi bi-arrow-up"></i></div></div>);
+        className='bi bi-command'></i><i className="bi bi-arrow-up"></i></div></div>);
         jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={'col item'}>Down<div><i
-        className='bi bi-command'></i> <i className="bi bi-arrow-down"></i></div></div>);
+        className='bi bi-command'></i><i className="bi bi-arrow-down"></i></div></div>);
         jsxList.push(<hr className={'my-1'} />);
         /* LOCK-UNLOCK */
         jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>Lock/Unlock<div> <i
