@@ -8,6 +8,7 @@ import {Info, Skeleton, Viewpoints, Views, Logger, Console} from "../../componen
 import DockManager from './DockManager';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
+import NodeEditor from '../rightbar/styleEditor/StyleEditor';
 
 
 const tabidprefix = "DockComponent_rightbar_";
@@ -29,13 +30,13 @@ function DockComponent(props: AllProps) {
     const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}>Summary</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
 
     /* Editors */
-    const test = {id: id(), title: 'Test', group: 'editors', closable: false, content: <TestTab />};
+    // const test = {id: id(), title: 'Test', group: 'editors', closable: false, content: <TestTab />};
     const structure = {id: id(), title: <TabHeader tid={tid()}>Info</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Info /></TabContent>};
     //const metadata = {id: id(), title: <TabHeader tid={tid()}>Metadata</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><ModelMetaData /></TabContent>};
     const tree = {id: id(), title: <TabHeader tid={tid()}>Structure</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Skeleton /></TabContent>};
     const views = {id: id(), title: <TabHeader tid={tid()}>Views</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Views /></TabContent>};
     const node = {id: id(), title: <TabHeader tid={tid()}>Node</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NodeEditor /></TabContent>};
-    const viewpoints = {id: id(), title: <TabHeader tid={tid()}>Perspectives</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Viewpoints validation={false} /></TabContent>};
+    const viewpoints = {id: id(), title: <TabHeader tid={tid()}>Perspectives</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Viewpoints /*validation={false} *//></TabContent>};
     //const validation = {id: id(), title: <TabHeader tid={tid()}>Validation</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><ViewpointEditor validation={true} /></TabContent>};
     //const collaborators = {id: id(), title: <TabHeader tid={tid()}>Collaborators</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><CollaboratorsEditor /></TabContent>};
     //const mqtt = {id: id(), title: <TabHeader tid={tid()}>Mqtt</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MqttEditor /></TabContent>};
