@@ -44,24 +44,44 @@ function DataTree(props: DataTreeProps): JSX.Element {
         }, '', false);
     }
 
-    return(<div>
+    let icon = 'box';
+    switch(data.className) {
+        case 'DModel': icon = 'diagram-2'; break;
+        case 'DPackage': icon = 'boxes'; break;
+        case 'DClass': icon = 'folder'; break;
+        case 'DAttribute': icon = 'stop'; break;
+        case 'DReference': icon = 'stop-fill'; break; //beliezer2 // folder-symlink
+        case 'DOperation': icon = 'gear-wide'; break;
+        case 'DObject': icon = ''; break;
+        case 'DValue': icon = ''; break;
+    }
+
+    return(<section>
         <div className={'d-flex tree'}>
-            <button className={'btn'} onClick={setFilter}>
-                {(data.children?.length > 0 && hide) ? <i className={'bi bi-chevron-up'} /> : <i className={'bi bi-chevron-down'} />}
-            </button>
-            <label className={data.className + ' ms-1 text-capitalize my-auto'}>
-                <b>{data.className}</b>:
-            </label>
-            <label tabIndex={-1} role={'button'} onClick={click} className={'name ms-1 my-auto'}>
+            {data.children?.length >= 1 ? ((data.children?.length && hide) ?
+                <i style={{fontSize: '0.7em', color: 'gray'}} className={'bi bi-chevron-right cursor-pointer d-block my-auto'} onClick={setFilter} /> :
+                <i style={{fontSize: '0.7em', color: 'gray'}} className={'bi bi-chevron-down cursor-pointer d-block my-auto'} onClick={setFilter} />
+            ) :
+                <i style={{fontSize: '0.75em', color: 'whitesmoke'}} className={'bi bi-caret-right-fill d-block my-auto'} />
+            }
+
+            <div className={'tree-icon'}>
+                <div className={`type tree-${data.className}`}>{data.className.slice(1, 2)}</div>
+                <div className={'name'} onClick={click}>{(data.name) ? data.name : 'unnamed'}</div>
+            </div>
+            {/*<label className={data.className + ' ms-1 text-capitalize'}>
+                {data.className}:
+            </label>*/}
+            {/*<label tabIndex={-1} role={'button'} onClick={click} className={'name ms-1 d-block my-auto'} style={{fontSize: '0.75em'}}>
                 {(data.name) ? data.name : 'unnamed'}
-            </label>
+            </label>*/}
         </div>
         {!hide && Array.isArray(data.children) && data.children?.map((child: LModelElement) => {
-            return(<div className={'ms-2'}>
+            return(<div style={{marginLeft: '1em'}}>
                 <Tree data={child} depth={depth} />
             </div>);
         })}
-    </div>);
+    </section>);
 }
 
 interface HtmlTreeProps {data: GObject, hide: boolean, depth: string[], setFilter: () => void}
@@ -77,9 +97,10 @@ function HtmlTree(props: HtmlTreeProps) {
             const children: (string|ReactNode)[] = (Array.isArray(element.props.children)) ? element.props.children: [element.props.children];
             return(<>
                 <div className={'d-flex'}>
-                    <button className={'btn'} onClick={setFilter}>
-                        {(children.length > 0 && hide) ? <i className={'bi bi-chevron-up'} /> : <i className={'bi bi-chevron-down'} />}
-                    </button>
+                    {(children.length > 0 && hide) ?
+                        <i className={'bi bi-chevron-up cursor-pointer d-block my-auto'} onClick={setFilter} /> :
+                        <i className={'bi bi-chevron-down cursor-pointer d-block my-auto'} onClick={setFilter} />
+                    }
                     <label className={'ms-1 my-auto'}>
                         {element.props['label'] ? element.props['label'] : 'unnamed'}
                     </label>

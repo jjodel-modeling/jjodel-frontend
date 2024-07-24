@@ -20,6 +20,7 @@ const clicksRequired = 2;
 const timeframe = 2000;
 function NavbarComponent(props: AllProps) {
     const debug = props.debug;
+    const advanced = props.advanced;
     const user = props.user;
     const project = user.project;
     const navigate = useNavigate();
@@ -104,7 +105,9 @@ function NavbarComponent(props: AllProps) {
                     </li>
                 </ul>
             </li>
-
+            <button onClick={e => SetRootFieldAction.new('advanced', !advanced)}>
+                {advanced ? 'advanced' : 'basic'}
+            </button>
             <ul className={'navbar-nav ms-auto'}>
             </ul>
             {user.project && <li className={'nav-item'}>
@@ -123,6 +126,7 @@ interface OwnProps {}
 interface StateProps {
     debug: boolean;
     user: LUser;
+    advanced: boolean;
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -132,6 +136,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     ret.debug = state.debug;
     ret.user = LUser.fromPointer(DUser.current);
+    ret.advanced = state.advanced;
     return ret;
 }
 

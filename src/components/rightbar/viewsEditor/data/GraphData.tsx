@@ -4,7 +4,7 @@ import {
     DViewElement,
     GenericInput,
     GObject,
-    Info,
+    Info, Input,
     LPointerTargetable,
     LViewElement,
     Pointer,
@@ -18,9 +18,13 @@ function GraphDataComponent(props: AllProps) {
     const readOnly = props.readonly;
     let empty = true;
     // if (empty) return null;
-    return(<section className={'p-3'}>
-        {<h5>Graph</h5>}
-        No options for Graphs so far...
+    return(<section>
+        <h5>Graph</h5>
+        <div className={'px-2'}>
+            <div className={'input-container'}>
+                <b className={'me-2'}>No options for Graph so far...</b>
+            </div>
+        </div>
     </section>);
 }
 

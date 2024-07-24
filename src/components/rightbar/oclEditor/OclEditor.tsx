@@ -16,14 +16,14 @@ function OclEditorComponent(props: AllProps) {
     }
     const blur = () => { view.oclCondition = ocl } // confirm in redux state for final state
 
-    return <>
+    return(<>
         <div style={{...(props.style || {})}} className={'d-flex'}>
             <span className={'cursor-pointer my-auto'} tabIndex={-1} onClick={e => setShow(!show)}>
                 {show ? <i className={'bi bi-eye-fill'} /> : <i className={'bi bi-eye-slash-fill'} /> }
             </span>
             <label className={'ms-2 mb-1 my-auto'}>
-                OCL Editor (OCL engine by Stephan Köninger,
-                <a className={'ms-1'} target={'_blank'} href={'https://ocl.stekoe.de/#examples'}>Supported instructions</a>)
+                OCL Editor {/*(OCL engine by Stephan Köninger,
+                <a className={'ms-1'} target={'_blank'} href={'https://ocl.stekoe.de/#examples'}>Supported instructions</a>)*/}
             </label>
         </div>
 
@@ -34,7 +34,7 @@ function OclEditorComponent(props: AllProps) {
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                     defaultLanguage={'js'} value={view.oclCondition} />
         </div>}
-    </>;
+    </>);
 }
 interface OwnProps {
     readonly?: boolean;

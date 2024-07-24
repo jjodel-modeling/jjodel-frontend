@@ -55,53 +55,34 @@ function SelectComponent(props: AllProps) {
     delete otherprops.primitives;
     delete otherprops.returns;
     delete otherprops.hidden;
-    return(<label ref={props.ref as any} className={'d-flex p-1'} {...otherprops}>
-        {(label || jsxLabel) && <label className={'my-auto'}
-                                       onMouseEnter={e => setShowTooltip(true)}
-                                       onMouseLeave={e => setShowTooltip(false)}>
-            {label}
-            {jsxLabel}
-        </label>}
-        {(tooltip && showTooltip) && <div className={'my-tooltip'}>
-            <b className={'text-center text-capitalize'}>{field}</b>
-            <br />
-            <label>{tooltip}</label>
-        </div>}
-
-        <select {...otherprops} disabled={readOnly}
+    return(<select {...otherprops} disabled={readOnly}
             className={props.inputClassName || css}
             style={props.inputStyle}
             value={value}
             onChange={SelectChange}>
 
-            {(returns && returns.length > 0) && <optgroup label={'Defaults'}>
-                {returns.map((returnType, i) => {
-                    return <option key={i} value={returnType.id}>{returnType.name}</option>
-                })}
-            </optgroup>}
-            {(primitives && primitives.length) && <optgroup label={'Primitives'}>
-                {primitives.map((primitive, i) => {
-                   return <option key={i} value={primitive.id}>{primitive.name}</option>
-                })}
-            </optgroup>}
-            {(enumerators && enumerators.length > 0) && <optgroup label={'Enumerators'}>
-                {enumerators.map((enumerator, i) => {
-                    return <option key={i} value={enumerator.id}>{enumerator.name}</option>
-                })}
-            </optgroup>}
-            {(classes && classes.length > 0) && <optgroup label={'Classes'}>
-                {classes.map((classifier, i) => {
-                    return <option key={i} value={classifier.id}>{classifier.name}</option>
-                })}
-            </optgroup>}
-            {props.options}
-        </select>
-        {(props.postLabel) &&
-            <label className={'my-auto'} onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)}>
-                {props.postLabel}
-            </label>
-        }
-    </label>);
+        {(returns && returns.length > 0) && <optgroup label={'Defaults'}>
+            {returns.map((returnType, i) => {
+                return <option key={i} value={returnType.id}>{returnType.name}</option>
+            })}
+        </optgroup>}
+        {(primitives && primitives.length) && <optgroup label={'Primitives'}>
+            {primitives.map((primitive, i) => {
+               return <option key={i} value={primitive.id}>{primitive.name}</option>
+            })}
+        </optgroup>}
+        {(enumerators && enumerators.length > 0) && <optgroup label={'Enumerators'}>
+            {enumerators.map((enumerator, i) => {
+                return <option key={i} value={enumerator.id}>{enumerator.name}</option>
+            })}
+        </optgroup>}
+        {(classes && classes.length > 0) && <optgroup label={'Classes'}>
+            {classes.map((classifier, i) => {
+                return <option key={i} value={classifier.id}>{classifier.name}</option>
+            })}
+        </optgroup>}
+        {props.options}
+    </select>);
 }
 SelectComponent.cname = 'SelectComponent';
 export interface SelectOwnProps {

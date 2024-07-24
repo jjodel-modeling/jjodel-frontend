@@ -9,7 +9,11 @@ body {
         background-color: whitesmoke;
         overflow: hidden;
     }
-    font-family: Lato, 'Helvetica Neue', Arial,Helvetica, sans-serif !important;
+    // font-family: Lato, 'Helvetica Neue', Arial,Helvetica, sans-serif !important;
+    font-family: 'Inter Tight', sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
     font-size: small;
     #root{
         position: fixed; // without this, it can scroll
@@ -49,3 +53,6 @@ body {
     border-color: #e0e0e0 !important;
     box-shadow: none;
 }*/
+html {
+    font-size: 0.85em;
+}

@@ -9,23 +9,23 @@ import 'jqwidgets-scripts/jqwidgets/styles/jqx.base.css';
 import 'jqwidgets-scripts/jqwidgets/styles/jqx.material-purple.css';
 import $ from "jquery";
 import {Dictionary, DocString, GObject, Log} from "../../joiner";
-import { DockingLayout } from 'smart-webcomponents-react/dockinglayout';
-import {DockLayout, LayoutData} from 'rc-dock';
-import { Slider } from 'smart-webcomponents-react/slider';
-import { MultilineTextBox } from 'smart-webcomponents-react/multilinetextbox';
+import {DockingLayout} from 'smart-webcomponents-react/dockinglayout';
+
 class PortalOwnProps{
     children!: ReactNode;
     container!: string | Element;
 }
 
-export class MyPortal extends React.Component<PortalOwnProps>{
-    constructor(props: PortalOwnProps) {
-        super(props);
-    }
+export class MyPortal extends React.Component<PortalOwnProps> {
     container: Element | null = null;
     maxRetries: number = 10;
     retries: number = 0;
-    render(){
+
+    constructor(props: PortalOwnProps) {
+        super(props);
+    }
+
+    render() {
         if (!this.container) {
             if (!this.props.container) return <div>Error: Portal container is {this.props.container}</div>;
             if (typeof this.props.container === 'object') this.container = this.props.container; else
@@ -33,7 +33,7 @@ export class MyPortal extends React.Component<PortalOwnProps>{
         }
         if (!this.container) {
             if (this.retries++ < this.maxRetries) this.forceUpdate();
-            console.log("MyPortal retry getting container", {thiss:this, props: this.props});
+            console.log('MyPortal retry getting container', {thiss: this, props: this.props});
             return this.props.children;
         }
         this.retries = 0;
@@ -89,13 +89,13 @@ const defaultLayout = [{
         }
     ]
 }];
-
+/*
 export class SmartDock extends React.Component {
     public layout: GObject;
     constructor(props: any) {
         super(props);
-        let layoutstr = localStorage.getItem('smartDockingLayoutdocking-smart-1');
-        let layout: GObject | null = layoutstr ? JSON.parse(layoutstr) : null;
+        let layoutString = localStorage.getItem('smartDockingLayoutdocking-smart-1') || '';
+        let layout: GObject | null = layoutString ? JSON.parse(layoutString) : null;
         if (!layout) {
             layout = defaultLayout;
         }
@@ -108,14 +108,14 @@ export class SmartDock extends React.Component {
     dockReady() { this.afterUpdate(); }
     componentDidUpdate(prevProps: Readonly<{}>, prevState: Readonly<{}>, snapshot?: any) { this.afterUpdate(); }
 
-    savehtmlmap: Dictionary<DocString<"id">, NodeListOf<ChildNode>> = {}
+    saveHtmlMap: Dictionary<DocString<'id'>, NodeListOf<ChildNode>> = {}
     beforeUpdate(){
         if (!this.html) return;
-        let $tabs = $(this.html).find("smart-tab-item.smart-element.smart-tab-item");
+        let $tabs = $(this.html).find('smart-tab-item.smart-element.smart-tab-item');
         let tab: HTMLElement;
         for (tab of $tabs){
-            if (!tab.id) { Log.eDevv("tabs must have id's", {tab}); }
-            this.savehtmlmap[tab.id] = tab.childNodes;
+            if (!tab.id) { Log.eDevv('tabs must have id\'s', {tab}); }
+            this.saveHtmlMap[tab.id] = tab.childNodes;
         }
     }
     afterUpdate(){
@@ -124,7 +124,7 @@ export class SmartDock extends React.Component {
             this.forceUpdate();
             // dock failed to load from localStorage, i'm forcing rerender.
         }
-        (window as any).debugafterupdate = ()=> {
+        (window as any).debugAfterUpdate = () => {
             this.forceUpdate();
         }
         if (window) return; // weirdly it works also without this?
@@ -133,10 +133,10 @@ export class SmartDock extends React.Component {
         if (!this.html) return;
         // let $html = $(this.html);
         let id: string;
-        for (id in this.savehtmlmap){
+        for (id in this.saveHtmlMap){
             let elem = document.getElementById(id);
             if (!elem) { continue; }
-            for (let c of this.savehtmlmap[id]) {
+            for (let c of this.saveHtmlMap[id]) {
                 elem.append(c);
             }
         }
@@ -149,15 +149,15 @@ export class SmartDock extends React.Component {
         let r = (random*255).toFixed(0);
         this.beforeUpdate();
         return (
-            <div onMouseEnter={()=>this.forceUpdate()} ref={(e)=>this.html = e}>
+            <div onMouseEnter={() => this.forceUpdate()} ref={e => this.html = e}>
                 <h1>{r}</h1>
-                <DockingLayout id={"docking-smart-1"} autoSaveState={true} autoLoadState={true}
+                <DockingLayout id={'docking-smart-1'} autoSaveState={true} autoLoadState={true}
                                ref={(e)=> {
                                    this.dock = e;
                                    if (!this.dock) return; //
                                    // this.dock.loadState(layout);
                                }}
-                               style={{backgroundColor: 'rgb('+r+", " +r+", "+r+")"}}
+                               style={{backgroundColor: `rgb(${r}, ${r}, ${r})`}}
                                onReady={()=>this.dockReady()} layout={layout} draggable={true}>
                 </DockingLayout>
                 <MyPortal container={'#tab1'}><div id={"tab1content"}>tab1 content!</div></MyPortal>
@@ -165,7 +165,7 @@ export class SmartDock extends React.Component {
         );
     }
 }
-
+*/
 /*
 how to do custom pinned tabs:
 
