@@ -7,7 +7,7 @@ import {
     Info,
     LPointerTargetable,
     LViewElement,
-    Pointer
+    Pointer, Select
 } from '../../../../joiner';
 import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
@@ -25,13 +25,18 @@ function EdgeDataComponent(props: AllProps) {
         let key: string = fullKey.substring(prefixLength);
         if (info.hidden || info.obsolete || info.todo) continue;
         if (!info.isEdge) continue;
-        rows.push(<GenericInput rootClassName={'mx-3 mt-1 d-flex'} className={'d-flex'} data={view}
-                                field={key as any} tooltip={true} info={info} disabled={readOnly} />);
+        rows.push(<div className={'input-container'}>
+            <b className={'me-2'}>{key[0].toUpperCase() + key.substring(1)}:</b>
+            <GenericInput rootClassName={'mx-3 mt-1 d-flex'} className={'d-flex'} data={view}
+                field={key as any} tooltip={true} info={info} disabled={readOnly} />
+        </div>);
     }
 
-    return(<section className={'p-3'}>
+    return(<section>
         <h5>Edge</h5>
-        {rows}
+        <div className={'px-2'}>
+            {rows}
+        </div>
     </section>);
 }
 

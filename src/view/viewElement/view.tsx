@@ -265,13 +265,10 @@ export class DViewElement extends DPointerTargetable {
     static newDefault(forData?: DNamedElement): DViewElement{
         const jsx = `<div className={'root'}>
     <div className={'header'}>
-        <Input
-            placeholder={"?"}
-            autosize={"true"}
-            hidden={true}
-            data={data}
-            field={"name"}
-        />
+        <div className={'input-container mx-2'}>
+            <b className={'object-name'}>Name:</b>
+            <Input data={data} field={'name'} hidden={true} />
+        </div>
     </div>
     <div className={'body'}>To add information here,<br/> edit the view<br/><i>"{view.name}"</i></div>
 </div>`;

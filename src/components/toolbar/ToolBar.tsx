@@ -274,7 +274,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     console.log("toolbar", {contentarr, separator, content});
 
     return (
-        <div className="toolbar-draggable" ref={htmlref} style={{top: '35px', position:"absolute"}} // refuses to focus without event...
+        <div className="toolbar-draggable" ref={htmlref} style={{top: '35px', position:"absolute", backgroundColor: 'red !important'}} // refuses to focus without event...
              onClick={(e)=>{ console.log("click focus", {htmlref}); setTimeout(()=> {
                  if (htmlref.current) (htmlref.current as any).children[0].focus();
              }, 1)}}>
@@ -283,7 +283,6 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
                 </div>
 
                 <i className={"content pin bi bi-pin-angle"+(pinned ? "-fill" : '')} onClick={()=> setPinned(!pinned) } />
-                <div className={"preview toolbar-section-label my-auto mx-1"}>Add</div>
                 <div className={"content inline"}>{content}</div>
             </div>
         </div>);

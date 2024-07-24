@@ -12,7 +12,7 @@
 .ui-icon, .ui-widget-content .ui-icon { background-image: none !important; }
 .dock-content .dock-tabpane { background-color: whitesmoke; }
 .btn-white { background-color: whitesmoke; color: #2e2f34; }
-.input { width: 50%; outline: none; font-size: 0.9rem; appearance: none; height: min-content;
+.input { width: 70%; outline: none; font-size: 0.9rem; appearance: none; height: min-content;
   border-radius: $radius; border: 1px solid $border-color; }
 .input:focus { border: 1px dashed $border-color; }
 .input[type="checkbox"]:focus, .input[type="radio"]:focus { border: none; }
@@ -111,14 +111,22 @@ input[type='checkbox'] { // was .input as class
   background-repeat: no-repeat; background-size: cover;
   width: min-content;
   cursor: pointer;
-  padding: 0.88em; // above this, the total height become bigger than a char because of some input native stylings
-  scale: 1.2;
+  padding: 0.9em; // above this, the total height become bigger than a char because of some input native stylings
+  scale: 0.9;
   background-color: transparent;
   border: none;
 }
 input[type='checkbox']:checked { // was .input as class
   background-image: url("../static/svg/toggle-on.svg");
 }
+
+.switch {
+  background-image: url("../static/svg/switch-off.svg") !important;
+}
+.switch:checked {
+  background-image: url("../static/svg/switch-on.svg") !important;
+}
+
 .select {
   width: 50%;
   outline: none;
@@ -188,7 +196,8 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
 }
 
 .monaco-editor-wrapper {
-  border: 1px solid var(--border-color-1);
+  margin: 5px;
+  background: white;
   border-radius: 4px;
 }
 

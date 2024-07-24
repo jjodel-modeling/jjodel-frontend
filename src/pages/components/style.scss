@@ -1,0 +1,165 @@
+/* EDITORS */
+.editors {
+    position: absolute;
+    right: 0;
+    height: 100%;
+    width: 20em;
+    top: 2.35em;
+    padding-left: 5px;
+    left: revert !important;
+}
+
+.editor-button {
+    padding: 0.5em;
+    border-radius: 999px 0 0 999px;
+    width: 100%;
+    margin-top: 0.25em;
+    cursor: pointer;
+}
+
+.editor-container {
+    border-radius: 5px 0 0 5px;
+    height: 100%;
+    padding: 0.5em;
+    background: #eee;
+    width: 100%;
+}
+
+/* FOOTER */
+.footer {
+    width: 100%;
+    position: absolute;
+    display: flex;
+    bottom: 0;
+    font-weight: 400;
+    background: #233d4d;
+    color: #e2e2e1;
+    width: 100%;
+    z-index: 99;
+    border-top: 1px solid #233d4d;
+}
+
+.footer label {
+    border-right: 1px solid #525251;
+    padding: 0.25em 2em 0.25em 2em;
+}
+
+.footer .coordinates {
+    text-align: center;
+    color: #e2e2e1;
+    padding-top: 0.3em;
+    width: 300px!important;
+    border-right: 1px solid #525251;
+    padding-right: 20px;
+    font-weight: 200;
+}
+
+.footer .bi {
+    color: #ed474a;
+    font-size: 1.1em;
+    padding: 0 4px;
+    /* yesy */
+}
+
+.footer .bi-bell, .footer .bi-terminal {
+    color: white;
+    font-size: 1.3em;
+}
+
+.footer .widgetbar {
+    position: absolute;
+    bottom: 0;
+    right: 2em;
+    font-size: 1.1em;
+    padding-bottom: 0em;
+
+}
+
+.footer .bi:hover {
+    color: #f3b700;
+    cursor: pointer;
+}
+
+/* NAVBAR */
+.my-navbar {
+    width: 100%;
+    padding: 0.3em;
+    background: #5F0F40;
+    display: flex;
+    z-index: 99;
+}
+.my-navbar > .items-container > .item {
+    color: white;
+    cursor: pointer;
+    padding: 0 0.5em;
+}
+.my-navbar > .items-container > .item:hover {
+    text-decoration: underline;
+    overflow: visible;
+}
+.my-navbar > .items-container > .sub-items-container {
+    top: 1.8em;
+    background: white;
+    padding: 0.3em;
+    position: absolute;
+    z-index: 999;
+}
+.my-navbar > .items-container > .sub-items-container > .sub-item {
+    cursor: pointer;
+    padding: 0 0.3em;
+    display: block;
+}
+.my-navbar > .items-container > .sub-items-container > .sub-item:hover {
+    text-decoration: underline;
+}
+
+/* NEW NAVBAR */
+.new-navbar {
+    list-style-type: none;
+    background-color: #5F0F40;
+    overflow: hidden;
+    display: flex;
+    padding-left: 0.1em;
+}
+
+.new-navbar > li {
+    position: relative;
+    cursor: pointer;
+}
+
+/* Navbar links styling */
+.new-navbar label {
+    display: block;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    padding: 0.5em;
+}
+
+.new-navbar label:hover {
+    text-decoration: underline;
+}
+
+/* Dropdown content */
+.new-dropdown-content {
+    margin-top: 0.1em;
+    display: none;
+    position: fixed;
+    background-color: #5F0F40;
+    min-width: 160px;
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+    list-style-type: none;
+}
+
+.new-dropdown-content li label {
+    padding: 0.5em;
+    text-decoration: none;
+    display: block;
+    text-align: left;
+    cursor: pointer;
+}
+
+/* Show the dropdown menu on hover */
+.new-dropdown:hover .new-dropdown-content {
+    display: block;
+}

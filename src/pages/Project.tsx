@@ -15,11 +15,11 @@ import {
 } from '../joiner';
 import {FakeStateProps} from '../joiner/types';
 import Dock from '../components/abstract/Dock';
-import useQuery from "../hooks/useQuery";
-import {ProjectsApi} from "../api/persistance";
-import Navbar from "../components/navbar/Navbar";
-import {SaveManager} from "../components/topbar/SaveManager";
-import Loader from "../components/loader/Loader";
+import useQuery from '../hooks/useQuery';
+import {ProjectsApi} from '../api/persistance';
+import {SaveManager} from '../components/topbar/SaveManager';
+import Loader from '../components/loader/Loader';
+import {Navbar} from "./components";
 import {CSS_Units} from "../view/viewElement/view";
 
 

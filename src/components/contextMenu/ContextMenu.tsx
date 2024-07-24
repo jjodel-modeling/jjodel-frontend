@@ -90,7 +90,7 @@ function ContextMenuComponent(props: AllProps) {
     }
 
     if(display) {
-        jsxList.push(<div className={'mt-1 col text-center'}><b>{data.className}</b></div>);
+        jsxList.push(<div className={'mt-1 col'} style={{paddingLeft:'12px' }}>{data.className}: <i>{data.name}</i></div>);
         jsxList.push(<hr className={'my-1'} />);
 
         if(data.className === 'DObject') {
@@ -98,31 +98,55 @@ function ContextMenuComponent(props: AllProps) {
         }
 
         /* Memorec */
-        if(data.className === 'DClass')
+        if(data.className === 'DClass') {
             jsxList.push(<div onClick={structuralFeature} className={'col item'}>AI Suggest <i
-                className='bi bi-arrow-right-short'></i></div>);
-        if(data.className === 'DPackage')
-            jsxList.push(<div onClick={classifier} className={'col item'}>
-                AI Suggest
-                <i className={'ms-1 bi bi-arrow-right'}></i>
-            </div>);
+                className='bi bi-chevron-right' style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}}></i></div>);
+            jsxList.push(<hr className={'my-1'} />);
+        }
+        if(data.className === 'DPackage') {
+            jsxList.push(<div onClick={classifier} className={'col item'}>AI Suggest<i 
+                className={'ms-1 bi bi-chevron-right'} style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}}></i></div>);
+            jsxList.push(<hr className={'my-1'} />);
+        }
+
         jsxList.push(<div onClick={() => {
             close();
             SetRootFieldAction.new(`selected.${DUser.current}`, '', '', false);
         }} className={'col item'}>Deselect</div>);
-        jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={'col item'}>Up</div>);
-        jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={'col item'}>Down</div>);
-        jsxList.push(<div onClick={async () => {close(); await addView();}} className={'col item'}>Add View</div>);
-        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>Delete</div>);
+        jsxList.push(<hr className={'my-1'} />);
+        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>Delete<i
+            className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}}></i></div>);
+        jsxList.push(<hr className={'my-1'} />);
+        jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={'col item'}>Up<div><i
+        className='bi bi-command'></i><i className="bi bi-arrow-up"></i></div></div>);
+        jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={'col item'}>Down<div><i
+        className='bi bi-command'></i><i className="bi bi-arrow-down"></i></div></div>);
+        jsxList.push(<hr className={'my-1'} />);
+        /* LOCK-UNLOCK */
+        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>Lock/Unlock<div> <i
+            className='bi bi-command'></i> L</div></div>);
+        /* UNLOCK ALL ELEMENTS */
+        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>Unlock all elements<div><i className="bi bi-alt"></i> <i
+            className='bi bi-command'></i> L</div></div>);
+
+        jsxList.push(<hr className={'my-1'} />);
+        
         switch (data.className) {
             case 'DValue': if ((data as any as LValue).instanceof) jsxList.pop(); break;
             case 'DClass':
                 jsxList.push(<div onClick={() => {
                     close();
                     SetRootFieldAction.new('isEdgePending', {user: user.id, source: data.id});
-                }} className={'col item'}>Extend</div>);
+                }} className={'col item'}>Extend<div><i
+                className='bi bi-command'></i> E</div></div>);
+                jsxList.push(<hr className={'my-1'} />);
                 break;
         }
+
+        /* ADD VIEW */ 
+        jsxList.push(<div onClick={async () => {close(); await addView();}} className={'col item'}>Add View<div><i
+        className='bi bi-alt'></i> <i
+        className='bi bi-command'></i> A</div></div>);
     }
 
     return(<>
