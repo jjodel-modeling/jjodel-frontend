@@ -14,7 +14,7 @@ import {
 } from "../../joiner";
 import {DockingLayout} from "smart-webcomponents-react/dockinglayout";
 import $ from "jquery";
-import {DockLayout, LayoutProps, PanelData, TabData, TabGroup} from "rc-dock";
+import {BoxData, DockLayout, LayoutProps, PanelData, TabData, TabGroup} from "rc-dock";
 import {MyPortal} from "./MyDock";
 import "./DockManagerStyles.scss";
 import {LayoutData} from "rc-dock/src/DockData";
@@ -91,7 +91,20 @@ export class TabHeader extends React.Component<TabHeaderProps, TabHeaderState>{
         let s: string;
         let tabcontentholder: HTMLElement|null|undefined = tabcontent.parentElement?.parentElement;
         if (!tabcontentholder?.classList.contains('dock-content-holder'))
-            return Log.exDevv('rc-dock changed structure, need code update or downgrading of rc-dock library.', {tabcontent, tabcontentholder})
+            return Log.exDevv('rc-dock changed structure, need code update or downgrading of rc-dock library.', {tabcontent, tabcontentholder});
+        let $tabholder = $(tabcontentholder);
+        if (!$tabholder.data("uiResizable")) {
+            let handles: string;
+            switch(strip.props.side){
+                default: handles = ""; break;
+                case "t": handles = "s, se, sw"; break;
+                case "b": handles = "n, ne, nw"; break;
+                case "l": handles = "e, se, ne"; break;
+                case "r": handles = "w, sw, nw"; break;
+            }
+            $tabholder.resizable({handles});
+            tabcontentholder.tabIndex = 0;
+        }
         switch(strip.props.side){
             default: return;
             case "t": case "b":
@@ -115,13 +128,20 @@ export class TabHeader extends React.Component<TabHeaderProps, TabHeaderState>{
         let pinned = this.state.pinned;
         let content = <div onMouseDown={()=>{console.log("tab dragging start")}}>{props.children}<i className={"pin-button bi bi-pin-angle-fill"} onClick={()=>this.unpin()}/></div>;
         console.log("tabheader portal pre pin", {pinned});
-        if (!pinned) return content;
+        if (!pinned) {
+            let selectTab = () => PinnableDock.instance.setAsActiveTab(props.tid);
+            return <div className={"active-on-mouseenter not-pinned"} onMouseDown={selectTab} /*onMouseEnter={selectTab}*/>{content}</div>;
+        }
         const strip: PinnableStrip = (PinnableStrip as GObject)[pinned];
         const html: Element|null = tabdict_title[props.tid + '_pinned'];
         console.log("tabheader portal", {html, content, tabdict:tabdict_title, td:{...tabdict_title}});
-        if (!html) return content;
+        if (!html) { // unpinned tab
+            Log.exDevv("cannot find html", {html, pinned, 'this': this});
+            let selectTab = () => PinnableDock.instance.setAsActiveTab(props.tid);
+            return <div className={"active-on-mouseenter"} onMouseDown={selectTab} /*onMouseEnter={selectTab}*/>{content}</div>;
+        }
         function preventFocusOnOriginDock(e: any): void{
-            e.stopPropagation();
+            e.stopPropagation(); // otherwise the pinned tab will focus the hidden-tab on original dock
         }
         content = <div className={"active-on-mouseenter"} ref={(e) => this.html = e} onMouseDown={preventFocusOnOriginDock} onClick={preventFocusOnOriginDock} onMouseEnter={()=>this.onMouseHoverExpand()} onMouseLeave={()=>this.onMouseLeaveExpand()}>{content}</div>
         return <><MyPortal container={html}>{content}</MyPortal><div className={"moved-content"}>moved</div></>;
@@ -216,6 +236,7 @@ export class PinnableStrip extends PureComponent<PinnableStripProps, PinnableStr
         delete this.tabs[tid+"_pinned"];
         stripdock.dockMove(tabData, null, 'remove');
         if (!Object.keys(this.tabs).length) this.forceUpdate();
+        PinnableDock.instance.restoreTab(tid);
     }
     setAfterUpdateCallback(c: (...a:any)=>any){
         this.afterUpdateCallback_funcs.push(c);
@@ -323,6 +344,7 @@ windoww.confirmSetAnchor = function(side: AnchorTypes){
         console.log("confirm pin anchor", {content, title, strip, side, tabdata, newtabdata, currentDropRect});
     });
     strip.addTab( newtabdata );
+    PinnableDock.instance.hideTab(tabdata.id as string, side);
 
     /*strip.setState({pinnedTabsid:{...strip.state.pinnedTabsid, [tabdata.id as string]:true}},
         ()=>{
@@ -385,13 +407,18 @@ const anchorControls = [
     makeAnchorControl('right'),
 ];
 
-
+// todo: how to drop pinned tabs in the main layout https://github.com/ticlo/rc-dock/issues/97there is also an official example with a different strat
 export class PinnableDock extends DockLayout{
+    static instance: PinnableDock;
     constructor(props: any) {
         super(props);
+        console.trace("pinnableDock instance", this);
+        //Log.exDevv(PinnableDock.instance, "current PinnableDock is a singleton, cannot make 2 instances", {thiss:this, oldnstance: PinnableDock.instance});
+        PinnableDock.instance = this;
         let debug:boolean = false;
         if (!debug) return;
         let t: GObject = this;
+        // for debug only, discovery of inner events
         for (let k in t) {
             let originalfunc = t[k];
             if (typeof t[k] === "function") t[k] = function (...a:any): any {
@@ -401,12 +428,64 @@ export class PinnableDock extends DockLayout{
         }
     }
 
+    hideTab(tid: string, pinnedSide: AnchorTypes){
+        let tabdata: TabData = this.find(tid) as TabData;
+        this.updateTab(tid, {...tabdata, pinned:pinnedSide} as any, false);
+        let siblings = this.getSiblings(tid);
+        let i = siblings.findIndex((t)=> t.id === tid);
+        let newActiveTab = this.getAdiacentTab(tid);
+        console.log("hideTab", {siblings, i, newActiveTab, tabdata});
+        if (newActiveTab) this.updateTab(newActiveTab.id as string, newActiveTab, true);
+        else this.hidePanel(this.getPanelFromTab(tabdata));
+    }
+    getPanelFromTab(t: TabData): PanelData{
+        return t.parent as any;
+    }
+    hidePanel(p:PanelData): void {
+        // document.findElementById(p.id)
+    }
+    restoreTab(tid: string){
+        let tabdata = this.find(tid);
+        this.updateTab(tid, {...tabdata, pinned:undefined} as any, true);
+    }
+    setAsActiveTab(tid: string, tabdata?: TabData): void{ // todo: on mousehover on unpinned tabs
+        tabdata = tabdata || this.find(tid) as TabData;
+        this.updateTab(tid, tabdata, true);
+    }
     setState<K extends keyof LayoutState>(state: ((prevState: Readonly<LayoutState>, props: Readonly<LayoutProps>) => (Pick<LayoutState, K> | LayoutState | null)) | Pick<LayoutState, K> | LayoutState | null, callback?: () => void) {
         // console.warn("set state", state, (state as any)?.dropRect?.element);
         super.setState(state, callback);
     }
+    getSiblings(tid: string): TabData[]{
+        let tabdata = this.find(tid);
+        let panel: PanelData = tabdata.parent as PanelData;
+        return panel.tabs;
+    }
+    getAdiacentTab(tid: string): TabData | undefined{
+        let siblings: GObject<TabData>[] = this.getSiblings(tid);
+        let i0 = siblings.findIndex((t)=> t.id === tid);
+        let i = i0;
+        while (++i < siblings.length) if(!siblings[i].pinned) return siblings[i];
+        i = i0;
+        while (--i >= 0) if(!siblings[i].pinned) return siblings[i];
+        return undefined;
+    }
+    getNextTab(tid: string): TabData | undefined{
+        let siblings: GObject<TabData>[] = this.getSiblings(tid);
+        let i = siblings.findIndex((t)=> t.id === tid);
+        while (++i < siblings.length) if(!siblings[i].pinned) return siblings[i];
+        return undefined;
+    }
+    getPrevTab(tid: string): TabData | undefined{
+        let siblings: GObject<TabData>[] = this.getSiblings(tid);
+        let i = siblings.findIndex((t)=> t.id === tid);
+        while (--i >= 0) if(!siblings[i].pinned) return siblings[i];
+        return undefined;
+    }
     public static getTabFromDropRect(dropRect: LayoutState['dropRect']): TabData{
+        if (!dropRect.source) return undefined as any;
         const panel: PanelData = dropRect.source.props.panelData;
+        console.log("getTabFromDropRect", {dropRect, panel, active: panel.activeId});
         const tabdata: TabData = panel.tabs.filter(t=> t.id === panel.activeId)[0];
         return tabdata;
     }
@@ -424,6 +503,8 @@ export class PinnableDock extends DockLayout{
             windoww.htmldockLayout = this._ref;
             if (!droplayer) return;
             droplayer.append(...anchorControls);
+            let tab = PinnableDock.getTabFromDropRect(droparea);
+            // todo: tabfocus but not the active one, the clicked one
             // droparea.style.backgroundColor = "red";
         }
         // document.querySelectorAll('.dock-drop-layer')
@@ -455,7 +536,7 @@ export class PinnableDock extends DockLayout{
             <PinnableStrip side={"t"} />
             <div className={"pinnable-dock-middle-strip"}>
                 <PinnableStrip side={"l"} />
-                {super.render()}
+                <div className={"not-strip"}>{super.render()}</div>
                 <PinnableStrip side={"r"} />
             </div>
             <PinnableStrip side={"b"} />

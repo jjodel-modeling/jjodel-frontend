@@ -81,14 +81,6 @@
     transform-style: preserve-3d;
     //.dock-nav-list:hover{ background: red; }
     .pinnable-strip{
-        .dock-content-holder{
-            opacity: 0;
-            min-height: 50px;
-            min-width: 50px;
-            background: whitesmoke;
-            transition: all .3s ease-in;
-            // transition-delay: 0.5s;
-        }
 
         transform-style: preserve-3d;
 
@@ -107,14 +99,6 @@
                     }
                 }
             }
-        }
-    }
-
-    .pinnable-strip:has(.dock-nav-list:hover, .dock-content-holder:hover){
-        transform-style: preserve-3d;
-        .dock-content-holder{
-            transition: all .3s ease-out;
-            opacity: 1;
         }
     }
 }
@@ -142,12 +126,23 @@
         pointer-events: all;
     }
     .dock-content-holder{
-        // display: none;
-        // &:hover{ display: block; }
+
+        .ui-resizable-handle {
+            // background: red;
+            min-width: 20px;
+            min-height: 20px;
+        }
+
+        opacity: 0;
+        background: whitesmoke;
+        border: 1px solid var(--content-border);
+        transition: all .3s ease-in;
+        // transition-delay: 0.5s;
+
         position: absolute;
         z-index: 999;
-        height: max-content;
-        width: max-content;
+        min-height: 150px; // max-content does not work for height, because it is the "inline" content size, and inline only grows horizontally. max-content;
+        min-width: max-content; // max(max-content, 50px);
         --safetymargin: 0px;
         pointer-events: all;
         max-width: calc(100vw - var(--pinnable-strip-w) - var(--safetymargin));
@@ -170,9 +165,6 @@
     outline-color: #108ee9;
 }
 .pinnable-strip{
-    .dock-content-holder{
-        border: 1px solid var(--content-border);
-    }
     .dock-tab > div {
         padding: 0px;
     }
@@ -192,22 +184,28 @@
 .dock-tab:has(.moved-content){
     display: none;
 }
-
 .pinnable-strip-t, .pinnable-strip-b{
     width: 100%;
     height: var(--pinnable-strip-h);
     .dock-content-holder {
         border-top: none;
         transform: translateZ(1px) scaleY(0);
-        //width: 100vw;
+        width: 100vw;
+        height: 33vh;
         // width: calc(100vw - var(--pinnable-strip-w));
-        height: max-content;
-        width: max-content;
     }
-
-    &:has(.dock-nav-list:hover, .dock-content-holder:hover){
-        .dock-content-holder {
+    .dock-content .dock-tabpane{
+        overflow-y: auto;
+    }
+    &:has(
+        .dock-nav-list:hover, .dock-nav-list:focus-within, .dock-nav-list:focus, .dock-nav-list:active,
+        .dock-content-holder:hover, .dock-content-holder:focus-within, .dock-content-holder:focus, .dock-content-holder:active
+    ){
+        transform-style: preserve-3d;
+        .dock-content-holder{
             transform: translateZ(1px) scaleY(1) !important;
+            transition: transform .3s ease-out;
+            opacity: 1;
         }
     }
 }
@@ -229,14 +227,22 @@
     height: 100%;
     .dock-content-holder {
         transform: translateZ(1px) scaleX(0);
-        //height: 100vh;
-        // height: calc(100vh - var(--navbar-h) - var(--pinnable-strip-h));
-        width: max-content;
-        height: max-content;
+        // height: 100vh;
+        width: 33vw;
+        height: calc(100vh - var(--navbar-h) - var(--pinnable-strip-h));
     }
-    &:has(.dock-nav-list:hover, .dock-content-holder:hover){
-        .dock-content-holder {
+    .dock-content .dock-tabpane{
+        overflow-x: auto;
+    }
+    &:has(
+        .dock-nav-list:hover, .dock-nav-list:focus-within, .dock-nav-list:focus, .dock-nav-list:active,
+        .dock-content-holder:hover, .dock-content-holder:focus-within, .dock-content-holder:focus, .dock-content-holder:active
+    ){
+        transform-style: preserve-3d;
+        .dock-content-holder{
             transform: translateZ(1px) scaleX(1) !important;
+            transition: transform .3s ease-out;
+            opacity: 1;
         }
     }
     .dock-nav{
@@ -253,6 +259,13 @@
     .dock-content-holder{
         transform-origin: left;
         left: calc(var(--pinnable-strip-w) - 2px);
+    }
+
+    .dock-nav-wrap{
+        transform: translate(-0px, 2px) scaleY(-1);
+        .active-on-mouseenter{
+            transform: scaleX(-1);
+        }
     }
 }
 .pinnable-strip-r{
@@ -350,5 +363,18 @@ div.dock-drop-layer{
     }
     .dock-content .dock-tabpane{
         background-color: var(--bg-color); // whitesmoke;
+    }
+}
+.not-strip{
+    flex-grow: 1;
+    display: flex;
+    .dock-layout{
+        .dock-panel{
+            display:none;
+            &:has(.not-pinned){
+                display: block;
+            }
+        }
+
     }
 }
