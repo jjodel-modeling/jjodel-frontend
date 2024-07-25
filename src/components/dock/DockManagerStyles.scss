@@ -126,7 +126,6 @@
         pointer-events: all;
     }
     .dock-content-holder{
-
         .ui-resizable-handle {
             // background: red;
             min-width: 20px;
@@ -145,8 +144,8 @@
         min-width: max-content; // max(max-content, 50px);
         --safetymargin: 0px;
         pointer-events: all;
-        max-width: calc(100vw - var(--pinnable-strip-w) - var(--safetymargin));
-        max-height: calc(100vh - var(--navbar-h) - var(--pinnable-strip-h) - var(--safetymargin));
+        max-width: calc(100vw - 0 * var(--pinnable-strip-w) - var(--safetymargin));
+        max-height: calc(100vh - var(--navbar-h) - 0 * var(--pinnable-strip-h) - var(--safetymargin));
 
         overflow: auto;
         //outline: 2px solid red;
@@ -188,6 +187,8 @@
     width: 100%;
     height: var(--pinnable-strip-h);
     .dock-content-holder {
+        // override inline-style set by my js to make dynamic panel size float near the tab, now they occupy all the height/width
+        left: 0 !important;
         border-top: none;
         transform: translateZ(1px) scaleY(0);
         width: 100vw;
@@ -226,10 +227,12 @@
     width: var(--pinnable-strip-w);
     height: 100%;
     .dock-content-holder {
+        // override inline-style set by my js to make dynamic panel size float near the tab, now they occupy all the height/width
+        top: calc( -1 * var(--pinnable-strip-h)) !important;
         transform: translateZ(1px) scaleX(0);
         // height: 100vh;
         width: 33vw;
-        height: calc(100vh - var(--navbar-h) - var(--pinnable-strip-h));
+        height: 100vh;
     }
     .dock-content .dock-tabpane{
         overflow-x: auto;
