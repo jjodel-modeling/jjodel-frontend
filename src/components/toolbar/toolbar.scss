@@ -3,77 +3,81 @@
 }
 
 .toolbar {
-  padding: 0.5rem;
-  cursor: move;
-  display: flex;
-  font-size: 1rem;
+    --bg: #233d4d;
+    --color: white;
 
-  --palette-1: red;
-  --palette-w: #D4DAE2;
-
-  .drag-handle{
-    flex-grow: 1;
-    // width: 1em;
-    width: 12px;
-    height: 30px;
-    /*margin-left: 0.55em;
-    margin-top: 0.25em;
-    margin-right: 0.7em;
-    margin-bottom: 0.25em;*/
-    margin-left: calc(-0.5rem + 0.4rem);
-    margin-right: calc(-0.3rem + 0.4rem);
-    margin-top: 0.25em;
-    margin-bottom: 0.25em;
-
-  }
-
-  .toolbar-section-label{
-    margin-bottom: 0.25rem;
-    margin-left: 0.3rem;
-    // margin-right: 2em;
-    //text-transform: uppercase;
-    // text-align: center;
-    display: block;
-    font-size: 0.9rem;
-    font-weight: bold;
-
-  }
-
-  background: var(--palette-1);
-  color: var(--palette-w);
-  white-space: pre;
-
-  .bi.pin{/*
-    background: var(--palette-1);*/
-    color: var(--palette-w);
-    cursor: pointer;
-    position: absolute;
-    top: 0.25rem;
-    right: 0.25rem;
-    z-index: 2 !important;
-    box-shadow: none !important;
-    padding: 0 4px;
-    &:hover{
-      color: var(--palette-1);
-      background: var(--palette-w);
-      border-radius: 999px;
-      scale: 1.15;
-    }
-  }
-  .toolbar-item{
-    border-radius: 6px;
-    padding-right: 0.25em;
+    padding: 0.5rem;
+    padding-left: 12px;
+    margin: 0;
+    cursor: move;
     display: flex;
-    cursor: pointer;
+    font-size: 13px;
+    background-color: var(--bg);
+    color: var(--color);
+    white-space: pre;
+    width: 300px;
+    margin-right: 100px;
+    border-radius: 8px;
+    box-shadow:0px 10px 20px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.8); 
+    left: 20px;
 
-    > span{
-      display: inline-block;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      max-width: 400px;
-      margin: auto;
+    .drag-handle{
+      flex-grow: 0;
+      width: 12px;
+      height: 30px;
+      
+      margin-left: calc(-0.5rem + 0.4rem);
+      margin-right: calc(-0.3rem + 0.4rem);
+      margin-top: 0.25em;
+      margin-bottom: 0.25em;
+
     }
+  
+    .toolbar-section-label{
+      
+        margin-bottom: 0.25rem;
+        margin-left: 0.3rem;
+        // margin-right: 2em;
+        //text-transform: uppercase;
+        // text-align: center;
+        display: block;
+        font-size: 13px;
+        font-weight: 300;
+    }
+
+    
+
+    .bi.pin{/*
+      background: var(--palette-1);*/
+      color: var(--palette-w);
+      cursor: pointer;
+      position: absolute;
+      top: 0.25rem;
+      right: 0.25rem;
+      z-index: 2 !important;
+      box-shadow: none !important;
+      padding: 0 4px;
+      &:hover{
+        color: var(--palette-1);
+        background: var(--palette-w);
+        border-radius: 999px;
+        scale: 1.15;
+      }
+    }
+    .toolbar-item{
+      border-radius: 6px;
+      padding-right: 0.25em;
+      display: flex;
+      cursor: pointer;
+
+      > span{
+        display: inline-block;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        max-width: 400px;
+        margin: auto;
+      }
   }
   .toolbar-item:hover, .toolbar-item:focus{
     background: var(--palette-w);
@@ -92,6 +96,14 @@
     padding: 2px;
     // border-left: 2px solid;
   }
+
+
+
+
+
+
+
+
   /*
   .package {
     border-left-color: $package-color;

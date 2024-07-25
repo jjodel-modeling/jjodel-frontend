@@ -1,34 +1,67 @@
 import './style.scss';
 import {DState, DUser, LModel, LProject, LUser, SetRootFieldAction, U} from '../../joiner';
-import React, {Component, Dispatch, ReactElement, useState} from 'react';
+import React, {Component, Dispatch, ReactElement, ReactNode, useState} from 'react';
 import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
 import {MetamodelPopup, ModelPopup} from './popups';
 import {ProjectsApi} from '../../api/persistance';
 import {useNavigate} from 'react-router-dom';
+import logo from '../../static/img/jjodel.jpg';
 
-function NavbarComponent(props: AllProps): JSX.Element {
+
+
+
+function NavbarComponent(props: AllProps) {
     const {version, project, metamodels, advanced, debug} = props;
     const [focussed, setFocussed] = useState('');
     const [clicked, setClicked] = useState('');
     const navigate = useNavigate();
 
+    const menuType = "normal";
+
     const projectItems = [
-        {name: 'New',
+        {name: 'New metamodel', function: async() => {}, keystroke: <React.Fragment><i className="bi bi-alt"> </i><i className="bi bi-command"></i> M</React.Fragment>},
+        {name: 'New model', function: async() => {}, keystroke: ''},
+        {name: 'divisor', function: async() => {}, keystroke: ''},
+        {name: 'Close project', function: async() => {}, keystroke: <React.Fragment><i className="bi bi-command"></i> Q</React.Fragment>},
+        {name: 'divisor', function: async() => {}, keystroke: ''},
+        {name: 'Undo', function: async() => {}, keystroke: <React.Fragment><i className="bi bi-command"></i> Z</React.Fragment>},
+        {name: 'Redo', function: async() => {}, keystroke: <React.Fragment><i className="bi bi-shift"></i> <i className="bi bi-command"></i> Z</React.Fragment>},
+        {name: 'divisor', function: async() => {}, keystroke: ''},
+        {name: 'Save', function: async() => {project && await ProjectsApi.save(project)}, keystroke: <React.Fragment><i className="bi bi-command"></i> S</React.Fragment>},
+        {name: 'Save as', function: async() => {}, keystroke: <React.Fragment><i className="bi bi-shift"></i> <i className="bi bi-command"></i> S</React.Fragment>},
+        {name: 'divisor', function: async() => {}, keystroke: ''},
+        {name: 'Import...', function: async() => {}, keystroke: ''},
+        {name: 'Export as...', function: async() => {}, keystroke: ''},
+        {name: 'divisor', function: async() => {}, keystroke: ''},
+        
+        
+        {name: 'View',
             subItems: [
-                {name: 'Metamodel', function: async() => {}},
-                {name: 'Model', function: async() => {}},
-                {name: 'Export', function: async() => {}},
-                {name: 'Import', function: async() => {}}
-            ]
+                {name: 'Show dot grid', function: async() => {}, keystroke: ''},
+                {name: 'divisor', function: async() => {}, keystroke: ''},
+                {name: 'Maximize editor', function: async() => {}, keystroke: ''},
+                {name: 'divisor', function: async() => {}, keystroke: ''},
+                {name: 'Zoom in', function: async() => {}, keystroke: <React.Fragment><i className="bi bi-command"></i> +</React.Fragment>},
+                {name: 'Zoom out', function: async() => {}, keystroke: <React.Fragment><i className="bi bi-command"></i> -</React.Fragment>},
+                {name: 'Zoom to 100%', function: async() => {}, keystroke: <React.Fragment><i className="bi bi-command"></i> 0</React.Fragment>}
+            ],
+            keystroke: ''
         },
-        {name: 'Project',
-            subItems: [
-                {name: 'Save', function: async() => {project && await ProjectsApi.save(project)}},
-                {name: 'Save as', function: async() => {}},
-                {name: 'Close', function: async() => {navigate('/dashboard'); U.refresh();}}
-            ]
-        }
+        {name: 'divisor', function: async() => {}},
+        {name: 'Help', subItems: [
+            {name: 'What\'s new', function: async() => {}, keystroke: ''},
+            {name: 'divisor', function: async() => {}, keystroke: ''},
+            {name: 'Homepage', function: async() => {}, keystroke: ''},
+            {name: 'Getting started', function: async() => {}, keystroke: ''},
+            {name: 'User guide', function: async() => {}, keystroke: ''},
+            {name: 'divisor', function: async() => {}, keystroke: ''},
+            {name: 'Legal terms', function: async() => {}, keystroke: ''}
+        ], 
+        keystroke: ''},
+        {name: 'About jjodel', function: async() => {}, keystroke: ''}
+
+        
     ];
 
     const dashboardItems = [
@@ -50,33 +83,65 @@ function NavbarComponent(props: AllProps): JSX.Element {
 
     if(project)
         return(<>
-            <nav style={{zIndex: 99}}>
-                <ul className={'new-navbar'}>
-                    {projectItems.map(i => <li key={i.name} className={'new-dropdown'}>
-                        <label>{i.name}</label>
-                        <ul className={'new-dropdown-content'}>
-                            {i.subItems.map(si => <li key={si.name} onClick={async() => {
-                                setClicked(`${i.name}.${si.name}`.toLowerCase());
-                                await si.function();
-                            }}>
-                                <label>{si.name}</label>
-                            </li>)}
+            <nav className={'nav-container'} style={{zIndex: 99}}>
+                <div className='nav-hamburger hoverable'>
+                    <i className="bi bi-grid-3x3-gap-fill list"></i>
+                    <div className={'content context-menu'}>
+                        <ul>
+                            {projectItems.map(i => i.name === "divisor" ? 
+                                <li className='divisor'><hr /></li> : 
+                                <li>
+                                    <label className='hoverable'>
+                                        {i.name}
+                                        {i.subItems ? 
+                                            <div><i className='bi bi-chevron-right'></i></div> : 
+                                            <div className={'keystroke'}>{i.keystroke}</div>
+                                        }
+                                        {i.subItems && 
+                                            <div className='content right'>
+                                                <ul className='context-menu right'>
+                                                    {i.subItems.map(si => si.name === "divisor" ?
+                                                        <li className='divisor'><hr></hr></li> :
+                                                        <li>
+                                                            <label>{si.name}</label>
+                                                            <div className={'keystroke d-flex'}>{si.keystroke}</div>
+                                                        </li>
+                                                    )}
+                                                </ul>
+                                            </div>
+                                        }
+                                    </label>
+                                </li>)}
                         </ul>
-                    </li>)}
-                    <div className={'ms-auto d-flex'}>
-                        <li className={'input-container mx-2'}>
-                            <b className={'object-name text-white'}>Advanced</b>
-                            <input checked={advanced} onClick={e =>
-                                    SetRootFieldAction.new('advanced', !advanced)
-                                } className={'input switch my-auto ms-2'} type={'checkbox'}
-                            />
-                        </li>
+                    </div>
+                </div>
+                <div className='nav-logo'><img height={24} src={logo} /></div>
+                <div className='nav-side'></div>
+            </nav>
+                
+                
+                
+            
+                
+
+                       
+                    {/* 
                         <label onClick={e => SetRootFieldAction.new('debug', !debug)} className={`my-auto py-0 mx-2 cursor-pointer item text-white rounded ${debug ? 'bg-success' : 'bg-danger'}`}>
                             DEBUG
                         </label>
+                        <label  className={`my-auto py-0 mx-2 item`}>
+                            <img src="src/static/img/logo.png" />
+                        </label>
+                        
                     </div>
-                </ul>
-            </nav>
+                </ul>*/}
+                    
+        
+
+                    
+
+                    
+
             {clicked === 'new.metamodel' && <MetamodelPopup {...{project, setClicked}} />}
             {clicked === 'new.model' && <ModelPopup {...{metamodels, project, setClicked}} />}
         </>);

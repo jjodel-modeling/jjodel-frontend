@@ -33,6 +33,7 @@ import {
     LEdgePoint, DUser,
     U, LPointerTargetable, SetRootFieldAction, GObject, EMeasurableEvents, TRANSACTION
 } from "../../joiner";
+
 import {InitialVertexSizeObj} from "../../joiner/types";
 import ModellingIcon from "../forEndUser/ModellingIcon";
 
@@ -188,6 +189,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
 
     // downward["DModel"] = ["DPackage"];
     // downward["DModel"] = ["DPackage"];
+
     downward["DPackage"] = ["DPackage", "DClass", "DEnumerator"];
     downward["DClass"] = ["DAttribute", "DReference", "DOperation"];
     downward["DEnumerator"] = ["DLiteral"];
@@ -199,6 +201,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     downward["DVoidEdge"] = ["DEdgePoint"]
 
     // for (let parentKey in downward) myDictValidator.set(parentKey, addChildren("package"));
+
     let upward: Dictionary<DocString<"DClassName (model)">, DocString<"hisDParents">[]> = {};
     for (let parentKey in downward){
         let vals = downward[parentKey];
@@ -223,8 +226,10 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         let siblings = data ? addChildren(upward[data.className]) : [];
         if (node) siblings.push(...addChildren(upward[node.className]));
         let subelements = data ? addChildren(downward[data.className]) : [];
-        if (siblings.length > 0)    contentarr.push([<b className={'toolbar-section-label'}>Sibling</b>, siblings]);
-        if (subelements.length > 0) contentarr.push([<b className={'toolbar-section-label'}>Sublevel</b>, subelements]);
+        
+        
+        if (siblings.length > 0)    contentarr.push([<span className={'toolbar-section-label'}>Structure</span>, siblings]);
+        if (subelements.length > 0) contentarr.push([<span className={'toolbar-section-label'}>Features</span>, subelements]);
 
     }
     else {
@@ -274,16 +279,19 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     console.log("toolbar", {contentarr, separator, content});
 
     return (
-        <div className="toolbar-draggable" ref={htmlref} style={{top: '35px', position:"absolute", backgroundColor: 'red !important'}} // refuses to focus without event...
-             onClick={(e)=>{ console.log("click focus", {htmlref}); setTimeout(()=> {
-                 if (htmlref.current) (htmlref.current as any).children[0].focus();
-             }, 1)}}>
+        <div className="toolbar-draggable"
+            ref={htmlref}
+            style={{ border: 'none', top: '35px', position: "absolute", backgroundColor: 'red !important' }} // refuses to focus without event...
+            onClick={(e) => {
+                console.log("click focus", { htmlref }); setTimeout(() => {
+                    if (htmlref.current) (htmlref.current as any).children[0].focus();
+                }, 1)
+            }}>
             <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
-                <div className={"drag-handle dark"}>
+                <i className={"content pin bi bi-pin-angle" + (pinned ? "-fill" : '')} onClick={() => setPinned(!pinned)} />
+                <div className={"content inline"}>
+                    {content}
                 </div>
-
-                <i className={"content pin bi bi-pin-angle"+(pinned ? "-fill" : '')} onClick={()=> setPinned(!pinned) } />
-                <div className={"content inline"}>{content}</div>
             </div>
         </div>);
 }
