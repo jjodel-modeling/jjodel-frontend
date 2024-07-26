@@ -5,6 +5,8 @@ import {connect} from 'react-redux';
 import type {Dictionary, FakeStateProps} from '../../../joiner/types';
 import DockManager from "../DockManager";
 
+/* test */
+
 
 type Props = {
     key: string;
