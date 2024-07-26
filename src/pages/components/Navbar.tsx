@@ -15,9 +15,14 @@ enum Key{
 }
 
 const NamedKeys: Dictionary<string, boolean> = Object.values(Key).reduce((acc, v) => { acc[v] = true; return acc; }, {} as GObject);
+const windowsKeys: Dictionary<string, string> = {
+    [Key.cmd]: "ctrl", //'windows'; // <i className="bi bi-windows"></i>
+    [Key.shift]: "shift",
+    [Key.alt]: "alt",
+}
 
 function getKeystrokeJsx(key: string){
-    if (key in NamedKeys) return <span><i className={"bi " + key}/></span>;
+    if (key in NamedKeys) return <span><i className={"bi " + key} title={windowsKeys[key] || key}/></span>;
     return <span>{key.toUpperCase()}</span>;
 }
 function getKeyStrokes(keys?: string[]){

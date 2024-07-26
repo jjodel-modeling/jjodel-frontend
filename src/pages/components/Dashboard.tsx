@@ -11,10 +11,12 @@ function Dashboard(props: Props): JSX.Element {
     const {children, active} = props;
 
     return(<>
-        <Navbar />
-        <LeftBar active={active} />
-        <div style={{marginLeft: '12%'}} className={'p-2'}>
-            {children}
+        { /*<Navbar />*/}
+        <div className={"d-flex h-100 w-100"}>
+            <LeftBar active={active} />
+            <div className={'p-2'} style={{flexGrow:1}}>
+                {children}
+            </div>
         </div>
     </>);
 }
