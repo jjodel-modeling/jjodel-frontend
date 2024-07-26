@@ -5,6 +5,48 @@
   margin-bottom: 0.2em;
 }
 
+.summary {
+  color: var(--color);
+  position: relative;
+  top: 10%;
+  margin: auto;
+  width: 100%;
+  height: fit-content;
+  background-color: white;
+  border-radius: 10px;
+  font-family: "Inter Tight", sans-serif;
+  font-size: 1em; 
+
+  & .bi-pencil-square {
+    font-size: 1.3em;
+  }
+  & label .bi {
+    font-size: 1.7em;
+  }
+  & .bi:hover {
+    color: var(--accent);
+  }
+  & p {
+    font-size: 1.2em;
+  }
+
+  & .chart {
+    width: 80%;
+    height: 8px;
+    margin: 0 2px;
+  }
+  & .bg-3 {
+    color: var(--bg-3-1);
+    text-align: center;
+  }
+  & input {
+    font-weight: 400;
+    font-size: 1em;
+    border-radius: 3px;
+  }
+
+}
+
 .v-container {
   display: flex;
 }

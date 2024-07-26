@@ -147,6 +147,8 @@
     font-size: 1.2em;
 }
 
+
+
 .footer .widgetbar .bi.active  {
     color: var(--accent);
 }
@@ -174,10 +176,16 @@
     color: var(--bg-5);
     cursor:auto;
 }
+
 .footer .widgetbar .notify .button .bi-chevron-down {
+    position: relative;
+    right: 0px;
+    top: -2px;
     padding: 2px 4px 1px 4px;
+
     border-radius: 4px;
     border: 1px solid var(--bg-3-1);
+    font-size: 0.9em;
 }
 
 .footer .widgetbar .notify .button .bi-chevron-down:hover {
