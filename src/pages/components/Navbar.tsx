@@ -118,29 +118,7 @@ function NavbarComponent(props: AllProps) {
                 <div className='nav-logo'><img height={24} src={logo} /></div>
                 <div className='nav-side'></div>
             </nav>
-                
-                
-                
-            
-                
-
-                       
-                    {/* 
-                        <label onClick={e => SetRootFieldAction.new('debug', !debug)} className={`my-auto py-0 mx-2 cursor-pointer item text-white rounded ${debug ? 'bg-success' : 'bg-danger'}`}>
-                            DEBUG
-                        </label>
-                        <label  className={`my-auto py-0 mx-2 item`}>
-                            <img src="src/static/img/logo.png" />
-                        </label>
-                        
-                    </div>
-                </ul>*/}
-                    
-        
-
-                    
-
-                    
+                 
 
             {clicked === 'new.metamodel' && <MetamodelPopup {...{project, setClicked}} />}
             {clicked === 'new.model' && <ModelPopup {...{metamodels, project, setClicked}} />}
