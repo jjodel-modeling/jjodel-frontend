@@ -39,12 +39,10 @@
       
         margin-bottom: 0.25rem;
         margin-left: 0.3rem;
-        // margin-right: 2em;
-        //text-transform: uppercase;
-        // text-align: center;
         display: block;
+        font-family: 'Inter Tight', sans-serif;
         font-size: 13px;
-        font-weight: 300;
+        font-weight: 400;
     }
 
     
@@ -123,5 +121,11 @@ hr.my-1{
   color: #8a8a8a;
   width: 180px;
   left: 5px;
+}
 
+
+.my-auto {
+  font-family: 'Inter Tight', sans-serif!important;
+  font-weight: 200;
+  padding-bottom: 5px;
 }

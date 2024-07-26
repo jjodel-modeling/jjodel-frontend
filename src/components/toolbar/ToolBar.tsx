@@ -229,11 +229,11 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         
         
         if (siblings.length > 0) {
-            contentarr.push([<span className={'toolbar-section-label'}>Structure</span>, siblings]);
+            contentarr.push([<span className={'toolbar-section-label'}>Structure</span>, <hr className={'my-1'} />, siblings]);
         }
 
         if (subelements.length > 0) {
-            contentarr.push([<span className={'toolbar-section-label'}>Features</span>, subelements]);
+            contentarr.push([<span className={'toolbar-section-label'}>Features</span>, <hr className={'my-1'} />, subelements]);
         }
 
     }
@@ -266,6 +266,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         }) || [];
         rootobjs.push(<div key={"RawObject"} className={'toolbar-item'} tabIndex={ti} onClick={()=>select(model.addObject({}, null))}>
             <ModellingIcon name={'object'} />
+            <hr className={'my-1'} />
             <span className={'ms-1 my-auto text-capitalize'}>Object</span>
         </div>);
 
@@ -280,7 +281,9 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
 
 
     let shapes = node ? addChildren(downward[node.className]) : [];
-    if (shapes.length > 0)      contentarr.push([<b className={'toolbar-section-label'}>Shape</b>, shapes]);
+    if (shapes.length > 0) {
+        contentarr.push([<b className={'toolbar-section-label'}>Shape</b>, shapes]);
+    }
 
     let separator = <hr className={'my-1'} /> as any;
     // @ts-ignore
