@@ -397,7 +397,13 @@ let htmltablist = <div className="dock-bar drag-initiator" role="tablist" tabInd
 // <LayoutProps, LayoutState>
 function makeAnchorControl(side: string){
     let s = side[0];
-    const str = `<div class="dock-drop-square dock-drop-${side}-anchor" onmouseup="confirmSetAnchor('${s}')" onmouseenter="highlightAnchorArea('${s}')" onmouseleave="hideAnchorArea('${s}')""><div class="dock-drop-square-box"></div></div>`;
+
+
+    const str = `<div class="dock-drop-square dock-drop-${side}-anchor" onmouseup="confirmSetAnchor('${s}')" onmouseenter="highlightAnchorArea('${s}')" onmouseleave="hideAnchorArea('${s}')"">
+<div class="dock-drop-square-box">
+<i class="bi bi-pin-angle-fill"></i>
+</div>
+</div>`;
     return U.toHtml(str);
 }
 const anchorControls = [

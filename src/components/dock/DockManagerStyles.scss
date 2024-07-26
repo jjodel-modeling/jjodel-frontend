@@ -299,32 +299,40 @@
 
 div.dock-drop-layer{
     --drop-button-size: 32px;
+    .dock-drop-square.dock-drop-top-anchor,
+    .dock-drop-square.dock-drop-left-anchor,
+    .dock-drop-square.dock-drop-right-anchor,
+    .dock-drop-square.dock-drop-bottom-anchor{
+        &:hover{background: #88c7f4;  color: white;}
+        //&::before{content:'📌'}
+        >.dock-drop-square-box{
+            display: flex;
+            >.bi{
+                color: inherit;
+                margin:auto;
+            }
+        }
+    }
     .dock-drop-square.dock-drop-top-anchor{
         top: calc(50% - var(--drop-button-size) * 3);
-        &::before{content:'📌'}
-        &:hover{background: #88c7f4;  color: white;}
     }
     .dock-drop-square.dock-drop-left-anchor{
         left: calc(50% - var(--drop-button-size) * 3);
-        &::before{content:'📌'}
-        &:hover{background: #88c7f4;  color: white;}
     }
     .dock-drop-square.dock-drop-right-anchor{
         left: calc(50% + var(--drop-button-size) * 2);
-        &::before{content:'📌'}
-        &:hover{background: #88c7f4;  color: white;}
     }
     .dock-drop-square.dock-drop-bottom-anchor{
         top: calc(50% + var(--drop-button-size) * 2);
-        &::before{content:'📌'}
-        &:hover{background: #88c7f4;  color: white;}
     }
 }
 
 
 .pinnable-dock-root.gray-style{
     --hover-color: black;
-    --font-color: #767676;
+    --font-color: rgba(0,0, 0, 0.85);
+    --panel-content-color: rgba(0,0, 0, 0.85);
+    --inactive-tab-font-color: #767676;
     --underline-color: #B2B2B2;
     --bg-color: #D9D9D9;
 
@@ -342,7 +350,7 @@ div.dock-drop-layer{
         background: var(--bg-color);
         .dock-tab{
             background: var(--bg-color);
-            color: var(--font-color); //rgba(0, 0, 0, 0.85);
+            color: var(--inactive-tab-font-color); //rgba(0, 0, 0, 0.85);
             border-bottom: 1px solid var(--underline-color); //#ddd;
 
             &.dock-tab-active{

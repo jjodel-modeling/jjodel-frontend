@@ -1,3 +1,6 @@
+body{
+  --panel-content-color: rgba(0,0, 0, 0.85);
+}
 body > .dragging-layer {
   position: absolute !important;
   z-index: 9999;
@@ -228,7 +231,7 @@ body > .dragging-layer > div:last-child {
 .dock-nav-more {
   height: 30px;
   border: none;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--panel-content-color);
   background: transparent;
   cursor: pointer;
   position: relative;
@@ -267,7 +270,7 @@ body > .dragging-layer > div:last-child {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--panel-content-color);
   font-size: 14px;
   font-variant: tabular-nums;
   line-height: 1.5715;
@@ -301,7 +304,7 @@ body > .dragging-layer > div:last-child {
   margin: 0;
   padding: 5px 12px;
   overflow: hidden;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--panel-content-color);
   font-weight: 400;
   font-size: 14px;
   line-height: 22px;
@@ -340,7 +343,7 @@ body.dock-dragging iframe {
 .dock-panel {
   box-sizing: border-box;
   position: relative;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--panel-content-color);
   background: #fff;
   border: 1px solid #ddd;
 }
@@ -519,12 +522,16 @@ body.dock-dragging iframe {
   z-index: 300;
   width: 32px;
   height: 32px;
-  font-family: 'Fredoka One', sans-serif;
-  color: #ddd;
-  background: #fff;
-  border: 1px solid transparent;
   left: calc(50% - 16px);
   top: calc(50% - 16px);
+  font-family: 'Fredoka One', sans-serif;
+  // color: #ddd;
+  // background: #fff;
+  // border: 1px solid transparent;
+  background: inherit;
+  color: inherit;
+  border: 1.99px outset white;
+  scale: 0.85;
 }
 .dock-drop-layer .dock-drop-square .dock-drop-square-box {
   box-sizing: border-box;
