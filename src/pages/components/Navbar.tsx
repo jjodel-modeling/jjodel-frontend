@@ -29,7 +29,7 @@ function getKeyStrokes(keys?: string[]){
 
 function makeEntry(i: MenuEntry) {
     if (i.name === "divisor") return <li className='divisor'><hr /></li>;
-    return <li className={i.subItems ? "hoverable" : ""}>
+    return <li className={i.subItems ? "hoverable" : ""} tabIndex={0}>
             <label className='highlight'>
                 <span>{i.name}</span>
                 {i.subItems ?
@@ -121,7 +121,7 @@ function NavbarComponent(props: AllProps) {
     if(project)
         return(<>
             <nav className={'nav-container'} style={{zIndex: 99}}>
-                <div className='nav-hamburger hoverable'>
+                <div className='nav-hamburger hoverable' tabIndex={0}>
                     <i className="bi bi-grid-3x3-gap-fill list"></i>
                     <div className={'content context-menu'}>
                         <ul>
