@@ -9,7 +9,8 @@
         --pinnable-strip-h: calc(0px + 31px);
         --pinnable-strip-w: calc(0px + 31px);
         --content-border: 1px solid #108ee9;
-        --navbar-h: 42px;
+        --navbar-h: 32px;
+        --footer-h: 28px;
         position: relative;
         background-color: whitesmoke;
         &.empty{
@@ -145,7 +146,7 @@
         --safetymargin: 0px;
         pointer-events: all;
         max-width: calc(100vw - 0 * var(--pinnable-strip-w) - var(--safetymargin));
-        max-height: calc(100vh - var(--navbar-h) - 0 * var(--pinnable-strip-h) - var(--safetymargin));
+        max-height: calc(100vh - var(--footer-h) - var(--navbar-h) - 0 * var(--pinnable-strip-h) - var(--safetymargin));
 
         overflow: auto;
         //outline: 2px solid red;
@@ -155,8 +156,39 @@
         }
 
     }
-    .dock-content{
-        display:block;
+    .dock-content-holder{
+        .dock-content{
+            display:block;
+            // overflow: hidden; // jqui resizable sicons make it overflow
+        }
+        .ui-resizable-n{
+            top: 0;
+        }
+        .ui-resizable-s{
+            bottom: 0;
+        }
+        .ui-resizable-e{
+            right: 0;
+        }
+        .ui-resizable-w{
+            left: 0;
+        }
+        .ui-resizable-sw{
+            left: 0;
+            bottom:0;
+        }
+        .ui-resizable-se{
+            right: 0;
+            bottom:0;
+        }
+        .ui-resizable-nw{
+            left: 0;
+            top:0;
+        }
+        .ui-resizable-ne{
+            right: 0;
+            top:0;
+        }
     }
 }
 .dock-tab > div {
@@ -189,7 +221,6 @@
     .dock-content-holder {
         // override inline-style set by my js to make dynamic panel size float near the tab, now they occupy all the height/width
         left: 0 !important;
-        border-top: none;
         transform: translateZ(1px) scaleY(0);
         width: 100vw;
         height: 33vh;
@@ -213,12 +244,14 @@
 .pinnable-strip-t{
     .dock-content-holder{
         transform-origin: top;
+        border-top: none;
         top: calc(var(--pinnable-strip-h) - 3px);
     }
 }
 .pinnable-strip-b{
     .dock-content-holder{
         transform-origin: bottom;
+        border-bottom: none;
         bottom: calc(var(--pinnable-strip-h) - 3px);
     }
 }
@@ -228,7 +261,7 @@
     height: 100%;
     .dock-content-holder {
         // override inline-style set by my js to make dynamic panel size float near the tab, now they occupy all the height/width
-        top: calc( -1 * var(--pinnable-strip-h)) !important;
+        top: 0 !important; //calc( -1 * var(--pinnable-strip-h)) !important;
         transform: translateZ(1px) scaleX(0);
         // height: 100vh;
         width: 33vw;
@@ -253,7 +286,7 @@
         // transform: translateX(calc(var(--pinnable-strip-h) - 2px)) rotate(90deg);
         //transform: translateX(29px) rotate(90deg);
         transform-origin: top left;
-        width: calc(100vh - var(--navbar-h) - var(--pinnable-strip-h)) !important;
+        width: calc(100vh - var(--footer-h) - var(--navbar-h) - 0 * var(--pinnable-strip-h)) !important;
         height: var(--pinnable-strip-h) !important;
 
     }
@@ -261,6 +294,7 @@
 .pinnable-strip-l{
     .dock-content-holder{
         transform-origin: left;
+        border-left: none;
         left: calc(var(--pinnable-strip-w) - 2px);
     }
 
@@ -273,7 +307,7 @@
 }
 .pinnable-strip-r{
     .dock-content-holder{
-        transform-origin: right;
+        border-right: none;
         right: calc(var(--pinnable-strip-w) - 2px);
     }
 }

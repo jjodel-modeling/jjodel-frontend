@@ -58,7 +58,6 @@ function App(props: AllProps): JSX.Element {
         <ExternalLibraries />
         <TooltipVisualizer />
         <MessageVisualizer />
-        <BottomBar />
         <HashRouter>
             <PathChecker />
             <Routes>
@@ -76,6 +75,7 @@ function App(props: AllProps): JSX.Element {
                 <Route path={'auth'} element={<AuthPage />} />
             </Routes>
         </HashRouter>
+        <BottomBar />
     </>);
 
     /*
