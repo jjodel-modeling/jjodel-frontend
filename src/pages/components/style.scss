@@ -420,6 +420,9 @@
 
 }
 // ho riunito i miei cambiamenti in un solo posto per distinguere le mie aggiunte ed eventualmente annullarne parti.
+.nav-hamburger:hover, .nav-hamburger:focus-within{
+    // &>.bi{ color: var(--accent); }
+}
 .nav-container .content.context-menu{
     width: auto;
 }
@@ -434,7 +437,7 @@
     >li{
         display: flex;
         width: 100%;
-        &:hover{
+        &:hover, &:focus-within{
             >label{
                 border-radius: 4px;
                 background-color: var(--accent);
