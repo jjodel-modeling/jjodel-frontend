@@ -2,18 +2,14 @@
   position: absolute;
   z-index: 1001;
   top: 9%;
-  box-shadow: 0 0 2px #C0C0C0;
   width: 200px;
   border-radius: 8px;
   border-style: solid;
   border-width: 1px;
-  // border-color: #1e1e1e;
   border-color: #233d4d;
   padding: 3px;
   color: white;
-  // background: #1e1e1e;
   background: #233d4d;
-  box-shadow: 5px 10px #888888;
   box-shadow:0px 10px 20px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.8); 
 }
 
@@ -36,6 +32,7 @@
 
 .context-menu > div >.item div {
   font-size: 0.9em;
+  
   font-kerning: none;
   float: right;
   padding-top: 2px;
