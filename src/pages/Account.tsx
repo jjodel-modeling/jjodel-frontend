@@ -8,6 +8,7 @@ function AccountComponent(props: AllProps): JSX.Element {
     const {user} = props;
     return(<Try>
         <Dashboard active={'Account'} version={props.version}>
+
             <div className={'p-2'}>
                 <text className={'d-block'}><b>ID: </b>{user.id}</text>
                 <text className={'d-block'}><b>Username: </b>{user.username}</text>

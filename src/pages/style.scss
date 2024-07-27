@@ -1,4 +1,4 @@
-.dashboard-row{
+.dashboard-row {
   background: #fff;
   cursor: pointer;
   &:hover{ background: #eee; }
@@ -16,10 +16,57 @@
     background-color: #eee;
   }
 }
+.project-card {
+    --color: #233d4d;
+    --accent: #f3b700;
+    --accent-disabled:var(--bg-4);
+    --bg-1: white;
+    --bg-2: #f5f5f5;
+    --bg-3: #e2e2e1;
+    --bg-4: #8f908e;
+    --bg-5: #525251;
+    --danger: #ed474a;
+    --success: #3ddc97;
+    --side-padding: 2em;
+    --sep-padding: 4em;
+}
+
 
 .project-card {
   position: relative;
-  width: min-content; height: min-content;
+  /* width: min-content; 
+  height: min-content;*/
+  width: 292px;
+  height: 176px;
+  margin: 73px;
+  border-radius: 8px;
+  background-color: var(--bg-2);
+
+  padding-bottom: 10px;
+  border-bottom: 6px solid var(--accent);
+}
+
+.project-card .content {
+  left: 10px;
+}
+
+.project-card h5 {
+  margin-bottom: 4px;
+}
+
+.project-card label {
+  font-weight: 300;
+  color: var(--bg-4);
+}
+
+.project-card .tag {
+  font-weight: 300;
+  font-size: 13px;
+}
+
+.project-card .tag .bi {
+  font-size: 1.3em;
+  padding-right: 10px;
 }
 
 .bg-gray {
@@ -28,4 +75,5 @@
 .text-gray {
   color: #eee;
 }
+
 

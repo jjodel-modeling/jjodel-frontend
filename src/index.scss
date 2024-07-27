@@ -1,12 +1,14 @@
 
 img { -webkit-user-drag: none; }
 body {
+
+    color: var(--color);
     &,#root{
         max-width: 100vw;
         max-height: 100vh;
         width: 100vw;
         height: 100vh;
-        background-color: whitesmoke;
+        background-color: white;
         overflow: hidden;
     }
     // font-family: Lato, 'Helvetica Neue', Arial,Helvetica, sans-serif !important;
@@ -15,12 +17,42 @@ body {
     font-weight: 400;
     font-style: normal;
     font-size: small;
+    
     #root{
         position: fixed; // without this, it can scroll
         display: flex;
         flex-direction: column;
     }
 }
+
+.catalog-container {
+    margin-left: calc(12% + 50px);
+}
+.catalog-container .user {
+    margin-bottom: 70px;
+}
+.catalog-container .user .name {
+    float: left; 
+    width: fit-content; 
+    padding-top: 5px;
+}
+.catalog-container .user .name h2 {
+    font-weight: 400;
+}
+
+.catalog-container .user .initials {
+    text-align: center;
+    font-size: 1.5em;
+    width: 2.2em;
+    height: 2.2em;
+    padding-top: 6px; 
+    margin-left: 14px;  
+    color: white;
+    border-radius: 30px;
+    background-color: #087E8B;
+    float: left;    
+}
+
 
 ::-webkit-scrollbar {
     width: 0.2rem;
@@ -43,7 +75,7 @@ body {
 }
 .ui-draggable, .ui-resizable, ui-rotatable{
     position: absolute !important; // because jqui sets the html style attr to relative
-    border: 1px solid var(--palette-g);
+    // border: 1px solid var(--palette-g);
     width: fit-content;
     height: fit-content;
     overflow: hidden;
