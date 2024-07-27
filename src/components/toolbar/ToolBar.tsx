@@ -71,20 +71,14 @@ function toolbarClick(item_dname: string, data: LModelElement|undefined, myDictV
                 else if (prevNodeid === dedge.end) prevnodeindex = subelements.length;
                 else Log.exDevv("edgepoint insert position not found", {subelements, prevNodeid, longestSeg, dedge, ledge});
             } else prevnodeindex += 1;
-            let goodway = true; // not working// todo: keep his true branch and remove this when finished debug. false crashed for missing father on subelements, guess i need more delay??
-            if (goodway) newmp.index = prevnodeindex;
+            newmp.index = prevnodeindex;
             // delete (newmp as any).id;
             let mp = [...dedge.midPoints];
             mp.splice(longestIndex, 0, newmp);
             wedge.midPoints = mp;
-            //
             let olddebug = [...subelements];
             subelements.splice(prevnodeindex, 0, newmp.id as string);
             console.log("injecting ep", {prevnodeindex, newmp, prevNodeid, longestSeg, old: olddebug, new: subelements, ledge, dedge});
-            // this might break pointers too
-            let fixorder = () => { wedge.subElements = subelements; }
-            if (!goodway) setTimeout( fixorder, 1); // need to wait edgepoint creation
-            // selectNode(newmp);
             break;
         default:
             if (!data || !myDictValidator) return;
@@ -226,8 +220,8 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         let siblings = data ? addChildren(upward[data.className]) : [];
         if (node) siblings.push(...addChildren(upward[node.className]));
         let subelements = data ? addChildren(downward[data.className]) : [];
-        
-        
+
+
         if (siblings.length > 0)    contentarr.push([<span className={'toolbar-section-label'}>Structure</span>, siblings]);
         if (subelements.length > 0) contentarr.push([<span className={'toolbar-section-label'}>Features</span>, subelements]);
 
@@ -289,6 +283,11 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             }}>
             <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
                 <i className={"content pin bi bi-pin-angle" + (pinned ? "-fill" : '')} onClick={() => setPinned(!pinned)} />
+                {/*<div className={"preview toolbar-section-label mb-0 mx-1"}>
+                    <i className={'bi bi-plus-lg'} />
+                </div>
+                <div className={"preview toolbar-section-label my-auto mx-1"}>Add</div>
+                */}
                 <div className={"content inline"}>
                     {content}
                 </div>

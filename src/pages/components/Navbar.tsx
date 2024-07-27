@@ -1,4 +1,5 @@
 import './style.scss';
+import './navbar.scss';
 import {Dictionary, DState, DUser, GObject, LModel, LProject, LUser, SetRootFieldAction, U} from '../../joiner';
 import React, {Component, Dispatch, ReactElement, ReactNode, useState} from 'react';
 import {FakeStateProps} from '../../joiner/types';

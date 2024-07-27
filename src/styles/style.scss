@@ -111,8 +111,10 @@ input[type='checkbox'] { // was .input as class
   background-repeat: no-repeat; background-size: cover;
   width: min-content;
   cursor: pointer;
-  padding: 0.9em; // above this, the total height become bigger than a char because of some input native stylings
-  scale: 0.9;
+  padding: 0.9em;
+  // scale: 0.9;
+  // padding: 0.88em; // above this, the total height become bigger than a char because of some input native stylings
+  // scale: 1.2;
   background-color: transparent;
   border: none;
 }

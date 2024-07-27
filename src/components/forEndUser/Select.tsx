@@ -55,7 +55,7 @@ function SelectComponent(props: AllProps) {
     delete otherprops.primitives;
     delete otherprops.returns;
     delete otherprops.hidden;
-    return(<select {...otherprops} disabled={readOnly}
+    let select = (<select {...otherprops} disabled={readOnly}
             className={props.inputClassName || css}
             style={props.inputStyle}
             value={value}
@@ -83,6 +83,28 @@ function SelectComponent(props: AllProps) {
         </optgroup>}
         {props.options}
     </select>);
+
+
+    return select;/*
+    return (<label ref={props.ref as any} className={'d-flex p-1'} {...otherprops}>
+        {(label || jsxLabel) && <label className={'my-auto'}
+                                       onMouseEnter={e => setShowTooltip(true)}
+                                       onMouseLeave={e => setShowTooltip(false)}>
+            {label}
+            {jsxLabel}
+        </label>}
+        {(tooltip && showTooltip) && <div className={'my-tooltip'}>
+            <b className={'text-center text-capitalize'}>{field}</b>
+            <br />
+            <label>{tooltip}</label>
+        </div>}
+        {select}
+        {(props.postLabel) &&
+            <label className={'my-auto'} onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)}>
+                {props.postLabel}
+            </label>
+        }
+    </label>);*/
 }
 SelectComponent.cname = 'SelectComponent';
 export interface SelectOwnProps {

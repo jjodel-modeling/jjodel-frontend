@@ -1,30 +1,19 @@
-import {
-    DAttribute, DClass, DEnumerator, Dictionary, DocString, DReference,
-    DState,
-    Input, LAttribute, LClass, LClassifier, LEnumerator,
-    LGraphElement,
-    LModel,
-    LModelElement,
-    LObject, LPointerTargetable, LReference, LStructuralFeature, LValue,
-    LViewElement, Pointer,
-    Select,
-    Selectors, SetFieldAction, U, ValueDetail
-} from '../../joiner';
-import {FakeStateProps} from '../../joiner/types';
+import type {FakeStateProps} from '../../joiner/types';
+import {DState, LModelElement,} from '../../joiner';
 import React, {Component, Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
-import './style.scss';
+import './skeleton.scss';
 import Tree from "../forEndUser/Tree";
 
 function SkeletonComponent(props: AllProps) {
     const {data} = props;
 
-    if(!data) return(<section className={'p-2'}>
+    if(!data) return(<section>
         <label className={'d-block text-center'}>
             No Data to display!
         </label>
     </section>);
-    else return(<section className={'p-2'}>
+    else return(<section>
         <Tree data={data} />
     </section>)
 

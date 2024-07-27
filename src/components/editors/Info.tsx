@@ -24,13 +24,13 @@ class builder {
     }
 
     static model(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section className={'p-2'}>
+        return (<section>
             {this.named(data, advanced)}
         </section>);
     }
 
     static package(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section className={'p-2'}>
+        return (<section>
             {this.named(data, advanced)}
             <div className={'input-container'}>
                 <b className={'me-2'}>Uri:</b>
@@ -44,7 +44,7 @@ class builder {
     }
 
     static class(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section className={'p-2'}>
+        return (<section>
             {this.named(data, advanced)}
             <div className={'input-container'}>
                 <b className={'me-2'}>Abstract:</b>
@@ -62,7 +62,7 @@ class builder {
     }
 
     static enum(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section className={'p-2'}>
+        return (<section>
             {this.named(data, advanced)}
             {advanced && <div className={'input-container'}>
                 <b className={'me-2'}>Serializable:</b>
@@ -119,7 +119,7 @@ class builder {
         </>);
     }
     static attribute(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section className={'p-2'}>
+        return (<section>
             {this.feature(data, advanced)}
             {advanced && <div className={'input-container'}>
                 <b className={'me-2'}>ID:</b>
@@ -128,7 +128,7 @@ class builder {
         </section>);
     }
     static reference(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section className={'p-2'}>
+        return (<section>
             {this.feature(data, advanced)}
             <div className={'input-container'}>
                 <b className={'me-2'}>Containment:</b>
@@ -145,7 +145,7 @@ class builder {
         </section>);
     }
     static operation(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section className={'p-2'}>
+        return (<section>
             {this.named(data, advanced)}
             <div className={'input-container'}>
                 <b className={'me-2'}>Return:</b>
@@ -154,7 +154,7 @@ class builder {
         </section>);
     }
     static literal(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section className={'p-2'}>
+        return (<section>
             {this.named(data, advanced)}
             <div className={'input-container'}>
                 <b className={'me-2'}>Ordinal:</b>
@@ -172,7 +172,7 @@ class builder {
             const value = feature.values;
             conform = (value.length >= lowerBound && value.length <= upperBound);
         }
-        return(<section className={'p-2'}>
+        return(<section>
             {object.instanceof && conform && <label className={'d-block text-center'}>
                 The instance <b className={'text-success'}>CONFORMS</b> to {object.instanceof.name}
             </label>}
@@ -346,7 +346,7 @@ class builder {
                     </button>
                 </div>);
 
-        return(<section className={'p-2'}>
+        return(<section>
             <div className={'d-flex'}>
                 <label className={'ms-1 my-auto'}>Values</label>
                 <button className={'btn btn-primary ms-auto me-1'} disabled={filteredValues.length >= upperBound} onClick={add}>
@@ -390,7 +390,7 @@ function InfoComponent(props: AllProps) {
         case 'DValue':
             return builder.value(data, topics, advanced);
     }
-    return(<section className={'p-2'}>
+    return(<section>
         <label className={'d-block text-center'}>
             No Data to display!
         </label>
