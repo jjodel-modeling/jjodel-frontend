@@ -15,8 +15,6 @@
     --radius: 6px;
 }
 
-
-
 .menu-button {
     position: relative;
     color: var(--bg-5);
@@ -49,6 +47,7 @@
     background-color: var(--color);
     color: white;
     border-radius: var(--radius);
+    box-shadow:0px 2px 4px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.1); 
   }
   
   .dropdown > div.item {

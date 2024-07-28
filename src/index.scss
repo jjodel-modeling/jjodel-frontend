@@ -11,8 +11,9 @@ body {
         background-color: white;
         overflow: hidden;
     }
-    // font-family: Lato, 'Helvetica Neue', Arial,Helvetica, sans-serif !important;
-    font-family: 'Inter Tight', sans-serif;
+    // font-family: , 'Helvetica Neue', Arial,Helvetica, sans-serif !important;
+
+    font-family: 'Inter Tight', Lato, sans-serif;
     font-optical-sizing: auto;
     font-weight: 400;
     font-style: normal;
@@ -26,7 +27,12 @@ body {
 }
 
 .catalog-container {
+    position: relative;
     margin-left: calc(12% + 50px);
+    max-width: 82%;
+    min-height: 75%;
+    padding-bottom: 2em;
+
 }
 .catalog-container .user {
     margin-bottom: 70px;
@@ -53,6 +59,167 @@ body {
     float: left;    
 }
 
+.catalog {
+    position: absolute;
+    width: 100%;
+    padding: 0;
+    padding-right: 290px;
+
+}
+
+.catalog-container .catalog-header {
+    width: 100%;
+    margin-left: 0em;
+    margin-bottom: 2em;
+}
+
+.catalog-container .catalog-header button {
+    color: var(--bg-4);
+    background-color: transparent;
+    font-size: 0.9em;
+    font-weight: 400;
+    padding: 4px 10px;
+    border: none; 
+    border-radius: 3px;
+}
+
+.catalog-container .catalog-header button:hover {
+    background-color: var(--bg-2);
+}
+
+.catalog-container .catalog-header button:active {
+
+}
+
+.catalog-container .catalog-header button.active {
+    background-color: var(--bg-2);
+    color: var(--color);
+}
+
+
+.catalog-container div .catalog-header button {
+    margin-left: 1em;    
+}
+
+.catalog-container div .catalog-header .right button:hover {
+    color: red;   
+}
+
+.catalog-container .catalog-header .left {
+    margin-left: 0;
+    padding-left: 0;
+}
+.catalog-container .catalog-header .right {
+    text-align: right;
+    float: right;
+    border: 1px solid red;
+}
+
+.view-icons {
+    float: right;
+}
+.view-icons .bi {
+    font-size: 1.2em;
+    margin-left: 0.6em;
+}
+.view-icons .bi-list {
+    font-size: 1.4em;
+}
+
+.view-icons .bi.selected {
+    background-color: var(--bg-3);
+    border-radius: 4px;
+    padding: 2px;
+}
+
+.details {
+    position: absolute;
+    float: right;
+    width: 260px; 
+    right: 0;
+    border: 1px solid var(--bg-3);
+    border-radius: 8px;
+    padding: 1.2em;
+    top: 0px;
+}
+
+.commandbar .blue {
+    background: linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    color: white;
+    border: none;
+}
+
+.commandbar .red {
+    background: linear-gradient(90deg, hsla(14, 90%, 73%, 1) 0%, hsla(331, 54%, 44%, 1) 100%);
+    color: white;
+    border: none;
+}
+
+.commandbar .dark {
+    background: linear-gradient(90deg, hsla(208, 33%, 21%, 1) 0%, hsla(211, 36%, 46%, 1) 100%);
+    color: white;
+    border: none;
+
+    & .bi {
+        color: white;
+    }
+}
+
+.commandbar .clear {
+    background: white;
+    color: var(--color);
+
+
+    & .bi {
+        color: var(--secondary);
+    }
+}
+
+
+.commandbar .default {
+    background: linear-gradient(90deg, hsla(186, 33%, 94%, 1) 0%, hsla(216, 41%, 79%, 1) 100%);
+    color: var(--color);
+    border: none;
+
+}
+
+.commandbar .card {
+    width: 23em; 
+    margin-right: calc(1% - 2px);
+    margin-left: 1%;
+    padding: 1.2em
+}
+
+.commandbar .card {
+    display: grid;
+    grid-template-columns: 20% 80%;
+    grid-gap: 0px;
+}
+
+.commandbar .card .icon {
+    flex: 1;
+    font-size: 2.5em;
+    justify-content: center;
+}
+
+.commandbar .card .icon .bi:hover {
+    cursor: pointer;
+    color: var(--accent);
+}
+.commandbar .card .icon .disabled:hover {
+    color: inherit!important;
+    cursor: default; 
+}
+
+.commandbar .card .body h5 {
+    margin-bottom: 0px;
+    
+}
+
+.commandbar .card .body {
+    padding-top: 6px;
+
+}
 
 ::-webkit-scrollbar {
     width: 0.2rem;
@@ -80,11 +247,7 @@ body {
     height: fit-content;
     overflow: hidden;
 }
-/*
-.form-control:focus {
-    border-color: #e0e0e0 !important;
-    box-shadow: none;
-}*/
+
 html {
     font-size: 0.85em;
 }

@@ -39,16 +39,19 @@ const Catalog = (props: CatalogProps) => {
 
 
 
-function Dashboard(props: Props): JSX.Element {
+function Dashboard(props: Props): any {
     const {children, active} = props;
 
     return(<>
         <Navbar />
         <LeftBar active={active} />
+        
         <div className={'catalog-container'}>
-            <User name={'Alfonso Pierantonio'} initials={'AP'} />
+            <User name={'John Doe'} initials={'JD'} />
             <Catalog children={children}/>
         </div>
+        
+        
     </>);
 }
 
