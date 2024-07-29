@@ -73,7 +73,7 @@
 
 .footer label {
     border-right: 1px solid var(--bg-5);
-    padding: 0.25em 2em 0.25em 2em; 
+    padding: 0.25em 2em 0.25em 2em;
 }
 
 .footer .coordinates {
@@ -127,7 +127,7 @@
     background-color: var(--bg-3);
     border: 1px solid var(--bg-3-1);
     color: var(--bg-5);
-    box-shadow:0px 2px 4px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.1); 
+    box-shadow:0px 2px 4px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.1);
     border-radius: 4px;
     padding: 5px 13px 5px 13px;
     font-size: 1.2em;
@@ -191,7 +191,7 @@
 .footer .widgetbar .notify .button .bi-chevron-down:hover {
     background-color: var(--bg-3-1);
     color: var(--bg-5);
-    
+
     cursor: pointer;
     transition: 0.3s;
 }
@@ -272,7 +272,7 @@
 }
 
 .new-navbar .bi.list {
-    
+
     display: block;
     color: var(--color);
     font-size: 1.3em;
@@ -281,7 +281,7 @@
 
 .new-navbar .bi.list:hover {
     color: var(--accent);
-    
+
     transition: color 0.2s;
 
 }
@@ -297,13 +297,13 @@
     background-color: var(--color);
     min-width: 200px;
     list-style-type: none;
-    box-shadow:0px 10px 20px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.8); 
+    box-shadow:0px 10px 20px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.8);
     padding: 3px;
     padding-left: 15px;
 }
 
 .new-dropdown-content li label {
-    
+
     text-decoration: none;
     display: block;
     text-align: left;
@@ -349,8 +349,8 @@
 }
 
 .nav-container .nav-hamburger .bi:hover {
-    color: var(--accent); 
-   
+    color: var(--accent);
+
     transform-origin: center;
     transform: rotate(180deg);
 }
@@ -362,8 +362,8 @@
 
 .nav-container .nav-hamburger label div .bi {
     color: white;
-    font-size: 0.75em; 
-    padding-top: 2px; 
+    font-size: 0.75em;
+    padding-top: 2px;
     font-weight: 800;
 }
 
@@ -391,12 +391,12 @@
         padding-left: 0;
         padding-right: 0;
     }
-    
+
     ul li.divisor {
         padding: 3px 0;
     }
 
-    ul li hr { 
+    ul li hr {
         position: relative;
         color: #8a8a8a;
         width: 180px;
@@ -404,7 +404,7 @@
     }
 
     & label {
-        color: var(-bg-1);
+        color: var(--bg-1);
         cursor: pointer;
         display: block;
         font-size: 12px;
@@ -417,15 +417,69 @@
     & label:hover {
         background-color: var(--accent);
         border-radius: 4px;
-        
+
     }
-    
+
     & .keystroke .bi {
         font-size: 0.9em;
         font-kerning: none;
         padding-top: 2px;
     }
 
+}
+// ho riunito i miei cambiamenti in un solo posto per distinguere le mie aggiunte ed eventualmente annullarne parti.
+.nav-hamburger:hover, .nav-hamburger:focus-within{
+    // &>.bi{ color: var(--accent); }
+}
+.nav-container .content.context-menu{
+    width: auto;
+}
+.nav-container .content.context-menu ul{
+    width: max-content;
+    min-width: 100%;
+    padding: 4px 0px;
+    --font-color-1: white;
+    .content.right{
+        min-height: 100%;
+    }
+    >li{
+        display: flex;
+        width: 100%;
+        &:hover, &:focus-within{
+            >label{
+                border-radius: 4px;
+                background-color: var(--accent);
+            }
+        }
+        >label{
+            display: flex;
+            padding: 3px 8px;
+            width: 100%;
+            //font-size: 12px;
+            //font-weight: 200;
+            >*:first-child{
+                flex-grow: 1;
+            }
+            .keystrokes{
+                height: 18px;
+                display: flex;
+                justify-content: end;
+
+                >*{
+                    font-size: 12px;
+                    i.bi{
+                        font-size: inherit;
+                        &:hover{
+                            color: var(--color-1);
+                        }
+                    }
+                    width: 1.1ic;
+                    // border: 1px solid red;
+                    text-align:center;
+                }
+            }
+        }
+    }
 }
 
 .nav-container .content.right {
