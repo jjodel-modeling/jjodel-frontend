@@ -113,7 +113,7 @@ const Catalog = (props: ChildrenType) => {
                     </div>
                     <div style={{float: 'right'}}>
                     <Menu position={'left'}>
-                        <Item>Alphabetical</Item>
+                        <Item action={(e)=> {alert('')}}>Alphabetical</Item>
                         <Item>Date created</Item>
                         <Item>Last modified</Item>
                     </Menu>
