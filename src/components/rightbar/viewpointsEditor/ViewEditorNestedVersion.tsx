@@ -81,6 +81,13 @@ function NestedViewComponent(props: AllProps) {
                     <div className={`icon type tree-${appliableTo}`}>{appliableTo === "Any" ? "*" : appliableTo[0]}</div>
                     <div>{d.name}</div>
                 </div>
+                <div className={"hover-stuff vertical-centering d-flex"}>
+                    <div className={"ms-auto d-flex"} onClick={preventClick}>
+                        {/*@ts-ignore*/}
+                        <button className="bg btn-delete my-auto ms-2 green" onClick={(e)=> { l.duplicate(); preventClick(e);}}><i className='bx bx-duplicate' /></button>
+                        <button className="bg btn-delete my-auto ms-2" onClick={(e)=> { l.delete(); preventClick(e);}}><i className="p-1 bi bi-dash" /></button>
+                    </div>
+                </div>
                 <div className={"right-stuff vertical-centering"}>
                     <div className={"right-content"} onClick={preventClick}>
                         <span className={"priority"}>priority: {l.explicitApplicationPriority} *</span>
@@ -94,13 +101,6 @@ function NestedViewComponent(props: AllProps) {
                         <span className={"ocl-ico vertical-centering " + (d.oclCondition.length ? "" : "hidden")}>OCL</span>
                         <span className={"js-ico vertical-centering " + (d.jsCondition.length ? "" : "hidden")}>
                         <i className="bi bi-lightning"></i>JS</span>
-                    </div>
-                </div>
-                <div className={"hover-stuff vertical-centering d-flex"}>
-                    <div className={"ms-auto d-flex"} onClick={preventClick}>
-                        {/*@ts-ignore*/}
-                        <button className="bg btn-delete my-auto ms-2 green" onClick={(e)=> { l.duplicate(); preventClick(e);}}><i className='bx bx-duplicate' /></button>
-                        <button className="bg btn-delete my-auto ms-2" onClick={(e)=> { l.delete(); preventClick(e);}}><i className="p-1 bi bi-dash" /></button>
                     </div>
                 </div>
             </div>
@@ -120,17 +120,19 @@ function NestedViewComponent(props: AllProps) {
 
     let [view, setView] = useStateIfMounted(undefined as (undefined | Pointer<DViewElement>));
     let vieweditor = view && <div className={"single-view-content"}><ViewData viewid={view} setSelectedView={setView} /></div>;
-    if (test) return(<div>
-        <div className={'d-flex p-2'}>
-            <b className={'ms-1 my-auto'}>Views</b>
-            <button className={'btn btn-primary ms-auto'} onClick={addVP}>
-                <i className={'p-1 bi bi-plus'}></i>
-            </button>
+    if (test) return(<div className={"view-editor-root"}>
+        <div className={"view-editor-fullsize-content"}>
+            <div className={'d-flex p-2'}>
+                <b className={'ms-1 my-auto'}>Views</b>
+                <button className={'btn btn-primary ms-auto'} onClick={addVP}>
+                    <i className={'p-1 bi bi-plus'}></i>
+                </button>
+            </div>
+            {vieweditor}
+            <ul className={"p-2"}>
+                {viewpoints.map(vp=><GenericTree data={vp.__raw} getSubElements={getSubElements} renderEntry={renderEntry} metadata={{setView, scoreBoost:0}} />)}
+            </ul>
         </div>
-        {vieweditor}
-        <ul className={"p-2"}>
-        {viewpoints.map(vp=><GenericTree data={vp.__raw} getSubElements={getSubElements} renderEntry={renderEntry} metadata={{setView, scoreBoost:0}} />)}
-        </ul>
     </div>);
 
     let hoverID: any = '';
