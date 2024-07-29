@@ -87,15 +87,10 @@ body {
     background-color: var(--bg-2);
 }
 
-.catalog-container .catalog-header button:active {
-
-}
-
 .catalog-container .catalog-header button.active {
     background-color: var(--bg-2);
     color: var(--color);
 }
-
 
 .catalog-container div .catalog-header button {
     margin-left: 1em;    
@@ -114,6 +109,39 @@ body {
     float: right;
     border: 1px solid red;
 }
+
+.catalog-container .project-list {
+   margin-right: 280px;
+}
+
+.catalog-container .project-list .header {
+    font-size: 1.2em;
+    color: var(--bg-4);
+    margin-bottom: 6px;
+}
+
+.catalog-container .project-list .data {
+    font-size: 1.2em;
+    color: var(--color);
+    padding: 4px 8px;
+}
+
+.catalog-container .project-list .data:hover {
+    color: var(--bg-5);
+    background-color: var(--bg-3);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: color background-color 0.3s;
+}
+
+.catalog-container .project-list .name {
+    font-weight: 600;
+    float: right;
+}
+
+
+
+
 
 .view-icons {
     float: right;
@@ -185,8 +213,8 @@ body {
 
 .commandbar .card {
     width: 23em; 
-    margin-right: calc(1% - 2px);
-    margin-left: 1%;
+    margin-right: 15px;
+    margin-left: 10px;
     padding: 1.2em
 }
 

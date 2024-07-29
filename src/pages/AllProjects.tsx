@@ -58,117 +58,162 @@ const Card = (props: CardType) => {
 Cards.Item = Card;
 
 type ChildrenType = {
-    children: any;
+    projects?: any;
+    children?: any;
 };
 
+
+/* main component */
+
 const Catalog = (props: ChildrenType) => {
-    return (
-        <div>
-            {props.children}
-        </div>
-    );
-}
 
-const CatalogHeader = (props: ChildrenType) => {
-    return (
-        <div className='row catalog-header'>
-            {props.children}
-        </div>
-    );
-}
+    const [filters, setFilters] = useState([false,false,false]);
+    const [mode, setMode] = useState<string>("cards");
 
-const CatalogFilters = () => {
-    const [filters, setFilters] = useState([true,true,true]);
-
-    function getFilters(){
-        return filters;
+    const Header = (props: ChildrenType) => {
+        return (
+            <div className='row catalog-header'>
+                {props.children}
+            </div>
+        );
     }
 
-    function toggleFilters(el: 0|1|2) {
-        switch(el) {
-            case 0:
-                setFilters([!filters[0], filters[1], filters[2]]);
-                break;
-            case 1:
-                setFilters([filters[0], !filters[1], filters[2]]);
-                break;
-            case 2:
-                setFilters([filters[0], filters[1], !filters[2]]);
-                break;
-        }
-    };
+    const CatalogFilters = () => {
+    
+        function toggleFilters(el: 0|1|2) {
+            switch(el) {
+                case 0:
+                    setFilters([!filters[0], filters[1], filters[2]]);
+                    break;
+                case 1:
+                    setFilters([filters[0], !filters[1], filters[2]]);
+                    break;
+                case 2:
+                    setFilters([filters[0], filters[1], !filters[2]]);
+                    break;
+            }
+        };
+    
+        return (
+            <div className={'col left'}>
+                {filters[0] ? <button onClick={(e) => toggleFilters(0)} className='active'>public</button> : <button onClick={(e) => toggleFilters(0)}>public</button>}
+                {filters[1] ? <button onClick={(e) => toggleFilters(1)} className='active'>private</button> : <button onClick={(e) => toggleFilters(1)}>private</button>}
+                {filters[2] ? <button onClick={(e) => toggleFilters(2)} className='active'>collaborative</button> : <button onClick={(e) => toggleFilters(2)} >collaborative</button>}
+            </div>
+        );
+    }
 
-    return (
-        <div className={'col left'}>
-            {filters[0] ? <button onClick={(e) => toggleFilters(0)} className='active'>public</button> : <button onClick={(e) => toggleFilters(0)}>public</button>}
-            {filters[1] ? <button onClick={(e) => toggleFilters(1)} className='active'>private</button> : <button onClick={(e) => toggleFilters(1)}>private</button>}
-            {filters[2] ? <button onClick={(e) => toggleFilters(2)} className='active'>collaborative</button> : <button onClick={(e) => toggleFilters(2)} >collaborative</button>}
-        </div>
-    );
-}
-
-const CatalogMode = () => {
-    return (
-        <div className={'col left'}>
-            <div className="float-end">sorted by 
-                <div className={'view-icons'}>
-                    <i className="bi bi-grid selected"></i>
-                    <i className="bi bi-list"></i>
-                </div>
-                <div style={{float: 'right'}}>
-                <Menu position={'left'}>
-                    <Item>Alphabetical</Item>
-                    <Item>Date created</Item>
-                    <Item>Last modified</Item>
-                </Menu>
+    const CatalogMode = () => {
+        return (<>
+            <div className={'col left'}>
+                <div className="float-end">sorted by 
+                    <div className={'view-icons'}>
+                        <i onClick={(e) => setMode('cards')} className={`bi bi-grid ${mode === "cards" && 'selected'}`}></i>
+                        <i onClick={(e) => setMode('list')} className={`bi bi-list ${mode === "list" && 'selected'}`}></i>
+                    </div>
+                    <div style={{float: 'right'}}>
+                    <Menu position={'left'}>
+                        <Item>Alphabetical</Item>
+                        <Item>Date created</Item>
+                        <Item>Last modified</Item>
+                    </Menu>
+                    </div>
                 </div>
             </div>
-        </div>
-    );
-}
+        </>);
+    }
 
-const CatalogSide = (props: ChildrenType) => {
-    return (
-    <div className={'catalog'}>
-        {props.children}
-    </div>
-    );
-}
+    const CatalogSide = (props: ChildrenType) => {
+        return (
+            <div className={'catalog'}>
+                {props.children}
+            </div>
+        );
+    }
 
-const CatalogInfoCard = (props: any) => {
-    return (
-        <>
+    const CatalogInfoCard = (props: any) => {
+        return (
             <div className={'details'}>
                 <h5>Your projects</h5>
                 <p>You developed <strong>{props.projects.length}</strong> projects with an overall number of 12 artifacts.</p>
                 <img src={colors} width={220} />
             </div>
-        </>
-    );
-}
+        );
+    }
 
-type ReportType = {
-    projects: LProject[];
-    filters?: [boolean, boolean, boolean];
-}
+    type CatalogType = {
+        projects: LProject[];
+    }
+    
+    const CatalogReport = (props: CatalogType) =>{
+        
+        let items_public: LProject[] = []; 
+        let items_private: LProject[] = []; 
+        let items_collaborative: LProject[] = []; 
 
-const CatalogReport = (props: ReportType) =>{
-    return (
-        <>
-            <div style={{display: (props.projects.length > 0) ? 'flex' : 'none'}} className={'flex-wrap'}>
-                {props.projects.map(p => <Project key={p.id} data={p} />)}
+
+        if (filters[0]) {
+            items_public = props.projects.filter(p => p.type === "public");
+        }
+        if (filters[1]) {
+            items_private = props.projects.filter(p => p.type === "private");
+        }
+        if (filters[2]) {
+            items_collaborative = props.projects.filter(p => p.type === "collaborative");
+        }
+
+        var items  = items_public.concat(items_private,items_collaborative);
+        
+        return (
+            
+            mode == "cards" ?
+
+            <div style={{display: (props.projects.length > 0) ? 'flex' : 'none', marginRight: '270px'}} className={'flex-wrap'}>
+
+                {props.projects.length === 0 && <span>Sorry, there are no results matching your search criteria. Please try again with different filters.</span>}
+                
+                {
+                    props.projects.map(p => <>
+                        {filters[0] && p.type === "public" && <Project key={p.id} data={p} mode={mode} />}
+                        {filters[1] && p.type === "private" && <Project key={p.id} data={p} mode={mode} />}
+                        {filters[2] && p.type === "collaborative" && <Project key={p.id} data={p} mode={mode} />}
+                        {!filters[0] && !filters[1] && !filters[2] && <Project key={p.id} data={p} mode={mode} />}
+                    </>)
+                }
+            
             </div>
-        </>
+
+            : 
+            <div className={'row project-list'}>
+                <div className='row header'>
+                    <div className={'col-6'}>Name</div><div className={'col-3'}>Last modified</div><div className={'col-3'}>Created</div>
+                </div>
+                {
+                    props.projects.map(p => <>
+                        {filters[0] && p.type === "public" && <Project key={p.id} data={p} mode={mode} />}
+                        {filters[1] && p.type === "private" && <Project key={p.id} data={p} mode={mode} />}
+                        {filters[2] && p.type === "collaborative" && <Project key={p.id} data={p} mode={mode} />}
+                        {!filters[0] && !filters[1] && !filters[2] && <Project key={p.id} data={p} mode={mode} />}
+                    </>)
+                }
+            </div>
+                
+        );
+    }; 
+
+    return (
+        <div>
+            <Header>
+                <CatalogFilters/>
+                <CatalogMode/>
+            </Header>
+            <CatalogSide>
+                <CatalogInfoCard projects={props.projects}/>
+            </CatalogSide>
+            <CatalogReport projects={props.projects}/>
+        </div>
     );
-}; 
-
-Catalog.Header = CatalogHeader;
-Catalog.Filters = CatalogFilters;
-Catalog.Mode = CatalogMode;
-Catalog.Side = CatalogSide;
-Catalog.InfoCard = CatalogInfoCard;
-Catalog.Report = CatalogReport;
-
+}
 
 
 
@@ -226,33 +271,9 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
                 </Cards>
 
                 
-                <Catalog>
-                    <Catalog.Header>
-                        <Catalog.Filters />
-                        <Catalog.Mode />
-                    </Catalog.Header>       
-                
-                    <Catalog.Side>
-                        <Catalog.InfoCard projects={projects}/>
-                        
-                        {/* 
-                        
-                        AP: l'upload di progetti deve avvenire tramite il menu principale
+                <Catalog projects={projects} />
 
-                        <div className={'ms-2 p-1 bg-primary w-25 rounded me-auto'}>
-                            <b className={'d-block text-center text-gray'}>Do you want to import a project?</b>
-                            <input className={'form-control w-100'} type={'file'} onChange={async e => await importProject(e)} />
-                        </div>*/}
-                        
-                        <Catalog.Report projects={projects} />
-                        
-                    </Catalog.Side>
-                    
-                        
-                        
 
-                    
-                </Catalog>
             </React.Fragment>
         </Dashboard>
     </Try>);
