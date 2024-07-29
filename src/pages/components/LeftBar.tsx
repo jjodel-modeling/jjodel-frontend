@@ -1,6 +1,7 @@
 import {useNavigate} from 'react-router-dom';
 
 type Props = {active: 'Account'|'Settings'|'Updates'|'Community'|'All'|'Archive'};
+
 function LeftBar(props: Props): JSX.Element {
     const {active} = props;
     const navigate = useNavigate();

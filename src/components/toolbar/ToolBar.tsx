@@ -222,8 +222,8 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         let subelements = data ? addChildren(downward[data.className]) : [];
 
 
-        if (siblings.length > 0)    contentarr.push([<span className={'toolbar-section-label'}>Structure</span>, siblings]);
-        if (subelements.length > 0) contentarr.push([<span className={'toolbar-section-label'}>Features</span>, subelements]);
+        if (siblings.length > 0)    { contentarr.push([<span className={'toolbar-section-label'}>Structure</span>, <hr className={'my-1'} />, siblings]); }
+        if (subelements.length > 0) { contentarr.push([<span className={'toolbar-section-label'}>Features</span>, <hr className={'my-1'} />, subelements]); }
 
     }
     else {
@@ -255,19 +255,26 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
         }) || [];
         rootobjs.push(<div key={"RawObject"} className={'toolbar-item'} tabIndex={ti} onClick={()=>select(model.addObject({}, null))}>
             <ModellingIcon name={'object'} />
+            <hr className={'my-1'} />
             <span className={'ms-1 my-auto text-capitalize'}>Object</span>
         </div>);
 
 
-        if (rootobjs.length > 0)    contentarr.push([<b className={'toolbar-section-label'} style={{marginRight:"1.5em"/*to avoid overlap with pin*/}}>Root level</b>, rootobjs]);
-        if (subleveloptions.length > 0) contentarr.push([<b className={'toolbar-section-label'}>Sublevel</b>, subleveloptions]);
+        if (rootobjs.length > 0) {
+            contentarr.push([<b className={'toolbar-section-label'} style={{marginRight:"1.5em"/*to avoid overlap with pin*/}}>Root level</b>, rootobjs]);
+        }
+        if (subleveloptions.length > 0) {
+            contentarr.push([<b className={'toolbar-section-label'}>Sublevel</b>, subleveloptions]);
+        }
     }
 
 
     let shapes = node ? addChildren(downward[node.className]) : [];
-    if (shapes.length > 0)      contentarr.push([<b className={'toolbar-section-label'}>Shape</b>, shapes]);
+    if (shapes.length > 0) {
+        contentarr.push([<b className={'toolbar-section-label'}>Shape</b>, shapes]);
+    }
 
-    let separator = <hr className={'my-2'} /> as any;
+    let separator = <hr className={'my-1'} /> as any;
     // @ts-ignore
     content = contentarr.separator(separator);// .flat() as any;
     console.log("toolbar", {contentarr, separator, content});
@@ -288,7 +295,7 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
                 </div>
                 <div className={"preview toolbar-section-label my-auto mx-1"}>Add</div>
                 */}
-                <div className={"content inline"}>
+                <div className={"content inline w-100"}>
                     {content}
                 </div>
             </div>

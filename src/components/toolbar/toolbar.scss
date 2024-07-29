@@ -3,19 +3,21 @@
 }
 
 .toolbar {
+
     --bg: #233d4d;
     --color: white;
+    --accent: #f3b700;
 
     padding: 0.5rem;
-    padding-left: 12px;
     margin: 0;
+    z-index: 12000;
     cursor: move;
     display: flex;
     font-size: 13px;
     background-color: var(--bg);
     color: var(--color);
     white-space: pre;
-    width: 300px;
+    width: 205px;
     margin-right: 100px;
     border-radius: 8px;
     box-shadow:0px 10px 20px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.8); 
@@ -37,19 +39,16 @@
       
         margin-bottom: 0.25rem;
         margin-left: 0.3rem;
-        // margin-right: 2em;
-        //text-transform: uppercase;
-        // text-align: center;
         display: block;
+        font-family: 'Inter Tight', sans-serif;
         font-size: 13px;
-        font-weight: 300;
+        font-weight: 400;
     }
 
     
 
-    .bi.pin{/*
-      background: var(--palette-1);*/
-      color: var(--palette-w);
+    .bi.pin{
+      color: var(--color);
       cursor: pointer;
       position: absolute;
       top: 0.25rem;
@@ -57,20 +56,25 @@
       z-index: 2 !important;
       box-shadow: none !important;
       padding: 0 4px;
-      &:hover{
-        color: var(--palette-1);
-        background: var(--palette-w);
+      
+      & :hover{
+        color: var(--color);
+        background-color: var(--bg);
         border-radius: 999px;
         scale: 1.15;
       }
     }
-    .toolbar-item{
-      border-radius: 6px;
-      padding-right: 0.25em;
+
+    .toolbar-item {
+      width: 100%;
+      border-radius: 4px;
+      margin-right: 0!important;
+      padding-left: 2px;
       display: flex;
       cursor: pointer;
 
       > span{
+        width: 100%;
         display: inline-block;
         overflow: hidden;
         white-space: nowrap;
@@ -79,11 +83,23 @@
         margin: auto;
       }
   }
-  .toolbar-item:hover, .toolbar-item:focus{
-    background: var(--palette-w);
-    color: var(--palette-1);
+
+  .w-100 {
+    position: relative;
+    width: 100%;
+    padding-right: 0px;
+    margin-left: 0;
+    left: -0  px;
   }
-  z-index: 1;
+
+  .toolbar .content {
+      width: 100%;
+  }
+  .toolbar-item:hover, .toolbar-item:focus{
+    background-color: var(--accent);
+    color: var(--color);
+  }
+  z-index: 1200;
   box-shadow: var(--smart-elevation-8); // 6px 0 4px -4px #999, -6px 0 4px -4px #999;
 
   b {
@@ -97,34 +113,19 @@
     // border-left: 2px solid;
   }
 
+  
+}
+
+hr.my-1{
+  position: relative;
+  color: #8a8a8a;
+  width: 180px;
+  left: 5px;
+}
 
 
-
-
-
-
-
-  /*
-  .package {
-    border-left-color: $package-color;
-  }
-  .class {
-    border-left-color: $class-color;
-  }
-  .enumerator {
-    border-left-color: $enum-color;
-  }
-  .attribute, .reference, .operation, .feature, .parameter, .exception, .literal {
-    border-left-color: $feature-color;
-  }
-  .edgepoint, .edge, .vertex, .voidvertex, .voidedge{
-    border-left-color: $vertex-color;
-  }
-  .annotation {
-    border-left-color: $annotation-color;
-  }
-  .object, .LObject {
-    border-left: 2px solid $object-color;
-  }
-  */
+.my-auto {
+  font-family: 'Inter Tight', sans-serif!important;
+  font-weight: 200;
+  padding-bottom: 5px;
 }

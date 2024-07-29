@@ -5,8 +5,100 @@
   margin-bottom: 0.2em;
 }
 
+.summary {
+
+  color: var(--color);
+  position: relative;
+  top: 10%;
+  margin: auto;
+  width:min-content;
+  max-width: 700px;
+  height: fit-content;
+  background-color: var(--bg-2);
+
+  border-radius: 10px;
+  font-family: "Inter Tight", sans-serif;
+  font-size: 1em; 
+
+  border-bottom: 10px solid var(--success);
+
+
+  & .bi-pencil-square {
+    font-size: 1.3em;
+  }
+  & label .bi {
+    font-size: 1.7em;
+  }
+  & .bi:hover {
+    color: var(--accent);
+  }
+  & p {
+    font-size: 1.2em;
+  }
+
+  & .chart {
+    width: 80%;
+    height: 8px;
+    margin: 0 2px;
+  }
+  & .bg-3 {
+    color: var(--bg-3-1);
+    text-align: center;
+  }
+  & input {
+    font-weight: 400;
+    font-size: 1em;
+    border-radius: 3px;
+  }
+
+  & > strong {
+    font-weight: 400;
+  }
+
+  & .bi-chevron-down {
+
+    margin-left: 10px;
+    padding: 2px 4px 1px 4px;
+  }
+
+  & .bi-chevron-down:hover {
+    background-color: var(--bg-3-1);
+    color: var(--bg-5);
+    
+    cursor: pointer;
+    transition: background-color 0.3s;
+    
+
+    border-radius: 4px;
+    border: 1px solid var(--bg-3-1);
+    font-size: 0.9em;
+  }
+
+  & .content .item {
+    cursor: pointer;
+    margin: 0 4px 0 4px;
+    padding: 3px 8px 3px 8px;
+    font-size: 12px;
+    font-weight: 200;
+    font-style: normal;
+  }
+
+  & .content {
+    position: absolute;
+    top: 20px;
+    left: 0;
+  }
+
+  & .content .item:hover {
+    background-color: #F3B700;
+    border-radius: 4px;
+  }
+
+}
+
 .v-container {
   display: flex;
+  background-color: white;
 }
 
 .v-container > label:hover {

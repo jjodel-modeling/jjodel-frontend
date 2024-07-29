@@ -183,9 +183,6 @@ function NavbarComponent(props: AllProps) {
 
 
 
-
-
-
                     {/*
                         <label onClick={e => SetRootFieldAction.new('debug', !debug)} className={`my-auto py-0 mx-2 cursor-pointer item text-white rounded ${debug ? 'bg-success' : 'bg-danger'}`}>
                             DEBUG
@@ -196,10 +193,6 @@ function NavbarComponent(props: AllProps) {
 
                     </div>
                 </ul>*/}
-
-
-
-
 
 
 
