@@ -268,7 +268,6 @@ interface OwnProps {
     autosize?: boolean;
     inputClassName?: string;
     inputStyle?: GObject;
-    asLabel?: boolean;
     key?: React.Key | null;
 }
 

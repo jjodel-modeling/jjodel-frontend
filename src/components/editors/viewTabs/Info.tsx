@@ -41,7 +41,7 @@ function ViewInfo(props: Props): JSX.Element {
         <div className={'input-container'}>
             <b className={'me-2'}>Name:</b>
             <Select data={view} field={'forceNodeType'}
-                    setter={(data, key, val) => {view.forceNodeType = val === 'unset' ? undefined : val;}}
+                    setter={(val, data, key) => {view.forceNodeType = val === 'unset' ? undefined : val;}}
                     getter={(data, key) => {return data[key] || 'unset_';}}
                     options={
                         <>

@@ -1,5 +1,5 @@
 import './style.scss';
-import {DState, DUser, LGraphElement, LModelElement, LUser} from "../../joiner";
+import {DState, DUser, LGraphElement, LModelElement, LUser, U} from "../../joiner";
 import {FakeStateProps} from "../../joiner/types";
 import React, {Dispatch, ReactElement, useState} from "react";
 import {connect} from "react-redux";
@@ -13,7 +13,7 @@ enum notificationType {
 
 enum alertType {
     Normal = 0,
-    Success = 1, 
+    Success = 1,
     RequireAttention = 2,
     Alert = 3,
     Error = 4
@@ -38,20 +38,20 @@ const Notify = (props: Props) => {
         {name: 'terminal', icon: 'bi bi-terminal-fill', defaultMessage: ''},
         {name: 'messages', icon: 'bi bi-bell-fill', defaultMessage: 'There are no messages.'}
     ];
-  
-    const openNotify = () => { 
+
+    const openNotify = () => {
             setIsOpen(props.type);
     };
 
     const closeNotify = () => {
         setIsOpen(null);
     }
-  
+
     return (
-        <React.Fragment> 
+        <React.Fragment>
             <div onClick={openNotify} className={'widget'}><i className={ `bi ${typeInfo[props.type].icon} ${isOpen != null && 'active'}` }></i><label>{typeInfo[props.type].name}</label></div>
 
-            {isOpen != null && 
+            {isOpen != null &&
                 <div className={'notify show'}>
                     <div  className={'message'}>
                         {props.message ? props.message : typeInfo[props.type].defaultMessage}
@@ -60,7 +60,7 @@ const Notify = (props: Props) => {
                         <i className={ `bi ${typeInfo[props.type].icon}` }></i>
                         <i onClick={closeNotify} className="bi bi-chevron-down"></i>
                     </div>
-                </div>       
+                </div>
             }
 
 
@@ -71,16 +71,30 @@ const Notify = (props: Props) => {
 
 function BottomBarComponent(props: AllProps): JSX.Element {
     const {node,data} = props;
+    let nodepos: string | undefined;
+    if (node) {
+        let size = {...node.size};
+        let ret = [
+            '', U.cropNum(+size.x.toFixed(2)),
+            ', ', U.cropNum(+size.y.toFixed(2)),
+            ', ', U.cropNum(+node.zIndex.toFixed(2)),
+            ' w:', U.cropNum(+size.w.toFixed(2)),
+            ' h:', U.cropNum(+size.h.toFixed(2)),
+        ]
+        nodepos = ret.join('');
+    }
+
     return(<footer className={'footer'}>
         <label className={'me-3'}>
-            Made with <i className="bi bi-heart-fill"></i> in the swen group
+            Made with <i className="bi bi-heart-fill" /> in the swen group
         </label>
         <div className={'coordinates'} hidden={!node}>
-            {data?.name} ({node?.x},{node?.y},{node?.zIndex}) w:{node?.w} h:{node?.h} 
+            {data?.name}&nbsp;
+            {nodepos}
         </div>
         <div className={'widgetbar float-end'}>
             <Notify  type={notificationType.Clients} alert={alertType.Normal} message={''} />
-            <Notify  type={notificationType.Terminal} alert={alertType.Normal} message={''} />           
+            <Notify  type={notificationType.Terminal} alert={alertType.Normal} message={''} />
             <Notify  type={notificationType.Messages} alert={alertType.Normal} message={''} />
         </div>
     </footer>)

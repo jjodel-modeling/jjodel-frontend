@@ -291,7 +291,7 @@ export class DV {
             "}";
         let ev = DViewElement.new2("Edge"+name, jsx,
             (v: DViewElement) => {
-                v.appliableToClasses = [DVoidEdge.cname];
+                // v.appliableToClasses = [DVoidEdge.cname];
                 v.appliableTo = 'Edge';
                 v.bendingMode = EdgeBendingMode.Line;
                 v.edgeHeadSize = headSize;

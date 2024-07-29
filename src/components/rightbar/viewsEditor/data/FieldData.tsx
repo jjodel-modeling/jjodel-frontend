@@ -47,7 +47,7 @@ function FieldDataComponent(props: AllProps) {
                 <Select data={view} field={'appliableTo'}
                         options={graphElementOptions}
                         getter={() => dview.appliableTo || 'Any'}
-                        setter={(data: DViewElement, field: string, v: string)=>view.appliableTo = v as any} />
+                        setter={(v: string, data: DViewElement, field: string, )=>view.appliableTo = v as any} />
             </div>
         </div>
     </section>);

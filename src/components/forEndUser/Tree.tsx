@@ -1,7 +1,17 @@
 import React, {ReactNode} from "react";
-import {GObject, LModelElement, LNamedElement, SetRootFieldAction, U} from '../../joiner';
+import {
+    Dictionary,
+    DViewElement,
+    GObject,
+    LModelElement,
+    LNamedElement, LPointerTargetable,
+    LViewElement,
+    LViewPoint,
+    SetRootFieldAction,
+    U
+} from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
-import './style.scss';
+import './tree.scss';
 import {useEffectOnce} from "usehooks-ts";
 
 interface TreeProps {data?: LModelElement, depth?: string[], children?: GObject}
@@ -44,7 +54,7 @@ function DataTree(props: DataTreeProps): JSX.Element {
         }, '', false);
     }
 
-    let icon = 'box';
+    /*let icon = 'box';
     switch(data.className) {
         case 'DModel': icon = 'diagram-2'; break;
         case 'DPackage': icon = 'boxes'; break;
@@ -54,7 +64,7 @@ function DataTree(props: DataTreeProps): JSX.Element {
         case 'DOperation': icon = 'gear-wide'; break;
         case 'DObject': icon = ''; break;
         case 'DValue': icon = ''; break;
-    }
+    }*/
 
     return(<section>
         <div className={'d-flex tree'}>
@@ -118,7 +128,71 @@ function HtmlTree(props: HtmlTreeProps) {
     </div>);
 }
 
+interface GenericTreeProps<T extends any = any> {
+    data: any,
+    getSubElements: (o: any)=>(GObject[] | Dictionary<any, any>),
+    //getKey: (o:any) => string,
+    renderEntry: (e: any, childrens: any, isExpanded: boolean, toggleExpansion: () => any, depth: number, path: number[], metadata?:any)=>JSX.Element,
+    initialHidingState?: boolean,
+    depth?: number,
+    path?: number[],
+    metadata?: any,
+}
+
+export function GenericTree(props: GenericTreeProps): JSX.Element {
+    let [isExpanded, setExpanded] = useStateIfMounted(props.initialHidingState || false);
+    const data: GObject = props.data;
+    const childrens = props.getSubElements(data) || [];
+    // if (typeof childrens === "object" && (Array.isArray(childrens) && childrens.length === 0) || Object.keys(childrens)) isExpanded = false;
+    return props.renderEntry(data, childrens, isExpanded, ()=>setExpanded(!isExpanded), props.depth || 0, props.path || [], props.metadata);
+    /*
+    if (!data) return(<div>Error Data is <b>undefined</b></div>);
+    const depth = props.depth;
+    const setFilter = props.setFilter;
+
+    const click = () => {
+        let node = data.node;
+        SetRootFieldAction.new('_lastSelected', {
+            node: node?.id,
+            view: node?.view.id,
+            modelElement: data.id
+        }, '', false);
+    }
+
+    let className: string = data.className;
+    let name: string = data.name;
+    let vp: LViewPoint | undefined = className === LViewPoint.cname ? (data as any) : undefined;
+    let view: LViewElement | undefined = vp || (className === DViewElement.cname ? (data as any) : undefined);
+    let subType: string = '';
+    if (view) {
+        let appliableTo = view.appliableToClasses;
+        subType = appliableTo.length > 1 ? "multi" : appliableTo[0];
+    }
+    let subelements: GObject[] = props.getSubElements ? props.getSubElements(data) : (view ? view.subViews : data.children);
+    return(<section>
+        <div className={'d-flex tree ' + className + ' ' + subType}>
+            {subelements?.length >= 1 ? ((subelements?.length && hide) ?
+                        <i style={{fontSize: '0.7em', color: 'gray'}} className={'bi bi-chevron-right cursor-pointer d-block my-auto'} onClick={setFilter} /> :
+                        <i style={{fontSize: '0.7em', color: 'gray'}} className={'bi bi-chevron-down cursor-pointer d-block my-auto'} onClick={setFilter} />
+                ) :
+                <i style={{fontSize: '0.75em', color: 'whitesmoke'}} className={'bi bi-caret-right-fill d-block my-auto'} />
+            }
+
+            <div className={'tree-icon'}>
+                <div className={`type tree-${className}`}>{className.slice(1, 2)}</div>
+                <div className={'name'} onClick={click}>{(data.name) ? data.name : 'unnamed'}</div>
+            </div>
+        </div>
+        {!hide && Array.isArray(subelements) && subelements?.map((child: LPointerTargetable) => {
+            return(<div style={{marginLeft: '1em'}}>
+                <Tree data={child} depth={depth} />
+            </div>);
+        })}
+    </section>);*/
+}
+
 Tree.cname = "Tree";
 DataTree.cname = "DataTree";
 HtmlTree.cname = "HtmlTree";
+GenericTree.cname = "GenericTree";
 export default Tree;

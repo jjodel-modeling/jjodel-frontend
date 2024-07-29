@@ -5,7 +5,6 @@ import {DUser, DViewPoint, LProject, LUser, LViewPoint, U, SetFieldAction} from 
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from '../../../joiner/types';
 
-
 function ViewpointsEditorComponent(props: AllProps) {
     const project = props.project;
     const viewpoints = props.viewpoints;

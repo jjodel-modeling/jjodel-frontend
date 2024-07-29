@@ -32,9 +32,9 @@ export {GenericInput} from "../components/forEndUser/GenericInput"
 export {OclEditor} from "../components/rightbar/oclEditor/OclEditor";
 export {JsEditor} from "../components/rightbar/jsEditor/JsEditor";
 
-export {Input, Edit} from "../components/forEndUser/Input";
-export {TextArea} from "../components/forEndUser/TextArea";
-export {Select} from "../components/forEndUser/Select";
+export {Input, Edit, TextArea, Select} from "../components/forEndUser/Input";
+// export {TextArea} from "../components/forEndUser/TextArea";
+// export {Select} from "../components/forEndUser/Select";
 export {View} from "../components/forEndUser/Aliases";
 export {Try} from "../components/forEndUser/Try";
 

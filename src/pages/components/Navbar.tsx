@@ -1,6 +1,17 @@
 import './style.scss';
 import './navbar.scss';
-import {Dictionary, DState, DUser, GObject, LModel, LProject, LUser, SetRootFieldAction, U} from '../../joiner';
+import {
+    Dictionary, DModel,
+    DState,
+    DUser,
+    GObject, LGraph,
+    LModel, LPackage,
+    LProject,
+    LUser,
+    Selectors,
+    SetRootFieldAction,
+    U
+} from '../../joiner';
 import React, {Component, Dispatch, ReactElement, ReactNode, useState} from 'react';
 import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
@@ -8,6 +19,8 @@ import {MetamodelPopup, ModelPopup} from './popups';
 import {ProjectsApi} from '../../api/persistance';
 import {useNavigate} from 'react-router-dom';
 import logo from '../../static/img/jjodel.jpg';
+import TabDataMaker from "../../components/abstract/tabs/TabDataMaker";
+import DockManager from "../../components/abstract/DockManager";
 
 enum Key{
     "cmd"   = "bi-command",
@@ -35,7 +48,7 @@ function getKeyStrokes(keys?: string[]){
 
 function makeEntry(i: MenuEntry) {
     if (i.name === "divisor") return <li className='divisor'><hr /></li>;
-    return <li className={i.subItems ? "hoverable" : ""} tabIndex={0}>
+    return <li className={i.subItems ? "hoverable" : ""} tabIndex={0} onClick={()=>i.function?.()}>
             <label className='highlight'>
                 <span>{i.name}</span>
                 {i.subItems ?
@@ -53,17 +66,45 @@ function makeEntry(i: MenuEntry) {
         </li>;
 }
 
-type MenuEntry = {name: string, function?: ()=>{}, keystroke?: string[], subItems?:MenuEntry[]};
+const createM2 = (project: LProject) => {
+    let name = 'metamodel_' + 0;
+    let names: string[] = Selectors.getAllMetamodels().map(m => m.name);
+    name = U.increaseEndingNumber(name, false, false, newName => names.indexOf(newName) >= 0)
+    const dModel = DModel.new(name, undefined, true);
+    const lModel: LModel = LModel.fromD(dModel);
+    project.metamodels = [...project.metamodels, lModel];
+    project.graphs = [...project.graphs, lModel.node as LGraph];
+    const dPackage = lModel.addChild('package');
+    const lPackage: LPackage = LPackage.fromD(dPackage);
+    lPackage.name = 'default';
+    const tab = TabDataMaker.metamodel(dModel);
+    DockManager.open('models', tab);
+}
+
+const createM1 = (project: LProject, metamodel: LModel) => {
+    let name = 'model_' + 0;
+    let modelNames: (string)[] = metamodel.models.map(m => m.name);
+    name = U.increaseEndingNumber(name, false, false, newName => modelNames.indexOf(newName) >= 0);
+    const dModel: DModel = DModel.new(name, metamodel.id, false, true);
+    const lModel: LModel = LModel.fromD(dModel);
+    project.models = [...project.models, lModel];
+    project.graphs = [...project.graphs, lModel.node as LGraph];
+    const tab = TabDataMaker.model(dModel);
+    DockManager.open('models', tab);
+}
+
+type MenuEntry = {name: string, function?: ()=>any, keystroke?: string[], subItems?:MenuEntry[]};
 function NavbarComponent(props: AllProps) {
-    const {version, project, metamodels, advanced, debug} = props;
+    const {version, metamodels, advanced, debug} = props;
     const [focussed, setFocussed] = useState('');
     const [clicked, setClicked] = useState('');
     const navigate = useNavigate();
+    const project: LProject = props.project as LProject;
 
     const menuType = "normal";
 
     const projectItems: MenuEntry[] = [
-        {name: 'New metamodel', function: async() => {}, keystroke: [Key.alt, Key.cmd, 'M']},
+        {name: 'New metamodel', function: ()=>createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
         {name: 'New model', function: async() => {}, keystroke: []},
         {name: 'divisor', function: async() => {}, keystroke: []},
         {name: 'Close project', function: async() => {}, keystroke: [Key.cmd, 'Q']},

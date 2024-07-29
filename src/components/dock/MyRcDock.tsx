@@ -22,7 +22,6 @@ import TestTab from "../abstract/tabs/TestTab";
 import StructureEditor from "../rightbar/structureEditor/StructureEditor";
 import {ModelMetaData} from "../rightbar/structureEditor/ModelMetaData";
 import TreeEditor from "../rightbar/treeEditor/treeEditor";
-import ViewsEditor from "../rightbar/viewsEditor/ViewsEditor";
 import NodeEditor from "../rightbar/styleEditor/StyleEditor";
 import ViewpointEditor from "../rightbar/viewpointsEditor/ViewpointsEditor";
 import CollaboratorsEditor from "../rightbar/collaboratorsEditor/CollaboratorsEditor";

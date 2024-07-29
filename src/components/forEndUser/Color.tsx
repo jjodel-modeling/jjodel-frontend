@@ -96,7 +96,6 @@ export interface InputOwnProps {
     autosize?: boolean;
     inputClassName?: string;
     inputStyle?: GObject;
-    asLabel?: boolean;
     key?: React.Key | null;
     canDelete?: boolean;
     children?: any;

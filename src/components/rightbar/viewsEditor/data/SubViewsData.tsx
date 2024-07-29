@@ -52,7 +52,7 @@ function SubViewsDataComponent(props: AllProps) {
         {view.subViews.map((subView, index) => {
             return <div key={index} className={'d-flex p-1 mt-1 border round mx-1'} tabIndex={-1}
                         onMouseEnter={e => setHoverID(subView.id)} onMouseLeave={e => setHoverID('')}
-                        onClick={e => props.setSelectedView(subView)}
+                        onClick={e => props.setSelectedView(subView.id)}
                         style={{cursor: 'pointer', background: hoverID === subView.id ? '#E0E0E0' : 'transparent'}}>
                 <label style={{cursor: 'pointer'}} className={'my-auto'}>{subView.name}</label>
                 <button className={'btn btn-danger ms-auto'} disabled={readOnly}
@@ -67,7 +67,7 @@ function SubViewsDataComponent(props: AllProps) {
 interface OwnProps {
     viewID: Pointer<DViewElement, 1, 1, LViewElement>;
     readonly: boolean;
-    setSelectedView: React.Dispatch<React.SetStateAction<LViewElement | undefined>>;// (val: LViewElement | undefined) => {}
+    setSelectedView: React.Dispatch<React.SetStateAction<Pointer<DViewElement> | undefined>>;// (val: LViewElement | undefined) => {}
 }
 interface StateProps {
     view: LViewElement;

@@ -119,7 +119,7 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
             case 'point': case 'graphpoint': case 'size': case 'graphSsize':
                 return <SizeInput {...otherProps} data={l} field={this.props.field} label={label} />;
             case 'text':
-                return <TextArea inputClassName={'input my-auto ms-auto '} {...otherProps} className={(this.props.rootClassName||'')+' '+(this.props.className||'')}
+                return <TextArea inputClassName={'input my-auto ms-auto '} {...otherProps as any} className={(this.props.rootClassName||'')+' '+(this.props.className||'')}
                                  data={this.props.data} field={this.props.field}
                                  jsxLabel={label} tooltip={this.props.tooltip} />;
             case 'function':
@@ -132,7 +132,7 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
                                          height={this.props.height}
                                          {...otherProps as any /*not working? i had to list them all*/}  />;
             case 'eenum':
-                return <Select inputClassName={'my-auto ms-auto select'} {...otherProps} className={this.props.rootClassName}
+                return <Select inputClassName={'my-auto ms-auto select'} {...otherProps as any} className={this.props.rootClassName}
                                data={this.props.data} field={this.props.field} options={enumOptionsJSX}
                                jsxLabel={label} tooltip={this.props.tooltip} />;
                 // <input> natives

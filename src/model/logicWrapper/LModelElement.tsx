@@ -2101,6 +2101,13 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return true;
     }
 
+    allInstances!: LValue[];
+    __info_of__allInstances: Info = {type: 'LValue[]', txt: "Instances in m1 of this class and of all subclasses."};
+    protected get_allInstances(context: Context): this["instances"] {
+        let sc = this.get_allSubClasses(context, true);
+        return sc.flatMap( (c) => c.instances);
+    }
+
     protected get_instances(context: Context): this["instances"] {
         return context.data.instances.map((pointer) => {
             return LPointerTargetable.from(pointer)
@@ -2598,6 +2605,7 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
             return LPointerTargetable.from(pointer)
         });
     }
+
     protected set_instances(val: PackArr<this["instances"]>, context: Context): boolean {
         const list = val.map((lItem) => { return Pointers.from(lItem) });
         SetFieldAction.new(context.data, 'instances', list, "", true);

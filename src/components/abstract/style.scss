@@ -213,8 +213,7 @@ body > .dragging-layer > div:last-child {
 }
 .dock-content .dock-tabpane {
   position: relative;
-  overflow-x: hidden;
-  overflow-y: hidden;
+  overflow: auto;
   width: 100%;
   height: 100%;
   outline: none;

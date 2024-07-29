@@ -11,6 +11,7 @@ import DockManager from './DockManager';
 import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import MqttEditor from "../rightbar/mqtt/MqttEditor";
+import NestedView from "../rightbar/viewpointsEditor/ViewEditorNestedVersion";
 
 
 const tabidprefix = "DockComponent_rightbar_";
@@ -38,7 +39,7 @@ function DockComponent(props: AllProps) {
     const tree = {id: id(), title: <TabHeader tid={tid()}>Tree View</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Skeleton /></TabContent>};
     const views = {id: id(), title: <TabHeader tid={tid()}>Views</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Views /></TabContent>};
     const node = {id: id(), title: <TabHeader tid={tid()}>Node</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NodeEditor /></TabContent>};
-    const viewpoints = {id: id(), title: <TabHeader tid={tid()}>Perspectives</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Viewpoints /*validation={false}*/ /></TabContent>};
+    const viewpoints = {id: id(), title: <TabHeader tid={tid()}>Perspectives</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NestedView /></TabContent>};
     //const validation = {id: id(), title: <TabHeader tid={tid()}>Validation</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><ViewpointEditor validation={true} /></TabContent>};
     //const collaborators = {id: id(), title: <TabHeader tid={tid()}>Collaborators</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><CollaboratorsEditor /></TabContent>};
     //const mqtt = {id: id(), title: <TabHeader tid={tid()}>Mqtt</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MqttEditor /></TabContent>};

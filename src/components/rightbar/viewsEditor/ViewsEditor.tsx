@@ -1,18 +1,19 @@
 import React, {Dispatch, ReactElement} from "react";
 import {DState} from "../../../redux/store";
 import {connect} from "react-redux";
-import {DUser, LProject, LUser, LViewElement, LViewPoint} from "../../../joiner";
+import {DUser, DViewElement, LProject, LUser, LViewElement, LViewPoint, Pointer} from "../../../joiner";
 import ViewsData from "./Views";
 import ViewData from "./View";
 import {FakeStateProps} from "../../../joiner/types";
 import {useStateIfMounted} from "use-state-if-mounted";
-
+export let trydelete = true;
+/*
 function ViewsEditorComponent(props: AllProps) {
     const stackViews = props.stackViews;
-    const [selectedView, setView] = useStateIfMounted(undefined as (LViewElement | undefined));
+    const [selectedView, setView] = useStateIfMounted(undefined as (Pointer<DViewElement> | undefined));
 
     return( selectedView ?
-            <ViewData viewid={selectedView.id} setSelectedView={setView} /> :
+            <ViewData viewid={selectedView} setSelectedView={setView} /> :
             <ViewsData setSelectedView={setView} />);
 }
 interface OwnProps { }
@@ -42,3 +43,4 @@ export const ViewsEditor = (props: OwnProps, children: (string | React.Component
     return <ViewsEditorConnected {...{...props, children}} />;
 }
 export default ViewsEditor;
+*/

@@ -14,8 +14,6 @@ import {
     Pointer, store,
     U, LoggerCategoryState
 } from '../../joiner';
-import {useStateIfMounted} from 'use-state-if-mounted';
-import './style.scss';
 /*
 *   What's uncatched:
 *   - reducer

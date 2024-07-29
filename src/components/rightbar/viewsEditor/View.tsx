@@ -73,7 +73,7 @@ function ViewDataComponent(props: AllProps) {
 }
 interface OwnProps {
     viewid: Pointer<DViewElement>;
-    setSelectedView: React.Dispatch<React.SetStateAction<LViewElement | undefined>>;// (val: LViewElement | undefined) => {}
+    setSelectedView: React.Dispatch<React.SetStateAction<Pointer<DViewElement> | undefined>>;// (val: LViewElement | undefined) => {}
 }
 interface StateProps {
     view: LViewElement;

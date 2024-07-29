@@ -1,9 +1,9 @@
-import {DPointerTargetable, LClass, LModel, Defaults, U} from '../../joiner';
+import {DPointerTargetable, LClass, LModel, Defaults, U, Input} from '../../joiner';
 import {DState, GObject, LEnumerator, LPointerTargetable, Overlap, Pointer} from '../../joiner';
 import React, {Dispatch, LegacyRef, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import {useStateIfMounted} from 'use-state-if-mounted';
-import './style.scss';
+import './inputselect.scss';
 
 
 function SelectComponent(props: AllProps) {
@@ -20,8 +20,8 @@ function SelectComponent(props: AllProps) {
     const jsxLabel: ReactNode|undefined = props.jsxLabel;
     let tooltip: string|undefined = (props.tooltip === true) ? ((gdata['__info_of__' + field]) ? gdata['__info_of__' + field].txt: '') : props.tooltip;
     tooltip = tooltip || '';
-    let css = 'my-auto select ';
-    css += (jsxLabel) ? 'ms-1' : 'ms-auto';
+    let css = '';//'my-auto select ';
+   // css += (jsxLabel) ? 'ms-1' : 'ms-auto';
     css += (props.hidden) ? ' hidden-input' : '';
 
     function SelectChange(evt: React.ChangeEvent<HTMLSelectElement>) {
@@ -33,20 +33,6 @@ function SelectComponent(props: AllProps) {
         else (data as GObject)[field] = newValue;
     }
 
-    let returns: LClass[] | undefined;
-    let primitives: LClass[] | undefined;
-    let classes: LClass[] | undefined;
-    let enumerators: LEnumerator[] | undefined;
-    if ((field as string) === 'type') {
-        let model: LModel | undefined = (l as GObject).model;
-        if (model) switch (data.className) {
-            case 'DAttribute': primitives = props.primitives; enumerators = model.enums; break;
-            case 'DReference': classes = model.classes; break;
-            case 'DOperation': primitives = props.primitives; classes = model.classes; enumerators = model.enums; returns = props.returns; break;
-            case 'DParameter': primitives = props.primitives; classes = model.classes; enumerators = model.enums;  break;
-        }
-    }
-
     const otherprops: GObject = {...props};
     delete otherprops.data;
     delete otherprops.getter;
@@ -55,33 +41,20 @@ function SelectComponent(props: AllProps) {
     delete otherprops.primitives;
     delete otherprops.returns;
     delete otherprops.hidden;
-    let select = (<select {...otherprops} disabled={readOnly}
-            className={props.inputClassName || css}
+    let cursor: string;
+    if (tooltip) cursor = 'help';
+    else if (readOnly) cursor = 'not-allowed';
+    else cursor = 'pointer';
+    let inputStyle = props.inputStyle || {};
+    if (!inputStyle.cursor && cursor === 'not-allowed') { inputStyle.cursor = cursor; }
+    U.objectMergeInPlace(inputStyle, props.inputStyle || {}, props.style || {});
+    let className = [props.className, props.inputClassName, css].join(' ');
+
+    let select = (<select {...otherprops} className={className} disabled={readOnly}
             style={props.inputStyle}
             value={value}
             onChange={SelectChange}>
 
-        {(returns && returns.length > 0) && <optgroup label={'Defaults'}>
-            {returns.map((returnType, i) => {
-                return <option key={i} value={returnType.id}>{returnType.name}</option>
-            })}
-        </optgroup>}
-        {(primitives && primitives.length) && <optgroup label={'Primitives'}>
-            {primitives.map((primitive, i) => {
-               return <option key={i} value={primitive.id}>{primitive.name}</option>
-            })}
-        </optgroup>}
-        {(enumerators && enumerators.length > 0) && <optgroup label={'Enumerators'}>
-            {enumerators.map((enumerator, i) => {
-                return <option key={i} value={enumerator.id}>{enumerator.name}</option>
-            })}
-        </optgroup>}
-        {(classes && classes.length > 0) && <optgroup label={'Classes'}>
-            {classes.map((classifier, i) => {
-                return <option key={i} value={classifier.id}>{classifier.name}</option>
-            })}
-        </optgroup>}
-        {props.options}
     </select>);
 
 
@@ -99,11 +72,6 @@ function SelectComponent(props: AllProps) {
             <label>{tooltip}</label>
         </div>}
         {select}
-        {(props.postLabel) &&
-            <label className={'my-auto'} onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)}>
-                {props.postLabel}
-            </label>
-        }
     </label>);*/
 }
 SelectComponent.cname = 'SelectComponent';
@@ -111,7 +79,6 @@ export interface SelectOwnProps {
     data?: DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field: string;
     label?: string;
-    postLabel?: ReactNode;
     jsxLabel?: ReactNode;
     tooltip?: boolean|string;
     hidden?: boolean;

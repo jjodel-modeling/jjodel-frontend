@@ -19,21 +19,6 @@
 
 
 
-.my-tooltip {
-  position: fixed;
-  bottom: 0.75em;
-  left: 50%;
-  // top: 85%;
-  transform: translate(-50%, 0);
-  z-index: 9999;
-  background: white;
-  border-radius: 4px;
-  border-style: solid;
-  border-width: 1px;
-  border-color: lightgray;
-  padding: 10px;
-}
-
 /* TREE */
 
 .tree-icon  {
@@ -48,7 +33,7 @@
   font-size: 0.75em;
 }
 
-.tree-icon .type {
+.type {
   border-right: 1px solid gray;
   height: 100%;
   display: block; margin: auto;
@@ -64,33 +49,37 @@
   cursor: pointer;
 }
 
-.tree-DModel {
+.tree-DModel, .tree-Model {
   background-color: #5F0F40;
 }
-.tree-DPackage {
+.tree-DPackage, .tree-Package {
   background-color: #087E8B;
 }
-.tree-DClass {
+.tree-DClass, .tree-Class {
   background-color: #DF1619;
 }
-.tree-DAttribute {
+.tree-DAttribute, .tree-Attribute {
   background-color: #C5D86D;
 }
-.tree-DReference {
+.tree-DReference, .tree-Reference {
   background-color: #ABC7D8;
 }
-.tree-DOperation {
+.tree-DOperation, .tree-Operation {
   background-color: #FA8334;
 }
-.tree-DEnumerator {
+.tree-DParameter, .tree-Parameter {
+  background-color: #aaaaaa;
+  // color: black;
+}
+.tree-DEnumerator, .tree-Enumerator {
   background-color: #F3B700;
 }
-.tree-DEnumLiteral {
+.tree-DEnumLiteral, .tree-EnumLiteral {
   background-color: #857C8D;
 }
-.tree-DObject {
+.tree-DObject, .tree-Object {
   background-color: #C2B2B4;
 }
-.tree-DValue {
+.tree-DValue, .tree-Value {
   background-color: #C19AB7;
 }

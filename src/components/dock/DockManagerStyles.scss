@@ -413,13 +413,19 @@ div.dock-drop-layer{
 .not-strip{
     flex-grow: 1;
     display: flex;
-    .dock-layout{
+    &>.dock-layout{
         .dock-panel{
             display:none;
             &:has(.not-pinned){
                 display: block;
             }
+            // undo for nested docks
+            .dock-layout{
+                .dock-panel{
+                    display:block;
+                }
+            }
         }
-
     }
+
 }

@@ -3,9 +3,8 @@ import React, {ReactElement, ReactNode} from "react";
 import withReactContent from "sweetalert2-react-content";
 import Swal from "sweetalert2";
 import type { GraphElementOwnProps, GObject, Dictionary, DocString, Pointer, LGraph } from "../joiner";
-import type { InputOwnProps } from '../components/forEndUser/Input';
-import type { SelectOwnProps } from '../components/forEndUser/Select';
-import type { TextAreaOwnProps } from '../components/forEndUser/TextArea';
+import type { InputOwnProps, SelectOwnProps } from '../components/forEndUser/Input';
+import type {  } from '../components/forEndUser/Select';
 import {
     LPointerTargetable,
     U,
@@ -115,7 +114,7 @@ export class UX{
             case windoww.Components.Select.cname+"Component":
             case windoww.Components.TextArea.cname+"Component":
                 // todo: can i do a injector that if the user provides a ModelElement list raw <div>{this.children}</div> it wraps them in DefaultNode?
-                const injectProps2: InputOwnProps | SelectOwnProps | TextAreaOwnProps = {} as any;
+                const injectProps2: InputOwnProps | SelectOwnProps = {} as any;
                 const parentnodeid = parentComponent.props.node?.id;
                 injectProps2.data = re.props.data || (typeof parentComponent.props.data === "string" ? parentComponent.props.data : parentComponent.props.data?.id);
                 // !IMPORTANT! this key does not remove the responsability of adding keys to <GraphElement>s. this is assigning the key to the first returned element by component A,

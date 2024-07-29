@@ -65,7 +65,7 @@ function InfoDataComponent(props: AllProps) {
                     Object.keys(Vertexes).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
                 }</optgroup>
             </>
-        } setter={(data, key, val) => { view.forceNodeType = val === 'unset' ? undefined : val; }}
+        } setter={(val, data, key) => { view.forceNodeType = val === 'unset' ? undefined : val; }}
           getter={(data, key) => { return data[key] || 'unset_'; }} />
         <Select data={view} field={'appliableToClasses'} label={'Appliable to classes'} readonly={readOnly} options={classesOptions} />
         <div className={'d-flex p-1'}>
