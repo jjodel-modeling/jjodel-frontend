@@ -301,7 +301,10 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
   }
   // border-radius: 7.5px;
 }
-
+.bx:before {
+  line-height: 1;
+  vertical-align: -.125em;
+}
 .dock-content .dock-tabpane:has(.GraphContainer){
   overflow-y: hidden;
 }
