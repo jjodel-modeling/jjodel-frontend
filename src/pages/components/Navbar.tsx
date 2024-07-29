@@ -40,7 +40,7 @@ function NavbarComponent(props: AllProps): JSX.Element {
                     await U.sleep(1);
                     await ProjectsApi.create('public', 'Unnamed Project');
                     SetRootFieldAction.new('isLoading', false);
-                }},
+                }}
             ]
         }
     ];

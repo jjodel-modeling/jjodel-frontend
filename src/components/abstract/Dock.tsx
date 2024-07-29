@@ -4,7 +4,7 @@ import {connect} from 'react-redux';
 import {DState, LoggerComponent, Try} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
 import {DockLayout, LayoutData} from 'rc-dock';
-import {Info, Skeleton, Viewpoints, Views, Logger, Console} from "../../components/editors";
+import {Info, Skeleton, Viewpoints, Views, Logger, Console, Mqtt} from "../../components/editors";
 import DockManager from './DockManager';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
@@ -39,7 +39,7 @@ function DockComponent(props: AllProps) {
     const viewpoints = {id: id(), title: <TabHeader tid={tid()}>Perspectives</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Viewpoints /*validation={false} *//></TabContent>};
     //const validation = {id: id(), title: <TabHeader tid={tid()}>Validation</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><ViewpointEditor validation={true} /></TabContent>};
     //const collaborators = {id: id(), title: <TabHeader tid={tid()}>Collaborators</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><CollaboratorsEditor /></TabContent>};
-    //const mqtt = {id: id(), title: <TabHeader tid={tid()}>Mqtt</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MqttEditor /></TabContent>};
+    const mqtt = {id: id(), title: <TabHeader tid={tid()}>MQTT</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Mqtt /></TabContent>};
     const console = {id: id(), title: <TabHeader tid={tid()}>Console</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Console /></TabContent>};
     const logger = {id: id(), title: <TabHeader tid={tid()}>Logger</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Logger /></TabContent>};
 
@@ -53,7 +53,7 @@ function DockComponent(props: AllProps) {
         viewpoints,
         //validation,
         // collaborators,
-        // mqtt,
+        mqtt,
         node,
         console,
         logger

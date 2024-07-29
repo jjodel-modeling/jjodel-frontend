@@ -5,3 +5,4 @@ export {Viewpoints} from './Viewpoints';
 export {Console} from './Console';
 export {Settings} from './Settings';
 export {Logger} from './Logger';
+export {Mqtt} from './Mqtt';

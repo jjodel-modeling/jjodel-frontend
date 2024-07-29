@@ -7,7 +7,7 @@ import {
     EdgeBendingMode,
     EdgeHead,
     GObject,
-    GraphPoint,
+    GraphPoint, Input, LModelElement,
     Pointer,
     RuntimeAccessible,
     ShortAttribETypes as SAType,
@@ -600,5 +600,11 @@ public static parameter(): string { return (
         </div>`;
     }
 
+    public static input(label: string, data: unknown, field: string, type: 'text'|'number'|'checkbox') {
+        return(<div className={'input-container'}>
+            <b className={'me-2'}>{label}:</b>
+            <Input data={data as LModelElement} field={field} type={type} />
+        </div>);
+    }
 
 }
