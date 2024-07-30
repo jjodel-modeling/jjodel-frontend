@@ -14,11 +14,24 @@ type Props = {
     key: any;
 };
 
+type ProjectTypeType = {
+    type: string;
+}
+
+function ProjectType(props: ProjectTypeType){
+    return (<>
+        {props.type === "public" && <i className="bi bi-unlock"></i>}
+        {props.type === "private" && <i className="bi bi-lock"></i>}
+        {props.type === "collaborative" && <i className="bi bi-diagram-3"></i>}
+    </>);
+}
 
 
 function Project(props: Props): JSX.Element {
     const {data} = props;
     const navigate = useNavigate();
+
+    const [favorite, setFavorite] = useState(false);
 
     const selectProject = () => {
         navigate(`/project?id=${data.id}`);
@@ -44,12 +57,13 @@ function Project(props: Props): JSX.Element {
                         onClick={async e => await deleteProject()}>
                     <i className={'p-1 bi bi-trash-fill'} />
     </button>*/}
-                
+                    {favorite ? <i onClick={(e) => setFavorite(false)} className="bi bi-star-fill"></i> : <i onClick={(e) => setFavorite(true)} className="bi bi-star"></i>}
                     <Menu>
                             <Item keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
                             <Item>Duplicate</Item>
                             <Item action={e => exportProject()}>Download</Item>
                             <Divisor />
+                            <Item action={(e => setFavorite(!favorite))}>Add to favotites</Item>
                             <Item>Share</Item>
                             <Divisor />
                             <Item action={async e => await deleteProject()}>Delete</Item>
@@ -77,20 +91,28 @@ function Project(props: Props): JSX.Element {
     function ProjectList(props: Props): JSX.Element {
         return (<>
             <div className="row data">
-                <div className={'col-1'}>
+                <div className={'col'}>
                     <Menu position='right'>
                         <Item keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
                         <Item>Duplicate</Item>
                         <Item action={e => exportProject()}>Download</Item>
                         <Divisor />
+                        <Item action={(e => setFavorite(!favorite))}>Add to favotites</Item>
                         <Item>Share</Item>
                         <Divisor />
                         <Item action={async e => await deleteProject()}>Delete</Item>
                     </Menu> 
                 </div>
+                <div className={'col w-20'}>
+                {data.type === "public" && <i className="bi bi-unlock"></i>}
+        {data.type === "private" && <i className="bi bi-lock"></i>}
+        {data.type === "collaborative" && <i className="bi bi-diagram-3"></i>}
+                    {favorite ? <i style={{float: 'left'}} onClick={(e) => setFavorite(false)} className="bi bi-star-fill"></i> : <i style={{float: 'left'}} onClick={(e) => setFavorite(true)} className="bi bi-star"></i>}
+                   
+                </div>
                 <div className={'col-5 name'}>{data.name}</div>
-                <div className={'col-3'}>13 days ago</div>
-                <div className={'col-3'}>July 13, 2024</div>  
+                <div className={'col-2'}>13 days ago</div>
+                <div className={'col-2'}>July 13, 2024</div>  
             </div>  
         </>);
     }

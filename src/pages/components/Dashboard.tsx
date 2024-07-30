@@ -1,5 +1,6 @@
-import type { DState } from '../../joiner';
+import type { LUser, DUser, LPointerTargetable, DState, LProject } from '../../joiner';
 import {Navbar, LeftBar} from './';
+
 import '../style.scss'
 
 type UserProps = {
@@ -41,11 +42,12 @@ const Catalog = (props: CatalogProps) => {
 
 function Dashboard(props: Props): any {
     const {children, active} = props;
+    const user: LUser = LPointerTargetable.fromPointer(DUser.current);
 
     return(<>
         <Navbar />
         <div className={"d-flex h-100 w-100"}>
-            <LeftBar active={active} />
+            <LeftBar projects={user.projects} active={active} />
 
             <div className={'catalog-container'}>
                 <User name={'John Doe'} initials={'JD'} />

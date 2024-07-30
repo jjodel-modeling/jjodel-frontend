@@ -9,6 +9,8 @@ import {Menu, Item, Divisor} from './components/menu/Menu';
 
 import colors from '../static/img/colors.png';
 
+
+
 type CardsType = {
     children: any;
 };
@@ -238,6 +240,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
             U.refresh();
         } catch (e) {alert('Invalid File.')}
     }
+    
     const importProject = async(e: ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files || [];
         if(!files.length) return;
@@ -270,11 +273,9 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
                     {true && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
                 </Cards>
 
-                
                 <Catalog projects={projects} />
-
-
             </React.Fragment>
+            
         </Dashboard>
     </Try>);
 }
@@ -285,6 +286,7 @@ interface StateProps {
     version: DState["version"];
 }
 interface DispatchProps {}
+
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 
