@@ -1016,8 +1016,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.models = m1;
         _this.type = type;
         _this.name = name;
-        _this.state = state;
+        _this.state = state || '';
         if(id) _this.id = id;
+        _this.favorite = {};
+        _this.description = 'A new Project. Created by ' + (DPointerTargetable.from(DUser.current) as DUser).username + ' @' + new Date().toLocaleString();
         this.setExternalPtr(DUser.current, 'projects', '+=');
         return this;
     }
@@ -2106,9 +2108,11 @@ export class DProject extends DPointerTargetable {
     // stackViews: Pointer<DViewPoint, 0, 'N'> = []; // ??
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
     activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
+    favorite!: Dictionary<Pointer<DUser>, true | undefined>;
+    description!: string;
     // collaborators dict user: priority
 
-    state: string = '';
+    state!: string;
 
     public static new(type: DProject['type'], name: string, state?: DProject['state'], m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id']): DProject {
         return new Constructors(new DProject('dwc'), undefined, true, undefined)
@@ -2132,6 +2136,8 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     // stackViews!: LViewElement[];
     viewpoints!: LViewPoint[];
     activeViewpoint!: LViewPoint;
+    favorite!: boolean;
+    description!: string;
 
     // stringify state
     state!: string;
@@ -2163,6 +2169,28 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
 
     /* Functions */
 
+    protected get_favorite(c: Context): this['favorite'] {
+        const uid = DUser.current;
+        if (!c.data.favorite) return false;
+        return !!c.data.favorite[uid];
+    }
+    protected set_favorite(v: boolean, c: Context): true {
+        let favMap = c.data.favorite;
+        if (!favMap) {
+            favMap = {};
+            SetFieldAction.new(c.data.id, 'favorite', favMap);
+        }
+        const uid = DUser.current;
+        if (v) { // case favorite
+            if (favMap[uid]) return true;
+            SetFieldAction.new(c.data.id, 'favorite', {[uid]: true}, '+=');
+        }
+        else { // case un-favorite
+            if (!favMap[uid]) return true;
+            SetFieldAction.new(c.data.id, 'favorite', {[uid]: undefined} as any, '-=');
+        }
+        return true;
+    }
     protected get_name(context: Context): this['name'] {
         return context.data.name;
     }
