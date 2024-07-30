@@ -424,7 +424,10 @@ node.state = {error_lowerbound: err};\n
 
     let dv_subviews = [DefaultViews.model(vp), DefaultViews.package(vp), DefaultViews.class(vp), DefaultViews.enum(vp),
         DefaultViews.attribute(vp), DefaultViews.reference(vp), DefaultViews.operation(vp), DefaultViews.parameter(vp),
-        DefaultViews.literal(vp), DefaultViews.object(vp), DefaultViews.value(vp), anchorView, voidView, ...edgeViews, DefaultViews.edgepoint(vp)];
+        DefaultViews.literal(vp), DefaultViews.object(vp), DefaultViews.value(vp), anchorView, voidView,
+        ...edgeViews,
+        DefaultViews.edgepoint(vp),
+        anchorView];
 
     let validation_subviews = [errorOverlayView, errorCheckLowerbound, errorCheckName];
     // SetFieldAction.new(vp, 'subViews', U.objectFromArrayValues(dv_subviews.map(dv=>dv.id), 1.5));
