@@ -2094,7 +2094,7 @@ export class DProject extends DPointerTargetable {
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
     id!: Pointer<DProject, 1, 1, LProject>;
-    type: 'public'|'private'|'collaborative';
+    type: 'public'|'private'|'collaborative' = 'public';
     name!: string;
     author: Pointer<DUser> = DUser.current;
     collaborators: Pointer<DUser, 0, 'N'> = [];

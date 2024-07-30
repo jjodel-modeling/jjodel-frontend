@@ -11,7 +11,7 @@ import {
     Temporary,
     LPointerTargetable,
     DPointerTargetable,
-    Log, EMeasurableEvents, TRANSACTION,
+    Log, EMeasurableEvents, TRANSACTION, CreateElementAction, DLog,
 } from "../joiner";
 import {
     DClassifier,
@@ -75,6 +75,16 @@ export class Color {
 
 @RuntimeAccessible('U')
 export class U {
+
+    public static writeLog(action: string, context: string, firstItem: string, secondItem?: string): void {
+        let log: string = '';
+        switch(action.toLowerCase()) {
+            case 'create': log = `<i>${context}:</i> created <b>${firstItem}</b>`; break;
+            case 'add': log = `<i>${context}:</i> added <b>${firstItem}</b> to <b>${secondItem}</b>`; break;
+            case 'delete': log = `<i>${context}:</i> deleted <b>${firstItem}</b> from <b>${secondItem}</b>`; break;
+        }
+        CreateElementAction.new(new DLog(log));
+    }
 
     static async decompressState(state: string): Promise<string> {
         return await decompressFromUTF16(state);

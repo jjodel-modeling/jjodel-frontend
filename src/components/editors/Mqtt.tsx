@@ -1,21 +1,23 @@
 import {Action, CompositeAction, DState, DUser, GObject, LUser, SetRootFieldAction, store, U} from '../../joiner';
-import {Component, Dispatch, ReactElement, ReactNode, useState} from 'react';
+import {Component, Dispatch, ReactElement, useState} from 'react';
 import {connect} from 'react-redux';
-import {io, Socket} from 'socket.io-client';
 import {FakeStateProps} from "../../joiner/types";
+import WebSockets from "../../webSockets/WebSockets";
 
 function MqttEditorComponent(props: AllProps) {
     const {user} = props;
-    const [iot, setIot] = useState<Socket|null>(null);
-    const [ip, setIp] = useState('http://localhost');
-    const [port, setPort] = useState(5003);
+    const [ip, setIp] = useState('mqtt://localhost');
+    const [port, setPort] = useState(1883);
 
     const connect = async() => {
+        U.writeLog('create', 'MQTT', 'Connection');
         SetRootFieldAction.new('isLoading', true);
-        const _iot = io(`${ip}:${port}`, {path: '/iot', autoConnect: false, reconnection: false});
-        _iot.io.opts.query = {'project': user.project?.id};
-        _iot.off('pull-action');
-        _iot.on('pull-action', (receivedAction: GObject<Action & CompositeAction>) => {
+        WebSockets.iot.io.opts.query = {
+            'project': user.project?.id,
+            'brokerUrl': `${ip}:${port}`
+        };
+        WebSockets.iot.off('pull-action');
+        WebSockets.iot.on('pull-action', (receivedAction: GObject<Action & CompositeAction>) => {
             const action = Action.fromJson(receivedAction);
             if(!(action.field in store.getState()['topics']))
                 SetRootFieldAction.new(action.field.replaceAll('+=', ''), [], '', false);
@@ -23,26 +25,22 @@ function MqttEditorComponent(props: AllProps) {
             console.log('Received Action from server.', action);
             action.fire();
         });
-        _iot.connect();
+        WebSockets.iot.connect();
         await U.sleep(1);
-        setIot(_iot);
-        if(!_iot.connected) alert('Error: Invalid parameters');
         SetRootFieldAction.new('isLoading', false);
-
     }
     const disconnect = async() => {
-        if(!iot) return;
         SetRootFieldAction.new('isLoading', true);
-        iot.off('pull-action');
-        iot.disconnect();
+        WebSockets.iot.off('pull-action');
+        WebSockets.iot.disconnect();
         await U.sleep(1);
-        setIot(null);
+        SetRootFieldAction.new('isLoading', false);
     }
 
     return <section className={'p-2'}>
         <div className={'d-flex'}>
             <h4 className={'d-block my-auto'}>MQTT</h4>
-            <div style={{width: '15px', height: '15px'}} className={`d-block ms-2 my-auto circle ${iot?.connected ? 'bg-success' : 'bg-danger'}`}></div>
+            <div style={{width: '15px', height: '15px'}} className={`d-block ms-2 my-auto circle ${WebSockets.iot.connected ? 'bg-success' : 'bg-danger'}`}></div>
         </div>
         <div className={'p-1 d-flex'}>
             <label className={'my-auto'}>Ip Address:</label>
@@ -52,7 +50,7 @@ function MqttEditorComponent(props: AllProps) {
             <label className={'my-auto'}>Port:</label>
             <input type={'number'} defaultValue={port} onChange={e => setPort(e.target.valueAsNumber)} className={'my-auto input ms-auto'} spellCheck={false} />
         </div>
-        {iot?.connected ?
+        {WebSockets.iot.connected ?
             <button onClick={disconnect} className={'mt-3 btn btn-primary w-100 p-2'}>Disconnect</button> :
             <button onClick={connect} className={'mt-3 btn btn-primary w-100 p-2'}>Connect</button>
         }
