@@ -70,11 +70,11 @@ function NestedViewComponent(props: AllProps) {
                 <div className={"left-stuff vertical-centering"} onClick={preventClick}>
                     {parr.length >= 1 ?
                         <>
-                            <i style={{fontSize: '0.7em', color: 'gray'}} className={'bi cursor-pointer d-block my-auto bi-chevron-' + (isExpanded ? 'down' : 'right')} onClick={toggleExpansion} />
+                            <i className={'bi cursor-pointer d-block my-auto bi-chevron-' + (isExpanded ? 'down' : 'right')} onClick={toggleExpansion} />
                             {isExpanded && <div className={"expansion-line"} />}
                         </>
                         :
-                        <i style={{fontSize: '0.75em', color: 'whitesmoke'}} className={'bi bi-caret-right-fill d-block my-auto'} />
+                        <i className={'bi bi-caret-right-fill d-block my-auto'} />
                     }
                 </div>
                 <div className={"mid-stuff vertical-centering"}>
@@ -111,6 +111,7 @@ function NestedViewComponent(props: AllProps) {
                              renderEntry={renderEntry}
                              depth={depth + 1} path={[...path, i]}
                              metadata={{setView:metadata.setView, scoreBoost:childrens[ptr]} as Metadata}
+                             initialHidingState={depth < 100}
                     // metadata={{...metadata, depth: metadata.depth + 1, path:[...metadata.path, i], scoreBoost: }}
                 />))}</ul>
         </li>;
@@ -122,15 +123,20 @@ function NestedViewComponent(props: AllProps) {
     let vieweditor = view && <div className={"single-view-content"}><ViewData viewid={view} setSelectedView={setView} /></div>;
     if (test) return(<div className={"view-editor-root"}>
         <div className={"view-editor-fullsize-content"}>
-            <div className={'d-flex p-2'}>
+            <div className={'d-flex ps-2 pt-2'}>
                 <b className={'ms-1 my-auto'}>Views</b>
                 <button className={'btn btn-primary ms-auto'} onClick={addVP}>
                     <i className={'p-1 bi bi-plus'}></i>
                 </button>
             </div>
             {vieweditor}
-            <ul className={"p-2"}>
-                {viewpoints.map(vp=><GenericTree data={vp.__raw} getSubElements={getSubElements} renderEntry={renderEntry} metadata={{setView, scoreBoost:0}} />)}
+            <ul className={"ps-2 pt-2"}>
+                {viewpoints.map(vp=><GenericTree
+                    data={vp.__raw}
+                    getSubElements={getSubElements}
+                    renderEntry={renderEntry}
+                    metadata={{setView, scoreBoost:0}}
+                    initialHidingState={true} />)}
             </ul>
         </div>
     </div>);

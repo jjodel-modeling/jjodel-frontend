@@ -62,7 +62,7 @@ function ViewDataComponent(props: AllProps) {
     layout.dockbox.children.push({tabs});
 
     return(<div>
-        <div className={'d-flex p-2 view-editor'}>
+        <div className={'d-flex p-2 view-editor w-100'}>
             <b className={'ms-1 my-auto'}>{view.name}</b>
             <button className={'bg btn-back ms-auto'} onClick={ () => props.setSelectedView(undefined)}>
                 <i className={'p-1 bi bi-arrow-left'}></i>
