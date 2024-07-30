@@ -1,12 +1,15 @@
 import {OclEngine} from "@stekoe/ocl.js"
 import {
     Constructor, DGraphElement,
-    DModelElement, DViewElement,
+    DModel,
+    DModelElement, DPointerTargetable, DState, DViewElement,
     GObject, LGraphElement,
     LModelElement,
+    Log,
+    LPointerTargetable,
     LViewElement,
     RuntimeAccessible,
-    RuntimeAccessibleClass, ViewEClassMatch
+    RuntimeAccessibleClass, store, transientProperties, ViewEClassMatch
 } from "../joiner";
 import {OclResult} from "@stekoe/ocl.js/dist/components/OclResult";
 
