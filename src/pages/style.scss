@@ -10,29 +10,39 @@
   width: 250px; 
   height: 100%;
   
-  & > div div {
-    cursor: pointer;
-    padding: 4px 8px 4px 2rem;
-    display: block;
-    border: none;
+    & > div div {
+      cursor: pointer;
+      padding: 4px 8px 4px 2rem;
+      display: block;
+      border: none;
 
-  }
-  & > div div:hover {
-    background-color: #eee;
-  }
+    }
+    & > div div:hover {
+      background-color: #eee;
+    }
 
-  & > div div .bi {
-    padding-right: 14px;
-    font-size: 1.1em;
-  }
+    & > div div .bi {
+      padding-right: 14px;
+      font-size: 1.1em;
+    }
 
-  & > h1 {
-    margin-top: 10px;
-    font-size: 1em;
-    padding-left: 2rem;
-    font-weight: 600;
+    & > h1 {
+      margin-top: 10px;
+      font-size: 1em;
+      padding-left: 2rem;
+      font-weight: 600;
+    }
 
-  }
+    & > input {
+      width: calc(100% - 20px);
+      border: none;
+      background-color: var(--bg-2);
+      margin: 7px 12px 7px 12px;
+      border-radius: 3px;
+      font-size: 1em!important;
+      padding: 5px 8px 5px 8px;
+
+    }
 }
 .project-card {
     --color: #233d4d;

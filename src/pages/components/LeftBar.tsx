@@ -66,14 +66,14 @@ function LeftBar(props: Props): JSX.Element {
 
     return(<div className={'leftbar border-end border-light-subtle '}>
 
-    
+        <input placeholder={'Search for anything'}type={'text'} name='search-text' />
         <Menu>
             <Item action={'allProjects'} icon={<i className="bi bi-grid"></i>}>All projects</Item>
             <Item icon={<i className="bi bi-clock"></i>}>Recent</Item>
             <Divisor/>
         </Menu>
         <Menu title={"Starred"}>
-            {props.projects.map(p => <Item icon={<i className="bi bi-folder2"></i>}>{p.name}</Item>)}
+            {props.projects.filter(p => (p.favorite)).map(p => <Item icon={<i className="bi bi-folder2"></i>}>{p.name}</Item>)}
         </Menu>
 
 
