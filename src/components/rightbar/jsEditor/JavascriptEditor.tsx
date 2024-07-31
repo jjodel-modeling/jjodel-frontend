@@ -62,9 +62,10 @@ function JavascriptEditorComponent(props: AllProps) {
     if (jsxLabel === undefined && info) jsxLabel = typeof info.label === "string" ? <label className={'ms-2 mb-1 my-auto'}>{info.label}</label> : info.label || undefined;
 
     return <>
-        <div style={{...(props.style || {})}} className={'d-flex'} onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)} >
-            {props.hide !== undefined ? <span className={'cursor-pointer my-auto'} tabIndex={-1} onClick={e => setShow(!show)}>
-                {show ? <i className={'bi bi-eye-fill'}/> : <i className={'bi bi-eye-slash-fill'}/>}
+        <div style={{...(props.style || {})}} className={'cursor-pointer d-flex'} onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)} onClick={e => setShow(!show)}>
+            {props.hide !== undefined ? <span className={'my-auto'} tabIndex={-1}>
+                <i className={'bi bi-chevron-' + (show ? 'down' : 'right')} />
+                {/*show ? <i className={'bi bi-eye-fill'}/> : <i className={'bi bi-eye-slash-fill'}/>*/}
             </span> : undefined}
             {title}
             {jsxLabel}

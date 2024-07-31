@@ -31,6 +31,7 @@ import {
     Pointers,
     RuntimeAccessible,
     RuntimeAccessibleClass,
+    Selectors,
     SetFieldAction, SetRootFieldAction,
     ShortAttribETypes,
     store,
@@ -366,6 +367,23 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             <br/>A non-exclusive view cannot be applied alone and needs an exclusive view to render the main graphical content.</div>};
     get_isOverlay(c: Context): this["isOverlay"] { return this.get_isExclusiveView(c); }
     set_isOverlay(val: this["isOverlay"], c: Context): boolean { return this.set_isExclusiveView(val, c); }
+
+
+    allPossibleParentViews!: LViewElement[];
+    __info_of__allPossibleParentViews: Info = {isGlobal: true, type: 'LViewElement[]', txt: 'All views except subviews and this view.' }
+    get_allPossibleParentViews(c: Context): this['allPossibleParentViews']{
+        let subviewsarr = this.get_allSubViews(c);
+        let subviews = U.objectFromArray(subviewsarr, (sv)=>sv.id);
+        let allviewsarr: LViewElement[] = Selectors.getAll(DViewElement, undefined, undefined, true, true);
+        let allviews = U.objectFromArray(allviewsarr, (sv)=>sv.id);
+        console.log('allPossibleParentViews', {subviews, subviewsarr, allviews:{...allviews}, allviewsarr});
+        for (let k in subviews) {
+            delete allviews[k];
+        }
+        delete allviews[c.data.id];
+        console.log('allPossibleParentViews ret', {allviews});
+        return Object.values(allviews);
+    }
 
 
 

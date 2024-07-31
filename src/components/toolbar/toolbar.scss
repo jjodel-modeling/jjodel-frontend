@@ -20,23 +20,23 @@
     width: 205px;
     margin-right: 100px;
     border-radius: 8px;
-    box-shadow:0px 10px 20px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.8); 
+    box-shadow:0px 10px 20px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.8);
     left: 20px;
 
     .drag-handle{
       flex-grow: 0;
       width: 12px;
       height: 30px;
-      
+
       margin-left: calc(-0.5rem + 0.4rem);
       margin-right: calc(-0.3rem + 0.4rem);
       margin-top: 0.25em;
       margin-bottom: 0.25em;
 
     }
-  
+
     .toolbar-section-label{
-      
+
         margin-bottom: 0.25rem;
         margin-left: 0.3rem;
         display: block;
@@ -45,7 +45,7 @@
         font-weight: 400;
     }
 
-    
+
 
     .bi.pin{
       color: var(--color);
@@ -56,7 +56,7 @@
       z-index: 2 !important;
       box-shadow: none !important;
       padding: 0 4px;
-      
+
       & :hover{
         color: var(--color);
         background-color: var(--bg);
@@ -113,7 +113,7 @@
     // border-left: 2px solid;
   }
 
-  
+
 }
 
 hr.my-1{
@@ -123,9 +123,10 @@ hr.my-1{
   left: 5px;
 }
 
-
+/* meglio non aggiungere cose scorrelate alle classi bootstrap, possono avere effetti collaterali un pò ovunque.
+da cambiare con un selettore più specifico.
 .my-auto {
   font-family: 'Inter Tight', sans-serif!important;
   font-weight: 200;
   padding-bottom: 5px;
-}
+}*/

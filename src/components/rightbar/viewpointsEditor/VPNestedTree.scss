@@ -51,16 +51,17 @@ ul{
 .tree-DGraph, .tree-Graph {
   background-color: #5F0F40;
 }
+/*
 input[type="number"] {
   -webkit-appearance: initial;
   -moz-appearance: initial;
   appearance: initial;
 }
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: initial;
 }
-
+*/
 input.change-boost{
   width: 2.5em;
   outline: 1px solid black;
@@ -226,7 +227,6 @@ input.change-boost{
   cursor: pointer;
 }
 .single-view-content{
-  display: flex;
   position: absolute;
   top:0;
   bottom:0;

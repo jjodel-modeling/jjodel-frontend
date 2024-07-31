@@ -109,12 +109,15 @@ input[type="color"]::-webkit-color-swatch {
 input[type='checkbox'] { // was .input as class
   background-image: url("../static/svg/toggle-off.svg");
   background-repeat: no-repeat; background-size: cover;
-  width: min-content;
   cursor: pointer;
-  padding: 0.9em;
-  // scale: 0.9;
-  // padding: 0.88em; // above this, the total height become bigger than a char because of some input native stylings
-  // scale: 1.2;
+  height: 1lh;
+  width: 1lh;
+
+
+  /* this works only on native checkbos (no background-image)
+  padding: 0.5lh; // half line-height, not well-know unit but works
+  scale: 1.35; // padding makes it correctly a full-line height, but visually it looks less, this fixes it without making container bigger or overflowing.
+  */
   background-color: transparent;
   border: none;
 }

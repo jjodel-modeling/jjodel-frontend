@@ -16,11 +16,14 @@ import JsEditor from "../../jsEditor/JsEditor";
 import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
 
+import "./vieweditor.scss";
 
 function InfoDataComponent(props: AllProps) {
     const view = props.view;
     const viewpoints = props.viewpoints;
-    const readOnly = props.readonly;
+    let readOnly = props.readonly;
+    if (readOnly === undefined) readOnly = Defaults.check(view.id);
+    readOnly = false;
 
     const objectTypes = ['', 'DModel', 'DPackage', 'DEnumerator', 'DEnumLiteral', 'DClass', 'DAttribute', 'DReference', 'DOperation', 'DParameter', 'DObject', 'DValue', 'DStructuralFeature'];
     const classesOptions = <optgroup label={'Object type'}>
@@ -31,18 +34,19 @@ function InfoDataComponent(props: AllProps) {
         (view as any as DViewPoint).viewpoint = evt.target.value;
     }
 
-    return(<section className={'p-3'}>
-        <Input data={view} field={'name'} label={'Name'} type={'text'} readonly={readOnly}/>
-        <Input data={view} field={'isExclusiveView'} label={'is Decorator'} type={"checkbox"} readonly={readOnly || Defaults.check(view.id)}
-               setter={(val) => { console.log("setting vex", {view, vex: view.isExclusiveView, val, nval:!val}); view.isExclusiveView = !val}}
-               getter={(data) => !(data as LViewElement).isExclusiveView as any}/>
+    return(<section className={'page-root'}>
+        <Input data={view} field={'name'} label={'Name'} readonly={readOnly}/>
+        <Input data={view} field={'isExclusiveView'} label={'Is Exclusive'} type={"checkbox"} readonly={readOnly}
+               //setter={(val) => { view.isExclusiveView = !val}}
+               //getter={(data) => !(data as LViewElement).isExclusiveView as any
+        />
         <Input data={view} field={'explicitApplicationPriority'} label={'Priority'} type={'number'} readonly={readOnly}
                getter={(data: LViewElement)=>{ let v = data.__raw.explicitApplicationPriority; return v === undefined ? v : ''+v; }}
-               setter={(v: string | boolean)=>{ view.explicitApplicationPriority = v ? +v as number : undefined as any; }}
+               setter={(v)=>{ view.explicitApplicationPriority = (v ? +v as number : undefined as any); }}
                placeholder={'automatic: ' + view.explicitApplicationPriority}
-               key={''+view.explicitApplicationPriority/*just to force reupdate if placeholder changes, or it is bugged*/}
+               key={''+view.explicitApplicationPriority/*just to force reupdate if placeholder changes*/}
         />
-        {/*
+        {/* moved in "options"
         <Select data={view} field={'appliableTo'} label={'Appliable to node types'} readonly={readOnly} options={<optgroup label={'Appliable Types'}>
             <option value={'node'}>Node</option>
             <option value={'edge'}>Edge</option>
@@ -67,8 +71,14 @@ function InfoDataComponent(props: AllProps) {
             </>
         } setter={(val, data, key) => { view.forceNodeType = val === 'unset' ? undefined : val; }}
           getter={(data, key) => { return data[key] || 'unset_'; }} />
-        <Select data={view} field={'appliableToClasses'} label={'Appliable to classes'} readonly={readOnly} options={classesOptions} />
-        <div className={'d-flex p-1'}>
+        <Select data={view} field={'appliableToClasses'} label={'Appliable to'} readonly={readOnly} options={classesOptions} />
+
+        <Select readonly={readOnly} data={view} field={'viewpoint'} label={"Parent view"}>
+            {view.allPossibleParentViews.map((viewpoint) => (
+                <option key={viewpoint.id} value={viewpoint.id}>{viewpoint.name}</option>
+            ))}
+        </Select>
+            {/*        <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Viewpoint</label>
             <select className={'my-auto ms-auto select'} disabled={readOnly}
                     defaultValue={view.viewpoint ? view.viewpoint.id : 'null'} onChange={changeVP}>
@@ -78,6 +88,7 @@ function InfoDataComponent(props: AllProps) {
                 })}
             </select>
         </div>
+            */}
         <OclEditor viewID={view.id} />
         <JsEditor
             viewID={view.id} field={'jsCondition'}

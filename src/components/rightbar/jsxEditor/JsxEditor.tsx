@@ -60,9 +60,10 @@ function JsxEditorComponent(props: AllProps) {
 
 
     return(<>
-        <div className={'d-flex'}>
-            <span className={'cursor-pointer my-auto'} tabIndex={-1} onClick={e => setShow(!show)}>
-                {show ? <i className={'bi bi-eye-fill'} /> : <i className={'bi bi-eye-slash-fill'} /> }
+        <div className={'cursor-pointer d-flex'} onClick={e => setShow(!show)}>
+            <span className={'my-auto'} tabIndex={-1} >
+                <i className={'bi bi-chevron-' + (show ? 'down' : 'right')} />
+                {/*show ? <i className={'bi bi-eye-fill'} /> : <i className={'bi bi-eye-slash-fill'} /> */}
             </span>
             <label className={'ms-2 mb-1 my-auto'}>
                 JSX Editor

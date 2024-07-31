@@ -1,0 +1,58 @@
+/*.view-list-elem{
+  cursor: pointer;
+  background: transparent;
+  &:hover{
+    background: #E0E0E0;
+  }
+}
+*/
+
+
+.view-editor-header { // removed the whole root
+  display: flex;
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  top: 4px;
+  background-color: var(--bg-color);
+  .view-name{
+    display: none;
+    margin: auto;
+    margin-right: 0.25em;
+    padding-left: 0.25em; // because the left "margin" should get background-color
+  }
+  .btn-back{
+    margin: auto;
+    margin-right: 1rem;
+
+  }
+}
+
+
+
+
+.view-editor-root{
+  --back-btn-size:27px;
+  --inner-page-padding: 1rem;
+  .btn-back{
+    width: var(--back-btn-size);
+    height: var(--back-btn-size);
+    position: absolute;
+    z-index: 1;
+    top: 6.5px;
+    left: calc(var(--inner-page-padding));
+  }
+  .dock-layout{
+    // position: 'absolute', left: 10, top: 40, right: 10, bottom: 10, marginBottom: "20px"
+    width: 100%;
+    height: 100%;
+    .dock-nav-wrap{
+      margin-left: calc(var(--inner-page-padding) * 1 + var(--back-btn-size) + 0.25rem);
+    }
+  }
+  .page-root{
+    padding: var(--inner-page-padding);
+  }
+}
+
+
