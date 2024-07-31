@@ -47,7 +47,9 @@ body {
 .catalog-container .user .name h2 {
     font-weight: 400;
 }
-
+.catalog-container .user .name h2 .bi {
+    color: var(--secondary);
+}
 .catalog-container .user .initials {
     text-align: center;
     font-size: 1.5em;
@@ -189,6 +191,17 @@ body {
 
 .commandbar .dark {
     background: linear-gradient(90deg, hsla(208, 33%, 21%, 1) 0%, hsla(211, 36%, 46%, 1) 100%);
+    color: white;
+    border: none;
+
+    & .bi {
+        color: white;
+    }
+}
+
+.commandbar .rainbow {
+    background: linear-gradient(90deg, hsla(182, 64%, 53%, 1) 0%, hsla(34, 98%, 50%, 1) 50%, hsla(323, 100%, 47%, 1) 100%);
+
     color: white;
     border: none;
 

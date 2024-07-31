@@ -94,9 +94,9 @@ function Project(props: Props): JSX.Element {
     function ProjectList(props: Props): JSX.Element {
         return (<>
             <div className="row data">
-                <div className={'col'}>
+                <div className={'col-sm-1'} style={{width: '30px'}}>
                     <Menu position='right'>
-                        <Item keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
+                        <Item action={e => selectProject()}>Open</Item>
                         <Item>Duplicate</Item>
                         <Item action={e => exportProject()}>Download</Item>
                         <Divisor />
@@ -106,27 +106,21 @@ function Project(props: Props): JSX.Element {
                         <Item action={async e => await deleteProject()}>Delete</Item>
                     </Menu> 
                 </div>
-                <div className={'col w-20'}>
-                {data.type === "public" && <i className="bi bi-unlock"></i>}
-        {data.type === "private" && <i className="bi bi-lock"></i>}
-        {data.type === "collaborative" && <i className="bi bi-diagram-3"></i>}
+                <div className={'col-sm-1'}>
                     {data.favorite ? <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> : <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
-                   
+                    &nbsp;
+                    {data.type === "public" && <i className="bi bi-unlock"></i>}
+                    {data.type === "private" && <i className="bi bi-lock"></i>}
+                    {data.type === "collaborative" && <i className="bi bi-diagram-3"></i>}
+
+                    
                 </div>
                 <div className={'col-5 name'}>{data.name}</div>
-                <div className={'col-2'}>13 days ago</div>
+                <div className={'col-3'}>13 days ago</div>
                 <div className={'col-2'}>July 13, 2024</div>  
             </div>  
         </>);
     }
-
-
-
-
-
-
-
-
 
 
     return(<>

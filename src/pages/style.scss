@@ -48,7 +48,7 @@
 
     & > .menu div div .bi {
       padding-right: 14px;
-      font-size: 1.1em;
+      font-size: 1.15em;
     }
 
     & > .menu h1 {
@@ -114,6 +114,26 @@
 
     & .bi-chevron-right:hover {
       color: var(--accent);
+    }
+
+    & > .upload {
+      text-align: center;
+      width: calc(100% - 14px);
+      border: none;
+      background-color: var(--bg-2);
+      margin: 7px 7px 7px 7px;
+      border-radius: 8px;
+      font-size: 1em!important;
+      padding: 15px;
+      margin-top: 20px;
+    }
+
+    & > .upload p {
+      margin-top: 10px;
+    }
+
+    & > .upload .bi {
+      font-size: 2em;
     }
 
 }

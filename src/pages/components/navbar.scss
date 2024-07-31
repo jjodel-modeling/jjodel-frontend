@@ -250,7 +250,33 @@
   & .keystroke {
     float: right;
     margin-right: 10px;
-    border: 1px solid red;
 
   }
+}
+
+.user-initials {
+  width: 28px;
+  height: 28px;
+  border-radius: 22px;
+  color: white;
+  font-weight: 400;
+  text-align: center;
+  padding-right: 1px;
+  background-color: var(--secondary);
+  font-size: 1rem;
+  padding-top: 1px;
+  transition: 0.3s;
+}
+
+.user-initials:hover {
+  background-color: var(--accent);
+  transition: 0.3s;
+}
+
+.nav-side {
+  position: absolute;
+  right: 31px;
+  float: right;
+  top: 2px;
+
 }

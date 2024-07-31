@@ -18,9 +18,23 @@ const User = (props: UserProps) => {
 };
 
 
+type TitleProps = {
+    title: string;
+    icon: Element;
+}
+
+const Title = (props: TitleProps) => {
+    return (<>
+        <div className={'user row'}>
+            <div className={'name'}><h2>{props.icon} {props.title}</h2></div>
+        </div>
+    </>);
+};
+
+
 type Props = {
     children?: JSX.Element,
-    active: 'Account'|'Settings'|'Updates'|'Community'|'All'|'Archive',
+    active: 'Account'|'Settings'|'Updates'|'Community'|'All'|'Archive'|'Templates',
     version: Partial<DState["version"]>;
 };
 
@@ -50,7 +64,9 @@ function Dashboard(props: Props): any {
             <LeftBar projects={user.projects} active={active} />
 
             <div className={'catalog-container w-100'}>
-                <User name={'John Doe'} initials={'JD'} />
+
+                {active === "Templates" ? <Title title={'Jjodel Templates'} icon={<i className="bi bi-code-square"></i>} /> : <User name={'John Doe'} initials={'JD'} />}
+                
                 <Catalog children={children}/>
             </div>
         </div>

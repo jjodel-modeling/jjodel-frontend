@@ -6,6 +6,7 @@ import {Dashboard, Project} from './components';
 import Storage from "../data/storage";
 
 import {Menu, Item, Divisor} from './components/menu/Menu';
+import {Modal} from './components/modal/Modal';
 
 import colors from '../static/img/colors.png';
 
@@ -15,7 +16,7 @@ type CardsType = {
     children: any;
 };
 
-const Cards = (props: CardsType): any => {
+const Cards = (props: CardsType): any => { 
     return (
         <React.Fragment>
             <div className='row mb-5 commandbar'>
@@ -26,11 +27,12 @@ const Cards = (props: CardsType): any => {
 }
 
 type CardType = {
-    icon: "add" | "import" | "question";
-    style?: "blue" | "red" | "dark" | "clear" | "default";
+    icon: "add" | "import" | "clone" | "question";
+    style?: "blue" | "red" | "dark" | "clear" | "rainbow" | "default";
     title: string;
     subtitle: string;
     action?: MouseEventHandler;
+    children?: JSX.Element[];
 };
 
 const Card = (props: CardType) => {
@@ -38,10 +40,11 @@ const Card = (props: CardType) => {
     const icons = {
         add: "bi-plus-circle",
         import: "bi-box-arrow-in-up",
-        question: "bi-question-square" 
+        question: "bi-question-square",
+        clone: "bi-clipboard2-check" 
     };
     
-    return (
+    return (<>
         <div className={`card ${props.style ? props.style : 'default' }`}>
             <div className={'col icon'}>
                 {props.action ?
@@ -54,6 +57,7 @@ const Card = (props: CardType) => {
                 {props.subtitle}
             </div>
         </div>
+        </>
     );
 }
 
@@ -61,7 +65,7 @@ Cards.Item = Card;
 
 type ChildrenType = {
     projects?: any;
-    children?: any;
+    children?: JSX.Element[];
 };
 
 
@@ -191,7 +195,7 @@ const Catalog = (props: ChildrenType) => {
             : 
             <div className={'row project-list'}>
                 <div className='row header'>
-                <div className={'col-sm-1'} style={{width: '30px'}}></div><div className={'col-sm-1'}></div><div className={'col-sm-5'}>Name</div><div className={'col-3'}>Last modified</div><div className={'col-2'}>Created</div>
+                    <div className={'col-6'}>Name</div><div className={'col-3'}>Last modified</div><div className={'col-3'}>Created</div>
                 </div>
                 {
                     props.projects.map(p => <>
@@ -214,11 +218,16 @@ const Catalog = (props: ChildrenType) => {
             </Header>
             <CatalogSide>
                 <CatalogInfoCard projects={props.projects}/>
-            
                 <CatalogReport projects={props.projects}/>
             </CatalogSide>
         </div>
     );
+}
+
+
+
+function importModal() {
+    alert('');
 }
 
 function AllProjectsComponent(props: AllProps): JSX.Element {
@@ -250,23 +259,16 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
 
 
     return(<Try>
-        <Dashboard active={'All'} version={props.version}>
+        <Dashboard active={'Templates'} version={props.version}>
             
             <React.Fragment>                
 
                 <Cards>
                     <Cards.Item
-                        title={'New jjodel'} 
-                        subtitle={'Create a new jjodel project.'}
-                        icon={'add'} 
-                        style={'red'}   
-                    />
-                    <Cards.Item
-                        title={'Import jjodel'} 
-                        subtitle={'Import an existing jjodel project.'}
-                        icon={'import'} 
-                        style={'blue'} 
-                        action={(e) => importModal()}
+                        title={'Clone a template'} 
+                        subtitle={'Clone a template in your workspace.'}
+                        icon={'clone'} 
+                        style={'rainbow'}   
                     />
                     {true && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
                 </Cards>
@@ -305,9 +307,9 @@ const AllProjectsConnected = connect<StateProps, DispatchProps, OwnProps, DState
     mapDispatchToProps
 )(AllProjectsComponent);
 
-const AllProjectsPage = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+const TemplatePage = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
     return <AllProjectsConnected {...{...props, children}} />;
 }
 
-export {AllProjectsPage};
+export {TemplatePage};
 

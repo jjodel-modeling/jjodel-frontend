@@ -23,6 +23,8 @@ import logo from '../../static/img/jjodel.jpg';
 import TabDataMaker from "../../components/abstract/tabs/TabDataMaker";
 import DockManager from "../../components/abstract/DockManager";
 
+import {Menu, Item, Divisor} from '../components/menu/Menu';
+
 enum Key{
     "cmd"   = "bi-command",
     "alt"   = "bi-alt",
@@ -94,8 +96,19 @@ const createM1 = (project: LProject, metamodel: LModel) => {
     DockManager.open('models', tab);
 }
 
+type UserProps = {
+    initials: string;
+}
+const User = (props: UserProps) => {
+    return (
+        <div>John Doe</div>
+    );
+};
+
 type MenuEntry = {name: string, function?: ()=>any, keystroke?: string[], subItems?:MenuEntry[]};
+
 function NavbarComponent(props: AllProps) {
+    
     const {version, metamodels, advanced, debug} = props;
     const [focussed, setFocussed] = useState('');
     const [clicked, setClicked] = useState('');
@@ -105,6 +118,7 @@ function NavbarComponent(props: AllProps) {
     const menuType = "normal";
 
     const projectItems: MenuEntry[] = [
+        
         {name: 'New metamodel', function: ()=>createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
         {name: 'New model', function: async() => {}, keystroke: []},
         {name: 'divisor', function: async() => {}, keystroke: []},
@@ -150,7 +164,25 @@ function NavbarComponent(props: AllProps) {
     ];
 
     const dashboardItems = [
-        {name: 'Project',
+
+        {name: 'New project', function: ()=>alert('new project'), keystroke: [Key.cmd, 'N']},
+        {name: 'Import...', function: async() => {}, keystroke: []},
+        {name: 'divisor', function: async() => {}, keystroke: []},
+        {name: 'Help', subItems: [
+            {name: 'What\'s new', function: async() => {}, keystroke: []},
+            {name: 'divisor', function: async() => {}, keystroke: []},
+            {name: 'Homepage', function: async() => {}, keystroke: []},
+            {name: 'Getting started', function: async() => {}, keystroke: []},
+            {name: 'User guide', function: async() => {}, keystroke: []},
+            {name: 'divisor', function: async() => {}, keystroke: []},
+            {name: 'Legal terms', function: async() => {}, keystroke: []}
+        ],
+        keystroke: []},
+        {name: 'About jjodel', function: async() => {}, keystroke: []},
+        {name: 'divisor', function: async() => {}, keystroke: []},
+        {name: 'Logout', function: async() => {}, keystroke: [Key.cmd, 'Q']},
+
+        /* {name: 'Project',
             subItems: [
                 {name: 'New', function: async() => {
                     navigate('/allProjects');
@@ -160,13 +192,13 @@ function NavbarComponent(props: AllProps) {
                     SetRootFieldAction.new('isLoading', false);
                 }},
             ]
-        }
+        }*/
     ];
 
 
 
+    if(!project)
 
-    if(true)
         return(<>
             <nav className={'nav-container'} style={{zIndex: 99}}>
                 <div className='nav-hamburger hoverable' tabIndex={0}>
@@ -177,8 +209,24 @@ function NavbarComponent(props: AllProps) {
                         </ul>
                     </div>
                 </div>
-                <div className='nav-logo'><img height={24} src={logo} /></div>
-                <div className='nav-side'></div>
+                <div className='nav-logo' style={{width: '30%'}}>
+                    <img height={24} src={logo} />
+                </div>
+                <div className='nav-side'>
+                    <div style={{float: 'right', left: '300px!important', width: '31px', marginTop: '2px'}}>
+                        <Menu position={'left'}>
+                            <Item action={(e)=> {alert('')}}>Dashboard</Item>
+                            <Divisor />
+                            <Item action={(e)=> {alert('')}}>Profile</Item>
+                            <Item action={(e)=> {alert('')}}>Account</Item>
+                            <Item action={(e)=> {alert('')}}>Sign out</Item>
+                        </Menu>
+                    </div>
+                </div>
+                <div style={{marginLeft: 'auto', marginRight: '38px', marginTop: '4px', float: 'right', width: 'fit-content', fontWeight: '400'}}>
+                    <button style={{border: 'none', marginRight: '20px', borderRadius: '4px', padding: '2px 20px 2px 10px', color: 'white', background: 'linear-gradient(90deg, hsla(321, 42%, 48%, 1) 0%, hsla(343, 80%, 65%, 1) 100%)'}}>
+                    <i className="bi bi-plus-lg" style={{paddingRight: '6px', color: 'white'}}></i> Create new project</button> Alfonso <b>Pierantonio</b>
+                </div>
             </nav>
 
 
@@ -202,7 +250,23 @@ function NavbarComponent(props: AllProps) {
         </>);
     else
         return(<>
-            <nav style={{zIndex: 99}}>
+            <nav className={'nav-container'} style={{zIndex: 99}}>
+                <div className='nav-hamburger hoverable' tabIndex={0}>
+                    <i className="bi bi-grid-3x3-gap-fill list"></i>
+                    <div className={'content context-menu'}>
+                        <ul>
+                            {dashboardItems.map(i => makeEntry(i))}
+                        </ul>
+                    </div>
+                </div>
+                <div className='nav-logo'>
+                    <img height={24} src={logo} />
+                </div>
+                <div className='nav-side'>
+                    <User initials={'JD'} />
+                </div>
+            </nav>
+            {/* <nav style={{zIndex: 99}}>
                 <ul className={'new-navbar'}>
                     {dashboardItems.map(i => <li key={i.name} className={'new-dropdown'}>
                         <label>{i.name}</label>
@@ -216,7 +280,7 @@ function NavbarComponent(props: AllProps) {
                         </ul>
                     </li>)}
                 </ul>
-            </nav>
+                        </nav>*/}
         </>);
 }
 

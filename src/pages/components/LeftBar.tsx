@@ -28,6 +28,15 @@ const Item = (props: ItemProps) => {
     );
 }
 
+const Upload = () => {
+    return(
+        <div className={'upload'}>
+            <i className="bi bi-arrow-up-circle"></i>
+            <p>Drop your jjodel project archive here to import it.</p>
+        </div>
+    );
+};
+
 type MenuProps = {
     children: any;
     title?: string;
@@ -53,6 +62,7 @@ const Menu = (props: MenuProps) => {
 const Divisor = () => {
     return (<hr className='my-1' />);
 };
+
 
 Menu.Item = Item;
 
@@ -81,11 +91,13 @@ function LeftBar(props: Props): JSX.Element {
             <Item icon={<i className="bi bi-clock"></i>}>Recent</Item>
         </Menu>
         <Menu title={"Starred"} mode={'collapsable'}>
-            {props.projects.filter(p => p.favorite).map(p => <Item icon={<i className="bi bi-folder2"></i>}>{p.name}</Item>)}
+            {props.projects.filter(p => p.favorite).map(p => <Item icon={<i className="bi bi-folder"></i>}>{p.name}</Item>)}
         </Menu>
-        <Menu title={"Templates"}>
-            <Item icon={<i className="bi bi-code-square"></i>}>Example Template</Item>
+        <Menu>
+            <Item action={'templates'} icon={<i className="bi bi-code-square"></i>}>Templates</Item>
         </Menu>
+
+        <Upload />
 
 
         {/* 

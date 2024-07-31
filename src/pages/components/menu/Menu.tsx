@@ -69,7 +69,6 @@ export const Item = (props: ItemType) => {
         {props.action && props.keystroke &&  <div onClick={props.action} className={'item'}>{props.children} <span>{parse(props.keystroke)}</span></div>} 
         {props.action && !props.keystroke &&  <div onClick={props.action} className={'item'}>{props.children}</div>} 
         {!props.action  &&  <div className={'item disabled'}>{props.children}</div>} 
-
     </>);
 }
 
