@@ -1,0 +1,18 @@
+section.page-root{
+  display: flex;
+  flex-flow: column;
+  &>label{
+    flex-grow:1;
+    display: flex;
+    padding-top: 0.125em;
+    padding-bottom: 0.125em;
+    height: 32px;
+    &>span{
+      margin: auto;
+      flex-grow: 1;
+    }
+    &>input{
+      margin: auto;
+    }
+  }
+}

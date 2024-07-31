@@ -16,7 +16,7 @@
         &.empty{
             display: none;
         }
-        .view-editor+.dock-layout{
+        .view-editor-header+.dock-layout{
             position: relative !important;// rc-dock sets pos:absolute in direct style
             min-height: 75vh;
             min-width: 550px;

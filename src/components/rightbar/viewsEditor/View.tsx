@@ -14,17 +14,19 @@ import {FakeStateProps} from "../../../joiner/types";
 import {connect} from "react-redux";
 import PaletteData from "./data/PaletteData";
 import GenericNodeData from "./data/GenericNodeData";
-// import "./view.scss";
+import "./view.scss";
 
 const tabidprefix = "Dock_in_view_detail";
 let idcounter = 0;
 function id(){ // NB: cannot use just indexes or tab title because the id is injected in html, so it must be unique in the whole page.
     return tabidprefix + (idcounter++);
+
 }
 
 
 function ViewDataComponent(props: AllProps) {
     const view = props.view;
+    const user: LUser = LPointerTargetable.fromPointer(DUser.current);
     (window as any).view = view;
 /*
     if(!view) {
@@ -61,14 +63,17 @@ function ViewDataComponent(props: AllProps) {
     // Log.exx('$crash', "test crash", {propss:props});
     layout.dockbox.children.push({tabs});
 
-    return(<div>
-        <div className={'d-flex p-2 view-editor w-100'}>
-            <b className={'ms-1 my-auto'}>{view.name}</b>
+    return(<div className={"view-editor-root"}>
+        {/*<div className={'view-editor-header'}>
+            <b className={'view-name ms-1 my-auto'}>{view.name}</b>
             <button className={'bg btn-back ms-auto'} onClick={ () => props.setSelectedView(undefined)}>
                 <i className={'p-1 bi bi-arrow-left'}></i>
             </button>
-        </div>
-        <DockLayout defaultLayout={layout} style={{position: 'absolute', left: 10, top: 40, right: 10, bottom: 10, marginBottom: "20px"}} />
+        </div>*/}
+        <button className={'bg btn-back ms-auto'} onClick={ () => props.setSelectedView(undefined)}>
+            <i className={'p-1 bi bi-arrow-left'}></i>
+        </button>
+        <DockLayout defaultLayout={layout} />
     </div>);
 }
 interface OwnProps {

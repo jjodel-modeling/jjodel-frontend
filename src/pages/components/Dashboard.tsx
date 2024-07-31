@@ -32,7 +32,7 @@ type CatalogProps = {
 const Catalog = (props: CatalogProps) => {
 
     return (<>
-        <div>
+        <div className={'p-2'} style={{flexGrow:1}}>
             {props.children}
         </div>
     </>);

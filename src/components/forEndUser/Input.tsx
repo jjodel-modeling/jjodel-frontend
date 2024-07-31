@@ -20,7 +20,7 @@ import { Tooltip } from './Tooltip';
 
 
 export function getSelectOptions(data: any, field: string, options: ReactNode, children?: ReactNode) {
-    console.log("select options pre", {data, field, options});
+    console.log("select options", {data, field, children, options});
     if (options) return options;
     // children is auto-filled to empty array even if it is not set explicitly in jsx
     if (Array.isArray(children) && children.length > 0) return children;
@@ -62,7 +62,7 @@ export function getSelectOptions(data: any, field: string, options: ReactNode, c
         primitives = LPointerTargetable.fromPointer(state.returnTypes);
     }
 
-    console.log("select options", {data, field, returns, primitives, classes, enumerators})
+    console.log("select options", {data, field, returns, primitives, classes, enumerators});
 
     return (
         <>
@@ -106,7 +106,6 @@ export function InputComponent(props: AllProps) {
     if (props.tag === 'select') value = oldValue; // select does not use state.
     let serializeValue = (val: LPointerTargetable | PrimitiveType): string | PrimitiveType => (val as LPointerTargetable)?.id || (val as any);
 
-    if (props.tag === "select")console.log("select render 0", oldValue, value, isTouched);
     function valueDidChange(v1: any, v2: any): boolean {
         return serializeValue(v1) !== serializeValue(v2);
         /*
@@ -130,7 +129,8 @@ export function InputComponent(props: AllProps) {
     else readOnly = props.debugmodee !== 'true' && Defaults.check(data?.id)
 
     const type = (props.type) ? props.type : 'text';
-    const label: ReactNode|undefined = props.jsxLabel || props.label;
+    let label: ReactNode | undefined = props.jsxLabel || props.label;
+    let postlabel: ReactNode | undefined = props.postlabel;
     let tooltip: ReactNode|string|undefined = ((props.tooltip === true) ? data?.['__info_of__' + field]?.txt : props.tooltip) || '';
 
     let css = '';//'my-auto input ';
@@ -142,7 +142,7 @@ export function InputComponent(props: AllProps) {
 
 
     const onChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-        console.log("onChange", {oldValue, value, nv: getValueFromEvent(evt), evt, ev: evt.target.value});
+        (props as any).onChange?.(evt);
         if (readOnly) return;
         if (isBoolean) {
             const target = evt.target.checked;
@@ -153,13 +153,14 @@ export function InputComponent(props: AllProps) {
         if (props.tag === "select") {
             confirmValue(evt as any);
         } else {
-            console.log("setValue", {value, nv: getValueFromEvent(evt), evt, ev: evt.target.value});
+            //console.log("setValue", {value, nv: getValueFromEvent(evt), evt, ev: evt.target.value});
             setValue(getValueFromEvent(evt));
             setIsTouched(true);     // I'm editing the element in my local state.
             // the actual set is done in onBlur
         }
     }
     const onKeyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
+        (props as any).onKeyDown?.(evt);
         if (props.tag === 'select') return;
         if (evt.key === Keystrokes.enter) confirmValue(evt as any);
         if (evt.key === Keystrokes.escape) {
@@ -187,6 +188,7 @@ export function InputComponent(props: AllProps) {
     }
 
     const onBlur = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }) => {
+        (props as any).onBlur?.(evt);
         if (props.tag === 'select') return;
         confirmValue(evt);
     }
@@ -194,7 +196,7 @@ export function InputComponent(props: AllProps) {
         if (readOnly || isBoolean) return;
         const newValue: string = getValueFromEvent(evt);
         const oldValue = getter ? getter(data, field) : data[field];
-        console.log("onChange confirm", {evt, newValue, oldValue, changed: valueDidChange(newValue, oldValue), readOnly, isBoolean, nnv:serializeValue(newValue)});
+        // console.log("onChange confirm", {evt, newValue, oldValue, changed: valueDidChange(newValue, oldValue), readOnly, isBoolean, nnv:serializeValue(newValue)});
         if (valueDidChange(newValue, oldValue)){
             if (setter) setter(newValue, data, field);
             else data[field] = serializeValue(newValue);
@@ -202,7 +204,6 @@ export function InputComponent(props: AllProps) {
         // I terminate my editing, so I communicate it to other <Input /> that render the same field.
         setIsTouched(false);
     }
-    if (props.tag === "select")console.log("select render 4")
 
     const otherprops: GObject = {...props};
     delete otherprops.data;
@@ -210,6 +211,7 @@ export function InputComponent(props: AllProps) {
     delete otherprops.getter;
     delete otherprops.setter;
     delete otherprops.label;
+    delete otherprops.postlabel;
     delete otherprops.jsxLabel;
     delete otherprops.tooltip;
     delete otherprops.hidden;
@@ -226,14 +228,15 @@ export function InputComponent(props: AllProps) {
     else if (isBoolean) cursor = 'pointer';
     else cursor = 'auto';
 
-    let inputProps: GObject = { spellCheck: (props as any).spellCkeck || false, readOnly, disabled: readOnly, type, value: serializeValue(value), checked,
+    let inputProps: GObject = {...otherprops,
         className: [props.inputClassName, css].join(' '),
         style: (props.inputStyle || {}),
+        spellCheck: (props as any).spellCkeck || false, readOnly, disabled: readOnly, type, value: serializeValue(value), checked,
         onChange, onBlur, onKeyDown} // key:`${field}.${data?.id}`
     if (!inputProps.style.cursor && cursor === 'not-allowed') { inputProps.style.cursor = cursor; }
 
     let input: ReactNode;
-    let rootprops: GObject = {...otherprops};
+    let rootprops: GObject = {className: otherprops.className, style: otherprops.style};
     switch (typeof rootprops.ref) {
         default: rootprops.ref = inputRef; break;
         case "object":
@@ -250,18 +253,17 @@ export function InputComponent(props: AllProps) {
         rootprops.onMouseEnter = () => Tooltip.show(tooltip, true, (rootprops.ref));
         rootprops.onMouseLeave = () => Tooltip.hide();
     }
-    let rootkeys = new Set(...Object.keys(rootprops));
-    //  merge events: ltodo: might want to distinguish which events are merged between root and input and which not.
+    /*let rootkeys = new Set(...Object.keys(rootprops));
+    //  merge events: might want to distinguish which events are merged between root and input and which not.
     //  onChange surely needs merge. onMouseHover might not to let it trigger on label too.
     for (let k of rootkeys) {
         if (!(k[0] === 'o' && k[1] === 'n' && k[2] && k[2].toUpperCase() === k[2])) continue;
         if (inputProps[k]) inputProps[k] = function(...a:any) { inputProps[k](arguments); rootprops[k](arguments); }
         else inputProps[k] = rootprops[k];
         delete rootprops[k];
-    }
-    if (props.tag === "select")console.log("select render 8")
+    }*/
 
-    if (!label && !autosize) {
+    if (!label && !postlabel && !autosize) {
         if (rootprops.className) inputProps.className = rootprops.className + ' ' + inputProps.className;
         if (rootprops.style) U.objectMergeInPlace(inputProps.style, rootprops.style);
         inputProps = {...rootprops, ...inputProps};
@@ -275,7 +277,6 @@ export function InputComponent(props: AllProps) {
         }
     }
     if (autosize) rootprops.className = (rootprops.className || '') + ' autosize-input-container';
-    if (props.tag === "select")console.log("select render 9")
 
     switch (props.tag){
         case "textarea": input = <textarea {...inputProps}>{inputProps.value}</textarea>; break;
@@ -285,9 +286,22 @@ export function InputComponent(props: AllProps) {
             inputProps.contentEditable = inputProps.contentEditable !== false;
             input = React.createElement(props.tag, inputProps, props.children); break;
     }
-    if (props.tag === "select")console.log("select render 10")
+    if (typeof label === "string") label = <span>{label}</span>;
+    if (typeof postlabel === "string") postlabel = <span>{postlabel}</span>;
 
-    return <label {...rootprops}>{label || undefined}{input}</label>;
+    const openSelect = (e: any)=>{
+        /*
+        tried to make label click open the select but does not work easily in js, a solution was here but with css padding.
+        https://stackoverflow.com/questions/15249958/once-i-click-on-label-select-button-should-get-open
+        */
+        if (props.tag !== "select") return;
+        let t: HTMLElement = (e.target) as any;
+        let select = (t.tagName === 'select') ? t : t.querySelector('select');
+        console.log("click select root", {t, select});
+        select?.click();
+    }
+    return <label className={'input-container'} {...rootprops} /*onClick={openSelect}*/>
+    {label || undefined}{input}{postlabel || undefined}</label>;
     /*
     return(<label className={'p-1'} {...otherprops}
                   style={rootStyle}>
@@ -321,6 +335,7 @@ export interface InputOwnProps {
     getter?: (data: any/*LPointerTargetable*/, field: string) => string | boolean | undefined;
     setter?: (value: string|boolean, data: any, field: string) => void;
     label?: string | ReactNode;
+    postlabel?: string | ReactNode;
     jsxLabel?: ReactNode; // @deprecated, use label
     type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|
     'number'|'password'|'radio'|'range'|'tel'|'text'|'time'|'url'|'week';
@@ -336,7 +351,6 @@ export interface InputOwnProps {
     placeholder?: string;
     tag?: string;
     children?: ReactNode;
-    // todo: div contenteditable
 }
 
 export interface SelectOwnProps extends Omit<InputOwnProps, 'setter'> {
@@ -374,17 +388,17 @@ export const InputConnected =
 
 
 // export function Input(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement { return 'input' as any; }
-export function Input(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement {
-    return <InputConnected {...{...props, children} as any} />;
+export function Input(props: InputOwnProps): ReactElement {
+    return <InputConnected {...props as any}>{props.children}</InputConnected>;
 }
 
 // export function TextArea(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement { return 'textarea' as any; }
-export function TextArea(props: InputOwnProps, children: (string | React.Component)[] = []): ReactElement {
-    return <InputConnected {...{...props, children, tag:"textarea"} as any} />;
+export function TextArea(props: InputOwnProps): ReactElement {
+    return <InputConnected {...{...props, tag:"textarea"} as any}>{props.children}</InputConnected>;
 }
 //export function Select(props: SelectOwnProps, children: (string | React.Component)[] = []): ReactElement { return 'select' as any; }
-export function Select(props: SelectOwnProps, children: (string | React.Component)[] = []): ReactElement {
-    return <InputConnected {...{...props, children, tag:"select"} as any} />;
+export function Select(props: SelectOwnProps): ReactElement {
+    return <InputConnected {...{...props, tag:"select"} as any}>{props.children}</InputConnected>;
 }
 export const Edit = Input;
 
