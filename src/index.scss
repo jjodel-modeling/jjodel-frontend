@@ -28,7 +28,7 @@ body {
 
 .catalog-container {
     position: relative;
-    margin-left: calc(12% + 50px);
+    margin-left: 36px;
     max-width: 82%;
     min-height: 75%;
     padding-bottom: 2em;
@@ -52,7 +52,8 @@ body {
     width: 2.2em;
     height: 2.2em;
     padding-top: 6px;
-    margin-left: 14px;
+    padding-left: 10px;
+    margin-left: 16px;
     color: white;
     border-radius: 30px;
     background-color: #087E8B;
@@ -63,7 +64,7 @@ body {
     position: absolute;
     width: 100%;
     padding: 0;
-    padding-right: 290px;
+    // padding-right: 290px;
 
 }
 

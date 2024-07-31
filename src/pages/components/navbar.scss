@@ -23,6 +23,7 @@
     margin: 10px 0px 10px 0px;
     padding-top: 2px;
     height: 25px;
+    
     &:hover{
       /* background-color: #f5f5f5;
       border-radius: 4px;*/
@@ -103,7 +104,6 @@
     transition: 0.3s;
     .bi:hover {
       color: var(--accent);
-
       transform-origin: center;
       transform: rotate(180deg);
     }

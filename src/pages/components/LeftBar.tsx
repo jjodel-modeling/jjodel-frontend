@@ -1,5 +1,5 @@
 import { meanBy } from 'lodash';
-import { MouseEventHandler } from 'react';
+import { useState, MouseEventHandler } from 'react';
 import { IconTheme } from 'react-hot-toast';
 import {useNavigate} from 'react-router-dom';
 import { LProject } from '../../joiner';
@@ -31,14 +31,21 @@ const Item = (props: ItemProps) => {
 type MenuProps = {
     children: any;
     title?: string;
+    mode?: "collapsable";
 };
 
 const Menu = (props: MenuProps) => {
+    const [open,setOpen] = useState(true);
 
     return (<>
-        {props.title && <h1>{props.title}</h1>}
-        <div className={'menu border-end'}>
-            {props.children}
+        {props.title && props.mode && open && <i className={'bi bi-chevron-down'} onClick={(e) => setOpen(!open)}></i>}
+        {props.title && props.mode && !open && <i className={'bi bi-chevron-right'} onClick={(e) => setOpen(!open)}></i>}
+        
+        <div className='menu border-bottom'>
+            {props.title && <h1>{props.title}</h1>}
+            <div>
+                {open && props.children}
+            </div>
         </div>
     </>);
 }
@@ -65,16 +72,19 @@ function LeftBar(props: Props): JSX.Element {
     ];
 
     return(<div className={'leftbar border-end border-light-subtle '}>
-
+        
+        <i className="bi bi-search"></i>
         <input placeholder={'Search for anything'}type={'text'} name='search-text' />
 
         <Menu>
             <Item action={'allProjects'} icon={<i className="bi bi-grid"></i>}>All projects</Item>
             <Item icon={<i className="bi bi-clock"></i>}>Recent</Item>
-            <Divisor/>
         </Menu>
-        <Menu title={"Starred"}>
-            {props.projects.filter(p => (p.favorite)).map(p => <Item icon={<i className="bi bi-folder2"></i>}>{p.name}</Item>)}
+        <Menu title={"Starred"} mode={'collapsable'}>
+            {props.projects.filter(p => p.favorite).map(p => <Item icon={<i className="bi bi-folder2"></i>}>{p.name}</Item>)}
+        </Menu>
+        <Menu title={"Templates"}>
+            <Item icon={<i className="bi bi-code-square"></i>}>Example Template</Item>
         </Menu>
 
 

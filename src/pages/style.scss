@@ -5,72 +5,119 @@
 
 }
 
+.project-card {
+  --color: #233d4d;
+  --accent: #f3b700;
+  --accent-disabled:var(--bg-4);
+  --secondary: #5F0F40;
+  --bg-1: white;
+  --bg-2: #f5f5f5;
+  --bg-25: #f5f5f5;
+  --bg-3: #e2e2e1;
+  --bg-3_5: red;
+  --bg-4: #8f908e;
+  --bg-5: #525251;
+  --danger: #ed474a;
+  --success: #3ddc97;
+  --side-padding: 2em;
+  --sep-padding: 4em;
+}
+
 .leftbar {
   background-color: white;
   width: 250px; 
   height: 100%;
+  color: var(--color);
+
+    & > .menu {
+      
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
   
-    & > div div {
+    & > .menu div div {
       cursor: pointer;
       padding: 4px 8px 4px 2rem;
       display: block;
       border: none;
 
     }
-    & > div div:hover {
+    & > .menu div div:hover {
       background-color: #eee;
     }
 
-    & > div div .bi {
+    & > .menu div div .bi {
       padding-right: 14px;
       font-size: 1.1em;
     }
 
-    & > h1 {
+    & > .menu h1 {
       margin-top: 10px;
-      font-size: 1em;
+      font-size: 1.05em;
       padding-left: 2rem;
-      font-weight: 600;
+      font-weight: 500;
+    }
+
+    & > .bi-search {
+      position: relative;
+      top: 34px;
+      left: 12px;
+      font-size: 1.1em;
+    }
+
+    & > .bi-search:hover {
+      color: var(--color);
     }
 
     & > input {
-      width: calc(100% - 20px);
+      width: calc(100% - 14px);
       border: none;
       background-color: var(--bg-2);
-      margin: 7px 12px 7px 12px;
+      margin: 7px 7px 7px 7px;
       border-radius: 3px;
       font-size: 1em!important;
-      padding: 5px 8px 5px 8px;
-      color: var(--bg-3);
+      padding: 5px 8px 5px 25px;
+      color: #A5A5A1;
       border: 1px solid var(--bg-2);
       outline: none;
+      transition:  0.3s;
     }
 
     & > input::placeholder {
-      color: var(--bg-3);
+      color: #A5A5A1;
     }
 
     & > input:focus {
       background-color: var(--bg-3);
-      color: var(--bg-4);
+      color: #A5A5A1;
       border: 1px solid var(--bg-3);
+      transition:  0.3s;
     }
+
+    & .bi-chevron-down {
+      cursor: pointer;
+      float: left; 
+      padding-top: 17px;
+      padding-left: 10px;
+    }
+
+    & .bi-chevron-down:hover {
+      color: var(--accent);
+    }
+
+    & .bi-chevron-right {
+      cursor: pointer;
+      float: left; 
+      padding-top: 17px;
+      padding-left: 10px;
+    }
+
+    & .bi-chevron-right:hover {
+      color: var(--accent);
+    }
+
 }
-.project-card {
-    --color: #233d4d;
-    --accent: #f3b700;
-    --accent-disabled:var(--bg-4);
-    --secondary: #5F0F40;
-    --bg-1: white;
-    --bg-2: #f5f5f5;
-    --bg-3: #e2e2e1;
-    --bg-4: #8f908e;
-    --bg-5: #525251;
-    --danger: #ed474a;
-    --success: #3ddc97;
-    --side-padding: 2em;
-    --sep-padding: 4em;
-}
+
 
 
 .project-card {

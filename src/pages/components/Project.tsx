@@ -31,8 +31,11 @@ function Project(props: Props): JSX.Element {
     const {data} = props;
     const navigate = useNavigate();
 
-    const [favorite, setFavorite] = useState(false);
+    // const [favorite, setFavorite] = useState(false);
 
+    const toggleFavorite = (project: LProject) => {
+        project.favorite = !project.favorite;
+    }; 
     const selectProject = () => {
         navigate(`/project?id=${data.id}`);
         U.refresh();
@@ -57,13 +60,13 @@ function Project(props: Props): JSX.Element {
                         onClick={async e => await deleteProject()}>
                     <i className={'p-1 bi bi-trash-fill'} />
     </button>*/}
-                    {favorite ? <i onClick={(e) => setFavorite(false)} className="bi bi-star-fill"></i> : <i onClick={(e) => setFavorite(true)} className="bi bi-star"></i>}
+                    {data.favorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> : <i onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
                     <Menu>
                             <Item keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
                             <Item>Duplicate</Item>
                             <Item action={e => exportProject()}>Download</Item>
                             <Divisor />
-                            <Item action={(e => setFavorite(!favorite))}>Add to favotites</Item>
+                            <Item action={(e => toggleFavorite(data))}>Add to favorites</Item>
                             <Item>Share</Item>
                             <Divisor />
                             <Item action={async e => await deleteProject()}>Delete</Item>
@@ -97,7 +100,7 @@ function Project(props: Props): JSX.Element {
                         <Item>Duplicate</Item>
                         <Item action={e => exportProject()}>Download</Item>
                         <Divisor />
-                        <Item action={(e => setFavorite(!favorite))}>Add to favotites</Item>
+                        <Item action={(e => toggleFavorite(data))}>Add to favorites</Item>
                         <Item>Share</Item>
                         <Divisor />
                         <Item action={async e => await deleteProject()}>Delete</Item>
@@ -107,7 +110,7 @@ function Project(props: Props): JSX.Element {
                 {data.type === "public" && <i className="bi bi-unlock"></i>}
         {data.type === "private" && <i className="bi bi-lock"></i>}
         {data.type === "collaborative" && <i className="bi bi-diagram-3"></i>}
-                    {favorite ? <i style={{float: 'left'}} onClick={(e) => setFavorite(false)} className="bi bi-star-fill"></i> : <i style={{float: 'left'}} onClick={(e) => setFavorite(true)} className="bi bi-star"></i>}
+                    {data.favorite ? <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> : <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
                    
                 </div>
                 <div className={'col-5 name'}>{data.name}</div>
