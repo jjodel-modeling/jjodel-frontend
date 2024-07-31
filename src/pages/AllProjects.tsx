@@ -214,8 +214,9 @@ const Catalog = (props: ChildrenType) => {
             </Header>
             <CatalogSide>
                 <CatalogInfoCard projects={props.projects}/>
+            
+                <CatalogReport projects={props.projects}/>
             </CatalogSide>
-            <CatalogReport projects={props.projects}/>
         </div>
     );
 }

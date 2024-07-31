@@ -30,6 +30,7 @@ body {
     position: relative;
     margin-left: 36px;
     margin-right: 36px;
+    margin-top: 72px;
     width: auto;
     min-height: 75%;
     padding-bottom: 2em;
@@ -65,7 +66,7 @@ body {
     position: absolute;
     width: 100%;
     padding: 0;
-    // padding-right: 290px;
+    padding-right: 245px;
 
 }
 
@@ -149,17 +150,17 @@ body {
     float: right;
 }
 .view-icons .bi {
-    font-size: 1.2em;
-    margin-left: 0.6em;
+    font-size: 1.5em;
+    margin-left: 2px;
+    border-radius: 4px;
+    padding: 2px 4px 2px 4px;
 }
 .view-icons .bi-list {
-    font-size: 1.4em;
+    font-size: 1.5em;
 }
 
 .view-icons .bi.selected {
     background-color: var(--bg-3);
-    border-radius: 4px;
-    padding: 2px;
 }
 
 .details {

@@ -12,6 +12,7 @@ import {
     SetRootFieldAction,
     U
 } from '../../joiner';
+
 import React, {Component, Dispatch, ReactElement, ReactNode, useState} from 'react';
 import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
@@ -165,7 +166,7 @@ function NavbarComponent(props: AllProps) {
 
 
 
-    if(project)
+    if(true)
         return(<>
             <nav className={'nav-container'} style={{zIndex: 99}}>
                 <div className='nav-hamburger hoverable' tabIndex={0}>

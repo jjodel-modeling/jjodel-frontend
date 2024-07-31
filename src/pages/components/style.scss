@@ -10,7 +10,7 @@
     --bg-5: #525251;
     --danger: #ed474a;
     --success: #3ddc97;
-    --side-padding: 2em;
+    --side-padding: 31px;
     --sep-padding: 4em;
 }
 
@@ -237,3 +237,9 @@ used by Navbar_NEW_OLD.tsx (purple version)
 .my-navbar > .items-container > .sub-items-container > .sub-item:hover {
     text-decoration: underline;
 }*/
+
+
+.nav-container {
+    border-bottom: 1px solid var(--bg-3);
+
+}
