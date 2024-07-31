@@ -41,7 +41,19 @@
       border-radius: 3px;
       font-size: 1em!important;
       padding: 5px 8px 5px 8px;
+      color: var(--bg-3);
+      border: 1px solid var(--bg-2);
+      outline: none;
+    }
 
+    & > input::placeholder {
+      color: var(--bg-3);
+    }
+
+    & > input:focus {
+      background-color: var(--bg-3);
+      color: var(--bg-4);
+      border: 1px solid var(--bg-3);
     }
 }
 .project-card {
