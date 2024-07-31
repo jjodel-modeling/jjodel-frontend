@@ -46,10 +46,10 @@ function Dashboard(props: Props): any {
 
     return(<>
         <Navbar />
-        <div className={"d-flex h-100 w-100"}>
+        <div className={"d-flex h-100 w-100"}  style={{width: '100%'}}>
             <LeftBar projects={user.projects} active={active} />
 
-            <div className={'catalog-container'}>
+            <div className={'catalog-container w-100'}>
                 <User name={'John Doe'} initials={'JD'} />
                 <Catalog children={children}/>
             </div>

@@ -164,15 +164,18 @@ const Catalog = (props: ChildrenType) => {
             items_collaborative = props.projects.filter(p => p.type === "collaborative");
         }
 
-        var items  = items_public.concat(items_private,items_collaborative);
+        //var items  = items_public.concat(items_private,items_collaborative);
+
+        var items = props.projects.filter(p => 
+            (filters[0] && p.type ==="public" || filters[1] && p.type ==="private" || filters[2] && p.type ==="collaborative" || !filters[0] && !filters[1] && !filters[2]));
         
         return (
             
             mode == "cards" ?
 
-            <div style={{display: (props.projects.length > 0) ? 'flex' : 'none', marginRight: '270px'}} className={'flex-wrap'}>
+            <div style={{display: (items.length > 0) ? 'flex' : 'flex'}} className={'flex-wrap'} >
 
-                {props.projects.length === 0 && <span>Sorry, there are no results matching your search criteria. Please try again with different filters.</span>}
+                {items.length === 0 && <div>Sorry, there are no results matching your search criteria. Please try again with different filters.</div>}
                 
                 {
                     props.projects.map(p => <>

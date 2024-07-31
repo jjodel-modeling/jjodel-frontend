@@ -29,7 +29,8 @@ body {
 .catalog-container {
     position: relative;
     margin-left: 36px;
-    max-width: 82%;
+    margin-right: 36px;
+    width: auto;
     min-height: 75%;
     padding-bottom: 2em;
 
@@ -77,7 +78,7 @@ body {
 .catalog-container .catalog-header button {
     color: var(--bg-4);
     background-color: transparent;
-    font-size: 0.9em;
+    font-size: 1em;
     font-weight: 400;
     padding: 4px 10px;
     border: none;
@@ -164,12 +165,13 @@ body {
 .details {
     position: absolute;
     float: right;
-    width: 260px;
+    width: 253px;
     right: 0;
     border: 1px solid var(--bg-3);
     border-radius: 8px;
     padding: 1.2em;
     top: 0px;
+    right: 0px;
 }
 
 .commandbar .blue {
