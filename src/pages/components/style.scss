@@ -245,3 +245,21 @@ used by Navbar_NEW_OLD.tsx (purple version)
     border-bottom: 1px solid var(--bg-3);
 
 }
+
+.add-project {
+    margin-right: 0;
+    padding-right: '0'!important;
+    background-color: var(--secondary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 20px 4px 12px;
+}
+
+.add-project:hover {
+    background-color: var(--bg-5);
+}
+
+.add-project .bi, .add-project:hover .bi {
+    color: white;
+}

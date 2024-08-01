@@ -14,7 +14,6 @@ type Props = {
     data: LProject;
     mode?: string;
     key: any;
-    index: int;
 };
 
 type ProjectTypeType = {
@@ -66,10 +65,6 @@ function Project(props: Props): JSX.Element {
 
     function ProjectCard(props: Props): JSX.Element {
 
-        const showTip = () => {
-
-        }
-
         type MeterProps = {
             project: LProject
         }
@@ -106,14 +101,14 @@ function Project(props: Props): JSX.Element {
     </button>*/}
                     {data.favorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> : <i onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
                     <Menu>
-                            <Item keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
-                            <Item>Duplicate</Item>
-                            <Item action={e => exportProject()}>Download</Item>
+                            <Item icon={<i className="bi bi-plus-square"></i>} keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
+                            <Item icon={<i className="bi bi-files"></i>}>Duplicate</Item>
+                            <Item icon={<i className="bi bi-download"></i>} action={e => exportProject()}>Download</Item>
                             <Divisor />
-                            <Item action={(e => toggleFavorite(data))}>Add to favorites</Item>
-                            <Item>Share</Item>
+                            <Item icon={<i className="bi bi-star"></i>} action={(e => toggleFavorite(data))}>Add to favorites</Item>
+                            <Item icon={<i className="bi bi-share"></i>}>Share</Item>
                             <Divisor />
-                            <Item action={async e => await deleteProject()}>Delete</Item>
+                            <Item icon={<i className="bi bi-trash3"></i>} action={async e => await deleteProject()}>Delete</Item>
                     </Menu>
                 </div>
                 <div className='header'>
@@ -143,14 +138,14 @@ function Project(props: Props): JSX.Element {
             <div className="row data">
                 <div className={'col-sm-1'} style={{width: '30px'}}>
                     <Menu position='right'>
-                        <Item action={e => selectProject()}>Open</Item>
-                        <Item>Duplicate</Item>
-                        <Item action={e => exportProject()}>Download</Item>
+                        <Item icon={<i className="bi bi-plus-square"></i>} action={e => selectProject()}>Open</Item>
+                        <Item icon={<i className="bi bi-files"></i>}>Duplicate</Item>
+                        <Item  icon={<i className="bi bi-download"></i>} action={e => exportProject()}>Download</Item>
                         <Divisor />
-                        <Item action={(e => toggleFavorite(data))}>Add to favorites</Item>
-                        <Item>Share</Item>
+                        <Item icon={<i className="bi bi-star"></i>}  action={(e => toggleFavorite(data))}>Add to favorites</Item>
+                        <Item icon={<i className="bi bi-share"></i>}>Share</Item>
                         <Divisor />
-                        <Item action={async e => await deleteProject()}>Delete</Item>
+                        <Item icon={<i className="bi bi-trash3"></i>} action={async e => await deleteProject()}>Delete</Item>
                     </Menu> 
                 </div>
                 <div className={'col-sm-1'}>

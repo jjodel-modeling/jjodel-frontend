@@ -25,6 +25,8 @@ import DockManager from "../../components/abstract/DockManager";
 
 import {Menu, Item, Divisor} from '../components/menu/Menu';
 
+import jj from '../../static/img/jj-k.png';
+
 enum Key{
     "cmd"   = "bi-command",
     "alt"   = "bi-alt",
@@ -50,23 +52,36 @@ function getKeyStrokes(keys?: string[]){
 }
 
 function makeEntry(i: MenuEntry) {
-    if (i.name === "divisor") return <li className='divisor'><hr /></li>;
-    return <li className={i.subItems ? "hoverable" : ""} tabIndex={0} onClick={()=>i.function?.()}>
-            <label className='highlight'>
-                <span>{i.name}</span>
-                {i.subItems ?
-                    <i className='bi bi-chevron-right icon-expand-submenu'></i> :
-                    getKeyStrokes(i.keystroke)
-                }
-            </label>
-        {i.subItems &&
-            <div className='content right'>
-                <ul className='context-menu right'>
-                    {i.subItems.map(si => makeEntry(si))}
-                </ul>
-            </div>
-        }
-        </li>;
+
+    if (i.name === "divisor") {
+        return (
+            <li className='divisor'>
+                <hr />
+            </li>
+        );
+    } else {
+        return (
+            <li className={i.subItems ? "hoverable" : ""} tabIndex={0} onClick={()=>i.function?.()}>
+                <label className='highlight'>
+                    {i.icon ? 
+                        <span>{i.icon} {i.name}</span> :
+                        <span><i className="bi bi-app hidden"></i> {i.name}</span>
+                    }
+                    {i.subItems ?
+                        <i className='bi bi-chevron-right icon-expand-submenu'></i> :
+                        getKeyStrokes(i.keystroke)
+                    }
+                </label>
+            {i.subItems &&
+                <div className='content right'>
+                    <ul className='context-menu right'>
+                        {i.subItems.map(si => makeEntry(si))}
+                    </ul>
+                </div>
+            }
+            </li>
+        );
+    }
 }
 
 const createM2 = (project: LProject) => {
@@ -97,17 +112,18 @@ const createM1 = (project: LProject, metamodel: LModel) => {
 }
 
 type UserProps = {
-    initials: string;
+    user?: LUser;
 }
 const User = (props: UserProps) => {
     return (
-        <div>John Doe</div>
+        <div className={'user'}>Alfonso <b>Pierantonio</b></div>
     );
 };
 
-type MenuEntry = {name: string, function?: ()=>any, keystroke?: string[], subItems?:MenuEntry[]};
+type MenuEntry = {name: string, icon?: any, function?: ()=>any, keystroke?: string[], subItems?:MenuEntry[]};
 
 function NavbarComponent(props: AllProps) {
+    
     
     const {version, metamodels, advanced, debug} = props;
     const [focussed, setFocussed] = useState('');
@@ -119,68 +135,68 @@ function NavbarComponent(props: AllProps) {
 
     const projectItems: MenuEntry[] = [
         
-        {name: 'New metamodel', function: ()=>createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
-        {name: 'New model', function: async() => {}, keystroke: []},
+        {name: 'New metamodel', icon: <i className="bi bi-plus-square"></i>, function: ()=>createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
+        {name: 'New model', icon: <i className="bi bi-plus-square"></i>, function: async() => {}, keystroke: []},
         {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Close project', function: async() => {}, keystroke: [Key.cmd, 'Q']},
+        {name: 'Close project', icon: <i className="bi bi-dash-square"></i>, function: async() => {}, keystroke: [Key.cmd, 'Q']},
         {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Undo', function: async() => {}, keystroke: [Key.cmd, 'Z']},
-        {name: 'Redo', function: async() => {}, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
+        {name: 'Undo', icon: <i className="bi bi-arrow-counterclockwise"></i>, function: async() => {}, keystroke: [Key.cmd, 'Z']},
+        {name: 'Redo', icon: <i className="bi bi-arrow-clockwise"></i>, function: async() => {}, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
+        {name: 'divisor', icon: <></>, function: async() => {}, keystroke: []},
+        {name: 'Save', icon: <i className="bi bi-upload"></i>, function: async() => {project && await ProjectsApi.save(project)}, keystroke: [Key.cmd, 'S']},
+        {name: 'Save as', icon: <i className="bi bi-upload"></i>, function: async() => {}, keystroke: [Key.shift, Key.cmd, 'S']},
         {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Save', function: async() => {project && await ProjectsApi.save(project)}, keystroke: [Key.cmd, 'S']},
-        {name: 'Save as', function: async() => {}, keystroke: [Key.shift, Key.cmd, 'S']},
-        {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Import...', function: async() => {}, keystroke: []},
-        {name: 'Export as...', function: async() => {}, keystroke: []},
+        {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: async() => {}, keystroke: []},
+        {name: 'Export as...', icon: <i className="bi bi-arrow-bar-right"></i>, function: async() => {}, keystroke: []},
         {name: 'divisor', function: async() => {}, keystroke: []},
 
 
-        {name: 'View',
+        {name: 'View', icon: <i className="bi bi-tv"></i>,
             subItems: [
-                {name: 'Show dot grid', function: async() => {}, keystroke: []},
+                {name: 'Show dot grid', icon: <i className="bi bi-grid-3x3-gap"></i>, function: async() => {}, keystroke: []},
                 {name: 'divisor', function: async() => {}, keystroke: []},
-                {name: 'Maximize editor', function: async() => {}, keystroke: []},
+                {name: 'Maximize editor', icon: <i className="bi bi-arrows-fullscreen"></i>, function: async() => {}, keystroke: []},
                 {name: 'divisor', function: async() => {}, keystroke: []},
-                {name: 'Zoom in', function: async() => {}, keystroke: [Key.cmd, '+']},
-                {name: 'Zoom out', function: async() => {}, keystroke: [Key.cmd, '-']},
+                {name: 'Zoom in', icon: <i className="bi bi-zoom-in"></i>, function: async() => {}, keystroke: [Key.cmd, '+']},
+                {name: 'Zoom out', icon: <i className="bi bi-zoom-out"></i>, function: async() => {}, keystroke: [Key.cmd, '-']},
                 {name: 'Zoom to 100%', function: async() => {}, keystroke: [Key.cmd, '0']},
             ],
             keystroke: []
         },
         {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Help', subItems: [
-            {name: 'What\'s new', function: async() => {}, keystroke: []},
+        {name: 'Help', icon: <i className="bi bi-question-square"></i>, subItems: [
+            {name: 'What\'s new', icon: <i className="bi bi-clock"></i>, function: async() => {}, keystroke: []},
             {name: 'divisor', function: async() => {}, keystroke: []},
-            {name: 'Homepage', function: async() => {}, keystroke: []},
-            {name: 'Getting started', function: async() => {}, keystroke: []},
-            {name: 'User guide', function: async() => {}, keystroke: []},
+            {name: 'Homepage', icon: <i className="bi bi-house"></i>, function: async() => {}, keystroke: []},
+            {name: 'Getting started', icon: <i className="bi bi-airplane"></i>, function: async() => {}, keystroke: []},
+            {name: 'User guide', icon: <i className="bi bi-journals"></i>, function: async() => {}, keystroke: []},
             {name: 'divisor', function: async() => {}, keystroke: []},
-            {name: 'Legal terms', function: async() => {}, keystroke: []}
+            {name: 'Legal terms', icon: <i className="bi bi-mortarboard"></i>, function: async() => {}, keystroke: []}
         ],
         keystroke: []},
-        {name: 'About jjodel', function: async() => {}, keystroke: []}
+        {name: 'About jjodel', icon: <img src={jj} width={15}/>, function: async() => {}, keystroke: []}
 
 
     ];
 
-    const dashboardItems = [
+    const dashboardItems: MenuEntry[] = [
 
-        {name: 'New project', function: ()=>alert('new project'), keystroke: [Key.cmd, 'N']},
-        {name: 'Import...', function: async() => {}, keystroke: []},
+        {name: 'New project', icon: <i className="bi bi-plus-square"></i>, function: ()=>alert('new project'), keystroke: [Key.cmd, 'N']},
+        {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: async() => {}, keystroke: []},
         {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Help', subItems: [
-            {name: 'What\'s new', function: async() => {}, keystroke: []},
+        {name: 'Help', icon: <i className="bi bi-question-square"></i>, subItems: [
+            {name: 'What\'s new', icon: <i className="bi bi-clock"></i>, function: async() => {}, keystroke: []},
             {name: 'divisor', function: async() => {}, keystroke: []},
-            {name: 'Homepage', function: async() => {}, keystroke: []},
-            {name: 'Getting started', function: async() => {}, keystroke: []},
-            {name: 'User guide', function: async() => {}, keystroke: []},
+            {name: 'Homepage', icon: <i className="bi bi-house"></i>, function: async() => {}, keystroke: []},
+            {name: 'Getting started', icon: <i className="bi bi-airplane"></i>, function: async() => {}, keystroke: []},
+            {name: 'User guide', icon: <i className="bi bi-journals"></i>, function: async() => {}, keystroke: []},
             {name: 'divisor', function: async() => {}, keystroke: []},
-            {name: 'Legal terms', function: async() => {}, keystroke: []}
+            {name: 'Legal terms', icon: <i className="bi bi-mortarboard"></i>, function: async() => {}, keystroke: []}
         ],
         keystroke: []},
-        {name: 'About jjodel', function: async() => {}, keystroke: []},
+        {name: 'About jjodel', icon: <img src={jj} width={15}/>, function: async() => {}, keystroke: []},
         {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Logout', function: async() => {}, keystroke: [Key.cmd, 'Q']},
+        {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {}, keystroke: [Key.cmd, 'Q']},
 
         /* {name: 'Project',
             subItems: [
@@ -195,40 +211,46 @@ function NavbarComponent(props: AllProps) {
         }*/
     ];
 
+    const MainMenu = () => {
 
+        return(
+            <div className='col nav-hamburger hoverable' tabIndex={0}>
+                <i className="bi bi-grid-3x3-gap-fill list"></i>
+                <div className={'content context-menu'}>
+                    <ul>
+                        {projectItems.map(i => makeEntry(i))}
+                    </ul>
+                </div>
+            </div>
+        );
+
+
+
+    };
 
     if(project)
 
         return(<>
-            <nav className={'nav-container'} style={{zIndex: 99}}>
-                <div className='nav-hamburger hoverable' tabIndex={0}>
-                    <i className="bi bi-grid-3x3-gap-fill list"></i>
-                    <div className={'content context-menu'}>
-                        <ul>
-                            {projectItems.map(i => makeEntry(i))}
-                        </ul>
-                    </div>
-                </div>
-                <div className='nav-logo' style={{width: '30%'}}>
+            <nav className={'nav-container d-flex'} style={{zIndex: 99}}>
+                
+                <MainMenu />
+                <div className='col nav-logo'>
                     <img height={24} src={logo} />
                 </div>
-                <div className='nav-side'>
+                <div className='col nav-side'>
                     <div style={{float: 'right', left: '300px!important', width: '31px', marginTop: '2px'}}>
                         <Menu position={'left'}>
-                            <Item action={(e)=> {alert('')}}>Dashboard</Item>
+                            <Item icon={<i className="bi bi-grid"></i>} action={(e)=> {alert('')}}>Dashboard</Item>
                             <Divisor />
-                            <Item action={(e)=> {alert('')}}>Profile</Item>
-                            <Item action={(e)=> {alert('')}}>Account</Item>
-                            <Item action={(e)=> {alert('')}}>Sign out</Item>
+                            <Item icon={<i className="bi bi-person-square"></i>}action={(e)=> {alert('')}}>Profile</Item>
+                            <Item icon={<i className="bi bi-sliders"></i>} action={(e)=> {alert('')}}>Account</Item>
+                            <Divisor />
+                            <Item icon={<i className="bi bi-box-arrow-right"></i>} action={(e)=> {alert('')}}>Sign out</Item>
                         </Menu>
                     </div>
                 </div>
-                <div style={{marginLeft: 'auto', marginRight: '38px', marginTop: '4px', float: 'right', width: 'fit-content', fontWeight: '400'}}>
-                    <button style={{border: 'none', marginRight: '20px', borderRadius: '4px', padding: '2px 20px 2px 10px', color: 'white', background: 'linear-gradient(90deg, hsla(321, 42%, 48%, 1) 0%, hsla(343, 80%, 65%, 1) 100%)'}}>
-                    <i className="bi bi-plus-lg" style={{paddingRight: '6px', color: 'white'}}></i> Create new project</button> Alfonso <b>Pierantonio</b>
-                </div>
+                <User />
             </nav>
-
 
 
 
@@ -250,8 +272,8 @@ function NavbarComponent(props: AllProps) {
         </>);
     else
         return(<>
-            <nav className={'nav-container'} style={{zIndex: 99}}>
-                <div className='nav-hamburger hoverable' tabIndex={0}>
+            <nav className={'nav-container d-flex'} style={{zIndex: 99}}>
+                <div className='col nav-hamburger hoverable' tabIndex={0}>
                     <i className="bi bi-grid-3x3-gap-fill list"></i>
                     <div className={'content context-menu'}>
                         <ul>
@@ -259,14 +281,43 @@ function NavbarComponent(props: AllProps) {
                         </ul>
                     </div>
                 </div>
-                <div className='nav-logo'>
+                <div className='nav-logo col'>
                     <img height={24} src={logo} />
                 </div>
-                <div className='nav-side'>
-                    <User initials={'JD'} />
+                <div className='nav-side col'>
+                    <div style={{float: 'right', left: '300px!important', width: '31px', marginTop: '2px'}}>
+                        <Menu position={'left'}>
+                            <Item action={(e)=> {alert('')}}><i className="bi bi-grid"></i> Dashboard</Item>
+                            <Divisor />
+                            <Item action={(e)=> {alert('')}}><i className="bi bi-person-square"></i> Profile</Item>
+                            <Item action={(e)=> {alert('')}}><i className="bi bi-sliders"></i> Account</Item>
+                            <Divisor />
+                            <Item action={(e)=> {alert('')}}><i className="bi bi-box-arrow-right"></i> Sign out</Item>
+                        </Menu>
+                    </div>
+                </div>
+                <User />
+            </nav>
+
+
+
+            {/*<nav className={'nav-container d-flex'} style={{zIndex: 99}}>
+                <div className='nav-hamburger hoverable col' tabIndex={0}>
+                    <i className="bi bi-grid-3x3-gap-fill list"></i>
+                    <div className={'content context-menu'}>
+                        <ul>
+                            {dashboardItems.map(i => makeEntry(i))}
+                        </ul>
+                    </div>
+                </div>
+                <div className='nav-logo col'>
+                    <img height={24} src={logo} />
+                </div>
+                <div className='nav-side col'>
+                    <User />
                 </div>
             </nav>
-            {/* <nav style={{zIndex: 99}}>
+             <nav style={{zIndex: 99}}>
                 <ul className={'new-navbar'}>
                     {dashboardItems.map(i => <li key={i.name} className={'new-dropdown'}>
                         <label>{i.name}</label>

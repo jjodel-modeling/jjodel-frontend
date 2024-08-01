@@ -52,21 +52,24 @@ const Catalog = (props: CatalogProps) => {
     </>);
 };
 
-
-
 function Dashboard(props: Props): any {
     const {children, active} = props;
     const user: LUser = LPointerTargetable.fromPointer(DUser.current);
 
     return(<>
         <Navbar />
-        <div className={"d-flex h-100 w-100"}  style={{width: '100%'}}>
-            <LeftBar projects={user.projects} active={active} />
+        <div className={"d-flex h-100 w-100"}>
+            <LeftBar projects={user.projects} active={active}/>
 
-            <div className={'catalog-container w-100'}>
+            <div className={'row catalog-container w-100'} style={{marginRight: '20px', height: '10px'}}>
+                <div className={'col'}>
+                    {active === "Templates" && <Title title={'Jjodel Templates'} icon={<i className="bi bi-code-square"></i>} />} 
+                    {active !== "Templates" && <User name={'John Doe'} initials={'JD'} />}
+                </div>
+                <div className={'col text-end'}>
+                    <button className={'add-project'}><i className="bi bi-plus-lg"></i> Project</button>
+                </div>
 
-                {active === "Templates" ? <Title title={'Jjodel Templates'} icon={<i className="bi bi-code-square"></i>} /> : <User name={'John Doe'} initials={'JD'} />}
-                
                 <Catalog children={children}/>
             </div>
         </div>

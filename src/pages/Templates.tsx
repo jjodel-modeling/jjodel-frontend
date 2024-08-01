@@ -6,7 +6,6 @@ import {Dashboard, Project} from './components';
 import Storage from "../data/storage";
 
 import {Menu, Item, Divisor} from './components/menu/Menu';
-import {Modal} from './components/modal/Modal';
 
 import colors from '../static/img/colors.png';
 
