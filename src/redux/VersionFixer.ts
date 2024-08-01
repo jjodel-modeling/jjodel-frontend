@@ -162,6 +162,8 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         s.version.n = 2.2;
         // let ls: LState = LPointerTargetable.from(s); nope, avoid L-ojects. actions would fire in present state instead of in parameter state
         for (let c of (s.classs).map(p=> this.d(p, s))) c.isSingleton = !!c.isSingleton; // booleanize the undefined
+        for (let c of (s.viewelements).map(p=> this.d(p, s))) { c.father = c.viewpoint; }
+        for (let c of (s.projects).map(p=> this.d(p, s))) { c.favorite = {}; c.description = ''; }
         return s;
     }
     private d<D extends DPointerTargetable, L extends LPointerTargetable>(ptr: Pointer<D>, s: DState): D{

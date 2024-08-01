@@ -39,7 +39,7 @@ function ViewsDataComponent(props: AllProps) {
         e.stopPropagation();
         if (!candelete) return;
         TRANSACTION(()=>{
-            SetFieldAction.new(view.viewpoint.id, 'subViews', view.id as any, '-=', false);
+            //SetFieldAction.new(view.viewpoint.id, 'subViews', view.id as any, '-=', false);
             view.delete();
         })
     }

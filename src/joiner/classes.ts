@@ -141,6 +141,7 @@ import {
 } from "./index";
 import {OclEngine} from "@stekoe/ocl.js";
 import {ReactNode} from "react";
+import {ProjectsApi} from "../api/persistance";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -983,7 +984,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             // this.setExternalPtr(vp, 'subViews', '', subviews);
             let subviews: GObject = {}; subviews[thiss.id] = 1.5;
             this.setExternalPtr(vp, 'subViews', '+=', subviews);
-            this.setPtr('viewpoint', vp);
+            this.setPtr('father', vp);
         }
 
         let trview = transientProperties.view[thiss.id] = {} as any;
@@ -2114,7 +2115,13 @@ export class DProject extends DPointerTargetable {
 
     state!: string;
 
-    public static new(type: DProject['type'], name: string, state?: DProject['state'], m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id']): DProject {
+    public static new(type: DProject['type'], name: string, state?: DProject['state'],
+                      m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id'], otherProjects?:LProject[]): DProject {
+        // fix name
+        if (!otherProjects) otherProjects = LPointerTargetable.fromPointer(DUser.current).projects;
+        let allProjectNames: Dictionary<string, LProject> = U.objectFromArray(otherProjects, (p)=>p.name);
+        name = U.increaseEndingNumber(name, false, false, (s)=>!!allProjectNames[s]);
+
         return new Constructors(new DProject('dwc'), undefined, true, undefined)
             .DPointerTargetable().DProject(type, name, state || '', m2 || [], m1 || [], id).end(); }
 }
@@ -2445,16 +2452,35 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     public delete(): void {
         throw new Error('cannot be called directly, should trigger getter. this is only for correct signature');
     }
-    protected get_delete(context: Context): () => void {
-        const data = context.proxyObject as LProject;
+    protected get_delete(c: Context): () => void {
+        const data = c.proxyObject as LProject;
         return () => {
             TRANSACTION(()=> {
-                data.children.map(c => c && c.delete());
-                SetFieldAction.new(DUser.current, 'projects', data.id as any, '-=', true);
+                // this crashes, there is no get_children() (data.children || []).map(c => c && c.delete());
+                SetFieldAction.new(DUser.current, 'projects', c.data.id as any, '-=', true);
                 DeleteElementAction.new(data.id);
-                SetRootFieldAction.new('projects', data.id, '-=', true);
+                SetRootFieldAction.new('projects', c.data.id, '-=', true);
             });
         }
+    }
+
+    duplicate(): LProject{ return this.wrongAccessMessage('LProject.duplicate()')};
+    get_duplicate(c: Context): ()=>LProject{
+        return () => {
+            let clone: DProject = DProject.new(c.data.type, c.data.name + ' Copy');
+            for (let key in c.data){
+                switch (key){
+                    case 'pointedBy': case 'name': continue;
+                    default:
+                        // @ts-ignore
+                        clone[key] = c.data[key];
+                        break;
+            }
+        }
+        clone.author = DUser.current;
+        clone.onlineUsers = 0;// i think this should not be a presistent data, but a fake attribute available only on LProject
+        // todo per giordano: assign project to user & set persistent stuff with ProjectsAPI ?
+        return LPointerTargetable.fromD(clone); }
     }
 }
 

@@ -269,6 +269,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             case '$$typeof':
             case "typeName":
                 return this.d.className;
+            case 'parent': propKey = 'father'; break;
         }
         if (propKey[0] === "_" && propKey.indexOf("__info_of__")===0) {
             return (this.l as GObject)[propKey];
@@ -325,6 +326,19 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     public set(targetObj: ME, propKey: string | symbol, value: any, proxyitself?: Proxyfied<ME>): boolean {
         // console.error('_proxy set PRE:', {targetObj, propKey, value, proxyitself, arguments});
         // if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.s + (propKey as string)] || (this.l as GObject)[(propKey as string)]) {
+
+        switch (typeof propKey) {
+            case "symbol":
+                propKey = String(propKey);
+                Log.exDevv('unexpected symbol in proxy setter:', propKey);
+                break;
+            default: break;
+        }
+
+        switch (propKey) {
+            case 'parent': propKey = 'father'; break;
+        }
+
         if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.s + (propKey as string)]) {
             // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
             if (typeof propKey !== 'symbol' && this.s + propKey in this.lg) {

@@ -8,7 +8,8 @@ import {
     LViewElement,
     LViewPoint,
     Pointer,
-    Select
+    Select,
+    Selectors
 } from '../../../../joiner';
 import {OclEditor} from '../../oclEditor/OclEditor';
 import {Edges, Fields, GraphElements, Graphs, Vertexes} from "../../../../joiner/components";
@@ -22,17 +23,15 @@ function InfoDataComponent(props: AllProps) {
     const view = props.view;
     const viewpoints = props.viewpoints;
     let readOnly = props.readonly;
-    if (readOnly === undefined) readOnly = Defaults.check(view.id);
-    readOnly = false;
+    let vp = view.viewpoint;
+    let vpid = vp?.id;
+    let dallVP: DViewPoint[] = viewpoints.map(v=>v.__raw); //Selectors.getAll(DViewPoint, undefined, undefined, true, false);
+    // readOnly = false;
 
     const objectTypes = ['', 'DModel', 'DPackage', 'DEnumerator', 'DEnumLiteral', 'DClass', 'DAttribute', 'DReference', 'DOperation', 'DParameter', 'DObject', 'DValue', 'DStructuralFeature'];
     const classesOptions = <optgroup label={'Object type'}>
             {objectTypes.map((o)=><option key={o} value={o}>{o ? o.substring(1) : 'anything'}</option>)}
     </optgroup>;
-
-    const changeVP = (evt: React.ChangeEvent<HTMLSelectElement>) => {
-        (view as any as DViewPoint).viewpoint = evt.target.value;
-    }
 
     return(<section className={'page-root'}>
         <Input data={view} field={'name'} label={'Name'} readonly={readOnly}/>
@@ -73,9 +72,14 @@ function InfoDataComponent(props: AllProps) {
           getter={(data, key) => { return data[key] || 'unset_'; }} />
         <Select data={view} field={'appliableToClasses'} label={'Appliable to'} readonly={readOnly} options={classesOptions} />
 
-        <Select readonly={readOnly} data={view} field={'viewpoint'} label={"Parent view"}>
-            {view.allPossibleParentViews.map((viewpoint) => (
+        <Select readonly={readOnly} data={view} field={'father'} label={"Viewpoint"} getter={()=> vpid}>
+            {dallVP.map((viewpoint) => (
                 <option key={viewpoint.id} value={viewpoint.id}>{viewpoint.name}</option>
+            ))}
+        </Select>
+        <Select readonly={readOnly} data={view} field={'father'} label={"Parent view"}>
+            {view.allPossibleParentViews.filter(v=>v.viewpoint?.id === vpid).map((view) => (
+                <option key={view.id} value={view.id}>{view.name}</option>
             ))}
         </Select>
             {/*        <div className={'d-flex p-1'}>

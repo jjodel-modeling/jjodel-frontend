@@ -17,16 +17,17 @@ function ViewEventsComponent(props: AllProps) {
         view.events = newevent;
     }
 
+    let initialExpand = (v: any, field: any)=>!!(v as any)[field as string];
     return(<section className={'p-3'}>
         <b style={{fontSize: '1.25em'}}>Default Events</b>
         <hr className={'my-1'} />
-        <JsEditor viewID={view.id} field={'onDataUpdate'} title={'onDataUpdate'}  />
-        <JsEditor viewID={view.id} field={'onDragStart'} title={'onDragStart'}  />
-        <JsEditor viewID={view.id} field={'whileDragging'} title={'whileDragging'}  />
-        <JsEditor viewID={view.id} field={'onDragEnd'} title={'onDragEnd'}  />
-        <JsEditor viewID={view.id} field={'onResizeStart'} title={'onResizeStart'}  />
-        <JsEditor viewID={view.id} field={'whileResizing'} title={'whileResizing'}  />
-        <JsEditor viewID={view.id} field={'onResizeEnd'} title={'onResizeEnd'}  />
+        <JsEditor viewID={view.id} field={'onDataUpdate'} title={'onDataUpdate'} initialExpand={initialExpand} readonly={readOnly}/>
+        <JsEditor viewID={view.id} field={'onDragStart'} title={'onDragStart'} initialExpand={initialExpand} readonly={readOnly}/>
+        <JsEditor viewID={view.id} field={'whileDragging'} title={'whileDragging'} initialExpand={initialExpand} readonly={readOnly}/>
+        <JsEditor viewID={view.id} field={'onDragEnd'} title={'onDragEnd'} initialExpand={initialExpand} readonly={readOnly}/>
+        <JsEditor viewID={view.id} field={'onResizeStart'} title={'onResizeStart'} initialExpand={initialExpand} readonly={readOnly}/>
+        <JsEditor viewID={view.id} field={'whileResizing'} title={'whileResizing'} initialExpand={initialExpand} readonly={readOnly}/>
+        <JsEditor viewID={view.id} field={'onResizeEnd'} title={'onResizeEnd'} initialExpand={initialExpand} readonly={readOnly}/>
         <div className={'d-flex mx-auto'}>
             <b style={{fontSize: '1.25em'}}>Custom Events</b>
             <button className={'btn btn-primary ms-auto'} onClick={addEvent} disabled={readOnly}>
@@ -41,6 +42,7 @@ function ViewEventsComponent(props: AllProps) {
             <JsEditor
             viewID={view.id} key={k/* if val does not update, concatenate it to the key (k+val)*/}
             readonly={readOnly}
+            initialExpand={()=>true}
             title={<input defaultValue={k} disabled={readOnly} onBlur={(e)=>{
                 let newname = e.target.value;
                 if (k === newname) return;
@@ -53,7 +55,7 @@ function ViewEventsComponent(props: AllProps) {
                 let newEvent: GObject = {};
                 newEvent[k] = undefined; // this is how you trigger deletion with object -= action
                 view.events = newEvent;
-            }} disabled={readOnly}>
+            }}>
                 <i className={'p-1 bi bi-trash3-fill'} />
             </button>}
             getter={() => val}

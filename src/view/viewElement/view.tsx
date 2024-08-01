@@ -248,16 +248,19 @@ export class DViewElement extends DPointerTargetable {
     cssIsGlobal!: boolean;
     /* private */ compiled_css!: string;
     /* private */ css_MUST_RECOMPILE!: boolean;
+    father?: Pointer<DViewElement>;
 
     public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
                       priority?: number, persist: boolean = true, isDefaultView: boolean = false, vp?: Pointer<DViewPoint> | 'skip'): DViewElement {
         let id = isDefaultView ? 'Pointer_View' + name : undefined;
-        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id).DPointerTargetable().DViewElement(name, jsxString, vp, defaultVSize, usageDeclarations, constants,
+        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id).DPointerTargetable()
+            .DViewElement(name, jsxString, vp, defaultVSize, usageDeclarations, constants,
             preRenderFunc, appliableToClasses, oclCondition, priority).end();
 
     }
-    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true, vp?: Pointer<DViewPoint> | 'skip', id?: string): DViewElement {
+    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true,
+                       vp?: Pointer<DViewElement> | 'skip', id?: string): DViewElement {
         // let id = isDefaultView ? 'Pointer_View' + name : undefined;
         return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id)
             .DPointerTargetable().DViewElement(name, jsxString, vp).end(callback);
@@ -1116,13 +1119,41 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return true;
     }
 
-    public get_viewpoint(context: Context): this["viewpoint"] {
-        return (LViewPoint.fromPointer(context.data.viewpoint as Pointer<DViewPoint>));
+    fatherChain!: LViewElement[];
+    __info_of__fatherChain: Info = {type: 'LViewElement[]', txt: 'a list of all father elements sorted from the closest to farthest'};
+    public get_fatherChain(c: Context): this["fatherChain"] {
+        let current = this.get_father(c);
+        if (!current) return [] as any;
+        let ret: LViewElement[] = [];
+        while (current) {
+            ret.push(current);
+            current = current.father;
+        }
+        return ret;
+    }
+    father?: LViewElement;
+    public get_father(c: Context): this["father"] {
+        return (LViewPoint.fromPointer(c.data.father as Pointer<DViewPoint>));
+    }
+    public get_viewpoint(c: Context): this["viewpoint"] {
+        let p = c.data.father;
+        if (!p) return LPointerTargetable.fromD(c.data);
+        let curr: LViewElement = LPointerTargetable.fromPointer(p);
+        while (curr) {
+            let prev = curr.father;
+            if (!prev) return curr;
+            curr = prev;
+        }
+        return undefined as any;
     }
     // public set_subViews(v: Pointer<DViewPoint>[], context: Context): boolean { return this.cannotSet('subViews, call set_viewpoint on the sub-elements instead.'); }
 
     // WARNING!! if there are mass vp assignments, preserveOrder=true will cause a vp to "lose" subviews and keep only the last assigned.
     public set_viewpoint(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement, preserveOrder: boolean = false): boolean {
+        Log.exDevv('setViewpoint() should not be called, call view.setFather(viewpoint) instead');
+        return true;
+    }
+    public set_father(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement, preserveOrder: boolean = false): boolean {
         let ret = false;
         let vpid: Pointer<DViewPoint> = v && Pointers.from(v);
         const data =  (manualDview || context.data);
@@ -1131,7 +1162,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (vpid === oldvpid) return true;
 
         TRANSACTION(()=>{
-            ret = SetFieldAction.new(id, "viewpoint", vpid, '', true);
+            ret = SetFieldAction.new(id, "father", vpid, '', true);
             if (oldvpid) {
                 let subViews = {...DPointerTargetable.fromPointer(oldvpid).subViews};
                 delete subViews[id];
@@ -1169,7 +1200,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     }
 
 
-    public get_subViews(context: Context, key: string): LViewElement[]{
+    public get_subViews(context: Context): LViewElement[]{
         let subViewsPointers = context.data.subViews;
         let subViews: LViewElement[] = [];
         for (let pointer in subViewsPointers) {
@@ -1244,7 +1275,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return true;
     }
 
-    get_children(context: Context): never[] { return []; }
+    children!: LViewElement[];
+    get_children(context: Context): this['children'] { return this.get_subViews(context); }
 
 
     get_lazySizeUpdate(context: Context): D["lazySizeUpdate"] { return Debug.lightMode || context.data.lazySizeUpdate; }
@@ -1351,6 +1383,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                             //lview.subViews = subviews as any;
                             break;
                         case 'father':
+                            this.set_father(new_vp.pvid, undefined as any, dclone, !deep);
+                            break;
                         case 'viewpoint':
                             // update parent view
                             /*
@@ -1359,7 +1393,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                             SetFieldAction.new(new_vp.pvid, 'subViews', subviews, '+=', true);
                             SetFieldAction.new(dclone.id, 'viewpoint', new_vp.pvid, '+=', true);*/
                             // insert in-place right after the cloned view, with old score.
-                            this.set_viewpoint(new_vp.pvid, undefined as any, dclone, !deep);
+                            //this.set_viewpoint(new_vp.pvid, undefined as any, dclone, !deep);
                             // SetFieldAction.new(dclone.id, 'father', new_vp.vpid, '+=', true);
                             break;
                         case '':

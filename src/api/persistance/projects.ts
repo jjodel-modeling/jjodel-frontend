@@ -1,10 +1,21 @@
-import {DModel, DProject, LPointerTargetable, LProject, LUser, Pointer, SetRootFieldAction, U} from '../../joiner';
+import {
+    Dictionary,
+    DModel,
+    DProject, DUser,
+    LPointerTargetable,
+    LProject,
+    LUser,
+    Pointer,
+    SetRootFieldAction,
+    U
+} from '../../joiner';
 import Storage from "../../data/storage";
 import Api from "../../data/api";
 
 class ProjectsApi {
-    static async create(type: DProject['type'], name: DProject['name'], m2: Pointer<DModel>[] = [], m1: Pointer<DModel>[] = []): Promise<DProject> {
-        const project = DProject.new(type, name, undefined, m2, m1);
+    static async create(type: DProject['type'], name: DProject['name'], m2: Pointer<DModel>[] = [], m1: Pointer<DModel>[] = [], otherProjects?: LProject[]): Promise<DProject> {
+
+        const project = DProject.new(type, name, undefined, m2, m1, undefined, otherProjects);
         if(U.isOffline()) Offline.create(project);
         else await Online.create(project);
         return project;
@@ -16,7 +27,7 @@ class ProjectsApi {
     static async delete(project: LProject): Promise<void> {
         if(U.isOffline()) Offline.delete(project.__raw as DProject);
         else await Online.delete(project.__raw as DProject);
-        project.delete();
+        project.delete(); // penso sia meglio spostare questi check isOffline() etc dentro la project.delete()
     }
     static async getOne(id: DProject['id']): Promise<null|DProject> {
         if(U.isOffline()) return Offline.getOne(id);

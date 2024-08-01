@@ -1,4 +1,5 @@
-import type { LUser, DUser, LPointerTargetable, DState, LProject } from '../../joiner';
+import type { LUser, DState, LProject } from '../../joiner';
+import {DUser, LPointerTargetable} from '../../joiner';
 import {Navbar, LeftBar} from './';
 
 import '../style.scss'

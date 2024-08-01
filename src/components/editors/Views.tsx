@@ -35,7 +35,7 @@ function ViewsComponent(props: AllProps) {
         setClicked({viewID: '', x: 0, y: 0})
         const view: LViewElement = LViewElement.fromPointer(pointer);
         TRANSACTION(() => {
-            SetFieldAction.new(view.viewpoint.id, 'subViews', view.id as any, '-=', false);
+            // SetFieldAction.new(view.viewpoint.id, 'subViews', view.id as any, '-=', false);
             view.delete();
         })
     }
@@ -66,7 +66,6 @@ function ViewsComponent(props: AllProps) {
             {name: 'style', component: <ViewStyle view={view} />},
             {name: 'events', component: <ViewEvents view={view} />},
             {name: 'options', component: <ViewOptions view={view} />},
-            {name: 'subviews', component: <ViewSubViews view={view} views={user.project?.views || []} />}
         ];
         return(<section className={'p-2'}>
             <nav className={'w-100 p-1 bg-white border rounded text-center mb-2'}>

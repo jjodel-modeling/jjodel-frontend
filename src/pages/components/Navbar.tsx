@@ -21,6 +21,7 @@ import {useNavigate} from 'react-router-dom';
 import logo from '../../static/img/jjodel.jpg';
 import TabDataMaker from "../../components/abstract/tabs/TabDataMaker";
 import DockManager from "../../components/abstract/DockManager";
+import DebugImage from "../../static/img/debug.png";
 
 enum Key{
     "cmd"   = "bi-command",
@@ -107,7 +108,7 @@ function NavbarComponent(props: AllProps) {
         {name: 'New metamodel', function: ()=>createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
         {name: 'New model', function: async() => {}, keystroke: []},
         {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Close project', function: async() => {}, keystroke: [Key.cmd, 'Q']},
+        {name: 'Close project', function: async() => {window.location = window.location.origin + '/#/allProjects' as any}, keystroke: [Key.cmd, 'Q']},
         {name: 'divisor', function: async() => {}, keystroke: []},
         {name: 'Undo', function: async() => {}, keystroke: [Key.cmd, 'Z']},
         {name: 'Redo', function: async() => {}, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
@@ -176,7 +177,10 @@ function NavbarComponent(props: AllProps) {
                         </ul>
                     </div>
                 </div>
-                <div className='nav-logo'><img height={24} src={logo} /></div>
+                <div className='nav-logo'>
+                    <img height={24} src={logo} alt={'jjodel logo'} onContextMenu={(e)=>{ e.preventDefault(); SetRootFieldAction.new('debug', !props.debug)}}/>
+                    {props.debug && <img alt='debug' height={24} src={DebugImage}/>}
+                </div>
                 <div className='nav-side'></div>
             </nav>
 

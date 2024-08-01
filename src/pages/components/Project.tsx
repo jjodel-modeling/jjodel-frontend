@@ -48,11 +48,11 @@ function Project(props: Props): JSX.Element {
 
     function ProjectCard(props: Props): JSX.Element {
         return (<>
-        
+
             <div className={'project-card'}>
                 <div style={{position: 'absolute', top: 10, right: 5}} className={'d-flex'}>
-                {/* 
-                
+                {/*
+
                 <button disabled={data.author.id !== DUser.current} className={'btn btn-danger me-2'}
                         onClick={async e => await deleteProject()}>
                     <i className={'p-1 bi bi-trash-fill'} />
@@ -75,17 +75,17 @@ function Project(props: Props): JSX.Element {
                 </div>
                 <div className={'tag'}>
                     <div>
-                        <i className="bi bi-files"></i> {props.data.metamodels.length} metamodel(s), {props.data.models.length} model(s)<br/> 
+                        <i className="bi bi-files"></i> {props.data.metamodels.length} metamodel(s), {props.data.models.length} model(s)<br/>
                         <i className="bi bi-file-code"></i> {props.data.viewpoints.length-1} viewpoint(s)
                     </div>
                 </div>
             </div>
-        
-        
+
+
         </>);
     }
 
-    
+
     /* LIST */
 
     function ProjectList(props: Props): JSX.Element {
@@ -94,26 +94,26 @@ function Project(props: Props): JSX.Element {
                 <div className={'col'}>
                     <Menu position='right'>
                         <Item keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
-                        <Item>Duplicate</Item>
+                        <Item action={(e => props.data.duplicate())}>Duplicate</Item>
                         <Item action={e => exportProject()}>Download</Item>
                         <Divisor />
                         <Item action={(e => setFavorite(!favorite))}>Add to favotites</Item>
                         <Item>Share</Item>
                         <Divisor />
                         <Item action={async e => await deleteProject()}>Delete</Item>
-                    </Menu> 
+                    </Menu>
                 </div>
                 <div className={'col w-20'}>
                 {data.type === "public" && <i className="bi bi-unlock"></i>}
         {data.type === "private" && <i className="bi bi-lock"></i>}
         {data.type === "collaborative" && <i className="bi bi-diagram-3"></i>}
                     {favorite ? <i style={{float: 'left'}} onClick={(e) => setFavorite(false)} className="bi bi-star-fill"></i> : <i style={{float: 'left'}} onClick={(e) => setFavorite(true)} className="bi bi-star"></i>}
-                   
+
                 </div>
                 <div className={'col-5 name'}>{data.name}</div>
                 <div className={'col-2'}>13 days ago</div>
-                <div className={'col-2'}>July 13, 2024</div>  
-            </div>  
+                <div className={'col-2'}>July 13, 2024</div>
+            </div>
         </>);
     }
 

@@ -8,7 +8,7 @@ import {FakeStateProps} from '../../../joiner/types';
 function JsEditorComponent(props: AllProps) {
     const {view, field, placeHolder, height, title, getter, setter, jsxLabel} = props;
     const [js, setJs] = useStateIfMounted(view.jsCondition);
-    const [show, setShow] = useStateIfMounted(false);
+    const [show, setShow] = useStateIfMounted(props.initialExpand ? props.initialExpand(view, field) : false);
     const readOnly = props.readonly !== undefined ? props.readonly : Defaults.check(view.id);
     const change = (value: string|undefined) => {
         /* save in local state for frequent changes */
@@ -76,6 +76,7 @@ interface OwnProps {
     jsxLabel?: ReactNode;
     getter?: () => string;
     setter?: (js: string) => void;
+    initialExpand?: (data: LViewElement, field?: string) => boolean;
 }
 interface StateProps { view: LViewElement }
 interface DispatchProps {}

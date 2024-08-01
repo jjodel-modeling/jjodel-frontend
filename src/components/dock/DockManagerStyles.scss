@@ -392,7 +392,7 @@ div.dock-drop-layer{
             }
         }
         .dock-tab > div {
-            padding: 8px 8px;
+            padding: 4px 8px;
         }
         .dock-ink-bar{
             background-color: var(--hover-color); //#108ee9
@@ -408,6 +408,7 @@ div.dock-drop-layer{
     }
     .dock-content .dock-tabpane{
         background-color: var(--bg-color); // whitesmoke;
+        overflow:hidden;
     }
 }
 .not-strip{
