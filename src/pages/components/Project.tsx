@@ -6,12 +6,15 @@ import { ProjectsApi } from '../../api/persistance';
 import { useNavigate } from 'react-router-dom';
 import { Item, Divisor, Menu } from './menu/Menu';
 
-import card_bg from '../../static/img/card-bg.png';
+import card from '../../static/img/card.png';
+import { int } from '../../joiner/types';
+
 
 type Props = {
     data: LProject;
     mode?: string;
     key: any;
+    index: int;
 };
 
 type ProjectTypeType = {
@@ -26,6 +29,12 @@ function ProjectType(props: ProjectTypeType){
     </>);
 }
 
+type TipProps = {
+    children: string;
+}
+const Tip = (props: TipProps) => {
+    return (<div className="tip">{props.children}</div>);
+};
 
 function Project(props: Props): JSX.Element {
     const {data} = props;
@@ -49,7 +58,42 @@ function Project(props: Props): JSX.Element {
 
     /* CARDS */
 
+    var sectionStyle = {
+        backgroundImage: `url(${card}),
+        backgroundSize: 'contain'`
+   
+     }
+
     function ProjectCard(props: Props): JSX.Element {
+
+        const showTip = () => {
+
+        }
+
+        type MeterProps = {
+            project: LProject
+        }
+
+        const Meter = (props: MeterProps) => {
+
+            var length = props.project.metamodels.length + props.project.models.length + props.project.viewpoints.length;
+            var unit = Math.round(90/length);
+            var mm_length = Math.round(90/length*props.project.metamodels.length);
+            var m_length = Math.round(90/length*props.project.models.length);
+            var vp_length = Math.round(90/length*props.project.viewpoints.length);
+            return (<>
+                <div className={'meter'} style={{width: '90%'}}>
+                    {props.project.viewpoints.map((m,i) => <div className={'artifact viewpoints'} style={{width: `${unit}%`}}>{i == props.project.viewpoints.length-1 && <span>VP</span>}</div>)}
+                    {props.project.models.map((m,i) => <div className={'artifact models'} style={{width: `${unit}%`}}>{i == props.project.models.length-1 && <span>M1</span>}</div>)}
+                    {props.project.metamodels.map((m,i) => <div className={'artifact metamodels'} style={{width: `${unit}%`}}>{i == props.project.metamodels.length-1 && <span>M2</span>}</div>)}
+
+                    {/* <div className={'artifact viewpoints'} style={{width: `${vp_length}%`}}><span>VP</span></div>
+                    <div className={'artifact models'} style={{width: `${m_length}%`}}><span>M1</span></div>
+            <div className={'artifact metamodels'} style={{width: `${mm_length}%`}}><span>M2</span></div>*/}
+                </div>
+             </>);
+        };
+
         return (<>
         
             <div className={'project-card'}>
@@ -76,10 +120,13 @@ function Project(props: Props): JSX.Element {
                     <h5 className={'d-block'}>{data.name}</h5>
                     <label className={'d-block'}><i className="bi bi-clock"></i> Edited 10 hours ago</label>
                 </div>
+                
+                <Meter project={data}></Meter>
+                
                 <div className={'tag'}>
                     <div>
-                        <i className="bi bi-files"></i> {props.data.metamodels.length} metamodel(s), {props.data.models.length} model(s)<br/> 
-                        <i className="bi bi-file-code"></i> {props.data.viewpoints.length-1} viewpoint(s)
+                        {/* <i className="bi bi-files"></i> {props.data.metamodels.length} metamodel(s), {props.data.models.length} model(s)<br/> 
+                        <i className="bi bi-file-code"></i> {props.data.viewpoints.length-1} viewpoint(s)*/}
                     </div>
                 </div>
             </div>
@@ -125,8 +172,8 @@ function Project(props: Props): JSX.Element {
 
     return(<>
         {props.mode === "cards" ?
-            <ProjectCard key={props.key} data={props.data} /> :
-            <ProjectList key={props.key} data={props.data} />
+            <ProjectCard index={props.index} key={props.key} data={props.data} /> :
+            <ProjectList index={props.index}  key={props.key} data={props.data} />
         }
     </>);
 }

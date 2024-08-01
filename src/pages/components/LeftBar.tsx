@@ -88,13 +88,14 @@ function LeftBar(props: Props): JSX.Element {
 
         <Menu>
             <Item action={'allProjects'} icon={<i className="bi bi-grid"></i>}>All projects </Item>
-            <Item icon={<i className="bi bi-clock"></i>}>Recent</Item>
+            <Item action={'recent'} icon={<i className="bi bi-clock"></i>}>Recent</Item>
         </Menu>
         <Menu title={"Starred"} mode={'collapsable'}>
             {props.projects.filter(p => p.favorite).map(p => <Item icon={<i className="bi bi-folder"></i>}>{p.name}</Item>)}
         </Menu>
         <Menu>
             <Item action={'templates'} icon={<i className="bi bi-code-square"></i>}>Templates</Item>
+            <Item action={'notes'} icon={<i className="bi bi-pencil-square"></i>}>Notes</Item>
         </Menu>
 
         <Upload />

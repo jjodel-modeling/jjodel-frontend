@@ -178,11 +178,11 @@ const Catalog = (props: ChildrenType) => {
                 {items.length === 0 && <div>Sorry, there are no results matching your search criteria. Please try again with different filters.</div>}
                 
                 {
-                    props.projects.map(p => <>
-                        {filters[0] && p.type === "public" && <Project key={p.id} data={p} mode={mode} />}
-                        {filters[1] && p.type === "private" && <Project key={p.id} data={p} mode={mode} />}
-                        {filters[2] && p.type === "collaborative" && <Project key={p.id} data={p} mode={mode} />}
-                        {!filters[0] && !filters[1] && !filters[2] && <Project key={p.id} data={p} mode={mode} />}
+                    props.projects.map((p,i) => <>
+                        {filters[0] && p.type === "public" && <Project index={i} key={p.id} data={p} mode={mode} />}
+                        {filters[1] && p.type === "private" && <Project index={i}  key={p.id} data={p} mode={mode} />}
+                        {filters[2] && p.type === "collaborative" && <Project index={i}  key={p.id} data={p} mode={mode} />}
+                        {!filters[0] && !filters[1] && !filters[2] && <Project index={i}  key={p.id} data={p} mode={mode} />}
                     </>)
                 }
             

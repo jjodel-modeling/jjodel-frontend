@@ -197,7 +197,7 @@ function NavbarComponent(props: AllProps) {
 
 
 
-    if(!project)
+    if(project)
 
         return(<>
             <nav className={'nav-container'} style={{zIndex: 99}}>
