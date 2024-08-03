@@ -20,7 +20,7 @@ const User = (props: UserProps) => {
 
 type TitleProps = {
     title: string;
-    icon: Element;
+    icon: any;
 }
 
 const Title = (props: TitleProps) => {
@@ -34,7 +34,7 @@ const Title = (props: TitleProps) => {
 
 type Props = {
     children?: JSX.Element,
-    active: 'Account'|'Settings'|'Updates'|'Community'|'All'|'Archive'|'Templates',
+    active: 'Account' | 'All' | 'Recent' | 'Notes' | 'Profile' | 'Settings' | 'Templates' |  'Updates',
     version: Partial<DState["version"]>;
 };
 
@@ -53,6 +53,7 @@ const Catalog = (props: CatalogProps) => {
 };
 
 function Dashboard(props: Props): any {
+
     const {children, active} = props;
     const user: LUser = LPointerTargetable.fromPointer(DUser.current);
 
@@ -61,10 +62,15 @@ function Dashboard(props: Props): any {
         <div className={"d-flex h-100 w-100"}>
             <LeftBar projects={user.projects} active={active}/>
 
-            <div className={'row catalog-container w-100'} style={{marginRight: '20px', height: '10px'}}>
+            <div className={'row catalog-container h-20 w-100'} style={{marginRight: '20px', height: '10px'}}>
                 <div className={'col'}>
+                    {active === "All" && <User name={'John Doe'} initials={'JD'} />}
+                    {active === "Recent" && <Title title={'Recent'} icon={<i className="bi bi-clock"></i>} />} 
                     {active === "Templates" && <Title title={'Jjodel Templates'} icon={<i className="bi bi-code-square"></i>} />} 
-                    {active !== "Templates" && <User name={'John Doe'} initials={'JD'} />}
+                    {active === "Notes" && <Title title={'Project Notes'} icon={<i className="bi bi-pencil-square"></i>} />} 
+                    {active === "Updates" && <Title title={'What\'s new'} icon={<i className="bi bi-clock-history"></i>} />}
+                    {active === "Profile" && <Title title={'Profile'} icon={<i className="bi bi-clock-history"></i>} />}
+                    
                 </div>
                 <div className={'col text-end'}>
                     <button className={'add-project'}><i className="bi bi-plus-lg"></i> Project</button>

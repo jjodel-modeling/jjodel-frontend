@@ -4,10 +4,10 @@ import {Dashboard} from './components';
 import {Cards, Card} from './components/cards/Cards';
 import { Catalog } from './components/catalog/Catalog';
 
-function UpdatesPage(): JSX.Element {
+function ProfilePage(): JSX.Element {
     // NB: this works only in production if you put subfolders with past builds in the new build root.
     return(<Try>
-        <Dashboard active={'Updates'} version={{n: 0, date:'fake-date'}}>
+        <Dashboard active={'Profile'} version={{n: 0, date:'fake-date'}}>
             <>                
 
             <Cards>
@@ -31,4 +31,4 @@ function UpdatesPage(): JSX.Element {
     </Try>);
 }
 
-export {UpdatesPage};
+export {ProfilePage};

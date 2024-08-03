@@ -4,6 +4,8 @@ import { IconTheme } from 'react-hot-toast';
 import {useNavigate} from 'react-router-dom';
 import { LProject } from '../../joiner';
 
+import { icon } from './icons/Icons';
+
 interface StateProps {
     projects: LProject[];
 }
@@ -18,7 +20,7 @@ type Props = {
 type ItemProps = {
     children: string;
     icon?: any;
-    action?: string;
+    action?: string | MouseEventHandler;
 };
 
 const Item = (props: ItemProps) => {
@@ -63,23 +65,13 @@ const Divisor = () => {
     return (<hr className='my-1' />);
 };
 
-
 Menu.Item = Item;
 
 function LeftBar(props: Props): JSX.Element {
     const {active} = props;
     const navigate = useNavigate();
     
-    const info = [
-        {icon: 'person-fill', link: 'account', label: 'Account'},
-        {icon: 'gear-fill', link: 'settings', label: 'Settings'},
-        {icon: 'app-indicator', link: 'updates', label: 'Updates'},
-        {icon: 'chat-fill', link: 'community', label: 'Community'}
-    ];
-    const projects = [
-        {icon: 'grid-fill', link: 'allProjects', label: 'All'},
-        {icon: 'archive-fill', link: 'archive', label: 'Archive'}
-    ];
+    
 
     return(<div className={'leftbar border-end border-light-subtle '}>
         
@@ -87,15 +79,20 @@ function LeftBar(props: Props): JSX.Element {
         <input placeholder={'Search for anything'}type={'text'} name='search-text' />
 
         <Menu>
-            <Item action={'allProjects'} icon={<i className="bi bi-grid"></i>}>All projects </Item>
-            <Item action={'recent'} icon={<i className="bi bi-clock"></i>}>Recent</Item>
+            <Item action={'allProjects'} icon={icon['dashboard']}>All projects </Item>
+            <Item action={'recent'} icon={icon['recent']}>Recent</Item>
         </Menu>
         <Menu title={"Starred"} mode={'collapsable'}>
-            {props.projects.filter(p => p.favorite).map(p => <Item icon={<i className="bi bi-folder"></i>}>{p.name}</Item>)}
+            {props.projects.filter(p => p.favorite).map(p => <Item icon={icon['folder']} action={e => selectProject()}>{p.name}</Item>)}
         </Menu>
         <Menu>
-            <Item action={'templates'} icon={<i className="bi bi-code-square"></i>}>Templates</Item>
-            <Item action={'notes'} icon={<i className="bi bi-pencil-square"></i>}>Notes</Item>
+            <Item action={'templates'} icon={icon['template2']}>Templates</Item>
+            <Item action={'notes'} icon={icon['edit']}>Notes</Item>
+        </Menu>
+        <Menu title={'Support'} mode={'collapsable'}>
+            <Item action={'updates'} icon={icon['whats-new']}>What's new</Item>
+            <Item action={'gettingstarted'} icon={icon['getting-started']}>Getting started</Item>
+            <Item action={'guide'} icon={icon['manual']}>User guide</Item>
         </Menu>
 
         <Upload />

@@ -5,8 +5,12 @@ import {FakeStateProps} from '../joiner/types';
 import {Dashboard, Project} from './components';
 import Storage from "../data/storage";
 
+import {Menu, Item, Divisor} from './components/menu/Menu';
 import { Cards, Card } from './components/cards/Cards';
 import { Catalog } from './components/catalog/Catalog';
+
+import colors from '../static/img/colors.png';
+
 
 function AllProjectsComponent(props: AllProps): JSX.Element {
     const {projects} = props;
@@ -33,26 +37,22 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
         reader.readAsText(file);
     }
 
+
+
+
     return(<Try>
-        <Dashboard active={'All'} version={props.version}>
+        <Dashboard active={'Recent'} version={props.version}>
             
             <React.Fragment>                
 
                 <Cards>
                     <Cards.Item
-                        title={'New jjodel'} 
-                        subtitle={'Create a new jjodel project.'}
-                        icon={'add'} 
-                        style={'red'}   
+                        title={'Need help?'} 
+                        subtitle={'Don\' ask Alexa, click here instead.'}
+                        icon={'alexa'} 
+                        style={'red-orange'}   
                     />
-                    <Cards.Item
-                        title={'Import jjodel'} 
-                        subtitle={'Import an existing jjodel project.'}
-                        icon={'import'} 
-                        style={'blue'} 
-                        action={(e) => importModal()}
-                    />
-                    {true && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
+                    {false && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
                 </Cards>
 
                 <Catalog projects={projects} />
@@ -89,9 +89,9 @@ const AllProjectsConnected = connect<StateProps, DispatchProps, OwnProps, DState
     mapDispatchToProps
 )(AllProjectsComponent);
 
-const AllProjectsPage = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+const RecentPage = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
     return <AllProjectsConnected {...{...props, children}} />;
 }
 
-export {AllProjectsPage};
+export {RecentPage};
 

@@ -33,7 +33,7 @@ body {
     margin-top: 72px;
     width: auto;
     min-height: 75%;
-    padding-bottom: 2em;
+    padding-bottom: 40em;
 
 }
 .catalog-container .user {
@@ -174,97 +174,10 @@ body {
     border-radius: 8px;
     padding: 1.2em;
     top: 0px;
-    right: 0px;
-}
-
-.commandbar .blue {
-    background: linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
-    color: white;
-    border: none;
-}
-
-.commandbar .red {
-    background: linear-gradient(90deg, hsla(14, 90%, 73%, 1) 0%, hsla(331, 54%, 44%, 1) 100%);
-    color: white;
-    border: none;
-}
-
-.commandbar .dark {
-    background: linear-gradient(90deg, hsla(208, 33%, 21%, 1) 0%, hsla(211, 36%, 46%, 1) 100%);
-    color: white;
-    border: none;
-
-    & .bi {
-        color: white;
-    }
-}
-
-.commandbar .rainbow {
-    background: linear-gradient(90deg, hsla(182, 64%, 53%, 1) 0%, hsla(34, 98%, 50%, 1) 50%, hsla(323, 100%, 47%, 1) 100%);
-
-    color: white;
-    border: none;
-
-    & .bi {
-        color: white;
-    }
-}
-
-.commandbar .clear {
-    background: white;
-    color: var(--color);
-
-
-    & .bi {
-        color: var(--secondary);
-    }
+    right: 17px;
 }
 
 
-.commandbar .default {
-    background: linear-gradient(90deg, hsla(186, 33%, 94%, 1) 0%, hsla(216, 41%, 79%, 1) 100%);
-    color: var(--color);
-    border: none;
-
-}
-
-.commandbar .card {
-    width: 23em;
-    margin-right: 15px;
-    margin-left: 10px;
-    padding: 1.2em
-}
-
-.commandbar .card {
-    display: grid;
-    grid-template-columns: 20% 80%;
-    grid-gap: 0px;
-}
-
-.commandbar .card .icon {
-    flex: 1;
-    font-size: 2.5em;
-    justify-content: center;
-}
-
-.commandbar .card .icon .bi:hover {
-    cursor: pointer;
-    color: var(--accent);
-}
-.commandbar .card .icon .disabled:hover {
-    color: inherit!important;
-    cursor: default;
-}
-
-.commandbar .card .body h5 {
-    margin-bottom: 0px;
-
-}
-
-.commandbar .card .body {
-    padding-top: 6px;
-
-}
 
 ::-webkit-scrollbar {
     width: 0.2rem;

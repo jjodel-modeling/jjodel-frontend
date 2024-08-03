@@ -10,17 +10,22 @@ import {useEffectOnce} from "usehooks-ts";
 import {HashRouter, Route, Routes} from 'react-router-dom';
 import PathChecker from "./components/pathChecker/PathChecker";
 import {AuthApi} from "./api/persistance";
+
 import {
     AccountPage,
     AllProjectsPage,
     ArchivePage,
     AuthPage,
     CommunityPage,
+    NotesPage,
+    ProfilePage,
     ProjectPage,
+    RecentPage,
     SettingsPage,
     TemplatePage,
     UpdatesPage
 } from "./pages";
+
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
 import {MessageVisualizer} from "./components/forEndUser/SplashMessage";
@@ -70,8 +75,11 @@ function App(props: AllProps): JSX.Element {
                     <Route path={'community'} element={<CommunityPage />} />
                     <Route path={'allProjects'} element={<AllProjectsPage />} />
                     <Route path={'templates'} element={<TemplatePage />} />
+                    <Route path={'notes'} element={<NotesPage />} />
                     <Route path={'archive'} element={<ArchivePage />} />
                     <Route path={'project'} element={<ProjectPage />} />
+                    <Route path={'recent'} element={<RecentPage />} />
+                    <Route path={'profile'} element={<ProfilePage />} />
                     <Route path={'*'} element={<AccountPage />} />
                 </>}
                 <Route path={'auth'} element={<AuthPage />} />
