@@ -26,6 +26,7 @@ import TabDataMaker from "../../../src/components/abstract/tabs/TabDataMaker";
 import DockManager from "../../../src/components/abstract/DockManager";
 
 import {Menu, Item, Divisor} from '../components/menu/Menu';
+import { Toggle } from '../../components/widgets/Widgets';
 
 import logo from '../../static/img/jjodel.jpg';
 import jj from '../../static/img/jj-k.png';
@@ -243,7 +244,7 @@ function NavbarComponent(props: AllProps) {
 
     const Commands = () => {
         return (<div className='col text-end nav-commands'>
-            <input type="checkbox"></input>
+            <Toggle name={'mode'} values={{false: 'base', true: 'advanced'}} labels={{false: 'base', true: 'advanced'}}/>
         </div>);
     };
 

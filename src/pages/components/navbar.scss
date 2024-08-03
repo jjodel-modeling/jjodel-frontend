@@ -88,9 +88,8 @@
 
 .nav-container {
   display: flex;
-
   background-color: var(--bg-1);
-  height: auto;
+  height: 32px;
   padding: 0px var(--side-padding);
   font-weight: 200;
 
@@ -122,18 +121,19 @@
 }
 
 .nav-container .nav-logo {
-  padding: 4px 0;
+  margin-top: auto;
+  margin-bottom: auto;
   text-align: center;
 }
 
 .nav-commands {
-  width: fit-content;
 
+  width: fit-content;
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
-
 .nav-container .content {
-
   background-color: var(--color);
   min-width: 200px;
   top: 100%;
@@ -192,10 +192,10 @@
 
 
 
-.nav-container .content.context-menu{
+.nav-container .content.context-menu {
   width: auto;
 }
-.nav-container .content.context-menu ul{
+.nav-container .content.context-menu ul {
   width: max-content;
   min-width: 100%;
   padding: 4px 0px;
@@ -259,8 +259,10 @@
 }
 
 .nav-container .user {
-  margin-top: 4px;
+
   padding-right: 20px;
+  margin-top: auto;
+    margin-bottom: auto;
 }
 
 .user-initials {
@@ -289,5 +291,7 @@
   padding-right:0;
   float: right;
   top: 4px;
+  margin-top: auto;
+  margin-bottom: auto;
 
 }
