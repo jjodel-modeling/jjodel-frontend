@@ -123,7 +123,7 @@ type UserProps = {
 }
 const User = (props: UserProps) => {
     return (
-        <div className={'user'}>Alfonso <b>Pierantonio</b></div>
+        <div className={'col-2 user text-end'}>Alfonso <b>Pierantonio</b></div>
     );
 };
 
@@ -158,7 +158,7 @@ function NavbarComponent(props: AllProps) {
         {name: 'Export as...', icon: icon['export'], function: async() => {}, keystroke: []},
         {name: 'divisor', function: async() => {}, keystroke: []},
 
-        {name: 'View', icon: <i className="bi bi-tv"></i>,
+        {name: 'View', icon: icon['view'],
             subItems: [
                 {name: 'Show dot grid', icon: icon['grid'], function: async() => {}, keystroke: []},
                 {name: 'divisor', function: async() => {}, keystroke: []},
@@ -181,7 +181,7 @@ function NavbarComponent(props: AllProps) {
             {name: 'Legal terms', icon: icon['legal'], function: async() => {}, keystroke: []}
         ],
         keystroke: []},
-        {name: 'About jjodel', icon: <img src={jj} width={15}/>, function: async() => {}, keystroke: []}
+        {name: 'About jjodel', icon: icon['jjodel-dark'], function: async() => {}, keystroke: []}
 
 
     ];
@@ -213,13 +213,7 @@ function NavbarComponent(props: AllProps) {
         keystroke: []},
         {name: 'About jjodel', icon: <img src={jj} width={15}/>, function: async() => {}, keystroke: []},
         {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {}, keystroke: [Key.cmd, 'Q']},
-
-        /* {name: 'Project',
-            subItems: [
-                {name: 'New', },
-            ]
-        }*/
+        {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {}, keystroke: [Key.cmd, 'Q']}
     ];
 
     type MenuType = {
@@ -228,7 +222,7 @@ function NavbarComponent(props: AllProps) {
     const MainMenu = (props: MenuType) => {
 
         return(
-            <div className='col nav-hamburger hoverable' tabIndex={0}>
+            <div className='col-5 nav-hamburger hoverable' tabIndex={0}>
                 <i className="bi bi-grid-3x3-gap-fill list"></i>
                 <div className={'content context-menu'}>
                     <ul>
@@ -241,22 +235,22 @@ function NavbarComponent(props: AllProps) {
 
     const Logo = () => {
         return (
-        <div className='col nav-logo'>
+        <div className='col-1 nav-logo'>
             <img height={24} src={logo} />
         </div>
         );
     }
 
     const Commands = () => {
-        return (<>
-                      
-        </>);
+        return (<div className='col text-end nav-commands'>
+            <input type="checkbox"></input>
+        </div>);
     };
 
     const UserMenu = () => {
         return (<>
-            <div className='col nav-side'>
-                <div style={{float: 'right', left: '300px!important', width: '31px', marginTop: '2px'}}>
+            <div className='col-1 text-end nav-side'>
+                <div style={{float: 'right', left: '300px!important', marginTop: '2px'}}>
                     <Menu position={'left'}>
                         <Item icon={icon['dashboard']} action={() => {navigate('/allProjects')}}>Dashboard</Item>
                         <Divisor />
@@ -273,7 +267,7 @@ function NavbarComponent(props: AllProps) {
     if(project)
 
         return(<>
-            <nav className={'nav-container d-flex'} style={{zIndex: 99}}>
+            <nav className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
                 <MainMenu items={projectItems}/>
                 <Logo />
                 <UserMenu />
@@ -286,10 +280,11 @@ function NavbarComponent(props: AllProps) {
         </>);
     else
         return(<>
-            <nav className={'nav-container d-flex'} style={{zIndex: 99}}>
+            <nav className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
                 <MainMenu items={dashboardItems} />
                 <Logo />
-                <UserMenu />
+                <UserMenu />    
+                <Commands />
                 <User />
             </nav>
         </>);

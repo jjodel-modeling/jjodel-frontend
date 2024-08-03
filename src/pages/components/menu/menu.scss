@@ -33,6 +33,7 @@
 
   .menu-button:hover .bi {
     color: var(--accent);
+
   }
 
   .dropdown {
@@ -69,7 +70,7 @@
   .dropdown > div.item .bi {
     color: white;
     font-size: 1.2em;
-    padding-right: 8px!important;
+    padding-right: 6px!important;
   }
 
   .dropdown > div.item.disabled {

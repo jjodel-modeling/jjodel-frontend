@@ -3,16 +3,16 @@ import './icons.scss';
 import jj from '../../../static/img/jj-k.png'; 
 
 let icon: { [name: string]: any}  = {
-    new: <i className="bi bi-plus-square menuitem"></i>,
-    close: <i className="bi bi-dash-square menuitem"></i>,
+    new: <i className="bi bi-plus-circle-dotted menuitem"></i>,
+    close: <i className="bi bi-x-lg menuitem"></i>,
     edit: <i className="bi bi-pencil-square menuitem"></i>,
     duplicate: <i className="bi bi-files menuitem"></i>,
     copy: <i className="bi bi-files menuitem"></i>,
     undo: <i className="bi bi-arrow-counterclockwise menuitem"></i>,
     redo: <i className="bi bi-arrow-clockwise menuitem"></i>, 
     save: <i className="bi bi-upload menuitem"></i>,
-    select: <i className="bi bi-check"></i>,
-    deselect: <i className="bi bi-check"></i>,
+    select: <i className="bi bi-check menuitem"></i>,
+    deselect: <i className="bi bi-check2 menuitem"></i>,
     
     import: <i className="bi bi-arrow-bar-left menuitem"></i>,
     export: <i className="bi bi-arrow-bar-right menuitem"></i>,
@@ -43,7 +43,7 @@ let icon: { [name: string]: any}  = {
     legal: <i className="bi bi-mortarboard menuitem"></i>,
     about: <img src={jj} width={15} className={'menuitem'}/>,
    'jjodel-dark': <img src={jj} width={15} className={'menuitem'}/>,
-   'jjodel-clear': <img style={{border: '1px solid var(--color)', borderRadius: '2px', marginRight: '11px'}} src={jj} width={15} className={'menuitem'}/>,
+   'jjodel-clear': <img style={{border: '1px solid var(--color)', borderRadius: '2px', marginTop: '2px', marginRight: '-2px'}} src={jj} width={16} className={'menuitem'}/>,
     logout: <i className="bi bi-box-arrow-right menuitem"></i>,
     dashboard2: <i className="bi bi-grid menuitem"></i>,
     dashboard: <i className="bi bi-columns-gap menuitem"></i>,

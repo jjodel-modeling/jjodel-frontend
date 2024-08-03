@@ -114,15 +114,17 @@ function ContextMenuComponent(props: AllProps) {
         jsxList.push(<div onClick={() => {
             close();
             SetRootFieldAction.new(`selected.${DUser.current}`, '', '', false);
-        }} className={'col item'}>{icon['new']} Deselect</div>);
+        }} className={'col item'}>{icon['deselect']} Deselect</div>);
         jsxList.push(<hr className={'my-1'} />);
         jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>{icon['delete']} Delete<i
             className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}}></i></div>);
         jsxList.push(<hr className={'my-1'} />);
-        jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={'col item'}>{icon['new']}{icon['up']} Up<div><i
+
+        jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={'col item'}>{icon['up']} Up<div><i
         className='bi bi-command'></i><i className="bi bi-arrow-up"></i></div></div>);
-        jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={'col item'}>{icon['new']}{icon['down']} Down<div><i
+        jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={'col item'}>{icon['down']} Down<div><i
         className='bi bi-command'></i><i className="bi bi-arrow-down"></i></div></div>);
+        
         jsxList.push(<hr className={'my-1'} />);
         /* LOCK-UNLOCK */
         jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>{icon['lock']} Lock/Unlock<div> <i
