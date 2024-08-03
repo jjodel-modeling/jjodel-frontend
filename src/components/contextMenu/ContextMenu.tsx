@@ -24,6 +24,8 @@ import {useStateIfMounted} from 'use-state-if-mounted';
 import ModellingIcon from "../forEndUser/ModellingIcon";
 import {FakeStateProps} from "../../joiner/types";
 
+import { icon } from '../../pages/components/icons/Icons';
+
 function ContextMenuComponent(props: AllProps) {
     const user = props.user;
     const project = user.project as LProject;
@@ -99,12 +101,12 @@ function ContextMenuComponent(props: AllProps) {
 
         /* Memorec */
         if(data.className === 'DClass') {
-            jsxList.push(<div onClick={structuralFeature} className={'col item'}>AI Suggest <i
+            jsxList.push(<div onClick={structuralFeature} className={'col item'}>{icon['ai']} AI Suggest <i
                 className='bi bi-chevron-right' style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}}></i></div>);
             jsxList.push(<hr className={'my-1'} />);
         }
         if(data.className === 'DPackage') {
-            jsxList.push(<div onClick={classifier} className={'col item'}>AI Suggest<i 
+            jsxList.push(<div onClick={classifier} className={'col item'}>{icon['ai']} AI Suggest<i 
                 className={'ms-1 bi bi-chevron-right'} style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}}></i></div>);
             jsxList.push(<hr className={'my-1'} />);
         }
@@ -112,21 +114,21 @@ function ContextMenuComponent(props: AllProps) {
         jsxList.push(<div onClick={() => {
             close();
             SetRootFieldAction.new(`selected.${DUser.current}`, '', '', false);
-        }} className={'col item'}>Deselect</div>);
+        }} className={'col item'}>{icon['new']} Deselect</div>);
         jsxList.push(<hr className={'my-1'} />);
-        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>Delete<i
+        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>{icon['delete']} Delete<i
             className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}}></i></div>);
         jsxList.push(<hr className={'my-1'} />);
-        jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={'col item'}>Up<div><i
+        jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={'col item'}>{icon['new']}{icon['up']} Up<div><i
         className='bi bi-command'></i><i className="bi bi-arrow-up"></i></div></div>);
-        jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={'col item'}>Down<div><i
+        jsxList.push(<div onClick={() => {close(); node.zIndex -= 1;}} className={'col item'}>{icon['new']}{icon['down']} Down<div><i
         className='bi bi-command'></i><i className="bi bi-arrow-down"></i></div></div>);
         jsxList.push(<hr className={'my-1'} />);
         /* LOCK-UNLOCK */
-        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>Lock/Unlock<div> <i
+        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>{icon['lock']} Lock/Unlock<div> <i
             className='bi bi-command'></i> L</div></div>);
         /* UNLOCK ALL ELEMENTS */
-        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>Unlock all elements<div><i className="bi bi-alt"></i> <i
+        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>{icon['unlock']} Unlock all elements<div><i className="bi bi-alt"></i> <i
             className='bi bi-command'></i> L</div></div>);
 
         jsxList.push(<hr className={'my-1'} />);
@@ -137,14 +139,14 @@ function ContextMenuComponent(props: AllProps) {
                 jsxList.push(<div onClick={() => {
                     close();
                     SetRootFieldAction.new('isEdgePending', {user: user.id, source: data.id});
-                }} className={'col item'}>Extend<div><i
+                }} className={'col item'}>{icon['extend']} Extend<div><i
                 className='bi bi-command'></i> E</div></div>);
                 jsxList.push(<hr className={'my-1'} />);
                 break;
         }
 
         /* ADD VIEW */ 
-        jsxList.push(<div onClick={async () => {close(); await addView();}} className={'col item'}>Add View<div><i
+        jsxList.push(<div onClick={async () => {close(); await addView();}} className={'col item'}>{icon['view']} Add View<div><i
         className='bi bi-alt'></i> <i
         className='bi bi-command'></i> A</div></div>);
     }

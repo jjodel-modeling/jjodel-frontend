@@ -4,6 +4,7 @@ import { Menu, Item } from "../menu/Menu";
 import { Project } from "../Project";
 
 import colors from '../../../static/img/colors.png';
+import { icon } from "../icons/Icons";
 
 
 type ChildrenType = {
