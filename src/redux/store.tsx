@@ -214,11 +214,12 @@ export class DState extends DPointerTargetable{
     static init(store?: DState): void {
         this.fixcolors();
         BEGIN()
-        const viewpoint = DViewPoint.new2('Default', '', (vp)=>{ vp.isExclusiveView = false; }, true, 'Pointer_ViewPointDefault');
-        const validationViewpoint = DViewPoint.new2('Validation default', '', (vp)=>{ vp.isExclusiveView = false; vp.isValidation = true;}, true, 'Pointer_ViewPointValidation');
+        const viewpoint = DViewPoint.newVP('Default', undefined,true, 'Pointer_ViewPointDefault');
+        const validationViewpoint = DViewPoint.newVP('Validation default',
+            (vp)=>{ vp.isExclusiveView = false; vp.isValidation = true;}, true, 'Pointer_ViewPointValidation');
 
         Log.exDev(viewpoint.id !== Defaults.viewpoints[0], "wrong vp id initialization", {viewpoint, def:Defaults.viewpoints});
-        const views: DViewElement[] = makeDefaultGraphViews(viewpoint.id, validationViewpoint.id);
+        const views: DViewElement[] = makeDefaultGraphViews(viewpoint, validationViewpoint);
 
         for (let view of views) { CreateElementAction.new(view); }
 
@@ -251,9 +252,9 @@ export class DState extends DPointerTargetable{
 }
 
 
-function makeDefaultGraphViews(vp: Pointer<DViewPoint>, validationVP: Pointer<DViewPoint>): DViewElement[] {
+function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewElement[] {
 
-    let errorOverlayView: DViewElement = DViewElement.new2('Semantic error view', DV.semanticErrorOverlay(), (v) => {
+    let errorOverlayView: DViewElement = DViewElement.new2('Semantic error view', DV.semanticErrorOverlay(), validationVP, (v) => {
         v.jsCondition = 'let nstate = node?.state || {};\nObject.keys(nstate).filter(k => k.indexOf("error_")===0).map(k=>nstate[k]).join(\'\\n\').length>0';
         v.usageDeclarations = "(ret)=>{\n" +
         "// ** preparations and default behaviour here ** //\n" +
@@ -284,9 +285,9 @@ function makeDefaultGraphViews(vp: Pointer<DViewPoint>, validationVP: Pointer<DV
         transform: translate(calc(100% + 3px), calc(-50%));
     }
 }`
-    }, false, validationVP, 'Pointer_ViewOverlay' );
+    }, false, 'Pointer_ViewOverlay' );
 
-    let errorCheckName: DViewElement = DViewElement.new2('Naming error view', DV.invisibleJsx(), (v) => {
+    let errorCheckName: DViewElement = DViewElement.new2('Naming error view', DV.invisibleJsx(), validationVP, (v) => {
         v.isExclusiveView = false;
         v.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
             "// ** preparations and default behaviour here ** //\n" +
@@ -302,9 +303,9 @@ if (name.length === 0 && type !== "shapeless") err = type + "es must be named.";
 else if (!name[0].match(/[A-Za-z_$]/)) err = type + " names must begin with an alphabet letter or $_ symbols.";
 else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]*$/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
 node.state = {error_naming:err};
-`;}, false, validationVP, 'Pointer_ViewCheckName' );
+`;}, false, 'Pointer_ViewCheckName' );
 
-let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), (v) => {
+let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), validationVP, (v) => {
             // v.jsCondition = '(data, node)=> {\nnode.state.errors?.length>0';
             v.appliableToClasses = ['DValue'];
             v.isExclusiveView = false;
@@ -321,7 +322,7 @@ if (missingLowerbound > 0) err = (data.className.substring(1))\n
  \t\t+ ' Lowerbound violation, missing ' + missingLowerbound + ' values.';\n
 node.state = {error_lowerbound: err};\n
 `;
-    }, false, validationVP, 'Pointer_ViewLowerbound' );
+    }, false, 'Pointer_ViewLowerbound' );
     // errorOverlayView.oclCondition = 'context DValue inv: self.value < 0';
 
     let valuecolormap: GObject = {};
@@ -338,11 +339,7 @@ node.state = {error_lowerbound: err};\n
     valuecolormap[ShortAttribETypes.EVoid] = "gray";
 
 
-    let voidView: DViewElement = DViewElement.new('Void', DV.voidView(), undefined, '', '', '',
-        [], '', undefined, false, true, vp);
-    // voidView.appliableToClasses=["VoidVertex"];
-    voidView.adaptWidth = true; voidView.adaptHeight = true;
-
+    let voidView: DViewElement = DViewElement.new2('Fallback', DV.fallbackView(), vp, undefined, false, 'fallback');
 
 
     let edgeViews: DViewElement[] = [];
@@ -350,20 +347,20 @@ node.state = {error_lowerbound: err};\n
 
 
     let model = DefaultViews.model(vp);
-    let packagee = DefaultViews.package(model.id);
-    let classs = DefaultViews.class(packagee.id);
-    let enumm = DefaultViews.enum(packagee.id);
-    let attr = DefaultViews.attribute(classs.id);
-    let ref = DefaultViews.reference(classs.id);
-    let op = DefaultViews.operation(classs.id);
-    let par = DefaultViews.parameter(op.id);
-    let lit = DefaultViews.literal(enumm.id);
-    let obj = DefaultViews.object(model.id);
-    let val = DefaultViews.value(obj.id);
-    let anchorView = DefaultViews.anchor(model.id);
+    let packagee = DefaultViews.package(model);
+    let classs = DefaultViews.class(packagee);
+    let enumm = DefaultViews.enum(packagee);
+    let attr = DefaultViews.attribute(classs);
+    let ref = DefaultViews.reference(classs);
+    let op = DefaultViews.operation(classs);
+    let par = DefaultViews.parameter(op);
+    let lit = DefaultViews.literal(enumm);
+    let obj = DefaultViews.object(model);
+    let val = DefaultViews.value(obj);
+    let anchorView = DefaultViews.anchor(model);
 
     function makeEdgeView(name: string, type: EdgeHead, headSize: GraphPoint | undefined, tailSize: GraphPoint | undefined, dashing: boolean): DViewElement{
-        let ev = DV.edgeView(type, headSize || size0, tailSize || size0, dashing ? "10.5,9,0,0" : undefined, model.id, name);
+        let ev = DV.edgeView(type, headSize || size0, tailSize || size0, dashing ? "10.5,9,0,0" : undefined, model, name);
         edgeViews.push(ev);
         return ev;
     }
@@ -388,7 +385,7 @@ node.state = {error_lowerbound: err};\n
     let dv_subviews = [model, packagee, classs, enumm, attr, ref, op, par,
         lit, obj, val, voidView,
         ...edgeViews,
-        DefaultViews.edgepoint(model.id),
+        DefaultViews.edgepoint(model),
         anchorView];
 
     let validation_subviews = [errorOverlayView, errorCheckLowerbound, errorCheckName];

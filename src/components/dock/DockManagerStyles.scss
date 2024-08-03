@@ -430,3 +430,21 @@ div.dock-drop-layer{
     }
 
 }
+
+
+/// default styles for graph
+.GraphContainer {/*
+    *:has(>select, >input){
+        display: flex;
+        select, input{
+            flex-grow: 1;
+            flex-basis: 50px;
+            min-width: 50px;
+        }
+    }*/
+    /*
+    select, input{
+        min-width: 50px;
+        width: 33%
+    }*/
+}

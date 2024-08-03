@@ -40,7 +40,6 @@ import {
     windoww
 } from "../../joiner";
 import {DUser, EPSize, Pack1, transientProperties } from "../../joiner/classes";
-import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsData";
 import DSL from "../../DSL/DSL";
 import {ReactNode} from "react";
 
@@ -249,20 +248,23 @@ export class DViewElement extends DPointerTargetable {
     /* private */ compiled_css!: string;
     /* private */ css_MUST_RECOMPILE!: boolean;
     father?: Pointer<DViewElement>;
-
-    public static new(name: string, jsxString: string, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
+/*
+    public static new(name: string, jsxString: string, father?: DViewElement, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
-                      priority?: number, persist: boolean = true, isDefaultView: boolean = false, vp?: Pointer<DViewPoint> | 'skip'): DViewElement {
+                      priority?: number, persist: boolean = true, isDefaultView: boolean = false): DViewElement {
         let id = isDefaultView ? 'Pointer_View' + name : undefined;
-        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id).DPointerTargetable()
+        let vp = father.viewpoint;
+        return new Constructors(new DViewElement('dwc'), father.id, persist, undefined, id).DPointerTargetable()
             .DViewElement(name, jsxString, vp, defaultVSize, usageDeclarations, constants,
             preRenderFunc, appliableToClasses, oclCondition, priority).end();
-
-    }
-    public static new2(name: string, jsxString: string, callback?: (d:DViewElement)=>void, persist: boolean = true,
-                       vp?: Pointer<DViewElement> | 'skip', id?: string): DViewElement {
+    }*/
+    public static new(...a:never): any{}
+    public static new2(name: string, jsxString: string, father0?: DViewElement, callback?: (d:DViewElement)=>void, persist: boolean = true,
+                       id?: string): DViewElement {
         // let id = isDefaultView ? 'Pointer_View' + name : undefined;
-        return new Constructors(new DViewElement('dwc'), undefined, persist, undefined, id)
+        let father: DViewElement = father0 || DPointerTargetable.from(Defaults.viewpoints[0]);
+        let vp = father.viewpoint || Defaults.viewpoints[0];
+        return new Constructors(new DViewElement('dwc'), father.id, persist, undefined, id)
             .DPointerTargetable().DViewElement(name, jsxString, vp).end(callback);
     }
 
@@ -271,7 +273,7 @@ export class DViewElement extends DPointerTargetable {
     <div className={'header'}>
         <div className={'input-container mx-2'}>
             <b className={'object-name'}>Name:</b>
-            <Input data={data} field={'name'} hidden={true} />
+            <Input data={data} field={'name'} hidden={true} autosize={true} />
         </div>
     </div>
     <div className={'body'}>To add information here,<br/> edit the view<br/><i>"{view.name}"</i></div>
@@ -328,14 +330,14 @@ export class DViewElement extends DPointerTargetable {
         const user = LUser.fromPointer(DUser.current);
         // const project = user?.project; if(!project) return this;
         let name: string;
+        const vp: LViewPoint = user?.project?.activeViewpoint || LPointerTargetable.fromPointer(Defaults.viewpoints[0]);
         if (forData?.name) {
             name = forData.name + 'View';
         } else {
-            const vp: LViewPoint = user?.project?.activeViewpoint || LPointerTargetable.fromPointer(Defaults.viewpoints[0]);
             let names: string[] = vp.subViews.map(v => v && v.name);
             name = U.increaseEndingNumber( 'view_' + 0, false, false, newName => names.indexOf(newName) >= 0);
         }
-        return DViewElement.new2(name, jsx, (d)=>{
+        return DViewElement.new2(name, jsx, vp.__raw,(d)=>{
             d.css = css;
             d.palette = palettes;
             d.css_MUST_RECOMPILE = true;
@@ -1155,23 +1157,25 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     }
     public set_father(v: Pointer<DViewPoint>, context: Context, manualDview?: DViewElement, preserveOrder: boolean = false): boolean {
         let ret = false;
-        let vpid: Pointer<DViewPoint> = v && Pointers.from(v);
+        let pvid: Pointer<DViewPoint> = v && Pointers.from(v);
         const data =  (manualDview || context.data);
         let id = data.id;
-        let oldvpid: Pointer<DViewPoint> = data.viewpoint;
-        if (vpid === oldvpid) return true;
+        let oldpvid = data.father;
+        if (pvid === oldpvid) return true;
+        let dfather: DViewElement = (v && typeof v === "object") ? ((v as any).__raw || v) as any : DPointerTargetable.fromPointer(pvid);
 
         TRANSACTION(()=>{
-            ret = SetFieldAction.new(id, "father", vpid, '', true);
-            if (oldvpid) {
-                let subViews = {...DPointerTargetable.fromPointer(oldvpid).subViews};
+            ret = SetFieldAction.new(id, "father", pvid, '', true);
+            if (data.viewpoint !== dfather.viewpoint) SetFieldAction.new(id, "viewpoint", dfather.viewpoint, '', true);
+            if (oldpvid) {
+                let subViews = {...DPointerTargetable.fromPointer(oldpvid).subViews};
                 delete subViews[id];
-                SetFieldAction.new(oldvpid, "subViews", subViews, '', true);
+                SetFieldAction.new(oldpvid, "subViews", subViews, '', true);
             }
-            if (vpid) {
+            if (pvid) {
                 let name = data.name;
                 let copyPos = name.indexOf("Copy");
-                let oldSubViews = DPointerTargetable.fromPointer(vpid).subViews;
+                let oldSubViews = DPointerTargetable.fromPointer(pvid).subViews;
                 let insertBefore: string = '';
                 let subViews: GObject = {};
                 if (copyPos) {
@@ -1193,7 +1197,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                     }
                 } else { subViews = {...oldSubViews}; subViews[id] = 1.5; }
                 subViews[id] = insertBefore ? subViews[insertBefore] : 1.5;
-                SetFieldAction.new(vpid, "subViews", subViews, '+=', true);
+                SetFieldAction.new(pvid, "subViews", subViews, '+=', true);
             }
         })
         return ret;
@@ -1363,8 +1367,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             TRANSACTION( () => {
                 let pvid: Pointer<DViewPoint> = c.data.viewpoint as Pointer<DViewPoint>;
                 const dclone: DViewElement = c.data.className === 'DViewPoint' ?
-                    DViewPoint.new2(`${c.data.name} Copy`, '', undefined, true) :
-                    DViewElement.new2(`${c.data.name} Copy`, '', undefined, true, 'skip');
+                    DViewPoint.newVP(`${c.data.name} Copy`) :
+                    DViewElement.new2(`${c.data.name} Copy`, '', DPointerTargetable.from(c.data.father as any),
+                        undefined, true);
+                // todo: test if this have correct parent, vp and pointedby
                 lview = LPointerTargetable.fromD(dclone);
                 const new_vp: DuplicateVPChange = new_vp0 || {pvid};
                 // || {pvid,  score: (DPointerTargetable.from(pvid, state) as DViewElement).subViews[c.data.id]}

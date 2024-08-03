@@ -12,22 +12,11 @@ import {
     U,
     windoww
 } from "../../joiner";
-import {DockingLayout} from "smart-webcomponents-react/dockinglayout";
 import $ from "jquery";
 import {BoxData, DockLayout, LayoutProps, PanelData, TabData, TabGroup} from "rc-dock";
 import {MyPortal} from "./MyDock";
 import "./DockManagerStyles.scss";
 import {LayoutData} from "rc-dock/src/DockData";
-import TestTab from "../abstract/tabs/TestTab";
-import StructureEditor from "../rightbar/structureEditor/StructureEditor";
-import {ModelMetaData} from "../rightbar/structureEditor/ModelMetaData";
-import TreeEditor from "../rightbar/treeEditor/treeEditor";
-import NodeEditor from "../rightbar/styleEditor/StyleEditor";
-import ViewpointEditor from "../rightbar/viewpointsEditor/ViewpointsEditor";
-import CollaboratorsEditor from "../rightbar/collaboratorsEditor/CollaboratorsEditor";
-import MqttEditor from "../rightbar/mqtt/MqttEditor";
-import Console from "../rightbar/console/Console";
-
 
 // needs to be class component because needs setState() to be called externally
 interface TabHeaderProps{

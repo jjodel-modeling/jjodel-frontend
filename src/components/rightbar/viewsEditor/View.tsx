@@ -9,7 +9,6 @@ import EdgePointData from './data/EdgePointData';
 import {DockLayout} from 'rc-dock';
 import {LayoutData} from 'rc-dock/lib/DockData';
 import EventsData from './data/CustomData';
-import SubViewsData from './data/SubViewsData';
 import {FakeStateProps, Overlap} from "../../../joiner/types";
 import {connect} from "react-redux";
 import PaletteData from "./data/PaletteData";

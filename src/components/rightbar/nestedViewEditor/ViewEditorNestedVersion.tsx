@@ -29,7 +29,7 @@ function NestedViewComponent(props: AllProps) {
         let name = 'viewpoint_' + 0;
         let viewpointNames: string[] = viewpoints.map(vp => vp && vp.name);
         name = U.increaseEndingNumber(name, false, false, newName => viewpointNames.indexOf(newName) >= 0);
-        DViewPoint.new2(name, '', (d) => { /*d.isExclusiveView = !(d.isValidation = props.validation); */} );
+        DViewPoint.newVP(name);
     }
     const deleteV = (e: React.MouseEvent, viewPoint: LViewElement) => {
         e.stopPropagation();

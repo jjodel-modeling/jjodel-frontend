@@ -4,14 +4,14 @@ import {connect} from 'react-redux';
 import {DState, LoggerComponent, Try} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
 import {DockLayout, LayoutData} from 'rc-dock';
-import {Info, Skeleton, Viewpoints, Views, Logger, Console} from "../../components/editors";
+import {Info, Skeleton, Logger, Console} from "../../components/editors";
 import {ModelMetaData} from '../rightbar/structureEditor/ModelMetaData';
 import NodeEditor from '../rightbar/styleEditor/StyleEditor';
 import DockManager from './DockManager';
 import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import MqttEditor from "../rightbar/mqtt/MqttEditor";
-import NestedView from "../rightbar/viewpointsEditor/ViewEditorNestedVersion";
+import NestedView from "../rightbar/nestedViewEditor/ViewEditorNestedVersion";
 
 
 const tabidprefix = "DockComponent_rightbar_";

@@ -521,6 +521,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     // private callbacks: Function[];
     private nonPersistentCallbacks: Function[];
     fatherType?: typeof RuntimeAccessibleClass;
+    private fatherPtr?: Pointer // T['father'];
     private state?: DState; // set only if requested by setWithSideEffect
     /*
     problem: if isPersistent is set to false, but the object is later made persistent with an action, you lose all the callback effects afecting other elements (as setting opposite relations like instances-typeof or losing pointedBy's)
@@ -540,6 +541,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         t._persistCallbacks = [];
         t._derivedSubElements = [];
         this.nonPersistentCallbacks = [];
+        this.fatherPtr = father;
+
         if (this.thiss.hasOwnProperty("father")) {
             this.fatherType = fatherType as any;
             this.setPtr("father", father);
@@ -905,7 +908,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this;
     }
 
-    DViewElement(name: string, jsxString: string, vp?: Pointer<DViewPoint>, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
+    DViewElement(name: string, jsxString: string, vp?: Pointer<DViewPoint>,
+                 defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                  preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '', priority?: number): this {
         const thiss: DViewElement = this.thiss as any;
         const vid = thiss.id;
@@ -979,15 +983,16 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // const project = user?.project; if(!project) return this;
         if (!vp) vp = user?.project?.activeViewpoint.id || Defaults.viewpoints[0];
         if (vp !== 'skip') {
-            let dvp = DPointerTargetable.fromPointer(vp);
+            // let dvp = DPointerTargetable.fromPointer(vp);
             // let subviews = {...dvp.subViews}; subviews[thiss.id] = 1.5;
             // this.setExternalPtr(vp, 'subViews', '', subviews);
-            let subviews: GObject = {}; subviews[thiss.id] = 1.5;
-            this.setExternalPtr(vp, 'subViews', '+=', subviews);
-            this.setPtr('father', vp);
+            this.setPtr('viewpoint', vp);
         }
 
-        let trview = transientProperties.view[thiss.id] = {} as any;
+        this.setExternalPtr(this.fatherPtr as Pointer<DViewElement>, 'subViews', '+=', {[thiss.id]: 1.5});
+        transientProperties.view[thiss.id] = {} as any;
+
+        // let trview = transientProperties.view[thiss.id];
         // trview.?? = ???
 
         TRANSACTION(() => {
@@ -2273,7 +2278,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected get_views(c: Context): this['views'] {
         // return LViewElement.fromPointer([...c.data.views, ...Defaults.views]);
         let duplicateRemover: Dictionary<Pointer, LViewElement> = {};
-        let varr = this.get_viewpoints(c).flatMap(vp => vp.subViews);
+        let varr = this.get_viewpoints(c).flatMap(vp => vp.allSubViews);
         for (let v of varr) duplicateRemover[v.id] = v;
         return Object.values(duplicateRemover);
     }

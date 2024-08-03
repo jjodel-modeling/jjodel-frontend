@@ -366,11 +366,6 @@ export class Selectors{
         return undefined;
     }
 
-
-    // todo: idea, set query complexity = explicitpriority amd autoset explicit priority to query lemgth
-    private static getQueryComplexity = (query: string) => query.length; // todo: the more "or" and navigations there are, the more a query is "complex", the more the query match is a priority.
-
-
     static getAllGraphElementPointers(): Pointer<DGraphElement>[] {
         // graphelements = fields;
         let state: DState = store.getState();
@@ -508,7 +503,7 @@ export class Selectors{
             // don't match exclusive views from other vp
             let dvp: DViewPoint = DPointerTargetable.fromPointer(dview.viewpoint, state);
             let oldVpMatch: number = tnv.viewPointMatch;
-            // console.log("vp matching " +vid, {vid, dvp, activevpid });
+            console.log("vp matching " +vid, {vid, dvp, activevpid });
             if (dvp.id === activevpid) tnv.viewPointMatch = ViewEClassMatch.VP_Explicit;
             else if (dvp.id === 'Pointer_ViewPointDefault') tnv.viewPointMatch = ViewEClassMatch.VP_Default;
             else if (!dvp.isExclusiveView) tnv.viewPointMatch = ViewEClassMatch.VP_Decorative;

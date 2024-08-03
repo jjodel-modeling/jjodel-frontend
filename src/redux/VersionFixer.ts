@@ -89,9 +89,9 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         // purpose: save in state 1 of each D-objects with all the possible sub-objects in every possible structure shape
         // values can be dummy but syntactical valid
         //DState.new(); nope, i'm using current state, just call it from an empty project with no models.
-        DViewElement.new2("View", "jsx", (d)=>{
+        DViewElement.new2("View", "jsx", undefined,(d)=>{
             d.appliableTo = 'Any';
-            d.subViews = {["View"]: 3.5};
+            d.subViews = {["Sample-fake-subView"]: 3.5};
             d.oclUpdateCondition = '(view: LViewElement) => { return false; } <--- as a string'
             d.defaultVSize = new GraphSize(5,5,5,5);
             d.palette = {
@@ -109,7 +109,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             d.edgePointCoordMode = CoordinateMode.relativePercent;
             d.edgeHeadSize = new GraphPoint(5,5);
             d.edgeTailSize = new GraphPoint(5,5);
-        }, true, Defaults.viewpoints[0], 'DViewElement');
+        }, true, 'DViewElement');
 
 
 
