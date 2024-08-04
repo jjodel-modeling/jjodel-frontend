@@ -13,13 +13,13 @@ body{
   --bg-2-5: #EBEBEB;
   --bg-3: #e2e2e1;
   --bg-3-1: #c3c3c1;
-  
+
   --bg-4: #8f908e;
   --bg-5: #525251;
 
-  --dock-bg: var(-bg-1); 
+  --dock-bg: var(-bg-1);
   --disabled: red; //var(--bg-4);
-  
+
   --danger: #ed474a;
   --success: #3ddc97;
   --side-padding: 2em;
@@ -95,10 +95,10 @@ body > .dragging-layer > div:last-child {
 .dock-tab-btn {
   padding-top: 0!important;
 }
-
+/*
 .dock-tab-btn:has(.dock-tab-close-btn) {
   padding-top: 4px!important;
-}
+}*/
 
 .dock-tab-btn-disabled {
   cursor: default;
@@ -149,7 +149,7 @@ body > .dragging-layer > div:last-child {
   color: var(--terziary);
   cursor: default;
   transform: translateZ(0);
-  
+
 }
 .dock-tab-active {
   top: 0px;
@@ -247,16 +247,6 @@ body > .dragging-layer > div:last-child {
 }
 */
 
-.dock-tab-close-btn:hover,
-.dock-tab-close-btn:focus {
-  color: var(--bg-5);
-  transform: scale(1.1, 1.1);
-}
-.dock-tab:hover .dock-tab-close-btn,
-.dock-tab-close-btn:focus {
-  opacity: 1;
-  color: var(--accent);
-}
 .dock-tab-hit-area {
   position: absolute;
   pointer-events: none;
@@ -699,14 +689,14 @@ body.dock-dragging iframe {
 }
 .dock-panel-max-btn {
   position: relative;
-  
+
   top: 10px;
   right: 10px;
   width: 16px;
   height: 16px;
-  
+
   font-family: 'Inter Tight', sans-serif;
- 
+
   cursor: pointer;
   transition: all 0.25s ease-in-out;
   outline: none;
@@ -730,7 +720,7 @@ body.dock-dragging iframe {
 }
 .dock-panel-max-btn:hover:before,
 .dock-panel-max-btn:focus:before {
-  
+
 }
 .dock-panel-max-btn:hover {
   transform: scale(1.1);
@@ -750,7 +740,7 @@ body.dock-dragging iframe {
   font-size: 20px;
   line-height: 4px;
 
-  
+
 
 }
 .dock-mbox .dock-panel-max-btn:hover:before,

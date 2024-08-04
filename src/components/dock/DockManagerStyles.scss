@@ -199,7 +199,6 @@
     .dock-tab > div {
         padding: 0px;
     }
-
     .dock-tab-btn, .drag-initiator, .drag-initiator>div{
         height: 100%;
         width: 100%;
@@ -214,6 +213,50 @@
 }
 .dock-tab:has(.moved-content){
     display: none;
+}
+
+.dock-tab{
+    margin-top: 0;
+    margin-bottom: 0;
+}
+.pinnable-strip{
+    .dock-tab{
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+}
+
+.dock-tab-close-btn:hover,
+.dock-tab-close-btn:focus {
+    transform: scale(1.1);
+}
+.dock-tab:hover .dock-tab-close-btn,
+.dock-tab-close-btn:focus {
+    opacity: 1;
+}
+
+.dock-tab-close-btn{
+    background-image: none;
+    top: 0;
+    bottom: 0;
+    height: auto;
+    padding: 0;
+    // background: red;
+    display: flex;
+    width: 28px;
+    color: var(--terziary);
+    &:hover{ color: red; }
+    &::before{
+        margin: auto;
+        content: "\f62a"; // "\f623" x in a circle
+        font-size: 1.5rem;
+
+        font-family: bootstrap-icons !important;
+        font-style: normal;
+        font-weight: normal !important;
+        font-variant: normal;
+        text-transform: none;
+    }
 }
 .pinnable-strip-t, .pinnable-strip-b{
     width: 100%;
