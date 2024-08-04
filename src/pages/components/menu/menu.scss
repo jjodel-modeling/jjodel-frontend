@@ -1,6 +1,6 @@
 .dropdown {
     --color: #233d4d;
-    --accent: #f3b700;
+    --accent: #087E8B;// #f3b700;
     --accent-disabled: #8f908e;
     --color-disabled: #8f908e;
     --bg-1: white;
@@ -66,18 +66,34 @@
     color: white;
   }
 
+  .dropdown > div.item .bi {
+    color: white;
+    font-size: 1.2em;
+    padding-right: 8px!important;
+  }
+
   .dropdown > div.item.disabled {
     color: var(--color-disabled);
   }
+
+  .dropdown > div.item.disabled .bi {
+    color: var(--color-disabled);
+  }
+
+
   
   .dropdown > div.item:hover {
-    background-color: #F3B700;
+    background-color: var(--accent);
     border-radius: 4px;
   }
 
 .dropdown > div.item.disabled:hover {
   background-color: var(--accent-disabled);
   color: white;
+}
+
+.dropdown > div.item.disabled:hover .bi {
+  color: white; 
 }
 
 .dropdown.right {

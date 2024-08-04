@@ -23,6 +23,7 @@
     margin: 10px 0px 10px 0px;
     padding-top: 2px;
     height: 25px;
+    
     &:hover{
       /* background-color: #f5f5f5;
       border-radius: 4px;*/
@@ -94,6 +95,7 @@
   font-weight: 200;
 
   .nav-hamburger {
+    width: 270px!important;
     color: var(--color);
     font-size: 1.5em;
     padding-right: var(--sep-padding);
@@ -103,7 +105,6 @@
     transition: 0.3s;
     .bi:hover {
       color: var(--accent);
-
       transform-origin: center;
       transform: rotate(180deg);
     }
@@ -124,6 +125,8 @@
 
 .nav-container .nav-logo {
   padding: 4px var(--sep-padding) 4px 0;
+  width: 300px;
+
 }
 
 .nav-container .content {
@@ -183,9 +186,9 @@
 
 }
 // ho riunito i miei cambiamenti in un solo posto per distinguere le mie aggiunte ed eventualmente annullarne parti.
-.nav-hamburger:hover, .nav-hamburger:focus-within{
-  // &>.bi{ color: var(--accent); }
-}
+
+
+
 .nav-container .content.context-menu{
   width: auto;
 }
@@ -250,7 +253,38 @@
   & .keystroke {
     float: right;
     margin-right: 10px;
-    border: 1px solid red;
 
   }
+}
+
+.nav-container .user {
+  margin-top: 4px;
+  margin-right: 35px;
+}
+
+.user-initials {
+  width: 28px;
+  height: 28px;
+  border-radius: 22px;
+  color: white;
+  font-weight: 400;
+  text-align: center;
+  padding-right: 1px;
+  background-color: var(--secondary);
+  font-size: 1rem;
+  padding-top: 1px;
+  transition: 0.3s;
+}
+
+.user-initials:hover {
+  background-color: var(--accent);
+  transition: 0.3s;
+}
+
+.nav-side {
+  position: absolute;
+  right: 31px;
+  float: right;
+  top: 4px;
+
 }

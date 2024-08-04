@@ -1,5 +1,5 @@
 import { meanBy } from 'lodash';
-import { MouseEventHandler } from 'react';
+import { useState, MouseEventHandler } from 'react';
 import { IconTheme } from 'react-hot-toast';
 import {useNavigate} from 'react-router-dom';
 import { LProject } from '../../joiner';
@@ -28,17 +28,33 @@ const Item = (props: ItemProps) => {
     );
 }
 
+const Upload = () => {
+    return(
+        <div className={'upload'}>
+            <i className="bi bi-arrow-up-circle"></i>
+            <p>Drop your jjodel project archive here to import it.</p>
+        </div>
+    );
+};
+
 type MenuProps = {
     children: any;
     title?: string;
+    mode?: "collapsable";
 };
 
 const Menu = (props: MenuProps) => {
+    const [open,setOpen] = useState(true);
 
     return (<>
-        {props.title && <h1>{props.title}</h1>}
-        <div className={'menu border-end'}>
-            {props.children}
+        {props.title && props.mode && open && <i className={'bi bi-chevron-down'} onClick={(e) => setOpen(!open)}></i>}
+        {props.title && props.mode && !open && <i className={'bi bi-chevron-right'} onClick={(e) => setOpen(!open)}></i>}
+        
+        <div className='menu border-bottom'>
+            {props.title && <h1>{props.title}</h1>}
+            <div>
+                {open && props.children}
+            </div>
         </div>
     </>);
 }
@@ -46,6 +62,7 @@ const Menu = (props: MenuProps) => {
 const Divisor = () => {
     return (<hr className='my-1' />);
 };
+
 
 Menu.Item = Item;
 
@@ -65,17 +82,23 @@ function LeftBar(props: Props): JSX.Element {
     ];
 
     return(<div className={'leftbar border-end border-light-subtle '}>
-
+        
+        <i className="bi bi-search"></i>
         <input placeholder={'Search for anything'}type={'text'} name='search-text' />
 
         <Menu>
-            <Item action={'allProjects'} icon={<i className="bi bi-grid"></i>}>All projects</Item>
-            <Item icon={<i className="bi bi-clock"></i>}>Recent</Item>
-            <Divisor/>
+            <Item action={'allProjects'} icon={<i className="bi bi-grid"></i>}>All projects </Item>
+            <Item action={'recent'} icon={<i className="bi bi-clock"></i>}>Recent</Item>
         </Menu>
-        <Menu title={"Starred"}>
-            {props.projects.filter(p => (p.favorite)).map(p => <Item icon={<i className="bi bi-folder2"></i>}>{p.name}</Item>)}
+        <Menu title={"Starred"} mode={'collapsable'}>
+            {props.projects.filter(p => p.favorite).map(p => <Item icon={<i className="bi bi-folder"></i>}>{p.name}</Item>)}
         </Menu>
+        <Menu>
+            <Item action={'templates'} icon={<i className="bi bi-code-square"></i>}>Templates</Item>
+            <Item action={'notes'} icon={<i className="bi bi-pencil-square"></i>}>Notes</Item>
+        </Menu>
+
+        <Upload />
 
 
         {/* 

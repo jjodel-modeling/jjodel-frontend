@@ -24,6 +24,7 @@ import {CSS_Units} from "../view/viewElement/view";
 
 
 function ProjectComponent(props: AllProps): JSX.Element {
+    
     const user = props.user;
     const query = useQuery();
     const id = query.get('id') || '';

@@ -18,6 +18,7 @@ import {
     CommunityPage,
     ProjectPage,
     SettingsPage,
+    TemplatePage,
     UpdatesPage
 } from "./pages";
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
@@ -68,6 +69,7 @@ function App(props: AllProps): JSX.Element {
                     <Route path={'updates'} element={<UpdatesPage />} />
                     <Route path={'community'} element={<CommunityPage />} />
                     <Route path={'allProjects'} element={<AllProjectsPage />} />
+                    <Route path={'templates'} element={<TemplatePage />} />
                     <Route path={'archive'} element={<ArchivePage />} />
                     <Route path={'project'} element={<ProjectPage />} />
                     <Route path={'*'} element={<AccountPage />} />

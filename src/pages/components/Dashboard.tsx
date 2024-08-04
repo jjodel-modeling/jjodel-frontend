@@ -19,9 +19,23 @@ const User = (props: UserProps) => {
 };
 
 
+type TitleProps = {
+    title: string;
+    icon: Element;
+}
+
+const Title = (props: TitleProps) => {
+    return (<>
+        <div className={'user row'}>
+            <div className={'name'}><h2>{props.icon} {props.title}</h2></div>
+        </div>
+    </>);
+};
+
+
 type Props = {
     children?: JSX.Element,
-    active: 'Account'|'Settings'|'Updates'|'Community'|'All'|'Archive',
+    active: 'Account'|'Settings'|'Updates'|'Community'|'All'|'Archive'|'Templates',
     version: Partial<DState["version"]>;
 };
 
@@ -39,8 +53,6 @@ const Catalog = (props: CatalogProps) => {
     </>);
 };
 
-
-
 function Dashboard(props: Props): any {
     const {children, active} = props;
     const user: LUser = LPointerTargetable.fromPointer(DUser.current);
@@ -48,10 +60,17 @@ function Dashboard(props: Props): any {
     return(<>
         <Navbar />
         <div className={"d-flex h-100 w-100"}>
-            <LeftBar projects={user.projects} active={active} />
+            <LeftBar projects={user.projects} active={active}/>
 
-            <div className={'catalog-container'}>
-                <User name={'John Doe'} initials={'JD'} />
+            <div className={'row catalog-container w-100'} style={{marginRight: '20px', height: '10px'}}>
+                <div className={'col'}>
+                    {active === "Templates" && <Title title={'Jjodel Templates'} icon={<i className="bi bi-code-square"></i>} />} 
+                    {active !== "Templates" && <User name={'John Doe'} initials={'JD'} />}
+                </div>
+                <div className={'col text-end'}>
+                    <button className={'add-project'}><i className="bi bi-plus-lg"></i> Project</button>
+                </div>
+
                 <Catalog children={children}/>
             </div>
         </div>

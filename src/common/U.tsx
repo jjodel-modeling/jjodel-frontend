@@ -34,7 +34,7 @@ import {NumberControl, PaletteControl, PaletteType, PathControl, StringControl} 
 import tinycolor from "tinycolor2";
 import util from "util";
 import Convert from "ansi-to-html";
-import {isValidElement} from "react";
+import React, {isValidElement} from "react";
 // var Convert = require('ansi-to-html');
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
@@ -2122,44 +2122,78 @@ export class SelectorOutput {
     resultSetElem!: JQuery<Element>;
 }
 // compare it with event.key
-export enum Keystrokes {
-    clickLeft = 0,
-    clickWheel = 1,
-    clickRight = 2,
-    clickBackMouseButton = 3,
-    clickForwardMouseButton = 4,
+export class Keystrokes {
+    public static clickLeft = 0;
+    public static clickWheel = 1;
+    public static clickRight = 2;
+    public static clickBackMouseButton = 3;
+    public static clickForwardMouseButton = 4;
 
     // keyboard
-    escape = 'Escape',
-    capsLock = 'CapsLock',
-    shift = 'Shift',
-    tab = 'Tab',
-    alt = 'Alt',
-    control = 'Control',
-    end = 'End',
-    home = 'Home',
-    pageUp = 'PageUp',
-    pageDown = 'PageDown',
-    enter = 'Enter', // event.code = 'NumpadEnter' se fatto da numpad, oppure "numpad3", "NumpadMultiply", ShiftLeft, etc...
-    numpadEnter = 'NumpadEnter',
-    audioVolumeMute = 'AudioVolumeMute',
-    audioVolumeUp = 'AudioVolumeUp',
-    audioVolumeDown = 'AudioVolumeDown',
-    mediaTrackPrevious = 'MediaTrackPrevious',
-    delete = 'Delete', // canc
-    backspace = 'Backspace',
-    space = ' ',
-    altGraph = 'AltGraph',
-    arrowLeft = 'ArrowLeft',
-    arrowRight = 'ArrowRight',
-    arrowUp = 'ArrowUp',
-    arrowDown = 'ArrowDown',
-    insert = 'Insert',
-    f1 = 'F1',
+    public static escape = 'Escape';
+    public static capsLock = 'CapsLock';
+    public static shift = 'Shift';
+    public static tab = 'Tab';
+    public static alt = 'Alt';
+    public static cmd = 'Control';
+    public static control = 'Control';
+    public static end = 'End';
+    public static home = 'Home';
+    public static pageUp = 'PageUp';
+    public static pageDown = 'PageDown';
+    public static enter = 'Enter'; // event.code = 'NumpadEnter' se fatto da numpad, oppure "numpad3", "NumpadMultiply", ShiftLeft, etc...
+    public static numpadEnter = 'NumpadEnter';
+    public static audioVolumeMute = 'AudioVolumeMute';
+    public static audioVolumeUp = 'AudioVolumeUp';
+    public static audioVolumeDown = 'AudioVolumeDown';
+    public static mediaTrackPrevious = 'MediaTrackPrevious';
+    public static delete = 'Delete'; // canc
+    public static backspace = 'Backspace';
+    public static space = ' ';
+    public static altGraph = 'AltGraph';
+    public static arrowLeft = 'ArrowLeft';
+    public static arrowRight = 'ArrowRight';
+    public static arrowUp = 'ArrowUp';
+    public static arrowDown = 'ArrowDown';
+    public static insert = 'Insert';
+    public static f1 = 'F1';
     // weird ones:
-    meta = 'Meta', // f1, or other f's with custom binding and windows key
-    unidentified = 'Unidentified', // brightness
-    __NotReacting__ = 'fn, print, maybe others', // not even triggering event?
+    public static meta = 'Meta'; // f1, or other f's with custom binding and windows key
+    public static unidentified = 'Unidentified'; // brightness
+    public static __NotReacting__ = 'fn, print, maybe others'; // not even triggering event?
+    public static register(arr: {function: ()=>any, keystrokes: Key[]){
+
+
+    }
+}
+
+const iconKeys: Dictionary<string, boolean> = {
+    "cmd"   : "bi-command",
+    "alt"   : "bi-alt",
+    "shift" : "bi-shift"
+}; // filled later with a kv of all listed keys
+function bi(key: string){
+    return <i className={"bi " + key} title={windowsKeys[key] || key}/>
+}
+export class Key extends KeyStrokes{
+    public static getKeystrokeJsx(key: string){
+        if (key in NamedKeys) return <span><i className={"bi " + key} title={windowsKeys[key] || key}/></span>;
+        return <span>{key.toUpperCase()}</span>;
+    }
+}
+
+Keystrokes.NamedKeys: Dictionary<string, boolean> = Object.values(Key).reduce((acc, v) => { acc[v] = true; return acc; }, {} as GObject);
+/*const windowsKeys: Dictionary<string, string> = {
+    [Key.cmd]: "ctrl", //'windows'; // <i className="bi bi-windows"></i>
+    [Key.shift]: "shift",
+    [Key.alt]: "alt",
+}*/
+
+function getKeyStrokes(keys?: string[]){
+    if (!keys || !keys.length) return undefined;
+    return <div className={"keystrokes"}>
+        {keys.map(k => getKeystrokeJsx(k))}
+        </div>
 }
 
 export enum DefaultEClasses{

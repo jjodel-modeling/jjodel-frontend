@@ -1,14 +1,13 @@
 import React, {ChangeEvent, MouseEventHandler, Component, Dispatch, ReactElement, useState, useRef } from 'react';
 import {connect} from 'react-redux';
-import {DProject, DState, Log, LProject, Try, U} from '../joiner';
-import {Dictionary, FakeStateProps} from '../joiner/types';
+import {DProject, DState, LProject, Try, U} from '../joiner';
+import {FakeStateProps} from '../joiner/types';
 import {Dashboard, Project} from './components';
 import Storage from "../data/storage";
 
 import {Menu, Item, Divisor} from './components/menu/Menu';
 
 import colors from '../static/img/colors.png';
-import {ProjectsApi} from "../api/persistance";
 
 
 
@@ -16,7 +15,7 @@ type CardsType = {
     children: any;
 };
 
-const Cards = (props: CardsType): any => {
+const Cards = (props: CardsType): any => { 
     return (
         <React.Fragment>
             <div className='row mb-5 commandbar'>
@@ -27,11 +26,12 @@ const Cards = (props: CardsType): any => {
 }
 
 type CardType = {
-    icon: "add" | "import" | "question";
-    style?: "blue" | "red" | "dark" | "clear" | "default";
+    icon: "add" | "import" | "clone" | "question";
+    style?: "blue" | "red" | "dark" | "clear" | "rainbow" | "default";
     title: string;
     subtitle: string;
     action?: MouseEventHandler;
+    children?: JSX.Element[];
 };
 
 const Card = (props: CardType) => {
@@ -39,22 +39,24 @@ const Card = (props: CardType) => {
     const icons = {
         add: "bi-plus-circle",
         import: "bi-box-arrow-in-up",
-        question: "bi-question-square"
+        question: "bi-question-square",
+        clone: "bi-clipboard2-check" 
     };
-
-    return (
+    
+    return (<>
         <div className={`card ${props.style ? props.style : 'default' }`}>
             <div className={'col icon'}>
                 {props.action ?
                     <i onClick={props.action} className={`bi ${icons[props.icon]}`}></i> :
                     <i className={`bi ${icons[props.icon]} disabled`}></i>
-                }
+                }            
             </div>
             <div className={'col body'}>
                 <h5>{props.title}</h5>
                 {props.subtitle}
             </div>
         </div>
+        </>
     );
 }
 
@@ -62,7 +64,7 @@ Cards.Item = Card;
 
 type ChildrenType = {
     projects?: any;
-    children?: any;
+    children?: JSX.Element[];
 };
 
 
@@ -82,7 +84,7 @@ const Catalog = (props: ChildrenType) => {
     }
 
     const CatalogFilters = () => {
-
+    
         function toggleFilters(el: 0|1|2) {
             switch(el) {
                 case 0:
@@ -96,7 +98,7 @@ const Catalog = (props: ChildrenType) => {
                     break;
             }
         };
-
+    
         return (
             <div className={'col left'}>
                 {filters[0] ? <button onClick={(e) => toggleFilters(0)} className='active'>public</button> : <button onClick={(e) => toggleFilters(0)}>public</button>}
@@ -109,7 +111,7 @@ const Catalog = (props: ChildrenType) => {
     const CatalogMode = () => {
         return (<>
             <div className={'col left'}>
-                <div className="float-end">sorted by
+                <div className="float-end">sorted by 
                     <div className={'view-icons'}>
                         <i onClick={(e) => setMode('cards')} className={`bi bi-grid ${mode === "cards" && 'selected'}`}></i>
                         <i onClick={(e) => setMode('list')} className={`bi bi-list ${mode === "list" && 'selected'}`}></i>
@@ -147,11 +149,12 @@ const Catalog = (props: ChildrenType) => {
     type CatalogType = {
         projects: LProject[];
     }
-
+    
     const CatalogReport = (props: CatalogType) =>{
-        let items_public: LProject[] = [];
-        let items_private: LProject[] = [];
-        let items_collaborative: LProject[] = [];
+        
+        let items_public: LProject[] = []; 
+        let items_private: LProject[] = []; 
+        let items_collaborative: LProject[] = []; 
 
 
         if (filters[0]) {
@@ -166,32 +169,32 @@ const Catalog = (props: ChildrenType) => {
 
         //var items  = items_public.concat(items_private,items_collaborative);
 
-        var items = props.projects.filter(p =>
+        var items = props.projects.filter(p => 
             (filters[0] && p.type ==="public" || filters[1] && p.type ==="private" || filters[2] && p.type ==="collaborative" || !filters[0] && !filters[1] && !filters[2]));
-
+        
         return (
-
-            mode === "cards" ?
+            
+            mode == "cards" ?
 
             <div style={{display: (items.length > 0) ? 'flex' : 'flex'}} className={'flex-wrap'} >
 
                 {items.length === 0 && <div>Sorry, there are no results matching your search criteria. Please try again with different filters.</div>}
-
+                
                 {
-                    props.projects.map((p,i) => <>
-                        {filters[0] && p.type === "public" && <Project index={i} key={p.id} data={p} mode={mode} />}
-                        {filters[1] && p.type === "private" && <Project index={i}  key={p.id} data={p} mode={mode} />}
-                        {filters[2] && p.type === "collaborative" && <Project index={i}  key={p.id} data={p} mode={mode} />}
-                        {!filters[0] && !filters[1] && !filters[2] && <Project index={i}  key={p.id} data={p} mode={mode} />}
+                    props.projects.map(p => <>
+                        {filters[0] && p.type === "public" && <Project key={p.id} data={p} mode={mode} />}
+                        {filters[1] && p.type === "private" && <Project key={p.id} data={p} mode={mode} />}
+                        {filters[2] && p.type === "collaborative" && <Project key={p.id} data={p} mode={mode} />}
+                        {!filters[0] && !filters[1] && !filters[2] && <Project key={p.id} data={p} mode={mode} />}
                     </>)
                 }
-
+            
             </div>
 
-            :
+            : 
             <div className={'row project-list'}>
                 <div className='row header'>
-                <div className={'col-sm-1'} style={{width: '30px'}}></div><div className={'col-sm-1'}></div><div className={'col-sm-5'}>Name</div><div className={'col-3'}>Last modified</div><div className={'col-2'}>Created</div>
+                    <div className={'col-6'}>Name</div><div className={'col-3'}>Last modified</div><div className={'col-3'}>Created</div>
                 </div>
                 {
                     props.projects.map(p => <>
@@ -202,9 +205,9 @@ const Catalog = (props: ChildrenType) => {
                     </>)
                 }
             </div>
-
+                
         );
-    };
+    }; 
 
     return (
         <div>
@@ -214,7 +217,6 @@ const Catalog = (props: ChildrenType) => {
             </Header>
             <CatalogSide>
                 <CatalogInfoCard projects={props.projects}/>
-
                 <CatalogReport projects={props.projects}/>
             </CatalogSide>
         </div>
@@ -222,61 +224,57 @@ const Catalog = (props: ChildrenType) => {
 }
 
 
-function createProject(projects: LProject[], name: string = 'Project 1', type: 'public' | 'private' | 'collaborative' = 'public'){
-    ProjectsApi.create('public', name, undefined, undefined, projects);
-}
-const reader = new FileReader();
-reader.onload = async e => {
-    /* Import Project File */
-    const content = String(e.target?.result);
-    if(!content) return;
-    try {
-        const project = JSON.parse(content) as DProject;
-        const projects = Storage.read<DProject[]>('projects') || [];
-        const filtered = projects.filter(p => p.id !== project.id);
-        filtered.push(project);
-        Storage.write('projects', filtered);
-        U.refresh();
-    } catch (e) {alert('Invalid File.')}
-}
 
 function importModal() {
-    let extensions = ['*.jjodel'];
-    U.fileRead((e: any, files?: FileList | null, fileContents?: string[]) => {
-        //const files = e.target.files || [];
-        if (!files?.length) return;
-        const file = files[0];
-        reader.readAsText(file);
-    }, extensions, true);
+    alert('');
 }
 
 function AllProjectsComponent(props: AllProps): JSX.Element {
     const {projects} = props;
+
+    const reader = new FileReader();
+    reader.onload = async e => {
+        /* Import Project File */
+        const content = String(e.target?.result);
+        if(!content) return;
+        try {
+            const project = JSON.parse(content) as DProject;
+            const projects = Storage.read<DProject[]>('projects') || [];
+            const filtered = projects.filter(p => p.id !== project.id);
+            filtered.push(project);
+            Storage.write('projects', filtered);
+            U.refresh();
+        } catch (e) {alert('Invalid File.')}
+    }
+    
+    const importProject = async(e: ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files || [];
+        if(!files.length) return;
+        const file = files[0];
+        reader.readAsText(file);
+    }
+
+
+
+
     return(<Try>
-        <Dashboard active={'All'} version={props.version}>
-            <React.Fragment>
+        <Dashboard active={'Templates'} version={props.version}>
+            
+            <React.Fragment>                
 
                 <Cards>
                     <Cards.Item
-                        title={'New jjodel'}
-                        subtitle={'Create a new jjodel project.'}
-                        icon={'add'}
-                        style={'red'}
-                        action={(e) => {ProjectsApi.create('public', 'Project 0', undefined, undefined, projects)}}
-                    />
-                    <Cards.Item
-                        title={'Import jjodel'}
-                        subtitle={'Import an existing jjodel project.'}
-                        icon={'import'}
-                        style={'blue'}
-                        action={(e) => importModal()}
+                        title={'Clone a template'} 
+                        subtitle={'Clone a template in your workspace.'}
+                        icon={'clone'} 
+                        style={'rainbow'}   
                     />
                     {true && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
                 </Cards>
 
                 <Catalog projects={projects} />
-
             </React.Fragment>
+            
         </Dashboard>
     </Try>);
 }
@@ -308,9 +306,9 @@ const AllProjectsConnected = connect<StateProps, DispatchProps, OwnProps, DState
     mapDispatchToProps
 )(AllProjectsComponent);
 
-const AllProjectsPage = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+const TemplatePage = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
     return <AllProjectsConnected {...{...props, children}} />;
 }
 
-export {AllProjectsPage};
+export {TemplatePage};
 

@@ -1,20 +1,22 @@
 /* COLOR SCHEME */
 
-.nav-container {
+.nav-container, .footer, .catalog-container {
     --color: #233d4d;
-    --accent: #f3b700;
+    --accent: #087E8B; //#f3b700;
     --bg-1: white;
     --bg-2: #f5f5f5;
     --bg-3: #e2e2e1;
+    --bg-3-1: #c3c3c1;
     --bg-4: #8f908e;
     --bg-5: #525251;
     --danger: #ed474a;
     --success: #3ddc97;
-    --side-padding: 2em;
+    --side-padding: 31px;
     --sep-padding: 4em;
+    --secondary: #087e8b;
 }
 
-.footer {
+/* .footer {
     --color: #233d4d;
     --accent: #f3b700;
     --bg-1: white;
@@ -27,7 +29,7 @@
     --success: #3ddc97;
     --side-padding: 2em;
     --sep-padding: 4em;
-}
+}*/
 
 
 /* EDITORS */
@@ -237,3 +239,27 @@ used by Navbar_NEW_OLD.tsx (purple version)
 .my-navbar > .items-container > .sub-items-container > .sub-item:hover {
     text-decoration: underline;
 }*/
+
+
+.nav-container {
+    border-bottom: 1px solid var(--bg-3);
+
+}
+
+.add-project {
+    margin-right: 0;
+    padding-right: '0'!important;
+    background-color: var(--secondary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 20px 4px 12px;
+}
+
+.add-project:hover {
+    background-color: var(--bg-5);
+}
+
+.add-project .bi, .add-project:hover .bi {
+    color: white;
+}

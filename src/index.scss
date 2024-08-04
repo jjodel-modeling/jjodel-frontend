@@ -28,8 +28,10 @@ body {
 
 .catalog-container {
     position: relative;
-    margin-left: calc(12% + 50px);
-    max-width: 82%;
+    margin-left: 36px;
+    margin-right: 36px;
+    margin-top: 72px;
+    width: auto;
     min-height: 75%;
     padding-bottom: 2em;
 
@@ -45,14 +47,17 @@ body {
 .catalog-container .user .name h2 {
     font-weight: 400;
 }
-
+.catalog-container .user .name h2 .bi {
+    color: var(--secondary);
+}
 .catalog-container .user .initials {
     text-align: center;
     font-size: 1.5em;
     width: 2.2em;
     height: 2.2em;
     padding-top: 6px;
-    margin-left: 14px;
+    padding-left: 10px;
+    margin-left: 16px;
     color: white;
     border-radius: 30px;
     background-color: #087E8B;
@@ -63,7 +68,7 @@ body {
     position: absolute;
     width: 100%;
     padding: 0;
-    padding-right: 290px;
+    padding-right: 245px;
 
 }
 
@@ -76,7 +81,7 @@ body {
 .catalog-container .catalog-header button {
     color: var(--bg-4);
     background-color: transparent;
-    font-size: 0.9em;
+    font-size: 1em;
     font-weight: 400;
     padding: 4px 10px;
     border: none;
@@ -147,28 +152,29 @@ body {
     float: right;
 }
 .view-icons .bi {
-    font-size: 1.2em;
-    margin-left: 0.6em;
+    font-size: 1.5em;
+    margin-left: 2px;
+    border-radius: 4px;
+    padding: 2px 4px 2px 4px;
 }
 .view-icons .bi-list {
-    font-size: 1.4em;
+    font-size: 1.5em;
 }
 
 .view-icons .bi.selected {
     background-color: var(--bg-3);
-    border-radius: 4px;
-    padding: 2px;
 }
 
 .details {
     position: absolute;
     float: right;
-    width: 260px;
+    width: 253px;
     right: 0;
     border: 1px solid var(--bg-3);
     border-radius: 8px;
     padding: 1.2em;
     top: 0px;
+    right: 0px;
 }
 
 .commandbar .blue {
@@ -185,6 +191,17 @@ body {
 
 .commandbar .dark {
     background: linear-gradient(90deg, hsla(208, 33%, 21%, 1) 0%, hsla(211, 36%, 46%, 1) 100%);
+    color: white;
+    border: none;
+
+    & .bi {
+        color: white;
+    }
+}
+
+.commandbar .rainbow {
+    background: linear-gradient(90deg, hsla(182, 64%, 53%, 1) 0%, hsla(34, 98%, 50%, 1) 50%, hsla(323, 100%, 47%, 1) 100%);
+
     color: white;
     border: none;
 

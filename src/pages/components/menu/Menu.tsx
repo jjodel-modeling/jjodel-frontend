@@ -59,6 +59,7 @@ export const Divisor = () => {
 };
 
 type ItemType = {
+    icon?: any;
     children: any;
     action?: MouseEventHandler;
     keystroke?: string; 
@@ -66,10 +67,9 @@ type ItemType = {
 
 export const Item = (props: ItemType) => {
     return(<>
-        {props.action && props.keystroke &&  <div onClick={props.action} className={'item'}>{props.children} <span>{parse(props.keystroke)}</span></div>} 
-        {props.action && !props.keystroke &&  <div onClick={props.action} className={'item'}>{props.children}</div>} 
-        {!props.action  &&  <div className={'item disabled'}>{props.children}</div>} 
-
+        {props.action && props.keystroke &&  <div onClick={props.action} className={'item'}>{props.icon ? props.icon: <i className="bi bi-app"></i>} {props.children} <span>{parse(props.keystroke)}</span></div>} 
+        {props.action && !props.keystroke &&  <div onClick={props.action} className={'item'}>{props.icon ? props.icon: <i className="bi bi-app"></i>} {props.children}</div>} 
+        {!props.action  &&  <div className={'item disabled'}>{props.icon ? props.icon: <i className="bi bi-app"></i>} {props.children}</div>} 
     </>);
 }
 

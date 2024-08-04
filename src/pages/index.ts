@@ -4,5 +4,6 @@ export {AuthPage} from './Auth';
 export {ArchivePage} from './Archive';
 export {CommunityPage} from './Community';
 export {SettingsPage} from './Settings';
+export {TemplatePage} from './Templates';
 export {UpdatesPage} from './Updates';
 export {ProjectPage} from './Project';
