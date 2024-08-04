@@ -92,9 +92,6 @@ body > .dragging-layer > div:last-child {
   width: 0px;
   height: 0px;
 }
-.dock-tab-btn {
-  padding-top: 0!important;
-}
 /*
 .dock-tab-btn:has(.dock-tab-close-btn) {
   padding-top: 4px!important;
@@ -322,10 +319,6 @@ body > .dragging-layer > div:last-child {
   position: relative;
   transition: transform 0.3s;
   height: min-content;
-}
-.dock-extra-content {
-  display: flex;
-  height: 30px;
 }
 .dock-dropdown {
   box-sizing: border-box;

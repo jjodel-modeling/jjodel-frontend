@@ -234,6 +234,37 @@
 .dock-tab-close-btn:focus {
     opacity: 1;
 }
+.tablist{
+    height: 100%; // if it's auto i cannot set h-100 on subelements
+}
+.dock-nav-operations{
+    float: right;
+    height: 100%;
+    .dock-nav-more{
+        margin: auto;
+    }
+}
+.dock-extra-content {
+    /*display: flex;
+    height: 30px;*//*
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0.5rem;*/
+    float: right;
+    height: 100%;
+    margin-right: 0.5rem;
+    width: auto;
+    display: flex;
+    .dock-panel-max-btn{
+        position: unset; // overrides default style
+        margin: auto;
+        width: 1.25ric;
+        &:hover{
+            transform: scale(1.1);
+        }
+    }
+}
 
 .dock-tab-close-btn{
     background-image: none;
