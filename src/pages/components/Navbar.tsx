@@ -4,7 +4,7 @@ import {
     Dictionary, DModel,
     DState,
     DUser,
-    GObject, LGraph,
+    GObject, Keystrokes, LGraph,
     LModel, LPackage,
     LProject,
     LUser,
@@ -28,27 +28,10 @@ import {Menu, Item, Divisor} from '../components/menu/Menu';
 
 import jj from '../../static/img/jj-k.png';
 
-enum Key{
-    "cmd"   = "bi-command",
-    "alt"   = "bi-alt",
-    "shift" = "bi-shift",
-}
-
-const NamedKeys: Dictionary<string, boolean> = Object.values(Key).reduce((acc, v) => { acc[v] = true; return acc; }, {} as GObject);
-const windowsKeys: Dictionary<string, string> = {
-    [Key.cmd]: "ctrl", //'windows'; // <i className="bi bi-windows"></i>
-    [Key.shift]: "shift",
-    [Key.alt]: "alt",
-}
-
-function getKeystrokeJsx(key: string){
-    if (key in NamedKeys) return <span><i className={"bi " + key} title={windowsKeys[key] || key}/></span>;
-    return <span>{key.toUpperCase()}</span>;
-}
 function getKeyStrokes(keys?: string[]){
     if (!keys || !keys.length) return undefined;
     return <div className={"keystrokes"}>
-        {keys.map(k => getKeystrokeJsx(k))}
+        {keys.map(k => Keystrokes.getKeystrokeJsx(k))}
     </div>
 }
 
@@ -134,18 +117,19 @@ function NavbarComponent(props: AllProps) {
 
     const menuType = "normal";
 
+    const K = Keystrokes;
     const projectItems: MenuEntry[] = [
 
-        {name: 'New metamodel', icon: <i className="bi bi-plus-square"></i>, function: ()=>createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
+        {name: 'New metamodel', icon: <i className="bi bi-plus-square"></i>, function: ()=>createM2(project), keystroke: [K.alt, K.cmd, 'M']},
         {name: 'New model', icon: <i className="bi bi-plus-square"></i>, function: async() => {}, keystroke: []},
         {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Close project', icon: <i className="bi bi-dash-square"></i>, function: () => {window.location = window.location.origin + '/#/allProjects' as any}, keystroke: [Key.cmd, 'Q']},
+        {name: 'Close project', icon: <i className="bi bi-dash-square"></i>, function: () => {window.location = window.location.origin + '/#/allProjects' as any}, keystroke: [K.cmd, 'Q']},
         {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Undo', icon: <i className="bi bi-arrow-counterclockwise"></i>, function: async() => {}, keystroke: [Key.cmd, 'Z']},
-        {name: 'Redo', icon: <i className="bi bi-arrow-clockwise"></i>, function: async() => {}, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
+        {name: 'Undo', icon: <i className="bi bi-arrow-counterclockwise"></i>, function: async() => {}, keystroke: [K.cmd, 'Z']},
+        {name: 'Redo', icon: <i className="bi bi-arrow-clockwise"></i>, function: async() => {}, keystroke: [K.shift, K.cmd, 'Z']}, // maybe better cmd + Y ?
         {name: 'divisor', icon: <></>, function: async() => {}, keystroke: []},
-        {name: 'Save', icon: <i className="bi bi-upload"></i>, function: async() => {project && await ProjectsApi.save(project)}, keystroke: [Key.cmd, 'S']},
-        {name: 'Save as', icon: <i className="bi bi-upload"></i>, function: async() => {}, keystroke: [Key.shift, Key.cmd, 'S']},
+        {name: 'Save', icon: <i className="bi bi-upload"></i>, function: async() => {project && await ProjectsApi.save(project)}, keystroke: [K.cmd, 'S']},
+        {name: 'Save as', icon: <i className="bi bi-upload"></i>, function: async() => {}, keystroke: [K.shift, K.cmd, 'S']},
         {name: 'divisor', function: async() => {}, keystroke: []},
         {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: async() => {}, keystroke: []},
         {name: 'Export as...', icon: <i className="bi bi-arrow-bar-right"></i>, function: async() => {}, keystroke: []},
@@ -158,9 +142,9 @@ function NavbarComponent(props: AllProps) {
                 {name: 'divisor', function: async() => {}, keystroke: []},
                 {name: 'Maximize editor', icon: <i className="bi bi-arrows-fullscreen"></i>, function: async() => {}, keystroke: []},
                 {name: 'divisor', function: async() => {}, keystroke: []},
-                {name: 'Zoom in', icon: <i className="bi bi-zoom-in"></i>, function: async() => {}, keystroke: [Key.cmd, '+']},
-                {name: 'Zoom out', icon: <i className="bi bi-zoom-out"></i>, function: async() => {}, keystroke: [Key.cmd, '-']},
-                {name: 'Zoom to 100%', function: async() => {}, keystroke: [Key.cmd, '0']},
+                {name: 'Zoom in', icon: <i className="bi bi-zoom-in"></i>, function: async() => {}, keystroke: [K.cmd, '+']},
+                {name: 'Zoom out', icon: <i className="bi bi-zoom-out"></i>, function: async() => {}, keystroke: [K.cmd, '-']},
+                {name: 'Zoom to 100%', function: async() => {}, keystroke: [K.cmd, '0']},
             ],
             keystroke: []
         },
@@ -180,10 +164,12 @@ function NavbarComponent(props: AllProps) {
 
     ];
 
+    const createProject = ()=>ProjectsApi.create('public', undefined, undefined, undefined, props.user.projects);
+
     const dashboardItems: MenuEntry[] = [
 
-        {name: 'New project', icon: <i className="bi bi-plus-square"></i>, function: ()=>alert('new project'), keystroke: [Key.cmd, 'N']},
-        {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: async() => {}, keystroke: []},
+        {name: 'New project', icon: <i className="bi bi-plus-square"></i>, function: createProject, keystroke: [K.cmd, 'M']},
+        {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: ProjectsApi.importModal, keystroke: []},
         {name: 'divisor', function: async() => {}, keystroke: []},
         {name: 'Help', icon: <i className="bi bi-question-square"></i>, subItems: [
             {name: 'What\'s new', icon: <i className="bi bi-clock"></i>, function: async() => {}, keystroke: []},
@@ -197,7 +183,7 @@ function NavbarComponent(props: AllProps) {
         keystroke: []},
         {name: 'About jjodel', icon: <img src={jj} width={15}/>, function: async() => {}, keystroke: []},
         {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {}, keystroke: [Key.cmd, 'Q']},
+        {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {}, keystroke: [K.cmd, 'Q']},
 
         /* {name: 'Project',
             subItems: [
@@ -211,6 +197,9 @@ function NavbarComponent(props: AllProps) {
             ]
         }*/
     ];
+
+    let itemsToRegister: MenuEntry[] = [...dashboardItems/*, ...projectItems*/];
+    Keystrokes.register('#root', Object.values(itemsToRegister));
 
     const MainMenu = () => {
 

@@ -3,6 +3,7 @@ import {DUser, LPointerTargetable} from '../../joiner';
 import {Navbar, LeftBar} from './';
 
 import '../style.scss'
+import {ReactElement} from "react";
 
 type UserProps = {
     name: string;
@@ -21,7 +22,7 @@ const User = (props: UserProps) => {
 
 type TitleProps = {
     title: string;
-    icon: Element;
+    icon: ReactElement;
 }
 
 const Title = (props: TitleProps) => {
@@ -59,12 +60,12 @@ function Dashboard(props: Props): any {
 
     return(<>
         <Navbar />
-        <div className={"d-flex h-100 w-100"}>
+        <div className={"d-flex h-100 w-100"} tabIndex={-1}>
             <LeftBar projects={user.projects} active={active}/>
 
             <div className={'row catalog-container w-100'} style={{marginRight: '20px', height: '10px'}}>
                 <div className={'col'}>
-                    {active === "Templates" && <Title title={'Jjodel Templates'} icon={<i className="bi bi-code-square"></i>} />} 
+                    {active === "Templates" && <Title title={'Jjodel Templates'} icon={<i className="bi bi-code-square"></i>} />}
                     {active !== "Templates" && <User name={'John Doe'} initials={'JD'} />}
                 </div>
                 <div className={'col text-end'}>

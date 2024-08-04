@@ -10,7 +10,7 @@ interface StateProps {
 
 
 type Props = {
-    active: 'Account'|'Settings'|'Updates'|'Community'|'All'|'Archive';
+    active: 'Account'|'Settings'|'Updates'|'Community'|'All'|'Archive'|'Templates';
     projects: LProject[];
 };
 
@@ -49,7 +49,7 @@ const Menu = (props: MenuProps) => {
     return (<>
         {props.title && props.mode && open && <i className={'bi bi-chevron-down'} onClick={(e) => setOpen(!open)}></i>}
         {props.title && props.mode && !open && <i className={'bi bi-chevron-right'} onClick={(e) => setOpen(!open)}></i>}
-        
+
         <div className='menu border-bottom'>
             {props.title && <h1>{props.title}</h1>}
             <div>
@@ -69,7 +69,7 @@ Menu.Item = Item;
 function LeftBar(props: Props): JSX.Element {
     const {active} = props;
     const navigate = useNavigate();
-    
+
     const info = [
         {icon: 'person-fill', link: 'account', label: 'Account'},
         {icon: 'gear-fill', link: 'settings', label: 'Settings'},
@@ -82,7 +82,7 @@ function LeftBar(props: Props): JSX.Element {
     ];
 
     return(<div className={'leftbar border-end border-light-subtle '}>
-        
+
         <i className="bi bi-search"></i>
         <input placeholder={'Search for anything'}type={'text'} name='search-text' />
 
@@ -101,8 +101,8 @@ function LeftBar(props: Props): JSX.Element {
         <Upload />
 
 
-        {/* 
-        
+        {/*
+
         <b className={'d-block px-1 mt-2'}>Generals</b>
         {info.map((data, i) => <div key={i} onClick={e => navigate(`/${data.link}`)} className={`${active === data.label && 'bg-gray'} p-2`} tabIndex={-1}>
             <i style={{fontSize: '1.2em'}} className={`bi bi-${data.icon}`} />
@@ -114,10 +114,10 @@ function LeftBar(props: Props): JSX.Element {
             <i style={{fontSize: '1.2em'}} className={`bi bi-${data.icon}`} />
             <label className={'ms-2 my-auto'}>{data.label}</label>
         </div>)}
-        
+
         */}
     </div>
-    
+
     )
 }
 

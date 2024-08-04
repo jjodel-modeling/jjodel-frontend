@@ -13,8 +13,7 @@ import Storage from "../../data/storage";
 import Api from "../../data/api";
 
 class ProjectsApi {
-    static async create(type: DProject['type'], name: DProject['name'], m2: Pointer<DModel>[] = [], m1: Pointer<DModel>[] = [], otherProjects?: LProject[]): Promise<DProject> {
-
+    static async create(type: DProject['type'], name?: DProject['name'], m2: Pointer<DModel>[] = [], m1: Pointer<DModel>[] = [], otherProjects?: LProject[]): Promise<DProject> {
         const project = DProject.new(type, name, undefined, m2, m1, undefined, otherProjects);
         if(U.isOffline()) Offline.create(project);
         else await Online.create(project);
@@ -38,6 +37,31 @@ class ProjectsApi {
         SetRootFieldAction.new('_lastSelected', undefined);
         if(U.isOffline()) await Offline.save(project.__raw as DProject);
         else await Online.save(project.__raw as DProject);
+    }
+
+    static importModal() {
+        const reader = new FileReader();
+        reader.onload = async e => {
+            /* Import Project File */
+            const content = String(e.target?.result);
+            if(!content) return;
+            try {
+                const project = JSON.parse(content) as DProject;
+                const projects = Storage.read<DProject[]>('projects') || [];
+                const filtered = projects.filter(p => p.id !== project.id);
+                filtered.push(project);
+                Storage.write('projects', filtered);
+                U.refresh();
+            } catch (e) {alert('Invalid File.')}
+        }
+
+        let extensions = ['*.jjodel'];
+        U.fileRead((e: any, files?: FileList | null, fileContents?: string[]) => {
+            //const files = e.target.files || [];
+            if (!files?.length) return;
+            const file = files[0];
+            reader.readAsText(file);
+        }, extensions, true);
     }
 }
 

@@ -2120,12 +2120,23 @@ export class DProject extends DPointerTargetable {
 
     state!: string;
 
-    public static new(type: DProject['type'], name: string, state?: DProject['state'],
+    public static new(type: DProject['type'], name?: string, state?: DProject['state'],
                       m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id'], otherProjects?:LProject[]): DProject {
+
         // fix name
         if (!otherProjects) otherProjects = LPointerTargetable.fromPointer(DUser.current).projects;
-        let allProjectNames: Dictionary<string, LProject> = U.objectFromArray(otherProjects, (p)=>p.name);
-        name = U.increaseEndingNumber(name, false, false, (s)=>!!allProjectNames[s]);
+        if (!name) {
+            // autofix default name
+            let regexp = /Project \d+/;
+            let maxnum = Math.max(...otherProjects.map(p=>(+(regexp.exec(p.name)?.[1] as any) || 0)));
+            name = 'Project ' + ( 1 + maxnum);
+            console.log("autoname project", {name, maxnum, regexp, otherProjects, on: otherProjects.map(p=>p.name)});
+        }
+        else {
+            // autofix manually inputted name
+            let allProjectNames: Dictionary<string, LProject> = U.objectFromArray(otherProjects, (p)=>p.name);
+            name = U.increaseEndingNumber(name, false, false, (s)=>!!allProjectNames[s]);
+        }
 
         return new Constructors(new DProject('dwc'), undefined, true, undefined)
             .DPointerTargetable().DProject(type, name, state || '', m2 || [], m1 || [], id).end(); }

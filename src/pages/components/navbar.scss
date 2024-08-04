@@ -23,7 +23,7 @@
     margin: 10px 0px 10px 0px;
     padding-top: 2px;
     height: 25px;
-    
+
     &:hover{
       /* background-color: #f5f5f5;
       border-radius: 4px;*/
@@ -93,6 +93,7 @@
   height: auto;
   padding: 0px var(--side-padding);
   font-weight: 200;
+  --palette-1-hover: var(--accent);
 
   .nav-hamburger {
     width: 270px!important;
@@ -102,10 +103,12 @@
     display: block;
     margin-top: auto;
     margin-bottom: auto;
-    transition: 0.3s;
-    .bi:hover {
-      color: var(--accent);
+    >.bi::before{
+      transform: rotate(0deg);
       transform-origin: center;
+      transition: 0.3s linear transform; // ease-in-out
+    }
+    >.bi:hover::before{
       transform: rotate(180deg);
     }
     label div {
@@ -193,6 +196,7 @@
   width: auto;
 }
 .nav-container .content.context-menu ul{
+  --palette-1-hover: white;
   width: max-content;
   min-width: 100%;
   padding: 4px 0px;
@@ -222,20 +226,45 @@
         height: 18px;
         display: flex;
         justify-content: end;
+        margin: auto;
+        margin-left: 1rem;
 
         >*{
           font-size: 12px;
-          i.bi{
-            font-size: inherit;
-            &:hover{
-              color: var(--color-1);
-            }
-          }
           width: 1.1ic;
           // border: 1px solid red;
           text-align:center;
+          order: 1;
+          vertical-align: middle;
+          height: 100%;
+          &::before{
+            vertical-align: middle;
+            height: 100%;
+          }
         }
+        i.bi{
+          font-size: inherit;
+          &:hover{
+            color: var(--color-1);
+          }
+        }
+        .bi-shift{
+          order: -1;
+        }
+        >.text-icon{
+          width: 2ic;
+          order: 0;
+        }
+
       }
+    }
+  }
+}
+.win{
+  .keystrokes{
+    line-height: 1.7;
+    .bi-shift{
+
     }
   }
 }

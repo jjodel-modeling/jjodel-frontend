@@ -180,9 +180,9 @@ const Catalog = (props: ChildrenType) => {
                 {
                     props.projects.map((p,i) => <>
                         {filters[0] && p.type === "public" && <Project index={i} key={p.id} data={p} mode={mode} />}
-                        {filters[1] && p.type === "private" && <Project index={i}  key={p.id} data={p} mode={mode} />}
-                        {filters[2] && p.type === "collaborative" && <Project index={i}  key={p.id} data={p} mode={mode} />}
-                        {!filters[0] && !filters[1] && !filters[2] && <Project index={i}  key={p.id} data={p} mode={mode} />}
+                        {filters[1] && p.type === "private" && <Project index={i} key={p.id} data={p} mode={mode} />}
+                        {filters[2] && p.type === "collaborative" && <Project index={i} key={p.id} data={p} mode={mode} />}
+                        {!filters[0] && !filters[1] && !filters[2] && <Project index={i} key={p.id} data={p} mode={mode} />}
                     </>)
                 }
 
@@ -222,36 +222,10 @@ const Catalog = (props: ChildrenType) => {
 }
 
 
-function createProject(projects: LProject[], name: string = 'Project 1', type: 'public' | 'private' | 'collaborative' = 'public'){
-    ProjectsApi.create('public', name, undefined, undefined, projects);
-}
-const reader = new FileReader();
-reader.onload = async e => {
-    /* Import Project File */
-    const content = String(e.target?.result);
-    if(!content) return;
-    try {
-        const project = JSON.parse(content) as DProject;
-        const projects = Storage.read<DProject[]>('projects') || [];
-        const filtered = projects.filter(p => p.id !== project.id);
-        filtered.push(project);
-        Storage.write('projects', filtered);
-        U.refresh();
-    } catch (e) {alert('Invalid File.')}
-}
-
-function importModal() {
-    let extensions = ['*.jjodel'];
-    U.fileRead((e: any, files?: FileList | null, fileContents?: string[]) => {
-        //const files = e.target.files || [];
-        if (!files?.length) return;
-        const file = files[0];
-        reader.readAsText(file);
-    }, extensions, true);
-}
 
 function AllProjectsComponent(props: AllProps): JSX.Element {
     const {projects} = props;
+    const createProject = ()=>ProjectsApi.create('public', undefined, undefined, undefined, projects);
     return(<Try>
         <Dashboard active={'All'} version={props.version}>
             <React.Fragment>
@@ -262,14 +236,14 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
                         subtitle={'Create a new jjodel project.'}
                         icon={'add'}
                         style={'red'}
-                        action={(e) => {ProjectsApi.create('public', 'Project 0', undefined, undefined, projects)}}
+                        action={createProject}
                     />
                     <Cards.Item
                         title={'Import jjodel'}
                         subtitle={'Import an existing jjodel project.'}
                         icon={'import'}
                         style={'blue'}
-                        action={(e) => importModal()}
+                        action={ProjectsApi.importModal}
                     />
                     {true && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
                 </Cards>

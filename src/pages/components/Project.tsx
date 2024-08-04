@@ -14,6 +14,7 @@ type Props = {
     data: LProject;
     mode?: string;
     key: any;
+    index?: number; // a che serve? si può togliere?
 };
 
 type ProjectTypeType = {
@@ -58,9 +59,8 @@ function Project(props: Props): JSX.Element {
     /* CARDS */
 
     var sectionStyle = {
-        backgroundImage: `url(${card}),
-        backgroundSize: 'contain'`
-
+        backgroundImage: `url(${card})`,
+        backgroundSize: 'contain'
      }
 
     function ProjectCard(props: Props): JSX.Element {
