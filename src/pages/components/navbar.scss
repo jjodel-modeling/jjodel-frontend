@@ -87,14 +87,37 @@
 
 
 .nav-container {
+  position: relative;
   display: flex;
+  border-bottom: 1px solid var(--bg-3);
   background-color: var(--bg-1);
   height: 32px;
   padding: 0px var(--side-padding);
   font-weight: 200;
   --palette-1-hover: var(--accent);
 
+
+  .nav-logo {
+    // margin: auto;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    pointer-events: none;
+    display: flex;
+    &>.aligner{
+      margin: auto;
+      pointer-events: all;
+    }
+  }
+  .nav-commands{
+    margin-right: 3rem;
+    margin-left: auto;
+  }
+
   .nav-hamburger {
+    margin-right: auto;
     color: var(--color);
     font-size: 1.5em;
     padding-right: 0;
@@ -121,12 +144,6 @@
   font-size: 0.75em;
   padding-top: 2px;
   font-weight: 800;
-}
-
-.nav-container .nav-logo {
-  margin-top: auto;
-  margin-bottom: auto;
-  text-align: center;
 }
 
 .nav-commands {

@@ -35,6 +35,7 @@ class DefaultViews {
         const view = DViewElement.new2(
             'Model', DSL.parser(DV.modelView()), vp,(d)=> {
                 d.appliableTo = 'Graph';
+                d.appliableToClasses = [DModel.cname];
                 d.oclCondition = 'context DModel inv: true';
                 d.draggable = false; d.resizable = false;
                 d.palette = {

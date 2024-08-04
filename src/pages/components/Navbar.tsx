@@ -109,7 +109,7 @@ const User = (props: UserProps) => {
     var name = "Alfonso Pierantonio";
     var initials = name.split(" ").map((n)=>n[0]).join("");
     return (<>
-        <div className={'col-2 user text-end'}><div style={{display: 'inline-block', marginRight: '4px', fontWeight: '400', paddingTop: '2px', textAlign: 'center', color: 'white', height: '24px', width: '24px', borderRadius: '20px', backgroundColor: 'var(--secondary)'}}>{initials}</div> Alfonso <b>Pierantonio</b></div>
+        <div className={'user text-end'}><div style={{display: 'inline-block', marginRight: '4px', fontWeight: '400', paddingTop: '2px', textAlign: 'center', color: 'white', height: '24px', width: '24px', borderRadius: '20px', backgroundColor: 'var(--secondary)'}}>{initials}</div> Alfonso <b>Pierantonio</b></div>
     </>);
 };
 
@@ -210,7 +210,7 @@ function NavbarComponent(props: AllProps) {
     const MainMenu = (props: MenuProps) => {
 
         return(
-            <div className='col-5 nav-hamburger hoverable' tabIndex={0}>
+            <div className='nav-hamburger hoverable' tabIndex={0}>
                 <i className="bi bi-grid-3x3-gap-fill list"></i>
                 <div className={'content context-menu'}>
                     <ul>
@@ -223,22 +223,24 @@ function NavbarComponent(props: AllProps) {
 
     const Logo = () => {
         return (
-        <div className='col-1 nav-logo'>
-            <img height={24} src={logo} alt={'jjodel logo'} onContextMenu={(e)=>{ e.preventDefault(); SetRootFieldAction.new('debug', !props.debug)}}/>
-            {props.debug && <img alt='debug' height={24} src={DebugImage}/>}
+        <div className='nav-logo'>
+            <div className={"aligner"}>
+                <img className="logo" height={24} src={logo} alt={'jjodel logo'} onContextMenu={(e)=>{ e.preventDefault(); SetRootFieldAction.new('debug', !props.debug)}}/>
+                {props.debug && <img alt='debug' height={24} src={DebugImage}/>}
+            </div>
         </div>
         );
     }
 
     const Commands = () => {
-        return (<div className='col text-end nav-commands'>
+        return (<div className='text-end nav-commands'>
             {project && <Toggle name={'mode'} values={{false: 'base', true: 'advanced'}} labels={{false: 'base', true: 'advanced'}}/>}
         </div>);
     };
 
     const UserMenu = () => {
         return (<>
-            <div className='col-1 text-end nav-side'>
+            <div className='text-end nav-side'>
                 <div style={{float: 'right', left: '300px!important', marginTop: '2px'}}>
                     <Menu position={'left'}>
                         <Item icon={icon['dashboard']} action={() => {navigate('/allProjects')}}>Dashboard</Item>
