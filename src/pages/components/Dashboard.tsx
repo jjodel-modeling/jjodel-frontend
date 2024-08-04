@@ -34,9 +34,10 @@ const Title = (props: TitleProps) => {
 };
 
 
-type Props = {
+export type DashProps = {
     children?: JSX.Element,
-    active: 'Account' | 'All' | 'Recent' | 'Notes' | 'Profile' | 'Settings' | 'Templates' |  'Updates',
+    // NB: account and profile are both used, i don't know which to keep
+    active: 'Account'|'Profile'|'Settings'|'Updates'|'Community'|'All'|'Archive'|'Templates'|'Recent' | 'Notes';
     version: Partial<DState["version"]>;
 };
 
@@ -54,7 +55,7 @@ const Catalog = (props: CatalogProps) => {
     </>);
 };
 
-function Dashboard(props: Props): any {
+function Dashboard(props: DashProps): any {
 
     const {children, active} = props;
     const user: LUser = LPointerTargetable.fromPointer(DUser.current);

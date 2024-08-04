@@ -5,14 +5,15 @@ import {useNavigate} from 'react-router-dom';
 import { LProject } from '../../joiner';
 
 import { icon } from './icons/Icons';
+import {DashProps} from "./Dashboard";
 
 interface StateProps {
     projects: LProject[];
 }
 
 
-type Props = {
-    active: 'Account'|'Settings'|'Updates'|'Community'|'All'|'Archive'|'Templates';
+export type LeftBarProps = {
+    active: DashProps['active']; // prende il tipo dal parent-component, così si evita di aggiornare entrambi o avere tipi discordanti.
     projects: LProject[];
 };
 
@@ -67,11 +68,12 @@ const Divisor = () => {
 
 Menu.Item = Item;
 
-function LeftBar(props: Props): JSX.Element {
+function LeftBar(props: LeftBarProps): JSX.Element {
     const {active} = props;
     const navigate = useNavigate();
 
 
+    const selectProject=()=> alert('todo: la funzione era inesistente nel pull');
 
     return(<div className={'leftbar border-end border-light-subtle '}>
 

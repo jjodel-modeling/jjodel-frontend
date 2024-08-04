@@ -2127,15 +2127,18 @@ export class DProject extends DPointerTargetable {
         if (!otherProjects) otherProjects = LPointerTargetable.fromPointer(DUser.current).projects;
         if (!name) {
             // autofix default name
-            let regexp = /Project \d+/;
-            let maxnum = Math.max(...otherProjects.map(p=>(+(regexp.exec(p.name)?.[1] as any) || 0)));
-            name = 'Project ' + ( 1 + maxnum);
-            console.log("autoname project", {name, maxnum, regexp, otherProjects, on: otherProjects.map(p=>p.name)});
+            let regexp = /Project (\d+)/;
+            const matches = otherProjects.map(p=>(+(regexp.exec(p.name)?.[1] as any) || 0));
+            let maxnum = Math.max(...matches, 0);
+            name = 'Project ' + (1 + maxnum);
+            console.log("auto name project", {name, maxnum, regexp, otherProjects, on: otherProjects.map(p=>p.name)});
         }
         else {
             // autofix manually inputted name
             let allProjectNames: Dictionary<string, LProject> = U.objectFromArray(otherProjects, (p)=>p.name);
+            console.trace("explicit name project pre", {name, otherProjects, on: otherProjects.map(p=>p.name)});
             name = U.increaseEndingNumber(name, false, false, (s)=>!!allProjectNames[s]);
+            console.log("explicit name project post", {name, otherProjects, on: otherProjects.map(p=>p.name)});
         }
 
         return new Constructors(new DProject('dwc'), undefined, true, undefined)

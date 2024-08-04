@@ -171,21 +171,19 @@ function NavbarComponent(props: AllProps) {
 
     ];
 
-    const createProject = ()=>ProjectsApi.create('public', undefined, undefined, undefined, props.user.projects);
-
     const dashboardItems: MenuEntry[] = [
 
         {name: 'New project', icon: <i className="bi bi-plus-square"></i>, function:
             async()=>{
                 navigate('/allProjects');
-                createProject();
+                ProjectsApi.create('public', undefined, undefined, undefined, props.user.projects);
                 /*
                 SetRootFieldAction.new('isLoading', true);
                 await U.sleep(1);
                 await ProjectsApi.create('public', 'Unnamed Project');
                 SetRootFieldAction.new('isLoading', false);*/
             },
-            keystroke: [Key.cmd, 'N']},
+            keystroke: [Key.cmd, 'M']},
         {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: ProjectsApi.importModal, keystroke: []},
         {name: 'divisor', function: () => {}, keystroke: []},
         {name: 'Help', icon: <i className="bi bi-question-square"></i>, subItems: [
