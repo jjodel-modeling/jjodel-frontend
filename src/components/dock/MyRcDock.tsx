@@ -537,7 +537,7 @@ export class PinnableDock extends DockLayout{
     // }
 
     render(): React.ReactNode {
-        return <div className={"pinnable-dock-root gray-style"}>
+        return <div className={"pinnable-dock-root white-style"}>
             <PinnableStrip side={"t"} />
             <div className={"pinnable-dock-middle-strip"}>
                 <PinnableStrip side={"l"} />

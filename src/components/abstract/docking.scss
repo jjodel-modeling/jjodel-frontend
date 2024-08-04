@@ -91,6 +91,11 @@
   //background-image: url("../../img/google/2x/baseline_fullscreen_exit_black_24dp.png");
 }
 
+.dock-panel-max-btn {
+  background-color: red!important;
+}
+
+
 /* different color for the focused panel */
 .dock-panel.dock-style-card{
   border-radius: 8px 8px 0 0;

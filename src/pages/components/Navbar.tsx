@@ -123,9 +123,11 @@ type UserProps = {
     user?: LUser;
 }
 const User = (props: UserProps) => {
-    return (
-        <div className={'col-2 user text-end'}>Alfonso <b>Pierantonio</b></div>
-    );
+    var name = "Alfonso Pierantonio";
+    var initials = name.split(" ").map((n)=>n[0]).join("");
+    return (<>
+        <div className={'col-2 user text-end'}><div style={{display: 'inline-block', marginRight: '4px', fontWeight: '400', paddingTop: '2px', textAlign: 'center', color: 'white', height: '24px', width: '24px', borderRadius: '20px', backgroundColor: 'var(--secondary)'}}>{initials}</div> Alfonso <b>Pierantonio</b></div>
+    </>);
 };
 
 type MenuEntry = {name: string, icon?: any, function?: ()=>any, keystroke?: string[], subItems?:MenuEntry[]};
@@ -244,7 +246,7 @@ function NavbarComponent(props: AllProps) {
 
     const Commands = () => {
         return (<div className='col text-end nav-commands'>
-            <Toggle name={'mode'} values={{false: 'base', true: 'advanced'}} labels={{false: 'base', true: 'advanced'}}/>
+            {project && <Toggle name={'mode'} values={{false: 'base', true: 'advanced'}} labels={{false: 'base', true: 'advanced'}}/>}
         </div>);
     };
 
@@ -265,30 +267,23 @@ function NavbarComponent(props: AllProps) {
         </>);
     }
 
-    if(project)
 
-        return(<>
-            <nav className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
+    return(<>
+        <nav className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
+            {project ?
                 <MainMenu items={projectItems}/>
-                <Logo />
-                <UserMenu />
-                <Commands />
-                <User />
-            </nav>
-
-            {clicked === 'new.metamodel' && <MetamodelPopup {...{project, setClicked}} />}
-            {clicked === 'new.model' && <ModelPopup {...{metamodels, project, setClicked}} />}
-        </>);
-    else
-        return(<>
-            <nav className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
+                :
                 <MainMenu items={dashboardItems} />
-                <Logo />
-                <UserMenu />    
-                <Commands />
-                <User />
-            </nav>
-        </>);
+            }
+            <Logo />
+            <UserMenu />
+            <Commands />
+            <User /> {/* aggiungere utente loggato */}
+        </nav>
+
+        {clicked === 'new.metamodel' && <MetamodelPopup {...{project, setClicked}} />}
+        {clicked === 'new.model' && <ModelPopup {...{metamodels, project, setClicked}} />}
+    </>);
 }
 
 interface OwnProps {}
