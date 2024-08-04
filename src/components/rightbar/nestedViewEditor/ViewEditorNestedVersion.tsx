@@ -29,7 +29,7 @@ function NestedViewComponent(props: AllProps) {
         let name = 'viewpoint_' + 0;
         let viewpointNames: string[] = viewpoints.map(vp => vp && vp.name);
         name = U.increaseEndingNumber(name, false, false, newName => viewpointNames.indexOf(newName) >= 0);
-        DViewPoint.new2(name, '', (d) => { /*d.isExclusiveView = !(d.isValidation = props.validation); */} );
+        DViewPoint.newVP(name);
     }
     const deleteV = (e: React.MouseEvent, viewPoint: LViewElement) => {
         e.stopPropagation();
@@ -120,7 +120,7 @@ function NestedViewComponent(props: AllProps) {
     let test = windoww;
 
     let [view, setView] = useStateIfMounted(undefined as (undefined | Pointer<DViewElement>));
-    let vieweditor = view && <div className={"single-view-content"}><ViewData viewid={view} setSelectedView={setView} /></div>;
+    let vieweditor = view && <div className={"single-view-content"}><ViewData key={view} viewid={view} viewpoints={viewpoints.map(v=>v.id)} setSelectedView={setView} /></div>;
     if (test) return(<div className={"view-editor-root"}>
         <div className={"view-editor-fullsize-content"}>
             <div className={'d-flex ps-2 pt-2'}>
@@ -158,7 +158,7 @@ function NestedViewComponent(props: AllProps) {
                        label={"Is exclusive"} readonly={validation || index <= 0} />
                 {(!validation || true) && <button className={'btn btn-success ms-1'} disabled={active.id === viewpoint.id}
                                                         onClick={(evt) => {select(viewpoint)}}>
-                    <i className={'p-1 bi bi-check2'}></i>
+                    <i className={'p-1 bi bi-check2'}/>
                 </button>
                     // todo: validation views should not be "activable" but so far it is the only way to see the subviews in it.
                 }
@@ -190,11 +190,10 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    const user: LUser = LUser.fromPointer(DUser.current);
-    const project = U.wrapper<LProject>(user.project);
-    ret.project = project;
-    ret.viewpoints = project.viewpoints.filter( (vp) => !!vp/* && vp.isValidation === ownProps.validation*/);
-    ret.active = project.activeViewpoint;
+    const user: LUser = LUser.fromPointer(DUser.current, state);
+    ret.project = user.project as LProject;
+    ret.viewpoints = ret.project.viewpoints.filter( (vp) => !!vp/* && vp.isValidation === ownProps.validation*/);
+    ret.active = ret.project.activeViewpoint;
     return ret;
 }
 

@@ -248,6 +248,7 @@ export function InputComponent(props: AllProps) {
             rootprops.ref = (v: Element | null) => { oldreff(v); inputRef.current = v; }
             break;
     }
+    if (props.autosize) rootprops['data-value'] = inputProps.value;
 
     if (tooltip) {
         rootprops.onMouseEnter = () => Tooltip.show(tooltip, true, (rootprops.ref));

@@ -11,7 +11,7 @@ import {
     Temporary,
     LPointerTargetable,
     DPointerTargetable,
-    Log, EMeasurableEvents, TRANSACTION,
+    Log, EMeasurableEvents, TRANSACTION, KeyDownEvent,
 } from "../joiner";
 import {
     DClassifier,
@@ -34,7 +34,7 @@ import {NumberControl, PaletteControl, PaletteType, PathControl, StringControl} 
 import tinycolor from "tinycolor2";
 import util from "util";
 import Convert from "ansi-to-html";
-import {isValidElement} from "react";
+import React, {isValidElement} from "react";
 // var Convert = require('ansi-to-html');
 // import KeyDownEvent = JQuery.KeyDownEvent; // https://github.com/tombigel/detect-zoom broken 2013? but works
 
@@ -1944,6 +1944,208 @@ export class U {
     }
 */
 
+    static getOSBrowserData(){
+        /**
+         * JavaScript Client Detection
+         * (C) viazenetti GmbH (Christian Ludwig)
+         */
+        /** source: https://stackoverflow.com/a/18706818/24978590
+         author comment:
+         I started to write a Script to read OS and browser version that can be tested on Fiddle.
+         Feel free to use and extend.
+        */
+        var unknown = '-';
+
+        // screen
+        var screenSize = '';
+        let screen = window.screen;
+        if (screen?.width) {
+            let width = (screen.width) ? screen.width : '';
+            let height = (screen.height) ? screen.height : '';
+            screenSize += '' + width + " x " + height;
+        }
+
+        // browser
+        var nVer = navigator?.appVersion || '';
+        var nAgt = navigator?.userAgent || '';
+        var browser = navigator?.appName || '';
+        var version = '' + parseFloat(nVer);
+        var nameOffset, verOffset, ix;
+
+        // Yandex Browser
+        if ((verOffset = nAgt.indexOf('YaBrowser')) != -1) {
+            browser = 'Yandex';
+            version = nAgt.substring(verOffset + 10);
+        }
+        // Samsung Browser
+        else if ((verOffset = nAgt.indexOf('SamsungBrowser')) != -1) {
+            browser = 'Samsung';
+            version = nAgt.substring(verOffset + 15);
+        }
+        // UC Browser
+        else if ((verOffset = nAgt.indexOf('UCBrowser')) != -1) {
+            browser = 'UC Browser';
+            version = nAgt.substring(verOffset + 10);
+        }
+        // Opera Next
+        else if ((verOffset = nAgt.indexOf('OPR')) != -1) {
+            browser = 'Opera';
+            version = nAgt.substring(verOffset + 4);
+        }
+        // Opera
+        else if ((verOffset = nAgt.indexOf('Opera')) != -1) {
+            browser = 'Opera';
+            version = nAgt.substring(verOffset + 6);
+            if ((verOffset = nAgt.indexOf('Version')) != -1) {
+                version = nAgt.substring(verOffset + 8);
+            }
+        }
+        // Legacy Edge
+        else if ((verOffset = nAgt.indexOf('Edge')) != -1) {
+            browser = 'Microsoft Legacy Edge';
+            version = nAgt.substring(verOffset + 5);
+        }
+        // Edge (Chromium)
+        else if ((verOffset = nAgt.indexOf('Edg')) != -1) {
+            browser = 'Microsoft Edge';
+            version = nAgt.substring(verOffset + 4);
+        }
+        // MSIE
+        else if ((verOffset = nAgt.indexOf('MSIE')) != -1) {
+            browser = 'Microsoft Internet Explorer';
+            version = nAgt.substring(verOffset + 5);
+        }
+        // Chrome
+        else if ((verOffset = nAgt.indexOf('Chrome')) != -1) {
+            browser = 'Chrome';
+            version = nAgt.substring(verOffset + 7);
+        }
+        // Safari
+        else if ((verOffset = nAgt.indexOf('Safari')) != -1) {
+            browser = 'Safari';
+            version = nAgt.substring(verOffset + 7);
+            if ((verOffset = nAgt.indexOf('Version')) != -1) {
+                version = nAgt.substring(verOffset + 8);
+            }
+        }
+        // Firefox
+        else if ((verOffset = nAgt.indexOf('Firefox')) != -1) {
+            browser = 'Firefox';
+            version = nAgt.substring(verOffset + 8);
+        }
+        // MSIE 11+
+        else if (nAgt.indexOf('Trident/') != -1) {
+            browser = 'Microsoft Internet Explorer';
+            version = nAgt.substring(nAgt.indexOf('rv:') + 3);
+        }
+        // Other browsers
+        else if ((nameOffset = nAgt.lastIndexOf(' ') + 1) < (verOffset = nAgt.lastIndexOf('/'))) {
+            browser = nAgt.substring(nameOffset, verOffset);
+            version = nAgt.substring(verOffset + 1);
+            if (browser.toLowerCase() == browser.toUpperCase()) {
+                browser = navigator?.appName;
+            }
+        }
+        // trim the version string
+        if ((ix = version.indexOf(';')) != -1) version = version.substring(0, ix);
+        if ((ix = version.indexOf(' ')) != -1) version = version.substring(0, ix);
+        if ((ix = version.indexOf(')')) != -1) version = version.substring(0, ix);
+
+        let majorVersion = parseInt('' + version, 10);
+        if (isNaN(majorVersion)) {
+            version = '' + parseFloat(nVer);
+            majorVersion = parseInt(nVer, 10);
+        }
+
+        // mobile version
+        var mobile = /Mobile|mini|Fennec|Android|iP(ad|od|hone)/.test(nVer);
+
+        // cookie
+        var cookieEnabled = (navigator?.cookieEnabled) ? true : false;
+
+        if (typeof navigator?.cookieEnabled === 'undefined' && !cookieEnabled) {
+            document.cookie = 'testcookie';
+            cookieEnabled = document.cookie.indexOf('testcookie') !== -1;
+        }
+
+        // system
+        var clientStrings = [
+            {s:'Windows 10', r:/(Windows 10.0|Windows NT 10.0)/},
+            {s:'Windows 8.1', r:/(Windows 8.1|Windows NT 6.3)/},
+            {s:'Windows 8', r:/(Windows 8|Windows NT 6.2)/},
+            {s:'Windows 7', r:/(Windows 7|Windows NT 6.1)/},
+            {s:'Windows Vista', r:/Windows NT 6.0/},
+            {s:'Windows Server 2003', r:/Windows NT 5.2/},
+            {s:'Windows XP', r:/(Windows NT 5.1|Windows XP)/},
+            {s:'Windows 2000', r:/(Windows NT 5.0|Windows 2000)/},
+            {s:'Windows ME', r:/(Win 9x 4.90|Windows ME)/},
+            {s:'Windows 98', r:/(Windows 98|Win98)/},
+            {s:'Windows 95', r:/(Windows 95|Win95|Windows_95)/},
+            {s:'Windows NT 4.0', r:/(Windows NT 4.0|WinNT4.0|WinNT|Windows NT)/},
+            {s:'Windows CE', r:/Windows CE/},
+            {s:'Windows 3.11', r:/Win16/},
+            {s:'Android', r:/Android/},
+            {s:'Open BSD', r:/OpenBSD/},
+            {s:'Sun OS', r:/SunOS/},
+            {s:'Chrome OS', r:/CrOS/},
+            {s:'Linux', r:/(Linux|X11(?!.*CrOS))/},
+            {s:'iOS', r:/(iPhone|iPad|iPod)/},
+            {s:'Mac OS X', r:/Mac OS X/},
+            {s:'Mac OS', r:/(Mac OS|MacPPC|MacIntel|Mac_PowerPC|Macintosh)/},
+            {s:'QNX', r:/QNX/},
+            {s:'UNIX', r:/UNIX/},
+            {s:'BeOS', r:/BeOS/},
+            {s:'OS/2', r:/OS\/2/},
+            {s:'Search Bot', r:/(nuhk|Googlebot|Yammybot|Openbot|Slurp|MSNBot|Ask Jeeves\/Teoma|ia_archiver)/}
+        ];
+        var os = unknown;
+        for (var id in clientStrings) {
+            var cs = clientStrings[id];
+            if (cs.r.test(nAgt)) {
+                os = cs.s;
+                break;
+            }
+        }
+        if (os === unknown){
+            let s = nAgt.toLowerCase();
+            if (s.indexOf('windows')) os = 'Windows';
+            if (s.indexOf('mac')) os = 'Mac OS';
+        }
+
+        var osVersion = unknown;
+
+        if (/Windows/.test(os)) {
+            osVersion = /Windows (.*)/.exec(os)?.[1] || 'unknown';
+            os = 'Windows';
+        }
+
+        switch (os) {
+            case 'Mac OS':
+            case 'Mac OS X':
+            case 'Android':
+                osVersion = /(?:Android|Mac OS|Mac OS X|MacPPC|MacIntel|Mac_PowerPC|Macintosh) ([\.\_\d]+)/.exec(nAgt)?.[1] || 'unknown';
+                break;
+
+            case 'iOS':
+                let match = /OS (\d+)_(\d+)_?(\d+)?/.exec(nVer);
+                if (match) osVersion = match[1] + '.' + match[2] + '.' + (match[3] || 0);
+                else osVersion = 'unknown';
+                break;
+        }
+
+        return {
+            screen: screenSize,
+            browser: browser,
+            browserVersion: version,
+            browserMajorVersion: majorVersion,
+            mobile: mobile,
+            os: os,
+            osVersion: osVersion,
+            cookies: cookieEnabled,
+            userAgent: navigator.userAgent,
+        };
+    }
+
     // warning: nodes from other iframes will say are not instance from Element of the current frame, in that case need duck typing.
     private static isHtmlNode(element: any): element is Element {
         return element instanceof Element || element instanceof HTMLDocument || element instanceof SVGElement;
@@ -2122,45 +2324,154 @@ export class SelectorOutput {
     resultSetElem!: JQuery<Element>;
 }
 // compare it with event.key
-export enum Keystrokes {
-    clickLeft = 0,
-    clickWheel = 1,
-    clickRight = 2,
-    clickBackMouseButton = 3,
-    clickForwardMouseButton = 4,
+export type Key = string;
+export class Keystrokes {
+    public static clickLeft = 0;
+    public static clickWheel = 1;
+    public static clickRight = 2;
+    public static clickBackMouseButton = 3;
+    public static clickForwardMouseButton = 4;
 
     // keyboard
-    escape = 'Escape',
-    capsLock = 'CapsLock',
-    shift = 'Shift',
-    tab = 'Tab',
-    alt = 'Alt',
-    control = 'Control',
-    end = 'End',
-    home = 'Home',
-    pageUp = 'PageUp',
-    pageDown = 'PageDown',
-    enter = 'Enter', // event.code = 'NumpadEnter' se fatto da numpad, oppure "numpad3", "NumpadMultiply", ShiftLeft, etc...
-    numpadEnter = 'NumpadEnter',
-    audioVolumeMute = 'AudioVolumeMute',
-    audioVolumeUp = 'AudioVolumeUp',
-    audioVolumeDown = 'AudioVolumeDown',
-    mediaTrackPrevious = 'MediaTrackPrevious',
-    delete = 'Delete', // canc
-    backspace = 'Backspace',
-    space = ' ',
-    altGraph = 'AltGraph',
-    arrowLeft = 'ArrowLeft',
-    arrowRight = 'ArrowRight',
-    arrowUp = 'ArrowUp',
-    arrowDown = 'ArrowDown',
-    insert = 'Insert',
-    f1 = 'F1',
+    public static escape = 'Escape';
+    public static capsLock = 'CapsLock';
+    public static shift = 'Shift';
+    public static tab = 'Tab';
+    public static alt = 'Alt';
+    public static cmd = 'Control';
+    public static control = 'Control';
+    public static end = 'End';
+    public static home = 'Home';
+    public static pageUp = 'PageUp';
+    public static pageDown = 'PageDown';
+    public static enter = 'Enter'; // event.code = 'NumpadEnter' se fatto da numpad, oppure "numpad3", "NumpadMultiply", ShiftLeft, etc...
+    public static numpadEnter = 'NumpadEnter';
+    public static audioVolumeMute = 'AudioVolumeMute';
+    public static audioVolumeUp = 'AudioVolumeUp';
+    public static audioVolumeDown = 'AudioVolumeDown';
+    public static mediaTrackPrevious = 'MediaTrackPrevious';
+    public static delete = 'Delete'; // canc
+    public static backspace = 'Backspace';
+    public static space = ' ';
+    public static altGraph = 'AltGraph';
+    public static arrowLeft = 'ArrowLeft';
+    public static arrowRight = 'ArrowRight';
+    public static arrowUp = 'ArrowUp';
+    public static arrowDown = 'ArrowDown';
+    public static insert = 'Insert';
+    public static f1 = 'F1';
     // weird ones:
-    meta = 'Meta', // f1, or other f's with custom binding and windows key
-    unidentified = 'Unidentified', // brightness
-    __NotReacting__ = 'fn, print, maybe others', // not even triggering event?
+    public static meta = 'Meta'; // f1, or other f's with custom binding and windows key
+    public static unidentified = 'Unidentified'; // brightness
+    public static __NotReacting__ = 'fn, print, maybe others'; // not even triggering event?
+    private static RegisteredKeyStrokes: Dictionary<DocString<'selector'>, (e:any)=>any> = {};
+    public static register(selector: string, arr: {function?: ()=>any, keystroke?: Key[]}[]): void{
+        if (Keystrokes.RegisteredKeyStrokes[selector]) return;
+        let $elems = $(selector);// sort from most "uncommon" to most common key
+        let metakeysmap = {
+            [Keystrokes.alt]: 'altKey',
+            [Keystrokes.shift]: 'shiftKey',
+            [Keystrokes.control]: 'ctrlKey',/*
+            'altKey': Keystrokes.alt,
+            'shiftKey': Keystrokes.shift,
+            'ctrlKey': Keystrokes.control,*/
+        }; //  '??': 'metaKey'];*/
+        // let metakeys = ['altKey', 'shiftKey', 'ctrlKey'];
+
+        Log.exDev(!($elems.on as any), 'jQuery is required for Keystrokes.register');
+        let optimizedKeyPaths: GObject = {
+            [Keystrokes.alt]: {},
+            [Keystrokes.shift]: {},
+            [Keystrokes.control]: {},
+        }
+        for (let entry of arr) {
+            console.log('registering keystrokes ', {entry, skipp:!entry.function || !entry.keystroke || !entry.keystroke.length});
+            if (!entry.function || !entry.keystroke || !entry.keystroke.length) continue;
+            let keymap = U.objectFromArrayValues(entry.keystroke);
+            let root = optimizedKeyPaths
+            if (keymap[Keystrokes.alt]) {
+                if (!root[Keystrokes.alt]) root = root[Keystrokes.alt] = {};
+                else root = root[Keystrokes.alt];
+            }
+            if (keymap[Keystrokes.shift]) {
+                if (!root[Keystrokes.shift]) root = root[Keystrokes.shift] = {};
+                else root = root[Keystrokes.shift];
+            }
+            if (keymap[Keystrokes.control]) {
+                if (!root[Keystrokes.control]) root = root[Keystrokes.control] = {};
+                else root = root[Keystrokes.control];
+            }
+            let terminalKeys = entry.keystroke.filter(k => !(k in metakeysmap));
+            Log.eDev(terminalKeys.length !== 1, "found a keystroke combination with multiple terminal keys", {entry, selector});
+            let terminal = terminalKeys[0].toLowerCase();
+            console.log('registering keystrokes ', {keys:entry.keystroke, terminal, root, optimizedKeyPaths});
+            root[terminal] = entry.function;
+        }
+        let func = (e: KeyDownEvent)=>{
+            let root = optimizedKeyPaths;
+            if (e.altKey) { root = root[Keystrokes.alt] || {}; }
+            if (e.shiftKey) { root = root[Keystrokes.shift] || {}; }
+            if (e.ctrlKey) { root = root[Keystrokes.control] || {}; }
+            root[e.key]?.();
+            console.log("execute keystrokes", {e, root, optimizedKeyPaths, up:{$elems, func, optimizedKeyPaths, arr}});
+        };
+        /// todo: for graph can attack evt to graph root and use selector in on() lieke $graphcontainer.on('keydown', '.Class', classkeystrokehandler...)
+        Keystrokes.RegisteredKeyStrokes[selector] = func;
+        $elems.on('keydown', null, func);
+        console.log("register keystrokes", {$elems, func, optimizedKeyPaths, arr});
+
+    }
+    public static unregister(selector: string): void{
+        if (!Keystrokes.RegisteredKeyStrokes[selector]) return;
+        $(selector).off('keydown', null as any, Keystrokes.RegisteredKeyStrokes[selector]);
+        delete Keystrokes.RegisteredKeyStrokes[selector];
+    }
+
+
+    public static getKeystrokeJsx(key: string, allowBootIcons: boolean = true, allowBoxIcons: boolean=true, allowTextIcons: boolean = true){
+        let os = U.getOSBrowserData().os.substring(0, 3).toLowerCase();
+        let obj = iconKeys['bi_' + os];
+        if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';
+        if (allowBootIcons && key in obj) { let val = obj[key]; return <i className={"bi " + val} title={key}/>; }
+        //obj = iconKeys['box_' + os];
+        // if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';
+        //if (allowBoxIcons && key in obj) { let val = obj[key]; return <span><i className={"box-icons?? " + val todo} title={key}/></span>; }
+        obj = iconKeys['text_' + os];
+        if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';
+        if (allowTextIcons && key in obj) { let val = obj[key]; return <i className={"text-icon " + val} title={key} data-val={val} data-content={key}/>; }
+        return <span>{key.toUpperCase()}</span>;
+    }
+    public static NamedKeys: Dictionary<string, boolean>;
 }
+
+const iconKeys: Dictionary<string, Dictionary<string, string>> = {
+        bi_win: {
+            [Keystrokes.shift] : "bi-shift"
+        },
+        bi_mac: {
+            [Keystrokes.cmd]   : "bi-command",
+            [Keystrokes.control]   : "bi-command",
+            [Keystrokes.alt]   : "bi-alt",
+            [Keystrokes.shift] : "bi-shift"
+        },
+    box_win: {},
+    box_mac: {},
+    text_win: {
+        [Keystrokes.cmd]   : "ctrl",
+        [Keystrokes.control]   : "ctrl",
+        [Keystrokes.alt]   : "alt",
+        [Keystrokes.shift] : "shift"
+    },
+    text_mac: {},
+};
+
+// Keystrokes.NamedKeys: Dictionary<string, boolean> = Object.values(Keystrokes).reduce((acc, v) => { acc[v] = true; return acc; }, Keystrokes.NamedKeys as GObject);
+/*const windowsKeys: Dictionary<string, string> = {
+    [Key.cmd]: "ctrl", //'windows'; // <i className="bi bi-windows"></i>
+    [Key.shift]: "shift",
+    [Key.alt]: "alt",
+}*/
+
 
 export enum DefaultEClasses{
     EObject = "ecore:EClass platform:/plugin/org.eclipse.emf.ecore/model/Ecore.ecore#//EObject",

@@ -1,63 +1,43 @@
 import React, {ChangeEvent, MouseEventHandler, Component, Dispatch, ReactElement, useState, useRef } from 'react';
 import {connect} from 'react-redux';
-import {DProject, DState, LProject, Try, U} from '../joiner';
-import {FakeStateProps} from '../joiner/types';
+import {DProject, DState, Log, LProject, Try, U} from '../joiner';
+import {Dictionary, FakeStateProps} from '../joiner/types';
 import {Dashboard, Project} from './components';
 import Storage from "../data/storage";
 
 import { Cards, Card } from './components/cards/Cards';
 import { Catalog } from './components/catalog/Catalog';
 
+import {ProjectsApi} from "../api/persistance";
+
 function AllProjectsComponent(props: AllProps): JSX.Element {
     const {projects} = props;
-
-    const reader = new FileReader();
-    reader.onload = async e => {
-        /* Import Project File */
-        const content = String(e.target?.result);
-        if(!content) return;
-        try {
-            const project = JSON.parse(content) as DProject;
-            const projects = Storage.read<DProject[]>('projects') || [];
-            const filtered = projects.filter(p => p.id !== project.id);
-            filtered.push(project);
-            Storage.write('projects', filtered);
-            U.refresh();
-        } catch (e) {alert('Invalid File.')}
-    }
-    
-    const importProject = async(e: ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files || [];
-        if(!files.length) return;
-        const file = files[0];
-        reader.readAsText(file);
-    }
-
+    const createProject = ()=>ProjectsApi.create('public', undefined, undefined, undefined, projects);
     return(<Try>
         <Dashboard active={'All'} version={props.version}>
-            
-            <React.Fragment>                
+            <React.Fragment>
 
                 <Cards>
                     <Cards.Item
-                        title={'New jjodel'} 
+                        title={'New jjodel'}
                         subtitle={'Create a new jjodel project.'}
-                        icon={'add'} 
-                        style={'red'}   
+                        icon={'add'}
+                        style={'red'}
+                        action={createProject}
                     />
                     <Cards.Item
-                        title={'Import jjodel'} 
+                        title={'Import jjodel'}
                         subtitle={'Import an existing jjodel project.'}
-                        icon={'import'} 
-                        style={'blue'} 
-                        action={(e) => importModal()}
+                        icon={'import'}
+                        style={'blue'}
+                        action={ProjectsApi.importModal}
                     />
                     {true && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
                 </Cards>
 
                 <Catalog projects={projects} />
+
             </React.Fragment>
-            
         </Dashboard>
     </Try>);
 }

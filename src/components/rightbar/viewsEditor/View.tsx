@@ -1,5 +1,5 @@
 import React, {Dispatch, ReactElement} from 'react';
-import {DViewElement, Log, LViewElement, Pointer, Try} from '../../../joiner';
+import {DViewElement, DViewPoint, Log, LViewElement, Pointer, Try, U} from '../../../joiner';
 import {DState, DUser, LProject, LUser, LViewPoint, Defaults, LPointerTargetable} from "../../../joiner";
 import InfoData from './data/InfoData';
 import NodeData from './data/NodeData';
@@ -9,24 +9,16 @@ import EdgePointData from './data/EdgePointData';
 import {DockLayout} from 'rc-dock';
 import {LayoutData} from 'rc-dock/lib/DockData';
 import EventsData from './data/CustomData';
-import SubViewsData from './data/SubViewsData';
-import {FakeStateProps} from "../../../joiner/types";
+import {FakeStateProps, Overlap} from "../../../joiner/types";
 import {connect} from "react-redux";
 import PaletteData from "./data/PaletteData";
 import GenericNodeData from "./data/GenericNodeData";
 import "./view.scss";
 
 const tabidprefix = "Dock_in_view_detail";
-let idcounter = 0;
-function id(){ // NB: cannot use just indexes or tab title because the id is injected in html, so it must be unique in the whole page.
-    return tabidprefix + (idcounter++);
-
-}
-
 
 function ViewDataComponent(props: AllProps) {
     const view = props.view;
-    const user: LUser = LPointerTargetable.fromPointer(DUser.current);
     (window as any).view = view;
 /*
     if(!view) {
@@ -36,13 +28,19 @@ function ViewDataComponent(props: AllProps) {
     const viewpoints = props.viewpoints;
     const debug = props.debug;
     const readOnly = !debug && Defaults.check(view.id);
+    let viewChain: LViewElement[] = [...view.fatherChain.reverse(), view];
 
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
-    let i = 1;
+
+    let idcounter = 0;
+    function id(){ // NB: cannot use just indexes or tab title because the id is injected in html, so it must be unique in the whole page.
+        return tabidprefix + (idcounter++);
+    }
+
     const tabs = [
-        {id: id(), title: 'Overview', group: '1', closable: false, content: <Try><InfoData viewID={view.id} viewpointsID={viewpoints.map(vp => vp.id)} readonly={readOnly} /></Try>},
+        {id: id(), title: 'Apply to', group: '1', closable: false, content: <Try><InfoData viewID={view.id} viewpointsID={viewpoints.map(vp => vp.id)} readonly={readOnly} /></Try>},
         {id: id(), title: 'Template', group: '1', closable: false, content: <Try><TemplateData viewID={view.id} readonly={readOnly} /></Try>},
-        {id: id(), title: 'Palette/Css', group: '1', closable: false, content: <Try><PaletteData viewID={view.id} readonly={readOnly} /></Try>},
+        {id: id(), title: 'Style', group: '1', closable: false, content: <Try><PaletteData viewID={view.id} readonly={readOnly} /></Try>},
         {id: id(), title: 'Events', group: '1', closable: false, content: <Try><EventsData viewID={view.id} readonly={readOnly} /></Try>},
         {id: id(), title: 'Options', group: '1', closable: false, content: <Try><GenericNodeData viewID={view.id} readonly={readOnly} /></Try>},
     ];
@@ -56,28 +54,37 @@ function ViewDataComponent(props: AllProps) {
     if(view.appliableTo === 'edgePoint') tabs.push(
         {id: 'sharedid', title: 'EdgePoint', group: '1', closable: false, content: <EdgePointData viewID={view.id} readonly={readOnly} />}
     );*/
-    tabs.push({id: id(), title: 'Sub Views', group: '1', closable: false, content: <Try><SubViewsData viewID={view.id} readonly={readOnly} setSelectedView={props.setSelectedView} /></Try>});
+    //tabs.push({id: id(), title: 'Sub Views', group: '1', closable: false, content: <Try><SubViewsData viewID={view.id} readonly={readOnly} setSelectedView={props.setSelectedView} /></Try>});
 
 
 
     // Log.exx('$crash', "test crash", {propss:props});
     layout.dockbox.children.push({tabs});
+    // let allParentViews = view.father
 
     return(<div className={"view-editor-root"}>
-        {/*<div className={'view-editor-header'}>
-            <b className={'view-name ms-1 my-auto'}>{view.name}</b>
-            <button className={'bg btn-back ms-auto'} onClick={ () => props.setSelectedView(undefined)}>
+        {<div className={'view-editor-header'}>
+            <button className={'bg btn-back'} onClick={ () => props.setSelectedView(undefined)}>
                 <i className={'p-1 bi bi-arrow-left'}></i>
             </button>
-        </div>*/}
-        <button className={'bg btn-back ms-auto'} onClick={ () => props.setSelectedView(undefined)}>
-            <i className={'p-1 bi bi-arrow-left'}></i>
-        </button>
+            <div className={"path-list"}>{
+                (viewChain.map(v => <>
+                    <div className={"path-element"} onClick={()=>props.setSelectedView(v.id)}>
+                        {U.cropStr(v.name, 1,1, 10, 10)}
+                    </div>
+                </>) as any
+                ).separator(
+                    //bi-caret-right-fill bi-chevron-right
+                    <i className={"path-separator bi bi-chevron-right"} />
+                )
+            }</div>
+        </div>}
         <DockLayout defaultLayout={layout} />
     </div>);
 }
 interface OwnProps {
     viewid: Pointer<DViewElement>;
+    viewpoints: Pointer<DViewPoint>[];
     setSelectedView: React.Dispatch<React.SetStateAction<Pointer<DViewElement> | undefined>>;// (val: LViewElement | undefined) => {}
 }
 interface StateProps {
@@ -87,13 +94,13 @@ interface StateProps {
     debug: boolean;
 }
 interface DispatchProps { }
-type AllProps = OwnProps & StateProps & DispatchProps;
+type AllProps = Overlap<OwnProps, StateProps> & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    const user = LUser.fromPointer(DUser.current);
-    ret.project = user.project as LProject;
-    ret.viewpoints = ret.project.viewpoints;
+    // const user = LUser.fromPointer(DUser.current, state);
+    // ret.project = user.project as LProject;
+    ret.viewpoints = LPointerTargetable.fromArr(ownProps.viewpoints); // ret.project.viewpoints;
     ret.debug = state.debug;
     ret.view = LPointerTargetable.fromPointer(ownProps.viewid, state);
     return ret;

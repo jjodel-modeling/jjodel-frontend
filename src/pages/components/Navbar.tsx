@@ -4,7 +4,7 @@ import {
     Dictionary, DModel,
     DState,
     DUser,
-    GObject, LGraph,
+    GObject, Keystrokes, LGraph,
     LModel, LPackage,
     LProject,
     LUser,
@@ -29,6 +29,7 @@ import {Menu, Item, Divisor} from '../components/menu/Menu';
 import { Toggle } from '../../components/widgets/Widgets';
 
 import logo from '../../static/img/jjodel.jpg';
+import DebugImage from "../../static/img/debug.png";
 import jj from '../../static/img/jj-k.png';
 
 const createM2 = (project: LProject) => {
@@ -57,28 +58,10 @@ const createM1 = (project: LProject, metamodel: LModel) => {
     const tab = TabDataMaker.model(dModel);
     DockManager.open('models', tab);
 }
-
-enum Key{
-    "cmd"   = "bi-command",
-    "alt"   = "bi-alt",
-    "shift" = "bi-shift",
-}
-
-const NamedKeys: Dictionary<string, boolean> = Object.values(Key).reduce((acc, v) => { acc[v] = true; return acc; }, {} as GObject);
-const windowsKeys: Dictionary<string, string> = {
-    [Key.cmd]: "ctrl", //'windows'; // <i className="bi bi-windows"></i>
-    [Key.shift]: "shift",
-    [Key.alt]: "alt",
-}
-
-function getKeystrokeJsx(key: string){
-    if (key in NamedKeys) return <span><i className={"bi " + key} title={windowsKeys[key] || key}/></span>;
-    return <span>{key.toUpperCase()}</span>;
-}
 function getKeyStrokes(keys?: string[]){
     if (!keys || !keys.length) return undefined;
     return <div className={"keystrokes"}>
-        {keys.map(k => getKeystrokeJsx(k))}
+        {keys.map(k => Keystrokes.getKeystrokeJsx(k))}
     </div>
 }
 
@@ -94,7 +77,7 @@ function makeEntry(i: MenuEntry) {
         return (
             <li className={i.subItems ? "hoverable" : ""} tabIndex={0} onClick={()=>i.function?.()}>
                 <label className='highlight'>
-                    {i.icon ? 
+                    {i.icon ?
                         <span>{i.icon} {i.name}</span> :
                         <span><i className="bi bi-app hidden"></i> {i.name}</span>
                     }
@@ -135,31 +118,32 @@ type MenuEntry = {name: string, icon?: any, function?: ()=>any, keystroke?: stri
 function NavbarComponent(props: AllProps) {
 
     const navigate = useNavigate();
-    
+
     const {version, metamodels, advanced, debug} = props;
     const [focussed, setFocussed] = useState('');
     const [clicked, setClicked] = useState('');
-    
+
     const project: LProject = props.project as LProject;
 
     // const menuType = "normal";
 
+    const Key = Keystrokes;
     const projectItems: MenuEntry[] = [
-        
+
         {name: 'New metamodel', icon: icon['new'], function: ()=>createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
         {name: 'New model', icon: icon['new'], function: () => {}, keystroke: []},
-        {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Close project', icon: icon['close'], function: async() => {}, keystroke: [Key.cmd, 'Q']},
-        {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Undo', icon: icon['undo'], function: async() => {}, keystroke: [Key.cmd, 'Z']},
-        {name: 'Redo', icon: icon['redo'], function: async() => {}, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
-        {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Save', icon: icon['save'], function: async() => {project && await ProjectsApi.save(project)}, keystroke: [Key.cmd, 'S']},
-        {name: 'Save as', icon: icon['save'], function: async() => {}, keystroke: [Key.shift, Key.cmd, 'S']},
-        {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Import...', icon: icon['import'], function: async() => {}, keystroke: []},
-        {name: 'Export as...', icon: icon['export'], function: async() => {}, keystroke: []},
-        {name: 'divisor', function: async() => {}, keystroke: []},
+        {name: 'divisor', function: () => {}, keystroke: []},
+        {name: 'Close project', icon: icon['close'], function: () => {window.location = window.location.origin + '/#/allProjects' as any}, keystroke: [Key.cmd, 'Q']},
+        {name: 'divisor', function: () => {}, keystroke: []},
+        {name: 'Undo', icon: icon['undo'], function: () => {}, keystroke: [Key.cmd, 'Z']},
+        {name: 'Redo', icon: icon['redo'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
+        {name: 'divisor', function: () => {}, keystroke: []},
+        {name: 'Save', icon: icon['save'], function: () => {project && ProjectsApi.save(project)}, keystroke: [Key.cmd, 'S']},
+        {name: 'Save as', icon: icon['save'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'S']},
+        {name: 'divisor', function: () => {}, keystroke: []},
+        {name: 'Import...', icon: icon['import'], function: () => {}, keystroke: []},
+        {name: 'Export as...', icon: icon['export'], function: () => {}, keystroke: []},
+        {name: 'divisor', function: () => {}, keystroke: []},
 
         {name: 'View', icon: icon['view'],
             subItems: [
@@ -191,38 +175,39 @@ function NavbarComponent(props: AllProps) {
 
     const dashboardItems: MenuEntry[] = [
 
-        {name: 'New project', icon: <i className="bi bi-plus-square"></i>, function: 
-        
+        {name: 'New project', icon: <i className="bi bi-plus-square"></i>, function:
             async()=>{
                 navigate('/allProjects');
-            
+                ProjectsApi.create('public', undefined, undefined, undefined, props.user.projects);
+                /*
                 SetRootFieldAction.new('isLoading', true);
                 await U.sleep(1);
                 await ProjectsApi.create('public', 'Unnamed Project');
-                SetRootFieldAction.new('isLoading', false);
-            }, 
-            keystroke: [Key.cmd, 'N']},
-        {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: async() => {}, keystroke: []},
-        {name: 'divisor', function: async() => {}, keystroke: []},
+                SetRootFieldAction.new('isLoading', false);*/
+            },
+            keystroke: [Key.cmd, 'M']},
+        {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: ProjectsApi.importModal, keystroke: []},
+        {name: 'divisor', function: () => {}, keystroke: []},
         {name: 'Help', icon: <i className="bi bi-question-square"></i>, subItems: [
-            {name: 'What\'s new', icon: <i className="bi bi-clock"></i>, function: async() => {}, keystroke: []},
-            {name: 'divisor', function: async() => {}, keystroke: []},
-            {name: 'Homepage', icon: <i className="bi bi-house"></i>, function: async() => {}, keystroke: []},
-            {name: 'Getting started', icon: <i className="bi bi-airplane"></i>, function: async() => {}, keystroke: []},
-            {name: 'User guide', icon: <i className="bi bi-journals"></i>, function: async() => {}, keystroke: []},
-            {name: 'divisor', function: async() => {}, keystroke: []},
-            {name: 'Legal terms', icon: <i className="bi bi-mortarboard"></i>, function: async() => {}, keystroke: []}
+            {name: 'What\'s new', icon: <i className="bi bi-clock"></i>, function: () => {}, keystroke: []},
+            {name: 'divisor', function: () => {}, keystroke: []},
+            {name: 'Homepage', icon: <i className="bi bi-house"></i>, function: () => {}, keystroke: []},
+            {name: 'Getting started', icon: <i className="bi bi-airplane"></i>, function: () => {}, keystroke: []},
+            {name: 'User guide', icon: <i className="bi bi-journals"></i>, function: () => {}, keystroke: []},
+            {name: 'divisor', function: () => {}, keystroke: []},
+            {name: 'Legal terms', icon: <i className="bi bi-mortarboard"></i>, function: () => {}, keystroke: []}
         ],
         keystroke: []},
-        {name: 'About jjodel', icon: <img src={jj} width={15}/>, function: async() => {}, keystroke: []},
-        {name: 'divisor', function: async() => {}, keystroke: []},
+        {name: 'About jjodel', icon: <img src={jj} width={15}/>, function: () => {}, keystroke: []},
+        {name: 'divisor', function: () => {}, keystroke: []},
         {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {}, keystroke: [Key.cmd, 'Q']}
     ];
 
-    type MenuType = {
-        items: MenuEntry[];
-    }
-    const MainMenu = (props: MenuType) => {
+    let itemsToRegister: MenuEntry[] = [...dashboardItems/*, ...projectItems*/];
+    Keystrokes.register('#root', Object.values(itemsToRegister));
+
+    type MenuProps = { items: MenuEntry[] }
+    const MainMenu = (props: MenuProps) => {
 
         return(
             <div className='col-5 nav-hamburger hoverable' tabIndex={0}>
@@ -239,7 +224,8 @@ function NavbarComponent(props: AllProps) {
     const Logo = () => {
         return (
         <div className='col-1 nav-logo'>
-            <img height={24} src={logo} />
+            <img height={24} src={logo} alt={'jjodel logo'} onContextMenu={(e)=>{ e.preventDefault(); SetRootFieldAction.new('debug', !props.debug)}}/>
+            {props.debug && <img alt='debug' height={24} src={DebugImage}/>}
         </div>
         );
     }

@@ -29,7 +29,7 @@ export class DV {
     public static referenceView(): string { return beautify(DefaultView.feature()); }
     public static enumeratorView(): string { return beautify(DefaultView.enum()); }
     public static literalView(): string { return beautify(DefaultView.literal()); }
-    public static voidView(): string { return beautify(DefaultView.void()); }
+    public static fallbackView(): string { return beautify(DefaultView.void()); }
     public static operationView(): string { return beautify(DefaultView.operation()); }
     public static parameterView(): string { return beautify(DefaultView.parameter()); }
 
@@ -120,7 +120,7 @@ export class DV {
 
     // about label rotation in .edge > foreignObect > div (label)
     // first transform is h-center. second is rotate, third adds [0, 50%] of 50% vertical offset AFTER rotation to take label out of edge. fourth is to add a margin.
-    static edgeView(modename: EdgeHead, headSize: GraphPoint, tailSize: GraphPoint, dashing: string | undefined, vp: Pointer<DViewPoint>, name: string): DViewElement {
+    static edgeView(modename: EdgeHead, headSize: GraphPoint, tailSize: GraphPoint, dashing: string | undefined, vp: DViewElement, name: string): DViewElement {
         let fill: string;
         switch (modename){
             case EdgeHead.reference:
@@ -289,7 +289,7 @@ export class DV {
             "ret.end = edge.end\n"+
             "ret.segments = edge.segments\n"+
             "}";
-        let ev = DViewElement.new2("Edge"+name, jsx,
+        let ev = DViewElement.new2("Edge"+name, jsx, vp,
             (v: DViewElement) => {
                 // v.appliableToClasses = [DVoidEdge.cname];
                 v.appliableTo = 'Edge';
@@ -301,7 +301,7 @@ export class DV {
                 v.css = css
                 v.usageDeclarations = edgeUsageDeclarations;
                 v.preRenderFunc = edgePrerenderFunc;
-            }, false, vp, 'Pointer_ViewEdge' + name);
+            }, false, 'Pointer_ViewEdge' + name);
         return ev;
     }
     /*
@@ -352,7 +352,7 @@ let valuecolormap_str = JSON.stringify(valuecolormap); // can this be declared i
 class DefaultView {
 
     public static model(): string { return (
-`<div className={'root'}>
+`<div className={'root model'}>
     {!data && "Model data missing."}
     {/*<ControlPanel node={node}></ControlPanel>*/}
     <label className={"detail-level"}>
@@ -374,7 +374,7 @@ class DefaultView {
 );}
 
     public static void(): string { return (
-`<div className={'round bg-white root void model-less p-1'}>
+`<div className={'root void model-less round bg-white p-1'}>
     <div>voidvertex element test</div>
     <div>data: {props.data ? props.data.name : "empty"}</div>
     {decorators}
@@ -406,7 +406,7 @@ class DefaultView {
 );}
 
     public static defaultPackage(): string { return (
-`<div className={'root'}>
+`<div className={'root package'}>
     <div className={'package-children'}>
         {data.children.map(c => <DefaultNode key={c.id} data={c} />)}
     </div>
@@ -416,11 +416,9 @@ class DefaultView {
 
     public static class(): string { return (
 `<View className={'root class'} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
-    <div>
-        <div className={'input-container mx-2'}>
-            <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}:</b>
-            <Input data={data} field={'name'} hidden={true} />
-        </div>
+    <div className={'header'}>
+        <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}:</b>
+        <Input data={data} field={'name'} hidden={true} autosize={true} />
     </div>
     <hr/>
     <div className={'class-children'}>
@@ -448,9 +446,9 @@ class DefaultView {
 
     public static enum(): string { return (
 `<div className={'root enumerator'}>
-    <div className={'input-container mx-2'}>
+    <div className={'header'}>
         <b className={'enumerator-name'}>Enum:</b>
-        <Input data={data} field={'name'} hidden={true} />
+        <Input data={data} field={'name'} hidden={true} autosize={true} />
     </div>
     <hr />
     <div className={'enumerator-children'}>
@@ -462,30 +460,27 @@ class DefaultView {
 );}
 
     public static feature(): string { return (
-`<div className={'root w-100 feature'}>
-    <div className={'input-container mx-2'}>
-        <b className={'feature-name'}>{data.name}:</b>
-        <Select data={data} field={'type'} />
-    </div>
+`<div className={'root feature w-100'}>
+    <span className={'feature-name'}>{data.name}:</span>
+    <Select data={data} field={'type'} />
     {decorators}
 </div>`
 );}
 
     public static literal(): string { return (
-`<label className={'root d-block text-center'}>
+`<label className={'root literal d-block text-center'}>
     {data.name}
     {decorators}
 </label>`
 );}
 
     public static operation(): string { return (
-`<div className={'root w-100'}>
-    <div className={'input-container mx-2'}>
-        <b className={'feature-name'}>{data.name + ' =>'}</b>
+`<div className={'root operation w-100 hoverable'}>
+        <span className={'feature-name'}>{data.name + ' =>'}</span>
         <Select data={data} field={'type'} />
-    </div>
+    <div className={"parameters content"}>
     {data.exceptions.length ? " throws " + data.exceptions.join(", ") : ''}
-    <div className={"parameters"}>{
+    {
         level >= 3 && data.parameters.map(p => <DefaultNode data={p} key={p.id} />)
     }</div>
     {decorators}
@@ -493,14 +488,12 @@ class DefaultView {
 );}
 
 public static parameter(): string { return (
-`<div className={'root w-100 ms-1'}>
-    <div className={'input-container mx-2'}>
-        <b className={'feature-name'}>
-            {data.name + '' + (data.lowerBound === 0 ? '?:' : ':' )}
-            {data.upperBound === 0 ? '&nbsp;&nbsp;' : '[]'}
-        </b>
-        <Select data={data} field={'type'} />
-    </div>
+`<div className={'root parameter w-100'}>
+    <span className={'feature-name'}>
+        {data.name + '' + (data.lowerBound === 0 ? '?:' : ':' )}
+    </span>
+    <Select data={data} field={'type'} />
+    <span className={"modifier"}>{data.upperBound > 1 || data.upperBound === -1 ? '[]' : ''}</span>
     {decorators}
 </div>`
 );}
@@ -536,10 +529,8 @@ public static parameter(): string { return (
 
     public static object(): string { return (
 `<div className={'root object'}>
-    <div className={'input-container mx-2'}>
-        <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
-        <Input data={data} field={'name'} hidden={true} />
-    </div>
+    <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
+    <Input data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
     <div className={'object-children'}>
         {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
@@ -549,12 +540,9 @@ public static parameter(): string { return (
 );}
 
     public static value() { return (
-`<div className={'root d-flex value'}>
-    {instanceofname && <label className={'d-block ms-1'}>{instanceofname}</label>}
-    {!instanceofname && <div className={'input-container mx-2'}>
-        <b className={'object-name'}>Name:</b>
-        <Input data={data} field={'name'} hidden={true} />
-    </div>}
+`<div className={'root value d-flex'}>
+    {instanceofname && <label className={'d-block ms-1 name'}>{instanceofname}</label>}
+    {!instanceofname && <Input className='name' data={data} field={'name'} hidden={true} autosize={true} />}
     <label className={'d-block m-auto values_str'} style={{color: constants[typeString] || 'gray'}}>
         : {valuesString}
     </label>

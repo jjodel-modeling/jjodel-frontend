@@ -308,3 +308,12 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
 .dock-content .dock-tabpane:has(.GraphContainer){
   overflow-y: hidden;
 }
+.text-icon{
+  &::before{
+    content: attr(data-val);
+    text-transform: capitalize;
+    font-variant: normal;
+    // font-weight: normal;
+    font-style: normal; // removes italic
+  }
+}

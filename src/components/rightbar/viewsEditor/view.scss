@@ -1,58 +1,52 @@
-/*.view-list-elem{
-  cursor: pointer;
-  background: transparent;
-  &:hover{
-    background: #E0E0E0;
-  }
-}
-*/
-
-
-.view-editor-header { // removed the whole root
-  display: flex;
-  position: absolute;
-  z-index: 1;
-  right: 0;
-  top: 4px;
-  background-color: var(--bg-color);
-  .view-name{
-    display: none;
-    margin: auto;
-    margin-right: 0.25em;
-    padding-left: 0.25em; // because the left "margin" should get background-color
-  }
-  .btn-back{
-    margin: auto;
-    margin-right: 1rem;
-
-  }
-}
-
-
-
-
 .view-editor-root{
-  --back-btn-size:27px;
   --inner-page-padding: 1rem;
   .btn-back{
-    width: var(--back-btn-size);
-    height: var(--back-btn-size);
-    position: absolute;
-    z-index: 1;
-    top: 6.5px;
-    left: calc(var(--inner-page-padding));
+    font-size: 0.9em;
+    margin: auto;
+    &i::before{
+      transform: translate(0, 1px);
+    }
   }
   .dock-layout{
-    // position: 'absolute', left: 10, top: 40, right: 10, bottom: 10, marginBottom: "20px"
     width: 100%;
     height: 100%;
     .dock-nav-wrap{
-      margin-left: calc(var(--inner-page-padding) * 1 + var(--back-btn-size) + 0.25rem);
+      margin-left: 0.25rem;
     }
   }
   .page-root{
     padding: var(--inner-page-padding);
+    padding-top: 0;
   }
+
+  .view-editor-header {
+    margin-top: 0.25em;
+    margin-left: var(--inner-page-padding);
+    margin-right: var(--inner-page-padding);
+    display: inline-flex;
+
+    .path-list{
+      display: inline-flex;
+      // border: 2px solid red;
+      // &>*{ border: 2px solid black; }
+      margin: auto;
+      margin-left: 0.5em;
+
+      .path-separator{
+        height: min-content;
+        margin: auto;
+        margin-left: 0.125em;
+        margin-right: 0.125em;
+      }
+      .path-element {
+        cursor: pointer;
+        margin: auto;
+        &:hover{
+          //font-weight: 900;
+          text-shadow: 0px 0px 1px black;
+        }
+      }
+    }
+  }
+
 }
-
-

@@ -125,7 +125,7 @@ export class StateMachine {
     }
     static load3(name: string, save?: boolean) {
         this.load2(name);
-        this.resetView = LViewElement.fromD(DViewElement.new('Reset', `<div className={'root bg-white p-2'}>RESET</div>`));
+        this.resetView = LViewElement.fromD(DViewElement.new2('Reset', `<div className={'root bg-white p-2'}>RESET</div>`));
         TRANSACTION(() => {
             SetFieldAction.new(this.resetView.id, 'explicitApplicationPriority', 10, '', false);
             SetFieldAction.new(this.resetView.id, 'viewpoint', this.viewpoint.id, '', true);

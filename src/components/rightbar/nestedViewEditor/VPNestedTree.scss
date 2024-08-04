@@ -247,3 +247,10 @@ input.change-boost{
 }
 .view-editor-fullsize-content{
 }
+.view-editor-root{
+  overflow: hidden;
+  .dock-content .dock-tabpane{
+    overflow: auto !important;
+  }
+}
+

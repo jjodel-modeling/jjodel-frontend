@@ -141,6 +141,7 @@ import {
 } from "./index";
 import {OclEngine} from "@stekoe/ocl.js";
 import {ReactNode} from "react";
+import {ProjectsApi} from "../api/persistance";
 
 var windoww = window as any;
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -520,6 +521,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     // private callbacks: Function[];
     private nonPersistentCallbacks: Function[];
     fatherType?: typeof RuntimeAccessibleClass;
+    private fatherPtr?: Pointer // T['father'];
     private state?: DState; // set only if requested by setWithSideEffect
     /*
     problem: if isPersistent is set to false, but the object is later made persistent with an action, you lose all the callback effects afecting other elements (as setting opposite relations like instances-typeof or losing pointedBy's)
@@ -539,6 +541,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         t._persistCallbacks = [];
         t._derivedSubElements = [];
         this.nonPersistentCallbacks = [];
+        this.fatherPtr = father;
+
         if (this.thiss.hasOwnProperty("father")) {
             this.fatherType = fatherType as any;
             this.setPtr("father", father);
@@ -904,7 +908,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this;
     }
 
-    DViewElement(name: string, jsxString: string, vp?: Pointer<DViewPoint>, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
+    DViewElement(name: string, jsxString: string, vp?: Pointer<DViewPoint>,
+                 defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                  preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '', priority?: number): this {
         const thiss: DViewElement = this.thiss as any;
         const vid = thiss.id;
@@ -978,15 +983,16 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // const project = user?.project; if(!project) return this;
         if (!vp) vp = user?.project?.activeViewpoint.id || Defaults.viewpoints[0];
         if (vp !== 'skip') {
-            let dvp = DPointerTargetable.fromPointer(vp);
+            // let dvp = DPointerTargetable.fromPointer(vp);
             // let subviews = {...dvp.subViews}; subviews[thiss.id] = 1.5;
             // this.setExternalPtr(vp, 'subViews', '', subviews);
-            let subviews: GObject = {}; subviews[thiss.id] = 1.5;
-            this.setExternalPtr(vp, 'subViews', '+=', subviews);
             this.setPtr('viewpoint', vp);
         }
 
-        let trview = transientProperties.view[thiss.id] = {} as any;
+        this.setExternalPtr(this.fatherPtr as Pointer<DViewElement>, 'subViews', '+=', {[thiss.id]: 1.5});
+        transientProperties.view[thiss.id] = {} as any;
+
+        // let trview = transientProperties.view[thiss.id];
         // trview.?? = ???
 
         TRANSACTION(() => {
@@ -2114,7 +2120,27 @@ export class DProject extends DPointerTargetable {
 
     state!: string;
 
-    public static new(type: DProject['type'], name: string, state?: DProject['state'], m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id']): DProject {
+    public static new(type: DProject['type'], name?: string, state?: DProject['state'],
+                      m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id'], otherProjects?:LProject[]): DProject {
+
+        // fix name
+        if (!otherProjects) otherProjects = LPointerTargetable.fromPointer(DUser.current).projects;
+        if (!name) {
+            // autofix default name
+            let regexp = /Project (\d+)/;
+            const matches = otherProjects.map(p=>(+(regexp.exec(p.name)?.[1] as any) || 0));
+            let maxnum = Math.max(...matches, 0);
+            name = 'Project ' + (1 + maxnum);
+            console.log("auto name project", {name, maxnum, regexp, otherProjects, on: otherProjects.map(p=>p.name)});
+        }
+        else {
+            // autofix manually inputted name
+            let allProjectNames: Dictionary<string, LProject> = U.objectFromArray(otherProjects, (p)=>p.name);
+            console.trace("explicit name project pre", {name, otherProjects, on: otherProjects.map(p=>p.name)});
+            name = U.increaseEndingNumber(name, false, false, (s)=>!!allProjectNames[s]);
+            console.log("explicit name project post", {name, otherProjects, on: otherProjects.map(p=>p.name)});
+        }
+
         return new Constructors(new DProject('dwc'), undefined, true, undefined)
             .DPointerTargetable().DProject(type, name, state || '', m2 || [], m1 || [], id).end(); }
 }
@@ -2266,7 +2292,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected get_views(c: Context): this['views'] {
         // return LViewElement.fromPointer([...c.data.views, ...Defaults.views]);
         let duplicateRemover: Dictionary<Pointer, LViewElement> = {};
-        let varr = this.get_viewpoints(c).flatMap(vp => vp.subViews);
+        let varr = this.get_viewpoints(c).flatMap(vp => vp.allSubViews);
         for (let v of varr) duplicateRemover[v.id] = v;
         return Object.values(duplicateRemover);
     }
@@ -2445,16 +2471,35 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     public delete(): void {
         throw new Error('cannot be called directly, should trigger getter. this is only for correct signature');
     }
-    protected get_delete(context: Context): () => void {
-        const data = context.proxyObject as LProject;
+    protected get_delete(c: Context): () => void {
+        const data = c.proxyObject as LProject;
         return () => {
             TRANSACTION(()=> {
-                data.children.map(c => c && c.delete());
-                SetFieldAction.new(DUser.current, 'projects', data.id as any, '-=', true);
+                // this crashes, there is no get_children() (data.children || []).map(c => c && c.delete());
+                SetFieldAction.new(DUser.current, 'projects', c.data.id as any, '-=', true);
                 DeleteElementAction.new(data.id);
-                SetRootFieldAction.new('projects', data.id, '-=', true);
+                SetRootFieldAction.new('projects', c.data.id, '-=', true);
             });
         }
+    }
+
+    duplicate(): LProject{ return this.wrongAccessMessage('LProject.duplicate()')};
+    get_duplicate(c: Context): ()=>LProject{
+        return () => {
+            let clone: DProject = DProject.new(c.data.type, c.data.name + ' Copy');
+            for (let key in c.data){
+                switch (key){
+                    case 'pointedBy': case 'name': continue;
+                    default:
+                        // @ts-ignore
+                        clone[key] = c.data[key];
+                        break;
+            }
+        }
+        clone.author = DUser.current;
+        clone.onlineUsers = 0;// i think this should not be a presistent data, but a fake attribute available only on LProject
+        // todo per giordano: assign project to user & set persistent stuff with ProjectsAPI ?
+        return LPointerTargetable.fromD(clone); }
     }
 }
 

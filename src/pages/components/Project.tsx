@@ -14,6 +14,7 @@ type Props = {
     data: LProject;
     mode?: string;
     key: any;
+    index?: number; // a che serve? si può togliere?
 };
 
 type ProjectTypeType = {
@@ -36,7 +37,7 @@ function Project(props: Props): JSX.Element {
 
     const toggleFavorite = (project: LProject) => {
         project.favorite = !project.favorite;
-    }; 
+    };
     const selectProject = () => {
         navigate(`/project?id=${data.id}`);
         U.refresh();
@@ -51,9 +52,8 @@ function Project(props: Props): JSX.Element {
     /* CARDS */
 
     var sectionStyle = {
-        backgroundImage: `url(${card}),
-        backgroundSize: 'contain'`
-   
+        backgroundImage: `url(${card})`,
+        backgroundSize: 'contain'
      }
 
     function ProjectCard(props: Props): JSX.Element {
@@ -83,11 +83,11 @@ function Project(props: Props): JSX.Element {
         };
 
         return (<>
-        
+
             <div className={'project-card'}>
                 <div style={{position: 'absolute', top: 10, right: 5}} className={'d-flex'}>
-                {/* 
-                
+                {/*
+
                 <button disabled={data.author.id !== DUser.current} className={'btn btn-danger me-2'}
                         onClick={async e => await deleteProject()}>
                     <i className={'p-1 bi bi-trash-fill'} />
@@ -108,22 +108,22 @@ function Project(props: Props): JSX.Element {
                     <h5 className={'d-block'}>{data.name}</h5>
                     <label className={'d-block'}><i className="bi bi-clock"></i> Edited 10 hours ago</label>
                 </div>
-                
+
                 <Meter project={data}></Meter>
-                
+
                 <div className={'tag'}>
                     <div>
-                        {/* <i className="bi bi-files"></i> {props.data.metamodels.length} metamodel(s), {props.data.models.length} model(s)<br/> 
+                        {/* <i className="bi bi-files"></i> {props.data.metamodels.length} metamodel(s), {props.data.models.length} model(s)<br/>
                         <i className="bi bi-file-code"></i> {props.data.viewpoints.length-1} viewpoint(s)*/}
                     </div>
                 </div>
             </div>
-        
-        
+
+
         </>);
     }
 
-    
+
     /* LIST */
 
     function ProjectList(props: Props): JSX.Element {
@@ -132,14 +132,14 @@ function Project(props: Props): JSX.Element {
                 <div className={'col-sm-1'} style={{width: '30px'}}>
                     <Menu position='right'>
                         <Item icon={<i className="bi bi-plus-square"></i>} action={e => selectProject()}>Open</Item>
-                        <Item icon={<i className="bi bi-files"></i>}>Duplicate</Item>
+                        <Item icon={<i className="bi bi-files"></i>} action={(e => props.data.duplicate())}>Duplicate</Item>
                         <Item  icon={<i className="bi bi-download"></i>} action={e => exportProject()}>Download</Item>
                         <Divisor />
                         <Item icon={<i className="bi bi-star"></i>}  action={(e => toggleFavorite(data))}>Add to favorites</Item>
                         <Item icon={<i className="bi bi-share"></i>}>Share</Item>
                         <Divisor />
                         <Item icon={<i className="bi bi-trash3"></i>} action={async e => await deleteProject()}>Delete</Item>
-                    </Menu> 
+                    </Menu>
                 </div>
                 <div className={'col-sm-1'}>
                     {data.favorite ? <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> : <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
@@ -148,12 +148,12 @@ function Project(props: Props): JSX.Element {
                     {data.type === "private" && <i className="bi bi-lock"></i>}
                     {data.type === "collaborative" && <i className="bi bi-diagram-3"></i>}
 
-                    
+
                 </div>
                 <div className={'col-5 name'}>{data.name}</div>
                 <div className={'col-3'}>13 days ago</div>
-                <div className={'col-2'}>July 13, 2024</div>  
-            </div>  
+                <div className={'col-2'}>July 13, 2024</div>
+            </div>
         </>);
     }
 

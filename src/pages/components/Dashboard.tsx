@@ -1,7 +1,9 @@
-import type { LUser, DUser, LPointerTargetable, DState, LProject } from '../../joiner';
+import type { LUser, DState, LProject } from '../../joiner';
+import {DUser, LPointerTargetable} from '../../joiner';
 import {Navbar, LeftBar} from './';
 
 import '../style.scss'
+import {ReactElement} from "react";
 
 type UserProps = {
     name: string;
@@ -20,7 +22,7 @@ const User = (props: UserProps) => {
 
 type TitleProps = {
     title: string;
-    icon: any;
+    icon: ReactElement;
 }
 
 const Title = (props: TitleProps) => {
@@ -32,9 +34,10 @@ const Title = (props: TitleProps) => {
 };
 
 
-type Props = {
+export type DashProps = {
     children?: JSX.Element,
-    active: 'Account' | 'All' | 'Recent' | 'Notes' | 'Profile' | 'Settings' | 'Templates' |  'Updates',
+    // NB: account and profile are both used, i don't know which to keep
+    active: 'Account'|'Profile'|'Settings'|'Updates'|'Community'|'All'|'Archive'|'Templates'|'Recent' | 'Notes';
     version: Partial<DState["version"]>;
 };
 
@@ -52,25 +55,25 @@ const Catalog = (props: CatalogProps) => {
     </>);
 };
 
-function Dashboard(props: Props): any {
+function Dashboard(props: DashProps): any {
 
     const {children, active} = props;
     const user: LUser = LPointerTargetable.fromPointer(DUser.current);
 
     return(<>
         <Navbar />
-        <div className={"d-flex h-100 w-100"}>
+        <div className={"d-flex h-100 w-100"} tabIndex={-1}>
             <LeftBar projects={user.projects} active={active}/>
 
             <div className={'row catalog-container h-20 w-100'} style={{marginRight: '20px', height: '10px'}}>
                 <div className={'col'}>
                     {active === "All" && <User name={'John Doe'} initials={'JD'} />}
-                    {active === "Recent" && <Title title={'Recent'} icon={<i className="bi bi-clock"></i>} />} 
-                    {active === "Templates" && <Title title={'Jjodel Templates'} icon={<i className="bi bi-code-square"></i>} />} 
-                    {active === "Notes" && <Title title={'Project Notes'} icon={<i className="bi bi-pencil-square"></i>} />} 
+                    {active === "Recent" && <Title title={'Recent'} icon={<i className="bi bi-clock"></i>} />}
+                    {active === "Templates" && <Title title={'Jjodel Templates'} icon={<i className="bi bi-code-square"></i>} />}
+                    {active === "Notes" && <Title title={'Project Notes'} icon={<i className="bi bi-pencil-square"></i>} />}
                     {active === "Updates" && <Title title={'What\'s new'} icon={<i className="bi bi-clock-history"></i>} />}
                     {active === "Profile" && <Title title={'Profile'} icon={<i className="bi bi-clock-history"></i>} />}
-                    
+
                 </div>
                 <div className={'col text-end'}>
                     <button className={'add-project'}><i className="bi bi-plus-lg"></i> Project</button>

@@ -4,14 +4,14 @@ import {connect} from 'react-redux';
 import {DState, LoggerComponent, Try} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
 import {DockLayout, LayoutData} from 'rc-dock';
-import {Info, Skeleton, Viewpoints, Views, Logger, Console} from "../../components/editors";
+import {Info, Skeleton, Logger, Console} from "../../components/editors";
 import {ModelMetaData} from '../rightbar/structureEditor/ModelMetaData';
 import NodeEditor from '../rightbar/styleEditor/StyleEditor';
 import DockManager from './DockManager';
 import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import MqttEditor from "../rightbar/mqtt/MqttEditor";
-import NestedView from "../rightbar/viewpointsEditor/ViewEditorNestedVersion";
+import NestedView from "../rightbar/nestedViewEditor/ViewEditorNestedVersion";
 
 
 const tabidprefix = "DockComponent_rightbar_";
@@ -37,9 +37,9 @@ function DockComponent(props: AllProps) {
     const structure = {id: id(), title: <TabHeader tid={tid()}>Structure</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Info /></TabContent>};
     const metadata = {id: id(), title: <TabHeader tid={tid()}>Metadata</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><ModelMetaData /></TabContent>};
     const tree = {id: id(), title: <TabHeader tid={tid()}>Tree View</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Skeleton /></TabContent>};
-    const views = {id: id(), title: <TabHeader tid={tid()}>Views</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Views /></TabContent>};
+    // const views = {id: id(), title: <TabHeader tid={tid()}>Views</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Views /></TabContent>};
     const node = {id: id(), title: <TabHeader tid={tid()}>Node</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NodeEditor /></TabContent>};
-    const viewpoints = {id: id(), title: <TabHeader tid={tid()}>Perspectives</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NestedView /></TabContent>};
+    const views = {id: id(), title: <TabHeader tid={tid()}>Views</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NestedView /></TabContent>};
     //const validation = {id: id(), title: <TabHeader tid={tid()}>Validation</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><ViewpointEditor validation={true} /></TabContent>};
     //const collaborators = {id: id(), title: <TabHeader tid={tid()}>Collaborators</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><CollaboratorsEditor /></TabContent>};
     //const mqtt = {id: id(), title: <TabHeader tid={tid()}>Mqtt</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MqttEditor /></TabContent>};
@@ -53,8 +53,6 @@ function DockComponent(props: AllProps) {
         // metadata,
         tree,
         views,
-        viewpoints,
-        // validation,
         // collaborators,
         // mqtt,
         node,

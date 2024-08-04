@@ -50,7 +50,6 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
     UX,
     windoww, transientProperties
 } from "../../joiner";
-import subViewsData from "../../components/rightbar/viewsEditor/data/SubViewsData";
 import {NodeTransientProperties, Pack1} from "../../joiner/classes";
 
 // const Selectors: typeof Selectors_ = windoww.Selectors;
