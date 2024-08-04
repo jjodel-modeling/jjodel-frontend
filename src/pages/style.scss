@@ -34,7 +34,6 @@ project-card .tip {
   --sep-padding: 4em;
 
   --gr-0: linear-gradient(90deg, hsla(233, 100%, 90%, 1) 0%, hsla(0, 0%, 89%, 1) 100%);
-
   --fg-0: var(--color);
   --gr-1: linear-gradient(90deg, hsla(233, 100%, 90%, 1) 0%, hsla(0, 0%, 89%, 1) 100%);
   --fg-1: var(--color);;
@@ -135,7 +134,7 @@ project-card .tip {
     }
 
     & > .menu div div .bi {
-      padding-right: 14px;
+      padding-right: 0px;
       font-size: 1.15em;
     }
 
@@ -209,6 +208,8 @@ project-card .tip {
       width: calc(100% - 14px);
       border: none;
       background-color: var(--bg-2);
+      background: linear-gradient(90deg, hsla(46, 73%, 75%, 1) 0%, hsla(176, 73%, 88%, 1) 100%);
+      background: linear-gradient(90deg, hsla(208, 33%, 21%, 1) 0%, hsla(211, 36%, 46%, 1) 100%);color: white;
       margin: 7px 7px 7px 7px;
       border-radius: 8px;
       font-size: 1em!important;
@@ -222,6 +223,7 @@ project-card .tip {
 
     & > .upload .bi {
       font-size: 2em;
+      color: white;
     }
 
 }

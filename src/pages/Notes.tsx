@@ -252,7 +252,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
 
 
     return(<Try>
-        <Dashboard active={'Templates'} version={props.version}>
+        <Dashboard active={'Notes'} version={props.version}>
             
             <React.Fragment>                
 
@@ -300,9 +300,9 @@ const AllProjectsConnected = connect<StateProps, DispatchProps, OwnProps, DState
     mapDispatchToProps
 )(AllProjectsComponent);
 
-const TemplatePage = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
+const NotesPage = (props: OwnProps, children: (string | Component)[] = []): ReactElement => {
     return <AllProjectsConnected {...{...props, children}} />;
 }
 
-export {TemplatePage};
+export {NotesPage};
 

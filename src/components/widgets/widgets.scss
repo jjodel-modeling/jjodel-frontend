@@ -1,0 +1,66 @@
+.toggle { 
+    // border: 1px solid red;
+    position: relative;
+    padding: 0;
+    --dimension: 18px; // dimensioni dispari
+    --top: 0px;
+    --top_label: -19px;
+ }
+ .toggle span {
+    color: var(--color);
+    font-weight: 400;
+    position: relative;
+    display: block;
+    margin-right: calc(var(--dimension) + 20px);
+    margin-top: 6px;
+ }
+ .toggle input[type="checkbox"] {
+    width: 0;
+    height: 0;
+    padding: 0;
+ }
+ 
+ .toggle input[type="checkbox"] + label::before{
+    position: absolute;
+    content: '';
+    display: block;
+    width: calc(var(--dimension) * 1.8);
+    height: var(--dimension);
+    border: 1px solid var(--bg-3-1);
+    border-radius: var(--dimension);
+    top: var(--top);
+    right: 0px;
+    background-color: var(--bg-3-1);
+    transition: 0.3s;
+ }
+
+ .toggle input[type="checkbox"]:checked + label::before {
+    display: inline-block;
+    transition: all 0.3s ease-in;
+    background-color: var(--secondary);
+    border: 2px solid var(--secondary);
+ }
+ 
+ .toggle input[type="checkbox"] + label::after {
+    position: relative;
+    content: '';
+    display: block;
+    height: calc(var(--dimension) - 1px);
+    width: calc(var(--dimension) - 1px);
+    border: 2px solid var(--bg-3-1);   
+    border-radius: var(--dimension);
+    top: var(--top_label);
+    right: 0px!important;
+    background: white;
+    transition: all 0.3s ease-in;
+ }
+ 
+ .toggle input[type="checkbox"]:checked + label::after {
+    display: block;
+    transition: all 0.3s ease-in;
+    background-color: white;
+    border: 2px solid var(--secondary);
+    right: calc(var(--dimension) - 3px)!important;
+ }
+ 
+ 

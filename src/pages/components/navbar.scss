@@ -89,17 +89,15 @@
 .nav-container {
   display: flex;
   background-color: var(--bg-1);
-  width: 100%;
-  height: auto;
+  height: 32px;
   padding: 0px var(--side-padding);
   font-weight: 200;
   --palette-1-hover: var(--accent);
 
   .nav-hamburger {
-    width: 270px!important;
     color: var(--color);
     font-size: 1.5em;
-    padding-right: var(--sep-padding);
+    padding-right: 0;
     display: block;
     margin-top: auto;
     margin-bottom: auto;
@@ -113,7 +111,6 @@
     }
     label div {
       float: right;
-      margin-right: 0;
     }
   }
 }
@@ -127,13 +124,19 @@
 }
 
 .nav-container .nav-logo {
-  padding: 4px var(--sep-padding) 4px 0;
-  width: 300px;
+  margin-top: auto;
+  margin-bottom: auto;
+  text-align: center;
+}
 
+.nav-commands {
+
+  width: fit-content;
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
 .nav-container .content {
-
   background-color: var(--color);
   min-width: 200px;
   top: 100%;
@@ -192,10 +195,10 @@
 
 
 
-.nav-container .content.context-menu{
+.nav-container .content.context-menu {
   width: auto;
 }
-.nav-container .content.context-menu ul{
+.nav-container .content.context-menu ul {
   --palette-1-hover: white;
   width: max-content;
   min-width: 100%;
@@ -217,8 +220,7 @@
       display: flex;
       padding: 3px 8px;
       width: 100%;
-      //font-size: 12px;
-      //font-weight: 200;
+
       >*:first-child{
         flex-grow: 1;
       }
@@ -287,8 +289,9 @@
 }
 
 .nav-container .user {
-  margin-top: 4px;
-  margin-right: 35px;
+  padding-right: 20px;
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
 .user-initials {
@@ -312,8 +315,11 @@
 
 .nav-side {
   position: absolute;
-  right: 31px;
+  width: fit-content;
+  right: calc(var(--side-padding) - 12px);
+  padding-right:0;
   float: right;
   top: 4px;
-
+  margin-top: auto;
+  margin-bottom: auto;
 }

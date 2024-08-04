@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { Item, Divisor, Menu } from './menu/Menu';
 
 import card from '../../static/img/card.png';
-import { int } from '../../joiner/types';
+import { icon } from './icons/Icons';
 
 
 type Props = {
@@ -28,13 +28,6 @@ function ProjectType(props: ProjectTypeType){
         {props.type === "collaborative" && <i className="bi bi-diagram-3"></i>}
     </>);
 }
-
-type TipProps = {
-    children: string;
-}
-const Tip = (props: TipProps) => {
-    return (<div className="tip">{props.children}</div>);
-};
 
 function Project(props: Props): JSX.Element {
     const {data} = props;
@@ -101,14 +94,14 @@ function Project(props: Props): JSX.Element {
     </button>*/}
                     {data.favorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> : <i onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
                     <Menu>
-                            <Item icon={<i className="bi bi-plus-square"></i>} keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
-                            <Item icon={<i className="bi bi-files"></i>}>Duplicate</Item>
-                            <Item icon={<i className="bi bi-download"></i>} action={e => exportProject()}>Download</Item>
+                            <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
+                            <Item icon={icon['duplicate']}>Duplicate</Item>
+                            <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
                             <Divisor />
-                            <Item icon={<i className="bi bi-star"></i>} action={(e => toggleFavorite(data))}>Add to favorites</Item>
-                            <Item icon={<i className="bi bi-share"></i>}>Share</Item>
+                            <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>Add to favorites</Item>
+                            <Item icon={icon['share']}>Share</Item>
                             <Divisor />
-                            <Item icon={<i className="bi bi-trash3"></i>} action={async e => await deleteProject()}>Delete</Item>
+                            <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
                     </Menu>
                 </div>
                 <div className='header'>
