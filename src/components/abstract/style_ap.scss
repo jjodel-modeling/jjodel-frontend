@@ -7,7 +7,6 @@ body{
   --secondary: #048BA8;
   --terziary: #5F0F40;
   --accent-secondary: #F3B700;
-
   --bg-1: white;
   --bg-2: #f5f5f5;
   --bg-2-5: #EBEBEB;
@@ -25,7 +24,6 @@ body{
   --side-padding: 2em;
   --sep-padding: 4em;
 }
-
 body > .dragging-layer {
   position: absolute !important;
   z-index: 9999;
@@ -95,11 +93,6 @@ body > .dragging-layer > div:last-child {
 .dock-tab-btn {
   padding-top: 0!important;
 }
-
-.dock-tab-btn:has(.dock-tab-close-btn) {
-  padding-top: 4px!important;
-}
-
 .dock-tab-btn-disabled {
   cursor: default;
   color: var(--disabled);
@@ -112,6 +105,7 @@ body > .dragging-layer > div:last-child {
   position: relative;
   display: block;
   min-width: 30px;
+  height: 30px;
   text-align: center;
   transition: color 0.25s cubic-bezier(0.35, 0, 0.25, 1);
   padding: 0px;
@@ -145,8 +139,8 @@ body > .dragging-layer > div:last-child {
 }
 .dock-tab-active,
 .dock-tab-active:hover {
-  border-top: 3px solid var(--terziary)!important;
-  color: var(--terziary);
+  border-top: 3px solid var(--accent);
+  color: var(--accent);
   cursor: default;
   transform: translateZ(0);
   
@@ -215,7 +209,6 @@ body > .dragging-layer > div:last-child {
   bottom: 0px;
   left: 0;
 }
-
 .dock-tab-close-btn {
   position: absolute;
   cursor: pointer;
@@ -223,30 +216,15 @@ body > .dragging-layer > div:last-child {
   color: var(--bg-3);
   right: -3px;
   font-size: 12px;
-  width: 10px;
-  height: 10px;
+  width: 16px;
   text-align: center;
-  top: 10px;
-  opacity: 0;
-  margin-right: 4px!important;
+  top: 6px;
   outline: none;
   transition: all 0.25s ease-in-out;
-  padding-right: 6px;
-
-  background-image: url('/static/img/close-on.png');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 6px 6px;
-
 }
-
-/*
-
 .dock-tab-close-btn:before {
-  content: "";
+  content: "X";
 }
-*/
-
 .dock-tab-close-btn:hover,
 .dock-tab-close-btn:focus {
   color: var(--bg-5);
@@ -331,7 +309,6 @@ body > .dragging-layer > div:last-child {
   display: flex;
   position: relative;
   transition: transform 0.3s;
-  height: min-content;
 }
 .dock-extra-content {
   display: flex;
@@ -825,7 +802,7 @@ body.dock-dragging iframe {
   margin-top: 4px;
 }
 .dock-panel.dock-style-card .dock-tab-close-btn {
-  right: 0px;
+  right: 0;
   font-size: 11px;
   top: 8px;
 }
