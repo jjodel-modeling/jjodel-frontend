@@ -492,7 +492,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     * the outernmost html root cannot update his attribute without refreshing the parent and recalling injectprops
     * fixed: by updating it directly in GraphElement.render()
     * */
-    get_zIndex(context: Context): this["zIndex"] { return context.data.zIndex; }
+    get_zIndex(context: Context): this["zIndex"] { return (context.data.zIndex || 0); }
     set_zIndex(val: this["zIndex"], context: Context): boolean {
         SetFieldAction.new(context.data.id, "zIndex", val, undefined, false);
         return true; }
