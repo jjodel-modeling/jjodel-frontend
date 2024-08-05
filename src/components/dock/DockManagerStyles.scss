@@ -1,3 +1,28 @@
+.dock-tab {
+    --color: #233d4d;
+  --accent: #048BA8;
+  --accent-50: var(--bg-4);
+  --secondary: #048BA8;
+  --terziary: #5F0F40;
+  --accent-secondary: #F3B700;
+  --bg-1: white;
+  --bg-2: #f5f5f5;
+  --bg-2-5: #EBEBEB;
+  --bg-3: #e2e2e1;
+  --bg-3-1: #c3c3c1;
+
+  --bg-4: #8f908e;
+  --bg-5: #525251;
+
+  --dock-bg: var(-bg-1);
+  --disabled: var(--bg-4);
+  --failure: #ed474a;
+  --danger: #ed474a;
+  --success: #3ddc97;
+  --side-padding: 2em;
+  --sep-padding: 4em;
+}
+
 .pinnable-dock-root{
     display: flex;
     flex-flow: column;
@@ -37,7 +62,7 @@
     .pinnable-strip .dock-content{
         position: absolute;
         left: 100%;
-        border: 2px solid red;
+        // border: 2px solid red;
     }
 
 
@@ -117,6 +142,7 @@
         // otherwise since the tab header content is portal-ed, it bubbles the event to the source docklayout,
         // so i need to trigger it from the "static" empty tab header container
         >*{pointer-events: none;}
+
     }
     .active-on-mouseenter{ pointer-events: all; }
 
@@ -124,7 +150,7 @@
     .dock-tab:hover .pin-button{
         display: inline;
         margin-left: .5em;
-        pointer-events: all;
+        pointer-events: all; 
     }
     .dock-content-holder{
         .ui-resizable-handle {
@@ -192,8 +218,8 @@
     }
 }
 .dock-tab > div {
-    padding: 4px 14px;
-    outline-color: #108ee9;
+    padding: 1px 14px;
+    outline-color: none;
 }
 .pinnable-strip{
     .dock-tab > div {
@@ -233,6 +259,7 @@
 .dock-tab:hover .dock-tab-close-btn,
 .dock-tab-close-btn:focus {
     opacity: 1;
+    color: var(--terziary);
 }
 .dock-nav-operations{
     float: right;
@@ -269,7 +296,7 @@
 .dock-nav{
     height: 100%;
 }
-.dock-tab-close-btn{
+.dock-tab-close-btn {
     background-image: none;
     top: 0;
     bottom: 0;
@@ -282,8 +309,8 @@
     &:hover{ color: red; }
     &::before{
         margin: auto;
-        content: "\f62a"; // "\f623" x in a circle
-        font-size: 1.5rem;
+        content: "\f629"; // "\f623" x in a circle | "\f62a" x only | "\f629" square-x
+        font-size: 0.8rem;
 
         font-family: bootstrap-icons !important;
         font-style: normal;

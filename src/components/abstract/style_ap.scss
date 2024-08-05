@@ -1,4 +1,4 @@
-body{
+body {
   --panel-content-color: rgba(0,0, 0, 0.85);
 
   --color: #233d4d;
@@ -17,8 +17,8 @@ body{
   --bg-5: #525251;
 
   --dock-bg: var(-bg-1);
-  --disabled: red; //var(--bg-4);
-
+  --disabled: var(--bg-4);
+  --failure: #ed474a;
   --danger: #ed474a;
   --success: #3ddc97;
   --side-padding: 2em;
@@ -72,7 +72,7 @@ body > .dragging-layer > div:last-child {
   display: flex;
 }
 .dock-bar {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
   box-sizing: border-box;
   overflow: hidden;
@@ -85,7 +85,7 @@ body > .dragging-layer > div:last-child {
   position: absolute;
   box-sizing: border-box;
   margin-top: -3px;
-  background-color: white; // var(--accent);
+  background-color: var(--bg-1); // var(--accent);
   transform-origin: 0 0;
   width: 0px;
   height: 0px;
@@ -105,7 +105,7 @@ body > .dragging-layer > div:last-child {
   position: relative;
   display: block;
   min-width: 30px;
-  height: 30px;
+  height: 30px!important;
   text-align: center;
   transition: color 0.25s cubic-bezier(0.35, 0, 0.25, 1);
   padding: 0px;
@@ -179,6 +179,8 @@ body > .dragging-layer > div:last-child {
   animation-duration: 0.5s;
 }
 
+
+
 @keyframes dock-fadeOut {
   from {
     height: 100%;
@@ -223,7 +225,7 @@ body > .dragging-layer > div:last-child {
   transition: all 0.25s ease-in-out;
 }
 .dock-tab-close-btn:before {
-  content: "X";
+  content: "x";
 }
 .dock-tab-close-btn:hover,
 .dock-tab-close-btn:focus {
@@ -295,6 +297,7 @@ body > .dragging-layer > div:last-child {
   left: -30px;
   top: 0;
   box-shadow: inset -10px 0 8px -8px rgba(0, 0, 0, 0.08);
+
 }
 .dock-nav-wrap {
   position: relative;
