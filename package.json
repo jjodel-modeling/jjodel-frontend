@@ -25,7 +25,7 @@
     "async-lz-string": "^1.1.0",
     "axios": "^0.21.4",
     "bootstrap": "^5.2.1",
-    "bootstrap-icons": "^1.9.1",
+    "bootstrap-icons": "^1.11.3",
     "html-react-parser": "^3.0.4",
     "http-proxy-middleware": "^2.0.6",
     "igniteui-dockmanager": "^1.14.4",
