@@ -309,6 +309,17 @@
   padding-right: 20px;
   margin-top: auto;
   margin-bottom: auto;
+    .initials{
+      font-size: inherit;
+      display: inline-block;
+      padding: 2px;
+      height: 24px;
+      width: 24px;
+    }
+  >*{
+    margin: auto 0;
+  }
+
 }
 
 .user-initials {

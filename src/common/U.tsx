@@ -1064,6 +1064,7 @@ export class U {
         return +parseFloat(s); }
 
     static increaseEndingNumber(s: string, allowLastNonNumberChars: boolean = false, allowDecimal: boolean = false, increaseWhile?: ((x: string) => boolean)): string {
+        if (increaseWhile && !increaseWhile(s)) return s;
         let regexpstr = '([0-9]+' + (allowDecimal ? '|[0-9]+\\.[0-9]+' : '') + ')' + (allowLastNonNumberChars ? '[^0-9]*' : '') + '$';
         const matches: RegExpExecArray | null = new RegExp(regexpstr, 'g').exec(s); // Global (return multi-match) Single line (. matches \n).
         // S flag removed for browser support (firefox), should work anyway.

@@ -1932,7 +1932,9 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         const dependencies = data.dependencies();
 
         const ret = () => {
-            for(let child of data.children) {
+            if (context.data.id.indexOf('Pointer_View')) return; // cannot delete default views/viewpoints
+
+            for (let child of data.children) {
                 child.delete();
                 // todo: if a m1-dvalue which conforms to a m2-reference with "containment" is deleted, need to delete also target.
                 // maybe better to do through override?

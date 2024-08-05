@@ -1,6 +1,7 @@
 .commandbar {
     margin-left: 0px;
     padding-left: 0px;
+    display: flex;
 }
 
 .commandbar .blue {
@@ -40,7 +41,7 @@
     background: linear-gradient(90deg, hsla(333, 100%, 53%, 1) 0%, hsla(33, 94%, 57%, 1) 100%);
     color: white;
     border: none;
-    
+
     & .bi {
         color: white;
     }
@@ -94,11 +95,16 @@
 }
 
 .commandbar .card .body h5 {
-    margin-bottom: 0px;
-
+    // margin-bottom: 0px; was messing with button alignment
 }
 
 .commandbar .card .body {
-    padding-top: 6px;
+    // padding-top: 6px;
+    display: flex;
+    flex-flow: column;
+    &>*{
+        margin: auto;
+        margin-left: 0;
+    }
 
 }

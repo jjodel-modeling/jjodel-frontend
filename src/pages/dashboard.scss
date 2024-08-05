@@ -53,7 +53,10 @@ project-card .tip {
   border-bottom: 6px solid var(--accent);
   border-bottom: 6px solid #B5C6E0;
   color: #3A647E;
-  margin: 0 2em 2em 0;
+  margin: 0 .75em 2em 0;
+  &>.project-actions>*{
+    margin: auto;
+  }
 }
 
 .project-card .meter {
@@ -77,7 +80,7 @@ project-card .tip {
 }
 
 .project-card:hover .meter .artifact span {
-  
+
   visibility: visible;
   opacity: 1;
   transition: visibility 0s, opacity 0.5s linear;
@@ -112,16 +115,19 @@ project-card .tip {
 
 .leftbar {
   background-color: white;
-  width: 300px!important; 
+  max-width: 300px!important;
+  flex-basis: 170px;
+  flex-grow: 0.5;
+
   height: 100%;
   color: var(--color);
 
     & > .menu {
-      
+
       padding-top: 10px;
       padding-bottom: 10px;
     }
-  
+
     & > .menu div div {
       cursor: pointer;
       padding: 4px 8px 4px 2rem;
@@ -183,7 +189,7 @@ project-card .tip {
 
     & .bi-chevron-down {
       cursor: pointer;
-      float: left; 
+      float: left;
       padding-top: 17px;
       padding-left: 10px;
     }
@@ -194,7 +200,7 @@ project-card .tip {
 
     & .bi-chevron-right {
       cursor: pointer;
-      float: left; 
+      float: left;
       padding-top: 17px;
       padding-left: 10px;
     }
@@ -245,7 +251,7 @@ project-card .tip {
 .project-card .tag {
 
   // background: linear-gradient(180deg, hsla(45, 100%, 88%, 1) 0%, hsla(191, 95%, 34%, 1) 100%);
-  
+
 
   font-weight: 300;
   font-size: 13px;
@@ -282,6 +288,79 @@ project-card .tip {
 }
 .text-gray {
   color: #eee;
+}
+
+.dashboard-container{
+  display: flex;
+  min-height: 0;
+}
+
+.user {
+  display: inline-flex;
+  .name {
+    float: left;
+    width: fit-content;
+    padding-top: 5px;
+    h2 {
+      font-weight: 400;
+      .bi {
+        color: var(--secondary);
+      }
+    }
+  }
+  .initials {
+    text-align: center;
+    font-size: 1.5em;
+    width: 2.2em;
+    height: 2.2em;
+    padding: 6px;
+    margin: auto 0.5em;
+    color: white;
+    border-radius: 30px;
+    background-color: #087E8B;
+  }
+}
+
+.card>.icon{
+  min-width: fit-content;
+  >.bi{
+    margin: auto;
+  }
+}
+
+/*
+
+  // uso il padding come spacing minimo, e margin-auto come spacing aggiuntivo se avanza spazio su schermi grandi
+  margin: auto;
+  padding: 30px 0;*/
+.catalog-container {
+  padding: 20px;
+  position: relative;
+  flex-grow: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-flow: column;
+  .col{
+    display: flex;
+  }
+  .user-title{
+    flex: 0 0;
+    margin-top: 60px;
+    margin-bottom: 60px;
+
+    .add-project{
+      margin-left: auto;
+    }
+  }
+
+
+  *{
+    outline: 1px solid gray;
+    .bi::before{
+      outline: 1px solid gray;
+    }
+  }
 }
 
 

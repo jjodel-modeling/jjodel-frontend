@@ -1,0 +1,134 @@
+
+.details {
+  width: 253px;
+  border: 1px solid var(--bg-3);
+  border-radius: 8px;
+  padding: 1.2em;
+}
+.fallback-message{
+  grid-column: 1 / -1;
+  display: flex;
+  span { margin: auto; }
+}
+
+.catalog-header {
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
+  margin-left: 0em;
+  margin-bottom: 2em;
+  // flex-flow: column;
+  &>.left{
+    padding: 0;
+    margin: auto;
+    margin-left: 0;
+    flex: unset;
+    height: min-content;
+  }
+  &>.right{
+    padding: 0;
+    margin: auto;
+    margin-right: 0;
+    flex: unset;
+    display: flex;
+    text-align: right;
+    &>*{
+      margin: auto .5em;
+    }
+    span{
+      margin-left: auto;
+      margin-right: 0;
+    }
+    .menu-button{
+      margin-left: 1px;
+    }
+    .view-icons{
+      margin: auto 0;
+      display: flex;
+      .bi{ margin: auto .25em; }
+      .bi:last-child{ margin-right: 0; }
+    }
+  }
+}
+.catalog-header button {
+  color: var(--bg-4);
+  background-color: transparent;
+  font-size: 1em;
+  font-weight: 400;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 3px;
+}
+
+.catalog-header button:hover {
+  background-color: var(--bg-2);
+}
+
+.catalog-header button.active {
+  background-color: var(--bg-2);
+  color: var(--color);
+}
+
+.catalog-header button {
+  margin-right: 1em;
+}
+
+.catalog-header .right button:hover {
+  color: red;
+}
+
+
+.project-list {
+  margin-right: 280px;
+}
+
+.project-list .header {
+  font-size: 1.2em;
+  color: var(--bg-4);
+  margin-bottom: 6px;
+}
+
+.project-list .data {
+  font-size: 1.2em;
+  color: var(--color);
+  padding: 4px 8px;
+}
+
+.project-list .data:hover {
+  color: var(--bg-5);
+  background-color: var(--bg-3);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color, background-color 0.3s;
+}
+
+.project-list .name {
+  font-weight: 600;
+  float: right;
+}
+
+
+.catalog {
+  width: 100%;
+  padding: 0;
+  display: flex;
+  .details{
+    order: 2;
+  }
+  .card-holder{
+    // justify-content: space-between;
+    flex-wrap: wrap;
+    display: grid;
+    flex-grow: 1;
+    flex-grow: 1;
+    grid-template-columns: repeat(auto-fit, 300px);
+    grid-column-gap: 2em;
+    grid-row-gap: 2em;
+
+    .project-card{
+      margin: auto 0;
+      margin-right: 2em;
+    }
+  }
+
+}

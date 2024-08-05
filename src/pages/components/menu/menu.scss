@@ -48,9 +48,10 @@
     background-color: var(--color);
     color: white;
     border-radius: var(--radius);
-    box-shadow:0px 2px 4px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.1); 
+    box-shadow:0px 2px 4px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.1);
+    padding: 4px 0px;
   }
-  
+
   .dropdown > div.item {
     margin: 0 4px 0 4px;
     padding: 3px 8px 3px 8px;
@@ -82,7 +83,7 @@
   }
 
 
-  
+
   .dropdown > div.item:hover {
     background-color: var(--accent);
     border-radius: 4px;
@@ -94,7 +95,7 @@
 }
 
 .dropdown > div.item.disabled:hover .bi {
-  color: white; 
+  color: white;
 }
 
 .dropdown.right {

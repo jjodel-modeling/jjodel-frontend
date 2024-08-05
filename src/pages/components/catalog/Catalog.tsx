@@ -5,6 +5,7 @@ import { Project } from "../Project";
 
 import colors from '../../../static/img/colors.png';
 import { icon } from "../icons/Icons";
+import "./catalog.scss"
 
 
 type ChildrenType = {
@@ -26,7 +27,7 @@ const Catalog = (props: ChildrenType) => {
     }
 
     const CatalogFilters = () => {
-    
+
         function toggleFilters(el: 0|1|2) {
             switch(el) {
                 case 0:
@@ -40,9 +41,9 @@ const Catalog = (props: ChildrenType) => {
                     break;
             }
         };
-    
+
         return (
-            <div className={'col left'}>
+            <div className={'left'}>
                 {filters[0] ? <button onClick={(e) => toggleFilters(0)} className='active'>public</button> : <button onClick={(e) => toggleFilters(0)}>public</button>}
                 {filters[1] ? <button onClick={(e) => toggleFilters(1)} className='active'>private</button> : <button onClick={(e) => toggleFilters(1)}>private</button>}
                 {filters[2] ? <button onClick={(e) => toggleFilters(2)} className='active'>collaborative</button> : <button onClick={(e) => toggleFilters(2)} >collaborative</button>}
@@ -52,19 +53,16 @@ const Catalog = (props: ChildrenType) => {
 
     const CatalogMode = () => {
         return (<>
-            <div className={'col left'}>
-                <div className="float-end">sorted by 
-                    <div className={'view-icons'}>
-                        <i onClick={(e) => setMode('cards')} className={`bi bi-grid ${mode === "cards" && 'selected'}`}></i>
-                        <i onClick={(e) => setMode('list')} className={`bi bi-list ${mode === "list" && 'selected'}`}></i>
-                    </div>
-                    <div style={{float: 'right'}}>
-                    <Menu position={'left'}>
-                        <Item action={(e)=> {alert('')}}>Alphabetical</Item>
-                        <Item>Date created</Item>
-                        <Item>Last modified</Item>
-                    </Menu>
-                    </div>
+            <div className={'right'}>
+                <span>sorted by</span>
+                <Menu position={'left'}>
+                    <Item action={(e)=> {alert('')}}>Alphabetical</Item>
+                    <Item>Date created</Item>
+                    <Item>Last modified</Item>
+                </Menu>
+                <div className={'view-icons'}>
+                    <i onClick={(e) => setMode('cards')} className={`bi bi-grid ${mode === "cards" && 'selected'}`}></i>
+                    <i onClick={(e) => setMode('list')} className={`bi bi-list ${mode === "list" && 'selected'}`}></i>
                 </div>
             </div>
         </>);
@@ -101,12 +99,12 @@ const Catalog = (props: ChildrenType) => {
     type CatalogType = {
         projects: LProject[];
     }
-    
+
     const CatalogReport = (props: CatalogType) =>{
-        
-        let items_public: LProject[] = []; 
-        let items_private: LProject[] = []; 
-        let items_collaborative: LProject[] = []; 
+
+        let items_public: LProject[] = [];
+        let items_private: LProject[] = [];
+        let items_collaborative: LProject[] = [];
 
 
         if (filters[0]) {
@@ -121,19 +119,21 @@ const Catalog = (props: ChildrenType) => {
 
         //var items  = items_public.concat(items_private,items_collaborative);
 
-        var items = props.projects.filter(p => 
+        var items = props.projects.filter(p =>
             (filters[0] && p.type ==="public" || filters[1] && p.type ==="private" || filters[2] && p.type ==="collaborative" || !filters[0] && !filters[1] && !filters[2]));
-        
+
         return (
-            
+
             mode == "cards" ?
 
                 /* cards mode */
 
-                <div style={{display: (items.length > 0) ? 'flex' : 'flex'}} className={'flex-wrap'}>
+                <div className={'card-holder'}>
 
-                    {items.length === 0 && <div>Sorry, there are no results matching your search criteria. Please try again with different filters.</div>}
-                    
+                    {items.length === 0 && <div className={"fallback-message"}><span>
+                        Sorry, there are no results matching your search criteria. Please try again with different filters.
+                    </span></div>}
+
                     {
                         props.projects.map((p,i) => <>
                             {filters[0] && p.type === "public" && <Project index={i} key={p.id} data={p} mode={mode} />}
@@ -142,10 +142,10 @@ const Catalog = (props: ChildrenType) => {
                             {!filters[0] && !filters[1] && !filters[2] && <Project index={i}  key={p.id} data={p} mode={mode} />}
                         </>)
                     }
-                
+
                 </div>
 
-            : 
+            :
                 /* list mode */
 
                 <div className={'row project-list'}>
@@ -161,22 +161,22 @@ const Catalog = (props: ChildrenType) => {
                         </>)
                     }
                 </div>
-                
+
         );
-    }; 
+    };
 
     return (
-        <div>
+        <>
             <Header>
                 <CatalogFilters/>
                 <CatalogMode/>
             </Header>
             <CatalogSide>
                 <CatalogInfoCard projects={props.projects}/>
-            
+
                 <CatalogReport projects={props.projects}/>
             </CatalogSide>
-        </div>
+        </>
     );
 }
 

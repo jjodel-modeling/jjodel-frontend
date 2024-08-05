@@ -85,7 +85,7 @@ function Project(props: Props): JSX.Element {
         return (<>
 
             <div className={'project-card'}>
-                <div style={{position: 'absolute', top: 10, right: 5}} className={'d-flex'}>
+                <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
                 {/*
 
                 <button disabled={data.author.id !== DUser.current} className={'btn btn-danger me-2'}
@@ -142,7 +142,9 @@ function Project(props: Props): JSX.Element {
                     </Menu>
                 </div>
                 <div className={'col-sm-1'}>
-                    {data.favorite ? <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> : <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
+                    {data.favorite ?
+                        <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> :
+                        <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
                     &nbsp;
                     {data.type === "public" && <i className="bi bi-unlock"></i>}
                     {data.type === "private" && <i className="bi bi-lock"></i>}

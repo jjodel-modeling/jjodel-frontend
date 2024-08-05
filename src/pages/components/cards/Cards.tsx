@@ -8,7 +8,7 @@ type CardsType = {
 export const Cards = (props: CardsType): any => {
     return (
         <React.Fragment>
-            <div className='row mb-5 commandbar'>
+            <div className='mb-5 commandbar'>
                 {props.children}
             </div>
         </React.Fragment>
@@ -32,18 +32,18 @@ export const Card = (props: CardType) => {
         gettingstarted: "bi-airplane" ,
         alexa: "bi-alexa"
     };
-    
+
     return (
         <div className={`card ${props.style ? props.style : 'default' }`}>
             <div className={'col icon'}>
                 {props.action ?
                     <i onClick={props.action} className={`bi ${icons[props.icon]}`}></i> :
                     <i className={`bi ${icons[props.icon]} disabled`}></i>
-                }            
+                }
             </div>
             <div className={'col body'}>
                 <h5>{props.title}</h5>
-                {props.subtitle}
+                <span>{props.subtitle}</span>
             </div>
         </div>
     );

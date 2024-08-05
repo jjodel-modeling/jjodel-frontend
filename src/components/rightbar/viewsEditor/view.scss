@@ -13,12 +13,14 @@
     .dock-nav-wrap{
       margin-left: 0.25rem;
     }
+    .dock-panel-max-btn{
+      display: none;
+    }
   }
   .page-root{
     padding: var(--inner-page-padding);
     padding-top: 0;
   }
-
   .view-editor-header {
     margin-top: 0.25em;
     margin-left: var(--inner-page-padding);
@@ -31,6 +33,7 @@
       // &>*{ border: 2px solid black; }
       margin: auto;
       margin-left: 0.5em;
+      padding: 3px 0;
 
       .path-separator{
         height: min-content;

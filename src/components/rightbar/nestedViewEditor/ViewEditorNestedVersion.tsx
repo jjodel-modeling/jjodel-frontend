@@ -64,9 +64,14 @@ function NestedViewComponent(props: AllProps) {
         let l: LViewElement = LPointerTargetable.fromD(d);
 
         const preventClick = (e: any)=>e.stopPropagation();
+        let isVP = d.className === DViewPoint.cname;
+        let isDefault = d.id.indexOf('Pointer_View') === 0;
 
-        return <li className={"entry-root"} key={d.id} >
-            <div className={"inline-row"} onClick={()=>setView(d.id)}>
+        function select(ptr: Pointer<DViewPoint>){ project.activeViewpoint = ptr as any; }
+        let activeViewpointId: Pointer<DPointerTargetable> = project.activeViewpoint.id;
+
+        return <li className={"entry-root " + d.className + (d.id === activeViewpointId ? ' selected' : '')} key={d.id}>
+            <div className={"inline-row"} onClick={()=>!isVP && setView(d.id)}>
                 <div className={"left-stuff vertical-centering"} onClick={preventClick}>
                     {parr.length >= 1 ?
                         <>
@@ -78,29 +83,44 @@ function NestedViewComponent(props: AllProps) {
                     }
                 </div>
                 <div className={"mid-stuff vertical-centering"}>
-                    <div className={`icon type tree-${appliableTo}`}>{appliableTo === "Any" ? "*" : appliableTo[0]}</div>
+                    <div className={`icon type tree-${appliableTo} ${d.className}`}>{
+                        isVP ? 'VP' : (appliableTo === "Any" ? "*" : appliableTo[0])
+                    }</div>
                     <div>{d.name}</div>
                 </div>
                 <div className={"hover-stuff vertical-centering d-flex"}>
                     <div className={"ms-auto d-flex"} onClick={preventClick}>
-                        {/*@ts-ignore*/}
+                        {isVP && <button className="bg btn-delete my-auto ms-2 green" disabled={active.id === d.id}
+                                         onClick={(evt) => {select(d.id)}}>
+                            <i className='bi bi-check2' />
+                        </button>
+                        }
                         <button className="bg btn-delete my-auto ms-2 green" onClick={(e)=> { l.duplicate(); preventClick(e);}}><i className='bx bx-duplicate' /></button>
                         <button className="bg btn-delete my-auto ms-2" onClick={(e)=> { l.delete(); preventClick(e);}}><i className="p-1 bi bi-dash" /></button>
                     </div>
                 </div>
                 <div className={"right-stuff vertical-centering"}>
                     <div className={"right-content"} onClick={preventClick}>
-                        <span className={"priority"}>priority: {l.explicitApplicationPriority} *</span>
-                        <Input type="number"
-                               className={"change-boost hidden-input"}
-                               inputClassName={"change-boost hidden-input"}
-                               readonly={false}
-                               data={l}
-                               getter={()=>scoreBoost + ''}
-                               setter={(v)=>{l.subViews = {...childrens, [d.id]: +v} as any}} />
-                        <span className={"ocl-ico vertical-centering " + (d.oclCondition.length ? "" : "hidden")}>OCL</span>
-                        <span className={"js-ico vertical-centering " + (d.jsCondition.length ? "" : "hidden")}>
-                        <i className="bi bi-lightning"></i>JS</span>
+                        {
+                            isVP ? <>
+                                <div className={"spacer"}/>
+                            </> : <>
+                                <span className={"priority"}>priority: {l.explicitApplicationPriority} *</span>
+                                <div className={"spacer"}/>
+                                <Input type="number"
+                                       className={"change-boost hidden-input"}
+                                       inputClassName={"change-boost hidden-input"}
+                                       readonly={false}
+                                       data={l}
+                                       getter={()=>scoreBoost + ''}
+                                       setter={(v)=>{l.subViews = {...childrens, [d.id]: +v} as any}} />
+                                <span className={"right-icon ocl-ico vertical-centering " + (d.oclCondition.length ? "" : "hidden")}>OCL</span>
+                                <span className={"right-icon js-ico vertical-centering " + (d.jsCondition.length ? "" : "hidden")}>
+                                    <i className="bi bi-lightning" />JS
+                                </span>
+                            </>
+                        }
+                        <span className={"right-icon ex-ico vertical-centering " + (d.isExclusiveView ? '' : "hidden")}>Ex</span>
                     </div>
                 </div>
             </div>
@@ -143,7 +163,7 @@ function NestedViewComponent(props: AllProps) {
 
     let hoverID: any = '';
     function setHoverID(a:any){}
-    function select(a: any){}
+    function selectt(a: any){}
     let validation: false;// props.validation
     return (<div>
         {viewpoints.map((viewpoint, index) => {
@@ -157,7 +177,7 @@ function NestedViewComponent(props: AllProps) {
                 <Input className={"ms-auto"} data={viewpoint} field={"isExclusiveView"} type={"checkbox"}
                        label={"Is exclusive"} readonly={validation || index <= 0} />
                 {(!validation || true) && <button className={'btn btn-success ms-1'} disabled={active.id === viewpoint.id}
-                                                        onClick={(evt) => {select(viewpoint)}}>
+                                                        onClick={(evt) => {selectt(viewpoint.id)}}>
                     <i className={'p-1 bi bi-check2'}/>
                 </button>
                     // todo: validation views should not be "activable" but so far it is the only way to see the subviews in it.

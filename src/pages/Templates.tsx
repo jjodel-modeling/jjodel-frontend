@@ -15,7 +15,7 @@ type CardsType = {
     children: any;
 };
 
-const Cards = (props: CardsType): any => { 
+const Cards = (props: CardsType): any => {
     return (
         <React.Fragment>
             <div className='row mb-5 commandbar'>
@@ -40,16 +40,16 @@ const Card = (props: CardType) => {
         add: "bi-plus-circle",
         import: "bi-box-arrow-in-up",
         question: "bi-question-square",
-        clone: "bi-clipboard2-check" 
+        clone: "bi-clipboard2-check"
     };
-    
+
     return (<>
         <div className={`card ${props.style ? props.style : 'default' }`}>
             <div className={'col icon'}>
                 {props.action ?
                     <i onClick={props.action} className={`bi ${icons[props.icon]}`}></i> :
                     <i className={`bi ${icons[props.icon]} disabled`}></i>
-                }            
+                }
             </div>
             <div className={'col body'}>
                 <h5>{props.title}</h5>
@@ -84,7 +84,7 @@ const Catalog = (props: ChildrenType) => {
     }
 
     const CatalogFilters = () => {
-    
+
         function toggleFilters(el: 0|1|2) {
             switch(el) {
                 case 0:
@@ -98,7 +98,7 @@ const Catalog = (props: ChildrenType) => {
                     break;
             }
         };
-    
+
         return (
             <div className={'col left'}>
                 {filters[0] ? <button onClick={(e) => toggleFilters(0)} className='active'>public</button> : <button onClick={(e) => toggleFilters(0)}>public</button>}
@@ -108,10 +108,10 @@ const Catalog = (props: ChildrenType) => {
         );
     }
 
-    const CatalogMode = () => {
+    const CatalogMode = () => { // unused component?
         return (<>
             <div className={'col left'}>
-                <div className="float-end">sorted by 
+                <div className="float-end">sorted by
                     <div className={'view-icons'}>
                         <i onClick={(e) => setMode('cards')} className={`bi bi-grid ${mode === "cards" && 'selected'}`}></i>
                         <i onClick={(e) => setMode('list')} className={`bi bi-list ${mode === "list" && 'selected'}`}></i>
@@ -149,12 +149,12 @@ const Catalog = (props: ChildrenType) => {
     type CatalogType = {
         projects: LProject[];
     }
-    
+
     const CatalogReport = (props: CatalogType) =>{
-        
-        let items_public: LProject[] = []; 
-        let items_private: LProject[] = []; 
-        let items_collaborative: LProject[] = []; 
+
+        let items_public: LProject[] = [];
+        let items_private: LProject[] = [];
+        let items_collaborative: LProject[] = [];
 
 
         if (filters[0]) {
@@ -169,17 +169,17 @@ const Catalog = (props: ChildrenType) => {
 
         //var items  = items_public.concat(items_private,items_collaborative);
 
-        var items = props.projects.filter(p => 
+        var items = props.projects.filter(p =>
             (filters[0] && p.type ==="public" || filters[1] && p.type ==="private" || filters[2] && p.type ==="collaborative" || !filters[0] && !filters[1] && !filters[2]));
-        
+
         return (
-            
+
             mode == "cards" ?
 
             <div style={{display: (items.length > 0) ? 'flex' : 'flex'}} className={'flex-wrap'} >
 
                 {items.length === 0 && <div>Sorry, there are no results matching your search criteria. Please try again with different filters.</div>}
-                
+
                 {
                     props.projects.map(p => <>
                         {filters[0] && p.type === "public" && <Project key={p.id} data={p} mode={mode} />}
@@ -188,10 +188,10 @@ const Catalog = (props: ChildrenType) => {
                         {!filters[0] && !filters[1] && !filters[2] && <Project key={p.id} data={p} mode={mode} />}
                     </>)
                 }
-            
+
             </div>
 
-            : 
+            :
             <div className={'row project-list'}>
                 <div className='row header'>
                     <div className={'col-6'}>Name</div><div className={'col-3'}>Last modified</div><div className={'col-3'}>Created</div>
@@ -205,9 +205,9 @@ const Catalog = (props: ChildrenType) => {
                     </>)
                 }
             </div>
-                
+
         );
-    }; 
+    };
 
     return (
         <div>
@@ -240,7 +240,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
             U.refresh();
         } catch (e) {alert('Invalid File.')}
     }
-    
+
     const importProject = async(e: ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files || [];
         if(!files.length) return;
@@ -253,22 +253,22 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
 
     return(<Try>
         <Dashboard active={'Templates'} version={props.version}>
-            
-            <React.Fragment>                
+
+            <React.Fragment>
 
                 <Cards>
                     <Cards.Item
-                        title={'Clone a template'} 
+                        title={'Clone a template'}
                         subtitle={'Clone a template in your workspace.'}
-                        icon={'clone'} 
-                        style={'rainbow'}   
+                        icon={'clone'}
+                        style={'rainbow'}
                     />
                     {true && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
                 </Cards>
 
                 <Catalog projects={projects} />
             </React.Fragment>
-            
+
         </Dashboard>
     </Try>);
 }

@@ -60,6 +60,7 @@ function App(props: AllProps): JSX.Element {
     });
 
     return(<>
+        <div className={"router-wrapper"}>
         {isLoading && <Loader />}
         <ExternalLibraries />
         <TooltipVisualizer />
@@ -85,6 +86,7 @@ function App(props: AllProps): JSX.Element {
                 <Route path={'auth'} element={<AuthPage />} />
             </Routes>
         </HashRouter>
+        </div>
         <BottomBar />
     </>);
 

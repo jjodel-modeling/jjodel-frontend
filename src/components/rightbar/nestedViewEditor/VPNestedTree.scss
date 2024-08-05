@@ -6,7 +6,20 @@
   position: absolute;
   z-index: -1;
 }
-.entry-root{
+/*
+.entry-root.DViewPoint{
+  &>.inline-row>.right-stuff{
+    .priority, .change-boost, .right-ico{
+    }
+    display: none;
+  }
+}*/
+.entry-root.DViewPoint.selected{
+  &>.inline-row{
+    background: #ddffdd;
+    // background: #00ff00;
+  }
+
   // padding: 0.5em; padding-right: 0;
   // position: relative;
 }
@@ -82,31 +95,39 @@ input.change-boost{
   }
 }
 
-.ocl-ico, .js-ico{
+.right-icon{
   outline: 1px solid;
   padding: 0.25em;
   margin-left: 0.35em;
-  font-weight: bolder;
   height: 100%;
   display: inline-block;
   width: 2.5em;
   // border-radius: 8px;
+  --color: black;
+
+  text-shadow: 0px 0px 1px var(--color);
+  color: var(--color);
+  outline-color: var(--color);
 
   .bi { color: inherit; }
   &.hidden{
-    opacity: 0.5;
+    opacity: 0.33;
     color: #333;
     outline-color: #333;
-    font-weight: normal;
+    text-shadow: none;
   }
 }
 .ocl-ico{
-  color: #ff2020;
-  outline-color: #ff2020;
+  --color: #ff2020;
 }
 .js-ico{
-  color: goldenrod;
-  outline-color: goldenrod;
+  --color: goldenrod;
+  padding-left: 0.125em;
+}
+.ex-ico{
+  width: 1.4ic;
+  color: #207720;
+  outline-color: #207720;
   padding-left: 0.125em;
 }
 /*.hidden{
@@ -124,19 +145,19 @@ input.change-boost{
   --anim-in: all 0.2s linear;
   --anim-out: all 0.2s linear;
   cursor: pointer;
-  width: 184px;
   transform: scaleX(1);
   transition: var(--anim-in);
   display: flex;
-  >:first-child{margin-left: auto;}
   transform-origin:left;
   transform: scaleX(1);
   max-height: 26px;
   height: 26px;
   white-space: nowrap;
   // border: 2px solid red;
+  >:first-child{margin-left: auto;}
 }
 .left-stuff{
+  padding-left: 0.125em;
   .bi{
     font-size: 0.7em;
     color: gray;
@@ -159,16 +180,18 @@ input.change-boost{
   cursor: default;
 }
 .right-stuff{
-  width: 184px;
   max-height: 26px;
   height: 26px;
+  .spacer{
+    margin-left: auto;
+  }
 }
 .inline-row {
   padding-right: 0.5em;
   border-radius: 10px;
   padding-top: 0.125em;
   padding-bottom: 0.125em;
-  --hover-bg: #ccc;
+  --hover-bg: #eee;
   &:hover{
     background-color: var(--hover-bg);
     outline: 2px solid #999;
@@ -177,7 +200,7 @@ input.change-boost{
     transform-origin:right;
   }
   .hover-stuff{
-    width: 0;
+    // width: 0;
     height: 26px;
     &>*{ height: 26px; }
     .bg, .bx{
@@ -200,12 +223,11 @@ input.change-boost{
     transform: scaleX(0);
     transform-origin: right;
 
-    float: right;
+    // float: right;
     margin-right: 0.5em;
   }
   &:hover{
     .hover-stuff{
-      width: 184px;
       transition: var(--anim-in);
       transform: scaleX(1);
     }
@@ -239,18 +261,13 @@ input.change-boost{
 .view-editor-root{
   height: 100%;
   max-height: 100%;
-  overflow: auto;
+  overflow: hidden;
   padding-right: 0.25em;
+  background: white;
   &:has(.single-view-content){
     overflow: hidden;
   }
-}
-.view-editor-fullsize-content{
-}
-.view-editor-root{
-  overflow: hidden;
   .dock-content .dock-tabpane{
     overflow: auto !important;
   }
 }
-

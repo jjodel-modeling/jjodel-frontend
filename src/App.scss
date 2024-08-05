@@ -317,3 +317,9 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
     font-style: normal; // removes italic
   }
 }
+.router-wrapper{
+  flex-grow: 1;
+  min-height: 0;
+  display: flex;
+  flex-flow: column;
+}

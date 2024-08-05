@@ -2,7 +2,7 @@ import type { LUser, DState, LProject } from '../../joiner';
 import {DUser, LPointerTargetable} from '../../joiner';
 import {Navbar, LeftBar} from './';
 
-import '../style.scss'
+import '../dashboard.scss'
 import {ReactElement} from "react";
 
 type UserProps = {
@@ -12,7 +12,7 @@ type UserProps = {
 
 const User = (props: UserProps) => {
     return (<>
-        <div className={'user row'}>
+        <div className={'user'}>
             <div className={'initials'}>{props.initials}</div>
             <div className={'name'}><h2>{props.name}'s projects</h2></div>
         </div>
@@ -27,7 +27,7 @@ type TitleProps = {
 
 const Title = (props: TitleProps) => {
     return (<>
-        <div className={'user row'}>
+        <div className={'user'}>
             <div className={'name'}><h2>{props.icon} {props.title}</h2></div>
         </div>
     </>);
@@ -48,11 +48,12 @@ type CatalogProps = {
 
 const Catalog = (props: CatalogProps) => {
 
-    return (<>
+    return props.children;
+    /*return (<>
         <div className={'p-2'} style={{flexGrow:1}}>
             {props.children}
         </div>
-    </>);
+    </>);*/
 };
 
 function Dashboard(props: DashProps): any {
@@ -62,11 +63,11 @@ function Dashboard(props: DashProps): any {
 
     return(<>
         <Navbar />
-        <div className={"d-flex h-100 w-100"} tabIndex={-1}>
+        <div className={"dashboard-container"} tabIndex={-1}>
             <LeftBar projects={user.projects} active={active}/>
 
-            <div className={'row catalog-container h-20 w-100'} style={{marginRight: '20px', height: '10px'}}>
-                <div className={'col'}>
+            <div className={'catalog-container'} style={{}}>
+                <div className={'col user-title'}>
                     {active === "All" && <User name={'John Doe'} initials={'JD'} />}
                     {active === "Recent" && <Title title={'Recent'} icon={<i className="bi bi-clock"></i>} />}
                     {active === "Templates" && <Title title={'Jjodel Templates'} icon={<i className="bi bi-code-square"></i>} />}
@@ -74,8 +75,6 @@ function Dashboard(props: DashProps): any {
                     {active === "Updates" && <Title title={'What\'s new'} icon={<i className="bi bi-clock-history"></i>} />}
                     {active === "Profile" && <Title title={'Profile'} icon={<i className="bi bi-clock-history"></i>} />}
 
-                </div>
-                <div className={'col text-end'}>
                     <button className={'add-project'}><i className="bi bi-plus-lg"></i> Project</button>
                 </div>
 

@@ -109,7 +109,7 @@ const User = (props: UserProps) => {
     var name = "Alfonso Pierantonio";
     var initials = name.split(" ").map((n)=>n[0]).join("");
     return (<>
-        <div className={'user text-end'}><div style={{display: 'inline-block', marginRight: '4px', fontWeight: '400', paddingTop: '2px', textAlign: 'center', color: 'white', height: '24px', width: '24px', borderRadius: '20px', backgroundColor: 'var(--secondary)'}}>{initials}</div> Alfonso <b>Pierantonio</b></div>
+        <div className={'user text-end'}><div className={"initials"}>{initials}</div>&nbsp;<span>Alfonso</span><b>&nbsp;<span>Pierantonio</span></b></div>
     </>);
 };
 

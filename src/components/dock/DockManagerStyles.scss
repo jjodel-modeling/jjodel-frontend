@@ -230,10 +230,12 @@
 .dock-tab-close-btn:focus {
     transform: scale(1.1);
 }
+
 .dock-tab:hover .dock-tab-close-btn,
 .dock-tab-close-btn:focus {
     opacity: 1;
 }
+
 .dock-nav-operations{
     float: right;
     height: 100%;

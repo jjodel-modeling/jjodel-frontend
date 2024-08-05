@@ -42,7 +42,7 @@ class DefaultViews {
                     'background-': U.hexToPalette('#fff'),
                     'color-': U.hexToPalette('#123cd0', '#4b0082', '#ff0000', '#3191bb', '#3191bb')
                 };
-            }, false);
+            }, false, 'Pointer_ViewModel');
 
         view.css = `
 &, .Graph{
@@ -247,7 +247,7 @@ control-panel .section .toggle {
                 '// ** declarations here ** //\n' +
                 udLevelPkg +
                 '}';
-        }, false);
+        }, false, 'Pointer_ViewPackage');
         return view
     }
 
@@ -273,7 +273,7 @@ control-panel .section .toggle {
         background-color: var(--background-2);
         height: fit-content;
         width: -webkit-fill-available;
-        padding: 0.125em 0;
+        &>*:last-child { padding-bottom: 0.125em; }
     }
     .abstract { font-style: italic; }
     .summary { padding: 0.25rem; text-align: center; }
@@ -298,7 +298,7 @@ control-panel .section .toggle {
     ${udLevel}
 }`;
             // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
-        }, false);
+        }, false, 'Pointer_ViewClass');
         return view;
     }
 
@@ -324,7 +324,7 @@ control-panel .section .toggle {
         background-color: var(--background-2);
         height: fit-content;
         width: -webkit-fill-available;
-        padding: 0.125em 0;
+        &>*:last-child { padding-bottom: 0.125em; }
     }
     .summary { padding: 0.25rem; text-align: center; }
 }
@@ -343,7 +343,7 @@ control-panel .section .toggle {
     ret.literals = data.literals
     ${udLevel}
 }`;
-        }, false);
+        }, false, 'Pointer_ViewEnum');
         return view;
     }
     static attribute(vp: DViewElement): DViewElement {
@@ -360,7 +360,7 @@ control-panel .section .toggle {
         width: max(33%, 75px);
     }
 }`;
-        }, false);
+        }, false, 'Pointer_ViewAttribute');
         return view;
     }
 
@@ -378,7 +378,7 @@ control-panel .section .toggle {
         width: max(33%, 75px);
     }
 }`;
-        }, false);
+        }, false, 'Pointer_ViewReference');
         return view;
     }
 
@@ -414,7 +414,7 @@ control-panel .section .toggle {
         width: 100%;
     }
 }`;
-        }, false);
+        }, false, 'Pointer_ViewOperation');
         return view;
     }
 
@@ -422,7 +422,7 @@ control-panel .section .toggle {
         const view = DViewElement.new2('Parameter', DV.parameterView(), vp, (view)=>{
             view.appliableToClasses = [DParameter.cname];
             view.appliableTo = 'Field';
-        }, false);
+        }, false, 'Pointer_ViewParameter');
         view.css = `
 .parameter{
     display: flex;
@@ -443,7 +443,7 @@ control-panel .section .toggle {
             view.appliableTo = 'Field';
             view.palette = {};
             view.css = "display: block;";
-        }, false);
+        }, false, 'Pointer_ViewLiteral');
         return view;
     }
 
@@ -470,7 +470,7 @@ control-panel .section .toggle {
                 'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
                 udLevel +
                 '}';
-        }, false);
+        }, false, 'Pointer_ViewObject');
         return view;
     }
 
@@ -502,7 +502,7 @@ control-panel .section .toggle {
                 'ret.valuesString = data.valuesString()\n' +
                 'ret.typeString = data.typeString\n' +
                 '}';
-        }, false);
+        }, false, 'Pointer_ViewValue');
         return view;
     }
     static edgepoint(vp: DViewElement): DViewElement{
@@ -548,7 +548,7 @@ control-panel .section .toggle {
             d.edgePointCoordMode = CoordinateMode.absolute;
             d.defaultVSize = defaultEdgePointSize;
             // d.defaultVSize = new GraphSize(0, 0, 25, 25);
-        }, false);
+        }, false, 'Pointer_ViewEdgePoint');
         return view;
     }
 
