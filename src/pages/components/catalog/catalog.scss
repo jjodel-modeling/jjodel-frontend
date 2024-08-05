@@ -19,11 +19,11 @@
   margin-bottom: 2em;
   // flex-flow: column;
   &>.left{
-    padding: 0;
     margin: auto;
     margin-left: 0;
     flex: unset;
     height: min-content;
+    padding: 0 1.2em;
   }
   &>.right{
     padding: 0;
@@ -79,28 +79,28 @@
 
 
 .project-list {
-  margin-right: 280px;
+  width: 500px;
+  flex-grow: 1;
+
+  .header {
+    font-size: 1.2em;
+    color: var(--bg-4);
+    margin-bottom: 6px;
+  }
+  .data {
+    font-size: 1.2em;
+    color: var(--color);
+    padding: 4px 8px;
+    cursor: pointer;
+    &:hover {
+      color: var(--bg-5);
+      background-color: var(--bg-3);
+      border-radius: 4px;
+      transition: color, background-color 0.3s;
+    }
+  }
 }
 
-.project-list .header {
-  font-size: 1.2em;
-  color: var(--bg-4);
-  margin-bottom: 6px;
-}
-
-.project-list .data {
-  font-size: 1.2em;
-  color: var(--color);
-  padding: 4px 8px;
-}
-
-.project-list .data:hover {
-  color: var(--bg-5);
-  background-color: var(--bg-3);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: color, background-color 0.3s;
-}
 
 .project-list .name {
   font-weight: 600;

@@ -115,9 +115,10 @@ project-card .tip {
 
 .leftbar {
   background-color: white;
-  max-width: 300px!important;
-  flex-basis: 170px;
-  flex-grow: 0.5;
+  max-width: 250px!important;
+  flex-basis: 155px;
+  flex-grow: 0.15;
+  flex-shrink: 0;
 
   height: 100%;
   color: var(--color);
@@ -293,6 +294,7 @@ project-card .tip {
 .dashboard-container{
   display: flex;
   min-height: 0;
+  flex-grow: 1;
 }
 
 .user {
@@ -325,6 +327,7 @@ project-card .tip {
   min-width: fit-content;
   >.bi{
     margin: auto;
+    margin-left: 0;
   }
 }
 
@@ -350,17 +353,19 @@ project-card .tip {
     margin-bottom: 60px;
 
     .add-project{
-      margin-left: auto;
+      margin: auto;
+      margin-right: 0;
+      height: fit-content;
     }
   }
 
-
+/*
   *{
     outline: 1px solid gray;
     .bi::before{
       outline: 1px solid gray;
     }
-  }
+  }*/
 }
 
 
