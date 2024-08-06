@@ -56,13 +56,22 @@ function Project(props: Props): JSX.Element {
         backgroundSize: 'contain'
      }
 
+    type ProjectProps = {
+        project: LProject
+    }
+
+    const Empty = (props: ProjectProps) => {
+        return (<>
+            {props.project.metamodels.length == 0 && props.project.models.length == 0 && <><i title="empty project" className="bi bi-exclamation-circle"></i> <span>Empty project</span></>}
+            {/* {props.project.metamodels.length == 0 && props.project.models.length != 0 && <i style={{float: 'left'}} title="no models" className="bi bi-circle-half"></i>}
+            {props.project.metamodels.length != 0 && props.project.models.length != 0 && <i style={{float: 'left'}} title="artifacts present" className="bi bi-circle-fill"></i>}*/}
+        </>);
+    }
+
     function ProjectCard(props: Props): JSX.Element {
 
-        type MeterProps = {
-            project: LProject
-        }
-
-        const Meter = (props: MeterProps) => {
+    
+        const Meter = (props: ProjectProps) => {
 
             var length = props.project.metamodels.length + props.project.models.length + props.project.viewpoints.length;
             var unit = Math.round(90/length);
@@ -70,15 +79,13 @@ function Project(props: Props): JSX.Element {
             var m_length = Math.round(90/length*props.project.models.length);
             var vp_length = Math.round(90/length*props.project.viewpoints.length);
             return (<>
-                <div className={'meter'} style={{width: '90%'}}>
-                    {props.project.viewpoints.map((m,i) => <div className={'artifact viewpoints'} style={{width: `${unit}%`}}>{i == props.project.viewpoints.length-1 && <span>VP</span>}</div>)}
-                    {props.project.models.map((m,i) => <div className={'artifact models'} style={{width: `${unit}%`}}>{i == props.project.models.length-1 && <span>M1</span>}</div>)}
-                    {props.project.metamodels.map((m,i) => <div className={'artifact metamodels'} style={{width: `${unit}%`}}>{i == props.project.metamodels.length-1 && <span>M2</span>}</div>)}
 
-                    {/* <div className={'artifact viewpoints'} style={{width: `${vp_length}%`}}><span>VP</span></div>
-                    <div className={'artifact models'} style={{width: `${m_length}%`}}><span>M1</span></div>
-            <div className={'artifact metamodels'} style={{width: `${mm_length}%`}}><span>M2</span></div>*/}
-                </div>
+                    <div className={'meter'} style={{width: '90%'}}>
+                        {props.project.viewpoints.map((m,i) => <div className={'artifact viewpoints'} style={{width: `${unit}%`}}>{i == props.project.viewpoints.length-1 && <span>VP</span>}</div>)}
+                        {props.project.models.map((m,i) => <div className={'artifact models'} style={{width: `${unit}%`}}>{i == props.project.models.length-1 && <span>M1</span>}</div>)}
+                        {props.project.metamodels.map((m,i) => <div className={'artifact metamodels'} style={{width: `${unit}%`}}>{i == props.project.metamodels.length-1 && <span>M2</span>}</div>)}
+                    </div>
+                    
              </>);
         };
 
@@ -86,12 +93,7 @@ function Project(props: Props): JSX.Element {
 
             <div className={'project-card'}>
                 <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
-                {/*
-
-                <button disabled={data.author.id !== DUser.current} className={'btn btn-danger me-2'}
-                        onClick={async e => await deleteProject()}>
-                    <i className={'p-1 bi bi-trash-fill'} />
-    </button>*/}
+                
                     {data.favorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> : <i onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
                     <Menu>
                             <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
@@ -106,7 +108,8 @@ function Project(props: Props): JSX.Element {
                 </div>
                 <div className='header'>
                     <h5 className={'d-block'}>{data.name}</h5>
-                    <label className={'d-block'}><i className="bi bi-clock"></i> Edited 10 hours ago</label>
+                    <label className={'d-block'}><i className="bi bi-clock"></i> Edited 10 hours ago
+                    <Empty project={props.data}/></label>
                 </div>
 
                 <Meter project={data}></Meter>

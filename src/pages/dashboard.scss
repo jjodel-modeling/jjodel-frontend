@@ -64,6 +64,10 @@ project-card .tip {
   padding-top: 4px;
 }
 
+.project-card .meter  {
+  
+}
+
 .project-card .meter .artifact {
   float: right;
   margin-right: 1px;
@@ -112,6 +116,13 @@ project-card .tip {
   color: white;
 }
 
+.project-card .header label.d-block .bi {
+  margin-right: 4px!important;
+  margin-left: 8px;
+}
+.project-card .header label.d-block .bi:first-of-type {
+  margin-left: 0px!important;
+}
 
 .leftbar {
   background-color: white;

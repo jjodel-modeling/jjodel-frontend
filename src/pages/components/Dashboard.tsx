@@ -68,7 +68,7 @@ function Dashboard(props: DashProps): any {
 
             <div className={'catalog-container'} style={{}}>
                 <div className={'col user-title'}>
-                    {active === "All" && <User name={'John Doe'} initials={'JD'} />}
+                    {active === "All" && <Title title={'Dashboard'} icon={<i className="bi bi-columns-gap"></i>} />}
                     {active === "Recent" && <Title title={'Recent'} icon={<i className="bi bi-clock"></i>} />}
                     {active === "Templates" && <Title title={'Jjodel Templates'} icon={<i className="bi bi-code-square"></i>} />}
                     {active === "Notes" && <Title title={'Project Notes'} icon={<i className="bi bi-pencil-square"></i>} />}

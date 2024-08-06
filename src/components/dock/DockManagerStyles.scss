@@ -536,7 +536,9 @@ div.dock-drop-layer{
     }
 
 }
-
+.not-strip .dock-tab {
+    margin-top: 4px;
+}
 
 /// default styles for graph
 .GraphContainer {/*

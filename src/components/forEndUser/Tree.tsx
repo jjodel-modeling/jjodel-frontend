@@ -14,7 +14,10 @@ import {useStateIfMounted} from 'use-state-if-mounted';
 import './tree.scss';
 import {useEffectOnce} from "usehooks-ts";
 
+import { MyTooltip } from "../tooltip/MyTooltip";
+
 interface TreeProps {data?: LModelElement, depth?: string[], children?: GObject}
+
 function Tree(props: TreeProps) {
     const data = (props.data) ? props.data : null;
     const children = props.children;
@@ -76,15 +79,10 @@ function DataTree(props: DataTreeProps): JSX.Element {
             }
 
             <div className={'tree-icon'}>
-                <div className={`type tree-${data.className}`}>{data.className.slice(1, 2)}</div>
+                <div className={`type tree-${data.className}`}>{data.className.slice(1, 2)}<MyTooltip text={data.className} /></div>
                 <div className={'name'} onClick={click}>{(data.name) ? data.name : 'unnamed'}</div>
             </div>
-            {/*<label className={data.className + ' ms-1 text-capitalize'}>
-                {data.className}:
-            </label>*/}
-            {/*<label tabIndex={-1} role={'button'} onClick={click} className={'name ms-1 d-block my-auto'} style={{fontSize: '0.75em'}}>
-                {(data.name) ? data.name : 'unnamed'}
-            </label>*/}
+            
         </div>
         {!hide && Array.isArray(data.children) && data.children?.map((child: LModelElement) => {
             return(<div style={{marginLeft: '1em'}}>
