@@ -1,8 +1,10 @@
 import React, {ReactNode} from "react";
 import {
+    DClass,
     Dictionary,
     DViewElement,
     GObject,
+    LClass,
     LModelElement,
     LNamedElement, LPointerTargetable,
     LViewElement,
@@ -78,9 +80,15 @@ function DataTree(props: DataTreeProps): JSX.Element {
                 <i style={{fontSize: '0.75em', color: 'whitesmoke'}} className={'bi bi-caret-right-fill d-block my-auto'} />
             }
 
-            <div className={'tree-icon'}>
-                <div className={`type tree-${data.className}`}>{data.className.slice(1, 2)}<MyTooltip text={data.className} /></div>
-                <div className={'name'} onClick={click}>{(data.name) ? data.name : 'unnamed'}</div>
+            <div className={'tree-item'}>
+                <div className={`type tree-${data.className} ${(data as any).abstract && 'abstract-class'}`}>
+                    <div className="icon">{data.className.slice(1, 2)}</div>
+                    <MyTooltip text={`${(data as any).abstract ? 'Abstract ':''}` + data.className} />
+                </div>
+                <div className={'name'} onClick={click}>
+                    {/* {(data as LClass).extends && (data as LClass).extends.length > 0 && (data as LClass).extends.map(c => ` ${c.name}` ) + ' > ' }*/}
+                    <span className={'class-name'}>{(data.name) ? data.name : 'unnamed'}</span>
+                    </div>
             </div>
             
         </div>

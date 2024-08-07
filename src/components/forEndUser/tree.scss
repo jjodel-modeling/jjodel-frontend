@@ -1,6 +1,7 @@
 @import "src/styles/variables";
 
 .tree {
+
   & > .DModel > b {color: $model-color}
   & > .DPackage > b {color: $package-color}
   & > .DClass > b {color: $class-color}
@@ -21,7 +22,7 @@
 
 /* TREE */
 
-.tree-icon  {
+.tree-item  {
   float: left;
   font-weight: bold;
   display: flex;
@@ -45,24 +46,38 @@
   border-radius: 1.4rem;
 }
 
-.tree-icon .name {
-  padding: 0px 4px;
+.abstract-class .icon {
+  opacity: 0.5;
+}
+
+.tree-item .name {
+  padding: 2px 4px;
   margin-top: 0;
   font-weight: normal;
   cursor: pointer;
 }
 
+.tree-item .class-name {
+  // font-weight: 600;
+}
+
+.tree-item .parent-class {
+  color: rent;
+}
+
 .tree-DModel, .tree-Model {
   background-color: #5F0F40;
-  background-color: white;
+  // background-color: white;
   border: 2px solid #5F0F40;
   color: var(--bg-5);
+  color: white;
 }
 .tree-DPackage, .tree-Package {
   background-color: #087E8B;
-  background-color: white;
+  // background-color: white;
   border: 2px solid #087E8B;
   color: var(--bg-5);
+  color: white;
   
 }
 .tree-DClass, .tree-Class {

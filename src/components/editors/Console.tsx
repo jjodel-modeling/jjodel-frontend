@@ -111,7 +111,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         else {
             this._context = {...this.props, props: this.props};
         }
-        try { output = U.evalInContextAndScope(expression || '<span class="console-msg">undefined</span>', this._context, this._context); }
+        try { output = U.evalInContextAndScope(expression || '<span class="console-msg">111undefined</span>', this._context, this._context); }
         catch (e: any) {
             console.error("console error", e);
             // output = '<span class="console-error">Invalid Syntax!</span> <span class="console-error-msg">' + e.toString() + '<span>' ; }

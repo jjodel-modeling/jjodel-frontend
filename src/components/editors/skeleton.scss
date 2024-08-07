@@ -112,6 +112,7 @@
   // Tree View
 
   & section {
+    
   }
 
   & section:has(section) section {
@@ -168,8 +169,9 @@
       font-family: Courier, monospace;
       font-size: 1em;
       color: var(--color);
-      padding: 0.3rem 0.5rem!important;
+      padding: 0.5rem 1rem!important;
       margin: 2px;
+      border-radius: var(--radius);
     }
 
     &  label.on-element {
@@ -183,11 +185,54 @@
     }
 
     & .output-row {
-      border: 1px solid var(--bg-3);
+      border-top: none;
+      border-left: 2px solid var(--bg-3);
+      border-right: 2px solid var(--bg-3);
+      border-bottom: none; 
+      
       background-color: var(--bg-2);
-      border-radius: 6px;
       padding: 1rem;
     }
+    & .output-row:first-of-type {
+      border-top: 2px solid var(--bg-3);
+      border-left: 2px solid var(--bg-3);
+      border-right: 2px solid var(--bg-3);
+      border-bottom: none; 
+      
+      background-color: var(--bg-2);
+      border-top-left-radius: var(--radius);
+      border-top-right-radius: var(--radius);
+      padding: 1rem;
+    }
+    & .output-row:last-of-type {
+      border-bottom: 2px solid var(--bg-3);
+      border-left: 2px solid var(--bg-3);
+      border-right: 2px solid var(--bg-3);
+      border-top: none; 
+      
+      background-color: var(--bg-2);
+      border-bottom-left-radius: var(--radius);
+      border-bottom-right-radius: var(--radius);
+      padding: 1rem;
+    }
+
+    & h4 + .output-row  {
+      border-top: 2px solid var(--bg-3);
+      border-left: 2px solid var(--bg-3);
+      border-right: 2px solid var(--bg-3);
+      border-bottom: none; 
+      
+      background-color: var(--bg-2);
+      border-top-left-radius: var(--radius);
+      border-top-right-radius: var(--radius);
+      padding: 1rem;
+    }
+
+    & br { 
+      display: block;
+      height: 1px; width: 100%;
+    }
+    
 
     & span.console-error {
       display: block;
@@ -230,7 +275,9 @@
 
     & .console-msg {
       font-family: Lekton, monospace;
-      color: var(--bg-5); color: red!important;
+      color: var(--bg-5); 
+      color: var(--keyword-color);
+      font-weight: var(--keyword-weight);
     }
 
     & textarea:focus {
@@ -240,10 +287,16 @@
   }
 }
 
+
+
 .dock-content-holder #DockComponent_rightbar_8 {
 
   // Logger
 
   border: 1px solid red;
 
+  }
+
+  .dock-style-models .dock-tabpane {
+    overflow-x: scroll;
   }
