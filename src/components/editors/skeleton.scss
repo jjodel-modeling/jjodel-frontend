@@ -11,15 +11,28 @@
   transition: opacity 0.3s;
 
   & input[type=text], input[type=number] {
-    min-width: 170px;
     padding: 1px 8px;
     outline-color: var(--accent);
     outline-width: 1px;
+    
+  }
+
+  & input[type=text] {
+    min-width: 170px;
+    transition: min-width 0.3s ease-in-out;
+  }
+
+  & input[type=number] {
+    width: 60px;
   }
 
   & input[type=text]:focus, input[type=number]:focus {
     border: 1px solid var(--accent);
     padding: 2px 9px;
+  }
+
+  & input[type=text]:focus {
+    min-width: 70%;
   }
   
   & input[type=checkbox] {
