@@ -121,10 +121,16 @@ class builder {
     static attribute(data: LModelElement, advanced: boolean): JSX.Element {
         return (<section className={'p-2'}>
             {this.feature(data, advanced)}
-            {advanced && <div className={'input-container'}>
-                <b className={'me-2'}>ID:</b>
-                <Input data={data} field={'isID'} type={'checkbox'} />
-            </div>}
+            {advanced && <>
+                <div className={'input-container'}>
+                    <b className={'me-2'}>ID:</b>
+                    <Input data={data} field={'isID'} type={'checkbox'} />
+                </div>
+                <div className={'input-container'}>
+                    <b className={'me-2'}>IoT:</b>
+                    <Input data={data} field={'isIoT'} type={'checkbox'} />
+                </div>
+            </>}
         </section>);
     }
     static reference(data: LModelElement, advanced: boolean): JSX.Element {
@@ -346,6 +352,7 @@ class builder {
                     </button>
                 </div>);
 
+        console.log('topics', topics)
         return(<section className={'p-2'}>
             <div className={'d-flex'}>
                 <label className={'ms-1 my-auto'}>Values</label>
@@ -354,14 +361,13 @@ class builder {
                 </button>
             </div>
             {valueslist}
-            {value.instanceof?.className === 'DAttribute' && (value.instanceof as LAttribute).isIoT && <>
-                <hr className={'my-3'} />
+            {value.instanceof?.className === 'DAttribute' && (value.instanceof as LAttribute).isIoT && <div className={'input-container'}>
+                <b className={'me-2'}>Topic:</b>
                 <Select data={value} field={'topic'} label={'Topic'} options={<optgroup label={'Topics'}>
                     <option value={''}>------</option>
                     {U.extractKeys(topics).map(t => <option key={t} value={t}>{t}</option>)}
                 </optgroup>} />
-                {JSON.stringify(U.extractByKey(topics, value.topic))}
-            </>}
+            </div>}
         </section>)
     }
 }

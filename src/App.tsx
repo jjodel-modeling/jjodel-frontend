@@ -45,8 +45,6 @@ function App(props: AllProps): JSX.Element {
         (async function () {
             SetRootFieldAction.new('isLoading', true);
             await stateInitializer();
-            /* Offline by default */
-            if(!DUser.current) AuthApi.offline();
             await U.sleep(2);
             SetRootFieldAction.new('isLoading', false);
         })();

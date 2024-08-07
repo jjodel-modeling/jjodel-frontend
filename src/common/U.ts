@@ -193,7 +193,7 @@ export class U {
             }
         }
         for (const key in dict) {
-            traverse(dict[key][0], key);
+            traverse(dict[key], key);
         }
         return keys;
     }

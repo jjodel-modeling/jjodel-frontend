@@ -18,10 +18,7 @@ function MqttEditorComponent(props: AllProps) {
         };
         WebSockets.iot.off('pull-action');
         WebSockets.iot.on('pull-action', (receivedAction: GObject<Action & CompositeAction>) => {
-            const action = Action.fromJson(receivedAction);
-            if(!(action.field in store.getState()['topics']))
-                SetRootFieldAction.new(action.field.replaceAll('+=', ''), [], '', false);
-            action.hasFired = 0;
+            const action = Action.fromJson(receivedAction); action.hasFired = 0;
             console.log('Received Action from server.', action);
             action.fire();
         });
@@ -32,6 +29,7 @@ function MqttEditorComponent(props: AllProps) {
     const disconnect = async() => {
         SetRootFieldAction.new('isLoading', true);
         WebSockets.iot.off('pull-action');
+        WebSockets.iot.off('logger');
         WebSockets.iot.disconnect();
         await U.sleep(1);
         SetRootFieldAction.new('isLoading', false);
@@ -39,7 +37,7 @@ function MqttEditorComponent(props: AllProps) {
 
     return <section className={'p-2'}>
         <div className={'d-flex'}>
-            <h4 className={'d-block my-auto'}>MQTT</h4>
+            <h4 className={'d-block my-auto'}>Middleware</h4>
             <div style={{width: '15px', height: '15px'}} className={`d-block ms-2 my-auto circle ${WebSockets.iot.connected ? 'bg-success' : 'bg-danger'}`}></div>
         </div>
         <div className={'p-1 d-flex'}>

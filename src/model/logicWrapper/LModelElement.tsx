@@ -4982,6 +4982,14 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                                             solveLiterals: "ordinals" | "literal_obj" | "literal_str" | "original" = "literal_obj")
         : (T extends undefined ? this["values"] : T extends false ? this["values"] : ValueDetail[]) & {type?: string}  {
 
+        const data = context.proxyObject;
+        if(data.topic) {
+            let value: any = store.getState()['topics'];
+            const path = data.topic.split('.');
+            for(const field of path) value = value[field];
+            return [value];
+        }
+
         let ret: any[] = [...context.data.values] as [];
         let meta: LAttribute | LReference | undefined = shapeless ? undefined : context.proxyObject.instanceof;
         let dmeta: undefined | DAttribute | DReference = meta?.__raw;
