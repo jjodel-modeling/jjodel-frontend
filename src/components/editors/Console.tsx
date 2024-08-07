@@ -111,11 +111,12 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         else {
             this._context = {...this.props, props: this.props};
         }
-        try { output = U.evalInContextAndScope(expression || 'undefined', this._context, this._context); }
+        try { output = U.evalInContextAndScope(expression || '<span class="console-msg">undefined</span>', this._context, this._context); }
         catch (e: any) {
             console.error("console error", e);
-            output = '<span style="color:red">Invalid Syntax!<br></span>' + e.toString(); }
-        this.setState({expression, output});
+            // output = '<span class="console-error">Invalid Syntax!</span> <span class="console-error-msg">' + e.toString() + '<span>' ; }
+            output = '<span class="console-error-msg"><i class="bi bi-exclamation-square-fill"></i> ' + e.toString() + '<span>' ; }
+        this.setState({expression, output });
     }
 
     render(){
@@ -159,7 +160,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             if (output?._reactInternals) {
                 output = {"React.Component": {props:"...navigate to expand...", state:"", _isMounted:output._isMounted}}
             }
-            outstr = '<h4>Result:</h4><div class="output-row" tabindex="984">' + U.objectInspect(output)+"<span>";
+            outstr = '<h4>Result</h4><div class="output-row" tabindex="984">' + U.objectInspect(output)+"<span>";
             let commentsPopup = "";
             if (shortcuts || comments){
                 // if(!shortcuts) shortcuts = {};
@@ -170,12 +171,12 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                     if (txt && typeof txt !== "string") {
                         // try to inject jsx
                         jsxComments[commentKey] = txt;
-                        txt = "<span id='console_output_comment_" + commentKey + "' />";
+                        txt = "<span id='console_output_comment_" + commentKey + "'  class='console-msg'/>";
                         // fallback read text, that should go deep iteration, but 1 level deep should be enough.
                         // let arr: any[] = (Array.isArray(txt?.props?.children) ? txt.props.children : (txt.props.children ? [txt.props.children] : []));
                         // txt = arr.map(e => typeof e === "string" ? e : e?.props?.children + '' || '').join("");
                     }
-                    if (commentVal?.type) commentVal = "\t\t<span style='color: #999'>" + (commentVal?.type?.cname || commentVal.type)+"</span>"; // + " ~ " + txt;
+                    if (commentVal?.type) commentVal = "\t\t<span class='console-msg'>" + (commentVal?.type?.cname || commentVal.type)+"</span>"; // + " ~ " + txt;
                     // warning: unicode char but should not make a problem. 𐀹
                     commentVal += '<div class="output-comment my-tooltip">' + txt + '</div></div><div class="output-row" tabindex="984">'
 
@@ -191,10 +192,10 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 // if (hidden) outstr +="</div><br><br><h4>Other less useful properties</h4><div class=\"output-row\" tabindex=\"984\">" + format(hidden);
                 // warning: unicode char but should not make a problem.
                 // outstr = U.replaceAll( outstr, '𐀹,\n', '],</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
-                outstr = U.replaceAll( outstr, '<span style="color:#000">,\n',
-                    '</span><span style="color:#000">,</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
-                outstr = U.replaceAll( outstr, '],\n', '],</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
-                outstr = U.replaceAll( outstr, '},\n', '},</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
+                outstr = U.replaceAll( outstr, '<span style="color:#000" class="console-msg">,\n',
+                    '</span><span style="color:#000" class="console-msg">,</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
+                outstr = U.replaceAll( outstr, '],\n', '],</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
+                outstr = U.replaceAll( outstr, '},\n', '},</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
             }
             ashtml = true; }
         catch(e: any) {
@@ -223,16 +224,18 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         setTimeout(injectCommentJSX, 1)
         this.setNativeConsoleVariables();
 
-        return(<div className={'w-100 h-100 p-2'}>
+        return(<div className={'w-100 h-100 p-2 console'}>
             <textarea spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} />
             {/*<label>Query {(this.state.expression)}</label>*/}
-            <label>On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}</label>
+            <label className={'on-element'}>On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}</label>
             <hr className={'mt-1 mb-1'} />
-            { this.state.expression &&  ashtml && <div className={"console-output-container"} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
+            { this.state.expression &&  ashtml && <div className={"console-output-container console-msg"} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
+            
             { this.state.expression && !ashtml && <div style={{whiteSpace:"pre"}}>{ outstr }</div>}
-            <label className={"mt-2"}>Context keys:</label>
+            
+            <label className={"context-keys mt-2"}>Context keys</label>
             {
-                <div style={{whiteSpace:"pre"}}> {contextkeys} </div>
+                <div className={'context-keys-list'} style={{whiteSpace:"pre"}}>{contextkeys} </div>
             }
         </div>)
     }
