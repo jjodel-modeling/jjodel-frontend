@@ -8,7 +8,7 @@ import {
     LModelElement,
     LNamedElement, LPointerTargetable,
     LViewElement,
-    LViewPoint,
+    LViewPoint, Pointer,
     SetRootFieldAction,
     U
 } from '../../joiner';
@@ -29,7 +29,7 @@ type BtnProps = {
 
 const Btn = (props: BtnProps) => {
     return (<>
-        {props.action ? 
+        {props.action ?
             <div><i onClick={props.action} title={`${props.tip && props.tip}`} className={`bi tab-btn ${props.icon} ${props.size && props.size}`}></i></div>
         :
             <i className={`bi tab-btn ${props.icon} ${props.size && props.size} disabled`}></i>
@@ -69,14 +69,25 @@ function Tree(props: TreeProps) {
         else applyFilter(id);
     }
 
+    function setME(data?: LModelElement): void {
+        if (!data) return;
+        let node = data.node;
+        SetRootFieldAction.new('_lastSelected', {
+            node: node?.id,
+            view: node?.view.id,
+            modelElement: data.id
+        }, '', false);
+    }
 
-    if(data) return(<>
+    let up = data?.father;
+    let down = data?.children[0];
+    if (data) return(<>
         <CommandBar>
-            <Btn icon={'up'} size={'medium'} action={(e) => {alert('up')}} tip={'Click to go up to the anchestor element'} /> // todo per damiano: aggiungere hook per salire di livello (up)
-            <Btn icon={'down'} size={'medium'} /> // todo per damiano: non so se oltre ad up serve anche un down, in ogni caso ce lo lascerei disabilitato perché da contesto pure all'up
+            <Btn icon={'up'} size={'medium'} disabled={!up} action={(e) => { setME(up)} } tip={'Click to go up to the ancestor element'} />
+            <Btn icon={'down'} size={'medium'} disabled={!down} action={(e) => { setME(down)} } tip={'Select the first child'} />
         </CommandBar>
         <DataTree data={data} depth={depth} hide={hide} setFilter={setFilter}  /></>)
-    if(children) return(<><HtmlTree data={children} hide={hide} depth={depth} setFilter={setFilter} /></>);
+    if (children) return(<><HtmlTree data={children} hide={hide} depth={depth} setFilter={setFilter} /></>);
     return(<></>);
 }
 
@@ -110,7 +121,7 @@ function DataTree(props: DataTreeProps): JSX.Element {
     }*/
 
     return(<section>
-        
+
         <div className={'d-flex tree'}>
             {data.children?.length >= 1 ? ((data.children?.length && hide) ?
                 <i style={{fontSize: '0.7em', color: 'gray'}} className={'bi bi-chevron-right cursor-pointer d-block my-auto'} onClick={setFilter} /> :
@@ -119,7 +130,7 @@ function DataTree(props: DataTreeProps): JSX.Element {
                 <i style={{fontSize: '0.75em', color: 'whitesmoke'}} className={'bi bi-caret-right-fill d-block my-auto'} />
             }
 
-            <div className={'tree-item'}>
+            <div className={'tree-item'} onClick={click}>
                 {/* <div className={`type tree-${data.className} ${(data as any).abstract && 'abstract-class'}`}>
                     <div className={'icon'}>{data.className.slice(1, 2)}</div>*/}
 
@@ -130,11 +141,11 @@ function DataTree(props: DataTreeProps): JSX.Element {
                     </div>
                     <MyTooltip text={`${(data as any).abstract ? 'Abstract ':''}` + data.className} />
                 </div>
-                <div className={'name'} onClick={click}>
+                <div className={'name'}>
                     <span className={'class-name'}>
-                        {(data.name) ? data.name : 'unnamed'} 
-                        {(data as LClass).extends && (data as LClass).extends.length > 0 && 
-                            <span className={'extends'}> 
+                        {(data.name) ? data.name : 'unnamed'}
+                        {(data as LClass).extends && (data as LClass).extends.length > 0 &&
+                            <span className={'extends'}>
                                 &nbsp; <i className="bi bi-caret-right"></i> [{(data as LClass).extends.map((s,i) => <><i>{s.name}</i>{i < (data as LClass).extends.length - 1 ? ', ' :''}</>)}]
                             </span>
                         }

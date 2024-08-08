@@ -55,7 +55,6 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
         case "object":
             ret.output = output = {...output};
             if ((addLKeys && proxy)) {
-                console.log("console output", {output, proxy});
                 let Lsingleton: GObject<'L singleton'> = (RuntimeAccessibleClass.get(output?.className)?.logic?.singleton) || {};
                 let comments: Dictionary<string, string | {type:string, txt:string}> = {};
                 ret.shortcuts = {...Lsingleton};
@@ -137,7 +136,6 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
 
     // textarea: HTMLTextAreaElement | null = null;
     getClickableEntry(expression: string, k: string, arr?: any): JSX.Element{
-        console.log("getClickableEntry", {k, v:arr && arr[k]});
         return <li onClick={()=> {
             let isnum = !isNaN(+k);
             let isregular: boolean = isnum ? true : /\w/.test(k);
@@ -145,7 +143,6 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             if (isnum) append = '['+k+']';
             else if (isregular) append = '.'+k;
             else append = '['+JSON.stringify(k)+']';
-            console.log("setSTate:", {old:this.state.expression, new:expression+append, append} );
             this.setState({expression: (expression ? expression + append : k)}, ()=> { this.change(); });
         }}>{k}{arr && arr[k] ? <>:{arr[k]}</> : undefined}</li>;
     }
@@ -179,7 +176,6 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             }
             if (Array.isArray(output) && output[0]?.__isProxy) {
                 output = output.map(o => fixproxy(o).output);
-                console.log("console result (array):", {output});
             }
             else {
                 let ret = fixproxy(output);
@@ -187,7 +183,6 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 comments = ret.comments;
                 shortcuts = ret.shortcuts;
                 hidden = ret.hiddenkeys;
-                console.log("console result:", {output, ret});
             }
             // todo: as i fix the displaying of a LViewElement without replacing it with __raw,
             //  i will fix window, component and props displaying too i think they crash for props.data, props.view...
@@ -248,7 +243,6 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             outstr = "[circular object]: " + e.toString();
             ashtml = false;
         }
-        console.log("console result (string)", {outstr, jsxComments});
         let contextkeysarr: (string)[];
         let contextkeys: ReactNode = '';
         if (this.state.expression.trim() === "this") contextkeys = "Warning: \"this\" in the console is aliased to data instead of the whole context of a GraphElement component.";
@@ -284,7 +278,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             <label className={'on-element'}>
                 <span>On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}</span>
             </label>
-            <textarea spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} value={this.state.expression} />
+            <textarea spellCheck={false} className={'p-0 input w-100'} onChange={this.change} value={this.state.expression} />
             {/*<label>Query {(this.state.expression)}</label>*/}
             <hr className={'mt-1 mb-1'} />
             { this.state.expression &&  ashtml && <div className={"console-output-container console-msg"} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }

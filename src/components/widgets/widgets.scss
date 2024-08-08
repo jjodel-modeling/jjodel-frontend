@@ -1,4 +1,4 @@
-.toggle { 
+.toggle {
     // border: 1px solid red;
     position: relative;
     padding: 0;
@@ -7,6 +7,85 @@
     --top_label: -19px;
     cursor: pointer;
  }
+div.toggle{
+  position: unset;
+  display: flex;
+  span {
+    position: unset;
+    margin: auto 0;
+    margin-right: 0.25em;
+  }
+  input[type="checkbox"] ~ label{
+    display: block;
+    height: 100%;
+    flex-basis: 0;
+    flex-grow: 1;
+    margin: auto 0;
+    min-width: 40px;
+    transition: all 0.3s ease-in;
+    border-radius: var(--dimension);
+    background-color: var(--bg-3-1);
+    border: 2px solid var(--bg-3-1);
+
+    &::after {
+      content: '';
+      display: block;
+      border: 2.5px solid var(--bg-3-1);
+      border-radius: var(--dimension);
+      background: white;
+      transition: all 0.3s ease-in;
+      width: 1lh;
+      height: 1lh;
+      margin-left: calc(100% - 1lh);
+    }
+  }
+  input{
+    order: 1;
+  }
+  .labels{
+    margin: auto;
+    span{
+      overflow: hidden;
+    }
+  }
+  input[type="checkbox"]+.labels{
+    display: flex;
+    height: 100%;
+    order: 0;
+    width: fit-content;
+    flex-flow: column;
+    flex-wrap: wrap;
+    .on{
+      height: 0;
+    }
+    .off{
+      height: 100%;
+    }
+
+  }
+
+  input[type="checkbox"]:checked+.labels{
+    .on{
+      height: 100%;
+    }
+    .off{
+      height: 0;
+    }
+  }
+
+  input[type="checkbox"]:checked ~ label{
+    transition: all 0.3s ease-in;
+    background-color: var(--secondary);
+    border: 2px solid var(--secondary);
+
+
+    &::after {
+      margin-left: 0;
+      border-color: var(--secondary);
+    }
+  }
+}
+
  .toggle span {
     color: var(--color);
     font-weight: 400;
@@ -19,8 +98,9 @@
     width: 0;
     height: 0;
     padding: 0;
+    border: none;
  }
- 
+/*
  .toggle input[type="checkbox"] + label::before{
     position: absolute;
     content: '';
@@ -41,27 +121,23 @@
     background-color: var(--secondary);
     border: 2px solid var(--secondary);
  }
- 
+
  .toggle input[type="checkbox"] + label::after {
     position: relative;
     content: '';
     display: block;
     height: calc(var(--dimension) - 1px);
     width: calc(var(--dimension) - 1px);
-    border: 2px solid var(--bg-3-1);   
+    border: 2px solid var(--bg-3-1);
     border-radius: var(--dimension);
     top: var(--top_label);
     right: 0px!important;
     background: white;
     transition: all 0.3s ease-in;
  }
- 
+
  .toggle input[type="checkbox"]:checked + label::after {
-    display: block;
-    transition: all 0.3s ease-in;
-    background-color: white;
     border: 2px solid var(--secondary);
     right: calc(var(--dimension) - 3px)!important;
- }
- 
- 
+ }*/
+

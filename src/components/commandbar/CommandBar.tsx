@@ -2,6 +2,7 @@ import React, {MouseEventHandler} from "react";
 import './commandbar.scss';
 
 type BtnProps = {
+    disabled?: boolean;
     icon: "up" | "down" | "back" | "fwd" | "add" | "delete" | "edit",
     tip?: string,
     action?: MouseEventHandler,
@@ -10,10 +11,13 @@ type BtnProps = {
 
 export const Btn = (props: BtnProps) => {
     return (<>
-        {props.action ? 
-            <div><i onClick={props.action} title={`${props.tip && props.tip}`} className={`bi tab-btn ${props.icon} ${props.size && props.size}`}></i></div>
+        {props.action ?
+            <div>
+                <i className={`bi tab-btn ${props.icon} ${props.size && props.size} ${props.disabled && 'disabled'}`}
+                   onClick={props.action} title={`${props.tip && props.tip}`} />
+            </div>
         :
-            <i className={`bi tab-btn ${props.icon} ${props.size && props.size} disabled`}></i>
+            <i className={`bi tab-btn ${props.icon} ${props.size && props.size} disabled`} />
         }
     </>);
 }

@@ -33,7 +33,7 @@ export class DV {
     public static operationView(): string { return beautify(DefaultView.operation()); }
     public static parameterView(): string { return beautify(DefaultView.parameter()); }
 
-    // damiano: i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
+    // i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
     // it is still work in progress.
     public static operationViewm1(): string { return beautify(DefaultView.operationm1()); }
     public static objectView(): string { return beautify(DefaultView.object()); }
@@ -498,7 +498,7 @@ public static parameter(): string { return (
 </div>`
 );}
 
-    // damiano: i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
+    // i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
     // it is still work in progress.
     public static operationm1(): string { return (
 `<div className={'d-flex root operationm1'} style={{paddingRight: "6px"}}>

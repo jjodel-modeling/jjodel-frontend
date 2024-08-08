@@ -18,7 +18,7 @@ type ToggleProps = {
 
 export const Toggle = (props: ToggleProps) => {
     const [value, setValue] = useState<boolean>(false);
-    
+
     const toggleValue = (e: MouseEvent, value: boolean) => {
         setValue(value);
 
@@ -26,8 +26,11 @@ export const Toggle = (props: ToggleProps) => {
 
     return (
         <div className={'toggle'}  onClick={(e)=>setValue(!value)} >
-            <span>{value ? props.labels['true'] : props.labels['false']}</span>
-            <input id={props.name} type="checkbox" value="true"  checked={value}/> 
+            <input id={props.name} type="checkbox" value="true"  checked={value}/>
+            <div className={"labels"}>
+                <span className={"on"}>{props.labels['true']}</span>
+                <span className={"off"}>{props.labels['false']}</span>
+            </div>
             <label></label>
         </div>
     );

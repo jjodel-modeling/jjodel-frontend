@@ -85,7 +85,7 @@ function NestedViewComponent(props: AllProps) {
                 </div>
                 <div className={"mid-stuff vertical-centering"}>
                     <div className={`icon type tree-${appliableTo} ${d.className}`}>{
-                        isVP ? 'VP' : (appliableTo === "Any" ? "*" : appliableTo[0])
+                        isVP ? 'VP' : (appliableTo === "Any" ? "✲" : appliableTo[0])
                     }</div>
                     <div>{d.name}</div>
                 </div>
