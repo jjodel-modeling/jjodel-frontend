@@ -107,7 +107,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
     private _context: GObject = {};
     change(evt?: React.ChangeEvent<HTMLTextAreaElement>) {
         if (!this) return; // component being destroyed and remade after code hot update
-        let expression0: string = evt?.target.value || this.state.expression || '';
+        let expression0: string = (evt ? evt.target.value : this.state.expression) || '';
         let expression: string = expression0.trim();
         let output;
         // let context = {...this.props, props: this.props}; // makeEvalContext(this.props as any, {} as any);
@@ -137,6 +137,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
 
     // textarea: HTMLTextAreaElement | null = null;
     getClickableEntry(expression: string, k: string, arr?: any): JSX.Element{
+        console.log("getClickableEntry", {k, v:arr && arr[k]});
         return <li onClick={()=> {
             let isnum = !isNaN(+k);
             let isregular: boolean = isnum ? true : /\w/.test(k);
