@@ -182,7 +182,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
         (Array.prototype as any).contains = function (o:any): boolean{
             return this.indexOf(o) !== -1;
         };
-        (Array.prototype as any).joinOriginal = Array.prototype.join;
+        // (Array.prototype as any).joinOriginal = Array.prototype.join;
         // @ts-ignore
         Array.prototype.first = function(){ return this[0]; }
         // @ts-ignore

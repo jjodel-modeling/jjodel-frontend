@@ -11,10 +11,16 @@ import {
     windoww
 } from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
-import React, {Component, Dispatch, PureComponent, ReactElement} from 'react';
+import React, {Component, Dispatch, PureComponent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
-import './style.scss';
+
+import './style.scss'; // <-- tenuto per retro-compatibilità ma dovrebbe sparire
+import './editors.scss'; // <-- stile comune a tutte le tab editor (idealmente da tenere leggero)
+import './console.scss'; // <-- stile di questa tab
+
 import ReactDOM from "react-dom";
+import { useStateIfMounted } from 'use-state-if-mounted';
+import {Empty} from "./Empty";
 
 var Convert = require('ansi-to-html');
 
@@ -40,7 +46,11 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
 
     let ret: ReturnType<typeof fixproxy> = {output};
     switch(typeof output) {
-        case "function": return {output: U.buildFunctionDocumentation(output)};
+        case "function": {
+            let fdata =  U.buildFunctionDocumentation(output);
+
+            return {output: fdata};
+        }
         default: return {output};
         case "object":
             ret.output = output = {...output};
@@ -97,7 +107,8 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
     private _context: GObject = {};
     change(evt?: React.ChangeEvent<HTMLTextAreaElement>) {
         if (!this) return; // component being destroyed and remade after code hot update
-        let expression: string | undefined = evt?.target.value.trim() || this.state.expression || '';
+        let expression0: string = (evt ? evt.target.value : this.state.expression) || '';
+        let expression: string = expression0.trim();
         let output;
         // let context = {...this.props, props: this.props}; // makeEvalContext(this.props as any, {} as any);
 
@@ -111,19 +122,41 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         else {
             this._context = {...this.props, props: this.props};
         }
-        try { output = U.evalInContextAndScope(expression || '<span class="console-msg">111undefined</span>', this._context, this._context); }
+        try {
+
+            // if (expression === 'this') expression = 'data'; // it does a mess by taking a L-singleton with all his __info_of__ stuff
+            if (expression === 'this') output = this._context;
+            else output = U.evalInContextAndScope(expression || '<span class="console-msg">undefined</span>', this._context, this._context);
+        }
         catch (e: any) {
             console.error("console error", e);
             // output = '<span class="console-error">Invalid Syntax!</span> <span class="console-error-msg">' + e.toString() + '<span>' ; }
-            output = '<span class="console-error-msg"><i class="bi bi-exclamation-square-fill"></i> ' + e.toString() + '<span>' ; }
-        this.setState({expression, output });
+            output = '<span class="console-error-msg"><i class="bi bi-exclamation-square-fill"></i><span>' + e.toString() + '</span></span>' ; }
+        this.setState({expression:expression0, output });
+    }
+
+    // textarea: HTMLTextAreaElement | null = null;
+    getClickableEntry(expression: string, k: string, arr?: any): JSX.Element{
+        console.log("getClickableEntry", {k, v:arr && arr[k]});
+        return <li onClick={()=> {
+            let isnum = !isNaN(+k);
+            let isregular: boolean = isnum ? true : /\w/.test(k);
+            let append: string;
+            if (isnum) append = '['+k+']';
+            else if (isregular) append = '.'+k;
+            else append = '['+JSON.stringify(k)+']';
+            console.log("setSTate:", {old:this.state.expression, new:expression+append, append} );
+            this.setState({expression: (expression ? expression + append : k)}, ()=> { this.change(); });
+        }}>{k}{arr && arr[k] ? <>:{arr[k]}</> : undefined}</li>;
     }
 
     render(){
-        const data = this.props.data;/*
-        const [expression, setExpression] = useStateIfMounted('data');
+        /*const [expression, setExpression] = useStateIfMounted('data');
         const [output, setOutput] = useStateIfMounted('');*/
-        if (!this.props.node) return(<></>);
+        if (!this.props.node) return <Empty msg={"Select a node."} />;
+        let expression = this.state.expression.trim();
+        if (expression === 'this') expression = 'data';
+        const data = this.props.data;
         if (this.lastNode !== this.props.node.id) this.change(); // force reevaluation if selected node changed
         this.lastNode = this.props.node.id;
 
@@ -137,6 +170,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         let comments: Dictionary<string, string | {type:string, txt:string}> | undefined = undefined;
         let hidden: Dictionary<string, string> | undefined = undefined;
         let jsxComments: Dictionary<string, JSX.Element[]> = {};
+        let shortcutsjsx: ReactNode = undefined;
         try {
             if (Array.isArray(output)){
                 comments = {"separator": '<span>Similar to <a href={"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join"}>Array.join(separator)</a>' +
@@ -160,7 +194,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             if (output?._reactInternals) {
                 output = {"React.Component": {props:"...navigate to expand...", state:"", _isMounted:output._isMounted}}
             }
-            outstr = '<h4>Result</h4><div class="output-row" tabindex="984">' + U.objectInspect(output)+"<span>";
+            outstr = '<h4>Result:</h4><section class="group result-container"><div class="output-row" tabindex="984">' + U.objectInspect(output)+"<span>";
             let commentsPopup = "";
             if (shortcuts || comments){
                 // if(!shortcuts) shortcuts = {};
@@ -188,7 +222,17 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                     outstr = outstr.replace(regexpCloseTags,  "</span>$1");
                     outstr = U.replaceAll(outstr, "£", "$");
                 }
-                if (shortcuts) outstr += "</div><br><br><h4>Shortcuts</h4><div class=\"output-row\" tabindex=\"984\">" + U.objectInspect(shortcuts);
+
+
+                /*if (shortcuts) outstr += "</div></section><br><br>" +
+                    "<h4>Shortcuts</h4><section class='group shortcuts-container'><div class=\"output-row\" tabindex=\"984\">" + U.objectInspect(shortcuts)+"</section>";
+                */
+
+                if (shortcuts) {
+                    shortcutsjsx = <ul>{
+                        Object.keys(shortcuts).map(k=>this.getClickableEntry(expression, k, shortcuts))
+                    }</ul>
+                }
                 // if (hidden) outstr +="</div><br><br><h4>Other less useful properties</h4><div class=\"output-row\" tabindex=\"984\">" + format(hidden);
                 // warning: unicode char but should not make a problem.
                 // outstr = U.replaceAll( outstr, '𐀹,\n', '],</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
@@ -205,12 +249,21 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             ashtml = false;
         }
         console.log("console result (string)", {outstr, jsxComments});
-        let contextkeys;
+        let contextkeysarr: (string)[];
+        let contextkeys: ReactNode = '';
+        if (this.state.expression.trim() === "this") contextkeys = "Warning: \"this\" in the console is aliased to data instead of the whole context of a GraphElement component.";
+
         let objraw = this.state.output?.__raw || (typeof this.state.output === "object" ? this.state.output : "[primitiveValue]") || {};
-        if (this.state.expression.trim() === "") contextkeys = ["data", "node", "view", "component"].join(", ");
-        else if (this.state.expression.trim() === "this") contextkeys = ["Warning: \"this\" will refer to the Console component instead of a GraphElement component."].join(", ");
-        else if (typeof objraw === "string") { contextkeys = "- length\n- all string functions"}
-        else contextkeys = Array.isArray(objraw) ? ["array[index]", ...Object.keys(Array.prototype)].join(",\n") : Object.getOwnPropertyNames(objraw).join(",\n");// || []).join(", ")
+        if (this.state.expression.trim() === "") contextkeysarr = ["data", "node", "view", "component"];
+        else if (typeof objraw === "string") { contextkeysarr = Object.keys(String.prototype); }
+        else contextkeysarr = (Array.isArray(objraw) ?
+                [...(Object.keys(objraw) as any as number[]).filter(k => (k) <= 10).map(k=>k===10 ? '...' : ''+k), ...Object.keys(Array.prototype)]
+                : Object.getOwnPropertyNames(objraw)) || [];
+
+        contextkeys = <ul>{
+            contextkeysarr.map(k=>this.getClickableEntry(expression, k))
+        }</ul>;
+
 
         let injectCommentJSX = () => {
             try{ for (let key in jsxComments) {
@@ -223,19 +276,25 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         }
         setTimeout(injectCommentJSX, 1)
         this.setNativeConsoleVariables();
+        windoww.output = output;
+        windoww.contextkeysarr = contextkeysarr;
+        windoww.contextkeys = contextkeys;
 
         return(<div className={'w-100 h-100 p-2 console'}>
-            <textarea spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} />
+            <label className={'on-element'}>
+                <span>On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}</span>
+            </label>
+            <textarea spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} value={this.state.expression} />
             {/*<label>Query {(this.state.expression)}</label>*/}
-            <label className={'on-element'}>On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}</label>
             <hr className={'mt-1 mb-1'} />
             { this.state.expression &&  ashtml && <div className={"console-output-container console-msg"} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
-            
-            { this.state.expression && !ashtml && <div style={{whiteSpace:"pre"}}>{ outstr }</div>}
-            
+
+            { this.state.expression && !ashtml && <div className={"console-output-container console-msg"} style={{whiteSpace:"pre"}}>{ outstr }</div>}
+
+            {shortcutsjsx && <><h4>Shortcuts</h4><section className='group shortcuts-container'>{shortcutsjsx}</section></>}
             <label className={"context-keys mt-2"}>Context keys</label>
             {
-                <div className={'context-keys-list'} style={{whiteSpace:"pre"}}>{contextkeys} </div>
+                <section className={'group context-keys-list'} style={{whiteSpace:"pre"}}>{contextkeys} </section>
             }
         </div>)
     }

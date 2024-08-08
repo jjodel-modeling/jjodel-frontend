@@ -13,7 +13,10 @@ import {
 import {FakeStateProps} from '../../joiner/types';
 import React, {Component, Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
+import './editors.scss';
+import './info.scss';
 import './style.scss';
+import {Empty} from "./Empty";
 
 class builder {
     static named(data: LModelElement, advanced: boolean): ReactNode {
@@ -383,6 +386,8 @@ function InfoComponent(props: AllProps) {
             return builder.reference(data, advanced);
         case 'DOperation':
             return builder.operation(data, advanced);
+        case 'DParameter':
+            return builder.operation(data.father, advanced);
         case 'DEnumLiteral':
             return builder.literal(data, advanced);
         case 'DObject':
@@ -390,11 +395,7 @@ function InfoComponent(props: AllProps) {
         case 'DValue':
             return builder.value(data, topics, advanced);
     }
-    return(<section>
-        <label className={'d-block text-center'}>
-            No Data to display!
-        </label>
-    </section>);
+    return <Empty />;
 
 }
 

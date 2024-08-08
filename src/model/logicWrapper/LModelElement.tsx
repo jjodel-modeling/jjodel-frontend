@@ -136,7 +136,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     public fatherList!: LModelElement[]; // chain of fathers going up recursively
     annotations!: LAnnotation[];
     children!: (LPackage | LClassifier | LTypedElement | LAnnotation | LObject | LValue)[];
-    __info_of_children__: Info = {type: "LModelElement[]", txt: <div>Merging of all the subelement collections (attributes, references, parameters...) except annotations</div>}
+    __info_of__children__: Info = {type: "LModelElement[]", txt: <div>Merging of all the subelement collections (attributes, references, parameters...) except annotations</div>}
     nodes!: LGraphElement[];
     node!: LGraphElement | undefined;
 
@@ -3733,7 +3733,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     }
 
     public instancesOf(instancetypes0: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false): LObject[]{ return this.cannotCall("instancesOf"); }
-    public __type_of__instancesOf: Info = {type: "(instancetypes: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false) => LObject[]",
+    public __info_of__instancesOf: Info = {type: "(instancetypes: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false) => LObject[]",
         txt:<div>Retrieves all objects instancing a target class.
             <br/>The first parameter is the targeted class, which can be his name, pointer or object.
             <br/>The second parameter tells if instances of his subclasses needs to be retreieved as well.</div>

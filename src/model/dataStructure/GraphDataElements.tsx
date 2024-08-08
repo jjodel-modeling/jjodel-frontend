@@ -130,8 +130,8 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
 
     z!:number;
     zIndex!: number;
-    __info_of_z__: Info = {type:ShortAttribETypes.EInt, txt: "alias for zIndex"};
-    __info_of_zIndex__: Info = {type:ShortAttribETypes.EInt,
+    __info_of__z__: Info = {type:ShortAttribETypes.EInt, txt: "alias for zIndex"};
+    __info_of__zIndex__: Info = {type:ShortAttribETypes.EInt,
         txt: "Determine the z-axis priority of the element.<br/>Higher value tende to overlap other elements.<br/>Lower value tends to be on background."};
     zoom!: GraphPoint;
     html?: Element;
@@ -147,8 +147,8 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     component!: GraphElementComponent;
     favoriteNode!: boolean;
     vertex?: LVoidVertex;
-    __info__of__vertex: Info = {type: "LVoidVertex", txt: "the foremost vertex containing this graphElement, or undefiened."}
-    __info__of__favoriteNode: Info = {type: ShortAttribETypes.EBoolean,
+    __info_of__vertex: Info = {type: "LVoidVertex", txt: "the foremost vertex containing this graphElement, or undefiened."}
+    __info_of__favoriteNode: Info = {type: ShortAttribETypes.EBoolean,
         txt: "<span>Indicates this is the primarly used (by default) node to refer to a modelling element that might have multiple representations." +
             "<br> Can be used as favorite target for edges or other."}
 

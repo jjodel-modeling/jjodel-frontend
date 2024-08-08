@@ -6,6 +6,12 @@
   height: 100vh;
   pointer-events: none;
   display: flex;
+  &.top>*{
+    margin-top: 10vh;
+  }
+  &.bottom>*{
+    margin-bottom: 10vh;
+  }
   &>*{
     pointer-events: all;
     margin: auto;
@@ -14,10 +20,8 @@
     border: 1px solid var(--palette-g);
     border-radius: 0.5em;
   }
-  &.top>*{
-    margin-top: 10vh;
-  }
-  &.bottom>*{
-    margin-bottom: 10vh;
+  &.inline>*{
+    margin: auto;
+    pointer-events: none;
   }
 }

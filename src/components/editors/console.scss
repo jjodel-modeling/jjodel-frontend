@@ -1,0 +1,181 @@
+.group.context-keys-list, .group.shortcuts-container {
+  ul li{
+    cursor: pointer;
+  }
+}
+
+.output-row {
+  // white-space: pre;
+  .output-comment{
+    display: none;
+    position: fixed;
+  }
+  &:hover .output-comment,
+  &:focus-within .output-comment,
+  &:focus .output-comment,
+  &:active .output-comment,
+  {
+    &:first-of-type{
+      display: block;
+    }
+  }
+}
+
+.console {
+  color: var(--color);
+  margin: 1rem .5rem;
+  padding: 1rem 1.65rem;
+  font-weight: 300;
+  max-height: 95%;
+  border: 1px solid var(--bg-1-5);
+  border-radius: 8px;
+  background-color: var(--bg-1-5)!important;
+  transition: opacity 0.3s;
+  width:  calc(100% - 1rem)!important;
+}
+
+.on-element{
+  display: flex;
+
+  span{
+    margin: auto 0;
+  }
+
+  &::before {
+    font-size: 1.5em;
+    font-family: bootstrap-icons;
+    content: "\F5C3";
+    color: var(--accent);
+    border-bottom: 1px dotted var(--bg-3);
+    margin: auto 0.25rem;
+    // l'elemento era allineato correttamente, ma l'icona stessa non è centrata in verticale. questo lo corregge visualmente.
+    height: 10px;
+    margin-top: -3.5px;
+  }
+}
+
+ .console {
+
+  textarea {
+    font-family: Courier, monospace;
+    font-size: 1em;
+    color: var(--color);
+    padding: 0.5rem 1rem!important;
+    margin: 0.25rem;
+    border-radius: var(--radius);
+  }
+
+  label.on-element {
+    font-weight: 500;
+  }
+
+  h4 {
+    font-family: "Inter Tight", sans-serif;
+    color: var(--accent);
+    font-size: 1.3em;
+  }
+
+  .output-row {
+    border-top: none;
+    border-left: 2px solid var(--bg-3);
+    border-right: 2px solid var(--bg-3);
+    border-bottom: none;
+
+    background-color: var(--bg-2);
+    padding: 1rem;
+  }
+  .output-row:first-of-type {
+    border-top: 2px solid var(--bg-3);
+    border-left: 2px solid var(--bg-3);
+    border-right: 2px solid var(--bg-3);
+    border-bottom: none;
+
+    background-color: var(--bg-2);
+    border-top-left-radius: var(--radius);
+    border-top-right-radius: var(--radius);
+    padding: 1rem;
+  }
+  .output-row:last-of-type {
+    border-bottom: 2px solid var(--bg-3);
+    border-left: 2px solid var(--bg-3);
+    border-right: 2px solid var(--bg-3);
+    border-top: none;
+
+    background-color: var(--bg-2);
+    border-bottom-left-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+    padding: 1rem;
+  }
+
+  h4 + .output-row  {
+    border-top: 2px solid var(--bg-3);
+    border-left: 2px solid var(--bg-3);
+    border-right: 2px solid var(--bg-3);
+    border-bottom: none;
+
+    background-color: var(--bg-2);
+    border-top-left-radius: var(--radius);
+    border-top-right-radius: var(--radius);
+    padding: 1rem;
+  }
+
+  br {
+    display: block;
+    height: 1px; width: 100%;
+  }
+
+
+  span.console-error {
+    display: block;
+    padding: 2px 12px;
+    margin-bottom: 4px;
+    width: fit-content;
+    color: white;
+    border-radius: 3px;
+    background-color: var(--failure);
+    font-weight: 400;
+  }
+
+
+  span.console-error .bi {
+    color: white;
+  }
+
+  span.console-error-msg {
+    display: flex;
+    font-family: Lekton, monospace;
+    color: var(--bg-5);
+    padding-left: 0px;
+    margin-top: auto;
+    margin-bottom: auto;
+    >*{
+      margin: auto 0.25rem;
+    }
+  }
+
+  span.console-error-msg .bi {
+    font-size: 1.9em;
+    color: var(--failure);
+  }
+
+  .context-keys {
+    font-weight: 500;
+    font-size: 1.1em;
+  }
+
+  .context-keys-list {
+    font-family: Lekton, monospace;
+  }
+
+  .console-msg {
+    font-family: Lekton, monospace;
+    color: var(--bg-5);
+    color: var(--keyword-color);
+    font-weight: var(--keyword-weight);
+  }
+
+  textarea:focus {
+    border: 2px solid var(--accent);
+    margin: 0;
+  }
+}

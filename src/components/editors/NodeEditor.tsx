@@ -1,13 +1,13 @@
 import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
-import {DState} from '../../../redux/store';
+import {DState} from '../../redux/store';
 import type {
     LModelElement,
     LViewElement,
     LGraphElement,
     LVoidVertex,
     LVoidEdge, LGraph,Pointer, DGraphElement,
-    DNamedElement, LNamedElement} from '../../../joiner';
+    DNamedElement, LNamedElement} from '../../joiner';
 import {
     LPointerTargetable,
     L,
@@ -16,12 +16,15 @@ import {
     TextArea,
     RuntimeAccessibleClass,
     SetRootFieldAction,
-} from '../../../joiner';
+} from '../../joiner';
+import './editors.scss';
+import './node-editor.scss';
+import {Empty} from "./Empty";
 
 function NodeEditorComponent(props: AllProps) {
     const selected = props.selected;
     const editable = true;
-    if (!selected?.node) return(<></>);
+    if (!selected?.node) return <Empty msg={'Select a node.'} />;
     const node = selected.node;
     const dnode = (node.__raw || node) as DGraphElement
     let cname = dnode.className;

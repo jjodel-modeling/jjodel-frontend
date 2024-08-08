@@ -20,7 +20,7 @@ import {
     LPointerTargetable,
     Overlap,
     Pointer, store,
-    U, LoggerCategoryState, RuntimeAccessible
+    U, LoggerCategoryState, RuntimeAccessible, Size
 } from '../../joiner';
 import './tooltip.scss';
 class TooltipVisualizerState{
@@ -40,14 +40,25 @@ export class TooltipVisualizer extends React.Component<{}, TooltipVisualizerStat
     }
     render(){
         if (!this.state.tooltip) return null;
-        const style = {}
+        const style: GObject = {}
         if (this.state.baseElement){
             // todo: set top, left in pos:absolute according to baseElement
+            //style.position = 'absolute';
+            let size = Size.of(this.state.baseElement);
+            style.left = 'min( 50vw, calc( '+size.x+'px - 50vw ))';
+            style.top = 'min( 50vh, calc( '+size.y+'px - 50vh ))';
+            // style.right = 'calc( 100vw - '+size.w+'px)';
+            // currently center of tooltip is topleft of baseelem
         }
 
+        console.log('tooltip', style, this.state)
 
-        return <div className={"tooltip-wrapper " + (this.state.position ? "top" : "bottom")} onMouseEnter={this.onMouseEnter}
-                    style={style}>{this.state.tooltip}</div>;
+        return <div className={"tooltip-wrapper " +
+            (this.state.position ? "top" : "bottom")+
+            (this.state.baseElement ? " inline" : " fixed")
+        } onMouseEnter={this.onMouseEnter}
+                    style={style}>
+            {this.state.tooltip}</div>;
     }
 }
 
@@ -73,7 +84,7 @@ export class Tooltip extends React.Component<AllProps, State> {
     }
 
     onMouseEnter(e?: MouseEvent): void{
-        let inline = !!this.props.position;
+        let inline = this.props.inline;
         let onTop = this.props.position === 'bottom' ? false : (this.props.position === 'top' ? true : undefined);
         Tooltip.show(this.tooltip, onTop, inline ? (this.childhtml || undefined) : undefined);
     }
@@ -147,6 +158,7 @@ interface OwnProps {
     catch?: ReactNode | ((error: Error, info?: React.ErrorInfo) => ReactNode);
     children: ReactNode;
     tooltip: ReactNode;
+    inline?: boolean;
     position?: 'top' | 'bottom'; // missing means on global center-bottom. top or bottom means on top-bottom of child element (inline-like)
     // inline: boolean;
 }

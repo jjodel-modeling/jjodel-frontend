@@ -2,17 +2,15 @@ import type {FakeStateProps} from '../../joiner/types';
 import {DState, LModelElement,} from '../../joiner';
 import React, {Component, Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
+import './editors.scss';
 import './skeleton.scss';
 import Tree from "../forEndUser/Tree";
+import {Empty} from "./Empty";
 
 function SkeletonComponent(props: AllProps) {
     const {data} = props;
 
-    if(!data) return(<section>
-        <label className={'d-block text-center'}>
-            No Data to display!
-        </label>
-    </section>);
+    if(!data) return(<Empty />);
     else return(<section>
         <Tree data={data} />
     </section>)

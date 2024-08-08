@@ -2,7 +2,7 @@ import React, {Dispatch} from 'react';
 import './App.scss';
 import './styles/view.scss';
 import './styles/style.scss';
-import {DState, DUser, LUser, SetRootFieldAction, statehistory, stateInitializer, U} from "./joiner";
+import {DState, DUser, LUser, SetRootFieldAction, statehistory, stateInitializer, Try, U} from "./joiner";
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import {FakeStateProps} from "./joiner/types";
@@ -61,11 +61,13 @@ function App(props: AllProps): JSX.Element {
 
     return(<>
         <div className={"router-wrapper"}>
-        {isLoading && <Loader />}
-        <ExternalLibraries />
-        <TooltipVisualizer />
-        <MessageVisualizer />
-        <HashRouter>
+            {isLoading && <Loader />}
+            <ExternalLibraries />
+            <TooltipVisualizer />
+            <MessageVisualizer />
+            <Try><>
+            </></Try>
+            <HashRouter>
             <PathChecker />
             <Routes>
                 {DUser.current && <>

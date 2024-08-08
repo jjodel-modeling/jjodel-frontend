@@ -99,6 +99,7 @@ export class U {
     }
 
     public static objectInspect(val: GObject, depth: number = 2, color: boolean = true, showHidden = true): string{
+        if (typeof val === 'string') return val;
         let ansiConvert = (window as any).ansiConvert;
         if (!ansiConvert) (window as any).ansiconvert = ansiConvert = new Convert();
         return U.replaceAll(ansiConvert.toHtml(U.inspect(val, showHidden, depth, color)),
@@ -557,11 +558,11 @@ export class U {
         for (let o of objarr) for (let key in o) { if (condition(out, key, o, objarr, i++)) out[key] = o[key]; }
         return out as  A & B; }
 
-    static buildFunctionDocumentation(f: Function): {parameters: {name: string, defaultVal: string | undefined, typedesc: string | null}[], returns: string | undefined, f: Function, fname: string | undefined, isLambda: boolean, signature: string} {
+    static buildFunctionDocumentation(f: Function): {fullSignature: string, parameters: {name: string, defaultVal: string | undefined, typedesc: string | null}[], returns: string | undefined, f: Function, fname: string | undefined, isLambda: boolean, signature: string} {
         Log.e(!JsType.isFunction(f), 'getFunctionSignature() parameter must be a function', f);
         // let parameters: {name: string, defaultVal: string, typedesc: string}[] = []; //{name: '', defaultVal: undefined, typedesc: ''};
-        let ret: {parameters: {name: string, defaultVal: string | undefined, typedesc: string | null}[], returns: string | undefined, f: Function, fname: string | undefined, isLambda: boolean, signature: string}
-            = {parameters: [], returns: undefined, f: f, fname: undefined, isLambda: null as Temporary, signature: ''};
+        let ret: {fullSignature: string, parameters: {name: string, defaultVal: string | undefined, typedesc: string | null}[], returns: string | undefined, f: Function, fname: string | undefined, isLambda: boolean, signature: string}
+            = {fullSignature: '', fname: undefined, signature: '', parameters: [], returns: undefined, f: f, isLambda: null as Temporary};
         let str: string = f.toString();
         let starti: number = str.indexOf('(');
         let endi: number;
@@ -615,6 +616,8 @@ export class U {
             ret.signature += (i === 0 ? '' : ', ') + par.name + (par.typedesc ? '/*' + par.typedesc + '*/' : '') + (par.defaultVal ? ' = ' + par.defaultVal : '');
         }
         ret.signature += ')' + (ret.returns ? '/*' + ret.returns + '*/' : '');
+
+        ret.fullSignature = ret.isLambda? ret.signature + '=>' + ret.returns : (ret.fname ||'function') + ret.signature+': '+ret.returns;
         return ret; }
 
 

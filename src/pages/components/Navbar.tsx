@@ -133,7 +133,7 @@ function NavbarComponent(props: AllProps) {
         {name: 'New metamodel', icon: icon['new'], function: ()=>createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
         {name: 'New model', icon: icon['new'], function: () => {}, keystroke: []},
         {name: 'divisor', function: () => {}, keystroke: []},
-        {name: 'Close project', icon: icon['close'], function: () => {window.location = window.location.origin + '/#/allProjects' as any}, keystroke: [Key.cmd, 'Q']},
+        {name: 'Close project', icon: icon['close'], function: () => {window.location = window.location.origin + '/#/allProjects' as any; U.refresh(); }, keystroke: [Key.cmd, 'Q']},
         {name: 'divisor', function: () => {}, keystroke: []},
         {name: 'Undo', icon: icon['undo'], function: () => {}, keystroke: [Key.cmd, 'Z']},
         {name: 'Redo', icon: icon['redo'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?

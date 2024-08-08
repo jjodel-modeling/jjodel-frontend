@@ -141,7 +141,7 @@ function DataTree(props: DataTreeProps): JSX.Element {
                     </span>
                     </div>
             </div>
-            
+
         </div>
         {!hide && Array.isArray(data.children) && data.children?.map((child: LModelElement) => {
             return(<div style={{marginLeft: '1em'}}>
@@ -169,7 +169,7 @@ function HtmlTree(props: HtmlTreeProps) {
                         <i className={'bi bi-chevron-down cursor-pointer d-block my-auto'} onClick={setFilter} />
                     }
                     <label className={'ms-1 my-auto'}>
-                        {element.props['label'] ? element.props['label'] : 'unnamed'} 
+                        {element.props['label'] ? element.props['label'] : 'unnamed'}
                     </label>
                 </div>
                 {!hide && children.map((child) => {
