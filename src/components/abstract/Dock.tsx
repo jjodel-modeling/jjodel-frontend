@@ -6,7 +6,7 @@ import {FakeStateProps} from '../../joiner/types';
 import {DockLayout, LayoutData} from 'rc-dock';
 import {Info, Skeleton, Logger, Console} from "../../components/editors";
 import {ModelMetaData} from '../rightbar/structureEditor/ModelMetaData';
-import NodeEditor from '../rightbar/styleEditor/StyleEditor';
+import {NodeEditor} from "../editors/NodeEditor";
 import DockManager from './DockManager';
 import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";

@@ -1,7 +1,7 @@
 .dock-style-editors .dock-tabpane  section {
 
   color: var(--color);
-  margin: 1rem .5rem; 
+  margin: 1rem .5rem;
   padding: 1rem 1.65rem;
   font-weight: 300;
 
@@ -14,7 +14,7 @@
     padding: 1px 8px;
     outline-color: var(--accent);
     outline-width: 1px;
-    
+
   }
 
   & input[type=text] {
@@ -34,7 +34,7 @@
   & input[type=text]:focus {
     min-width: 70%;
   }
-  
+
   & input[type=checkbox] {
     accent-color: var(--accent);
   }
@@ -50,7 +50,7 @@
   border-bottom: 1px dotted var(--bg-3);
   padding-bottom: 0.5rem;
   margin-bottom: 0.5rem;
-  
+
 }
 
 .dock-style-editors .dock-tabpane .input-container:has(input) > .me-2 {
@@ -73,7 +73,7 @@
 
   }
 
- 
+
 }
 .dock-style-editors .dock-tabpane .input-container:has(input:focus) > .me-2::before, .dock-style-editors .dock-tabpane .input-container:has(input:hover) > .me-2::before,
 .dock-style-editors .dock-tabpane .input-container:has(select:focus) > .me-2::before, .dock-style-editors .dock-tabpane .input-container:has(select:hover) > .me-2::before {
@@ -93,27 +93,27 @@
 }
 
 .dock-content-holder #DockComponent_rightbar_1 {
-  
+
   // Summary
 
   overflow: scroll;
 }
 
 .dock-content-holder #DockComponent_rightbar_2 {
-  
+
   // Properties / Structure
-  
+
   & section {
 
   }
 }
 
 .dock-content-holder #DockComponent_rightbar_4 {
-  
+
   // Tree View
 
   & section {
-    
+
   }
 
   & section:has(section) section {
@@ -139,9 +139,9 @@
 
   & .console {
 
-    
+
     color: var(--color);
-    margin: 1rem .5rem; 
+    margin: 1rem .5rem;
     padding: 1rem 1.65rem;
     font-weight: 300;
     max-height: 95%;
@@ -165,7 +165,7 @@
   }
 
   & .console {
-  
+
     & textarea {
       font-family: Courier, monospace;
       font-size: 1em;
@@ -189,8 +189,8 @@
       border-top: none;
       border-left: 2px solid var(--bg-3);
       border-right: 2px solid var(--bg-3);
-      border-bottom: none; 
-      
+      border-bottom: none;
+
       background-color: var(--bg-2);
       padding: 1rem;
     }
@@ -198,8 +198,8 @@
       border-top: 2px solid var(--bg-3);
       border-left: 2px solid var(--bg-3);
       border-right: 2px solid var(--bg-3);
-      border-bottom: none; 
-      
+      border-bottom: none;
+
       background-color: var(--bg-2);
       border-top-left-radius: var(--radius);
       border-top-right-radius: var(--radius);
@@ -209,8 +209,8 @@
       border-bottom: 2px solid var(--bg-3);
       border-left: 2px solid var(--bg-3);
       border-right: 2px solid var(--bg-3);
-      border-top: none; 
-      
+      border-top: none;
+
       background-color: var(--bg-2);
       border-bottom-left-radius: var(--radius);
       border-bottom-right-radius: var(--radius);
@@ -221,19 +221,19 @@
       border-top: 2px solid var(--bg-3);
       border-left: 2px solid var(--bg-3);
       border-right: 2px solid var(--bg-3);
-      border-bottom: none; 
-      
+      border-bottom: none;
+
       background-color: var(--bg-2);
       border-top-left-radius: var(--radius);
       border-top-right-radius: var(--radius);
       padding: 1rem;
     }
 
-    & br { 
+    & br {
       display: block;
       height: 1px; width: 100%;
     }
-    
+
 
     & span.console-error {
       display: block;
@@ -252,12 +252,15 @@
     }
 
     & span.console-error-msg {
-      display: block;
+      display: flex;
       font-family: Lekton, monospace;
       color: var(--bg-5);
       padding-left: 0px;
       margin-top: auto;
       margin-bottom: auto;
+      >*{
+        margin: auto 0.25rem;
+      }
     }
 
     & span.console-error-msg .bi {
@@ -276,7 +279,7 @@
 
     & .console-msg {
       font-family: Lekton, monospace;
-      color: var(--bg-5); 
+      color: var(--bg-5);
       color: var(--keyword-color);
       font-weight: var(--keyword-weight);
     }
@@ -284,7 +287,7 @@
     & textarea:focus {
       border: 2px solid var(--accent);
       margin: 0;
-    } 
+    }
   }
 }
 
@@ -297,6 +300,262 @@
   border: 1px solid red;
 
   }
+
+/* ackup
+.dock-style-editors .dock-tabpane  section {
+
+  color: var(--color);
+  margin: 1rem .5rem;
+  padding: 1rem 1.65rem;
+  font-weight: 300;
+
+  border: 1px solid var(--bg-1-5);
+  border-radius: 8px;
+  background-color: var(--bg-1-5);
+  transition: opacity 0.3s;
+
+  & input[type=text], input[type=number] {
+    padding: 1px 8px;
+    outline-color: var(--accent);
+    outline-width: 1px;
+
+  }
+
+  & input[type=text] {
+    min-width: 170px;
+    transition: min-width 0.3s ease-in-out;
+  }
+
+  & input[type=number] {
+    width: 60px;
+  }
+
+  & input[type=text]:focus, input[type=number]:focus {
+    border: 1px solid var(--accent);
+    padding: 2px 9px;
+  }
+
+  & input[type=text]:focus {
+    min-width: 70%;
+  }
+
+  & input[type=checkbox] {
+    accent-color: var(--accent);
+  }
+}
+
+.dock-style-editors .dock-tabpane:has(input) section::before {
+  display:block;
+  width: 100%;
+  font-size: 1.5em;
+  font-family: bootstrap-icons;
+  content: "\F4CA";
+  color: var(--accent);
+  border-bottom: 1px dotted var(--bg-3);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+
+}
+
+.dock-style-editors .dock-tabpane .input-container:has(input) > .me-2 {
+  height: 2em;
+}
+
+.input-container {
+  & select {
+    height: 28px;
+    width: 170px;
+    padding: 1px 6px!important;
+    outline-color: var(--accent);
+    outline-width: 1px;
+  }
+
+  & input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button {
+
+    appearance: auto;
+    opacity: 1;
+
+  }
+
+
+}
+.dock-style-editors .dock-tabpane .input-container:has(input:focus) > .me-2::before, .dock-style-editors .dock-tabpane .input-container:has(input:hover) > .me-2::before,
+.dock-style-editors .dock-tabpane .input-container:has(select:focus) > .me-2::before, .dock-style-editors .dock-tabpane .input-container:has(select:hover) > .me-2::before {
+
+  position: relative;
+  right: 0px;
+  top: 0;
+  border-left: 4px solid var(--accent);
+  width: 8px;
+  margin-right: 4px;
+  height: 0.7em;
+  font-family: bootstrap-icons;
+  content: "";
+  font-size: 1em;
+  transition: border 0.3s;
+
+}
+
+.dock-content-holder #DockComponent_rightbar_1 {
+
+  // Summary
+
+  overflow: scroll;
+}
+
+.dock-content-holder #DockComponent_rightbar_2 {
+
+  // Properties / Structure
+
+  & section {
+  }
+}
+
+.dock-content-holder #DockComponent_rightbar_4 {
+
+  // Tree View
+
+  & section {
+  }
+
+  & section:has(section) section {
+    padding: 0;
+    margin: 0;
+  }
+
+}
+
+
+
+.dock-content-holder #DockComponent_rightbar_5 {
+
+  // Node
+
+
+}
+
+.dock-content-holder #DockComponent_rightbar_7 {
+
+  // Console
+
+
+  & .console {
+
+
+    color: var(--color);
+    margin: 1rem .5rem;
+    padding: 1rem 1.65rem;
+    font-weight: 300;
+    max-height: 95%;
+    border: 1px solid var(--bg-1-5);
+    border-radius: 8px;
+    background-color: var(--bg-1-5)!important;
+    transition: opacity 0.3s;
+    width:  calc(100% - 1rem)!important;
+  }
+
+  & .console::before {
+    display:block;
+    width: 100%;
+    font-size: 1.5em;
+    font-family: bootstrap-icons;
+    content: "\F5C3";
+    color: var(--accent);
+    border-bottom: 1px dotted var(--bg-3);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  & .console {
+
+    & textarea {
+      font-family: Courier, monospace;
+      font-size: 1em;
+      color: var(--color);
+      padding: 0.3rem 0.5rem!important;
+      margin: 2px;
+    }
+
+    &  label.on-element {
+      font-weight: 500;
+    }
+
+    & h4 {
+      font-family: "Inter Tight", sans-serif;
+      color: var(--accent);
+      font-size: 1.3em;
+    }
+
+    & .output-row {
+      border: 1px solid var(--bg-3);
+      background-color: var(--bg-2);
+      border-radius: 6px;
+      padding: 1rem;
+    }
+
+    & span.console-error {
+      display: block;
+      padding: 2px 12px;
+      margin-bottom: 4px;
+      width: fit-content;
+      color: white;
+      border-radius: 3px;
+      background-color: var(--failure);
+      font-weight: 400;
+    }
+
+
+    & span.console-error .bi {
+      color: white;
+    }
+
+    & span.console-error-msg {
+      display: flex;
+      font-family: Lekton, monospace;
+      color: var(--bg-5);
+      padding-left: 0px;
+      margin-top: auto;
+      margin-bottom: auto;
+      >*{
+        margin: auto 0.25rem;
+      }
+    }
+
+    & span.console-error-msg .bi {
+      font-size: 1.9em;
+      color: var(--failure);
+    }
+
+    & .context-keys {
+      font-weight: 500;
+      font-size: 1.1em;
+    }
+
+    & .context-keys-list {
+      font-family: Lekton, monospace;
+    }
+
+    & .console-msg {
+      font-family: Lekton, monospace;
+      color: var(--bg-5); color: red!important;
+    }
+
+    & textarea:focus {
+      border: 2px solid var(--accent);
+      margin: 0;
+    }
+  }
+}
+
+.dock-content-holder #DockComponent_rightbar_8 {
+
+  // Logger
+
+  border: 1px solid red;
+
+}
+
+*/
 
   .dock-style-models .dock-tabpane {
     overflow-x: scroll;

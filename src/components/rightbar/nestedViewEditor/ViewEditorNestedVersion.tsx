@@ -17,6 +17,7 @@ import {add} from "lodash";
 import Tree, {GenericTree} from "../../forEndUser/Tree";
 import "./VPNestedTree.scss"
 import ViewData from '../viewsEditor/View';
+import {Tooltip} from "../../forEndUser/Tooltip";
 // import "./tree.scss" already imported by <Tree> subcomponent
 type Metadata = {setView: (p: Pointer)=>any, scoreBoost: number}
 function NestedViewComponent(props: AllProps) {
@@ -51,6 +52,7 @@ function NestedViewComponent(props: AllProps) {
     const activateVP = (viewPoint: LViewPoint) => { project.activeViewpoint = viewPoint; }
     const clone = (v: LViewElement) => { v.duplicate(true); }
     const getSubElements = (v: DViewElement) => v.subViews || {};
+    let activeViewpointId: Pointer<DPointerTargetable> = project.activeViewpoint.id;
 
     function renderEntry(e: DViewElement, childrens: Dictionary<Pointer, number>, isExpanded: boolean, toggleExpansion: ()=>any, depth: number, path: number[], metadata: Metadata): JSX.Element{
         let d = e;
@@ -68,7 +70,6 @@ function NestedViewComponent(props: AllProps) {
         let isDefault = d.id.indexOf('Pointer_View') === 0;
 
         function select(ptr: Pointer<DViewPoint>){ project.activeViewpoint = ptr as any; }
-        let activeViewpointId: Pointer<DPointerTargetable> = project.activeViewpoint.id;
 
         return <li className={"entry-root " + d.className + (d.id === activeViewpointId ? ' selected' : '')} key={d.id}>
             <div className={"inline-row"} onClick={()=>!isVP && setView(d.id)}>
@@ -120,7 +121,8 @@ function NestedViewComponent(props: AllProps) {
                                 </span>
                             </>
                         }
-                        <span className={"right-icon ex-ico vertical-centering " + (d.isExclusiveView ? '' : "hidden")}>Ex</span>
+                        <Tooltip tooltip={<div>is {d.isExclusiveView ? "" : "not"} mutually exclusive with other "Ex" views.</div>} position={"bottom"} inline={true}>
+                            <span className={"right-icon ex-ico vertical-centering " + (d.isExclusiveView ? '' : "hidden")}>Ex</span></Tooltip>
                     </div>
                 </div>
             </div>
@@ -156,7 +158,7 @@ function NestedViewComponent(props: AllProps) {
                     getSubElements={getSubElements}
                     renderEntry={renderEntry}
                     metadata={{setView, scoreBoost:0}}
-                    initialHidingState={true} />)}
+                    initialHidingState={vp.id === activeViewpointId} />)}
             </ul>
         </div>
     </div>);

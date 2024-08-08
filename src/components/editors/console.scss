@@ -1,0 +1,22 @@
+.group.context-keys-list, .group.shortcuts-container {
+  ul li{
+    cursor: pointer;
+  }
+}
+
+.output-row {
+  // white-space: pre;
+  .output-comment{
+    display: none;
+    position: fixed;
+  }
+  &:hover .output-comment,
+  &:focus-within .output-comment,
+  &:focus .output-comment,
+  &:active .output-comment,
+  {
+    &:first-of-type{
+      display: block;
+    }
+  }
+}

@@ -115,6 +115,8 @@ class TryComponent extends React.Component<AllProps, State> {
         let title = "Jodel assisted error report V"+state?.version?.n;
         (window as any).tryerror = error;
         let reportstr = this.state.lz || this.stringreport(Log.getByError(error));
+        let mongoreport = {state: state, when: new Date()+'', e:{'stack':error.stack, 'msg':error.message}, compostack: info?.componentStack};
+        // todo giordano: salva mongoreport su mongodb
 
         const msgbody_notencoded: string = "This mail is auto-generated, it might contain data of your views or model.\n" +
             "If your project have sensitive personal information please do a manual report instead."+// check the report below to omit them.\n\n" +

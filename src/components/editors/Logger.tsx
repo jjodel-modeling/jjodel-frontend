@@ -3,6 +3,7 @@ import {FakeStateProps} from '../../joiner/types';
 import React, {Component, Dispatch, PureComponent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
+import {Empty} from "./Empty";
 
 class ThisState {
     categoriesActive: Dictionary<LoggerType, boolean> = {l: true, i: true, w: true, e: true, ex: true, eDev: true, exDev: true};
@@ -178,6 +179,7 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
                         {this.displayArgs(msg, msg.category)}
                     </li>))
                 }
+                { allMessages.length === 0 && <Empty /> }
             </ul>
         </section>);
     }

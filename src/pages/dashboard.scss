@@ -350,11 +350,13 @@ project-card .tip {
 .catalog-container {
   padding: 20px;
   position: relative;
-  flex-grow: 1;
   overflow-x: hidden;
   overflow-y: auto;
   display: flex;
   flex-flow: column;
+  flex-basis: 1000px;
+  flex-grow: 1;
+  flex-shrink: 1;
   .col{
     display: flex;
   }
