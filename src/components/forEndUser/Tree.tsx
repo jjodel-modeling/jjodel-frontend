@@ -72,8 +72,8 @@ function Tree(props: TreeProps) {
 
     if(data) return(<>
         <CommandBar>
-            <Btn icon={'up'} size={'medium'} action={(e) => {alert('up')}} tip={'Click to go up to the anchestor element'} />
-            <Btn icon={'down'} size={'medium'} />
+            <Btn icon={'up'} size={'medium'} action={(e) => {alert('up')}} tip={'Click to go up to the anchestor element'} /> // todo per damiano: aggiungere hook per salire di livello (up)
+            <Btn icon={'down'} size={'medium'} /> // todo per damiano: non so se oltre ad up serve anche un down, in ogni caso ce lo lascerei disabilitato perché da contesto pure all'up
         </CommandBar>
         <DataTree data={data} depth={depth} hide={hide} setFilter={setFilter}  /></>)
     if(children) return(<><HtmlTree data={children} hide={hide} depth={depth} setFilter={setFilter} /></>);
