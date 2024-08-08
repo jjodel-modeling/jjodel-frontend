@@ -9,7 +9,8 @@ import ELiteral from '../../static/icon/modelling/literal.png';
 import Utility from '../../static/img/utility.png';
 
 interface Props {name?: string, className?: string, src?:string}
-function ModellingIcon(props: Props) {
+
+/* function ModellingIcon(props: Props) {
     const name = props.name;
     const className = props.className ? props.className : '';
     const pprops = {width:20, height:20, className:`my-auto ${className||''} ` + (name || '')}
@@ -29,6 +30,39 @@ function ModellingIcon(props: Props) {
         default:
             return(<img {...pprops} src={Utility} />);
 
+    }
+}*/
+
+type IconProps = {
+    letter: string
+}
+function Icon(props: IconProps) {
+
+    return (
+        <label className={'element-icon'}>{props.letter}</label>
+    );
+
+};
+
+function ModellingIcon(props: Props) {
+    const name = props.name;
+    const className = props.className ? props.className : '';
+    const pprops = {width:20, height:20, className:`my-auto ${className||''} ` + (name || '')}
+    if (props.src) return <img {...pprops} src={props.src} />;
+    switch (name) {
+        case 'package': return(<Icon letter={'P'} />);
+        case 'object':
+        case 'class':
+            return(<Icon letter={'C'} />);
+        case 'reference': return(<Icon letter={'R'} />)
+        case 'operation': return(<Icon letter={'O'} />)
+        case 'enumerator': return(<Icon letter={'E'} />)
+        case 'literal': return(<Icon letter={'L'} />)
+        case 'value':
+        case 'attribute':
+            return(<Icon letter={'A'} />)
+        default:
+            return(<Icon letter={'U'} />)
     }
 }
 
