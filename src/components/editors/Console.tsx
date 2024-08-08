@@ -13,9 +13,11 @@ import {
 import {FakeStateProps} from '../../joiner/types';
 import React, {Component, Dispatch, PureComponent, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
-import './style.scss';
-import './editors.scss';
-import './console.scss';
+
+import './style.scss'; // <-- tenuto per retro-compatibilità ma dovrebbe sparire
+import './editors.scss'; // <-- stile comune a tutte le tab editor (idealmente da tenere leggero)
+import './console.scss'; // <-- stile di questa tab
+
 import ReactDOM from "react-dom";
 import { useStateIfMounted } from 'use-state-if-mounted';
 import {Empty} from "./Empty";
@@ -278,7 +280,9 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         windoww.contextkeys = contextkeys;
 
         return(<div className={'w-100 h-100 p-2 console'}>
-            <label className={'on-element'}>On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}</label>
+            <label className={'on-element'}>
+                <span>On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}</span>
+            </label>
             <textarea spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} value={this.state.expression} />
             {/*<label>Query {(this.state.expression)}</label>*/}
             <hr className={'mt-1 mb-1'} />
