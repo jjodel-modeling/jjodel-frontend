@@ -7,6 +7,10 @@ body{
 
     --keyword-color: orange;
     --keyword-weight: 400;
+
+    // btn generic
+    --btn-generic: var(--accent);
+    --btn-generic-accent: var(--accent);
     
     // btn-up
     --btn-up: var(--terziary);
@@ -45,7 +49,9 @@ body{
     --btn-font-large-size: 2.1em;
     
 
+  // radius
 
+    --tab-radius: 4px;
 
   // palette
 

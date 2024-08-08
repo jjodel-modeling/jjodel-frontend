@@ -95,6 +95,7 @@ function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLK
     return ret;
 }
 
+
 class ConsoleComponent extends PureComponent<AllProps, ThisState>{
     public static cname: string = "ConsoleComponent";
     lastNode?: Pointer<DGraphElement>;
@@ -194,7 +195,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             if (output?._reactInternals) {
                 output = {"React.Component": {props:"...navigate to expand...", state:"", _isMounted:output._isMounted}}
             }
-            outstr = '<h4>Result:</h4><section class="group result-container"><div class="output-row" tabindex="984">' + U.objectInspect(output)+"<span>";
+            outstr = '<h4>Result</h4><section class="group result-container"><div class="output-row" tabindex="984">' + U.objectInspect(output)+"<span>";
             let commentsPopup = "";
             if (shortcuts || comments){
                 // if(!shortcuts) shortcuts = {};
@@ -284,7 +285,13 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             <label className={'on-element'}>
                 <span>On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}</span>
             </label>
-            <textarea spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} value={this.state.expression} />
+            <div className='console-terminal p-0 mb-2 w-100'>
+                <div className='commands'><i onClick={(e) => {alert('clear console')}} title={'Empty console'} className="bi bi-slash-circle"></i><i title={'Copy in the clopboard'} className="bi bi-clipboard-plus"></i></div>
+                {/* todo per damiano: aggiungere la funzione per cancellare il contenuto della console e la funzione per copiare il contenuto nella clipboard */}
+                <textarea id={'console'} spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} value={this.state.expression} ></textarea>
+                
+            </div>
+            
             {/*<label>Query {(this.state.expression)}</label>*/}
             <hr className={'mt-1 mb-1'} />
             { this.state.expression &&  ashtml && <div className={"console-output-container console-msg"} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
