@@ -7,6 +7,43 @@ body{
 
     --keyword-color: orange;
     --keyword-weight: 400;
+    
+    // btn-up
+    --btn-up: var(--terziary);
+    --btn-up-accent: var(--terziary);
+    --btn-up-icon: "\F147";
+    --btn-up-icon-accent: "\F146";
+   
+    // btn-down
+    --btn-up: var(--terziary);
+    --btn-up-accent: var(--terziary);
+    --btn-up-icon: \F126;
+    --btn-up-icon-accent: \F125;
+
+    // btn-back
+    --btn-back: var(--terziary);
+    --btn-back-accent: var(--terziary);
+    --btn-back-icon: \F12E;
+    --btn-back-icon-accent: \F12D;
+
+    // btn-fwd
+    --btn-up: var(--terziary);
+    --btn-up-accent: var(--terziary);
+    --btn-up-icon: \F137;
+    --btn-up-icon-accent: \F136;
+  
+    // btn sizes
+    
+    --btn-small-size: 24px;
+    --btn-medium-size: 20px;
+    --btn-large-size: 28px;
+
+    --btn-radius: 4px;
+    
+    --btn-font-small-size: 1.5em;
+    --btn-font-medium-size: 1.8em;
+    --btn-font-large-size: 2.1em;
+    
 
 
 
@@ -24,6 +61,7 @@ body{
     --danger: #ed474a;
     --failure: #ed474a;
     --success: #3ddc97;
+    --disabled: var(--bg-3);
     --side-padding: 31px;
     --sep-padding: 4em;
     --secondary: #087e8b;

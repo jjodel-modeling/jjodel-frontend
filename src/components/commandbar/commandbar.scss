@@ -1,0 +1,99 @@
+// the paramenters are defined in src/styles/variables.scss
+
+
+.command-bar {
+
+    position: relative;
+    display: flex;
+    left: 0!important;
+    margin-bottom: 10px;
+    height: fit-content;
+    text-align: left!important;
+    border-radius: 0!important;
+    border-bottom: 1px dotted var(--bg-3);
+    
+    // CommandBar button
+
+    & .tab-btn {
+      cursor: pointer;
+      font-size: var(--btn-font-medium-size)!important;
+      background-color: transparent;
+      font-family: bootstrap-icon;
+      margin-right: 2px;
+    }
+
+    // up
+    
+    & .tab-btn.up {
+      color: var(--btn-up)!important;
+    }
+    & .tab-btn.up:hover {
+      color: var(--btn-up-accent)!important;
+    }
+    & .tab-btn.up::before {
+      content: "\F147";
+    }
+    & .tab-btn.up:hover::before {
+      content: "\F146";
+    }
+
+    // down
+    
+    & .tab-btn.down {
+      color: var(--btn-up)!important;
+    }
+    & .tab-btn.down:hover {
+      color: var(--btn-up-accent)!important;
+    }
+    & .tab-btn.down::before {
+      content: "\F126";
+    }
+    & .tab-btn.down:hover::before {
+      content: "\F125";
+    }
+
+    // back
+    
+    & .tab-btn.back {
+      color: var(--btn-back)!important;
+    }
+    & .tab-btn.back:hover {
+      color: var(--btn-back-accent)!important;
+    }
+    & .tab-btn.back::before {
+      content: "\F12E";
+    }
+    & .tab-btn.back:hover::before {
+      content: "\F12D";
+    }
+     
+    // sizes
+
+    & .tab-btn .small {
+      font-size: var(--btn-font-small-size);
+      margin: 0!important;
+      padding: 0!important;
+    }
+    & .tab-btn .large {
+      font-size: var(--btn-font-large-size);
+      margin: 0!important;
+      padding: 0!important;
+    }
+    & .tab-btn .medium {
+      font-size: var(--btn-font-medium-size);
+      margin: 0!important;
+      padding: 0!important;
+    }
+
+    // disabled
+
+    & .tab-btn.disabled {
+      cursor: normal!important;
+      color: var(--disabled)!important; 
+    }
+    & .tab-btn.disabled:hover {
+      cursor: not-allowed;
+      color: var(--disabled)!important; 
+    }
+    
+  }

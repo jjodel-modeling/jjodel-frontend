@@ -110,9 +110,10 @@
 
 .dock-content-holder #DockComponent_rightbar_4 {
   
-  // Tree View
+  // Tree View *******
 
   & section {
+
     
   }
 
@@ -121,24 +122,27 @@
     margin: 0;
   }
 
+  & section:has(section) section .command-bar:nth-child(1) {
+    display: none;
+  }
+
 }
 
 
 
 .dock-content-holder #DockComponent_rightbar_5 {
 
-  // Node
+  // Node *******
 
 
 }
 
 .dock-content-holder #DockComponent_rightbar_7 {
 
-  // Console
+  // Console *******
 
 
   & .console {
-
     
     color: var(--color);
     margin: 1rem .5rem; 

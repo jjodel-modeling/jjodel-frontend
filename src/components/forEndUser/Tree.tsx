@@ -1,4 +1,4 @@
-import React, {ReactNode} from "react";
+import React, {ReactNode, MouseEventHandler} from "react";
 import {
     DClass,
     Dictionary,
@@ -17,6 +17,38 @@ import './tree.scss';
 import {useEffectOnce} from "usehooks-ts";
 
 import { MyTooltip } from "../tooltip/MyTooltip";
+import { CommandBar, Btn } from "../commandbar/CommandBar";
+
+/*
+type BtnProps = {
+    icon: "up" | "down" | "back" | "fwd" | "add" | "delete" | "edit",
+    tip?: string,
+    action?: MouseEventHandler,
+    size?: "small" | "medium" | "large"
+}
+
+const Btn = (props: BtnProps) => {
+    return (<>
+        {props.action ? 
+            <div><i onClick={props.action} title={`${props.tip && props.tip}`} className={`bi tab-btn ${props.icon} ${props.size && props.size}`}></i></div>
+        :
+            <i className={`bi tab-btn ${props.icon} ${props.size && props.size} disabled`}></i>
+        }
+    </>);
+}
+
+
+
+type CommandProps = {
+    children: any;
+}
+const CommandBar = (props: CommandProps) => {
+
+    return(<div className={'command-bar'}>
+        {props.children}
+    </div>);
+};*/
+
 
 interface TreeProps {data?: LModelElement, depth?: string[], children?: GObject}
 
@@ -37,8 +69,14 @@ function Tree(props: TreeProps) {
         else applyFilter(id);
     }
 
-    if(data) return(<DataTree data={data} depth={depth} hide={hide} setFilter={setFilter}  />)
-    if(children) return(<HtmlTree data={children} hide={hide} depth={depth} setFilter={setFilter} />);
+
+    if(data) return(<>
+        <CommandBar>
+            <Btn icon={'up'} size={'medium'} action={(e) => {alert('up')}} tip={'Click to go up to the anchestor element'} />
+            <Btn icon={'down'} size={'medium'} />
+        </CommandBar>
+        <DataTree data={data} depth={depth} hide={hide} setFilter={setFilter}  /></>)
+    if(children) return(<><HtmlTree data={children} hide={hide} depth={depth} setFilter={setFilter} /></>);
     return(<></>);
 }
 
@@ -72,6 +110,7 @@ function DataTree(props: DataTreeProps): JSX.Element {
     }*/
 
     return(<section>
+        
         <div className={'d-flex tree'}>
             {data.children?.length >= 1 ? ((data.children?.length && hide) ?
                 <i style={{fontSize: '0.7em', color: 'gray'}} className={'bi bi-chevron-right cursor-pointer d-block my-auto'} onClick={setFilter} /> :
@@ -81,13 +120,25 @@ function DataTree(props: DataTreeProps): JSX.Element {
             }
 
             <div className={'tree-item'}>
-                <div className={`type tree-${data.className} ${(data as any).abstract && 'abstract-class'}`}>
-                    <div className="icon">{data.className.slice(1, 2)}</div>
+                {/* <div className={`type tree-${data.className} ${(data as any).abstract && 'abstract-class'}`}>
+                    <div className={'icon'}>{data.className.slice(1, 2)}</div>*/}
+
+                <div className={'type'}>
+
+                    <div className={`icon tree-${data.className} ${(data as any).abstract && 'abstract-class'}`}>
+                        {data.className === 'DEnumLiteral' ? 'L' : data.className.slice(1, 2)}
+                    </div>
                     <MyTooltip text={`${(data as any).abstract ? 'Abstract ':''}` + data.className} />
                 </div>
                 <div className={'name'} onClick={click}>
-                    {/* {(data as LClass).extends && (data as LClass).extends.length > 0 && (data as LClass).extends.map(c => ` ${c.name}` ) + ' > ' }*/}
-                    <span className={'class-name'}>{(data.name) ? data.name : 'unnamed'}</span>
+                    <span className={'class-name'}>
+                        {(data.name) ? data.name : 'unnamed'} 
+                        {(data as LClass).extends && (data as LClass).extends.length > 0 && 
+                            <span className={'extends'}> 
+                                &nbsp; <i className="bi bi-caret-right"></i> [{(data as LClass).extends.map((s,i) => <><i>{s.name}</i>{i < (data as LClass).extends.length - 1 ? ', ' :''}</>)}]
+                            </span>
+                        }
+                    </span>
                     </div>
             </div>
             
