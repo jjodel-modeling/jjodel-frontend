@@ -34,12 +34,12 @@ function InfoDataComponent(props: AllProps) {
     </optgroup>;
 
     return(<section className={'page-root'}>
-        <Input data={view} field={'name'} label={'Name'} readonly={readOnly}/>
-        <Input data={view} field={'isExclusiveView'} label={'Is Exclusive'} type={"checkbox"} readonly={readOnly}
+        <Input data={view} field={'name'} label={'Name:'} readonly={readOnly}/>
+        <Input data={view} field={'isExclusiveView'} label={'Is Exclusive:'} type={"checkbox"} readonly={readOnly}
                //setter={(val) => { view.isExclusiveView = !val}}
                //getter={(data) => !(data as LViewElement).isExclusiveView as any
         />
-        <Input data={view} field={'explicitApplicationPriority'} label={'Priority'} type={'number'} readonly={readOnly}
+        <Input data={view} field={'explicitApplicationPriority'} label={'Priority:'} type={'number'} readonly={readOnly}
                getter={(data: LViewElement)=>{ let v = data.__raw.explicitApplicationPriority; return v === undefined ? v : ''+v; }}
                setter={(v)=>{ view.explicitApplicationPriority = (v ? +v as number : undefined as any); }}
                placeholder={'automatic: ' + view.explicitApplicationPriority}
@@ -52,7 +52,7 @@ function InfoDataComponent(props: AllProps) {
             <option value={'edgePoint'}>Edge Point</option>
         </optgroup>} />
         */}
-        <Select data={view} field={'forceNodeType'} label={'Preferred appearance'} readonly={readOnly} options={
+        <Select data={view} field={'forceNodeType'} label={'Preferred appearance:'} readonly={readOnly} options={
             <>
                 <option value={'unset'} key={-1}>Automatic by model type (package, object, feature...)</option>
                 <optgroup label={'Graph'} key={0}>{
@@ -70,14 +70,14 @@ function InfoDataComponent(props: AllProps) {
             </>
         } setter={(val, data, key) => { view.forceNodeType = val === 'unset' ? undefined : val; }}
           getter={(data, key) => { return data[key] || 'unset_'; }} />
-        <Select data={view} field={'appliableToClasses'} label={'Appliable to'} readonly={readOnly} options={classesOptions} />
+        <Select data={view} field={'appliableToClasses'} label={'Appliable to:'} readonly={readOnly} options={classesOptions} />
 
-        <Select readonly={readOnly} data={view} field={'father'} label={"Viewpoint"} getter={()=> vpid}>
+        <Select readonly={readOnly} data={view} field={'father'} label={"Viewpoint:"} getter={()=> vpid}>
             {dallVP.map((viewpoint) => (
                 <option key={viewpoint.id} value={viewpoint.id}>{viewpoint.name}</option>
             ))}
         </Select>
-        <Select readonly={readOnly} data={view} field={'father'} label={"Parent view"}>
+        <Select readonly={readOnly} data={view} field={'father'} label={"Parent view:"}>
             {view.allPossibleParentViews.filter(v=>v.viewpoint?.id === vpid).map((view) => (
                 <option key={view.id} value={view.id}>{view.name}</option>
             ))}
@@ -96,7 +96,7 @@ function InfoDataComponent(props: AllProps) {
         <OclEditor viewID={view.id} />
         <JsEditor
             viewID={view.id} field={'jsCondition'}
-            placeHolder={'/* Last Line should be the return (boolean) */'}
+            placeHolder={'/* Last line must return a boolean */'}
         />
     </section>);
 }
