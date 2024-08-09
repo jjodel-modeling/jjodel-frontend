@@ -108,6 +108,17 @@
     cursor: pointer;
   }
 
+  & .console-terminal .commands .bi-arrow-left-square {
+    float: right!important;
+    margin-right: 6px;
+  }
+
+  & .console-terminal .commands .bi-arrow-left-square:hover::before {
+    font-family: bootstrap-icon;
+    color: var(--btn-generic-accennt);
+    content: "\F12D";
+    cursor: pointer;
+  }
 
 
 }

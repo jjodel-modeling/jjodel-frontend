@@ -286,8 +286,16 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 <span>On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}</span>
             </label>
             <div className='console-terminal p-0 mb-2 w-100'>
-                <div className='commands'><i onClick={(e) => {alert('clear console')}} title={'Empty console'} className="bi bi-slash-circle"></i><i title={'Copy in the clopboard'} className="bi bi-clipboard-plus"></i></div>
+                <div className='commands'>
+                    <i onClick={(e) => {alert('clear console')}} title={'Empty console'} className="bi bi-slash-circle"></i>
+                    <i onClick={(e) => {alert('copy to clipboard')}} title={'Copy in the clopboard'} className="bi bi-clipboard-plus"></i>
+                    <i onClick={(e) => {alert('torna indietro')}} title={'Copy in the clopboard'} className="bi bi-arrow-left-square"></i>
+                </div>
+
                 {/* todo per damiano: aggiungere la funzione per cancellare il contenuto della console e la funzione per copiare il contenuto nella clipboard */}
+                {/* todo per damiano: per la funzione 'torna indietro', si tratta di annullare l'ultimo inserimento, per esempio se clicco su data e poi length, nella console
+                    avrei 'data.length', cliccando sul back nella consol avrei 'data' */}
+                
                 <textarea id={'console'} spellCheck={false} className={'p-0 input mb-2 w-100'} onChange={this.change} value={this.state.expression} ></textarea>
                 
             </div>
