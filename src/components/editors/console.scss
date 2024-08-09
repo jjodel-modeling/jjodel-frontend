@@ -270,7 +270,7 @@
   }
 }
 
-& .on-element {
+.on-element {
   margin-bottom: 10px;
 
   & span {
@@ -278,7 +278,7 @@
   }
 }
 
-& .shortcuts-container {
+.shortcuts-container {
 
   & ul {
     padding-left: 5px;
@@ -308,7 +308,7 @@
 
 }
 
-& .context-keys-list  {
+.context-keys-list  {
   & ul {
     padding-left: 5px!important;
   }
@@ -332,7 +332,7 @@
   }
 }
 
-& .context-keys {
+.context-keys {
   display:block;
   clear: both;
   padding: 30px 0px 10px 0!important;
