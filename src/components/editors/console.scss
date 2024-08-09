@@ -51,12 +51,12 @@
   }
 
   .console-terminal::before {
-    position: relative;
+    position: absolute;
     font-family: Lekton, monospace;
     font-size: 1.3em;
     content: ">";
-    top: 2.25rem;
-    left: 0.8rem;
+    top: 1.25rem;
+    left: 0.75rem;
     width: 100%!important;
 
   }
@@ -78,11 +78,11 @@
 
   .console-terminal .commands {
     position: absolute;
-    bottom: 0.9rem;
+    bottom: calc(1em - 1px);
     border-bottom-left-radius: var(--radius);
     border-bottom-right-radius: var(--radius);
-    left: 0.3rem;
-    width: calc(100% - 0.6rem);
+    left:1px;
+    width: calc(100% - 2px - 0.5rem);
     background-color: var(--bg-2);
     height: fit-content;
     border-top: 1px solid var(--bg-3-1);
