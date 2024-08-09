@@ -108,6 +108,7 @@ class GenericInputComponent extends PureComponent<AllProps, ThisState/*undefined
             if (info.max !== undefined) otherProps.max = info.max;
             else otherProps.max = info.positive === false ? max/2 - 1 : max-1; // assume true if non specified
         }
+
         let label: ReactNode = info.label || this.props.field;
         if (typeof label === "string") label = U.uppercaseFirstLetter(info.label || this.props.field);
 

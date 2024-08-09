@@ -65,28 +65,56 @@ function NodeEditorComponent(props: AllProps) {
     const subElements = node.subElements;
     let edgesIn = !isEdge && node.edgesIn || [];
     let edgesOut = !isEdge && node.edgesOut || [];
-    let stackingOrder = <Input data={node} field={'zIndex'} label={'Stacking order'} type={'number'} readonly={!editable} />;
-    return(<div className={'p-3'}>
+    
+            
+
+
+
+    type InputRowProps = {
+        label: string,
+        as: any,
+        field: string,
+        type: string
+    }
+    const InputRow = (props: any) => {
+        return (
+            <div className='input-container'>
+                <b className={'me-2'}>{props.label}</b>
+                <Input data={props.as} field={props.field} type={props.type} readonly={!editable} />
+            </div>
+        );
+    };
+
+    let stackingOrder = <InputRow label={'Stacking order'} as={node} field={'zIndex'} type={'number'} />
+    
+    return(<div className={'p-3 node-editor'}>
         {/*<Input obj={selected.node} field={'id'} label={'ID'} type={'text'} readonly={true}/>*/}
+        
         {asGraph && <><h3>Graph</h3>
             <GenericInput data={asGraph} field={'zoom'} />
             <GenericInput data={asGraph} field={'offset'} />
+
             {/*graphSize readonly on LGraph but not on DGraph, = internal graph size. put it for info.*/ }
         </>}
+        
         {asVertex && <><h3>Vertex</h3>
             {stackingOrder}
-            <Input data={asVertex} field={'x'} label={'X Position'} type={'number'} readonly={!editable} />
-            <Input data={asVertex} field={'y'} label={'Y Position'} type={'number'} readonly={!editable} />
-            <Input data={asVertex} field={'width'} label={'Width'} type={'number'} readonly={!editable} />
-            <Input data={asVertex} field={'height'} label={'Height'} type={'number'} readonly={!editable} />
+
+            <InputRow label={'X Position'} as={asVertex} field={'x'} type={'number'} />
+            <InputRow label={'Y Position'} as={asVertex} field={'y'} type={'number'} />
+            <InputRow label={'Width'} as={asVertex} field={'width'} type={'number'} />
+            <InputRow label={'Height'} as={asVertex} field={'height'} type={'number'} />
         </>}
+        
         {asEdge && <><h3>Edge</h3>
             {stackingOrder}
+
             <GenericInput data={asEdge} field={'longestLabel'}
                           placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
                               '\n\t// a complex example. The label can be either a function like this or a simple string.' +
                               '\n\t return (edge.start.model)?.name + \' ~ \' + (e.end.model)?.name + \'(\' + segment.length.toFixed(1) + \')\';' +
                               '\n}'}/>
+
             <GenericInput data={asEdge} field={'labels'}
                           placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
                             '\n\t// a complex example. The label can be either a function like this or a simple string.' +
@@ -95,7 +123,8 @@ function NodeEditorComponent(props: AllProps) {
             <GenericInput data={asEdge} field={"anchorStart"}/>
             <GenericInput data={asEdge} field={"anchorEnd"}/>
         </>}
-        {asField && <><h3>Field</h3>
+        
+        {asField && <><h3>Field</h3> 
             {stackingOrder}
         </>}
 
