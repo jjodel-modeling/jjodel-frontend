@@ -189,11 +189,11 @@ export class U {
         return keys;
     }
 
-    // damiano: eseguire una funzione costa in performance, anche se è brutto fare questi cast
+    // eseguire una funzione costa in performance, anche se è brutto fare questi cast
     static wrapper<T>(obj: any): T {
         return obj as unknown as T;
     }
-    // damiano: mi sa che c'era un metodo l.__serialize or something
+    // mi sa che c'era un metodo l.__serialize or something
     static json(dElement: GObject): Json {
         return JSON.parse(JSON.stringify(dElement.__raw));
     }

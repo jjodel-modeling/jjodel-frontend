@@ -12,7 +12,7 @@ function ImageComponent(props: AllProps) {
     } else {
         link = (props as any).src;
     }
-    return <img className={'h-100 w-100'} src={link} />; // damiano: what's this? added to read src if provided
+    return <img className={'h-100 w-100'} src={link} />; // what's this? added to read src if provided
 }
 interface OwnProps { code: string; name: string; }
 interface StateProps { }
