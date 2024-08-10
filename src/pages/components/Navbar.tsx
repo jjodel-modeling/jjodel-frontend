@@ -225,8 +225,10 @@ function NavbarComponent(props: AllProps) {
         return (
         <div className='nav-logo'>
             <div className={"aligner"}>
-                <img className="logo" height={24} src={logo} alt={'jjodel logo'} onContextMenu={(e)=>{ e.preventDefault(); SetRootFieldAction.new('debug', !props.debug)}}/>
-                {props.debug && <img alt='debug' height={24} src={DebugImage}/>}
+                
+                <div className='logo' onContextMenu={(e)=>{ e.preventDefault(); SetRootFieldAction.new('debug', !props.debug)}}></div>
+                {props.debug && <i className="bi bi-bug-fill"></i>}
+                
             </div>
         </div>
         );

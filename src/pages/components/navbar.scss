@@ -106,10 +106,42 @@
     bottom: 0;
     pointer-events: none;
     display: flex;
-    &>.aligner{
+    
+    &> .aligner{
       margin: auto;
       pointer-events: all;
     }
+
+    &  div.logo{
+      position: relative;
+      background-image: url(/static/img/jjodel.jpg);
+      height: 24px;
+      width: 70px;
+      top: 0;
+      background-repeat: no-repeat;
+      background-size: 57px 25px;
+      transition: all 0.3s ease-in-out;
+      z-index:200;
+    }
+
+    & div.logo:hover {
+      background-image: url(/static/img/logo-on.png);
+      height: 24px;
+      width: 70px;
+      z-index:2;
+    } 
+
+    & .bi {
+      position: absolute;
+      color: var(--accent);
+      padding-left: 70px;
+      top: 0;
+      font-size: 1.6em;
+      margin: auto;
+      z-index: 1;
+    }
+
+    
   }
 
   .nav-commands{
