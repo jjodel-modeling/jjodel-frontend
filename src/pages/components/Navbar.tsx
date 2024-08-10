@@ -226,7 +226,11 @@ function NavbarComponent(props: AllProps) {
         <div className='nav-logo'>
             <div className={"aligner"}>
                 
-                <div className='logo' onContextMenu={(e)=>{ e.preventDefault(); SetRootFieldAction.new('debug', !props.debug)}}></div>
+                {props.debug ? 
+                    <div className='logo-on' onContextMenu={(e)=>{ e.preventDefault(); SetRootFieldAction.new('debug', !props.debug)}}></div>
+                    :
+                    <div className='logo' onContextMenu={(e)=>{ e.preventDefault(); SetRootFieldAction.new('debug', !props.debug)}}></div>
+                }
                 {props.debug && <i className="bi bi-bug-fill"></i>}
                 
             </div>

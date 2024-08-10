@@ -130,6 +130,21 @@
       width: 70px;
       z-index:2;
     } 
+    
+    &  div.logo-on {
+
+      position: relative;
+      background-image: url(/static/img/logo-on.png);
+      height: 24px;
+      width: 70px;
+      top: 0;
+      background-repeat: no-repeat;
+      background-size: 57px 25px;
+      transition: all 0.3s ease-in-out;
+      z-index:200;
+    }
+
+    
 
     & .bi {
       position: absolute;
