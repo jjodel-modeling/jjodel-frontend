@@ -1,35 +1,79 @@
-import React, {MouseEventHandler} from "react";
+import React, {MouseEventHandler, ClassAttributes} from "react";
 import './commandbar.scss';
+import { inherits } from "util";
 
 type BtnProps = {
     disabled?: boolean;
-    icon: "up" | "down" | "back" | "fwd" | "add" | "delete" | "edit",
+    icon: "up" | "down" | "back" | "fwd" | "add" | "delete" | "delete2" | "edit" ,
     tip?: string,
+    theme?: "dark" | "light",
     action?: MouseEventHandler,
-    size?: "small" | "medium" | "large"
+    size?: "x-small" | "small" | "medium" | "large"
 }
 
 export const Btn = (props: BtnProps) => {
+
     return (<>
         {props.action ?
             <div>
-                <i className={`bi tab-btn ${props.icon} ${props.size && props.size} ${props.disabled && 'disabled'}`}
-                   onClick={props.action} title={`${props.tip && props.tip}`} />
+                {props.icon === "delete2" ? 
+                    <div className={`delete2 ${props.theme ? props.theme : 'light'}`}>Delete</div>
+                    :
+                    <i 
+                        className={`bi tab-btn ${props.icon} ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.disabled && 'disabled'}`}
+                        onClick={props.action && props.action} title={`${props.tip && props.tip}`} 
+                    />
+                }
             </div>
         :
-            <i className={`bi tab-btn ${props.icon} ${props.size && props.size} disabled`} />
+            <i 
+                className={`bi tab-btn ${props.icon} ${props.size && props.size} disabled ${props.theme ? props.theme : 'light'}s`} 
+            />
         }
     </>);
 }
 
+/*
+export const Btn = (props: BtnProps) => {
+
+    return (<>
+        {props.action ?
+            <div className={`${props.icon === 'delete2' && 'my-w-100'}`} >
+                <i 
+                    className={`bi tab-btn ${props.icon} ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.disabled && 'disabled'}`}
+                    onClick={props.action && props.action} title={`${props.tip && props.tip}`} 
+                />
+            </div>
+        :
+            <i 
+                className={`bi tab-btn ${props.icon} ${props.size && props.size} disabled ${props.theme ? props.theme : 'light'}s`} 
+            />
+        }
+    </>);
+}
+*/
+
 
 type CommandProps = {
-    children: any;
+    children: any,
+    style?: React.CSSProperties,
+    className?: string
 }
 
 export const CommandBar = (props: CommandProps) => {
 
-    return(<div className={'command-bar'}>
-        {props.children}
-    </div>);
+    let style = props.style;
+
+    return(<>
+        {props.style ?
+            <div className={`command-bar ${props.className && props.className}`} style={props.style}>
+                {props.children}
+            </div>
+            :
+            <div className={`command-bar ${props.className && props.className}`} >
+                {props.children}
+            </div>
+        }
+            
+    </>);
 };

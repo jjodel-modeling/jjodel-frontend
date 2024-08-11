@@ -56,7 +56,8 @@ function ColorComponent(props: AllProps) {
     />
 
     console.log("color component", {label, jsxLabel, tooltip, c:props.children})
-    return(<label className={(props.className ? props.className : 'p-1 color-picker-root') + ' hoverable'} {...otherprops}
+    
+    return(<label className={(props.className ? props.className : 'color-picker-root') + ' hoverable'} {...otherprops}
                   style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor: tooltip ? 'help' : 'auto', ...((props as any).style || {})}}>
 
         {label && <label className={'my-auto'} onMouseEnter={e => setShowTooltip(true)}

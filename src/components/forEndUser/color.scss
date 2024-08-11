@@ -5,7 +5,7 @@
 
 .color-container{
   outline: 1px solid var(--palette-g);
-  border-radius: 0.4em;
+  border-radius: var(--radius);
 }
 .color-container, .suggestion-container, .value.hoverable, .value.hoverable>div{
   // background: white;
@@ -16,7 +16,151 @@
   flex-wrap: wrap;
   overflow: hidden;
 }
+
+.btn-danger {
+  border: 1px solide white!important;
+}
+
+.palette-row {
+  & .color-container {
+    background-color: transparent;
+    outline: none;
+
+    & .suggestions {
+      border-radius: var(--radius);
+      background-color: var(--color)!important;
+
+      & h6 {
+        color: var(--neutral);
+        font-family: 'Inter Tight', sans-serif;
+        font-weight: 400;
+        font-size: 1em;
+        color: white;
+        margin-top: 20px!important;
+        margin-bottom: 0;
+
+        & .command-bar {
+          border-bottom: none!important;
+        }
+        
+        
+       
+      }
+
+      & .color-suggestion button::-webkit-color-swatch {
+          border-radius: 50%;
+          border: 1px solid var(--neutral);
+      }  
+      & .color-suggestion::-moz-color-swatch {
+        border-radius: 50%;
+        border: 1px solid var(--neutral);
+    } 
+    }
+
+    & button.btn.color-suggestion {
+        border-radius: var(--input-height)!important;
+        border: none!important;
+        padding: 0!important;
+        margin: 0 4px!important;
+
+        height: var(--input-height);
+        width: var(--input-height);
+
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-color: transparent;
+        
+        border: none;
+        cursor: pointer;
+    } 
+      
+      
+    & .btn.color-suggestion button::-moz-color-swatch {
+      border-radius: 50%;
+      border: 1px solid var(--neutral);
+    }  
+
+    & .btn.color-suggestion .bi {
+      position: relative;
+      bottom: 0px;
+      right: 0px;
+      transition: all 0.3s;
+      font-size: 1.1em;
+      background: transparent!important;
+
+    }
+
+    & .color-picker-root {
+      height: var(--input-height);
+      background-color: white; // transparent!important;
+      padding: 0!important;
+      margin: 0!important;
+      height: var(--input-height);
+      width: var(--input-height);
+      border-radius: var(--input-height)!important;
+
+      & input.my-auto.input {
+        border-radius: var(--input-height)!important;
+        border: none!important;
+        padding: 0!important;
+        margin: 0 0px!important;
+
+        height: var(--input-height);
+        width: var(--input-height);
+
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-color: transparent;
+        
+        border: none;
+        cursor: pointer;
+      }
+
+      & input.my-auto.input::-webkit-color-swatch {
+        border-radius: 50%;
+        border: 1px solid var(--neutral);
+      }
+
+      & input.my-auto.input::-moz-color-swatch {
+        border-radius: 50%;
+        border: 1px solid var(--neutral);
+      }
+
+      & input.my-auto.input:hover {
+        border: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+      }
+
+    }
+
+    .color-picker-root:hover {
+      border: none;
+    }
+
+}
+.palette-row-container {
+
+  & .prefix {
+    height: var(--input-height);
+    border-radius: var(--radius);
+  }
+
+  
+
+    & .my-auto {
+      background-color: blue;
+    } 
+
+  }
+}
+
+
 .palette-row-container:hover, .palette-row-container:focus-within{
+
   position: relative;
   z-index: 1;
 }
@@ -78,6 +222,7 @@
   // min-width: 500px;
   transform: translate3d( calc(-50% + 24px / 2), 0px, 6600px);
   >*{margin-left: 1em; margin-right: 1em;}
+  
   h6{
     margin-top: .5em;
     margin-bottom: 0.25em;
@@ -180,4 +325,15 @@
     >*{margin:auto; width: 100%;}
     button{width:100%;}
   }
+}
+
+input.prefix {
+  height: var(--input-height);
+  width: var(--input-widht);
+  padding: 2px 10px!important;
+}
+
+input.prefix:disabled {
+  color: var(--color-disabled)!important;
+  background-color: var(--bg-disabled);
 }

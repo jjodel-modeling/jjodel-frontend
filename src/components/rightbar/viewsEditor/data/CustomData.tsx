@@ -4,6 +4,8 @@ import {connect} from "react-redux";
 import {Function} from "../../../forEndUser/FunctionComponent";
 import JsEditor from "../../jsEditor/JsEditor";
 
+import { CommandBar, Btn } from '../../../commandbar/CommandBar';
+
 function ViewEventsComponent(props: AllProps) {
     const view = props.view;
     const dview = props.view.__raw;
@@ -30,9 +32,7 @@ function ViewEventsComponent(props: AllProps) {
         <JsEditor viewID={view.id} field={'onResizeEnd'} title={'onResizeEnd'} initialExpand={initialExpand} readonly={readOnly}/>
         <div className={'d-flex mx-auto'}>
             <b style={{fontSize: '1.25em'}}>Custom Events</b>
-            <button className={'btn btn-primary ms-auto'} onClick={addEvent} disabled={readOnly}>
-                <i className={'p-1 bi bi-plus'} />
-            </button>
+            <CommandBar className={'ms-auto'} style={{paddingTop: '12px'}}><Btn icon={'add'} action={addEvent} /></CommandBar>
         </div>
         <hr className={'my-1'} />
         {Object.keys(dview.events).map((k) => {
@@ -51,13 +51,21 @@ function ViewEventsComponent(props: AllProps) {
                 newEvent[k] = undefined;
                 view.events = newEvent;
             }}/>}
-            jsxLabel={<button className={'btn btn-danger my-auto ms-auto'} onClick={() => {
+            jsxLabel={<CommandBar className={'ms-auto'}><Btn icon={'delete'} action={() => {
+                let newEvent: GObject = {};
+                newEvent[k] = undefined; // this is how you trigger deletion with object -= action
+                view.events = newEvent;
+            }}/></CommandBar>}
+
+            /* jsxLabel={<button className={'btn btn-danger my-auto ms-auto'} onClick={() => {
                 let newEvent: GObject = {};
                 newEvent[k] = undefined; // this is how you trigger deletion with object -= action
                 view.events = newEvent;
             }}>
                 <i className={'p-1 bi bi-trash3-fill'} />
-            </button>}
+            </button>}*/
+
+
             getter={() => val}
             setter={(js) => {
                 let newEvent: GObject = {};
