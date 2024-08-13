@@ -174,8 +174,13 @@ export class Tooltip extends React.Component<AllProps, State> {
         let y = this.props.offsetY;
         let offset: Point | undefined = (x || x === 0) || (y || y === 0) ? new Point(this.props.offsetX || 0, this.props.offsetY || 0) : undefined;
         Tooltip.show(this.tooltip, this.props.position, inline ? (this.childhtml || undefined) : undefined, -1, offset);
+
+        if (this.props.seconds) {
+            setTimeout(()=>this.onMouseLeave(e), this.props.seconds);
+        }
     }
     onMouseLeave(e?: MouseEvent): void{
+        if (this.props.seconds) return;
         Tooltip.hide();
     }
 
@@ -249,6 +254,7 @@ interface OwnProps {
     offsetX?: number;
     offsetY?: number;
     position?: PositionStrTypes;
+    seconds?: number;
 }
 interface StateProps {
 }
