@@ -399,6 +399,15 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (c.data.explicitApplicationPriority !== undefined) return c.data.explicitApplicationPriority;
         else return (c.data.jsCondition?.length || 1) + (c.data.oclCondition?.length || 1); }
     set_explicitApplicationPriority(val: this["explicitApplicationPriority"] | undefined, c: Context): boolean {
+        if (c.data.explicitApplicationPriority === val) return true;
+        for (let nid in transientProperties.node){
+            let tn = transientProperties.node[nid];
+            for (let vid in tn.viewScores){
+                let tnv = tn.viewScores[vid];
+                if (!tnv.metaclassScore || !tnv.OCLScore) continue;
+                if (tnv.jsScore === true) tn.needSorting = true; // recompute final score.
+            }
+        }
         SetFieldAction.new(c.data, "explicitApplicationPriority", val as number, '', false);
         return true;
     }
