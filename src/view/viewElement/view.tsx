@@ -729,8 +729,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     adaptWidth!: boolean;
     __info_of__adaptWidth: Info = {isNode:true, type: ShortAttribETypes.EBoolean, label:"adapt width",
-        txt: '@'}
-        // txt: 'Whether the element should expand his width to accomodate his own contents.'}
+        txt: 'Whether the element should expand his width to accomodate his own contents.'}
 
     adaptHeight!: boolean;
     __info_of__adaptHeight: Info = {isNode:true, type: ShortAttribETypes.EBoolean, label:"adapt height",
