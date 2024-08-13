@@ -73,8 +73,8 @@ function ViewDataComponent(props: AllProps) {
                 <i className={'p-1 bi bi-arrow-left'}></i>
         </button>*/}
             <div className={"path-list"}>{
-                (viewChain.map(v => <>
-                    <div className={"path-element"} onClick={()=>props.setSelectedView(v.id)}>
+                (viewChain.map((v, i) => <>
+                    <div className={"path-element"} onClick={()=>props.setSelectedView(i === 0 ? undefined : v.id)}>
                         {U.cropStr(v.name, 1,1, 10, 10)}
                     </div>
                 </>) as any

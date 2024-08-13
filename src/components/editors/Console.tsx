@@ -29,8 +29,10 @@ let ansiConvert = (window as any).ansiConvert;
 if (!ansiConvert) (window as any).ansiconvert = ansiConvert = new Convert();
 
 class ThisState{
-    expression!: string;
-    output: any;
+    expression: string = '';
+    output: any = null;
+    expressionIndex: number = 0;
+    expressionHistory: string[] = [''];
 }
 
 // trasformato in class component così puoi usare il this nella console. e non usa accidentalmente window come contesto
@@ -101,7 +103,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
     lastNode?: Pointer<DGraphElement>;
     constructor(props: AllProps) {
         super(props);
-        this.state = {expression:'', output: null};
+        this.state = new ThisState();
         this.change = this.change.bind(this);
         this.change(undefined);
     }
@@ -150,6 +152,18 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
     }
 
     outputhtml: HTMLElement | null = null;
+    setState(s: GObject<Partial<ThisState>> | null, callback?: (...a:any) => any): void{
+        if (s){
+            let olds = this.state || {};
+            if (s.expression) s.expressionHistory = [...olds.expressionHistory.slice(0, s.expressionIndex ?? olds.expressionIndex), s.expression];
+            if (s.expressionIndex) s.expression = olds.expressionHistory[s.expressionIndex];
+            if (s.expressionHistory){
+                let len = s.expressionHistory.length;
+                if (len > 10) s.expressionHistory = s.expressionHistory.slice(len - 10, len);
+            }
+        }
+        super.setState(s as any, callback);
+    }
     render(){
         /*const [expression, setExpression] = useStateIfMounted('data');
         const [output, setOutput] = useStateIfMounted('');*/
@@ -276,6 +290,18 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         windoww.output = output;
         windoww.contextkeysarr = contextkeysarr;
         windoww.contextkeys = contextkeys;
+        const undo = ()=>{
+            const expressionHistory = this.state.expressionHistory;
+            let expressionIndex = Math.max(0, this.state.expressionIndex - 1);
+            if (expressionIndex === this.state.expressionIndex) return;
+            this.setState({ expressionIndex })
+        }
+        const redo = ()=>{
+            const expressionHistory = this.state.expressionHistory;
+            let expressionIndex = Math.min(expressionHistory.length, this.state.expressionIndex + 1);
+            if (expressionIndex === this.state.expressionIndex) return;
+            this.setState({ expressionIndex })
+        }
 
         return(<div className={'w-100 h-100 p-2 console'}>
             <label className={'on-element'}>
@@ -290,7 +316,10 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                         s = s.substring('Result'.length).trim();
                         U.clipboardCopy(s, ()=> Tooltip.show('Content copied to clipboard', undefined, undefined, 2));
                     }} title={'Copy in the clipboard'} className="bi bi-clipboard-plus" />
-                    <i onClick={(e) => {alert('torna indietro')}} title={'Copy in the clopboard'} className="bi bi-arrow-left-square"></i>
+                    {/* @ts-ignore */}
+                    <i onClick={undo} disabled={this.state.expressionIndex > 0} title={'undo'} className="bi bi-arrow-left-square" />
+                    {/* @ts-ignore */}
+                    <i onClick={redo} disabled={this.state.expressionIndex < this.state.expressionHistory.length} title={'redo'} className="bi bi-arrow-right-square" />
 
                     {/* todo per damiano: per la funzione 'torna indietro', si tratta di annullare l'ultimo inserimento, per esempio se clicco su data e poi length, nella console
                     avrei 'data.length', cliccando sul back nella consol avrei 'data' */}
