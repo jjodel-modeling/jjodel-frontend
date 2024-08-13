@@ -65,7 +65,7 @@ function JsxEditorComponent(props: AllProps) {
                 <i className={'bi bi-chevron-' + (show ? 'down' : 'right')} />
                 {/*show ? <i className={'bi bi-eye-fill'} /> : <i className={'bi bi-eye-slash-fill'} /> */}
             </span>
-            <label className={'ms-2 mb-1 my-auto'}>
+            <label className={'editor-label'}>
                 JSX Editor
             </label>
         </div>
