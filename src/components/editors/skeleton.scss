@@ -77,7 +77,7 @@
   width: 20px!important;
 }
 .monaco-scrollable-element {
- 
+
   left: 30px!important;
 }
 .view-lines.monaco-mouse-cursor-text {
@@ -105,7 +105,7 @@
   border-bottom: 1px dotted var(--bg-3);
   padding-bottom: 0.5rem;
   margin-bottom: 0.5rem;
-  
+
 
 }
 
@@ -159,7 +159,7 @@
 
   // Properties / Structure
 
-  & section { 
+  & section {
     margin: 10px;
     border-radius: var(--tab-radius);
 
@@ -174,7 +174,7 @@
 
     margin: 10px;
     border-radius: var(--tab-radius);
-    
+
   }
 
   & section:has(section) section {
@@ -463,12 +463,13 @@
     overflow-x: scroll;
   }
 
-
-#Dock_in_view_detail0 .page-root, // Apply to
-#Dock_in_view_detail1 section, // Template 
-#Dock_in_view_detail2 section, // Style 
-#Dock_in_view_detail3 section, // Events
-  #Dock_in_view_detail4 section { // Options
+.view-editor-root .dock-tabpane >*, // universal selector for all view sub-tabs
+// #Dock_in_view_detail0 .page-root, // Apply to
+// #Dock_in_view_detail1 section, // Template
+// #Dock_in_view_detail2 section, // Style
+// #Dock_in_view_detail3 section, // Events
+// #Dock_in_view_detail4 section, // Options
+{
   margin: 0.7em;
   border-radius: var(--radius);
 }

@@ -18,6 +18,7 @@ import Tree, {GenericTree} from "../../forEndUser/Tree";
 import "./VPNestedTree.scss"
 import ViewData from '../viewsEditor/View';
 import {Tooltip} from "../../forEndUser/Tooltip";
+
 // import "./tree.scss" already imported by <Tree> subcomponent
 type Metadata = {setView: (p: Pointer)=>any, scoreBoost: number}
 function NestedViewComponent(props: AllProps) {

@@ -386,7 +386,10 @@ export class Selectors{
             explicitprio = (dview.jsCondition?.length || 1) + (dview.oclCondition?.length || 1);
         } else explicitprio = dview.explicitApplicationPriority;
 
-        return entry.viewPointMatch * entry.metaclassScore * pvScore * explicitprio;
+        console.log("getFinalScore", {entry, vid, dview, explicitprio, ep:dview.explicitApplicationPriority})
+
+        let defualtViewMalus = dview.id.indexOf('View') >= 0 ? 0 : 0.1;
+        return entry.viewPointMatch * entry.metaclassScore * pvScore * explicitprio + defualtViewMalus;
         //score = precoditiom * paremtview(comfiguravle) * (explicitprio = jsValid*jslemgth + oclvalid*ocllemgth)
         // or if jscomditiom returmed mumver --> * jsscore
     }

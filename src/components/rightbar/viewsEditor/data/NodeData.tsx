@@ -41,7 +41,7 @@ function NodeDataComponent(props: AllProps) {
         <div className={'px-2'}>
             <div className={'input-container'}>
                 <b className={'me-2'}>Store Size in View:</b>
-                {<Input data={view} field={"storeSize"} readonly={readOnly}  tooltip={
+                {<Input data={view} field={"storeSize"} readonly={readOnly} tooltip={
                     <div>On - The node position depends from the view currently displayed.<br/>Off - It depends from the graph.</div>} type={"checkbox"} />
                     /* on = EuseSizeFrom.nv,   off = EuseSizeFrom.n */
                 }
@@ -53,7 +53,7 @@ function NodeDataComponent(props: AllProps) {
 
             <div className={'input-container'}>
                 <b className={'me-2'}>Adapt Width:</b>
-                <Input data={view} field={"adaptWidth"} type={"checkbox"} readonly={readOnly} />
+                <Input data={view} field={"adaptWidth"} type={"checkbox"} readonly={readOnly} tooltip={true}/>
             </div>
 
             <div className={'input-container'}>

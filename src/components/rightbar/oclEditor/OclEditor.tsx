@@ -18,11 +18,11 @@ function OclEditorComponent(props: AllProps) {
 
     return(<>
         <div style={{...(props.style || {})}} className={'cursor-pointer d-flex'} onClick={e => setShow(!show)}>
-            <span className={'my-auto'} tabIndex={-1} >
+            <span className={'chevron-holder'} tabIndex={-1} >
                 <i className={'bi bi-chevron-' + (show ? 'down' : 'right')} />
                 {/*show ? <i className={'bi bi-eye-fill'} /> : <i className={'bi bi-eye-slash-fill'} /> */}
             </span>
-            <label className={'ms-2 mb-1 my-auto'}>
+            <label className={'editor-label'}>
                 OCL Editor {/*(OCL engine by Stephan Köninger,
                 <a className={'ms-1'} target={'_blank'} href={'https://ocl.stekoe.de/#examples'}>Supported instructions</a>)*/}
             </label>

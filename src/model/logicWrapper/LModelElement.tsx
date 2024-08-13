@@ -171,8 +171,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             // let dchildren: DPointerTargetable[] = lchildren.map<DPointerTargetable>(l => l.__raw as any);
             let lc: GObject;
             let pk: string;
-            const childrenKeys = ["@", "$"];
-            if (childrenKeys.includes(k[0])) { pk = k.substring(1); }
+            if (TargetableProxyHandler.childKeys[k[0]]) { pk = k.substring(1); }
             else pk = k;
             if (Array.isArray(lchildren)) for (lc of lchildren) {
                 let n = lc?.name;
@@ -189,7 +188,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
     // this one must be able to return false because is called by DObject and DValue default setters and return type is checked
     protected _setterFor$stuff_canReturnFalse(val: any, c: Context, k: keyof Context["data"] & string): boolean {
-        if (!["@", "$"].includes(k[0])) return false;
+        // if (!["@", "$"].includes(k[0])) return false;
+        if (!TargetableProxyHandler.childKeys[k[0]]) return false;
         let target: LPointerTargetable = (c.proxyObject as GObject)[k];
         if (!target) return false;
         let l;
@@ -3602,7 +3602,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         return this._defaultGetterM2(c, key);
     }
     _defaultGetterM2(c: Context, key: string): any{
-        if (key[0] === "$"){
+        if ((TargetableProxyHandler.childKeys[key[0]])){
             // look for m1 matches
             let k = key.substring(1).toLowerCase();
             let s = store.getState();
@@ -3629,7 +3629,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         // priorities: 1) m1 name natch --> m1object. 2) m2 exact name match --> m2item, 3) m2 name+"s" match --> instances
         // to access m2 classes within a package, need to navigate it like model.$packagename.Ssubcpackagename.$classname,
         // path + "s" won't work in that case, and need to use this.getInstancesOf instead
-        if (key[0] === "$"){
+        if (TargetableProxyHandler.childKeys[key[0]]){
             // look for m1 matches
             let deepmatch: LObject | undefined;
             let k = key.substring(1).toLowerCase();
@@ -4628,10 +4628,30 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     conformsTo!:( LAttribute | LReference)[]; // low priority to do: attributo fittizio controlla a quali elementi m2 è conforme quando viene richiesto
 
 
-    protected _defaultGetter(c: Context, k: keyof Context["data"]): any {
-        if (k in c.data) return this.__defaultGetter(c, k);
-        // if value not found in node, check in view.
-        return (this.get_instanceof(c) as any)[k];
+    length!: number;
+    __info_of__length: Info = {type: 'number', txt: "shortcut for data.values.length."};
+    get_length(c: Context): number{
+        return this.get_values(c).length;
+    }
+
+    protected get_toPrimitive(c: Context): ()=>(string | number){
+        return ()=>this.get_value(c) as any;
+    }
+    protected _defaultGetter(c: Context, k: string | number): any {
+        if (k in c.data || typeof k === "symbol") return this.__defaultGetter(c, k);
+        if (typeof k === "number") return this.get_values(c)[k];
+        if (TargetableProxyHandler.childKeys[k[0]]) {
+            k = k.substring(1);
+            let vals: any[] = this.get_values(c);
+            for (let v of vals) {
+                if (!v) continue;
+                let ret = v[k];
+                if (ret !== undefined) return ret;
+            }
+        }
+        // if value not found in val, check in attr/ref.
+        let meta = this.get_instanceof(c);
+        return (meta as any)[k];
     }
 
     protected _defaultSetter(v: any, c: Context, k: keyof Context["data"]): true {
@@ -4709,11 +4729,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             else scoreMap[raw.id] = {class:c, instantiable, isPartial: raw.partial} as any;
         }
         if (schema) {
-            // const fix$ = (vals: string[]) => vals.map(v=> v[0] === "$" ? v.substring(1) : v);
+            // const fix$ = (vals: string[]) => vals.map(v=> (TargetableProxyHandler.childKeys[k[0]]) ? v.substring(1) : v);
             const fix$ = (obj: GObject) => {
                 let ret: GObject = {};
                 for (let k in obj) {
-                    let k1:string = k[0] === "$" ? k.substring(1) : k;
+                    let k1 :string = (TargetableProxyHandler.childKeys[k[0]]) ? k.substring(1) : k;
                     ret[k1] = obj[k];
                 }
                 return ret;
@@ -4877,7 +4897,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 // because at current time Constructor.setPtr actions are not executed yet. so dobject.features is empty, even through LPoint.from(valueid) canaccess the "pending" local dvalue not in store.
                 setTimeout(()=>TRANSACTION(()=>{
                     for (let key in json) {
-                        if (key[0] === "$") { // if $ is prepended, priority is first and only child values check
+                        if (TargetableProxyHandler.childKeys[key[0]]) { // if $ is prepended, priority is first and only child values check
                             if (key in childnames) { // if child dvalue with that name including char $ exist, like in "$" + "$name"
                                 (lobj as GObject<LObject>)["$" + key].values = json[key];
                                 continue;

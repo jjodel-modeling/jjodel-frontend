@@ -20,13 +20,20 @@ import {
     LPointerTargetable,
     Overlap,
     Pointer, store,
-    U, LoggerCategoryState, RuntimeAccessible, Size
+    U, LoggerCategoryState, RuntimeAccessible, Size, Point
 } from '../../joiner';
 import './tooltip.scss';
+import {IPoint, PositionStr, PositionStrTypes} from "../../common/Geom";
+
 class TooltipVisualizerState{
     tooltip?: ReactNode;
     baseElement?: Element;
-    position?: boolean = false; // true = top, false = bottom
+    position?: PositionStrTypes;
+    offsetX?: number;
+    offsetY?: number
+    constructor() {
+        this.position = 'b';
+    }
 }
 export class TooltipVisualizer extends React.Component<{}, TooltipVisualizerState> {
     public static component: TooltipVisualizer;
@@ -36,29 +43,100 @@ export class TooltipVisualizer extends React.Component<{}, TooltipVisualizerStat
         TooltipVisualizer.component = this;
     }
     onMouseEnter(){
-        TooltipVisualizer.component.setState({position: !TooltipVisualizer.component.state.position});
+        let position = PositionStr.invertPosStr(TooltipVisualizer.component.state.position ?? "b");
+        TooltipVisualizer.component.setState({position});
     }
+
+    private tooltip: HTMLElement | null = null;
+    private root: HTMLElement | null = null;
+    private innerText?: string;
+    private tsize?: Size;
+    setRef(e: HTMLElement | null) { this.root = e; this.componentDidUpdate(); }
+    componentDidMount(){
+        return this.componentDidUpdate();
+    }
+    componentDidUpdate(){
+        let e = this.root;
+        if (!e) return;
+        let innerText = e.innerText;
+        if (innerText === this.innerText) return;
+        this.innerText = innerText;
+        this.tooltip = e.children[0] as any;
+        this.tsize = this.tooltip ? Size.of(this.tooltip) : undefined;
+        this.forceUpdate();
+    }
+
     render(){
-        if (!this.state.tooltip) return null;
-        const style: GObject = {}
+        let tooltip = this.state.tooltip;
+        if (!tooltip) return null;
+        const style: GObject = {};
+        let position = this.state.position;
+        let offsetX = this.state.offsetX || 0;
+        let offsetY = this.state.offsetY || 0;
+        /* debug stuff override
+        let positions = ['t', 'b', 'l', 'r', 'tl', 'tr', 'bl', 'br', ''] as any;
+        let windoww = window as any
+        position = positions[windoww.ii || 0];//Math.floor(Math.random()*positions.length)];
+        offsetX = windoww.xx || 0;
+        offsetY = windoww.yy || 0;*/
         if (this.state.baseElement){
-            // todo: set top, left in pos:absolute according to baseElement
             //style.position = 'absolute';
             let size = Size.of(this.state.baseElement);
-            style.left = 'min( 50vw, calc( '+size.x+'px - 50vw ))';
-            style.top = 'min( 50vh, calc( '+size.y+'px - 50vh ))';
+            let tsize = this.tsize;
+            let x = size.x;
+            let y = size.y;
+            let pos = PositionStr.fromPosString(position);
+            x += (pos.x+1)/2 * size.w + pos.x * offsetX;
+            y += (pos.y+1)/2 * size.h + pos.y * offsetY;
+            // -1 -> 0
+            // 0 -> 0.5
+            // 1 -> 1
+
+            let xmin = 'calc(' + size.w + 'px / 2 - 50vw)';
+            let ymin = 'calc(' +  size.h + 'px / 2 - 50vh)';
+
+            let xmax = 'calc(50vw - ' + size.w + 'px / 2)';
+            let ymax = 'calc(50vh - ' +  size.h + 'px / 2)';
+
+            let l = 'max(' + xmin + ', min(' + xmax +', calc( '+ x +'px - 50vw)))';
+            let t = 'max(' + ymin + ', min(' + ymax + ', calc( '+ y +'px - 50vh)))';
+            // style.left = l; style.top = t;
+            style['--mid-x'] = 'calc(' + x + 'px - 50vw)';
+            style['--mid-y'] = 'calc(' + y + 'px - 50vh)';
+            style['--source-size-w'] = size.w + 'px';
+            style['--source-size-h'] = size.h + 'px';
+            if (tsize) {
+                style['--size-w'] = tsize.w + 'px';
+                style['--size-h'] = tsize.h + 'px';
+            }
+            console.log("inlinepos:", {position, pos, x, y, size, offsetX, offsetY, l, t});
             // style.right = 'calc( 100vw - '+size.w+'px)';
             // currently center of tooltip is topleft of baseelem
         }
 
-        console.log('tooltip', style, this.state)
-
-        return <div className={"tooltip-wrapper " +
-            (this.state.position ? "top" : "bottom")+
-            (this.state.baseElement ? " inline" : " fixed")
-        } onMouseEnter={this.onMouseEnter}
-                    style={style}>
-            {this.state.tooltip}</div>;
+        // wrapper cannot contain only rawtext without subelements to be rendered
+        if (typeof tooltip !== 'object') tooltip = <div>{tooltip}</div>;
+        if (Array.isArray(tooltip)) tooltip = tooltip.map(e => typeof e !== 'object' ? <div>{e}</div> : e)
+        // NB: arrays are allowed but currently show elements in an horizontal line
+        console.log('tooltip', style, this.state);
+        // debugg stuff
+        let tooltip2 = <div style={{...style, padding:0, width:0, height:0, border:'2px solid red', borderRadius: '100%'}} />;
+        style.padding = 0;
+        // debug stuff end
+        return <>
+            <div className={"tooltip-wrapper " +
+                (PositionStr.toSeparateFullLabels(position ?? 't'))+
+                (this.state.baseElement ? " inline" : " fixed")
+            } onMouseEnter={this.onMouseEnter}
+                 style={style} ref={(e)=> this.setRef(e)}>
+                {tooltip}</div>
+            <div className={"tooltip-wrapper " +
+                (PositionStr.toSeparateFullLabels(position ?? 't'))+
+                (this.state.baseElement ? " inline" : " fixed")
+            } onMouseEnter={this.onMouseEnter}
+                 style={style}>
+                {tooltip2}</div>
+        </>;
     }
 }
 
@@ -69,26 +147,40 @@ export class Tooltip extends React.Component<AllProps, State> {
 
     constructor(props: AllProps) {
         super(props);
-        this.state = { };
+        this.state = {};
         this.onMouseEnter = this.onMouseEnter.bind(this);
         this.onMouseLeave = this.onMouseLeave.bind(this);
     }
-    public static show(tooltip: ReactNode, onTop?: boolean, baseElement?: Element): void{
+
+    public static show(tooltip: ReactNode, pos?: PositionStrTypes, baseElement?: Element, seconds: number = -1, offset?: IPoint): void{
         tooltip = Tooltip.fixTooltip(tooltip);
-        const statepatch: Partial<TooltipVisualizerState> = {tooltip, baseElement};
-        if (onTop !== undefined) statepatch.position = onTop;
+        const statepatch: Partial<TooltipVisualizerState> = {tooltip, baseElement, offsetX: offset?.x ?? 0, offsetY: offset?.y ?? 0};
+         statepatch.position = pos ?? 'b';
         TooltipVisualizer.component.setState(statepatch);
+        if (seconds>0) setTimeout( () => {
+            if (TooltipVisualizer.component.state.tooltip !== tooltip) return;
+            if (TooltipVisualizer.component.state.baseElement !== baseElement) return;
+            TooltipVisualizer.component.setState({tooltip: undefined, baseElement: undefined, offsetX: 0, offsetY: 0});
+            }, seconds * 1000);
     }
+
     public static hide(): void {
         TooltipVisualizer.component.setState({tooltip: undefined});
     }
 
     onMouseEnter(e?: MouseEvent): void{
         let inline = this.props.inline;
-        let onTop = this.props.position === 'bottom' ? false : (this.props.position === 'top' ? true : undefined);
-        Tooltip.show(this.tooltip, onTop, inline ? (this.childhtml || undefined) : undefined);
+        let x = this.props.offsetX;
+        let y = this.props.offsetY;
+        let offset: Point | undefined = (x || x === 0) || (y || y === 0) ? new Point(this.props.offsetX || 0, this.props.offsetY || 0) : undefined;
+        Tooltip.show(this.tooltip, this.props.position, inline ? (this.childhtml || undefined) : undefined, -1, offset);
+
+        if (this.props.seconds) {
+            setTimeout(()=>this.onMouseLeave(e), this.props.seconds);
+        }
     }
     onMouseLeave(e?: MouseEvent): void{
+        if (this.props.seconds) return;
         Tooltip.hide();
     }
 
@@ -159,8 +251,10 @@ interface OwnProps {
     children: ReactNode;
     tooltip: ReactNode;
     inline?: boolean;
-    position?: 'top' | 'bottom'; // missing means on global center-bottom. top or bottom means on top-bottom of child element (inline-like)
-    // inline: boolean;
+    offsetX?: number;
+    offsetY?: number;
+    position?: PositionStrTypes;
+    seconds?: number;
 }
 interface StateProps {
 }

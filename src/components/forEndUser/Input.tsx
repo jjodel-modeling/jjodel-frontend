@@ -251,7 +251,7 @@ export function InputComponent(props: AllProps) {
     if (props.autosize) rootprops['data-value'] = inputProps.value;
 
     if (tooltip) {
-        rootprops.onMouseEnter = () => Tooltip.show(tooltip, true, (rootprops.ref));
+        rootprops.onMouseEnter = () => Tooltip.show(tooltip, 'b', (rootprops.ref?.current) || rootprops.ref);
         rootprops.onMouseLeave = () => Tooltip.hide();
     }
     /*let rootkeys = new Set(...Object.keys(rootprops));

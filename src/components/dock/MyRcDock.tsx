@@ -24,8 +24,10 @@ interface TabHeaderProps{
     children: ReactNode;
 }
 class TabHeaderState{
-    pinned: AnchorTypes | "";
+    fixed: boolean;
+    pinned: AnchorTypes | '';
     constructor() {
+        this.fixed = false;
         this.pinned = '';
     }
 }
@@ -49,6 +51,14 @@ export class TabHeader extends React.Component<TabHeaderProps, TabHeaderState>{
         this.setState({pinned: ''}, ()=>{
             let strip: PinnableStrip = PinnableStrip[oldPinned as AnchorTypes];
             strip.unpin(this.props.tid);
+        });
+    }
+    toggleFixed(){
+        let fixed = !this.state.fixed;
+        TabContent.instances[this.props.tid].setState({fixed});
+        this.setState({fixed}, ()=>{
+            // let strip: PinnableStrip = PinnableStrip[oldPinned as AnchorTypes];
+            // strip.fixed(this.props.tid, fixed);
         });
     }
     onMouseHoverExpand(){
@@ -114,7 +124,10 @@ export class TabHeader extends React.Component<TabHeaderProps, TabHeaderState>{
     render(): ReactNode {
         const props: TabHeaderProps = this.props;
         let pinned = this.state.pinned;
-        let content = <div onMouseDown={()=>{console.log("tab dragging start")}}>{props.children}<i className={"pin-button bi bi-pin-angle-fill"} onClick={()=>this.unpin()}/></div>;
+        let content = <div onMouseDown={()=>{console.log("tab dragging start")}}>{props.children}
+            {/*<i className={"pin-button bi bi-pin-angle" + (this.state.fixed ? '-fill' : '')} onClick={()=>this.toggleFixed()}/>*/}
+            <i className={"pin-button bi bi-arrow-down"} onClick={()=>this.unpin()}/>
+        </div>;
         console.log("tabheader portal pre pin", {pinned});
         if (!pinned) {
             let selectTab = () => PinnableDock.instance.setAsActiveTab(props.tid);
@@ -144,6 +157,7 @@ export class TabContent extends React.Component<TabContentProps, TabContentState
         TabContent.instances[props.tid] = this;
         this.state = new TabContentState();
     }
+
     render() {
         const props: TabContentProps = this.props;
         let pinned = this.state.pinned;
@@ -155,6 +169,11 @@ export class TabContent extends React.Component<TabContentProps, TabContentState
         console.log("tabcontent portal", {html, content, tabdict:tabdict_content, td:{...tabdict_content}});
         if (!html) return content;
         return <MyPortal container={html}>{content}</MyPortal>;
+        /*
+        return <MyPortal container={html}>
+            <div className={"pinned-tab-content-root "+ (this.state.fixed ? "fixed" : '')}>{content}</div>
+        </MyPortal>;
+        */
     }
 }
 
@@ -165,8 +184,10 @@ interface PinnableStripProps{
 class PinnableStripState{
     // pinnedTabs: TabData[];// or what?
     //pinnedTabsid: Dictionary<string, true>;
+    pinned: boolean;
 
     constructor() {
+        this.pinned = false;
        // this.pinnedTabsid = {};
     }
 }
@@ -267,7 +288,9 @@ export class PinnableStrip extends PureComponent<PinnableStripProps, PinnableStr
     render(){
         const layout = this.layout;
         const groups = this.groups;
-        return <div className={(Object.keys(this.tabs).length ? '' : 'empty') +" pinnable-strip pinnable-strip-" + this.props.side} ref={(curr)=>this.html = curr}>
+        return <div className={(Object.keys(this.tabs).length ? '' : 'empty') +" pinnable-strip pinnable-strip-" + this.props.side + (this.state.pinned ? ' pinned' : '')}
+                    ref={(curr)=>this.html = curr}>
+            <i className={"side-pin-btn bi bi-pin-angle" + (this.state.pinned ? '-fill' : '')} onClick={()=>this.setState({pinned: !this.state.pinned})} />
             {/* loadTab={(d)=>tabdict[d.id as string]} */}
             <DockLayout key="thestripdock" ref={(e)=>this.dockLayout = e} defaultLayout={layout} groups={groups} style={{width: '100%', height: '100%'}} />
             {/*<div className={"tab-row"} ref={(curr)=>this.headerHtml = curr}></div>

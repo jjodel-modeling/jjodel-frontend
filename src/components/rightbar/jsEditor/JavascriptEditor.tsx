@@ -59,7 +59,7 @@ function JavascriptEditorComponent(props: AllProps) {
     const info: Info | undefined = data && field && gata['__info_of__' + field];
     let tooltip: ReactNode = ((props.tooltip === true) ? (info ? info.txt: '') : props.tooltip) || '';
 
-    if (jsxLabel === undefined && info) jsxLabel = typeof info.label === "string" ? <label className={'ms-2 mb-1 my-auto'}>{info.label}</label> : info.label || undefined;
+    if (jsxLabel === undefined && info) jsxLabel = typeof info.label === "string" ? <label className={'editor-label'}>{info.label}</label> : info.label || undefined;
 
     return <>
         <div style={{...(props.style || {})}} className={'cursor-pointer d-flex'} onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)} onClick={e => setShow(!show)}>

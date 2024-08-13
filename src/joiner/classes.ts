@@ -2236,7 +2236,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         SetFieldAction.new(data.id, 'author', Pointers.from(val), '', true);
         return true;
     }
-
+    /*
     public get_state(context: any): this['state'] {
         return context.data.state;
     }
@@ -2244,10 +2244,10 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         const data = context.data;
         SetFieldAction.new(data.id, 'state', val, '', false);
         return true;
-    }
+    }*/
 
     protected get_collaborators(context: Context): this['collaborators'] {
-        return LUser.fromPointer(context.data.collaborators);
+        return LUser.fromPointer(context.data.collaborators) || [];
     }
     protected set_collaborators(val: PackArr<this['collaborators']>, context: Context): boolean {
         const data = context.data;
@@ -2265,7 +2265,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_metamodels(context: Context): this['metamodels'] {
-        return LModel.fromPointer(context.data.metamodels);
+        return LModel.fromPointer(context.data.metamodels) || [];
     }
     protected set_metamodels(val: PackArr<this['metamodels']>, context: Context): boolean {
         const data = context.data;
@@ -2274,7 +2274,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_models(context: Context): this['models'] {
-        return LModel.fromPointer(context.data.models);
+        return LModel.fromPointer(context.data.models) || [];
     }
     protected set_models(val: PackArr<this['models']>, context: Context): boolean {
         const data = context.data;
@@ -2283,7 +2283,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_graphs(context: Context): this['graphs'] {
-        return LGraph.fromPointer(context.data.graphs);
+        return LGraph.fromPointer(context.data.graphs) || [];
     }
     protected set_graphs(val: PackArr<this['graphs']>, context: Context): boolean {
         const data = context.data;
@@ -2320,7 +2320,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         }*/
 
     protected get_viewpoints(context: Context): this['viewpoints'] {
-        return LViewPoint.fromPointer([...Defaults.viewpoints, ...context.data.viewpoints]);
+        return LViewPoint.fromPointer([...Defaults.viewpoints, ...(context.data.viewpoints || [])]);
     }
     protected set_viewpoints(val: PackArr<this['viewpoints']>, context: Context): boolean {
         const data = context.data;

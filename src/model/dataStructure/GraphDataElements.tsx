@@ -325,7 +325,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return GraphElementComponent.map[context.data.id]; }
     // get_view(context: Context): this["view"] { return this.get_component(context).props.view; }
     get_view(context: Context): this["view"] {
-        return transientProperties.node[context.data.id]?.mainView || LPointerTargetable.from(context.data.view) || this.get_component(context)?.props.view;
+        return transientProperties.node[context.data.id]?.mainView?.r || LPointerTargetable.fromPointer(context.data.view) || this.get_component(context)?.props.view?.r;
     }
     set_view(val: Pack1<this["view"]>, context: Context){
         Log.eDevv("node.view is readonly, change it through props or the model");
