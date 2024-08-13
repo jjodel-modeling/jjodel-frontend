@@ -1,15 +1,18 @@
-import React, {MouseEventHandler, ClassAttributes} from "react";
+import React, {MouseEventHandler, ClassAttributes, useState} from "react";
 import './commandbar.scss';
 import { inherits } from "util";
 
 type BtnProps = {
     disabled?: boolean;
-    icon: "up" | "down" | "back" | "fwd" | "add" | "delete" | "delete2" | "edit" ,
+    icon: "up" | "down" | "back" | "fwd" | "add" | "add2" | "delete" | "delete2" | "edit" | "space",
     tip?: string,
+    label?: string;
     theme?: "dark" | "light",
     action?: MouseEventHandler,
     size?: "x-small" | "small" | "medium" | "large"
 }
+
+
 
 export const Btn = (props: BtnProps) => {
 
@@ -19,16 +22,23 @@ export const Btn = (props: BtnProps) => {
                 {props.icon === "delete2" ? 
                     <div className={`delete2 ${props.theme ? props.theme : 'light'}`}>Delete</div>
                     :
+                    
                     <i 
                         className={`bi tab-btn ${props.icon} ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.disabled && 'disabled'}`}
                         onClick={props.action && props.action} title={`${props.tip && props.tip}`} 
                     />
+                
                 }
+                    
             </div>
         :
-            <i 
-                className={`bi tab-btn ${props.icon} ${props.size && props.size} disabled ${props.theme ? props.theme : 'light'}s`} 
-            />
+            <>
+            {props.icon === "space" ?
+                <span style={{display: 'block', width: '26px'}}></span>
+            : 
+                <button className="btn btn-success my-btn">{props.icon === "add2" && props.label}</button>
+            }
+            </>
         }
     </>);
 }

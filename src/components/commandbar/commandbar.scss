@@ -10,109 +10,195 @@
     height: 24px;
     text-align: left!important;
     border-radius: 0!important;
-    border-bottom: 1px dotted var(--bg-3);
+    //border-bottom: 1px dotted var(--bg-3);
     
     // CommandBar button
 
     & .tab-btn {
       cursor: pointer;
-      font-size: var(--btn-font-medium-size)!important;
+      font-size: var(--btn-font-small-size)!important;
       background-color: transparent;
       font-family: bootstrap-icon;
       margin-right: 2px!important;
-
+      border: none!important;
+      text-decoration: none!important;
+      
+    }
       // theme
 
-      & .tab-btn.bi.dark  {
-        color: white!important;
-        background-color: transparent!important;
-      }
+    & .tab-btn.bi.dark  {
+      color: white!important;
+      background-color: transparent!important;
     }
 
-    // up
-    
-    & .tab-btn.up {
-      color: var(--btn-up)!important;
+      // disabled
+
+    & .tab-btn.disabled {
+      cursor: normal!important;
+      color: var(--disabled)!important; 
+      background-color: var(--bg-1-5)!important;
     }
+
+    & .tab-btn.disabled::before:hover {
+      background-color: none!important;
+      cursor: normal!important;
+    }
+
+    
+
+    // up
+
+    & .tab-btn.up {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
     & .tab-btn.up:hover {
-      color: var(--btn-up-accent)!important;
+      
     }
     & .tab-btn.up::before {
-      content: "\F147";
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 0px 0px;
+      text-align: center;
+      font-size: 0.9em;
+      margin-right: 2px;
+      content: "\F145"; // \F148";
     }
+
     & .tab-btn.up:hover::before {
-      content: "\F146";
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
     }
+
 
     // down
     
     & .tab-btn.down {
-      color: var(--btn-up)!important;
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
     }
+
     & .tab-btn.down:hover {
-      color: var(--btn-up-accent)!important;
+      
     }
     & .tab-btn.down::before {
-      content: "\F126";
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 0px 0px;
+      text-align: center;
+      font-size: 0.9em;
+      margin-right: 2px;
+      content: "\F124"; // \F128";
     }
+
     & .tab-btn.down:hover::before {
-      content: "\F125";
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
     }
+
 
     // back
     
     & .tab-btn.back {
+      margin: auto;
       color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
     }
+
     & .tab-btn.back:hover {
-      color: var(--btn-back-accent)!important;
+      
     }
     & .tab-btn.back::before {
-      content: "\F12E";
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 1px 1px;
+      text-align: center;
+      font-size: 1em;
+      content: "\F12C"; // "\F12F";
     }
+
     & .tab-btn.back:hover::before {
-      content: "\F12D";
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
     }
 
     // add
     
     & .tab-btn.add {
-      color: var(--neutral)!important;
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
     }
-    & .tab-btn.dark.add {
-      color: white!important;
-    }
+
     & .tab-btn.add:hover {
-      color: var(--success)!important;
+      
     }
     & .tab-btn.add::before {
-      content: "\F4FB";
 
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F64D";
     }
+
     & .tab-btn.add:hover::before {
-      content: "\F4FC";
-
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
     }
+    
+    
 
     // delete
     
     & .tab-btn.delete {
-      color: var(--neutral)!important;
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
     }
-    & .tab-btn.dark.delete {
-      color: white!important;
-    }
+
     & .tab-btn.delete:hover {
-      color: var(--failure)!important;
+      
     }
     & .tab-btn.delete::before {
-      content: "\F2E7";
 
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F78B";
     }
+
     & .tab-btn.delete:hover::before {
-      content: "\F2E8";
-
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
     }
+    
 
     // delete 2
 
@@ -176,20 +262,13 @@
     }
     & .tab-btn.medium {
       font-size: var(--btn-font-medium-size)!important;
-      margin: 0!important;
-      padding: 0!important;
+      margin: 0;
+      padding: 0;
     }
 
     // disabled
 
-    & .tab-btn.disabled {
-      cursor: normal!important;
-      color: var(--disabled)!important; 
-    }
-    & .tab-btn.disabled:hover {
-      cursor: not-allowed;
-      color: var(--disabled)!important; 
-    }
+    
 
     
     

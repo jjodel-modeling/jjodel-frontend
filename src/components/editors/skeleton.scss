@@ -186,6 +186,10 @@
     display: none;
   }
 
+  & section div.command-bar {
+    margin-bottom: 20px!important;
+  }
+
 }
 
 .dock-content-holder #DockComponent_rightbar_8 {
@@ -459,7 +463,7 @@
     overflow-x: scroll;
   }
 
-.view-editor-root .dock-tabpane >*, // universal selector for all view sub-tabs
+.view-editor-root .dock-tabpane >* // universal selector for all view sub-tabs
 // #Dock_in_view_detail0 .page-root, // Apply to
 // #Dock_in_view_detail1 section, // Template
 // #Dock_in_view_detail2 section, // Style
@@ -469,3 +473,23 @@
   margin: 0.7em;
   border-radius: var(--radius);
 }
+
+
+.ms-2.mb-1.my-auto {
+  margin-top: 10px!important;
+  font-size: 1em!important;
+
+}
+
+.my-auto {
+  margin-top: 10px!important
+}
+
+.view-editor-header {
+
+  margin-top: 26px!important;
+  margin-bottom: 6px;
+
+
+}
+
