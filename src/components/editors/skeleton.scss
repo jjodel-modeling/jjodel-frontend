@@ -186,6 +186,10 @@
     display: none;
   }
 
+  & section div.command-bar {
+    margin-bottom: 20px!important;
+  }
+
 }
 
 .dock-content-holder #DockComponent_rightbar_8 {
@@ -487,6 +491,3 @@
 
 }
 
-.path-list {
-  float: right!important;
-}

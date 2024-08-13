@@ -11,6 +11,7 @@ body{
     // btn generic
     --btn-generic: var(--accent);
     --btn-generic-accent: var(--accent);
+    --btn-bg: var(--bg-3);
     
     // btn-up
     --btn-up: var(--terziary);
@@ -25,10 +26,10 @@ body{
     --btn-up-icon-accent: \F125;
 
     // btn-back
-    --btn-back: var(--terziary);
+    --btn-back: var(--bg-5);
     --btn-back-accent: var(--terziary);
-    --btn-back-icon: \F12E;
-    --btn-back-icon-accent: \F12D;
+    --btn-back-icon: \F12F;
+    --btn-back-icon-accent: \F12F;
 
     // btn-fwd
     --btn-up: var(--terziary);
@@ -64,6 +65,11 @@ body{
 
     --input-height: 26px;
     --input-width: 170px;
+
+  // select
+
+    --select-height: 26px;
+    --select-width: 170px;
 
 
 

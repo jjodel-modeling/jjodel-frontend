@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, ReactNode, Ref, RefObject, SyntheticEvent} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, Ref, RefObject, SyntheticEvent, useState, useRef, useEffect} from 'react';
 import {connect} from "react-redux";
 import {useStateIfMounted} from "use-state-if-mounted";
 import tinycolor, {Instance} from "tinycolor2";
@@ -77,6 +77,8 @@ function makeNumericInput(prefix: string, number: NumberControl,
     </>
 }
 
+
+
 // delete button <button className="btn btn-danger ms-1"><i className="p-1 bi bi-trash3-fill"/></button>
 function PaletteDataComponent(props: AllProps) {
     const view = props.view;
@@ -87,6 +89,77 @@ function PaletteDataComponent(props: AllProps) {
 
     const change = (value: string|undefined) => { if(value !== undefined) setCss(value); } // save in local state for frequent changes.
     const blur = () => view.css = css; // confirm in redux state for final state
+
+    /* *** alfonso *** */
+
+
+    function useClickOutside(ref: any, onClickOutside: any) {
+        useEffect(() => {
+          
+            function handleClickOutside(event: Event) {
+                if (ref.current && !ref.current.contains(event.target)) {
+                    onClickOutside();
+                }
+            }
+    
+          // Bind
+    
+          document.addEventListener("mousedown", handleClickOutside);
+          return () => {
+            // dispose
+            document.removeEventListener("mousedown", handleClickOutside);
+          };
+        }, [ref, onClickOutside]);
+    }
+    
+    const AddPalette = () => {
+        const [open,setOpen] = useState(false);
+        const menuRef = useRef(null);
+    
+        useClickOutside(menuRef, () => {
+            setOpen(false);
+        });
+    
+    
+        return (<>
+            {/* {open ?
+                <div className='palette-buttons'>
+                    <button onClick={()=>addControl('palette')} className='btn btn-success my-btn btn-color'>Add palette</button>
+                    <button onClick={()=> addControl('number')} className='btn btn-success my-btn btn-number'>Add number</button>
+                    <button onClick={()=>addControl('text')} className='btn btn-success my-btn btn-textual'>Add text</button>
+                    <button onClick={()=>addControl('path')}className='btn btn-success my-btn btn-path'>Add path</button>
+                </div>
+            :
+                <button onClick={() => setOpen(!open)} className='btn btn-success my-btn'>Add new</button>
+            }*/}
+
+            {!open ?
+                <div className={'add-palette-item'} onClick={() => {setOpen(true)}}>
+                    <i style={{color: 'white'}} className="bi bi-plus"></i> 
+                    <span>Add new</span>
+                </div>
+                :
+                <>
+                    <div className={'add-palette-item active'} onClick={() => {setOpen(false)}}>
+                        <i style={{color: 'white'}} className="bi bi-plus"></i>
+                    </div>
+                    <button onClick={()=>addControl('palette')} className='btn btn-success my-btn btn-color'>Palette</button>
+                    <button onClick={()=> addControl('number')} className='btn btn-success my-btn btn-number'>Number</button>
+                    <button onClick={()=>addControl('text')} className='btn btn-success my-btn btn-textual'>Text</button>
+                    <button onClick={()=>addControl('path')}className='btn btn-success my-btn btn-path'>Path</button>
+                
+                </>
+            }
+        
+        </>);
+    };
+
+    /* *** */
+
+    
+
+
+
 
     const addControl = (type: 'palette' | 'number' | 'text' | 'path') => {
         if (readOnly) return;
@@ -148,6 +221,10 @@ function PaletteDataComponent(props: AllProps) {
         }
         view.palette = palette = tmp;
     }
+    
+
+
+    
     const setGeneric = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>, prefix: string, key: string) => {
         const val: string = e.target.value;
         if (readOnly || (palette[prefix] as any)[key] === val) return;
@@ -273,9 +350,6 @@ function PaletteDataComponent(props: AllProps) {
             <div className="palette-row-container">
                 {/* <button className="btn btn-danger me-1" onClick={()=>removeControl(prefix)} disabled={readOnly}><i className="p-1 bi bi-trash3-fill"/></button>*/}
 
-                {/* <CommandBar>
-                    <Btn icon={'delete'} size={'large'} action={()=>removeControl(prefix)} />
-        </CommandBar>*/}
                 <input className={"prefix"} style={{maxHeight: 'var(--input-height)', borderRadius: 'var(--radius)'}} placeholder={"variable name"} value={prefix} onChange={(e)=> changePrefix(prefix, e.target.value)} disabled={readOnly} />
                 {node}
             </div>)
@@ -291,6 +365,7 @@ function PaletteDataComponent(props: AllProps) {
                 let suggestions = [tinycolor('#ffaaaa')]; // todo: compute according to current row "colors"
                 return palettewrap(prefix, <>
                     <div className="palette-row">
+
                         <div className="color-container" style={{maxHeight: 'var(--input-height)', borderRadius: 'var(--radius)'}}>{
                             colors.map((color, i) => <Color key={prefix+i} readonly={readOnly}
                                                             data={view} field={'palette'} canDelete={!readOnly}
@@ -398,9 +473,6 @@ function PaletteDataComponent(props: AllProps) {
                                                                         </div>
                                                                     </>})()}
                                                                     
-                                                                        {/* <CommandBar style={{marginTop: '20px', width: '100%'}}>
-                                                                            <Btn icon={'delete2'} theme={'dark'} action={()=>removeColor(prefix, i)} />
-                                                                    </CommandBar>*/ }
 
                                                                     <button 
                                                                         className={'btn btn-danger content delete-color mt-2 jj-delete'} 
@@ -431,25 +503,31 @@ function PaletteDataComponent(props: AllProps) {
                     let path: PathControl = entry[1] as any;
                     return palettewrap(prefix,
                         <div className="palette-row path" title={"todo: proper tooltip.\nedgeHeadSize is in the \"Options\" tab and determines the position of the head.\nBasic math operators are allowed, but the minus and plus must have spaces around them or they will be traated as unary operators.\nx and y are variables local to this path used to scale his shape."}>
-                            <div className={"value hoverable"}>
+                            <div className={"value hoverable"} >
                                 <div className={"d-flex w-100"}>
                                     <input className={"value w-100 my-auto"} placeholder={"svg path [d]"} defaultValue={path.value} key={path.value} onBlur={e => {setText(e as any, prefix)}} disabled={readOnly}
                                            onKeyDown={e => {
                                                if (e.key === Keystrokes.enter) setText(e as any, prefix);
-                                               if (e.key === Keystrokes.escape) (e.target as HTMLInputElement).value = path.value; }} />
+                                               if (e.key === Keystrokes.escape) (e.target as HTMLInputElement).value = path.value; }} 
+                                    />
                                 </div>
-                                <div className={"content d-flex"} style={{backgroundColor: 'whitesmoke'}}>
+                                <div className={"content d-flex w-100"} style={{position: 'relative', backgroundColor: 'whitesmoke'}}>
                                     <input className={"spacer w-100"}/>
                                     <label className={"mx-auto"}>x:&nbsp;<input className="x" placeholder={"x"} defaultValue={path.x} disabled={readOnly} onChange={(e)=>setGeneric(e, prefix, "x")}/></label>
                                     <label className={"mx-auto"}>y:&nbsp;<input className="y" placeholder={"y"} defaultValue={path.y} disabled={readOnly} onChange={(e)=>setGeneric(e, prefix, "y")}/></label>
                                 </div>
                             </div>
-                            <select value={path.value} disabled={readOnly} onChange={(e)=>setText(e as any, prefix)}>
+                            <select className={'d-flex'} style={{width: '100px!important'}} value={path.value} disabled={readOnly} onChange={(e)=>setText(e as any, prefix)}>
                                 {[<option style={{fontStyle:'italic', color:'gray'}} value={""}>Custom</option>, path.options.map((e)=>{
                                 let k = e.k;
                                 let v = e.v;
                                 return <option value={v}>{k}</option>
                             })]}</select>
+                            <CommandBar className={'d-flex w-100 float-end'}>
+                                <Btn icon={'space'} />
+                                <Btn icon={"delete"} action={(e) => {}} />
+                            </CommandBar>
+                            
                         </div>)
                 }
             )}
@@ -461,6 +539,11 @@ function PaletteDataComponent(props: AllProps) {
                             {makeNumericInput(prefix, number, setNumber, setText, readOnly)}
                             <input className={"unit"} placeholder={"unit"} value={number.unit} pattern={CSS_Units.pattern} disabled={readOnly}
                                    list={"__jodel_CSS_units"} onChange={e => {setUnit(e as any, prefix)}} />
+
+                            <CommandBar>
+                                <Btn icon={'space'} />
+                                <Btn icon={"delete"} action={(e) => {}} />
+                            </CommandBar>
                         </div>)
                 }
             )}
@@ -473,12 +556,20 @@ function PaletteDataComponent(props: AllProps) {
                                    onKeyDown={e => {
                                        if (e.key === Keystrokes.enter) setText(e as any, prefix);
                                        if (e.key === Keystrokes.escape) (e.target as HTMLInputElement).value = string.value; }} />
+                            <CommandBar>
+                                <Btn icon={'space'} />
+                                <Btn icon={"delete"} action={(e) => {}} />
+                            </CommandBar>
                         </div>)
                 }
             )}
         </div>
 
-        <div className={"w-100"} style={{display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', position: 'relative', zIndex:1}}
+        
+        <AddPalette />
+
+
+        {/* <div className={"w-100"} style={{display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', position: 'relative', zIndex:1}}
              onMouseEnter={(e)=>{ dropDownButton.current?.open()}}
              onMouseLeave={(e)=>{ dropDownButton.current?.close()}}
         >
@@ -493,11 +584,11 @@ function PaletteDataComponent(props: AllProps) {
                             onClick={()=>addControl('path')}>+ Path</button>
                 </div>
             </DropDownButton>
-        </div>
+            </div>*/}
 
         <hr/>
         <Input data={view} field={'cssIsGlobal'} type={"checkbox"} jsxLabel={
-            <span style={{width:'80%', display:'inline-block'}}>
+            <span style={{width:'100%', display:'inline-block'}}>
                 {cssIsGlobal ? <b style={{color: 'inherit', fontWeight:'bold'}}>Global</b> : <b style={{color: 'inherit'}}>Local</b>}
                 {' CSS & LESS Editor '}
                 {cssIsGlobal ? <b style={{color: 'red', fontSize:'0.7em', fontWeight:'bold'}}>Use with caution</b> : ''}
@@ -514,7 +605,7 @@ function PaletteDataComponent(props: AllProps) {
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                     defaultLanguage={'less'} value={vcss} onChange={change}/>
         </div>
-        <div className={"debug"}><div style={{whiteSpace:'pre'}}>{view.compiled_css}</div></div>
+        {false && <div className={"debug"}><div style={{whiteSpace:'pre'}}>{view.compiled_css}</div></div>}
         {/*<textarea>
             '[data-viewid="'+view.id+'"]{\n' +
             Object.entries(palette).flatMap((entry, index, entries)=>{
