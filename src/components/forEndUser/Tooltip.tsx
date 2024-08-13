@@ -20,7 +20,7 @@ import {
     LPointerTargetable,
     Overlap,
     Pointer, store,
-    U, LoggerCategoryState, RuntimeAccessible, Size
+    U, LoggerCategoryState, RuntimeAccessible, Size, Point
 } from '../../joiner';
 import './tooltip.scss';
 import {IPoint, PositionStr, PositionStrTypes} from "../../common/Geom";
@@ -170,7 +170,10 @@ export class Tooltip extends React.Component<AllProps, State> {
 
     onMouseEnter(e?: MouseEvent): void{
         let inline = this.props.inline;
-        Tooltip.show(this.tooltip, this.props.position, inline ? (this.childhtml || undefined) : undefined);
+        let x = this.props.offsetX;
+        let y = this.props.offsetY;
+        let offset: Point | undefined = (x || x === 0) || (y || y === 0) ? new Point(this.props.offsetX || 0, this.props.offsetY || 0) : undefined;
+        Tooltip.show(this.tooltip, this.props.position, inline ? (this.childhtml || undefined) : undefined, -1, offset);
     }
     onMouseLeave(e?: MouseEvent): void{
         Tooltip.hide();
@@ -243,6 +246,8 @@ interface OwnProps {
     children: ReactNode;
     tooltip: ReactNode;
     inline?: boolean;
+    offsetX?: number;
+    offsetY?: number;
     position?: PositionStrTypes;
 }
 interface StateProps {
