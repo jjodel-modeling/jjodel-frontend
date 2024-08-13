@@ -345,7 +345,7 @@ class builder {
                         </select>}
                     </>}
                     <button className={'btn btn-danger m-auto ms-2'} onClick={(evt) => {remove(index, isPtr)}}>
-                        <i className={'p-1 bi bi-trash3-fill'}></i>
+                        <i className={'p-1 bi bi-trash3'}></i>
                     </button>
                 </div>);
 

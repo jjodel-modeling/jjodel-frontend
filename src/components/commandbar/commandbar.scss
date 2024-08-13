@@ -7,7 +7,7 @@
     display: flex;
     left: 0!important;
     margin-bottom: 10px;
-    height: fit-content;
+    height: 24px;
     text-align: left!important;
     border-radius: 0!important;
     border-bottom: 1px dotted var(--bg-3);
@@ -19,7 +19,14 @@
       font-size: var(--btn-font-medium-size)!important;
       background-color: transparent;
       font-family: bootstrap-icon;
-      margin-right: 2px;
+      margin-right: 2px!important;
+
+      // theme
+
+      & .tab-btn.bi.dark  {
+        color: white!important;
+        background-color: transparent!important;
+      }
     }
 
     // up
@@ -66,21 +73,109 @@
     & .tab-btn.back:hover::before {
       content: "\F12D";
     }
+
+    // add
+    
+    & .tab-btn.add {
+      color: var(--neutral)!important;
+    }
+    & .tab-btn.dark.add {
+      color: white!important;
+    }
+    & .tab-btn.add:hover {
+      color: var(--success)!important;
+    }
+    & .tab-btn.add::before {
+      content: "\F4FB";
+
+    }
+    & .tab-btn.add:hover::before {
+      content: "\F4FC";
+
+    }
+
+    // delete
+    
+    & .tab-btn.delete {
+      color: var(--neutral)!important;
+    }
+    & .tab-btn.dark.delete {
+      color: white!important;
+    }
+    & .tab-btn.delete:hover {
+      color: var(--failure)!important;
+    }
+    & .tab-btn.delete::before {
+      content: "\F2E7";
+
+    }
+    & .tab-btn.delete:hover::before {
+      content: "\F2E8";
+
+    }
+
+    // delete 2
+
+    & div.delete2 {
+      margin-left: auto;
+      margin-right: auto;
+      display: block;
+      color: var(--neutral);
+      width: 100%!important;
+      height: var(--input-height);
+      border: 1px solid var(--neutral);
+
+    }
+
+    & div.delete2.dark {
+      position: inherit;
+      display: block;
+      border: 1px solid white;
+      width: 100%;
+      color: white!important;
+    
+    }
+
+
+    & .tab-btn.dark.delete2 {
+      color: white!important;
+    }
+
+    & .tab-btn.delete2:hover {
+      color: var(--failure)!important;
+    }
+
+    & .tab-btn.delete2::before {
+      content: "\F2E7";
+
+    }
+
+    & .tab-btn.delete2:hover::before {
+      content: "\F2E8";
+
+    }
+
+
      
     // sizes
 
-    & .tab-btn .small {
-      font-size: var(--btn-font-small-size);
+    & .tab-btn.x-small {
+      font-size: var(--btn-font-x-small-size)!important; 
       margin: 0!important;
       padding: 0!important;
     }
-    & .tab-btn .large {
-      font-size: var(--btn-font-large-size);
+    & .tab-btn.small {
+      font-size: var(--btn-font-small-size)!important;
       margin: 0!important;
       padding: 0!important;
     }
-    & .tab-btn .medium {
-      font-size: var(--btn-font-medium-size);
+    & .tab-btn.large {
+      font-size: var(--btn-font-large-size)!important;
+      margin: 0!important;
+      padding: 0!important;
+    }
+    & .tab-btn.medium {
+      font-size: var(--btn-font-medium-size)!important;
       margin: 0!important;
       padding: 0!important;
     }
@@ -95,5 +190,22 @@
       cursor: not-allowed;
       color: var(--disabled)!important; 
     }
+
     
+    
+  }
+
+  button.jj-delete {
+    border: 1px solid white!important;
+    height: 1.8rem!important;
+    background-color: transparent!important;
+    margin-top: 20px!important;
+    font-size: 1em;
+    font-weight: 300;
+  }
+
+  button.jj-delete:hover {
+    border: 1px solid var(--failure)!important;
+    background-color: var(--failure)!important;
+    cursor: pointer;
   }

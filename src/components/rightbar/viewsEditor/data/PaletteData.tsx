@@ -30,6 +30,8 @@ import{CSS_Units} from '../../../../view/viewElement/view';
 import {Function} from "../../../forEndUser/FunctionComponent";
 import { Color } from '../../../forEndUser/Color';
 
+import { CommandBar, Btn } from '../../../commandbar/CommandBar';
+
 
 function makeNumericInput(prefix: string, number: NumberControl,
                           setNumber: (e: React.FocusEvent<HTMLInputElement>, prefix: string) => void,
@@ -269,8 +271,12 @@ function PaletteDataComponent(props: AllProps) {
     function palettewrap(prefix: string, node: ReactNode): ReactNode{
         return (
             <div className="palette-row-container">
-                <button className="btn btn-danger me-1" onClick={()=>removeControl(prefix)} disabled={readOnly}><i className="p-1 bi bi-trash3-fill"/></button>
-                <input className={"prefix"} placeholder={"variable name"} value={prefix} onChange={(e)=> changePrefix(prefix, e.target.value)} disabled={readOnly} />
+                {/* <button className="btn btn-danger me-1" onClick={()=>removeControl(prefix)} disabled={readOnly}><i className="p-1 bi bi-trash3-fill"/></button>*/}
+
+                {/* <CommandBar>
+                    <Btn icon={'delete'} size={'large'} action={()=>removeControl(prefix)} />
+        </CommandBar>*/}
+                <input className={"prefix"} style={{maxHeight: 'var(--input-height)', borderRadius: 'var(--radius)'}} placeholder={"variable name"} value={prefix} onChange={(e)=> changePrefix(prefix, e.target.value)} disabled={readOnly} />
                 {node}
             </div>)
     }
@@ -285,7 +291,7 @@ function PaletteDataComponent(props: AllProps) {
                 let suggestions = [tinycolor('#ffaaaa')]; // todo: compute according to current row "colors"
                 return palettewrap(prefix, <>
                     <div className="palette-row">
-                        <div className="color-container">{
+                        <div className="color-container" style={{maxHeight: 'var(--input-height)', borderRadius: 'var(--radius)'}}>{
                             colors.map((color, i) => <Color key={prefix+i} readonly={readOnly}
                                                             data={view} field={'palette'} canDelete={!readOnly}
                                                             getter={()=>colors[i].toHexString()} setter={(newVal) => { setColor(prefix, i, newVal) }}
@@ -295,55 +301,113 @@ function PaletteDataComponent(props: AllProps) {
                                                                 <div className={"content suggestions"} style={{backgroundColor: "inherit"}} onClick={(e) => {e.preventDefault(); e.stopPropagation();}}>
                                                                     {(()=>{ return <>
                                                                         <h6 title={"Alter current color transparency"}>Opacity</h6>
+                                                                        
                                                                         <input style={{width: "auto", marginLeft:"1em", marginRight:"1em"}} type={"range"} min={0} max={1} step={"any"} value={color.getAlpha()} onChange={(e)=>{ transparencyColor(prefix, i, color, +e.target.value) }} />
-                                                                        <h6 onClick={()=>addColor(prefix, color.analogous(7, 30/1.5), i)} title={"Add all the colors"}>➕Analogous</h6>
+                                                                        
+                                                                        <h6 title={"Add all the colors"}>
+                                                                            <CommandBar style={{float: 'left', paddingRight: '8px'}}>
+                                                                                <Btn icon={'add'} size={'x-small'}  action={()=>addColor(prefix, color.analogous(7, 30/1.5), i)} theme={'dark'} />
+                                                                            </CommandBar>
+                                                                            Analogous
+                                                                        </h6>
+                                                                        
                                                                         <div className={"roww"}>
                                                                             {color.analogous(7, 30/1.5).map((c,ii) => ii===0?undefined:
-                                                                                <button style={style(c)} onClick={(e)=>{addColor(prefix, c, i)}} className="btn color-suggestion">+</button>
+                                                                                <button style={style(c)} onClick={(e)=>{addColor(prefix, c, i)}} className="btn color-suggestion"><i style={style(c)} className="bi bi-plus-lg"></i></button>
                                                                             )}
                                                                         </div>{/*
-                                    <h6 onClick={()=>addColor(prefix, color.monochromatic(7), i)} title={"Add all the colors"}>➕Monochromatic</h6>
+                                    <h6 onClick={()=>addColor(prefix, color.monochromatic(7), i)} title={"Add all the colors"}>Monochromatic</h6>
                                     <div className={"roww"}>
                                         {color.monochromatic(7).map((c,ii) => ii===0?undefined: <button style={style(c)}
                                                                                                         onClick={(e)=>{addColor(prefix, c, i)}} className="btn color-suggestion">+</button>)}
                                     </div>{/*[6/12, 5/12, 4/12, 3/12, 2/12, 1/12]*/}
-                                                                        <h6 onClick={()=>addColor(prefix, [1/12, 2/12, 3/12, 4/12, 5/12, 6/12].map(n=>color.clone().lighten(n*100)), i, false)} title={"Add all the colors"}>➕Lighten</h6>
+                                                                        <h6 title={"Add all the colors"}>
+                                                                            <CommandBar style={{float: 'left', paddingRight: '8px'}}>
+                                                                                <Btn icon={'add'} size={'x-small'} theme={'dark'} action={()=>addColor(prefix, [1/12, 2/12, 3/12, 4/12, 5/12, 6/12].map(n=>color.clone().lighten(n*100)), i, false)}/>
+                                                                            </CommandBar>
+                                                                            Lighten
+                                                                        </h6>
+                                                                        
                                                                         <div className={"roww"}>
                                                                             {[1/12, 2/12, 3/12, 4/12, 5/12, 6/12].map(n=>color.clone().lighten(n*100))
                                                                                 .map((c,ii) => <button style={style(c)} className="btn color-suggestion"
-                                                                                                       onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
+                                                                                                       onClick={(e)=>{addColor(prefix, c, i)}}><i style={style(c)} className="bi bi-plus-lg"></i></button>)}
                                                                         </div>
-                                                                        <h6 onClick={()=>addColor(prefix, [6/12, 5/12, 4/12, 3/12, 2/12, 1/12].map(n=>color.clone().darken(n*100)), i, false)} title={"Add all the colors"}>➕Darken</h6>
+
+                                                                        <h6 title={"Add all the colors"}>
+                                                                            <CommandBar style={{float: 'left', paddingRight: '8px'}}>
+                                                                                <Btn icon={'add'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, [6/12, 5/12, 4/12, 3/12, 2/12, 1/12].map(n=>color.clone().darken(n*100)), i, false)}/>
+                                                                            </CommandBar>
+                                                                            Darken
+                                                                            
+                                                                        </h6>
+
                                                                         <div className={"roww"}>
                                                                             {[6/12, 5/12, 4/12, 3/12, 2/12, 1/12].map(n=>color.clone().darken(n*100))
                                                                                 .map((c,ii) => <button style={style(c)} className="btn color-suggestion"
-                                                                                                       onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
+                                                                                                       onClick={(e)=>{addColor(prefix, c, i)}}><i style={style(c)} className="bi bi-plus-lg"></i></button>)}
                                                                         </div>
-                                                                        <h6 onClick={()=>addColor(prefix, [color.complement(), tinycolor(invert(color))], i, false)} title={"Add all the colors"}>➕Complementary / Opposite</h6>
+                                                                        
+                                                                        <h6 title={"Add all the colors"}>
+                                                                            <CommandBar style={{float: 'left', paddingRight: '8px'}}>
+                                                                                <Btn icon={'add'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, [color.complement(), tinycolor(invert(color))], i, false)}/>
+                                                                            </CommandBar>
+                                                                            Complementary / Opposite
+                                                                        </h6>
+                                                                        
                                                                         <div className={"roww"}>
                                                                             <button style={style(color.complement())} className="btn color-suggestion"
-                                                                                    onClick={(e)=>{addColor(prefix, color.complement(), i)}}>+</button>
+                                                                                    onClick={(e)=>{addColor(prefix, color.complement(), i)}}><i style={style(color.complement())} className="bi bi-plus-lg"></i></button>
                                                                             <button style={style(color)} className="btn color-suggestion"
-                                                                                    onClick={(e)=>{addColor(prefix, tinycolor(invert(color)), i)}}>+</button>
+                                                                                    onClick={(e)=>{addColor(prefix, tinycolor(invert(color)), i)}}><i style={style(color)} className="bi bi-plus-lg"></i></button>
                                                                         </div>
-                                                                        <h6 onClick={()=>addColor(prefix, color.splitcomplement(), i)} title={"Add all the colors"}>➕Split Complementary</h6>
+                                                                        
+                                                                        <h6 title={"Add all the colors"}>
+                                                                        <CommandBar style={{float: 'left', paddingRight: '8px'}}>
+                                                                            <Btn icon={'add'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, color.splitcomplement(), i)}/>
+                                                                        </CommandBar>
+                                                                        Split Complementary
+                                                                        </h6>
+                                                                        
                                                                         <div className={"roww"}>
                                                                             {color.splitcomplement().map((c) => <button style={{...style(c)}} className="btn color-suggestion"
-                                                                                                                        onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
+                                                                                                                        onClick={(e)=>{addColor(prefix, c, i)}}><i style={style(c)} className="bi bi-plus-lg"></i></button>)}
                                                                         </div>
-                                                                        <h6 onClick={()=>addColor(prefix, color.triad(), i)} title={"Add all the colors"}>➕Triadic</h6>
+                                                                        
+                                                                        <h6 title={"Add all the colors"}>
+                                                                        <CommandBar style={{float: 'left', paddingRight: '8px'}}>
+                                                                                <Btn icon={'add'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, color.triad(), i)}/>
+                                                                            </CommandBar>
+                                                                            Triadic
+                                                                        </h6>
+                                                                        
                                                                         <div className={"roww"}>
                                                                             {color.triad().map ( (c) => <button style={{...style(c)}} className="btn color-suggestion"
-                                                                                                                onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
+                                                                                                                onClick={(e)=>{addColor(prefix, c, i)}}><i style={style(c)} className="bi bi-plus-lg"></i></button>)}
                                                                         </div>
-                                                                        <h6 onClick={()=>addColor(prefix, color.tetrad(), i)} title={"Add all the colors"}>➕Tetradic</h6>
+                                                                        
+                                                                        <h6 title={"Add all the colors"}>
+                                                                        <CommandBar style={{float: 'left', paddingRight: '8px'}}>
+                                                                                <Btn icon={'add'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, color.tetrad(), i)}/>
+                                                                            </CommandBar>
+                                                                            Tetradic
+                                                                        </h6>
                                                                         <div className={"roww"}>
                                                                             {color.tetrad().map ( (c) => <button style={{...style(c)}} className="btn color-suggestion"
-                                                                                                                 onClick={(e)=>{addColor(prefix, c, i)}}>+</button>)}
+                                                                                                                 onClick={(e)=>{addColor(prefix, c, i)}}><i style={style(c)} className="bi bi-plus-lg"></i></button>)}
                                                                         </div>
                                                                     </>})()}
-                                                                    <button className={'btn btn-danger content delete-color mt-2'} onClick={()=>removeColor(prefix, i)} disabled={readOnly}>
-                                                                        <i className="bi p-1 bi-trash3-fill"/>
+                                                                    
+                                                                        {/* <CommandBar style={{marginTop: '20px', width: '100%'}}>
+                                                                            <Btn icon={'delete2'} theme={'dark'} action={()=>removeColor(prefix, i)} />
+                                                                    </CommandBar>*/ }
+
+                                                                    <button 
+                                                                        className={'btn btn-danger content delete-color mt-2 jj-delete'} 
+                                                                        onClick={()=>removeColor(prefix, i)} 
+                                                                        disabled={readOnly}
+                                                                    >
+                                                                        <i className="bi p-1 bi-trash-fill"/> Delete
                                                                     </button>
                                                                 </div>
                                                             }
@@ -352,7 +416,11 @@ function PaletteDataComponent(props: AllProps) {
                         </div>
                         <div className="suggestion-container">{
                             suggestions.map((c, i) => <label className="p-1">
-                                <button className="btn color-suggestion" style={style(c)} onClick={()=>{addColor(prefix, c)}} disabled={readOnly}>+</button>
+                                <CommandBar>
+                                    <Btn icon={'add'} tip={'Add color to palette'} action={() => addColor(prefix, c)} />
+                                    <Btn icon={'delete'} tip={'Remove color from palette'} action={()=>removeControl(prefix)} />
+                                </CommandBar>
+                                {/* <button className="btn color-suggestion" style={style(c)} onClick={()=>{addColor(prefix, c)}} disabled={readOnly}>+</button>*/}
                             </label>)
                         }</div>
                     </div>

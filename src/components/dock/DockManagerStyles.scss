@@ -68,6 +68,7 @@
             position: relative !important;// rc-dock sets pos:absolute in direct style
             min-height: 75vh;
             min-width: 550px;
+            border: 1px solid red;
         }
         .view-list-elem{
             // min-width: 550px; if you want the whole view editor to match single view size

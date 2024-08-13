@@ -7,6 +7,9 @@ section.page-root{
     padding-top: 0.125em;
     padding-bottom: 0.125em;
     height: 32px;
+    font-size: 1.1em!important;
+    color: var(--color);
+
     &>span{
       margin: auto;
       flex-grow: 1;

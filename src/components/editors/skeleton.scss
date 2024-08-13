@@ -44,7 +44,58 @@
   }
 }
 
+
+/** pseudo fix per editor monaco **/
+
+/* todo per damiano, dopo gli ultimi aggiornamenti, l'editor monaco faceva schifo, gli ho dato una buona sistemata, ma non è perfetto - dacci un'occhiata, tra l'altro non so se questo è il posto migliore dove farlo */
+
+.dock-style-editors .dock-tabpane:has(input) .monaco-editor-wrapper section::before {
+  content: none;
+}
+
+.dock-style-editors .dock-tabpane:has(input) .monaco-editor-wrapper {
+  background-color: white;
+  margin:0;
+  padding:0!important;
+  border-radius:  var(--radius);
+  border: 1px solid var(--color);
+}
+.dock-style-editors .dock-tabpane:has(input) .monaco-editor-wrapper .margin-view-overlays {
+  width: 0px!important;
+  margin:0;
+
+}
+.margin {
+  padding: 0!important;
+  margin: 0!important;
+  width: 30px!important;
+
+}
+.line-numbers {
+
+  margin: 0!important;
+  width: 20px!important;
+}
+.monaco-scrollable-element {
+ 
+  left: 30px!important;
+}
+.view-lines.monaco-mouse-cursor-text {
+  width: 100%!important;
+}
+.current-line.current-line-margin-both {
+  width: 31px!important;
+}
+
+.dock-style-editors .dock-tabpane:has(input) .monaco-editor-wrapper section {
+  background-color: white;
+  padding: 0;
+}
+
+/** fine **/
+
 .dock-style-editors .dock-tabpane:has(input) section::before {
+
   display:block;
   width: 100%;
   font-size: 1.5em;
@@ -54,6 +105,7 @@
   border-bottom: 1px dotted var(--bg-3);
   padding-bottom: 0.5rem;
   margin-bottom: 0.5rem;
+  
 
 }
 
@@ -136,18 +188,6 @@
 
 }
 
-
-
-.dock-content-holder #DockComponent_rightbar_5 {
-
-  // Node
-
-
-}
-
-
-
-
 .dock-content-holder #DockComponent_rightbar_8 {
 
   // Logger
@@ -156,7 +196,7 @@
 
   }
 
-/* ackup
+/* backup
 .dock-style-editors .dock-tabpane  section {
 
   color: var(--color);
@@ -271,7 +311,7 @@
   // Tree View
 
   & section {
->>>>>>> 0f8cdd926545458d69cf88545cafc4561e1c8209
+
   }
 
   & section:has(section) section {
@@ -418,3 +458,35 @@
   .dock-style-models .dock-tabpane {
     overflow-x: scroll;
   }
+
+
+#Dock_in_view_detail0 .page-root, // Apply to
+#Dock_in_view_detail1 section, // Template 
+#Dock_in_view_detail2 section, // Style 
+#Dock_in_view_detail3 section, // Events
+  #Dock_in_view_detail4 section { // Options
+  margin: 0.7em;
+  border-radius: var(--radius);
+}
+
+.ms-2.mb-1.my-auto {
+  margin-top: 10px!important;
+  font-size: 1em!important;
+
+}
+
+.my-auto {
+  margin-top: 10px!important
+}
+
+.view-editor-header {
+
+  margin-top: 26px!important;
+  margin-bottom: 6px;
+
+
+}
+
+.path-list {
+  float: right!important;
+}

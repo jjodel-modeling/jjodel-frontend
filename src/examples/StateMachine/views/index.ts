@@ -101,6 +101,7 @@ export class StateMachine_Views {
                 'padding':'4px 2px 4px 2px'
             }}>
                 {data.instanceof.name}:<b className={'ms-1'}>{data.$name.value}</b>
+                
                 <button className={'ms-1 circle btn btn-primary p-0'} onClick={e => {
                     const dObject = data.model.addObject({}, command.id);
                     const lObject = LObject.fromD(dObject);

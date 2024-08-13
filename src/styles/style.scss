@@ -201,9 +201,7 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
 }
 
 .monaco-editor-wrapper {
-  margin: 5px;
-  background: white;
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 
 label.jj-editor-title {

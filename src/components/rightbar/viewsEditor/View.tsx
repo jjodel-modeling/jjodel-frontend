@@ -13,6 +13,8 @@ import {FakeStateProps, Overlap} from "../../../joiner/types";
 import {connect} from "react-redux";
 import PaletteData from "./data/PaletteData";
 import GenericNodeData from "./data/GenericNodeData";
+
+import { CommandBar, Btn } from '../../commandbar/CommandBar';
 import "./view.scss";
 
 const tabidprefix = "Dock_in_view_detail";
@@ -64,9 +66,12 @@ function ViewDataComponent(props: AllProps) {
 
     return(<div className={"view-editor-root"}>
         {<div className={'view-editor-header'}>
-            <button className={'bg btn-back'} onClick={ () => props.setSelectedView(undefined)}>
+            <CommandBar>
+                <Btn icon={'back'} action={() => props.setSelectedView(undefined)} />
+            </CommandBar>
+            {/* <button className={'bg btn-back'} onClick={ () => props.setSelectedView(undefined)}>
                 <i className={'p-1 bi bi-arrow-left'}></i>
-            </button>
+        </button>*/}
             <div className={"path-list"}>{
                 (viewChain.map(v => <>
                     <div className={"path-element"} onClick={()=>props.setSelectedView(v.id)}>

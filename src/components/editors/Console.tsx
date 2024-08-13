@@ -290,6 +290,10 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                         s = s.substring('Result'.length).trim();
                         U.clipboardCopy(s, ()=> Tooltip.show('Content copied to clipboard', undefined, undefined, 2));
                     }} title={'Copy in the clipboard'} className="bi bi-clipboard-plus" />
+                    <i onClick={(e) => {alert('torna indietro')}} title={'Copy in the clopboard'} className="bi bi-arrow-left-square"></i>
+
+                    {/* todo per damiano: per la funzione 'torna indietro', si tratta di annullare l'ultimo inserimento, per esempio se clicco su data e poi length, nella console
+                    avrei 'data.length', cliccando sul back nella consol avrei 'data' */}
                 </div>
                 <textarea id={'console'} spellCheck={false} className={'p-0 input w-100'} onChange={this.change} value={this.state.expression} ></textarea>
 

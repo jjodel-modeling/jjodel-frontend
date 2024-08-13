@@ -42,8 +42,14 @@
         margin-left: 0.3rem;
         display: block;
         font-family: 'Inter Tight', sans-serif;
-        font-size: 13px;
-        font-weight: 400;
+        font-size: 1.1em;
+        font-weight: 300;
+    }
+
+    .toolbar-section-label::before {
+      font-family: bootstrap-icons;
+      content: "";
+      padding-right: 0px;
     }
 
 
@@ -115,7 +121,12 @@
     // border-left: 2px solid;
   }
 
+  & .my-auto {
+    font-family: "Inter Tight", sans-serif;
+    font-weight: 200;
 
+    margin: 5px 10px 5px 10px!important;
+  }
 }
 
 hr.my-1{
@@ -129,7 +140,7 @@ hr.my-1{
 .element-icon {
   font-size: 0.9em;
   display: block;
-  width: 22px!important;
+  width: 23px!important;
   height: 20px!important;
   border: 1px solid white;
   border-radius: 24px;

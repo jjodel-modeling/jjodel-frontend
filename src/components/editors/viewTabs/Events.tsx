@@ -2,6 +2,8 @@ import {GObject, LViewElement, U} from "../../../joiner";
 import JsEditor from "../../rightbar/jsEditor/JsEditor";
 import React from "react";
 
+import { CommandBar, Btn } from "../../commandbar/CommandBar";
+
 type Props = {view: LViewElement};
 function ViewEvents(props: Props): JSX.Element {
     const {view} = props;
@@ -31,7 +33,9 @@ function ViewEvents(props: Props): JSX.Element {
             <b style={{fontSize: '1.25em'}}>Custom Events</b>
             <button className={'btn btn-primary ms-auto'} onClick={addEvent} disabled={readOnly}>
                 <i className={'p-1 bi bi-plus'} />
-            </button>
+    </button>
+
+            
         </div>
         <hr className={'my-1'} />
         {Object.keys(dview.events).map((k) => {
