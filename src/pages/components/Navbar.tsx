@@ -10,7 +10,7 @@ import {
     LUser,
     SetRootFieldAction,
     Selectors,
-    U
+    U, LPointerTargetable
 } from '../../joiner';
 
 import {icon} from '../components/icons/Icons';
@@ -33,7 +33,7 @@ import DebugImage from "../../static/img/debug.png";
 import jj from '../../static/img/jj-k.png';
 
 const createM2 = (project: LProject) => {
-    let name = 'metamodel_' + 0;
+    let name = 'metamodel_' + 1;
     let names: string[] = Selectors.getAllMetamodels().map(m => m.name);
     name = U.increaseEndingNumber(name, false, false, newName => names.indexOf(newName) >= 0)
     const dModel = DModel.new(name, undefined, true);
@@ -48,7 +48,7 @@ const createM2 = (project: LProject) => {
 }
 
 const createM1 = (project: LProject, metamodel: LModel) => {
-    let name = 'model_' + 0;
+    let name = 'model_' + 1;
     let modelNames: (string)[] = metamodel.models.map(m => m.name);
     name = U.increaseEndingNumber(name, false, false, newName => modelNames.indexOf(newName) >= 0);
     const dModel: DModel = DModel.new(name, metamodel.id, false, true);
@@ -123,55 +123,62 @@ function NavbarComponent(props: AllProps) {
     const [focussed, setFocussed] = useState('');
     const [clicked, setClicked] = useState('');
 
-    const project: LProject = props.project as LProject;
+    const project = props.project;
 
     // const menuType = "normal";
 
     const Key = Keystrokes;
-    const projectItems: MenuEntry[] = [
+    let projectItems: MenuEntry[] = [];
+    if (project){
+        projectItems = [
 
-        {name: 'New metamodel', icon: icon['new'], function: ()=>createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
-        {name: 'New model', icon: icon['new'], function: () => {}, keystroke: []},
-        {name: 'divisor', function: () => {}, keystroke: []},
-        {name: 'Close project', icon: icon['close'], function: () => {window.location = window.location.origin + '/#/allProjects' as any; U.refresh(); }, keystroke: [Key.cmd, 'Q']},
-        {name: 'divisor', function: () => {}, keystroke: []},
-        {name: 'Undo', icon: icon['undo'], function: () => {}, keystroke: [Key.cmd, 'Z']},
-        {name: 'Redo', icon: icon['redo'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
-        {name: 'divisor', function: () => {}, keystroke: []},
-        {name: 'Save', icon: icon['save'], function: () => {project && ProjectsApi.save(project)}, keystroke: [Key.cmd, 'S']},
-        {name: 'Save as', icon: icon['save'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'S']},
-        {name: 'divisor', function: () => {}, keystroke: []},
-        {name: 'Import...', icon: icon['import'], function: () => {}, keystroke: []},
-        {name: 'Export as...', icon: icon['export'], function: () => {}, keystroke: []},
-        {name: 'divisor', function: () => {}, keystroke: []},
+            {name: 'New metamodel', icon: icon['new'], function: ()=>createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
+            {name: 'New model', icon: icon['new'],
+                subItems: project.metamodels.map((m2, i)=>({
+                    name: m2.name, function: () => { createM1(project, m2) }, keystroke: []
+                }))
+            },
+            {name: 'divisor', function: () => {}, keystroke: []},
+            {name: 'Close project', icon: icon['close'], function: () => {window.location = window.location.origin + '/#/allProjects' as any; U.refresh(); }, keystroke: [Key.cmd, 'Q']},
+            {name: 'divisor', function: () => {}, keystroke: []},
+            {name: 'Undo', icon: icon['undo'], function: () => {}, keystroke: [Key.cmd, 'Z']},
+            {name: 'Redo', icon: icon['redo'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
+            {name: 'divisor', function: () => {}, keystroke: []},
+            {name: 'Save', icon: icon['save'], function: () => {project && ProjectsApi.save(project)}, keystroke: [Key.cmd, 'S']},
+            {name: 'Save as', icon: icon['save'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'S']},
+            {name: 'divisor', function: () => {}, keystroke: []},
+            {name: 'Import...', icon: icon['import'], function: () => {}, keystroke: []},
+            {name: 'Export as...', icon: icon['export'], function: () => {}, keystroke: []},
+            {name: 'divisor', function: () => {}, keystroke: []},
 
-        {name: 'View', icon: icon['view'],
-            subItems: [
-                {name: 'Show dot grid', icon: icon['grid'], function: async() => {}, keystroke: []},
-                {name: 'divisor', function: async() => {}, keystroke: []},
-                {name: 'Maximize editor', icon: icon['maximize'], function: async() => {}, keystroke: []},
-                {name: 'divisor', function: async() => {}, keystroke: []},
-                {name: 'Zoom in', icon: icon['zoom-in'], function: async() => {}, keystroke: [Key.cmd, '+']},
-                {name: 'Zoom out', icon: icon['zoom-out'], function: async() => {}, keystroke: [Key.cmd, '-']},
-                {name: 'Zoom to 100%', function: async() => {}, keystroke: [Key.cmd, '0']},
-            ],
-            keystroke: []
-        },
-        {name: 'divisor', function: async() => {}, keystroke: []},
-        {name: 'Help', icon: icon['help'], subItems: [
-            {name: 'What\'s new', icon: icon['whats-new'], function: async() => {}, keystroke: []},
+            {name: 'View', icon: icon['view'],
+                subItems: [
+                    {name: 'Show dot grid', icon: icon['grid'], function: async() => {}, keystroke: []},
+                    {name: 'divisor', function: async() => {}, keystroke: []},
+                    {name: 'Maximize editor', icon: icon['maximize'], function: async() => {}, keystroke: []},
+                    {name: 'divisor', function: async() => {}, keystroke: []},
+                    {name: 'Zoom in', icon: icon['zoom-in'], function: async() => {}, keystroke: [Key.cmd, '+']},
+                    {name: 'Zoom out', icon: icon['zoom-out'], function: async() => {}, keystroke: [Key.cmd, '-']},
+                    {name: 'Zoom to 100%', function: async() => {}, keystroke: [Key.cmd, '0']},
+                ],
+                keystroke: []
+            },
             {name: 'divisor', function: async() => {}, keystroke: []},
-            {name: 'Homepage', icon: icon['home'], function: async() => {}, keystroke: []},
-            {name: 'Getting started', icon: icon['getting-started'], function: async() => {}, keystroke: []},
-            {name: 'User guide', icon: icon['manual'], function: async() => {}, keystroke: []},
-            {name: 'divisor', function: async() => {}, keystroke: []},
-            {name: 'Legal terms', icon: icon['legal'], function: async() => {}, keystroke: []}
-        ],
-        keystroke: []},
-        {name: 'About jjodel', icon: icon['jjodel-dark'], function: async() => {}, keystroke: []}
+            {name: 'Help', icon: icon['help'], subItems: [
+                    {name: 'What\'s new', icon: icon['whats-new'], function: async() => {}, keystroke: []},
+                    {name: 'divisor', function: async() => {}, keystroke: []},
+                    {name: 'Homepage', icon: icon['home'], function: async() => {}, keystroke: []},
+                    {name: 'Getting started', icon: icon['getting-started'], function: async() => {}, keystroke: []},
+                    {name: 'User guide', icon: icon['manual'], function: async() => {}, keystroke: []},
+                    {name: 'divisor', function: async() => {}, keystroke: []},
+                    {name: 'Legal terms', icon: icon['legal'], function: async() => {}, keystroke: []}
+                ],
+                keystroke: []},
+            {name: 'About jjodel', icon: icon['jjodel-dark'], function: async() => {}, keystroke: []}
 
 
-    ];
+        ];
+    }
 
     const dashboardItems: MenuEntry[] = [
 
@@ -203,7 +210,7 @@ function NavbarComponent(props: AllProps) {
         {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {}, keystroke: [Key.cmd, 'Q']}
     ];
 
-    let itemsToRegister: MenuEntry[] = [...dashboardItems/*, ...projectItems*/];
+    let itemsToRegister: MenuEntry[] = [...dashboardItems, ...projectItems];
     Keystrokes.register('#root', Object.values(itemsToRegister));
 
     type MenuProps = { items: MenuEntry[] }
@@ -269,8 +276,8 @@ function NavbarComponent(props: AllProps) {
             <User /> {/* aggiungere utente loggato */}
         </nav>
 
-        {clicked === 'new.metamodel' && <MetamodelPopup {...{project, setClicked}} />}
-        {clicked === 'new.model' && <ModelPopup {...{metamodels, project, setClicked}} />}
+        {project && clicked === 'new.metamodel' && <MetamodelPopup {...{project, setClicked}} />}
+        {project && clicked === 'new.model' && <ModelPopup {...{metamodels, project, setClicked}} />}
     </>);
 }
 

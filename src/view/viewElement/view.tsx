@@ -729,7 +729,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     adaptWidth!: boolean;
     __info_of__adaptWidth: Info = {isNode:true, type: ShortAttribETypes.EBoolean, label:"adapt width",
-        txt: 'Whether the element should expand his width to accomodate his own contents.'}
+        txt: '@'}
+        // txt: 'Whether the element should expand his width to accomodate his own contents.'}
 
     adaptHeight!: boolean;
     __info_of__adaptHeight: Info = {isNode:true, type: ShortAttribETypes.EBoolean, label:"adapt height",
@@ -1224,9 +1225,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 if (vp?.storeSize) return vp.updateSize(id, size);
                 return false;
             }
-            let vsize: EPSize = (context.data.size[id] || vp?.__raw.size[id]) as EPSize;
+            let vsize: EPSize = (context.data.size[id] || vp?.__raw.size[id]) as EPSize || {} as any;
             let newSize: EPSize = new GraphSize() as EPSize;
-            if (size.currentCoordType === vsize.currentCoordType) { // if samecoord system mix them.
+            console.log({vsize, newSize, size, vp, d:context.data})
+            if (size.currentCoordType === vsize?.currentCoordType) { // if samecoord system mix them.
                 newSize.x = size?.x !== undefined ? size.x : vsize.x;
                 newSize.y = size?.y !== undefined ? size.y : vsize.y;
             } else if (size.x !== undefined && size.y !== undefined) { // if different coord system pick all of size
@@ -1261,9 +1263,11 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             if (typeof id === "object") id = (id as any).id;
             let view = context.data;
             let ret: GraphSize;
+            console.log('vvv', {view, context, id});
             if (view.storeSize){
                 ret = view.size[id];
-                if(ret) return ret; }
+                if (ret) return ret;
+            }
             let vp = context.proxyObject.viewpoint;
             if (vp && view.id !== vp.id && vp.storeSize){
                 ret = vp.size[id];

@@ -55,9 +55,10 @@
     font-family: Lekton, monospace;
     font-size: 1.3em;
     content: ">";
-    top: 1.25rem;
+    top: calc(1.25rem - 1px);
     left: 0.75rem;
-    width: 100%!important;
+    // width: 100%!important;
+    pointer-events: none;
 
   }
 
@@ -87,9 +88,11 @@
     height: fit-content;
     border-top: 1px solid var(--bg-3-1);
     font-size: 1.2em;
+    pointer-events: none;
   }
 
   .console-terminal .commands .bi {
+    pointer-events: all;
     color: var(--btn-generic);
     margin-left: 5px;
   }

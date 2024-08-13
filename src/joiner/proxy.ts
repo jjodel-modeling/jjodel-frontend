@@ -25,7 +25,6 @@ type ERROR = "_Type_Error_";
 // ))
 // type WtoL<WX extends WPointerTargetable> ='';
 
-const childrenKeys = ["@", "$"];
 @RuntimeAccessible('LogicContext')
 export class LogicContext<
     DX extends GObject = DModelElement,
@@ -187,6 +186,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     additionalPath: string;
 
     public baseObjInLookup: DPointerTargetable;
+    static childKeys: Dictionary<string, true> = {'$': true, '@': true};
 
     constructor(d: ME, baseObjInLookup?: DPointerTargetable, additionalPath: string = '', l?: LE) {
         super();
@@ -240,6 +240,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         switch(typeof propKey) {
             case "symbol":
                 propKey = String(propKey);
+                console.log('get symbol', {propKey});
                 switch (propKey) {
                     default: Log.exDevv('unexpected symbol in proxy getter:', propKey); break;
                     case 'Symbol(Symbol.toStringTag)': propKey = 'toString'; break; //return (()=>"[Proxy]");

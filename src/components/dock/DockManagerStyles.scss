@@ -28,6 +28,10 @@
     flex-flow: column;
     flex-grow:1;
 
+    --content-border-opposite: none;
+    --content-border-side: 1px solid gray;
+    --content-border-main: 1px solid gray;
+
     //.dock:hover{overflow: visible;}
 
     .pinnable-strip{
@@ -38,6 +42,25 @@
         --footer-h: 28px;
         position: relative;
         background-color: whitesmoke;
+        display: flex;
+        &>.bi{
+            margin: auto 0.5ric;
+            position: absolute;
+            z-index: 1;
+            width: 1ric;
+            height: 31px;
+            display: flex;
+            &::before{
+                margin: auto;
+            }
+        }/*
+        .dock-layout{
+            width: 0;
+            flex-grow: 1;
+        }*/
+        .dock-nav-list{
+            margin-left: 1.5ric;
+        }
         &.empty{
             display: none;
         }
@@ -150,7 +173,7 @@
     .dock-tab:hover .pin-button{
         display: inline;
         margin-left: .5em;
-        pointer-events: all; 
+        pointer-events: all;
     }
     .dock-content-holder{
         .ui-resizable-handle {
@@ -167,8 +190,8 @@
 
         position: absolute;
         z-index: 999;
-        min-height: 150px; // max-content does not work for height, because it is the "inline" content size, and inline only grows horizontally. max-content;
-        min-width: max-content; // max(max-content, 50px);
+        // min-height: 150px; // max-content does not work for height, because it is the "inline" content size, and inline only grows horizontally. max-content;
+        // min-width: max-content; // max(max-content, 50px);
         --safetymargin: 0px;
         pointer-events: all;
         max-width: calc(100vw - 0 * var(--pinnable-strip-w) - var(--safetymargin));
@@ -343,15 +366,36 @@
         .dock-content-holder{
             transform: translateZ(1px) scaleY(1) !important;
             transition: transform .3s ease-out;
+            left: unset !important; // override jqui
             opacity: 1;
         }
     }
+    &.pinned{
+         transform-style: preserve-3d;
+         .dock-content-holder{
+             transform: translateZ(0.1px) scaleY(1) !important;
+             transition: transform .3s ease-out;
+             left: unset !important; // override jqui
+             opacity: 1;
+         }
+     }
 }
+
+.pinnable-strip{
+    .dock-content-holder{
+        border: var(--content-border-side);
+    }
+}
+
 .pinnable-strip-t{
     .dock-content-holder{
         transform-origin: top;
-        border-top: none;
         top: calc(var(--pinnable-strip-h) - 3px);
+        border-bottom: var(--content-border-main);
+        border-top: var(--content-border-opposite);
+    }
+    .dock-content{
+        padding-bottom: 10px; // resize bar is 20px, but i allow some overlap
     }
 }
 .pinnable-strip-b{
@@ -359,6 +403,11 @@
         transform-origin: bottom;
         border-bottom: none;
         bottom: calc(var(--pinnable-strip-h) - 3px);
+        border-top: var(--content-border-main);
+        border-bottom: var(--content-border-opposite);
+    }
+    .dock-content{
+        padding-top: 10px; // resize bar is 20px, but i allow some overlap
     }
 }
 
@@ -368,6 +417,7 @@
     .dock-content-holder {
         // override inline-style set by my js to make dynamic panel size float near the tab, now they occupy all the height/width
         top: 0 !important; //calc( -1 * var(--pinnable-strip-h)) !important;
+        left: unset !important; // override jqui
         transform: translateZ(1px) scaleX(0);
         // height: 100vh;
         width: 33vw;
@@ -387,6 +437,14 @@
             opacity: 1;
         }
     }
+    &.pinned{
+          transform-style: preserve-3d;
+          .dock-content-holder{
+              transform: translateZ(0.1px) scaleX(1) !important;
+              transition: transform .3s ease-out;
+              opacity: 1;
+          }
+      }
     .dock-nav{
         transform: translateX(23px) rotate(90deg);
         // transform: translateX(calc(var(--pinnable-strip-h) - 2px)) rotate(90deg);
@@ -400,10 +458,14 @@
 .pinnable-strip-l{
     .dock-content-holder{
         transform-origin: left;
-        border-left: none;
-        left: calc(var(--pinnable-strip-w) - 2px);
+        border-left: var(--content-border-opposite);
+        border-right: var(--content-border-main);
+        left: calc(var(--pinnable-strip-w) - 2px) !important;
     }
 
+    .dock-content{
+        padding-right: 10px; // resize bar is 20px, but i allow some overlap
+    }
     .dock-nav-wrap{
         transform: translate(-0px, 2px) scaleY(-1);
         .active-on-mouseenter{
@@ -413,8 +475,13 @@
 }
 .pinnable-strip-r{
     .dock-content-holder{
-        border-right: none;
+        transform-origin: right;
+        border-right: var(--content-border-opposite);
+        border-left: var(--content-border-main);
         right: calc(var(--pinnable-strip-w) - 2px);
+    }
+    .dock-content{
+        padding-left: 10px; // resize bar is 20px, but i allow some overlap
     }
 }
 .pinnable-dock-middle-strip{

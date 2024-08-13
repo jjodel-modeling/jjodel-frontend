@@ -21,6 +21,7 @@ import './console.scss'; // <-- stile di questa tab
 import ReactDOM from "react-dom";
 import { useStateIfMounted } from 'use-state-if-mounted';
 import {Empty} from "./Empty";
+import {Tooltip} from "../forEndUser/Tooltip";
 
 var Convert = require('ansi-to-html');
 
@@ -148,6 +149,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         }}>{k}{arr && arr[k] ? <>:{arr[k]}</> : undefined}</li>;
     }
 
+    outputhtml: HTMLElement | null = null;
     render(){
         /*const [expression, setExpression] = useStateIfMounted('data');
         const [output, setOutput] = useStateIfMounted('');*/
@@ -280,17 +282,26 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 <span>On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}</span>
             </label>
             <div className='console-terminal p-0 mb-2 w-100'>
-                <div className='commands'><i onClick={(e) => {alert('clear console')}} title={'Empty console'} className="bi bi-slash-circle"></i><i title={'Copy in the clopboard'} className="bi bi-clipboard-plus"></i></div>
-                {/* todo per damiano: aggiungere la funzione per cancellare il contenuto della console e la funzione per copiare il contenuto nella clipboard */}
+                <div className='commands'>
+                    <i onClick={(e) => { this.setState({expression:''})} } title={'Empty console'} className="bi bi-slash-circle" />
+                    <i onClick={(e) => {
+                        if (!this.state.expression.trim()) { return Tooltip.show('Nothing to copy', undefined, undefined, 2); }
+                        let s = this.outputhtml?.innerText || '';
+                        s = s.substring('Result'.length).trim();
+                        U.clipboardCopy(s, ()=> Tooltip.show('Content copied to clipboard', undefined, undefined, 2));
+                    }} title={'Copy in the clipboard'} className="bi bi-clipboard-plus" />
+                </div>
                 <textarea id={'console'} spellCheck={false} className={'p-0 input w-100'} onChange={this.change} value={this.state.expression} ></textarea>
 
             </div>
 
             {/*<label>Query {(this.state.expression)}</label>*/}
             <hr className={'mt-1 mb-1'} />
-            { this.state.expression &&  ashtml && <div className={"console-output-container console-msg"} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
+            { this.state.expression &&  ashtml && <div className={"console-output-container console-msg"}
+                        ref={(e)=>this.outputhtml = e} dangerouslySetInnerHTML={ashtml ? { __html: outstr as string} : undefined} /> }
 
-            { this.state.expression && !ashtml && <div className={"console-output-container console-msg"} style={{whiteSpace:"pre"}}>{ outstr }</div>}
+            { this.state.expression && !ashtml && <div className={"console-output-container console-msg"}
+                        ref={(e)=>this.outputhtml = e} style={{whiteSpace:"pre"}}>{ outstr }</div>}
 
             {shortcutsjsx && <><h4>Shortcuts</h4><section className='group shortcuts-container'>{shortcutsjsx}</section></>}
             <label className={"context-keys mt-2"}>Context keys</label>
