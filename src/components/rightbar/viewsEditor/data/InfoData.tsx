@@ -33,7 +33,8 @@ function InfoDataComponent(props: AllProps) {
             {objectTypes.map((o)=><option key={o} value={o}>{o ? o.substring(1) : 'anything'}</option>)}
     </optgroup>;
 
-    return(<section className={'page-root'}>
+    return(<section className={'page-root properties-tab'}>
+        <h1>{view.name}</h1>
         <Input data={view} field={'name'} label={'Name:'} readonly={readOnly}/>
         <Input data={view} field={'isExclusiveView'} label={'Is Exclusive:'} type={"checkbox"} readonly={readOnly}
                //setter={(val) => { view.isExclusiveView = !val}}

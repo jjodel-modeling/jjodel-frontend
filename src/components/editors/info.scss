@@ -1,3 +1,184 @@
 section {
   padding: .5rem; // p-2
 }
+
+.properties-tab h1 {
+  width: 100%!important;
+  display: block;
+  clear: right!important;
+  font-size: 1.1em;
+  color: var(--accent);
+  padding-bottom: 0.5em;
+  border-bottom: 1px solid var(--bg-2-5);
+  margin-bottom: 1em;
+
+  &::before {
+    position: relative;
+    top: 2px;
+    font-size: 1.15em;
+    margin-right: var(--tab-sep);
+    font-family: bootstrap-icons;
+    content: "\F789";
+  }
+}
+
+.template-tab h1 {
+  width: 100%!important;
+  display: block;
+  clear: right!important;
+  font-size: 1.1em;
+  color: var(--accent);
+  padding-bottom: 0.5em;
+  border-bottom: 1px solid var(--bg-2-5);
+  margin-bottom: 1em;
+
+  &::before {
+    position: relative;
+    top: 2px;
+    font-size: 1.15em;
+    margin-right: var(--tab-sep);
+    font-family: bootstrap-icons;
+    content: "\F2C7";
+  }
+}
+
+.style-tab h1 {
+  width: 100%!important;
+  display: block;
+  clear: right!important;
+  font-size: 1.1em;
+  color: var(--accent);
+  padding-bottom: 0.5em;
+  border-bottom: 1px solid var(--bg-2-5);
+  margin-bottom: 1em;
+
+  &::before {
+    position: relative;
+    top: 2px;
+    font-size: 1.15em;
+    margin-right: var(--tab-sep);
+    font-family: bootstrap-icons;
+    content: "\F66D";
+  }
+}
+
+.events-tab {
+
+  & h1 {
+  width: 100%!important;
+  display: block;
+  clear: right!important;
+  font-size: 1.1em;
+  color: var(--accent);
+  padding-bottom: 0.5em;
+  border-bottom: 1px solid var(--bg-2-5);
+  margin-bottom: 1em;
+  }
+
+  & h2 {
+    font-size: 1em;
+    color: var(--accent);
+  }
+  & h1::before {
+    position: relative;
+    top: 2px;
+    font-size: 1.15em;
+    margin-right: var(--tab-sep);
+    font-family: bootstrap-icons;
+    content: "\F18A";
+  }
+}
+
+.options-tab {
+
+  & h1 {
+  width: 100%!important;
+  display: block;
+  clear: right!important;
+  font-size: 1.1em;
+  color: var(--accent);
+  padding-bottom: 0.5em;
+  border-bottom: 1px solid var(--bg-2-5);
+  margin-bottom: 1em;
+  }
+
+  & h2 {
+    font-size: 1em;
+    color: var(--accent);
+  }
+  & h1::before {
+    position: relative;
+    top: 2px;
+    font-size: 1.15em;
+    margin-right: var(--tab-sep);
+    font-family: bootstrap-icons;
+    content: "\F5D9";
+  }
+
+  
+
+  .options-field {
+
+    padding-left: 0;
+    font-size: 1em;
+
+  
+    & h5 {
+
+      color: var(--accent);
+      margin-left: 0;
+      padding-left: 0;
+      font-size: 1.2em;
+    }
+    
+  }
+
+}
+
+.node-editor {
+  
+  & h3::before {
+    position: relative;
+    top: 2px;
+    font-size: 1.15em;
+    margin-right: var(--tab-sep);
+    font-family: bootstrap-icons;
+    content: "\F2EC"!important; // geo-alt F3E8, capsule F7DF, code slash F2C6, diagram2 F2EC, disc F2FF, gear F3E3, hand index F403, window F620
+  }
+
+  & h6 {
+    position: relative;
+    font-size: 1.1em;
+    color: var(--accent)!important;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    height: 2em;
+  }
+
+  .sub-element:last-of-type {
+    padding-bottom: 10px;
+  }
+
+  .object-state {
+    border: 1px solid var(--bg-3);
+    background-color: var(--bg-1-1);
+    border-radius: var(--radius);
+    padding: 0.5em;
+    font-family: Lekton;
+  }
+  
+} 
+  
+
+  
+
+
+
+
+
+
+
+
+.page-root.properties-tab h1 {
+  margin-top: 9px;
+}

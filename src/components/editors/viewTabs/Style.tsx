@@ -266,6 +266,7 @@ function ViewStyle(props: Props): JSX.Element {
     }
 
     return(<>
+
         <div className={"controls"} style={{position:'relative', zIndex:2}}>
             {Object.entries(palettes.color).map((entry, index, entries)=>{
                 let prefix = entry[0];
@@ -447,6 +448,7 @@ function ViewStyle(props: Props): JSX.Element {
         </div>
 
         <hr/>
+
         <div className={'input-container'}>
             <b className={'me-2'}>Global CSS:</b>
             <Input data={view} field={'cssIsGlobal'} type={'checkbox'}

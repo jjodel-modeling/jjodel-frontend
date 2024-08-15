@@ -18,7 +18,8 @@ function TemplateData(props: AllProps) {
     const readOnly = props.readonly;
 
     return(<>
-        <section className={'p-3'}>
+        <section className={'p-3 template-tab'}>
+            <h1>{props.view.name}</h1>
             {/*<TextArea data={view} field={"constants"} label={"Constants"}  readonly={readOnly} />*/}
             {/*<TextArea data={view} field={"preRenderFunc"} label={"PreRender Function"}  readonly={readOnly} />*/}
             <JsxEditor viewid={view.id}  readonly={readOnly} />
