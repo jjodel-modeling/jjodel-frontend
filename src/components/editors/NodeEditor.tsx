@@ -185,14 +185,19 @@ function NodeEditorComponent(props: AllProps) {
             )}
             </div>*/}
 
-        {subElements.length && <div>
+            {subElements.length > 0 && <div>
             <h6 style={{display: 'flex'}}>
-                Sub elements <CommandBar style={{paddingLeft: 'var(--tab-sep)', bottom: '3px'}}><Btn icon={'down'} action={(e)=> {}} /></CommandBar>
+                Sub elements 
+                
+                <CommandBar style={{paddingLeft: 'var(--tab-sep)', bottom: '3px'}}>
+                    <Btn icon={'down'} action={(e)=> {}} />
+                </CommandBar>
             </h6>
+            
             {subElements.map(
                 n => <div className={'w-100 ms-2 sub-element'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getNodeLabel(n)}</div>
             )}
-        </div>}
+            </div>}
 
         {!asEdge && <>
 
