@@ -98,7 +98,7 @@ function NestedViewComponent(props: AllProps) {
                     <div className={"ms-auto d-flex"} onClick={preventClick}>
                         {isVP && 
                             <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
-                                <Btn icon={'check'} action={(evt) => {select(d.id)}}/>
+                                <Btn icon={'check'} action={(evt) => {select(d.id)}} tip={'Activate'}/>
                             </CommandBar>
                             
                                 /* <button className="bg btn-delete my-auto ms-2 green" disabled={active.id === d.id}
@@ -109,8 +109,8 @@ function NestedViewComponent(props: AllProps) {
                             
                         
                         <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
-                            <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e);}} />
-                            <Btn icon={'copy'} action={(e)=> { l.duplicate(); preventClick(e);}}/>
+                            <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e);}} tip={'Delete'}/>
+                            <Btn icon={'copy'} action={(e)=> { l.duplicate(); preventClick(e);}} tip={'Duplicate'}/>
                         </CommandBar>
                         {/* <button className="bg btn-delete my-auto ms-2 green" onClick={(e)=> { l.duplicate(); preventClick(e);}}><i className='bx bx-duplicate' /></button>
                         <button className="bg btn-delete my-auto ms-2" onClick={(e)=> { l.delete(); preventClick(e);}}><i className="p-1 bi bi-dash" /></button>*/}

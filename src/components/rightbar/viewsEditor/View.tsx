@@ -67,7 +67,7 @@ function ViewDataComponent(props: AllProps) {
     return(<div className={"view-editor-root"}>
         {<div className={'view-editor-header'}>
             <CommandBar>
-                <Btn icon={'back'} action={() => props.setSelectedView(undefined)} />
+                <Btn icon={'back'} action={() => props.setSelectedView(undefined)} tip={'Back'}/>
             </CommandBar>
             {/* <button className={'bg btn-back'} onClick={ () => props.setSelectedView(undefined)}>
                 <i className={'p-1 bi bi-arrow-left'}></i>

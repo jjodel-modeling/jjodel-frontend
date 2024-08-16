@@ -150,7 +150,7 @@ function NodeEditorComponent(props: AllProps) {
                     {/*<span onClick={(e)=> dnode.father && openNode(dnode.father)} style={clickableStyle}>
                         {[node.father?.className, <i style={{paddingLeft: '8px'}} className="bi bi-chevron-up"></i>]}
                     </span>*/}
-                    <CommandBar style={{paddingLeft: 'var(--tab-sep)', bottom: '3px'}}><Btn icon={'up'} action={(e)=> dnode.father && openNode(dnode.father)} /></CommandBar>
+                    <CommandBar style={{paddingLeft: 'var(--tab-sep)', bottom: '3px'}}><Btn icon={'up'} action={(e)=> dnode.father && openNode(dnode.father)} tip={'Go up'}/></CommandBar>
             </h6>
         </div>}
 
@@ -190,7 +190,7 @@ function NodeEditorComponent(props: AllProps) {
                 Sub elements 
                 
                 <CommandBar style={{paddingLeft: 'var(--tab-sep)', bottom: '3px'}}>
-                    <Btn icon={'down'} action={(e)=> {}} />
+                    <Btn icon={'down'} action={(e)=> {}} tip={'Go down'}/>
                 </CommandBar>
             </h6>
             

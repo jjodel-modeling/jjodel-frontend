@@ -382,7 +382,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                         
                                                                         <h6 title={"Add all the colors"}>
                                                                             <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                                <Btn icon={'add'} size={'x-small'}  action={()=>addColor(prefix, color.analogous(7, 30/1.5), i)} theme={'dark'} />
+                                                                                <Btn icon={'add'} size={'x-small'}  action={()=>addColor(prefix, color.analogous(7, 30/1.5), i)} theme={'dark'} tip={'Add all the colors'}/>
                                                                             </CommandBar>
                                                                             Analogous
                                                                         </h6>
@@ -399,7 +399,7 @@ function PaletteDataComponent(props: AllProps) {
                                     </div>{/*[6/12, 5/12, 4/12, 3/12, 2/12, 1/12]*/}
                                                                         <h6 title={"Add all the colors"}>
                                                                             <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                                <Btn icon={'add'} size={'x-small'} theme={'dark'} action={()=>addColor(prefix, [1/12, 2/12, 3/12, 4/12, 5/12, 6/12].map(n=>color.clone().lighten(n*100)), i, false)}/>
+                                                                                <Btn icon={'add'} size={'x-small'} tip={'Add all the colors'} theme={'dark'} action={()=>addColor(prefix, [1/12, 2/12, 3/12, 4/12, 5/12, 6/12].map(n=>color.clone().lighten(n*100)), i, false)}/>
                                                                             </CommandBar>
                                                                             Lighten
                                                                         </h6>
@@ -412,7 +412,7 @@ function PaletteDataComponent(props: AllProps) {
 
                                                                         <h6 title={"Add all the colors"}>
                                                                             <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                                <Btn icon={'add'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, [6/12, 5/12, 4/12, 3/12, 2/12, 1/12].map(n=>color.clone().darken(n*100)), i, false)}/>
+                                                                                <Btn icon={'add'} theme={'dark'} tip={'Add all the colors'} size={'x-small'} action={()=>addColor(prefix, [6/12, 5/12, 4/12, 3/12, 2/12, 1/12].map(n=>color.clone().darken(n*100)), i, false)}/>
                                                                             </CommandBar>
                                                                             Darken
                                                                             
@@ -452,7 +452,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                         
                                                                         <h6 title={"Add all the colors"}>
                                                                         <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                                <Btn icon={'add'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, color.triad(), i)}/>
+                                                                                <Btn icon={'add'} tip={'Add all the colors'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, color.triad(), i)}/>
                                                                             </CommandBar>
                                                                             Triadic
                                                                         </h6>
@@ -526,7 +526,7 @@ function PaletteDataComponent(props: AllProps) {
                             })]}</select>
                             <CommandBar className={'d-flex w-100 float-end'}>
                                 <Btn icon={'space'} />
-                                <Btn icon={"delete"} action={(e) => {}} />
+                                <Btn icon={"delete"} action={(e) => {}} tip={'Delete'}/>
                             </CommandBar>
                             
                         </div>)
@@ -543,7 +543,7 @@ function PaletteDataComponent(props: AllProps) {
 
                             <CommandBar>
                                 <Btn icon={'space'} />
-                                <Btn icon={"delete"} action={(e) => {}} />
+                                <Btn icon={"delete"} action={(e) => {}} tip={'Delete'}/>
                             </CommandBar>
                         </div>)
                 }
@@ -559,7 +559,7 @@ function PaletteDataComponent(props: AllProps) {
                                        if (e.key === Keystrokes.escape) (e.target as HTMLInputElement).value = string.value; }} />
                             <CommandBar>
                                 <Btn icon={'space'} />
-                                <Btn icon={"delete"} action={(e) => {}} />
+                                <Btn icon={"delete"} action={(e) => {}} tip={'Delete'}/>
                             </CommandBar>
                         </div>)
                 }

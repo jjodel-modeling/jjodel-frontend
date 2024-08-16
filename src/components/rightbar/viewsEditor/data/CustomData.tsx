@@ -34,7 +34,7 @@ function ViewEventsComponent(props: AllProps) {
         <JsEditor viewID={view.id} field={'onResizeEnd'} title={'onResizeEnd'} initialExpand={initialExpand} readonly={readOnly}/>
         <div className={'d-flex mx-auto'} style={{marginTop: '14px'}}>
             <h2>Custom Events</h2>
-            <CommandBar className={'ms-auto'} style={{paddingTop: '12px'}}><Btn icon={'add'} action={addEvent} /></CommandBar>
+            <CommandBar className={'ms-auto'} style={{paddingTop: '12px'}}><Btn icon={'add'} action={addEvent}  tip={'New event'}/></CommandBar>
         </div>
 
         {Object.keys(dview.events).map((k) => {
@@ -53,7 +53,7 @@ function ViewEventsComponent(props: AllProps) {
                 newEvent[k] = undefined;
                 view.events = newEvent;
             }}/>}
-            jsxLabel={<CommandBar className={'ms-auto'}><Btn icon={'delete'} action={() => {
+            jsxLabel={<CommandBar className={'ms-auto'}><Btn icon={'delete'} tip={'Delete event'} action={() => {
                 let newEvent: GObject = {};
                 newEvent[k] = undefined; // this is how you trigger deletion with object -= action
                 view.events = newEvent;
