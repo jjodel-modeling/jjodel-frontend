@@ -241,6 +241,143 @@
 
     }
 
+    // collapse
+
+    & .tab-btn.shrink {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.shrink:hover {
+      
+    }
+    & .tab-btn.shrink::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F14B";
+    }
+
+    & .tab-btn.shrink:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    // expand
+
+    & .tab-btn.expand {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.expand:hover {
+      
+    }
+    & .tab-btn.expand::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F14C";
+    }
+
+    & .tab-btn.expand:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+     // check
+
+     & .tab-btn.check {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.check:hover {
+      
+    }
+    & .tab-btn.check::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F633";
+    }
+
+    & .tab-btn.check:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    // copy
+
+    & .tab-btn.copy {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.copy:hover {
+      
+    }
+    & .tab-btn.copy::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F759";
+    }
+
+    & .tab-btn.copy:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+
+    // sep, separator
+
+    & .tab-btn.sep {
+      
+    }
+
+    & .tab-btn.sep::before {
+      color: var(--bg-3)!important;
+      display: block;
+      border-left: 1px solid var(--bg-3);
+      width: 1px;
+      height: 18px;
+      margin: 3px 6px 0 8px;
+      content: "";
+    }
+    
 
      
     // sizes

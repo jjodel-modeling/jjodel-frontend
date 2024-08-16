@@ -4,12 +4,13 @@ import { inherits } from "util";
 
 type BtnProps = {
     disabled?: boolean;
-    icon: "up" | "down" | "back" | "fwd" | "add" | "add2" | "delete" | "delete2" | "edit" | "space",
+    icon: "up" | "down" | "back" | "fwd" | "add" | "add2" | "delete" | "delete2" | "edit" | "shrink" | "expand" | "space" | "sep" | "check" | "copy",
     tip?: string,
     label?: string;
     theme?: "dark" | "light",
     action?: MouseEventHandler,
-    size?: "x-small" | "small" | "medium" | "large"
+    size?: "x-small" | "small" | "medium" | "large",
+    style?: React.CSSProperties
 }
 
 
@@ -40,6 +41,15 @@ export const Btn = (props: BtnProps) => {
             }
             </>
         }
+    </>);
+}
+
+export const Sep = () => {
+
+    return (<>
+            <div>
+                <div className={'tab-btn sep'}></div>
+            </div>
     </>);
 }
 

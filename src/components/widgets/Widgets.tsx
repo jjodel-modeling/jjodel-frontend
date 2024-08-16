@@ -14,18 +14,20 @@ type ToggleProps = {
     values: ToggleValues;
     labels: ToggleValues;
     width?: "small" | "medium" | "large";
+    style?: React.CSSProperties;
 };
+
+
 
 export const Toggle = (props: ToggleProps) => {
     const [value, setValue] = useState<boolean>(false);
 
     const toggleValue = (e: MouseEvent, value: boolean) => {
         setValue(value);
-
     };
 
     return (
-        <div className={'toggle'}  onClick={(e)=>setValue(!value)} >
+        <div className={'toggle'}  onClick={(e)=>setValue(!value)} style={props.style}>
             <input id={props.name} type="checkbox" value="true"  checked={value}/>
             <div className={"labels"}>
                 <span className={"on"}>{props.labels['true']}</span>
