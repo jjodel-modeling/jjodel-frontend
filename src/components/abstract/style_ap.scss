@@ -449,7 +449,7 @@ body.dock-dragging iframe {
   background: var(--bg-2-5);
   border-left: 1px solid var(--bg-1);
   border-right: 2px solid var(--bg-1);
-  background-image: url('/static/img/dock-handle.png');
+  // background-image: url('/static/img/dock-handle.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: 8px 800px;
@@ -692,7 +692,7 @@ body.dock-dragging iframe {
   outline: none;
   user-select: none;
 
-  background-image: url('/static/img/max-btn.png');
+  //background-image: url('/static/img/max-btn.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: 14px 14px;
