@@ -15,6 +15,7 @@ import {
 import {DefaultNode} from "../../../joiner/components";
 import ToolBar from "../../toolbar/ToolBar";
 import ContextMenu from "../../contextMenu/ContextMenu";
+import { MetricsPanel } from "../../metrics/Metrics";
 
 
 function MetamodelTabComponent(props: AllProps) {
@@ -31,6 +32,7 @@ function MetamodelTabComponent(props: AllProps) {
     }
 
     return(<div className={'w-100 h-100'}>
+        <MetricsPanel data={model}/>
         <ContextMenu />
         {/*<PendingEdge />*/}
         {/* Temporary Edge Pending Manager */}

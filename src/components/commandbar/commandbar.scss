@@ -361,6 +361,64 @@
       border-radius: var(--radius);
     }
 
+    // close
+
+    & .tab-btn.close {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.close:hover {
+      
+    }
+    & .tab-btn.close::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F629";
+    }
+
+    & .tab-btn.close:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    // close dark
+
+    & .tab-btn.close.dark {
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.close.dark:hover {
+      
+    }
+    & .tab-btn.close.dark::before {
+      color: white;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      margin-bottom: 10px!important;
+      content: "\F629";
+    }
+
+    & .tab-btn.close.dark:hover::before {
+      border: 1px solid transparent;
+      background-color: transparent;
+      border-radius: var(--radius);
+    }
+
 
     // sep, separator
 

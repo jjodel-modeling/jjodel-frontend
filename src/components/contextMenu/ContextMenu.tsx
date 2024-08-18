@@ -23,6 +23,8 @@ import MemoRec from '../../memorec/api';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import ModellingIcon from "../forEndUser/ModellingIcon";
 import {FakeStateProps} from "../../joiner/types";
+import { showMetrics, hideMetrics, toggleMetrics } from '../metrics/Metrics';
+
 
 import { icon } from '../../pages/components/icons/Icons';
 
@@ -130,8 +132,14 @@ function ContextMenuComponent(props: AllProps) {
         jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>{icon['lock']} Lock/Unlock<div> <i
             className='bi bi-command'></i> L</div></div>);
         /* UNLOCK ALL ELEMENTS */
-        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>{icon['unlock']} Unlock all elements<div><i className="bi bi-alt"></i> <i
+        jsxList.push(<div onClick={() => {close(); data.delete(); node.delete();}} className={'col item'}>{icon['unlock']} Unlock all<div><i className="bi bi-alt"></i> <i
             className='bi bi-command'></i> L</div></div>);
+        
+        jsxList.push(<hr className={'my-1'} />);
+        /* METRICS */
+
+        jsxList.push(<div onClick={() => {toggleMetrics(); close();}} className={'col item'}>{icon['metrics']} Show Metrics<div> <i
+            className='bi bi-command'></i> M</div></div>);
 
         jsxList.push(<hr className={'my-1'} />);
         

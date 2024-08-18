@@ -115,7 +115,20 @@ body{
     --abstract-class-color: rgba(ed,47,4a,0.5);
     --enum-color: #f3b700;
 
+    --gr-1: linear-gradient(90deg, hsla(208, 33%, 21%, 1) 0%, hsla(186, 89%, 29%, 1) 100%);
+    --gr-2: linear-gradient(90deg, hsla(186, 89%, 29%, 1) 0%, hsla(154, 69%, 55%, 1) 100%);
+    --gr-3: linear-gradient(90deg, hsla(323, 73%, 22%, 1) 0%, hsla(359, 82%, 60%, 1) 100%);
+    --gr-4: linear-gradient(90deg, hsla(359, 82%, 60%, 1) 0%, hsla(45, 100%, 48%, 1) 100%);
+    --gr-5: linear-gradient(90deg, hsla(60, 1%, 32%, 1) 0%, hsla(90, 1%, 56%, 1) 100%);
+    --gr-6: linear-gradient(90deg, hsla(154, 69%, 55%, 1) 0%, hsla(154, 69%, 72%, 1) 100%);
+    --gr-7: linear-gradient(90deg, hsla(359, 82%, 60%, 1) 0%, hsla(359, 82%, 76%, 1) 100%);
+    --gr-8: linear-gradient(90deg, hsla(203, 37%, 22%, 1) 0%, hsla(203, 37%, 52%, 1) 100%);
+    --gr-9: linear-gradient(90deg, hsla(186, 89%, 29%, 1) 0%, hsla(186, 89%, 48%, 1) 100%);
+    --gr-10: linear-gradient(90deg, hsla(45, 100%, 48%, 1) 0%, hsla(45, 100%, 80%, 1) 100%);
+    --gr-11: linear-gradient(90deg, hsla(323, 73%, 22%, 1) 0%, hsla(323, 73%, 64%, 1) 100%);
+    --gr-12: linear-gradient(90deg, hsla(186, 33%, 94%, 1) 0%, hsla(216, 41%, 79%, 1) 100%);
 
+    --gr-card: var(--gr-12);
 
     --color-bg-1: #fbdada;
     --color-bg-2: #eefcf6;

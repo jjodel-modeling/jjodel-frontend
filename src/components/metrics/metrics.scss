@@ -1,0 +1,96 @@
+.metrics-row {
+    display: block;
+    width: 100%;
+    font-weight: 200;
+    padding-right: 5px!important;
+    padding-left: 5px!important;
+    border-radius: 2px;
+
+    height: 20px;
+    transition: background-color 0.3s;
+    & .name {
+        
+    }
+    & label:nth-child(2) {
+        position: relative;
+        display: block;
+        float: right;
+    }
+}
+.metrics-row:hover {
+    background-color: var(--bg-3);
+    color: var(--color);
+}
+
+
+.metrics-panel {
+    
+    z-index: 1000;
+    background-color: var(--color);
+    color: white;
+    border-radius: calc(var(--radius) * 2);
+    box-shadow: var(--smart-elevation-8);
+    position: absolute;
+    right: 20px;
+    padding: 0.5rem;
+    bottom: 10px;
+    width: 330px; 
+    height: fit-content; 
+    font-weight: 200;
+    & p {
+        text-align: center;
+        font-size: 0.7em;
+        padding-top: 12px;
+    }
+    & p a {
+        color: white;
+        padding: 1px 6px;
+        text-decoration: none;
+    }
+    & p a:hover {
+        background-color: white;
+        color: var(--color);
+        padding: 1px 6px;
+        border-radius: 2px;
+    }
+
+    & .container {
+        font-weight: 100;
+        margin: 0;
+        padding:0;
+        padding-left: 5px;
+        width: 100%;
+        display: grid;
+        grid-template-columns: auto auto auto;
+        justify-items: start;
+
+        & .hd {
+            font-weight: 300!important;
+            margin-bottom: 5px;
+
+
+        }
+
+        & div.value {
+            justify-items: end!important;
+            margin: auto!important;
+        }
+    }
+
+    & h1 {
+        width: 100%;
+        font-size: 1.1em;
+        font-weight: 300;
+        border-bottom: 1px solid var(--bg-5);
+        padding-bottom: 4px;
+        margin-bottom: 6px;
+        margin-left: 5px;
+    }
+
+    & h1::before {
+        font-family: bootstrap-icons;
+        font-size: 1em;
+        content: "\F673";
+        margin-right: 8px;
+    }
+}

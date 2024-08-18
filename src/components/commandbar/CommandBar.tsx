@@ -4,7 +4,22 @@ import { inherits } from "util";
 
 type BtnProps = {
     disabled?: boolean;
-    icon: "up" | "down" | "back" | "fwd" | "add" | "add2" | "delete" | "delete2" | "edit" | "shrink" | "expand" | "space" | "sep" | "check" | "copy",
+    icon: "up" 
+        | "down" 
+        | "back" 
+        | "fwd" 
+        | "add" 
+        | "add2" 
+        | "delete" 
+        | "delete2" 
+        | "edit" 
+        | "shrink" 
+        | "expand" 
+        | "space" 
+        | "sep" 
+        | "check" 
+        | "copy"
+        | "close",
     tip?: string,
     label?: string;
     theme?: "dark" | "light",
@@ -17,6 +32,12 @@ type BtnProps = {
 
 export const Btn = (props: BtnProps) => {
 
+    const [value,setValue] = useState(false);
+
+
+        
+
+
     return (<>
         {props.action ?
             <div>
@@ -26,7 +47,9 @@ export const Btn = (props: BtnProps) => {
                     
                     <i 
                         className={`bi tab-btn ${props.icon} ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.disabled && 'disabled'}`}
-                        onClick={props.action && props.action} title={`${props.tip && props.tip}`} 
+                        onClick={props.action && props.action} 
+                        title={`${props.tip && props.tip}`} 
+                        style={props.style} 
                     />
                 
                 }

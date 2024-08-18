@@ -54,7 +54,9 @@ let icon: { [name: string]: any}  = {
     template: <i className="bi bi-code-square menuitem"></i>,
     template2: <i className="bi bi-lightbulb menuitem"></i>,
     extend: <i className="bi bi-caret-up menuitem" style={{paddingBottom: '2px'}}></i>,
-    ai: <i className="bi bi-magic menuitem"></i>
+    ai: <i className="bi bi-stars"></i>,
+    metrics: <i className="bi bi-graph-up-arrow" style={{marginRight: '10px'}}></i>
+
     
 };
 

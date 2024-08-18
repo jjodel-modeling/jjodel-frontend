@@ -3,7 +3,8 @@ import {DState, DUser, LGraphElement, LModelElement, LUser, U} from "../../joine
 import {FakeStateProps} from "../../joiner/types";
 import React, {Dispatch, ReactElement, useState} from "react";
 import {connect} from "react-redux";
-import swen from '../../static/img/swen-2.png';
+import { Metrics } from '../../components/metrics/Metrics';
+
 
 enum notificationType {
     Clients = 0,
@@ -93,6 +94,18 @@ function BottomBarComponent(props: AllProps): JSX.Element {
             {nodepos}
         </div>
         <div className={'widgetbar float-end'}>
+
+            <i className="bi bi-graph-up-arrow"></i> Metrics 
+            <Metrics type={'metaclass'} data={props.data} tip={'Number of Metaclasses'}/>
+            <Metrics type={'enum'} data={props.data} tip={'Number of Enumerators'}/>
+            <Metrics type={'package'} data={props.data} tip={'Number of Packages'}/>
+            <Metrics type={'ref'} data={props.data} tip={'Overall number of References'}/>
+            <Metrics type={'attr'} data={props.data} tip={'Overall number of Attributes'}/>
+            <Metrics type={'ext'} data={props.data} tip={'Number of Inheritance Extensions'}/>
+            <Metrics type={'allAttr'} data={props.data} tip={'Overall number of Attributes, including ingherited ones'}/>
+            
+            
+
             <Notify  type={notificationType.Clients} alert={alertType.Normal} message={''} />
             <Notify  type={notificationType.Terminal} alert={alertType.Normal} message={''} />
             <Notify  type={notificationType.Messages} alert={alertType.Normal} message={''} />
