@@ -111,9 +111,18 @@
     cursor: pointer;
   }
 
-  & .console-terminal .commands .bi-arrow-left-square {
-    float: right!important;
-    margin-right: 6px;
+  & .console-terminal .commands {
+    .undo, .redo{
+      float: right;
+      margin-left: 0;
+      margin-right: 5px;
+      .redo{
+        margin-right: 15px;
+      }
+      &.disabled{
+        visibility: hidden;
+      }
+    }
   }
 
   & .console-terminal .commands .bi-arrow-left-square:hover::before {

@@ -169,7 +169,7 @@ step 2) when parsing jsx to build nodes, edges, check if props like edge.start o
 in that case, update such value
 */
 export const Square = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { // rectangle
-    return <VertexConnected {...{...props, children}} isgraph={false} isvertex={true} isvoid={true} />; }
+    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} isVoid={true} />; }
 Square.cname = 'Rectangle/Square';
 /*
 export const Rhombus = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { // rectangle

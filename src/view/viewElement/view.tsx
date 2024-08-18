@@ -1271,7 +1271,6 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             if (typeof id === "object") id = (id as any).id;
             let view = context.data;
             let ret: GraphSize;
-            console.log('vvv', {view, context, id});
             if (view.storeSize){
                 ret = view.size[id];
                 if (ret) return ret;

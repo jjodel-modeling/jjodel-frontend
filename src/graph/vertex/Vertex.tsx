@@ -137,6 +137,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                 },
                 drag: (event: GObject, obj: GObject) => {
                     TRANSACTION(()=>{
+                        console.log('Vertex.setsize', obj);
                         if (!this.props.view.lazySizeUpdate) this.setSize({x:obj.position.left, y:obj.position.top});
                         for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.whileDragging, vid);
                     })
@@ -242,14 +243,14 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                                 break;
                         }*/
                         // n, e, s, w, ne, se, sw, nw
-                        // almost, but: there is a few pix error. and: if i drag through horizontal or vertical handles it acts as if i used diagonal handle
-                        // console.log('resizing', {newSize, cursorSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
-                        console.log('resizing', {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
+                        // console.log('resizing', {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
+                        // NB: size.x and size.y are going crazy if the element have an edge, no idea why, i just deleted x & y before setSize()
                     }
                     else newSize = {w:obj.size.width, h:obj.size.height};
                     // evt coordinates: clientX, layerX, offsetX, pageX, screenX
                     TRANSACTION(()=>{
-
+                        delete newSize.x;
+                        delete newSize.y;
                         this.setSize(newSize);
                         // console.log('resize setsize:', obj, {w:obj.size.width, h:obj.size.height});
                         for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onResizeEnd, vid);
@@ -328,6 +329,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         let size: {x?:number, y?: number, w?:number, h?:number} = size0;
         if (size.w !== undefined && size.w < 0) size.w = 0;
         if (size.h !== undefined && size.h < 0) size.h = 0;
+
+        console.log('L.setsize', size, size0);
         return this.props.node.size = size as any;
         // console.log('setSize('+(this.props?.data as any).name+') thisss', this);
         if (this.props.view.storeSize) {
@@ -364,12 +367,12 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
         // set classes
         this.nodeType = 'NODE_TYPE_ERROR';
-        if ( this.props.isedgepoint) this.nodeType = 'EdgePoint'; else
-        if ( this.props.isgraph &&  this.props.isvertex) this.nodeType = 'GraphVertex'; else
-        if ( this.props.isgraph && !this.props.isvertex) this.nodeType = 'Graph'; else
-        if (!this.props.isgraph &&  this.props.isvertex && (this.props.isvoid || !this.props.data)) this.nodeType = 'VoidVertex'; else
-        if (!this.props.isgraph &&  this.props.isvertex) this.nodeType = 'Vertex'; else
-        if (!this.props.isgraph && !this.props.isvertex) this.nodeType = 'Field';
+        if ( this.props.isEdgePoint) this.nodeType = 'EdgePoint'; else
+        if ( this.props.isGraph &&  this.props.isVertex) this.nodeType = 'GraphVertex'; else
+        if ( this.props.isGraph && !this.props.isVertex) this.nodeType = 'Graph'; else
+        if (!this.props.isGraph &&  this.props.isVertex && (this.props.isVoid || !this.props.data)) this.nodeType = 'VoidVertex'; else
+        if (!this.props.isGraph &&  this.props.isVertex) this.nodeType = 'Vertex'; else
+        if (!this.props.isGraph && !this.props.isVertex) this.nodeType = 'Field';
 
         // const named: LNamedElement = this.props.data as LNamedElement; // LNamedElement.fromPointer(this.props.dataid);
         const classesOverride = [this.nodeType, ...cssOverride]; // , (named?.name === 'default') ? 'default' : ''];
@@ -417,13 +420,13 @@ export type AllPropss = VertexOwnProps & VertexStateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: VertexOwnProps): VertexStateProps {
     let DGraphElementClass: typeof DGraphElement;
-    if (ownProps.isedgepoint) DGraphElementClass = DEdgePoint; else
-    if (ownProps.isvertex && ownProps.isgraph) DGraphElementClass = DGraphVertex; else
-    if (ownProps.isvertex && !ownProps.isgraph) DGraphElementClass = DVertex; else
-    if (!ownProps.isvertex && ownProps.isgraph) DGraphElementClass = DGraph;
+    if (ownProps.isEdgePoint) DGraphElementClass = DEdgePoint; else
+    if (ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraphVertex; else
+    if (ownProps.isVertex && !ownProps.isGraph) DGraphElementClass = DVertex; else
+    if (!ownProps.isVertex && ownProps.isGraph) DGraphElementClass = DGraph;
     else DGraphElementClass = DGraphElement; // DField;
 
-    if (DGraphElementClass === DVertex && ownProps.isvoid) DGraphElementClass = DVoidVertex;
+    if (DGraphElementClass === DVertex && ownProps.isVoid) DGraphElementClass = DVoidVertex;
     const superret: VertexStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass, {...ownProps}) as VertexStateProps;
     // superret.lastSelected = state._lastSelected?.modelElement;
     // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
@@ -464,26 +467,26 @@ export const VertexConnected = connect<VertexStateProps, DispatchProps, VertexOw
 )(VertexComponent as any);
 
 export const Vertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { //  children: (string | React.Component)[]
-    return <VertexConnected {...{...props, children}} isgraph={false} isvertex={true}/>;
+    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true}/>;
 }
 export const VoidVertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}} isgraph={false} isvertex={true} isvoid={true}/>;
+    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} isVoid={true}/>;
 }
 export const EdgePoint = function EdgePoint (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement {
-    return <VertexConnected {...{...props, children}} isgraph={false} isedgepoint={true}/>;
+    return <VertexConnected {...{...props, children}} isGraph={false} isEdgePoint={true}/>;
 }
 // todo: name them all or verify the name is still usable.
 
-export const Graph = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { // doesn't work?
-    return <VertexConnected {...{...props, children}} isgraph={true} isvertex={false} />;
+export const Graph = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
+    return <VertexConnected {...{...props, children}} isGraph={true} isVertex={false} />;
 }
 
 export const GraphVertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}} isgraph={true} isvertex={true} />;
+    return <VertexConnected {...{...props, children}} isGraph={true} isVertex={true} />;
 }
 
 export const Field = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}} isgraph={false} isvertex={false} />;
+    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={false} />;
 }
 (window as any).componentdebug = {Graph, GraphVertex, Field, Vertex, VoidVertex, EdgePoint, VertexConnected, VertexComponent};
 

@@ -32,7 +32,6 @@ function NodeEditorComponent(props: AllProps) {
     let isVertex = ['DVoidVertex', 'DVertex', 'DEdgePoint'].includes(cname); // RuntimeAccessibleClass.extends(cname, 'DVoidVertex');
     let isEdge = ['DVoidEdge', 'DEdge'].includes(cname); // RuntimeAccessibleClass.extends(cname, 'DVoidEdge');
     let isField = (!isGraph && !isVertex && !isEdge);
-    console.log('Style editor', {cname, isVertex, isGraph, isEdge, selected});
     let asGraph: LGraph | undefined = isGraph && node as any;
     let asVertex: LVoidVertex | undefined  = isVertex && node as any;
     let asEdge: LVoidEdge | undefined = isEdge && node as any;
@@ -65,8 +64,8 @@ function NodeEditorComponent(props: AllProps) {
     const subElements = node.subElements;
     let edgesIn = !isEdge && node.edgesIn || [];
     let edgesOut = !isEdge && node.edgesOut || [];
-    
-            
+
+
 
 
 
@@ -86,17 +85,17 @@ function NodeEditorComponent(props: AllProps) {
     };
 
     let stackingOrder = <InputRow label={'Stacking order'} as={node} field={'zIndex'} type={'number'} />
-    
+
     return(<div className={'p-3 node-editor'}>
         {/*<Input obj={selected.node} field={'id'} label={'ID'} type={'text'} readonly={true}/>*/}
-        
+
         {asGraph && <><h3>Graph</h3>
             <GenericInput data={asGraph} field={'zoom'} />
             <GenericInput data={asGraph} field={'offset'} />
 
             {/*graphSize readonly on LGraph but not on DGraph, = internal graph size. put it for info.*/ }
         </>}
-        
+
         {asVertex && <><h3>Vertex</h3>
             {stackingOrder}
 
@@ -105,7 +104,7 @@ function NodeEditorComponent(props: AllProps) {
             <InputRow label={'Width'} as={asVertex} field={'width'} type={'number'} />
             <InputRow label={'Height'} as={asVertex} field={'height'} type={'number'} />
         </>}
-        
+
         {asEdge && <><h3>Edge</h3>
             {stackingOrder}
 
@@ -123,8 +122,8 @@ function NodeEditorComponent(props: AllProps) {
             <GenericInput data={asEdge} field={"anchorStart"}/>
             <GenericInput data={asEdge} field={"anchorEnd"}/>
         </>}
-        
-        {asField && <><h3>Field</h3> 
+
+        {asField && <><h3>Field</h3>
             {stackingOrder}
         </>}
 

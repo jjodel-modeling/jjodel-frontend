@@ -45,16 +45,25 @@ class DefaultViews {
             }, false, 'Pointer_ViewModel');
 
         view.css = `
+.panning-handle{
+   position: relative;
+   overflow: visible;
+   width: 100%;
+   height: 100%;
+   left: var(--pan-x);
+   right: var(--pan-y);
+   transform: translate(var(--pan-x), var(--pan-y));
+   
+   >*.root {
+       overflow: visible;
+       position: relative;
+   }
+}
 &, .Graph{
-  /*position: absolute;*/
   background-color: var(--background-1);
   &:hover{ overflow: hidden; }
   height: 100%;
   width: -webkit-fill-available;
-}
-.root {
-    overflow: hidden;
-    position: relative;
 }
 .edges {z-index: 101; position: absolute; top: 0; left: 0; height: 0; width: 0; overflow: visible; }
 .detail-level {

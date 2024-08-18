@@ -89,8 +89,9 @@ export class GraphElementOwnProps extends BasicReactOwnProps {
 export class EdgeOwnProps extends GraphElementOwnProps {
     onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
     onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    isgraph?: boolean = false;
-    isvertex?: boolean = true;
+    isGraph?: boolean = false;
+    isVertex?: boolean = false;
+    isEdge?: boolean = true;
     start!: LGraphElement["id"];
     end!: LGraphElement["id"];
     label?: DEdge["longestLabel"];
@@ -135,10 +136,10 @@ export class EdgeDefaultUsageDeclarations extends DefaultUsageDeclarations{
 export class VertexOwnProps extends GraphElementOwnProps {
     // onclick?: (e: React.MouseEvent<HTMLDivElement>) => void;
     // onmousedown?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    isedgepoint?: boolean = false;
-    isgraph?: boolean = false;
-    isvertex?: boolean = true;
-    isvoid?: boolean = false;
+    isEdgePoint?: boolean = false;
+    isGraph?: boolean = false;
+    isVertex?: boolean = true;
+    isVoid?: boolean = false;
     decorated?: boolean; // for <decoratedStar /> (defaults true)
     sides?: number // for <Polygon />, <Star /> and <Cross />
     innerRadius?: number // for <Star /> and <Cross />
@@ -170,7 +171,7 @@ function setContextFixedKeys(){
         "otherViews": true, 'decorators':true, // only on final jsx, decorators are injected
         //"data":true, "node":true, "parentViewId":true, "parentnodeid":true,// from props:
         //"view":true, "views":true, "viewScores":true,// from props:
-        //"children":true, "isgraph":true, "isvertex":true, "graphid":true, "nodeid":true,// from props:
+        //"children":true, "isGraph":true, "isVertex":true, isEdge:true, isEdgePoint:true, isVoid: true, "graphid":true, "nodeid":true,// from props:
     }];
     for (let props of propmakers) for (let k in props) contextFixedKeys[k] = true;
     delete contextFixedKeys.class;

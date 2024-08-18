@@ -3,7 +3,9 @@
 [data-nodetype], [data-nodetype] > * {
   overflow: visible;
 }
-
+.toolbar-draggable{
+  overflow: visible;
+}
 .toolbar {
 
     --bg: var(--color);

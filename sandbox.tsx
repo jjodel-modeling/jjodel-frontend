@@ -7,7 +7,16 @@ import {AllPropss} from "./src/graph/vertex/Vertex";
 export const aaa = 0;
 let data:any, node:any, view:any, component:any;
 let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPackages:any, refEdges:any, extendEdges:any, React:any, Edge:any;
+/*
+node collapsing:
+    theory: edges are rendered before nodes, so it will find a node with size0 (not rendered) and assign that size during get_size.
+    proof: when i change the html css size of a vertes to 20px, but i assign in console edge.end.size={w:200, h:200}
+           2 actions are fired in sequence, one setting to 200 and one to 20px.
+           it does not work if the node is on isResized === false because the getter cannot trigger a set in that case.
 
+node crazy pos: when i resize a node with an edge it goes off screen?
+
+* */
 // todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or removed
 /**
  problem when changing ep mode, need to move the ep before it works

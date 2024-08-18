@@ -434,7 +434,6 @@ export class Size extends ISize<Point> {
             if (displayStyles[i] === 'none' || (displayStyles[i] === '' && getComputedStyle(ancestors[i]).display === 'none')) { ancestors[i].style.display = 'block' }
         }
         // size = new Size(tmp.left, tmp.top, 0, 0);
-        console.log('crasssh', element, element0);
         let rect = element.getBoundingClientRect();
         size = new Size(0, 0, 0, 0);
 

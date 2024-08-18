@@ -230,7 +230,12 @@ svg.hoverable {
     }
   }
 }
-
+.draggable-child-mode{
+  left: 0 !important;
+  top: 0 !important;
+  transform: none !important;
+  position: relative !important;
+}
 //.EdgePoint{ transform: translate(-50%, -50%); }
 
 /*

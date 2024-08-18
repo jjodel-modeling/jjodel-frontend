@@ -376,7 +376,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         // (window as any).retry = ()=>view.getSize(context.data.id);
         let ret: EPSize = view.getSize(context.data.id) as any; // (this.props.dataid || this.props.nodeid as string)
 
-        // console.log("getSize() from view", {ret: ret ? {...ret} : ret});
+        console.log("getSize() from view", {ret: ret ? {...ret} : ret});
         if (!ret) {
             ret = new GraphSize() as EPSize;
             ret.x = context.data.x;
@@ -389,7 +389,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             if (undefined===(ret.w)) { if (!def) def = view.defaultVSize; ret.w = def.w || 10;}
             if (undefined===(ret.h)) { if (!def) def = view.defaultVSize; ret.h = def.h | 10;}
             ret.currentCoordType = (context.data as DEdgePoint).currentCoordType as any;
-            // console.log("getSize() from node merged with defaultVSize", {ret: ret ? {...ret} : ret});
+            console.log("getSize() from node merged with defaultVSize", {ret: ret ? {...ret} : ret});
         }
         if (context.data.className === DEdgePoint.cname) {
             ret = (this as any as LEdgePoint).decodePosCoords(context, ret, view);
@@ -403,12 +403,14 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             if (outerSize) ret = this.get_outerGraph(context).translateSize(ret, this.get_innerGraph(context));
             return ret;
         }
-        let html: RefObject<HTMLElement | undefined> | undefined = this.get_component(context)?.html;
-        let actualSize: Partial<Size> & {w:number, h:number} = html?.current ? Size.of(html.current) : {w:0, h:0};
-        let updateSize: boolean = false;
+        let html: HTMLElement | undefined | null = this.get_component(context)?.html?.current;
+        let actualSize: Partial<Size> & {w:number, h:number} = html ? Size.of(html) : {w:0, h:0};
         let isOldElement = (context.data.clonedCounter as number) > 3;
         // if w = 0 i don't auto-set it as in first render it has w:0 because is not reredered and not resized.
         // if (canTriggerSet) this.set_size({w:actualSize.w}, context);
+        console.log("getSize() cantriggerset html size", {ret: ret ? {...ret} : ret, html, actualSize, hcc:html?.dataset?.clonedcounter, ncc: context.data.clonedCounter});
+        if (!html || +(html.dataset.clonedcounter as string) !== context.data.clonedCounter) canTriggerSet = false;
+        let updateSize: boolean = false;
         if (view.adaptWidth && ret.w !== actualSize.w) {
             if (canTriggerSet && (isOldElement || actualSize.w !== 0)) {
                 ret.w = actualSize.w;

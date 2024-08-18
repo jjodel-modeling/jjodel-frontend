@@ -16,20 +16,20 @@ export class GraphDragManager extends RuntimeAccessibleClass{
     static draggingGraph?: LGraph;
 
     static startPanning(e: React.MouseEvent, graph: LGraph) {
-        // console.log("start panning", !GraphDragManager.draggingGraph, graph, graph.id);
+        console.log("start panning", !GraphDragManager.draggingGraph, graph, graph.id);
         if (GraphDragManager.draggingGraph) return;
         GraphDragManager.draggingGraph = graph as LGraph;
         GraphDragManager.initialClickPos = Point.fromEvent(e);
     }
     static stopPanning(e: JQuery.MouseUpEvent | React.MouseEvent) {
-        // damiano: why was disabled?
-        // console.log("stop panning", GraphDragManager.draggingGraph);
+        console.log("stop panning", GraphDragManager.draggingGraph);
         if (!GraphDragManager.draggingGraph) return;
         let g: LGraph = GraphDragManager.draggingGraph;
         let initial: PointType = GraphDragManager.initialClickPos as PointType;
         GraphDragManager.draggingGraph = undefined;
         GraphDragManager.initialClickPos = undefined;
-        console.log(initial, Point.fromEvent(e), g.zoom, g.offset)
-        g.offset = initial.subtract(Point.fromEvent(e), false).multiply(g.zoom).add(g.offset, false) as any; // actual type is Partial<Size>
+        let newoffset = initial.subtract(Point.fromEvent(e), false).multiply(g.zoom).add(g.offset, false) as any; // actual type is Partial<Size>
+        console.log("stop panning", {initial, minus:Point.fromEvent(e), zoom:g.zoom, offset: g.offset, newoffset});
+        g.offset = newoffset
     }
 }

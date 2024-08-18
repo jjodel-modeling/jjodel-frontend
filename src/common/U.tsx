@@ -2151,7 +2151,7 @@ export class U {
     }
 
     // warning: nodes from other iframes will say are not instance from Element of the current frame, in that case need duck typing.
-    private static isHtmlNode(element: any): element is Element {
+    public static isHtmlNode(element: any): element is Element {
         return element instanceof Element || element instanceof HTMLDocument || element instanceof SVGElement;
     }
 
@@ -2416,8 +2416,10 @@ export class Keystrokes {
             if (e.altKey) { root = root[Keystrokes.alt] || {}; }
             if (e.shiftKey) { root = root[Keystrokes.shift] || {}; }
             if (e.ctrlKey) { root = root[Keystrokes.control] || {}; }
-            root[e.key]?.();
+            let f = root[e.key];
             console.log("execute keystrokes", {e, root, optimizedKeyPaths, up:{$elems, func, optimizedKeyPaths, arr}});
+            Log.exDev(f && typeof f !== 'function','found keystroke with invalid func', {f, root, e})
+            f?.();
         };
         /// todo: for graph can attack evt to graph root and use selector in on() lieke $graphcontainer.on('keydown', '.Class', classkeystrokehandler...)
         Keystrokes.RegisteredKeyStrokes[selector] = func;

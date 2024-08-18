@@ -240,7 +240,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         switch(typeof propKey) {
             case "symbol":
                 propKey = String(propKey);
-                console.log('get symbol', {propKey});
+                // console.log('get symbol', {propKey});
                 switch (propKey) {
                     default: Log.exDevv('unexpected symbol in proxy getter:', propKey); break;
                     case 'Symbol(Symbol.toStringTag)': propKey = 'toString'; break; //return (()=>"[Proxy]");

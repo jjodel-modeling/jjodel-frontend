@@ -33,6 +33,8 @@ class ThisState{
     output: any = null;
     expressionIndex: number = 0;
     expressionHistory: string[] = [''];
+    initialState: boolean = true;
+    time: number = 0;
 }
 
 // trasformato in class component così puoi usare il this nella console. e non usa accidentalmente window come contesto
@@ -126,7 +128,6 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             this._context = {...this.props, props: this.props};
         }
         try {
-
             // if (expression === 'this') expression = 'data'; // it does a mess by taking a L-singleton with all his __info_of__ stuff
             if (expression === 'this') output = this._context;
             else output = U.evalInContextAndScope(expression || '<span class="console-msg">undefined</span>', this._context, this._context);
@@ -147,19 +148,44 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
             if (isnum) append = '['+k+']';
             else if (isregular) append = '.'+k;
             else append = '['+JSON.stringify(k)+']';
-            this.setState({expression: (expression ? expression + append : k)}, ()=> { this.change(); });
+            this.setState({expression: (expression ? expression + append : k)}/*, ()=> { this.change(); }*/);
         }}>{k}{arr && arr[k] ? <>:{arr[k]}</> : undefined}</li>;
     }
 
     outputhtml: HTMLElement | null = null;
     setState(s: GObject<Partial<ThisState>> | null, callback?: (...a:any) => any): void{
         if (s){
-            let olds = this.state || {};
-            if (s.expression) s.expressionHistory = [...olds.expressionHistory.slice(0, s.expressionIndex ?? olds.expressionIndex), s.expression];
-            if (s.expressionIndex) s.expression = olds.expressionHistory[s.expressionIndex];
-            if (s.expressionHistory){
-                let len = s.expressionHistory.length;
-                if (len > 10) s.expressionHistory = s.expressionHistory.slice(len - 10, len);
+            if (s.initialState) {
+                delete s.initialState;
+                return super.setState(s as any);
+            }
+            let s0: GObject<ThisState> = {...s} as any;
+            let olds = this.state;
+            if (s0.expressionIndex && s0.expressionIndex !== olds.expressionIndex) s.expression = olds.expressionHistory[s0.expressionIndex];
+            if (s0.expressionHistory && s0.expressionHistory !== olds.expressionHistory){
+                let len = s0.expressionHistory.length;
+                if (len > 10) s.expressionHistory = s0.expressionHistory.slice(len - 10, len);
+            }
+            if (s0.expression && s0.expression !== olds.expression) {
+                let time = new Date().getTime();
+                let oldtime = olds.time;
+                Log.exDev(s0.expressionIndex !== undefined, 'cannot set both index and expression together');
+                let i = s.expressionIndex ?? olds.expressionIndex;
+                let slice: string[];
+                if (time - oldtime < 1000) {
+                    slice = olds.expressionHistory.slice(0, i);
+                }
+                else {
+                    slice = olds.expressionHistory.slice(0, i+1);
+                    s.expressionIndex = i + 1;
+                }
+                s.time = time;
+                s.expressionHistory = [...slice, s0.expression];
+                console.log('setstate', {olds: {...olds}, s, slice, i, s0});
+            }
+            if (s.expression !== olds.expression && !('output' in s)) {
+                let call0 = callback;
+                callback = () => { call0?.(); this.change(); }
             }
         }
         super.setState(s as any, callback);
@@ -291,17 +317,18 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         windoww.contextkeysarr = contextkeysarr;
         windoww.contextkeys = contextkeys;
         const undo = ()=>{
-            const expressionHistory = this.state.expressionHistory;
             let expressionIndex = Math.max(0, this.state.expressionIndex - 1);
             if (expressionIndex === this.state.expressionIndex) return;
             this.setState({ expressionIndex })
         }
         const redo = ()=>{
             const expressionHistory = this.state.expressionHistory;
-            let expressionIndex = Math.min(expressionHistory.length, this.state.expressionIndex + 1);
+            let expressionIndex = Math.min(expressionHistory.length-1, this.state.expressionIndex + 1);
             if (expressionIndex === this.state.expressionIndex) return;
             this.setState({ expressionIndex })
         }
+        let canredo = this.state.expressionIndex < this.state.expressionHistory.length - 1;
+        let canundo = this.state.expressionIndex > 0;
 
         return(<div className={'w-100 h-100 p-2 console'}>
             <label className={'on-element'}>
@@ -317,17 +344,20 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                         U.clipboardCopy(s, ()=> Tooltip.show('Content copied to clipboard', undefined, undefined, 2));
                     }} title={'Copy in the clipboard'} className="bi bi-clipboard-plus" />
                     {/* @ts-ignore */}
-                    <i onClick={undo} disabled={this.state.expressionIndex > 0} title={'undo'} className="bi bi-arrow-left-square" />
+                    <i onClick={redo} title={'redo'} className={"redo bi bi-arrow-right-square" + (canredo ? '':" disabled")} />
                     {/* @ts-ignore */}
-                    <i onClick={redo} disabled={this.state.expressionIndex < this.state.expressionHistory.length} title={'redo'} className="bi bi-arrow-right-square" />
+                    <i onClick={undo} title={'undo'} className={"undo bi bi-arrow-left-square" + (canundo ? '':" disabled")} />
 
                     {/* todo per damiano: per la funzione 'torna indietro', si tratta di annullare l'ultimo inserimento, per esempio se clicco su data e poi length, nella console
                     avrei 'data.length', cliccando sul back nella consol avrei 'data' */}
                 </div>
                 <textarea id={'console'} spellCheck={false} className={'p-0 input w-100'} onChange={this.change} value={this.state.expression} ></textarea>
-
             </div>
-
+            <div>Debug history (index = {this.state.expressionIndex})
+                { this.state.expressionHistory.map((s, i)=> (<>
+                <div style={{border: '1px solid ' + (i === this.state.expressionIndex ? 'red' : 'gray'), marginTop:'5px', height: '30px'}}>{s}</div>
+                </>
+                ))}</div>
             {/*<label>Query {(this.state.expression)}</label>*/}
             <hr className={'mt-1 mb-1'} />
             { this.state.expression &&  ashtml && <div className={"console-output-container console-msg"}

@@ -450,7 +450,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let functionsToBind = [this.onClick,
             this.onLeave, this.onEnter,
             this.doContextMenu, this.onContextMenu,
-            this.onMouseDown, this.onMouseUp, this.onKeyDown, this.onScroll];/*
+            this.onMouseDown, this.onMouseUp, this.onKeyDown, this.onScroll, this.onMouseMove];/*
         this.onClick = this.onClick.bind(this);
         this.onLeave = this.onLeave.bind(this);
         this.onContextMenu = this.onContextMenu.bind(this);
@@ -701,7 +701,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         TRANSACTION(()=>{
             if (e.button === Keystrokes.clickRight) { this.doContextMenu(e); }
             let p: GObject = this.props;
-            if (p.isGraph && !p.isvertex || p.isGraph && p.isvertex && e.ctrlKey) GraphDragManager.startPanning(e, this.props.node as LGraph);
+            console.log('try drag', {p, ig: p.isGraph, iv:p.isVertex});
+            // if ((p.isGraph && !p.isVertex) || (p.isGraph && p.isVertex && e.ctrlKey)) GraphDragManager.startPanning(e, this.props.node as LGraph);
         })
     }
 
@@ -724,12 +725,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         })
         e.stopPropagation();
     }
-    onMouseUp(e: React.MouseEvent): void {
+    onMouseMove(e: React.MouseEvent): void {
+        //this.onMouseUp(e);
+    }
+    onMouseUp(e: React.MouseEvent, frommousemove: boolean = false): void {
         e.stopPropagation();
         TRANSACTION(()=>{
-            GraphDragManager.stopPanning(e);
+            //GraphDragManager.stopPanning(e);
             if (GraphElementComponent.mousedownComponent !== this) { return; }
-            this.doOnClick(e);
+            if (!frommousemove) this.doOnClick(e);
         })
     }
     onKeyDown(e: React.KeyboardEvent){
@@ -952,7 +956,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const addprops: boolean = true;
         let fiximport = !!this.props.node;
         //let a: false = true as any; if (a) return "Loading...";
-        if (this.props.data?.name === "Concept 1") console.log("shouldcomponentupdate rendering " + this.props.data?.name, {cc: this.props.data.clonedCounter, attrs: (this.props.data as any).attributes});
+        // if (this.props.data?.name === "Concept 1") console.log("shouldcomponentupdate rendering " + this.props.data?.name, {cc: this.props.data.clonedCounter, attrs: (this.props.data as any).attributes});
         if (addprops && rawRElement && fiximport) {
             if (windoww.debugcount && debugcount++>windoww.debugcount) throw new Error("debug triggered stop");
             let fixdoubleroot = true;
@@ -995,11 +999,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                         onContextMenu: this.onContextMenu,
                         onMouseDown: this.onMouseDown,
                         onMouseUp: this.onMouseUp,
+                        onMouseMove: this.onMouseMove,
                         onwheel: this.onScroll,
                         onMouseEnter: this.onEnter,
                         onMouseLeave: this.onLeave,
                         tabIndex: (props as any).tabIndex || -1,
                         "data-countrenders": this.countRenders++,
+                        "data-clonedcounter": props.node?.clonedCounter || -1,
                         // decorators: otherViews,
                     };
                     let p: GObject = this.props;
@@ -1064,7 +1070,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         // console.log("nodeee", {thiss:this, props:this.props, node: this.props.node});
         if (false && dv.isExclusiveView && (props.node?.__raw as DGraphElement).father) {
-            let $containedIn = $('#' + props.node.father);
+            let $containedIn = $('#' + props.node.__raw.father);
             let $containerDropArea = $containedIn.find(".VertexContainer");
             const droparea = $containerDropArea[0] || $containedIn[0];
             Log.exDev(!droparea, 'invalid vertex container target', {$containedIn, $containerDropArea});
