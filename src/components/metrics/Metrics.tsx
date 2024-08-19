@@ -22,6 +22,7 @@ import {
 import { CommandBar, Btn } from "../commandbar/CommandBar";
 import { SetRootFieldAction } from "../../joiner";
 import './metrics.scss';
+import { int } from "../../joiner/types";
 
 type MetricsProps = {
     data: LModelElement;
@@ -66,6 +67,12 @@ export const toggleMetrics = () => {
 
 export const MetricsPanel = (props: MetricsProps) => {
     
+    const [mode,setMode] = useState<string>('EMF');
+
+    const getWidth = (value:int, scale: int) => {
+        return 100/scale * value + '%';
+    }
+
     return (<>
         {windoww.MetricsPanelVisible && 
             <div className={'metrics-panel'}>
@@ -74,6 +81,90 @@ export const MetricsPanel = (props: MetricsProps) => {
                         <Btn icon={'close'} action={(e) => {hideMetrics(); return false;}} theme={'dark'} tip={'Close metrics panel'}/>
                     </CommandBar>
                 </h1>
+                
+                <div className={'analytics-panel'}>
+            
+                <div className={'category'}>
+                    <label>
+                        <CommandBar style={{float: 'left'}}>
+                            <Btn icon={"info"} action={(e) => {alert('information page')}}  theme={'dark'}/>
+                        </CommandBar> 
+                        Metamodel classification as
+                    </label>
+                    <select id={'category'} onChange={(e) => {setMode(e.target.value)}}>
+                        <option value={'EMF'}>EMF-based</option>
+                        <option value={'DSML'}>DSML</option>
+                        <option value={'GPML'}>GPML</option>
+                    </select>
+                    
+                </div>
+
+
+                {mode === 'GPML' && <> 
+                    <div className={'chart GPML'}>
+                        <div className={'legenda small'} >small</div>
+                        <div className={'legenda medium'}>medium</div>
+                        <div className={'legenda large'}>large</div>
+                    </div>
+                    <div className={'chart GPML'}>
+                        <div className={'small section'}>50</div>
+                        <div className={'medium section'}>150</div>
+                        <div className={'large section'}>250</div>
+                    </div>
+                    <div className={'chart current'} 
+                        style={{gridTemplateColumns: `${getWidth(props.data.model.classes.length, 250)} auto`}}>
+                        <div></div>
+                        <div>
+                            <div>{props.data.model.classes.length}</div>
+                            <div>{props.data.model.name}</div>
+                        </div>
+                    </div>
+                </>}
+                {mode === 'EMF' && <>
+                    <div className={'chart EMF'}>
+                        <div className={'legenda small'} >small</div>
+                        <div className={'legenda medium'}>medium</div>
+                        <div className={'legenda large'}>large</div>
+                    </div>
+                    <div className={'chart EMF'}>
+                        <div className={'small section'}>30</div>
+                        <div className={'medium section'}>50</div>
+                        <div className={'large section'}>80</div>
+                    </div>
+                    <div className={'chart current'} 
+                        style={{gridTemplateColumns: `${getWidth(props.data.model.classes.length, 80)} auto`}}>
+                        <div></div>
+                        <div>
+                            <div>{props.data.model.classes.length}</div>
+                            <div>{props.data.model.name}</div>
+                        </div>
+                    </div>
+                </>}
+                {mode === 'DSML' && <>
+                    <div className={'chart DSML'}>
+                        <div className={'legenda small'} >small</div>
+                        <div className={'legenda medium'}>medium</div>
+                        <div className={'legenda large'}>large</div>
+                    </div>
+                    <div className={'chart DSML'}>
+                        <div className={'small section'}>10</div>
+                        <div className={'medium section'}>30</div>
+                        <div className={'large section'}>50</div>
+                    </div>
+                    <div className={'chart current'} 
+                        style={{gridTemplateColumns: `${getWidth(props.data.model.classes.length, 50)} auto`}}>
+                        <div></div>
+                        <div>
+                            <div>{props.data.model.classes.length}</div>
+                            <div>{props.data.model.name}</div>
+                        </div>
+                    </div>
+                </>}
+                </div>
+
+
+                <hr style={{display: 'block', marginBottom: '5px'}}/>
+
                 <div className={'container'}>
                     <div className={'hd'}>Acronym</div>
                     <div className={'hd'}>Name</div>
@@ -102,6 +193,10 @@ export const MetricsPanel = (props: MetricsProps) => {
                     <div>MCWS</div>
                     <div># Metaclasses with Superclass</div>
                     <Metrics type={'mcws'} data={props.data}/>
+
+                    <div>LMC</div>
+                    <div>% Isolated Metaclasses</div>
+                    <Metrics type={'lmc'} data={props.data}/>
                     
                     <div>SF</div>
                     <div># Structural Features</div>
@@ -110,8 +205,12 @@ export const MetricsPanel = (props: MetricsProps) => {
                     <div>ASF</div>
                     <div>Avg # Structural Features</div>
                     <Metrics type={'asf'} data={props.data}/>
+                    
+                    <div>EN/LIT</div>
+                    <div># Enumeration/Literals</div>
+                    <Metrics type={'enum'} data={props.data}/>
                 </div>
-                <p><a target="_blank" href="https://dl.acm.org/doi/abs/10.1145/2593770.2593774">https://dl.acm.org/doi/abs/10.1145/2593770.2593774</a></p>
+                {/* <p><a target="_blank" href="https://dl.acm.org/doi/abs/10.1145/2593770.2593774">https://dl.acm.org/doi/abs/10.1145/2593770.2593774</a></p>*/}
             </div>
                     
                     /*
@@ -178,10 +277,11 @@ export const Metrics = (props: MetricsProps) => {
         {props.type === "mcws" && <>{props.data?.model.classes.filter(c => c.extends.length > 0).length}</>}
         {props.type === "sf" && <>{getAllAttributes() + getAllReferences()}</>}
         {props.type === "asf" && <>{((getAllAttributes() + getAllReferences())/(props.data?.model.classes.filter(c => !c.abstract).length)).toFixed(2)}</>}
-
+        {props.type === "enum" && <>{props.data?.model.enumerators.length}/{props.data?.model.literals.length}</>} 
         {props.type === "attr" && <>{props.data?.model.attributes.length}/{getAllAttributes()}</>}
-        {props.type === "ref" && <>{props.data?.model.references.length}/{getAllReferences()}</>}
-        {props.type === "enum" && <>{props.data?.model.enumerators.length}/{props.data?.model.literals.length}</>}    
+        {props.type === "ref" && <>{props.data?.model.references.length}/{getAllReferences()}</>}   
+        {props.type === "lmc" && <>{((props.data?.model.classes.filter(c => c.extends.length == 0 && c.extendedBy.length == 0).length/props.data?.model.classes.length)*100).toFixed(2)}%</>}
+
         {props.type === "ext" && <>{props.data?.model.subNodes.filter(c => c.name === "EdgeInheritance").length}</>}
         </div>);
 

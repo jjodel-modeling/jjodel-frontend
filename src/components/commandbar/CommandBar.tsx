@@ -19,7 +19,8 @@ type BtnProps = {
         | "sep" 
         | "check" 
         | "copy"
-        | "close",
+        | "close"
+        | "info",
     tip?: string,
     label?: string;
     theme?: "dark" | "light",

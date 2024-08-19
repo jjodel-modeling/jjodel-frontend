@@ -8,9 +8,7 @@
 
     height: 20px;
     transition: background-color 0.3s;
-    & .name {
-        
-    }
+    
     & label:nth-child(2) {
         position: relative;
         display: block;
@@ -34,7 +32,7 @@
     right: 20px;
     padding: 0.5rem;
     bottom: 10px;
-    width: 330px; 
+    width: 340px; 
     height: fit-content; 
     font-weight: 200;
     & p {
@@ -63,6 +61,7 @@
         display: grid;
         grid-template-columns: auto auto auto;
         justify-items: start;
+        margin-top: 20px;
 
         & .hd {
             font-weight: 300!important;
@@ -92,5 +91,123 @@
         font-size: 1em;
         content: "\F673";
         margin-right: 8px;
+    }
+    & hr {
+        color: var(--bg-4)!important;
+    }
+
+
+    & #category {
+        background-color: var(--color);
+        font-size: 0.7;
+        font-weight: 200;
+        height: 16px;
+        padding: 0;
+        border-radius: 4px!important;
+        width: 90px;
+        color: white;
+        border: none;
+        margin-bottom: 10px;
+        & :focus {
+            font-size: 0.8;
+            height: 16px!important;
+            padding: 0;
+            outline: none!important;
+            border: none!important;
+            width: fit-content;
+        }
+        
+    }
+
+    .analytics-panel {
+        width: calc(100% - 5px);
+        border: 1px dotted var(--bg-3);
+        border-radius: var(--radius);
+        padding-right: 5px;
+        margin-left: 5px;
+
+        & label {
+            margin-left: 5px;
+            margin-bottom: 10px;
+        }
+        & select {
+            float: inline-end;
+            outline: none!important;
+            padding-top: 2px!important;
+        }
+        
+        
+    }
+
+    .chart {
+        display: grid;
+        margin-left: 5px;
+        
+
+    }
+
+    .chart.GPML {
+        grid-template-columns: 20% 40% 40%;// 50 100 150
+    }
+    .chart.EMF {
+        grid-template-columns: 37.5% 25% 37.5%; // 30 50 80
+    }
+    .chart.DSML {
+        grid-template-columns: 20% 40% 40%; // 10 30 50
+    }
+
+    .chart .legenda {
+        background-color: var(--color)!important;
+        text-align: center!important;
+        font-size: 0.9em!important;
+    }
+
+    .chart .section  {
+        height: 14px;
+        text-align: right;
+        font-size: 0.8em;
+        padding-right: 2px;
+    }
+
+    .chart .small {background-color: var(--accent); }
+    .chart .medium {background-color: var(--accent-secondary); }
+    .chart .large {background-color: var(--terziary);}
+
+    .chart.current {
+
+        width: calc(100% - 5px);
+        display: grid;
+        margin-bottom: 10px;
+        
+        
+        & >div:nth-child(1) {
+            text-align: center!important;
+            margin-top: 6px;
+            height: 14px;
+            background-color: white;
+        }
+
+        & >div:nth-child(2) {
+            display: grid;
+            grid-template-columns: auto auto;
+            width: 100%;
+            text-align: right!important;
+            
+            white-space: pre;
+            height: 14px;
+            font-size: 0.85em;
+            padding-top: 0px;
+            right: 0;
+
+            margin-top: 6px;
+            &>div:nth-child(1) {
+                text-align: left;
+                padding-left: 5px;
+            }
+            &>div:nth-child(2) {
+               text-align: right;
+               padding-right: 2px; 
+            }
+        }
     }
 }
