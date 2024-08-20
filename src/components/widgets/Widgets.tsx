@@ -6,34 +6,40 @@ import { windoww } from '../../joiner/types';
 import { SetRootFieldAction } from '../../joiner';
 import { MapStateToProps } from 'react-redux';
 import { InputMapStateToProps } from '../forEndUser/Input';
+import { DState } from '../../joiner';
+import { VertexOwnProps, VertexStateProps } from '../../graph/graphElement/sharedTypes/sharedTypes';
+
 
 type ToggleValues = {
     true: string;
     false: string;
 }
 
-
-
 type ToggleProps = {
     name: string;
     values: ToggleValues;
     labels: ToggleValues;
-    width?: "small" | "medium" | "large";
+    size?: "small" | "medium" | "large";
     style?: React.CSSProperties;
 };
 
 
-
 export const Toggle = (props: ToggleProps) => {
     const [value, setValue] = useState<boolean>(false);
+    SetRootFieldAction.new(props.name, false);
 
-    const toggleValue = (e: MouseEvent, value: boolean) => {
-        setValue(value);
+    const toggleValue = () => {
+        setValue(!value);
+        SetRootFieldAction.new(props.name, !value);
     };
 
+    function mapStateToProps(state: any) {
+        return state[props.name];
+    }
+
     return (
-        <div className={'toggle'}  onClick={(e)=>setValue(!value)} style={props.style}>
-            <input id={props.name} type="checkbox" value="true"  checked={value}/>
+        <div className={`toggle ${props.size ? props.size : 'medium'}`}  onClick={(e)=>setValue(!value)} style={props.style}>
+            <input id={props.name} type="checkbox" value="true"  checked={value} onClick={() => {toggleValue()}} />
             <div className={"labels"}>
                 <span className={"on"}>{props.labels['true']}</span>
                 <span className={"off"}>{props.labels['false']}</span>
@@ -42,6 +48,8 @@ export const Toggle = (props: ToggleProps) => {
         </div>
     );
 }
+
+
 
 type RangeProps = {
     name: string;

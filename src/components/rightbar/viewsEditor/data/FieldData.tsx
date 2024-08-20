@@ -40,7 +40,7 @@ function FieldDataComponent(props: AllProps) {
         <option>Field</option>
     </optgroup>;
     return(<section className={'options-field'}>
-        <h5>Field aa</h5>
+        <h5>Field</h5>
         <div>
             <div className={'input-container'}>
                 <p>Appliable to:</p>

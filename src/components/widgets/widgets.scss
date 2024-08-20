@@ -1,45 +1,67 @@
 .toggle {
-    // border: 1px solid red;
     position: relative;
     padding: 0;
-    --dimension: 18px; // dimensioni dispari
-    --top: 0px;
-    --top_label: -19px;
-    --border: 1px;
     cursor: pointer;
  }
+
+ .toggle.small {
+  --dimension: 16px; 
+  --top: 0px;
+  --top_label: -19px;
+  --border: 1px;
+  --width: 26px;
+ }
+ .toggle.medium {
+  --dimension: 22px; 
+  --top: 0px;
+  --top_label: -19px;
+  --width: 34px;
+  --border: 2px;
+ }
+ .toggle.large {
+  --dimension: 26px; 
+  --top: 0px;
+  --top_label: -19px;
+  --border: 1px;
+  --width: 40px;
+  --border: 2px;
+ }
+
 div.toggle{
   position: unset;
   display: flex;
+  
   span {
     position: unset;
     margin: auto 0;
     margin-right: 0.25em;
   }
+  
   input[type="checkbox"] ~ label{
     display: block;
-    height: 100%;
+    height: var(--dimension);
     flex-basis: 0;
     flex-grow: 1;
     margin: auto 0;
-    min-width: 35px;
+    width: var(--width);
     transition: all 0.3s ease-in;
     border-radius: var(--dimension);
     background-color: var(--bg-3-1);
-    border: 1px solid var(--bg-3-1); // 2px
+    border: var(--border) solid var(--bg-3-1); // 2px
 
     &::after {
       content: '';
       display: block;
-      border: 2px solid var(--bg-3-1); // 2.5px
+      border: none; // var(--border) solid var(--bg-3-1); 
       border-radius: var(--dimension);
       background: white;
       transition: all 0.3s ease-in;
-      width: 1lh;
-      height: 1lh;
-      margin-left: calc(100% - 1lh);
+      width: calc(var(--dimension) - var(--border)*2);
+      height: calc(var(--dimension) - var(--border)*2);
+      margin-left: calc(100% - var(--dimension) + 2 * var(--border));
     }
   }
+  
   input{
     order: 1;
   }
@@ -64,7 +86,6 @@ div.toggle{
     }
 
   }
-
   input[type="checkbox"]:checked+.labels{
     .on{
       height: 100%;
@@ -76,13 +97,12 @@ div.toggle{
 
   input[type="checkbox"]:checked ~ label{
     transition: all 0.3s ease-in;
-    background-color: var(--secondary);
-    border: 1px solid var(--secondary); // 2px
-
+    background-color: var(--accent);
+    border: var(--border) solid var(--accent); // 2px
 
     &::after {
       margin-left: 0;
-      border-color: var(--secondary);
+      border-color: var(--accent);
     }
   }
 }
@@ -101,45 +121,4 @@ div.toggle{
     padding: 0;
     border: none;
  }
-
- /*
- .toggle input[type="checkbox"] + label::before{
-    position: absolute;
-    content: '';
-    display: block;
-    width: calc(var(--dimension) * 1.8);
-    height: var(--dimension);
-    border: 1px solid var(--bg-3-1);
-    border-radius: var(--dimension);
-    top: var(--top);
-    right: 0px;
-    background-color: var(--bg-3-1);
-    transition: 0.3s;
- }
-
- .toggle input[type="checkbox"]:checked + label::before {
-    display: inline-block;
-    transition: all 0.3s ease-in;
-    background-color: var(--secondary);
-    border: 2px solid var(--secondary);
- }
-
- .toggle input[type="checkbox"] + label::after {
-    position: relative;
-    content: '';
-    display: block;
-    height: calc(var(--dimension) - 1px);
-    width: calc(var(--dimension) - 1px);
-    border: 2px solid var(--bg-3-1);
-    border-radius: var(--dimension);
-    top: var(--top_label);
-    right: 0px!important;
-    background: white;
-    transition: all 0.3s ease-in;
- }
-
- .toggle input[type="checkbox"]:checked + label::after {
-    border: 2px solid var(--secondary);
-    right: calc(var(--dimension) - 3px)!important;
- }*/
 

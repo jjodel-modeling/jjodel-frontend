@@ -173,10 +173,11 @@ function NestedViewComponent(props: AllProps) {
                             <Btn icon={'add'} action={addVP} tip={'Create a new viewpoint'} />
                         </CommandBar>
                         <Toggle 
-                            name={'prority'} 
+                            name={'priority'} 
                             values={{false: 'false', true: 'true'}} 
                             labels={{false: 'show priorities', true: 'hide priorities'}} 
                             style={{float: 'right', paddingRight: '20px', fontSize: '0.9em'}}
+                            size={'small'}
                         />
                     </h1>
                 </div>

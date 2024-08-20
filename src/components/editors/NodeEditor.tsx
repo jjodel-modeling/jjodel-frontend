@@ -25,7 +25,7 @@ import { CommandBar, Btn } from '../commandbar/CommandBar';
 function NodeEditorComponent(props: AllProps) {
     const selected = props.selected;
     const editable = true;
-    if (!selected?.node) return <Empty msg={'Select a node2.'} />;
+    if (!selected?.node) return <Empty msg={'Select a node.'} />;
     const node = selected.node;
     const dnode = (node.__raw || node) as DGraphElement
     let cname = dnode.className;
