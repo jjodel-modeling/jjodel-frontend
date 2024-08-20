@@ -1,11 +1,11 @@
-.dock-style-editors .dock-tabpane  section {
+.dock-style-editors .dock-tabpane section,
+.input-container {
 
 
   color: var(--color);
   // margin: 1rem .5rem;
   // padding: 1rem 1.65rem;
   font-weight: 300;
-
   border: 1px solid var(--bg-1-5);
   border-radius: var(--tab-radius);
   background-color: var(--bg-1-5);
@@ -16,7 +16,6 @@
   }
 
   & input[type=text], input[type=number] {
-    padding: 1px 8px;
     outline-color: var(--accent);
     outline-width: 1px;
     height: var(--input-height);
@@ -24,24 +23,31 @@
   }
 
   & input[type=text] {
+    padding: 1px 8px;
     min-width: 170px;
     transition: min-width 0.3s ease-in-out;
   }
 
   & input[type=number] {
-    width: 60px;
+    width: 120px;
+    padding: 1px 0px 1px 8px;
   }
 
   & input[type=text]:focus, input[type=number]:focus {
     padding: 2px 9px;
     border-radius: var(--radius)!important;
-
+    height: var(--input-height);
   }
 
   & input[type=text]:focus {
     min-width: 70%;
     border-radius: var(--radius)!important;
     border: none;
+  }
+
+  & input[type=number]:focus {
+    padding: 1px 0px 1px 8px;
+    width: 120px;
   }
 
   & input[type=checkbox] {
@@ -141,22 +147,15 @@
     outline-width: 1px;
   }
 
-  & input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button {
-
-    appearance: auto;
-    opacity: 1;
-
-  }
+  
 }
 
 //.dock-style-editors .dock-tabpane .input-container:has(input:focus) > .me-2::before, .dock-style-editors .dock-tabpane .input-container:has(input:hover) > .me-2::before,
 //.dock-style-editors .dock-tabpane .input-container:has(select:focus) > .me-2::before, .dock-style-editors .dock-tabpane .input-container:has(select:hover) > .me-2::before {
-  .input-container:has(input:focus) > .me-2::before, 
-  .input-container:has(input:hover) > .me-2::before,
-  .input-container:has(select:focus) > .me-2::before, 
-  .input-container:has(select:hover) > .me-2::before,
-  .properties-tab label:has(input:hover) > span::before,
-  .properties-tab label:has(select:hover) > span::before  {
+  
+.input-container:has(input:focus) > .me-2::before, .input-container:has(input:hover) > .me-2::before,
+.input-container:has(select:focus) > .me-2::before, .input-container:has(select:hover) > .me-2::before,
+.properties-tab label:has(input:hover) > span::before, .properties-tab label:has(select:hover) > span::before  {
   
   position: relative;
   right: 0px;
@@ -214,6 +213,52 @@
     margin-bottom: 20px!important;
   }
 
+}
+
+
+/* .input-container input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button {
+  appearance: auto;
+  opacity: 1;
+}*/
+
+/* spin buttons v1.0
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: auto !important;
+  opacity: 1 !important;
+  background: transparent !important;
+  border-width: 0px;
+  margin: 0;
+  border-left: 1px solid #d8d8d8;
+  height: var(--input-height);
+  width: 24px;
+  padding-top: 2px!important;
+  cursor: pointer;  
+
+  background-color: var(--accent);
+  color: white;
+  border-left: 2px solid var(--color)!important;
+
+}*/
+
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: auto !important;
+  opacity: 1 !important;
+  background: transparent !important;
+  border-width: 0px;
+  margin: 0;
+  border-left: 1px solid #d8d8d8;
+  height: var(--input-height);
+  width: 24px;
+  padding-top: 2px!important;
+  cursor: pointer;  
+
+  background-color: var(--accent);
+  color: white!important;
+  border-left: 1px solid var(--color)!important;
 }
 
 .dock-content-holder #DockComponent_rightbar_8 {

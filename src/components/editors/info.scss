@@ -159,8 +159,11 @@ section {
     height: 2em;
   }
 
+  .sub-element {
+    margin-left: 0px!important;
+  }
   .sub-element:last-of-type {
-    padding-bottom: 10px;
+      padding-bottom: 10px;
   }
 
   .object-state {
