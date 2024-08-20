@@ -58,7 +58,7 @@ class SizeInputComponent extends PureComponent<AllProps, ThisState>{
         const inputStyle = {justifyContent: "right", width: "auto", marginRight:"5px"};
         let labelStyle = {height: '100%', display: 'inline-block', marginRight:"5px"}
         return (<>
-            <label className={this.props.rootClassName} style={{fontFamily:'consolas', ...(this.props.rootStyle||{})}}>
+            <label className={this.props.rootClassName} style={{fontFamily:'Inter Tight', ...(this.props.rootStyle||{})}}>
                 {(this.props.label) && <label className={'my-auto'} style={{fontFamily:'-webkit-body'}} onClick={() => { if (tooltip) notify() }}>
                     {this.props.label}
                 </label>}

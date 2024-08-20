@@ -2,19 +2,51 @@ section {
   padding: .5rem; // p-2
 }
 
-.properties-tab {
-
+.console {
+  
 }
 
-.properties-tab h1 {
-  width: 100%!important;
-  display: block;
-  clear: right!important;
-  font-size: 1.1em;
+.properties-tab,
+.tree-view,
+.viewpoint-tab,
+.template-tab,
+.style-tab,
+.events-tab,
+.options-tab,
+.node-editor,
+.console {
+  margin: 0.5rem!important;
+  background-color: var(--bg-2);
+  padding-top: 0.5rem!important;
+  padding-left: 1.5em!important;
+  padding-left: 1.5em!important;
+
+  & section {
+
+  }
+}
+
+.no-data-to-display {
+  background-color: var(--bg-2-5);
+  margin: 0.5rem;
+}
+
+.properties-tab h1,
+.viewpoint-tab h1,
+.template-tab h1.view,
+.style-tab h1.view,
+.events-tab h1.view,
+.options-tab h1.view,
+.node-editor h3,
+.console h1 { 
+
+  font-size: 1.1em!important;
   color: var(--accent);
-  padding-bottom: 0.5em;
-  border-bottom: 1px solid var(--bg-2-5);
-  margin-bottom: 1em;
+  padding-bottom: 0.5em!important;
+  border-bottom: 1px solid var(--bg-2-5)!important;
+  margin-bottom: 1em!important;
+  padding-top: 0!important;
+
 
   &::before {
     position: relative;
@@ -26,58 +58,34 @@ section {
   }
 }
 
-.template-tab h1 {
-  width: 100%!important;
-  display: block;
-  clear: right!important;
-  font-size: 1.1em;
-  color: var(--accent);
-  padding-bottom: 0.5em;
-  border-bottom: 1px solid var(--bg-2-5);
-  margin-bottom: 1em;
-
-  &::before {
-    position: relative;
-    top: 2px;
-    font-size: 1.15em;
-    margin-right: var(--tab-sep);
-    font-family: bootstrap-icons;
-    content: "\F2C7";
-  }
+.properties-tab h1 {padding-top: 0px!important;}
+.console h1::before {
+  content: "\F5C3";
 }
 
-.style-tab h1 {
-  width: 100%!important;
-  display: block;
-  clear: right!important;
-  font-size: 1.1em;
-  color: var(--accent);
-  padding-bottom: 0.5em;
-  border-bottom: 1px solid var(--bg-2-5);
-  margin-bottom: 1em;
 
-  &::before {
-    position: relative;
-    top: 2px;
-    font-size: 1.15em;
-    margin-right: var(--tab-sep);
-    font-family: bootstrap-icons;
-    content: "\F66D";
-  }
+
+
+.template-tab h1::before {
+  position: relative;
+  top: 2px;
+  font-size: 1.15em;
+  margin-right: var(--tab-sep);
+  font-family: bootstrap-icons;
+  content: "\F2C7";
+}
+
+
+.style-tab h1::before {
+  position: relative;
+  top: 2px;
+  font-size: 1.15em;
+  margin-right: var(--tab-sep);
+  font-family: bootstrap-icons;
+  content: "\F66D";
 }
 
 .events-tab {
-
-  & h1 {
-  width: 100%!important;
-  display: block;
-  clear: right!important;
-  font-size: 1.1em;
-  color: var(--accent);
-  padding-bottom: 0.5em;
-  border-bottom: 1px solid var(--bg-2-5);
-  margin-bottom: 1em;
-  }
 
   & h2 {
     font-size: 1em;
@@ -94,17 +102,6 @@ section {
 }
 
 .options-tab {
-
-  & h1 {
-  width: 100%!important;
-  display: block;
-  clear: right!important;
-  font-size: 1.1em;
-  color: var(--accent);
-  padding-bottom: 0.5em;
-  border-bottom: 1px solid var(--bg-2-5);
-  margin-bottom: 1em;
-  }
 
   & h2 {
     font-size: 1em;
@@ -175,9 +172,3 @@ section {
   }
   
 } 
-  
-
-  
-.page-root.properties-tab h1 {
-  margin-top: 9px;
-}

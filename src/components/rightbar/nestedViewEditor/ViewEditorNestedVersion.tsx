@@ -162,7 +162,7 @@ function NestedViewComponent(props: AllProps) {
     if (test) return(<div className={"view-editor-root"}>
         <section className={'viewpoint-tab'}>
             <div className={"view-editor-fullsize-content"}>
-                <div className={'d-flex ps-2 pt-2'}>
+                <div className={'d-flexd-flex'}>
                     <h1>Viewpoints
 
                     

@@ -364,7 +364,7 @@ export class JQDock extends React.PureComponent<{}, IDockingLayoutProps> {
                 </div>
                 {/* floatGroup */}
                 <div data-container={'OutputPanel'}>
-                    <div style={{ fontFamily: 'Consolas' }}>
+                    <div style={{ fontFamily: 'Inter Tight' }}>
                         <p>
                             Themes installation complete.
                         </p>

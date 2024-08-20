@@ -304,9 +304,9 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         }
 
         return(<div className={'w-100 h-100 p-2 console'}>
-            <label className={'on-element'}>
-                <span>On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}</span>
-            </label>
+            <h1>
+                On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}
+            </h1>
             <div className='console-terminal p-0 mb-2 w-100'>
                 <div className='commands'>
                     <i onClick={(e) => { this.setState({expression:''})} } title={'Empty console'} className="bi bi-slash-circle" />
