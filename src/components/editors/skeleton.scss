@@ -19,6 +19,8 @@
     padding: 1px 8px;
     outline-color: var(--accent);
     outline-width: 1px;
+    height: var(--input-height);
+    
   }
 
   & input[type=text] {
@@ -31,12 +33,15 @@
   }
 
   & input[type=text]:focus, input[type=number]:focus {
-    border: 1px solid var(--accent);
     padding: 2px 9px;
+    border-radius: var(--radius)!important;
+
   }
 
   & input[type=text]:focus {
     min-width: 70%;
+    border-radius: var(--radius)!important;
+    border: none;
   }
 
   & input[type=checkbox] {
@@ -49,6 +54,16 @@
     padding: 1px 8px;
     outline-color: var(--accent);
     outline-width: 1px;
+    height: var(--input-height);
+
+
+    color: blue;
+  }
+  & input:focus {
+    color: red;
+    border-radius: var(--radius)!important;
+    border: none;
+
   }
 }
 
