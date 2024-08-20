@@ -24,7 +24,7 @@
 
 ul.ps-2.pt-2 .entry-rootDViewPoint.selected {
   position: relative;
-  z-index: 2;
+  z-index: 0;
 
   &>.inline-row{
     background: #ddffdd!important;
@@ -32,7 +32,7 @@ ul.ps-2.pt-2 .entry-rootDViewPoint.selected {
     border: 1px solid #ddffdd;
   }
   &>.inline-row:hover {
-    border: 1px solid red;
+    border: 1px solid var(--bg-4);
   }
 
 
@@ -53,8 +53,7 @@ ul.ps-2.pt-2 .entry-rootDViewPoint.selected::after {
   height: calc(100% - 2.8em);
   width: 4px;
   content: "";
-  z-index: 1;
-  
+
 }
 
 
