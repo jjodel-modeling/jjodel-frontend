@@ -21,7 +21,7 @@ function ViewEventsComponent(props: AllProps) {
 
     let initialExpand = (v: any, field: any)=>!!(v as any)[field as string];
     return(<section className={'p-3 events-tab'}>
-        <h1>{view.name}</h1>
+        <h1 className={'view'}>View: {view.name}</h1>
         <h2>Default Events</h2>
       
 

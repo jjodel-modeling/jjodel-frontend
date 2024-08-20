@@ -357,7 +357,7 @@ function PaletteDataComponent(props: AllProps) {
     const vcss = view.css;
 
     return(<section className={'p-3 style-tab'}>
-        <h1>{props.view.name}</h1>
+        <h1 className={'view'}>View: {props.view.name}</h1>
         <div className={"controls"} style={{position:'relative', zIndex:2}}>
             {Object.entries(palettes.color).map((entry, index, entries)=>{
                 let prefix = entry[0];

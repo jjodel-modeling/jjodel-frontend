@@ -163,7 +163,7 @@ function NestedViewComponent(props: AllProps) {
         <section className={'viewpoint-tab'}>
             <div className={"view-editor-fullsize-content"}>
                 <div className={'d-flex ps-2 pt-2'}>
-                    <h1>Views
+                    <h1>Viewpoints
 
                     
                         <CommandBar style={{float: 'right'}}>

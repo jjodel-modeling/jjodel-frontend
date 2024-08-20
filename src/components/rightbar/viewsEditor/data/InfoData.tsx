@@ -34,7 +34,7 @@ function InfoDataComponent(props: AllProps) {
     </optgroup>;
 
     return(<section className={'page-root properties-tab'}>
-        <h1>{view.name}</h1>
+        <h1 className={'view'}>View: {view.name}</h1>
         <Input data={view} field={'name'} label={'Name:'} readonly={readOnly}/>
         <Input data={view} field={'isExclusiveView'} label={'Is Exclusive:'} type={"checkbox"} readonly={readOnly}
                //setter={(val) => { view.isExclusiveView = !val}}
