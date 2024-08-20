@@ -55,12 +55,9 @@
     outline-color: var(--accent);
     outline-width: 1px;
     height: var(--input-height);
-
-
-    color: blue;
   }
   & input:focus {
-    color: red;
+
     border-radius: var(--radius)!important;
     border: none;
 
