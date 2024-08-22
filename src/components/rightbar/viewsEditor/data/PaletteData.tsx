@@ -380,6 +380,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                         
                                                                         <input style={{width: "auto", marginLeft:"1em", marginRight:"1em"}} type={"range"} min={0} max={1} step={"any"} value={color.getAlpha()} onChange={(e)=>{ transparencyColor(prefix, i, color, +e.target.value) }} />
                                                                         
+                                                                        {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}>
                                                                             <CommandBar style={{float: 'left', paddingRight: '8px'}}>
                                                                                 <Btn icon={'add'} size={'x-small'}  action={()=>addColor(prefix, color.analogous(7, 30/1.5), i)} theme={'dark'} tip={'Add all the colors'}/>
@@ -397,6 +398,8 @@ function PaletteDataComponent(props: AllProps) {
                                         {color.monochromatic(7).map((c,ii) => ii===0?undefined: <button style={style(c)}
                                                                                                         onClick={(e)=>{addColor(prefix, c, i)}} className="btn color-suggestion">+</button>)}
                                     </div>{/*[6/12, 5/12, 4/12, 3/12, 2/12, 1/12]*/}
+                                                                        
+                                                                        {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}>
                                                                             <CommandBar style={{float: 'left', paddingRight: '8px'}}>
                                                                                 <Btn icon={'add'} size={'x-small'} tip={'Add all the colors'} theme={'dark'} action={()=>addColor(prefix, [1/12, 2/12, 3/12, 4/12, 5/12, 6/12].map(n=>color.clone().lighten(n*100)), i, false)}/>
@@ -410,6 +413,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                                                        onClick={(e)=>{addColor(prefix, c, i)}}><i style={style(c)} className="bi bi-plus-lg"></i></button>)}
                                                                         </div>
 
+                                                                        {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}>
                                                                             <CommandBar style={{float: 'left', paddingRight: '8px'}}>
                                                                                 <Btn icon={'add'} theme={'dark'} tip={'Add all the colors'} size={'x-small'} action={()=>addColor(prefix, [6/12, 5/12, 4/12, 3/12, 2/12, 1/12].map(n=>color.clone().darken(n*100)), i, false)}/>
@@ -424,6 +428,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                                                        onClick={(e)=>{addColor(prefix, c, i)}}><i style={style(c)} className="bi bi-plus-lg"></i></button>)}
                                                                         </div>
                                                                         
+                                                                        {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}>
                                                                             <CommandBar style={{float: 'left', paddingRight: '8px'}}>
                                                                                 <Btn icon={'add'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, [color.complement(), tinycolor(invert(color))], i, false)}/>
@@ -438,6 +443,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                                     onClick={(e)=>{addColor(prefix, tinycolor(invert(color)), i)}}><i style={style(color)} className="bi bi-plus-lg"></i></button>
                                                                         </div>
                                                                         
+                                                                        {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}>
                                                                         <CommandBar style={{float: 'left', paddingRight: '8px'}}>
                                                                             <Btn icon={'add'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, color.splitcomplement(), i)}/>
@@ -462,6 +468,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                                                                 onClick={(e)=>{addColor(prefix, c, i)}}><i style={style(c)} className="bi bi-plus-lg"></i></button>)}
                                                                         </div>
                                                                         
+                                                                        {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}>
                                                                         <CommandBar style={{float: 'left', paddingRight: '8px'}}>
                                                                                 <Btn icon={'add'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, color.tetrad(), i)}/>
@@ -489,6 +496,7 @@ function PaletteDataComponent(props: AllProps) {
                         </div>
                         <div className="suggestion-container">{
                             suggestions.map((c, i) => <label className="p-1">
+                                {/* Palette */}
                                 <CommandBar>
                                     <Btn icon={'add'} tip={'Add color to palette'} action={() => addColor(prefix, c)} />
                                     <Btn icon={'delete'} tip={'Remove color from palette'} action={()=>removeControl(prefix)} />
@@ -524,9 +532,11 @@ function PaletteDataComponent(props: AllProps) {
                                 let v = e.v;
                                 return <option value={v}>{k}</option>
                             })]}</select>
-                            <CommandBar className={'d-flex w-100 float-end'}>
+
+                            {/* Path */}
+                            <CommandBar className={'d-flex w-100 float-end'} >
                                 <Btn icon={'space'} />
-                                <Btn icon={"delete"} action={(e) => {}} tip={'Delete'}/>
+                                <Btn icon={"delete"} action={(e) => {}} tip={'Remove path'}/>
                             </CommandBar>
                             
                         </div>)
@@ -541,9 +551,10 @@ function PaletteDataComponent(props: AllProps) {
                             <input className={"unit"} placeholder={"unit"} value={number.unit} pattern={CSS_Units.pattern} disabled={readOnly}
                                    list={"__jodel_CSS_units"} onChange={e => {setUnit(e as any, prefix)}} />
 
-                            <CommandBar>
+                            {/* Numeric */}
+                            <CommandBar >
                                 <Btn icon={'space'} />
-                                <Btn icon={"delete"} action={(e) => {}} tip={'Delete'}/>
+                                <Btn icon={"delete"} action={(e) => {}} tip={'Remove number'}/>
                             </CommandBar>
                         </div>)
                 }
@@ -557,9 +568,11 @@ function PaletteDataComponent(props: AllProps) {
                                    onKeyDown={e => {
                                        if (e.key === Keystrokes.enter) setText(e as any, prefix);
                                        if (e.key === Keystrokes.escape) (e.target as HTMLInputElement).value = string.value; }} />
+                            
+                            {/* Text */}
                             <CommandBar>
                                 <Btn icon={'space'} />
-                                <Btn icon={"delete"} action={(e) => {}} tip={'Delete'}/>
+                                <Btn icon={"delete"} action={(e) => {}} tip={'Remove text'}/>
                             </CommandBar>
                         </div>)
                 }

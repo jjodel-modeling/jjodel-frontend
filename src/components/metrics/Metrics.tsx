@@ -76,7 +76,7 @@ export const MetricsPanel = (props: MetricsProps) => {
     return (<>
         {windoww.MetricsPanelVisible && 
             <div className={'metrics-panel'}>
-                <h1>Metamodel Metrics
+                <h1>Metamodel Analytics
                     <CommandBar style={{float: 'right', height: '20px'}}>
                         <Btn icon={'close'} action={(e) => {hideMetrics(); return false;}} theme={'dark'} tip={'Close metrics panel'}/>
                     </CommandBar>

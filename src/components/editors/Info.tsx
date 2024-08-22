@@ -17,6 +17,7 @@ import './editors.scss';
 import './info.scss';
 import './style.scss';
 import {Empty} from "./Empty";
+import { CommandBar, Btn } from '../commandbar/CommandBar';
 
 class builder {
     static named(data: LModelElement, advanced: boolean): ReactNode {
@@ -347,18 +348,24 @@ class builder {
                             {selectOptions}
                         </select>}
                     </>}
-                    <button className={'btn btn-danger m-auto ms-2'} onClick={(evt) => {remove(index, isPtr)}}>
+                    <CommandBar>
+                        <Btn icon={'delete'} action={(evt) => {remove(index, isPtr)}} />
+                    </CommandBar>
+                    {/*<button className={'btn btn-danger m-auto ms-2'} onClick={(evt) => {remove(index, isPtr)}}>
                         <i className={'p-1 bi bi-trash3'}></i>
-                    </button>
+                    </button>*/}
                 </div>);
 
         return(<section className={'properties-tab'}>
-            <h1>{data.name}8</h1>
+            <h1>{data.name}</h1>
             <div className={'d-flex'}>
                 <label className={'ms-1 my-auto'}>Values</label>
-                <button className={'btn btn-primary ms-auto me-1'} disabled={filteredValues.length >= upperBound} onClick={add}>
+                <CommandBar style={{marginLeft: 'auto', marginTop: '6px'}}>
+                    <Btn icon={'add'} action={add} disabled={filteredValues.length >= upperBound}/>
+                </CommandBar>
+                {/* <button className={'btn btn-primary ms-auto me-1'} disabled={filteredValues.length >= upperBound} onClick={add}>
                     <i className={'p-1 bi bi-plus'}></i>
-                </button>
+                </button>*/}
             </div>
             {valueslist}
             {value.instanceof?.className === 'DAttribute' && (value.instanceof as LAttribute).isIoT && <>

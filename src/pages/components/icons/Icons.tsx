@@ -13,6 +13,7 @@ let icon: { [name: string]: any}  = {
     save: <i className="bi bi-upload menuitem"></i>,
     select: <i className="bi bi-check menuitem"></i>,
     deselect: <i className="bi bi-check2 menuitem"></i>,
+    add: <i className="bi bi-plus-circle-dotted menuitem"></i>,
     
     import: <i className="bi bi-arrow-bar-left menuitem"></i>,
     export: <i className="bi bi-arrow-bar-right menuitem"></i>,
@@ -21,6 +22,8 @@ let icon: { [name: string]: any}  = {
     favorite: <i className="bi bi-star menuitem"></i>,
     share: <i className="bi bi-share menuitem"></i>,
     delete: <i className="bi bi-trash3 menuitem"></i>,
+    'delete-confirm': <i className="bi bi-question-square-fill menuitem confirm"></i>,
+
 
     up: <i className="bi bi-arrow-up menuitem"></i>,
     down: <i className="bi bi-arrow-down menuitem"></i>,
@@ -28,7 +31,7 @@ let icon: { [name: string]: any}  = {
     lock: <i className="bi bi-lock menuitem" style={{marginRight: '10px'}}></i>,
     unlock: <i className="bi bi-unlock menuitem" style={{marginRight: '10px'}}></i>,
 
-    view: <i className="bi bi-file menuitem"></i>,
+    view: <i className="bi bi-window-plus menuitem"></i>,
 
 
     grid: <i className="bi bi-grid-3x3-gap menuitem"></i>,
@@ -55,7 +58,9 @@ let icon: { [name: string]: any}  = {
     template2: <i className="bi bi-lightbulb menuitem"></i>,
     extend: <i className="bi bi-caret-up menuitem" style={{paddingBottom: '2px'}}></i>,
     ai: <i className="bi bi-stars"></i>,
-    metrics: <i className="bi bi-graph-up-arrow" style={{marginRight: '10px'}}></i>
+    metrics: <i className="bi bi-graph-up" style={{marginRight: '10px'}}></i>,
+
+    submenu: <i className="bi bi-chevron-right menuitem float-end"></i>
 
     
 };

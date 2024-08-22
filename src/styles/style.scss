@@ -3,6 +3,11 @@
 .REACT-ROOT:not(.debug) .debug{
   display: none;
 }
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 /* classes */
 .round { border-radius: $radius; }
 .circle { border-radius: 999px !important; }

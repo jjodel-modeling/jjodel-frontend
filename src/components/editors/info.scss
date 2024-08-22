@@ -26,6 +26,10 @@ section {
   }
 }
 
+.properties-tab {
+  overflow: hidden!important;
+}
+
 .no-data-to-display {
   background-color: var(--bg-2-5);
   margin: 0.5rem;

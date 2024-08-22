@@ -1,4 +1,4 @@
-import React, {MouseEventHandler, ClassAttributes, useState} from "react";
+import React, {MouseEventHandler, ClassAttributes, useState, useRef, useEffect} from "react";
 import './commandbar.scss';
 import { inherits } from "util";
 
@@ -29,15 +29,32 @@ type BtnProps = {
     style?: React.CSSProperties
 }
 
+function useClickOutside(ref: any, onClickOutside: any) {
+    useEffect(() => {
+      
+        function handleClickOutside(event: Event) {
+            if (ref.current && !ref.current.contains(event.target)) {
+                onClickOutside();
+            }
+        }
 
+      // Bind
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        // dispose
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, [ref, onClickOutside]);
+  }
 
 export const Btn = (props: BtnProps) => {
 
-    const [value,setValue] = useState(false);
+    const [del,setDel] = useState(false);
+    const delRef = useRef(null);
 
-
-        
-
+    useClickOutside(delRef, () => {
+        setDel(false);
+    });
 
     return (<>
         {props.action ?
@@ -45,14 +62,33 @@ export const Btn = (props: BtnProps) => {
                 {props.icon === "delete2" ? 
                     <div className={`delete2 ${props.theme ? props.theme : 'light'}`}>Delete</div>
                     :
-                    
-                    <i 
+                    <>
+                    {props.icon === 'delete' ?
+                        <>
+                        {del ? 
+                            <i  onClick={props.action && props.action}
+                                className={`bi tab-btn bi-question-square-fill ${props.theme ? props.theme : 'light'} question ${props.size && props.size} ${props.disabled && 'disabled'}`}
+                                ref={delRef}
+                                title={'Are you sure?'} 
+                                style={props.style} 
+                            />
+                            :
+                            <i 
+                                className={`bi tab-btn ${props.icon} ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.disabled && 'disabled'}`}
+                                onClick={(e) => setDel(true)}
+                                title={`${props.tip && props.tip}`} 
+                                style={props.style} 
+                            />
+                        }
+                        </>
+                        :
+                        <i 
                         className={`bi tab-btn ${props.icon} ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.disabled && 'disabled'}`}
                         onClick={props.action && props.action} 
                         title={`${props.tip && props.tip}`} 
                         style={props.style} 
-                    />
-                
+                    />}
+                    </>
                 }
                     
             </div>
@@ -76,26 +112,6 @@ export const Sep = () => {
             </div>
     </>);
 }
-
-/*
-export const Btn = (props: BtnProps) => {
-
-    return (<>
-        {props.action ?
-            <div className={`${props.icon === 'delete2' && 'my-w-100'}`} >
-                <i 
-                    className={`bi tab-btn ${props.icon} ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.disabled && 'disabled'}`}
-                    onClick={props.action && props.action} title={`${props.tip && props.tip}`} 
-                />
-            </div>
-        :
-            <i 
-                className={`bi tab-btn ${props.icon} ${props.size && props.size} disabled ${props.theme ? props.theme : 'light'}s`} 
-            />
-        }
-    </>);
-}
-*/
 
 
 type CommandProps = {
