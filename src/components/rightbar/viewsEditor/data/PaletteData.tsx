@@ -514,7 +514,7 @@ function PaletteDataComponent(props: AllProps) {
                             suggestions.map((c, i) => <label className="p-1">
                                 
                                 {/* Palette */}
-                                <CommandBar>
+                                <CommandBar style={{float: 'right'}}>
                                     <Btn icon={'add'} tip={'Add color to palette'} action={() => addColor(prefix, c)} />
                                     <Btn icon={'delete'} tip={'Remove color from palette'} action={() => {
                                         if (Array.isArray(palette[prefix].value) && (palette[prefix].value as any).length) {
@@ -559,7 +559,7 @@ function PaletteDataComponent(props: AllProps) {
                             })]}</select>
 
                             {/* Path */}
-                            <CommandBar className={'d-flex w-100 float-end'} >
+                            <CommandBar  style={{paddingRight: '4px', marginLeft: 'auto'}}>
                                 <Btn icon={'space'} />
                                 <Btn icon={"delete"} action={(e) => {removeControl(prefix)}} tip={'Remove path'}/>
                             </CommandBar>
@@ -577,7 +577,7 @@ function PaletteDataComponent(props: AllProps) {
                                    list={"__jodel_CSS_units"} onChange={e => {setUnit(e as any, prefix)}} />
 
                             {/* Numeric */}
-                            <CommandBar >
+                            <CommandBar  style={{paddingRight: '4px', marginLeft: 'auto'}}>
                                 <Btn icon={'space'} />
                                 <Btn icon={"delete"} action={(e) => {removeControl(prefix)}} tip={'Remove number'}/>
                             </CommandBar>
@@ -595,7 +595,7 @@ function PaletteDataComponent(props: AllProps) {
                                        if (e.key === Keystrokes.escape) (e.target as HTMLInputElement).value = string.value; }} />
                             
                             {/* Text */}
-                            <CommandBar>
+                            <CommandBar  style={{paddingRight: '4px', marginLeft: 'auto'}}>
                                 <Btn icon={'space'} />
                                 <Btn icon={"delete"} action={(e) => {removeControl(prefix)}} tip={'Remove text'}/>
                             </CommandBar>

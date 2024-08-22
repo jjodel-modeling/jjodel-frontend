@@ -53,7 +53,7 @@ function ViewEventsComponent(props: AllProps) {
                 newEvent[k] = undefined;
                 view.events = newEvent;
             }}/>}
-            jsxLabel={<CommandBar className={'ms-auto'}><Btn icon={'delete'} tip={'Delete event'} action={() => {
+            jsxLabel={<CommandBar className={'ms-auto'}><Btn icon={'delete'} tip={'Remove event'} action={() => {
                 let newEvent: GObject = {};
                 newEvent[k] = undefined; // this is how you trigger deletion with object -= action
                 view.events = newEvent;

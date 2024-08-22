@@ -70,12 +70,28 @@
     pointer-events: all;
     margin: auto;
     background: whitesmoke; //var(--palette-w);
-    padding: 1em;
+    padding: 0.4em;
     border: 1px solid var(--palette-g);
-    border-radius: 0.5em;
+    border-radius: var(--radius); //.5em;
   }
+  
   &.inline>*{
     margin: auto;
     pointer-events: none;
   }
+}
+
+.tooltip-wrapper.small {
+
+
+  &>*{
+    pointer-events: all;
+    margin: auto;
+    background: black!important; //var(--palette-w);
+    padding: 0.4em;
+    border: 1px solid var(--palette-g);
+    border-radius: var(--radius); //.5em;
+    color: white;
+  }
+
 }
