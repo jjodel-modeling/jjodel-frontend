@@ -447,7 +447,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                         {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}>
                                                                             <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                                <Btn icon={'add'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, [color.complement(), tinycolor(invert(color))], i, false)}/>
+                                                                                <Btn icon={'add'} tip={'Add all the colors'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, [color.complement(), tinycolor(invert(color))], i, false)}/>
                                                                             </CommandBar>
                                                                             Complementary / Opposite
                                                                         </h6>
@@ -462,7 +462,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                         {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}>
                                                                         <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                            <Btn icon={'add'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, color.splitcomplement(), i)}/>
+                                                                            <Btn icon={'add'} tip={'Add all the colors'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, color.splitcomplement(), i)}/>
                                                                         </CommandBar>
                                                                         Split Complementary
                                                                         </h6>
@@ -487,7 +487,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                         {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}> {/* todo per damiano, todo per giordano: controllare che funzioni*/}
                                                                         <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                                <Btn icon={'add'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, color.tetrad(), i)}/>
+                                                                                <Btn icon={'add'} tip={'Add all the colors'} theme={'dark'} size={'x-small'} action={()=>addColor(prefix, color.tetrad(), i)}/>
                                                                             </CommandBar>
                                                                             Tetradic
                                                                         </h6>

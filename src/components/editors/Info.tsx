@@ -349,7 +349,7 @@ class builder {
                         </select>}
                     </>}
                     <CommandBar>
-                        <Btn icon={'delete'} action={(evt) => {remove(index, isPtr)}} />
+                        <Btn icon={'delete'} tip={'Remove value'} action={(evt) => {remove(index, isPtr)}} />
                     </CommandBar>
                     {/*<button className={'btn btn-danger m-auto ms-2'} onClick={(evt) => {remove(index, isPtr)}}>
                         <i className={'p-1 bi bi-trash3'}></i>
@@ -361,7 +361,7 @@ class builder {
             <div className={'d-flex'}>
                 <label className={'ms-1 my-auto'}>Values</label>
                 <CommandBar style={{marginLeft: 'auto', marginTop: '6px'}}>
-                    <Btn icon={'add'} action={add} disabled={filteredValues.length >= upperBound}/>
+                    <Btn icon={'add'} action={add} tip={`Add a ${data.name} value`} disabled={filteredValues.length >= upperBound}/>
                 </CommandBar>
                 {/* <button className={'btn btn-primary ms-auto me-1'} disabled={filteredValues.length >= upperBound} onClick={add}>
                     <i className={'p-1 bi bi-plus'}></i>

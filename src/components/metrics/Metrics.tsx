@@ -78,7 +78,7 @@ export const MetricsPanel = (props: MetricsProps) => {
             <div className={'metrics-panel'}>
                 <h1>Metamodel Analytics
                     <CommandBar style={{float: 'right', height: '20px'}}>
-                        <Btn icon={'close'} action={(e) => {hideMetrics(); return false;}} theme={'dark'} tip={'Close metrics panel'}/>
+                        <Btn icon={'close'} action={(e) => {hideMetrics(); return false;}} theme={'dark'} tip={'Close panel'}/>
                     </CommandBar>
                 </h1>
                 
@@ -87,7 +87,7 @@ export const MetricsPanel = (props: MetricsProps) => {
                 <div className={'category'}>
                     <label>
                         <CommandBar style={{float: 'left'}}>
-                            <Btn icon={"info"} action={(e) => {alert('information page')}}  theme={'dark'}/>
+                            <Btn icon={"info"} action={(e) => {alert('information page')}} theme={'dark'}/>
                         </CommandBar> 
                         Metamodel classification as
                     </label>
