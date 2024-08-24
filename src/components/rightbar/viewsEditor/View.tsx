@@ -69,9 +69,6 @@ function ViewDataComponent(props: AllProps) {
             <CommandBar>
                 <Btn icon={'back'} action={() => props.setSelectedView(undefined)} tip={'Back'}/>
             </CommandBar>
-            {/* <button className={'bg btn-back'} onClick={ () => props.setSelectedView(undefined)}>
-                <i className={'p-1 bi bi-arrow-left'}></i>
-        </button>*/}
             <div className={"path-list"}>{
                 (viewChain.map((v, i) => <>
                     <div className={"path-element"} onClick={()=>props.setSelectedView(i === 0 ? undefined : v.id)}>
@@ -79,7 +76,6 @@ function ViewDataComponent(props: AllProps) {
                     </div>
                 </>) as any
                 ).separator(
-                    //bi-caret-right-fill bi-chevron-right
                     <i className={"path-separator bi bi-chevron-right"} />
                 )
             }</div>

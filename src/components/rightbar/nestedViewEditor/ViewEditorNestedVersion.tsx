@@ -1,3 +1,6 @@
+/* Viewpoints */
+
+
 import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import {
@@ -20,6 +23,7 @@ import ViewData from '../viewsEditor/View';
 import {Tooltip} from "../../forEndUser/Tooltip";
 import { CommandBar, Btn, Sep } from '../../commandbar/CommandBar';
 import { Toggle } from '../../widgets/Widgets';
+
 
 // import "./tree.scss" already imported by <Tree> subcomponent
 type Metadata = {setView: (p: Pointer)=>any, scoreBoost: number}
@@ -52,6 +56,17 @@ function NestedViewComponent(props: AllProps) {
         });
     }
 
+
+    function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+        const ret: StateProps = {} as FakeStateProps;
+        // const user = LUser.fromPointer(DUser.current, state);
+        // ret.project = user.project as LProject;
+        ret.priority = LPointerTargetable.fromArr(ownProps.priority); // ret.project.viewpoints;
+        ret.debug = state.debug;
+        ret.view = LPointerTargetable.fromPointer(ownProps.viewid, state);
+        return ret;
+    }
+
     const activateVP = (viewPoint: LViewPoint) => { project.activeViewpoint = viewPoint; }
     const clone = (v: LViewElement) => { v.duplicate(true); }
     const getSubElements = (v: DViewElement) => v.subViews || {};
@@ -73,6 +88,10 @@ function NestedViewComponent(props: AllProps) {
         let isDefault = d.id.indexOf('Pointer_View') === 0;
 
         function select(ptr: Pointer<DViewPoint>){ project.activeViewpoint = ptr as any; }
+
+        
+        
+            
 
         return <li className={"entry-root" + d.className + (d.id === activeViewpointId ? ' selected' : '')} key={d.id}>
 
@@ -109,7 +128,7 @@ function NestedViewComponent(props: AllProps) {
                             
                         
                         <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
-                            <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e);}} tip={'Delete'}/>
+                            <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e);}} tip={'Delete'}/> {/* todo per damiano, la cancellazione non funziona*/}
                             <Btn icon={'copy'} action={(e)=> { l.duplicate(); preventClick(e);}} tip={'Duplicate'}/>
                         </CommandBar>
                         {/* <button className="bg btn-delete my-auto ms-2 green" onClick={(e)=> { l.duplicate(); preventClick(e);}}><i className='bx bx-duplicate' /></button>
@@ -121,7 +140,7 @@ function NestedViewComponent(props: AllProps) {
                         {
                             isVP ? <>
                                 <div className={"spacer"}/>
-                            </> : <>{ true && <>
+                            </> : <>{ props.isAdvanced && <>
                                 <span className={"priority"}>priority: {l.explicitApplicationPriority} </span><i style={{paddingTop: '4px'}} className="bi bi-x"></i>
                                 <div className={"spacer"}/>
                                 <Input type="number"
@@ -173,12 +192,13 @@ function NestedViewComponent(props: AllProps) {
                             <Btn icon={'add'} action={addVP} tip={'Create a new viewpoint'} />
                         </CommandBar>
                         <Toggle 
-                            name={'priority'} 
+                            name={'advanced'} 
                             values={{false: 'false', true: 'true'}} 
                             labels={{false: 'show priorities', true: 'hide priorities'}} 
                             style={{float: 'right', paddingRight: '20px', fontSize: '0.9em'}}
                             size={'small'}
                         />
+
                     </h1>
                 </div>
                 {vieweditor}
@@ -253,6 +273,7 @@ interface StateProps {
     project: LProject;
     viewpoints: LViewPoint[];
     active: LViewPoint;
+    isAdvanced: boolean;
 }
 interface DispatchProps { }
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -264,6 +285,8 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.project = user.project as LProject;
     ret.viewpoints = ret.project.viewpoints.filter( (vp) => !!vp/* && vp.isValidation === ownProps.validation*/);
     ret.active = ret.project.activeViewpoint;
+    ret.isAdvanced = state.advanced;
+    
     return ret;
 }
 

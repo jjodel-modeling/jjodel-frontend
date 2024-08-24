@@ -1,3 +1,5 @@
+/* Viewpoints > Events */
+
 import React, {Dispatch, EventHandler, MouseEventHandler, ReactElement} from 'react';
 import {DState, DViewElement, GObject, LViewElement, Pointer, TextArea, U} from '../../../../joiner';
 import {connect} from "react-redux";

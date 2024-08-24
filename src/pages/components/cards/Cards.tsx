@@ -1,5 +1,6 @@
 import React, {MouseEventHandler, ReactNode} from 'react';
 import "./cards.scss";
+import { Tooltip } from '../../../components/forEndUser/Tooltip';
 
 type CardsType = {
     children: any;
@@ -34,18 +35,18 @@ export const Card = (props: CardType) => {
     };
 
     return (
-        <div className={`card ${props.style ? props.style : 'default' }`}>
-            <div className={'col icon'}>
-                {props.action ?
-                    <i onClick={props.action} className={`bi ${icons[props.icon]}`}></i> :
-                    <i className={`bi ${icons[props.icon]} disabled`}></i>
-                }
+            <div className={`card ${props.style ? props.style : 'default' }`}>
+                <div className={'col icon'}>
+                    {props.action ?
+                        <i onClick={props.action} className={`bi ${icons[props.icon]}`}></i> :
+                        <i className={`bi ${icons[props.icon]} disabled`}></i>
+                    }
+                </div>
+                <div className={'col body'}>
+                    <h5>{props.title}</h5>
+                    <span>{props.subtitle}</span>
+                </div>
             </div>
-            <div className={'col body'}>
-                <h5>{props.title}</h5>
-                <span>{props.subtitle}</span>
-            </div>
-        </div>
     );
 }
 

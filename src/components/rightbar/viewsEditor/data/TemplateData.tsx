@@ -1,3 +1,5 @@
+/* Viewpoints > Template */
+
 import React, {Dispatch} from 'react';
 import {
     DState,
