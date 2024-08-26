@@ -24,6 +24,7 @@ let icon: { [name: string]: any}  = {
     delete: <i className="bi bi-trash3 menuitem"></i>,
     'delete-confirm': <i className="bi bi-question-square-fill menuitem confirm"></i>,
 
+    refresh: <i className="bi bi-arrow-clockwise menuitem"></i>,
 
     up: <i className="bi bi-arrow-up menuitem"></i>,
     down: <i className="bi bi-arrow-down menuitem"></i>,

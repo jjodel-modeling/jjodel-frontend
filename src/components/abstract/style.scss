@@ -698,12 +698,12 @@ body.dock-dragging iframe {
 .dock-panel-max-btn::before {
   display: block;
   position: relative;
-  height: 24px;
-  width: 24px;
+  height: 20px;
+  width: 20px;
   font-family: bootstrap-icons;
   font-size: 1.1em;
   color: var(--terziary);
-  content: "\F584"; // max
+  content: "\F3DF"; // max
   cursor: pointer;
 
 }
@@ -718,7 +718,7 @@ body.dock-dragging iframe {
 
 }
 .dock-panel-max-btn:hover {
-  transform: scale(1.1);
+
 }
 
 .dock-mbox .dock-panel-max-btn {
@@ -736,7 +736,7 @@ body.dock-dragging iframe {
   font-family: bootstrap-icons;
   font-size: 1.1em;
   color: var(--terziary);
-  content: "\F460"; // min
+  content: "\F3DE"; // min
   cursor: pointer;
 }
 .dock-mbox .dock-panel-max-btn:hover:before,

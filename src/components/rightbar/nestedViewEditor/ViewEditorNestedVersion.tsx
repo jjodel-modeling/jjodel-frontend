@@ -57,15 +57,15 @@ function NestedViewComponent(props: AllProps) {
     }
 
 
-    function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
-        const ret: StateProps = {} as FakeStateProps;
-        // const user = LUser.fromPointer(DUser.current, state);
-        // ret.project = user.project as LProject;
-        ret.priority = LPointerTargetable.fromArr(ownProps.priority); // ret.project.viewpoints;
-        ret.debug = state.debug;
-        ret.view = LPointerTargetable.fromPointer(ownProps.viewid, state);
-        return ret;
-    }
+    // function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
+    //     const ret: StateProps = {} as FakeStateProps;
+    //     // const user = LUser.fromPointer(DUser.current, state);
+    //     // ret.project = user.project as LProject;
+    //     ret.priority = LPointerTargetable.fromArr(ownProps.priority); // ret.project.viewpoints;
+    //     ret.debug = state.debug;
+    //     ret.view = LPointerTargetable.fromPointer(ownProps.viewid, state);
+    //     return ret;
+    // }
 
     const activateVP = (viewPoint: LViewPoint) => { project.activeViewpoint = viewPoint; }
     const clone = (v: LViewElement) => { v.duplicate(true); }
@@ -91,7 +91,7 @@ function NestedViewComponent(props: AllProps) {
 
         
         
-            
+        const max_priority = l.explicitApplicationPriority 
 
         return <li className={"entry-root" + d.className + (d.id === activeViewpointId ? ' selected' : '')} key={d.id}>
 
@@ -156,7 +156,7 @@ function NestedViewComponent(props: AllProps) {
                                 <span className={"right-icon feature-border js-icon vertical-centering " + (d.jsCondition.length ? "" : "hidden")}></span>
                             </>
                         }
-                        <Tooltip tooltip={<div>is {d.isExclusiveView ? "" : "not"} mutually exclusive with other "Ex" views.</div>} position={"bottom"} inline={true}>
+                        <Tooltip theme={'dark'} tooltip={<div>is {d.isExclusiveView ? "" : "not"} mutually exclusive with other "Ex" views.</div>} position={"bottom"} inline={true}>
                             <span className={"right-icon feature-border ex-icon vertical-centering " + (d.isExclusiveView ? '' : "hidden")}></span></Tooltip>
                     </div>
                 </div>

@@ -254,7 +254,7 @@ export class Tooltip extends React.Component<AllProps, State> {
 interface State{
 }
 
-type ThemeType = 'default' | 'small';
+type ThemeType = 'default' | 'dark';
 
 interface OwnProps {
     key?: React.Key | null;
