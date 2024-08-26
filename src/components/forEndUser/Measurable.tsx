@@ -1,23 +1,29 @@
 import React, {Component, CSSProperties, PureComponent, ReactChild, ReactElement, ReactNode} from "react";
-import {Dictionary, GObject, Log, RuntimeAccessible, TRANSACTION, U} from "../../joiner";
+import {DGraphElement, Dictionary, GObject, GraphSize, LGraph, Log, RuntimeAccessible, Size, TRANSACTION, U} from "../../joiner";
 import $ from "jquery";
-import {JQueryUI} from "../../common/libraries/jqui-types";
 import {OwnProps} from "../rightbar/structureEditor/ModelMetaData";
+/// <reference path="../../common/libraries/jqui-types.ts" />
+import {JQueryUI} from "../../common/libraries/jqui-types"
+
 type ResizableEvent = JQueryUI.ResizableEvent;
 type DraggableEvent = JQueryUI.DraggableEvent;
-type RotatableEvent = ()=>void; // todo
-
+type RotatableEvent = JQueryUI.RotatableEvent;
+type DraggableOptions = JQueryUI.DraggableOptions;
+type ResizableOptions = JQueryUI.ResizableOptions;
+type RotatabeOptions = JQueryUI.RotatableOptions;
 // private
 interface MeasurableState {
 }
 interface ScrollState {
 }
 
+type EventLetter = 's'|'ing'|'e';
 type MeasurableUIEvent = ResizableEvent | DraggableEvent | RotatableEvent;
 
 @RuntimeAccessible('MeasurableComponent')
 export class MeasurableComponent extends Component<MeasurableAllProps, MeasurableState>{
     static cname: string = "MeasurableComponent";
+    static childmodekeys: (keyof CSSStyleDeclaration)[] = ['left', 'top', 'transform', 'position'];
 
 
     private html: Element | null = null;
@@ -44,6 +50,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
     componentDidUpdate(prevProps: Readonly<MeasurableAllProps>, prevState: Readonly<MeasurableState>, snapshot?: any) {
         this.afterUpdate();
     }
+
     afterUpdate(): void{
         if (!this.html) return;
         this.$html = $(this.html);
@@ -51,88 +58,186 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         if (this.resizeOptionsChanged) { this.afterUpdateSingle("resizable"); }
         if (this.rotateOptionsChanged) { this.afterUpdateSingle("rotatable"); }
     }
+    /*
+        afterUpdateSingle(type: "draggable" | "resizable" | "rotatable"): void{
+            if (this.props.draggable) this.afterUpdateDraggable
+        }/*
+        afterUpdateDraggable_old(): void{
+            nope, erase this and just make the previous _old genericversion with inner dynamic functions called 9 times like event('drag', 'while'); event('drag', 'end'); event('resize', 'while');...
+            make and extract new functions from code so that it dinamically build the jqui options object
+            if (!this.$html) return;
+            let $measurable = this.$html;
+            let jqui_options = this.props.draggable;
+            let jqui_start = jqui_options === 'object' ? jqui_options.start : undefined;
+            let jqui_end = jqui_options === 'object' ? jqui_options.stop : undefined;
+            let jqui_ing = jqui_options === 'object' ? jqui_options.drag : undefined;
+            let props_start = this.props.onDragStart;
+            let props_end = this.props.onDragEnd;
+            let props_ing = this.props.whileDragging;
+            let type = 'draggable';
 
-    afterUpdateSingle(type: "draggable" | "resizable" | "rotatable"): void{
-        if (!this.$html) return;
-        let $measurable = this.$html;
 
-        // todo: changing options at runtime works, but changing children does not update
+            //let positionMap = new WeakMap<HTMLElement, {left: number; top: number}>();
+            let childmode_drag = (e: HTMLElement, evt?: any, evtkind?: EventLetter, ui?:any): void => {
+                let oc = this.props.onChildren;
+                if (!oc) {
+                    Log.ee('not oc', {evt, oc, e, p: this.props}); return;
+                }
+                let child: HTMLElement;
+                if (typeof oc === 'function') child = oc(e);
+                else child = e.children[0] as HTMLElement;
+                if (!child) {
+                    Log.ee('child not found', {child, evt, oc, e}); return;
+                }
+                let oldpos = this.oldPos; // positionMap.get(e);
+                console.log('measurable default event child ' + evtkind, {ui, e, oc, oldpos});
+                //if (evtkind === 'e') { positionMap.set(e, ui.position); }
 
+                /*if (evtkind === 's') {
+                    ui.originalPosition.left = 300;
+                    ui.offset.left = 300;
+                    ui.position.left = 300;
+                    console.log('measurable sstart ', {type, e, oc, ui, el: e.style.left, cl: child.style.left});
+                }* /
 
-        type EventLetter = 's'|'ing'|'e';
+                let key: any;
+                for (key of childmodekeys) {
+                    let fixpos = () => {
+                        if (oldpos && (oldpos as any)[key] !== undefined) {
+                            if (key ==='left') console.log('measurable fixpos ' + evtkind, (oldpos as any)[key] + ui.position[key] + 'px', (oldpos as any)[key]);
+                            let newpos = (oldpos as any)[key] + ui.position[key];
+                            child.style[key] = (newpos) + 'px';
+                            if (evtkind === 'e') this.oldPos[key] = newpos;
+                        }
+                        else child.style[key] = e.style[key];
+                    }
+                    fixpos();
+                    if (evtkind === 'e')  setTimeout(fixpos, 1000);
+                    if (evtkind === 's' && !e.classList.contains('draggable-child-mode')) e.classList.add('draggable-child-mode');
+                    // delete e.style[key]
+                }
+            }
+
+            let translateeevents: Dictionary<string, Dictionary<string, DraggableEvent>> = {
+                'draggable': {
+                    's': (e, ui)=>{ this.absoluteToTransform(e.target as HTMLElement, e, 's'); },
+                    'ing': (e, ui)=>{ this.absoluteToTransform(e.target as HTMLElement, e, 'ing'); },
+                    'e': (e, ui)=>{ this.absoluteToTransform(e.target as HTMLElement, e, 'e'); }},
+            };
+            let defaulteevent = (evtkind: EventLetter): MeasurableUIEvent | null =>{
+                if (!this.props.transformMode && !this.props.onChildren) return null;
+                return (e: any, ui: any) => {
+                    //console.log('measurable default event', {type, evtkind, translateeevents, e, t: e.target});
+                    if (this.props.transformMode === true) translateeevents[type][evtkind](e, ui);
+                    childmode_drag(e.target, e, evtkind, ui);
+                }
+            };
+
+            if (props[optionkey] === false || !props[optionkey]) {
+                console.log("measurable off " + type, {$measurable, type, datamap, optionkey, props});
+                if ($measurable.data(datamap[type])) ($measurable as GObject)[type]('disable');
+                return;
+            }
+            if (props[optionkey] === true) {
+                options = {};
+            } else options = {...props[optionkey]};
+
+            if (props_start && typeof props_start !== "function") { return Log.ee("<Measurable /> onDragStart props must be a function"); }
+            if (props_end && typeof props_end !== "function") { return Log.ee("<Measurable /> onDragEnd props must be a function"); }
+            if (props_ing && typeof props_ing !== "function") { return Log.ee("<Measurable /> whileDragging props must be a function"); }
+            if (!jqui_start && !props_start && ! default_start) delete options.start,
+                else options.start = (evt, ui) => { default_start?.(evt, ui); jqui_start?.(evt, ui); props_start?.(thiss.getCoords(evt, ui), evt, ui); }
+
+            let propsOptions = {...options};
+            let defaultOptions = this.defaultOptions[type];
+            U.objectMergeInPlace(options, defaultOptions);
+            //console.log("measurable", {type, $measurable, options, propsOptions, defaultOptions});
+            ($measurable as GObject)[type](options);
+        }*/
+
+    absoluteToTransform(e: HTMLElement, evt?: any, evtkind?: EventLetter): any {
+        let x = e.style.left;
+        let y = e.style.top;
+        /*
+            e.style.left = '0px';
+            e.style.top = '0px';*/
+        //e.style.position = 'unset';
+        e.style.transform = `translate(${x}, ${y})`;
+    }
+    childmode(e: HTMLElement, evt?: any, evtkind?: EventLetter, ui?:any): void{
+        let oc = this.props.onChildren;
+        if (!oc) {
+            Log.ee('not oc', {evt, oc, e, p: this.props}); return;
+        }
+        let child: HTMLElement;
+        console.log('cchild', {e, evt,  evtkind, ui});
+        if (typeof oc === 'function') child = oc(e);
+        else child = e.children[0] as HTMLElement;
+        if (!child) {
+            Log.ee('child not found', {child, evt, oc, e}); return;
+        }
+        let oldpos = this.oldPos; // positionMap.get(e);
+        console.log('measurable default event child ' + evtkind, {ui, e, oc, oldpos});
+        //if (evtkind === 'e') { positionMap.set(e, ui.position); }
+
+        /*if (evtkind === 's') {
+            ui.originalPosition.left = 300;
+            ui.offset.left = 300;
+            ui.position.left = 300;
+            console.log('measurable sstart ', {type, e, oc, ui, el: e.style.left, cl: child.style.left});
+        }*/
+
+        let key: any;
+        for (key of MeasurableComponent.childmodekeys) {
+            let fixpos = () => {
+                if (oldpos && (oldpos as any)[key] !== undefined) {
+                    if (key ==='left') console.log('measurable fixpos ' + evtkind, (oldpos as any)[key] + ui.position[key] + 'px', (oldpos as any)[key]);
+                    let newpos = (oldpos as any)[key] + ui.position[key];
+                    child.style[key] = (newpos) + 'px';
+                    if (evtkind === 'e') this.oldPos[key] = newpos;
+                }
+                else child.style[key] = e.style[key];
+            }
+            fixpos();
+            if (evtkind === 'e')  setTimeout(fixpos, 1000);
+            if (evtkind === 's' && !e.classList.contains('draggable-child-mode')) e.classList.add('draggable-child-mode');
+            // delete e.style[key]
+        }
+    }
+    getDefaultEvent(type: "draggable" | "resizable" | "rotatable", evtkind: EventLetter): MeasurableUIEvent | null {
+        if (!this.props.transformMode && !(this.props.onChildren && type === 'draggable')) return null;
+        switch (type) {
+            case 'draggable': if (!this.props.transformMode && !this.props.onChildren) return null; break
+            case 'resizable': break
+            case 'rotatable': break
+        }
+
+        let translateeevents: Dictionary<string, Dictionary<string, DraggableEvent>> = {
+            'draggable': {
+                's': (e, ui)=>{ this.absoluteToTransform(e.target as HTMLElement, e, 's'); },
+                'ing': (e, ui)=>{ this.absoluteToTransform(e.target as HTMLElement, e, 'ing'); },
+                'e': (e, ui)=>{ this.absoluteToTransform(e.target as HTMLElement, e, 'e'); }},
+            /*'resizable': {
+                's': (e, ui)=>{ },
+                'ing': (e, ui)=>{ },
+                'e': (e, ui)=>{ }},
+            'rotatable': {
+                's': (e, ui)=>{ },
+                'ing': (e, ui)=>{ },
+                'e': (e, ui)=>{ }},*/
+        };
+        return (e: any, ui: any) => {
+            console.log('measurable default event', {type, evtkind, translateeevents, e, t: e.target});
+            if (this.props.transformMode === true) translateeevents[type]?.[evtkind]?.(e, ui);
+            this.childmode(e.target, e, evtkind, ui);
+        }
+    }
+    makeEvent(options: GObject<DraggableOptions>, type: string, evtkey: keyof typeof jquievent) {
         let eventmap = {
             's':    {'draggable': 'onDragStart',    'rotatable': 'onRotateStart',   'resizable': 'onResizeStart'},
             'ing':  {'draggable': 'whileDragging',  'rotatable': 'whileRotating',   'resizable': 'whileResizing'},
             'e':    {'draggable': 'onDragEnd',      'rotatable': 'onRotateEnd',     'resizable': 'onResizeEnd'  },
         }
-        let childmodekeys: (keyof CSSStyleDeclaration)[] = ['left', 'top', 'transform', 'position'];
-        //let positionMap = new WeakMap<HTMLElement, {left: number; top: number}>();
-        let childmode = (e: HTMLElement, evt?: any, evtkind?: EventLetter, ui?:any): void => {
-            let oc = this.props.onChildren;
-            if (!oc) {
-                Log.ee('not oc', {evt, oc, e, p: this.props}); return;
-            }
-            let child: HTMLElement;
-            if (typeof oc === 'function') child = oc(e);
-            else child = e.children[0] as HTMLElement;
-            if (!child) {
-                Log.ee('child not found', {child, evt, oc, e}); return;
-            }
-            let oldpos = this.oldPos; // positionMap.get(e);
-            console.log('measurable default event child ' + evtkind, {ui, e, oc, oldpos});
-            //if (evtkind === 'e') { positionMap.set(e, ui.position); }
-
-            /*if (evtkind === 's') {
-                ui.originalPosition.left = 300;
-                ui.offset.left = 300;
-                ui.position.left = 300;
-                console.log('measurable sstart ', {type, e, oc, ui, el: e.style.left, cl: child.style.left});
-            }*/
-
-            let key: any;
-            for (key of childmodekeys) {
-                let fixpos = () => {
-                    if (oldpos && (oldpos as any)[key] !== undefined) {
-                        if (key ==='left') console.log('measurable fixpos ' + evtkind, (oldpos as any)[key] + ui.position[key] + 'px', (oldpos as any)[key]);
-                        let newpos = (oldpos as any)[key] + ui.position[key];
-                        child.style[key] = (newpos) + 'px';
-                        if (evtkind === 'e') this.oldPos[key] = newpos;
-                    }
-                    else child.style[key] = e.style[key];
-                }
-                fixpos();
-                if (evtkind === 'e')  setTimeout(fixpos, 1000);
-                if (evtkind === 's' && !e.classList.contains('draggable-child-mode')) e.classList.add('draggable-child-mode');
-                // delete e.style[key]
-            }
-        }
-        function absoluteToTransform(e: HTMLElement, evt?: any, evtkind?: EventLetter): void {
-            let x = e.style.left;
-            let y = e.style.top;/*
-            e.style.left = '0px';
-            e.style.top = '0px';*/
-            //e.style.position = 'unset';
-            e.style.transform = `translate(${x}, ${y})`;
-        }
-        let translateeevents: Dictionary<string, Dictionary<string, DraggableEvent>> = {
-            'draggable': {
-                's': (e, ui)=>{ absoluteToTransform(e.target as HTMLElement, e, 's'); },
-                'ing': (e, ui)=>{ absoluteToTransform(e.target as HTMLElement, e, 'ing'); },
-                'e': (e, ui)=>{ absoluteToTransform(e.target as HTMLElement, e, 'e'); }},
-            'resizable': {
-                's': (e, ui)=>{},
-                'ing': (e, ui)=>{},
-                'e': (e, ui)=>{}},
-            'rotatable': {
-                's': (e, ui)=>{},
-                'ing': (e, ui)=>{},
-                'e': (e, ui)=>{}},
-        };
-        let defaulteevent = (evtkind: EventLetter)=>( (e: any, ui: any) => {
-            //console.log('measurable default event', {type, evtkind, translateeevents, e, t: e.target});
-            if (this.props.transformMode === true) translateeevents[type][evtkind](e, ui);
-            childmode(e.target, e, evtkind, ui);
-        } ) as MeasurableUIEvent;
         let jqui_ing: string;
         switch (type){
             default: jqui_ing = Log.eDevv("unexpected measurable event: " + type); return;
@@ -140,22 +245,36 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
             case "resizable": jqui_ing = 'resize'; break;
             case "rotatable": jqui_ing = 'rotate'; break;
         }
-        /*
-        defaultoptions.start = (event: GObject, obj: GObject) => {
-            TRANSACTION(()=>{
-                //for (let vid of allviews) this.doMeasurableEvent((EMeasurableEvents as any)[eventmap.s[type]], vid);
-            })
+        //let jodelevent = {'s': eventmap.s[type], 'ing': eventmap.ing[type], 'e': eventmap.e[type]};
+        let jquievent = {'s': 'start', 'ing': jqui_ing, 'e':'stop'};
+
+        let jqkey = jquievent[evtkey] || '';
+        let props: GObject<MeasurableAllProps> = this.props;
+        let propsevent = props[eventmap[evtkey][type]];
+
+        if (propsevent && typeof propsevent !== "function") {
+            Log.ee("<Measurable /> " + eventmap[evtkey][type] + " props must be a function");
+            return;
         }
-        defaultoptions[jqui_ing] = (event: GObject, obj: GObject) => {
-            TRANSACTION(()=>{
-                //for (let vid of allviews) this.doMeasurableEvent((EMeasurableEvents as any)[eventmap.s[type]], vid);
-            })
-        };
-        defaultoptions.stop = (event: GObject, obj: GObject) => {
-            TRANSACTION(()=>{
-                //for (let vid of allviews) this.doMeasurableEvent((EMeasurableEvents as any)[eventmap.s[type]], vid);
-            })
-        }*/
+        // call ondragend... jodel events
+        let jquievt = options[jqkey];
+        // let jodelevt = propsevent; // (...params: any) => propsevent(...params); // was made to preserve "this"?
+        let defaultevt: null | MeasurableUIEvent = this.getDefaultEvent(type, evtkey);
+        let allevents = [defaultevt, jquievt, propsevent].filter((e)=>!!e);
+        console.log('checking for jodelevent 00', {propsevent, allevents, props, k: eventmap[evtkey][type], pe: props[eventmap[evtkey][type]], evtkey, type, eventmap});
+        if (allevents.length) options[jqkey] = ((evt, ui)=>{
+            for (let e of allevents) {
+                propsevent = props[eventmap[evtkey][type]]; // if i don't redeclare it here, closure makes a mess taking always the last jodelevt for all iterations.
+                console.log('checking for jodelevent', {eq:e === propsevent, e, propsevent, allevents, props, k: (eventmap as any)[evtkey][type], pe: props[eventmap[evtkey][type]], evtkey, type, eventmap});
+                if (e === propsevent) { e(this.getCoords(evt, ui, !!this.props.isPanning), evt, ui); }
+                else e(evt, ui);
+            }
+        }) as DraggableEvent;
+    }
+    afterUpdateSingle(type: "draggable" | "resizable" | "rotatable"): void{
+        // was forced to move from general loop-style implementation to individual redundant stuff because of closure messes.
+        if (!this.$html) return;
+        let $measurable = this.$html;
         let options: GObject;
         const props: GObject = this.props;
         const datamap = {draggable: "uiDraggable", resizable: "uiResizable", rotatable: "uiRotatable"};
@@ -170,28 +289,21 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
             options = {};
         } else options = {...props[optionkey]};
 
-        //let jodelevent = {'s': eventmap.s[type], 'ing': eventmap.ing[type], 'e': eventmap.e[type]};
+        // todo: changing options at runtime works, but changing children does not update
+
+        let jqui_ing: string;
+        switch (type){
+            default: jqui_ing = Log.eDevv("unexpected measurable event: " + type); return;
+            case "draggable": jqui_ing = 'drag'; break;
+            case "resizable": jqui_ing = 'resize'; break;
+            case "rotatable": jqui_ing = 'rotate'; break;
+        }
         let jquievent = {'s': 'start', 'ing': jqui_ing, 'e':'stop'};
         let evtkey: keyof typeof jquievent;
-        for (evtkey in jquievent) {
-            let jqkey = jquievent[evtkey] || '';
-            let propsevent = props[eventmap[evtkey][type]];
-            if (propsevent && typeof propsevent !== "function") {
-                Log.ee("<Measurable /> " + eventmap[evtkey][type] + " props must be a function");
-                continue;
-            }
-            options[jqkey+"_debug"] = propsevent;
-            // call ondragend... jodel events
-            let oldevt = options[jqkey];
-            let jodelevt = propsevent; // (...params: any) => propsevent(...params); // was made to preserve "this"?
-            let translatemodeevt: null | MeasurableUIEvent = defaulteevent(evtkey);
-            let allevents = [oldevt, jodelevt, translatemodeevt].filter((e)=>!!e);
-            if (allevents.length) options[jqkey] = (...params: any)=> { for (let e of allevents) e(...params); };
-        }
-        let propsOptions = {...options};
+        for (evtkey in jquievent) { this.makeEvent(options, type, evtkey); }
         let defaultOptions = this.defaultOptions[type];
         U.objectMergeInPlace(options, defaultOptions);
-        //console.log("measurable", {type, $measurable, options, propsOptions, defaultOptions});
+        console.log("measurable options", {type, $measurable, options, defaultOptions});
         ($measurable as GObject)[type](options);
     }
     shouldComponentUpdate(nextProps: Readonly<MeasurableAllProps>, nextState: Readonly<MeasurableState>, nextContext: any): boolean {
@@ -287,6 +399,18 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         let clonedChild = React.cloneElement(child, newProps);
         return clonedChild;
     }
+
+    private getCoords(evt: JQueryEventObject, ui: JQueryUI.DraggableEventUIParams, isPanning: boolean): GraphSize {
+        let size = Size.of(evt.target);
+        let graph: LGraph = DGraphElement.graphLFromHtml(evt.target) as LGraph;
+        let gsize: GraphSize = graph?.translateHtmlSize(size);
+        if (isPanning) {
+            let position = this.props.onChildren ? this.oldPos : ui.position;
+            gsize.x = position.left;
+            gsize.y = position.top;
+        }
+        return gsize;
+    }
 }
 /*
 @RuntimeAccessible('InfiniteScrollComponent')
@@ -302,6 +426,7 @@ interface ScrollOwnProps {
     children: ReactChild[] | ReactChild;
 }
 interface MeasurableOwnProps {
+    isPanning?: boolean;
     children: ReactChild[] | ReactChild;
     //dragOptions?: Options;
     //drag?: Options;

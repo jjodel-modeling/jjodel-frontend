@@ -8,6 +8,13 @@ export const aaa = 0;
 let data:any, node:any, view:any, component:any;
 let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPackages:any, refEdges:any, extendEdges:any, React:any, Edge:any;
 /*
+
+during first render of any modelelement trigger forceUpdate() because it will lack jqueryui-html events as html was not there.
+re-enable the bug and investigate x-8400 stuff that was hapening during resize as it's happening during edge anchoring too
+
+Reducer.suspend()
+and Reducer.resume() for stuff like resizing a node
+
 node collapsing:
     theory: edges are rendered before nodes, so it will find a node with size0 (not rendered) and assign that size during get_size.
     proof: when i change the html css size of a vertes to 20px, but i assign in console edge.end.size={w:200, h:200}
@@ -15,6 +22,9 @@ node collapsing:
            it does not work if the node is on isResized === false because the getter cannot trigger a set in that case.
 
 node crazy pos: when i resize a node with an edge it goes off screen?
+
+
+
 
 * */
 // todo: check oldprops.views-nextprops.views and always set shouldupdate to views newly introduced or removed

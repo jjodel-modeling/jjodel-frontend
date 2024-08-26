@@ -2945,6 +2945,8 @@ export class NodeTransientProperties{
     viewScores: Dictionary<Pointer<DViewElement>, ViewScore> = {} as any;
     evalContext!: GObject; // global for this node (without view-specific usageDeclaration)
     needSorting!: boolean;
+    longestLabel!: LVoidEdge['longestLabel'];
+    labels!: LVoidEdge['labels'];
     //force1Update!: boolean;
     constructor(){
         // this.stackViews = []; this.validMainViews = [];
@@ -2975,6 +2977,9 @@ export class ViewTransientProperties {
     onRotationStart!: undefined | ((context:GObject)=>void);
     onRotationEnd!: undefined | ((context:GObject)=>void);
     whileRotating!: undefined | ((context:GObject)=>void);
+
+    longestLabel!: LVoidEdge['longestLabel'];
+    labels!: LVoidEdge['labels'];
 
     constructor(){
         this.events = {};

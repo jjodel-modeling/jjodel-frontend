@@ -1,5 +1,5 @@
-import type { GObject, Temporary, TODO} from "../joiner";
-import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleClass} from "../joiner";
+import {GObject, Temporary, TODO, U} from "../joiner";
+import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleClass, Dictionary} from "../joiner";
 import React from "react";
 import {radian} from "../joiner/types";
 
@@ -757,6 +757,37 @@ export class PositionStr{
 
 @RuntimeAccessible('Geom')
 export class Geom extends RuntimeAccessibleClass {
+
+    static markings: Dictionary<string, HTMLElement> = {};
+    static unmark(key: string): boolean{
+        if (!Geom.markings[key]) return false;
+        let e = Geom.markings[key];
+        U.removeFromDom(e);
+        delete Geom.markings[key];
+        return true;
+    }
+    static markPt(key: string, pt: Point, color?: string, label?: string): HTMLElement{ return Geom.mark(key, pt.x, pt.y, 1, 1, color, label); }
+    static markSize(key: string, pt: Size, color?: string, label?: string): HTMLElement{ return Geom.mark(key, pt.x, pt.y, pt.w??1, pt.h??1, color, label); }
+    static mark(key: string, x: number, y: number, w: number=1, h: number=1, color: string='red', label: string=''): HTMLElement{
+        if (Geom.markings[key]) Geom.unmark(key);
+        let e: HTMLElement;
+        let pre = '<div class="debug-mark" data-key="'+key+'" data-label="'+label+'" style="position: absolute; z-index:99999; left:'+x+'px; top:'+y+'px; width: '+w+'px; height: '+h+'px;';
+        let post = '"/>';
+        if (w + h > 2) {
+            e = U.toHtml(pre+'border-radius:0; background: transparent;'+post) as HTMLElement;
+        }
+        else {
+            e = U.toHtml(pre+'border-radius:100%; background: '+color+'; outline: 1px solid '+color+'; outline-offset: 5px;'+post) as HTMLElement;
+        }
+        document.body.append(e);
+        Geom.markings[key] = e;
+        return e;
+    }
+    // warning: nodes from other iframes will say are not instance from Element of the current frame, in that case need duck typing.
+    public static isHtmlNode(element: any): element is Element {
+        return element instanceof Element || element instanceof HTMLDocument || element instanceof SVGElement;
+    }
+
 
     static isPositiveZero(m: number): boolean {
         if (!!Object.is) { return Object.is(m, +0); }

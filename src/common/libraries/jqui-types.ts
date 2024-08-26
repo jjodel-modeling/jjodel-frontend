@@ -437,9 +437,14 @@ export declare namespace JQueryUI {
         offset: { top: number; left: number };
     }
 
+    interface RotatableEvent { // todo: update this is just copied from drag
+        (event: JQueryEventObject, ui: DraggableEventUIParams): void;
+    }
+
     interface DraggableEvent {
         (event: JQueryEventObject, ui: DraggableEventUIParams): void;
     }
+
 
     interface DraggableOptions extends DraggableEvents {
         disabled?: boolean | undefined;
@@ -471,6 +476,9 @@ export declare namespace JQueryUI {
         snapTolerance?: number | undefined;
         stack?: string | undefined;
         zIndex?: number | undefined;
+    }
+
+    interface RotatableOptions extends DraggableOptions { // todo: update this is just copied from drag
     }
 
     interface DraggableClasses {

@@ -9,7 +9,7 @@ import {
     Defaults,
     LPointerTargetable,
     Pack1,
-    Overlap, GObject
+    Overlap, GObject, Log
 } from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps, Info} from '../../../joiner/types';
@@ -61,6 +61,16 @@ function JavascriptEditorComponent(props: AllProps) {
 
     if (jsxLabel === undefined && info) jsxLabel = typeof info.label === "string" ? <label className={'editor-label'}>{info.label}</label> : info.label || undefined;
 
+    if (typeof value === 'function') { value = (value as any).toString(); }
+    if (typeof value !== 'string') {
+        try { value = JSON.stringify(value); }
+        catch (e){
+            let msg = 'found invalid value for JsEditor. a string is required, found instead:' + typeof value;
+            Log.ee(msg, {e, value, field:props.field, data:props.data});
+            value = msg;
+        }
+    }
+    console.log('jsEditor', {value, p: props.field, t:props.title, l:props.jsxLabel});
     return <>
         <div style={{...(props.style || {})}} className={'cursor-pointer d-flex'} onMouseEnter={e => setShowTooltip(true)} onMouseLeave={e => setShowTooltip(false)} onClick={e => setShow(!show)}>
             {props.hide !== undefined ? <span className={'my-auto'} tabIndex={-1}>

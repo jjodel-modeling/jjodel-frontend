@@ -243,14 +243,14 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                                 break;
                         }*/
                         // n, e, s, w, ne, se, sw, nw
-                        // console.log('resizing', {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
+                        console.log('resizing', {newSize, htmlSize, event, nativeevt, sizeof_with_transforms: Size.of(event.target, true)});
                         // NB: size.x and size.y are going crazy if the element have an edge, no idea why, i just deleted x & y before setSize()
                     }
                     else newSize = {w:obj.size.width, h:obj.size.height};
                     // evt coordinates: clientX, layerX, offsetX, pageX, screenX
-                    TRANSACTION(()=>{
+                    TRANSACTION(()=>{/*
                         delete newSize.x;
-                        delete newSize.y;
+                        delete newSize.y;*/
                         this.setSize(newSize);
                         // console.log('resize setsize:', obj, {w:obj.size.width, h:obj.size.height});
                         for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onResizeEnd, vid);

@@ -2155,6 +2155,12 @@ export class U {
         return element instanceof Element || element instanceof HTMLDocument || element instanceof SVGElement;
     }
 
+    static removeFromDom(e: Node): boolean {
+        let p = e.parentNode;
+        if (!p) return false;
+        p.removeChild(e);
+        return true;
+    }
 }
 export class DDate{
     static cname: string = "DDate";

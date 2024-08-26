@@ -163,6 +163,12 @@ export class DState extends DPointerTargetable{
     ////////////////     flags shared, but handled locally      /////////////////////////////
 
     /* RECOMPILES MODULE */
+    NODES_RECOMPILE_labels: Pointer<DGraphElement>[] = [];
+    NODES_RECOMPILE_longestLabel: Pointer<DGraphElement>[] = [];
+
+    VIEWS_RECOMPILE_labels: Pointer<DViewElement>[] = [];
+    VIEWS_RECOMPILE_longestLabel: Pointer<DViewElement>[] = [];
+
     VIEWS_RECOMPILE_onDataUpdate: Pointer<DViewElement>[] = [];
 
     VIEWS_RECOMPILE_onDragStart: Pointer<DViewElement>[] = [];

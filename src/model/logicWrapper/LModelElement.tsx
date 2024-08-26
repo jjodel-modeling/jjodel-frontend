@@ -101,6 +101,16 @@ export class DModelElement extends DPointerTargetable {
     public static new3(...a:any): DModelElement {
         Log.exx("DModelElement is abstract, cannot instantiate");
         return null as any; }
+
+    static LFromHtml(target?: Element | null): LModelElement | undefined { return LPointerTargetable.fromPointer(DModelElement.PtrFromHtml(target) as Pointer); }
+    static DFromHtml(target?: Element | null): DModelElement | undefined { return DPointerTargetable.fromPointer(DModelElement.PtrFromHtml(target) as Pointer); }
+    static PtrFromHtml(target?: Element | null): Pointer<DModelElement> | undefined {
+        while (target) {
+            if ((target.attributes as any).dataid) return (target.attributes as any).dataid.value;
+            target = target.parentElement;
+        }
+        return undefined;
+    }
 }
 
 @Leaf

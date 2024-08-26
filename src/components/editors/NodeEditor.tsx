@@ -113,12 +113,14 @@ function NodeEditorComponent(props: AllProps) {
                               '\n\t// a complex example. The label can be either a function like this or a simple string.' +
                               '\n\t return (edge.start.model)?.name + \' ~ \' + (e.end.model)?.name + \'(\' + segment.length.toFixed(1) + \')\';' +
                               '\n}'}/>
+            {
+                <GenericInput data={asEdge} field={'labels'}
+                placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
+                '\n\t// a complex example. The label can be either a function like this or a simple string.' +
+                '\n\t return (edge.start.model)?.name + \' ~ \' + (e.end.model)?.name + \'(\' + segment.length.toFixed(1) + \')\';' +
+                '\n}'}/>
+            }
 
-            <GenericInput data={asEdge} field={'labels'}
-                          placeholder={'(edge/*LEdge*/, segment/*EdgeSegment*/, subNodes/*LGraphElement[]*/, allSegments/*EdgeSegment[]*/) => {' +
-                            '\n\t// a complex example. The label can be either a function like this or a simple string.' +
-                            '\n\t return (edge.start.model)?.name + \' ~ \' + (e.end.model)?.name + \'(\' + segment.length.toFixed(1) + \')\';' +
-                            '\n}'}/>
             <GenericInput data={asEdge} field={"anchorStart"}/>
             <GenericInput data={asEdge} field={"anchorEnd"}/>
         </>}

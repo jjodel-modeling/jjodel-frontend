@@ -322,6 +322,18 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
     font-style: normal; // removes italic
   }
 }
+
+.debug-mark{
+  ::before{
+    content: attr(data-key);
+    float: top;
+  }
+  ::after{
+    content: attr(data-label); // todo: concat coordinates?
+    float: bottom;
+  }
+}
+
 .router-wrapper{
   flex-grow: 1;
   min-height: 0;

@@ -37,11 +37,11 @@ import {
     PrimitiveType,
     RuntimeAccessible,
     RuntimeAccessibleClass,
-    SetFieldAction,
+    SetFieldAction, SetRootFieldAction,
     ShortAttribETypes,
     Size,
     store,
-    TargetableProxyHandler,
+    TargetableProxyHandler, TRANSACTION,
     transientProperties,
     U,
     Uarr,
@@ -95,6 +95,24 @@ export class DGraphElement extends DPointerTargetable {
             .DGraphElement(model, graphID, htmlindex).end();
     }
 
+    static nodeLFromHtml(target?: Element | null): LGraphElement | undefined { return LPointerTargetable.fromPointer(DGraphElement.nodePtrFromHtml(target) as Pointer); }
+    static nodeDFromHtml(target?: Element | null): DGraphElement | undefined { return DPointerTargetable.fromPointer(DGraphElement.nodePtrFromHtml(target) as Pointer); }
+    static nodePtrFromHtml(target?: Element | null): Pointer<DGraphElement> | undefined {
+        while (target) {
+            if ((target.attributes as any).nodeid) return (target.attributes as any).nodeid.value;
+            target = target.parentElement;
+        }
+        return undefined;
+    }
+    static graphLFromHtml(target?: Element | null): LGraph | undefined { return LPointerTargetable.fromPointer(DGraphElement.graphPtrFromHtml(target) as Pointer); }
+    static graphDFromHtml(target?: Element | null): DGraph | undefined { return DPointerTargetable.fromPointer(DGraphElement.graphPtrFromHtml(target) as Pointer); }
+    static graphPtrFromHtml(target?: Element | null): Pointer<DGraph> | undefined {
+        while (target) {
+            if ((target.attributes as any).graphid) return (target.attributes as any).graphid.value;
+            target = target.parentElement;
+        }
+        return undefined;
+    }
 }
 @RuntimeAccessible('LGraphElement')
 export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C extends Context = Context> extends LPointerTargetable {
@@ -494,9 +512,9 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     * the outernmost html root cannot update his attribute without refreshing the parent and recalling injectprops
     * fixed: by updating it directly in GraphElement.render()
     * */
-    get_zIndex(context: Context): this["zIndex"] { return (context.data.zIndex || 0); }
+    get_zIndex(context: Context): this["zIndex"] { return (+context.data.zIndex || 0); }
     set_zIndex(val: this["zIndex"], context: Context): boolean {
-        SetFieldAction.new(context.data.id, "zIndex", val, undefined, false);
+        SetFieldAction.new(context.data.id, "zIndex", +val ?? 0, undefined, false);
         return true; }
     get_z(context: Context): this["zIndex"] { return context.data.zIndex; }
     set_z(val: this["zIndex"], context: Context): boolean { return this.set_zIndex(val, context); }
@@ -818,13 +836,16 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     __info_of__offset: Info = {type:GraphPoint.cname, label:"offset", txt:"In-graph scrolling position."};
     __info_of__graphSize: Info = {type:GraphSize.cname, label:"graphSize", txt:"size internal to the graph, including internal scroll and panning."};
     __info_of__translateSize: Info = {type:"(T, Graph)=>T where T is GraphSize | GraphPoint", txt:"Translates a coordinate set from the local coordinates of a SubGraph to this Graph containing it."};
-    __info_of__translateHtmlSize: Info = {type:"(Size|Point) => GraphSize|GraphPoint", txt:"Translate page\'s viewport coordinate set to this graph coordinate set."};
+    __info_of__translateHtmlSize: Info = {type:"(Size|Point) => GraphSize|GraphPoint", txt:'Translate page\'s viewport coordinate set to this graph coordinate set.'};
     get_translateHtmlSize<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(c: Context): ((size: T) => G) {
         return (size: T): G => {
             let graphHtmlSize = this.get_htmlSize(c);
             let a = size.subtract(graphHtmlSize.tl(), true);
-            let b = a.add({x:c.data.offset.x, y:c.data.offset.y}, false);
-            return b.multiply(c.data.zoom, false) as any as G;
+            let offset = {x:c.data.offset.x, y:c.data.offset.y};
+            let b = a.add(offset, true);
+            let r = b.multiply(c.data.zoom, false) as any as G;
+            console.log('resizing', {size, a, b, r, offset, graphHtmlSize});
+            return r;
         }
     }
 
@@ -1357,8 +1378,8 @@ export class DVoidEdge extends DGraphElement {
     midPoints!: InitialVertexSize[]; // the logic part which instructs to generate the midnodes
     midnodes!: Pointer<DEdgePoint, 1, 1, LEdgePoint>[]; // using subelements instead most of times
 
-    longestLabel!: PrimitiveType | labelfunc;
-    labels!: PrimitiveType[] | labelfunc[];
+    longestLabel?: DocString<"function">;
+    labels?: DocString<"function">;
     anchorStart?: string;
     anchorEnd?: string;
     // endFollow!: boolean; they became derived attributes from static properties
@@ -1656,27 +1677,49 @@ replaced by startPoint
      <br>Computed by combining the anchor offset option in View and the size of the starting node."}
 */
 
-
-    label!: PrimitiveType;  // should never be read change their documentation in write only. their values is "read" in this.segments
-    longestLabel!: PrimitiveType;
-    labels!: PrimitiveType[];
     allNodes!: [LGraphElement, ...Array<LEdgePoint>, LGraphElement];
-    __info_of__longestLabel: Info = {label:"Longest label", type:"function(edge)=>string | string", readType: "PrimitiveType",
-        writeType:"PrimitiveType | (e:this, curr: LGraphElement, next: LGraphElement, curr_index: number, allNodes: LGraphElement[]) => PrimitiveType)",
+    __info_of__allNodes: Info = {type: "[LGraphElement, ...Array<LEdgePoint>, LGraphElement]", txt: <span>first element is this.start. then all this.midnodes. this.end as last element</span>};
+
+
+    label!: this["longestLabel"];  // should never be read change their documentation in write only. their values is "read" in this.segments
+    longestLabel!: (e:LVoidEdge, curr: LGraphElement, next: LGraphElement, curr_index: number, allNodes: LGraphElement[]) => string;
+    labels!: (e:LVoidEdge, curr: LGraphElement, next: LGraphElement, curr_index: number, allNodes: LGraphElement[]) => string;
+    __info_of__longestLabel: Info = {label:"Longest label", type:"function(edge)=>string",
+        readType: " (e:LVoidEdge, curr: LGraphElement, next: LGraphElement, curr_index: number, allNodes: LGraphElement[]) => string",
+        writeType:"string",
         txt: <span>Label assigned to the longest path segment.</span>}
     __info_of__label: Info = {type: "", txt: <span>Alias for longestLabel</span>};
-    __info_of__labels: Info = {label:"Multiple labels", type: "function(edge)=>string | string",
-        writeType: "type of label or Array<type of label>",
-        txt: <span>Instructions to label to multiple or all path segments in an edge</span>};
-    __info_of__allNodes: Info = {type: "[LGraphElement, ...Array<LEdgePoint>, LGraphElement]", txt: <span>first element is this.start. then all this.midnodes. this.end as last element</span>};
+    __info_of__labels: Info = {label:"Multiple labels", type: "function(edge)=>string | string[]",
+        writeType: "string",
+        txt: <span>Instructions to label to multiple or all path segments in an edge</span>
+    };
 
 
     get_label(c: Context): this["longestLabel"] { return this.get_longestLabel(c); }
     set_label(val: this["longestLabel"], c: Context): boolean { return this.set_longestLabel(val, c); }
-    get_longestLabel(c: Context): this["longestLabel"] { return c.data.longestLabel as any; }
-    set_longestLabel(val: this["longestLabel"], c: Context): boolean { SetFieldAction.new(c.data, "longestLabel", val); return true; }
-    get_labels(c: Context): this["labels"] { return c.data.labels as any; }
-    set_labels(val: this["labels"], c: Context): boolean { SetFieldAction.new(c.data, "labels", val); return true; }
+    get_longestLabel(c: Context): this["longestLabel"] {
+        return transientProperties.node[c.data.id].longestLabel;
+        // return c.data.longestLabel as any;
+    }
+    set_longestLabel(val: DVoidEdge["longestLabel"], c: Context): boolean {
+        if (val === c.data.longestLabel) return true;
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data, "longestLabel", val);
+            SetRootFieldAction.new("RECOMPILE_longestLabel+=", c.data.id);
+        });
+        return true;
+    }
+    get_labels(c: Context): this["labels"] {
+        return transientProperties.node[c.data.id].labels;
+        // return c.data.labels as any;
+    }
+    set_labels(val: DVoidEdge["labels"], c: Context): boolean {
+        if (val === c.data.labels) return true;
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data, "labels", val);
+            SetRootFieldAction.new("RECOMPILE_labels+=", c.data.id);
+        });
+        return true; }
     public headPos_impl(c: Context, isHead: boolean, headSize0?: GraphPoint, segment0?: EdgeSegment, zoom0?: GraphPoint): GraphSize & {rad: number} {
         let segment: EdgeSegment = segment0 || this.get_segments(c).segments[0];
         // let v: LViewElement = this.get_view(c);
