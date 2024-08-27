@@ -13,6 +13,7 @@ import {
 } from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps, Info} from '../../../joiner/types';
+import { CommandBar, Btn } from '../../commandbar/CommandBar';
 
 function JavascriptEditorComponent(props: AllProps) {
     let {placeHolder, height, title, jsxLabel, data, field} = props;
@@ -23,6 +24,9 @@ function JavascriptEditorComponent(props: AllProps) {
     }) || props.setter;
     const [js, setJs] = useStateIfMounted(getter());
     const [show, setShow] = useStateIfMounted(props.hide === false ? false : true);
+
+    const [expand, setExpand] = useStateIfMounted(false); 
+
     const [showTooltip, setShowTooltip] = useStateIfMounted(false);
     const readOnly = props.readonly !== undefined ? props.readonly : data && Defaults.check(data.id);
     const change = (value: string|undefined) => {
@@ -69,6 +73,14 @@ function JavascriptEditorComponent(props: AllProps) {
             </span> : undefined}
             {title}
             {jsxLabel}
+
+            {show && <CommandBar style={{paddingTop: '10px'}}>
+                {expand ? 
+                    <Btn icon={'shrink'} action={(e) => {setExpand(false); setShow(true)}} tip={'Minimize editor'}/>
+                    :
+                    <Btn icon={'expand'} action={(e) => {setExpand(true); setShow(true)}} tip={'Enlarge editor'}/>
+                }
+            </CommandBar>}
         </div>
         {(tooltip && showTooltip) && <div className={'my-tooltip'}>
             <b className={'text-center text-capitalize'}>{field}</b>
@@ -76,7 +88,8 @@ function JavascriptEditorComponent(props: AllProps) {
             <label>{tooltip}</label>
         </div>}
         {show && <div className={'monaco-editor-wrapper'}
-             style={{padding: '5px', minHeight: '20px', height: height ? `${height}px` : '100px', resize: 'vertical', overflow:'hidden'}}
+             /* style={{padding: '5px', minHeight: '20px', height: height ? `${height}px` : '100px', resize: 'vertical', overflow:'hidden'}}*/
+             style={{padding: '5px', minHeight: '20px', height:`${expand ? '10lvh' : '5lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
              tabIndex={-1} onBlur={blur}>
             <Editor className={'mx-1'} onChange={change}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}

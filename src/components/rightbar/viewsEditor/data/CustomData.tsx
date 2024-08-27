@@ -6,7 +6,7 @@ import {connect} from "react-redux";
 import {Function} from "../../../forEndUser/FunctionComponent";
 import JsEditor from "../../jsEditor/JsEditor";
 
-import { CommandBar, Btn } from '../../../commandbar/CommandBar';
+import { CommandBar, Btn, Sep } from '../../../commandbar/CommandBar';
 
 function ViewEventsComponent(props: AllProps) {
     const view = props.view;
@@ -55,11 +55,14 @@ function ViewEventsComponent(props: AllProps) {
                 newEvent[k] = undefined;
                 view.events = newEvent;
             }}/>}
-            jsxLabel={<CommandBar className={'ms-auto'}><Btn icon={'delete'} tip={'Remove event'} action={() => {
-                let newEvent: GObject = {};
-                newEvent[k] = undefined; // this is how you trigger deletion with object -= action
-                view.events = newEvent;
-            }}/></CommandBar>}
+            jsxLabel={<CommandBar className={'ms-auto'} style={{paddingTop: '9px'}}>
+                <Btn icon={'delete'} tip={'Remove event'} action={() => {
+                    let newEvent: GObject = {};
+                    newEvent[k] = undefined; // this is how you trigger deletion with object -= action
+                    view.events = newEvent;
+                }}/>
+                <Sep />
+            </CommandBar>}
 
             /* jsxLabel={<button className={'btn btn-danger my-auto ms-auto'} onClick={() => {
                 let newEvent: GObject = {};

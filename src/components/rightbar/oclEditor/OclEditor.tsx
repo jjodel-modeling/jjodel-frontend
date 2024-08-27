@@ -4,11 +4,15 @@ import Editor from '@monaco-editor/react';
 import {DState, DViewElement, LViewElement, Pointer, Defaults} from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from '../../../joiner/types';
+import { Btn, CommandBar } from '../../commandbar/CommandBar';
 
 function OclEditorComponent(props: AllProps) {
     const view = props.view;
     const [ocl, setOcl] = useStateIfMounted(view.oclCondition);
     const [show, setShow] = useStateIfMounted(true);
+
+    const [expand, setExpand] = useStateIfMounted(false);
+
     if(!view) return(<></>);
     const readOnly = props.readonly !== undefined ? props.readonly : Defaults.check(view.id);
     const change = (value: string|undefined) => { // save in local state for frequent changes.
@@ -26,10 +30,17 @@ function OclEditorComponent(props: AllProps) {
                 OCL Editor {/*(OCL engine by Stephan Köninger,
                 <a className={'ms-1'} target={'_blank'} href={'https://ocl.stekoe.de/#examples'}>Supported instructions</a>)*/}
             </label>
+            {show && <CommandBar style={{paddingTop: '10px'}}>
+                {expand ? 
+                    <Btn icon={'shrink'} action={(e) => {setExpand(false); setShow(true)}} tip={'Minimize editor'}/>
+                    :
+                    <Btn icon={'expand'} action={(e) => {setExpand(true); setShow(true)}} tip={'Enlarge editor'}/>
+                }
+            </CommandBar>}
         </div>
 
         {show && <div className={"monaco-editor-wrapper"}
-                style={{padding: '5px', minHeight: '20px', height:'100px', resize: 'vertical', overflow:'hidden'}}
+                style={{padding: '5px', minHeight: '20px', height:`${expand ? '10lvh' : '5lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
                       tabIndex={-1} onBlur={blur}>
             <Editor className={'mx-1'} onChange={change}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}

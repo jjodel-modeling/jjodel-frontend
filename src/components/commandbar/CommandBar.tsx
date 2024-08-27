@@ -49,6 +49,10 @@ function useClickOutside(ref: any, onClickOutside: any) {
     }, [ref, onClickOutside]);
   }
 
+type EditorProps = {
+    style?: React.CSSProperties;
+}
+
 export const Btn = (props: BtnProps) => {
 
     const [del,setDel] = useState(false);
@@ -68,7 +72,7 @@ export const Btn = (props: BtnProps) => {
                     {props.icon === 'delete' ?
                         <>
                         {del ? 
-                            <Tooltip tooltip={'Are you sure?'} inline={true} position={'top'} offsetY={10} theme={'small'}>
+                            <Tooltip tooltip={'Are you sure?'} inline={true} position={'top'} offsetY={10} >
                                 <i onClick={(e) => {props.action && props.action(e); setDel(false); }}
                                     className={`bi tab-btn bi-question-square-fill ${props.theme ? props.theme : 'light'} question ${props.size && props.size} ${props.disabled && 'disabled'}`}
                                     ref={delRef}
@@ -76,7 +80,7 @@ export const Btn = (props: BtnProps) => {
                                 />
                             </Tooltip>
                             :
-                            <Tooltip tooltip={`${props.tip && props.tip}`} inline={true} position={'top'} offsetY={10} theme={'small'}>
+                            <Tooltip tooltip={`${props.tip && props.tip}`} inline={true} position={'top'} offsetY={10} >
                                 <i className={`bi tab-btn ${props.icon} ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.disabled && 'disabled'}`}
                                     onClick={(e) => setDel(true)}
                                     style={props.style} 
@@ -85,9 +89,9 @@ export const Btn = (props: BtnProps) => {
                         }
                         </>
                         :
-                        <Tooltip tooltip={`${props.tip && props.tip}`} inline={true} position={'top'} offsetY={10} theme={'small'}>
+                        <Tooltip tooltip={`${props.tip && props.tip}`} inline={true} position={'top'} offsetY={10} >
                             <i className={`bi tab-btn ${props.icon} ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.disabled && 'disabled'}`}
-                                onClick={props.action && props.action} 
+                                onClick={(e) => {props.action && props.action(e); e.stopPropagation();}}
                                 style={props.style} 
                             />
                         </Tooltip>}

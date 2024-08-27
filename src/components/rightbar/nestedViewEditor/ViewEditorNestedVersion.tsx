@@ -95,7 +95,7 @@ function NestedViewComponent(props: AllProps) {
 
         return <li className={"entry-root" + d.className + (d.id === activeViewpointId ? ' selected' : '')} key={d.id}>
 
-            <div className={'inline-row'} onClick={()=>!isVP && setView(d.id)}>
+            <div className={'inline-row'} onClick={()=>!isVP && setView(d.id)} onDoubleClick={(e) => {select(d.id)}}> {/* activate anche con il dblclick */}
                 
                 <div className={"left-stuff vertical-centering "} onClick={preventClick}>
                     {parr.length >= 1 ?
@@ -128,9 +128,10 @@ function NestedViewComponent(props: AllProps) {
                             
                         
                         <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
-                            <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e);}} tip={'Delete'}/> {/* todo per damiano, la cancellazione non funziona*/}
+                            <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e); alert(l)}} tip={'Delete'}/> {/* todo per damiano, la cancellazione non funziona*/}
                             <Btn icon={'copy'} action={(e)=> { l.duplicate(); preventClick(e);}} tip={'Duplicate'}/>
                         </CommandBar>
+
                         {/* <button className="bg btn-delete my-auto ms-2 green" onClick={(e)=> { l.duplicate(); preventClick(e);}}><i className='bx bx-duplicate' /></button>
                         <button className="bg btn-delete my-auto ms-2" onClick={(e)=> { l.delete(); preventClick(e);}}><i className="p-1 bi bi-dash" /></button>*/}
                     </div>
@@ -156,11 +157,12 @@ function NestedViewComponent(props: AllProps) {
                                 <span className={"right-icon feature-border js-icon vertical-centering " + (d.jsCondition.length ? "" : "hidden")}></span>
                             </>
                         }
-                        <Tooltip theme={'dark'} tooltip={<div>is {d.isExclusiveView ? "" : "not"} mutually exclusive with other "Ex" views.</div>} position={"bottom"} inline={true}>
+                        <Tooltip tooltip={<div>is {d.isExclusiveView ? "" : "not"} mutually exclusive with other "Ex" views.</div>} position={"bottom"} inline={true}>
                             <span className={"right-icon feature-border ex-icon vertical-centering " + (d.isExclusiveView ? '' : "hidden")}></span></Tooltip>
                     </div>
                 </div>
             </div>
+
             <ul>{isExpanded && parr.map( (ptr, i) => (
                 <GenericTree key={ptr}
                              data={DPointerTargetable.from(ptr)}

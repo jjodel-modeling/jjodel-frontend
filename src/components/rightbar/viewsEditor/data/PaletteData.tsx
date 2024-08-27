@@ -89,6 +89,8 @@ function PaletteDataComponent(props: AllProps) {
     let tmp: PaletteType = undefined as any;
     const [css, setCss] = useStateIfMounted(view.css);
 
+    const [expand, setExpand] = useStateIfMounted(false);
+
     const change = (value: string|undefined) => { if(value !== undefined) setCss(value); } // save in local state for frequent changes.
     const blur = () => view.css = css; // confirm in redux state for final state
 
@@ -628,6 +630,7 @@ function PaletteDataComponent(props: AllProps) {
             </div>*/}
 
         <hr/>
+        
         <Input data={view} field={'cssIsGlobal'} type={"checkbox"} jsxLabel={
             <span style={{width:'100%', display:'inline-block'}}>
                 {cssIsGlobal ? <b style={{color: 'inherit', fontWeight:'bold'}}>Global</b> : <b style={{color: 'inherit'}}>Local</b>}
@@ -635,12 +638,23 @@ function PaletteDataComponent(props: AllProps) {
                 {cssIsGlobal ? <b style={{color: 'red', fontSize:'0.7em', fontWeight:'bold'}}>Use with caution</b> : ''}
             </span>
         } />
+
+        <CommandBar style={{paddingTop: '10px', float: 'right'}}>
+            {expand ? 
+                <Btn icon={'shrink'} action={(e) => {setExpand(false)}} tip={'Minimize editor'}/>
+                :
+                <Btn icon={'expand'} action={(e) => {setExpand(true)}} tip={'Enlarge editor'}/>
+            }
+        </CommandBar>
+
+        {/* ****** */}
+
         {/*<label className={'ms-1 mb-1'}>{view.cssIsGlobal ? 'Global' : 'Local'} CSS Editor</label>*/}
         {vcss.indexOf('//') >= 0 && <b><span style={{color:'red'}}>Warning:</span> Inline comments // are not supported by our compiler.<br/>
             Please replace them with /* block comments */</b>}
 
             <div className={"monaco-editor-wrapper"} style={{
-            minHeight: '20ùpx', height:'200px'/*there is a bug of height 100% on childrens not working if parent have only minHeight*/,
+            minHeight: '20ùpx', transition: 'height 0.3s', height:`${expand ? '30lvh' : '10lvh'}`    /*there is a bug of height 100% on childrens not working if parent have only minHeight*/,
             resize: 'vertical', overflow:'hidden'}} onBlur={blur}>
             <Editor className={'mx-1'}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
