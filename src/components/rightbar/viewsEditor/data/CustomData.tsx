@@ -36,7 +36,9 @@ function ViewEventsComponent(props: AllProps) {
         <JsEditor viewID={view.id} field={'onResizeEnd'} title={'onResizeEnd'} initialExpand={initialExpand} readonly={readOnly}/>
         <div className={'d-flex mx-auto'} style={{marginTop: '14px'}}>
             <h2>Custom Events</h2>
-            <CommandBar className={'ms-auto'} style={{paddingTop: '12px'}}><Btn icon={'add'} action={addEvent}  tip={'New event'}/></CommandBar>
+            <CommandBar className={'ms-auto'} style={{paddingTop: '12px'}}>
+                <Btn icon={'add'} action={addEvent}  tip={'New event'}/>
+            </CommandBar>
         </div>
 
         {Object.keys(dview.events).map((k) => {

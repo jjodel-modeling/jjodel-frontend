@@ -73,7 +73,7 @@ export const Btn = (props: BtnProps) => {
                         <>
                         {del ? 
                             <Tooltip tooltip={'Are you sure?'} inline={true} position={'top'} offsetY={10} >
-                                <i onClick={(e) => {props.action && props.action(e); setDel(false); }}
+                                <i onClick={(e) => {props.action && props.action(e); setDel(false); e.stopPropagation()}}
                                     className={`bi tab-btn bi-question-square-fill ${props.theme ? props.theme : 'light'} question ${props.size && props.size} ${props.disabled && 'disabled'}`}
                                     ref={delRef}
                                     style={props.style} 
@@ -82,7 +82,7 @@ export const Btn = (props: BtnProps) => {
                             :
                             <Tooltip tooltip={`${props.tip && props.tip}`} inline={true} position={'top'} offsetY={10} >
                                 <i className={`bi tab-btn ${props.icon} ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.disabled && 'disabled'}`}
-                                    onClick={(e) => setDel(true)}
+                                    onClick={(e) => {setDel(true);e.stopPropagation();}}
                                     style={props.style} 
                                 />
                             </Tooltip>

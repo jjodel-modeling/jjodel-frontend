@@ -106,6 +106,9 @@ section {
 }
 
 .options-tab {
+  & p {
+    font-size: 1.1em!important;
+  }
 
   & h2 {
     font-size: 1em;
@@ -120,24 +123,72 @@ section {
     content: "\F5D9";
   }
 
+  & h5 {
+    font-size: 1.1em!important;
+    color: var(--accent);
+  }
+
+  & section.node {
+    padding-left: 0;
+    padding-right: 0;
   
+    & .px-2 {
+      padding-left: 0!important;
+    }
+  }
+
+  & section {
+    padding-left: 0!important;
+    
+    & .px-2.no-padding-left {
+      padding-left: 0!important;
+      padding-right: 0!important;
+
+      & .input-container {
+        
+        
+
+        &>label.mx-3 {
+          margin-right: 0!important;
+          margin-bottom: 10px;
+        }
+        &>label.mx-3 span {
+          margin-right: 6px;
+          
+          padding-top: 4px;
+          margin-top: 6px;
+        }
+
+        &>label.mx-3 select {
+
+        }
+      }  
+    }
+  }
+  
+
+
 
   .options-field {
 
     padding-left: 0;
     font-size: 1em;
 
-  
+    
+
     & h5 {
 
       color: var(--accent);
       margin-left: 0;
-      padding-left: 0;
+      padding-left: 0!important;
       font-size: 1.2em;
     }
     
   }
+}
 
+.options-tab .section .node h5 {
+  padding-left: 0!important; color: red!important;
 }
 
 .node-editor {
