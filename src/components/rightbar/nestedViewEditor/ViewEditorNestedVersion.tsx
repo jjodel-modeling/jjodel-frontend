@@ -69,7 +69,7 @@ function NestedViewComponent(props: AllProps) {
 
     const activateVP = (viewPoint: LViewPoint) => { project.activeViewpoint = viewPoint; }
     const clone = (v: LViewElement) => { v.duplicate(true); }
-    const getSubElements = (v: DViewElement) => v.subViews || {};
+    const getSubElements = (v: DViewElement) => v.subViews || {}; // 
     let activeViewpointId: Pointer<DPointerTargetable> = project.activeViewpoint.id;
 
     function renderEntry(e: DViewElement, childrens: Dictionary<Pointer, number>, isExpanded: boolean, toggleExpansion: ()=>any, depth: number, path: number[], metadata: Metadata): JSX.Element{
@@ -128,7 +128,7 @@ function NestedViewComponent(props: AllProps) {
                             
                         
                         <CommandBar style={{transition: '1s 0.3s', marginTop: '2px'}}>
-                            <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e); alert(l)}} tip={'Delete'}/> {/* todo per damiano, la cancellazione non funziona*/}
+                            <Btn icon={'delete'} action={(e)=> { l.delete(); preventClick(e);}} tip={'Delete'}/> {/* todo per damiano, la cancellazione non funziona - visto con giordano, l'elemento non è correttamente eliminato, rimane quale dipendenza appesa ("cannot read properties of undefined")*/}
                             <Btn icon={'copy'} action={(e)=> { l.duplicate(); preventClick(e);}} tip={'Duplicate'}/>
                         </CommandBar>
 

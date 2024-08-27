@@ -1932,7 +1932,9 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         const dependencies = data.dependencies();
 
         const ret = () => {
-            if (context.data.id.indexOf('Pointer_View')) return; // cannot delete default views/viewpoints
+            // if (context.data.id.indexOf('Pointer_View')) return; // cannot delete default views/viewpoints
+
+            if (context.data.id.indexOf('Pointer_View') !== -1 ) return; // cannot delete default views/viewpoints
 
             for (let child of data.children) {
                 child.delete();
