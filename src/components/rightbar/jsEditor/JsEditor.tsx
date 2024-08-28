@@ -49,6 +49,8 @@ function JsEditorComponent(props: AllProps) {
     else if(placeHolder) value = placeHolder;
     else if(field && view[field]) value = (view as any)[field];
 
+    const lines = (Math.round(view.oclCondition.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(view.oclCondition.split(/\r|\r\n|\n/).length*1.8));
+
     return <>
         <div style={{...(props.style || {})}} className={'cursor-pointer d-flex'} onClick={e => setShow(!show)}>
             <span className={'my-auto'} tabIndex={-1}>
@@ -69,7 +71,7 @@ function JsEditorComponent(props: AllProps) {
         </div>
         {show && <div className={'monaco-editor-wrapper'}
              /* style={{padding: '5px', minHeight: '20px', height: height ? `${height}px` : '100px', resize: 'vertical', overflow:'hidden'}}*/
-            style={{padding: '5px', minHeight: '20px', height:`${expand ? '10lvh' : '5lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
+            style={{padding: '5px', minHeight: '20px', height:`${expand ? lines+'lvh' : '5lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
             tabIndex={-1} 
             onFocus={() => setExpand(true)}
             onBlur={() => {setExpand(false);blur()}}>

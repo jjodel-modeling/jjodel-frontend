@@ -367,6 +367,7 @@ function PaletteDataComponent(props: AllProps) {
     const vcss = view.css;
 
     let colors = Object.keys(palettes.color).sort();
+    const lines = (Math.round(vcss.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(vcss.split(/\r|\r\n|\n/).length*1.8));
 
     return(<section className={'p-3 style-tab'}>
         <h1 className={'view'}>View: {props.view.name}</h1>
@@ -654,11 +655,16 @@ function PaletteDataComponent(props: AllProps) {
             Please replace them with /* block comments */</b>}
 
             <div className={"monaco-editor-wrapper"} style={{
-            minHeight: '20ùpx', transition: 'height 0.3s', height:`${expand ? '30lvh' : '10lvh'}`    /*there is a bug of height 100% on childrens not working if parent have only minHeight*/,
-            resize: 'vertical', overflow:'hidden'}} 
+                minHeight: '20px', 
+                height:`${expand ? '30lvh' : '10lvh'}`, 
+                transition: 'height 0.3s',
+                resize: 'vertical', overflow:'hidden',
+                display: 'flex',
+                flexDirection: 'column'        
+            }} 
             onFocus={() => setExpand(true)}
             onBlur={() => {setExpand(false);blur()}}>
-            <Editor className={'mx-1'}
+            <Editor className={'mx-1'} 
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                     defaultLanguage={'less'} value={vcss} onChange={change}/>
         </div>

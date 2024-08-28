@@ -20,6 +20,8 @@ function OclEditorComponent(props: AllProps) {
     }
     const blur = () => { view.oclCondition = ocl } // confirm in redux state for final state
 
+    const lines = (Math.round(view.oclCondition.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(view.oclCondition.split(/\r|\r\n|\n/).length*1.8));
+
     return(<>
         <div style={{...(props.style || {})}} className={'cursor-pointer d-flex'} onClick={e => setShow(!show)}>
             <span className={'chevron-holder'} tabIndex={-1} >
@@ -40,7 +42,7 @@ function OclEditorComponent(props: AllProps) {
         </div>
 
         {show && <div className={"monaco-editor-wrapper"}
-                style={{padding: '5px', minHeight: '20px', height:`${expand ? '10lvh' : '5lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
+                style={{padding: '5px', minHeight: '20px', height:`${expand ? lines+'lvh' : '5lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
                       tabIndex={-1} 
                       onFocus={() => setExpand(true)}
                     onBlur={() => {setExpand(false);blur()}}>

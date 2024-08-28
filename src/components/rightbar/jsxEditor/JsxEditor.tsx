@@ -61,6 +61,7 @@ function JsxEditorComponent(props: AllProps) {
 
     }, [monaco]);
 
+    const lines = (Math.round(dview.jsxString.split(/\r|\r\n|\n/).length*1.8) < 5 ? 5 : Math.round(dview.jsxString.split(/\r|\r\n|\n/).length*1.8));
 
     return(<>
         <div className={'cursor-pointer d-flex'} onClick={e => setShow(!show)}>
@@ -103,7 +104,7 @@ function JsxEditorComponent(props: AllProps) {
             </label>}
         </div>}
         {show && <div className={'monaco-editor-wrapper'}
-                    style={{padding: '5px', minHeight: '20px', transition: 'height 0.3s', height:`${expand ? '30lvh' : '10lvh'}`, resize: 'vertical', overflow:'hidden'}}
+                    style={{padding: '5px', minHeight: '20px', transition: 'height 0.3s', height:`${expand ? lines+'lvh' : '10lvh'}`, resize: 'vertical', overflow:'hidden'}}
                     onFocus={() => setExpand(true)}
                     onBlur={(e) => {setExpand(false);blur(e)}}
                     tabIndex={-1} >

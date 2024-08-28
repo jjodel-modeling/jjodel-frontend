@@ -63,7 +63,6 @@ function ViewEventsComponent(props: AllProps) {
                     newEvent[k] = undefined; // this is how you trigger deletion with object -= action
                     view.events = newEvent;
                 }}/>
-                <Sep />
             </CommandBar>}
 
             /* jsxLabel={<button className={'btn btn-danger my-auto ms-auto'} onClick={() => {

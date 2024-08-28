@@ -209,6 +209,10 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
   border-radius: var(--radius);
 }
 
+.monaco-editor-wrapper textarea {
+  height: 10px!important;
+}
+
 label.jj-editor-title {
   color: var(--palette-w);
   background-color: var(--palette-3);
