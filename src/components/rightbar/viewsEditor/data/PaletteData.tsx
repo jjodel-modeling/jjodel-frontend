@@ -639,13 +639,13 @@ function PaletteDataComponent(props: AllProps) {
             </span>
         } />
 
-        <CommandBar style={{paddingTop: '10px', float: 'right'}}>
+        {/* <CommandBar style={{paddingTop: '10px', float: 'right'}}>
             {expand ? 
                 <Btn icon={'shrink'} action={(e) => {setExpand(false)}} tip={'Minimize editor'}/>
                 :
                 <Btn icon={'expand'} action={(e) => {setExpand(true)}} tip={'Enlarge editor'}/>
             }
-        </CommandBar>
+        </CommandBar>*/}
 
         {/* ****** */}
 
@@ -655,7 +655,9 @@ function PaletteDataComponent(props: AllProps) {
 
             <div className={"monaco-editor-wrapper"} style={{
             minHeight: '20ùpx', transition: 'height 0.3s', height:`${expand ? '30lvh' : '10lvh'}`    /*there is a bug of height 100% on childrens not working if parent have only minHeight*/,
-            resize: 'vertical', overflow:'hidden'}} onBlur={blur}>
+            resize: 'vertical', overflow:'hidden'}} 
+            onFocus={() => setExpand(true)}
+            onBlur={() => {setExpand(false);blur()}}>
             <Editor className={'mx-1'}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                     defaultLanguage={'less'} value={vcss} onChange={change}/>

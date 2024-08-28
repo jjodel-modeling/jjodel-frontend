@@ -30,18 +30,20 @@ function OclEditorComponent(props: AllProps) {
                 OCL Editor {/*(OCL engine by Stephan Köninger,
                 <a className={'ms-1'} target={'_blank'} href={'https://ocl.stekoe.de/#examples'}>Supported instructions</a>)*/}
             </label>
-            {show && <CommandBar style={{paddingTop: '10px'}}>
+            {/* show && <CommandBar style={{paddingTop: '10px'}}>
                 {expand ? 
                     <Btn icon={'shrink'} action={(e) => {setExpand(false); setShow(true)}} tip={'Minimize editor'}/>
                     :
                     <Btn icon={'expand'} action={(e) => {setExpand(true); setShow(true)}} tip={'Enlarge editor'}/>
                 }
-            </CommandBar>}
+            </CommandBar>*/}
         </div>
 
         {show && <div className={"monaco-editor-wrapper"}
                 style={{padding: '5px', minHeight: '20px', height:`${expand ? '10lvh' : '5lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
-                      tabIndex={-1} onBlur={blur}>
+                      tabIndex={-1} 
+                      onFocus={() => setExpand(true)}
+                    onBlur={() => {setExpand(false);blur()}}>
             <Editor className={'mx-1'} onChange={change}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                     defaultLanguage={'js'} value={view.oclCondition} />

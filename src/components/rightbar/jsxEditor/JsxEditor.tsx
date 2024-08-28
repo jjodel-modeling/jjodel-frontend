@@ -72,13 +72,13 @@ function JsxEditorComponent(props: AllProps) {
                 JSX Editor
             </label>
 
-            {show && <CommandBar style={{paddingTop: '10px'}}>
+            {/* show && <CommandBar style={{paddingTop: '10px'}}>
                 {expand ? 
                     <Btn icon={'shrink'} action={(e) => {setExpand(false); setShow(true)}} tip={'Minimize editor'}/>
                     :
                     <Btn icon={'expand'} action={(e) => {setExpand(true); setShow(true)}} tip={'Enlarge editor'}/>
                 }
-            </CommandBar>}
+            </CommandBar>*/}
         </div>
         {show && <div className={'mt-1'}>
             {jsx.match(/{\s*\(.+\?.+\:.+\)\s*}/gm) && <label>
@@ -104,7 +104,9 @@ function JsxEditorComponent(props: AllProps) {
         </div>}
         {show && <div className={'monaco-editor-wrapper'}
                     style={{padding: '5px', minHeight: '20px', transition: 'height 0.3s', height:`${expand ? '30lvh' : '10lvh'}`, resize: 'vertical', overflow:'hidden'}}
-                    tabIndex={-1} onBlur={blur}>
+                    onFocus={() => setExpand(true)}
+                    onBlur={(e) => {setExpand(false);blur(e)}}
+                    tabIndex={-1} >
             <Editor className={'mx-1'} onChange={change} language={"typescript"}
                     options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
                     defaultLanguage={'typescript'} value={dview.jsxString} />
