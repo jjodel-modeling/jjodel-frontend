@@ -702,7 +702,7 @@ body.dock-dragging iframe {
   width: 20px;
   font-family: bootstrap-icons;
   font-size: 1.1em;
-  color: var(--terziary);
+  color: var(--color);
   content: "\F3DF"; // max
   cursor: pointer;
 
@@ -735,7 +735,7 @@ body.dock-dragging iframe {
   width: 24px;
   font-family: bootstrap-icons;
   font-size: 1.1em;
-  color: var(--terziary);
+  color: var(--color);
   content: "\F3DE"; // min
   cursor: pointer;
 }

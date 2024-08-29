@@ -1,5 +1,6 @@
 
 /* NEW NAVBAR */
+
 .new-navbar {
   list-style-type: none;
   background-color: var(--fg-1);
@@ -363,6 +364,7 @@
       padding: 2px;
       height: 24px;
       width: 24px;
+      background-color: var(--color);
     }
   >*{
     margin: auto 0;

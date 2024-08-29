@@ -97,12 +97,12 @@ div.toggle{
 
   input[type="checkbox"]:checked ~ label{
     transition: all 0.3s ease-in;
-    background-color: var(--accent);
-    border: var(--border) solid var(--accent); // 2px
+    background-color: var(--color);
+    border: var(--border) solid var(--color); // 2px
 
     &::after {
       margin-left: 0;
-      border-color: var(--accent);
+      border-color: var(--color);
     }
   }
 }
