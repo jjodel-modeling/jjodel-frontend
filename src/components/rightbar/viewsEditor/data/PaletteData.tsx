@@ -33,6 +33,7 @@ import {Function} from "../../../forEndUser/FunctionComponent";
 import { Color } from '../../../forEndUser/Color';
 
 import { CommandBar, Btn } from '../../../commandbar/CommandBar';
+import { HRule } from '../../../widgets/Widgets';
 
 
 function makeNumericInput(prefix: string, number: NumberControl,
@@ -630,14 +631,14 @@ function PaletteDataComponent(props: AllProps) {
             </DropDownButton>
             </div>*/}
 
-        <hr/>
+        <HRule theme={'light'} style={{display: 'block', padding: '30px 0px!important'}}/>
         
-        <Input data={view} field={'cssIsGlobal'} type={"checkbox"} jsxLabel={
-            <span style={{width:'100%', display:'inline-block'}}>
-                {cssIsGlobal ? <b style={{color: 'inherit', fontWeight:'bold'}}>Global</b> : <b style={{color: 'inherit'}}>Local</b>}
+        <Input data={view} field={'cssIsGlobal'} type={"checkbox"}  jsxLabel={
+            <div style={{width:'100%', display:'block', float: 'left'}}>
+                {cssIsGlobal ? <b style={{color: 'inherit'}}>Global</b> : <b style={{color: 'inherit'}}>Local</b>}
                 {' CSS & LESS Editor '}
-                {cssIsGlobal ? <b style={{color: 'red', fontSize:'0.7em', fontWeight:'bold'}}>Use with caution</b> : ''}
-            </span>
+                {cssIsGlobal ? '(Use with caution)' : ''}
+            </div>
         } />
 
         {/* <CommandBar style={{paddingTop: '10px', float: 'right'}}>

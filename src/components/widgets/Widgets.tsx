@@ -45,8 +45,21 @@ export const Toggle = (props: ToggleProps) => {
     );
 }
 
+type HRuleProps = {
+    theme?:  'normal' | 'light' | 'dark';
+    style?: React.CSSProperties;
+}
+export const HRule = (props: HRuleProps) => {
 
-
+    const theme = (!props.theme ? 'normal' : props.theme);
+    return (<>
+        {props.style ? 
+            <hr className={`hrule ${theme}`} style={props.style}></hr>
+        :
+            <hr className={`hrule ${theme}`} ></hr>
+        }
+    </>);
+}
 
 
 type RangeProps = {

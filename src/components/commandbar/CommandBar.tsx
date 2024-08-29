@@ -1,4 +1,4 @@
-import React, {MouseEventHandler, ClassAttributes, useState, useRef, useEffect} from "react";
+import React, {MouseEventHandler, ClassAttributes, useState, useRef, useEffect, ReactElement, ReactNode} from "react";
 import './commandbar.scss';
 import { inherits } from "util";
 import { Tooltip } from "../forEndUser/Tooltip";
@@ -21,13 +21,19 @@ type BtnProps = {
         | "check" 
         | "copy"
         | "close"
-        | "info",
-    tip?: string,
+        | "info"
+        | "show"
+        | "open-down"
+        | "close-up"
+        | "settings";
+        
+    tip?: string | ReactNode;
     label?: string;
     theme?: "dark" | "light",
     action?: MouseEventHandler,
     size?: "x-small" | "small" | "medium" | "large",
-    style?: React.CSSProperties
+    style?: React.CSSProperties,
+    mode?: 'normal' | 'negative'
 }
 
 function useClickOutside(ref: any, onClickOutside: any) {
@@ -62,6 +68,8 @@ export const Btn = (props: BtnProps) => {
         setDel(false);
     });
 
+    const mode = (props.mode ? props.mode : 'normal');
+
     return (<>
         {props.action ?
             <div>
@@ -74,23 +82,23 @@ export const Btn = (props: BtnProps) => {
                         {del ? 
                             <Tooltip tooltip={'Are you sure?'} inline={true} position={'top'} offsetY={10} >
                                 <i onClick={(e) => {props.action && props.action(e); setDel(false); e.stopPropagation()}}
-                                    className={`bi tab-btn bi-question-square-fill ${props.theme ? props.theme : 'light'} question ${props.size && props.size} ${props.disabled && 'disabled'}`}
+                                    className={`bi tab-btn bi-question-square-fill commandbar-btn ${props.theme ? props.theme : 'light'} question ${props.size && props.size} ${props.disabled && 'disabled'}`}
                                     ref={delRef}
                                     style={props.style} 
                                 />
                             </Tooltip>
                             :
                             <Tooltip tooltip={`${props.tip && props.tip}`} inline={true} position={'top'} offsetY={10} >
-                                <i className={`bi tab-btn ${props.icon} ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.disabled && 'disabled'}`}
+                                <i className={`bi tab-btn ${props.icon} commandbar-btn ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.disabled && 'disabled'}`}
                                     onClick={(e) => {setDel(true);e.stopPropagation();}}
-                                    style={props.style} 
+                                    style={props.style}
                                 />
                             </Tooltip>
                         }
                         </>
                         :
                         <Tooltip tooltip={`${props.tip && props.tip}`} inline={true} position={'top'} offsetY={10} >
-                            <i className={`bi tab-btn ${props.icon} ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.disabled && 'disabled'}`}
+                            <i className={`bi tab-btn ${props.icon} commandbar-btn ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.mode} ${props.disabled && 'disabled'}`}
                                 onClick={(e) => {props.action && props.action(e); e.stopPropagation();}}
                                 style={props.style} 
                             />

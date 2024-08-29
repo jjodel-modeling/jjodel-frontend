@@ -241,6 +241,193 @@
 
     }
 
+
+    // show 
+        
+    & .tab-btn.show {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.show:hover {
+      
+    }
+    & .tab-btn.show::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F341";
+    }
+
+    & .tab-btn.show:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    // open-down 
+        
+    & .tab-btn.open-down {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.open-down:hover {
+      
+    }
+    & .tab-btn.open-down::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F282";
+    }
+
+    & .tab-btn.open-down:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+    // close-up 
+        
+    & .tab-btn.close-up {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.close-up:hover {
+      
+    }
+    & .tab-btn.close-up::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F286";
+    }
+
+    & .tab-btn.close-up:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    // information
+
+    & .tab-btn.info {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    } 
+    & .tab-btn.info:hover {}
+    & .tab-btn.info::before {
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F433";
+    }
+    & .tab-btn.info:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    & .tab-btn.info.negative {
+      color: white!important;
+    }
+    & .tab-btn.info.negative::before {
+      background-color: var(--accent);
+    }
+
+    // info dark
+
+    & .tab-btn.info.dark {
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.info.dark:hover {
+      
+    }
+    & .tab-btn.info.dark::before {
+      color: white;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      margin-bottom: 10px!important;
+      content: "\F433";
+    }
+
+    & .tab-btn.info.dark:hover::before {
+      border: 1px solid transparent;
+      background-color: transparent;
+      border-radius: var(--radius);
+    }
+
+
+
+    // settings 
+        
+    & .tab-btn.settings {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+    & .tab-btn.settings:hover {}
+    & .tab-btn.settings::before {
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px;
+      text-align: center;
+      font-size: 0.7em;
+
+      margin-right: 2px;
+      content: "\F3E5";
+    }
+    & .tab-btn.settings:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+    & .tab-btn.settings.negative {
+      color: white!important;
+    }
+    & .tab-btn.settings.negative::before {
+      background-color: var(--accent);
+     
+    }
+
+
+
     // collapse
 
     & .tab-btn.shrink {
@@ -420,64 +607,7 @@
     }
 
 
-    // information
-
-    & .tab-btn.info {
-      margin: auto;
-      color: var(--btn-back)!important;
-      margin-right: 2px!important;
-      transition: background-color 0.3s;
-    }
-
-    & .tab-btn.info:hover {
-      
-    }
-    & .tab-btn.info::before {
-
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
-      display: block;
-      padding: 3px 3px;
-      text-align: center;
-      font-size: 0.7em;
-      margin-right: 2px;
-      content: "\F433";
-    }
-
-    & .tab-btn.info:hover::before {
-      border: 1px solid var(--btn-bg);
-      background-color: var(--btn-bg);
-      border-radius: var(--radius);
-    }
-
-    // info dark
-
-    & .tab-btn.info.dark {
-      transition: background-color 0.3s;
-    }
-
-    & .tab-btn.info.dark:hover {
-      
-    }
-    & .tab-btn.info.dark::before {
-      color: white;
-      border: 1px solid transparent;
-      border-radius: var(--radius);
-      display: block;
-      padding: 3px 3px;
-      text-align: center;
-      font-size: 0.7em;
-      margin-right: 2px;
-      margin-bottom: 10px!important;
-      content: "\F433";
-    }
-
-    & .tab-btn.info.dark:hover::before {
-      border: 1px solid transparent;
-      background-color: transparent;
-      border-radius: var(--radius);
-    }
-
+    
     
 
     // sep, separator

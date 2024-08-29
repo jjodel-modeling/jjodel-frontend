@@ -122,3 +122,16 @@ div.toggle{
     border: none;
  }
 
+/* HRule */
+
+hr.hrule {
+  margin: 10px 0!important;
+}
+
+hr.hrule.light {
+  border-top: 1px dotted var(--bg-5);
+}
+
+hr.hrule.dark {
+  border-top: 1px solid var(--bg-5);
+}
