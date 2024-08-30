@@ -215,7 +215,7 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
 
 .template-item:first-of-type {  
     margin-top: 0!important;
-    padding-top: 0!important;
+    
 
     & input {
       margin-top: 0!important;
@@ -226,6 +226,22 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
     & div:has(.delete) {
       padding-top: 0!important;
     } 
+    & div:has(.question) {
+      
+    }
+    & div.command-bar:has(.question) {
+      position: relative;
+      margin-top: 0px!important;
+      padding-top: 0px!important;
+    }
+    & div.command-bar .question {
+      position: relative;bottom: 2px!important;
+
+      margin-top: 0px!important;
+      padding-top: 0px!important;
+      
+    }
+
     
     
 }
