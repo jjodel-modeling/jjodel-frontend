@@ -103,7 +103,7 @@
       width: 100%;
   }
   .toolbar-item:hover, .toolbar-item:focus{
-    background-color: var(--accent);
+    background-color: var(--secondary);
     color: var(--fg);
   }
   z-index: 1200;
@@ -147,4 +147,29 @@ hr.my-1{
   text-align: center;
   margin-left: 2px;
 
+}
+
+
+.toolbar-collapsed::before {
+  position: absolute;
+  z-index: 12000;
+  display: block;
+  bottom: 30px;
+  left: 20px;
+  height: 40px;
+  width: 40px;
+  border-radius: 40px;
+  text-align: center;
+  padding-top: 4px;
+  height: 40px;
+  width: 40px;
+  border-radius:50%;
+  color: white;
+  font-family: bootstrap-icons;
+  content: "\F466"; // chat: "\F24D"; // list: "\F479";
+  cursor: pointer;
+  font-size: 1.7em;
+  transition: 0.3s;background-color: var(--color);
+  box-shadow: var(--smart-elevation-8);
+  transition: all 0.3s;
 }

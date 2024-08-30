@@ -4,9 +4,103 @@
     display: flex;
 }
 
-.commandbar .blue {
-    background: linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+.commandbar .ottanio {
+    background: var(--gr-1); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
     color: white;
+    & .bi {
+        color: white;
+    }
+    border: none;
+}
+
+.commandbar .green {
+    background: var(--gr-2); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    color: white;
+    & .bi {
+        color: white;
+    }
+    border: none;
+}
+
+.commandbar .dark-red {
+    background: var(--gr-3); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    color: white;
+    & .bi {
+        color: white;
+    }
+    border: none;
+}
+
+.commandbar .orange-yellow {
+    background: var(--gr-4); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    color: white;
+    & .bi {
+        color: white;
+    }
+    border: none;
+}
+.commandbar .gray {
+    background: var(--gr-5); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    color: white;
+    & .bi {
+        color: white;
+    }
+    border: none;
+}
+.commandbar .light-green  {
+    background: var(--gr-6); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    color: white;
+    & .bi {
+        color: white;
+    }
+    border: none;
+}
+.commandbar .light-red {
+    background: var(--gr-7); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    color: white;
+    & .bi {
+        color: white;
+    }
+    border: none;
+}
+.commandbar .dark-blue {
+    background: var(--gr-8); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    color: white;
+    & .bi {
+        color: white;
+    }
+    border: none;
+}
+.commandbar .azure {
+    background: var(--gr-9); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    color: white;
+    & .bi {
+        color: white;
+    }
+    border: none;
+}
+.commandbar .yellow {
+    background: var(--gr-10); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    color: white;
+    & .bi {
+        color: white;
+    }
+    border: none;
+}
+.commandbar .purple {
+    background: var(--gr-11); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    color: white;
+    & .bi {
+        color: white;
+    }
+    border: none;
+}
+.commandbar .blue {
+    background: var(--gr-12); // linear-gradient(90deg, hsla(173, 89%, 70%, 1) 0%, hsla(196, 68%, 38%, 1) 100%);
+    color: var(--color);
+    & .bi {
+        color: var(--color);
+    }
     border: none;
 }
 
