@@ -70,7 +70,7 @@ function Project(props: Props): JSX.Element {
 
     function ProjectCard(props: Props): JSX.Element {
 
-    
+
         const Meter = (props: ProjectProps) => {
 
             var length = props.project.metamodels.length + props.project.models.length + props.project.viewpoints.length;
@@ -85,7 +85,7 @@ function Project(props: Props): JSX.Element {
                         {props.project.models.map((m,i) => <div className={'artifact models'} style={{width: `${unit}%`}}>{i == props.project.models.length-1 && <span>M1</span>}</div>)}
                         {props.project.metamodels.map((m,i) => <div className={'artifact metamodels'} style={{width: `${unit}%`}}>{i == props.project.metamodels.length-1 && <span>M2</span>}</div>)}
                     </div>
-                    
+
              </>);
         };
 
@@ -93,7 +93,7 @@ function Project(props: Props): JSX.Element {
 
             <div className={'project-card'}>
                 <div className="project-actions d-flex" style={{position: 'absolute', top: 10, right: 5}}>
-                
+
                     {data.favorite ? <i onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> : <i onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
                     <Menu>
                             <Item icon={icon['new']} keystroke={'<i class="bi bi-command"></i>'} action={e => selectProject()}>Open</Item>
@@ -101,7 +101,6 @@ function Project(props: Props): JSX.Element {
                             <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
                             <Divisor />
                             <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>Add to favorites</Item>
-                            <Item icon={icon['share']}>Share</Item>
                             <Divisor />
                             <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
                     </Menu>

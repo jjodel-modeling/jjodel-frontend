@@ -110,6 +110,7 @@ class Online {
             /* 401: Unauthorized -> Invalid Token (Local Storage)  */
             Storage.reset();
             U.refresh();
+            return;
         }
         const data = U.wrapper<DProject[]>(response.data);
         for(const project of data)
