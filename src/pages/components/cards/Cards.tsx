@@ -18,7 +18,7 @@ export const Cards = (props: CardsType): any => {
 
 type CardType = {
     icon: "add" | "import" | "question" | "gettingstarted" | "alexa";
-    style?: "ottanio" | "red" | "dark" | "clear" | "rainbow" | "red-orange" | "default";
+    style?: "ottanio" | "red" | "dark" | "blue" | "clear" | "rainbow" | "red-orange" | "default";
     title: string;
     subtitle: string;
     action?: MouseEventHandler;

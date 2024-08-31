@@ -88,7 +88,6 @@ const Catalog = (props: ChildrenType) => {
                 :
                     <>
                         <h5>No projects</h5>
-                        <p>You developed un cazz projects with an overall number of 12 artifacts.</p>
                         <img src={colors} width={220} />
                     </>
                 }
@@ -100,7 +99,7 @@ const Catalog = (props: ChildrenType) => {
         projects: LProject[];
     }
 
-    const CatalogReport = (props: CatalogType) =>{
+    const CatalogReport = (props: CatalogType) => {
 
         let items_public: LProject[] = [];
         let items_private: LProject[] = [];
@@ -168,12 +167,11 @@ const Catalog = (props: ChildrenType) => {
     return (
         <>
             <Header>
-                <CatalogFilters/>
-                <CatalogMode/>
+                <CatalogFilters />
+                <CatalogMode />
             </Header>
             <CatalogSide>
                 <CatalogInfoCard projects={props.projects}/>
-
                 <CatalogReport projects={props.projects}/>
             </CatalogSide>
         </>

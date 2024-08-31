@@ -1,16 +1,18 @@
 import './style.scss';
 import './navbar.scss';
 import {
-    Dictionary, DModel,
+    DModel,
     DState,
     DUser,
-    GObject, Keystrokes, LGraph,
-    LModel, LPackage,
+    Keystrokes,
+    LGraph,
+    LModel,
+    LPackage,
     LProject,
     LUser,
-    SetRootFieldAction,
     Selectors,
-    U, LPointerTargetable
+    SetRootFieldAction,
+    U
 } from '../../joiner';
 
 import {icon} from '../components/icons/Icons';
@@ -21,16 +23,14 @@ import React, {Component, Dispatch, ReactElement, useState} from 'react';
 import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
 import {MetamodelPopup, ModelPopup} from './popups';
-import {ProjectsApi} from '../../api/persistance';
+import {AuthApi, ProjectsApi} from '../../api/persistance';
 import TabDataMaker from "../../../src/components/abstract/tabs/TabDataMaker";
 import DockManager from "../../../src/components/abstract/DockManager";
 
-import {Menu, Item, Divisor} from '../components/menu/Menu';
-import { Toggle } from '../../components/widgets/Widgets';
-
-import logo from '../../static/img/jjodel.jpg';
-import DebugImage from "../../static/img/debug.png";
+import {Divisor, Item, Menu} from '../components/menu/Menu';
+import {Toggle} from '../../components/widgets/Widgets';
 import jj from '../../static/img/jj-k.png';
+import Storage from '../../data/storage';
 
 const createM2 = (project: LProject) => {
     let name = 'metamodel_' + 1;
@@ -106,11 +106,14 @@ type UserProps = {
     user?: LUser;
 }
 const User = (props: UserProps) => {
-    var name = "Alfonso Pierantonio";
-    var initials = name.split(" ").map((n)=>n[0]).join("");
-    return (<>
-        <div className={'user text-end'}><div className={"initials"}>{initials}</div>&nbsp;<span>Alfonso</span><b>&nbsp;<span>Pierantonio</span></b></div>
-    </>);
+    const name = props.user ? props.user.username : 'Unknown';
+    const initials = name.split(' ').map((n)=>n[0]).join('');
+    return (<div className={'user text-end'}>
+        <div className={"initials"}>
+            {initials.toUpperCase()}
+        </div>&nbsp;
+        <span>{name}</span>
+    </div>);
 };
 
 type MenuEntry = {name: string, icon?: any, function?: ()=>any, keystroke?: string[], subItems?:MenuEntry[]};
@@ -207,7 +210,10 @@ function NavbarComponent(props: AllProps) {
         keystroke: []},
         {name: 'About jjodel', icon: <img src={jj} width={15}/>, function: () => {}, keystroke: []},
         {name: 'divisor', function: () => {}, keystroke: []},
-        {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {}, keystroke: [Key.cmd, 'Q']}
+        {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {
+            navigate('/auth');
+            await AuthApi.logout();
+            }, keystroke: [Key.cmd, 'Q']}
     ];
 
     let itemsToRegister: MenuEntry[] = [...dashboardItems, ...projectItems];
@@ -232,14 +238,14 @@ function NavbarComponent(props: AllProps) {
         return (
         <div className='nav-logo'>
             <div className={"aligner"}>
-                
-                {props.debug ? 
+
+                {props.debug ?
                     <div className='logo-on' onContextMenu={(e)=>{ e.preventDefault(); SetRootFieldAction.new('debug', !props.debug)}}></div>
                     :
                     <div className='logo' onContextMenu={(e)=>{ e.preventDefault(); SetRootFieldAction.new('debug', !props.debug)}}></div>
                 }
                 {props.debug && <i className="bi bi-bug-fill"></i>}
-                
+
             </div>
         </div>
         );
@@ -279,7 +285,7 @@ function NavbarComponent(props: AllProps) {
             <Logo />
             <UserMenu />
             <Commands />
-            <User /> {/* aggiungere utente loggato */}
+            <User user={props.user} /> {/* aggiungere utente loggato */}
         </nav>
 
         {project && clicked === 'new.metamodel' && <MetamodelPopup {...{project, setClicked}} />}

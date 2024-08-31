@@ -21,10 +21,11 @@ import {SaveManager} from '../components/topbar/SaveManager';
 import Loader from '../components/loader/Loader';
 import {Navbar} from "./components";
 import {CSS_Units} from "../view/viewElement/view";
+import CollaborativeAttacher from "../components/collaborative/CollaborativeAttacher";
 
 
 function ProjectComponent(props: AllProps): JSX.Element {
-    
+
     const user = props.user;
     const query = useQuery();
     const id = query.get('id') || '';
@@ -37,15 +38,16 @@ function ProjectComponent(props: AllProps): JSX.Element {
             user.project = LProject.fromPointer(project.id);
             if(!project.state) return;
             const state = await U.decompressState(project.state);
-            U.log(JSON.parse(state));
             SaveManager.load(state);
         })();
     }, [id]);
+
     let allViews = project?.viewpoints.flatMap((vp: LViewPoint) => vp && vp.allSubViews) || [];
     allViews = allViews.filter(v => v);
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
     if (user.project) return(<>
+        {project.type === 'collaborative' && <CollaborativeAttacher project={project} />}
         <Try><Navbar /></Try>
         <Try><>
             <style id={"views-css-injector"}>
