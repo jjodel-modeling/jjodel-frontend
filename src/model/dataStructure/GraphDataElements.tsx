@@ -28,7 +28,7 @@ import {
     LPointerTargetable,
     LViewElement,
     MixOnlyFuncs,
-    Node,
+    Node, orArr,
     Pack1,
     PackArr,
     Point,
@@ -51,7 +51,6 @@ import type {Tooltip} from "../../components/forEndUser/Tooltip";
 import type {RefObject} from "react";
 import type {SVGPathElementt, SVGPathSegment} from '../../common/libraries/pathdata';
 import {EdgeGapMode, InitialVertexSize} from "../../joiner/types";
-import {labelfunc} from "../../joiner/classes";
 import {Geom} from "../../common/Geom";
 
 
@@ -133,14 +132,11 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __raw!: DGraphElement;
     id!: Pointer<DGraphElement, 1, 1, LGraphElement>;
     father!: LGraphElement;
-    graph!: LGraph; // todo: can be removed and accessed by navigating .father
     model?: LModelElement;
     // protected isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>; //  & ((forUser?: Pointer<DUser>) => boolean);
 
     // containedIn?: LGraphElement;
-    subElements!: LGraphElement[]; // shallow, direct subelements
     _state!: GObject<"proxified">; // LMap;
-    allSubNodes!: LGraphElement[]; // deep, nested subelements
     x!: number;
     y!: number;
     width!: number;
@@ -179,12 +175,17 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             <br/>Obtained by combining anchoring point offset specified in view, before snapping to a Vertex border.
             <br/>Defaults in outer coordinates.</span>};
 
-    __info_of__graph: Info = {type:"", txt:""};
-    innerGraph!: LGraph;
-    __info_of__innnerGraph: Info = {type:"", txt:""};
+    graph!: LGraph | LGraphVertex;
+    __info_of__graph: Info = {type:"LGraph | LGraphVertex", txt:"Alias for innerGraph"};
+    get_graph(context: Context): LGraph | LGraphVertex { return this.get_innerGraph(context); }
+    innerGraph!: LGraph|LGraphVertex;
+    __info_of__innnerGraph: Info = {type:"LGraph | LGraphVertex", txt:"Gets the nearest-level graph (it might be a Sub-graph like a package usually is)"};
     outerGraph!: LGraph;
-    __info_of__outerGraphGraph: Info = {type:"", txt:""};
-    get_graph(context: Context): LGraph { return this.get_innerGraph(context); }
+    __info_of__outerGraphGraph: Info = {type:"LGraph", txt:"Gets the root-level graph"};
+    root!: LGraph;
+
+    __info_of__root: Info = {type:"LGraph", txt:"Alias for outerGraph"};
+    get_root(context: Context): LGraph { return this.get_outerGraph(context); }
 
     __info_of__graphAncestors: Info = {type:"LGraph[]",
         txt:"<span>collection of the stack of Graphs containing the current element where [0] is the most nested graph, and last is root graph.</span>"};
@@ -527,6 +528,35 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             if (ptr) SetFieldAction.new(ptr as any, 'subElements+=', context.data.id);
             return true; }*/
 
+    nodes!:LVoidVertex[];
+    __type_of__nodes:Info = {type:'LVertex[]', txt: "all direct sub-nodes. not including deep subelements (subelements of subelements)"};
+    get_nodes(c: Context): this['nodes'] { return this.get_subElements(c).filter(c => c && c.className.indexOf('Vertex') >= 0) as any; }
+    set_nodes(val: never, c: Context): boolean { return this.cannotSet('nodes'); }
+    edges!:LVoidVertex[];
+    __type_of__edges:Info = {type:'LEdge[]', txt: "all direct sub-edges. not including deep subelements (subelements of subelements)"};
+    get_edges(c: Context): this['edges'] { return this.get_subElements(c).filter(c => c && c.className.indexOf('Edge') >= 0) as any; }
+    set_edges(val: never, c: Context): boolean { return this.cannotSet('edges'); }
+    graphs!:LVoidVertex[];
+    __type_of__graphs:Info = {type:'LGraph[]', txt: "all direct sub-graphs. not including deep subelements (subelements of subelements)"};
+    get_graphs(c: Context): this['graphs'] { return this.get_subElements(c).filter(c => c && c.className.indexOf('Graph') >= 0) as any; }
+    set_graphs(val: never, c: Context): boolean { return this.cannotSet('graphs'); }
+
+    allSubNodes!: LVoidVertex[];
+    __type_of__allSubNodes:Info = {type:'LVertex[]', txt: "all deep sub-nodes. including subelements of subelements."};
+    get_allSubNodes(c: Context): this['allSubNodes'] { return this.get_allSubElements(c).filter(c => c && c.className.indexOf('Vertex') >= 0) as any; }
+    set_allSubNodes(val: never, c: Context): boolean { return this.cannotSet('allSubNodes'); }
+    allSubEdges!: LVoidEdge[];
+    __type_of__allSubEdges:Info = {type:'LEdge[]', txt: "all deep sub-edges. including subelements of subelements."};
+    get_allSubEdges(c: Context): this['allSubEdges'] { return this.get_allSubElements(c).filter(c => c && c.className.indexOf('Edge') >= 0) as any; }
+    set_allSubEdges(val: never, c: Context): boolean { return this.cannotSet('allSubEdges'); }
+    allSubGraphs!: (LGraph | LGraphVertex)[];
+    __type_of__allSubGraphs:Info = {type:'LGraph[]', txt: "all deep sub-graphs. including subelements of subelements."};
+    get_allSubGraphs(c: Context): this['allSubGraphs'] { return this.get_allSubElements(c).filter(c => c && c.className.indexOf('Graph') >= 0) as any; }
+    set_allSubGraphs(val: never, c: Context): boolean { return this.cannotSet('allSubGraphs'); }
+
+    subElements!: LGraphElement[]; // shallow, direct subelements
+    __info_of_subElements: Info = {type: 'LGraphElement[]',
+        txt: "all direct subelements (nodes, edges, edgepoints, subgraphs...). not including deep subelements (subelements of subelements)"}
     get_subElements(context: Context): this["subElements"] {
         return LPointerTargetable.fromArr([...new Set(context.data.subElements)]);
     }
@@ -554,18 +584,10 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return true;
     }
 
-    get_isResized(context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] { return context.data.isResized; }
-    set_isResized(val: DVoidVertex["isResized"], context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] {
-        return SetFieldAction.new(context.data.id, "isResized", val);
-    }
-
-    get_model(context: Context): this["model"] {
-        const modelElementId = context.data.model; //$('[id="' + context.data.id + '"]')[0].dataset.dataid;
-        const lModelElement: LModelElement = LPointerTargetable.from(modelElementId as string);
-        return lModelElement;
-    }
-
-    private get_allSubNodes(context: Context, state?: DState): this["allSubNodes"] {
+    allSubElements!: LGraphElement[]; // deep, nested subelements
+    __info_of_allSubElements: Info = {type: 'LGraphElement[]',
+        txt: "all deep subelements (nodes, edges, edgepoints, subgraphs...). including subelements of subelements."}
+    private get_allSubElements(context: Context, state?: DState): this["allSubElements"] {
         // return context.data.packages.map(p => LPointerTargetable.from(p));
         state = state || store.getState();
         let tocheck: Pointer<DGraphElement>[] = context.data.subElements || [];
@@ -581,7 +603,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
                 checked[ptr] = true;
                 let subnode: DGraphElement = DPointerTargetable.from(ptr, state);
                 let se = subnode?.subElements;
-                for (let e of se) dblcheck[e] = ptr; // debug only
+                //for (let e of se) dblcheck[e] = ptr; // debug only
                 U.arrayMergeInPlace(newtocheck, se);
             }
             tocheck = newtocheck;
@@ -589,6 +611,19 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         delete checked[context.data.id];
         return LPointerTargetable.from(Object.keys(checked), state);
     }
+    set_allSubElements(val: never, c: Context): boolean { return this.cannotSet('allSubElements'); }
+
+    get_isResized(context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] { return context.data.isResized; }
+    set_isResized(val: DVoidVertex["isResized"], context: LogicContext<DVoidVertex>): DVoidVertex["isResized"] {
+        return SetFieldAction.new(context.data.id, "isResized", val);
+    }
+
+    get_model(context: Context): this["model"] {
+        const modelElementId = context.data.model; //$('[id="' + context.data.id + '"]')[0].dataset.dataid;
+        const lModelElement: LModelElement = LPointerTargetable.from(modelElementId as string);
+        return lModelElement;
+    }
+
     assignEdgeAnchor!: ((anchorName?: string)=>void);
     __info_of__assignEdgeAnchor!: {hidden:true, type:"(anchorName?: string)=>void", txt: "Assign a specific anchor of this node to the edge currently following the cursor, if any."};
     get_assignEdgeAnchor(c: Context): ((anchorName?: string)=>void) {
@@ -735,7 +770,7 @@ export class DGraph extends DGraphElement {
     model!: Pointer<DModelElement, 1, 1, LModelElement>;
     isSelected!: Dictionary<DocString<Pointer<DUser>>, boolean>;
     // containedIn!: Pointer<DGraphElement, 0, 1, LGraphElement>;
-    subElements!: Pointer<DGraphElement, 0, 'N', LGraphElement>;
+
     state!: GObject;
     // personal attributes
     zoom!: GraphPoint;
@@ -800,20 +835,38 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
 
     // get_graphSize(context: LogicContext<DGraph>):  Readonly<GraphSize> { return todo: get bounding rect containing all subnodes.; }
     get_offset(context: LogicContext<DGraph>):  Readonly<GraphSize> {
-        return new GraphSize(context.data.offset.x, context.data.offset.y);
+        let offset: Partial<GraphSize> = (context.data.offset || new GraphSize()) as any;
+        return new GraphSize(offset.x, offset.y, offset.w, offset.h);
     }
-    set_offset(val: Partial<GraphPoint>, context: Context): boolean {
-        if (!val) val = {x:0, y:0};
-        if (context.data.offset.x === val.x && context.data.offset.y === val.y) return true;
-        if (val.x === undefined && context.data.offset.x !== val.x) val.x = context.data.offset.x;
-        if (val.y === undefined && context.data.offset.y !== val.y) val.y = context.data.offset.y;
-        SetFieldAction.new(context.data, "offset", val as GraphPoint);
+    set_offset(val: Partial<GraphSize>, context: Context): boolean {
+        if (!val) val = {x:0, y:0, w:0, h:0};
+        //if (val.x === undefined && val.y === undefined && val.w === undefined && val.h === undefined) return true;
+        let offset: Partial<GraphSize> = (context.data.offset || new GraphSize()) as any
+        if (val.x === undefined && offset.x !== val.x) val.x = offset.x;
+        if (val.y === undefined && offset.y !== val.y) val.y = offset.y;
+        if (val.w === undefined && offset.w !== val.w) val.w = offset.w;
+        if (val.h === undefined && offset.h !== val.h) val.h = offset.h;
+        if (offset.x === val.x && offset.y === val.y && offset.w === val.w && offset.h == val.h) return true;
+        SetFieldAction.new(context.data, "offset", val as any);
         return true;
     }
+
+    __info_of__zoom: Info = {type:GraphPoint.cname, label:"zoom", txt:"Scales the graph and all subelements by a factor."};
     get_zoom(context: Context): GraphPoint {
         const zoom: GraphPoint = context.data.zoom;
+        let ret = new GraphPoint(zoom.x||1, zoom.y||1); // NB: do not use (??1), zero is not a valid value for zoom.
         // (zoom as any).debug = {rawgraph: context.data.__raw, zoomx: context.data.zoom.x, zoomy: context.data.zoom.y}
-        return context.data.zoom; }
+        return ret; }
+    set_zoom(val: Partial<GraphPoint>, c: Context): boolean{
+        if (!val) val = {x:1, y:1};
+        //if (val.x === undefined && val.y === undefined) return true;
+        let zoom: Partial<GraphSize> = (c.data.zoom || new GraphSize()) as any;
+        if (!val.x) val.x = zoom.x; // remember zero is not allowed value
+        if (!val.y) val.y = zoom.y;
+        if (zoom.x === val.x && zoom.y === val.y) return true;
+        SetFieldAction.new(c.data, 'zoom', val as any, '+=', false);
+        return true;
+    }
 
     toGraphSize(...a:Parameters<this["coord"]>): ReturnType<this["coord"]>{ return this.wrongAccessMessage("toGraphSize"); }
     coord(htmlSize: Size): GraphSize { return this.wrongAccessMessage("toGraphSize"); }
@@ -828,11 +881,6 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     translateSize<T extends GraphSize|GraphPoint>(ret: T, innerGraph: LGraph): T { return this.wrongAccessMessage("translateSize()"); }
     translateHtmlSize<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(size: T): G { return this.wrongAccessMessage("translateHtmlSize()"); }
 
-    __info_of__zoom: Info = {type:GraphPoint.cname, label:"zoom", txt:"Scales the graph and all subelements by a factor."};
-    set_zoom(val: Partial<GraphPoint>, c: Context): boolean{
-        SetFieldAction.new(c.data, 'zoom', val as any, '+=', false);
-        return true;
-    }
     __info_of__offset: Info = {type:GraphPoint.cname, label:"offset", txt:"In-graph scrolling position."};
     __info_of__graphSize: Info = {type:GraphSize.cname, label:"graphSize", txt:"size internal to the graph, including internal scroll and panning."};
     __info_of__translateSize: Info = {type:"(T, Graph)=>T where T is GraphSize | GraphPoint", txt:"Translates a coordinate set from the local coordinates of a SubGraph to this Graph containing it."};
@@ -842,9 +890,8 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
             let graphHtmlSize = this.get_htmlSize(c);
             let a = size.subtract(graphHtmlSize.tl(), true);
             let offset = {x:c.data.offset.x, y:c.data.offset.y};
-            let b = a.add(offset, true);
+            let b = a.subtract(offset, true);
             let r = b.multiply(c.data.zoom, false) as any as G;
-            console.log('resizing', {size, a, b, r, offset, graphHtmlSize});
             return r;
         }
     }
@@ -854,9 +901,11 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
             innerGraph = LPointerTargetable.wrap(innerGraph) as LGraph;
             let ret: T = (size.hasOwnProperty("w") ? new GraphSize(size.x, size.y, (size as GraphSize).w, (size as GraphSize).h) : new GraphPoint(size.x, size.y)) as T;
             Log.ex(!innerGraph, "translateSize() graph parameter is invalid: "+innerGraph, innerGraph, c);
-            let ancestors: LGraph[] = [innerGraph, ...innerGraph.graphAncestors]
+            let ancestors: LGraph[] = [innerGraph, ...innerGraph.graphAncestors];
+            console.log("translateSize", {innerGraph, ret, ancestors, c});
             Log.ex(ancestors.indexOf(c.proxyObject) !== -1, "translateSize() graph parameter is invalid: it must be a graph containing the current one.", innerGraph, c);
             for (let g of ancestors) ret.add(g.size.tl(), false);
+            // for (let g of ancestors) ret.subtract(g.offset, false);
             // console.log("translateSize", {c, thiss:c.proxyObject, ancestors, ancestorSizes: ancestors.map(a=> a.size.tl()), size, ret});
             return ret; }
     }
@@ -1430,6 +1479,7 @@ export class EdgeSegment{
     bezier: segmentmaker[];
     end: segmentmaker;
     length!: number;
+    // if EdgeSegment is changed, shouldcomponentupdate needs update too: search in IDE for "5khi2"
     d!: string;
     dpart!: string; //  a segment of the whole path
     m!: number; // m coefficient of the line between start and end.
@@ -1626,7 +1676,8 @@ export class EdgeFillSegment extends EdgeSegment{
         }
     }
 }
-
+export type labelfunc = (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
+export type labeltype = orArr<labelfunc | PrimitiveType>;
 
 type segmentmaker = {size: GraphSize, view: LViewElement, ge: LGraphElement, pt: GraphPoint, uncutPt: GraphPoint};
 @RuntimeAccessible('LVoidEdge')
@@ -1642,10 +1693,8 @@ export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends 
     model?: LModelElement;
     // isSelected: Dictionary<DocString<Pointer<DUser>>, boolean> = {};
     isSelected(forUser?: Pointer<DUser>): boolean { return this.wrongAccessMessage("node.isSelected()"); }
-    // containedIn?: LGraphElement;
+    // containedIn?: LGraphElemnt;
     subElements!: LGraphElement[];
-    start!: LGraphElement;
-    end!: LGraphElement;
     __isLVoidEdge!: true;
     midPoints!: InitialVertexSize[]; // the logic part which instructs to generate the midnodes
     midnodes!: LEdgePoint[];
@@ -1682,44 +1731,69 @@ replaced by startPoint
 
 
     label!: this["longestLabel"];  // should never be read change their documentation in write only. their values is "read" in this.segments
-    longestLabel!: (e:LVoidEdge, curr: LGraphElement, next: LGraphElement, curr_index: number, allNodes: LGraphElement[]) => string;
-    labels!: (e:LVoidEdge, curr: LGraphElement, next: LGraphElement, curr_index: number, allNodes: LGraphElement[]) => string;
+    longestLabel!: labeltype;
+    labels!: labeltype;
     __info_of__longestLabel: Info = {label:"Longest label", type:"function(edge)=>string",
-        readType: " (e:LVoidEdge, curr: LGraphElement, next: LGraphElement, curr_index: number, allNodes: LGraphElement[]) => string",
+        readType: "(edge:LEdge, segment: EdgeSegment, allNodes: DGraphElement[], allSegments: EdgeSegment[]) => PrimitiveType",
         writeType:"string",
         txt: <span>Label assigned to the longest path segment.</span>}
     __info_of__label: Info = {type: "", txt: <span>Alias for longestLabel</span>};
-    __info_of__labels: Info = {label:"Multiple labels", type: "function(edge)=>string | string[]",
+    __info_of__labels: Info = {label:"Multiple labels", type: "same type as longestLabel | longestLabel[]",
         writeType: "string",
         txt: <span>Instructions to label to multiple or all path segments in an edge</span>
     };
 
 
+    start!: LGraphElement;
+    __info_of__start: Info = {type: "LVertex", txt:"the source point of the edge."}
+    get_start(c: Context): this['start'] { return LPointerTargetable.fromPointer(c.data.start); }
+    set_start(val: Pack1<LGraphElement>, c: Context): boolean {
+        let ptr = Pointers.from(val);
+        if (!ptr) { Log.exx("attempting to set an invalid LEdge.start: " + ptr, {ptr, data: c.data}); return true; }
+        if (ptr !== c.data.start) SetFieldAction.new(c.data.id, 'start', ptr, '', true);
+        return true;
+    }
+    end!: LGraphElement;
+    __info_of__end: Info = {type: "LVertex", txt:"the terminal point of the edge."}
+    get_end(c: Context): this['end'] { return LPointerTargetable.fromPointer(c.data.end); }
+    set_end(val: Pack1<LGraphElement>, c: Context): boolean {
+        let ptr = Pointers.from(val);
+        if (!ptr) { Log.exx("attempting to set an invalid LEdge.end: " + ptr, {ptr, data: c.data}); return true; }
+        if (ptr !== c.data.end) SetFieldAction.new(c.data.id, 'end', ptr, '', true);
+        return true;
+    }
+
+
     get_label(c: Context): this["longestLabel"] { return this.get_longestLabel(c); }
-    set_label(val: this["longestLabel"], c: Context): boolean { return this.set_longestLabel(val, c); }
+    set_label(val: DVoidEdge["longestLabel"], c: Context): boolean { return this.set_longestLabel(val, c); }
     get_longestLabel(c: Context): this["longestLabel"] {
         return transientProperties.node[c.data.id].longestLabel;
-        // return c.data.longestLabel as any;
-    }
-    set_longestLabel(val: DVoidEdge["longestLabel"], c: Context): boolean {
-        if (val === c.data.longestLabel) return true;
-        TRANSACTION(()=>{
-            SetFieldAction.new(c.data, "longestLabel", val);
-            SetRootFieldAction.new("RECOMPILE_longestLabel+=", c.data.id);
-        });
-        return true;
+        /*if (transientProperties.node[c.data.id].longestLabel !== undefined) return transientProperties.node[c.data.id].longestLabel;
+        else return transientProperties.view[c.data.view].longestLabel;*/
     }
     get_labels(c: Context): this["labels"] {
         return transientProperties.node[c.data.id].labels;
-        // return c.data.labels as any;
+        /*if (transientProperties.node[c.data.id].labels !== undefined) return transientProperties.node[c.data.id].labels;
+        else return transientProperties.view[c.data.view].labels;*/
+    }
+    set_longestLabel(val: DVoidEdge["longestLabel"], c: Context): boolean {
+        Log.exDevv('Edge.labels are disabled, pass it through props instead');
+        if (val === c.data.longestLabel) return true;
+        TRANSACTION(()=>{
+            SetFieldAction.new(c.data, "longestLabel", val);
+            SetRootFieldAction.new("NODES_RECOMPILE_longestLabel+=", c.data.id);
+        });
+        return true;
     }
     set_labels(val: DVoidEdge["labels"], c: Context): boolean {
+        Log.exDevv('Edge.labels are disabled, pass it through props instead');
         if (val === c.data.labels) return true;
         TRANSACTION(()=>{
             SetFieldAction.new(c.data, "labels", val);
-            SetRootFieldAction.new("RECOMPILE_labels+=", c.data.id);
+            SetRootFieldAction.new("NODES_RECOMPILE_labels+=", c.data.id);
         });
         return true; }
+
     public headPos_impl(c: Context, isHead: boolean, headSize0?: GraphPoint, segment0?: EdgeSegment, zoom0?: GraphPoint): GraphSize & {rad: number} {
         let segment: EdgeSegment = segment0 || this.get_segments(c).segments[0];
         // let v: LViewElement = this.get_view(c);
@@ -1768,7 +1842,9 @@ replaced by startPoint
             // secondIntersection = end;
         }
         secondIntersection = GraphSize.closestIntersection(x4headsize, start, end, undefined);
-        if (!secondIntersection) return Log.exx("failed to intersect edge head", {x4headsize, segment, headPos, c, start, end, useBezierPoints});
+        if (!secondIntersection) {
+           return Log.exDevv("failed to intersect edge head", {x4headsize, segment, headPos, c, start, end, useBezierPoints});
+        }
         tmp = secondIntersection.add(start, false).divide(2); // center of edgehead
         headPos.x = tmp.x - headPos.w / 2; // tl corner
         headPos.y = tmp.y - headPos.h / 2; // tl corner
@@ -1812,7 +1888,7 @@ replaced by startPoint
         // if (isLongestSegment) return this.get_longestLabel_impl(d, l, nodes, index):
         const d = c.data;
         const l = c.proxyObject;
-        let labelmaker: any = d[key]; // orArr<PrimitiveType | JSX | function>
+        let labelmaker: any = (this as any)['get_'+key](c);
         let labelmakerfunc: labelfunc = labelmaker as any;
         // let lastSeg = segments[i-1];
         switch (typeof labelmaker) {//nb{}[]<>
@@ -1821,13 +1897,15 @@ replaced by startPoint
             case "boolean":
             case "string": return labelmaker;
             // case "function": return nodes.map( (o, i) => d.labels(l, nodes, i)).slice(0, nodes.length-1);
+            // (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType
             case "function": return labelmakerfunc(l, segment, nodes, segments);
             default: break;
             case "object":
                 if (labelmaker === null) return null;
                 if (!Array.isArray(labelmaker)) break;
-                if (typeof labelmaker[0] === "function") return (labelmaker[segment.index % labelmaker.length] as labelfunc)(l, segment, nodes, segments);
-                return (labelmaker as PrimitiveType[])[segment.index % labelmaker.length];
+                let elem = (labelmaker as PrimitiveType[])[segment.index % labelmaker.length];
+                if (typeof elem === "function") return (elem as labelfunc)(l, segment, nodes, segments);
+                return elem;
         }
         Log.exx("edge labels invalid type, must be a primitive value, a function or an array of such.", {labelmaker, key, d});
         return undefined;
@@ -2007,7 +2085,7 @@ replaced by startPoint
         let gapMode: EdgeGapMode = v.edgeGapMode;
         let segmentSize = this.svgLetterSize(bm, false, true);
         let increase: number = segmentSize.first;
-        let segment: EdgeSegment | undefined;
+        let segment: EdgeSegment | undefined = undefined;
         /// grouping points according to SvgLetter
         for (let i = 0; i < all.length - 1; ) {
             // let start = all[i], end = all[i+increase];
@@ -2212,8 +2290,6 @@ replaced by startPoint
     protected set_midnodes(val: D["midnodes"], context: Context): boolean {
         return SetFieldAction.new(context.data.id, "midnodes", val, '', true);
     }
-    protected get_start(context: Context): this["start"] { return LPointerTargetable.from(context.data.start); }
-    protected get_end(context: Context): this["end"] { return LPointerTargetable.from(context.data.end); }
 
 
     anchorStart?: string;
@@ -2325,6 +2401,7 @@ replaced by startPoint
             let g: LGraph = c.proxyObject.graph;
             let cursorPos = LVoidEdge.getCursorPos(e0);
             let gcursorpos = g.translateHtmlSize(cursorPos);
+            // console.log("gcursorpos", {cursorPos:cursorPos.toString(), gcursorpos:gcursorpos.toString(), g});
             DVoidEdge.isFollowingCoords = gcursorpos;
 
             let component: GraphElementComponent = GraphElementComponent.map[(LVoidEdge.startFollow || LVoidEdge.endFollow) as string];
@@ -2457,8 +2534,6 @@ export class LEdge<Context extends LogicContext<DEdge> = any, D extends DEdge = 
     // containedIn!: LGraphElement;
     subElements!: LGraphElement[];
     _state!: GObject<"proxified">; // LMap;
-    start!: LGraphElement;
-    end!: LGraphElement;
     midnodes!: LEdgePoint[];
     __isLEdge!: true;
     __isLVoidEdge!: true;

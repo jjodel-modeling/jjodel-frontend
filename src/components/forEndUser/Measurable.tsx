@@ -4,6 +4,7 @@ import $ from "jquery";
 import {OwnProps} from "../rightbar/structureEditor/ModelMetaData";
 /// <reference path="../../common/libraries/jqui-types.ts" />
 import {JQueryUI} from "../../common/libraries/jqui-types"
+import "./Measurable.scss";
 
 type ResizableEvent = JQueryUI.ResizableEvent;
 type DraggableEvent = JQueryUI.DraggableEvent;
@@ -33,6 +34,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
     rotateOptionsChanged: boolean = true;
     defaultOptions: {"draggable": JQueryUI.DraggableOptions, resizable: JQueryUI.ResizableOptions, rotatable: GObject} = {
         draggable: {
+            cancel: '.no-drag,[contenteditable="true"],input,textarea,button,select,option',
             cursor: 'grabbing',
             // containment: 'parent',
             distance: 5,
@@ -261,11 +263,9 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         // let jodelevt = propsevent; // (...params: any) => propsevent(...params); // was made to preserve "this"?
         let defaultevt: null | MeasurableUIEvent = this.getDefaultEvent(type, evtkey);
         let allevents = [defaultevt, jquievt, propsevent].filter((e)=>!!e);
-        console.log('checking for jodelevent 00', {propsevent, allevents, props, k: eventmap[evtkey][type], pe: props[eventmap[evtkey][type]], evtkey, type, eventmap});
         if (allevents.length) options[jqkey] = ((evt, ui)=>{
             for (let e of allevents) {
                 propsevent = props[eventmap[evtkey][type]]; // if i don't redeclare it here, closure makes a mess taking always the last jodelevt for all iterations.
-                console.log('checking for jodelevent', {eq:e === propsevent, e, propsevent, allevents, props, k: (eventmap as any)[evtkey][type], pe: props[eventmap[evtkey][type]], evtkey, type, eventmap});
                 if (e === propsevent) { e(this.getCoords(evt, ui, !!this.props.isPanning), evt, ui); }
                 else e(evt, ui);
             }
@@ -412,18 +412,35 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         return gsize;
     }
 }
-/*
-@RuntimeAccessible('InfiniteScrollComponent')
-export class InfiniteScrollComponent extends Component<ScrollOwnProps, ScrollState>{
-    static cname: string = "InfiniteScrollComponent";
+
+@RuntimeAccessible('ScrollableComponent')
+export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
+    static cname: string = "ScrollableComponent";
     render(){
-        return <Measurable transformMode={false} onChildren={true}>{ this.props.children}</Measurable>
+        let graph = this.props.graph;
+        return (
+            <div className={"scrollable"}>
+                <Measurable draggable={true}
+                            isPanning={true}
+                            onDragEnd={graph ? (coords, ...args: any)=>{
+                                if (!graph) return; // just for ts-lint
+                                console.log("drag odee", {coords, graph, args});
+                                let offset = graph.offset;
+                                if (!offset.equals(coords)) graph.offset = coords as any;
+                            } : undefined}
+                            onChildren={true}>
+                    <div className="panning-handle">
+                        <div className="panning-content">{ this.props.children }</div>
+                    </div>
+                </Measurable>
+            </div>);
     }
 }
-*/
+
 // private
 interface ScrollOwnProps {
     children: ReactChild[] | ReactChild;
+    graph?: LGraph;
 }
 interface MeasurableOwnProps {
     isPanning?: boolean;
@@ -433,7 +450,7 @@ interface MeasurableOwnProps {
     draggable?: JQueryUI.DraggableOptions | boolean;
     onDragStart?: DraggableEvent;
     whileDragging?: DraggableEvent;
-    onDragEnd?: DraggableEvent;
+    onDragEnd?: (coords: GraphSize, ...args: Parameters<DraggableEvent>)=>void;
     onChildren?: boolean | ((e: HTMLElement)=>HTMLElement);
 
     //resizeOptions?: Options;
@@ -485,14 +502,42 @@ function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
     children: [],
 } as MeasurableOwnProps;
 
-export class InfiniteScrollComponent extends Component<any, any>{ }
 
-export function Measurable(props: MeasurableAllProps, children: ReactChild[] = []): ReactElement {
-    return <MeasurableComponent {...{...props, children}}>{children}</MeasurableComponent>;
+export function Measurable(props: MeasurableAllProps, children?: any): ReactElement {
+    return <MeasurableComponent {...{...props}}>{props.children||children}</MeasurableComponent>;
 }
-// todo: shortcuts for Draggable Resizable Rotatable with whileDragging onDragStart props simplified to start, while, end
-export function InfiniteScroll(props: MeasurableAllProps, children: ReactChild[] = []): ReactElement {
-    return <Measurable {...{...props, children}} transformMode={false} onChildren={true}>{children}</Measurable>;
+// shortcuts for Draggable Resizable Rotatable with whileDragging onDragStart props simplified to start, while, end
+export function Draggable(props: GObject<MeasurableAllProps>, children?: any): ReactElement {
+    return <MeasurableComponent
+        {...{...props}}
+        draggable={props.options || props.draggable || true}
+        onDragStart={props.start || props.begin || props.onDragStart}
+        onDragEnd={props.end || props.stop || props.onDragEnd}
+        whileDragging={props.drag || props.while || props.ing || props.whileDragging}
+    >{props.children||children}</MeasurableComponent>;
+}
+export function Resizable(props: GObject<MeasurableAllProps>, children?: any): ReactElement {
+    return <MeasurableComponent
+        {...{...props}}
+        resizable={props.options || props.resizable || true}
+        onResizeStart={props.start || props.begin || props.onResizeStart}
+        onResizeEnd={props.end || props.stop || props.onResizeEnd}
+        whileResizing={props.resize || props.while || props.ing || props.whileResizing}
+    >{props.children||children}</MeasurableComponent>;
+}
+export function Rotatable(props: GObject<MeasurableAllProps>, children?: any): ReactElement {
+    return <MeasurableComponent
+        {...{...props}}
+        rotatable={props.options || props.rotatable || true}
+        onRotationStart={props.start || props.begin || props.onRotateStart|| props.onRotationStart}
+        onRotationEnd={props.end || props.stop || props.onRotateEnd|| props.onRotationEnd}
+        whileRotating={props.rotate || props.while || props.ing || props.whileRotate || props.whileRotating}
+    >{props.children||children}</MeasurableComponent>;
+}
+
+
+export function Scrollable(props: MeasurableAllProps, children?: any): ReactElement {
+    return <ScrollableComponent {...{...props}}>{props.children||children}</ScrollableComponent>;
 }/*
 export function InfiniteScroll(props: MeasurableAllProps, children: ReactChild[] = []): ReactElement {
     return <InfiniteScrollComponent {...{...props, children}}>{children}</InfiniteScrollComponent>;

@@ -13,7 +13,7 @@ import {
     DState,
     DViewPoint, DVoidEdge,
     EdgeBendingMode,
-    EdgeGapMode,
+    EdgeGapMode, EdgeSegment,
     EGraphElements,
     EModelElements,
     END,
@@ -21,7 +21,7 @@ import {
     GObject,
     GraphPoint,
     GraphSize,
-    Info, LEdgePoint, LGraphElement, LModelElement,
+    Info, LEdge, LEdgePoint, LGraphElement, LModelElement,
     Log,
     LogicContext,
     LPointerTargetable, LUser,
@@ -29,7 +29,7 @@ import {
     LVoidEdge,
     MyProxyHandler,
     Pointer,
-    Pointers,
+    Pointers, PrimitiveType,
     RuntimeAccessible,
     RuntimeAccessibleClass,
     Selectors,
@@ -43,6 +43,7 @@ import {
 import {DUser, EPSize, Pack1, transientProperties } from "../../joiner/classes";
 import DSL from "../../DSL/DSL";
 import {ReactNode} from "react";
+import {labeltype} from "../../model/dataStructure/GraphDataElements";
 
 let CSS_Units0 = {'Local-font relative':{
         'cap':     'cap - (Cap height) the nominal height of capital letters of the element\'s font.',
@@ -387,22 +388,24 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     set_isOverlay(val: this["isOverlay"], c: Context): boolean { return this.set_isExclusiveView(val, c); }
 
     label!: this["longestLabel"];  // should never be read change their documentation in write only. their values is "read" in this.segments
-    longestLabel!: (e:LVoidEdge, curr: LGraphElement, next: LGraphElement, curr_index: number, allNodes: LGraphElement[]) => string;
-    labels!: (e:LVoidEdge, curr: LGraphElement, next: LGraphElement, curr_index: number, allNodes: LGraphElement[]) => string;
+    longestLabel!: labeltype; // (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
+    labels!: labeltype; // (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
     __info_of__longestLabel: Info = {label:"Longest label", type:"function(edge)=>string",
-        readType: " (e:LVoidEdge, curr: LGraphElement, next: LGraphElement, curr_index: number, allNodes: LGraphElement[]) => string",
-        writeType:"string",
+        readType: "(edge:LEdge, segment: EdgeSegment, allNodes: DGraphElement[], allSegments: EdgeSegment[]) => PrimitiveType",
+        writeType: "string",
         txt: <span>Label assigned to the longest path segment.</span>}
     __info_of__label: Info = {type: "", txt: <span>Alias for longestLabel</span>};
-    __info_of__labels: Info = {label:"Multiple labels", type: "function(edge)=>string | string[]",
+    __info_of__labels: Info = {label:"Multiple labels",
+        readType: "type of longestLabel | longestLabel[]",
         writeType: "string",
         txt: <span>Instructions to label to multiple or all path segments in an edge</span>
     };
     get_label(c: Context): this["longestLabel"] { return this.get_longestLabel(c); }
-    set_label(val: this["longestLabel"], c: Context): boolean { return this.set_longestLabel(val, c); }
+    set_label(val: DVoidEdge["longestLabel"], c: Context): boolean { return this.set_longestLabel(val, c); }
     get_longestLabel(c: Context): this["longestLabel"] { return transientProperties.view[c.data.id].longestLabel; }
     get_labels(c: Context): this["labels"] { return transientProperties.view[c.data.id].labels; }
     set_longestLabel(val: DVoidEdge["longestLabel"], c: Context): boolean {
+        Log.exDevv('Edge.labels are disabled, pass it through props instead');
         if (val === c.data.longestLabel) return true;
         TRANSACTION(()=>{
             SetFieldAction.new(c.data, "longestLabel", val);
@@ -411,6 +414,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return true;
     }
     set_labels(val: DVoidEdge["labels"], c: Context): boolean {
+        Log.exDevv('Edge.labels are disabled, pass it through props instead');
         if (val === c.data.labels) return true;
         TRANSACTION(()=>{
             SetFieldAction.new(c.data, "labels", val);

@@ -8,7 +8,7 @@ import {
     LGraph, MouseUpEvent, Point,
     Pointers,
     Selectors as Selectors_, Size, TRANSACTION, WGraph,
-    GraphDragManager, GraphPoint, Selectors, DNamedElement, DVoidEdge
+    GraphDragManager, GraphPoint, Selectors, DNamedElement, DVoidEdge, LEdge
 } from "../../joiner";
 import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
 
@@ -51,6 +51,7 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
     windoww, transientProperties
 } from "../../joiner";
 import {NodeTransientProperties, Pack1} from "../../joiner/classes";
+import {OwnProps} from "../../components/rightbar/structureEditor/ModelMetaData";
 
 // const Selectors: typeof Selectors_ = windoww.Selectors;
 /*
@@ -138,6 +139,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     public static cname: string;
     static all: Dictionary<number, GraphElementComponent> = {};
     public static map: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = {};
+    static defaultProps: Partial<GraphElementOwnProps> = GraphElementOwnProps.new();
     static maxid: number = 0;
     id: number;
 
@@ -277,11 +279,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 Log.e(!endnodeid, "Cannot create an edge without end node (yet)", {endnodeid, data:ret.data, propsEnd:edgeOwnProps.end});
                 if (!startnodeid || !endnodeid) return;
                 let longestLabel = edgeOwnProps.label;
-                let labels: DEdge["labels"] = edgeOwnProps.labels || [];
+                let labels = edgeOwnProps.labels;
                 // dge = DEdge.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, longestLabel, labels);
                 dge = DEdge.new2(ret.data?.id, parentnodeid, graphid, nodeid, startnodeid, endnodeid, (d)=>{
-                    d.longestLabel = longestLabel;
-                    d.labels = labels;
+                    //d.longestLabel = longestLabel;
+                    //d.labels = labels;
+                    let tn = (transientProperties.node[nodeid]);
+                    if (!tn) transientProperties.node[nodeid] = {} as any;
+                    tn.labels = labels;
+                    tn.longestLabel = longestLabel;
                     d.zIndex = ownProps.htmlindex || 1;
                     if (edgeOwnProps.anchorStart) d.anchorStart = edgeOwnProps.anchorStart;
                     if (edgeOwnProps.anchorEnd) d.anchorEnd = edgeOwnProps.anchorEnd;
@@ -315,7 +321,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     ////// mapper func
     static mapStateToProps(state: DState, ownProps: GraphElementOwnProps, dGraphDataClass: (typeof DGraphElement | typeof DEdge) = DGraphElement, startingobj?: GObject): GraphElementReduxStateProps {
         // console.log('dragx GE mapstate', {dGraphDataClass});
-        let ret: GraphElementReduxStateProps = (startingobj || {}) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
+        let ret: GraphElementReduxStateProps = (startingobj || GraphElementReduxStateProps.new()) as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
         // console.log("viewsss mapstate 0 " + ownProps.view + " " + ret.data?.name, {views:ret.views, ownProps, stateProps:{...ret}, thiss:this});
 
         GraphElementComponent.mapLModelStuff(state, ownProps, ret);
@@ -336,6 +342,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         ret.forceupdate = state.forceupdate;
 
         // Log.l((ret.data as any)?.name === "concept 1", "mapstatetoprops concept 1", {newnode: ret.node});
+        U.removeEmptyObjectKeys(ret);
         return ret;
     }
 
@@ -352,7 +359,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     lastOnUpdateChanges: {t: number}[];
     stopUpdateEvents?: number; // undefined or view.clonedCounter;
     dataOldClonedCounter?: number; // undefined or data.clonedCounter;
-
 
     public shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<GraphElementState>, nextContext: any, oldProps?: Readonly<AllProps>): boolean {
         if (!oldProps) oldProps = this.props;//for subviewcomponent
@@ -836,6 +842,45 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
     }
 
+
+    // returns: true if an action is fired and component needs re-rendering
+    updateNodeFromProps(props: GObject<AllProps>): boolean {
+        let ret = false;
+        let tn = transientProperties.node[props.nodeid];
+        let ptr: Pointer<any>;
+        let dnode = props.node.__raw;
+        // if edge.label props is func, do not set in the dedge, just in transientproperties. totally override the "text" system.
+        // it does not need collab sync:
+        // because if the view is active for the other user, his synched jsx will generate the same function in transientProperties.
+        // if it is inactive it does not matter, the value is not used.
+        if (props.label) { tn.longestLabel = props.label; }
+        if (props.longestLabel) { tn.longestLabel = props.longestLabel; }
+        if (props.labels) { tn.labels = props.labels; }
+        if (props.anchorStart && props.isEdge) { (props.node as LEdge).anchorStart = props.anchorStart; }
+        if (props.anchorEnd && props.isEdge) { (props.node as LEdge).anchorEnd = props.anchorEnd; }
+        if (props.start && props.isEdge) {
+            ptr = Pointers.from(props.start);
+            if (dnode.id !== ptr) (props.node as LEdge).start = ptr as any;
+        }
+        console.log("changing endpt", props, props.end, props.end?.model?.name);
+        if (props.end && props.isEdge) {
+            ptr = Pointers.from(props.end);
+            if (dnode.id !== ptr) (props.node as LEdge).end = ptr as any;
+        }
+        if (props.anchorEnd) { tn.labels = props.labels; }
+        if (typeof props.x === 'number') { let old = props.node.x; let n = +props.x; if (old !== n) { props.node.x = n; ret = true;} }
+        if (typeof props.y === 'number') { let old = props.node.y; let n = +props.y; if (old !== n) { props.node.y = n; ret = true;} }
+        // risk loop: todo loop detection and skip setting
+        if (typeof props.w === 'number') { let old = props.node.w; let n = +props.w; if (old !== n) { props.node.w = n; ret = true;} }
+        if (typeof props.h === 'number') { let old = props.node.h; let n = +props.h; if (old !== n) { props.node.h = n; ret = true;} }
+        if (typeof props.width  === 'number') { let old = props.node.w; let n = +props.width;  if (old !== n) { props.node.w = n; ret = true;} }
+        if (typeof props.height === 'number') { let old = props.node.h; let n = +props.height; if (old !== n) { props.node.h = n; ret = true;} }
+
+
+
+        return ret;
+    }
+
     public render(nodeType:string = '', styleoverride:React.CSSProperties={}, classes: string[]=[]): ReactNode {
         GraphElementComponent.map[this.props.nodeid as Pointer<DGraphElement>] = this; // props might change at runtime, setting in constructor is not enough
         if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
@@ -846,6 +891,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             this.onViewChange();
             return "Updating view...";
         }*/
+        if (this.updateNodeFromProps(this.props as GObject<any>)) return 'Updating...';
         let nid = this.props.nodeid;
         let allviews = [...this.props.views, this.props.view]; // main view must be last, for renderView ordering
 
@@ -1021,7 +1067,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 injectProps.children = UX.recursiveMap(rawRElement/*.props.children*/,
                     (rn: ReactNode, index: number, depthIndexes: number[]) => {
                         let injectOffset: undefined | LGraph = ((this.props as any).isGraph && !depthIndexes[0] && !index) && (this.props.node as LGraph);
-                        injectOffset&&console.log("inject offset props0:", {injectOffset});
+                        //injectOffset&&console.log("inject offset props0:", {injectOffset});
                         //console.log("inject offset props00:", {injectOffset, ig:(this.props as any).isGraph, props:this.props, depthIndexes, index});
                         return UX.injectProp(this, rn, subElements, this.props.parentnodeid as string, index, depthIndexes, injectOffset)
                     });

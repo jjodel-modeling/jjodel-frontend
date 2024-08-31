@@ -45,23 +45,8 @@ class DefaultViews {
             }, false, 'Pointer_ViewModel');
 
         view.css = `
-.panning-handle{
-   position: relative;
-   overflow: visible;
-   width: 100%;
-   height: 100%;
-   left: var(--pan-x);
-   right: var(--pan-y);
-   transform: translate(var(--pan-x), var(--pan-y));
-   
-   >*.root {
-       overflow: visible;
-       position: relative;
-   }
-}
 &, .Graph{
   background-color: var(--background-1);
-  &:hover{ overflow: hidden; }
   height: 100%;
   width: -webkit-fill-available;
 }
@@ -97,16 +82,15 @@ class DefaultViews {
 [data-nodetype="VoidVertex"],
 [data-nodetype="Vertex"],
 [data-nodetype="GraphVertex"] {
-  position: absolute;
   &>*{ border: 0.1em solid #a3a3a3; }
   &>.ui-resizable-handle{ border: none; }
 }
 &,[data-nodetype], [data-nodetype]>*{
   /* for some reason focus does not work?? so this is a fallback but needs to be properly fixed */
   overflow: hidden;
-  &.selected-by-me, &:has(.selected-by-me), &:hover, &:active, &:focus-within, &:focus{
+  &.selected-by-me, &:has(.selected-by-me, .Edge), &:hover, &:active, &:focus-within, &:focus{
     overflow: visible;
-    z-index: 1000 !important;
+    z-index: 100 !important;
   }
 }
 .Edge{
@@ -200,6 +184,7 @@ control-panel .section .toggle {
 }
 
 /*** CONTROL PANEL END ***/
+
 `;
 
         view.usageDeclarations = '(ret) => {\n' +

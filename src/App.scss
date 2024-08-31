@@ -323,6 +323,14 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
   }
 }
 
+.Vertex, .GraphVertex, .EdgePoint{
+  left: var(--left) !important;
+  top: var(--top) !important;
+}
+.Edge{
+  left: calc( -1 * var(--left)) !important;
+  top: calc( -1 * var(--top)) !important;
+}
 .debug-mark{
   ::before{
     content: attr(data-key);

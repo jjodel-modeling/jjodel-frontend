@@ -75,7 +75,7 @@ export class UX{
         // const parentComponent = this;
         const type = (re.type as any).WrappedComponent?.name || re.type;
         let injectProps: GraphElementOwnProps = {} as any;
-        if (injectOffset) {
+        /* if (false && injectOffset) {
             const style = {...(re.props?.style || {})};
             let offset = injectOffset.offset;
             let scale = injectOffset.zoom;
@@ -85,7 +85,7 @@ export class UX{
             style.transform = "scale(" + scale.x + "," + scale.y + ")"
             injectProps.style = style;
             console.log("inject offset props:", {re, injectProps});
-        }
+        }*/
         //  fix the injection somehow. override Edge() Vertex() Asterisk() ...
         // const windoww = window as any;
         // console.log('ux.injectingProp pre ', {type: (re.type as any).WrappedComponent?.name || re.type}, {mycomponents: windoww.mycomponents, re, props:re.props});

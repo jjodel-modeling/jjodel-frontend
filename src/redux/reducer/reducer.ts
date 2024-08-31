@@ -508,7 +508,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
 
 
     function parseLabel(ptr: Pointer, key: "labels" | "longestLabel", isNode: boolean): boolean{
-        let dv: DViewElement | DGraphElement = DPointerTargetable.fromPointer(ptr, ret);
+        let dv: GObject<DViewElement | DGraphElement> = DPointerTargetable.fromPointer(ptr, ret);
         let tp: NodeTransientProperties | ViewTransientProperties = ((isNode ? transientProperties.node : transientProperties.view) as GObject)[ptr];
         if (!tp) ((isNode ? transientProperties.node : transientProperties.view) as GObject)[ptr] = tp = {} as any;
         let val: string = dv[key];
@@ -520,12 +520,18 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         for (let k of tv.constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
         for (let k of tv.UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
         let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
-        console.log('labelsparse', { allContextKeys, ud:tv.UDList, c:tv.constantsList });
+        console.log('labels parse', { allContextKeys, ud:tv.UDList, c:tv.constantsList });
         const body: string =  'return (' + val + ')';
         // if (vid.includes('Model')) console.log("modelparse, laels", {paramStr, body});
-        console.log('labelsparse', {vid: ptr, paramStr, body});
+        console.log('labels parse', {vid: ptr, paramStr, body});
         try {
-            tp[key] = new Function(paramStr, body) as ((...a: any) => any);
+            if (isNode) {
+                // need to store the function in tnv instead of tn since if v changes, ud changes as well? in all of them?what if i make a new view?
+            }
+            else {
+                // tp[key] = new Function(paramStr, body) as ((...a: any) => any);
+            }
+            tp[key] = function(){ return 'label as an option is disabled, pass it through props instead.'; }
         }
         catch (e: any) {
             /*try{
@@ -534,17 +540,17 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
                 console.error("eval error same as func error", {e, eeval});
                 e = eeval;
             }*/
-            console.error('error labelsparse', {vid: ptr, e, paramStr, body});
+            console.error('error labels parse', {vid: ptr, e, paramStr, body});
             tp[key] = val;// (context: GObject) => 'Error during label evaluation';
         }
         return true;
         // implies recompilation of: ... nothing?
     }
-    let arr: Pointer[]
+    let arr: Pointer<any>[]
     arr = ret.NODES_RECOMPILE_labels;
     if (arr.length) {
         let successfullyParsed: Dictionary<string, boolean> = {};
-        for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'label', true);
+        for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'labels', true);
         ret.NODES_RECOMPILE_labels = arr.filter(e => successfullyParsed[e]);
     }
     arr = ret.NODES_RECOMPILE_longestLabel;
@@ -556,7 +562,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     arr = ret.VIEWS_RECOMPILE_labels;
     if (arr.length) {
         let successfullyParsed: Dictionary<string, boolean> = {};
-        for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'label', false);
+        for (const id of new Set(arr)) successfullyParsed[id] = parseLabel(id, 'labels', false);
         ret.VIEWS_RECOMPILE_labels = arr.filter(e => successfullyParsed[e]);
     }
     arr = ret.VIEWS_RECOMPILE_longestLabel;

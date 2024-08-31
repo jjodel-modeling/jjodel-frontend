@@ -1,0 +1,16 @@
+
+.ui-draggable, .ui-resizable, .ui-rotatable{
+  position: absolute !important; // because jqui sets the html style attr to relative
+  border: 1px solid var(--palette-g);
+  width: fit-content;
+  height: fit-content;
+  overflow: hidden;
+}
+
+.scrollable, .panning-handle, .panning-content{
+  width: 100%;
+  height: 100%;
+}
+.panning-content{
+  position: relative;
+}

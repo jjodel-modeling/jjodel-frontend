@@ -50,6 +50,7 @@ dragHelper.style.zIndex = '9999';
 export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
     extends superclassGraphElementComponent<AllProps, ThisState> {
     public static cname: string = 'VertexComponent';
+    static defaultProps: Partial<VertexOwnProps> = VertexOwnProps.new();
     draggableOptions: GObject | undefined;
     resizableOptions: GObject | undefined;
     rotableOptions: GObject | undefined;
@@ -115,6 +116,8 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             // first setup only
             this.draggableOptions = {
                 cursor: 'grabbing',
+                cancel: '.no-drag,[contenteditable="true"],input,textarea,button,select,option',
+                // cancel: '.no-drag,input,textarea,button,select,option',
                 containment: 'parent',
                 opacity: 0.0,
                 disabled: !(isDraggable), // this does not work, i think because once set the first time the whole declaration is not re-applied. would need to undo draggable
@@ -385,8 +388,10 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
             case 'Vertex':
             case 'VoidVertex':
             case 'EdgePoint':
-                styleOverride.top = size.y + 'px';
-                styleOverride.left = size.x + 'px';
+                // @ts-ignore
+                styleOverride['--top'] = size.y + 'px';
+                // @ts-ignore
+                styleOverride['--left'] = size.x + 'px';
                 let isResized = this.props.node.isResized;
                 if (isResized || !this.props.view.adaptWidth) styleOverride.width = size.w+'px';
                 else styleOverride.width = undefined;
@@ -427,7 +432,7 @@ function mapStateToProps(state: DState, ownProps: VertexOwnProps): VertexStatePr
     else DGraphElementClass = DGraphElement; // DField;
 
     if (DGraphElementClass === DVertex && ownProps.isVoid) DGraphElementClass = DVoidVertex;
-    const superret: VertexStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass, {...ownProps}) as VertexStateProps;
+    const superret: VertexStateProps = GraphElementComponent.mapStateToProps(state, ownProps, DGraphElementClass, VertexStateProps.new()) as VertexStateProps;
     // superret.lastSelected = state._lastSelected?.modelElement;
     // superret.lastSelected = state._lastSelected ? LPointerTargetable.from(state._lastSelected.modelElement) : null;
 
@@ -448,8 +453,8 @@ function mapStateToProps(state: DState, ownProps: VertexOwnProps): VertexStatePr
         source: LPointerTargetable.from(state.isEdgePending.source)
     };
     // superret.viewpoint = LViewPoint.fromPointer(state.viewpoint);
-    const ret: VertexStateProps = new VertexStateProps();
-    U.objectMergeInPlace(superret, ret);
+    /*const ret: VertexStateProps = VertexStateProps.new();
+    U.objectMergeInPlace(superret, ret);*/
     U.removeEmptyObjectKeys(superret);
     return superret;
 }
@@ -467,26 +472,32 @@ export const VertexConnected = connect<VertexStateProps, DispatchProps, VertexOw
 )(VertexComponent as any);
 
 export const Vertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => { //  children: (string | React.Component)[]
-    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true}/>;
+    return <VertexConnected {...{...props, children}}
+        isGraph={false} isGraphVertex={false} isVertex={true} isEdgePoint={false} isField={false} isEdge={false} isVoid={false}/>;
 }
 export const VoidVertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={true} isVoid={true}/>;
+    return <VertexConnected {...{...props, children}}
+                            isGraph={false} isGraphVertex={false} isVertex={true} isEdgePoint={false} isField={false} isEdge={false} isVoid={true}/>;
 }
 export const EdgePoint = function EdgePoint (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement {
-    return <VertexConnected {...{...props, children}} isGraph={false} isEdgePoint={true}/>;
+    return <VertexConnected {...{...props, children}}
+                            isGraph={false} isGraphVertex={false} isVertex={true} isEdgePoint={true} isField={false} isEdge={false} isVoid={false}/>;
 }
 // todo: name them all or verify the name is still usable.
 
 export const Graph = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}} isGraph={true} isVertex={false} />;
+    return <VertexConnected {...{...props, children}}
+                            isGraph={true} isGraphVertex={false} isVertex={false} isEdgePoint={false} isField={false} isEdge={false} isVoid={false} />;
 }
 
 export const GraphVertex = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}} isGraph={true} isVertex={true} />;
+    return <VertexConnected {...{...props, children}}
+                            isGraph={true} isGraphVertex={true} isVertex={true} isEdgePoint={false} isField={false} isEdge={false} isVoid={false}/>;
 }
 
 export const Field = (props: VertexOwnProps, children: ReactNode | undefined = []): ReactElement => {
-    return <VertexConnected {...{...props, children}} isGraph={false} isVertex={false} />;
+    return <VertexConnected {...{...props, children}}
+                            isGraph={false} isGraphVertex={false} isVertex={false} isEdgePoint={false} isField={true} isEdge={false} isVoid={false} />;
 }
 (window as any).componentdebug = {Graph, GraphVertex, Field, Vertex, VoidVertex, EdgePoint, VertexConnected, VertexComponent};
 

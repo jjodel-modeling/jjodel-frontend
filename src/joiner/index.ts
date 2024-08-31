@@ -49,7 +49,7 @@ export type {LoggerCategoryState, LoggerType} from "../common/Log";
 
 export {windoww, EdgeBendingMode, EdgeGapMode, EMeasurableEvents} from './types';
 export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
-    EdgeStateProps, EdgeOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
+    EdgeStateProps, EdgeOwnProps, VertexOwnProps, BasicReactOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
 
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,

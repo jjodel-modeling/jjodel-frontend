@@ -252,12 +252,12 @@ export class DV {
                 { /* edge tail */ }
                 ` + tail + `
                 { /* edge anchor start */ }
-                {edge.start && <circle className="edge-anchor content clickable"
+                {edge.start && <circle className="edge-anchor content clickable no-drag"
                  style={{transform: "translate(" + segments.all[0].start.pt.x +"px, " + segments.all[0].start.pt.y +"px)"}}
                  onMouseDown={()=> edge.startFollow=true}
                  onMouseUp={()=> edge.startfollow=false} />}
                 { /* edge anchor end */ }
-                {edge.end && <circle className="edge-anchor content clickable" `+ // cx={0*segments.all.last().end.pt.x} cy={0*segments.all.last().end.pt.y}
+                {edge.end && <circle className="edge-anchor content clickable no-drag" `+ // cx={0*segments.all.last().end.pt.x} cy={0*segments.all.last().end.pt.y}
                 `style={{transform: "translate(" + segments.all.last().end.pt.x +"px, " + segments.all.last().end.pt.y +"px)"}}
                  onMouseDown={()=> edge.endFollow=true}
                  onMouseUp={()=> edge.endfollow=false} />}
@@ -345,35 +345,33 @@ valuecolormap[ShortAttribETypes.EString] = "green";
 valuecolormap[ShortAttribETypes.EChar] = "green";
 valuecolormap[ShortAttribETypes.EVoid] = "gray";
 
-// &&[]bn
 let valuecolormap_str = JSON.stringify(valuecolormap); // can this be declared inside view.constants ?
 
 
 class DefaultView {
 
     public static model(): string { return (
-`
-<div className={'panning-handle'} style={{'--pan-x': node.offset.x+'px', '--pan-y': node.offset.y+'px'}}>
-    <div className={'root model'}>
-        {!data && "Model data missing."}
-        {/*<ControlPanel node={node}></ControlPanel>*/}
-        <label className={"detail-level"}>
-            <input onChange={(e)=>{node.state = {level:+e.target.value}}} min="0" max="3" type="range" step="1" value={level}/>
-            <div>Detail level:{level}</div>
-        </label>
-        <div className={'edges'}>
-            {[
-                refEdges.map(se => <Edge anchorStart={0} anchorEnd={0} key={se.id}
-                start={se.start.father.node} end={se.end.node} view={'Edge' + ( se.start.containment && 'Composition' || 'Association')} />),
-                extendEdges.map(se => <Edge start={se.start} end={se.end} view={'EdgeInheritance'} key={se.id} />)
-            ]}
-        </div>
-        {otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
-        {level >= 1 && firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
-        {level >= 1 && m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object} />)}
-        {decorators}
+`<view className={'root model'}>
+{/*<ControlPanel node={node}></ControlPanel>*/}
+<label className={"detail-level"}>
+    <input onChange={(e)=>{node.state = {level:+e.target.value}}} min="0" max="3" type="range" step="1" value={level}/>
+    <div>Detail level:{level}</div>
+</label>
+<Scrollable graph={node}>
+    {!data && "Model data missing."}
+    <div className={'edges'}>
+        {[
+            refEdges.map(se => <Edge anchorStart={0} anchorEnd={0} key={se.id}
+            start={se.start.father.node} end={se.end.node} view={'Edge' + ( se.start.containment && 'Composition' || 'Association')} />),
+            extendEdges.map(se => <Edge start={se.start} end={se.end} view={'EdgeInheritance'} key={se.id} />)
+        ]}
     </div>
-</div>`
+    {otherPackages.filter(p => p).map(pkg => <DefaultNode key={pkg.id} data={pkg} />)}
+    {level >= 1 && firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
+    {level >= 1 && m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object} />)}
+    {decorators}
+    </Scrollable>
+</view>`
 );}
 
     public static void(): string { return (

@@ -146,7 +146,7 @@ export abstract class IPoint extends RuntimeAccessibleClass {
             (p2.x - p1.x) * (p2.x - p1.x);
         return Math.abs(top) / Math.sqrt(bot);  }
 
-    public equals(pt: IPoint, tolleranzaX: number = 0, tolleranzaY: number = 0): boolean {
+    public equals(pt: {x:number, y:number}, tolleranzaX: number = 0, tolleranzaY: number = 0): boolean {
         if (pt === null) { return false; }
         return Math.abs(this.x - pt.x) <= tolleranzaX && Math.abs(this.y - pt.y) <= tolleranzaY; }
 

@@ -22,7 +22,7 @@ function JsxEditorComponent(props: AllProps) {
     }
 
 
-    const blur = (evt: React.FocusEvent) => { // confirm in redux state for final state
+    const blur = (evt?: React.FocusEvent) => { // confirm in redux state for final state
         view.jsxString = jsx;
     }
 

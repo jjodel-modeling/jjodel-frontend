@@ -313,6 +313,30 @@ export class U {
                         return false;
                     }
                 }
+
+                if (obj1.className !== obj2.className) {
+                    if (out) out.reason = o1Raw.className + 'replaced by another object type:' + o2Raw?.className;
+                    return false;
+                }
+                switch(obj1.className) {
+                    default: break;
+                    case "ISize": case "IPoint": case "GraphPoint": case "Point": case "Size":
+                        skipKeys.id = true;
+                        skipKeys.dontMixWithGraphSize = true;
+                        skipKeys.dontMixWithSize = true;
+                        skipKeys.dontmixwithGPoint = true;
+                        skipKeys.dontmixwithPoint = true;
+                        skipKeys.rad = true;
+                        break;
+                }
+                // if EdgeSegment is changed, this needs update too: search in IDE for "5khi2"
+                if (U.objectIncludeKeys(obj1, 'd', 'dpart', 'svgLetter')){
+                    let ret = obj1.d === obj2.d && obj1.dpart === obj2.dpart;
+                    if (out && !ret) out.reason = 'EdgeSegment changed:' + obj1.d +' --> ' + obj2.d;
+                    return ret;
+                }
+
+                // if it is any kind of unknown object type, do deep check on every subkey
                 if (depth > maxDepth) {
                     // to debug and see where is too deep, make returnIfMaxDepth = false, so the path is displayed in out.reason
                     if (out) out.reason = 'max depth reached, assumed ' + returnIfMaxDepth;
@@ -2155,12 +2179,18 @@ export class U {
         return element instanceof Element || element instanceof HTMLDocument || element instanceof SVGElement;
     }
 
+    private static objectIncludeKeys(obj1: GObject, ...keys: string[]): boolean {
+        for (let k of keys) if (!(k in obj1)) return false;
+        return true;
+    }
+
     static removeFromDom(e: Node): boolean {
         let p = e.parentNode;
         if (!p) return false;
         p.removeChild(e);
         return true;
     }
+
 }
 export class DDate{
     static cname: string = "DDate";
@@ -2234,6 +2264,11 @@ export class myFileReader {
 }
 @RuntimeAccessible('Uarr')
 export class Uarr{
+
+    public static isSubArray(array: any[], subarray: any[]): boolean {
+        return subarray.every((el) => array.includes(el));
+    }
+
     public static arrayIntersection<T>(arr1: T[], arr2: T[]): T[]{
         if (!arr1 || ! arr2) return null as any;
         return arr1.filter( e => arr2.indexOf(e) >= 0);

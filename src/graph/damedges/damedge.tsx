@@ -21,7 +21,7 @@ import {
     RuntimeAccessibleClass,
     U,
     EdgeOwnProps, EdgeStateProps,
-    LViewPoint, DModelElement, SetFieldAction
+    LViewPoint, DModelElement, SetFieldAction, LVertex
 } from "../../joiner";
 
 let groupingsize: Dictionary<EdgeBendingMode, number> = {} as any;
@@ -39,6 +39,7 @@ class ThisStatee extends GraphElementStatee {}
 export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
     extends superclassGraphElementComponent<AllProps, ThisState> {
     public static cname: string = "EdgeComponent";
+    static defaultProps: Partial<EdgeOwnProps> = EdgeOwnProps.new();
 
     constructor(props: AllProps, context: any) {
         super(props, context);
@@ -84,7 +85,7 @@ class DispatchProps extends GraphElementDispatchProps {
 type AllPropss = Overlap<Overlap<EdgeOwnProps, EdgeStateProps>, DispatchProps>;
 
 function mapStateToProps(state: DState, ownProps: EdgeOwnProps): EdgeStateProps {
-    let ret: EdgeStateProps = new EdgeStateProps();
+    let ret: EdgeStateProps = EdgeStateProps.new();
     if (!ownProps.data) {
         let lstart = LPointerTargetable.from(ownProps.start);
         if (RuntimeAccessibleClass.extends(lstart.className, DModelElement.cname)) ret.data = lstart as any;
@@ -95,6 +96,12 @@ function mapStateToProps(state: DState, ownProps: EdgeOwnProps): EdgeStateProps 
         user: LPointerTargetable.from(state.isEdgePending.user),
         source: LPointerTargetable.from(state.isEdgePending.source)
     };
+    let l: GObject;
+
+    if (typeof ownProps.start){ l = LPointerTargetable.from(ownProps.start); if (l) ret.start = l as LVertex; }
+    if (typeof ownProps.end){ l = LPointerTargetable.from(ownProps.end); if (l) ret.end = l as LVertex; }
+
+    U.removeEmptyObjectKeys(ret);
     return ret;
 }
 
@@ -113,7 +120,8 @@ export const EdgeConnected = connect<EdgeStateProps, DispatchProps, EdgeOwnProps
 )(EdgeComponent as any);
 
 export const Edge = (props: EdgeOwnProps, children: (string | React.Component)[] = []): ReactElement => {
-    return <EdgeConnected {...{...props, children}} isGraph={false} isVertex={false} isEdge={true} />;
+    return <EdgeConnected {...{...props, children}}
+                          isGraph={false} isGraphVertex={false} isVertex={false} isEdgePoint={false} isField={false} isEdge={true} isVoid={false} />;
 }
 
 EdgeComponent.cname = "EdgeComponent";

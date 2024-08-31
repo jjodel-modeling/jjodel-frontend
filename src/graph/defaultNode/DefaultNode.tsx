@@ -67,6 +67,7 @@ class DefaultNodeStatee extends GraphElementStatee { }
 @RuntimeAccessible('DefaultNodeComponent')
 //@ts-ignore
 export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeState = DefaultNodeStatee> extends superclass<AllProps, NodeState>{
+    static defaultProps: Partial<DefaultNodeOwnProps> = {}; // cannot decide anything on this level, delegated to lower levels.
 
     static mapStateToProps(state: DState, ownProps: GraphElementOwnProps): GraphElementReduxStateProps {
         let ret: GraphElementReduxStateProps = {} as GraphElementReduxStateProps; // NB: cannot use a constructor, must be pojo
