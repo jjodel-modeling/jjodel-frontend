@@ -9,6 +9,14 @@ let data:any, node:any, view:any, component:any;
 let otherViews: any, m1Objects:any, firstPackage:any, DefaultNode: any, otherPackages:any, refEdges:any, extendEdges:any, React:any, Edge:any;
 /*
 
+
+!!!!!!!!! for offset
+fai che offset settadelle variabili --offset-x, --offset-y che settano in css left e top del grafo.
+MA: disabilita la regola se il grafo ha ui-dragging o simile qualsiasi cosa metta jqui
+questo risolve il problema che il grafo parte a 0,0 a prescindere dall'offset salvato in memoria senza rompere il dragging e offset salvato solo ondragend.
+
+
+
 during first render of any modelelement trigger forceUpdate() because it will lack jqueryui-html events as html was not there.
 re-enable the bug and investigate x-8400 stuff that was hapening during resize as it's happening during edge anchoring too
 

@@ -896,14 +896,57 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
         }
     }
 
-    get_translateSize<T extends GraphSize|GraphPoint>(c: Context): ((size: T, innerGraph: LGraph) => T) {
-        return (size: T, innerGraph: LGraph): T => {
-            innerGraph = LPointerTargetable.wrap(innerGraph) as LGraph;
+    // graph_of_size, the size parameter have coordinates based on this graph.
+    get_translateSize<T extends GraphSize|GraphPoint>(c: Context): ((size: T, graph_of_size: LGraph) => T) {
+        return (size: T, graph_of_size: LGraph): T => {
+            let targetGraph: LGraph = c.proxyObject;
+            let currGraph: LGraph = graph_of_size;
+            if (currGraph.id === c.data.id) return size;
+            let currAncestors: LGraph[] = [currGraph, ...currGraph.graphAncestors];
+            let targetAncestors: LGraph[] = [targetGraph, ...targetGraph.graphAncestors];
+            let currAncestorsPtr: Pointer<DGraph>[] = currAncestors.map(l=>l.id).reverse();
+            let targetAncestorsPtr: Pointer<DGraph>[] = targetAncestors.map(l=>l.id).reverse();
+            Log.ex(targetAncestorsPtr[0] !== currAncestorsPtr[0],
+                'translateSize() The root graph of 2 elements should always be the same, are you comparing nodes from different graphs?',
+                {currGraph, targetGraph});
+            let i: number = 1;
+            while (currAncestorsPtr[i] === targetAncestorsPtr[i]) { i++; }
+            let commonAncestor: Pointer<DGraph> = targetAncestorsPtr[i-1];
+            currAncestors = currAncestors.slice(0, currAncestors.length - i).filter(e=>!!e);
+            targetAncestors = targetAncestors.slice(0, currAncestors.length - i).filter(e=>!!e);
+            // d, c, b, a           currAncestors
+            // d, c, x, y           targetAncestors
+            // undo a,b, redo x,y        i = [2]
+
+            Log.exDev(!currAncestors.length && !targetAncestors.length, "translateSize() found invalid intersection in container graphs",
+                {currGraph, targetGraph, currAncestors, targetAncestors});
+            // @ts-ignore
+            let ret: T = 'w' in size ? new GraphSize(size.x, size.y, size.w, size.h) : new GraphPoint(size.x, size.y, size.w, size.h);
+            console.log("translateSizee pre", (this.get_model(c) as any).name, size.x, size.y, {size, ret, currAncestors, targetAncestors} )
+            for (let g of currAncestors){
+                ret.subtract(g.offset, false);
+                ret.divide(g.zoom, false);
+                ret.add(g.size.tl(), false);
+            }
+            for (let g of targetAncestors){
+                ret.subtract(g.size.tl(), false);
+                ret.multiply(g.zoom, false);
+                ret.add(g.offset, false);
+            }
+            console.log("translateSizee ret", (this.get_model(c) as any).name, size.x, size.y, {size, ret, currAncestors, targetAncestors} )
+
+            return ret; }
+        //todo: check how many passes you need to go down or up, and make the up version too
+
+    }
+    get_translateSize_down_old<T extends GraphSize|GraphPoint>(c: Context): ((size: T, innerGraph: LGraph) => T) {
+        return (size: T, graph_of_size: LGraph): T => {
+            graph_of_size = LPointerTargetable.wrap(graph_of_size) as LGraph;
             let ret: T = (size.hasOwnProperty("w") ? new GraphSize(size.x, size.y, (size as GraphSize).w, (size as GraphSize).h) : new GraphPoint(size.x, size.y)) as T;
-            Log.ex(!innerGraph, "translateSize() graph parameter is invalid: "+innerGraph, innerGraph, c);
-            let ancestors: LGraph[] = [innerGraph, ...innerGraph.graphAncestors];
-            console.log("translateSize", {innerGraph, ret, ancestors, c});
-            Log.ex(ancestors.indexOf(c.proxyObject) !== -1, "translateSize() graph parameter is invalid: it must be a graph containing the current one.", innerGraph, c);
+            Log.ex(!graph_of_size, "translateSize() graph parameter is invalid: "+graph_of_size, graph_of_size, c);
+            let ancestors: LGraph[] = [graph_of_size, ...graph_of_size.graphAncestors];
+            console.log("translateSize", {innerGraph: graph_of_size, ret, ancestors, c});
+            Log.ex(ancestors.indexOf(c.proxyObject) !== -1, "translateSize() graph parameter is invalid: it must be a graph containing the current one.", graph_of_size, c);
             for (let g of ancestors) ret.add(g.size.tl(), false);
             // for (let g of ancestors) ret.subtract(g.offset, false);
             // console.log("translateSize", {c, thiss:c.proxyObject, ancestors, ancestorSizes: ancestors.map(a=> a.size.tl()), size, ret});
@@ -1986,6 +2029,7 @@ replaced by startPoint
         return ret;
     }
 
+    // outer should be a redundant param and always == true
     private get_points_impl(allNodes: LGraphElement[], outer: boolean, c:Context): segmentmaker[] {
         function getAnchorOffset(size: GraphSize, offset: GraphPoint, isPercentage: boolean, $factor: number = 100) {
             if (!size) size = new GraphSize(0, 0, 0, 0);
@@ -1993,9 +2037,19 @@ replaced by startPoint
             if (isPercentage) offset = new GraphPoint(offset.x/$factor*(size.w), offset.y/$factor*(size.h));
             return size.tl().add(offset, false);
         }
+        let innermost: LGraph = this.get_graph(c);
+        let root: LGraph = this.get_root(c);
         const all: segmentmaker[] = allNodes.flatMap((ge, i) => {
             let dge = ge.__raw;
-            let base: segmentmaker = {view: ge.view, size: outer ? ge.outerSize : ge.innerSize, ge, pt: null as any, uncutPt: null as any};
+            let size = outer ? ge.outerSize : ge.innerSize;
+            console.log("ttsize0", {root, innermost, rm:root?.model?.name, im:innermost?.model?.name})
+
+            if (outer && root && innermost && innermost.id !== root.id) {
+                console.log("ttsize", {size0:{...size}, ri: root.translateSize(size, innermost), ir: innermost.translateSize(size, root)})
+                size = innermost.translateSize(size, root);
+            }
+            let base: segmentmaker = {view: ge.view, size, ge, pt: null as any, uncutPt: null as any};
+
             Log.exDev(typeof base.size !== "object", "could not get node size:", {base, c, outer})
             let rets: segmentmaker | undefined;// = base as any;
             let rete: segmentmaker | undefined;// = {...base} as any;
@@ -2057,9 +2111,11 @@ replaced by startPoint
         return all;
     }
     private get_pointsDebug(c: Context): segmentmaker[]{ return this.get_points_impl(this.get_allNodes(c), true, c); }
-    private get_points(allNodes: LGraphElement[], outer: boolean = false, c: Context): segmentmaker[]{ return this.get_points_impl(allNodes, outer, c); }
+    private get_points(allNodes: LGraphElement[], outer: boolean = false, c: Context): segmentmaker[]{
+        return this.get_points_impl(allNodes, outer, c);
+    }
     private get_points_outer(allNodes: LGraphElement[], c: Context): segmentmaker[]{ return this.get_points_impl(allNodes, true, c); }
-    private get_points_inner(allNodes: LGraphElement[], c: Context): segmentmaker[]{ return this.get_points_impl(allNodes, false, c); }
+    // private get_points_inner(allNodes: LGraphElement[], c: Context): segmentmaker[]{ return this.get_points_impl(allNodes, false, c); }
     public d!: string;
     public __info_of__d: Info = {type: ShortAttribETypes.EString, txt:"the full suggested path of SVG path \"d\" attribute, merging all segments."}
     public get_d(c: Context) {
@@ -2070,9 +2126,11 @@ replaced by startPoint
     }*/
 
 
-    public get_segments(c:Context): this["segments"] { return this.get_segments_outer(c); }
+    public get_segments(c:Context): this["segments"] {
+        return this.get_segments_outer(c);
+    }
     public get_segments_outer(c:Context): this["segments"] { return this.get_segments_impl(c, true); }
-    public get_segments_inner(c: Context): this["segments"] { return this.get_segments_impl(c, false); }
+    // public get_segments_inner(c: Context): this["segments"] { return this.get_segments_impl(c, false); }
     private get_segments_impl(c: Context, outer: boolean): this["segments"] {
         let l = c.proxyObject;
         let v = this.get_view(c);
