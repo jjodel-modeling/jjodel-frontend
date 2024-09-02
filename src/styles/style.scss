@@ -235,16 +235,19 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
       padding-top: 0px!important;
     }
     & div.command-bar .question {
-      position: relative;bottom: 2px!important;
+      position: relative;
+      bottom: 2px!important;
 
       margin-top: 0px!important;
       padding-top: 0px!important;
       
     }
-
-    
-    
 }
+.template-item:not(:first-of-type) .question::before {
+  position: relative;
+  bottom: 3px!important; 
+}
+
 
 
 .simpleMode {
