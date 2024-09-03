@@ -1,6 +1,7 @@
-import {Dispatch, ReactElement, useEffect} from 'react';
+import {Dispatch, ReactElement, useEffect, useState} from 'react';
 import {connect} from 'react-redux';
 import {
+    CreateElementAction,
     Dictionary,
     DState,
     DUser,
@@ -22,6 +23,7 @@ import Loader from '../components/loader/Loader';
 import {Navbar} from "./components";
 import {CSS_Units} from "../view/viewElement/view";
 import CollaborativeAttacher from "../components/collaborative/CollaborativeAttacher";
+import {useEffectOnce} from "usehooks-ts";
 
 
 function ProjectComponent(props: AllProps): JSX.Element {
@@ -29,25 +31,27 @@ function ProjectComponent(props: AllProps): JSX.Element {
     const user = props.user;
     const query = useQuery();
     const id = query.get('id') || '';
-    const project: LProject = LProject.fromPointer(id);
+    user.project = LProject.fromPointer(id);
 
     useEffect(() => {
         (async function() {
             const project = await ProjectsApi.getOne(id);
-            if(!project) return;
-            user.project = LProject.fromPointer(project.id);
-            if(!project.state) return;
+            if(!project || !project.state) return;
             const state = await U.decompressState(project.state);
             SaveManager.load(state);
+            CreateElementAction.new(user.__raw);
         })();
     }, [id]);
 
-    let allViews = project?.viewpoints.flatMap((vp: LViewPoint) => vp && vp.allSubViews) || [];
+    let allViews = user.project?.viewpoints.flatMap((vp: LViewPoint) => vp && vp.allSubViews) || [];
     allViews = allViews.filter(v => v);
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
-    if (user.project) return(<>
-        {project.type === 'collaborative' && <CollaborativeAttacher project={project} />}
+    if(!user.project) return <div>
+        <label>waiting...</label>
+    </div>;
+    return(<>
+        {user.project.type === 'collaborative' && <CollaborativeAttacher project={user.project} />}
         <Try><Navbar /></Try>
         <Try><>
             <style id={"views-css-injector"}>
@@ -58,7 +62,6 @@ function ProjectComponent(props: AllProps): JSX.Element {
         </Try>
         <Try><Dock /></Try>
     </>);
-    return(<Loader />);
 }
 interface OwnProps {}
 interface StateProps {user: LUser}

@@ -12,6 +12,7 @@ import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import MqttEditor from "../rightbar/mqtt/MqttEditor";
 import NestedView from "../rightbar/nestedViewEditor/ViewEditorNestedVersion";
+import CollaboratorsEditor from "../rightbar/collaboratorsEditor/CollaboratorsEditor";
 
 
 const tabidprefix = "DockComponent_rightbar_";
@@ -41,7 +42,7 @@ function DockComponent(props: AllProps) {
     const node = {id: id(), title: <TabHeader tid={tid()}>Node</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NodeEditor /></TabContent>};
     const views = {id: id(), title: <TabHeader tid={tid()}>Viewpoints</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NestedView /></TabContent>};
     //const validation = {id: id(), title: <TabHeader tid={tid()}>Validation</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><ViewpointEditor validation={true} /></TabContent>};
-    //const collaborators = {id: id(), title: <TabHeader tid={tid()}>Collaborators</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><CollaboratorsEditor /></TabContent>};
+    const collaborators = {id: id(), title: <TabHeader tid={tid()}>Collaborators</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><CollaboratorsEditor /></TabContent>};
     //const mqtt = {id: id(), title: <TabHeader tid={tid()}>Mqtt</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MqttEditor /></TabContent>};
     const console = {id: id(), title: <TabHeader tid={tid()}>Console</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Console /></TabContent>};
     const logger = {id: id(), title: <TabHeader tid={tid()}>Logger</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Logger/></TabContent>};
@@ -53,7 +54,7 @@ function DockComponent(props: AllProps) {
         // metadata,
         tree,
         views,
-        // collaborators,
+        collaborators,
         // mqtt,
         node,
         console,

@@ -31,6 +31,7 @@ import {Divisor, Item, Menu} from '../components/menu/Menu';
 import {Toggle} from '../../components/widgets/Widgets';
 import jj from '../../static/img/jj-k.png';
 import Storage from '../../data/storage';
+import Collaborative from "../../components/collaborative/Collaborative";
 
 const createM2 = (project: LProject) => {
     let name = 'metamodel_' + 1;
@@ -142,7 +143,13 @@ function NavbarComponent(props: AllProps) {
                 }))
             },
             {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Close project', icon: icon['close'], function: () => {window.location = window.location.origin + '/#/allProjects' as any; U.refresh(); }, keystroke: [Key.cmd, 'Q']},
+            {name: 'Close project', icon: icon['close'], function: () => {
+                navigate('/allProjects');
+                Collaborative.client.off('pullAction');
+                Collaborative.client.disconnect();
+                SetRootFieldAction.new('collaborativeSession', false);
+                U.refresh();
+                }, keystroke: [Key.cmd, 'Q']},
             {name: 'divisor', function: () => {}, keystroke: []},
             {name: 'Undo', icon: icon['undo'], function: () => {}, keystroke: [Key.cmd, 'Z']},
             {name: 'Redo', icon: icon['redo'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
