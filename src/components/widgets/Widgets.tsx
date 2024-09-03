@@ -18,8 +18,8 @@ type ToggleValues = {
 
 type ToggleProps = {
     name: string;
-    values: ToggleValues;
-    labels: ToggleValues;
+    values?: ToggleValues;
+    labels?: ToggleValues;
     size?: "small" | "medium" | "large";
     style?: React.CSSProperties;
 };
@@ -27,7 +27,7 @@ type ToggleProps = {
 export const Toggle = (props: ToggleProps) => {
     const [value, setValue] = useState<boolean>(false);
     
-
+    const labels = props.labels ? props.labels : {true: props.name+' on', false: props.name+' off'};
     const toggleValue = () => {
         setValue(!value);
         SetRootFieldAction.new(props.name, !value);
@@ -37,8 +37,8 @@ export const Toggle = (props: ToggleProps) => {
         <div className={`toggle ${props.size ? props.size : 'medium'}`} onClick={() => {toggleValue()}} style={props.style}>
             <input id={props.name} type="checkbox" value="true" checked={value}  />
             <div className={"labels"}>
-                <span className={"on"}>{props.labels['true']}</span>
-                <span className={"off"}>{props.labels['false']}</span>
+                <span className={"on"}>{labels['true']}</span>
+                <span className={"off"}>{labels['false']}</span>
             </div>
             <label></label>
         </div>
@@ -62,30 +62,30 @@ export const HRule = (props: HRuleProps) => {
 }
 
 
-type RangeProps = {
-    name: string;
-    min: int;
-    max: int;
-    step?: int;
-    label?: string;
+// type RangeProps = {
+//     name: string;
+//     min: int;
+//     max: int;
+//     step?: int;
+//     label?: string;
 
-}
+// }
 
-export const Range = (props: RangeProps) => {
+// export const Range = (props: RangeProps) => {
 
-    return (<div className={'range'}>
-        /* <div className={'level'}>{level}</div> */
-        <input 
-            name={props.name} 
-            id={props.name} 
-            min={props.min} 
-            max={props.max} 
-            type="range" 
-            step={props.step} 
-            /* value={level} */
-            onChange={(e)=>{SetRootFieldAction.new(props.name, e.target.value)}} />
+//     return (<div className={'range'}>
+//         /* <div className={'level'}>{level}</div> */
+//         <input 
+//             name={props.name} 
+//             id={props.name} 
+//             min={props.min} 
+//             max={props.max} 
+//             type="range" 
+//             step={props.step} 
+//             /* value={level} */
+//             onChange={(e)=>{SetRootFieldAction.new(props.name, e.target.value)}} />
         
-        <div className={'tip'}>Abstraction1</div>
-    </div>);
+//         <div className={'tip'}>Abstraction1</div>
+//     </div>);
 
-}
+// }

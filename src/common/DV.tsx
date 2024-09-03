@@ -15,9 +15,15 @@ import {
 } from '../joiner';
 import React, {ReactNode} from "react";
 import {PaletteType} from "../view/viewElement/view";
+import "./error.scss";
+
+
+
 // const beautify = require('js-beautify').html; // BEWARE: this adds some newline that might be breaking and introduce syntax errors in our JSX parser
 const beautify = (s: string) => s;
 let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
+
+
 
 @RuntimeAccessible('DV')
 export class DV {
@@ -349,6 +355,48 @@ valuecolormap[ShortAttribETypes.EVoid] = "gray";
 let valuecolormap_str = JSON.stringify(valuecolormap); // can this be declared inside view.constants ?
 
 
+type ErrorProps = {
+    dname: any,
+    nodename: any,
+    errortype: any,
+    on: any,
+    v: any,
+    msg: any
+};
+
+const ErrorMessage = (props: ErrorProps) => {
+
+    let viewpointname = 'to do per damiano';
+
+    return (<div className={'error-notification'}>
+        <h1>Something Went Wrong...</h1>
+        <h2>Error in "{props.v.name}" syntax view definition in viewpoint {viewpointname}</h2>
+        
+    
+        <div className={'error-type'}>
+            <b data-dname={props.dname} data-nodename={props.nodename} data-str={true}>
+                {props.errortype} Error {props.on}
+                {props.v && <div>
+                    While applying view "{props.v.name}"
+                </div>}
+            </b>
+        </div>
+        <div className={'error-details'}>
+            {props.msg && props.msg}    
+        </div>
+
+            
+
+
+
+         
+
+    </div>);
+}
+
+
+
+
 class DefaultView {
 
     public static model(): string { return (
@@ -551,7 +599,6 @@ public static parameter(): string { return (
 );}
 
 
-
     public static error(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME",
                         data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement): React.ReactNode {
 
@@ -559,33 +606,43 @@ public static parameter(): string { return (
         if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         let on = dname && nodename ? " on " + dname + " / " + nodename : (dname || nodename ? " on " + (dname || nodename) : '');
-        return <div className={(v ? 'w-100 h-100' : 'raw_error') + ' round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
-            <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
-                <b data-dname={dname} data-nodename={nodename} data-str={true}>
-                    {errortype} ERROR{on}</b>
-                <hr/>
-                {v && <label className={'text-center mx-1 d-block'}>
-                    While applying view "{v.name}"
-                </label>}
-                {msg && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>{msg}</label>}
-            </div>
-        </div>;
+        
+        
+        return (<ErrorMessage 
+            dname={dname}
+            nodename={nodename}
+            errortype={errortype}
+            on={on}
+            v={v}
+            msg={msg}
+        />);
     }
+
     public static error_string(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: DViewElement) {
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
         if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         let on = dname && nodename ? " on " + dname + " / " + nodename : (dname || nodename ? " on " + (dname || nodename) : '');
-        return `<div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
-            <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
-                <b>{errortype}_ERROR` + on + `</b>
-                <hr/>
-                <label className={'text-center mx-1 d-block'}>
-                    While applying view "${v?.name}"
-                </label>
-                {${msg} && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>${msg}</label>}
-            </div>
-        </div>`;
+
+        // <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
+        //     <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
+        //         <b>{errortype}_ERROR` + on + `</b>
+        //         <hr/>
+        //         <label className={'text-center mx-1 d-block'}>
+        //             While applying view "${v?.name}"
+        //         </label>
+        //         {${msg} && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>${msg}</label>}
+        //     </div>
+        // </div>
+
+        return(<ErrorMessage 
+            dname={dname}
+            nodename={nodename}
+            errortype={errortype}
+            on={on}
+            v={v}
+            msg={msg}
+        />);
     }
 
 

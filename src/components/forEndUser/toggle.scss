@@ -1,0 +1,123 @@
+.toggle {
+    position: relative;
+    padding: 0;
+    cursor: pointer;
+ }
+
+ .toggle.small {
+  --dimension: 16px; 
+  --top: 0px;
+  --top_label: -19px;
+  --border: 1px;
+  --width: 26px;
+ }
+ .toggle.medium {
+  --dimension: 22px; 
+  --top: 0px;
+  --top_label: -19px;
+  --width: 34px;
+  --border: 2px;
+ }
+ .toggle.large {
+  --dimension: 26px; 
+  --top: 0px;
+  --top_label: -19px;
+  --border: 1px;
+  --width: 40px;
+  --border: 2px;
+ }
+
+div.toggle{
+  position: unset;
+  display: flex;
+  
+  span {
+    position: unset;
+    margin: auto 0;
+    margin-right: 0.25em;
+  }
+  
+  input[type="checkbox"] ~ label{
+    display: block;
+    height: var(--dimension);
+    flex-basis: 0;
+    flex-grow: 1;
+    margin: auto 0;
+    width: var(--width);
+    transition: all 0.3s ease-in;
+    border-radius: var(--dimension);
+    background-color: var(--bg-3-1);
+    border: var(--border) solid var(--bg-3-1); // 2px
+
+    &::after {
+      content: '';
+      display: block;
+      border: none; // var(--border) solid var(--bg-3-1); 
+      border-radius: var(--dimension);
+      background: white;
+      transition: all 0.3s ease-in;
+      width: calc(var(--dimension) - var(--border)*2);
+      height: calc(var(--dimension) - var(--border)*2);
+      margin-left: calc(100% - var(--dimension) + 2 * var(--border));
+    }
+  }
+  
+  input{
+    order: 1;
+  }
+  .labels{
+    margin: auto;
+    span{
+      overflow: hidden;
+    }
+  }
+  input[type="checkbox"]+.labels{
+    display: flex;
+    height: 100%;
+    order: 0;
+    width: fit-content;
+    flex-flow: column;
+    flex-wrap: wrap;
+    .on{
+      height: 0;
+    }
+    .off{
+      height: 100%;
+    }
+
+  }
+  input[type="checkbox"]:checked+.labels{
+    .on{
+      height: 100%;
+    }
+    .off{
+      height: 0;
+    }
+  }
+
+  input[type="checkbox"]:checked ~ label{
+    transition: all 0.3s ease-in;
+    background-color: var(--color);
+    border: var(--border) solid var(--color); // 2px
+
+    &::after {
+      margin-left: 0;
+      border-color: var(--color);
+    }
+  }
+}
+
+ .toggle span {
+    color: var(--color);
+    font-weight: 400;
+    position: relative;
+    display: block;
+    margin-right: calc(var(--dimension) + 20px);
+    margin-top: 6px;
+ }
+ .toggle input[type="checkbox"] {
+    width: 0;
+    height: 0;
+    padding: 0;
+    border: none;
+ }

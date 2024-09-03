@@ -4,6 +4,8 @@ import {FakeStateProps} from "../../joiner/types";
 import React, {Dispatch, ReactElement, useState} from "react";
 import {connect} from "react-redux";
 import { Metrics } from '../../components/metrics/Metrics';
+import { Tooltip } from '../../components/forEndUser/Tooltip';
+import { ControlBtn } from '../../components/forEndUser/Control';
 
 
 enum notificationType {
@@ -70,6 +72,13 @@ const Notify = (props: Props) => {
     );
   };
 
+
+
+
+function openControl(){
+    
+}
+
 function BottomBarComponent(props: AllProps): JSX.Element {
     const {node,data} = props;
     let nodepos: string | undefined;
@@ -89,6 +98,7 @@ function BottomBarComponent(props: AllProps): JSX.Element {
         <label className={'me-3'}>
             Made with <i className="bi bi-heart-fill" /> in the swen group
         </label>
+        <div style={{width: '100px'}}></div>
         <div className={'coordinates'} hidden={!node}>
             {data?.name}&nbsp;
             {nodepos}

@@ -80,7 +80,7 @@ body{
     --accent-secondary: #f3b700; // planned to be used, but it has been not - used for the enumerators in models
     --neutral: #525251; // #5F0F40; // dark gray
 
-
+// backgrounds
 
     --bg-1: white; // main background
     --bg-1-1: #fefefe;
@@ -92,10 +92,27 @@ body{
     --bg-4: #8f908e;
     --bg-5: #525251;
   
+// success/failure
     --danger: #ed474a;
     --failure: #ed474a;
     --delete: #ed474a;
     --success: #3ddc97;
+
+// alerting
+
+    --alert-color: #721c25;
+    --alert-border:#f5c6cc;
+    --alert-background: #f8d7db;
+
+// control panel 
+
+    --control-color: var(--control);
+    --control-border: none; // 1px solid var(--bg-4);
+    --control-background-dark: var(--bg-5);
+    --control-background-light: var(--bg-2);
+    --control-opacity: 0.7; 
+
+// *******
   
     --disabled: var(--bg-3);
   
@@ -135,7 +152,7 @@ body{
     --gr-11: linear-gradient(90deg, hsla(323, 73%, 22%, 1) 0%, hsla(323, 73%, 64%, 1) 100%);
     --gr-12: linear-gradient(90deg, hsla(186, 33%, 94%, 1) 0%, hsla(216, 41%, 79%, 1) 100%);
 
-    
+
 
     --gr-card: var(--gr-12);
 

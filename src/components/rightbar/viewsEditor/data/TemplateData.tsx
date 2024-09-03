@@ -29,7 +29,6 @@ function TemplateData(props: AllProps) {
 
             <HRule theme={'light'} style={{paddingTop: '40px!important', display: 'block'}}/>
             
-
             <Function 
                 data={view} 
                 field={"constants"} 
