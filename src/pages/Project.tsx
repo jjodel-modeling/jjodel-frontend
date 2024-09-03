@@ -39,6 +39,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
             if(!project || !project.state) return;
             const state = await U.decompressState(project.state);
             SaveManager.load(state);
+            CreateElementAction.new(user.__raw);
         })();
     }, [id]);
 
@@ -47,7 +48,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
     if(!user.project) return <div>
-        <label>waiti</label>
+        <label>waiting...</label>
     </div>;
     return(<>
         {user.project.type === 'collaborative' && <CollaborativeAttacher project={user.project} />}

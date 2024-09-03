@@ -410,7 +410,6 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     const ret = _reducer(oldState, action);
     if (ret === oldState) return oldState;
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
-
     // client synchronization stuff
     if (oldState?.collaborativeSession) {
         const ignoredFields: (keyof DState)[]  = ['contextMenu', '_lastSelected', 'isLoading', 'collaborativeSession'];
