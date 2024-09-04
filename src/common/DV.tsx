@@ -384,13 +384,6 @@ const ErrorMessage = (props: ErrorProps) => {
         <div className={'error-details'}>
             {props.msg && props.msg}    
         </div>
-
-            
-
-
-
-         
-
     </div>);
 }
 
@@ -399,10 +392,14 @@ const ErrorMessage = (props: ErrorProps) => {
 
 class DefaultView {
 
+    /* MODEL */
+
     public static model(): string { return (
-`<div className={'root model'}>
+`<View className={'root model'}>
     {!data && "Model data missing."}
-    {/*<ControlPanel node={node}></ControlPanel>*/}
+   
+    {/* here you can insert viewpoint-wide descriptions */}
+
     <label className={"detail-level"}>
         <input onChange={(e)=>{node.state = {level:+e.target.value}}} min="0" max="3" type="range" step="1" value={level}/>
         <div>Detail level:{level}</div>
@@ -418,7 +415,7 @@ class DefaultView {
     {level >= 1 && firstPackage && firstPackage.children.filter(c => c).map(classifier => <DefaultNode key={classifier.id} data={classifier} />)}
     {level >= 1 && m1Objects.filter(o => o).map(m1object => <DefaultNode key={m1object.id} data={m1object} />)}
     {decorators}
-</div>`
+</View>`
 );}
 
     public static void(): string { return (
@@ -429,8 +426,10 @@ class DefaultView {
 </div>`
 );}
 
+    /* PACKAGE */
+
     public static package(): string { return (
-`<div className={'root package'}>
+`<View className={'root package'}>
     <Measurable draggable={true} resizable={true}><div>draggable resizable</div></Measurable>
     <Measurable draggable={true}><div>draggable</div></Measurable>
     <div className={'package-children'}>
@@ -450,7 +449,7 @@ class DefaultView {
         ]}
     </div>
     {decorators}
-</div>`
+</View>`
 );}
 
     public static defaultPackage(): string { return (
@@ -461,6 +460,8 @@ class DefaultView {
     {decorators}
 </div>`
 );}
+
+    /* CLASS */
 
     public static class(): string { return (
 `<View className={'root class'} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
@@ -492,8 +493,10 @@ class DefaultView {
 </View>`
 );}
 
+    /* ENUM */
+
     public static enum(): string { return (
-`<div className={'root enumerator'}>
+`<View className={'root enumerator'}>
     <div className={'header'}>
         <b className={'enumerator-name'}>Enum:</b>
         <Input data={data} field={'name'} hidden={true} autosize={true} />
@@ -504,17 +507,18 @@ class DefaultView {
           || <div className={"summary"}>{literals.length} literals</div>}
     </div>
     {decorators}
-</div>`
+</View>`
 );}
 
     public static feature(): string { return (
-`<div className={'root feature w-100'}>
+`<View className={'root feature w-100'}>
     <span className={'feature-name'}>{data.name}:</span>
     <Select data={data} field={'type'} />
     {decorators}
-</div>`
+</View>`
 );}
 
+    /* LITERAL */
     public static literal(): string { return (
 `<label className={'root literal d-block text-center'}>
     {data.name}
@@ -522,8 +526,9 @@ class DefaultView {
 </label>`
 );}
 
+    /* OPERATION */
     public static operation(): string { return (
-`<div className={'root operation w-100 hoverable'}>
+`<View className={'root operation w-100 hoverable'}>
         <span className={'feature-name'}>{data.name + ' =>'}</span>
         <Select data={data} field={'type'} />
     <div className={"parameters content"}>
@@ -532,18 +537,19 @@ class DefaultView {
         level >= 3 && data.parameters.map(p => <DefaultNode data={p} key={p.id} />)
     }</div>
     {decorators}
-</div>`
+</View>`
 );}
 
+    /* PARAMETER */
 public static parameter(): string { return (
-`<div className={'root parameter w-100'}>
+`<View className={'root parameter w-100'}>
     <span className={'feature-name'}>
         {data.name + '' + (data.lowerBound === 0 ? '?:' : ':' )}
     </span>
     <Select data={data} field={'type'} />
     <span className={"modifier"}>{data.upperBound > 1 || data.upperBound === -1 ? '[]' : ''}</span>
     {decorators}
-</div>`
+</View>`
 );}
 
     // i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
@@ -576,7 +582,7 @@ public static parameter(): string { return (
 }
 
     public static object(): string { return (
-`<div className={'root object'}>
+`<View className={'root object'}>
     <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
     <Input data={data} field={'name'} hidden={true} autosize={true} />
     <hr/>
@@ -584,18 +590,20 @@ public static parameter(): string { return (
         {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
     </div>
     {decorators}
-</div>`
+</View>`
 );}
 
+    /* VALUE */
+
     public static value() { return (
-`<div className={'root value d-flex'}>
+`<View className={'root value d-flex'}>
     {instanceofname && <label className={'d-block ms-1 name'}>{instanceofname}</label>}
     {!instanceofname && <Input className='name' data={data} field={'name'} hidden={true} autosize={true} />}
     <label className={'d-block m-auto values_str'} style={{color: constants[typeString] || 'gray'}}>
         : {valuesString}
     </label>
     {decorators}
-</div>`
+</View>`
 );}
 
 
@@ -623,17 +631,6 @@ public static parameter(): string { return (
         if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
         let nodename: string = (node?.className || '').replace(/[^A-Z]+/g, "").substring(1);
         let on = dname && nodename ? " on " + dname + " / " + nodename : (dname || nodename ? " on " + (dname || nodename) : '');
-
-        // <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
-        //     <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
-        //         <b>{errortype}_ERROR` + on + `</b>
-        //         <hr/>
-        //         <label className={'text-center mx-1 d-block'}>
-        //             While applying view "${v?.name}"
-        //         </label>
-        //         {${msg} && <label className={'text-center mx-1 d-block'} style={{color:"black"}}>${msg}</label>}
-        //     </div>
-        // </div>
 
         return(<ErrorMessage 
             dname={dname}

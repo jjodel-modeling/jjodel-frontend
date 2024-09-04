@@ -15,7 +15,7 @@ type ChildrenType = {
 
 const Catalog = (props: ChildrenType) => {
 
-    const [filters, setFilters] = useState([false,false,false]);
+    const [filters, setFilters] = useState([true,true,true]);
     const [mode, setMode] = useState<string>("cards");
 
     const Header = (props: ChildrenType) => {
@@ -87,7 +87,7 @@ const Catalog = (props: ChildrenType) => {
                     </>
                 :
                     <>
-                        <h5>No projects</h5>
+                        <h5>No projects so far</h5>
                         <img src={colors} width={220} />
                     </>
                 }

@@ -5,6 +5,7 @@ import "./control.scss";
 import { useStateIfMounted } from "use-state-if-mounted";
 import { Tooltip } from "./Tooltip";
 import { VertexOwnProps } from "../../graph/graphElement/sharedTypes/sharedTypes";
+import { useEffectOnce } from "usehooks-ts";
 
 
 /* Control */
@@ -25,16 +26,6 @@ const ControlComponent = (props: ControlProps, children?:ReactNode) => {
 
     }
 
-            // <div className={'jjodel-control d-flex flex-row'}>
-            //     <div className={'control-title'}>
-            //         {props.title && <i className="bi bi-dpad"></i>}
-            //         {props.title && <h1>{props.title}</h1>}
-            //         {props.payoff && <h2>{props.payoff}</h2>}
-            //     </div>
-            //     <div className={'control-children'}>
-            //         {children || props.children} 
-            //     </div>
-            // </div>
     return (<>
         
             <div className={`jjodel-control d-flex flex-row ${controlOpen ? 'opened' : 'closed'}`}>
@@ -66,44 +57,52 @@ const Control = (props: VertexOwnProps, children: ReactNode = []): ReactElement 
 
 type SliderProps = {
     node: LGraphElement;
-    name?: string;
+    name: string;
     defaultValue?:number;
     title?:string;
     min?: number;
     max?: number;
     step?: number;
-    label?: string;
 }
+ 
+const SliderComponent = (props: SliderProps) => {
 
-const Slider = (props: SliderProps) => {
+    const min = props.min ? props.min : 0;
+    const max = props.max ? props.max : 10;
+    const step = props.step ? props.step : 1;
+    const defaultValue = props.defaultValue ? props.defaultValue : max;
+    const name = props.name;
 
-    // const min = props.min ? props.min : 0;
-    // const max = props.max ? props.max : 10;
-    // const step = props.step ? props.step : 1;
-    // const defaultValue = props.defaultValue ? props.defaultValue : max;
 
-    //const [value, setValue] = useState(defaultValue);
-
+    useEffectOnce(
+        () => {
+            {/* @ts-ignore */}
+            props.node.state = {[name] : defaultValue};
+        }
+    );
 
     function updateValue(value: number) {
-        // @ts-ignore
-        props.node.state = {level: value};
+        {/* @ts-ignore */}
+        props.node.state = {[name]: value};
     }
+
+
     return (<div className={'control-widget control-slider'}>
-        
         <input 
             type={'range'} 
             min={0} 
             max={3} 
             step={1} 
             onChange={(e)=>{updateValue(+e.target.value)}} />
+        
         {/* @ts-ignore */}
-      {props.title && <div className={'tip'}>{props.title} ({props.node.state.level})</div>}
+      {props.title && <div className={'tip'}>{props.title} ({props.node.state[name]})</div>}
     </div>);
 }
 
-
-
+const Slider = (props: SliderProps, children: ReactNode = []): ReactElement => {
+    return <SliderComponent {...props} />;
+}
 
 
 export {Control, Slider};

@@ -69,19 +69,19 @@ function App(props: AllProps): JSX.Element {
             <PathChecker />
             <Routes>
                 {DUser.current ? <>
+                    <Route path={'allProjects'} element={<AllProjectsPage />} />
                     <Route path={'dock'} element={<MyDock />} />
                     <Route path={'account'} element={<AccountPage />} />
                     <Route path={'settings'} element={<SettingsPage />} />
                     <Route path={'updates'} element={<UpdatesPage />} />
                     <Route path={'community'} element={<CommunityPage />} />
-                    <Route path={'allProjects'} element={<AllProjectsPage />} />
                     <Route path={'templates'} element={<TemplatePage />} />
                     <Route path={'notes'} element={<NotesPage />} />
                     <Route path={'archive'} element={<ArchivePage />} />
                     <Route path={'project'} element={<ProjectPage />} />
                     <Route path={'recent'} element={<RecentPage />} />
                     <Route path={'profile'} element={<ProfilePage />} />
-                    <Route path={'*'} element={<AccountPage />} />
+                    <Route path={'*'} element={<AllProjectsPage />} />
                 </> : <Route path={'*'} element={<AuthPage />} />}
             </Routes>
         </HashRouter>

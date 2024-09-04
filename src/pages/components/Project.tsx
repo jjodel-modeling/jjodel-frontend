@@ -106,7 +106,7 @@ function Project(props: Props): JSX.Element {
                     </Menu>
                 </div>
                 <div className='header'>
-                    <h5 className={'d-block'}>{data.name}</h5>
+                    <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>{data.name}</h5>
                     <label className={'d-block'}><i className="bi bi-clock"></i> Edited 10 hours ago
                     <Empty project={props.data}/></label>
                 </div>

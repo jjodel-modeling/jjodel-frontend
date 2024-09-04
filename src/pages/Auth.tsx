@@ -30,7 +30,8 @@ function AuthPage(): JSX.Element {
         user.token = data.token;
         Storage.write('user', user);
         Storage.write('token', user.token);
-        navigate('/dashboard');
+        //navigate('/dashboard');
+        navigate('/allProjects');
         U.refresh();
     }
     const register = async(username: string, email: string, password: string) => {
@@ -43,12 +44,14 @@ function AuthPage(): JSX.Element {
         Storage.write('token', data.token);
         const user = DUser.new(data.username, data.id);
         Storage.write('user', user);
-        navigate('/dashboard');
+        //navigate('/dashboard');
+        navigate('/allProjects');
         U.refresh();
     }
     const offline = () => {
         AuthApi.offline();
-        navigate('/dashboard');
+        //navigate('/dashboard');
+        navigate('/allProjects');
         U.refresh();
     }
 

@@ -274,7 +274,7 @@ function NavbarComponent(props: AllProps) {
                         <Item icon={icon['profile']}action={(e)=> {alert('')}}>Profile</Item>
                         <Item icon={icon['settings']} action={(e)=> {alert('')}}>Settings</Item>
                         <Divisor />
-                        <Item icon={icon['logout']} action={(e)=> {alert('')}}>Sign out</Item>
+                        <Item icon={icon['logout']} action={async() => { navigate('/auth'); await AuthApi.logout();}}>Logout</Item>
                     </Menu>
                 </div>
             </div>

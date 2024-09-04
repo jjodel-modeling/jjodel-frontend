@@ -70,12 +70,10 @@ function Dashboard(props: DashProps): any {
                 <div className={'col user-title'}>
                     {active === "All" && <Title title={'Dashboard'} icon={<i className="bi bi-columns-gap"></i>} />}
                     {active === "Recent" && <Title title={'Recent'} icon={<i className="bi bi-clock"></i>} />}
-                    {active === "Templates" && <Title title={'Jjodel Templates'} icon={<i className="bi bi-code-square"></i>} />}
+                    {active === "Templates" && <Title title={'Templates'} icon={<i className="bi bi-lightbulb"></i>} />}
                     {active === "Notes" && <Title title={'Project Notes'} icon={<i className="bi bi-pencil-square"></i>} />}
                     {active === "Updates" && <Title title={'What\'s new'} icon={<i className="bi bi-clock-history"></i>} />}
                     {active === "Profile" && <Title title={'Profile'} icon={<i className="bi bi-clock-history"></i>} />}
-
-                    <button className={'add-project'}><i className="bi bi-plus-lg"></i> Project</button>
                 </div>
 
                 <Catalog children={children}/>

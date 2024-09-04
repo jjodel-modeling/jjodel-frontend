@@ -112,7 +112,35 @@ body{
     --control-background-light: var(--bg-2);
     --control-opacity: 0.7; 
 
-// *******
+// font-size, font-weight
+
+    --h1-size: 1.2em;
+    --h1-weight: 600;
+    --h1-lg-size: 1.4rem!important;
+    --h1-lg-weight: 600;
+    --h2-size: 1.1em;
+    --h2-weight: 600;
+    --h3-size: 1em;
+    --h3-weight: 500;
+    --text-lg-size: 1.1em;
+    --text-lg-weight: 300;
+    --text-md-size: 1em;
+    --text-md-weight: 300;
+    --text-sm-size: 0.8em;
+    --text-sm-weight: 300;
+
+  // model palette
+
+    --model-color: rgb(45, 78, 98)!important; // 
+    --model-accent: #087E8B;
+    --model-accent-secondary: #f3b700;
+    --model-background: white;
+    --model-radius: var(--radius);
+    --model-shadow: 0 0 6px silver;
+    
+
+
+    // *******
   
     --disabled: var(--bg-3);
   

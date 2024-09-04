@@ -44,7 +44,7 @@ project-card .tip {
 .project-card {
   position: relative;
   width: 23em;
-  height: 122px;
+  height: 100px;
   border-radius: 8px;
   background-color: var(--bg-2);
   background: linear-gradient(90deg, hsla(186, 33%, 94%, 1) 0%, hsla(216, 41%, 79%, 1) 100%);
@@ -248,6 +248,8 @@ project-card .tip {
 
 .project-card h5 {
   margin-bottom: 4px;
+  font-size: var(--h1-size);
+  font-weight: var(--h1-weight);
 }
 
 .project-card label {
@@ -256,14 +258,12 @@ project-card .tip {
 }
 
 .project-card .header {
-
   padding: 1.2em;
 }
 
 .project-card .tag {
 
   // background: linear-gradient(180deg, hsla(45, 100%, 88%, 1) 0%, hsla(191, 95%, 34%, 1) 100%);
-
 
   font-weight: 300;
   font-size: 13px;
@@ -316,11 +316,11 @@ project-card .tip {
     padding-top: 5px;
     h2 {
       font-weight: 400;
-      .bi {
-        color: var(--secondary);
-      }
+      font-size: var(--h1-lg-size);
+      color: var(--color);
     }
   }
+
   .initials {
     text-align: center;
     font-size: 1.5em;
