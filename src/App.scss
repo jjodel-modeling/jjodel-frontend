@@ -322,7 +322,10 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
     font-style: normal; // removes italic
   }
 }
-
+.Graph, .GraphVertex{
+  --zoom-x: 1;
+  --zoom-y: 1;
+}
 .Vertex, .GraphVertex, .EdgePoint{
   left: var(--left) !important;
   top: var(--top) !important;

@@ -44,7 +44,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         resizable: {},
         rotatable: {},
     }
-    oldPos: Dictionary<string, number> =  {left: 0, top: 0};
+    oldPos: Dictionary<string, number> = {left: undefined, top: undefined} as any;
 
     componentDidMount() {
         this.afterUpdate();
@@ -178,8 +178,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         if (!child) {
             Log.ee('child not found', {child, evt, oc, e}); return;
         }
-        let oldpos = this.oldPos; // positionMap.get(e);
-        console.log('measurable default event child ' + evtkind, {ui, e, oc, oldpos});
+        console.log('measurable default event child ' + evtkind, {ui, e, oc, oldpos: this.oldPos});
         //if (evtkind === 'e') { positionMap.set(e, ui.position); }
 
         /*if (evtkind === 's') {
@@ -192,17 +191,26 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         let key: any;
         for (key of MeasurableComponent.childmodekeys) {
             let fixpos = () => {
+                let oldpos = this.oldPos; // positionMap.get(e); {x:-1000, y:-3000};//
                 if (oldpos && (oldpos as any)[key] !== undefined) {
-                    if (key ==='left') console.log('measurable fixpos ' + evtkind, (oldpos as any)[key] + ui.position[key] + 'px', (oldpos as any)[key]);
                     let newpos = (oldpos as any)[key] + ui.position[key];
+                    if (key ==='left') console.log('measurable fixpos ' + newpos + 'px', (oldpos as any)[key], {oldpos, uipos:ui.position, newpos});
                     child.style[key] = (newpos) + 'px';
                     if (evtkind === 'e') this.oldPos[key] = newpos;
                 }
                 else child.style[key] = e.style[key];
             }
+            if (evtkind === 'e') setTimeout(fixpos, 1000);
+            if (evtkind === 's') {
+                let graph = this.props.isPanning;
+                if (this.oldPos.left === undefined && graph) {
+                    console.log('measurable fixposss ',{oldpos:{...this.oldPos}});
+                    this.oldPos.left = ui.position.left = graph.offset.x;
+                    this.oldPos.top = ui.position.top = graph.offset.y;
+                }
+                if (!e.classList.contains('draggable-child-mode')) e.classList.add('draggable-child-mode');
+            }
             fixpos();
-            if (evtkind === 'e')  setTimeout(fixpos, 1000);
-            if (evtkind === 's' && !e.classList.contains('draggable-child-mode')) e.classList.add('draggable-child-mode');
             // delete e.style[key]
         }
     }
@@ -266,7 +274,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         if (allevents.length) options[jqkey] = ((evt, ui)=>{
             for (let e of allevents) {
                 propsevent = props[eventmap[evtkey][type]]; // if i don't redeclare it here, closure makes a mess taking always the last jodelevt for all iterations.
-                if (e === propsevent) { e(this.getCoords(evt, ui, !!this.props.isPanning), evt, ui); }
+                if (e === propsevent) { e(this.getCoords(evt, ui, this.props.isPanning), evt, ui); }
                 else e(evt, ui);
             }
         }) as DraggableEvent;
@@ -400,7 +408,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         return clonedChild;
     }
 
-    private getCoords(evt: JQueryEventObject, ui: JQueryUI.DraggableEventUIParams, isPanning: boolean): GraphSize {
+    private getCoords(evt: JQueryEventObject, ui: JQueryUI.DraggableEventUIParams, isPanning?: LGraph): GraphSize {
         let size = Size.of(evt.target);
         let graph: LGraph = DGraphElement.graphLFromHtml(evt.target) as LGraph;
         let gsize: GraphSize = graph?.translateHtmlSize(size);
@@ -418,10 +426,16 @@ export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
     static cname: string = "ScrollableComponent";
     render(){
         let graph = this.props.graph;
+        let create = (e: JQueryEventObject) => {/*
+            let target: HTMLElement = e.target.children[0] as HTMLElement;
+            target.style.left = graph.offset.x+'px';
+            target.style.top = graph.offset.y+'px';*/
+            // $(target).data({uiDraggable:{offset:{left: graph.offset.x, top: graph.offset.y}}});
+        }
         return (
             <div className={"scrollable"}>
-                <Measurable draggable={true}
-                            isPanning={true}
+                <Measurable draggable={{create}}
+                            isPanning={graph}
                             onDragEnd={graph ? (coords, ...args: any)=>{
                                 if (!graph) return; // just for ts-lint
                                 console.log("drag odee", {coords, graph, args});
@@ -440,10 +454,10 @@ export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
 // private
 interface ScrollOwnProps {
     children: ReactChild[] | ReactChild;
-    graph?: LGraph;
+    graph: LGraph;
 }
 interface MeasurableOwnProps {
-    isPanning?: boolean;
+    isPanning?: LGraph;
     children: ReactChild[] | ReactChild;
     //dragOptions?: Options;
     //drag?: Options;
@@ -537,6 +551,7 @@ export function Rotatable(props: GObject<MeasurableAllProps>, children?: any): R
 
 
 export function Scrollable(props: MeasurableAllProps, children?: any): ReactElement {
+    // @ts-ignore
     return <ScrollableComponent {...{...props}}>{props.children||children}</ScrollableComponent>;
 }/*
 export function InfiniteScroll(props: MeasurableAllProps, children: ReactChild[] = []): ReactElement {

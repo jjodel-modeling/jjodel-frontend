@@ -383,22 +383,40 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
         // set classes end
         const size: Readonly<GraphSize> = this.getSize();
 
+        let isVertex: boolean= false, isEdge: boolean= false, isGraph: boolean = false;
         switch (this.nodeType) {
-            case 'GraphVertex':
+            case 'Graph': isGraph = true; break;
+            case 'GraphVertex': isGraph = isVertex = true; break;
             case 'Vertex':
             case 'VoidVertex':
             case 'EdgePoint':
-                // @ts-ignore
-                styleOverride['--top'] = size.y + 'px';
-                // @ts-ignore
-                styleOverride['--left'] = size.x + 'px';
-                let isResized = this.props.node.isResized;
-                if (isResized || !this.props.view.adaptWidth) styleOverride.width = size.w+'px';
-                else styleOverride.width = undefined;
-                if (isResized || !this.props.view.adaptHeight) styleOverride.height = size.h+'px';
-                else styleOverride.height = undefined; // todo: the goal is to reset jqui inline style, but not override user-defined inline style
+                isVertex = true;
                 break;
             default: break;
+        }
+
+        if (isGraph){
+            let offset = (this.props.node as any as LGraph).offset;
+            let zoom = (this.props.node as any as LGraph).zoom;
+            // @ts-ignore
+            styleOverride['--offset-x'] = offset.x + 'px';
+            // @ts-ignore
+            styleOverride['--offset-y'] = offset.y + 'px';
+            // @ts-ignore
+            styleOverride['--zoom-x'] = zoom.x;
+            // @ts-ignore
+            styleOverride['--zoom-y'] = zoom.y;
+        }
+        if (isVertex){
+            // @ts-ignore
+            styleOverride['--top'] = size.y + 'px';
+            // @ts-ignore
+            styleOverride['--left'] = size.x + 'px';
+            let isResized = this.props.node.isResized;
+            if (isResized || !this.props.view.adaptWidth) styleOverride.width = size.w+'px';
+            else styleOverride.width = undefined;
+            if (isResized || !this.props.view.adaptHeight) styleOverride.height = size.h+'px';
+            else styleOverride.height = undefined; // todo: the goal is to reset jqui inline style, but not override user-defined inline style
         }
 
 

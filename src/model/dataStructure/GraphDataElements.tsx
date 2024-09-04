@@ -20,7 +20,7 @@ import {
     GraphElementComponent,
     GraphPoint,
     GraphSize,
-    Info, Keystrokes,
+    Info, IPoint, Keystrokes,
     Leaf,
     LModelElement,
     Log,
@@ -51,7 +51,7 @@ import type {Tooltip} from "../../components/forEndUser/Tooltip";
 import type {RefObject} from "react";
 import type {SVGPathElementt, SVGPathSegment} from '../../common/libraries/pathdata';
 import {EdgeGapMode, InitialVertexSize} from "../../joiner/types";
-import {Geom} from "../../common/Geom";
+import {Geom, ISize} from "../../common/Geom";
 
 
 console.warn('ts loading graphDataElement');
@@ -373,7 +373,9 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     }
     protected get_innerSize_impl(context: Context, canTriggerSet: boolean = true, outerSize: boolean = false): Readonly<GraphSize> {
         canTriggerSet = canTriggerSet && !Debug.lightMode;
-        switch (context.data.className){
+        let cname = context.data.className;
+        // cname = DGraphElement.cname;
+        switch (cname){
             default: return Log.exDevv("unexpected classname in get_size switch: " + context.data.className);
             case DEdge.cname:
             case DVoidEdge.cname:
@@ -851,8 +853,22 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
         return true;
     }
 
+    public cumulativeZoom!: GraphPoint;
+    public __info_of__cumulativeZoom: Info = {type: GraphPoint.cname, txt: "the product of all the ownZoom of containing ancestor graphs."};
+    private get_cumulativeZoom(c:Context): this['cumulativeZoom']{
+        let ancestors = [c.proxyObject, ...this.get_graphAncestors(c)];
+        let zoom: GraphPoint = new GraphPoint(1,1);
+        for (let g of ancestors) zoom.multiply(g.ownZoom, false);
+        return zoom;
+    }
+
+    get_zoom(c: Context): GraphPoint {
+        return this.get_cumulativeZoom(c);
+    }
+    public ownZoom!: GraphPoint;
+    __info_of__ownZoom: Info = {type:GraphPoint.cname, label:"zoom", txt:"The individual zoom applied to this graph."};
     __info_of__zoom: Info = {type:GraphPoint.cname, label:"zoom", txt:"Scales the graph and all subelements by a factor."};
-    get_zoom(context: Context): GraphPoint {
+    get_ownZoom(context: Context): GraphPoint {
         const zoom: GraphPoint = context.data.zoom;
         let ret = new GraphPoint(zoom.x||1, zoom.y||1); // NB: do not use (??1), zero is not a valid value for zoom.
         // (zoom as any).debug = {rawgraph: context.data.__raw, zoomx: context.data.zoom.x, zoomy: context.data.zoom.y}
@@ -872,9 +888,13 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     coord(htmlSize: Size): GraphSize { return this.wrongAccessMessage("toGraphSize"); }
     get_coord(context: Context): (htmlSize: Size) => GraphSize {
         return (htmlSize: Size)=> {
-            let size: Size = this.get_htmlSize(context);
+            let graphHtmlSize: Size = this.get_htmlSize(context);
             let zoom: GraphPoint = this.get_zoom(context);
-            return new GraphSize((htmlSize.x - size.x) / zoom.x, (htmlSize.y - size.y) / zoom.y, htmlSize.w/zoom.x, htmlSize.h/zoom.y);
+            return new GraphSize(
+                (htmlSize.x - graphHtmlSize.x) / zoom.x,
+                (htmlSize.y - graphHtmlSize.y) / zoom.y,
+                htmlSize.w/zoom.x,
+                htmlSize.h/zoom.y);
         }
     }
     // get_htmlSize(context: Context): Size { }
@@ -887,11 +907,66 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
     __info_of__translateHtmlSize: Info = {type:"(Size|Point) => GraphSize|GraphPoint", txt:'Translate page\'s viewport coordinate set to this graph coordinate set.'};
     get_translateHtmlSize<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(c: Context): ((size: T) => G) {
         return (size: T): G => {
+            let rootGraph: LGraph = this.get_root(c);
+            if (rootGraph.id === c.data.id) return this.get_translateHtmlSize_fromRoot<T, G>(c)(size);
+            let fakeRootSize = rootGraph.translateHtmlSize_fromRoot<T, G>(size) as any as ISize;
+            let screenOffset = this.get_screenOffset(c);//cumulative (g.size.tl()-offset.tl()*cumulativezoom)
+
+            // distance from the origin of the subgraph in rendered pixels
+            let ret = new GraphSize(fakeRootSize.x - screenOffset.x, fakeRootSize.y - screenOffset.y, fakeRootSize.w, fakeRootSize.h);
+            return ret.divide(this.get_cumulativeZoom(c) as any, false) as any;
+
+            /*
+            // fake because it assumes all subgraphs have the same zoom level of current graph.
+            let ancestors = this.get_graphAncestors(c).reverse().slice(1);
+            let cumulativeZoom: GraphPoint = new GraphPoint(1, 1); // = this.get_ownZoom(c);
+            for (let g of ancestors){
+                let offset = g.offset;
+                let ownZoom = g.ownZoom;
+                cumulativeZoom.multiply(ownZoom);
+                // let a, b, c be graphs
+                // size is =  a.zoom + a.offset
+
+            }
+            */
+        }
+    }
+    screenOffset!: GraphPoint;
+    __info_of__screenOffset: Info = {type: GraphPoint.cname, txt:"Distance of the subgraph origin in rendered pixels. to the top-left of graph container."}
+    private get_screenOffset(c: Context): GraphPoint{
+        let ancestors = [c.proxyObject, ...this.get_graphAncestors(c)].reverse();
+        let ret = new GraphPoint(0, 0);
+        let cumulativeZoom: GraphPoint = new GraphPoint(1, 1); // = this.get_ownZoom(c);
+        for (let g of ancestors){
+            let offset = g.offset;
+            let ownZoom = g.ownZoom;
+            let size = g.size;
+            ret
+                .add(size.tl().multiply(cumulativeZoom, false), false)
+                .subtract(offset, false);
+            cumulativeZoom.multiply(ownZoom);
+            ret
+                .multiply(cumulativeZoom, false);
+        }
+        return ret;
+    }
+
+    private translateHtmlSize_fromRoot<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(size: T):G {
+        return this.wrongAccessMessage('translateHtmlSize_fromRoot');
+    }
+
+    /**
+     *  IMPORTANT!
+     *  this is a wrong partial result, do not call this function directly outside translateHtmlSize.
+     *  this is outercoord without zoom, needs ti be translated to container graph coords & de-apply zoom
+     */
+    private get_translateHtmlSize_fromRoot<T extends Size|Point, G = T extends Size ? GraphSize : GraphPoint>(c: Context): ((size: T) => G) {
+        return (size: T): G => {
             let graphHtmlSize = this.get_htmlSize(c);
             let a = size.subtract(graphHtmlSize.tl(), true);
             let offset = {x:c.data.offset.x, y:c.data.offset.y};
             let b = a.subtract(offset, true);
-            let r = b.multiply(c.data.zoom, false) as any as G;
+            let r = b.divide(c.data.zoom as any, false) as any as G;
             return r;
         }
     }
@@ -925,12 +1000,12 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
             console.log("translateSizee pre", (this.get_model(c) as any).name, size.x, size.y, {size, ret, currAncestors, targetAncestors} )
             for (let g of currAncestors){
                 ret.subtract(g.offset, false);
-                ret.divide(g.zoom, false);
+                ret.divide(g.cumulativeZoom, false);
                 ret.add(g.size.tl(), false);
             }
             for (let g of targetAncestors){
                 ret.subtract(g.size.tl(), false);
-                ret.multiply(g.zoom, false);
+                ret.multiply(g.cumulativeZoom, false);
                 ret.add(g.offset, false);
             }
             console.log("translateSizee ret", (this.get_model(c) as any).name, size.x, size.y, {size, ret, currAncestors, targetAncestors} )
@@ -1847,7 +1922,7 @@ replaced by startPoint
             tmp.rad = 0;
             return tmp;
         }
-        let zoom: GraphPoint = zoom0 || this.get_graph(c).zoom;
+        let zoom: GraphPoint = zoom0 || this.get_graph(c).zoom;// ownZoom or cumulativeZoom?
         let headPos: GraphSize & {rad: number} = (new GraphSize(0, 0, tmp.x, tmp.y) as any); //.multiply({w:zoom.x, h:zoom.y});
         let useBezierPoints = true;
         let start: GraphPoint, end: GraphPoint;
