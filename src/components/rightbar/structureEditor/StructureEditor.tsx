@@ -33,12 +33,12 @@ class StructureEditorComponent extends PureComponent<AllProps, ThisState> {
         const data = this.props.data;
         return <div className={'mb-5'}>
             <div className={'px-3 mt-3'}>
-                {Structure.Editor(data || null)}
+                {Structure.Editor(data || null, this.props.advanced)}
                 {data?.className === DObject.cname && U.wrapper<LObject>(data).features.map((f, i) => {
                     return(<div key={i}>
                         <hr className={'my-3'} />
                         <label className={'text-center'}>{f.instanceof?.name}</label>
-                        {Structure.Editor(f)}
+                        {Structure.Editor(f, this.props.advanced)}
                     </div>);
                 })}
             </div>
@@ -52,6 +52,7 @@ interface StateProps {
     node?: LGraphElement
     view?: LViewElement
     data?: LModelElement
+    advanced: boolean;
 }
 interface DispatchProps {}
 
@@ -65,6 +66,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     if(nodeid) ret.node = LGraphElement.fromPointer(nodeid);
     if(viewid) ret.view = LViewElement.fromPointer(viewid);
     if(dataid) ret.data = LModelElement.fromPointer(dataid);
+    ret.advanced = state.advanced;
     return ret;
 }
 

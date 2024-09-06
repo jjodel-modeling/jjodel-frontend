@@ -30,9 +30,10 @@ div.jjodel-control {
     right: 45px;
     bottom:22px;
     opacity: 0.85;
+    width: fit-content;
 
     background-color: var(--control-background-light);;
-    padding: 10px 20px;
+    padding: 10px;
     color: var(color);
     border-radius: var(--radius);
     z-index: 1000;
@@ -47,6 +48,10 @@ div.jjodel-control {
         margin-bottom: auto;
         width: fit-content;
         padding-right: 20px;
+        padding-left: 10px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        border-right: 1px dotted var(--bg-4);
         
 
         & h1 {
@@ -65,13 +70,15 @@ div.jjodel-control {
     }
     
     & .control-widget {
-        padding: 10px;
         transition: all 0.2s;
-        border-left: 1px dotted var(--bg-4);
+        // border-left: 1px dotted var(--bg-4);
+    }
+    & .control-widget:first-of-type {
+        // border: 1px solid red!important;
+        border-left: 1px dotted var(--bg-4)!important;
     }
 
     & .control-slider {
-        width: 150px;
         text-align: center;
     }
 
@@ -83,10 +90,10 @@ div.jjodel-control.closed {
 
     & .control-widget {
         visibility: hidden;
-        
     }
 }
 div.jjodel-control.opened {
+    // width: 400px;
     transform: scaleX(1);
     transform-origin: 100%;
     visibility: visible;
@@ -96,3 +103,153 @@ div.jjodel-control.opened {
 
 /* Slider */
 
+div.jjodel-control .control-slider  {
+    width: 160px;
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+    transition: all 300ms ease-in-out;
+    
+ }
+ 
+ div.jjodel-control .control-slider:hover {
+
+
+    & input[type="range"] {
+       transition: all 300ms ease-in-out;
+    }
+    & ::-webkit-slider-runnable-track {
+       transition: all 300ms ease-in-out;
+    }
+    & ::-webkit-slider-thumb { // knob
+       border: 2px solid var(--bg-2-5); 
+       background-color: var(--secondary);
+       transition: all 300ms ease-in-out!important;  
+    }
+    & div.tip {   
+       transition: all 300ms ease-in-out; 
+    }
+ }
+
+ div.jjodel-control .control-slider .track {
+    position: relative;
+    top: 18px;
+    left: 15px;
+    width: 100%;
+    border-radius: 2px; 
+    height: 4px;
+    z-index: 1;
+    background-color: var(--secondary); //  var(--accent);
+ }
+
+ div.jjodel-control .control-slider input[type="range"] {
+    -webkit-appearance: none;
+    position: relative;
+    overflow: visible;
+    cursor: pointer;
+    background-color: var(--bg-2-5);
+    padding: 9px 10px 8px 10px;
+    height: 31px;
+    border-radius: var(--radius);
+    transition: all 300ms ease-in-out;
+ }
+ 
+ div.jjodel-control .control-slider ::-webkit-slider-runnable-track {
+     background: var(--bg-3-1);
+     border-radius: 2px;
+     height: 3px;
+ }
+ 
+ div.jjodel-control .control-slider ::-webkit-slider-thumb {
+    position: relative;
+    top: calc((var(--knob) / 2) * (-1) + 2px);
+    appearance: none;
+    height: var(--knob);
+    width: var(--knob);
+    border-radius: 50%;
+    border: 5px solid var(--bg-2-5);
+    background-color: var(--model-color);
+    transition: all 300ms ease-in-out;
+ }
+ 
+ div.jjodel-control ::-webkit-slider-thumb:hover {
+    border: 2px solid var(--accent-secondary);
+    transition: border 300ms ease-in-out;
+ }
+ 
+ div.jjodel-control div.tip {
+    position: absolute;
+    height: fit-content; 
+    border-radius: 3px;
+    padding: 2px 20px 2px 20px;
+    font-weight: 400;
+    text-align: center;
+    bottom: 5px;
+    transition: all 300ms; 
+    margin-left: auto;
+    margin-right: auto;
+    font-size: 0.85em;
+
+    & label {
+        padding-top: 1px;
+
+        margin-bottom: 2px;
+        margin-left: 10px;
+        width: 1.6em;
+        height: 1.6em;
+        border-radius: 2px;
+        color: white;
+        background-color: var(--accent);
+        font-weight: 800;
+        text-align: center;
+        vertical-align: middle;
+    }
+ }
+
+
+/* Notification */
+
+ div.control-notification {
+    position: absolute;
+    height: 80px;
+    right: 45px;
+    bottom:22px;
+    opacity: 0.85;
+    width: fit-content;
+    background-color: var(--control-background-light);;
+    padding: 10px;
+    color: var(color);
+    border-radius: var(--radius);
+    z-index: 1000;
+    overflow: hidden;    
+    vertical-align: middle;
+    transition: all 0.3s;
+
+    & .control-header {
+        margin-top: auto;
+        margin-bottom: auto;
+        width: fit-content;
+        padding-right: 20px;
+        padding-left: 10px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        border-right: 1px dotted var(--bg-4);
+
+        & h1 {
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 0px;
+            white-space: pre;
+        }
+        & h2 {
+            font-weight: 300;
+            font-size: 1em;
+            margin-bottom: 0px;
+            white-space: pre;
+        }
+        width: fit-content!important;
+    }
+
+ }
+ 
+ 

@@ -22,7 +22,7 @@ import "./VPNestedTree.scss"
 import ViewData from '../viewsEditor/View';
 import {Tooltip} from "../../forEndUser/Tooltip";
 import { CommandBar, Btn, Sep } from '../../commandbar/CommandBar';
-import { Toggle } from '../../widgets/Widgets';
+import { InternalToggle } from '../../widgets/Widgets';
 
 
 // import "./tree.scss" already imported by <Tree> subcomponent
@@ -193,7 +193,7 @@ function NestedViewComponent(props: AllProps) {
                             <Sep />
                             <Btn icon={'add'} action={addVP} tip={'Create a new viewpoint'} />
                         </CommandBar>
-                        <Toggle 
+                        <InternalToggle 
                             name={'advanced'} 
                             values={{false: 'false', true: 'true'}} 
                             labels={{false: 'show priorities', true: 'hide priorities'}} 

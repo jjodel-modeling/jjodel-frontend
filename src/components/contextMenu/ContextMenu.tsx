@@ -184,8 +184,9 @@ function ContextMenuComponent(props: AllProps) {
             className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}}></i></div>);
         jsxList.push(<hr className={'my-1'} />);
         /* Refresh */
-            jsxList.push(<div onClick={() => {alert('refresh')}} className={'col item'}>{icon['refresh']} Refresh</div>);
-        jsxList.push(<hr className={'my-1'} />);
+        
+        // jsxList.push(<div onClick={() => {alert('refresh')}} className={'col item'}>{icon['refresh']} Refresh</div>);
+        // jsxList.push(<hr className={'my-1'} />);
 
         /* Up / Down */
         jsxList.push(<div onClick={() => {close(); node.zIndex += 1;}} className={'col item'}>{icon['up']} Up<div><i

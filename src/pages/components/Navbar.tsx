@@ -28,7 +28,7 @@ import TabDataMaker from "../../../src/components/abstract/tabs/TabDataMaker";
 import DockManager from "../../../src/components/abstract/DockManager";
 
 import {Divisor, Item, Menu} from '../components/menu/Menu';
-import {Toggle} from '../../components/widgets/Widgets';
+import {InternalToggle} from '../../components/widgets/Widgets';
 import jj from '../../static/img/jj-k.png';
 import Storage from '../../data/storage';
 import Collaborative from "../../components/collaborative/Collaborative";
@@ -260,7 +260,7 @@ function NavbarComponent(props: AllProps) {
 
     const Commands = () => {
         return (<div className='text-end nav-commands'>
-            {project && <Toggle name={'mode'} values={{false: 'base', true: 'advanced'}} labels={{false: 'base', true: 'advanced'}}/>}
+            {project && <InternalToggle name={'advanced'} values={{false: false, true: true}} labels={{false: 'base', true: 'advanced'}}/>}
         </div>);
     };
 

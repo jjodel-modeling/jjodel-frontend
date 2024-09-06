@@ -382,6 +382,7 @@ class builder {
 
 function InfoComponent(props: AllProps) {
     const {data, node, view, topics, advanced} = props;
+    
     switch (data?.className) {
         case 'DModel':
             return builder.model(data, advanced);

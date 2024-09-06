@@ -19,29 +19,29 @@ import Value from "./editors/Value";
 export default class Structure {
     public static cname: string = "Structure";
 
-    private static BaseEditor(lModelElement: LModelElement) : ReactNode {
+    private static BaseEditor(lModelElement: LModelElement, advanced: boolean) : ReactNode {
         if(!lModelElement) return(<></>);
         return(<>
             {/*<Input obj={lModelElement} field={"id"} label={"ID"} type={"text"} readonly={true} />*/}
             <Input key={`input.name.${lModelElement.id}`} data={lModelElement} field={"name"} label={"Name"} type={"text"} tooltip={"Element name"} />
         </>);
     }
-    public static ModelEditor(lModel: LModelElement): ReactNode {
+    public static ModelEditor(lModel: LModelElement, advanced: boolean): ReactNode {
         if(!lModel) return(<></>);
-        return(<>{Structure.BaseEditor(lModel)}</>);
+        return(<>{Structure.BaseEditor(lModel, advanced)}</>);
     }
-    public static PackageEditor(lPackage: LModelElement): ReactNode {
+    public static PackageEditor(lPackage: LModelElement, advanced: boolean): ReactNode {
         if(!lPackage) return(<></>);
         return(<>
-            {Structure.BaseEditor(lPackage)}
+            {Structure.BaseEditor(lPackage, advanced)}
             <Input key={`input.uri.${lPackage.id}`} data={lPackage} field={"uri"} label={"NsURI"} type={"text"} tooltip={"Namespace URI of the package, i.e. the URI that is displayed in the xmlns tag to identify this package in an XMI document"} />
             <Input key={`input.prefix.${lPackage.id}`} data={lPackage} field={"prefix"} label={"NsPrefix"} type={"text"} tooltip={"Namespace prefix that is used when references to instances of the classes in this package are serialized"} />
         </>);
     }
-    public static ClassEditor(lClass: LModelElement): ReactNode {
+    public static ClassEditor(lClass: LModelElement, advanced: boolean): ReactNode {
         if(!lClass) return(<></>);
         return(<>
-            {Structure.BaseEditor(lClass)}
+            {Structure.BaseEditor(lClass, advanced)}
             <Input key={`input.abstract.${lClass.id}`} data={lClass} field={"abstract"} label={"IsAbstract"} type={"checkbox"} tooltip={"If set to True, the generated implementation class will have the abstract keyword"} />
             <Input key={`input.interface.${lClass.id}`} data={lClass} field={"interface"} label={"IsInterface"} type={"checkbox"} tooltip={"If set to True, only the java interface will be generated. There will be no corresponding implementation class and no create method in the factory"} />
             <Input key={`input.partial.${lClass.id}`} data={lClass} field={"partial"} label={"IsPartial"} type={"checkbox"} tooltip={"If set to True, the class will be partial."} />
@@ -65,18 +65,18 @@ export default class Structure {
             </div>)}
         </>);
     }
-    private static DataTypeEditor(lDataType: LModelElement): ReactNode {
+    private static DataTypeEditor(lDataType: LModelElement, advanced: boolean): ReactNode {
         if(!lDataType) return(<></>);
         return(<Input key={`input.serializable.${lDataType.id}`} data={lDataType} field={"serializable"} label={"IsSerializable"} type={"checkbox"} tooltip={"It represents whether values of this type will be serialized"} />);
     }
-    public static EnumEditor(lEnum: LModelElement): ReactNode {
+    public static EnumEditor(lEnum: LModelElement, advanced: boolean): ReactNode {
         if(!lEnum) return(<></>);
         return(<>
-            {Structure.BaseEditor(lEnum)}
-            {Structure.DataTypeEditor(lEnum)}
+            {Structure.BaseEditor(lEnum, advanced)}
+            {Structure.DataTypeEditor(lEnum, advanced)}
         </>);
     }
-    private static TypedElementEditor(lTypedElement: LModelElement): ReactNode {
+    private static TypedElementEditor(lTypedElement: LModelElement, advanced: boolean): ReactNode {
         if(!lTypedElement) return(<></>);
         return(<>
             <Select key={`input.type.${lTypedElement.id}`} data={lTypedElement} field={"type"} label={"Type"} tooltip={"Element Type"} />
@@ -86,7 +86,7 @@ export default class Structure {
             <Input key={`input.unique.${lTypedElement.id}`} data={lTypedElement} field={"unique"} label={"IsUnique"} type={"checkbox"} tooltip={"Indicates whether a many-valued attribute is allowed to have duplicates"} />
         </>);
     }
-    private static StructuralFeatureEditor(lStructuralFeature: LModelElement): ReactNode {
+    private static StructuralFeatureEditor(lStructuralFeature: LModelElement, advanced: boolean): ReactNode {
         if(!lStructuralFeature) return(<></>);
         return(<>
             <Input data={lStructuralFeature} field={"defaultValueLiteral"} label={"Default Value Literal"} type={"text"} tooltip={"Determines the value returned by the get method if the feature has never been set"} />
@@ -97,43 +97,43 @@ export default class Structure {
             <Input data={lStructuralFeature} field={"derived"} label={"IsDerived"} type={"checkbox"} tooltip={"A derived feature typically computes its value from those of other features. It will typically be transient and will often be volatile and not changeable. The default copier won't copy it"} />
         </>); // damiano: derived description tooltip might be wrong
     }
-    public static AttributeEditor(lAttribute: LModelElement): ReactNode {
+    public static AttributeEditor(lAttribute: LModelElement, advanced: boolean): ReactNode {
         if(!lAttribute) return(<></>);
         return(<>
-            {Structure.BaseEditor(lAttribute)}
-            {Structure.TypedElementEditor(lAttribute)}
-            {Structure.StructuralFeatureEditor(lAttribute)}
+            {Structure.BaseEditor(lAttribute, advanced)}
+            {Structure.TypedElementEditor(lAttribute, advanced)}
+            {Structure.StructuralFeatureEditor(lAttribute, advanced)}
             <Input data={lAttribute} field={"isID"} label={"IsID"} type={"checkbox"} tooltip={"An ID attribute explicitly models the one unique ID of an object"} />
             {/*<Input data={lAttribute} field={"isIoT"} label={"IsIoT"} type={"checkbox"} tooltip={"A Boolean value that allows the connection to an MQTT Broker"} />*/}
         </>);
     }
-    public static ReferenceEditor(lReference: LModelElement): ReactNode {
+    public static ReferenceEditor(lReference: LModelElement, advanced: boolean): ReactNode {
         if(!lReference) return(<></>);
         return(<>
-            {Structure.BaseEditor(lReference)}
-            {Structure.TypedElementEditor(lReference)}
-            {Structure.StructuralFeatureEditor(lReference)}
+            {Structure.BaseEditor(lReference, advanced)}
+            {Structure.TypedElementEditor(lReference, advanced)}
+            {Structure.StructuralFeatureEditor(lReference, advanced)}
             <Input data={lReference} field={"containment"} label={"IsContainment"} type={"checkbox"} tooltip={"Indicates whether the reference is a containment"} />
             <Input data={lReference} field={"container"} label={"IsContainer"} type={"checkbox"} tooltip={"Indicates whether the reference is a container. This is the opposite of a containment EReference. If container is true, the generated accessor methods will have container semantics"} />
             <Input data={lReference} field={"resolveProxies"} label={"IsResolveProxies"} type={"checkbox"} tooltip={"Indicates whether proxy references should be resolved automatically"} />
         </>);
     }
-    public static EnumLiteralEditor(lEnumLiteral: LModelElement): ReactNode {
+    public static EnumLiteralEditor(lEnumLiteral: LModelElement, advanced: boolean): ReactNode {
         if(!lEnumLiteral) return(<></>);
         console.log("eliteral editor", {lEnumLiteral});
         return(<>
-            {Structure.BaseEditor(lEnumLiteral)}
+            {Structure.BaseEditor(lEnumLiteral, advanced)}
             {
                 <Input data={lEnumLiteral} field={"value"} label={"Ordinal"} type={"number"} tooltip={"Determines the integer value that is associated with this literal"} />
             }
         </>);
     }
 
-    public static OperationEditor(me: LModelElement): ReactNode {
+    public static OperationEditor(me: LModelElement, advanced: boolean): ReactNode {
         const operation: LOperation = LOperation.fromPointer(me.id);
         if(!operation) return(<></>);
         return(<>
-            {Structure.BaseEditor(operation)}
+            {Structure.BaseEditor(operation, advanced)}
             <Select data={operation.id} field={'type'} label={'Return'} tooltip={"Method return type"} />
             {operation.parameters.map((parameter, index) => {
                 if (index > 0) {
@@ -153,7 +153,7 @@ export default class Structure {
             })}
         </>);
     }
-    public static ObjectEditor(me: LModelElement): ReactNode {
+    public static ObjectEditor(me: LModelElement, advanced: boolean): ReactNode {
         const object: LObject = LObject.fromPointer(me.id);
         if(!object) return(<></>);
         let conform = true;
@@ -207,26 +207,26 @@ export default class Structure {
             </select>
         </div>
     }
-    public static ValueEditor(me: LModelElement): ReactNode {
+    public static ValueEditor(me: LModelElement, advanced: boolean): ReactNode {
         const lValue: LValue = LValue.fromPointer(me.id);
         if(!lValue) return(<></>);
         return(<div>
             <Value valueID={lValue.id} />
         </div>);
     }
-    public static Editor(lModelElement: LModelElement|null) : ReactNode {
+    public static Editor(lModelElement: LModelElement|null, advanced: boolean) : ReactNode {
         if(lModelElement){
             switch (lModelElement.className){
-                case "DModel": return Structure.ModelEditor(lModelElement);
-                case "DPackage": return Structure.PackageEditor(lModelElement);
-                case "DClass": return Structure.ClassEditor(lModelElement);
-                case "DAttribute": return Structure.AttributeEditor(lModelElement);
-                case "DReference": return Structure.ReferenceEditor(lModelElement);
-                case "DEnumerator": return Structure.EnumEditor(lModelElement);
-                case "DEnumLiteral": return Structure.EnumLiteralEditor(lModelElement);
-                case "DOperation": return Structure.OperationEditor(lModelElement);
-                case "DObject" : return Structure.ObjectEditor(lModelElement);
-                case "DValue" : return Structure.ValueEditor(lModelElement);
+                case "DModel": return Structure.ModelEditor(lModelElement, advanced);
+                case "DPackage": return Structure.PackageEditor(lModelElement, advanced);
+                case "DClass": return Structure.ClassEditor(lModelElement, advanced);
+                case "DAttribute": return Structure.AttributeEditor(lModelElement, advanced);
+                case "DReference": return Structure.ReferenceEditor(lModelElement, advanced);
+                case "DEnumerator": return Structure.EnumEditor(lModelElement, advanced);
+                case "DEnumLiteral": return Structure.EnumLiteralEditor(lModelElement, advanced);
+                case "DOperation": return Structure.OperationEditor(lModelElement, advanced);
+                case "DObject" : return Structure.ObjectEditor(lModelElement, advanced);
+                case "DValue" : return Structure.ValueEditor(lModelElement, advanced);
                 default: break;
             }
         }
