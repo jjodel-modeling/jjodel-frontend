@@ -36,7 +36,7 @@ class builder {
 
     static package(data: LModelElement, advanced: boolean): JSX.Element {
         return (<section className={'properties-tab'}>
-            <h1>{data.name}</h1>
+            
             {this.named(data, advanced)}
             <div className={'input-container'}>
                 <b className={'me-2'}>Uri:</b>
