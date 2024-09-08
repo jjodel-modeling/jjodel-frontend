@@ -303,11 +303,47 @@ project-card .tip {
   color: #eee;
 }
 
-.dashboard-container{
+.dashboard-container{ 
   display: flex;
-  min-height: 0;
+  height: 100%;
   flex-grow: 1;
   width: 100%;
+  container-type: size;
+}
+
+@container (width < 1300px) {
+  .details {
+    display: none;
+    transition: transform 0.3s;
+  }
+
+  .project-list {
+    width: 100%!important;
+    margin-right: 0;
+  }
+}
+@container (width < 1200px) {
+
+  .artifact-type {
+    display: none;
+    width: 0;
+  }
+  
+}
+@container (width < 1000px) {
+
+  .created {
+    display: none;
+    width: 0;
+  }
+  
+}
+@container (width < 800px) {
+
+  .modified {
+    display: none;
+    width: 0;
+  }
   
 }
 
@@ -318,11 +354,14 @@ project-card .tip {
   margin-right: 20px;
   
   width: 100%;
+
   .name { 
     width: 100%;
     padding-top: 5px;
     padding-left: 0px!important;
     margin-bottom: 100px;
+    
+
     h2 {
       font-weight: 400;
       font-size: var(--h1-lg-size);
@@ -338,10 +377,17 @@ project-card .tip {
   }
 
   .details {
+    // transform: scaleX(100%);
+    // transform-origin: 0%;
+    // transition: transform 0.3s;
+
     & b {
       font-weight: 600;
+      
     }
   }
+
+  
 
 
   .initials {

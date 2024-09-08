@@ -6,6 +6,10 @@ import type {Dictionary, FakeStateProps} from '../../../joiner/types';
 import DockManager from "../DockManager";
 import jj from '../../../static/img/jj.png';
 
+import { LeftBar } from '../../../pages/components';
+import { ProjectCatalog, Title } from '../../../pages/components/Dashboard';
+
+
 type Props = {
     key: string;
     name: string;
@@ -19,6 +23,9 @@ type Props = {
 
 const Project = (props: Props) => {
 
+    const {name, metamodels, models} = props;
+    const project = props.data;
+
     const [edit, setEdit] = useState<boolean|undefined>(false);
 
     const editToggle = () => {
@@ -27,45 +34,24 @@ const Project = (props: Props) => {
 
     return (
         <React.Fragment>
-            {!edit ? 
+            {/* {!edit ? 
                 <h2 onClick={editToggle} className={'p-3'}>{props.name}<img style={{float: 'right'}}height={50} src={jj} /></h2> :
                 <h2 onBlur={editToggle} className={'p-3'}><Input key={props.key} field={'name'} data={props.data}/></h2>
             }
-            <p className='p-3'>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
-            Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. 
-            </p>
-            <div className='row p-3'>
-                <div className={'col-sm'}>
-                    <p>
-                    {props.data.type == "public" && <React.Fragment><i className="bi bi-unlock"></i> public project</React.Fragment>}
-                    {props.data.type == "private" && <React.Fragment><i className="bi bi-lock"></i> private project</React.Fragment>}
-                    {props.data.type == "collaborative" && <React.Fragment><i className="bi bi-diagram-3"></i> collaborative project</React.Fragment>}
-                    </p>
-                </div>
-                <div className={'col-sm'}>
-                    <p>
-                    {(props.data.type === 'collaborative') ?
-                        <div><i className="bi bi-diagram-3"></i> online users: <strong>{props.data.onlineUsers}</strong></div> :
-                        <div><i className="bi bi-diagram-3"></i> online users: <strong>only you.</strong></div>
-                    }
-                    </p>
-                </div>
-                <div className='row p-3'>
-                    
-                        <h4>Metamodels ({props.metamodels.length})</h4>
-                        <section>
-                            {props.metamodels.map(m2Row)}
-                        </section>
-                </div>
-                <div className={'row p-3'}>
-                        <h4>Models ({props.models.length})</h4>
-                        <section>
-                            {props.models.map(m1Row)}
-                        </section>
+            */}
 
-                </div>
+            
+            <div className={"dashboard-container"} tabIndex={-1}>
+                <LeftBar active={'Project'} project={project} />
+                <div className={'user'}>
+                    <div className={'name'}>
+                        <Title title={project.name} icon={<i className="bi bi-p-square"></i>} description={project.description}/>
+                        <ProjectCatalog project={project} />
+                    </div>
+                </div> 
             </div>
+
+
         </React.Fragment>
     );
 }
@@ -106,11 +92,16 @@ function InfoTabComponent(props: AllProps) {
     }
     models = Object.values(modelmap).flat();  // this way they are sorted by metamodel
 
-    return(<div className={'p-3 summary w-75'}>
-        <div>
+    // return(<div className={'p-3 summary w-75'}>
+    //     <div>
+    //         <Project key={project.id} name={project.name} data={project} metamodels={metamodels} models={models}/>
+    //     </div>
+    // </div>);
+
+    return(
+
             <Project key={project.id} name={project.name} data={project} metamodels={metamodels} models={models}/>
-        </div>
-    </div>);
+    );
 }
 
 interface OwnProps {}

@@ -40,21 +40,6 @@ const User = (props: UserProps) => {
 };
 
 
-type ProjectDetailsProp = {
-    project: LProject;
-}
-
-const ProjectDetails = (props: ProjectDetailsProp) => {
-
-    const {project} = props;
-
-    return (<></>);
-
-
-}
-
-
-
 type TitleProps = {
     title: string;
     icon: ReactElement;
@@ -80,7 +65,7 @@ export type DashProps = {
     children?: JSX.Element,
     // NB: account and profile are both used, i don't know which to keep
     active: 'Account'|'Profile'|'Settings'|'Updates'|'Community'|'All'|'Archive'|'Templates'|'Recent' | 'Notes' | 'Project';
-    version: Partial<DState["version"]>;
+    version?: Partial<DState["version"]>;
     project?: LProject;
     projects?:LProject[];
 };
@@ -184,19 +169,19 @@ function ProjectCatalog(props: ProjectProps) {
         <div className={'row project-list'} style={{width: '70%', marginRight: '35%'}}>
             <div className='row header'>
 
-                <div className={'col-3'}>Name</div>
-                <div className={'col-2'}>Type</div>
-                <div className={'col-2'}>Created</div>
-                <div className={'col-2'}>Last modified</div>
+                <div className={'col-3 '}>Name</div>
+                <div className={'col-2 artifact-type'}>Type</div>
+                <div className={'col-2 created'}>Created</div>
+                <div className={'col-2 modified'}>Last modified</div>
                 <div className={'col-3'}>Operation</div>
             </div>
 
             {project.metamodels.map(mm =>
                 <div className="row data">
-                    <div className={'col-3'} ><TbSquareRoundedLetterMFilled style={{fontSize: '1.5em'}}/> {mm.name}</div>
-                    <div className={'col-2'}>Metamodel</div>
-                    <div className={'col-2'}>13 days ago</div>
-                    <div className={'col-2'}>July 13, 2024</div>
+                    <div className={'col-3 '} onClick={async() => await DockManager.open2(mm)}><TbSquareRoundedLetterMFilled style={{fontSize: '1.5em'}}/> {mm.name}</div>
+                    <div className={'col-2 artifact-type'}>Metamodel</div>
+                    <div className={'col-2 created'}>13 days ago</div>
+                    <div className={'col-2 modified'}>July 13, 2024</div>
                     <div className={'col-3'}>
                         <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                             <Btn icon={'open'} action={async() => await DockManager.open2(mm)} tip={'Open metamodel'}/>
@@ -206,24 +191,14 @@ function ProjectCatalog(props: ProjectProps) {
                             <Btn icon={'delete'} action={e => alert('Delete Metamodel')} tip={`Delete model "${mm.name}"`}/>
                         </CommandBar>
                     </div>
-                        {/* <CommandBar noBorder={true} style={{marginBottom: '0'}}>
-                            <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={'Add to favorites'}/>
-                            <Btn icon={'minispace'} />
-                            <Btn icon={'copy'} action={e => props.data.duplicate()} tip={'Duplicate project'}/>
-                            <Btn icon={'minispace'} />
-                            <Btn icon={'download'} action={e => exportProject()} tip={'Download project'}/>
-                            <Sep />
-                            <Btn icon={'delete'} action={async e => await deleteProject()} tip={'Delete project'}/>
-                        </CommandBar>
-                    </div>*/}
                 </div>)
             }
             {project.models.map(model =>
                 <div className="row data">
-                    <div className={'col-3'} key={model.id} onClick={async() => await DockManager.open2(model)} ><TbSquareRoundedLetterM style={{fontSize: '1.5em'}}/> {model.name}</div>
-                    <div className={'col-2'}>Model</div>
-                    <div className={'col-2'}>13 days ago</div>
-                    <div className={'col-2'}>July 13, 2024</div>
+                    <div className={'col-3 '} key={model.id} onClick={async() => await DockManager.open2(model)} ><TbSquareRoundedLetterM style={{fontSize: '1.5em'}}/> {model.name}</div>
+                    <div className={'col-2 artifact-type'}>Model</div>
+                    <div className={'col-2 created'}>13 days ago</div>
+                    <div className={'col-2 modified'}>July 13, 2024</div>
                     <div className={'col-3'}>
                         <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                             <Btn icon={'open'} action={async() => await DockManager.open2(model)} tip={'Open model'}/>
@@ -233,27 +208,14 @@ function ProjectCatalog(props: ProjectProps) {
                             <Btn icon={'delete'} action={e => alert('Delete Model')} tip={`Delete model "${model.name}"`}/>
                         </CommandBar>
                     </div>
-                        {/* <CommandBar noBorder={true} style={{marginBottom: '0'}}>
-
-
-                            <Btn icon={'minispace'} />
-                            <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={'Add to favorites'}/>
-                            <Btn icon={'minispace'} />
-                            <Btn icon={'copy'} action={e => props.data.duplicate()} tip={'Duplicate project'}/>
-                            <Btn icon={'minispace'} />
-                            <Btn icon={'download'} action={e => exportProject()} tip={'Download project'}/>
-                            <Sep />
-                            <Btn icon={'delete'} action={async e => await deleteProject()} tip={'Delete project'}/>
-                        </CommandBar>
-                    </div>*/}
                 </div>)
             }
             {project.viewpoints.map(vp =>
                 <div className="row data">
                     <div className={'col-3'} onClick={()=> {alert()}}>{vp.isOverlay ? <TbSquareRoundedLetterVFilled style={{fontSize: '1.5em'}}/> : <TbSquareRoundedLetterV style={{fontSize: '1.5em'}}/>} {vp.name}</div>
-                    <div className={'col-2'}>Viewpoints</div>
-                    <div className={'col-2'}>13 days ago</div>
-                    <div className={'col-2'}>July 13, 2024</div>
+                    <div className={'col-2 artifact-type'}>Viewpoints</div>
+                    <div className={'col-2 created'}>13 days ago</div>
+                    <div className={'col-2 modified'}>July 13, 2024</div>
                     <div className={'col-3'}>
                         <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                             <Btn icon={'open'} tip={'Open model'}/>
@@ -263,18 +225,25 @@ function ProjectCatalog(props: ProjectProps) {
                             <Btn icon={'delete'} tip={'Delete viewpoint'}/>
                         </CommandBar>
                     </div>
-                        {/* <CommandBar noBorder={true} style={{marginBottom: '0'}}>
-                            <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={'Add to favorites'}/>
-                            <Btn icon={'minispace'} />
-                            <Btn icon={'copy'} action={e => props.data.duplicate()} tip={'Duplicate project'}/>
-                            <Btn icon={'minispace'} />
-                            <Btn icon={'download'} action={e => exportProject()} tip={'Download project'}/>
-                            <Sep />
-                            <Btn icon={'delete'} action={async e => await deleteProject()} tip={'Delete project'}/>
-                        </CommandBar>
-                    </div>*/}
                 </div>)
             }
+            <div className={'legenda'}>
+                <h1>Legenda</h1>
+                <div className={'row'}>
+                    <div className={'col-sm'}>
+                    <TbSquareRoundedLetterMFilled style={{fontSize: '1.3em'}}/> Metamodels
+                    </div>
+                    <div className={'col-sm'}>
+                    <TbSquareRoundedLetterM style={{fontSize: '1.3em'}}/> Models
+                    </div>
+                    <div className={'col-sm'}>
+                    <TbSquareRoundedLetterVFilled style={{fontSize: '1.3em'}}/> Viewpoints
+                    </div>
+                    <div className={'col-sm'}>
+                    <TbSquareRoundedLetterV style={{fontSize: '1.3em'}}/> Overlay Viewpoints
+                    </div>
+                </div>
+            </div>
         </div>
     </>)}
 
@@ -304,22 +273,8 @@ function ProjectDashboard(props: DashProps): any {
 
         <Navbar />
         <Try><Dock /></Try>
-        {/*<div className={"dashboard-container"} tabIndex={-1}>
-            <LeftBar active={active} projects={user.projects} project={project} />
-            <div className={'user'}>
-                <div className={'name'}>
-                    <Title title={project.name} icon={<i className="bi bi-p-square"></i>} description={project.description}/>
-                    <ProjectCatalog project={project} />
-                </div>
-            </div>
-        </div>
-        */}
     </>);
 }
-
-
-
-
 
 function Dashboard(props: DashProps): any {
 
@@ -333,5 +288,5 @@ function Dashboard(props: DashProps): any {
     </>);
 }
 
-export {Dashboard};
+export {Dashboard, ProjectCatalog, Title};
 

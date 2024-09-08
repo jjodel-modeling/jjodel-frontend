@@ -14,7 +14,7 @@ interface StateProps {
 
 export type LeftBarProps = {
     active: DashProps['active']; // prende il tipo dal parent-component, così si evita di aggiornare entrambi o avere tipi discordanti.
-    projects: LProject[];
+    projects?: LProject[];
     project?: LProject;
 
 };
@@ -113,11 +113,11 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     <Item action={'allProjects'} icon={icon['close']}>Close project </Item>
                 </Menu>
                 
-                {props.projects.filter(p => p.favorite).length > 0 && 
+                {/* {props.projects.filter(p => p.favorite).length > 0 && 
                     <Menu title={"Starred"} mode={'collapsable'}>
                         {props.projects.filter(p => p.favorite).map(p => <Item icon={icon['folder']} action={e => selectProject()}>{p.name}</Item>)}
                     </Menu>
-                }
+                } */}
                 
                 {/* <Menu>
                     <Item action={'templates'} icon={icon['template2']}>Templates</Item>
