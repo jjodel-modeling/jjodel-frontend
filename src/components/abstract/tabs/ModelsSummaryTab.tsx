@@ -26,26 +26,16 @@ const Project = (props: Props) => {
     const {name, metamodels, models} = props;
     const project = props.data;
 
-    const [edit, setEdit] = useState<boolean|undefined>(false);
-
-    const editToggle = () => {
-        setEdit(!edit);
-    }
-
     return (
         <React.Fragment>
-            {/* {!edit ? 
-                <h2 onClick={editToggle} className={'p-3'}>{props.name}<img style={{float: 'right'}}height={50} src={jj} /></h2> :
-                <h2 onBlur={editToggle} className={'p-3'}><Input key={props.key} field={'name'} data={props.data}/></h2>
-            }
-            */}
-
             
+
+          
             <div className={"dashboard-container"} tabIndex={-1}>
                 <LeftBar active={'Project'} project={project} />
                 <div className={'user'}>
                     <div className={'name'}>
-                        <Title title={project.name} icon={<i className="bi bi-p-square"></i>} description={project.description}/>
+                        <Title active={'Project'} title={project.name} icon={<i className="bi bi-p-square"></i>} description={project.description}/>
                         <ProjectCatalog project={project} />
                     </div>
                 </div> 

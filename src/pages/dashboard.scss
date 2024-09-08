@@ -311,7 +311,7 @@ project-card .tip {
   container-type: size;
 }
 
-@container (width < 1300px) {
+@container (width < 1680px) {
   .details {
     display: none;
     transition: transform 0.3s;
@@ -322,19 +322,29 @@ project-card .tip {
     margin-right: 0;
   }
 }
-@container (width < 1200px) {
+@container (width < 1100px) {
 
   .artifact-type {
     display: none;
     width: 0;
   }
+
+  .project-list {
+    width: 100%!important;
+    margin-right: 0;
+  }
   
 }
-@container (width < 1000px) {
+@container (width < 900px) {
 
   .created {
     display: none;
     width: 0;
+  }
+
+  .project-list {
+    width: 100%!important;
+    margin-right: 0;
   }
   
 }
@@ -343,6 +353,10 @@ project-card .tip {
   .modified {
     display: none;
     width: 0;
+  }
+  .project-list {
+    width: 100%!important;
+    margin-right: 0;
   }
   
 }
@@ -366,7 +380,6 @@ project-card .tip {
       font-weight: 400;
       font-size: var(--h1-lg-size);
       color: var(--color);
-      
     }
     h3 {
       margin-top: 10px;
