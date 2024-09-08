@@ -36,15 +36,28 @@
     & .tab-btn.disabled { 
       cursor: normal!important;
       background-color: transparent!important;
+      margin-left: 0px!important;
+      padding-left: 0px!important;
+      padding-right: 0px!important;
     }
-    & .tab-btn.bi.disabled {
+    & .tab-btn.bi.disabled::before {
       color: var(--bg-3-1)!important;
+      margin-left: 0px!important;
+      padding-left: 0px!important;
+      padding-right: 5px!important;
     }
     & .tab-btn.bi.disabled {
       cursor: default!important;
     }
 
-    
+    & .tab-btn.open.disabled {
+      padding-right: 0px!important;
+      margin-left: 0px!important;
+    }
+    & .tab-btn.open.disabled::before {
+      padding-right: 0px!important;
+      margin-left: 0px!important;
+    }
 
     
 
@@ -683,6 +696,8 @@
       border-radius: var(--radius);
     }
 
+    
+
     // close
 
     & .tab-btn.close {
@@ -760,6 +775,7 @@
       margin: 3px 6px 0 8px;
       content: "";
     }
+    
     
 
      
