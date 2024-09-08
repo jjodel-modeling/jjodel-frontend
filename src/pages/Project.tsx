@@ -55,7 +55,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
     </div>;
 
     return(<Try>
-        <Dashboard active={'Project'} version={props.version} project={user.project}>            
+        <Dashboard active={'Project'} version={props.version} project={user.project}>
             <React.Fragment>
                 <Cards>
                     {user.project.metamodels.length === 0 ?
@@ -84,11 +84,10 @@ function ProjectComponent(props: AllProps): JSX.Element {
                             />
                         </React.Fragment>
                     }
-
                     {true && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
                 </Cards>
-
             </React.Fragment>
+
         </Dashboard>
     </Try>);
 

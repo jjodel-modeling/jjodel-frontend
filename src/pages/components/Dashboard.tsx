@@ -1,4 +1,4 @@
-import { LUser, DState, LProject } from '../../joiner';
+import {LUser, DState, LProject, Try, Dictionary, Pointer, DViewElement, LViewElement, LViewPoint} from '../../joiner';
 import {DUser, LPointerTargetable} from '../../joiner';
 import {Navbar, LeftBar} from './';
 
@@ -19,6 +19,8 @@ import { TbSquareRoundedLetterMFilled } from "react-icons/tb";
 import { TbSquareRoundedLetterV } from "react-icons/tb";
 import { TbSquareRoundedLetterVFilled } from "react-icons/tb";
 import DockManager from '../../components/abstract/DockManager';
+import Dock from "../../components/abstract/Dock";
+import {CSS_Units} from "../../view/viewElement/view";
 
 
 
@@ -60,7 +62,7 @@ type TitleProps = {
 }
 
 const Title = (props: TitleProps) => {
-    
+
     /* edit title + description missing */
 
     return (<>
@@ -118,11 +120,11 @@ function GenericDashboard(props: DashProps): any {
                     {active === "Notes" && <Title title={'Project Notes'} icon={<i className="bi bi-pencil-square"></i>} />}
                     {active === "Updates" && <Title title={'What\'s new'} icon={<i className="bi bi-clock-history"></i>} />}
                     {active === "Profile" && <Title title={'Profile'} icon={<i className="bi bi-clock-history"></i>} />}
-                </> 
-                
+                </>
+
                 <Catalog children={children}/>
                 </div>
-                
+
             </div>
         </div>
     </>);
@@ -146,28 +148,28 @@ const ProjectInfoCard = (props: ProjectProps) => {
                     {project.description && <p>{project.description}</p>}
                     <img src={colors} width={220} style={{paddingBottom: '10px'}}/>
 
-                    {project.metamodels.length === 0 ? 
+                    {project.metamodels.length === 0 ?
                         <p>This project does not contain any metamodel and consequently no models yet; it only contains the default viewpoints.</p>
                         :
                         <p>
                         {project.metamodels.length === 1 && <>In this project, <b>one metamodel</b> is defined</>}
                         {project.metamodels.length > 1 && <>In this project, <b>{project.metamodels.length} metamodels</b> are defined </>}
-                        {project.models.length === 0  ? 
+                        {project.models.length === 0  ?
                             <> and does not contain any model (it only includes the default viewpoints).</>
                             :
                             <>
                             {project.models.length === 1  && <>, from which <b>one model</b> is instantiated. </>}
                             {project.models.length > 1  && <>, from which <b>{project.models.length}</b> models are instantiated. </>}
-                            
+
                             <>These models are explored and analyzed through <b>{project.viewpoints.length} viewpoints</b> (including the default ones), each offering a distinct perspective on different system concerns. </>
                             </>
                         }
-                        
-                        
+
+
                         </p>
                     }
                 </>
-            
+
         </div>
     );
 }
@@ -186,24 +188,24 @@ function ProjectCatalog(props: ProjectProps) {
                 <div className={'col-2'}>Type</div>
                 <div className={'col-2'}>Created</div>
                 <div className={'col-2'}>Last modified</div>
-                <div className={'col-3'}>Operation</div> 
+                <div className={'col-3'}>Operation</div>
             </div>
 
-            {project.metamodels.map(mm => 
+            {project.metamodels.map(mm =>
                 <div className="row data">
                     <div className={'col-3'} ><TbSquareRoundedLetterMFilled style={{fontSize: '1.5em'}}/> {mm.name}</div>
                     <div className={'col-2'}>Metamodel</div>
-                    <div className={'col-2'}>13 days ago</div> 
-                    <div className={'col-2'}>July 13, 2024</div> 
+                    <div className={'col-2'}>13 days ago</div>
+                    <div className={'col-2'}>July 13, 2024</div>
                     <div className={'col-3'}>
                         <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                             <Btn icon={'open'} action={async() => await DockManager.open2(mm)} tip={'Open metamodel'}/>
-                            <Btn icon={'minispace'} />  
+                            <Btn icon={'minispace'} />
                             <Btn icon={'copy'} action={e => alert('Duplicate metamodel')} tip={'Duplicate metamodel'}/>
                             <Sep />
                             <Btn icon={'delete'} action={e => alert('Delete Metamodel')} tip={`Delete model "${mm.name}"`}/>
-                        </CommandBar>    
-                    </div> 
+                        </CommandBar>
+                    </div>
                         {/* <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                             <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={'Add to favorites'}/>
                             <Btn icon={'minispace'} />
@@ -212,28 +214,28 @@ function ProjectCatalog(props: ProjectProps) {
                             <Btn icon={'download'} action={e => exportProject()} tip={'Download project'}/>
                             <Sep />
                             <Btn icon={'delete'} action={async e => await deleteProject()} tip={'Delete project'}/>
-                        </CommandBar> 
+                        </CommandBar>
                     </div>*/}
                 </div>)
             }
-            {project.models.map(model => 
+            {project.models.map(model =>
                 <div className="row data">
                     <div className={'col-3'} key={model.id} onClick={async() => await DockManager.open2(model)} ><TbSquareRoundedLetterM style={{fontSize: '1.5em'}}/> {model.name}</div>
                     <div className={'col-2'}>Model</div>
-                    <div className={'col-2'}>13 days ago</div> 
-                    <div className={'col-2'}>July 13, 2024</div> 
+                    <div className={'col-2'}>13 days ago</div>
+                    <div className={'col-2'}>July 13, 2024</div>
                     <div className={'col-3'}>
                         <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                             <Btn icon={'open'} action={async() => await DockManager.open2(model)} tip={'Open model'}/>
-                            <Btn icon={'minispace'} />  
+                            <Btn icon={'minispace'} />
                             <Btn icon={'copy'} action={e => alert('Duplicate model')} tip={'Duplicate model'}/>
                             <Sep />
                             <Btn icon={'delete'} action={e => alert('Delete Model')} tip={`Delete model "${model.name}"`}/>
                         </CommandBar>
-                    </div> 
+                    </div>
                         {/* <CommandBar noBorder={true} style={{marginBottom: '0'}}>
-                            
-                            
+
+
                             <Btn icon={'minispace'} />
                             <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={'Add to favorites'}/>
                             <Btn icon={'minispace'} />
@@ -242,25 +244,25 @@ function ProjectCatalog(props: ProjectProps) {
                             <Btn icon={'download'} action={e => exportProject()} tip={'Download project'}/>
                             <Sep />
                             <Btn icon={'delete'} action={async e => await deleteProject()} tip={'Delete project'}/>
-                        </CommandBar> 
+                        </CommandBar>
                     </div>*/}
                 </div>)
             }
-            {project.viewpoints.map(vp => 
+            {project.viewpoints.map(vp =>
                 <div className="row data">
                     <div className={'col-3'} onClick={()=> {alert()}}>{vp.isOverlay ? <TbSquareRoundedLetterVFilled style={{fontSize: '1.5em'}}/> : <TbSquareRoundedLetterV style={{fontSize: '1.5em'}}/>} {vp.name}</div>
                     <div className={'col-2'}>Viewpoints</div>
-                    <div className={'col-2'}>13 days ago</div> 
-                    <div className={'col-2'}>July 13, 2024</div> 
+                    <div className={'col-2'}>13 days ago</div>
+                    <div className={'col-2'}>July 13, 2024</div>
                     <div className={'col-3'}>
                         <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                             <Btn icon={'open'} tip={'Open model'}/>
-                            <Btn icon={'minispace'} />  
+                            <Btn icon={'minispace'} />
                             <Btn icon={'copy'} tip={'Duplicate model'}/>
                             <Sep />
                             <Btn icon={'delete'} tip={'Delete viewpoint'}/>
                         </CommandBar>
-                    </div> 
+                    </div>
                         {/* <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                             <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={'Add to favorites'}/>
                             <Btn icon={'minispace'} />
@@ -269,7 +271,7 @@ function ProjectCatalog(props: ProjectProps) {
                             <Btn icon={'download'} action={e => exportProject()} tip={'Download project'}/>
                             <Sep />
                             <Btn icon={'delete'} action={async e => await deleteProject()} tip={'Delete project'}/>
-                        </CommandBar> 
+                        </CommandBar>
                     </div>*/}
                 </div>)
             }
@@ -278,26 +280,40 @@ function ProjectCatalog(props: ProjectProps) {
 
 
 function ProjectDashboard(props: DashProps): any {
-    
+
     const {children, active} = props;
     const user: LUser = LPointerTargetable.fromPointer(DUser.current);
     const query = useQuery();
     const id = query.get('id') || '';
-    const project = LProject.fromPointer(id);
-    
-   
+    const project: LProject = LProject.fromPointer(id);
+
+    let allViews = project?.viewpoints.flatMap((vp: LViewPoint) => vp && vp.allSubViews) || [];
+    allViews = allViews.filter(v => v);
+    const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
+    for (let v of allViews) viewsDeDuplicator[v.id] = v;
+
     return (<>
+        <Try>
+            <>
+                <style id={"views-css-injector"}>
+                    {Object.values(viewsDeDuplicator).map(v => v.compiled_css).join('\n\n')}
+                </style>
+                {CSS_Units.jsx}
+            </>
+        </Try>
+
         <Navbar />
-        <div className={"dashboard-container"} tabIndex={-1}>
+        <Try><Dock /></Try>
+        {/*<div className={"dashboard-container"} tabIndex={-1}>
             <LeftBar active={active} projects={user.projects} project={project} />
             <div className={'user'}>
                 <div className={'name'}>
-                    {/* @ts-ignore */}
                     <Title title={project.name} icon={<i className="bi bi-p-square"></i>} description={project.description}/>
                     <ProjectCatalog project={project} />
                 </div>
             </div>
         </div>
+        */}
     </>);
 }
 
