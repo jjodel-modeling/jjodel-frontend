@@ -77,17 +77,20 @@ function makeEntry(i: MenuEntry) {
     } else {
         return (
             <li className={i.subItems ? "hoverable" : ""} tabIndex={0} onClick={()=>i.function?.()}>
-                <label className='highlight'>
+                
+                    <label className={`highlight ${i.disabled && 'disabled'}`}> 
+
+                
                     {i.icon ?
                         <span>{i.icon} {i.name}</span> :
                         <span><i className="bi bi-app hidden"></i> {i.name}</span>
                     }
-                    {i.subItems ?
+                    {!i.disabled && i.subItems ?
                         <i className='bi bi-chevron-right icon-expand-submenu'></i> :
                         getKeyStrokes(i.keystroke)
                     }
                 </label>
-            {i.subItems &&
+            {!i.disabled && i.subItems &&
                 <div className='content right'>
                     <ul className='context-menu right'>
                         {i.subItems.map(si => makeEntry(si))}
@@ -117,7 +120,14 @@ const User = (props: UserProps) => {
     </div>);
 };
 
-type MenuEntry = {name: string, icon?: any, function?: ()=>any, keystroke?: string[], subItems?:MenuEntry[]};
+type MenuEntry = {
+    name: string, 
+    icon?: any, 
+    function?: ()=>any, 
+    keystroke?: string[], 
+    subItems?:MenuEntry[],
+    disabled?: boolean;
+};
 
 function NavbarComponent(props: AllProps) {
 
@@ -137,11 +147,16 @@ function NavbarComponent(props: AllProps) {
         projectItems = [
 
             {name: 'New metamodel', icon: icon['new'], function: ()=>createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
-            {name: 'New model', icon: icon['new'],
+            
+            {
+                name: 'New model', 
+                icon: icon['new'],
                 subItems: project.metamodels.map((m2, i)=>({
                     name: m2.name, function: () => { createM1(project, m2) }, keystroke: []
-                }))
+                })),
+                disabled: project.metamodels.length == 0
             },
+
             {name: 'divisor', function: () => {}, keystroke: []},
             {name: 'Close project', icon: icon['close'], function: () => {
                 navigate('/allProjects');

@@ -18,6 +18,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
     return(<Try>
         <Dashboard active={'All'} version={props.version}>
             <React.Fragment>
+
                 <Cards>
                     <Cards.Item
                         title={'New jjodel (Public)'}
@@ -40,12 +41,11 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
                         style={'blue'}
                         action={ProjectsApi.importModal}
                     />
-                    {true && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
+                    {false && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
                 </Cards>
-
                 <Catalog projects={projects} />
-
             </React.Fragment>
+            
         </Dashboard>
     </Try>);
 }

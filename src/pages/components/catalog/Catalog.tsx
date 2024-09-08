@@ -79,6 +79,7 @@ const Catalog = (props: ChildrenType) => {
     const CatalogInfoCard = (props: any) => {
         return (
             <div className={'details'}>
+
                 {props.projects ?
                     <>
                         <h5>Your projects</h5>
@@ -147,9 +148,16 @@ const Catalog = (props: ChildrenType) => {
             :
                 /* list mode */
 
-                <div className={'row project-list'}>
+                <div className={'row project-list'} style={{marginRight: '35%'}}>
                     <div className='row header'>
-                    <div className={'col-sm-1'} style={{width: '30px'}}></div><div className={'col-sm-1'}></div><div className={'col-sm-5'}>Name</div><div className={'col-3'}>Last modified</div><div className={'col-2'}>Created</div>
+                        {/* <div className={'col-sm-1'} style={{width: '30px'}}></div>
+                        <div className={'col-sm-1'}></div> */}
+
+                        <div className={'col-3'}>Name</div>
+                        <div className={'col-2'}>Type</div>
+                        <div className={'col-2'}>Created</div>
+                        <div className={'col-2'}>Last modified</div>
+                        <div className={'col-3'}>Operation</div>
                     </div>
                     {
                         props.projects.map(p => <>

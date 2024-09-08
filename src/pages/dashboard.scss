@@ -127,6 +127,7 @@ project-card .tip {
 .leftbar {
   background-color: white;
   max-width: 250px!important;
+  min-width: 220px!important;
   flex-basis: 155px;
   flex-grow: 0.15;
   flex-shrink: 0;
@@ -306,20 +307,42 @@ project-card .tip {
   display: flex;
   min-height: 0;
   flex-grow: 1;
+  width: 100%;
+  
 }
 
-.user {
+.dashboard-container .user {
   display: inline-flex;
-  .name {
-    float: left;
-    width: fit-content;
+  margin-top: 50px;
+  margin-left: 100px;
+  margin-right: 20px;
+  
+  width: 100%;
+  .name { 
+    width: 100%;
     padding-top: 5px;
+    padding-left: 0px!important;
+    margin-bottom: 100px;
     h2 {
       font-weight: 400;
       font-size: var(--h1-lg-size);
       color: var(--color);
+      
+    }
+    h3 {
+      margin-top: 10px;
+      font-size: var(--h2-size);
+      width: 45%;
+    }
+    
+  }
+
+  .details {
+    & b {
+      font-weight: 600;
     }
   }
+
 
   .initials {
     text-align: center;
@@ -342,11 +365,6 @@ project-card .tip {
   }
 }
 
-/*
-
-  // uso il padding come spacing minimo, e margin-auto come spacing aggiuntivo se avanza spazio su schermi grandi
-  margin: auto;
-  padding: 30px 0;*/
 .catalog-container {
   padding: 20px;
   position: relative;
@@ -372,13 +390,6 @@ project-card .tip {
     }
   }
 
-/*
-  *{
-    outline: 1px solid gray;
-    .bi::before{
-      outline: 1px solid gray;
-    }
-  }*/
 }
 
 

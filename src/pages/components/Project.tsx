@@ -8,6 +8,7 @@ import { Item, Divisor, Menu } from './menu/Menu';
 
 import card from '../../static/img/card.png';
 import { icon } from './icons/Icons';
+import { Btn, CommandBar, Sep } from '../../components/commandbar/CommandBar';
 
 
 type Props = {
@@ -131,7 +132,7 @@ function Project(props: Props): JSX.Element {
     function ProjectList(props: Props): JSX.Element {
         return (<>
             <div className="row data">
-                <div className={'col-sm-1'} style={{width: '30px'}}>
+                {/* <div className={'col-sm-1'} style={{width: '30px'}}>
                     <Menu position='right'>
                         <Item icon={<i className="bi bi-plus-square"></i>} action={e => selectProject()}>Open</Item>
                         <Item icon={<i className="bi bi-files"></i>} action={(e => props.data.duplicate())}>Duplicate</Item>
@@ -147,16 +148,28 @@ function Project(props: Props): JSX.Element {
                     {data.favorite ?
                         <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> :
                         <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
-                    &nbsp;
+                    &nbsp; 
                     {data.type === "public" && <i className="bi bi-unlock"></i>}
                     {data.type === "private" && <i className="bi bi-lock"></i>}
                     {data.type === "collaborative" && <i className="bi bi-diagram-3"></i>}
 
 
+                </div> */}
+                <div className={'col-3'} onClick={()=> {selectProject()}}>{data.name}</div>
+                <div className={'col-2'}>{data.type}</div>
+                <div className={'col-2'}>13 days ago</div> {/* todo per damiano e giordano - last modified*/}
+                <div className={'col-2'}>July 13, 2024</div> {/* todo per damiano e giordano - Created */}
+                <div className={'col-3'}>
+                    <CommandBar noBorder={true} style={{marginBottom: '0'}}>
+                        <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={'Add to favorites'}/>
+                        <Btn icon={'minispace'} />
+                        <Btn icon={'copy'} action={e => props.data.duplicate()} tip={'Duplicate project'}/>
+                        <Btn icon={'minispace'} />
+                        <Btn icon={'download'} action={e => exportProject()} tip={'Download project'}/>
+                        <Sep />
+                        <Btn icon={'delete'} action={async e => await deleteProject()} tip={'Delete project'}/>
+                    </CommandBar>
                 </div>
-                <div className={'col-5 name'}>{data.name}</div>
-                <div className={'col-3'}>13 days ago</div>
-                <div className={'col-2'}>July 13, 2024</div>
             </div>
         </>);
     }

@@ -15,6 +15,8 @@ interface StateProps {
 export type LeftBarProps = {
     active: DashProps['active']; // prende il tipo dal parent-component, così si evita di aggiornare entrambi o avere tipi discordanti.
     projects: LProject[];
+    project?: LProject;
+
 };
 
 
@@ -26,9 +28,14 @@ type ItemProps = {
 
 const Item = (props: ItemProps) => {
     const navigate = useNavigate();
-    return (
-        <div onClick={e => navigate(`/${props.action}`)} className={'item'}>{props.icon && props.icon} {props.children}</div>
-    );
+    const type = (typeof props.action);
+    return (<>
+        {(typeof props.action) === 'string' ?
+            <div onClick={e => navigate(`/${props.action}`)} className={'item'}>{props.icon && props.icon} {props.children}</div>
+        :
+            <div onClick={(props.action as MouseEventHandler)} className={'item'}>{props.icon && props.icon} {props.children}</div>
+        }
+    </>);
 }
 
 const Upload = () => {
@@ -69,57 +76,93 @@ const Divisor = () => {
 Menu.Item = Item;
 
 function LeftBar(props: LeftBarProps): JSX.Element {
+
+    // export type LeftBarProps = {
+    //     active: DashProps['active']; // prende il tipo dal parent-component, così si evita di aggiornare entrambi o avere tipi discordanti.
+    //     projects: LProject[];
+    //     project?: LProject;
+    
+    // };
+
     const {active} = props;
     const navigate = useNavigate();
+
+    const toggleFavorite = (project: LProject) => {
+        project.favorite = !project.favorite;
+    };
 
 
     const selectProject=()=> alert('todo: la funzione era inesistente nel pull');
 
-    return(<div className={'leftbar border-end border-light-subtle '}>
+    return(<>
+    
+        {active === 'Project' ?
+            <div className={'leftbar border-end border-light-subtle '}>
 
-        <i className="bi bi-search"></i>
-        <input placeholder={'Search for anything'}type={'text'} name='search-text' />
+                <i className="bi bi-search"></i>
+                <input placeholder={'Search for anything'}type={'text'} name='search-text' />
 
-        <Menu>
-            <Item action={'allProjects'} icon={icon['dashboard']}>All projects </Item>
-            <Item action={'recent'} icon={icon['recent']}>Recent</Item>
-        </Menu>
-        {props.projects.filter(p => p.favorite).length > 0 && 
-            <Menu title={"Starred"} mode={'collapsable'}>
-                {props.projects.filter(p => p.favorite).map(p => <Item icon={icon['folder']} action={e => selectProject()}>{p.name}</Item>)}
-            </Menu>
+                {/* @ts-ignore */}
+                <Menu title={props.project.name}>
+                    <Item action={() => {alert('edit')}} icon={icon['edit']}>Edit </Item>
+                    <Item action={'allProjects'} icon={icon['export']}>Export as </Item>
+                    <Item action={'allProjects'} icon={icon['duplicate']}>Duplicate </Item>
+                    <Item action={'allProjects'} icon={icon['favorite']}>Add to favorite </Item>
+                    <Item action={'allProjects'} icon={icon['share']}>Public link </Item>
+                    <Item action={'allProjects'} icon={icon['delete']}>Delete </Item>
+                    <Item action={'allProjects'} icon={icon['close']}>Close project </Item>
+                </Menu>
+                
+                {props.projects.filter(p => p.favorite).length > 0 && 
+                    <Menu title={"Starred"} mode={'collapsable'}>
+                        {props.projects.filter(p => p.favorite).map(p => <Item icon={icon['folder']} action={e => selectProject()}>{p.name}</Item>)}
+                    </Menu>
+                }
+                
+                {/* <Menu>
+                    <Item action={'templates'} icon={icon['template2']}>Templates</Item>
+                    <Item action={'notes'} icon={icon['edit']}>Notes</Item>
+                </Menu>*/}
+                
+                <Menu title={'Support'} mode={'collapsable'}>
+                    <Item action={'updates'} icon={icon['whats-new']}>What's new</Item>
+                    <Item action={'gettingstarted'} icon={icon['getting-started']}>Getting started</Item>
+                    <Item action={'guide'} icon={icon['manual']}>User guide</Item>
+                </Menu>
+
+
+            </div>
+            :
+            <div className={'leftbar border-end border-light-subtle '}>
+
+                <i className="bi bi-search"></i>
+                <input placeholder={'Search for anything'}type={'text'} name='search-text' />
+
+                <Menu>
+                    <Item action={'allProjects'} icon={icon['dashboard']}>All projects </Item>
+                    <Item action={'recent'} icon={icon['recent']}>Recent</Item>
+                </Menu>
+                {props.projects.filter(p => p.favorite).length > 0 && 
+                    <Menu title={"Starred"} mode={'collapsable'}>
+                        {props.projects.filter(p => p.favorite).map(p => <Item icon={icon['folder']} action={e => selectProject()}>{p.name}</Item>)}
+                    </Menu>
+                }
+                {/* <Menu>
+                    <Item action={'templates'} icon={icon['template2']}>Templates</Item>
+                    <Item action={'notes'} icon={icon['edit']}>Notes</Item>
+                </Menu>*/}
+                <Menu title={'Support'} mode={'collapsable'}>
+                    <Item action={'updates'} icon={icon['whats-new']}>What's new</Item>
+                    <Item action={'gettingstarted'} icon={icon['getting-started']}>Getting started</Item>
+                    <Item action={'guide'} icon={icon['manual']}>User guide</Item>
+                </Menu>
+
+                <Upload />
+
+            </div>
         }
-        <Menu>
-            <Item action={'templates'} icon={icon['template2']}>Templates</Item>
-            {/* <Item action={'notes'} icon={icon['edit']}>Notes</Item>*/}
-        </Menu>
-        <Menu title={'Support'} mode={'collapsable'}>
-            <Item action={'updates'} icon={icon['whats-new']}>What's new</Item>
-            <Item action={'gettingstarted'} icon={icon['getting-started']}>Getting started</Item>
-            <Item action={'guide'} icon={icon['manual']}>User guide</Item>
-        </Menu>
 
-        <Upload />
-
-
-        {/*
-
-        <b className={'d-block px-1 mt-2'}>Generals</b>
-        {info.map((data, i) => <div key={i} onClick={e => navigate(`/${data.link}`)} className={`${active === data.label && 'bg-gray'} p-2`} tabIndex={-1}>
-            <i style={{fontSize: '1.2em'}} className={`bi bi-${data.icon}`} />
-            <label className={'ms-2 my-auto'}>{data.label}</label>
-        </div>)}
-        <hr className={'my-2'} />
-        <b className={'d-block px-1'}>Projects</b>
-        {projects.map((data, i) => <div key={i} onClick={e => navigate(`/${data.link}`)} className={`${active === data.label && 'bg-gray'} p-2`} tabIndex={-1}>
-            <i style={{fontSize: '1.2em'}} className={`bi bi-${data.icon}`} />
-            <label className={'ms-2 my-auto'}>{data.label}</label>
-        </div>)}
-
-        */}
-    </div>
-
-    )
+    </>)
 }
 
 export {LeftBar};

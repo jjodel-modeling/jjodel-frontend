@@ -79,6 +79,7 @@ body{
     --accent: #2D4E62; // #087E8B; // #087E8B; //#f3b700; // accent color, I'm considering to define it as the primary color
     --accent-secondary: #f3b700; // planned to be used, but it has been not - used for the enumerators in models
     --neutral: #525251; // #5F0F40; // dark gray
+    --disabled: var(--bg-4);
 
 // backgrounds
 
@@ -118,9 +119,9 @@ body{
     --h1-weight: 600;
     --h1-lg-size: 1.4rem!important;
     --h1-lg-weight: 600;
-    --h2-size: 1.1em;
+    --h2-size: 1.2em;
     --h2-weight: 600;
-    --h3-size: 1em;
+    --h3-size: 1.1em;
     --h3-weight: 500;
     --text-lg-size: 1.1em;
     --text-lg-weight: 300;
