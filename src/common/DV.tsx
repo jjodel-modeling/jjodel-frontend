@@ -398,12 +398,12 @@ class DefaultView {
 `<View className={'root model'}>
     {!data && "Model data missing."}
    
-    {/* here you can insert viewpoint-wide descriptions */}
+    {/* here you can insert viewpoint-wide descriptions, eg <Control> .. </Control> */}
 
-    <label className={"detail-level"}>
-        <input onChange={(e)=>{node.state = {level:+e.target.value}}} min="0" max="3" type="range" step="1" value={level}/>
-        <div>Detail level:{level}</div>
-    </label>
+    <Control title={'Abstraction'} payoff={'Zooming'}>
+        <Slider name={'level'} title={'Detail level '} node={node} max={3} />
+    </Control>
+
     <div className={'edges'}>
         {[
             refEdges.map(se => <Edge anchorStart={0} anchorEnd={0} key={se.id}
