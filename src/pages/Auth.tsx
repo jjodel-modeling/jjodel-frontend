@@ -5,6 +5,8 @@ import Storage from '../data/storage';
 import {useNavigate} from "react-router-dom";
 import {AuthApi} from "../api/persistance";
 
+import logo from '../static/img/jjodel.jpg';
+
 function AuthPage(): JSX.Element {
     const [isRegister, setIsRegister] = useStateIfMounted(false);
     const [username, setUsername] = useStateIfMounted('');
@@ -55,10 +57,10 @@ function AuthPage(): JSX.Element {
         U.refresh();
     }
 
-    return(<section className={'w-100 h-100'}>
+    return(<section className={'w-100 h-100 login bg-3'}>
         <form className={'d-block bg-white rounded border mx-auto w-fit px-5 py-4 mt-5'} onSubmit={onSubmit}>
-            <label className={'fs-1 d-block text-center text-primary'}>
-                {isRegister ? 'REGISTER' : 'LOGIN'}
+            <label className={'fs-1 d-block text-center text-primary login-header'}>
+                {isRegister ? 'Create an Account' : 'Sign In'}
             </label>
             <hr />
             <input className={'w-100 input w-fit d-block mx-auto mt-3'} placeholder={'Email'}
@@ -69,19 +71,20 @@ function AuthPage(): JSX.Element {
             }
             <input className={'w-100 input w-fit d-block mx-auto  mt-2'} placeholder={'Password'}
                    value={password} onChange={e => setPassword(e.target.value)} type={'password'} required={true} />
-            <button className={'d-block btn btn-primary p-1 mx-auto mt-3'} type={'submit'}>Submit</button>
+            <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'}>Login</button>
             <label className={'mt-3 d-block text-center'}>
                 {isRegister ? 'Already have an account?' : 'Don\'t have an account?'}
-                <b tabIndex={-1} onClick={e => setIsRegister(!isRegister)} className={'ms-1 text-primary text-decoration-none cursor-pointer'}>
+                <b tabIndex={-1} onClick={e => setIsRegister(!isRegister)} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>
                     click here
                 </b>
                 <br/>Or start in
-                <b tabIndex={-1} className={'ms-1 text-primary text-decoration-none cursor-pointer'}
+                <b tabIndex={-1} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}
                    onClick={e => offline()}
                 >
-                    Offline Mode
+                    offline mode
                 </b>
             </label>
+            <div className='login-logo'><img src={logo}></img></div>
         </form>
     </section>);
 }
