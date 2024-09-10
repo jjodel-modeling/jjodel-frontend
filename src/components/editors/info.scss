@@ -7,6 +7,7 @@ section {
 }
 
 .properties-tab,
+.collaborative-tab,
 .tree-view,
 .viewpoint-tab,
 .template-tab,
@@ -35,6 +36,7 @@ section {
   margin: 0.5rem;
 }
 
+.collaborative-tab h1,
 .properties-tab h1,
 .viewpoint-tab h1,
 .template-tab h1.view,
@@ -62,10 +64,71 @@ section {
   }
 }
 
+.collaborative-tab h1::before {
+  position: relative;
+  top: 2px;
+  font-size: 1.15em;
+  margin-right: var(--tab-sep);
+  font-family: bootstrap-icons;
+  content: "\F2EE";
+}
+.collaborative-tab h5 {
+  font-size: 1.1em!important;
+  color: var(--accent);
+}
+
+.collaborative-tab input {
+  color: var(--color);
+  outline: 1px solid var(--accent);
+  border: none;
+  // outline-color: var(--accent)!important;
+  // outline-width: 2px!important;
+  height: var(--input-height)!important;
+  
+  padding: 1px 8px!important;
+  min-width: 170px;
+  transition: min-width 0.3s ease-in-out;
+}
+
+.collaborative-tab input::placeholder {
+  color: var(--bg-3);
+  font-style: italic;
+}
+
+.collaborative-tab input:focus {
+  padding: 2px 9px;
+  border-radius: var(--radius)!important;
+  height: var(--input-height);
+  outline: 2px solid var(--accent); 
+
+  min-width: 70%;
+  border-radius: var(--radius)!important;
+  border: none;
+}
+.collaborative-tab .alert {
+  background-color: var(--accent);
+  color: white;
+  border: 1px dotted var(--accent);
+  padding: 6px 10px;
+  width: fit-content;
+  margin: 14px;
+
+  & i {
+    color: white;
+    padding-right: 4px;
+  }
+}
+
+
+
+
+
 .properties-tab h1 {padding-top: 0px!important;}
 .console h1::before {
   content: "\F5C3";
 }
+
+
 
 
 

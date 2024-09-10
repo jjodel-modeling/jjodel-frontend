@@ -1,7 +1,8 @@
-.dock-style-editors .dock-tabpane section,
+
+
+.dock-style-editors .dock-tabpane section, .collaborative-tab
+
 .input-container {
-
-
   color: var(--color);
   // margin: 1rem .5rem;
   // padding: 1rem 1.65rem;
@@ -155,7 +156,7 @@
   
 .input-container:has(input:focus) > .me-2::before, .input-container:has(input:hover) > .me-2::before,
 .input-container:has(select:focus) > .me-2::before, .input-container:has(select:hover) > .me-2::before,
-.properties-tab label:has(input:hover) > span::before, .properties-tab label:has(select:hover) > span::before  {
+.properties-tab label:has(input:hover) > span::before, .properties-tab label:has(select:hover) > span::before {
   
   position: relative;
   right: 0px;

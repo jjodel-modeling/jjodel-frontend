@@ -187,12 +187,17 @@ const SliderComponent = (props: SliderProps) => {
     return (
         <>
             {CheckProps('slider', props) || <div className={'control-widget control-slider'}>
-                <div className={'track'} style={{transition: 'width 0.3s', width: `calc((100% - var(--knob) * 2 - 14px) / ${max} * ${props.node.state[name]})`}}></div>
+                {/* <div className={'track'} style={{transition: 'width 0.3s', width: `calc((100% - var(--knob) * 2 - 14px) / ${max} * ${props.node.state[name]})`}}></div>*/}
+
+                <div className={'track'} 
+                    style={{transition: 'width 0.3s', width: `calc((((100% - var(--knob) * 2 - 14px) / (${max})) * (${props.node.state[name]}))`}}>
+                </div>
+
                 <input 
                     type={'range'} 
-                    min={0} 
-                    max={3} 
-                    step={1} 
+                    min={min} 
+                    max={max} 
+                    step={step} 
                     onChange={(e)=>{updateValue(+e.target.value)}} />
                 
                 {/* @ts-ignore */}

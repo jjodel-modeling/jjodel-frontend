@@ -4,6 +4,7 @@ import type {DState, LProject} from '../../../joiner';
 import {DUser, GObject, LUser, SetRootFieldAction, U} from '../../../joiner';
 import {FakeStateProps} from '../../../joiner/types';
 import {ProjectsApi, UsersApi} from "../../../api/persistance";
+import { Btn, CommandBar } from '../../commandbar/CommandBar';
 
 function CollaboratorsEditorComponent(props: AllProps) {
     const {project, users} = props;
@@ -19,27 +20,52 @@ function CollaboratorsEditorComponent(props: AllProps) {
         project.collaborators = [...project.collaborators, user];
     }
 
-    return (<div className={'p-2'}>
-        <div className={'p-1 w-100 border d-flex'}>
-            <b>Author</b>
+    // return (
+    //     <div className={'p-2'}>
+            
+                
+    //             <div className={'p-1 w-100 border d-flex'}>
+    //                 <b>Editor</b>
+    //                 <label className={'ms-auto'}>{project.author.username}</label>
+    //             </div>
+    //             {(project.author.id === DUser.current) && <div className={'mt-2 p-1 w-100 border d-flex'}>
+            
+    //             <input className={'input w-25 jj-input'} id={'collaborator-email'} /> 
+    //             
+    //             <CommandBar style={{marginLeft: '5px', marginTop: '2px'}}><Btn icon={'add'} action={addCollaborator} tip={'Invite contributor'} /></CommandBar>
+    //         </div>}
+    //         <div className={'mt-2 p-1 w-100 border d-flex'}>
+    //             <b>Contributors</b>
+    //             <div className={'ms-auto'}>
+    //                 {project.collaborators.map((collaborator, index) => {
+    //                     return(<label className={'ms-1'} key={index}>{collaborator.username}</label>);
+    //                 })}
+    //             </div>
+    //         </div>
+    //         ** Important: To send the request Save the project! **
+
+    // </div>);
+
+    return(<section className={'page-root collaborative-tab'}>
+        <h1 className={'view'}>Collaborative Modeling</h1>
+        <div className={'p-1 w-100  d-flex'} style={{borderRadius: 'var(--radius)'}}>
+            <h5><i className="bi bi-person-video3"></i> Editor</h5>
             <label className={'ms-auto'}>{project.author.username}</label>
         </div>
-        {(project.author.id === DUser.current) && <div className={'mt-2 p-1 w-100 border d-flex'}>
-            <input className={'input w-25'} id={'collaborator-email'} />
-            <button className={'ms-1 btn btn-success px-2'} onClick={addCollaborator}>
-                + Collaborator
-            </button>
-        </div>}
-        <div className={'mt-2 p-1 w-100 border d-flex'}>
-            <b>Collaborators</b>
+        <div className={'mt-2 p-1 w-100 border '} style={{borderRadius: 'var(--radius'}}>
+            <h5><i className="bi bi-person-video3"></i> Contributors
+                <CommandBar className={'float-end'} style={{marginLeft: '5px'}}><Btn icon={'add'} action={addCollaborator} tip={'Invite contributor'} /></CommandBar>
+                <input placeholder={'contributor email'} className={'input w-25 float-end'} id={'collaborator-email'} /> 
+                
+            </h5>
             <div className={'ms-auto'}>
                 {project.collaborators.map((collaborator, index) => {
                     return(<label className={'ms-1'} key={index}>{collaborator.username}</label>);
                 })}
             </div>
         </div>
-        ** Important: To send the request Save the project! **
-    </div>);
+        <div className={'alert'}><i className="bi bi-exclamation-circle"></i> Important: Before sending the invitation, save the project!</div>
+    </section>);
 }
 interface OwnProps {}
 interface StateProps {project: LProject, users: LUser[]}
