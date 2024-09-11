@@ -65,6 +65,9 @@ function AuthPage(): JSX.Element {
             </label>
 
             {isRegister ? <>
+
+                {/* REGISTRATION */}
+
                 <Tooltip tooltip={<div style={{padding: '10px', maxWidth: '600px'}}><h6>First Name</h6>Your first name will be visible to others whenever you interact with them, such as during collaboration on shared projects.</div>} >
                     <label>
                         First Name
@@ -406,7 +409,11 @@ function AuthPage(): JSX.Element {
                 </button>
             </>
             : 
+
+            
             <>
+                {/* LOGIN */}
+                
                 <input className={'w-100 input w-fit d-block mx-auto mt-3'} 
                     value={email} 
                     onChange={e => setEmail(e.target.value)} type={'email'}  
