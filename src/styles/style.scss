@@ -400,6 +400,7 @@ i.bi {
     outline: 1px solid var(--secondary);
     padding: 2px 8px;
     border: none; 
+    height: var(--input-height);
   }
 
   & input:focus {
@@ -410,6 +411,23 @@ i.bi {
   & input::placeholder {
     color: var(--bg-2-5);
     font-style: italic;
+  }
+
+  & select {
+    border: none;
+    border-radius: var(--radius);
+    padding: 0;
+    padding-left: 6px;
+    height: var(--input-height);
+    outline: 1px solid var(--secondary);
+    margin-top: 0!important;
+    margin-bottom: 6px;
+  }
+
+  & select:focus {
+    border: none;
+    padding-left: 6px;
+    outline: 2px solid var(--secondary);
   }
   
   & .login-button {
