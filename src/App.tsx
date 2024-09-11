@@ -82,11 +82,11 @@ function App(props: AllProps): JSX.Element {
                     <Route path={'recent'} element={<RecentPage />} />
                     <Route path={'profile'} element={<ProfilePage />} />
                     <Route path={'*'} element={<AllProjectsPage />} />
+                    <BottomBar />
                 </> : <Route path={'*'} element={<AuthPage />} />}
             </Routes>
         </HashRouter>
         </div>
-        <BottomBar />
     </>);
 
     /*
