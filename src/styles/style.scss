@@ -518,3 +518,20 @@ i.bi {
     margin-right: auto;
   }
 }
+
+.login.register {
+  
+  & form {
+    padding-left: 100px!important;
+    padding-right: 100px!important;
+    width: 800px!important;
+
+    & label {
+      width: 100%;
+      & input {
+        margin-top: 0!important;
+        margin-bottom: 6px;
+      }
+    }
+  }
+}
