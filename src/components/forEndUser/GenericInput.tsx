@@ -1,22 +1,26 @@
 import React, {Dispatch, InputHTMLAttributes, PureComponent, ReactNode} from 'react';
-import { connect } from 'react-redux';
+import {connect} from 'react-redux';
 import './GenericInput.scss';
 import {
-    Pointer,
-    Info,
-    GObject,
-    DocString,
     Dictionary,
+    DocString,
+    DPointerTargetable,
+    DState,
+    DViewElement,
+    GObject,
+    Info,
+    Input,
     Log,
-    TextArea,
+    LPointerTargetable,
+    LViewElement,
+    RuntimeAccessibleClass,
     Select,
     ShortAttribETypes,
-    Input, LViewElement, DViewElement, U
+    TextArea,
+    U
 } from '../../joiner';
-import {DState, DPointerTargetable, LPointerTargetable, RuntimeAccessibleClass} from '../../joiner';
 import {SizeInput} from './SizeInput';
-import JsEditor from "../rightbar/jsEditor/JsEditor";
-import JavascriptEditor from "../rightbar/jsEditor/JavascriptEditor";
+import {JavascriptEditor} from "../editors/languages";
 
 // private
 interface ThisState {

@@ -26,28 +26,27 @@ type InToggleProps = {
 
 export const InternalToggle = (props: InToggleProps) => {
     const [value, setValue] = useState<boolean>(false);
-    
+
     const labels = props.labels ? props.labels : {true: props.name+' on', false: props.name+' off'};
-    
+
     const toggleValue = () => {
-        setValue(!value); 
-        SetRootFieldAction.new(props.name, !value);
+        const newValue = !value;
+        setValue(newValue);
+        SetRootFieldAction.new(props.name, newValue);
     };
 
     return (
         <div className={'toggle'} onClick={() => {toggleValue()}} style={props.style}>
-            
-            <input className={'toggle-input'} id={props.name} type="checkbox" value="true" checked={value}  />
+
+            <input className={'toggle-input'} id={props.name} type={'checkbox'} checked={value}  />
             <label className={'toggle-label'}></label>
-            
             <div className={"toggle-labels"}>
-                {value ? 
+                {value ?
                     <span className={"toggle-on"}>{labels['true']}</span>
                     :
                     <span className={"toggle-off"}>{labels['false']}</span>
                 }
             </div>
-            
         </div>
     );
 }
@@ -60,7 +59,7 @@ export const HRule = (props: HRuleProps) => {
 
     const theme = (!props.theme ? 'normal' : props.theme);
     return (<>
-        {props.style ? 
+        {props.style ?
             <hr className={`hrule ${theme}`} style={props.style}></hr>
         :
             <hr className={`hrule ${theme}`} ></hr>

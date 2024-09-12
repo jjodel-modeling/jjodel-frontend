@@ -1,13 +1,12 @@
 import type {DState, LProject} from '../../../joiner';
-import {U, Input, DUser, LUser, LModel} from '../../../joiner';
-import React, {Dispatch, ReactElement, useState, ReactNode} from 'react';
+import {DUser, LModel, LUser} from '../../../joiner';
+import React, {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
 import type {Dictionary, FakeStateProps} from '../../../joiner/types';
 import DockManager from "../DockManager";
-import jj from '../../../static/img/jj.png';
 
-import { LeftBar } from '../../../pages/components';
-import { ProjectCatalog, Title } from '../../../pages/components/Dashboard';
+import {LeftBar} from '../../../pages/components';
+import {ProjectCatalog, Title} from '../../../pages/components/Dashboard';
 
 
 type Props = {
@@ -28,20 +27,15 @@ const Project = (props: Props) => {
 
     return (
         <React.Fragment>
-            
-
-          
             <div className={"dashboard-container"} tabIndex={-1}>
                 <LeftBar active={'Project'} project={project} />
                 <div className={'user'}>
                     <div className={'name'}>
-                        <Title active={'Project'} title={project.name} icon={<i className="bi bi-p-square"></i>} description={project.description}/>
+                        <Title projectID={project.id} active={'Project'} title={project.name} icon={<i className="bi bi-p-square"></i>} description={project.description}/>
                         <ProjectCatalog project={project} />
                     </div>
-                </div> 
+                </div>
             </div>
-
-
         </React.Fragment>
     );
 }

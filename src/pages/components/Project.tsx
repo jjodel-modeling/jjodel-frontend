@@ -37,7 +37,7 @@ function Project(props: Props): JSX.Element {
     // const [favorite, setFavorite] = useState(false);
 
     const toggleFavorite = (project: LProject) => {
-        project.favorite = !project.favorite;
+        project.isFavorite = !project.isFavorite;
     };
     const selectProject = () => {
         navigate(`/project?id=${data.id}`);
@@ -63,7 +63,7 @@ function Project(props: Props): JSX.Element {
 
     const Empty = (props: ProjectProps) => {
         return (<>
-            {props.project.metamodels.length == 0 && props.project.models.length == 0 && <><i title="empty project" className="bi bi-exclamation-circle"></i> <span>Empty project</span></>}
+            {props.project.metamodelsNumber == 0 && props.project.modelsNumber == 0 && <><i title="empty project" className="bi bi-exclamation-circle"></i> <span>Empty project</span></>}
             {/* {props.project.metamodels.length == 0 && props.project.models.length != 0 && <i style={{float: 'left'}} title="no models" className="bi bi-circle-half"></i>}
             {props.project.metamodels.length != 0 && props.project.models.length != 0 && <i style={{float: 'left'}} title="artifacts present" className="bi bi-circle-fill"></i>}*/}
         </>);
@@ -74,17 +74,17 @@ function Project(props: Props): JSX.Element {
 
         const Meter = (props: ProjectProps) => {
 
-            var length = props.project.metamodels.length + props.project.models.length + props.project.viewpoints.length;
-            var unit = Math.round(90/length);
-            var mm_length = Math.round(90/length*props.project.metamodels.length);
-            var m_length = Math.round(90/length*props.project.models.length);
-            var vp_length = Math.round(90/length*props.project.viewpoints.length);
+            const length = props.project.metamodelsNumber + props.project.modelsNumber + props.project.viewpointsNumber;
+            const unit = Math.round(90/length);
+            const mm_length = Math.round(90/length*props.project.metamodelsNumber);
+            const m_length = Math.round(90/length*props.project.modelsNumber);
+            const vp_length = Math.round(90/length*props.project.viewpointsNumber);
             return (<>
 
                     <div className={'meter'} style={{width: '90%'}}>
-                        {props.project.viewpoints.map((m,i) => <div className={'artifact viewpoints'} style={{width: `${unit}%`}}>{i == props.project.viewpoints.length-1 && <span>VP</span>}</div>)}
-                        {props.project.models.map((m,i) => <div className={'artifact models'} style={{width: `${unit}%`}}>{i == props.project.models.length-1 && <span>M1</span>}</div>)}
-                        {props.project.metamodels.map((m,i) => <div className={'artifact metamodels'} style={{width: `${unit}%`}}>{i == props.project.metamodels.length-1 && <span>M2</span>}</div>)}
+                        {props.project.viewpoints.map((m,i) => <div className={'artifact viewpoints'} style={{width: `${unit}%`}}>{i == props.project.viewpointsNumber - 1 && <span>VP</span>}</div>)}
+                        {props.project.models.map((m,i) => <div className={'artifact models'} style={{width: `${unit}%`}}>{i == props.project.modelsNumber - 1 && <span>M1</span>}</div>)}
+                        {props.project.metamodels.map((m,i) => <div className={'artifact metamodels'} style={{width: `${unit}%`}}>{i == props.project.metamodelsNumber - 1 && <span>M2</span>}</div>)}
                     </div>
 
              </>);
@@ -108,7 +108,7 @@ function Project(props: Props): JSX.Element {
                 </div>
                 <div className='header'>
                     <h5 className={'d-block'} style={{cursor: 'pointer'}} onClick={e => selectProject()}>{data.name}</h5>
-                    <label className={'d-block'}><i className="bi bi-clock"></i> Edited 10 hours ago
+                    <label className={'d-block'}><i className="bi bi-clock"></i> Edited {Math.floor((data.lastModified - data.creation) / (3600 * 1000))} hours ago
                     <Empty project={props.data}/></label>
                 </div>
 
@@ -148,7 +148,7 @@ function Project(props: Props): JSX.Element {
                     {data.favorite ?
                         <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star-fill"></i> :
                         <i style={{float: 'left'}} onClick={(e) => toggleFavorite(data)} className="bi bi-star"></i>}
-                    &nbsp; 
+                    &nbsp;
                     {data.type === "public" && <i className="bi bi-unlock"></i>}
                     {data.type === "private" && <i className="bi bi-lock"></i>}
                     {data.type === "collaborative" && <i className="bi bi-diagram-3"></i>}
@@ -157,8 +157,8 @@ function Project(props: Props): JSX.Element {
                 </div> */}
                 <div className={'col-3'} onClick={()=> {selectProject()}}>{data.name}</div>
                 <div className={'col-2'}>{data.type}</div>
-                <div className={'col-2'}>13 days ago</div> {/* todo per damiano e giordano - last modified*/}
-                <div className={'col-2'}>July 13, 2024</div> {/* todo per damiano e giordano - Created */}
+                <div className={'col-2'}>{Math.floor((data.lastModified - data.creation) / (3600 * 1000 * 24))} days ago</div>
+                <div className={'col-2'}>{Math.floor((data.lastModified - data.creation) / (3600 * 1000))} hours ago</div>
                 <div className={'col-3'}>
                     <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                         <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={'Add to favorites'}/>

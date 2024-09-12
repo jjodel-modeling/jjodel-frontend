@@ -201,6 +201,7 @@ export class DState extends DPointerTargetable{
     };
 
     advanced: boolean = false;
+    alert: string = '';
 
 
     static fixcolors(){

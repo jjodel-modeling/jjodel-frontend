@@ -1,29 +1,35 @@
-import {LUser, DState, LProject, Try, Dictionary, Pointer, DViewElement, LViewElement, LViewPoint} from '../../joiner';
-import {DUser, LPointerTargetable} from '../../joiner';
-import {Navbar, LeftBar} from './';
+import {
+    Dictionary, DProject,
+    DState,
+    DUser,
+    DViewElement,
+    LPointerTargetable,
+    LProject,
+    LUser,
+    LViewElement,
+    LViewPoint,
+    Pointer, SetFieldAction,
+    Try
+} from '../../joiner';
+import {LeftBar, Navbar} from './';
 
 import '../dashboard.scss'
 import {ReactElement, useRef} from "react";
-import { Btn, CommandBar, Sep } from '../../components/commandbar/CommandBar';
-import { Item, Menu } from './menu/Menu';
+import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
 
 import colors from '../../static/img/colors.png';
 import useQuery from '../../hooks/useQuery';
 
-import { TbHexagonLetterM } from "react-icons/tb";
-import { TbHexagonLetterMFilled } from "react-icons/tb";
-import { TbHexagonLetterV } from "react-icons/tb";
-
-import { TbSquareRoundedLetterM } from "react-icons/tb";
-import { TbSquareRoundedLetterMFilled } from "react-icons/tb";
-import { TbSquareRoundedLetterV } from "react-icons/tb";
-import { TbSquareRoundedLetterVFilled } from "react-icons/tb";
+import {
+    TbSquareRoundedLetterM,
+    TbSquareRoundedLetterMFilled,
+    TbSquareRoundedLetterV,
+    TbSquareRoundedLetterVFilled
+} from "react-icons/tb";
 import DockManager from '../../components/abstract/DockManager';
 import Dock from "../../components/abstract/Dock";
 import {CSS_Units} from "../../view/viewElement/view";
-import { useStateIfMounted } from 'use-state-if-mounted';
-
-
+import {useStateIfMounted} from 'use-state-if-mounted';
 
 
 type UserProps = {
@@ -42,6 +48,7 @@ const User = (props: UserProps) => {
 
 
 type TitleProps = {
+    projectID?: Pointer<DProject>;
     active: string;
     title: string;
     icon: ReactElement;
@@ -54,7 +61,7 @@ const Title = (props: TitleProps) => {
 
     const [editTitle, setEditTitle] = useStateIfMounted(false);
     const [editDes, setEditDes] = useStateIfMounted(false);
-    
+
     const titleRef = useRef();
     const desRef = useRef();
 
@@ -65,13 +72,17 @@ const Title = (props: TitleProps) => {
                     {editTitle ?
                         <h2 onBlur={() => setEditTitle(!editTitle)} >
                             <div>
-                                {props.icon} 
-                                <input 
+                                {props.icon}
+                                <input
                                     autoFocus
                                     type={'text'}
-                                    value={title} 
+                                    value={title}
                                     style={{padding: '0px', margin: '0'}}
-                                />                            
+                                    onChange={e => {
+                                        if(!props.projectID) return;
+                                        SetFieldAction.new(props.projectID, 'name', e.target.value, '', false)
+                                    }}
+                                />
                             </div>
                         </h2> :
                         <>
@@ -82,24 +93,27 @@ const Title = (props: TitleProps) => {
                     }
                     {editDes ?
                         <>
-                            {props.description && 
+                            {props.description &&
                                 <h3 onDoubleClick={() => setEditDes(!editDes)} onBlur={() => setEditDes(!editDes)}>
-                                    <textarea 
-                                        autoFocus 
+                                    <textarea
+                                        autoFocus
                                         rows={4}
                                         cols={60}
-                                        value={props.description} 
+                                        value={props.description}
+                                        onChange={e => {
+                                            if(!props.projectID) return;
+                                            SetFieldAction.new(props.projectID, 'description', e.target.value, '', false)
+                                        }}
                                     />
                                 </h3>}
-                            
-                        </> 
+
+                        </>
                         :
                         <>
                             {props.description && <h3 onDoubleClick={() => setEditDes(!editDes)} onBlur={() => setEditDes(!editDes)}>{props.description}</h3>}
-                            
                         </>
                     }
-                    
+
                 </div>
                 :
                 <div className={'name'}>
@@ -217,7 +231,7 @@ function ProjectCatalog(props: ProjectProps) {
 
     return (<>
         <ProjectInfoCard project={project}/>
-        
+
             <div className={'row project-list'}  >
                 <div className='row header' >
 
@@ -323,7 +337,6 @@ function ProjectDashboard(props: DashProps): any {
                 {CSS_Units.jsx}
             </>
         </Try>
-
         <Navbar />
         <Try><Dock /></Try>
     </>);
@@ -343,5 +356,5 @@ function Dashboard(props: DashProps): any {
 
 export {Dashboard, ProjectCatalog, Title};
 
-    
+
 

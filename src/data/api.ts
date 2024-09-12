@@ -1,11 +1,10 @@
 import Axios from 'axios';
 import {Json} from '../joiner';
 import Storage from "./storage";
-import Settings from "../settings/Settings";
 
 export type Response = {code: number, data: Json|null}
 class Api {
-    static persistance = `${Settings.persistanceURL}/persistance`;
+    static persistance = `${process.env['REACT_APP_PERSISTANCE']}/persistance`;
 
     private static headers(): {'auth-token': string} {
         return {'auth-token': Storage.read('token') || ''};

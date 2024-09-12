@@ -5,8 +5,8 @@ import {
     LPointerTargetable,
     LProject,
     LUser,
-    Pointer,
-    SetRootFieldAction,
+    Pointer, SetFieldAction,
+    SetRootFieldAction, TRANSACTION,
     U
 } from '../../joiner';
 import Storage from "../../data/storage";
@@ -26,7 +26,7 @@ class ProjectsApi {
     static async delete(project: LProject): Promise<void> {
         if(U.isOffline()) Offline.delete(project.__raw as DProject);
         else await Online.delete(project.__raw as DProject);
-        project.delete(); // penso sia meglio spostare questi check isOffline() etc dentro la project.delete()
+        project.delete();
     }
     static async getOne(id: DProject['id']): Promise<null|DProject> {
         if(U.isOffline()) return Offline.getOne(id);
@@ -35,6 +35,10 @@ class ProjectsApi {
     static async save(project: LUser['project']): Promise<void> {
         if(!project) return;
         const rawProject = project.__raw as DProject;
+        rawProject.lastModified = Date.now();
+        rawProject.viewpointsNumber = project.viewpoints.length;
+        rawProject.metamodelsNumber = project.metamodels.length;
+        rawProject.modelsNumber = project.models.length;
         console.log('Saved', rawProject);
         SetRootFieldAction.new('_lastSelected', undefined);
         if(U.isOffline()) await Offline.save(rawProject);
@@ -94,16 +98,18 @@ class Offline {
         const filtered = projects.filter(p => p.id !== project.id);
         const state = await U.compressedState();
         Storage.write('projects', [...filtered, {...project, state}]);
-        alert('Saved');
+        U.alert('i', 'Project Saved!');
     }
 }
 
 class Online {
     static async create (project: DProject): Promise<void> {
         await Api.post(`${Api.persistance}/projects`, {
-           id: project.id,
-           name: project.name,
-           type: project.type
+            id: project.id,
+            creation: project.creation,
+            description: project.description,
+            name: project.name,
+            type: project.type
         });
     }
     static async getAll(): Promise<void> {
@@ -115,8 +121,18 @@ class Online {
             return;
         }
         const data = U.wrapper<DProject[]>(response.data);
-        for(const project of data)
+        for(const project of data) {
             DProject.new(project.type, project.name, project.state, [], [], project.id);
+            TRANSACTION(() => {
+                SetFieldAction.new(project.id, 'creation', project.creation);
+                SetFieldAction.new(project.id, 'lastModified', project.lastModified);
+                SetFieldAction.new(project.id, 'description', project.description);
+                SetFieldAction.new(project.id, 'viewpointsNumber', project.viewpointsNumber);
+                SetFieldAction.new(project.id, 'metamodelsNumber', project.metamodelsNumber);
+                SetFieldAction.new(project.id, 'modelsNumber', project.modelsNumber);
+                SetFieldAction.new(project.id, 'isFavorite', project.isFavorite);
+            })
+        }
     }
     static async delete(project: DProject): Promise<void> {
         await Api.delete(`${Api.persistance}/projects/${project.id}`);

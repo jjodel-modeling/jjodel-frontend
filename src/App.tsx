@@ -31,6 +31,7 @@ import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
 import {MessageVisualizer} from "./components/forEndUser/SplashMessage";
 import {JQDock, MyDock} from "./components/dock/MyDock";
 import {BottomBar} from "./pages/components";
+import AlertVisualizer from "./components/alert/Alert";
 
 let userHasInteracted = false;
 function endPendingActions() {
@@ -62,7 +63,8 @@ function App(props: AllProps): JSX.Element {
             {isLoading && <Loader />}
             <ExternalLibraries />
             <TooltipVisualizer />
-            <MessageVisualizer />
+            {/*<MessageVisualizer />*/}
+            <AlertVisualizer />
             <Try><>
             </></Try>
             <HashRouter>
@@ -82,7 +84,7 @@ function App(props: AllProps): JSX.Element {
                     <Route path={'recent'} element={<RecentPage />} />
                     <Route path={'profile'} element={<ProfilePage />} />
                     <Route path={'*'} element={<AllProjectsPage />} />
-                    
+
                 </> : <Route path={'*'} element={<AuthPage />} />}
             </Routes>
         </HashRouter>

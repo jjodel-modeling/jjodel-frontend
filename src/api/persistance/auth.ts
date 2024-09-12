@@ -7,9 +7,9 @@ class AuthApi {
         Storage.reset(); Storage.write('offline', 'false');
         return await Api.post(`${Api.persistance}/auth/login`, {email, password});
     }
-    static async register(username: string, email: string, password: string): Promise<Response> {
+    static async register(name: string, surname: string, country: string, affiliation: string, newsLetter: boolean, nickname: string, email: string, password: string): Promise<Response> {
         Storage.reset(); Storage.write('offline', 'false');
-        return await Api.post(`${Api.persistance}/auth/register`, {username, email, password});
+        return await Api.post(`${Api.persistance}/auth/register`, {name, surname, country, affiliation, newsLetter, nickname, email, password});
     }
     static async logout(): Promise<void> {
         if(!U.isOffline()) await Api.delete(`${Api.persistance}/auth/logout`);
