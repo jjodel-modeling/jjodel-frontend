@@ -58,7 +58,7 @@ function AuthPage(): JSX.Element {
         U.refresh();
     }
 
-    return(<section className={`w-100 h-100 login bg-3 ${isRegister && 'register'}`}>
+    return(<section className={`w-100 h-100 login bg-1 ${isRegister && 'register'}`}>
         <form className={'d-block bg-white rounded border mx-auto w-fit px-5 py-4 mt-5'} onSubmit={onSubmit}>
             <label className={'fs-1 d-block text-center text-primary login-header'}>
                 {isRegister ? 'Create an Account' : 'Sign In'}
@@ -413,7 +413,7 @@ function AuthPage(): JSX.Element {
             
             <>
                 {/* LOGIN */}
-                
+
                 <input className={'w-100 input w-fit d-block mx-auto mt-3'} 
                     value={email} 
                     onChange={e => setEmail(e.target.value)} type={'email'}  

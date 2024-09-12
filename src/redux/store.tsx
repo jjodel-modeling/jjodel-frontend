@@ -254,7 +254,7 @@ export class DState extends DPointerTargetable{
 
 function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewElement[] {
 
-    let errorOverlayView: DViewElement = DViewElement.new2('Semantic error view', DV.semanticErrorOverlay(), validationVP, (v) => {
+    let errorOverlayView: DViewElement = DViewElement.new2('Generic error view', DV.semanticErrorOverlay(), validationVP, (v) => {
         v.jsCondition = 'let nstate = node?.state || {};\nObject.keys(nstate).filter(k => k.indexOf("error_")===0).map(k=>nstate[k]).join(\'\\n\').length>0';
         v.usageDeclarations = "(ret)=>{\n" +
         "// ** preparations and default behaviour here ** //\n" +
@@ -266,25 +266,38 @@ function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewE
         "\n}"
         v.isExclusiveView = false;
         v.css =
-`&.mainView { text-decoration-line: spelling-error; }
+`/* -- v2.0 - */
+&.mainView { text-decoration-line: spelling-error; }
 &.decorativeView {
     text-decoration-line: spelling-error;
     
     .overlap{
-      outline: 4px solid var(--background-3);
+      outline: 1px dotted var(--failure);
       display: flex;
     }
+
     .error-message{
-        color: var(--color-3);
-        background: var(--background-3);
-        border-radius: 0 16px 16px 0;
+        color: var(--accent);
+        background: var(--bg-2-5);
+        border-radius: var(--radius);
         margin: auto;
-        padding: 8px;
+        padding: 8px 14px 16px 10px;
         position:absolute;
         top:50%; right:0;
-        transform: translate(calc(100% + 3px), calc(-50%));
+        transform: translate(calc(100% + 20px), calc(-50%));
+
     }
-}`
+    .error-message::before {
+      position: relative;
+      top: 4px;
+      font-family: bootstrap-icons;
+      font-size: 1.2rem;
+      content: '\\F333';
+      margin-right: 10px;
+      padding-top: 10px!important;
+    }
+}
+`
     }, false, 'Pointer_ViewOverlay' );
 
     let errorCheckName: DViewElement = DViewElement.new2('Naming error view', DV.invisibleJsx(), validationVP, (v) => {

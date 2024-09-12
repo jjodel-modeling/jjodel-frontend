@@ -418,6 +418,7 @@ class DefaultView {
 </View>`
 );}
 
+
     public static void(): string { return (
 `<div className={'root void model-less round bg-white p-1'}>
     <div>voidvertex element test</div>
@@ -463,52 +464,104 @@ class DefaultView {
 
     /* CLASS */
 
-    public static class(): string { return (
-`<View className={'root class'} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
-    <div className={'header'}>
-        <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}:</b>
-        <Input data={data} field={'name'} hidden={true} autosize={true} />
-    </div>
-    <hr/>
+//     public static class(): string { return (
+// `<View className={'root class'} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
+//     <div className={'header'}>
+//         <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}:</b>
+//         <Input data={data} field={'name'} hidden={true} autosize={true} />
+//     </div>
+//     <hr/>
+//     <div className={'class-children'}>
+//         {level >= 2 && [
+//             attributes.map(c => <DefaultNode key={c.id} data={c} />),
+//             references.map(c => <DefaultNode key={c.id} data={c} />),
+//             operations.map(c => <DefaultNode key={c.id} data={c} />)
+//           ]
+//          || [/*
+//          <div className={""}><b>isInterface:</b><span className={"ms-1"}>{''+data.interface}</span></div>,
+//          <div className={""}><b>isAbstract:</b><span className={"ms-1"}>{''+data.abstract}</span></div>,
+//          <div className={""}><b>Instances:</b><span className={"ms-1"}>{data.instances.length}</span></div>,*/
+//          <div className={"summary"}>{[
+//              attributes.length ? attributes.length + " attributes" : '',
+//              references.length ? references.length + " references" : '',
+//              operations.length ? operations.length + " operations" : '',
+//              !(attributes.length + references.length + operations.length) ? '- empty -' : ''
+//             ].filter(v=>!!v).join(',')}</div>
+//          ]
+//         }
+//     </div>
+//     {decorators}
+// </View>`
+// );}
+
+
+// <View className={"root class " + (level === 1 && abstract ? "abstract")} + onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
+
+public static class(): string { return (`<View className={"root class"} onClick={()=>{/*node.events.e1(Math.random().toFixed(3))*/}}>
+<div className={'header'}>
+    {level > 1 && <b className={'class-name'}>{interface ? 'Interface' : abstract ? 'Abstract Class' : 'Class'}:</b>}
+    
+    {level === 1 && <i className="bi bi-c-square-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
+</div>
+{level > 2 && <hr/>}
+
+{level > 2 && 
     <div className={'class-children'}>
         {level >= 2 && [
             attributes.map(c => <DefaultNode key={c.id} data={c} />),
             references.map(c => <DefaultNode key={c.id} data={c} />),
             operations.map(c => <DefaultNode key={c.id} data={c} />)
-          ]
-         || [/*
-         <div className={""}><b>isInterface:</b><span className={"ms-1"}>{''+data.interface}</span></div>,
-         <div className={""}><b>isAbstract:</b><span className={"ms-1"}>{''+data.abstract}</span></div>,
-         <div className={""}><b>Instances:</b><span className={"ms-1"}>{data.instances.length}</span></div>,*/
-         <div className={"summary"}>{[
-             attributes.length ? attributes.length + " attributes" : '',
-             references.length ? references.length + " references" : '',
-             operations.length ? operations.length + " operations" : '',
-             !(attributes.length + references.length + operations.length) ? '- empty -' : ''
+        ]
+        || [
+        <div className={"summary"}>{[
+            attributes.length ? attributes.length + " attributes" : '',
+            references.length ? references.length + " references" : '',
+            operations.length ? operations.length + " operations" : '',
+            !(attributes.length + references.length + operations.length) ? '- empty -' : ''
             ].filter(v=>!!v).join(',')}</div>
-         ]
+        ]
         }
     </div>
-    {decorators}
-</View>`
-);}
+}
+
+{decorators}
+</View>`);}
 
     /* ENUM */
 
-    public static enum(): string { return (
+//     public static enum(): string { return (
+// `<View className={'root enumerator'}>
+//     <div className={'header'}>
+//         <b className={'enumerator-name'}>Enum:</b>
+//         <Input data={data} field={'name'} hidden={true} autosize={true} />
+//     </div>
+//     <hr />
+//     <div className={'enumerator-children'}>
+//         {level >= 2 && literals.map(c => <DefaultNode key={c.id} data={c}/>)
+//           || <div className={"summary"}>{literals.length} literals</div>}
+//     </div>
+//     {decorators}
+// </View>`
+// );}
+
+public static enum(): string { return (
 `<View className={'root enumerator'}>
     <div className={'header'}>
-        <b className={'enumerator-name'}>Enum:</b>
-        <Input data={data} field={'name'} hidden={true} autosize={true} />
+        {level > 1 && <b className={'enumerator-name'}>Enum:</b>}
+        {level == 1 && <i className="bi bi-explicit-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
     </div>
-    <hr />
+    {level > 1 && <hr />}
     <div className={'enumerator-children'}>
-        {level >= 2 && literals.map(c => <DefaultNode key={c.id} data={c}/>)
-          || <div className={"summary"}>{literals.length} literals</div>}
+        {level >= 2 && literals.map(c => <DefaultNode key={c.id} data={c}/>)}
     </div>
     {decorators}
 </View>`
 );}
+
+
+
+
+
 
     public static feature(): string { return (
 `<View className={'root feature w-100'}>
@@ -581,7 +634,19 @@ public static parameter(): string { return (
 </div>`);
 }
 
-    public static object(): string { return (
+//     public static object(): string { return (
+// `<View className={'root object'}>
+//     <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
+//     <Input data={data} field={'name'} hidden={true} autosize={true} />
+//     <hr/>
+//     <div className={'object-children'}>
+//         {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
+//     </div>
+//     {decorators}
+// </View>`
+// );}
+
+public static object(): string { return (
 `<View className={'root object'}>
     <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
     <Input data={data} field={'name'} hidden={true} autosize={true} />

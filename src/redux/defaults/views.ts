@@ -46,7 +46,7 @@ class DefaultViews {
 
         view.css = `
 &, .Graph{
-  /*position: absolute;ddd*/
+  /*position: absolute; ddd*/
   background-color: var(--background-1);
   &:hover{ overflow: hidden; }
   height: 100%;
@@ -104,6 +104,28 @@ class DefaultViews {
     overflow: visible;
 }
 
+/* level-specific rules */
+
+.model-0 {
+  height: 100%!important;
+  width: 100%!important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.metamodel {
+  position: absolute;
+  width: max-content;
+  height: max-content;
+  padding: 10px;
+  border: 1px solid var(--secondary)!important;
+  border-radius: var(--radius);
+}
+
+.model-1 {}
+.model-2 {}
+.model-3 {}
 
 `;
 
@@ -173,24 +195,41 @@ class DefaultViews {
             view.oclCondition = 'context DClass inv: true';
             view.palette = {'color-': U.hexToPalette('#f00', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
             view.css = `
+
+    /* class */
+
 .class {
-    border-radius: 0.2em;
-    border-left: 0.25em solid var(--color-1);
-    background: var(--background-1);
-    color:var(--color-2);
+    border-radius: var(--model-radius);
+    background: var(--model-background);
+    color:var(--model-color);
+
     &>.header{
         padding: 3px 6px;
         white-space: pre;
     }
-    .class-name{ font-weight: bold; color: var(--color-1); }
+    .class-name{ 
+        font-weight: bold; 
+        color: var(--model-accent); 
+    }
+    .bi {
+        color: var(--model-accent); 
+    }
     .class-children {
-        background-color: var(--background-2);
+        background-color: var(--model-background);
         height: fit-content;
         width: -webkit-fill-available;
         &>*:last-child { padding-bottom: 0.125em; }
     }
     .abstract { font-style: italic; }
     .summary { padding: 0.25rem; text-align: center; }
+}
+.abstract {
+border-style: dotted!important;
+border-color: silver!important;
+    }
+
+.class:hover {
+    box-shadow: var(--model-shadow);
 }
 `;
             view.defaultVSize = defaultVertexSize;
@@ -216,6 +255,8 @@ class DefaultViews {
         return view;
     }
 
+    /* ENUM */
+
     static enum(vp: DViewElement): DViewElement {
         const view = DViewElement.new2('Enum', DV.enumeratorView(), vp, (view)=>{
             view.appliableToClasses = [DEnumerator.cname];
@@ -223,24 +264,51 @@ class DefaultViews {
             view.appliableTo = 'Vertex';
             view.oclCondition = 'context DEnumerator inv: true';
             view.palette = {'color-':  U.hexToPalette('#ffa500', '#000', '#fff'), 'background-':  U.hexToPalette('#fff', '#eee', '#f00')};
-            view.css =  `
+//             view.css =  `
+// .enumerator {
+//     border-radius: 0.2em;
+//     border-left: 0.25em solid var(--color-1);
+//     background: var(--background-1);
+//     color:var(--color-2);
+//     &>.header{
+//         padding: 3px 6px;
+//         white-space: pre;
+//     }
+//     .enumerator-name { font-weight: bold; color: var(--color-1); }
+//     .enumerator-children {
+//         background-color: var(--background-2);
+//         height: fit-content;
+//         width: -webkit-fill-available;
+//         &>*:last-child { padding-bottom: 0.125em; }
+//     }
+//     .summary { padding: 0.25rem; text-align: center; }
+// }
+// `
+
+            view.css = `
 .enumerator {
-    border-radius: 0.2em;
-    border-left: 0.25em solid var(--color-1);
-    background: var(--background-1);
-    color:var(--color-2);
+    border-radius: var(--radius);
+    background: white;
+    color:var(--model-color);
     &>.header{
         padding: 3px 6px;
         white-space: pre;
     }
-    .enumerator-name { font-weight: bold; color: var(--color-1); }
+    .enumerator-name { font-weight: bold; color: var(--accent-secondary); }
+    .bi {
+        color: var(--accent-secondary);
+    }
     .enumerator-children {
-        background-color: var(--background-2);
+        background-color: white; 
         height: fit-content;
         width: -webkit-fill-available;
         &>*:last-child { padding-bottom: 0.125em; }
     }
     .summary { padding: 0.25rem; text-align: center; }
+}
+
+.enumerator:hover {
+    box-shadow: 0 0 5px silver;
 }
 `
             view.defaultVSize = defaultVertexSize;
@@ -260,6 +328,9 @@ class DefaultViews {
         }, false, 'Pointer_ViewEnum');
         return view;
     }
+
+    /* ATTRIBUTE */
+
     static attribute(vp: DViewElement): DViewElement {
         const view = DViewElement.new2('Attribute', DV.attributeView(), vp, (view)=>{
             view.appliableToClasses = [DAttribute.cname];
@@ -278,6 +349,8 @@ class DefaultViews {
         return view;
     }
 
+    /* REFERENCE */
+
     static reference(vp: DViewElement): DViewElement {
         const view = DViewElement.new2('Reference', DV.referenceView(), vp, (view)=>{
             view.appliableToClasses = [DReference.cname];
@@ -295,6 +368,8 @@ class DefaultViews {
         }, false, 'Pointer_ViewReference');
         return view;
     }
+
+    /* OPERATION */
 
     static operation(vp: DViewElement): DViewElement {
         const view = DViewElement.new2('Operation', DV.operationView(), vp, (view)=>{
@@ -332,6 +407,8 @@ class DefaultViews {
         return view;
     }
 
+    /* PARAMETER */
+
     static parameter(vp: DViewElement): DViewElement {
         const view = DViewElement.new2('Parameter', DV.parameterView(), vp, (view)=>{
             view.appliableToClasses = [DParameter.cname];
@@ -350,6 +427,8 @@ class DefaultViews {
         return view;
     }
 
+    /* LITERAL */
+
     static literal(vp: DViewElement): DViewElement {
         const view: DViewElement = DViewElement.new2('Literal', DV.literalView(), vp, (view)=>{
             view.appliableToClasses = [DEnumLiteral.cname];
@@ -367,9 +446,17 @@ class DefaultViews {
             view.adaptWidth = true; view.adaptHeight = true;
             view.oclCondition = 'context DObject inv: true';
             view.palette = {'color-':  U.hexToPalette('#f00', '#000', '#fff'), 'background-': U.hexToPalette('#fff', '#eee', '#f00')};
-            view.css = '.object {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);}\n';
-            view.css += '.object-name {font-weight: bold; color: var(--color-1);}\n';
-            view.css += '.object-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
+            
+            // view.css = '.object {border-radius: 0.2em; border-left: 0.25em solid var(--color-1); background: var(--background-1); color: var(--color-2);}\n';
+            // view.css += '.object-name {font-weight: bold; color: var(--color-1);}\n';
+            // view.css += '.object-children {background-color: var(--background-2); height: fit-content; width: -webkit-fill-available;}';
+            
+            view.css = '.object {border-radius: var(--radius); background: white; color: var(--accent);}\n';
+            view.css +='.object-name {padding: 10px; font-weight: 600; color: var(--accent);}\n';
+            view.css += '.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';
+
+
+
             view.defaultVSize = defaultVertexSize;
             view.appliableTo = 'Vertex';
             view.usageDeclarations = '(ret) => {\n' +
