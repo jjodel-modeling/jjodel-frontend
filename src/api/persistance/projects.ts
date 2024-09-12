@@ -44,6 +44,10 @@ class ProjectsApi {
         if(U.isOffline()) await Offline.save(rawProject);
         else await Online.save(rawProject);
     }
+    static async favorite(project: DProject): Promise<void> {
+        if(U.isOffline()) return Offline.favorite(project);
+        else return await Online.favorite(project);
+    }
 
     static importModal() {
         const reader = new FileReader();
@@ -100,6 +104,12 @@ class Offline {
         Storage.write('projects', [...filtered, {...project, state}]);
         U.alert('i', 'Project Saved!');
     }
+    static async favorite(project: DProject): Promise<void> {
+        const projects = Storage.read<DProject[]>('projects') || [];
+        const filtered = projects.filter(p => p.id !== project.id);
+        Storage.write('projects', [...filtered, {...project, isFavorite: !project.isFavorite}]);
+        SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
+    }
 }
 
 class Online {
@@ -124,13 +134,13 @@ class Online {
         for(const project of data) {
             DProject.new(project.type, project.name, project.state, [], [], project.id);
             TRANSACTION(() => {
-                SetFieldAction.new(project.id, 'creation', project.creation);
-                SetFieldAction.new(project.id, 'lastModified', project.lastModified);
-                SetFieldAction.new(project.id, 'description', project.description);
-                SetFieldAction.new(project.id, 'viewpointsNumber', project.viewpointsNumber);
-                SetFieldAction.new(project.id, 'metamodelsNumber', project.metamodelsNumber);
-                SetFieldAction.new(project.id, 'modelsNumber', project.modelsNumber);
-                SetFieldAction.new(project.id, 'isFavorite', project.isFavorite);
+                SetFieldAction.new(project.id, 'creation', project.creation, '', false);
+                SetFieldAction.new(project.id, 'lastModified', project.lastModified, '', false);
+                SetFieldAction.new(project.id, 'description', project.description, '', false);
+                SetFieldAction.new(project.id, 'viewpointsNumber', project.viewpointsNumber, '', false);
+                SetFieldAction.new(project.id, 'metamodelsNumber', project.metamodelsNumber, '', false);
+                SetFieldAction.new(project.id, 'modelsNumber', project.modelsNumber, '', false);
+                SetFieldAction.new(project.id, 'isFavorite', project.isFavorite, '', false);
             })
         }
     }
@@ -145,8 +155,15 @@ class Online {
     static async save(project: DProject): Promise<void> {
         const state = await U.compressedState();
         const response = await Api.patch(`${Api.persistance}/projects/${project.id}`, {...project, state});
-        if(response.code !== 200) alert('Cannot Save');
-        else alert('Saved')
+        if(response.code !== 200) U.alert('e', 'Cannot Save');
+        else U.alert('i', 'Project Saved!')
+    }
+    static async favorite(project: DProject): Promise<void> {
+        const response = await Api.patch(`${Api.persistance}/projects/${project.id}`, {
+            isFavorite: !project.isFavorite
+        });
+        if(response.code !== 200) U.alert('e', 'Cannot set this property!');
+        SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
     }
 }
 

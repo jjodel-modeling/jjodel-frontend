@@ -1,14 +1,13 @@
-import {DUser, LProject, U, bool} from '../../joiner';
-import Banner1 from '../../static/banner/1.png';
-import React, { useState, useRef, useEffect, Ref } from "react";
+import {DProject, LProject, U} from '../../joiner';
+import React from "react";
 
-import { ProjectsApi } from '../../api/persistance';
-import { useNavigate } from 'react-router-dom';
-import { Item, Divisor, Menu } from './menu/Menu';
+import {ProjectsApi} from '../../api/persistance';
+import {useNavigate} from 'react-router-dom';
+import {Divisor, Item, Menu} from './menu/Menu';
 
 import card from '../../static/img/card.png';
-import { icon } from './icons/Icons';
-import { Btn, CommandBar, Sep } from '../../components/commandbar/CommandBar';
+import {icon} from './icons/Icons';
+import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
 
 
 type Props = {
@@ -36,8 +35,8 @@ function Project(props: Props): JSX.Element {
 
     // const [favorite, setFavorite] = useState(false);
 
-    const toggleFavorite = (project: LProject) => {
-        project.isFavorite = !project.isFavorite;
+    const toggleFavorite = async(project: LProject) => {
+        await ProjectsApi.favorite(project.__raw as DProject);
     };
     const selectProject = () => {
         navigate(`/project?id=${data.id}`);
@@ -82,9 +81,9 @@ function Project(props: Props): JSX.Element {
             return (<>
 
                     <div className={'meter'} style={{width: '90%'}}>
-                        {props.project.viewpoints.map((m,i) => <div className={'artifact viewpoints'} style={{width: `${unit}%`}}>{i == props.project.viewpointsNumber - 1 && <span>VP</span>}</div>)}
-                        {props.project.models.map((m,i) => <div className={'artifact models'} style={{width: `${unit}%`}}>{i == props.project.modelsNumber - 1 && <span>M1</span>}</div>)}
-                        {props.project.metamodels.map((m,i) => <div className={'artifact metamodels'} style={{width: `${unit}%`}}>{i == props.project.metamodelsNumber - 1 && <span>M2</span>}</div>)}
+                        {Array.from(Array(props.project.viewpointsNumber)).map((m,i) => <div className={'artifact viewpoints'} style={{width: `${unit}%`}}>{i == props.project.viewpointsNumber - 1 && <span>VP</span>}</div>)}
+                        {Array.from(Array(props.project.modelsNumber)).map((m,i) => <div className={'artifact models'} style={{width: `${unit}%`}}>{i == props.project.modelsNumber - 1 && <span>M1</span>}</div>)}
+                        {Array.from(Array(props.project.metamodelsNumber)).map((m,i) => <div className={'artifact metamodels'} style={{width: `${unit}%`}}>{i == props.project.metamodelsNumber - 1 && <span>M2</span>}</div>)}
                     </div>
 
              </>);
@@ -161,7 +160,7 @@ function Project(props: Props): JSX.Element {
                 <div className={'col-2'}>{Math.floor((data.lastModified - data.creation) / (3600 * 1000))} hours ago</div>
                 <div className={'col-3'}>
                     <CommandBar noBorder={true} style={{marginBottom: '0'}}>
-                        <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={'Add to favorites'}/>
+                        <Btn icon={'favorite'} action={(e => toggleFavorite(data))} tip={'Add to favorites'} />
                         <Btn icon={'minispace'} />
                         <Btn icon={'copy'} action={e => props.data.duplicate()} tip={'Duplicate project'}/>
                         <Btn icon={'minispace'} />

@@ -49,13 +49,8 @@ function App(props: AllProps): JSX.Element {
 
 
     useEffectOnce(() => {
-        (async function () {
-            SetRootFieldAction.new('isLoading', true);
-            await stateInitializer();
-            await U.sleep(2);
-            SetRootFieldAction.new('isLoading', false);
-        })();
-
+        SetRootFieldAction.new('isLoading', true);
+        stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
     });
 
     return(<>
@@ -72,7 +67,7 @@ function App(props: AllProps): JSX.Element {
             <Routes>
                 {DUser.current ? <>
                     <Route path={'allProjects'} element={<AllProjectsPage />} />
-                    <Route path={'dock'} element={<MyDock />} />
+                    {/*<Route path={'dock'} element={<MyDock />} />*/}
                     <Route path={'account'} element={<AccountPage />} />
                     <Route path={'settings'} element={<SettingsPage />} />
                     <Route path={'updates'} element={<UpdatesPage />} />
@@ -84,7 +79,6 @@ function App(props: AllProps): JSX.Element {
                     <Route path={'recent'} element={<RecentPage />} />
                     <Route path={'profile'} element={<ProfilePage />} />
                     <Route path={'*'} element={<AllProjectsPage />} />
-
                 </> : <Route path={'*'} element={<AuthPage />} />}
             </Routes>
         </HashRouter>

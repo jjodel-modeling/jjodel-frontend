@@ -11,7 +11,7 @@ import {
     Temporary,
     LPointerTargetable,
     DPointerTargetable,
-    Log, EMeasurableEvents, TRANSACTION, KeyDownEvent, SetRootFieldAction,
+    Log, EMeasurableEvents, TRANSACTION, KeyDownEvent, SetRootFieldAction, LoadAction, stateInitializer,
 } from "../joiner";
 import {
     DClassifier,
@@ -90,7 +90,9 @@ export class U {
         return Storage.read('offline') === 'true';
     }
     static refresh(): void {
-        window.location.reload();
+        LoadAction.new(DState.new());
+        SetRootFieldAction.new('isLoading', true);
+        stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
     }
 
     public static inspect(object: any, showHidden?: boolean, depth?: number | null, color?: boolean): string {
