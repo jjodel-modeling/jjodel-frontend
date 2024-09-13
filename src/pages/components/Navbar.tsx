@@ -146,6 +146,21 @@ function NavbarComponent(props: AllProps) {
     {/*name: 'Save as', icon: icon['save'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'S']*/}
     {/*name: 'divisor', function: () => {}, keystroke: []*/}
     {/*name: 'Import...', icon: icon['import'], function: () => {}, keystroke: []*/}
+    {/*
+        {name: 'divisor', function: () => {}, keystroke: []},
+        {name: 'View', icon: icon['view'],
+            subItems: [
+            {name: 'Show dot grid', icon: icon['grid'], function: async() => {}, keystroke: []},
+            {name: 'divisor', function: async() => {}, keystroke: []},
+            {name: 'Maximize editor', icon: icon['maximize'], function: async() => {}, keystroke: []},
+            {name: 'divisor', function: async() => {}, keystroke: []},
+            {name: 'Zoom in', icon: icon['zoom-in'], function: async() => {}, keystroke: [Key.cmd, '+']},
+            {name: 'Zoom out', icon: icon['zoom-out'], function: async() => {}, keystroke: [Key.cmd, '-']},
+            {name: 'Zoom to 100%', function: async() => {}, keystroke: [Key.cmd, '0']},
+        ],
+            keystroke: []
+        },
+    */}
     if (project){
         projectItems = [
 
@@ -176,20 +191,6 @@ function NavbarComponent(props: AllProps) {
             {name: 'Download', icon: icon['download'], function: () => {
                     U.download(`${project.name}.jjodel`, JSON.stringify(project.__raw));
                 }, keystroke: []},
-            {name: 'divisor', function: () => {}, keystroke: []},
-
-            {name: 'View', icon: icon['view'],
-                subItems: [
-                    {name: 'Show dot grid', icon: icon['grid'], function: async() => {}, keystroke: []},
-                    {name: 'divisor', function: async() => {}, keystroke: []},
-                    {name: 'Maximize editor', icon: icon['maximize'], function: async() => {}, keystroke: []},
-                    {name: 'divisor', function: async() => {}, keystroke: []},
-                    {name: 'Zoom in', icon: icon['zoom-in'], function: async() => {}, keystroke: [Key.cmd, '+']},
-                    {name: 'Zoom out', icon: icon['zoom-out'], function: async() => {}, keystroke: [Key.cmd, '-']},
-                    {name: 'Zoom to 100%', function: async() => {}, keystroke: [Key.cmd, '0']},
-                ],
-                keystroke: []
-            },
             {name: 'divisor', function: async() => {}, keystroke: []},
             {name: 'Help', icon: icon['help'], subItems: [
                     {name: 'What\'s new', icon: icon['whats-new'], function: async() => {}, keystroke: []},
@@ -290,7 +291,13 @@ function NavbarComponent(props: AllProps) {
             <div className='text-end nav-side'>
                 <div style={{float: 'right', left: '300px!important', marginTop: '2px'}}>
                     <Menu position={'left'}>
-                        <Item icon={icon['dashboard']} action={() => {navigate('/allProjects')}}>Dashboard</Item>
+                        <Item icon={icon['dashboard']} action={() => {
+                            navigate('/allProjects');
+                            Collaborative.client.off('pullAction');
+                            Collaborative.client.disconnect();
+                            SetRootFieldAction.new('collaborativeSession', false);
+                            U.refresh();
+                        }}>Dashboard</Item>
                         <Divisor />
                         <Item icon={icon['profile']} action={(e)=> {alert('')}}>Profile</Item>
                         <Item icon={icon['settings']} action={(e)=> {alert('')}}>Settings</Item>
