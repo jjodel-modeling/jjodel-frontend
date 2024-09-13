@@ -1,3 +1,5 @@
+/* Viewpoints > Options */
+
 import React, {Dispatch} from 'react';
 import {DState, DViewElement, LPointerTargetable, LViewElement, Pointer, Select} from '../../../../joiner';
 import {FakeStateProps} from '../../../../joiner/types';
@@ -7,11 +9,11 @@ function FieldDataComponent(props: AllProps) {
     const view = props.view;
     const readOnly = props.readonly;
     let dview = view.__raw;
-    const changeFN = (evt: React.ChangeEvent<HTMLSelectElement>) => {
+    /*const changeFN = (evt: React.ChangeEvent<HTMLSelectElement>) => {
         const value = evt.target.value;
         view.forceNodeType = value;
         // SetFieldAction.new(dview.id, 'forceNodeType', value, '', false);
-    }
+    }*/
 
     const appliableTo = dview.appliableTo;
     let preferredDisplay: string = dview.forceNodeType as string;
@@ -29,15 +31,15 @@ function FieldDataComponent(props: AllProps) {
         <option>EdgePoint</option>
         <option>Field</option>
     </optgroup>;
-    return(<section>
+    return(<section className={'options-field'}>
         <h5>Field</h5>
-        <div className={'px-2'}>
+        <div>
             <div className={'input-container'}>
-                <b className={'me-2'}>Appliable to:</b>
+                <p>Appliable to:</p>
                 <Select data={view} field={'appliableTo'}
                         options={graphElementOptions}
                         getter={() => dview.appliableTo || 'Any'}
-                        setter={(data: any, field: string, value: any) => view.appliableTo = value} />
+                        setter={(v: string, data: DViewElement, field: string, )=>view.appliableTo = v as any} />
             </div>
         </div>
     </section>);

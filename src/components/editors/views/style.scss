@@ -446,3 +446,98 @@ input[type='number']::-webkit-outer-spin-button {
 
   }
 }
+
+.view-editor-root{
+  --inner-page-padding: 1rem;
+  .btn-back{
+    font-size: 0.9em;
+    margin: auto;
+    &i::before{
+      transform: translate(0, 1px);
+    }
+  }
+  .dock-layout{
+    width: 100%;
+    height: 100%;
+    .dock-nav-wrap{
+      margin-left: 0.25rem;
+    }
+    .dock-panel-max-btn{
+      display: none;
+    }
+  }
+  .page-root{
+    padding: var(--inner-page-padding);
+    padding-top: 0;
+  }
+  .view-editor-header {
+    margin-top: 0.25em;
+    margin-left: var(--inner-page-padding);
+    margin-right: var(--inner-page-padding);
+    display: inline-flex;
+
+    .path-list{
+      display: inline-flex;
+      // border: 2px solid red;
+      // &>*{ border: 2px solid black; }
+      margin: auto;
+      margin-left: 0.5em;
+      padding: 0px 0px 4px 0px;
+      margin-bottom: 10px!important;
+
+      .path-separator{
+        height: min-content;
+        margin: auto;
+        margin-left: 0.125em;
+        margin-right: 0.125em;
+      }
+      .path-element {
+        cursor: pointer;
+        margin: auto;
+        &:hover{
+          //font-weight: 900;
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+
+
+  .editor-label {
+    margin: auto;
+    margin-left: 0.5rem;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    & input {
+
+    }
+  }
+
+  .chevron-holder {
+    margin-top: 10px;
+  }
+
+  .view-editor-header {
+    margin-top: 26px!important;
+    margin-bottom: 6px;
+  }
+
+  .path-list {
+    float: right!important;
+  }
+}
+
+
+/*
+
+.path-list {
+  float: right!important;
+}
+
+.path-element:hover {
+  font-weight: 200;
+  font-style: normal;
+  font-style: none!important;
+}
+
+*/

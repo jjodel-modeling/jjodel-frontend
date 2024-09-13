@@ -33,7 +33,7 @@ function EdgePointDataComponent(props: AllProps) {
 
     return(<section>
         <h5>EdgePoint</h5>
-        <div className={'px-2'}>
+        <div className={'px-2 no-padding-left'}>
             {rows}
         </div>
     </section>);

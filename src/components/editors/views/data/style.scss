@@ -1,0 +1,25 @@
+section {
+  overflow:visible;
+}
+
+section.page-root{
+  display: flex;
+  flex-flow: column;
+  &>label{
+    flex-grow:1;
+    display: flex;
+    padding-top: 0.125em;
+    padding-bottom: 0.125em;
+    height: 32px;
+    font-size: 1.1em!important;
+    color: var(--color);
+
+    &>span{
+      margin: auto;
+      flex-grow: 1;
+    }
+    &>input{
+      margin: auto;
+    }
+  }
+}

@@ -1,7 +1,8 @@
 import React, {Dispatch, ReactElement} from 'react';
 import {DState, DViewElement, GObject, LViewElement, Pointer, U} from '../../../../joiner';
 import {connect} from "react-redux";
-import {JavascriptEditor} from "../../languages";
+import {JsEditor} from "../../languages";
+import {Btn, CommandBar} from '../../../commandbar/CommandBar';
 
 function ViewEventsComponent(props: AllProps) {
     const view = props.view;
@@ -16,30 +17,31 @@ function ViewEventsComponent(props: AllProps) {
         view.events = newevent;
     }
 
-    return(<section className={'p-3'}>
-        <b style={{fontSize: '1.25em'}}>Default Events</b>
-        <hr className={'my-1'} />
-        <JavascriptEditor viewID={view.id} field={'onDataUpdate'} title={'onDataUpdate'}  />
-        <JavascriptEditor viewID={view.id} field={'onDragStart'} title={'onDragStart'}  />
-        <JavascriptEditor viewID={view.id} field={'whileDragging'} title={'whileDragging'}  />
-        <JavascriptEditor viewID={view.id} field={'onDragEnd'} title={'onDragEnd'}  />
-        <JavascriptEditor viewID={view.id} field={'onResizeStart'} title={'onResizeStart'}  />
-        <JavascriptEditor viewID={view.id} field={'whileResizing'} title={'whileResizing'}  />
-        <JavascriptEditor viewID={view.id} field={'onResizeEnd'} title={'onResizeEnd'}  />
-        <div className={'d-flex mx-auto'}>
-            <b style={{fontSize: '1.25em'}}>Custom Events</b>
-            <button className={'btn btn-primary ms-auto'} onClick={addEvent} disabled={readOnly}>
-                <i className={'p-1 bi bi-plus'} />
-            </button>
+    let initialExpand = (v: any, field: any)=>!!(v as any)[field as string];
+    return(<section className={'p-3 events-tab'}>
+        <h1 className={'view'}>View: {view.name}</h1>
+        <h2>Default Events</h2>
+        <JsEditor viewID={view.id} field={'onDataUpdate'} title={'onDataUpdate'} initialExpand={initialExpand} readonly={readOnly}/>
+        <JsEditor viewID={view.id} field={'onDragStart'} title={'onDragStart'} initialExpand={initialExpand} readonly={readOnly}/>
+        <JsEditor viewID={view.id} field={'whileDragging'} title={'whileDragging'} initialExpand={initialExpand} readonly={readOnly}/>
+        <JsEditor viewID={view.id} field={'onDragEnd'} title={'onDragEnd'} initialExpand={initialExpand} readonly={readOnly}/>
+        <JsEditor viewID={view.id} field={'onResizeStart'} title={'onResizeStart'} initialExpand={initialExpand} readonly={readOnly}/>
+        <JsEditor viewID={view.id} field={'whileResizing'} title={'whileResizing'} initialExpand={initialExpand} readonly={readOnly}/>
+        <JsEditor viewID={view.id} field={'onResizeEnd'} title={'onResizeEnd'} initialExpand={initialExpand} readonly={readOnly}/>
+        <div className={'d-flex mx-auto'} style={{marginTop: '14px'}}>
+            <h2>Custom Events</h2>
+            <CommandBar className={'ms-auto'} style={{paddingTop: '12px'}}>
+                <Btn icon={'add'} action={addEvent}  tip={'New event'}/>
+            </CommandBar>
         </div>
-        <hr className={'my-1'} />
         {Object.keys(dview.events).map((k) => {
             let val = dview.events[k];
             if (!val) return;
             return <>
-            <JavascriptEditor
+            <JsEditor
             viewID={view.id} key={k/* if val does not update, concatenate it to the key (k+val)*/}
             readonly={readOnly}
+            initialExpand={()=>true}
             title={<input defaultValue={k} disabled={readOnly} onBlur={(e)=>{
                 let newname = e.target.value;
                 if (k === newname) return;
@@ -48,15 +50,15 @@ function ViewEventsComponent(props: AllProps) {
                 newEvent[k] = undefined;
                 view.events = newEvent;
             }}/>}
-            jsxLabel={<button className={'btn btn-danger my-auto ms-auto'} onClick={() => {
-                let newEvent: GObject = {};
-                newEvent[k] = undefined; // this is how you trigger deletion with object -= action
-                view.events = newEvent;
-            }} disabled={readOnly}>
-                <i className={'p-1 bi bi-trash3-fill'} />
-            </button>}
+            jsxLabel={<CommandBar className={'ms-auto'} style={{paddingTop: '9px'}}>
+                <Btn icon={'delete'} tip={'Remove event'} action={() => {
+                    let newEvent: GObject = {};
+                    newEvent[k] = undefined; // this is how you trigger deletion with object -= action
+                    view.events = newEvent;
+                }}/>
+            </CommandBar>}
             getter={() => val}
-            setter={(js: string) => {
+            setter={(js) => {
                 let newEvent: GObject = {};
                 newEvent[k] = js;
                 view.events = newEvent;
