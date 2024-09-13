@@ -954,7 +954,7 @@ export async function stateInitializer() {
     DState.init();
     const user = Storage.read<DUser>('user');
     if(!user) return;
-    DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.email, user.token, user.id);
+    DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, user.token, user.id);
     DUser.current = user.id;
     await ProjectsApi.getAll();
 }

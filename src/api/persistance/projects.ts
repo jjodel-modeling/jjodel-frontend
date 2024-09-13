@@ -1,12 +1,12 @@
 import {
-    Dictionary,
     DModel,
-    DProject, DUser,
-    LPointerTargetable,
+    DProject,
     LProject,
     LUser,
-    Pointer, SetFieldAction,
-    SetRootFieldAction, TRANSACTION,
+    Pointer,
+    SetFieldAction,
+    SetRootFieldAction,
+    TRANSACTION,
     U
 } from '../../joiner';
 import Storage from "../../data/storage";
@@ -83,8 +83,18 @@ class Offline {
     }
     static getAll(): void {
         const projects = Storage.read<DProject[]>('projects') || [];
-        for(const project of projects)
+        for(const project of projects) {
             DProject.new(project.type, project.name, project.state, [], [], project.id);
+            TRANSACTION(() => {
+                SetFieldAction.new(project.id, 'creation', project.creation, '', false);
+                SetFieldAction.new(project.id, 'lastModified', project.lastModified, '', false);
+                SetFieldAction.new(project.id, 'description', project.description, '', false);
+                SetFieldAction.new(project.id, 'viewpointsNumber', project.viewpointsNumber, '', false);
+                SetFieldAction.new(project.id, 'metamodelsNumber', project.metamodelsNumber, '', false);
+                SetFieldAction.new(project.id, 'modelsNumber', project.modelsNumber, '', false);
+                SetFieldAction.new(project.id, 'isFavorite', project.isFavorite, '', false);
+            });
+        }
     }
     static delete(project: DProject): void {
         const projects = Storage.read<DProject[]>('projects') || [];
@@ -141,7 +151,7 @@ class Online {
                 SetFieldAction.new(project.id, 'metamodelsNumber', project.metamodelsNumber, '', false);
                 SetFieldAction.new(project.id, 'modelsNumber', project.modelsNumber, '', false);
                 SetFieldAction.new(project.id, 'isFavorite', project.isFavorite, '', false);
-            })
+            });
         }
     }
     static async delete(project: DProject): Promise<void> {

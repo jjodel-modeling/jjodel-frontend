@@ -1,7 +1,7 @@
 import './style.scss';
 import {Dispatch, ReactElement} from 'react';
 import {connect} from 'react-redux';
-import {DState, LProject} from '../../joiner';
+import {DState, DUser, LProject, LUser} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
 import {LayoutData} from 'rc-dock';
 import {Collaborative, Console, Info, Logger, Skeleton, MetaData, NestedView} from "../editors";
@@ -22,7 +22,7 @@ function tid(){
 }
 
 function DockComponent(props: AllProps) {
-    const {collaborativeSession} = props;
+    const {user} = props;
     const groups = {
         'models': {floatable: true, maximizable: true},
         'editors': {floatable: true, maximizable: true}
@@ -57,14 +57,14 @@ function DockComponent(props: AllProps) {
         console,
         logger
     ];
-    if(collaborativeSession) tabs.push(collaborative);
+    if(user?.project?.type === 'collaborative') tabs.push(collaborative);
     layout.dockbox.children.push({tabs});
 
     return (<PinnableDock ref={dock => DockManager.dock = dock} defaultLayout={layout} groups={groups} />);
 }
 interface OwnProps {}
 interface StateProps {
-    collaborativeSession: boolean;
+    user: LUser|null
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -72,7 +72,8 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.collaborativeSession = state.collaborativeSession;
+    if(DUser.current) ret.user = LUser.fromPointer(DUser.current);
+    else ret.user = null;
     return ret;
 }
 

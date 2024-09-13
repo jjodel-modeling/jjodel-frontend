@@ -741,13 +741,14 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         // this.className = thiss.className;
         return this; }
 
-    DUser(name: string, surname: string, nickname: string, affiliation: string, country: string, email: string, token: string): this {
+    DUser(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean, email: string, token: string): this {
         const _this: DUser = this.thiss as unknown as DUser;
         _this.name = name;
         _this.surname = surname;
         _this.nickname = nickname;
         _this.affiliation = affiliation;
         _this.country = country;
+        _this.newsletter = newsletter;
         _this.email = email;
         _this.token = token;
         statehistory[_this.id] = {undoable:[], redoable:[]};
@@ -2058,8 +2059,9 @@ export class DUser extends DPointerTargetable {
     name!: string;
     surname!: string;
     nickname!: string;
-    affiliation!: string;
     country!: string;
+    affiliation!: string;
+    newsletter!: boolean;
     email!: string;
     token!: string;
     projects: Pointer<DProject, 0, 'N', LProject> = [];
@@ -2067,8 +2069,8 @@ export class DUser extends DPointerTargetable {
     __isUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
     /*public static new(id?: DUser["id"], triggerActions: boolean = true): DUser {
         return new Constructors(new DUser('dwc'), undefined, false, undefined, id, true).DPointerTargetable().DUser().end(); }*/
-    public static new(name: string, surname: string, nickname: string, affiliation: string, country: string, email: string, token: string, id?: DUser['id'], persist: boolean = true): DUser {
-        return new Constructors(new DUser('dwc'), undefined, persist, undefined, id).DPointerTargetable().DUser(name, surname, nickname, affiliation, country, email, token).end();
+    public static new(name: string, surname: string, nickname: string, affiliation: string, country: string, newsletter: boolean, email: string, token: string, id?: DUser['id'], persist: boolean = true): DUser {
+        return new Constructors(new DUser('dwc'), undefined, persist, undefined, id).DPointerTargetable().DUser(name, surname, nickname, affiliation, country, newsletter, email, token).end();
     }
 }
 
@@ -2081,8 +2083,9 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     name!: string;
     surname!: string;
     nickname!: string;
-    affiliation!: string;
     country!: string;
+    affiliation!: string;
+    newsletter!: boolean;
     email!: string;
     token!: string;
     projects!: LProject[];
@@ -2127,6 +2130,14 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     protected set_country(val: this['country'], context: Context): boolean {
         const data = context.data;
         return SetFieldAction.new(data.id, 'country', val, '', false);
+    }
+
+    protected get_newsletter(context: Context): this['newsletter'] {
+        return context.data.newsletter;
+    }
+    protected set_newsletter(val: this['newsletter'], context: Context): boolean {
+        const data = context.data;
+        return SetFieldAction.new(data.id, 'newsletter', val, '', false);
     }
 
     protected get_email(context: Context): this['email'] {

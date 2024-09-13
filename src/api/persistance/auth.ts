@@ -13,12 +13,12 @@ class AuthApi {
     }
     static async logout(): Promise<void> {
         if(!U.isOffline()) await Api.delete(`${Api.persistance}/auth/logout`);
-        Storage.reset();
+        Storage.reset(); DUser.current = '';
         U.refresh();
     }
     static offline(): void {
         Storage.reset(); Storage.write('offline', 'true');
-        const user = DUser.new('Unknown', 'Pointer_User_Default');
+        const user = DUser.new('Offline', 'User', 'Unknown', 'Unknown', 'Unknown', false, 'Unknown', 'Unknown', 'Pointer_User_Default');
         Storage.write('user', user);
     }
 }

@@ -184,10 +184,16 @@ function NavbarComponent(props: AllProps) {
                 U.refresh();
                 }, keystroke: [Key.cmd, 'Q']},
             {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Undo', icon: icon['undo'], function: () => {}, keystroke: [Key.cmd, 'Z']},
-            {name: 'Redo', icon: icon['redo'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
+            {name: 'Undo', icon: icon['undo'], function: () => {
+
+                }, keystroke: [Key.cmd, 'Z']},
+            {name: 'Redo', icon: icon['redo'], function: () => {
+
+                }, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
             {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Save', icon: icon['save'], function: () => {project && ProjectsApi.save(project)}, keystroke: [Key.cmd, 'S']},
+            {name: 'Save', icon: icon['save'], function: async() => {
+                if(project) await ProjectsApi.save(project);
+                }, keystroke: [Key.cmd, 'S']},
             {name: 'Download', icon: icon['download'], function: () => {
                     U.download(`${project.name}.jjodel`, JSON.stringify(project.__raw));
                 }, keystroke: []},
@@ -203,8 +209,6 @@ function NavbarComponent(props: AllProps) {
                 ],
                 keystroke: []},
             {name: 'About jjodel', icon: icon['jjodel-dark'], function: async() => {}, keystroke: []}
-
-
         ];
     }
 
@@ -236,8 +240,8 @@ function NavbarComponent(props: AllProps) {
         {name: 'About jjodel', icon: <img src={jj} width={15}/>, function: () => {}, keystroke: []},
         {name: 'divisor', function: () => {}, keystroke: []},
         {name: 'Logout', icon: <i className="bi bi-box-arrow-right"></i>, function: async() => {
-            navigate('/auth');
-            await AuthApi.logout();
+                navigate('/auth');
+                await AuthApi.logout();
             }, keystroke: [Key.cmd, 'Q']}
     ];
 
@@ -299,10 +303,16 @@ function NavbarComponent(props: AllProps) {
                             U.refresh();
                         }}>Dashboard</Item>
                         <Divisor />
-                        <Item icon={icon['profile']} action={(e)=> {alert('')}}>Profile</Item>
+                        <Item icon={icon['profile']} action={()=> {
+                            navigate('/account');
+                            U.refresh();
+                        }}>Profile</Item>
                         <Item icon={icon['settings']} action={(e)=> {alert('')}}>Settings</Item>
                         <Divisor />
-                        <Item icon={icon['logout']} action={async() => { navigate('/auth'); await AuthApi.logout();}}>Logout</Item>
+                        <Item icon={icon['logout']} action={async() => {
+                            navigate('/auth');
+                            await AuthApi.logout();
+                        }}>Logout</Item>
                     </Menu>
                 </div>
             </div>

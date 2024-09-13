@@ -163,18 +163,16 @@ function GenericDashboard(props: DashProps): any {
             <LeftBar active={active} projects={user.projects}/>
             <div className={'user'}>
                 <div className={'name'}>
-                <>
-                    {active === "All" && <Title active={active} title={'Dashboard'} icon={<i className="bi bi-columns-gap"></i>} />}
-                    {active === "Recent" && <Title  active={active} title={'Recent'} icon={<i className="bi bi-clock"></i>} />}
-                    {active === "Templates" && <Title  active={active} title={'Templates'} icon={<i className="bi bi-lightbulb"></i>} />}
-                    {active === "Notes" && <Title  active={active} title={'Project Notes'} icon={<i className="bi bi-pencil-square"></i>} />}
-                    {active === "Updates" && <Title  active={active} title={'What\'s new'} icon={<i className="bi bi-clock-history"></i>} />}
-                    {active === "Profile" && <Title  active={active} title={'Profile'} icon={<i className="bi bi-clock-history"></i>} />}
-                </>
-
-                <Catalog children={children}/>
+                    <>
+                        {active === "All" && <Title active={active} title={'Dashboard'} icon={<i className="bi bi-columns-gap"></i>} />}
+                        {active === "Recent" && <Title  active={active} title={'Recent'} icon={<i className="bi bi-clock"></i>} />}
+                        {active === "Templates" && <Title  active={active} title={'Templates'} icon={<i className="bi bi-lightbulb"></i>} />}
+                        {active === "Notes" && <Title  active={active} title={'Project Notes'} icon={<i className="bi bi-pencil-square"></i>} />}
+                        {active === "Updates" && <Title  active={active} title={'What\'s new'} icon={<i className="bi bi-clock-history"></i>} />}
+                        {active === "Profile" && <Title  active={active} title={'Profile'} icon={<i className="bi bi-clock-history"></i>} />}
+                    </>
+                    <Catalog children={children}/>
                 </div>
-
             </div>
         </div>
     </>);

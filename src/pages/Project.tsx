@@ -52,42 +52,44 @@ function ProjectComponent(props: AllProps): JSX.Element {
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
     if(!user.project) return (<div></div>);
 
-    return(<Try>
-        <Dashboard active={'Project'} version={props.version} project={user.project}>
-            <React.Fragment>
-                <Cards>
-                    {user.project.metamodels.length === 0 ?
-                        <Cards.Item
-                            title={'Your first metamodel ?'}
-                            subtitle={'Create a new metamodel.'}
-                            icon={'add'}
-                            style={'red'}
-                            action={() => {alert('new metamodel')}}
-                        />
-                        :
-                        <React.Fragment>
+    return(<>
+        <Try>
+            <Dashboard active={'Project'} version={props.version} project={user.project}>
+                <React.Fragment>
+                    <Cards>
+                        {user.project.metamodels.length === 0 ?
                             <Cards.Item
-                                title={'Create another metamodel ?'}
+                                title={'Your first metamodel ?'}
                                 subtitle={'Create a new metamodel.'}
                                 icon={'add'}
                                 style={'red'}
-                                action={() => {alert('another metamodel')}}
+                                action={() => {alert('new metamodel')}}
                             />
-                            <Cards.Item
-                                title={'Create a model ?'}
-                                subtitle={'Create a new model.'}
-                                icon={'add'}
-                                style={'red'}
-                                action={() => {alert('new model')}}
-                            />
-                        </React.Fragment>
-                    }
-                    {true && <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>}
-                </Cards>
-            </React.Fragment>
-
-        </Dashboard>
-    </Try>);
+                            :
+                            <React.Fragment>
+                                <Cards.Item
+                                    title={'Create another metamodel ?'}
+                                    subtitle={'Create a new metamodel.'}
+                                    icon={'add'}
+                                    style={'red'}
+                                    action={() => {alert('another metamodel')}}
+                                />
+                                <Cards.Item
+                                    title={'Create a model ?'}
+                                    subtitle={'Create a new model.'}
+                                    icon={'add'}
+                                    style={'red'}
+                                    action={() => {alert('new model')}}
+                                />
+                            </React.Fragment>
+                        }
+                        <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>
+                    </Cards>
+                </React.Fragment>
+            </Dashboard>
+        </Try>
+        {user.project.type === 'collaborative' && <CollaborativeAttacher project={user.project} />}
+    </>);
 
 }
 interface OwnProps {}

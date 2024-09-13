@@ -1,4 +1,5 @@
 import {
+    DEdge,
     DGraphElement,
     Dictionary,
     DState,
@@ -169,6 +170,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
     render(){
         /*const [expression, setExpression] = useStateIfMounted('data');
         const [output, setOutput] = useStateIfMounted('');*/
+        if(this.props.node?.className === DEdge.name) return <Empty msg={"Console not available on DEdge."} />;
         if (!this.props.node) return <Empty msg={"Select a node."} />;
         let expression = this.state.expression.trim();
         if (expression === 'this') expression = 'data';

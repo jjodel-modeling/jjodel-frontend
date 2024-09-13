@@ -17,7 +17,7 @@ function AuthPage(): JSX.Element {
     const [email, setEmail] = useStateIfMounted('');
     const [password, setPassword] = useStateIfMounted('');
     const [passwordCheck, setPasswordCheck] = useStateIfMounted('');
-    const [newsLetter, setNewsLetter] = useStateIfMounted(false);
+    const [newsletter, setNewsletter] = useStateIfMounted(false);
     const navigate = useNavigate();
 
     const onSubmit = async(e: FormEvent<HTMLFormElement>) => {
@@ -34,7 +34,7 @@ function AuthPage(): JSX.Element {
             return;
         }
         const data = U.wrapper<DUser>(response.data);
-        const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.email, data.token, data.id);
+        const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id);
         Storage.write('user', user);
         Storage.write('token', user.token);
         //navigate('/dashboard');
@@ -46,14 +46,14 @@ function AuthPage(): JSX.Element {
             U.alert('e', 'The two passwords are different');
             return;
         }
-        const response = await AuthApi.register(name, surname, country, affiliation, newsLetter, nickname, email, password);
+        const response = await AuthApi.register(name, surname, country, affiliation, newsletter, nickname, email, password);
         if(response.code !== 200) {
             U.alert('e', 'Bad Data!');
             return;
         }
         const data = U.wrapper<DUser>(response.data);
         Storage.write('token', data.token);
-        const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.email, data.token, data.id);
+        const user = DUser.new(data.name, data.surname, data.nickname, data.affiliation, data.country, data.newsletter || false, data.email, data.token, data.id);
         Storage.write('user', user);
         navigate('/allProjects');
         U.refresh();
@@ -402,12 +402,12 @@ function AuthPage(): JSX.Element {
 
                         <input className={'checkbox'}
                             placeholder={'newsletter'}
-                            checked={newsLetter}
-                            onChange={e => setNewsLetter(e.target.checked)}
+                            checked={newsletter}
+                            onChange={e => setNewsletter(e.target.checked)}
                             type={'checkbox'}
                             style={{outline: 'none', marginTop: '10px', float: 'left'}}
                         />
-                        <div style={{display: 'block', width: '90%', float: 'left', marginBottom: '10px',     paddingLeft: '10px'}}>Newsletter. Subscribe to the newsletter to receive updates and news. You can manage your registration preferences at any time. </div>
+                        <div style={{display: 'block', width: '90%', float: 'left', marginBottom: '10px', paddingLeft: '10px'}}>Newsletter. Subscribe to the newsletter to receive updates and news. You can manage your registration preferences at any time. </div>
                     </label>
 
                 </Tooltip>
