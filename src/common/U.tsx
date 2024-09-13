@@ -11,7 +11,7 @@ import {
     Temporary,
     LPointerTargetable,
     DPointerTargetable,
-    Log, EMeasurableEvents, TRANSACTION, KeyDownEvent, SetRootFieldAction, LoadAction, stateInitializer,
+    Log, EMeasurableEvents, TRANSACTION, KeyDownEvent, SetRootFieldAction, LoadAction, stateInitializer, DUser,
 } from "../joiner";
 import {
     DClassifier,
@@ -92,6 +92,7 @@ export class U {
     static refresh(): void {
         LoadAction.new(DState.new());
         SetRootFieldAction.new('isLoading', true);
+        DUser.current = '';
         stateInitializer().then(() => SetRootFieldAction.new('isLoading', false));
     }
 

@@ -2644,7 +2644,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     duplicate(): LProject{ return this.wrongAccessMessage('LProject.duplicate()')};
     get_duplicate(c: Context): ()=>LProject{
         return () => {
-            let clone: DProject = DProject.new(Date.now(), c.data.type, c.data.name + ' Copy');
+            let clone: DProject = DProject.new(c.data.type, c.data.name + ' Copy');
             for (let key in c.data){
                 switch (key){
                     case 'id':

@@ -1,4 +1,4 @@
-import {Dispatch, ReactElement, useEffect, useState} from 'react';
+import React, {Dispatch, ReactElement, useEffect} from 'react';
 import {connect} from 'react-redux';
 import {
     CreateElementAction,
@@ -15,18 +15,13 @@ import {
     U
 } from '../joiner';
 import {FakeStateProps} from '../joiner/types';
-import Dock from '../components/abstract/Dock';
 import useQuery from '../hooks/useQuery';
 import {ProjectsApi} from '../api/persistance';
 import {SaveManager} from '../components/topbar/SaveManager';
-import Loader from '../components/loader/Loader';
-import {Dashboard, Navbar} from "./components";
-import {CSS_Units} from "../view/viewElement/view";
+import {Dashboard} from "./components";
 import CollaborativeAttacher from "../components/collaborative/CollaborativeAttacher";
-import {useEffectOnce} from "usehooks-ts";
-import React from 'react';
-import { Cards } from './components/cards/Cards';
-import { Catalog } from './components/catalog/Catalog';
+import {Cards} from './components/cards/Cards';
+import Storage from "../data/storage";
 
 
 function ProjectComponent(props: AllProps): JSX.Element {
@@ -34,23 +29,27 @@ function ProjectComponent(props: AllProps): JSX.Element {
     const user = props.user;
     const query = useQuery();
     const id = query.get('id') || '';
-    user.project = LProject.fromPointer(id);
+    if(user) user.project = LProject.fromPointer(id);
 
     useEffect(() => {
         (async function() {
             const project = await ProjectsApi.getOne(id);
             if(!project || !project.state) return;
             const state = await U.decompressState(project.state);
+            const rawUser = Storage.read<DUser>('user');
+            if(!rawUser) return;
             SaveManager.load(state);
-            CreateElementAction.new(user.__raw);
+            CreateElementAction.new(rawUser);
+            //DUser.new(rawUser.name, rawUser.surname, rawUser.nickname, rawUser.affiliation, rawUser.country, rawUser.newsletter, rawUser.email, rawUser.token, rawUser.id);
+            //DUser.current = rawUser.id;
         })();
     }, [id]);
 
-    let allViews = user.project?.viewpoints.flatMap((vp: LViewPoint) => vp && vp.allSubViews) || [];
+    let allViews = user?.project?.viewpoints.flatMap((vp: LViewPoint) => vp && vp.allSubViews) || [];
     allViews = allViews.filter(v => v);
     const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
     for (let v of allViews) viewsDeDuplicator[v.id] = v;
-    if(!user.project) return (<div></div>);
+    if(!user?.project) return (<div></div>);
 
     return(<>
         <Try>

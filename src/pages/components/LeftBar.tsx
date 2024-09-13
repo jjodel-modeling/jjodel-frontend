@@ -39,6 +39,7 @@ const Item = (props: ItemProps) => {
 }
 
 const Upload = () => {
+    return(<></>);
     return(
         <div className={'upload'}>
             <i className="bi bi-arrow-up-circle"></i>
@@ -81,7 +82,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     //     active: DashProps['active']; // prende il tipo dal parent-component, così si evita di aggiornare entrambi o avere tipi discordanti.
     //     projects: LProject[];
     //     project?: LProject;
-    
+
     // };
 
     const {active} = props;
@@ -95,7 +96,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const selectProject=()=> alert('todo: la funzione era inesistente nel pull');
 
     return(<>
-    
+
         {active === 'Project' ?
             <div className={'leftbar border-end border-light-subtle '}>
 
@@ -112,18 +113,18 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     <Item action={'allProjects'} icon={icon['delete']}>Delete </Item>
                     <Item action={'allProjects'} icon={icon['close']}>Close project </Item>
                 </Menu>
-                
-                {/* {props.projects.filter(p => p.favorite).length > 0 && 
+
+                {/* {props.projects.filter(p => p.favorite).length > 0 &&
                     <Menu title={"Starred"} mode={'collapsable'}>
                         {props.projects.filter(p => p.favorite).map(p => <Item icon={icon['folder']} action={e => selectProject()}>{p.name}</Item>)}
                     </Menu>
                 } */}
-                
+
                 {/* <Menu>
                     <Item action={'templates'} icon={icon['template2']}>Templates</Item>
                     <Item action={'notes'} icon={icon['edit']}>Notes</Item>
                 </Menu>*/}
-                
+
                 <Menu title={'Support'} mode={'collapsable'}>
                     <Item action={'updates'} icon={icon['whats-new']}>What's new</Item>
                     <Item action={'gettingstarted'} icon={icon['getting-started']}>Getting started</Item>
@@ -142,7 +143,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     <Item action={'allProjects'} icon={icon['dashboard']}>All projects </Item>
                     <Item action={'recent'} icon={icon['recent']}>Recent</Item>
                 </Menu>
-                {props.projects.filter(p => p.favorite).length > 0 && 
+                {props.projects && props.projects.filter(p => p.favorite).length > 0 &&
                     <Menu title={"Starred"} mode={'collapsable'}>
                         {props.projects.filter(p => p.favorite).map(p => <Item icon={icon['folder']} action={e => selectProject()}>{p.name}</Item>)}
                     </Menu>

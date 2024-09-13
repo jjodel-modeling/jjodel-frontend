@@ -60,7 +60,6 @@ function AuthPage(): JSX.Element {
     }
     const offline = () => {
         AuthApi.offline();
-        //navigate('/dashboard');
         navigate('/allProjects');
         U.refresh();
     }

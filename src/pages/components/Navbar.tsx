@@ -106,14 +106,13 @@ function makeEntry(i: MenuEntry) {
 
 
 
-type UserProps = {
-    user?: LUser;
-}
+type UserProps = {}
 const User = (props: UserProps) => {
-    const name = props.user ? `${props.user.name} ${props.user.surname}` : 'Offline User';
-    const initials = name.split(' ').map((n)=>n[0]).join('');
+    const user: LUser = LUser.fromPointer(DUser.current);
+    const name = `${user?.name} ${user?.surname}`;
+    const initials = name.split(' ').map(n => n[0]).join('');
     return (<div className={'user text-end'}>
-        <div className={"initials"}>
+        <div className={'initials'}>
             {initials.toUpperCase()}
         </div>&nbsp;
         <span>{name}</span>
@@ -225,7 +224,7 @@ function NavbarComponent(props: AllProps) {
                 SetRootFieldAction.new('isLoading', false);*/
             },
             keystroke: [Key.cmd, 'M']},
-        {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: ProjectsApi.importModal, keystroke: []},
+        {name: 'Import...', icon: <i className="bi bi-arrow-bar-left"></i>, function: ProjectsApi.import, keystroke: []},
         {name: 'divisor', function: () => {}, keystroke: []},
         {name: 'Help', icon: <i className="bi bi-question-square"></i>, subItems: [
             {name: 'What\'s new', icon: <i className="bi bi-clock"></i>, function: () => {}, keystroke: []},
@@ -330,7 +329,7 @@ function NavbarComponent(props: AllProps) {
             <Logo />
             <UserMenu />
             <Commands />
-            <User user={props.user} /> {/* aggiungere utente loggato */}
+            <User />
         </nav>
 
         {project && clicked === 'new.metamodel' && <MetamodelPopup {...{project, setClicked}} />}

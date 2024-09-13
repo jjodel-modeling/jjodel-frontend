@@ -1,6 +1,7 @@
 import {
+    CreateElementAction,
     DModel,
-    DProject,
+    DProject, DUser,
     LProject,
     LUser,
     Pointer,
@@ -49,29 +50,29 @@ class ProjectsApi {
         else return await Online.favorite(project);
     }
 
-    static importModal() {
+    static import() {
         const reader = new FileReader();
         reader.onload = async e => {
-            /* Import Project File */
             const content = String(e.target?.result);
-            if(!content) return;
             try {
                 const project = JSON.parse(content) as DProject;
-                const projects = Storage.read<DProject[]>('projects') || [];
-                const filtered = projects.filter(p => p.id !== project.id);
-                filtered.push(project);
-                Storage.write('projects', filtered);
-                U.refresh();
-            } catch (e) {alert('Invalid File.')}
+                project.author = DUser.current;
+                project.creation = Date.now();
+                project.lastModified = Date.now();
+                project.isFavorite = false;
+                if(U.isOffline()) Offline.import(project);
+                else await Online.import(project);
+                CreateElementAction.new(project);
+            } catch (e) {U.alert('e', 'Invalid File.')}
         }
 
         let extensions = ['*.jjodel'];
-        U.fileRead((e: any, files?: FileList | null, fileContents?: string[]) => {
-            //const files = e.target.files || [];
+        U.fileRead((e: unknown, files?: FileList | null, fileContents?: string[]) => {
             if (!files?.length) return;
             const file = files[0];
             reader.readAsText(file);
         }, extensions, true);
+        U.refresh();
     }
 }
 
@@ -119,6 +120,12 @@ class Offline {
         const filtered = projects.filter(p => p.id !== project.id);
         Storage.write('projects', [...filtered, {...project, isFavorite: !project.isFavorite}]);
         SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
+    }
+    static import(project: DProject): void {
+        const projects = Storage.read<DProject[]>('projects') || [];
+        const filtered = projects.filter(p => p.id !== project.id);
+        filtered.push(project);
+        Storage.write('projects', filtered);
     }
 }
 
@@ -174,6 +181,10 @@ class Online {
         });
         if(response.code !== 200) U.alert('e', 'Cannot set this property!');
         SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
+    }
+    static async import(project: DProject): Promise<void> {
+        await Online.create(project);
+        await Online.save(project);
     }
 }
 
