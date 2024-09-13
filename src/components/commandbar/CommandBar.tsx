@@ -5,23 +5,23 @@ import { Tooltip } from "../forEndUser/Tooltip";
 
 type BtnProps = {
     disabled?: boolean;
-    icon: "up" 
-        | "down" 
-        | "back" 
-        | "fwd" 
-        | "add" 
-        | "add2" 
-        | "delete" 
-        | "delete2" 
+    icon: "up"
+        | "down"
+        | "back"
+        | "fwd"
+        | "add"
+        | "add2"
+        | "delete"
+        | "delete2"
         | "open"
-        | "edit" 
+        | "edit"
         | "favorite"
-        | "shrink" 
-        | "expand" 
-        | "space" 
-        | "minispace" 
-        | "sep" 
-        | "check" 
+        | "shrink"
+        | "expand"
+        | "space"
+        | "minispace"
+        | "sep"
+        | "check"
         | "copy"
         | "close"
         | "info"
@@ -30,7 +30,7 @@ type BtnProps = {
         | "close-up"
         | "settings"
         | "download";
-        
+
     tip?: string | ReactNode;
     label?: string;
     theme?: "dark" | "light",
@@ -43,7 +43,7 @@ type BtnProps = {
 function useClickOutside(ref: any, onClickOutside: any) {
 
     useEffect(() => {
-      
+
         function handleClickOutside(event: Event) {
             if (ref.current && !ref.current.contains(event.target)) {
                 onClickOutside();
@@ -77,18 +77,18 @@ export const Btn = (props: BtnProps) => {
     return (<>
         {props.action ?
             <div>
-                {props.icon === "delete2" ? 
+                {props.icon === "delete2" ?
                     <div className={`delete2 ${props.theme ? props.theme : 'light'}`}>Delete</div>
                     :
                     <>
                     {props.icon === 'delete' ?
                         <>
-                        {del ? 
+                        {del ?
                             <Tooltip tooltip={'Are you sure?'} inline={true} position={'top'} offsetY={10} >
                                 <i onClick={(e) => {props.action && props.action(e); setDel(false); e.stopPropagation()}}
                                     className={`bi tab-btn bi-question-square-fill commandbar-btn ${props.theme ? props.theme : 'light'} question ${props.size && props.size} ${props.disabled && 'disabled'}`}
                                     ref={delRef}
-                                    style={props.style} 
+                                    style={props.style}
                                 />
                             </Tooltip>
                             :
@@ -104,23 +104,23 @@ export const Btn = (props: BtnProps) => {
                         <Tooltip tooltip={`${props.tip && props.tip}`} inline={true} position={'top'} offsetY={10} >
                             <i className={`bi tab-btn ${props.icon} commandbar-btn ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.mode} ${props.disabled && 'disabled'}`}
                                 onClick={(e) => {props.action && props.action(e); e.stopPropagation();}}
-                                style={props.style} 
+                                style={props.style}
                             />
                         </Tooltip>
                     }
                     </>
                 }
-                    
+
             </div>
         :
             <>
                 {props.icon === "space" || props.icon === "minispace" ?
                     <span style={{display: 'block', width: `${props.icon === 'space' ? '24px' : '4px'}`}}></span>
-                : 
-            
+                :
+
                 <Tooltip tooltip={'Disabled'} inline={true} position={'top'} offsetY={10} >
                     <i className={`bi disabled tab-btn ${props.icon} commandbar-btn ${props.theme ? props.theme : 'light'} ${props.size && props.size} ${props.mode}`}
-                    style={props.style} 
+                    style={props.style}
                 />
             </Tooltip>
                 }
@@ -143,7 +143,7 @@ export const Sep = (style?: any) => {
                     <div className={'tab-btn sep'} style={style}></div>
                 </div>
             }
-            
+
     </>);
 }
 
@@ -171,6 +171,6 @@ export const CommandBar = (props: CommandProps) => {
                 {props.children}
             </div>
         }
-            
+
     </>);
 };

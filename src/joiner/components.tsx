@@ -30,8 +30,6 @@ export {Edge, EdgeComponent,} from "../graph/damedges/damedge";
 export {GenericInput} from "../components/forEndUser/GenericInput"
 // other exports
 //export {DockLayoutComponent} from "../components/abstract/DockLayoutComponent";
-export {OclEditor} from "../components/rightbar/oclEditor/OclEditor";
-export {JsEditor} from "../components/rightbar/jsEditor/JsEditor";
 
 export {Input, Edit, TextArea, Select} from "../components/forEndUser/Input";
 // export {TextArea} from "../components/forEndUser/TextArea";
@@ -50,7 +48,6 @@ export {LoggerComponent} from "../components/logger/loggerComponent";
 export {Overlap} from "../components/forEndUser/Overlap";
 
 export {ControlPanel} from '../components/forEndUser/ControlPanel';
-export {Popup} from '../components/popup/Popup';
 
 export {Control, Slider} from '../components/forEndUser/Control';
 

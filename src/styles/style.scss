@@ -214,9 +214,9 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
   height: 10px!important;
 }
 
-.template-item:first-of-type {  
+.template-item:first-of-type {
     margin-top: 0!important;
-    
+
 
     & input {
       margin-top: 0!important;
@@ -226,9 +226,9 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
     }
     & div:has(.delete) {
       padding-top: 0!important;
-    } 
+    }
     & div:has(.question) {
-      
+
     }
     & div.command-bar:has(.question) {
       position: relative;
@@ -241,18 +241,18 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
 
       margin-top: 0px!important;
       padding-top: 0px!important;
-      
+
     }
 }
 .template-item:not(:first-of-type) .question::before {
   position: relative;
-  bottom: 3px!important; 
+  bottom: 3px!important;
 }
 
 
 
 .simpleMode {
- 
+
 }
 .template-item:has(.detailedMode) > input  {
   padding-bottom: 0!important;
@@ -263,12 +263,12 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
 }
 
 .template-item:last-of-type {
-   
+
   margin-bottom: 10px;
 }
 
 .delete.command-bar{
-  
+
 }
 
 
@@ -380,12 +380,13 @@ i.bi {
 // LOGIN
 
 .login {
+  overflow: scroll;
   position: absolute;
-  
+
   & form {
     position: relative;
     top: 20%!important;
-    
+
     width: 500px;
     min-height: 350px;
   }
@@ -399,7 +400,7 @@ i.bi {
   & input {
     outline: 1px solid var(--secondary);
     padding: 2px 8px;
-    border: none; 
+    border: none;
     height: var(--input-height);
   }
 
@@ -429,7 +430,7 @@ i.bi {
     padding-left: 6px;
     outline: 2px solid var(--secondary);
   }
-  
+
   & .login-button {
     background-color: var(--secondary);
     padding: 10px 20px!important;
@@ -538,7 +539,7 @@ i.bi {
 }
 
 .login.register {
-  
+
   & form {
     padding-left: 100px!important;
     padding-right: 100px!important;

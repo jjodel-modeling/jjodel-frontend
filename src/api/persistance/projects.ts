@@ -5,8 +5,8 @@ import {
     LPointerTargetable,
     LProject,
     LUser,
-    Pointer,
-    SetRootFieldAction,
+    Pointer, SetFieldAction,
+    SetRootFieldAction, TRANSACTION,
     U
 } from '../../joiner';
 import Storage from "../../data/storage";
@@ -26,7 +26,7 @@ class ProjectsApi {
     static async delete(project: LProject): Promise<void> {
         if(U.isOffline()) Offline.delete(project.__raw as DProject);
         else await Online.delete(project.__raw as DProject);
-        project.delete(); // penso sia meglio spostare questi check isOffline() etc dentro la project.delete()
+        project.delete();
     }
     static async getOne(id: DProject['id']): Promise<null|DProject> {
         if(U.isOffline()) return Offline.getOne(id);
@@ -35,10 +35,18 @@ class ProjectsApi {
     static async save(project: LUser['project']): Promise<void> {
         if(!project) return;
         const rawProject = project.__raw as DProject;
+        rawProject.lastModified = Date.now();
+        rawProject.viewpointsNumber = project.viewpoints.length;
+        rawProject.metamodelsNumber = project.metamodels.length;
+        rawProject.modelsNumber = project.models.length;
         console.log('Saved', rawProject);
         SetRootFieldAction.new('_lastSelected', undefined);
         if(U.isOffline()) await Offline.save(rawProject);
         else await Online.save(rawProject);
+    }
+    static async favorite(project: DProject): Promise<void> {
+        if(U.isOffline()) return Offline.favorite(project);
+        else return await Online.favorite(project);
     }
 
     static importModal() {
@@ -94,16 +102,24 @@ class Offline {
         const filtered = projects.filter(p => p.id !== project.id);
         const state = await U.compressedState();
         Storage.write('projects', [...filtered, {...project, state}]);
-        alert('Saved');
+        U.alert('i', 'Project Saved!');
+    }
+    static async favorite(project: DProject): Promise<void> {
+        const projects = Storage.read<DProject[]>('projects') || [];
+        const filtered = projects.filter(p => p.id !== project.id);
+        Storage.write('projects', [...filtered, {...project, isFavorite: !project.isFavorite}]);
+        SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
     }
 }
 
 class Online {
     static async create (project: DProject): Promise<void> {
         await Api.post(`${Api.persistance}/projects`, {
-           id: project.id,
-           name: project.name,
-           type: project.type
+            id: project.id,
+            creation: project.creation,
+            description: project.description,
+            name: project.name,
+            type: project.type
         });
     }
     static async getAll(): Promise<void> {
@@ -115,8 +131,18 @@ class Online {
             return;
         }
         const data = U.wrapper<DProject[]>(response.data);
-        for(const project of data)
+        for(const project of data) {
             DProject.new(project.type, project.name, project.state, [], [], project.id);
+            TRANSACTION(() => {
+                SetFieldAction.new(project.id, 'creation', project.creation, '', false);
+                SetFieldAction.new(project.id, 'lastModified', project.lastModified, '', false);
+                SetFieldAction.new(project.id, 'description', project.description, '', false);
+                SetFieldAction.new(project.id, 'viewpointsNumber', project.viewpointsNumber, '', false);
+                SetFieldAction.new(project.id, 'metamodelsNumber', project.metamodelsNumber, '', false);
+                SetFieldAction.new(project.id, 'modelsNumber', project.modelsNumber, '', false);
+                SetFieldAction.new(project.id, 'isFavorite', project.isFavorite, '', false);
+            })
+        }
     }
     static async delete(project: DProject): Promise<void> {
         await Api.delete(`${Api.persistance}/projects/${project.id}`);
@@ -129,8 +155,15 @@ class Online {
     static async save(project: DProject): Promise<void> {
         const state = await U.compressedState();
         const response = await Api.patch(`${Api.persistance}/projects/${project.id}`, {...project, state});
-        if(response.code !== 200) alert('Cannot Save');
-        else alert('Saved')
+        if(response.code !== 200) U.alert('e', 'Cannot Save');
+        else U.alert('i', 'Project Saved!')
+    }
+    static async favorite(project: DProject): Promise<void> {
+        const response = await Api.patch(`${Api.persistance}/projects/${project.id}`, {
+            isFavorite: !project.isFavorite
+        });
+        if(response.code !== 200) U.alert('e', 'Cannot set this property!');
+        SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
     }
 }
 

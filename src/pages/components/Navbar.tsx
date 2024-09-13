@@ -77,10 +77,10 @@ function makeEntry(i: MenuEntry) {
     } else {
         return (
             <li className={i.subItems ? "hoverable" : ""} tabIndex={0} onClick={()=>i.function?.()}>
-                
-                    <label className={`highlight ${i.disabled && 'disabled'}`}> 
 
-                
+                    <label className={`highlight ${i.disabled && 'disabled'}`}>
+
+
                     {i.icon ?
                         <span>{i.icon} {i.name}</span> :
                         <span><i className="bi bi-app hidden"></i> {i.name}</span>
@@ -110,7 +110,7 @@ type UserProps = {
     user?: LUser;
 }
 const User = (props: UserProps) => {
-    const name = props.user ? props.user.username : 'Unknown';
+    const name = props.user ? `${props.user.name} ${props.user.surname}` : 'Offline User';
     const initials = name.split(' ').map((n)=>n[0]).join('');
     return (<div className={'user text-end'}>
         <div className={"initials"}>
@@ -121,10 +121,10 @@ const User = (props: UserProps) => {
 };
 
 type MenuEntry = {
-    name: string, 
-    icon?: any, 
-    function?: ()=>any, 
-    keystroke?: string[], 
+    name: string,
+    icon?: any,
+    function?: ()=>any,
+    keystroke?: string[],
     subItems?:MenuEntry[],
     disabled?: boolean;
 };
@@ -147,9 +147,9 @@ function NavbarComponent(props: AllProps) {
         projectItems = [
 
             {name: 'New metamodel', icon: icon['new'], function: ()=>createM2(project), keystroke: [Key.alt, Key.cmd, 'M']},
-            
+
             {
-                name: 'New model', 
+                name: 'New model',
                 icon: icon['new'],
                 subItems: project.metamodels.map((m2, i)=>({
                     name: m2.name, function: () => { createM1(project, m2) }, keystroke: []
@@ -210,7 +210,7 @@ function NavbarComponent(props: AllProps) {
         {name: 'New project', icon: <i className="bi bi-plus-square"></i>, function:
             async()=>{
                 navigate('/allProjects');
-                ProjectsApi.create('public', undefined, undefined, undefined, props.user.projects);
+                await ProjectsApi.create('public', undefined, undefined, undefined, props.user.projects);
                 /*
                 SetRootFieldAction.new('isLoading', true);
                 await U.sleep(1);
@@ -275,7 +275,7 @@ function NavbarComponent(props: AllProps) {
 
     const Commands = () => {
         return (<div className='text-end nav-commands'>
-            {project && <InternalToggle name={'advanced'} values={{false: false, true: true}} labels={{false: 'base', true: 'advanced'}}/>}
+            {project && <InternalToggle name={'advanced'} labels={{false: 'base', true: 'advanced'}}/>}
         </div>);
     };
 
