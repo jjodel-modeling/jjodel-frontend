@@ -143,6 +143,9 @@ function NavbarComponent(props: AllProps) {
 
     const Key = Keystrokes;
     let projectItems: MenuEntry[] = [];
+    {/*name: 'Save as', icon: icon['save'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'S']*/}
+    {/*name: 'divisor', function: () => {}, keystroke: []*/}
+    {/*name: 'Import...', icon: icon['import'], function: () => {}, keystroke: []*/}
     if (project){
         projectItems = [
 
@@ -170,10 +173,9 @@ function NavbarComponent(props: AllProps) {
             {name: 'Redo', icon: icon['redo'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'Z']}, // maybe better cmd + Y ?
             {name: 'divisor', function: () => {}, keystroke: []},
             {name: 'Save', icon: icon['save'], function: () => {project && ProjectsApi.save(project)}, keystroke: [Key.cmd, 'S']},
-            {name: 'Save as', icon: icon['save'], function: () => {}, keystroke: [Key.shift, Key.cmd, 'S']},
-            {name: 'divisor', function: () => {}, keystroke: []},
-            {name: 'Import...', icon: icon['import'], function: () => {}, keystroke: []},
-            {name: 'Export as...', icon: icon['export'], function: () => {}, keystroke: []},
+            {name: 'Download', icon: icon['download'], function: () => {
+                    U.download(`${project.name}.jjodel`, JSON.stringify(project.__raw));
+                }, keystroke: []},
             {name: 'divisor', function: () => {}, keystroke: []},
 
             {name: 'View', icon: icon['view'],
@@ -290,7 +292,7 @@ function NavbarComponent(props: AllProps) {
                     <Menu position={'left'}>
                         <Item icon={icon['dashboard']} action={() => {navigate('/allProjects')}}>Dashboard</Item>
                         <Divisor />
-                        <Item icon={icon['profile']}action={(e)=> {alert('')}}>Profile</Item>
+                        <Item icon={icon['profile']} action={(e)=> {alert('')}}>Profile</Item>
                         <Item icon={icon['settings']} action={(e)=> {alert('')}}>Settings</Item>
                         <Divisor />
                         <Item icon={icon['logout']} action={async() => { navigate('/auth'); await AuthApi.logout();}}>Logout</Item>
