@@ -244,7 +244,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
 
                 if (shortcuts) {
                     shortcutsjsx = <ul>{
-                        Object.keys(shortcuts).map(k=>this.getClickableEntry(expression, k, shortcuts))
+                        Object.keys(shortcuts).sort().map(k=>this.getClickableEntry(expression, k, shortcuts))
                     }</ul>
                 }
                 // if (hidden) outstr +="</div><br><br><h4>Other less useful properties</h4><div class=\"output-row\" tabindex=\"984\">" + format(hidden);
@@ -274,7 +274,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 : Object.getOwnPropertyNames(objraw)) || [];
 
         contextkeys = <ul>{
-            contextkeysarr.map(k=>this.getClickableEntry(expression, k))
+            contextkeysarr.sort().map(k=>this.getClickableEntry(expression, k))
         }</ul>;
 
 
