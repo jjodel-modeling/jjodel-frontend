@@ -1,55 +1,62 @@
+/* Apply to */
+
 import React, {Dispatch} from 'react';
 import {
-    Defaults,
     DState,
     DViewElement,
     DViewPoint,
+    Edges,
+    Fields,
+    GraphElements,
+    Graphs,
     Input,
     LPointerTargetable,
     LViewElement,
     LViewPoint,
     Pointer,
-    Select
+    Select,
+    Vertexes
 } from '../../../../joiner';
-import {OclEditor, JavascriptEditor} from '../../languages';
-import {Edges, Fields, GraphElements, Graphs, Vertexes} from "../../../../joiner";
+import {JsEditor, OclEditor} from "../../languages";
 import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
-
+import "./style.scss";
 
 function InfoDataComponent(props: AllProps) {
     const view = props.view;
     const viewpoints = props.viewpoints;
-    const readOnly = props.readonly;
+    let readOnly = props.readonly;
+    let vp = view.viewpoint;
+    let vpid = vp?.id;
+    let dallVP: DViewPoint[] = viewpoints.map(v=>v.__raw); //Selectors.getAll(DViewPoint, undefined, undefined, true, false);
+    // readOnly = false;
 
     const objectTypes = ['', 'DModel', 'DPackage', 'DEnumerator', 'DEnumLiteral', 'DClass', 'DAttribute', 'DReference', 'DOperation', 'DParameter', 'DObject', 'DValue', 'DStructuralFeature'];
     const classesOptions = <optgroup label={'Object type'}>
             {objectTypes.map((o)=><option key={o} value={o}>{o ? o.substring(1) : 'anything'}</option>)}
     </optgroup>;
 
-    const changeVP = (evt: React.ChangeEvent<HTMLSelectElement>) => {
-        (view as any as DViewPoint).viewpoint = evt.target.value;
-    }
-
-    return(<section className={'p-3'}>
-        <Input data={view} field={'name'} label={'Name'} type={'text'} readonly={readOnly}/>
-        <Input data={view} field={'isExclusiveView'} label={'is Decorator'} type={"checkbox"} readonly={readOnly || Defaults.check(view.id)}
-               setter={(val) => { console.log("setting vex", {view, vex: view.isExclusiveView, val, nval:!val}); view.isExclusiveView = !val}}
-               getter={(data) => !(data as LViewElement).isExclusiveView as any}/>
-        <Input data={view} field={'explicitApplicationPriority'} label={'Priority'} type={'number'} readonly={readOnly}
-               getter={(data: LViewElement)=>{ let v = data.__raw.explicitApplicationPriority; return v === undefined ? v : ''+v; }}
-               setter={(v: string | boolean)=>{ view.explicitApplicationPriority = v ? +v as number : undefined as any; }}
-               placeholder={'automatic: ' + view.explicitApplicationPriority}
-               key={''+view.explicitApplicationPriority/*just to force reupdate if placeholder changes, or it is bugged*/}
+    return(<section className={'page-root properties-tab'}>
+        <h1 className={'view'}>View: {view.name}</h1>
+        <Input data={view} field={'name'} label={'Name:'} readonly={readOnly}/>
+        <Input data={view} field={'isExclusiveView'} label={'Is Exclusive:'} type={"checkbox"} readonly={readOnly}
+               //setter={(val) => { view.isExclusiveView = !val}}
+               //getter={(data) => !(data as LViewElement).isExclusiveView as any
         />
-        {/*
+        <Input data={view} field={'explicitApplicationPriority'} label={'Priority:'} type={'number'} readonly={readOnly}
+               getter={(data: LViewElement)=>{ let v = data.__raw.explicitApplicationPriority; return v === undefined ? v : ''+v; }}
+               setter={(v)=>{ view.explicitApplicationPriority = (v ? +v as number : undefined as any); }}
+               placeholder={'automatic: ' + view.explicitApplicationPriority}
+               key={''+view.explicitApplicationPriority/*just to force reupdate if placeholder changes*/}
+        />
+        {/* moved in "options"
         <Select data={view} field={'appliableTo'} label={'Appliable to node types'} readonly={readOnly} options={<optgroup label={'Appliable Types'}>
             <option value={'node'}>Node</option>
             <option value={'edge'}>Edge</option>
             <option value={'edgePoint'}>Edge Point</option>
         </optgroup>} />
         */}
-        <Select data={view} field={'forceNodeType'} label={'Preferred appearance'} readonly={readOnly} options={
+        <Select data={view} field={'forceNodeType'} label={'Preferred appearance:'} readonly={readOnly} options={
             <>
                 <option value={'unset'} key={-1}>Automatic by model type (package, object, feature...)</option>
                 <optgroup label={'Graph'} key={0}>{
@@ -65,10 +72,21 @@ function InfoDataComponent(props: AllProps) {
                     Object.keys(Vertexes).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
                 }</optgroup>
             </>
-        } setter={(data, key, val) => { view.forceNodeType = val === 'unset' ? undefined : val; }}
+        } setter={(val, data, key) => { view.forceNodeType = val === 'unset' ? undefined : val; }}
           getter={(data, key) => { return data[key] || 'unset_'; }} />
-        <Select data={view} field={'appliableToClasses'} label={'Appliable to classes'} readonly={readOnly} options={classesOptions} />
-        <div className={'d-flex p-1'}>
+        <Select data={view} field={'appliableToClasses'} label={'Appliable to:'} readonly={readOnly} options={classesOptions} />
+
+        <Select readonly={readOnly} data={view} field={'father'} label={"Viewpoint:"} getter={()=> vpid}>
+            {dallVP.map((viewpoint) => (
+                <option key={viewpoint.id} value={viewpoint.id}>{viewpoint.name}</option>
+            ))}
+        </Select>
+        <Select readonly={readOnly} data={view} field={'father'} label={"Parent view:"}>
+            {view.allPossibleParentViews.filter(v=>v.viewpoint?.id === vpid).map((view) => (
+                <option key={view.id} value={view.id}>{view.name}</option>
+            ))}
+        </Select>
+            {/*        <div className={'d-flex p-1'}>
             <label className={'my-auto'}>Viewpoint</label>
             <select className={'my-auto ms-auto select'} disabled={readOnly}
                     defaultValue={view.viewpoint ? view.viewpoint.id : 'null'} onChange={changeVP}>
@@ -78,10 +96,11 @@ function InfoDataComponent(props: AllProps) {
                 })}
             </select>
         </div>
+            */}
         <OclEditor viewID={view.id} />
-        <JavascriptEditor
+        <JsEditor
             viewID={view.id} field={'jsCondition'}
-            placeHolder={'/* Last Line should be the return (boolean) */'}
+            placeHolder={'/* Last line must return a boolean */'}
         />
     </section>);
 }

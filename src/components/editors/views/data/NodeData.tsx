@@ -1,14 +1,5 @@
 import React, {Dispatch} from 'react';
-import {
-    LViewElement,
-    Input,
-    SetFieldAction,
-    TextArea,
-    Pointer,
-    DViewElement,
-    DState,
-    LPointerTargetable, GenericInput
-} from '../../../../joiner';
+import {DState, DViewElement, Input, LPointerTargetable, LViewElement, Pointer} from '../../../../joiner';
 import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
 
@@ -23,7 +14,7 @@ function NodeDataComponent(props: AllProps) {
         {objectTypes.map((o)=><option key={o} value={o}>{o.length ? o.substring(1) : "anything"}</option>)}
     </optgroup>;*/
 
-    return(<section>
+    return(<section className='node'>
         {/*<Select obj={view} field={"useSizeFrom"} readonly={readOnly} options={
             <optgroup label="Node position depends from what?">
                 <option value={EuseSizeFrom.nv}>Node & View: Will change his position when the view or graph changes</option>
@@ -41,7 +32,7 @@ function NodeDataComponent(props: AllProps) {
         <div className={'px-2'}>
             <div className={'input-container'}>
                 <b className={'me-2'}>Store Size in View:</b>
-                {<Input data={view} field={"storeSize"} readonly={readOnly}  tooltip={
+                {<Input data={view} field={"storeSize"} readonly={readOnly} tooltip={
                     <div>On - The node position depends from the view currently displayed.<br/>Off - It depends from the graph.</div>} type={"checkbox"} />
                     /* on = EuseSizeFrom.nv,   off = EuseSizeFrom.n */
                 }
@@ -53,7 +44,7 @@ function NodeDataComponent(props: AllProps) {
 
             <div className={'input-container'}>
                 <b className={'me-2'}>Adapt Width:</b>
-                <Input data={view} field={"adaptWidth"} type={"checkbox"} readonly={readOnly} />
+                <Input data={view} field={"adaptWidth"} type={"checkbox"} readonly={readOnly} tooltip={true}/>
             </div>
 
             <div className={'input-container'}>

@@ -27,7 +27,7 @@ function EdgeDataComponent(props: AllProps) {
         if (!info.isEdge) continue;
         rows.push(<div className={'input-container'}>
             <b className={'me-2'}>{key[0].toUpperCase() + key.substring(1)}:</b>
-            <GenericInput rootClassName={'mx-3 mt-1 d-flex'} className={'d-flex'} data={view}
+            <GenericInput rootClassName={'mx-3 mt-1 d-flex edgepoint-adjust'} className={'d-flex'} data={view}
                 field={key as any} tooltip={true} info={info} disabled={readOnly} />
         </div>);
     }

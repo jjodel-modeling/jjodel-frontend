@@ -275,7 +275,11 @@ function NavbarComponent(props: AllProps) {
 
     const Commands = () => {
         return (<div className='text-end nav-commands'>
-            {project && <InternalToggle name={'advanced'} labels={{false: 'base', true: 'advanced'}}/>}
+            {project && <InternalToggle
+                name={'advanced'}
+                labels={{false: 'base', true: 'advanced'}}
+                size={'small'}
+            />}
         </div>);
     };
 
