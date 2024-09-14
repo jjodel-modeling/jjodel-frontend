@@ -23,7 +23,7 @@ import PaletteData from "./data/PaletteData";
 import GenericNodeData from "./data/GenericNodeData";
 
 import {Btn, CommandBar} from '../../commandbar/CommandBar';
-import "./style.scss";
+import "./nestedView.scss";
 
 const tabidprefix = "Dock_in_view_detail";
 
