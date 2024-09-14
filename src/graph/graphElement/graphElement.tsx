@@ -51,7 +51,6 @@ import {EdgeStateProps, LGraphElement, store, VertexComponent,
     windoww, transientProperties
 } from "../../joiner";
 import {NodeTransientProperties, Pack1} from "../../joiner/classes";
-import {OwnProps} from "../../components/rightbar/structureEditor/ModelMetaData";
 
 // const Selectors: typeof Selectors_ = windoww.Selectors;
 /*

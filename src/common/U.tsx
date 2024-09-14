@@ -13,7 +13,7 @@ import {
     DPointerTargetable,
     Log, EMeasurableEvents, TRANSACTION,
     KeyDownEvent, KeyUpEvent,
-    LoadAction, stateInitializer, DUser,
+    LoadAction, stateInitializer, DUser, SetRootFieldAction,
 } from "../joiner";
 import {
     DClassifier,

@@ -191,7 +191,7 @@ const SliderComponent = (props: SliderProps) => {
                 {/* <div className={'track'} style={{transition: 'width 0.3s', width: `calc((100% - var(--knob) * 2 - 14px) / ${max} * ${props.node.state[name]})`}}></div>*/}
 
                 <div className={'track'}
-                    style={{transition: 'width 0.3s', width: `calc((((100% - var(--knob) * 2 - 14px) / (${max})) * (${props.node.state[name]}))`}}>
+                    style={{transition: 'width 0.3s', width: `calc((((100% - var(--knob) * 2 - 14px) / (${max})) * (${props.node.state[name as string]}))`}}>
                 </div>
 
                 <input

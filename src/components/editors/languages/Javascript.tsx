@@ -9,10 +9,9 @@ import {
     Defaults,
     LPointerTargetable,
     Pack1,
-    Overlap, GObject, Log
+    Overlap, GObject, Log, Info
 } from '../../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
-import {FakeStateProps, Info} from '../../../joiner';
 import {Btn, CommandBar} from '../../commandbar/CommandBar';
 
 function JavascriptEditorComponent(props: AllProps) {

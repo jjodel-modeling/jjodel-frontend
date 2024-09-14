@@ -3,7 +3,6 @@ import {connect} from "react-redux";
 import {DProject, DState, DUser} from "../../../joiner";
 import {FakeStateProps} from "../../../joiner/types";
 import DockManager from "../DockManager";
-import TreeEditor from "../../rightbar/treeEditor/treeEditor";
 
 function TestTabComponent(props: AllProps) {
     const click = () => {

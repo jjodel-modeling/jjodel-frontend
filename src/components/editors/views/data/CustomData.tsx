@@ -4,7 +4,6 @@ import React, {Dispatch, EventHandler, MouseEventHandler, ReactElement} from 're
 import {DState, DViewElement, GObject, LViewElement, Pointer, TextArea, U} from '../../../../joiner';
 import {connect} from "react-redux";
 import {JsEditor} from "../../languages";
-import {Btn, CommandBar} from '../../../commandbar/CommandBar';
 import {Function} from "../../../forEndUser/FunctionComponent";
 // import JsEditor from "../../jsEditor/JsEditor";
 

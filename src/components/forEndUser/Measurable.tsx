@@ -1,7 +1,6 @@
 import React, {Component, CSSProperties, PureComponent, ReactChild, ReactElement, ReactNode} from "react";
 import {DGraphElement, Dictionary, GObject, GraphSize, LGraph, Log, RuntimeAccessible, Size, TRANSACTION, U} from "../../joiner";
 import $ from "jquery";
-import {OwnProps} from "../rightbar/structureEditor/ModelMetaData";
 /// <reference path="../../common/libraries/jqui-types.ts" />
 import {JQueryUI} from "../../common/libraries/jqui-types"
 import "./Measurable.scss";

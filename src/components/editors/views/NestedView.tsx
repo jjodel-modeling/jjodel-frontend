@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement} from 'react';
+import React, {Dispatch, ReactElement, useState} from 'react';
 import {connect} from 'react-redux';
 import {
     DPointerTargetable,
@@ -20,7 +20,7 @@ import {
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {Dictionary, FakeStateProps} from '../../../joiner/types';
 import {GenericTree} from "../../forEndUser/Tree";
-import "./style.scss"
+import "./nestedView.scss"
 import {ViewData} from './ViewData';
 import {Tooltip} from "../../forEndUser/Tooltip";
 import {Btn, CommandBar, Sep} from '../../commandbar/CommandBar';
@@ -72,9 +72,18 @@ function NestedViewComponent(props: AllProps) {
     const getSubElements = (v: DViewElement) => v.subViews || {}; //
     let activeViewpointId: Pointer<DPointerTargetable> = project.activeViewpoint.id;
 
+    let [collapseAll, setCollapseAll] = useState<boolean | undefined>( undefined );
+
     function renderEntry(e: DViewElement, childrens: Dictionary<Pointer, number>, isExpanded: boolean, toggleExpansion: ()=>any, depth: number, path: number[], metadata: Metadata): JSX.Element{
         let d = e;
         let appliableTo: string;
+
+        if (collapseAll !== undefined && collapseAll === isExpanded) toggleExpansion();
+        let expandClick = () => {
+            setCollapseAll(undefined);
+            toggleExpansion();
+        }
+
         if (d.appliableToClasses.length === 1) appliableTo = d.appliableToClasses[0].substring(1);
         else if (d.appliableToClasses.length === 0) appliableTo = d.appliableTo;
         else appliableTo = "Any";
@@ -95,12 +104,12 @@ function NestedViewComponent(props: AllProps) {
 
         return <li className={"entry-root" + d.className + (d.id === activeViewpointId ? ' selected' : '')} key={d.id}>
 
-            <div className={'inline-row'} onClick={()=>!isVP && setView(d.id)} onDoubleClick={(e) => {select(d.id)}}> {/* activate anche con il dblclick */}
+            <div className={'inline-row'} onClick={()=>setView(d.id)} onDoubleClick={(e) => {select(d.id)}}> {/* activate anche con il dblclick */}
 
                 <div className={"left-stuff vertical-centering "} onClick={preventClick}>
                     {parr.length >= 1 ?
                         <>
-                            <i style={{fontSize: '0.55em', marginRight: '24px!important'}} className={'bi cursor-pointer d-block my-auto bi-chevron-' + (isExpanded ? 'down' : 'right')} onClick={toggleExpansion} />
+                            <i style={{fontSize: '0.55em', marginRight: '24px!important'}} className={'bi cursor-pointer d-block my-auto bi-chevron-' + (isExpanded ? 'down' : 'right')} onClick={expandClick} />
                             {isExpanded && <div className={"expansion-line"} />}
                         </>
                         :
@@ -188,8 +197,8 @@ function NestedViewComponent(props: AllProps) {
 
 
                         <CommandBar style={{float: 'right'}}>
-                            <Btn icon={'shrink'} action={() => {alert('collapse')}} tip={'Collapse all'} /> {/* todo per damiano*/}
-                            <Btn icon={'expand'} action={() => {alert('expand')}} tip={'Expand all'} />  {/* todo per damiano */}
+                            <Btn icon={'shrink'} active={collapseAll}         action={() => {setCollapseAll(true)}}  tip={'Collapse all'} />
+                            <Btn icon={'expand'} active={collapseAll===false} action={() => {setCollapseAll(false)}} tip={'Expand all'}   />
                             <Sep />
                             <Btn icon={'add'} action={addVP} tip={'Create a new viewpoint'} />
                         </CommandBar>

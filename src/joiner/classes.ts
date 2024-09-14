@@ -1608,6 +1608,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     private inspect!: D;
     private __random!: number;
     public __readonly!: boolean;
+    public state!: any;
     // public r!: this;
 
     private __info_of__id = {type:"Pointer&lt;this&gt;",
