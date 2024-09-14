@@ -781,7 +781,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (this.props.data?.className !== "DClass") return;
             // const user = this.props.isEdgePending.user;
             const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
-            const canBeExtend = this.props.data && edgePendingSource.canExtend(this.props.data as LClass, extendError);
+            const canBeExtend = this.props.data && edgePendingSource.canExtend(this.props.data as any as LClass, extendError);
             if (canBeExtend && this.props.data) {
                 const lClass: LClass = LPointerTargetable.from(this.props.data.id);
                 // SetFieldAction.new(lClass.id, "extendedBy", source.id, "", true); // todo: this should throw a error for wrong type.
@@ -848,6 +848,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let ret = false;
         let tn = transientProperties.node[props.nodeid];
         let ptr: Pointer<any>;
+        if (!props.node) return false;
         let dnode = props.node.__raw;
         // if edge.label props is func, do not set in the dedge, just in transientproperties. totally override the "text" system.
         // it does not need collab sync:
@@ -868,6 +869,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (dnode.id !== ptr) (props.node as LEdge).end = ptr as any;
         }
         if (props.anchorEnd) { tn.labels = props.labels; }
+        // if (typeof props.viewid === 'string') { let old = props.viewid; if (old !== props.node.view.id) { this.forceUpdate(); ret = true;} }
         if (typeof props.x === 'number') { let old = props.node.x; let n = +props.x; if (old !== n) { props.node.x = n; ret = true;} }
         if (typeof props.y === 'number') { let old = props.node.y; let n = +props.y; if (old !== n) { props.node.y = n; ret = true;} }
         // risk loop: todo loop detection and skip setting

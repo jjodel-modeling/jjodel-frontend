@@ -266,6 +266,7 @@ function ViewStyle(props: Props): JSX.Element {
     }
 
     return(<>
+
         <div className={"controls"} style={{position:'relative', zIndex:2}}>
             {Object.entries(palettes.color).map((entry, index, entries)=>{
                 let prefix = entry[0];
@@ -281,7 +282,7 @@ function ViewStyle(props: Props): JSX.Element {
                                                             style ={{background: 'white'}}
                                                             inputStyle ={{opacity: color.getAlpha()}}
                                                             childrenn={
-                                                                <div className={"content suggestions"} style={{backgroundColor: "inherit"}} onClick={(e) => {e.preventDefault(); e.stopPropagation();}}>
+                                                                <div className={"content suggestions"} tabIndex={-1} style={{backgroundColor: "inherit"}} onClick={(e) => {e.preventDefault(); e.stopPropagation();}}>
                                                                     {(()=>{ return <>
                                                                         <h6 title={"Alter current color transparency"}>Opacity</h6>
                                                                         <input style={{width: "auto", marginLeft:"1em", marginRight:"1em"}} type={"range"} min={0} max={1} step={"any"} value={color.getAlpha()} onChange={(e)=>{ transparencyColor(prefix, i, color, +e.target.value) }} />
@@ -447,6 +448,7 @@ function ViewStyle(props: Props): JSX.Element {
         </div>
 
         <hr/>
+
         <div className={'input-container'}>
             <b className={'me-2'}>Global CSS:</b>
             <Input data={view} field={'cssIsGlobal'} type={'checkbox'}

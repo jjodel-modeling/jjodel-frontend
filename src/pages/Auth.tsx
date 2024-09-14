@@ -26,9 +26,10 @@ function AuthPage(): JSX.Element {
             return;
         }
         const data = U.wrapper<DUser>(response.data);
-        Storage.write('token', data.token);
         const user = DUser.new(data.username, data.id);
+        user.token = data.token;
         Storage.write('user', user);
+        Storage.write('token', user.token);
         navigate('/dashboard');
         U.refresh();
     }

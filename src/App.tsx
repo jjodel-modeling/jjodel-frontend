@@ -51,8 +51,6 @@ function App(props: AllProps): JSX.Element {
         (async function () {
             SetRootFieldAction.new('isLoading', true);
             await stateInitializer();
-            /* Offline by default */
-            if(!DUser.current) AuthApi.offline();
             await U.sleep(2);
             SetRootFieldAction.new('isLoading', false);
         })();
@@ -70,7 +68,7 @@ function App(props: AllProps): JSX.Element {
             <HashRouter>
             <PathChecker />
             <Routes>
-                {DUser.current && <>
+                {DUser.current ? <>
                     <Route path={'dock'} element={<MyDock />} />
                     <Route path={'account'} element={<AccountPage />} />
                     <Route path={'settings'} element={<SettingsPage />} />
@@ -84,8 +82,7 @@ function App(props: AllProps): JSX.Element {
                     <Route path={'recent'} element={<RecentPage />} />
                     <Route path={'profile'} element={<ProfilePage />} />
                     <Route path={'*'} element={<AccountPage />} />
-                </>}
-                <Route path={'auth'} element={<AuthPage />} />
+                </> : <Route path={'*'} element={<AuthPage />} />}
             </Routes>
         </HashRouter>
         </div>

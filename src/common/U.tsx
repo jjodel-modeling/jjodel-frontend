@@ -11,7 +11,8 @@ import {
     Temporary,
     LPointerTargetable,
     DPointerTargetable,
-    Log, EMeasurableEvents, TRANSACTION, KeyDownEvent,
+    Log, EMeasurableEvents, TRANSACTION,
+    KeyDownEvent, KeyUpEvent,
 } from "../joiner";
 import {
     DClassifier,
@@ -1185,16 +1186,7 @@ export class U {
         return defaultVal;
     }
 
-    static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[], starting: T[], final: T[]} {
-        let ret: {added: T[], removed: T[], starting: T[], final: T[]} = {} as any;
-        ret.starting = starting;
-        ret.final = final;
-        if (!starting) starting = [];
-        if (!final) final = [];
-        ret.removed = Uarr.arraySubtract(starting, final, false); // start & !end
-        ret.added = Uarr.arraySubtract(final, starting, false); // end & !start
-        return ret;
-    }
+    static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[], starting: T[], final: T[]} { return Uarr.arrayDifference(starting, final); }
 
     // returns <"what changed from old to neww"> and in nested objects recursively
     // todo: how can i tell at what point it's the fina lvalue (might be a nestedobj) and up to when it's a delta to follow and unroll?   using __isAdelta:true ?
@@ -2269,6 +2261,17 @@ export class Uarr{
         return subarray.every((el) => array.includes(el));
     }
 
+    static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[], starting: T[], final: T[]} {
+        let ret: {added: T[], removed: T[], starting: T[], final: T[]} = {} as any;
+        ret.starting = starting;
+        ret.final = final;
+        if (!starting) starting = [];
+        if (!final) final = [];
+        ret.removed = Uarr.arraySubtract(starting, final, false); // start & !end
+        ret.added = Uarr.arraySubtract(final, starting, false); // end & !start
+        return ret;
+    }
+
     public static arrayIntersection<T>(arr1: T[], arr2: T[]): T[]{
         if (!arr1 || ! arr2) return null as any;
         return arr1.filter( e => arr2.indexOf(e) >= 0);
@@ -2286,6 +2289,11 @@ export class Uarr{
         if (a1.length !== a2.length) return false;
         for (let i = 0; i < a1.length; i++) if (a1[i] !== a2[i]) return false;
         return true;
+    }
+
+    static equalsUnsorted(a1: any[], a2: any[]): boolean {
+        let diff = Uarr.arrayDifference(a1, a2);
+        return (diff.removed.length === 0 && diff.added.length === 0);
     }
 }
 
@@ -2409,7 +2417,7 @@ export class Keystrokes {
     public static meta = 'Meta'; // f1, or other f's with custom binding and windows key
     public static unidentified = 'Unidentified'; // brightness
     public static __NotReacting__ = 'fn, print, maybe others'; // not even triggering event?
-    private static RegisteredKeyStrokes: Dictionary<DocString<'selector'>, (e:any)=>any> = {};
+    private static RegisteredKeyStrokes: Dictionary<DocString<'selector'>, {keyup: (e:any)=>any, keydown: (e:any)=>any}> = {};
     public static register(selector: string, arr: {function?: ()=>any, keystroke?: Key[]}[]): void{
         if (Keystrokes.RegisteredKeyStrokes[selector]) return;
         let $elems = $(selector);// sort from most "uncommon" to most common key
@@ -2422,6 +2430,7 @@ export class Keystrokes {
             'ctrlKey': Keystrokes.control,*/
         }; //  '??': 'metaKey'];*/
         // let metakeys = ['altKey', 'shiftKey', 'ctrlKey'];
+
 
         Log.exDev(!($elems.on as any), 'jQuery is required for Keystrokes.register');
         let optimizedKeyPaths: GObject = {
@@ -2452,25 +2461,32 @@ export class Keystrokes {
             console.log('registering keystrokes ', {keys:entry.keystroke, terminal, root, optimizedKeyPaths});
             root[terminal] = entry.function;
         }
-        let func = (e: KeyDownEvent)=>{
+        let keyup = (e: KeyUpEvent) => {
+            if (e.altKey) { $elems.removeClass('key-alt'); }
+            if (e.shiftKey) { $elems.removeClass('key-shift'); }
+            if (e.ctrlKey) { $elems.removeClass('key-ctrl'); }
+        }
+        let keydown = (e: KeyDownEvent) => {
             let root = optimizedKeyPaths;
-            if (e.altKey) { root = root[Keystrokes.alt] || {}; }
-            if (e.shiftKey) { root = root[Keystrokes.shift] || {}; }
-            if (e.ctrlKey) { root = root[Keystrokes.control] || {}; }
+            if (e.altKey) { root = root[Keystrokes.alt] || {}; $elems.addClass('key-alt'); }
+            if (e.shiftKey) { root = root[Keystrokes.shift] || {}; $elems.addClass('key-shift'); }
+            if (e.ctrlKey) { root = root[Keystrokes.control] || {}; $elems.addClass('key-ctrl'); }
             let f = root[e.key];
-            console.log("execute keystrokes", {e, root, optimizedKeyPaths, up:{$elems, func, optimizedKeyPaths, arr}});
+            console.log("execute keystrokes", {e, root, optimizedKeyPaths, up:{$elems, keydown, optimizedKeyPaths, arr}});
             Log.exDev(f && typeof f !== 'function','found keystroke with invalid func', {f, root, e})
             f?.();
         };
         /// todo: for graph can attack evt to graph root and use selector in on() lieke $graphcontainer.on('keydown', '.Class', classkeystrokehandler...)
-        Keystrokes.RegisteredKeyStrokes[selector] = func;
-        $elems.on('keydown', null, func);
-        console.log("register keystrokes", {$elems, func, optimizedKeyPaths, arr});
+        Keystrokes.RegisteredKeyStrokes[selector] = {keydown, keyup};
+        $elems.on('keydown', null, keydown);
+        $elems.on('keyup', null, keyup);
+        console.log("register keystrokes", {$elems, keydown, optimizedKeyPaths, arr});
 
     }
     public static unregister(selector: string): void{
         if (!Keystrokes.RegisteredKeyStrokes[selector]) return;
-        $(selector).off('keydown', null as any, Keystrokes.RegisteredKeyStrokes[selector]);
+        $(selector).off('keydown', null as any, Keystrokes.RegisteredKeyStrokes[selector].keydown);
+        $(selector).off('keyup', null as any, Keystrokes.RegisteredKeyStrokes[selector].keyup);
         delete Keystrokes.RegisteredKeyStrokes[selector];
     }
 

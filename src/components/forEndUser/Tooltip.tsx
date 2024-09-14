@@ -31,6 +31,7 @@ class TooltipVisualizerState{
     position?: PositionStrTypes;
     offsetX?: number;
     offsetY?: number
+    theme?: ThemeType;
     constructor() {
         this.position = 'b';
     }
@@ -51,6 +52,8 @@ export class TooltipVisualizer extends React.Component<{}, TooltipVisualizerStat
     private root: HTMLElement | null = null;
     private innerText?: string;
     private tsize?: Size;
+    private theme?: ThemeType;
+
     setRef(e: HTMLElement | null) { this.root = e; this.componentDidUpdate(); }
     componentDidMount(){
         return this.componentDidUpdate();
@@ -63,6 +66,7 @@ export class TooltipVisualizer extends React.Component<{}, TooltipVisualizerStat
         this.innerText = innerText;
         this.tooltip = e.children[0] as any;
         this.tsize = this.tooltip ? Size.of(this.tooltip) : undefined;
+        
         this.forceUpdate();
     }
 
@@ -73,6 +77,8 @@ export class TooltipVisualizer extends React.Component<{}, TooltipVisualizerStat
         let position = this.state.position;
         let offsetX = this.state.offsetX || 0;
         let offsetY = this.state.offsetY || 0;
+        let theme = this.state.theme;
+
         /* debug stuff override
         let positions = ['t', 'b', 'l', 'r', 'tl', 'tr', 'bl', 'br', ''] as any;
         let windoww = window as any
@@ -120,22 +126,25 @@ export class TooltipVisualizer extends React.Component<{}, TooltipVisualizerStat
         // NB: arrays are allowed but currently show elements in an horizontal line
         console.log('tooltip', style, this.state);
         // debugg stuff
-        let tooltip2 = <div style={{...style, padding:0, width:0, height:0, border:'2px solid red', borderRadius: '100%'}} />;
+        let tooltip2 = <div style={{...style, padding:0, width:0, height:0,  borderRadius: '100%'}} />; // border:'2px solid red',
         style.padding = 0;
         // debug stuff end
+
         return <>
             <div className={"tooltip-wrapper " +
                 (PositionStr.toSeparateFullLabels(position ?? 't'))+
-                (this.state.baseElement ? " inline" : " fixed")
+                (this.state.baseElement ? " inline" : " fixed")+ " "+
+                (theme)
             } onMouseEnter={this.onMouseEnter}
                  style={style} ref={(e)=> this.setRef(e)}>
                 {tooltip}</div>
             <div className={"tooltip-wrapper " +
                 (PositionStr.toSeparateFullLabels(position ?? 't'))+
-                (this.state.baseElement ? " inline" : " fixed")
+                (this.state.baseElement ? " inline" : " fixed")+ " "+
+                (theme)
             } onMouseEnter={this.onMouseEnter}
                  style={style}>
-                {tooltip2}</div>
+        {tooltip2}</div>
         </>;
     }
 }
@@ -152,9 +161,9 @@ export class Tooltip extends React.Component<AllProps, State> {
         this.onMouseLeave = this.onMouseLeave.bind(this);
     }
 
-    public static show(tooltip: ReactNode, pos?: PositionStrTypes, baseElement?: Element, seconds: number = -1, offset?: IPoint): void{
+    public static show(tooltip: ReactNode, pos?: PositionStrTypes, baseElement?: Element, seconds: number = -1, offset?: IPoint, theme?: ThemeType): void{
         tooltip = Tooltip.fixTooltip(tooltip);
-        const statepatch: Partial<TooltipVisualizerState> = {tooltip, baseElement, offsetX: offset?.x ?? 0, offsetY: offset?.y ?? 0};
+        const statepatch: Partial<TooltipVisualizerState> = {tooltip, baseElement, offsetX: offset?.x ?? 0, offsetY: offset?.y ?? 0, theme};
          statepatch.position = pos ?? 'b';
         TooltipVisualizer.component.setState(statepatch);
         if (seconds>0) setTimeout( () => {
@@ -204,7 +213,6 @@ export class Tooltip extends React.Component<AllProps, State> {
         }
         return evt;
 
-
     }
     childhtml: Element | null = null;
 
@@ -245,6 +253,9 @@ export class Tooltip extends React.Component<AllProps, State> {
 }
 interface State{
 }
+
+type ThemeType = 'default' | 'dark';
+
 interface OwnProps {
     key?: React.Key | null;
     catch?: ReactNode | ((error: Error, info?: React.ErrorInfo) => ReactNode);
@@ -255,6 +266,7 @@ interface OwnProps {
     offsetY?: number;
     position?: PositionStrTypes;
     seconds?: number;
+    theme?: ThemeType;
 }
 interface StateProps {
 }

@@ -15,6 +15,7 @@ import {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphCon
 import {Edge, EdgeComponent} from "../graph/damedges/damedge";
 import {GenericInput} from "../components/forEndUser/GenericInput"
 import {U} from "./index";
+import { Control } from "../components/forEndUser/Control";
 // exports graphelements
 export {GraphElement, GraphElementComponent} from "../graph/graphElement/graphElement";
 export {Graph, Vertex, VoidVertex, GraphVertex, Field, EdgePoint, VertexComponent} from "../graph/vertex/Vertex"; // require overlap, graphelement
@@ -50,6 +51,8 @@ export {Overlap} from "../components/forEndUser/Overlap";
 
 export {ControlPanel} from '../components/forEndUser/ControlPanel';
 export {Popup} from '../components/popup/Popup';
+
+export {Control, Slider} from '../components/forEndUser/Control';
 
 type dict = Dictionary<string, typeof GraphElement | typeof Edge>;
 

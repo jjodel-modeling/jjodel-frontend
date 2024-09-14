@@ -23,7 +23,7 @@ function NodeDataComponent(props: AllProps) {
         {objectTypes.map((o)=><option key={o} value={o}>{o.length ? o.substring(1) : "anything"}</option>)}
     </optgroup>;*/
 
-    return(<section>
+    return(<section className='node'>
         {/*<Select obj={view} field={"useSizeFrom"} readonly={readOnly} options={
             <optgroup label="Node position depends from what?">
                 <option value={EuseSizeFrom.nv}>Node & View: Will change his position when the view or graph changes</option>

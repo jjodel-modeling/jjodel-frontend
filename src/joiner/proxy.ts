@@ -1,5 +1,6 @@
 import type {DocString, DtoL, DtoW, GObject, Proxyfied, WPointerTargetable,} from "../joiner";
 import {
+    ABORT,
     Dictionary,
     DModelElement,
     DPointerTargetable,
@@ -328,6 +329,13 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         // console.error('_proxy set PRE:', {targetObj, propKey, value, proxyitself, arguments});
         // if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.s + (propKey as string)] || (this.l as GObject)[(propKey as string)]) {
 
+        if ((this.d as GObject).__readonly && propKey !== '__readonly') {
+            //todo if there is a transaction open i should throw exception?
+            if(ABORT()){
+                Log.ee('Transaction aborted because an object is readonly:', this.d);
+            }
+            return true;
+        }
         switch (typeof propKey) {
             case "symbol":
                 propKey = String(propKey);
@@ -348,12 +356,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             }
 
 
-
-            // if custom generic setter exist
-            // @ts-ignore
-            //if (this.lg._defaultSetter) return this.lg._defaultSetter(value, new LogicContext(proxyitself as any, targetObj), propKey);
-
-            // se esiste la proprietà ma non esiste il setter, che fare? do errore.
+            // se esiste la proprietà ma non esiste il setter?
             // Log.eDevv("dev error: property exist but setter does not: ", propKey, this);
             // return false;
         }
@@ -361,7 +364,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
         // if custom generic setter exist
         // @ts-ignore private property
-        if (this.lg._defaultSetter) { this.lg._defaultSetter(value, new LogicContext(proxyitself as any, targetObj), propKey);
+        if (this.lg._defaultSetter) { // @ts-ignore private property
+            this.lg._defaultSetter(value, new LogicContext(proxyitself as any, targetObj), propKey);
             return true;
         }
         /*if (enableFallbackSetter && typeof (propKey === "string") && ((propKey as string)[0] === '_' || (propKey as string).indexOf('tmp') > 0)) {

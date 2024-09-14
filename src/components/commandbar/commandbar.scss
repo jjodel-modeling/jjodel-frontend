@@ -11,9 +11,14 @@
     text-align: left!important;
     border-radius: 0!important;
     //border-bottom: 1px dotted var(--bg-3);
-    
+
     // CommandBar button
 
+    .btn-component.active{
+      .tab-btn::before{
+        background-color: var(--btn-bg);
+      }
+    }
     & .tab-btn {
       cursor: pointer;
       font-size: var(--btn-font-small-size)!important;
@@ -22,7 +27,7 @@
       margin-right: 2px!important;
       border: none!important;
       text-decoration: none!important;
-      
+
     }
       // theme
 
@@ -35,7 +40,7 @@
 
     & .tab-btn.disabled {
       cursor: normal!important;
-      color: var(--disabled)!important; 
+      color: var(--disabled)!important;
       background-color: var(--bg-1-5)!important;
     }
 
@@ -44,7 +49,7 @@
       cursor: normal!important;
     }
 
-    
+
 
     // up
 
@@ -55,9 +60,6 @@
       transition: background-color 0.3s;
     }
 
-    & .tab-btn.up:hover {
-      
-    }
     & .tab-btn.up::before {
 
       border: 1px solid var(--bg-2);
@@ -78,7 +80,7 @@
 
 
     // down
-    
+
     & .tab-btn.down {
       margin: auto;
       color: var(--btn-back)!important;
@@ -87,7 +89,7 @@
     }
 
     & .tab-btn.down:hover {
-      
+
     }
     & .tab-btn.down::before {
 
@@ -109,7 +111,7 @@
 
 
     // back
-    
+
     & .tab-btn.back {
       margin: auto;
       color: var(--btn-back)!important;
@@ -118,7 +120,7 @@
     }
 
     & .tab-btn.back:hover {
-      
+
     }
     & .tab-btn.back::before {
 
@@ -138,7 +140,7 @@
     }
 
     // add
-    
+
     & .tab-btn.add {
       margin: auto;
       color: var(--btn-back)!important;
@@ -147,7 +149,7 @@
     }
 
     & .tab-btn.add:hover {
-      
+
     }
     & .tab-btn.add::before {
 
@@ -166,11 +168,11 @@
       background-color: var(--btn-bg);
       border-radius: var(--radius);
     }
-    
-    
+
+
 
     // delete
-    
+
     & .tab-btn.delete {
       margin: auto;
       color: var(--btn-back)!important;
@@ -179,7 +181,7 @@
     }
 
     & .tab-btn.delete:hover {
-      
+
     }
     & .tab-btn.delete::before {
 
@@ -198,7 +200,7 @@
       background-color: var(--btn-bg);
       border-radius: var(--radius);
     }
-    
+
 
     // delete 2
 
@@ -219,7 +221,7 @@
       border: 1px solid white;
       width: 100%;
       color: white!important;
-    
+
     }
 
 
@@ -242,11 +244,396 @@
     }
 
 
-     
+    // show
+
+    & .tab-btn.show {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.show:hover {
+
+    }
+    & .tab-btn.show::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F341";
+    }
+
+    & .tab-btn.show:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    // open-down
+
+    & .tab-btn.open-down {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.open-down:hover {
+
+    }
+    & .tab-btn.open-down::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F282";
+    }
+
+    & .tab-btn.open-down:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+    // close-up
+
+    & .tab-btn.close-up {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.close-up:hover {
+
+    }
+    & .tab-btn.close-up::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F286";
+    }
+
+    & .tab-btn.close-up:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    // information
+
+    & .tab-btn.info {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+    & .tab-btn.info:hover {}
+    & .tab-btn.info::before {
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F433";
+    }
+    & .tab-btn.info:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    & .tab-btn.info.negative {
+      color: white!important;
+    }
+    & .tab-btn.info.negative::before {
+      background-color: var(--accent);
+    }
+
+    // info dark
+
+    & .tab-btn.info.dark {
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.info.dark:hover {
+
+    }
+    & .tab-btn.info.dark::before {
+      color: white;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      margin-bottom: 10px!important;
+      content: "\F433";
+    }
+
+    & .tab-btn.info.dark:hover::before {
+      border: 1px solid transparent;
+      background-color: transparent;
+      border-radius: var(--radius);
+    }
+
+
+
+    // settings
+
+    & .tab-btn.settings {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+    & .tab-btn.settings:hover {}
+    & .tab-btn.settings::before {
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px;
+      text-align: center;
+      font-size: 0.7em;
+
+      margin-right: 2px;
+      content: "\F3E5";
+    }
+    & .tab-btn.settings:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+    & .tab-btn.settings.negative {
+      color: white!important;
+    }
+    & .tab-btn.settings.negative::before {
+      background-color: var(--accent);
+
+    }
+
+
+
+    // collapse
+
+    & .tab-btn.shrink {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.shrink:hover {
+
+    }
+    & .tab-btn.shrink::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F14B";
+    }
+
+    & .tab-btn.shrink:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    // expand
+
+    & .tab-btn.expand {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.expand:hover {
+
+    }
+    & .tab-btn.expand::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F14C";
+    }
+
+    & .tab-btn.expand:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+     // check
+
+     & .tab-btn.check {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.check:hover {
+
+    }
+    & .tab-btn.check::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F633";
+    }
+
+    & .tab-btn.check:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    // copy
+
+    & .tab-btn.copy {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.copy:hover {
+
+    }
+    & .tab-btn.copy::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F759";
+    }
+
+    & .tab-btn.copy:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    // close
+
+    & .tab-btn.close {
+      margin: auto;
+      color: var(--btn-back)!important;
+      margin-right: 2px!important;
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.close:hover {
+
+    }
+    & .tab-btn.close::before {
+
+      border: 1px solid var(--bg-2);
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      content: "\F629";
+    }
+
+    & .tab-btn.close:hover::before {
+      border: 1px solid var(--btn-bg);
+      background-color: var(--btn-bg);
+      border-radius: var(--radius);
+    }
+
+    // close dark
+
+    & .tab-btn.close.dark {
+      transition: background-color 0.3s;
+    }
+
+    & .tab-btn.close.dark:hover {
+
+    }
+    & .tab-btn.close.dark::before {
+      color: white;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      display: block;
+      padding: 3px 3px;
+      text-align: center;
+      font-size: 0.7em;
+      margin-right: 2px;
+      margin-bottom: 10px!important;
+      content: "\F629";
+    }
+
+    & .tab-btn.close.dark:hover::before {
+      border: 1px solid transparent;
+      background-color: transparent;
+      border-radius: var(--radius);
+    }
+
+
+
+
+
+    // sep, separator
+
+    & .tab-btn.sep {
+
+    }
+
+    & .tab-btn.sep::before {
+      color: var(--bg-3)!important;
+      display: block;
+      border-left: 1px solid var(--bg-3);
+      width: 1px;
+      height: 18px;
+      margin: 3px 6px 0 8px;
+      content: "";
+    }
+
+
+
     // sizes
 
     & .tab-btn.x-small {
-      font-size: var(--btn-font-x-small-size)!important; 
+      font-size: var(--btn-font-x-small-size)!important;
       margin: 0!important;
       padding: 0!important;
     }
@@ -268,10 +655,10 @@
 
     // disabled
 
-    
 
-    
-    
+
+
+
   }
 
   button.jj-delete {

@@ -43,21 +43,23 @@ let hiddenkeys = ["jsxString", "pointedBy", "clonedCounter", "parent", "_subMaps
 function fixproxy(output: any/*but not array*/, hideDKeys: boolean = true, addLKeys: boolean = true):
     { output: any, shortcuts?: GObject<'L singleton'>, comments?: Dictionary<string, string | {type:string, txt:string}>, hiddenkeys?: GObject} {
 
+    let ret: ReturnType<typeof fixproxy> = {output};
+    if (!output) return ret;
+
     let proxy: LPointerTargetable | undefined;
     if (output?.__isProxy) {
         proxy = output;
         output = output.__raw; //Object.fromEntries(Object.getOwnPropertyNames(p).map(k => [k, p[k]]));
     } else proxy = undefined;
 
-    let ret: ReturnType<typeof fixproxy> = {output};
-    switch(typeof output) {
+    switch (typeof output) {
         case "function": {
             let fdata =  U.buildFunctionDocumentation(output);
-
             return {output: fdata};
         }
-        default: return {output};
+        default: return ret;
         case "object":
+            // if (Array.isArray(output)) { ret.output = output; break; /* no need to go inside, it is already done at render phase */ }
             ret.output = output = {...output};
             if ((addLKeys && proxy)) {
                 let Lsingleton: GObject<'L singleton'> = (RuntimeAccessibleClass.get(output?.className)?.logic?.singleton) || {};
@@ -217,7 +219,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                         ', but supports array of JSX nodes and JSX as separator argument.</span>'};
                 shortcuts = {"separator": ""};
             }
-            if (Array.isArray(output) && output[0]?.__isProxy) {
+            if (Array.isArray(output)) {
                 output = output.map(o => fixproxy(o).output);
             }
             else {
@@ -268,7 +270,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
 
                 if (shortcuts) {
                     shortcutsjsx = <ul>{
-                        Object.keys(shortcuts).map(k=>this.getClickableEntry(expression, k, shortcuts))
+                        Object.keys(shortcuts).sort().map(k=>this.getClickableEntry(expression, k, shortcuts))
                     }</ul>
                 }
                 // if (hidden) outstr +="</div><br><br><h4>Other less useful properties</h4><div class=\"output-row\" tabindex=\"984\">" + format(hidden);
@@ -298,7 +300,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                 : Object.getOwnPropertyNames(objraw)) || [];
 
         contextkeys = <ul>{
-            contextkeysarr.map(k=>this.getClickableEntry(expression, k))
+            contextkeysarr.sort().map(k=>this.getClickableEntry(expression, k))
         }</ul>;
 
 
@@ -331,9 +333,9 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
         let canundo = this.state.expressionIndex > 0;
 
         return(<div className={'w-100 h-100 p-2 console'}>
-            <label className={'on-element'}>
-                <span>On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}</span>
-            </label>
+            <h1>
+                On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}
+            </h1>
             <div className='console-terminal p-0 mb-2 w-100'>
                 <div className='commands'>
                     <i onClick={(e) => { this.setState({expression:''})} } title={'Empty console'} className="bi bi-slash-circle" />
@@ -347,17 +349,18 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
                     <i onClick={redo} title={'redo'} className={"redo bi bi-arrow-right-square" + (canredo ? '':" disabled")} />
                     {/* @ts-ignore */}
                     <i onClick={undo} title={'undo'} className={"undo bi bi-arrow-left-square" + (canundo ? '':" disabled")} />
-
-                    {/* todo per damiano: per la funzione 'torna indietro', si tratta di annullare l'ultimo inserimento, per esempio se clicco su data e poi length, nella console
-                    avrei 'data.length', cliccando sul back nella consol avrei 'data' */}
                 </div>
                 <textarea id={'console'} spellCheck={false} className={'p-0 input w-100'} onChange={this.change} value={this.state.expression} ></textarea>
             </div>
-            <div>Debug history (index = {this.state.expressionIndex})
-                { this.state.expressionHistory.map((s, i)=> (<>
-                <div style={{border: '1px solid ' + (i === this.state.expressionIndex ? 'red' : 'gray'), marginTop:'5px', height: '30px'}}>{s}</div>
-                </>
-                ))}</div>
+            {false && <div>Debug history (index = {this.state.expressionIndex})
+                {this.state.expressionHistory.map((s, i) => (<>
+                        <div style={{
+                            border: '1px solid ' + (i === this.state.expressionIndex ? 'red' : 'gray'),
+                            marginTop: '5px',
+                            height: '30px'
+                        }}>{s}</div>
+                    </>
+                ))}</div>}
             {/*<label>Query {(this.state.expression)}</label>*/}
             <hr className={'mt-1 mb-1'} />
             { this.state.expression &&  ashtml && <div className={"console-output-container console-msg"}

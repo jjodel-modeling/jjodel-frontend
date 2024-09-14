@@ -1,3 +1,5 @@
+/* Viewpoints > Options */
+
 import React, {Dispatch} from 'react';
 import {
     DState, DV,
@@ -39,11 +41,11 @@ function FieldDataComponent(props: AllProps) {
         <option>EdgePoint</option>
         <option>Field</option>
     </optgroup>;
-    return(<section>
+    return(<section className={'options-field'}>
         <h5>Field</h5>
-        <div className={'px-2'}>
+        <div>
             <div className={'input-container'}>
-                <b className={'me-2'}>Appliable to:</b>
+                <p>Appliable to:</p>
                 <Select data={view} field={'appliableTo'}
                         options={graphElementOptions}
                         getter={() => dview.appliableTo || 'Any'}

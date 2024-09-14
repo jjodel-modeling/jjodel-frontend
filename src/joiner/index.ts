@@ -223,6 +223,7 @@ export type ClickEvent = JQuery.ClickEvent;
 export type MouseDownEvent = JQuery.MouseDownEvent;
 export type BlurEvent = JQuery.BlurEvent;
 export type KeyDownEvent = JQuery.KeyDownEvent;
+export type KeyUpEvent = JQuery.KeyUpEvent;
 export type KeyPressEvent = JQuery.KeyPressEvent;
 export type DoubleClickEvent = JQuery.DoubleClickEvent;
 export type DragEndEvent = JQuery.DragEndEvent;

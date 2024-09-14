@@ -34,9 +34,11 @@ class ProjectsApi {
     }
     static async save(project: LUser['project']): Promise<void> {
         if(!project) return;
+        const rawProject = project.__raw as DProject;
+        console.log('Saved', rawProject);
         SetRootFieldAction.new('_lastSelected', undefined);
-        if(U.isOffline()) await Offline.save(project.__raw as DProject);
-        else await Online.save(project.__raw as DProject);
+        if(U.isOffline()) await Offline.save(rawProject);
+        else await Online.save(rawProject);
     }
 
     static importModal() {
@@ -110,6 +112,7 @@ class Online {
             /* 401: Unauthorized -> Invalid Token (Local Storage)  */
             Storage.reset();
             U.refresh();
+            return;
         }
         const data = U.wrapper<DProject[]>(response.data);
         for(const project of data)

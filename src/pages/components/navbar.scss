@@ -1,5 +1,6 @@
 
 /* NEW NAVBAR */
+
 .new-navbar {
   list-style-type: none;
   background-color: var(--fg-1);
@@ -106,7 +107,7 @@
     bottom: 0;
     pointer-events: none;
     display: flex;
-    
+
     &> .aligner{
       margin: auto;
       pointer-events: all;
@@ -129,8 +130,8 @@
       height: 24px;
       width: 70px;
       z-index:2;
-    } 
-    
+    }
+
     &  div.logo-on {
 
       position: relative;
@@ -144,7 +145,7 @@
       z-index:200;
     }
 
-    
+
 
     & .bi {
       position: absolute;
@@ -156,7 +157,7 @@
       z-index: 1;
     }
 
-    
+
   }
 
   .nav-commands{
@@ -269,6 +270,12 @@
   min-width: 100%;
   padding: 4px 0px;
   --font-color-1: white;
+  .highlight{
+    height: 30px;
+  }
+  .context-menu{
+    margin-top: -5px; // undo the padding (4) and border (1) to align the nested submenu
+  }
   .content.right{
     min-height: 100%;
   }
@@ -363,6 +370,7 @@
       padding: 2px;
       height: 24px;
       width: 24px;
+      background-color: var(--color);
     }
   >*{
     margin: auto 0;

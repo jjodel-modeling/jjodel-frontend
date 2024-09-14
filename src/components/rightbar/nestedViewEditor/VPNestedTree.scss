@@ -1,31 +1,61 @@
-.expansion-line{
+/* .expansion-line {
+  position: relative!important;
+  left: 0;
+  bottom: 0;
   border-left: 2px solid gray;
   border-bottom: 2px solid gray;
   border-radius: 8px;
   height: 100%;
   position: absolute;
   z-index: -1;
-}
-/*
-.entry-root.DViewPoint{
-  &>.inline-row>.right-stuff{
-    .priority, .change-boost, .right-ico{
-    }
-    display: none;
-  }
 }*/
-.entry-root.DViewPoint.selected{
+
+
+
+ul.ps-2.pt-2 .entry-root.DViewPoint.selected {
+  position: relative;
+  z-index: 0;
+
   &>.inline-row{
-    background: #ddffdd;
+    background: #ddffdd!important;
     // background: #00ff00;
+    border: 1px solid #ddffdd;
   }
+  &>.inline-row:hover {
+    border: 1px solid var(--bg-4);
+  }
+
 
   // padding: 0.5em; padding-right: 0;
   // position: relative;
 }
+
+
+
+
+
+ul.ps-2.pt-2 .entry-root.DViewPoint.selected::after {
+  position:absolute;
+  left    : 4px;
+  bottom  : 4px;
+  display: block;
+  border-left: 1px dotted var(--color);
+  height: calc(100% - 2.8em);
+  width: 4px;
+  content: "";
+
+}
+
+
+
+
+
 .inline-row{
   display: flex;
+  border: 1px solid transparent;
+  padding-bottom: 1px;
 }
+
 .icon.type{
   // border: none;
   margin: auto;
@@ -75,10 +105,9 @@ input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: initial;
 }
 */
-input.change-boost{
+/* input.change-boost{
   width: 2.5em;
   outline: 1px solid black;
-  height: 100%;
   // border-radius: 4px;
   border: none;
   text-align: center;
@@ -86,8 +115,9 @@ input.change-boost{
   &:hover, &:focus{
     outline: 2px solid black;
   }
-}
+}*/
 .vertical-centering{
+  position: relative;
   display: flex;
   >*{
     margin-top: auto;
@@ -96,19 +126,12 @@ input.change-boost{
 }
 
 .right-icon{
-  outline: 1px solid;
-  padding: 0.25em;
-  margin-left: 0.35em;
-  height: 100%;
   display: inline-block;
-  width: 2.5em;
-  // border-radius: 8px;
-  --color: black;
-
-  text-shadow: 0px 0px 1px var(--color);
-  color: var(--color);
-  outline-color: var(--color);
-
+  border-radius: calc(var(--radius) - 1px);
+  padding-top: 2px;
+  margin-left: 2px;
+  height: 24px;
+  transition: background-color 0.3s;
   .bi { color: inherit; }
   &.hidden{
     opacity: 0.33;
@@ -117,45 +140,108 @@ input.change-boost{
     text-shadow: none;
   }
 }
-.ocl-ico{
-  --color: #ff2020;
-}
-.js-ico{
-  --color: goldenrod;
-  padding-left: 0.125em;
-}
-.ex-ico{
-  width: 1.4ic;
-  color: #207720;
-  outline-color: #207720;
-  padding-left: 0.125em;
-}
-/*.hidden{
-  visibility: hidden;
-}
-*/
-.priority{
-  width: 72px;
-  white-space: nowrap;
-  // direction: rtl;
-  text-align: right;
-  margin-top: 4.1px; // apparently cannot edit his height/width or align text vertically
-}
-.right-content, .hover-stuff{
-  --anim-in: all 0.2s linear;
-  --anim-out: all 0.2s linear;
+
+.right-icon:hover {
   cursor: pointer;
-  transform: scaleX(1);
-  transition: var(--anim-in);
-  display: flex;
-  transform-origin:left;
-  transform: scaleX(1);
-  max-height: 26px;
-  height: 26px;
-  white-space: nowrap;
-  // border: 2px solid red;
-  >:first-child{margin-left: auto;}
+  color: white;
 }
+
+.ocl-icon {
+  transition: background-color 0.3s;
+  color: white;
+}
+.ocl-icon::before {
+  opacity: 0.7;
+  position: relative;
+  display: block;
+  width: 1.7rem;
+  height: 22px;
+  border: 1px solid var(--failure);
+  background-color: var(--failure);
+  color: var(--white)!important;
+  border-radius: var(--radius);
+  text-align: center;
+  margin: auto;
+  padding-left: auto;
+  padding-right: auto;
+  padding-top: 2px;
+  font-weight: 600;
+  font-size: 0.85em;
+
+  content: "OCL";
+
+}
+.ocl-icon:hover::before {
+  opacity: 1;
+}
+
+.js-icon {
+  transition: background-color 0.3s;
+  color: white;
+}
+
+.js-icon::before {
+  opacity: 0.7;
+  position: relative;
+  padding-top: 2px;
+  display: block;
+  min-width: 1.7rem;
+  height: 22px;
+  border: 1px solid var(--accent-secondary);
+  background-color: var(--accent-secondary);
+  color: var(--white)!important;
+  border-radius: var(--radius);
+  text-align: center;
+  padding-left: auto;
+  padding-right: auto;
+  margin: auto;
+  font-weight: 600;
+  font-size: 0.85em;
+
+  content: "JS";
+}
+.js-icon:hover::before {
+  opacity: 1;
+}
+
+.ex-icon {
+  transition: background-color 0.3s;
+  color: white;
+}
+.ex-icon::before {
+
+
+  opacity: 0.7;
+  position: relative;
+  display: block;
+  width: 1.7rem;
+  height: 22px;
+  border: 1px solid var(--accent);
+  background-color: var(--accent);
+  color: var(--white)!important;
+  border-radius: var(--radius);
+  text-align: center;
+  margin: auto;
+  padding-left: auto;
+  padding-right: auto;
+  padding-top: 2px;
+  font-weight: 600;
+  font-size: 0.85em;
+
+  content: "EX";
+  top: 0!important;
+
+}
+.ex-icon:hover::before {
+  opacity: 1;
+}
+
+.right-content, .hover-stuff{
+  cursor: pointer;
+  display: flex;
+  height: 26px;
+}
+
 .left-stuff{
   padding-left: 0.125em;
   .bi{
@@ -178,6 +264,42 @@ input.change-boost{
 }
 .right-content{
   cursor: default;
+
+  & .priority {
+    display: block;
+    min-width: 6rem;
+    height: 22px;
+    border: 1px solid var(--color);
+    border-radius: var(--radius);
+    margin: auto;
+    text-align: center;
+    padding-left: 10px;
+    padding-right: 10px;
+
+    width: 72px;
+    white-space: nowrap;
+
+  }
+  & .priority-booster {
+    display: block;
+    height: 24px;
+
+    margin: auto;
+    margin-right: 10px;
+    text-align: center;
+    padding-left: 10px;
+    padding-right: 10px;
+
+    width: 1.5em;
+    height: 22px;
+    border: 1px solid var(--color)!important;
+    border-radius: var(--radius);
+
+    text-align: center;
+    &:hover, &:focus{
+      outline: 2px solid black;
+    }
+  }
 }
 .right-stuff{
   max-height: 26px;
@@ -185,22 +307,26 @@ input.change-boost{
   .spacer{
     margin-left: auto;
   }
+  width: fit-content;
 }
 .inline-row {
+  position: relative;
   padding-right: 0.5em;
   border-radius: 10px;
-  padding-top: 0.125em;
-  padding-bottom: 0.125em;
-  --hover-bg: #eee;
+  left: -10px;
+  padding-left: 10px;
+
   &:hover{
-    background-color: var(--hover-bg);
-    outline: 2px solid #999;
+    background-color: var(--bg-3);
+    outline: none;
+    border-radius: var(--radius);
+    padding-left: 10px;
+
   }
   .right-stuff{
     transform-origin:right;
   }
   .hover-stuff{
-    // width: 0;
     height: 26px;
     &>*{ height: 26px; }
     .bg, .bx{
@@ -258,16 +384,55 @@ input.change-boost{
   z-index: 1;
 }
 
-.view-editor-root{
+.view-editor-root {
   height: 100%;
   max-height: 100%;
   overflow: hidden;
   padding-right: 0.25em;
   background: white;
+
   &:has(.single-view-content){
     overflow: hidden;
   }
   .dock-content .dock-tabpane{
     overflow: auto !important;
+  }
+
+  section.viewpoint-tab {
+
+    color: var(--color);
+    margin: 10px; // var(--tab-margin);
+    padding: 8px;
+    font-weight: 400;
+
+    border: 1px solid var(--bg-1-5);
+    border-radius: var(--radius);
+    background-color: var(--bg-1-5);
+    transition: opacity 0.3s;
+  }
+
+  section.viewpoint-tab .ps-2.pt-2 h1 {
+    width: 100%!important;
+    display: block;
+    clear: right!important;
+    font-size: 1.1em;
+    color: var(--accent);
+    border-bottom: 1px solid var(--bg-2-5);
+
+
+
+  }
+
+  section.viewpoint-tab h1::before {
+    position: relative;
+
+    font-size: 1.15em;
+    margin-right: var(--tab-sep);
+    font-family: bootstrap-icons;
+    content: "\F6D2";
+  }
+
+  .viewpoint {
+
   }
 }

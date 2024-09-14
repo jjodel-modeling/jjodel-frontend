@@ -3,6 +3,11 @@
 .REACT-ROOT:not(.debug) .debug{
   display: none;
 }
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 /* classes */
 .round { border-radius: $radius; }
 .circle { border-radius: 999px !important; }
@@ -201,17 +206,81 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
 
 .monaco-editor-wrapper {
   border-radius: var(--radius);
+  max-height: 75%;
 }
 
+.monaco-editor-wrapper textarea {
+  height: 10px!important;
+}
+
+.template-item:first-of-type {
+    margin-top: 0!important;
+
+
+    & input {
+      margin-top: 0!important;
+    }
+    & .simpleMode {
+      margin-top: 0!important;
+    }
+    & div:has(.delete) {
+      padding-top: 0!important;
+    }
+    & div:has(.question) {
+
+    }
+    & div.command-bar:has(.question) {
+      position: relative;
+      margin-top: 0px!important;
+      padding-top: 0px!important;
+    }
+    & div.command-bar .question {
+      position: relative;
+      bottom: 2px!important;
+
+      margin-top: 0px!important;
+      padding-top: 0px!important;
+
+    }
+}
+.template-item:not(:first-of-type) .question::before {
+  position: relative;
+  bottom: 3px!important;
+}
+
+
+
+.simpleMode {
+
+}
+.template-item:has(.detailedMode) > input  {
+  padding-bottom: 0!important;
+}
+
+.template-item:has(.detailedMode):first-of-type > span {
+  margin-top: 1px!important;
+}
+
+.template-item:last-of-type {
+
+  margin-bottom: 10px;
+}
+
+.delete.command-bar{
+
+}
+
+
 label.jj-editor-title {
-  color: var(--palette-w);
-  background-color: var(--palette-3);
+  display: inline-block;
+  color: var(--accent);
+
   width: fit-content;
-  padding: 2px 12px 2px 12px;
-  border-radius: 0.4em;
-  font-weight: 200;
-  // font-size: 1rem;
-  //margin-bottom: 6px!important;
+  margin-top: 20px;
+
+  font-weight: 500;
+  font-size: 1em;
+
 }
 
 i.bi {

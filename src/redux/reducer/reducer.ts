@@ -418,7 +418,6 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     const ret = _reducer(oldState, action);
     if (ret === oldState) return oldState;
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
-
     // client synchronization stuff
     if (oldState?.collaborativeSession) {
         const ignoredFields: (keyof DState)[]  = ['contextMenu', '_lastSelected', 'isLoading', 'collaborativeSession'];
@@ -765,6 +764,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     }
     ret.VIEWS_RECOMPILE_jsCondition = [];
 
+
     if (ret.VIEWS_RECOMPILE_jsxString?.length)
     for (const vid of new Set(ret.VIEWS_RECOMPILE_jsxString)) { // compiled in func, but NOT executed, result varies between nodes.
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
@@ -776,6 +776,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
         let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
         console.log('jsxparse', { allContextKeys, ud:transientProperties.view[vid].UDList, c:transientProperties.view[vid].constantsList });
+
         const body: string =  'return (' + UX.parseAndInject(DSL.parser(dv.jsxString), dv) + ')';
         // if (vid.includes('Model')) console.log("modelparse, jsx", {paramStr, body});
         console.log('jsxparse', {vid, paramStr, body});

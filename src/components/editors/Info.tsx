@@ -17,152 +17,181 @@ import './editors.scss';
 import './info.scss';
 import './style.scss';
 import {Empty} from "./Empty";
+import { CommandBar, Btn } from '../commandbar/CommandBar';
+import { Tooltip } from '../forEndUser/Tooltip';
 
 class builder {
     static named(data: LModelElement, advanced: boolean): ReactNode {
-        return (<div className={'input-container'}>
-            <b className={'me-2'}>Name:</b>
-            <Input data={data} field={'name'} type={'text'}/>
-        </div>);
+        return (<><h1>{data.name}</h1>
+            <label className={'input-container'}>
+                <b className={'me-2'}>Name:</b>
+                <Input data={data} field={'name'} type={'text'}/>
+            </label>
+
+            <label className={'input-container'}>
+                <b className={'me-2'}>Readonly:</b>
+                <Input data={data} field={'__readonly'} type={'checkbox'}/>
+            </label>
+        </>);
     }
 
     static model(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section>
+        return (<section className={'properties-tab'}>
             {this.named(data, advanced)}
         </section>);
     }
 
     static package(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section>
+        return (<section className={'properties-tab'}>
+            <h1>{data.name}</h1>
             {this.named(data, advanced)}
-            <div className={'input-container'}>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Uri:</b>
                 <Input data={data} field={'uri'} type={'text'}/>
-            </div>
-            <div className={'input-container'}>
+            </label>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Prefix:</b>
                 <Input data={data} field={'prefix'} type={'text'}/>
-            </div>
+            </label>
         </section>);
     }
 
     static class(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section>
+        return (<section className={'properties-tab'}>
             {this.named(data, advanced)}
-            <div className={'input-container'}>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Abstract:</b>
                 <Input data={data} field={'abstract'} type={'checkbox'}/>
-            </div>
-            <div className={'input-container'}>
+            </label>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Interface:</b>
                 <Input data={data} field={'interface'} type={'checkbox'}/>
-            </div>
-            {advanced && <div className={'input-container'}>
+            </label>
+            <label className={'input-container'}>
+                <b className={'me-2'}>Final:</b>
+                <Tooltip tooltip={"Defines if the class can be extended."}>
+                    <Input data={data} field={'final'} type={'checkbox'}/>
+                </Tooltip>
+            </label>
+            {false &&
+                <label className={'input-container'}>
+                    <b className={'me-2'}>Rootable:</b>
+                    <Tooltip tooltip={"Whether the element can be a m1 root (present in toolbar)."}>
+                        <Input data={data} field={'rootable'} type={'checkbox'} threeStateCheckbox={true}/>
+                    </Tooltip>
+                </label>}
+            <label className={'input-container'}>
+                <b className={'me-2'}>Singleton:</b>
+                <Tooltip tooltip={"Whether the element can be a m1 root (present in toolbar)."}>
+                    <Input data={data} field={'singleton'} type={'checkbox'}/>
+                </Tooltip>
+            </label>
+            {advanced && <label className={'input-container'}>
                 <b className={'me-2'}>Partial:</b>
                 <Input data={data} field={'partial'} type={'checkbox'}/>
-            </div>}
+            </label>}
         </section>);
     }
 
     static enum(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section>
+        return (<section className={'properties-tab'}>
             {this.named(data, advanced)}
-            {advanced && <div className={'input-container'}>
+            {advanced && <label className={'input-container'}>
                 <b className={'me-2'}>Serializable:</b>
                 <Input data={data} field={'serializable'} type={'checkbox'}/>
-            </div>}
+            </label>}
         </section>);
     }
 
     static feature(data: LModelElement, advanced: boolean): JSX.Element {
         return (<>
             {this.named(data, advanced)}
-            <div className={'input-container'}>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Type:</b>
                 <Select data={data} field={'type'} />
-            </div>
-            <div className={'input-container'}>
+            </label>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Lower Bound:</b>
                 <Input data={data} field={'lowerBound'} type={'number'} />
-            </div>
-            <div className={'input-container'}>
+            </label>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Upper Bound:</b>
                 <Input data={data} field={'upperBound'} type={'number'} />
-            </div>
+            </label>
             {advanced && <>
-                <div className={'input-container'}>
+                <label className={'input-container'}>
                     <b className={'me-2'}>Unique:</b>
                     <Input data={data} field={'unique'} type={'checkbox'} />
-                </div>
-                <div className={'input-container'}>
+                </label>
+                <label className={'input-container'}>
                     <b className={'me-2'}>Ordered:</b>
                     <Input data={data} field={'ordered'} type={'checkbox'} />
-                </div>
-                <div className={'input-container'}>
+                </label>
+                <label className={'input-container'}>
                     <b className={'me-2'}>Changeable:</b>
                     <Input data={data} field={'changeable'} type={'checkbox'} />
-                </div>
-                <div className={'input-container'}>
+                </label>
+                <label className={'input-container'}>
                     <b className={'me-2'}>Volatile:</b>
                     <Input data={data} field={'volatile'} type={'checkbox'} />
-                </div>
-                <div className={'input-container'}>
+                </label>
+                <label className={'input-container'}>
                     <b className={'me-2'}>Transient:</b>
                     <Input data={data} field={'transient'} type={'checkbox'} />
-                </div>
-                <div className={'input-container'}>
+                </label>
+                <label className={'input-container'}>
                     <b className={'me-2'}>Unsettable:</b>
                     <Input data={data} field={'unsettable'} type={'checkbox'} />
-                </div>
-                <div className={'input-container'}>
+                </label>
+                <label className={'input-container'}>
                     <b className={'me-2'}>Derived:</b>
                     <Input data={data} field={'derived'} type={'checkbox'} />
-                </div>
+                </label>
             </>}
         </>);
     }
     static attribute(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section>
+        return (<section  className={'properties-tab'}>
             {this.feature(data, advanced)}
-            {advanced && <div className={'input-container'}>
+            {advanced && <label className={'input-container'}>
                 <b className={'me-2'}>ID:</b>
                 <Input data={data} field={'isID'} type={'checkbox'} />
-            </div>}
+            </label>}
         </section>);
     }
     static reference(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section>
+        return (<section className={'properties-tab'}>
             {this.feature(data, advanced)}
-            <div className={'input-container'}>
-                <b className={'me-2'}>Containment:</b>
-                <Input data={data} field={'containment'} type={'checkbox'} />
-            </div>
-            <div className={'input-container'}>
+            <label className={'input-container'}>
+                <b className={'me-2'}>Composition:</b>
+                <Input data={data} field={'composition'} type={'checkbox'} />
+            </label>
+            <label className={'input-container'}>
+                <b className={'me-2'}>Aggregation:</b>
+                <Input data={data} field={'aggregation'} type={'checkbox'} />
+            </label>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Container:</b>
                 <Input data={data} field={'container'} type={'checkbox'} />
-            </div>
-            {advanced && <div className={'input-container'}>
-                <b className={'me-2'}>Resolve Proxies:</b>
-                <Input data={data} field={'resolveProxies'} type={'checkbox'} />
-            </div>}
+            </label>
         </section>);
     }
     static operation(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section>
+        return (<section className={'properties-tab'}>
             {this.named(data, advanced)}
-            <div className={'input-container'}>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Return:</b>
                 <Select data={data} field={'type'} />
-            </div>
+            </label>
         </section>);
     }
     static literal(data: LModelElement, advanced: boolean): JSX.Element {
-        return (<section>
+        return (<section className={'properties-tab'}>
             {this.named(data, advanced)}
-            <div className={'input-container'}>
+            <label className={'input-container'}>
                 <b className={'me-2'}>Ordinal:</b>
                 <Input data={data} field={'ordinal'} type={'number'} />
-            </div>
+            </label>
         </section>);
     }
     static object(data: LModelElement, advanced: boolean): JSX.Element {
@@ -175,7 +204,8 @@ class builder {
             const value = feature.values;
             conform = (value.length >= lowerBound && value.length <= upperBound);
         }
-        return(<section>
+        return(<section className={'properties-tab'}>
+            <h1>{data.name}</h1>
             {object.instanceof && conform && <label className={'d-block text-center'}>
                 The instance <b className={'text-success'}>CONFORMS</b> to {object.instanceof.name}
             </label>}
@@ -186,12 +216,12 @@ class builder {
                 The instance is <b className={'text-warning'}>SHAPELESS</b>
             </label>}
             {!object.partial ? null :
-                <div className={'input-container'}>
+                <label className={'input-container'}>
                     <b className={'me-2'}>Features:</b>
                     <button className={'btn btn-primary ms-auto'} onClick={e => object.addValue()}>
                         <i className={'p-1 bi bi-plus'} />
                     </button>
-                </div>
+                </label>
             }
             {this.forceConform(object)}
         </section>);
@@ -199,7 +229,7 @@ class builder {
     static forceConform(me: LObject) {
         let mm: LModel = Selectors.getLastSelectedModel().m2 as LModel;
         if (!mm) return <></>
-        return(<div className={'input-container'}>
+        return(<label className={'input-container'}>
             <b className={'me-2'}>Force Type:</b>
             <select className={'my-auto ms-auto select'} onChange={ (event)=>{
                 (window as any).debugmm = mm;
@@ -213,7 +243,7 @@ class builder {
                     <option value={'undefined'}>Object</option>
                 </optgroup>
             </select>
-        </div>);
+        </label>);
     }
     static value(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean): JSX.Element {
         const value: LValue = LValue.fromPointer(data.id);
@@ -325,7 +355,7 @@ class builder {
         let isPtr = isAttribute ? false : (isEnumerator || isReference ? true : undefined);
         const valueslist = (filteredValues).map((val, index) =>
             val.hidden ? null :
-                <div className={'mt-1 d-flex ms-4'} key={index}>
+                <label className={'mt-1 d-flex ms-4'} key={index}>
                     <div className={'border border-dark'}></div>
                     {isAttribute && <input onChange={(evt) => { changeDValue(evt, index, false) }} className={'input m-auto ms-1'} value={val.value + ''}
                                        checked={!!val.value} min={min} max={max} type={field} step={stepSize} maxLength={maxLength} placeholder={'empty'}/> }
@@ -344,18 +374,25 @@ class builder {
                             {selectOptions}
                         </select>}
                     </>}
-                    <button className={'btn btn-danger m-auto ms-2'} onClick={(evt) => {remove(index, isPtr)}}>
+                    <CommandBar>
+                        <Btn icon={'delete'} tip={'Remove value'} action={(evt) => {remove(index, isPtr)}} />
+                    </CommandBar>
+                    {/*<button className={'btn btn-danger m-auto ms-2'} onClick={(evt) => {remove(index, isPtr)}}>
                         <i className={'p-1 bi bi-trash3'}></i>
-                    </button>
-                </div>);
+                    </button>*/}
+                </label>);
 
-        return(<section>
-            <div className={'d-flex'}>
+        return(<section className={'properties-tab'}>
+            <h1>{data.name}</h1>
+            <label className={'d-flex'}>
                 <label className={'ms-1 my-auto'}>Values</label>
-                <button className={'btn btn-primary ms-auto me-1'} disabled={filteredValues.length >= upperBound} onClick={add}>
+                <CommandBar style={{marginLeft: 'auto', marginTop: '6px'}}>
+                    <Btn icon={'add'} action={add} tip={`Add a ${data.name} value`} disabled={filteredValues.length >= upperBound}/>
+                </CommandBar>
+                {/* <button className={'btn btn-primary ms-auto me-1'} disabled={filteredValues.length >= upperBound} onClick={add}>
                     <i className={'p-1 bi bi-plus'}></i>
-                </button>
-            </div>
+                </button>*/}
+            </label>
             {valueslist}
             {value.instanceof?.className === 'DAttribute' && (value.instanceof as LAttribute).isIoT && <>
                 <hr className={'my-3'} />

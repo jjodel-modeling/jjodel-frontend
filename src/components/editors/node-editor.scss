@@ -8,9 +8,10 @@
     }
   
     .node-editor {
-        margin: 1rem 0.5rem;
+        margin: 0.5rem;
         border-radius: var(--radius);
         background-color: var(--bg-2);
+
 
         h3 {
             color: var(--accent);
@@ -33,9 +34,14 @@
         }
 
         .my-auto {
+            font-weight: 400;
             font-family: "Inter Tight", sans-serif!important;
             color: var(--color);
             font-size: 1em;
+        }
+
+        input[type=number] {
+            padding-right: 0;
         }
     }
   }

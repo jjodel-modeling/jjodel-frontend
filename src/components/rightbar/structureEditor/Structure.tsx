@@ -115,7 +115,6 @@ export default class Structure {
             {Structure.StructuralFeatureEditor(lReference)}
             <Input data={lReference} field={"containment"} label={"IsContainment"} type={"checkbox"} tooltip={"Indicates whether the reference is a containment"} />
             <Input data={lReference} field={"container"} label={"IsContainer"} type={"checkbox"} tooltip={"Indicates whether the reference is a container. This is the opposite of a containment EReference. If container is true, the generated accessor methods will have container semantics"} />
-            <Input data={lReference} field={"resolveProxies"} label={"IsResolveProxies"} type={"checkbox"} tooltip={"Indicates whether proxy references should be resolved automatically"} />
         </>);
     }
     public static EnumLiteralEditor(lEnumLiteral: LModelElement): ReactNode {

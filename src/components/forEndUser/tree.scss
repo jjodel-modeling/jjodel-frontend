@@ -26,7 +26,7 @@
   float: left;
   font-weight: bold;
   display: flex;
-  margin: 1px  3px;
+  margin: 1px  8px!important;
   width: fit-content;
   //overflow: hidden;
   font-size: 1em;
@@ -38,7 +38,8 @@
 
 
 .tree-item .name {
-  padding: 2px 4px 2px 8px;
+  
+  padding: 2px 4px 2px 8px!important;
   margin-top: 0;
   font-weight: normal;
   cursor: pointer;
@@ -72,6 +73,7 @@
   border-radius: 1.4rem!important;
   height: 1.5rem;
   width: 1.5rem;
+  
 
 }
 

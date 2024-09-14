@@ -99,8 +99,9 @@ export function InputComponent(props: AllProps) {
     const getter = props.getter;
     const setter = props.setter;
     const field: string = props.field as string;
-    const oldValue: PrimitiveType | LPointerTargetable = (!data) ? undefined : (getter) ? getter(data, field) : data[field]; // !== undefined); ? data[field] : 'undefined'
+    const oldValue: PrimitiveType | LPointerTargetable = (getter) ? getter(data, field) : (data ? data[field] : undefined); // !== undefined); ? data[field] : 'undefined'
     let [value, setValue] = useStateIfMounted<PrimitiveType | LPointerTargetable>(oldValue);
+
     const [isTouched, setIsTouched] = useStateIfMounted(false);
     const inputRef = useRef<Element | null>(null);
     if (props.tag === 'select') value = oldValue; // select does not use state.
@@ -122,7 +123,7 @@ export function InputComponent(props: AllProps) {
     }
 
 
-    if (!(data || (getter && setter))) return(<>Either props.data or both getter & setter are required.</>);
+    if (!((data && field) || (getter && setter))) return(<>Either props.data & field or both getter & setter are required.</>);
     let readOnly: boolean;
     if (props.readonly !== undefined) readOnly = props.readonly;
     // else if (props.disabled !== undefined) readOnly = props.disabled;
@@ -148,6 +149,7 @@ export function InputComponent(props: AllProps) {
             const target = evt.target.checked;
             if (setter) setter(target, data, field);
             else data[field] = target;
+            setValue(target);
             return;
         }
         if (props.tag === "select") {
@@ -338,8 +340,8 @@ export interface InputOwnProps {
     label?: string | ReactNode;
     postlabel?: string | ReactNode;
     jsxLabel?: ReactNode; // @deprecated, use label
-    type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|
-    'number'|'password'|'radio'|'range'|'tel'|'text'|'time'|'url'|'week';
+    type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|'number'|'password'|'radio'|'range'|'tel'|'text'|'time'|'url'|'week';
+    threeStateCheckbox?: boolean;
     className?: string;
     style?: GObject;
     readonly?: boolean;

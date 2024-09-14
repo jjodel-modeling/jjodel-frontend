@@ -12,7 +12,7 @@ class AuthApi {
         return await Api.post(`${Api.persistance}/auth/register`, {username, email, password});
     }
     static async logout(): Promise<void> {
-        await Api.delete(`${Api.persistance}/auth/logout`);
+        if(!U.isOffline()) await Api.delete(`${Api.persistance}/auth/logout`);
         Storage.reset();
         U.refresh();
     }

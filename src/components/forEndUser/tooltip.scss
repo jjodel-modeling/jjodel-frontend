@@ -1,4 +1,4 @@
-.tooltip-wrapper{
+.tooltip-wrapper {
   position: fixed;
   z-index: 9999;
   top: 0;
@@ -66,14 +66,25 @@
 
     }
   }
-  &>*{
+  &> *{
     pointer-events: all;
     margin: auto;
     background: whitesmoke; //var(--palette-w);
-    padding: 1em;
     border: 1px solid var(--palette-g);
-    border-radius: 0.5em;
+    padding: 0.4em;
+    border-radius: var(--radius); //.5em;
   }
+
+  &> .dark * {
+    pointer-events: all;
+    margin: auto;
+    background: var(--palette-w);
+    border: 1px solid var(--palette-g);
+    color: white;
+    padding: 0.4em;
+    border-radius: var(--radius); //.5em;
+  }
+  
   &.inline>*{
     margin: auto;
     pointer-events: none;

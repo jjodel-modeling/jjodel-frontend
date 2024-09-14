@@ -545,21 +545,25 @@ div.controls div.palette-row-container div.palette-row.numeric input.value {
   }
 }
 
-input.prefix {
-  height: var(--input-height);
-  width: var(--input-widht);
-  padding: 2px 10px!important;
-}
+.view-editor-root {
 
-input.prefix:disabled {
-  color: var(--color-disabled)!important;
-  background-color: var(--bg-disabled);
-}
+  input.prefix {
+    height: var(--input-height);
+    width: var(--input-widht);
+    padding: 2px 10px!important;
+  }
+  
+  input.prefix:disabled {
+    color: var(--color-disabled)!important;
+    background-color: var(--bg-disabled);
+  }
+  
+  select {
+    height: var(--select-height);
+    min-width: var(--select-width);
+    padding-left: 10px; 
+  }
 
-select {
-  height: var(--select-height);
-  min-width: var(--select-width);
-  padding-left: 10px;
 }
 
 

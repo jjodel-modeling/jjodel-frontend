@@ -20,6 +20,7 @@ import {
 import './editors.scss';
 import './node-editor.scss';
 import {Empty} from "./Empty";
+import { CommandBar, Btn } from '../commandbar/CommandBar';
 
 function NodeEditorComponent(props: AllProps) {
     const selected = props.selected;
@@ -133,15 +134,31 @@ function NodeEditorComponent(props: AllProps) {
         </>}
 
         <div style={{marginTop:'1em', marginBottom:'1em', borderBottom:'1px solid gray'}}/>
-        <div><h6>Super element: {
-            node.father?.className ?
-                <span onClick={(e)=> dnode.father && openNode(dnode.father)} style={clickableStyle}>
-                    {[node.father?.className, <i className={'ms-1 bi bi-arrow-up'}/>]}
-                </span>
+        
+        {/* <div>
+            <h6 className={'super'}>
+                Super element: 
+                {node.father?.className ?
+                    <span onClick={(e)=> dnode.father && openNode(dnode.father)} style={clickableStyle}>
+                        {[node.father?.className, <i style={{paddingLeft: '8px'}} className="bi bi-chevron-up"></i>]}
+                    </span>
                 :
-                <span style={notFoundStyle}>Not contained</span>
-        }
-        </h6></div>
+                    <span style={notFoundStyle}>Not contained</span>
+                }
+            </h6>
+            </div>*/}
+
+        {node.father?.className && <div>
+            <h6 style={{display: 'flex'}}>
+                Super element 
+                    {/*<span onClick={(e)=> dnode.father && openNode(dnode.father)} style={clickableStyle}>
+                        {[node.father?.className, <i style={{paddingLeft: '8px'}} className="bi bi-chevron-up"></i>]}
+                    </span>*/}
+                    <CommandBar style={{paddingLeft: 'var(--tab-sep)', bottom: '3px'}}>
+                        <Btn icon={'up'} action={(e)=> dnode.father && openNode(dnode.father)} tip={'Go up'}/>
+                    </CommandBar>
+            </h6>
+        </div>}
 
         {asEdge && [
             <div><h6 style={headerStyle}>Edge start:{
@@ -159,23 +176,72 @@ function NodeEditorComponent(props: AllProps) {
                     : <span style={notFoundStyle}>Missing</span>
             }</h6></div>
         ]}
-        <div><h6 style={headerStyle}>
-            Sub elements{subElements.length ? <i className={'ms-1 bi bi-arrow-down'}/> : [': ', <span style={notFoundStyle}>None</span>]}
-        </h6>{subElements.map(
-            n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getNodeLabel(n)}</div>
-        )}</div>
+        
+        {/* <div>
+            <h6 style={headerStyle} className='sub'>
+                Sub elements
+                {subElements.length ? 
+                    <i style={{paddingLeft: '8px'}}className="bi bi-chevron-down"></i> 
+                : 
+                    [': ', <span style={notFoundStyle}>None</span>]
+                }
+            </h6>
+            {subElements.map(
+                n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getNodeLabel(n)}</div>
+            )}
+            </div>*/}
+
+            {subElements.length > 0 && <div>
+            <h6 style={{display: 'flex'}}>
+                Sub elements 
+                
+                <CommandBar style={{paddingLeft: 'var(--tab-sep)', bottom: '3px'}}>
+                    <Btn icon={'down'} action={(e)=> {}} tip={'Go down'}/>
+                </CommandBar>
+            </h6>
+            
+            {subElements.map(
+                n => <div className={'w-100 ms-2 sub-element'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getNodeLabel(n)}</div>
+            )}
+            </div>}
+
         {!asEdge && <>
-            <div><h6 style={headerStyle}>Outgoing Edges{edgesOut.length === 0 && <>: <span style={notFoundStyle}>None</span></>}</h6>{edgesOut.length && edgesOut.map(
-                n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>
-            )}</div>
-            <div><h6 style={headerStyle}>Incoming Edges{edgesIn.length === 0 && <>: <span style={notFoundStyle}>None</span></>}</h6>{edgesIn.map(
-                n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>
-            )}</div>
+
+            {edgesOut.length > 0 && <div>
+                <h6 style={{display: 'flex'}}>
+                    Outgoing Edges
+                </h6>
+                {edgesOut.length && edgesOut.map(n => <div className={'w-100 ms-2 sub-element'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>)}
+            </div>}
+            
+            {edgesIn.length > 0 && <div>
+                <h6 style={{display: 'flex'}}>
+                    Incoming Edges
+                </h6>
+                {edgesIn.map(n => <div className={'w-100 ms-2 sub-element'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>)}
+            </div>}
+
+            {/*<div>
+                <h6 style={headerStyle}>
+                    Outgoing Edges {edgesOut.length === 0 && <>: <span style={notFoundStyle}>None</span></>}
+                </h6>
+                {edgesOut.length && edgesOut.map(n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>)}
+            </div>
+            
+            <div>
+                <h6 style={headerStyle}>Incoming Edges{edgesIn.length === 0 && <>: 
+                    <span style={notFoundStyle}>None</span></>}
+                </h6>
+                {edgesIn.map(n => <div className={'w-100 ms-2'} onClick={(e)=> openNode(n.id)} style={clickableStyle}>{getEdgeLabel(n)}</div>)}
+            </div>*/}
         </>}
 
 
-        <h6 style={headerStyle}>Node state:{Object.keys(dnode._state).length === 0 && <span style={notFoundStyle}> Empty</span>}</h6>
-        <pre>{Object.keys(dnode._state).length ? JSON.stringify(dnode._state, null, '\t') : undefined}</pre>
+        <h6>Node state</h6>
+        <div className={'object-state'}>
+            {Object.keys(dnode._state).length === 0 && <pre> Empty</pre>}
+            <pre>{Object.keys(dnode._state).length ? JSON.stringify(dnode._state, null, '\t') : undefined}</pre>
+        </div>
 
     </div>);
 

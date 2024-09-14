@@ -11,7 +11,7 @@ function SkeletonComponent(props: AllProps) {
     const {data} = props;
 
     if(!data) return(<Empty />);
-    else return(<section>
+    else return(<section className={'tree-view'}>
         <Tree data={data} />
     </section>)
 

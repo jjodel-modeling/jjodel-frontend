@@ -638,7 +638,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         return this;
     }
 
-    DModelElement(): this { return this; }
+    DModelElement(): this {
+        let thiss: GObject<DModelElement> = this.thiss as any;
+        if ('instances' in thiss) thiss.instances = [];
+        return this; }
     DClassifier(): this { return this; }
     DParameter(defaultValue?: any): this {
         let thiss: DParameter = this.thiss as any;
@@ -684,6 +687,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     }
     DReference(): this {
         let thiss: DReference = this.thiss as any;
+        thiss.aggregation = false;
+        thiss.composition = false;
+        thiss.rootable = undefined;
         this.setExternalPtr(thiss.father, "references", "+=");
         return this; }
 
@@ -785,6 +791,15 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.packages = []; // packages;
         thiss.isMetamodel = isMetamodel || false;
         this.setPtr("instanceof", instanceoff || null);
+        let lmodel = instanceoff ? LPointerTargetable.fromPointer(instanceoff) : undefined;
+        this.thiss._persistCallbacks.push(()=>{
+            if (lmodel){
+                let lthis: LModel = LPointerTargetable.fromD(this.thiss);
+                for (let c of lmodel.classes) {
+                    if (c.isSingleton) lthis.addObject({}, c, true);
+                }
+            }
+        });
         instanceoff && this.setExternalPtr(instanceoff, "instances", "+=");
         // todo: check all D.new calls to make sure there are not actions in callbacks in new2() versions that will go outside the Transaction of persist(),, better move ptrs as .new() parameters
         // or make it so new2 splits pointer and non-pointer declarations (or just allow non-ptrs and ptrs must be DSomething.new() explicit parameters)
@@ -809,6 +824,9 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.partial = partial;
         thiss.partialdefaultname = partialdefaultname;
         thiss.isSingleton = false;
+        thiss.rootable = undefined;
+        thiss.sealed = [];
+        thiss.final = false;
         this.setExternalPtr(thiss.father, "classifiers", "+=");
         this.setExternalRootProperty('ClassNameChanged.'+thiss.id, thiss.name, '', false);
 
@@ -1128,6 +1146,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     // ma gli oggetti puntati da A tramite sotto-oggetti o attributi (subviews...) non vengono aggiornati in "pointedby"
     pointedBy: PointedBy[] = [];
     public className!: string;
+    public __readonly!: boolean;
     _state: GObject = {};
 
     static defaultname<L extends LModelElement = LModelElement>(startingPrefix: string | ((meta:L)=>string), father?: Pointer | DPointerTargetable | ((a:string)=>boolean), metaptr?: Pointer | null): string {
@@ -1575,18 +1594,49 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     public static structure: typeof DPointerTargetable;
     public static singleton: LPointerTargetable;
     public __raw!: D;
-    public pointedBy!: PointedBy[];
     public clonedCounter?: number;
 
     public __isProxy!: boolean;
     public __serialize!: DocString<"json">;
     private inspect!: D;
     private __random!: number;
+    public __readonly!: boolean;
     // public r!: this;
 
     private __info_of__id = {type:"Pointer&lt;this&gt;",
         txt:"<a href=\"https://github.com/DamianoNaraku/jodel-react/wiki/identifiers\">" +
             "<span>Unique identifier, and value used to point this object.</span></a>"};
+
+    private __info_of____readonly = {type:"boolean", txt:"prevent any change to the current object."};
+    protected set___readonly(val: any, c: Context): boolean {
+        val = !!val;
+        let thiss: GObject = this;
+        let childrens = (thiss.get_children && thiss.get_children(c)) || [];
+        let annotations = (thiss.get_annotations && thiss.get_annotations(c)) || [];
+        if (val === c.data.__readonly) return true;
+        TRANSACTION(()=>{
+            for (let c of childrens) { c.__readonly = val; }
+            for (let c of annotations) { c.__readonly = val; }
+            SetFieldAction.new(c.data, '__readonly', val);
+        });
+        return true;
+    }
+
+
+    public pointedBy!: PointedBy[];
+    // pointedBy!: LPointerTargetable[];
+    get_pointedBy(context: Context): LPointerTargetable["pointedBy"] {
+        let state: DState = store.getState();
+        let targeting: LPointerTargetable[] = LPointerTargetable.fromArr(context.data.pointedBy.map( p => {
+            let s: GObject = state;
+            for (let key of PointedBy.getPathArr(p)) {
+                s = s[key];
+                if (!s) return null;
+                if (s.className) return s.id;
+            }
+        }));
+        return targeting as any;
+    }
 
     protected wrongAccessMessage(str: string): any {
         let msg = "Method "+str+" should not be called directly, attempting to do so should trigger get_"+str+"(). This is only a signature for type checking.";
@@ -1614,7 +1664,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     }
 
 
-    protected cannotSet(field: string): any { return Log.exx('"' + field + '" field is read-only', this); }
+    protected cannotSet(field: string, msg?:string): any { return Log.exx('"' + field + '" field is read-only' + (msg ? '.\n'+msg : '')); }
     protected get_id(context: Context): this["id"] { return context.data.id; }
     protected set_id(): boolean { return this.cannotSet('id'); }
 
@@ -1727,6 +1777,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     protected __defaultSetter(v0: any, c: Context, k: keyof Context["data"]): boolean {
         // todo: get the those lobjects -> pointer checks from set_state
         let v: any = this.__sanitizeValue(v0, false, false);
+        if (!k) return Log.exx('a key is mandatory for default setter', {v0, k, c});
         if (true || k in c.data) {
             // check if is pointer
             let isPointer: boolean;
@@ -1933,7 +1984,9 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         const dependencies = data.dependencies();
 
         const ret = () => {
-            if (context.data.id.indexOf('Pointer_View')) return; // cannot delete default views/viewpoints
+            // if (context.data.id.indexOf('Pointer_View')) return; // cannot delete default views/viewpoints
+
+            if (context.data.id.indexOf('Pointer_View') !== -1 ) return; // cannot delete default views/viewpoints
 
             for (let child of data.children) {
                 child.delete();
@@ -2105,7 +2158,7 @@ export class DProject extends DPointerTargetable {
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
     id!: Pointer<DProject, 1, 1, LProject>;
-    type: 'public'|'private'|'collaborative' = 'collaborative';
+    type: 'public'|'private'|'collaborative' = 'public';
     name!: string;
     author: Pointer<DUser> = DUser.current;
     collaborators: Pointer<DUser, 0, 'N'> = [];

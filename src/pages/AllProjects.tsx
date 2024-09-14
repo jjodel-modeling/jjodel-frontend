@@ -12,18 +12,26 @@ import {ProjectsApi} from "../api/persistance";
 
 function AllProjectsComponent(props: AllProps): JSX.Element {
     const {projects} = props;
-    const createProject = ()=>ProjectsApi.create('public', undefined, undefined, undefined, projects);
+    const createProject = async(type: DProject['type']) => {
+        await ProjectsApi.create(type, undefined, undefined, undefined, projects);
+    }
     return(<Try>
         <Dashboard active={'All'} version={props.version}>
             <React.Fragment>
-
                 <Cards>
                     <Cards.Item
-                        title={'New jjodel'}
+                        title={'New jjodel (Public)'}
                         subtitle={'Create a new jjodel project.'}
                         icon={'add'}
                         style={'red'}
-                        action={createProject}
+                        action={() => createProject('public')}
+                    />
+                    <Cards.Item
+                        title={'New jjodel (Collaborative)'}
+                        subtitle={'Create a new jjodel project.'}
+                        icon={'add'}
+                        style={'red'}
+                        action={() => createProject('collaborative')}
                     />
                     <Cards.Item
                         title={'Import jjodel'}

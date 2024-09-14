@@ -155,9 +155,48 @@ function selectNode(d: DGraphElement|{id: string}): any {
     if (d && d.id) setTimeout(()=>$(".Graph [data-nodeid='"+d?.id+"']").trigger("click"), 10);
     return d; }
 
+function useClickOutside(ref: any, onClickOutside: any) {
+    useEffect(() => {
+        
+        function handleClickOutside(event: Event) {
+            if (ref.current && !ref.current.contains(event.target)) {
+                onClickOutside();
+            }
+        }
+
+        // Bind
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+        // dispose
+        document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [ref, onClickOutside]);
+}
+
 function ToolBarComponent(props: AllProps, state: ThisState) {
+    
     const node = props.node;
     let [pinned, setPinned] = useState(true);
+    let [collapsed, setCollapsed] = useState(true);
+    let [position, setPosition] = useState([20,50]); 
+
+    const menuRef = useRef();
+
+    useClickOutside(menuRef, () => {
+        setCollapsed(true);
+    });
+
+    const minimize = (ref: any) => {
+        ref.current.style.opacity = 0;
+
+        // ref.current.style.visibility = 'hidden';
+        // ref.current.style.display = 'none'; 
+        setCollapsed(true);
+    }
+    const maximize = (ref: any) => {
+        ref.current.style.opacity = 1;
+        setCollapsed(false);
+    }
 
     const htmlref: React.MutableRefObject<null | HTMLDivElement>= useRef(null);
     useEffect(() => {
@@ -279,7 +318,10 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
     content = contentarr.separator(separator);// .flat() as any;
     console.log("toolbar", {contentarr, separator, content});
 
-    return (
+
+    /* backup  */
+
+    /* return (
         <div className="toolbar-draggable"
             ref={htmlref}
             style={{ border: 'none', top: '35px', position: "absolute", backgroundColor: 'red !important' }} // refuses to focus without event...
@@ -290,16 +332,36 @@ function ToolBarComponent(props: AllProps, state: ThisState) {
             }}>
             <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
                 <i className={"content pin bi bi-pin-angle" + (pinned ? "-fill" : '')} onClick={() => setPinned(!pinned)} />
-                {/*<div className={"preview toolbar-section-label mb-0 mx-1"}>
-                    <i className={'bi bi-plus-lg'} />
-                </div>
-                <div className={"preview toolbar-section-label my-auto mx-1"}>Add</div>
-                */}
                 <div className={"content inline w-100"}>
                     {content}
                 </div>
             </div>
-        </div>);
+        </div>);*/ 
+
+    return (<>
+    
+        <div className="toolbar-draggable"
+            ref={htmlref}
+            style={{ border: 'none', top: '35px', position: "absolute", backgroundColor: 'red !important' }} // refuses to focus without event...
+            onClick={(e) => {
+                console.log("click focus", { htmlref }); setTimeout(() => {
+                    if (htmlref.current) (htmlref.current as any).children[0].focus();
+                }, 1)
+            }}>
+            <div className={"toolbar hoverable" + (pinned ? " pinned" : '')} tabIndex={0}>
+                <i style={{marginTop: '8px'}} className={"content pin bi bi-x-lg"} onClick={() => minimize(htmlref)} />
+                <div className={"content inline w-100"}>
+                    {content}
+                </div>
+            </div>
+        </div>
+        
+        {collapsed ? 
+            <div className="toolbar-collapsed" onClick={() => maximize(htmlref)}></div>
+            :
+            <div className="toolbar-collapsed" onClick={() => minimize(htmlref)}></div>
+        }
+    </>);
 }
 
 interface OwnProps {

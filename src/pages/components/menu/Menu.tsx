@@ -8,11 +8,9 @@ type MenuProps = {
 };
 
 function getFragment(command: string): any {
-    return (
-        <React.Fragment>
+    return (<>
             {command}
-        </React.Fragment>
-    );
+    </>);
 }
 
 function useClickOutside(ref: any, onClickOutside: any) {

@@ -5,6 +5,8 @@ import {Log, LPointerTargetable, U} from "../../joiner";
 import {useStateIfMounted} from "use-state-if-mounted";
 import {stringify} from "querystring";
 import "./FunctionComponent.scss";
+import { CommandBar, Btn, Sep } from '../commandbar/CommandBar';
+import { Tooltip } from './Tooltip';
 
 /*
  Rationale behind this:
@@ -181,71 +183,119 @@ function FunctionComponent(props: AllProps) {
 
 
     for (let row of state.arr) {
-        inputs.push(<label className={"d-flex" + (advancedMode ? "" : " my-1")} key={row.index} data-key={row.index}>
+        inputs.push(<label className={"d-flex template-item" + (advancedMode ? "" : " my-1")} key={row.index} data-key={row.index}>
             <span className={"my-auto detailedMode"}>{row.id.prefix}.</span>
-            <input className={"my-auto input"} placeholder={"identifier"} value={row.id.value}  disabled={readOnly}
-                   tabIndex={row.index*2}
-                   onInput={(e)=>identifierChange(e, row.index, state, setState)}
-                   onBlur={(e)=> !readOnly && onBlur(state, setState, props, row.index)}
+            <input className={"my-auto input"}
+                placeholder={"identifier"} value={row.id.value}  disabled={readOnly}
+                tabIndex={row.index*2}
+                onInput={(e)=>identifierChange(e, row.index, state, setState)}
+                onBlur={(e)=> !readOnly && onBlur(state, setState, props, row.index)}
+                style={{width: '30%'}}
             />
-            <span className={"my-auto mx-1 simpleMode"} style={{fontWeight: "bold"}}>⇠</span>
-            <span className={"my-auto mx-1 detailedMode"}>=</span>
-            <input className={"my-auto input"} placeholder={"expression"} value={row.exp.value} disabled={readOnly}
-                   tabIndex={row.index*2+1}
-                   onInput={(e)=>expressionChange(e, row.index, state, setState)}
-                   onBlur={(e)=> !readOnly && onBlur(state, setState, props, row.index)}
+            <span className={"my-auto mx-1 simpleMode"} style={{paddingRight: '6px', paddingLeft: '6px'}}><i style={{fontSize: '1.2em'}} className="bi bi-arrow-left-square"></i></span>
+            <span className={"my-auto mx-1 detailedMode"}>=</span> {/*  */}
+            <input className={"my-auto input"}
+                placeholder={"expression"}
+                value={row.exp.value}
+                disabled={readOnly}
+                tabIndex={row.index*2+1}
+                onInput={(e)=>expressionChange(e, row.index, state, setState)}
+                onBlur={(e)=> !readOnly && onBlur(state, setState, props, row.index)}
+                style={{marginRight: '6px'}}
             />
             <span className={"my-auto detailedMode"}>;</span>
-            <button className={"bg btn-delete my-auto ms-2"} tabIndex={state.arr.length*2 +1 +row.index} disabled={readOnly} onClick={()=>!readOnly && deleteClick(state, setState, row.index, props, row)}>
-                <i className={"p-1 bi bi-dash"} /></button>
+            <CommandBar style={{paddingTop: '10px'}}>
+                <Btn icon={'delete'} tip={'Delete'} action={()=>!readOnly && deleteClick(state, setState, row.index, props, row)} />
+            </CommandBar>
+            {/* <button className={"bg btn-delete my-auto ms-2"} tabIndex={state.arr.length*2 +1 +row.index} disabled={readOnly} onClick={()=>!readOnly && deleteClick(state, setState, row.index, props, row)}>
+                <i className={"p-1 bi bi-dash"} /></button> */}
         </label>);
     }
 
     let transitionTime = 300;
+
     return <div className={"function-editor-root"} data-mode={advancedMode ? "detailedMode" : "simpleMode"} style={{fontSize: "0.9rem"}}>
-        <div className={"d-flex w-100 function-editor-header"} style={{transition: "all 300ms",  cursor: tooltip ? 'help' : 'auto'}}
-             onMouseEnter={e => tooltip && setShowTooltip(true)} onMouseLeave={e =>  tooltip && setShowTooltip(false)}>
-            <div className={"d-flex function-editor-label"}>
+        <div className={"d-flex w-100 function-editor-header"}>
+        {/* <div className={"d-flex w-100 function-editor-header"} style={{transition: "all 300ms",  cursor: tooltip ? 'help' : 'auto'}}
+             onMouseEnter={e => tooltip && setShowTooltip(true)} onMouseLeave={e =>  tooltip && setShowTooltip(false)}></div>*/}
+            <div className={"function-editor-label"}>
                 {props.jsxLabel}
-                <button className={"btn button-add"} tabIndex={state.arr.length*2}
-                        disabled={readOnly} onClick={()=> !readOnly && addClick(state, setState)}>+</button>
+                <p style={{fontSize: '0.8em', paddingBottom: '0px'}}>{props.payoff}</p>
+                {/* <button className={"btn button-add"} tabIndex={state.arr.length*2}
+                        disabled={readOnly} onClick={()=> !readOnly && addClick(state, setState)}>+</button> */}
             </div>
-            <span className={"m-auto me-1"} style={{cursor: 'auto'}}>
-                {tooltip && <i className={"p1 m-auto me-1 bi bi-info-square"} style={{cursor: 'help'}} />}
+
+            <CommandBar style={{marginLeft: 'auto'}}>
+                {!state.collapsed ?
+                    <>
+                        <Btn icon={'add'} action={()=> !readOnly && addClick(state, setState)} tip={'Add new constant'}/>
+                        <Sep />
+                        {showTooltip ?
+                            <Btn icon={'info'} action={()=> {setShowTooltip(false)}} tip={'Hide information'} mode={'negative'}/>
+                            :
+                            <Btn icon={'info'} action={()=> {setShowTooltip(true)}} tip={'Show information'} />
+                        }
+
+                        {advancedMode?
+                            <Btn icon={'settings'} action={()=>setState( {...state, advancedMode:!state.advancedMode})} tip={'Close advanced mode'} mode={'negative'}/>
+                            :
+                            <Btn icon={'settings'} action={()=>setState( {...state, advancedMode:!state.advancedMode})} tip={'Open advanced mode'}/>
+                        }
+
+                        <Sep />
+                        <Btn icon={'open-down'} action={()=>setState( {...state, collapsed:!state.collapsed})} tip={'Hide definitions'}/>
+                    </>
+                    :
+                    <Btn icon={'close-up'} action={()=>setState( {...state, collapsed:!state.collapsed})} tip={'Show definitions'}/>
+                }
+
+            </CommandBar>
+
+
+            {/*
+            <span className={"m-auto me-1"} style={{border: '1px solid red', cursor: 'auto'}}>
+
+            {tooltip && <i className={"p1 m-auto me-1 bi bi-info-square"} style={{cursor: 'help'}} />}
 
                 <span className={"m-auto"} style={{cursor: 'auto', height: "100%", display: "inline-block"}}
                       onMouseEnter={e => tooltip && setShowTooltip(false)} onMouseLeave={e =>  tooltip && setShowTooltip(true)}
                 >
+
                 <i className={ "p1 m-auto mx-1 bi " + (advancedMode ? "btn-outline-secondary bi-eye-slash" : "btn-outline-secondary bi-eye")}
                    onClick={()=>setState( {...state, advancedMode:!state.advancedMode})} style={{cursor: 'pointer'}} />
-                <i className={ "p1 bi m-auto mx-1 bi bi-chevron-down btn-outline-secondary"}
+
+                   <i className={ "p1 bi m-auto mx-1 bi bi-chevron-down btn-outline-secondary"}
                    onClick={()=>setState( {...state, collapsed:!state.collapsed})}
                    style={{cursor: 'pointer', transition:transitionTime/2 + "ms all",
                        transform: "scaleY("+(state.collapsed ? 1 : -1 )+")  translateY(" + (state.collapsed ? -0 : 0.1) +"em)",
                    }} />
-                {/* erase all button removed<button className={ "p1 m-auto mx-1 bi btn btn-danger bi-trash3-fill"} disabled={!(props.data.__raw as GObject)[props.field]}
-                        onClick={()=>{ setState( {...state,  ta: {...state.ta, v:minimalTextareaValue}, arr: []}); (props.data as GObject)[props.field] = undefined}}
-                        style={{cursor: 'pointer'}} />*/}
+
                 </span>
             </span>
+            */}
+
+
+
         </div>
-        {(tooltip && showTooltip) && <div className={'my-tooltip'}>
+        {(tooltip && showTooltip) && <div className={'my-tooltip'} style={{marginBottom: '10px'}}>
+            {/*
             <b className={'text-center text-capitalize'}>{props.field}</b>
             <br />
+            */}
             <label>{tooltip}</label>
         </div>}
-        {<div className={"collapsable-section"} data-comment={"collapsable-section"} style={{transition: transitionTime + "ms all",
-            // transformOrigin: "top", transform: "rotateX("+(state.collapsed ? 0 : 90 )+"deg)",
-            transform: "scaleY("+(state.collapsed ? 0 : 1 )+")",
-            overflow:"hidden"}}>
+        {<div
+            className={"collapsable-section " + (state.collapsed ? "collapsed" : "expanded")}
+            data-comment={"collapsable-section"}
+            style={{
+            }}>
             <textarea className={"detailedMode input w-100"} disabled={readOnly} rows={Math.min(10, state.ta.v.split("\n").length)}
                   onInput={(e)=>textAreaChange(e, state, setState)}
                   onBlur={(e)=> !readOnly && onBlur(state, setState, props)}
                   data-txtcontent={state.ta.v}
-                  value={state.ta.v}
-        />
-        {inputs}
-        {false && <div style={{whiteSpace:"pre"}}>{(props.data as any)[props.field]}</div>}
+                  value={state.ta.v} />
+            {inputs}
+            {false && <div style={{whiteSpace:"pre"}}>{(props.data as any)[props.field]}</div>}
         </div>}
     </div>;
 }
@@ -261,6 +311,7 @@ interface OwnProps {
     // not used for now
     label?: string;
     jsxLabel?: ReactNode;
+    payoff?: string;
     className?: string;
     style?: GObject;
     tooltip?: string | boolean | ReactElement;
