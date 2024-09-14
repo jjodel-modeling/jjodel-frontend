@@ -115,7 +115,8 @@ const User = (props: UserProps) => {
     return (<div className={'user text-end'}>
         <div className={'initials'}>
             {initials.toUpperCase()}
-        </div>&nbsp;
+        </div>
+        &nbsp;
         <span>{name}</span>
     </div>);
 };
@@ -160,7 +161,8 @@ function NavbarComponent(props: AllProps) {
         ],
             keystroke: []
         },
-    */}
+    */
+    }
     //            {name: 'Close project', icon: icon['close'], function: () => {
     //                 navigate('/allProjects');
     //                 Collaborative.client.off('pullAction');

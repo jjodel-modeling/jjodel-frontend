@@ -73,7 +73,9 @@ function ProjectComponent(props: AllProps): JSX.Element {
                                 subtitle={'Create a new metamodel.'}
                                 icon={'add'}
                                 style={'red'}
-                                action={() => {alert('new metamodel')}}
+                                action={() => {
+                                    alert('new metamodel')
+                                }}
                             />
                             :
                             <React.Fragment>
@@ -82,18 +84,23 @@ function ProjectComponent(props: AllProps): JSX.Element {
                                     subtitle={'Create a new metamodel.'}
                                     icon={'add'}
                                     style={'red'}
-                                    action={() => {alert('another metamodel')}}
+                                    action={() => {
+                                        alert('another metamodel')
+                                    }}
                                 />
                                 <Cards.Item
                                     title={'Create a model ?'}
                                     subtitle={'Create a new model.'}
                                     icon={'add'}
                                     style={'red'}
-                                    action={() => {alert('new model')}}
+                                    action={() => {
+                                        alert('new model')
+                                    }}
                                 />
                             </React.Fragment>
                         }
-                        <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'} subtitle={'What do you want to do today?'}/>
+                        <Cards.Item icon={'question'} style={'clear'} title={'Ehy!'}
+                                    subtitle={'What do you want to do today?'}/>
                     </Cards>
 
                 </React.Fragment>
@@ -101,11 +108,14 @@ function ProjectComponent(props: AllProps): JSX.Element {
         </Try>
 
         {/*<Try><Dock /></Try>*/}
-        {user.project.type === 'collaborative' && <CollaborativeAttacher project={user.project} />}
+        {user.project.type === 'collaborative' && <CollaborativeAttacher project={user.project}/>}
     </>);
 
 }
-interface OwnProps {}
+
+interface OwnProps {
+}
+
 interface StateProps {
     user: LUser,
     projects: LProject[],
