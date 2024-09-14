@@ -115,7 +115,6 @@ export class TooltipVisualizer extends React.Component<{}, TooltipVisualizerStat
                 style['--size-w'] = tsize.w + 'px';
                 style['--size-h'] = tsize.h + 'px';
             }
-            console.log("inlinepos:", {position, pos, x, y, size, offsetX, offsetY, l, t});
             // style.right = 'calc( 100vw - '+size.w+'px)';
             // currently center of tooltip is topleft of baseelem
         }
@@ -124,7 +123,6 @@ export class TooltipVisualizer extends React.Component<{}, TooltipVisualizerStat
         if (typeof tooltip !== 'object') tooltip = <div>{tooltip}</div>;
         if (Array.isArray(tooltip)) tooltip = tooltip.map(e => typeof e !== 'object' ? <div>{e}</div> : e)
         // NB: arrays are allowed but currently show elements in an horizontal line
-        console.log('tooltip', style, this.state);
         // debugg stuff
         let tooltip2 = <div style={{...style, padding:0, width:0, height:0,  borderRadius: '100%'}} />; // border:'2px solid red',
         style.padding = 0;
@@ -225,7 +223,7 @@ export class Tooltip extends React.Component<AllProps, State> {
             &lt;Tooltip /&gt; component requires a html or react node as children.
         </span>
         for (let k of Object.keys(this.props)) switch (k){
-            default: Log.ww('<Tooltip /> component cannot accept props other than "key", "position", and "tooltip".'); break;
+            //default: Log.ww('<Tooltip /> component cannot accept props other than "key", "position", and "tooltip".'); break;
             case 'children': case 'key': case 'tooltip': case 'position': break;
             // case "inline": break;
         }

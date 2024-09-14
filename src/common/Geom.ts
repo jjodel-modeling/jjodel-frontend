@@ -713,7 +713,6 @@ export class PositionStr{
     public static fromPosString(position?: PositionStrTypes): PositionStr{
         let ret = new PositionStr(0, 0);
         let posarr = (position ?? 't').split(' '); // .map(s=>s[0]);
-        console.log('posarr inlinepos', posarr, ret, position);
         for (let p of posarr)
             switch (p) {
                 default:
