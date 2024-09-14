@@ -832,7 +832,7 @@ export class LNamedElement<Context extends LogicContext<DNamedElement> = any> ex
                 return (DNamedElement.fromPointer(child.id) as DNamedElement).name === name
             });
             if (check.length > 0) {
-                U.alert('error', 'Cannot rename the selected element since this name is already taken.');
+                U.alert('e', 'Cannot rename the selected element since this name is already taken.');
                 return true
             }
         }
@@ -2002,7 +2002,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     get_final(c: Context): LClass['final']{ return c.data.final; }
     set_final(val: boolean, c: Context): boolean{
         if (val === c.data.final) return true;
-        if (c.data.extendedBy.length > 0) { U.alert('error', 'Class cannot become final as it is currently extended. Remove the subclasses before.'); return true; }
+        if (c.data.extendedBy.length > 0) { U.alert('e', 'Class cannot become final as it is currently extended. Remove the subclasses before.'); return true; }
         TRANSACTION(()=>{
             SetFieldAction.new(c.data, 'final', val);
             SetFieldAction.new(c.data, 'sealed', [], '', true);
@@ -2013,8 +2013,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     get_isSingleton(c: Context): LClass['isSingleton'] { return this.get_singleton(c); }
     get_singleton(c: Context): LClass['isSingleton']{ return c.data.isSingleton; }
     set_singleton(val: boolean, c: Context): boolean{
-        if (c.data.instances.length > 1) { U.alert('error', 'Class cannot become a singleton since there are multiple instances already. Delete some and retry.'); return true; }
-        if (c.data.extendedBy.length > 0) { U.alert('error', 'Class cannot become a singleton unless is also final, and is currently extended. Remove the subclasses before.'); return true; }
+        if (c.data.instances.length > 1) { U.alert('e', 'Class cannot become a singleton since there are multiple instances already. Delete some and retry.'); return true; }
+        if (c.data.extendedBy.length > 0) { U.alert('e', 'Class cannot become a singleton unless is also final, and is currently extended. Remove the subclasses before.'); return true; }
         TRANSACTION(()=>{
             SetFieldAction.new(c.data, 'isSingleton', val);
             if (val) {
@@ -2214,7 +2214,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     protected set_abstract(val: this["abstract"], context: Context): boolean {
         const data = context.data;
         if(val && data.instances.length > 0) {
-            U.alert('error', 'Cannot change the abstraction level since there are instances.');
+            U.alert('e', 'Cannot change the abstraction level since there are instances.');
         } else {
             SetFieldAction.new(data, 'abstract', val);
         }
@@ -2227,7 +2227,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     protected get_interface(context: Context): this["interface"] { return context.data.interface; }
     protected set_interface(val: this["interface"], c: Context): boolean {
         if (val && c.data.instances.length > 0) {
-            U.alert('error', 'Class cannot become an interface since there are instances.');
+            U.alert('e', 'Class cannot become an interface since there are instances.');
         } else {
             SetFieldAction.new(c.data, 'interface', val);
         }
@@ -4144,7 +4144,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     protected set_name(val: this['name'], context: Context): boolean {
         const models: LModel[] = LModel.fromPointer(store.getState()['models']);
         if(models.filter((model) => { return model.name === val }).length > 0) {
-            U.alert('error', 'Cannot rename the selected element since this name is already taken.');
+            U.alert('e', 'Cannot rename the selected element since this name is already taken.');
         } else {
             SetFieldAction.new(context.data, 'name', val, '', false);
         }
